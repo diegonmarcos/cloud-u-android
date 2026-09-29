@@ -581,5 +581,220 @@ else
     ok "no 'Settings ▸ …' breadcrumb in the baked shell notice (#639)"
 fi
 
+# ── #640 — /usr/bin/env must EXIST, not merely be survivable ──────────────
+# #638 guarded the two unconditional `exec /usr/bin/env` lines so the terminal
+# boots without that path. It boots — and every `#!/usr/bin/env <interp>` script
+# in it still dies, which is the commonest shebang in existence. The file has to
+# be there, and the only thing that ever created it (upstream's first-login
+# wizard) is exactly what default_packages exists to skip.
+#
+# This section EXECUTES. It takes the REAL SYMLINKS.txt line the emitter
+# produces, extracts it into a sandbox the way TermuxInstaller does, resolves it
+# the way proot's /nix and /usr binds do, writes a script whose first line is
+# literally `#!/usr/bin/env sh`, and runs it. When the runner can give us a mount
+# namespace, the LITERAL /usr/bin/env is bind-replaced inside it so the KERNEL
+# does the shebang resolution; when it cannot, the script's own shebang line is
+# parsed and the resolved interpreter really exec'd. Either way a shell runs a
+# file, rather than a grep reading the emitter and believing it.
+echo "── #640 a #!/usr/bin/env sh script actually runs in the baked rootfs ──"
+E1_WORKDIR="$(mktemp -d)"
+E1_RESULT="$(python3 - "$DIR/app/src/main/cpp" "$E1_WORKDIR" "$PROFILE_LINK" <<'PYEOF' 2>&1 | sed -n 's/^RESULT://p'
+import os, shutil, subprocess, sys
+
+cpp_dir, work, profile_link = sys.argv[1:4]
+sys.path.insert(0, cpp_dir)
+import bake_default_packages as bake
+
+# Stand-ins for the two store paths the real bake step copies in: the profile
+# generation (whose bin/env is a symlink into coreutils, as `nix profile
+# install` builds it) and coreutils itself (a real, executable file). Fake
+# hashes are deliberate -- the emitter must never write a hash of its own.
+GEN = "/nix/store/zzz-profile-fake"
+CORE = "/nix/store/zzz-coreutils-fake"
+SCRIPT = "#!/usr/bin/env sh\necho SHEBANG_RAN\n"
+
+
+def build(root, lines, env_in_profile=True):
+    """Extract SYMLINKS.txt into `root` the way TermuxInstaller's loop does."""
+    shutil.rmtree(root, ignore_errors=True)
+    os.makedirs(root + CORE + "/bin")
+    envbin = root + CORE + "/bin/env"
+    open(envbin, "w").write('#!/bin/sh\nexec "$@"\n')
+    os.chmod(envbin, 0o755)          # what EXECUTABLES.txt does on the device
+    os.makedirs(root + GEN + "/bin")
+    # The generation's own bin/env is a store symlink, and add_tree() copies it
+    # into SYMLINKS.txt exactly like any other -- so it goes through the same
+    # extraction loop below, not around it.
+    if env_in_profile:
+        lines = [CORE + "/bin/env←" + GEN.lstrip("/") + "/bin/env"] + list(lines)
+    for line in lines:
+        target, _, link = line.partition("←")
+        full = os.path.join(root, link)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        # An absolute target resolves through proot's binds on the phone
+        # (files/usr/nix:/nix, files/usr/usr:/usr); here the sandbox root plays
+        # that part. That prefix is the ONLY substitution made anywhere below.
+        os.symlink(root + target if target.startswith("/") else target, full)
+    path = os.path.join(root, "shebang-probe.sh")
+    open(path, "w").write(SCRIPT)
+    os.chmod(path, 0o755)
+    return path
+
+
+def resolved_env(root):
+    p = os.path.join(root, bake.ENV_SYMLINK)
+    if not os.path.lexists(p):
+        return None, "no " + bake.ENV_SYMLINK + " was extracted at all"
+    real = os.path.realpath(p)
+    if not os.path.exists(real):
+        return None, "dangling symlink: " + p + " -> " + os.readlink(p)
+    if not os.access(real, os.X_OK):
+        return None, "target is not executable: " + real
+    return real, None
+
+
+def ns_usable():
+    """Can we get a mount namespace and bind a single file inside it?
+
+    Probed on /etc/hostname, nothing to do with env, so an infrastructure
+    failure here can never be mistaken for this ticket's defect.
+    """
+    probe = work + "/ns-probe"
+    open(probe, "w").write("NS_BIND_OK\n")
+    try:
+        p = subprocess.run(["unshare", "-rm", "sh", "-c",
+                            'mount --bind "$1" /etc/hostname && cat /etc/hostname',
+                            "_", probe], capture_output=True, text=True)
+    except OSError:
+        return False
+    return p.returncode == 0 and "NS_BIND_OK" in p.stdout
+
+
+def run_kernel(root, script, env_absent):
+    """Real kernel shebang resolution of the LITERAL /usr/bin/env."""
+    if env_absent:
+        empty = work + "/empty"
+        os.makedirs(empty, exist_ok=True)
+        cmd, args = 'mount --bind "$1" /usr/bin && exec "$2"', [empty, script]
+    else:
+        cmd, args = ('mount --bind "$1" /usr/bin/env && exec "$2"',
+                     [os.path.join(root, bake.ENV_SYMLINK), script])
+    p = subprocess.run(["unshare", "-rm", "sh", "-c", cmd, "_", *args],
+                       capture_output=True, text=True)
+    return p.returncode, p.stdout + p.stderr
+
+
+def run_resolved(root, script):
+    """No namespace: parse the script's OWN shebang and exec what it names."""
+    first = open(script).readline().rstrip("\n")
+    if not first.startswith("#!"):
+        return 126, "no shebang line in " + script
+    parts = first[2:].split()
+    interp, rest = parts[0], parts[1:]
+    mapped = root + interp if interp.startswith("/") else interp
+    try:
+        p = subprocess.run([mapped, *rest, script], capture_output=True, text=True)
+    except OSError as e:
+        return 127, mapped + ": " + (e.strerror or str(e))
+    return p.returncode, p.stdout + p.stderr
+
+
+KERNEL = ns_usable()
+mode = "kernel mount-namespace bind of the literal /usr/bin/env" if KERNEL \
+       else "shebang parsed from the script and the resolved interpreter exec'd"
+
+
+def run(root, script, env_absent=False):
+    return run_kernel(root, script, env_absent) if KERNEL else run_resolved(root, script)
+
+
+gen_line = GEN + "←" + profile_link
+env_line = bake.env_symlink_line(profile_link)
+
+# ── the real thing ────────────────────────────────────────────────────────
+root = work + "/good"
+script = build(root, [gen_line, env_line])
+why = []
+real, err = resolved_env(root)
+if err:
+    why.append("chain: " + err)
+rc, out = run(root, script)
+if rc != 0 or "SHEBANG_RAN" not in out:
+    why.append("run rc=%d out=%r" % (rc, out.strip()))
+print("RESULT:GOOD " + ("OK via " + mode if not why else "FAIL " + "; ".join(why)))
+
+# ── mutation A: drop the emitted SYMLINKS.txt line ────────────────────────
+root = work + "/no-line"
+script = build(root, [gen_line])
+why = []
+real, err = resolved_env(root)
+if not err:
+    why.append("chain still resolved to " + str(real))
+rc, out = run(root, script, env_absent=True)
+if rc == 0 or "No such file or directory" not in out:
+    why.append("still ran: rc=%d out=%r" % (rc, out.strip()))
+print("RESULT:MUTA " + ("OK " + repr(err) if not why else "SURVIVED " + "; ".join(why)))
+
+# ── mutation B: coreutils out of attrs -> the profile has no bin/env, so the
+#     line is emitted but points at nothing. A tester that only checked the
+#     link EXISTS would pass here; this one must call it dangling and the
+#     script must still not run.
+root = work + "/no-coreutils"
+script = build(root, [gen_line, env_line], env_in_profile=False)
+why = []
+real, err = resolved_env(root)
+if not err or "dangling" not in err:
+    why.append("chain verdict was %r, expected a dangling-symlink verdict" % (err,))
+rc, out = run(root, script)
+if rc == 0 or "SHEBANG_RAN" in out:
+    why.append("still ran: rc=%d out=%r" % (rc, out.strip()))
+print("RESULT:MUTB " + ("OK " + repr(err) if not why else "SURVIVED " + "; ".join(why)))
+
+# ── the emitter's own build-time reachability gate, executed ───────────────
+rel = "nix/store/zzz-coreutils-fake/bin/env"
+verdicts = [
+    ("reachable", bake.env_target_unreachable(rel, set(), {rel: b""}, [rel]), None),
+    ("not chmodded", bake.env_target_unreachable(rel, set(), {rel: b""}, []), "EXECUTABLES.txt"),
+    ("not in zip", bake.env_target_unreachable(rel, set(), {}, []), "not a file entry"),
+    ("already shipped", bake.env_target_unreachable(rel, {rel}, {}, []), None),
+]
+why = [
+    "%s -> %r" % (name, got)
+    for name, got, want in verdicts
+    if (want is None and got is not None) or (want is not None and (got is None or want not in got))
+]
+print("RESULT:GATE " + ("OK" if not why else "FAIL " + "; ".join(why)))
+PYEOF
+)"
+E1_GOOD="$(echo "$E1_RESULT" | sed -n 1p)"
+case "$E1_GOOD" in
+    GOOD\ OK*) ok "a script whose shebang is literally '#!/usr/bin/env sh' RUNS in the baked rootfs — ${E1_GOOD#GOOD OK via }" ;;
+    *)         bad "a '#!/usr/bin/env sh' script does not run in the baked rootfs: $E1_GOOD" ;;
+esac
+case "$(echo "$E1_RESULT" | sed -n 2p)" in
+    MUTA\ OK*) ok "mutation proved: without the emitted SYMLINKS.txt line the same script dies 'No such file or directory' — exactly what ships today" ;;
+    *)         bad "MUTATION SURVIVED: removing the usr/bin/env SYMLINKS.txt line changed nothing, so the assertion above proves nothing: $(echo "$E1_RESULT" | sed -n 2p)" ;;
+esac
+case "$(echo "$E1_RESULT" | sed -n 3p)" in
+    MUTB\ OK*) ok "mutation proved: with coreutils out of attrs the link is called DANGLING and the script still does not run (a link to nothing is worse than no link)" ;;
+    *)         bad "MUTATION SURVIVED: a usr/bin/env pointing at nothing passed as if it worked: $(echo "$E1_RESULT" | sed -n 3p)" ;;
+esac
+case "$(echo "$E1_RESULT" | sed -n 4p)" in
+    GATE\ OK) ok "bake_default_packages.py refuses to emit the link unless the resolved env is a real zip entry listed in EXECUTABLES.txt" ;;
+    *)        bad "the emitter's build-time reachability gate does not hold: $(echo "$E1_RESULT" | sed -n 4p)" ;;
+esac
+rm -rf "$E1_WORKDIR"
+
+# The declaration the emitted target is derived FROM, and no store literal in it.
+case " $ATTRS " in
+    *" coreutils "*) ok "default_packages.attrs declares coreutils, so a coreutils bin/env is really in the baked profile (#640)" ;;
+    *)               bad "default_packages.attrs has no coreutils — usr/bin/env would point into a store path that is not shipped (#640)" ;;
+esac
+if grep -qE '/nix/store/[0-9a-z]{32}' "$BAKE_PY"; then
+    bad "bake_default_packages.py hardcodes a /nix/store hash — it moves with the nixpkgs pin, so the usr/bin/env link would rot silently (#640)"
+else
+    ok "no /nix/store hash literal in bake_default_packages.py — the env link target is derived from profile_link"
+fi
+
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]

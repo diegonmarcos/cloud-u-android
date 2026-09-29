@@ -55,6 +55,46 @@ DROPPED_ENTRY = "etc/static/UNINTIALISED"
 ENV_EXEC = "exec /usr/bin/env bash  # otherwise it'll be a limited bash that came with Nix"
 ENV_EXEC_ARGV = 'exec /usr/bin/env "$@"'
 
+# #640 -- the guards above keep the TERMINAL booting when /usr/bin/env is absent,
+# and they stay: falling through to an absolute /nix/store bash is strictly better
+# than an unconditional exec either way. But they fix the boot only. `#!/usr/bin/env
+# <interp>` is the most common shebang there is, and with that path absent EVERY
+# such script in the shell dies "No such file or directory" -- so the file itself
+# has to exist. bin/login binds files/usr/usr onto /usr, so this link path, once
+# extracted into $PREFIX/usr, IS /usr/bin/env as the kernel resolves a shebang.
+ENV_SYMLINK = "usr/bin/env"
+
+
+def env_symlink_line(profile_link: str) -> str:
+    """The SYMLINKS.txt line that makes /usr/bin/env exist on a fresh install.
+
+    The target is derived from profile_link -- the SAME declaration that produces
+    the default-profile symlink below -- so no /nix/store hash is ever written
+    here: the nixpkgs pin moves, every hash under it moves, and a literal would
+    rot into a dangling link silently.
+
+    Pure str -> str like patch_login_inner, so test/test-bootstrap-baked.sh can
+    build a sandbox out of the REAL line and EXECUTE a `#!/usr/bin/env sh` script
+    through it, with no nix and no bootstrap zip.
+    """
+    return f"/{profile_link}/bin/env←{ENV_SYMLINK}"
+
+
+def env_target_unreachable(env_rel, existing, new_files, new_executables):
+    """None when the resolved coreutils `env` really ships AND gets chmod +x.
+
+    A symlink onto an absent or non-executable target is WORSE than no symlink at
+    all: it converts a clean "no such file or directory" into a permission error
+    nothing in the shell explains. Pure, so the tester can prove both verdicts.
+    """
+    if env_rel in existing:
+        return None  # already shipped by the input zip, with its own manifest lines
+    if env_rel not in new_files:
+        return f"{env_rel} is not a file entry in the output zip"
+    if env_rel not in new_executables:
+        return f"{env_rel} is not in EXECUTABLES.txt, so nothing ever chmods it +x"
+    return None
+
 
 def patch_login_inner(login_inner: str, app_id: str, fallback_script: str) -> str:
     """The text edits #595/#638 make to the generated usr/lib/login-inner.
@@ -246,6 +286,23 @@ def main() -> int:
 
             # the profile generation itself becomes the DEFAULT profile
             new_symlinks.append(f"{generation}←{profile_link}")
+
+            # ── #640: and /usr/bin/env resolves through that same profile ───
+            env_in_profile = os.path.join(generation, "bin", "env")
+            if not os.path.islink(env_in_profile) and not os.path.exists(env_in_profile):
+                print(f"FAIL: the realized profile has no bin/env ({env_in_profile}) -- "
+                      f"coreutils is missing from default_packages.attrs ({attrs})", file=sys.stderr)
+                return 1
+            if ENV_SYMLINK in existing:
+                print(f"FAIL: the input zip already carries {ENV_SYMLINK}; a second entry for it "
+                      "would make which one wins depend on extraction order", file=sys.stderr)
+                return 1
+            why = env_target_unreachable(
+                os.path.realpath(env_in_profile).lstrip("/"), existing, new_files, new_executables)
+            if why:
+                print(f"FAIL: /{ENV_SYMLINK} would point at something unrunnable: {why}", file=sys.stderr)
+                return 1
+            new_symlinks.append(env_symlink_line(profile_link))
 
             fallback_body = (
                 "# #595 -- baked default tooling, sourced by usr/lib/login-inner when\n"

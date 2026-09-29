@@ -79,16 +79,19 @@
           "attrs": [
             "git",
             "nodejs_22",
-            "claude-code"
+            "claude-code",
+            "coreutils"
           ],
+          "_doc_coreutils": "#640 -- coreutils is here for ONE path that is not a user-facing tool: /usr/bin/env. The bootstrap zip ships usr/bin/ EMPTY (verified across all 4056 central-directory entries of the pinned aarch64 zip: no usr/bin/env entry, no */bin/env anywhere, no SYMLINKS.txt line for it), and the only thing that has ever created it is upstream's first-login wizard -- which default_packages exists precisely to skip (etc/static/UNINTIALISED is dropped). #638 stopped the terminal DYING on that absence; it could not make `#!/usr/bin/env sh`, the commonest shebang there is, work. bake_default_packages.py::env_symlink_line emits a SYMLINKS.txt line for usr/bin/env pointing at profile_link + /bin/env, i.e. at THIS attr, and hard-fails the build if that target is not a real zip entry listed in EXECUTABLES.txt. Do not remove coreutils from attrs believing it is a convenience package: the bake step will fail loudly, which is the point.",
           "provides": {
             "git": ["git"],
             "nodejs_22": ["node", "npm", "npx"],
-            "claude-code": ["claude"]
+            "claude-code": ["claude"],
+            "coreutils": ["env"]
           },
           "profile_link": "nix/var/nix/profiles/per-user/nix-on-droid/profile",
           "fallback_init_script": "usr/lib/cloud-agent-tools-init.sh",
-          "binaries": ["git", "node", "npm", "npx", "claude"]
+          "binaries": ["git", "node", "npm", "npx", "claude", "env"]
         }
       }
     }
