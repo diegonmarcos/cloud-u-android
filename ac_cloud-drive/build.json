@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 19,
+    "version_code": 18,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -665,9 +665,7 @@
         "libs:rclone",
         "libs:mounts",
         "libs:bottomnav",
-        "libs:auth",
-        "libs:gh",
-        "libs:gix"
+        "libs:auth"
       ]
     },
     "libs:core": {
@@ -726,17 +724,6 @@
     "libs:bottomnav": {
       "_doc_dir": "#579 THE fleet bottom-nav island (#565): the five tabs are drawn by the same Compose declaration superapp, mail, wallet and me render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
-      "type": "library"
-    },
-    "_doc_git_chain_libs": "#646 THE TWO BINARY LIBRARIES OF THE GIT AUTH+OPS CHAIN, both shared BY REFERENCE like every module here and both NOT engines: they export no @Composable and host nothing, so they carry no `engine: true` (the libs:auth / libs:bottomnav precedent). Each ships a sha256-pinned FULLY STATIC binary as jniLibs/<abi>/lib<name>.so the libs:rclone way — fetch-once-refuse-on-mismatch of the archive AND the extracted binary, plus an ELF program-header walk that refuses a PT_INTERP — and this app already sets packaging.jniLibs.useLegacyPackaging = true, without which AGP would keep the payloads compressed and extract NOTHING. They are linked HERE, and not only shipped as their own cloud-lib-* APKs, for two reasons: the chain's visible state belongs to this app's Sync ▸ Git page, and a library whose tests no consuming app runs is a hollow green.",
-    "libs:gh": {
-      "_doc_dir": "#646 rung 2 of the declared git auth chain (ab_cloud-libs-shared/build.json::auth.git_chain): the GitHub CLI as a 37.1 MB fully static binary, plus the device grant that turns it into a git credential. It authenticates against GITHUB'S OWN app — the client ids are compiled into the pinned binary and both were measured returning live device codes — so nothing is registered on our side and no provider setting has to be toggled. That is what makes it different from the GitHub APP client #641 deleted, which stays deleted. It also closes the leg #641/#642 left open: listing personal repositories is /user/repos, which is REST and not the git protocol, so it needs a token however it was obtained.",
-      "dir": "../ab_cloud-libs-shared/libs/gh",
-      "type": "library"
-    },
-    "libs:gix": {
-      "_doc_dir": "#646 the in-process git leg: gitoxide as a 17.9 MB fully static binary that clones and fetches over HTTPS in ONE file, with no helper process and no rootfs. Canonical git cannot ship this way — `git-remote-https` is a SEPARATE executable and Android extracts only lib*.so. IT CANNOT PUSH (`gix push` is not a subcommand), and nothing pretends it can: data/gix-binary.json::verbs declares clone and fetch only, GixRunner refuses anything outside that declaration, and test/test-drive-git-auth-chain.sh fails the build if push is ever routed here. Push stays with the terminal handoff (#642's RUN_COMMAND) and with JGit inside libs:git-sync.",
-      "dir": "../ab_cloud-libs-shared/libs/gix",
       "type": "library"
     },
     "_doc_engine_flag": "#579 `engine: true` marks a module as one of the FOUR ENGINE LIBRARIES (the host contract: one @Composable <X>Screen(target, onOpenFile, onClose), a title string, the module boundary). Until #579 every Compose library this app linked WAS an engine, so test-drive-engine-modules.sh discovered engines as 'Compose library'; libs:bottomnav (the fleet's nav island, chrome not tooling) is the first Compose library here that is not one, so the role is now declared, not inferred."

@@ -543,15 +543,6 @@ dependencies {
     // #587 THE sign-in of the fleet: Configs ▸ Sign in hosts libs:auth's Compose surface
     // (the same one superapp's Profile ▸ Connect hosts) and applies the drive sections.
     implementation project(':libs:auth')
-    // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
-    // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
-    // GitAuthChain. These two carry the binaries: libs:gh is the github rung's
-    // device grant and the REST repo listing #641/#642 left without a credential;
-    // libs:gix clones and fetches in-process. NEITHER IS AN ENGINE — no Compose
-    // surface, nothing for EngineActivity to host. Both land a static payload in
-    // jniLibs, which is why packaging.jniLibs.useLegacyPackaging below is load-bearing.
-    implementation project(':libs:gh')
-    implementation project(':libs:gix')
     // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
     // libraries pin, so app and libraries compose against one toolchain.
     implementation platform('androidx.compose:compose-bom:2025.01.00')

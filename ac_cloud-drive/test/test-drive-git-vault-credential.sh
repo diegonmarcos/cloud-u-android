@@ -86,16 +86,8 @@ a3() {
     # The page states which of the TWO states it is in, and nothing else.
     grep -qE 'R\.string\.git_login_vault_absent' "$f" \
         || { echo "    the page does not say anything when there is no vault credential"; bad=1; }
-    # #646 INVERTED, on measured grounds. #641 demanded this line end "there is no browser
-    # login" — true then, because the only GitHub client we had declared was a GitHub APP and
-    # GitHub Apps ship Device Flow OFF. The official gh binary carries GITHUB'S OWN app ids and
-    # both return live device codes, so that sentence is now false and must be GONE, replaced by
-    # the declared chain. The half of A3 that still holds is above and below: no libs:auth
-    # sign-in surface on this page, and no breadcrumb to a provider setting.
-    grep -qE 'git_login_vault_absent">[^<]*declared chain' "$str" \
-        || { echo "    the credential-absent line does not name the declared chain as the way out"; bad=1; }
     grep -qE 'git_login_vault_absent">[^<]*no browser login' "$str" \
-        && { echo "    the credential-absent line still denies a browser login, which #646 measured to be false"; bad=1; }
+        || { echo "    the credential-absent line does not state plainly that there is no browser login"; bad=1; }
     # #639: no breadcrumbs. The page may not send the owner to another page or to a provider setting.
     grep -qE 'settings/apps|settings/developers|Configs . Sign in' "$f" "$str" \
         && { echo "    the page points at a provider setting or another page instead of saying its own state"; bad=1; }
@@ -174,7 +166,7 @@ r2() {
 
 echo "── A the vault is the primary git credential path ──"
 a1 "$PAGE" && pass "the page authenticates from the vault-delivered credential and lists with it, untapped" || fail "the git credential does not come from the vault-delivered config"
-a3 "$PAGE" "$STR" && pass "#646 no libs:auth sign-in surface and no provider-setting breadcrumb on the page, and the credential-absent line names the declared chain" || fail "the page hosts a sign-in surface, points at a provider setting, or misstates the credential-absent case"
+a3 "$PAGE" "$STR" && pass "#641 there is no browser login on the page, and the credential-absent line says so" || fail "the page still offers or points at a browser login"
 a4 "$APPLY" && pass "one store, the declared credential_id, and a fresh phone keeps the token" || fail "the vault credential is not stored/read through libs:git-sync's own store"
 python3 - "$BJ" <<'PYTHON'
 import json, sys
@@ -211,25 +203,12 @@ open(p,'w',encoding='utf-8').write(s)" "$copy"
 cmp -s "$PAGE" "$copy" && fail "MUT the mutation did not change the page (tester is stale)" \
     || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT a sign-in surface back on the page passed — A3 does not hold"; else pass "MUT a browser login put back on the page goes RED"; fi; }
 
-# #646 repointed at the line that exists now. The invariant is unchanged: prose that sends the
-# owner to a provider setting instead of stating the page's own state must go RED.
 copy="$MUT/breadcrumb.xml"; cp "$STR" "$copy"
 python3 -c "
 import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
-s=s.replace('the declared chain can fetch one','enable Device Flow at github.com/settings/apps')
+s=s.replace('there is no browser login','enable Device Flow at github.com/settings/apps')
 open(p,'w',encoding='utf-8').write(s)" "$copy"
-cmp -s "$STR" "$copy" && fail "MUT the breadcrumb mutation did not change the string table (tester is stale)" \
-    || { if a3 "$PAGE" "$copy" >/dev/null 2>&1; then fail "MUT prose pointing at the provider setting passed — A3 does not hold"; else pass "MUT a breadcrumb back to github.com/settings/apps goes RED"; fi; }
-
-# #646 AND THE NEW HALF: the deleted claim must not creep back. A build that re-denies the
-# browser login is a build whose page contradicts the chain it now ships.
-copy="$MUT/redenied.xml"; cp "$STR" "$copy"
-python3 -c "
-import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
-s=s.replace('failing that, the declared chain can fetch one','there is no browser login')
-open(p,'w',encoding='utf-8').write(s)" "$copy"
-cmp -s "$STR" "$copy" && fail "MUT the re-denial mutation did not change the string table (tester is stale)" \
-    || { if a3 "$PAGE" "$copy" >/dev/null 2>&1; then fail "MUT re-denying the browser login passed — the #646 inversion is not pinned"; else pass "MUT the page re-denying that a browser login exists goes RED"; fi; }
+if a3 "$PAGE" "$copy" >/dev/null 2>&1; then fail "MUT prose pointing at the provider setting passed — A3 does not hold"; else pass "MUT a breadcrumb back to github.com/settings/apps goes RED"; fi
 
 copy="$MUT/apply.kt"; cp "$APPLY" "$copy"
 python3 -c "

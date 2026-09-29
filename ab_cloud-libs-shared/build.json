@@ -3618,32 +3618,6 @@
           ]
         }
       ]
-    },
-    "_doc_git_chain": "#646 THE ONE ORDERED GIT-AUTH CHAIN of the fleet, and the ONLY place its ranking exists. `order` is the ranking; `providers` describes each rung; a rung in one and not the other is refused at parse time (the #627 closed-at-both-ends rule libs:appstore's resolver.order already uses). REORDERING THIS LIST REORDERS THE REAL ATTEMPTS and DELETING A RUNG STOPS IT BEING TRIED, with no Kotlin edit — that is the whole point, and #646's tester mutation-proves both. The owner's ask: 'if our servers are down we can do gh if not we can use our flow', so `fleet` is preferred whenever reachable and `github` is what answers when it is not. Read by libs:auth (AuthDeclaration.gitChain) and by nothing else; WALKED by libs:git-sync (GitAuthChain), which never reads JSON, so no module depends on another to resolve a credential. BOTH RUNGS WRITE THE SAME CREDENTIAL, under the SAME id the vault import already writes (ac_cloud-drive/build.json::auth.applies.git.credential_id = vault-git-https, #629) — the id is NOT repeated here, because a second copy of it is exactly how a credential silently splits in two and stays invisible until a clone fails. The vault import remains the primary path and is not a rung: it needs no negotiation at all. THIS IS NOT auth.sign_in.providers AND MUST NOT BECOME IT: #641 deleted a `github` device_flow provider from that list because OUR declared client was a GitHub APP and GitHub Apps ship Device Flow OFF, and it stays deleted. The `github` rung here authenticates through GITHUB'S OWN app, whose client ids are compiled into the pinned gh binary and were both measured returning live device codes, so nothing is registered on our side and no provider setting has to be toggled.",
-    "git_chain": {
-      "order": [
-        "fleet",
-        "github"
-      ],
-      "providers": {
-        "fleet": {
-          "_doc": "#647, BUILT IN PARALLEL IN cloud-infra AND MAY NOT EXIST YET. Our own Authelia-fronted proxy mints the git credential server-side, so on this leg the PHONE HOLDS NO GITHUB CREDENTIAL of its own — that is why it is ranked first. An endpoint that does not answer yet must render as a CLEAN FALL-THROUGH to the next rung and never as an error: not-built-yet, our-servers-are-down and this-network-cannot-reach-us are the same observable event to a phone, and all three mean 'try github'. The timeouts are deliberately SHORTER than the rest of the fleet's (4s/8s against config_source's 8s/20s) because this rung's failure is expected and cheap: the chain must move on quickly, not make the owner watch a spinner for twenty seconds before the rung that works. THE ONE COORDINATION POINT with #647: if that ticket serves a different path or response shape, this declaration is what changes — nothing in Kotlin names this URL.",
-          "label": "Cloud fleet",
-          "kind": "fleet_proxy",
-          "token_url": "https://api.diegonmarcos.com/pub/git/credential",
-          "connect_timeout_ms": 4000,
-          "read_timeout_ms": 8000,
-          "holds_github_credential": false
-        },
-        "github": {
-          "_doc": "Direct to GitHub through the gh CLI's device flow — what works when our servers are down, with ZERO registration on our side. The endpoints, the verification URI and the client ids are NOT repeated here: they live in the ONE pin that also carries the binary's hashes (ab_cloud-libs-shared/libs/gh/data/gh-binary.json), because an endpoint declared apart from the binary it belongs to is a second source of truth that drifts the moment gh is upgraded. `scope` is what the git rung needs: HTTPS clone/fetch/push plus the REST repo listing that #641/#642 left without a credential (/user/repos is REST, not the git protocol, so it needs a token however it was obtained). The honest UX tax, stated once: the owner reads a short code and types it at github.com/login/device, once per device.",
-          "label": "GitHub",
-          "kind": "gh_device_flow",
-          "scope": "repo read:org",
-          "pin": "libs/gh/data/gh-binary.json",
-          "holds_github_credential": true
-        }
-      }
     }
   }
 }
