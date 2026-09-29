@@ -67,6 +67,37 @@ object Declarations {
     /** One repository of the declared public set. */
     data class GitPublicRepoDecl(val name: String, val label: String)
 
+    /**
+     * #642 HOW A GIT OPERATION LEAVES THIS APP. cloud-drive runs no git: it hands the argv to
+     * cloud-terminal-nix's RunCommandService, which has a real git CLI in a real proot rootfs
+     * and the credential to use it.
+     *
+     * Every field is declared (build.json::ui.sync.git.terminal) and [pkg] is substituted into
+     * the rest at BUILD time from the constellation fleet manifest, so no package id, action or
+     * extra name is a literal in Kotlin. [command] is the terminal's bin/login, whose "called
+     * with arguments" branch execs the caller's argv inside the proot (#641) -- a /nix/store
+     * binary exec'd straight from Android would die for want of its glibc interpreter.
+     */
+    data class GitTerminalDecl(
+        val pkg: String,
+        val action: String,
+        val permission: String,
+        val command: String,
+        val extraPath: String,
+        val extraArguments: String,
+        val extraWorkdir: String,
+        val extraBackground: String,
+        val background: Boolean,
+        val ops: Map<String, List<String>>,
+    ) {
+        val declared: Boolean get() =
+            pkg.isNotBlank() && action.isNotBlank() && command.isNotBlank() && ops.isNotEmpty()
+
+        /** The argv for [op] with the declared placeholders filled, or null if [op] is not declared. */
+        fun argv(op: String, url: String, dest: String): List<String>? =
+            ops[op]?.map { it.replace("{url}", url).replace("{dest}", dest) }
+    }
+
     data class GitPageDecl(
         val dense: Boolean,
         val owner: String,
@@ -79,6 +110,7 @@ object Declarations {
         val historyMax: Int,
         val nameFamilies: List<String>,
         val publicRepos: List<GitPublicRepoDecl>,
+        val terminal: GitTerminalDecl?,
     ) {
         fun op(id: String): GitOpDecl? = ops.firstOrNull { it.id == id }
         fun remoteMode(id: String): GitRemoteModeDecl? = remoteModes.firstOrNull { it.id == id }
@@ -273,6 +305,7 @@ object Declarations {
     fun parseGitPage(e: JsonElement?): GitPageDecl {
         val o = e as? JsonObject ?: return EMPTY_GIT_PAGE
         val api = (o["api"] as? JsonObject) ?: JsonObject(emptyMap())
+        val term = o["terminal"] as? JsonObject
         return GitPageDecl(
             dense = o.bool("dense", true),
             owner = o.str("owner"),
@@ -295,6 +328,24 @@ object Declarations {
             },
             historyMax = (o.int("history_max") ?: 30).coerceAtLeast(1),
             nameFamilies = o.strings("name_families"),
+            // #642 absent block -> null -> the page says git handoff is not configured rather
+            // than firing an intent with an empty action, which resolves to nothing in silence.
+            terminal = term?.let { t ->
+                GitTerminalDecl(
+                    pkg = t.str("package"),
+                    action = t.str("action"),
+                    permission = t.str("permission"),
+                    command = t.str("command"),
+                    extraPath = t.str("extra_path"),
+                    extraArguments = t.str("extra_arguments"),
+                    extraWorkdir = t.str("extra_workdir"),
+                    extraBackground = t.str("extra_background"),
+                    background = t.bool("background"),
+                    ops = ((t["ops"] as? JsonObject)?.mapValues { (_, v) ->
+                        (v as? JsonArray)?.mapNotNull { e -> (e as? JsonPrimitive)?.contentOrNull }.orEmpty()
+                    })?.filterValues { it.isNotEmpty() }.orEmpty(),
+                )
+            },
             // `repo`/`caption`, not `name`/`label`: build.json::ui.sync.git._doc_public_repos
             // says why (the fleet's app-names guard sweeps name/label/title, and a repository
             // name is not an application name).
@@ -429,6 +480,11 @@ object Declarations {
     /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin.
      *  #641 `webauth` is gone with the GitHub device grant it drove. */
     const val KIND_SSH_KEY = "ssh_key"
+
+    /** #642 the terminal-handoff operation ids (build.json::ui.sync.git.terminal.ops keys).
+     *  Clone is not one of ui.sync.git.ops: those are the verbs of a repository ALREADY on
+     *  the device, and this is the one that puts it there. */
+    const val GIT_OP_CLONE = "clone"
 
     /** #608 the declared remote modes, by id. */
     const val REMOTE_HTTPS = "https"

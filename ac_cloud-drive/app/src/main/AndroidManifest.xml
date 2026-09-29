@@ -19,8 +19,21 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
+    <!-- #642 git operations are cloud-terminal-nix's job, and its RunCommandService is guarded
+         by this permission (protectionLevel dangerous, so it is also asked for at the point of
+         use). ${terminalPackage} is interpolated from the constellation fleet manifest by
+         app/build.gradle — the package id is not typed here, or anywhere but build.json's
+         fleet id. Without this line the service call is refused with a SecurityException, which
+         is exactly the "looked like it worked" failure this feature is built to avoid. -->
+    <uses-permission android:name="${terminalPackage}.permission.RUN_COMMAND" />
+
     <queries>
         <package android:name="com.diegonmarcos.clouddrive" />
+        <!-- #642 the terminal is resolved by package to tell "not installed" apart from
+             "refused": on API 30+ an unqueried package is INVISIBLE, and invisible reads
+             exactly like uninstalled. The MAIN/LAUNCHER query below would cover it today,
+             but only for as long as the terminal keeps a launcher icon. -->
+        <package android:name="${terminalPackage}" />
 
         <!-- The Apps tab launches the fleet's data apps (and Tidal) through the system
              launcher. A package query per tile would be a second list of packages to

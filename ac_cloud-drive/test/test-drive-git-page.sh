@@ -62,6 +62,10 @@ APP="$ROOT/ac_cloud-drive"
 BJ="$APP/build.json"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 PAGE="$SRC/sync/GitReposScreen.kt"
+# #642 the two files the terminal handoff must reach beyond the screen: the build that resolves
+# the fleet id to a package, and the manifest that must hold the permission it needs.
+GRADLE="$APP/app/build.gradle"
+MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 COORD="$SRC/sync/GitSyncCoordinator.kt"
 LIST="$SRC/sync/GitHubRepos.kt"
 SCAN="$SRC/sync/GitRepoScan.kt"
@@ -308,6 +312,47 @@ if grep -qE 'confirm = op' "$PAGE" && grep -qE 'R\.string\.git_confirm_force_pus
 if grep -qE 'val blocked = readOnly && \(op\.id == GitSyncCoordinator\.OP_PUSH \|\| op\.id == GitSyncCoordinator\.OP_FORCE_PUSH\)' "$PAGE" && grep -qE 'R\.string\.git_readonly_blocked' "$PAGE"; then pass "a read-only remote refuses push and force push instead of offering a button that always fails"; else fail "the read-only remote mode is not enforced"; fi
 if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD"; then pass "a clone lands in the store's git folder, the same one the seed uses"; else fail "the page's clone does not land in SharedStore.repoDir"; fi
 
+echo "== T #642 git is handed to cloud-terminal, and the wiring exists =="
+# The DECLARATION and the four places it must reach. Every one of these is the shape where a
+# feature is declared and then silently not wired: a fleet id gradle never resolves, a manifest
+# without the permission (SecurityException), a screen that never reports the outcome.
+t642() {
+python3 - "$1" "$2" "$3" "$4" <<'PYEOF'
+import json, re, sys
+bj, gradle, manifest, page = sys.argv[1:5]
+g = json.load(open(bj))["ui"]["sync"]["git"]
+t = g.get("terminal")
+bad = 0
+if not isinstance(t, dict) or not t.get("fleet") or not t.get("action") or not t.get("ops", {}).get("clone"):
+    print("    ui.sync.git.terminal must declare fleet + action + ops.clone"); bad = 1
+else:
+    if "{package}" not in t["action"] or "{package}" not in t.get("command", ""):
+        print("    the action/command must be derived from {package}, never a typed package id"); bad = 1
+    if t["ops"]["clone"][:2] != ["git", "clone"]:
+        print("    ops.clone is not a git clone: %s" % t["ops"]["clone"]); bad = 1
+    if "{url}" not in t["ops"]["clone"] or "{dest}" not in t["ops"]["clone"]:
+        print("    ops.clone must carry {url} and {dest} as separate argv words"); bad = 1
+gr = open(gradle).read()
+if "uiDecl.sync?.git?.terminal" not in gr or "fleetById[term.fleet]" not in gr or "GradleException" not in gr:
+    print("    app/build.gradle does not resolve terminal.fleet from the fleet manifest, or does not hard-fail"); bad = 1
+if "manifestPlaceholders" not in gr or "terminalPackage" not in gr:
+    print("    the resolved package is not handed to the manifest as a placeholder"); bad = 1
+mf = open(manifest).read()
+if "${terminalPackage}.permission.RUN_COMMAND" not in mf:
+    print("    AndroidManifest declares no RUN_COMMAND uses-permission — the call would be refused"); bad = 1
+if "<package android:name=\"${terminalPackage}\" />" not in mf:
+    print("    the terminal is not in <queries> — 'not installed' and 'invisible' would be the same answer"); bad = 1
+pg = open(page).read()
+for token in ("TerminalGit.run(", "R.string.git_terminal_sent", "R.string.git_terminal_absent",
+              "R.string.git_terminal_no_service", "DriveTags.SYNC_GIT_HANDOFF"):
+    if token not in pg:
+        print("    the screen never uses %s — an outcome would go unreported" % token); bad = 1
+print("T642 " + ("OK" if not bad else "BAD"))
+PYEOF
+}
+T642="$(t642 "$BJ" "$GRADLE" "$MANIFEST" "$PAGE" | tail -1)"
+if [ "$T642" = "T642 OK" ]; then pass "a clone is handed to cloud-terminal: declared by fleet id, resolved in gradle, permitted in the manifest, and every outcome reported"; else t642 "$BJ" "$GRADLE" "$MANIFEST" "$PAGE" | sed -n '1,8p'; fail "the #642 terminal handoff is declared but not wired"; fi
+
 echo "== M mutation-proof =="
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["ops"]=b["ui"]["sync"]["git"]["ops"][:-1]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-size-op.json"
@@ -321,6 +366,16 @@ p2 "$TMP/private-in-public.json" "$REPOS" >/dev/null && fail "P2 passed a PRIVAT
 grep -v '    fun forcePush(' "$ENGINE" > "$TMP/engine.kt"
 cmp -s "$ENGINE" "$TMP/engine.kt" && fail "the engine mutation changed nothing (tester is stale)"
 p4 "$COORD" "$TMP/engine.kt" >/dev/null && fail "P4 passed an engine without forcePush (tester is vacuous)" || pass "forcePush removed from the engine → P4 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["terminal"]["action"]="cld.termux.nix.RUN_COMMAND"; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/typed-package.json"
+t642 "$TMP/typed-package.json" "$GRADLE" "$MANIFEST" "$PAGE" | grep -q '^T642 OK$' && fail "T642 passed a hardcoded package id in the action (tester is vacuous)" || pass "the terminal action retyped as a package literal → T642 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); del b["ui"]["sync"]["git"]["terminal"]["ops"]["clone"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-clone-op.json"
+t642 "$TMP/no-clone-op.json" "$GRADLE" "$MANIFEST" "$PAGE" | grep -q '^T642 OK$' && fail "T642 passed a terminal block with no clone argv (tester is vacuous)" || pass "ops.clone dropped → T642 RED"
+grep -v 'uses-permission android:name="${terminalPackage}.permission.RUN_COMMAND"' "$MANIFEST" > "$TMP/manifest.xml"
+cmp -s "$MANIFEST" "$TMP/manifest.xml" && fail "the manifest mutation changed nothing (tester is stale)"
+t642 "$BJ" "$GRADLE" "$TMP/manifest.xml" "$PAGE" | grep -q '^T642 OK$' && fail "T642 passed a manifest without RUN_COMMAND (tester is vacuous)" || pass "RUN_COMMAND removed from the manifest → T642 RED"
+grep -v 'R.string.git_terminal_no_service' "$PAGE" > "$TMP/page642.kt"
+cmp -s "$PAGE" "$TMP/page642.kt" && fail "the screen mutation changed nothing (tester is stale)"
+t642 "$BJ" "$GRADLE" "$MANIFEST" "$TMP/page642.kt" | grep -q '^T642 OK$' && fail "T642 passed a screen that swallows the no-service outcome (tester is vacuous)" || pass "the no-service line deleted from the screen → T642 RED"
 p1 "$BJ" >/dev/null && p2 "$BJ" "$REPOS" >/dev/null && p3 "$BJ" "$PAGE" >/dev/null && p4 "$COORD" "$ENGINE" >/dev/null \
     && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 

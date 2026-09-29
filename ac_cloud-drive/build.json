@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 17,
+    "version_code": 18,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -410,6 +410,22 @@
           "repos_path": "/user/repos?per_page=100&affiliation=owner&sort=full_name",
           "max_pages": 4,
           "web_url": "https://github.com/{owner}/{name}"
+        },
+        "_doc_terminal": "#642 GIT IS THE TERMINAL'S JOB, NOT THIS APP'S. cloud-drive holds no git credential and mints none: a clone is handed to cloud-terminal-nix, which already carries a real git CLI inside its proot rootfs and the credential that pushes all day. That is why `webauth` did not need replacing with a second login (#641 deleted an OAuth device grant against a GitHub App that could never work) -- the fleet already owns this operation, and the app that owns it is the one that should run it. THE PIPE IS NOT NEW: RunCommandService is ours (ac_cloud-nix-on-droid RunCommandService.java), its action and permission are declared in that app's manifest, and #198/#620 exist precisely to make it usable from another app (allow-external-apps=true, rewritten on every launch and boot). cloud-drive is its first in-app client. `fleet` is resolved to a package at BUILD time from the same constellation manifest the Apps grid and ui.volumes.personal_auth resolve against, and every {package} below is substituted from it once -- so the terminal's id is written down here exactly as often as it is written down anywhere else: once. `command` is bin/login rather than a store path: login execs the caller's argv inside the proot where git and its glibc loader exist (the argv branch #641 fixed and tests), so `login git clone <url> <dest>` is a real git in a real rootfs, while exec'ing a /nix/store binary straight from Android would die for want of an interpreter. background=false so the clone runs in a visible session the user can read, including git's own error text.",
+        "terminal": {
+          "fleet": "nix-on-droid",
+          "action": "{package}.RUN_COMMAND",
+          "permission": "{package}.permission.RUN_COMMAND",
+          "command": "/data/data/{package}/files/usr/bin/login",
+          "extra_path": "{package}.RUN_COMMAND_PATH",
+          "extra_arguments": "{package}.RUN_COMMAND_ARGUMENTS",
+          "extra_workdir": "{package}.RUN_COMMAND_WORKDIR",
+          "extra_background": "{package}.RUN_COMMAND_BACKGROUND",
+          "background": false,
+          "_doc_ops": "The argv handed to bin/login, per operation. {url} and {dest} are the only placeholders and are substituted once, positionally, never concatenated into a shell string -- an argv array cannot be re-split by a space or a quote in a repository name.",
+          "ops": {
+            "clone": ["git", "clone", "{url}", "{dest}"]
+          }
         },
         "_doc_remote_modes": "What a row's Remote operation can switch `origin` to, in order. One URL shape each, declared, so the page never composes a remote by hand: HTTPS (what a token authenticates), SSH (what the user's key authenticates) and read-only, which is the same HTTPS URL with `read_only` set — the page then refuses push and force push on that repository rather than offering a button that always fails.",
         "remote_modes": [

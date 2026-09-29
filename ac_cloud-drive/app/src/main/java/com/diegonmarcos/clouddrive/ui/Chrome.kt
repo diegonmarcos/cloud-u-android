@@ -137,6 +137,8 @@ object DriveTags {
     const val SYNC_GIT_ROW = "sync_git_row"
     const val SYNC_GIT_OPS = "sync_git_ops"
     const val SYNC_GIT_LOGIN = "sync_git_login"
+    /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */
+    const val SYNC_GIT_HANDOFF = "sync_git_handoff"
     /** #629 the line that says where the git credential came from: the vault, or nowhere yet. */
     const val SYNC_GIT_VAULT_NOTE = "sync_git_vault_note"
     const val SYNC_HISTORY = "sync_history"

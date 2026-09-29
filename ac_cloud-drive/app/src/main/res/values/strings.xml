@@ -389,4 +389,15 @@
     <string name="viewer_info_location">%1$.5f, %2$.5f</string>
     <string name="viewer_delete_title">Delete %1$s?</string>
     <string name="viewer_saved">Saved %1$s</string>
+    <!-- #642 the cloud-terminal git handoff. Every outcome has its own line: a clone that
+         reported nothing is the silent no-op this feature exists to make impossible. -->
+    <string name="git_terminal_sent">Cloning %1$s in cloud-terminal → %2$s</string>
+    <string name="git_terminal_absent">cloud-terminal-nix (%1$s) is not installed, so git cannot run.</string>
+    <string name="git_terminal_asking">cloud-terminal needs permission to run commands for this app.</string>
+    <string name="git_terminal_granted">Permission granted. Clone again to hand it to cloud-terminal.</string>
+    <string name="git_terminal_refused">Permission refused, so git cannot be handed to cloud-terminal.</string>
+    <string name="git_terminal_no_service">cloud-terminal is installed but answers no %1$s service.</string>
+    <string name="git_terminal_refused_by">cloud-terminal refused the handoff: %1$s</string>
+    <string name="git_terminal_no_op">No %1$s command is declared for cloud-terminal.</string>
+    <string name="git_terminal_not_declared">No cloud-terminal handoff is declared in this build.</string>
 </resources>

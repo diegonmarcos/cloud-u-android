@@ -251,6 +251,30 @@ if (!(uiDecl.volumes?.classes instanceof List) || uiDecl.volumes.classes.isEmpty
 def uiTabsB64     = b64(uiDecl.tabs)
 def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
 def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
+// #642 Sync ▸ Git hands every git OPERATION to cloud-terminal-nix, so the terminal's package
+// is resolved here from the SAME constellation manifest personal_auth above resolves against —
+// one package list for the whole fleet, never a second (#170/#380/#381). Every {package}
+// placeholder in the block (the action, the permission, bin/login's path and the four extras)
+// is substituted from that one answer, so the id is written down once, in build.json, as a
+// fleet id rather than as a package literal anywhere. A fleet id the manifest lacks is a hard
+// error: resolving it would bake an intent aimed at a package that cannot exist, and an
+// unresolvable intent is exactly the silent no-op this feature must never have.
+def terminalPackage = ''
+if (uiDecl.sync?.git?.terminal != null) {
+    def term = uiDecl.sync.git.terminal
+    def termFleet = fleetById[term.fleet]
+    if (termFleet == null) {
+        throw new GradleException(
+            "build.json::ui.sync.git.terminal.fleet '${term.fleet}' is not in the constellation " +
+            "fleet manifest ($fleetAppsFile) — Sync ▸ Git would bake an intent at no package.")
+    }
+    terminalPackage = termFleet.package.toString()
+    term.each { k, v ->
+        if (v instanceof String) term[k] = v.replace('{package}', terminalPackage)
+    }
+    term.package = terminalPackage
+    term.remove('fleet')
+}
 def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiVolumesDecl = uiDecl.volumes.findAll { k, v -> !k.startsWith('_') }
@@ -376,6 +400,10 @@ android {
         resConfigs "en"
         versionCode codeFinal
         versionName "${buildJson.android.version_name} (sha-${shortSha})"
+        // #642 the manifest's <uses-permission> for the terminal's RUN_COMMAND cannot read
+        // build.json, and a retyped package literal there would be the second copy this whole
+        // resolution exists to avoid — so it interpolates the SAME answer the UI declaration got.
+        manifestPlaceholders = [terminalPackage: terminalPackage]
         ndk {
             def abiOverride = System.getenv('CLOUDDRIVE_ABIS')
             def abis = (abiOverride?.trim()) \

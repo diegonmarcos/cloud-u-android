@@ -1,5 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -132,8 +134,53 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val clonedByName = repos.associateBy { File(it.path).name }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
-    /** Clone [name] with whatever the personal section signed in as; public rows need nothing. */
+    // #642 what the last handoff to cloud-terminal-nix resolved to. Never empty after a
+    // clone attempt: a handoff that reported nothing is the silent no-op this feature exists
+    // to make impossible.
+    var handoff by remember { mutableStateOf("") }
+    val askRunCommand = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        // #639: state the fact, do not narrate a route through Settings.
+        handoff = ctx.getString(if (ok) R.string.git_terminal_granted else R.string.git_terminal_refused)
+    }
+
+    /**
+     * #642 CLONE IS THE TERMINAL'S JOB. The argv goes to cloud-terminal-nix, which has a real
+     * git and the credential for it; this app keeps none. Every outcome is turned into one
+     * factual line, including where the clone will land, because the store folder it lands in
+     * is the folder Files already lists — so the result is visible without a second step.
+     *
+     * The declaration's absence is the ONLY case that falls back to the in-process JGit path,
+     * and it says so: a build with no terminal block is a misconfiguration, not a mode.
+     */
+    fun cloneViaTerminal(name: String): Boolean {
+        val url = page.cloneUrl(name, Declarations.REMOTE_HTTPS)
+        val dest = SharedStore.repoDir(name)
+        val outcome = TerminalGit.run(ctx, page.terminal, Declarations.GIT_OP_CLONE, url, dest)
+        handoff = when (outcome) {
+            is TerminalGit.Outcome.Sent ->
+                ctx.getString(R.string.git_terminal_sent, name, outcome.dest.absolutePath)
+            is TerminalGit.Outcome.NotInstalled ->
+                ctx.getString(R.string.git_terminal_absent, outcome.pkg)
+            is TerminalGit.Outcome.NeedsPermission -> {
+                askRunCommand.launch(outcome.permission)
+                ctx.getString(R.string.git_terminal_asking)
+            }
+            is TerminalGit.Outcome.NoService ->
+                ctx.getString(R.string.git_terminal_no_service, outcome.action)
+            is TerminalGit.Outcome.Refused ->
+                ctx.getString(R.string.git_terminal_refused_by, outcome.why)
+            is TerminalGit.Outcome.NoSuchOp ->
+                ctx.getString(R.string.git_terminal_no_op, outcome.op)
+            TerminalGit.Outcome.NotDeclared ->
+                ctx.getString(R.string.git_terminal_not_declared)
+        }
+        return outcome is TerminalGit.Outcome.Sent
+    }
+
+    /** Clone [name] through the terminal; only an undeclared handoff falls back to JGit. */
     fun clone(name: String) {
+        if (page.terminal != null) { cloneViaTerminal(name); return }
+        handoff = ctx.getString(R.string.git_terminal_not_declared)
         val ssh = login.ssh && login.sshKeyPath.isNotBlank()
         val mode = if (ssh) Declarations.REMOTE_SSH else Declarations.REMOTE_HTTPS
         coordinator.cloneInto(
@@ -176,6 +223,19 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     LazyColumn(modifier.fillMaxSize()) {
+        // #642 WHAT THE HANDOFF DID, at the top of the page, above every row that could have
+        // triggered it. Shown for every outcome including success (which names the folder the
+        // clone lands in, the one Files already lists) so no press of Clone is ever silent.
+        if (handoff.isNotBlank()) item {
+            Text(
+                handoff,
+                Modifier.fillMaxWidth()
+                    .testTag(DriveTags.SYNC_GIT_HANDOFF)
+                    .padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Commit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
