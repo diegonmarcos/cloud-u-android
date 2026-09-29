@@ -5,13 +5,17 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
 # WHY THIS EXISTS, in the owner's words: "why GitHub Apps??? it is just a Git
-# Auth to get its ssh key!!!" He is right, and the evidence is on both sides.
+# Auth to get its ssh key!!!" He was right, and #641 finished the argument: the
+# provider is DELETED, not documented.
 #
-# ON THE PROVIDER SIDE the browser road is shut: the declared client_id carries
-# the `Ov23li` prefix, which is a GitHub APP, and GitHub Apps ship with Device
-# Flow OFF — the device hit `device_flow_disabled - Device Flow must be
-# explicitly enabled for this App`. That is a switch in github.com/settings/apps
-# and NO code can reach it, so a fix "in the app" cannot exist.
+# ON THE PROVIDER SIDE the browser road was never open. The declared client was a
+# GitHub APP (the client_id prefix GitHub gives App clients) and GitHub Apps ship
+# with Device Flow OFF, so every press of Start answered `device_flow_disabled -
+# Device Flow must be explicitly enabled for this App`. That is a switch in the
+# provider's own settings and NO code can reach it, so after the owner hit it a
+# third time the provider and its two remedy rows were removed. A browser git
+# login would need a GitHub OAuth App — a different kind of app, which does not
+# exist yet — so there is NO fallback: the vault credential is the only git auth.
 #
 # ON OUR SIDE the credential was already on the phone. cloud-vault
 # C_A1-configs/git/sources.json declares git.github_token (and an ssh key pair),
@@ -24,15 +28,18 @@
 #       DECLARED credential_id, and the listing runs off it with no tap.
 #   A2  a vault import writes it even when NOTHING is cloned yet — the fresh-phone
 #       case, where the old plan() reported not-ok and threw the token away.
-#   A3  the browser grant is drawn ONLY when there is no vault credential.
+#   A3  #641 INVERTED: there is NO browser grant on the page at all — no sign-in
+#       surface, no Start button, no provider named — and the credential-absent
+#       line says so in its own words, with no breadcrumb to another page.
 #   A4  there is no second credential store: the token goes into, and comes out
 #       of, libs:git-sync's GitCredentialStore and nowhere else.
-#   R1  the error->remedy mapping is DECLARED in one place
-#       (ab_cloud-libs-shared/build.json::auth.grant_remedies) and covers
-#       device_flow_disabled, with libs:auth as its single consumer.
+#   R1  #641 INVERTED: the grant_remedies MECHANISM stays declared in one place
+#       (ab_cloud-libs-shared/build.json::auth.grant_remedies) with libs:auth as
+#       its single consumer, and the two rows that existed only to word the
+#       GitHub App's dead end are gone, as is the provider itself.
 #   MUT mutation-proof: a credential resolved from somewhere other than the
-#       vault-delivered config, a Start button drawn while a vault credential is
-#       present, and a removed remedy mapping each go RED.
+#       vault-delivered config, a sign-in surface put back on the page, the
+#       github provider re-declared and an emptied remedy table each go RED.
 #
 # OWN-SOURCE ONLY. python3 and grep only, no network, no build.
 set -uo pipefail
@@ -43,6 +50,7 @@ SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 PAGE="$SRC/sync/GitReposScreen.kt"
 APPLY="$SRC/configs/DriveAuthApply.kt"
 BJ="$APP/build.json"
+STR="$APP/app/src/main/res/values/strings.xml"
 SHARED_BJ="$ROOT/ab_cloud-libs-shared/build.json"
 AUTH_DECL="$ROOT/ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/AuthDeclaration.kt"
 SIGNIN_UI="$ROOT/ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
@@ -50,7 +58,7 @@ SIGNIN_UI="$ROOT/ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/c
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$PAGE" "$APPLY" "$BJ" "$SHARED_BJ" "$AUTH_DECL" "$SIGNIN_UI"; do
+for required in "$PAGE" "$APPLY" "$BJ" "$STR" "$SHARED_BJ" "$AUTH_DECL" "$SIGNIN_UI"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -70,16 +78,19 @@ a1() {
     return $bad
 }
 
-# a3 <GitReposScreen.kt> : no browser Start button while a vault credential is in hand
+# a3 <GitReposScreen.kt> <strings.xml> : #641 no browser login on the page, in any shape
 a3() {
-    local f="$1" bad=0
-    if ! awk '/if \(login\.fromVault\) \{/{seen=NR} seen && /} else if \(webauth != null\) \{/{after=NR} END{exit !(seen && after && after > seen)}' "$f"; then
-        echo "    the device-grant surface is not gated on the ABSENCE of a vault credential"; bad=1
-    fi
-    # SignInWays must appear exactly once, inside the else arm.
-    local ways; ways=$(grep -cE 'SignInWays\(host = host' "$f")
-    [ "$ways" = "1" ] || { echo "    $ways sign-in surfaces on the page — one of them is not gated"; bad=1; }
-    grep -qE 'R\.string\.git_login_vault_absent' "$f" || { echo "    the fallback does not say what the supported path is"; bad=1; }
+    local f="$1" str="$2" bad=0
+    grep -qE 'SignInWays|SignInHost|SignInResult|webauth' "$f" \
+        && { echo "    a sign-in surface is back on the page — the vault credential is the only git auth path"; bad=1; }
+    # The page states which of the TWO states it is in, and nothing else.
+    grep -qE 'R\.string\.git_login_vault_absent' "$f" \
+        || { echo "    the page does not say anything when there is no vault credential"; bad=1; }
+    grep -qE 'git_login_vault_absent">[^<]*no browser login' "$str" \
+        || { echo "    the credential-absent line does not state plainly that there is no browser login"; bad=1; }
+    # #639: no breadcrumbs. The page may not send the owner to another page or to a provider setting.
+    grep -qE 'settings/apps|settings/developers|Configs . Sign in' "$f" "$str" \
+        && { echo "    the page points at a provider setting or another page instead of saying its own state"; bad=1; }
     return $bad
 }
 
@@ -110,20 +121,30 @@ rows = auth.get("grant_remedies") or []
 bad = 0
 if not rows:
     print("    auth.grant_remedies is not declared: the error would be shown with no remedy"); bad += 1
-hit = [r for r in rows if "device_flow_disabled" in (r.get("match") or "")]
-if not hit:
-    print("    no declared row matches device_flow_disabled — the error the owner actually hit"); bad += 1
+# #641 INVERTED. The rows that existed only to word the GitHub App's dead end are gone with
+# the provider; a row matching it again means the provider came back.
+dead = [r for r in rows if "device_flow_disabled" in (r.get("match") or "")
+        or "Device Flow must be explicitly enabled" in (r.get("match") or "")]
+if dead:
+    print("    %d remedy row(s) still word the deleted GitHub device grant: %r"
+          % (len(dead), [r.get("match") for r in dead])); bad += 1
 for r in rows:
     if not (r.get("match") or "").strip():
         print("    a remedy row matches nothing"); bad += 1
     if not (r.get("remedy") or "").strip():
         print("    row %s carries no remedy, which is the whole point" % r.get("match")); bad += 1
-for r in hit:
-    text = (r.get("remedy") or "") + " " + (r.get("url") or "")
-    if "settings/apps" not in text:
-        print("    the device_flow_disabled remedy does not name where the switch lives"); bad += 1
-    if "vault" not in text.lower():
-        print("    the remedy does not say that the vault path is the supported one"); bad += 1
+    if "settings/apps" in ((r.get("remedy") or "") + " " + (r.get("url") or "")):
+        print("    row %s still points at a GitHub App setting" % r.get("match")); bad += 1
+# The provider itself, in the same file: exactly one device grant is left and it is not GitHub's.
+providers = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["sign_in"]["providers"]
+flows = [p for p in providers if p.get("kind") == "device_flow"]
+if len(flows) != 1 or flows[0].get("id") != "google":
+    print("    the device grants are %r; exactly one, Google's, is expected"
+          % [p.get("id") for p in flows]); bad += 1
+if any(p.get("id") == "github" for p in providers):
+    print("    the github provider is declared again"); bad += 1
+if "Ov23li" in open(sys.argv[1], encoding="utf-8").read():
+    print("    a GitHub App client id is back in the shared declaration"); bad += 1
 print("    declared remedies: %d" % len(rows))
 sys.exit(1 if bad else 0)
 PYTHON
@@ -145,7 +166,7 @@ r2() {
 
 echo "── A the vault is the primary git credential path ──"
 a1 "$PAGE" && pass "the page authenticates from the vault-delivered credential and lists with it, untapped" || fail "the git credential does not come from the vault-delivered config"
-a3 "$PAGE" && pass "the browser device grant is drawn only when there is no vault credential" || fail "the page still demands a browser login while a vault credential is present"
+a3 "$PAGE" "$STR" && pass "#641 there is no browser login on the page, and the credential-absent line says so" || fail "the page still offers or points at a browser login"
 a4 "$APPLY" && pass "one store, the declared credential_id, and a fresh phone keeps the token" || fail "the vault credential is not stored/read through libs:git-sync's own store"
 python3 - "$BJ" <<'PYTHON'
 import json, sys
@@ -160,7 +181,7 @@ PYTHON
 if [ $? -eq 0 ]; then pass "the artifact key and the credential id are both declared"; else fail "auth.applies.git is not declared for the vault path"; fi
 
 echo "── R the error→remedy mapping is DECLARED ──"
-r1 "$SHARED_BJ" && pass "auth.grant_remedies covers device_flow_disabled, names the switch and the vault path" || fail "the remedy mapping is missing or says nothing actionable"
+r1 "$SHARED_BJ" && pass "#641 the remedy mechanism is declared, the GitHub rows are gone and so is the provider" || fail "the remedy table or the provider list still carries the deleted GitHub device grant"
 r2 "$AUTH_DECL" "$SIGNIN_UI" && pass "libs:auth is the one reader and the one consumer; no remedy string in Kotlin" || fail "the remedy is not read from the declaration / is hardcoded"
 
 echo "── MUT mutations ──"
@@ -177,9 +198,17 @@ if a1 "$copy" >/dev/null 2>&1; then fail "MUT a credential from somewhere other 
 copy="$MUT/page2.kt"; cp "$PAGE" "$copy"
 python3 -c "
 import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
-s=s.replace('} else if (webauth != null) {','}\nif (webauth != null) {')
+s=s.replace('        Text(','        SignInWays(host = host, policy = listOf(\"github\"))\n        Text(',1)
 open(p,'w',encoding='utf-8').write(s)" "$copy"
-if a3 "$copy" >/dev/null 2>&1; then fail "MUT a Start button drawn beside a vault credential passed — A3 does not hold"; else pass "MUT the browser login demanded while the vault credential is present goes RED"; fi
+cmp -s "$PAGE" "$copy" && fail "MUT the mutation did not change the page (tester is stale)" \
+    || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT a sign-in surface back on the page passed — A3 does not hold"; else pass "MUT a browser login put back on the page goes RED"; fi; }
+
+copy="$MUT/breadcrumb.xml"; cp "$STR" "$copy"
+python3 -c "
+import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
+s=s.replace('there is no browser login','enable Device Flow at github.com/settings/apps')
+open(p,'w',encoding='utf-8').write(s)" "$copy"
+if a3 "$PAGE" "$copy" >/dev/null 2>&1; then fail "MUT prose pointing at the provider setting passed — A3 does not hold"; else pass "MUT a breadcrumb back to github.com/settings/apps goes RED"; fi
 
 copy="$MUT/apply.kt"; cp "$APPLY" "$copy"
 python3 -c "
@@ -191,9 +220,17 @@ if a4 "$copy" >/dev/null 2>&1; then fail "MUT a fresh phone discarding the vault
 copy="$MUT/shared.json"; cp "$SHARED_BJ" "$copy"
 python3 -c "
 import json,sys;p=sys.argv[1];d=json.load(open(p,encoding='utf-8'))
-d['auth']['grant_remedies']=[r for r in d['auth']['grant_remedies'] if 'device_flow_disabled' not in r['match']]
+d['auth']['sign_in']['providers'].append({'id':'github','label':'GitHub','kind':'device_flow','device_code_url':'https://github.com/login/device/code','token_url':'https://github.com/login/oauth/access_token','client_id':'Ov23liOg9JhezyYUCHmS','client_secret':'','scope':'repo','grants':['identity','repo_artifact']})
+d['auth']['grant_remedies'].insert(0,{'match':'device_flow_disabled','remedy':'Enable it at github.com/settings/apps.','url':'https://github.com/settings/apps'})
 json.dump(d,open(p,'w',encoding='utf-8'))" "$copy"
-if r1 "$copy" >/dev/null 2>&1; then fail "MUT the removed remedy mapping passed — R1 does not hold"; else pass "MUT the device_flow_disabled remedy removed goes RED"; fi
+if r1 "$copy" >/dev/null 2>&1; then fail "MUT the re-declared github provider passed — R1 does not hold"; else pass "MUT the github device grant and its remedy row re-declared go RED"; fi
+
+copy="$MUT/noremedy.json"; cp "$SHARED_BJ" "$copy"
+python3 -c "
+import json,sys;p=sys.argv[1];d=json.load(open(p,encoding='utf-8'))
+d['auth']['grant_remedies']=[]
+json.dump(d,open(p,'w',encoding='utf-8'))" "$copy"
+if r1 "$copy" >/dev/null 2>&1; then fail "MUT an emptied remedy table passed — the MECHANISM is not pinned"; else pass "MUT the remedy mechanism deleted goes RED (Google still needs it)"; fi
 
 copy="$MUT/ui.kt"; cp "$SIGNIN_UI" "$copy"
 python3 -c "
@@ -202,7 +239,7 @@ s=s.replace('AuthDeclaration.explain(phase.message)','phase.message')
 open(p,'w',encoding='utf-8').write(s)" "$copy"
 if r2 "$AUTH_DECL" "$copy" >/dev/null 2>&1; then fail "MUT an unworded failure passed — R2 does not hold"; else pass "MUT the failure shown without its remedy goes RED"; fi
 
-a1 "$PAGE" >/dev/null 2>&1 && a3 "$PAGE" >/dev/null 2>&1 && a4 "$APPLY" >/dev/null 2>&1 \
+a1 "$PAGE" >/dev/null 2>&1 && a3 "$PAGE" "$STR" >/dev/null 2>&1 && a4 "$APPLY" >/dev/null 2>&1 \
     && r1 "$SHARED_BJ" >/dev/null 2>&1 && r2 "$AUTH_DECL" "$SIGNIN_UI" >/dev/null 2>&1 \
     && pass "MUT control: the unmutated sources pass every mutated check" \
     || fail "MUT control: the unmutated sources do NOT pass — the mutations above prove nothing"

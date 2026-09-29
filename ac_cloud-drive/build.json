@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 16,
+    "version_code": 17,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -394,17 +394,8 @@
             "icon": "lock"
           }
         ],
-        "_doc_login_ways": "The two ways into the personal section, in order. `webauth` is the fleet's ONE sign-in (libs:auth, the shared shelf's ONE auth declaration) driven through the OAuth 2.0 device grant against the provider named here — GitHub, whose declared scope is already `repo`, which is exactly what listing AND cloning a private repository needs; the approval's access token is what the listing and the HTTPS clone then use, in memory only (libs:auth carries it on SignInResult.accessToken and stores it nowhere). `ssh_key` is the user's EXISTING key: the path and passphrase libs:git-sync's ManagedRepo/GitCredentialStore already hold (sync_auth_key_path on the per-repo sheet), used as GitAuth.Ssh — no second key mechanism is built here, and SSH cannot list an account, so that way clones only.",
+        "_doc_login_ways": "#641 THE ONE way into the personal section, plus the user's own key. The `webauth` way is GONE: it drove an OAuth 2.0 device grant against a GitHub APP client, and GitHub Apps ship with Device Flow OFF, so every press of Start ended in `device_flow_disabled`. The HTTPS credential is the one the vault config import delivers (auth.applies.git.credential_id, #629) and there is no browser login to fall back to - a browser one would need a GitHub OAuth App, which is a different kind of app and does not exist yet. `ssh_key` is the user's EXISTING key: the path and passphrase libs:git-sync's ManagedRepo/GitCredentialStore already hold (sync_auth_key_path on the per-repo sheet), used as GitAuth.Ssh - no second key mechanism is built here, and SSH cannot list an account, so that way clones only.",
         "login_ways": [
-          {
-            "id": "github",
-            "label": "GitHub sign-in",
-            "icon": "login",
-            "kind": "webauth",
-            "provider": "github",
-            "scope": "repo",
-            "lists": true
-          },
           {
             "id": "ssh",
             "label": "SSH key",

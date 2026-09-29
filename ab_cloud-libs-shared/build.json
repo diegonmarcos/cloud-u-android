@@ -3562,18 +3562,8 @@
         "ref": "main"
       }
     },
-    "_doc_grant_remedies": "#629 A DEVICE-GRANT ERROR WHOSE FIX IS NOT IN THE CODE, mapped to its REMEDY \u2014 declared here, once, so no Fragment carries the sentence. The owner hit `device_flow_disabled - Device Flow must be explicitly enabled for this App` on the Sync \u25b8 Git sign-in: the declared client_id has the `Ov23li` prefix, which is a GITHUB APP, and GitHub Apps ship with Device Flow OFF. No amount of code can work around a provider-side switch, so the only useful thing the UI can do is name the switch and where it lives \u2014 and say that on this fleet the browser grant is the FALLBACK, because the git credential is already delivered by the vault import (ac_cloud-drive/build.json::auth.applies). `match` is a substring of the provider's own error text; the first match wins; a message that matches nothing is shown unchanged. SignInUi.word() is the single consumer.",
+    "_doc_grant_remedies": "#629 A DEVICE-GRANT ERROR WHOSE FIX IS NOT IN THE CODE, mapped to its REMEDY - declared here, once, so no Fragment carries the sentence. `match` is a substring of the provider's own error text; the first match wins; a message that matches nothing is shown unchanged. SignInUi.word() is the single consumer. #641 the two GitHub rows are GONE with the provider they explained: the `device_flow_disabled` row existed only because the declared client was a GitHub APP - its client_id carried the prefix GitHub gives App clients - and GitHub Apps ship with Device Flow OFF. No remedy sentence can flip a provider-side switch, so the provider was deleted instead of worded, and git auth on this fleet is the vault-delivered credential alone (ac_cloud-drive/build.json::auth.applies.git). The MECHANISM stays: Google's device grant is still declared here and still needs its errors worded.",
     "grant_remedies": [
-      {
-        "match": "device_flow_disabled",
-        "remedy": "The declared client is a GitHub App, and GitHub Apps ship with Device Flow OFF. Enable it at github.com/settings/apps \u2192 the app \u2192 General \u2192 Device flow. On this fleet you do not need it: the git credential arrives with the vault config import, and Sync \u25b8 Git uses that first.",
-        "url": "https://github.com/settings/apps"
-      },
-      {
-        "match": "Device Flow must be explicitly enabled",
-        "remedy": "Same switch, worded by GitHub: github.com/settings/apps \u2192 the app \u2192 General \u2192 Device flow. The vault-delivered credential is the supported path and needs no browser.",
-        "url": "https://github.com/settings/apps"
-      },
       {
         "match": "unauthorized_client",
         "remedy": "The provider does not accept this client for the device grant. Check the declared client_id, or use the vault config import, which carries the credential already.",
@@ -3591,7 +3581,7 @@
         1
       ]
     },
-    "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on. #578: the fleet SSO is offered as TWO distinct ways, one provider each - `authelia_bearer` (a stored or pasted bearer token, one tap; also the mailed-code second factor for the vault bundle) and `authelia_web` (the portal login in the embedded browser, whose session cookie is used for one request and dropped - #467's posture, no other login route); both reach the same Caddy gate (endpoints are config_source and vault_connect above). The bearer keeps id `authelia` because cloud-infra's superapp-users.json auth_providers policy already names it, and an APK that predates the split must keep being offered it. `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO (exactly one: the bearer way). `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google (#611): the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context. The client_id is PUBLIC and lives here. The client_secret does NOT: cloud-u-android is a public repository, so client_secret stays EMPTY in this committed declaration and is supplied at BUILD time from the private vault (cloud-me_vault A_A0-Providers/B_SERVICES-CLOUD/b15-google-oauth/) by libs:auth's build.gradle - exactly how libs:media bakes its GIF-provider keys, and a build without the vault simply bakes an empty secret (the flow then fails at the token exchange rather than never starting, since the client_id is present). scope stays identity-only (openid/email) until a fleet server accepts a Google token. verification_url/verification_uri are read as each provider spells them.",
+    "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on. #578: the fleet SSO is offered as TWO distinct ways, one provider each - `authelia_bearer` (a stored or pasted bearer token, one tap; also the mailed-code second factor for the vault bundle) and `authelia_web` (the portal login in the embedded browser, whose session cookie is used for one request and dropped - #467's posture, no other login route); both reach the same Caddy gate (endpoints are config_source and vault_connect above). The bearer keeps id `authelia` because cloud-infra's superapp-users.json auth_providers policy already names it, and an APK that predates the split must keep being offered it. `device_flow` is the OAuth 2.0 device grant. `primary` marks the fleet's own SSO (exactly one: the bearer way). `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with a token - NO provider grants it today (#641), so the branches that read it are dormant rather than removed, `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). #641 THERE IS NO GITHUB PROVIDER. The one that used to sit here carried a GitHub APP client_id (the prefix GitHub gives App clients), and GitHub Apps ship with Device Flow OFF - every attempt ended in `device_flow_disabled`, three times, so it is deleted rather than documented. A browser git login would need a GitHub OAuth App (a different kind of app, minted by the owner); until one exists, git auth is the vault-delivered credential and nothing else. Google (#611) is the ONE device grant left, and it is the correct kind of client: a 'TVs and Limited Input devices' client, whose token exchange takes a client_secret that Google itself documents as not secret in this context. The client_id is PUBLIC and lives here. The client_secret does NOT: cloud-u-android is a public repository, so client_secret stays EMPTY in this committed declaration and is supplied at BUILD time from the private vault (cloud-me_vault A_A0-Providers/B_SERVICES-CLOUD/b15-google-oauth/) by libs:auth's build.gradle - exactly how libs:media bakes its GIF-provider keys, and a build without the vault simply bakes an empty secret (the flow then fails at the token exchange rather than never starting, since the client_id is present). scope stays identity-only (openid/email) until a fleet server accepts a Google token. verification_url/verification_uri are read as each provider spells them.",
     "sign_in": {
       "providers": [
         {
@@ -3611,21 +3601,6 @@
           "grants": [
             "config_artifact",
             "vault_bundle"
-          ]
-        },
-        {
-          "id": "github",
-          "label": "GitHub",
-          "kind": "device_flow",
-          "device_code_url": "https://github.com/login/device/code",
-          "token_url": "https://github.com/login/oauth/access_token",
-          "userinfo_url": "https://api.github.com/user",
-          "client_id": "Ov23liOg9JhezyYUCHmS",
-          "client_secret": "",
-          "scope": "repo",
-          "grants": [
-            "identity",
-            "repo_artifact"
           ]
         },
         {

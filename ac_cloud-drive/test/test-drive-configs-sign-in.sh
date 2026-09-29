@@ -69,7 +69,11 @@ s2() {
 import json, os, re, sys
 shared, bj, src = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3]
 providers = shared.get("auth", {}).get("sign_in", {}).get("providers", [])
-if len(providers) < 4: print("    shared build.json::auth.sign_in declares %d providers (need the four ways)" % len(providers)); sys.exit(1)
+# #641 the three ways left: the two Authelia ways and Google's device grant. An EQUALITY, so a
+# provider quietly added or removed is reported rather than absorbed.
+if len(providers) != 3 or any(p.get("id") == "github" for p in providers):
+    print("    shared build.json::auth.sign_in declares %r; the three ways are authelia, authelia_web and google (#641 deleted the GitHub App device grant)"
+          % [p.get("id") for p in providers]); sys.exit(1)
 if "sign_in" in json.dumps(bj.get("ui", {})) or "providers" in json.dumps(bj.get("auth", {})):
     print("    this app's build.json ALSO declares a sign-in provider list — two declarations"); sys.exit(1)
 code = ""

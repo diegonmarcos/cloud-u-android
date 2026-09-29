@@ -51,14 +51,14 @@ class SignInTest {
         assertEquals(SignIn.Kind.AUTHELIA_BEARER, primaries.single().kind)
     }
 
-    @Test fun `four ways in - the SSO's bearer and web-auth are two providers of distinct kinds (#578)`() {
-        assertEquals(4, SignIn.providers.size)
+    @Test fun `three ways in - the SSO's bearer and web-auth are two providers of distinct kinds (#578)`() {
+        assertEquals(3, SignIn.providers.size)
         assertEquals(
-            listOf(SignIn.Kind.AUTHELIA_BEARER, SignIn.Kind.AUTHELIA_WEB, SignIn.Kind.DEVICE_FLOW, SignIn.Kind.DEVICE_FLOW),
+            listOf(SignIn.Kind.AUTHELIA_BEARER, SignIn.Kind.AUTHELIA_WEB, SignIn.Kind.DEVICE_FLOW),
             SignIn.providers.map { it.kind },
         )
-        assertEquals("ids are unique", 4, SignIn.providers.map { it.id }.toSet().size)
-        assertEquals("labels are unique - each pill says which way it is", 4, SignIn.providers.map { it.label }.toSet().size)
+        assertEquals("ids are unique", 3, SignIn.providers.map { it.id }.toSet().size)
+        assertEquals("labels are unique - each pill says which way it is", 3, SignIn.providers.map { it.label }.toSet().size)
         // Both SSO ways are startable and reach the same fetches; neither is the device grant.
         val sso = SignIn.providers.filter { it.kind == SignIn.Kind.AUTHELIA_BEARER || it.kind == SignIn.Kind.AUTHELIA_WEB }
         assertEquals(2, sso.size)
@@ -66,6 +66,31 @@ class SignInTest {
             assertTrue(it.configured)
             assertTrue(it.grants(SignIn.GRANT_CONFIG_ARTIFACT) && it.grants(SignIn.GRANT_VAULT_BUNDLE))
         }
+    }
+
+    /**
+     * #641 THE GITHUB DEVICE-FLOW PROVIDER IS DELETED, and this is the assertion that keeps it
+     * deleted. It carried an `Ov23li` client_id, which is a GitHub APP, and GitHub Apps ship with
+     * Device Flow OFF — so the grant could never start. Re-declaring it turns this red, and the
+     * count below makes sure the check cannot pass by finding NO device-flow provider at all.
+     */
+    @Test fun `there is no github device-flow provider, and no Ov23li client id anywhere (#641)`() {
+        val arr = declared().getJSONArray("providers")
+        val declaredIds = (0 until arr.length()).map { arr.getJSONObject(it).getString("id") }
+        assertFalse("a github provider is declared again", "github" in declaredIds)
+        assertNull("a github provider is baked", SignIn.provider("github"))
+        val flows = SignIn.providers.filter { it.kind == SignIn.Kind.DEVICE_FLOW }
+        assertEquals("exactly one device grant is left, and it is Google's", 1, flows.size)
+        assertEquals("google", flows.single().id)
+        // A GitHub App's client id, in the declaration or in the bake, is the defect itself.
+        SignIn.providers.forEach { assertFalse("${it.id} carries a GitHub App client id", it.clientId.startsWith("Ov23li")) }
+        assertFalse("the declaration carries a GitHub App client id", declared().toString().contains("Ov23li"))
+        assertFalse("the bake carries a GitHub App client id", AuthDeclaration.decode(BuildConfig.AUTH_B64).contains("Ov23li"))
+        // The remedy rows that existed ONLY to word this provider's dead end are gone too.
+        val remedies = AuthDeclaration.current.grantRemedies
+        assertTrue("a remedy table is still declared — the mechanism stays", remedies.isNotEmpty())
+        assertFalse("a device_flow_disabled remedy is declared for a provider that no longer exists",
+            remedies.any { it.match.contains("device_flow_disabled") || it.match.contains("Device Flow must be explicitly enabled") })
     }
 
     @Test fun `Google's owner-minted client id has landed, and the secret is never in the public repo (#611)`() {

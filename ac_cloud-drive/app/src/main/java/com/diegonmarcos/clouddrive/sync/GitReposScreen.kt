@@ -72,10 +72,6 @@ import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusDot
 import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.StatusLightRow
-import com.diegonmarcos.cloudlib.auth.SignIn
-import com.diegonmarcos.cloudlib.auth.SignInHost
-import com.diegonmarcos.cloudlib.auth.SignInResult
-import com.diegonmarcos.cloudlib.auth.SignInWays
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import java.io.File
 import java.text.DateFormat
@@ -103,10 +99,11 @@ import kotlinx.coroutines.withContext
  * TWO SECTIONS (ui.sync.git.sections):
  *  · public   — the declared set of the owner's PUBLIC repositories in the cloud and
  *               front name families. No login: they clone over plain HTTPS.
- *  · personal — the fleet sign-in (libs:auth's device grant against the declared GitHub
- *               provider, whose scope is already `repo`) or the user's existing SSH key.
- *               After a GitHub sign-in the account's own listing is fetched with the
- *               approval's token and split into the declared groups, Public then Private.
+ *  · personal — the credential the #566 vault config import delivers (#629), or the user's
+ *               existing SSH key. The account's own listing is fetched with that credential,
+ *               with no tap, and split into the declared groups, Public then Private. #641
+ *               there is NO browser login: the device grant that used to be offered here ran
+ *               against a GitHub App, and GitHub Apps ship with Device Flow OFF.
  *
  * Every clone lands in the store's git folder (#606, SharedStore.gitRoot), the same folder
  * and the same registry the first-run seed uses.
@@ -165,25 +162,16 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
-    // #629 THE VAULT IS THE MAIN ROAD. The credential the #566 config import delivers already has
-    // `repo` scope — it is the token that pushes all day — so the personal section authenticates
-    // from it and the account's own repositories list themselves with no tap and no browser. The
-    // device grant below is only offered when this is blank.
+    // #629 THE VAULT IS THE ONLY ROAD (#641). The credential the #566 config import delivers already
+    // has `repo` scope — it is the token that pushes all day — so the personal section authenticates
+    // from it and the account's own repositories list themselves with no tap and no browser. There is
+    // no browser login beside it: the device grant that used to be here ran against a GitHub App,
+    // whose Device Flow the provider ships OFF, so it could never start.
     LaunchedEffect(Unit) {
         val vault = withContext(Dispatchers.IO) { DriveAuthApply.vaultGitToken(ctx.applicationContext) }
         if (vault.isNotBlank() && login.token.isBlank()) {
             login = login.copy(identity = page.owner, token = vault, fromVault = true)
             fetchListing(vault)
-        }
-    }
-
-    val host = remember {
-        object : SignInHost {
-            override fun onSignedIn(result: SignInResult) {
-                SignIn.Current.session = SignIn.Session(result.provider.id, result.identity)
-                login = login.copy(identity = result.identity, token = result.accessToken, fromVault = false)
-                if (result.accessToken.isNotBlank()) fetchListing(result.accessToken)
-            }
         }
     }
 
@@ -237,7 +225,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     item {
                         SectionHeader(section.label, count = if (listing.loaded) listing.repos.size else null)
                         GitLoginBox(
-                            page = page, host = host, login = login, listing = listing,
+                            page = page, login = login, listing = listing,
                             onSshKeyPath = { login = login.copy(sshKeyPath = it) },
                             onUseSsh = { login = login.copy(ssh = it) },
                             onRetry = { if (login.token.isNotBlank()) fetchListing(login.token) },
@@ -341,21 +329,19 @@ private data class GitListing(
 )
 
 /**
- * The personal section's control: the declared ways in, then what the sign-in yielded. The
- * WebAuth way is libs:auth's own surface, narrowed by policy to the DECLARED provider, so
- * this page offers exactly the GitHub device grant and not the fleet's other providers.
+ * The personal section's control: what the vault-delivered credential yielded, and the user's
+ * own SSH key beside it. #641 there is no browser login here at all — the device grant that
+ * used to be offered ran against a GitHub App, whose Device Flow the provider ships OFF.
  */
 @Composable
 private fun GitLoginBox(
     page: Declarations.GitPageDecl,
-    host: SignInHost,
     login: GitLogin,
     listing: GitListing,
     onSshKeyPath: (String) -> Unit,
     onUseSsh: (Boolean) -> Unit,
     onRetry: () -> Unit,
 ) {
-    val webauth = page.webauthWay
     val ssh = page.sshWay
     DriveCard(
         stringResource(R.string.git_login_title),
@@ -364,24 +350,19 @@ private fun GitLoginBox(
             // #629 the state the owner must be able to read at a glance: the credential is the
             // vault's, so the private listing and every clone just work.
             login.fromVault -> stringResource(R.string.git_login_from_vault, login.identity)
-            login.token.isNotBlank() -> stringResource(R.string.git_login_as, login.identity.ifBlank { webauth?.label ?: "" }, webauth?.scope ?: "")
             login.ssh && login.sshKeyPath.isNotBlank() -> stringResource(R.string.git_login_ssh_active)
             else -> stringResource(R.string.git_login_hint)
         },
         tag = DriveTags.SYNC_GIT_LOGIN,
     ) {
-        // #629 THE FALLBACK, and only that. With a vault-delivered credential in hand there is
-        // nothing for a browser grant to add, so no Start button is drawn at all; without one, it
-        // is offered under a line that names the supported path. A provider-side refusal
-        // (device_flow_disabled) is worded by libs:auth from the DECLARED remedy table.
-        if (login.fromVault) {
-            Text(stringResource(R.string.git_login_vault_note), Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else if (webauth != null) {
-            Text(stringResource(R.string.git_login_vault_absent), Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            SignInWays(host = host, policy = listOf(webauth.provider), modifier = Modifier.padding(top = DriveMetrics.gapWide), pill = { label, tag, onClick ->
-                Pill(label, onClick, modifier = Modifier.padding(top = DriveMetrics.gapWide).testTag(tag), icon = IconCatalog.vectorOrDefault(webauth.icon))
-            })
-        }
+        // #629/#641 THE VAULT CREDENTIAL, and nothing beside it. There is no browser login and no
+        // Start button on this page: the only HTTPS credential is the one the config import
+        // delivers, so the card states which of the two states it is in and stops there.
+        Text(
+            stringResource(if (login.fromVault) R.string.git_login_vault_note else R.string.git_login_vault_absent),
+            Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (ssh != null) {
             PillRow { Pill(ssh.label, { onUseSsh(!login.ssh) }, icon = IconCatalog.vectorOrDefault(ssh.icon), filled = login.ssh) }
             if (login.ssh) {

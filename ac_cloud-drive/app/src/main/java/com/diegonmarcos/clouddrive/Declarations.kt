@@ -40,9 +40,10 @@ object Declarations {
 
     /**
      * A way into the personal section. [kind] is the ONLY thing the code dispatches on:
-     * [KIND_WEBAUTH] drives libs:auth's device grant against [provider] (its declared
-     * scope is [scope]) and [lists] says the token can then enumerate the account;
-     * [KIND_SSH_KEY] reuses the key libs:git-sync already holds and cannot list.
+     * [KIND_SSH_KEY] reuses the key libs:git-sync already holds and cannot list, so [lists]
+     * is false and [provider]/[scope] go unread. #641 there is no browser way left: the
+     * `webauth` kind drove a device grant against a GitHub App, whose Device Flow the
+     * provider ships OFF, and the HTTPS credential comes from the vault import instead.
      */
     data class GitLoginWayDecl(val id: String, val label: String, val icon: String, val kind: String, val provider: String, val scope: String, val lists: Boolean)
 
@@ -87,7 +88,6 @@ object Declarations {
         fun webUrl(name: String): String = api.webUrlFor(owner, name)
         /** Whether [name] belongs to one of the declared name families — the rule the public set was derived from. */
         fun inNameFamilies(name: String): Boolean = nameFamilies.any { it.isNotBlank() && name.startsWith(it) }
-        val webauthWay: GitLoginWayDecl? get() = loginWays.firstOrNull { it.kind == KIND_WEBAUTH }
         val sshWay: GitLoginWayDecl? get() = loginWays.firstOrNull { it.kind == KIND_SSH_KEY }
     }
 
@@ -426,8 +426,8 @@ object Declarations {
     /** #608 the page with nothing declared: every list empty, so the screen says so. */
     val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList())
 
-    /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin. */
-    const val KIND_WEBAUTH = "webauth"
+    /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin.
+     *  #641 `webauth` is gone with the GitHub device grant it drove. */
     const val KIND_SSH_KEY = "ssh_key"
 
     /** #608 the declared remote modes, by id. */

@@ -93,9 +93,12 @@ dispatched on `kind` and `grants` only — no Kotlin names a provider:
     cookie back for ONE request; nothing persisted, no other login route). Its
     session is recorded against this provider, not the bearer's.
 * `kind: device_flow` → **`<label> · browser code`** (RFC 8628 device grant,
-  `SignIn.kt`, one dialog for every such provider). If the provider `grants
-  repo_artifact` a second pill **`<label> · SSH key`** offers the existing
-  `GitSshVault` clone route.
+  `SignIn.kt`, one dialog for every such provider). Google's is the ONE such
+  provider (#641 deleted the GitHub one: its client was a GitHub **App**, and
+  GitHub Apps ship with Device Flow **off**, so the grant could never start).
+  If a provider `grants repo_artifact` a second pill **`<label> · SSH key`**
+  offers the existing `GitSshVault` clone route — no provider grants it today,
+  so that pill is not drawn.
 * a provider whose `configured` is false renders its pill disabled with "· not
   configured in this build".
 
@@ -279,7 +282,10 @@ token" as a bare button, the permanent mail-code box, the "Vault configs"
 header with its four controls, the Infos tab's "Imports" header and its five
 tiles, `showGithubDeviceDialog`, the `ui.config_source.github_oauth` block and
 the four `UI_GH_OAUTH_*` BuildConfig fields, the first-pass `buildSignIn` /
-`buildRegistry` spinners.
+`buildRegistry` spinners. #641: the whole `github` device_flow provider, its
+client_id and its two `grant_remedies` rows — a GitHub App cannot run a device
+grant, and a browser git login would need a GitHub **OAuth App**, which does not
+exist yet; git auth is the vault-delivered credential alone.
 
 ## 7. Testers
 

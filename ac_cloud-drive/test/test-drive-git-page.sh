@@ -34,11 +34,11 @@
 #       GitEngine declares the two force verbs, the JVM suite EXERCISES them
 #       (and proves the plain verbs refuse the same divergence first), and the
 #       app still imports no JGit.
-#   P5  the login is the fleet's ONE sign-in, narrowed: SignInWays is hosted
-#       with policy = the DECLARED provider, the credential is
-#       SignInResult.accessToken (which libs:auth DEFAULTS, so the superapp's
-#       existing call sites are untouched), the SSH way reuses the key path the
-#       per-repo sheet already holds, and no token is logged or persisted here.
+#   P5  #641 INVERTED: there is NO browser login on this page. No sign-in
+#       surface, no webauth way, no GitHub App client id in either declaration,
+#       exactly ONE device grant left in the shared declaration (Google's) and
+#       no breadcrumb prose; the SSH way reuses the key path the per-repo sheet
+#       already holds, and no token is logged or persisted here.
 #   P6  the listing comes from the declaration: no endpoint literal in the
 #       page's sources, the parser is pure and JVM-tested, and the two groups
 #       are the PROVIDER's own `private` flag, each alphabetical.
@@ -74,6 +74,8 @@ ENGINE="$GIT_MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
 ENGINE_TEST="$GIT_MOD/src/test/java/com/diegonmarcos/cloudlib/gitsync/GitEngineTest.kt"
 AUTH_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:auth"]["dir"])))' "$BJ" "$APP")"
 AUTH_UI="$AUTH_MOD/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
+SHARED_BJ="$ROOT/ab_cloud-libs-shared/build.json"
+STR="$APP/app/src/main/res/values/strings.xml"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
@@ -99,11 +101,11 @@ if not any(s.get("id") == "personal" and s.get("login_required") for s in g.get(
 if [x.get("id") for x in g.get("personal_groups", [])] != ["public", "private"]:
     print("    ui.sync.git.personal_groups is %s, not public/private" % [x.get("id") for x in g.get("personal_groups", [])]); bad = 1
 kinds = [w.get("kind") for w in g.get("login_ways", [])]
-if "webauth" not in kinds or "ssh_key" not in kinds:
-    print("    login_ways carries %s: both a webauth and an ssh_key way are required" % kinds); bad = 1
-web = next((w for w in g.get("login_ways", []) if w.get("kind") == "webauth"), {})
-if not web.get("provider") or web.get("scope") != "repo" or not web.get("lists"):
-    print("    the webauth way must name a provider, ask the `repo` scope and state lists: true (got %r)" % web); bad = 1
+# #641 the ONLY declared way is the user's own SSH key. The `webauth` way drove an OAuth
+# device grant against a GitHub APP client, whose Device Flow the provider ships OFF, so it
+# is deleted rather than worded; the HTTPS credential comes from the vault import alone.
+if kinds != ["ssh_key"]:
+    print("    login_ways carries %s: the ssh_key way is the only one, and no browser login may come back" % kinds); bad = 1
 if next((w for w in g.get("login_ways", []) if w.get("kind") == "ssh_key"), {}).get("lists"):
     print("    the ssh_key way claims it lists an account: SSH cannot"); bad = 1
 api = g.get("api") or {}
@@ -247,13 +249,29 @@ fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — libs:git-sync is the engine"; else pass "no JGit in the app: every verb goes through the engine"; fi
 if grep -qE 'setForce\(true\)' "$ENGINE" && grep -qE 'ResetCommand\.ResetType\.HARD\)\.setRef\(ref\.name\)' "$ENGINE"; then pass "forcePush takes the fast-forward check off; forcePull resets HARD onto the fetched remote ref"; else fail "the force verbs are not implemented as force (a synonym for push/pull would pass every name check)"; fi
 
-echo "── P5 the login is the fleet's ONE sign-in, narrowed ──"
-if grep -qE 'SignInWays\(host = host, policy = listOf\(webauth\.provider\)' "$PAGE"; then pass "the page hosts libs:auth's own surface, narrowed to the DECLARED provider"; else fail "the page does not host SignInWays with the declared provider as the policy"; fi
-# #629 the browser grant is now the FALLBACK and marks its token as not-from-the-vault; the
-# vault-first path itself is pinned by test-drive-git-vault-credential.sh.
-if grep -qE 'login = login\.copy\(identity = result\.identity, token = result\.accessToken, fromVault = false\)' "$PAGE" && grep -qE 'fetchListing\(result\.accessToken\)' "$PAGE"; then pass "the listing and the private clone use the approval's own access token"; else fail "the page does not take the token off the sign-in result"; fi
-if grep -qE 'val accessToken: String = ""' "$AUTH_UI"; then pass "libs:auth carries the token as a DEFAULTED field — the superapp's existing call sites are untouched"; else fail "SignInResult.accessToken is missing or not defaulted (a required field would break the other consumer)"; fi
-if grep -qE 'accessToken = approval\.accessToken' "$AUTH_UI"; then pass "the device-grant dialog fills it in"; else fail "the device grant does not pass its token through"; fi
+echo "── P5 #641 there is NO browser login on this page, and no GitHub App anywhere ──"
+# The provider was a GitHub APP (`Ov23li` client_id prefix) and GitHub Apps ship with Device
+# Flow OFF, so Start could never work. These are the INVERTED assertions: the affordance, the
+# surface and the client id must all be absent, and the vault credential is the only way in.
+if grep -qE 'SignInWays|SignInHost|SignInResult' "$PAGE"; then fail "the page hosts a sign-in surface again — the vault credential is the only git auth path"; else pass "no sign-in surface on the page: no Start button to press"; fi
+if grep -qE 'webauth' "$PAGE"; then fail "the page still reads a webauth way"; else pass "no webauth way is read in Kotlin"; fi
+if grep -rqE 'Ov23li' "$SHARED_BJ" "$BJ" "$PAGE"; then fail "a GitHub App client id is back in the declarations"; else pass "no Ov23li client id in either declaration or on the page"; fi
+python3 - "$SHARED_BJ" <<'PYTHON'
+import json, sys
+p = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["sign_in"]["providers"]
+flows = [x for x in p if x.get("kind") == "device_flow"]
+bad = 0
+# NOT ">= 0": the check must not pass by finding no device grant at all.
+if len(flows) != 1 or flows[0].get("id") != "google":
+    print("    the shared declaration carries %r as its device grants; exactly one, Google's, is expected"
+          % [x.get("id") for x in flows]); bad = 1
+if any(x.get("id") == "github" for x in p):
+    print("    the github provider is declared again"); bad = 1
+sys.exit(1 if bad else 0)
+PYTHON
+if [ $? -eq 0 ]; then pass "the shared declaration keeps exactly ONE device grant (Google's) and no github provider"; else fail "the shared declaration does not carry exactly one device-flow provider with no github among them"; fi
+if grep -qE 'github\.com/settings/apps|Configs . Sign in' "$PAGE" "$STR"; then fail "the page still points at a provider setting or another page"; else pass "no breadcrumb prose: the page states its own state and stops"; fi
+if grep -qE 'R\.string\.git_login_vault_absent' "$PAGE" && grep -qE 'git_login_vault_absent">[^<]*no browser login' "$STR"; then pass "with no vault credential the page says so, and says there is no browser login"; else fail "the credential-absent line does not state plainly that there is no browser login"; fi
 if grep -qE 'R\.string\.sync_auth_key_path' "$PAGE" && grep -qE 'sshKeyPath = if \(ssh\) login\.sshKeyPath else ""' "$PAGE" && grep -qE 'GitSyncCoordinator\.AUTH_SSH' "$PAGE"; then pass "the SSH way reuses the key path libs:git-sync already holds — no second key mechanism"; else fail "the SSH login does not reuse the existing key mechanism"; fi
 LEAK="$(grep -nE 'Log\.[a-z]+\(.*(token|accessToken)|putString\(.*token' "$PAGE" "$LIST" || true)"
 if [ -z "$LEAK" ]; then pass "no token is logged or written to preferences by the page"; else fail "a token leaves memory:"; printf '%s\n' "$LEAK" | sed 's/^/        /'; fi

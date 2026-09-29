@@ -76,9 +76,9 @@ data class SignInResult(
     val bearer: String = "",
     /**
      * #608 the DEVICE-GRANT access token, for a host that needs the provider's own
-     * API afterwards — cloud-drive's Sync ▸ Git lists and clones the signed-in
-     * owner's repositories with it (the GitHub provider's declared scope is already
-     * `repo`, so the same approval covers a private clone). "" for every other way,
+     * API afterwards. #641 no declared provider needs it today — cloud-drive's
+     * Sync ▸ Git took it off a GitHub device grant that is deleted, and its git
+     * credential now comes from the vault import. "" for every other way,
      * and DEFAULTED so a host that does not want it — cloud-superapp's Profile ▸
      * Connect — keeps its existing behaviour byte for byte: nothing is stored here,
      * nothing is logged, and the token dies with the host's process exactly as the
@@ -309,9 +309,9 @@ private fun DeviceFlowDialog(p: SignIn.Provider, onDismiss: () -> Unit, onLanded
             phase.pending.ifBlank { ctx.getString(R.string.auth_code_expiry, phase.code.expiresInSeconds / 60) },
         )
         is DeviceGrant.Phase.Approved -> ctx.getString(R.string.auth_approved, phase.identity.ifBlank { p.label })
-        // #629 THE REMEDY, not just the error. `device_flow_disabled` is a switch in the provider's
-        // own settings and no code can reach it, so the words must name the switch; the mapping is
-        // DECLARED in ab_cloud-libs-shared/build.json::auth.grant_remedies and read once here.
+        // #629 THE REMEDY, not just the error. A grant error whose fix is provider-side cannot be
+        // worked around in code, so the words must name what to do; the mapping is DECLARED in
+        // ab_cloud-libs-shared/build.json::auth.grant_remedies and read once here.
         is DeviceGrant.Phase.Failed -> "✗ " + AuthDeclaration.explain(phase.message)
         DeviceGrant.Phase.Expired -> ctx.getString(R.string.auth_code_expired)
     }

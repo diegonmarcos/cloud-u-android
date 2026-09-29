@@ -10,32 +10,34 @@ import org.robolectric.RobolectricTestRunner
 /**
  * #629 the declared error→remedy mapping, on the JVM.
  *
- * The error it exists for cannot be fixed in code: `device_flow_disabled - Device Flow must be
- * explicitly enabled for this App` is a switch in github.com/settings/apps, because the declared
- * client_id is a GitHub App and GitHub Apps ship with Device Flow off. So the only useful thing
- * the UI can do is name the switch and say that the vault-delivered credential is the supported
- * path — and that wording must come from ONE declared table, which is what these assert.
+ * A device-grant error whose fix is NOT in the code has to be worded, and that wording must come
+ * from ONE declared table rather than from a Fragment — which is what these assert. #641 the rows
+ * this was born for are gone with the provider they explained (the GitHub App's
+ * `device_flow_disabled` dead end, deleted rather than documented), so the fixture below is a
+ * plain table of its own: the MECHANISM is what is under test, and Google's device grant still
+ * needs it.
  */
 @RunWith(RobolectricTestRunner::class)
 class GrantRemedyTest {
 
     private val declared = listOf(
-        AuthDeclaration.GrantRemedy("device_flow_disabled", "Enable it at github.com/settings/apps; the vault credential needs no browser.", "https://github.com/settings/apps"),
+        AuthDeclaration.GrantRemedy("expired_token", "The code expired before it was approved. Start again, or use the vault config import, which carries the credential already.", "https://example.invalid/help"),
         AuthDeclaration.GrantRemedy("unauthorized_client", "Check the declared client_id.", ""),
     )
 
     @Test fun theDeclaredRowIsFoundInsideTheProvidersOwnErrorText() {
-        val message = "device_flow_disabled - Device Flow must be explicitly enabled for this App"
+        val message = "expired_token - the device code has expired"
         val hit = AuthDeclaration.remedyFor(message, declared)
-        assertEquals("device_flow_disabled", hit?.match)
+        assertEquals("expired_token", hit?.match)
     }
 
     /** The error is kept VERBATIM and the remedy is added — never one instead of the other. */
     @Test fun explainKeepsTheErrorAndAddsTheRemedyAndTheUrl() {
-        val message = "device_flow_disabled - Device Flow must be explicitly enabled for this App"
+        val message = "expired_token - the device code has expired"
         val text = AuthDeclaration.explain(message, declared)
         assertTrue("the provider's own words survive", text.contains(message))
-        assertTrue("the remedy names the switch", text.contains("github.com/settings/apps"))
+        assertTrue("the remedy says what to do", text.contains("Start again"))
+        assertTrue("the url is added", text.contains("https://example.invalid/help"))
         assertTrue("and the supported path", text.contains("vault"))
     }
 
@@ -58,17 +60,17 @@ class GrantRemedyTest {
      * which is precisely the defect, so this pins that the mapping is what carries the remedy.
      */
     @Test fun withNothingDeclaredTheWordingIsTheBareError() {
-        val message = "device_flow_disabled - Device Flow must be explicitly enabled for this App"
+        val message = "expired_token - the device code has expired"
         assertEquals(message, AuthDeclaration.explain(message, emptyList()))
     }
 
-    /** The declaration this module actually bakes must parse, and must cover the real error. */
+    /** The declaration this module actually bakes must parse, and a row matching nothing is dropped. */
     @Test fun theParserReadsTheDeclaredTable() {
         val parsed = AuthDeclaration.parse(
-            """{"grant_remedies":[{"match":"device_flow_disabled","remedy":"do the thing","url":"https://x"},{"match":"","remedy":"ignored"}]}""",
+            """{"grant_remedies":[{"match":"expired_token","remedy":"do the thing","url":"https://x"},{"match":"","remedy":"ignored"}]}""",
         )
         assertEquals(1, parsed.grantRemedies.size)
-        assertEquals("device_flow_disabled", parsed.grantRemedies.first().match)
+        assertEquals("expired_token", parsed.grantRemedies.first().match)
         assertTrue(AuthDeclaration.parse("").grantRemedies.isEmpty())
     }
 }

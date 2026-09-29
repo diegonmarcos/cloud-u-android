@@ -125,10 +125,12 @@ class GitPageTest {
         assertTrue(seeded.isNotEmpty())
         assertTrue("seeded repositories absent from the public set: " + seeded.map { it.name }.filterNot { it in names },
             seeded.all { it.name in names })
-        // The webauth way asks for the scope a PRIVATE clone needs; the SSH way cannot list.
-        val web = page.webauthWay
-        assertEquals("repo", web?.scope)
-        assertTrue(web?.lists == true)
+        // #641 the ONLY declared way in is the user's own SSH key, and it cannot list an account:
+        // the HTTPS credential comes from the vault import, never from a browser login. A `webauth`
+        // way back in the declaration turns this red.
+        assertEquals(listOf(Declarations.KIND_SSH_KEY), page.loginWays.map { it.kind })
+        assertFalse("no browser login may be declared for this page", page.loginWays.any { it.kind == "webauth" })
+        assertTrue("the ssh way is declared", page.sshWay != null)
         assertFalse(page.sshWay?.lists == true)
         assertTrue(page.historyMax >= 1)
     }

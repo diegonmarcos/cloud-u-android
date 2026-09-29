@@ -81,7 +81,7 @@ codeof() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ 
 echo "== T1: the provider list is data, in the ONE shared declaration =="
 SIGNIN='.auth.sign_in'
 N=$(jq "$SIGNIN.providers | length" "$SHARED" 2>/dev/null || echo 0)
-[ "${N:-0}" -ge 4 ] && ok "T1: $N providers declared in ab_cloud-libs-shared/build.json::auth" || bad "T1: fewer than 4 providers declared ($N)"
+[ "${N:-0}" -eq 3 ] && ok "T1: $N providers declared in ab_cloud-libs-shared/build.json::auth" || bad "T1: not the three declared providers ($N) — #641 deleted the GitHub device grant and nothing may re-add a provider unannounced"
 IDS=$(jq -r "$SIGNIN.providers[].id" "$SHARED")
 [ "$(echo "$IDS" | sort | uniq -d | wc -l)" = 0 ] && ok "T1: provider ids are unique" || bad "T1: duplicate provider id"
 P=$(jq "[$SIGNIN.providers[] | select(.primary == true)] | length" "$SHARED")
@@ -102,20 +102,28 @@ grep -qE 'UI_VAULT_CONNECT_SIGN_IN_B64|UI_CONFIG_SOURCE_BASE_URL|UI_CONFIG_GIT_R
 jq -e '.ui.config_source.github_oauth' "$BJ" >/dev/null 2>&1 && bad "T1: build.json still carries ui.config_source.github_oauth" || ok "T1: the OAuth client lives only in sign_in"
 grep -q "implementation project(':libs:auth')" "$GR" && jq -e '.modules["libs:auth"].dir' "$BJ" >/dev/null && ok "T1: libs:auth linked by reference (build.json::modules dir + gradle)" || bad "T1: libs:auth is not linked by reference"
 
-# ── the four ways in (#578), as a function so T9 can run it on mutated copies ──
+# ── the three ways in (#578, narrowed by #641), as a function so T9 can run it on mutated copies ──
 # $1 = the shared build.json, $2 = the lib's SignInUi.kt; prints the first broken rule, returns non-zero on one.
-fourways() {
+# #641 THE GITHUB DEVICE GRANT IS DELETED: its client was a GitHub APP, and GitHub Apps ship with
+# Device Flow OFF, so the grant could never start. Google's is the ONE device grant left — and the
+# count below is an equality, so this cannot pass by finding no device grant at all.
+waysin() {
     local bj="$1" ui="$2" k
-    [ "$(jq '.auth.sign_in.providers | length' "$bj")" = 4 ] || { echo "not four providers"; return 1; }
-    [ "$(jq '[.auth.sign_in.providers[].label] | unique | length' "$bj")" = 4 ] || { echo "labels are not unique"; return 1; }
+    [ "$(jq '.auth.sign_in.providers | length' "$bj")" = 3 ] || { echo "not three providers"; return 1; }
+    [ "$(jq '[.auth.sign_in.providers[].label] | unique | length' "$bj")" = 3 ] || { echo "labels are not unique"; return 1; }
+    [ "$(jq '[.auth.sign_in.providers[] | select(.id == "github")] | length' "$bj")" = 0 ] \
+        || { echo "the github provider is declared again (a GitHub App: Device Flow is OFF, the grant cannot start)"; return 1; }
+    grep -q 'Ov23li' "$bj" && { echo "a GitHub App client id is back in the shared declaration"; return 1; }
     for k in authelia_bearer authelia_web; do
         [ "$(jq --arg k "$k" '[.auth.sign_in.providers[] | select(.kind == $k)] | length' "$bj")" = 1 ] \
             || { echo "kind $k is not declared exactly once"; return 1; }
     done
-    [ "$(jq '[.auth.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 2 ] || { echo "not two device-flow providers"; return 1; }
-    # #611: both device-flow providers (GitHub, Google) carry a PUBLIC client_id, and
-    # NEITHER carries a client_secret in this public declaration — Google's is baked from
-    # the private vault at build time (libs:auth build.gradle), never committed here.
+    [ "$(jq '[.auth.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 1 ] || { echo "not exactly one device-flow provider"; return 1; }
+    [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow")][0].id' "$bj")" = "google" ] \
+        || { echo "the one device grant left is not Google's"; return 1; }
+    # #611: the device-flow provider carries a PUBLIC client_id and NO client_secret in this
+    # public declaration — Google's is baked from the private vault at build time
+    # (libs:auth build.gradle), never committed here.
     [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and ((.client_id // "") == ""))] | length' "$bj")" = 0 ] \
         || { echo "every device-flow provider must carry a client_id"; return 1; }
     [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and ((.client_secret // "") != ""))] | length' "$bj")" = 0 ] \
@@ -132,8 +140,8 @@ fourways() {
         || { echo "the web-auth session is not handed to the host"; return 1; }
     return 0
 }
-echo "== T1b: FOUR ways in — Authelia bearer, Authelia web-auth, GitHub, Google =="
-msg=$(fourways "$SHARED" "$UI") && ok "T1b: four ways, two distinct SSO kinds, both device-flow client_ids public with no committed secret, each SSO way has its own dialog" || bad "T1b: $msg"
+echo "== T1b: THREE ways in — Authelia bearer, Authelia web-auth, Google (#641: no GitHub) =="
+msg=$(waysin "$SHARED" "$UI") && ok "T1b: three ways, two distinct SSO kinds, ONE device grant (Google's) with a public client_id and no committed secret, each SSO way has its own dialog" || bad "T1b: $msg"
 grep -q 'via = SignIn.byKind(SignIn.Kind.AUTHELIA_BEARER)' "$PF" && ok "T1b: the stored bearer's one tap is recorded against the bearer way" || bad "T1b: the stored bearer's fetch names no provider"
 grep -q 'override fun onWebSession(cookie: String) { vaultSession = cookie }' "$PF" && ok "T1b: the browser session reaches the vault route (one login, both fetches)" || bad "T1b: the fragment drops the web-auth session"
 jq -e '.auth.sign_in.providers[] | select(.primary == true) | select(.kind == "authelia_bearer")' "$SHARED" >/dev/null \
@@ -291,17 +299,25 @@ t4 "$TMP/old-box.kt" && bad "T8: T4 passed a fragment that put the account-email
 awk '/renderJourney\(ctx, setup\)/{next} /renderWizard\(ctx, setup\)/{print "        renderWizard(ctx, setup)"; print "        renderJourney(ctx, setup)"; next} {print}' "$PF" > "$TMP/journey-last.kt"
 t4 "$TMP/journey-last.kt" && bad "T8: T4 passed a Setup page that renders the wizard ABOVE the sign-in" || ok "T8: journey below the wizard → T4 RED"
 
-echo "== T9: mutation — the four-way check turns red =="
+echo "== T9: mutation — the ways-in check turns red =="
 jq '.auth.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$SHARED" > "$TMP/folded.json"
-fourways "$TMP/folded.json" "$UI" >/dev/null && bad "T9: passed a declaration whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
-jq '.auth.sign_in.providers |= map(select(.id != "authelia_web"))' "$SHARED" > "$TMP/three.json"
-fourways "$TMP/three.json" "$UI" >/dev/null && bad "T9: passed three providers" || ok "T9: one SSO way dropped → RED"
+waysin "$TMP/folded.json" "$UI" >/dev/null && bad "T9: passed a declaration whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
+jq '.auth.sign_in.providers |= map(select(.id != "authelia_web"))' "$SHARED" > "$TMP/two.json"
+waysin "$TMP/two.json" "$UI" >/dev/null && bad "T9: passed two providers" || ok "T9: one SSO way dropped → RED"
 jq '.auth.sign_in.providers |= map(if .id == "google" then .client_secret = "leaked-secret" else . end)' "$SHARED" > "$TMP/leaked.json"
-fourways "$TMP/leaked.json" "$UI" >/dev/null && bad "T9: passed a Google client_secret committed to the public build.json" || ok "T9: a client_secret committed to the public build.json → RED"
+waysin "$TMP/leaked.json" "$UI" >/dev/null && bad "T9: passed a Google client_secret committed to the public build.json" || ok "T9: a client_secret committed to the public build.json → RED"
+# #641 THE INVERSION, mutation-proved: re-declaring the GitHub App device grant goes RED.
+jq '.auth.sign_in.providers += [{"id":"github","label":"GitHub","kind":"device_flow","device_code_url":"https://github.com/login/device/code","token_url":"https://github.com/login/oauth/access_token","client_id":"Ov23liOg9JhezyYUCHmS","client_secret":"","scope":"repo","grants":["identity","repo_artifact"]}]' "$SHARED" > "$TMP/github-back.json"
+msg=$(waysin "$TMP/github-back.json" "$UI") && bad "T9: passed a declaration that re-declares the GitHub App device grant" \
+    || case "$msg" in *"not three providers"*|*"github provider is declared again"*) ok "T9: the github device grant re-declared → RED ($msg)";; *) bad "T9: red for the wrong reason: $msg";; esac
+# And a second shape of the same mutation, one that keeps the count at three: swap Google out for GitHub.
+jq '.auth.sign_in.providers |= map(if .id == "google" then {"id":"github","label":"GitHub","kind":"device_flow","device_code_url":"https://github.com/login/device/code","token_url":"https://github.com/login/oauth/access_token","client_id":"Ov23liOg9JhezyYUCHmS","client_secret":"","scope":"repo","grants":["identity","repo_artifact"]} else . end)' "$SHARED" > "$TMP/github-swap.json"
+msg=$(waysin "$TMP/github-swap.json" "$UI") && bad "T9: passed a declaration whose one device grant is the GitHub App again" \
+    || case "$msg" in *"github provider is declared again"*) ok "T9: GitHub swapped in for Google → RED ($msg)";; *) bad "T9: red for the wrong reason: $msg";; esac
 sed 's/{ open = Open.Web(p) }/{ open = Open.Bearer(p) }/' "$UI" > "$TMP/web-to-bearer.kt"
 cmp -s "$UI" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the surface (tester is stale)" \
-    || { fourways "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
-fourways "$SHARED" "$UI" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
+    || { waysin "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
+waysin "$SHARED" "$UI" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
 
 echo "== T10: the fleet wizard (#622) is declarative, and its done-checks are real measurements =="
 WIZ="$PKG/Wizard.kt"
