@@ -1,0 +1,377 @@
+#!/bin/sh
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ #644 — the declarative link store, INSIDE the terminal                   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# The engine. It names no tool, no path and no terminal: everything it acts on
+# comes from declaration.sh, which render-store.py generates from
+# ab_cloud-terminal-store/store.json plus the app's own tool list. Adding a tool
+# is therefore an edit to that list and nothing else — no edit here.
+#
+# Semantics are nix's, because they are the right ones:
+#   generations/<n>   an immutable, fully built link tree
+#   current           ONE symlink; an apply flips it with a single rename(2),
+#                     so "half switched" is not a reachable state
+#   rollback          switch back to the previous generation, no rebuild
+#
+# What is NOT reimplemented: the package set. Where a package manager exists
+# (declaration: nix) `update` and `packages-rollback` delegate to it.
+#
+# Commands:
+#   apply              build a new generation from the declaration and switch
+#   verify             report every link that is missing, mis-aimed or dangling
+#   repair             verify, and if anything is broken rebuild from the
+#                      declaration (this is the "manage the links update and fix")
+#   ensure             apply when there is no store, else repair-if-broken;
+#                      what the login path calls, and it never blocks a login
+#   generations        list the generations, marking the live one
+#   rollback           switch to the previous generation
+#   switch <n>         switch to generation <n>
+#   update             package layer: nix → `nix profile upgrade`, then apply
+#   packages           package-layer generations (nix)
+#   packages-rollback  package-layer rollback (nix)
+#
+# Fault injection: CLOUD_STORE_FAULT=<populate|rename|switch> makes apply exit
+# at that stage. It exists so the atomicity claim above is TESTED rather than
+# asserted — see the #644 section of ac_cloud-nix-on-droid/test/test-bootstrap-baked.sh.
+set -u
+
+ME="cloud-store"
+
+die() { echo "$ME: $*" >&2; exit 1; }
+
+# ── the declaration ────────────────────────────────────────────────────────
+# CLOUD_STORE_DECLARATION lets the tester point at a sandbox declaration; the
+# shipped default is the one rendered next to this file.
+if [ -n "${CLOUD_STORE_DECLARATION:-}" ]; then
+    DECL="$CLOUD_STORE_DECLARATION"
+else
+    DECL="$(dirname "$0")/declaration.sh"
+    [ -r "$DECL" ] || DECL="${CLOUD_STORE_INSTALL_DIR:-/usr/lib/cloud-store}/declaration.sh"
+fi
+[ -r "$DECL" ] || die "no declaration to work from ($DECL is unreadable) — nothing here knows what the links should be"
+# shellcheck disable=SC1090 # generated, path is data
+. "$DECL"
+
+for v in CLOUD_STORE_ROOT CLOUD_STORE_CURRENT CLOUD_STORE_GENERATIONS \
+         CLOUD_STORE_BIN CLOUD_STORE_ENGINE CLOUD_STORE_MODE CLOUD_STORE_TOOLS; do
+    eval "val=\${$v:-}"
+    [ -n "$val" ] || die "$DECL sets no $v — it is not a declaration this engine can read"
+done
+
+HOME_DIR="${CLOUD_STORE_HOME:-${HOME:-}}"
+[ -n "$HOME_DIR" ] || die "neither \$CLOUD_STORE_HOME nor \$HOME is set, so the store has no home"
+ROOT="$HOME_DIR/$CLOUD_STORE_ROOT"
+GENS="$ROOT/$CLOUD_STORE_GENERATIONS"
+CUR="$ROOT/$CLOUD_STORE_CURRENT"
+
+# A store built by this engine is also what puts coreutils on PATH, so the very
+# first apply (in the nix terminal: before any profile PATH is exported) must
+# not depend on it having already happened.
+[ "$CLOUD_STORE_MODE" != prefix ] || PATH="$CLOUD_STORE_PREFIX:$PATH"
+
+fault() {
+    [ "${CLOUD_STORE_FAULT:-}" = "$1" ] || return 0
+    echo "$ME: fault injected at stage '$1' — stopping before it" >&2
+    exit 90
+}
+
+# ── targets: the ONE place a tool name becomes a real path ─────────────────
+# The engine itself is a declared tool whose target is the copy in the store, so
+# `cloud-store` is on PATH from $HOME and is repaired like everything else.
+target_of() {
+    if [ "$1" = "$CLOUD_STORE_ENGINE" ]; then
+        echo "$ROOT/$CLOUD_STORE_ENGINE"
+        return 0
+    fi
+    case "$CLOUD_STORE_MODE" in
+        prefix)
+            echo "$CLOUD_STORE_PREFIX/$1"
+            ;;
+        search)
+            for d in ${CLOUD_STORE_SEARCH:-}; do
+                if [ -x "$d/$1" ]; then echo "$d/$1"; return 0; fi
+            done
+            echo ""
+            return 1
+            ;;
+        *)
+            die "declaration mode '$CLOUD_STORE_MODE' is not one this engine implements (prefix|search)"
+            ;;
+    esac
+}
+
+tools() { echo "$CLOUD_STORE_TOOLS $CLOUD_STORE_ENGINE"; }
+
+# ── apply ──────────────────────────────────────────────────────────────────
+next_gen() {
+    n=0
+    for g in "$GENS"/*; do
+        [ -d "$g" ] || continue
+        b="${g##*/}"
+        case "$b" in *[!0-9]*) continue ;; esac
+        [ "$b" -le "$n" ] || n="$b"
+    done
+    echo $((n + 1))
+}
+
+# The switch, and the only thing that makes a generation live. `ln` into a
+# temporary name and rename over the old link: one syscall, no window in which
+# `current` is absent or points at a partly built tree. `mv -T` is what refuses
+# to descend into the existing symlink's directory; a shell whose mv lacks it
+# falls back to the non-atomic form and SAYS so rather than silently doing
+# something else.
+switch_to() {
+    gen="$1"
+    [ -d "$gen" ] || die "generation $gen does not exist"
+    tmp="$ROOT/.switch.$$"
+    rm -f "$tmp"
+    ln -s "$gen" "$tmp" || die "could not stage the new $CLOUD_STORE_CURRENT link"
+    fault switch
+    if ! mv -Tf "$tmp" "$CUR" 2>/dev/null; then
+        echo "$ME: warning — this shell's mv has no -T, falling back to a non-atomic switch" >&2
+        rm -f "$CUR"
+        mv -f "$tmp" "$CUR" || die "could not switch $CLOUD_STORE_CURRENT to $gen"
+    fi
+}
+
+prune() {
+    keep="${CLOUD_STORE_KEEP:-5}"
+    live="$(readlink "$CUR" 2>/dev/null || true)"
+    all="$(for g in "$GENS"/*; do
+               [ -d "$g" ] || continue
+               b="${g##*/}"
+               case "$b" in *[!0-9]*) continue ;; esac
+               echo "$b"
+           done | sort -n)"
+    total=0
+    for b in $all; do total=$((total + 1)); done
+    [ "$total" -gt "$keep" ] || return 0
+    drop=$((total - keep))
+    for b in $all; do
+        [ "$drop" -gt 0 ] || break
+        [ "$GENS/$b" != "$live" ] || continue
+        rm -rf "$GENS/$b"
+        drop=$((drop - 1))
+    done
+}
+
+install_engine() {
+    self="$1"
+    dest="$ROOT/$CLOUD_STORE_ENGINE"
+    [ "$self" != "$dest" ] || return 0
+    [ -r "$self" ] || return 0
+    cp -f "$self" "$dest" 2>/dev/null || {
+        echo "$ME: warning — could not copy the engine into $dest; its own link will report as broken" >&2
+        return 0
+    }
+    chmod 0755 "$dest" 2>/dev/null || true
+}
+
+apply() {
+    mkdir -p "$GENS" || die "could not create $GENS"
+    install_engine "$SELF"
+
+    n="$(next_gen)"
+    stage="$GENS/.new.$$"
+    rm -rf "$stage"
+    mkdir -p "$stage/$CLOUD_STORE_BIN" || die "could not create $stage/$CLOUD_STORE_BIN"
+
+    unresolved=""
+    for t in $(tools); do
+        if tgt="$(target_of "$t")" && [ -n "$tgt" ]; then
+            ln -s "$tgt" "$stage/$CLOUD_STORE_BIN/$t" || die "could not link $t"
+        else
+            unresolved="$unresolved $t"
+        fi
+    done
+    fault populate
+
+    # The generation becomes visible under its number only once it is complete.
+    mv "$stage" "$GENS/$n" || die "could not seal generation $n"
+    fault rename
+    switch_to "$GENS/$n"
+    prune
+
+    count=0
+    for t in $CLOUD_STORE_TOOLS; do count=$((count + 1)); done
+    echo "$ME: generation $n is live ($count declared tools)"
+
+    arc=0
+    materialise_fixed || arc=1
+    if [ -n "$unresolved" ]; then
+        echo "$ME: FAIL — declared but not found anywhere the declaration searches:$unresolved" >&2
+        arc=1
+    fi
+    return "$arc"
+}
+
+# ── fixed links: absolute paths the kernel or a shebang resolves, not PATH ──
+materialise_fixed() {
+    rc=0
+    for spec in ${CLOUD_STORE_FIXED_LINKS:-}; do
+        path="${spec%%=*}"
+        tool="${spec##*=}"
+        if ! tgt="$(target_of "$tool")" || [ -z "$tgt" ]; then
+            echo "$ME: FAIL — fixed link $path wants '$tool', which the declaration cannot resolve" >&2
+            rc=1
+            continue
+        fi
+        [ "$(readlink "$path" 2>/dev/null || true)" != "$tgt" ] || continue
+        mkdir -p "$(dirname "$path")" 2>/dev/null || true
+        tmp="$path.cloud-store.$$"
+        if ln -s "$tgt" "$tmp" 2>/dev/null && mv -Tf "$tmp" "$path" 2>/dev/null; then
+            echo "$ME: fixed link $path -> $tgt"
+        else
+            rm -f "$tmp" 2>/dev/null || true
+            echo "$ME: FAIL — could not write the fixed link $path -> $tgt (read-only or denied)" >&2
+            rc=1
+        fi
+    done
+    return $rc
+}
+
+# ── verify ─────────────────────────────────────────────────────────────────
+# Every message names the link it is about: a verdict nobody can act on is the
+# defect this whole ticket is about, one level up.
+verify() {
+    bad=0
+    if [ ! -L "$CUR" ]; then
+        echo "$ME: FAIL — the live-generation link $CUR is missing, so no declared tool is on PATH" >&2
+        return 1
+    fi
+    gen="$(readlink "$CUR")"
+    if [ ! -d "$gen" ]; then
+        echo "$ME: FAIL — $CUR points at $gen, which is not a generation directory" >&2
+        return 1
+    fi
+    for t in $(tools); do
+        link="$gen/$CLOUD_STORE_BIN/$t"
+        if ! want="$(target_of "$t")" || [ -z "$want" ]; then
+            echo "$ME: FAIL — $t: declared, but no target exists in $CLOUD_STORE_MODE mode" >&2
+            bad=1
+            continue
+        fi
+        if [ ! -L "$link" ]; then
+            echo "$ME: FAIL — $t: no link at $link (declared target $want)" >&2
+            bad=1
+            continue
+        fi
+        got="$(readlink "$link")"
+        if [ "$got" != "$want" ]; then
+            echo "$ME: FAIL — $t: link $link points at $got, the declaration says $want" >&2
+            bad=1
+            continue
+        fi
+        if [ ! -x "$link" ]; then
+            echo "$ME: FAIL — $t: link $link is dangling or not executable (target $want)" >&2
+            bad=1
+            continue
+        fi
+    done
+    for spec in ${CLOUD_STORE_FIXED_LINKS:-}; do
+        path="${spec%%=*}"
+        tool="${spec##*=}"
+        want="$(target_of "$tool" || true)"
+        got="$(readlink "$path" 2>/dev/null || true)"
+        if [ -z "$got" ]; then
+            echo "$ME: FAIL — fixed link $path is missing (declared target $want)" >&2
+            bad=1
+        elif [ "$got" != "$want" ]; then
+            echo "$ME: FAIL — fixed link $path points at $got, the declaration says $want" >&2
+            bad=1
+        elif [ ! -x "$path" ]; then
+            echo "$ME: FAIL — fixed link $path is dangling or not executable (target $want)" >&2
+            bad=1
+        fi
+    done
+    [ "$bad" -eq 0 ] && echo "$ME: ok — generation ${gen##*/}, every declared link resolves"
+    return "$bad"
+}
+
+repair() {
+    if verify; then
+        echo "$ME: nothing to repair"
+        return 0
+    fi
+    echo "$ME: repairing from the declaration"
+    apply || return 1
+    verify
+}
+
+ensure() {
+    if [ -L "$CUR" ]; then repair; else apply; fi
+}
+
+generations() {
+    live="$(readlink "$CUR" 2>/dev/null || true)"
+    for g in "$GENS"/*; do
+        [ -d "$g" ] || continue
+        b="${g##*/}"
+        case "$b" in *[!0-9]*) continue ;; esac
+        if [ "$g" = "$live" ]; then echo "$b (live)"; else echo "$b"; fi
+    done | sort -n
+}
+
+rollback() {
+    live="$(readlink "$CUR" 2>/dev/null || true)"
+    [ -n "$live" ] || die "there is no live generation to roll back from"
+    cur="${live##*/}"
+    prev=""
+    for g in "$GENS"/*; do
+        [ -d "$g" ] || continue
+        b="${g##*/}"
+        case "$b" in *[!0-9]*) continue ;; esac
+        [ "$b" -lt "$cur" ] || continue
+        [ -z "$prev" ] || [ "$b" -gt "$prev" ] || continue
+        prev="$b"
+    done
+    [ -n "$prev" ] || die "generation $cur is the oldest one kept; there is nothing to roll back to"
+    switch_to "$GENS/$prev"
+    echo "$ME: rolled back to generation $prev"
+}
+
+# ── the package layer, which is NOT this engine's job where nix exists ─────
+need_nix() {
+    [ "${CLOUD_STORE_PACKAGE_MANAGER:-none}" = nix ] || {
+        echo "$ME: this terminal has no package manager — its tool set is baked at build time from the declaration, so there is nothing to $1 here. Change the declared list and ship." >&2
+        return 1
+    }
+    [ -n "${CLOUD_STORE_NIX_PROFILE:-}" ] || die "package_manager is nix but the declaration names no profile"
+}
+
+update() {
+    if need_nix update; then
+        nix profile upgrade --profile "$CLOUD_STORE_NIX_PROFILE" --all \
+            --extra-experimental-features "nix-command flakes" || return 1
+    fi
+    apply
+}
+
+packages() {
+    need_nix list || return 1
+    nix-env --profile "$CLOUD_STORE_NIX_PROFILE" --list-generations
+}
+
+packages_rollback() {
+    need_nix roll back || return 1
+    nix-env --profile "$CLOUD_STORE_NIX_PROFILE" --rollback || return 1
+    apply
+}
+
+SELF="$0"
+case "${1:-ensure}" in
+    apply)             apply ;;
+    verify)            verify ;;
+    repair)            repair ;;
+    ensure)            ensure ;;
+    generations)       generations ;;
+    rollback)          rollback ;;
+    switch)            [ "${2:-}" ] || die "switch needs a generation number"
+                       switch_to "$GENS/$2" && echo "$ME: generation $2 is live" ;;
+    update)            update ;;
+    packages)          packages ;;
+    packages-rollback) packages_rollback ;;
+    help|-h|--help)    sed -n '/^# Commands:/,/^# Fault/p' "$SELF" | sed 's/^# \{0,1\}//' ;;
+    *)                 die "unknown command '$1' (try: help)" ;;
+esac

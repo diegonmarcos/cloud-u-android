@@ -1,0 +1,49 @@
+{
+  "_comment": "#644 — THE declaration of the tool links both terminals ship, and the engine that materialises, verifies, repairs and rolls them back. It exists because #638 (/usr/bin/env absent), #640 (the same absence killing every `#!/usr/bin/env` shebang) and #641 (a login shell pointing at a binary the zip did not carry) were three instances of ONE defect: a link between the fixed filesystem and the package layer was written once, by hand, at bake time, and nothing on the phone could tell that it had gone dangling. Each was fixed individually. This block stops that class instead: the links are DATA, and cloud-store is a generic loop over that data.\n\nTWO terminals, both stay (ac_cloud-termux is Termux, ac_cloud-nix-on-droid is Nix-on-Droid; they are not the same app and do not merge). They share this file, the engine, and the login wiring; they differ only in the two values below that say where a tool's real binary lives and whether a package manager exists to update it.\n\nNOT a reimplementation of nix. Nix already has generations, an atomic switch and rollback for a PACKAGE SET, and the nix terminal drives exactly that (package_manager: nix → `nix profile upgrade` / `nix-env --rollback` against nix_profile). What nix does NOT manage, and what the three defects above all lived in, is the $HOME-side link tree pointing INTO whichever package layer the terminal has — a tree the termux terminal has no nix for at all. That tree is what this engine owns, with nix's semantics (generations, one-symlink atomic switch, rollback) because those are the right semantics, not because nix is being copied.",
+  "_comment_adding_a_tool": "DATA ONLY, no code change, and that is the whole point of #644. A tool enters the store when it appears in the list `terminals.<t>.tools` points at — ac_cloud-nix-on-droid/build.json::forks.nixdroid.bootstrap.default_packages.binaries (alongside its attr and provides entry) or ac_cloud-termux/rootfs/rootfs.json::binaries. render-store.py re-renders declaration.sh from that list at build time and the engine loops over it at runtime. Nothing here, and nothing in cloud-store, names a tool.",
+  "store": {
+    "_doc": "Runtime layout, under $HOME so it survives every rootfs/bootstrap update (termux binds $HOME as /root; the nix terminal's $HOME is the real app-private path). `current` is the ONE symlink an apply flips, with a single rename(2) — a half-switched profile is therefore not a reachable state. generations/ keeps the previous ones so rollback is a switch, not a rebuild.",
+    "root": ".cloud-store",
+    "current": "current",
+    "generations": "generations",
+    "bin": "bin",
+    "engine": "cloud-store",
+    "keep_generations": 5,
+    "install_dir": "usr/lib/cloud-store",
+    "_doc_install_dir": "Where the engine, its rendered declaration and the login wiring are SHIPPED (read-only), as opposed to store.root where the store is BUILT (writable, in $HOME). Relative like every other baked path: the nix terminal extracts it under $PREFIX and bin/login binds $PREFIX/usr onto /usr; the termux terminal binds the same-named APK asset directory onto /usr/lib/cloud-store inside proot. Both therefore resolve it at /usr/lib/cloud-store, which is the one literal login-init.sh carries — render-store.py hard-fails if that literal and this value ever disagree.",
+    "_doc_engine_in_home": "`cloud-store` is also copied INTO the store ($HOME/.cloud-store/cloud-store) and linked into its own bin/, so the engine that manages the links is itself a declared link and is on PATH from $HOME, editable in place. Diego asked for the shell engine in the home directory; this is that, without giving up a read-only shipped copy to repair from."
+  },
+  "terminals": {
+    "nix": {
+      "_doc": "ac_cloud-nix-on-droid. The package layer IS a nix profile, so targets are a fixed prefix under it (never a /nix/store hash: every hash moves with the nixpkgs pin, which is how a literal rots into a dangling link silently) and updates/package-generation rollback are delegated to nix itself.",
+      "app_dir": "ac_cloud-nix-on-droid",
+      "tools": { "from_file": "build.json", "at": "forks.nixdroid.bootstrap.default_packages.binaries" },
+      "target": {
+        "mode": "prefix",
+        "prefix": { "from_file": "build.json", "at": "forks.nixdroid.bootstrap.default_packages.profile_link", "prepend": "/", "append": "/bin" }
+      },
+      "package_manager": "nix",
+      "nix_profile": { "from_file": "build.json", "at": "forks.nixdroid.bootstrap.default_packages.profile_link", "prepend": "/" },
+      "fixed_links": [
+        {
+          "_doc": "#640's link, now VERIFIED and REPAIRABLE rather than only written once. bake_default_packages.py still emits the SYMLINKS.txt line — it has to, nothing has logged in yet at extraction time — but until #644 nothing could notice afterwards that it had gone missing, and its absence is precisely what made every `#!/usr/bin/env` shebang fail. It is a fixed absolute path rather than a store link because the kernel resolves a shebang against /usr/bin/env and nothing else.",
+          "path": "/usr/bin/env",
+          "tool": "env"
+        }
+      ]
+    },
+    "termux": {
+      "_doc": "ac_cloud-termux. A baked Debian glibc tree entered through proot: no nix, so the generation/atomic-switch/rollback machinery here is the real implementation rather than a delegation. Targets are searched along the standard FHS path because rootfs.json installs them through apt, tarballs, npm and pip venvs, each into its own dir (install-in-rootfs.sh symlinks venv console scripts into /usr/local/bin), and the declaration should not have to restate which mechanism produced which tool.",
+      "app_dir": "ac_cloud-termux",
+      "tools": { "from_file": "rootfs/rootfs.json", "at": "binaries" },
+      "target": {
+        "mode": "search",
+        "search": ["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"]
+      },
+      "package_manager": "none",
+      "_doc_package_manager": "Honest `none`: the tool set is baked at build time from rootfs.json and a phone cannot add to it, so `cloud-store update` says so instead of pretending. The store is still worth having here — the rootfs tree is REPLACED on every update while $HOME persists, so links from $HOME into it are exactly what goes stale.",
+      "nix_profile": null,
+      "fixed_links": []
+    }
+  }
+}

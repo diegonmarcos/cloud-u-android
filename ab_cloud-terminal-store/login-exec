@@ -1,0 +1,13 @@
+#!/bin/sh
+# #644 — the termux terminal's store entry point. enter.sh execs this instead of
+# the login shell, and it execs the login shell: one extra process, no extra
+# proot, and the shell still ends up as the session leader's child.
+#
+# The nix terminal needs no such wrapper — its login-inner is a generated script
+# bake_default_packages.py already patches, so it sources login-init.sh directly.
+D="$(dirname "$0")"
+CLOUD_STORE_INSTALL_DIR="$D"
+export CLOUD_STORE_INSTALL_DIR
+# shellcheck disable=SC1091
+. "$D/login-init.sh"
+exec "$@"
