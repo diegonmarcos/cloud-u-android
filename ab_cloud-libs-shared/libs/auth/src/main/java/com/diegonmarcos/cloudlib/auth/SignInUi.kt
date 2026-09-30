@@ -226,6 +226,21 @@ private fun BearerDialog(p: SignIn.Provider, onDismiss: () -> Unit, onLanded: (S
  * only reason this way can hand a credential to [ConfigArtifact.fetchWithCookie].
  * The cookie is never persisted by us — it lives in the WebView jar for as
  * long as the app keeps it and is dropped from memory after the request.
+ *
+ * #669 WHAT THE DIALOG LOADS: the provider's DECLARED portal page when it names
+ * one, not a protected route. Loading a protected route rides the Authelia rd
+ * round-trip, and #655's edge defect drops the handle_path prefix from rd — so a
+ * COMPLETED login landed on a 404 inside this dialog and read as failure. The
+ * portal's own signed-in page is a landing that exists. Nothing here rewrites or
+ * repairs a return URL; the edge defect stays filed on the edge.
+ *
+ * #669 THE SESSION IS DELIVERED THE MOMENT IT EXISTS, before the artifact fetch.
+ * These are two different facts: the login proved a SESSION (what the git chain
+ * rides), and the artifact fetch proved the CONFIG ROUTE serves this session
+ * (what the configs surface wants). Coupling them was the loop that could not
+ * close: the config route failing — shedded service, #655 landing, anything —
+ * silently discarded a perfectly good session, and the git page reported "no
+ * fleet sign-in on this phone yet" forever, however many logins completed.
  */
 @Composable
 private fun WebAuthDialog(p: SignIn.Provider, host: SignInHost, onDismiss: () -> Unit, onLanded: (SignInResult) -> Unit) {
@@ -252,7 +267,9 @@ private fun WebAuthDialog(p: SignIn.Provider, host: SignInHost, onDismiss: () ->
                             settings.domStorageEnabled = true      // and keeps its state in DOM storage
                             webViewClient = WebViewClient()
                             CookieManager.getInstance().setAcceptCookie(true)
-                            loadUrl(endpoint)
+                            // #669 the DECLARED portal when there is one; the config
+                            // endpoint only for a provider that declares none.
+                            loadUrl(p.portalUrl.ifBlank { endpoint })
                             web = this
                         }
                     },
@@ -265,17 +282,20 @@ private fun WebAuthDialog(p: SignIn.Provider, host: SignInHost, onDismiss: () ->
             TextButton(enabled = !busy, onClick = {
                 val cookie = CookieManager.getInstance().getCookie(endpoint).orEmpty()
                 if (cookie.isBlank()) { status = noCookie; failed = true; return@TextButton }
+                // #669 THE SESSION IS THE FIRST DELIVERABLE, handed over as soon as it
+                // exists — the same session serves the vault route (#573) and the git
+                // chain (#653), and neither depends on the config route being up. The
+                // artifact fetch below can still fail, and says so; the session it
+                // failed WITH is not discarded with it.
+                host.onWebSession(cookie)
                 busy = true; failed = false; status = fetching
                 scope.launch {
                     val outcome = withContext(Dispatchers.IO) { ConfigArtifact.fetchWithCookie(cookie) }
                     busy = false
                     when (outcome) {
                         is ConfigSyncClient.Outcome.Failed -> { failed = true; status = "✗ ${outcome.kind}\n${outcome.message}" }
-                        is ConfigSyncClient.Outcome.Ok -> {
-                            // The same session serves the vault route (#573): one login, both fetches.
-                            host.onWebSession(cookie)
+                        is ConfigSyncClient.Outcome.Ok ->
                             onLanded(SignInResult(p, identityOf(outcome.body), outcome.body, outcome.bytes))
-                        }
                     }
                 }
             }) { Text(stringResource(R.string.auth_web_go)) }

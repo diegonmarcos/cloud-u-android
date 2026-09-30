@@ -50,9 +50,18 @@ import java.net.URL
  */
 object FleetGit {
 
-    /** The declared fleet rung, or null when the declaration does not rank one. */
-    private fun rung(): AuthDeclaration.GitRung? =
-        AuthDeclaration.gitChain.firstOrNull { it.kind == DriveGitChain.RUNG_FLEET }
+    /**
+     * The declared rung this client serves. #669 there are now TWO rungs of this
+     * kind — gitea and git-proxy-api, both Authelia-fronted listings — so a caller
+     * that knows WHICH rung answered passes its declared id, and the request is
+     * built from THAT rung's declaration. With no id (the pre-chain surfaces:
+     * which provider to offer, which health route to probe), the FIRST-ranked
+     * rung of the kind speaks for the family, which is what the ranking means.
+     */
+    private fun rung(id: String = ""): AuthDeclaration.GitRung? =
+        AuthDeclaration.gitChain.firstOrNull {
+            it.kind == DriveGitChain.RUNG_FLEET && (id.isBlank() || it.id == id)
+        }
 
     /** What the declaration says the fleet serves. Empty when no fleet rung is declared. */
     fun reposUrl(): String = rung()?.config?.optString("repos_url").orEmpty()
@@ -104,11 +113,11 @@ object FleetGit {
      * Reuses [GitHubRepos.parse] for the array: the proxy's projection keeps the
      * upstream field names, so a second parser would be a second thing to keep in step.
      */
-    fun repos(session: String): Outcome {
-        val url = reposUrl()
+    fun repos(session: String, rungId: String = ""): Outcome {
+        val config = rung(rungId)?.config
+        val url = config?.optString("repos_url").orEmpty()
         if (url.isBlank()) return Outcome.Unreachable("no fleet repos_url is declared")
         if (session.isBlank()) return Outcome.Unreachable("no fleet session on this phone")
-        val config = rung()?.config
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = false
@@ -120,7 +129,12 @@ object FleetGit {
             when (val code = connection.responseCode) {
                 in 200..299 -> {
                     val body = connection.inputStream.bufferedReader().readText()
-                    val repos = GitHubRepos.parse(JSONObject(body).optJSONArray("repos")?.toString().orEmpty())
+                    // #669 WHICH KEY CARRIES THE ARRAY IS DECLARED (`repos_field`):
+                    // git-proxy-api's projection says "repos", gitea's search says
+                    // "data". The item fields parse with the one existing parser —
+                    // gitea keeps GitHub's field shape deliberately.
+                    val field = config?.optString("repos_field").orEmpty().ifBlank { "repos" }
+                    val repos = GitHubRepos.parse(JSONObject(body).optJSONArray(field)?.toString().orEmpty())
                     Outcome.Listed(repos)
                 }
                 401, 403 -> Outcome.Refused(code, "the fleet refused this identity")

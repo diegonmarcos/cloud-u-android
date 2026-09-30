@@ -236,10 +236,14 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
      * states are kept APART on purpose — a redirect means the edge answered and says
      * nothing about the service, so it must never read as either working or broken.
      */
-    fun fetchFleetListing() {
+    fun fetchFleetListing(rungId: String) {
         listing = listing.copy(loading = true, error = "")
         scope.launch {
-            val outcome = withContext(Dispatchers.IO) { FleetGit.repos(FleetSession.cookie) }
+            // #669 the listing is fetched from the rung that ANSWERED — gitea and
+            // git-proxy-api are both declared under this kind now, and asking the
+            // family's first-ranked endpoint after the SECOND one answered would
+            // list from a service the chain just measured as unreachable.
+            val outcome = withContext(Dispatchers.IO) { FleetGit.repos(FleetSession.cookie, rungId) }
             listing = when (outcome) {
                 is FleetGit.Outcome.Listed -> GitListing(loaded = true, repos = outcome.repos, complete = true)
                 is FleetGit.Outcome.Refused -> GitListing(loaded = true, error = outcome.why)
@@ -300,7 +304,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 // #653 THE FLEET ANSWERED AND THERE IS NO TOKEN — the whole point. The
                 // listing comes from the proxy, which holds the GitHub credential on its
                 // own side, so this branch runs on a phone with ZERO GitHub credential.
-                outcome.ok && token == null -> fetchFleetListing()
+                outcome.ok && token == null -> fetchFleetListing(outcome.answeredBy.orEmpty())
                 token != null -> {
                     login = login.copy(identity = page.owner, token = token, fromVault = false)
                     fetchListing(token)

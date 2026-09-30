@@ -53,6 +53,13 @@ object SignIn {
         val clientSecret: String,
         val scope: String,
         val grants: List<String>,
+        /** #669 The page the browser login LOADS — the portal itself, declared.
+         *  Blank means the way loads the config endpoint as before. Loading the
+         *  portal directly avoids #655's broken rd round-trip (the edge drops the
+         *  handle_path prefix on the Authelia return, so a completed login on a
+         *  protected route lands on a 404); the portal's own signed-in page is a
+         *  landing that exists. */
+        val portalUrl: String = "",
     ) {
         fun grants(what: String) = what in grants
 
@@ -85,6 +92,7 @@ object SignIn {
                 clientSecret = p.optString("client_secret"),
                 scope = p.optString("scope"),
                 grants = if (g == null) emptyList() else (0 until g.length()).map { g.getString(it) },
+                portalUrl = p.optString("portal_url"),
             )
         }
     }

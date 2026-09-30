@@ -49,6 +49,8 @@ GIX_GRADLE="$SHARED/libs/gix/build.gradle"
 GIX_RUNNER="$SHARED/libs/gix/src/main/java/com/diegonmarcos/cloudlib/gix/GixRunner.kt"
 FLEET_CLIENT="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/FleetGit.kt"
 GH_RUNNER="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhRunner.kt"
+SIGNIN="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignIn.kt"
+SIGNIN_UI="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
@@ -93,9 +95,13 @@ if isinstance(order, list) and isinstance(providers, dict):
               % (sorted(ranked), sorted(declared))); bad += 1
     if len(order) != len(set(order)):
         print("    auth.git_chain.order repeats a rung: %r" % order); bad += 1
-    # The owner's ask is specifically ours-first.
-    if order[0] != "fleet":
-        print("    the first rung is %r; the fleet is preferred whenever reachable" % order[0]); bad += 1
+    # The owner's ask is specifically ours-first — and #669 OUR OWN GIT SERVER
+    # outranks our GitHub proxy: gitea needs no third party at all, and it is an
+    # independent service that stays up when the sheddable proxy (#662) is not.
+    if order[0] != "gitea":
+        print("    the first rung is %r; the fleet's own gitea is preferred whenever reachable" % order[0]); bad += 1
+    if "fleet" in order and "gitea" in order and order.index("gitea") > order.index("fleet"):
+        print("    the proxy is ranked above gitea — the sheddable service above the independent one"); bad += 1
     if "github" not in order:
         print("    there is no github rung: nothing answers when our servers are down"); bad += 1
     if order.index("fleet") > order.index("github"):
@@ -300,6 +306,119 @@ echo "── C8 #655 the declared routes carry the service's base path, and the 
 c8 "$SHARED_BJ" "$WIRING" "$FLEET_CLIENT" \
     && pass "the fleet rung declares the service's real routes under /git, rides the declared session header, and no Kotlin builds or repairs a URL" \
     || fail "the fleet rung's routes, session header, or redirect handling do not match the service that shipped"
+
+# c9 <shared build.json> <FleetGit.kt> <GitReposScreen.kt> <SignInUi.kt> <SignIn.kt>
+# <DriveGitChain.kt> : #669 the fleet's OWN git server is the first rung, and the
+# sign-in loop can CLOSE on a fresh phone
+#
+# The defect this pins was truthful and useless: both rungs empty on a real device,
+# and the "Get a credential" affordance unable to close the loop. Three properties
+# make a fresh phone reach a repo list, and each is asserted on the MESSAGE:
+#  · GITEA IS A DECLARED RUNG, ranked first — ours, Authelia-fronted, no third-party
+#    credential; resolved from the declaration, no Kotlin literal for host/endpoint,
+#    and the response's array key is DECLARED (repos_field), not a per-provider
+#    branch. The listing is fetched from the rung that ANSWERED, not the family's
+#    first-ranked endpoint.
+#  · THE SESSION IS DECOUPLED FROM THE ARTIFACT. The browser login's cookie is
+#    delivered to the host BEFORE the config-artifact fetch: those are two facts,
+#    and coupling them meant a failing config route silently discarded a good
+#    session — "no fleet sign-in on this phone yet" forever.
+#  · THE DIALOG LOADS THE DECLARED PORTAL, not a protected route, so a completed
+#    login lands on a page that exists instead of riding #655's broken rd
+#    round-trip. (No URL is repaired client-side; c8 still enforces that.)
+#  · A RUNG'S FAILURE NAMES THE NEXT STEP, not just itself.
+c9() {
+    local bj="$1" client="$2" page="$3" ui="$4" providers_kt="$5" wiring="$6" bad=0
+    python3 - "$bj" <<'PYTHON' || bad=1
+import json, sys
+auth = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]
+chain = auth["git_chain"]; order = chain.get("order") or []; prov = chain.get("providers") or {}
+bad = 0
+if not order or order[0] != "gitea":
+    print("    gitea is not the first rung: %r" % order); bad = 1
+g = prov.get("gitea") or {}
+if g.get("kind") != "fleet_proxy":
+    print("    the gitea rung's kind is %r; it is the second instance of the fleet_proxy shape" % g.get("kind")); bad = 1
+if g.get("session_provider") != "authelia_web":
+    print("    gitea's session_provider is %r; the ordinary browser login is authelia_web" % g.get("session_provider")); bad = 1
+if (g.get("session_header") or "").lower() != "cookie":
+    print("    gitea's session_header is %r; authelia_web yields a session COOKIE" % g.get("session_header")); bad = 1
+for key in ("repos_url", "health_url"):
+    url = g.get(key, "")
+    if not url.startswith("https://git.diegonmarcos.com/api/v1/"):
+        print("    gitea's %s (%r) is not the fleet git server's own API subdomain — a"
+              " subdomain has no handle_path prefix for the Authelia rd round-trip to"
+              " drop (#655), which is part of why this rung can close the loop" % (key, url)); bad = 1
+if not (g.get("repos_field") or "").strip():
+    print("    gitea declares no repos_field: the client would look for the proxy's"
+          " 'repos' key in gitea's {'data': [...]} body and list nothing, forever,"
+          " while both sides look healthy"); bad = 1
+if "token_url" in g:
+    print("    the gitea rung declares token_url — no rung mints a credential for the phone"); bad = 1
+if g.get("holds_github_credential") is not False:
+    print("    the gitea rung must declare holds_github_credential false — no third-party"
+          " credential exists anywhere on this leg"); bad = 1
+# The browser login loads the DECLARED portal — a page that exists after login.
+web = next((p for p in auth["sign_in"]["providers"] if p.get("id") == "authelia_web"), {})
+purl = web.get("portal_url", "")
+if not purl.startswith("https://"):
+    print("    authelia_web declares no portal_url: the dialog would load a protected"
+          " route and ride #655's broken rd round-trip to a 404 landing"); bad = 1
+elif "api.diegonmarcos.com" in purl:
+    print("    portal_url (%r) points at the protected API host, not the portal — that"
+          " is the #655-exposed round-trip again" % purl); bad = 1
+sys.exit(1 if bad else 0)
+PYTHON
+    # The client reads the DECLARED array key, and holds no per-provider literal:
+    # neither the gitea host nor its 'data' key may appear in Kotlin.
+    grep -qE 'optString\("repos_field"\)' "$client" \
+        || { echo "    FleetGit does not read the declared repos_field"; bad=1; }
+    local lit
+    for f_ in "$client" "$wiring" "$page"; do
+        lit="$(_code "$f_" | grep -nE 'git\.diegonmarcos|"data"' || true)"
+        [ -z "$lit" ] || { echo "    $(basename "$f_") holds a gitea host or array-key literal:"; \
+                           printf '%s\n' "$lit" | sed 's/^/        /'; bad=1; }
+    done
+    # The listing is fetched from the rung that ANSWERED.
+    grep -qE 'fun repos\(session: String, rungId: String' "$client" \
+        || { echo "    FleetGit.repos cannot be told which rung answered"; bad=1; }
+    grep -qE 'fetchFleetListing\(outcome\.answeredBy' "$page" \
+        || { echo "    the page lists from the family's first endpoint instead of the rung"; \
+             echo "    that answered — after a fall-through it would ask the very service"; \
+             echo "    the chain just measured as unreachable"; bad=1; }
+    # THE LOOP CLOSES: the session is handed to the host BEFORE the artifact fetch.
+    python3 - "$ui" <<'PYTHON' || bad=1
+import sys
+src = open(sys.argv[1], encoding="utf-8").read().splitlines()
+deliver = next((i for i, l in enumerate(src) if "host.onWebSession(cookie)" in l), None)
+fetch = next((i for i, l in enumerate(src) if "ConfigArtifact.fetchWithCookie(cookie)" in l), None)
+if deliver is None:
+    print("    the web dialog never delivers the session to the host"); sys.exit(1)
+if fetch is not None and deliver > fetch:
+    print("    the session is delivered only AFTER the artifact fetch — a failing config"
+          " route discards a good session, and the git page reports 'no fleet sign-in"
+          " on this phone yet' forever, however many logins complete"); sys.exit(1)
+PYTHON
+    # The dialog loads the declared portal, and the declaration is READ, not typed.
+    grep -qF 'loadUrl(p.portalUrl.ifBlank { endpoint })' "$ui" \
+        || { echo "    the web dialog does not load the declared portal page"; bad=1; }
+    grep -qE 'portalUrl = p\.optString\("portal_url"\)' "$providers_kt" \
+        || { echo "    portal_url is not parsed off the declaration"; bad=1; }
+    _code "$ui" | grep -qE '"https?://' \
+        && { echo "    SignInUi holds a URL literal — the portal must be declared"; bad=1; }
+    # A rung's failure names the NEXT STEP, not just itself.
+    grep -qF 'no fleet sign-in on this phone yet — the Authelia sign-in below starts one' "$wiring" \
+        || { echo "    the no-session fall-through names no next step — the dead end the"; \
+             echo "    owner spent three days in"; bad=1; }
+    grep -qF 'the vault import delivers one' "$wiring" \
+        || { echo "    the github decline names no next step"; bad=1; }
+    return $bad
+}
+
+echo "── C9 #669 gitea first, and the sign-in loop closes on a fresh phone ──"
+c9 "$SHARED_BJ" "$FLEET_CLIENT" "$PAGE" "$SIGNIN_UI" "$SIGNIN" "$WIRING" \
+    && pass "gitea is the declared first rung, the listing follows the answering rung, the session outlives a failing artifact fetch, the dialog lands on the declared portal, and every failure names its next step" \
+    || fail "a fresh phone with zero credentials still cannot reach a repo list"
 
 echo "── C2 reordering the declaration reorders the REAL attempts ──"
 c2 "$SHARED_BJ" && pass "the declared order is the attempted order, reversing it changes who answers, and a removed rung is never tried" \
@@ -637,6 +756,7 @@ _stage() {
     cp "$GH_PIN" "$W/gh.json";             cp "$GH_GRADLE" "$W/gh.gradle"
     cp "$GIX_PIN" "$W/gix.json";           cp "$GIX_GRADLE" "$W/gix.gradle"
     cp "$GIX_RUNNER" "$W/GixRunner.kt";    cp "$GH_RUNNER" "$W/GhRunner.kt"
+    cp "$SIGNIN_UI" "$W/SignInUi.kt";      cp "$SIGNIN" "$W/SignIn.kt"
 }
 
 # _sub <file> <old> <new> : an EXACT replacement that MUST actually apply. A
@@ -828,6 +948,33 @@ _stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScree
 _stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
     printf '\nprivate val leak = Log.d("chain", "token=$token")\n' >>"$W/GitAuthChain.kt"
     _red "C7 a token reaches a log line" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
+
+# ── C9 #669 gitea first, and the loop that closes ──
+_c9() { c9 "$W/shared.json" "$W/FleetGit.kt" "$W/GitReposScreen.kt" "$W/SignInUi.kt" "$W/SignIn.kt" "$W/DriveGitChain.kt"; }
+_stage && _green "c9" _c9 && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["order"].remove("gitea"); d["auth"]["git_chain"]["providers"].pop("gitea")'
+    _red "C9 the gitea rung dropped — the fleet's own git server no longer answers first" _c9; }
+_stage && _green "c9" _c9 && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["gitea"]["repos_field"] = ""'
+    _red "C9 gitea's array key undeclared — the client reads 'repos' out of {'data': ...} and lists nothing forever" _c9; }
+_stage && _green "c9" _c9 && {
+    _sub "$W/DriveGitChain.kt" 'no fleet sign-in on this phone yet — the Authelia sign-in below starts one' \
+                               'no fleet sign-in on this phone yet'
+    _red "C9 the no-session failure stops naming its next step (the three-day dead end)" _c9; }
+_stage && _green "c9" _c9 && {
+    _sub "$W/SignInUi.kt" '                host.onWebSession(cookie)
+                busy = true; failed = false; status = fetching' \
+                          '                busy = true; failed = false; status = fetching'
+    _red "C9 the session delivered only through a successful artifact fetch — the loop that cannot close" _c9; }
+_stage && _green "c9" _c9 && {
+    _json "$W/shared.json" '[p.pop("portal_url") for p in d["auth"]["sign_in"]["providers"] if p.get("id") == "authelia_web"]'
+    _red "C9 no declared portal — the dialog loads a protected route and lands on #655's 404" _c9; }
+_stage && _green "c9" _c9 && {
+    _sub "$W/FleetGit.kt" 'optString("repos_field")' 'optString("repos_key")'
+    _red "C9 the client stops reading the declared array key" _c9; }
+_stage && _green "c9" _c9 && {
+    _sub "$W/GitReposScreen.kt" 'fetchFleetListing(outcome.answeredBy.orEmpty())' 'fetchFleetListing("")'
+    _red "C9 the listing goes to the family's first endpoint instead of the rung that answered" _c9; }
 
 echo "── $MUTATIONS mutations, $HOLLOW of them hollow or void ──"
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))

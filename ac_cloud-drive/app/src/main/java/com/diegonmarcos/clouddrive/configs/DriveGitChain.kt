@@ -79,12 +79,15 @@ object DriveGitChain {
     }
 
     /**
-     * RUNG 1 — our own Authelia-fronted proxy (#647). Ranked first because on this
-     * leg the PHONE HOLDS NO GITHUB CREDENTIAL AT ALL: it presents the fleet
-     * session the owner's ordinary browser login earned, and git-proxy-api talks to
-     * GitHub with a token that never leaves the server. Nothing is minted for the
-     * device here, which is why this rung answers [GitAuthChain.Answer.Served]
-     * rather than a credential.
+     * THE FLEET-SHAPED RUNGS — every declared endpoint of kind `fleet_proxy`,
+     * each attempted with ITS OWN declared config. #669 there are two: the
+     * fleet's own gitea (ranked first — our git server, no third-party involved
+     * at all) and git-proxy-api (#647). On BOTH legs the PHONE HOLDS NO GITHUB
+     * CREDENTIAL AT ALL: it presents the fleet session the owner's ordinary
+     * browser login earned, and the service answers with a listing — gitea from
+     * its own store, git-proxy-api with a token that never leaves the server.
+     * Nothing is minted for the device here, which is why these rungs answer
+     * [GitAuthChain.Answer.Served] rather than a credential.
      *
      * EVERY WAY THIS CAN FAIL IS A FALL-THROUGH. Not deployed, our servers down,
      * this network unable to see them, no fleet sign-in on this phone yet — a phone
@@ -97,8 +100,10 @@ object DriveGitChain {
         val url = config.optString("repos_url")
         if (url.isBlank()) return GitAuthChain.Answer.NoImplementation("no repos_url is declared")
         // No session means we cannot even ask. That is indistinguishable from the
-        // fleet being unreachable, and must behave identically.
-        if (session.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet sign-in on this phone yet")
+        // fleet being unreachable, and must behave identically. #669 the words name
+        // the NEXT STEP, not just the lack: a failure that offers nothing is the
+        // dead end the owner spent three days in.
+        if (session.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet sign-in on this phone yet — the Authelia sign-in below starts one")
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = false
