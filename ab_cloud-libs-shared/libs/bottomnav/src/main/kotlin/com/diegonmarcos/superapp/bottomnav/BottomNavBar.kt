@@ -85,8 +85,12 @@ import kotlin.math.roundToInt
  *  - #477 the bottom clearance is ONE dimen plus the live system-bar/display-cutout inset.
  *    The inset is READ (getBottom), never applied through windowInsetsPadding or
  *    consumeWindowInsets, so nothing else in the window loses it.
- *  - #532 [collapsed] drops the labels and leaves an icons-only bar ([BottomNavCollapse] derives
- *    it from scrolling). The island is fill only, with no stroke layer, so the visible edge IS
+ *  - #532 [collapsed] drops the labels and leaves an icons-only bar. A Compose shell derives it
+ *    from scrolling with [BottomNavCollapse]; a View shell with
+ *    [BottomNavIslandView.collapseOnScrollIn], which #673 added after the View shells were found
+ *    to be setting [collapsed] nowhere at all, leaving them permanently expanded. Both drivers
+ *    decide with [collapseFor], so there is one rule and not one per host style.
+ *    The island is fill only, with no stroke layer, so the visible edge IS
  *    the fill's edge. The collapse is ANIMATED by one progress value that shrinks each label's
  *    layout slot, so the bar shrinks with it, and the label carries no clip of its own: the
  *    only thing that hides it is the capsule's pill clip, so the hide line IS the oval edge and
@@ -242,17 +246,23 @@ private fun rememberBarMotion(key: Any?): Boolean {
 }
 
 /**
- * #532 scroll-collapse. Attach it with Modifier.nestedScroll(collapse) on the scrolling
- * content and pass [collapsed] to [BottomNavIsland]. Scrolling down the content collapses the
- * bar to icons only, and scrolling back up restores the labels. It only observes: it consumes
- * nothing, so the list still gets every pixel of the scroll.
+ * #532 scroll-collapse for a COMPOSE shell. Attach it with Modifier.nestedScroll(collapse) on the
+ * scrolling content and pass [collapsed] to [BottomNavIsland]. Scrolling down the content
+ * collapses the bar to icons only, and scrolling back up restores the labels. It only observes: it
+ * consumes nothing, so the list still gets every pixel of the scroll.
+ *
+ * A View-based shell cannot use this — a NestedScrollConnection is reached only from Compose — and
+ * uses [BottomNavIslandView.collapseOnScrollIn] instead. Both apply [collapseFor].
  */
 public class BottomNavCollapse : NestedScrollConnection {
     public var collapsed: Boolean by mutableStateOf(false)
         private set
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        if (available.y < 0f) collapsed = true else if (available.y > 0f) collapsed = false
+        // Negated: a nested-scroll y goes negative as the content travels down, which is the same
+        // gesture a View shell measures as a RISING scroll offset. One rule, [collapseFor], so the
+        // Compose and View hosts cannot collapse on different definitions (#673).
+        collapsed = collapseFor(collapsed, -available.y)
         return Offset.Zero
     }
 }

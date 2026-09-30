@@ -7,12 +7,15 @@ import android.graphics.Canvas
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.core.graphics.Insets
@@ -23,6 +26,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.google.android.material.color.MaterialColors
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -67,6 +71,8 @@ class MeBottomNavTest {
 
     private lateinit var root: View
     private lateinit var nav: BottomNavIslandView
+    private lateinit var contentHost: FrameLayout
+    private lateinit var scroller: ScrollView
     private lateinit var themed: ContextThemeWrapper
     private val opened = mutableListOf<String>()
     private val launched = mutableListOf<String>()
@@ -80,10 +86,46 @@ class MeBottomNavTest {
             themed = ContextThemeWrapper(activity, R.style.Theme_CloudMe)
             root = LayoutInflater.from(themed).inflate(R.layout.activity_main, null)
             nav = root.findViewById(R.id.bottom_nav)
-            MeBottomNav.configure(nav, onOpen = { opened += it }, onTarget = { launched += it })
+            // The real content host — what the bar's collapse driver observes (#673). Left EMPTY
+            // and unlaid-out here: the geometry tests read exact pixels off this layout. A test
+            // that needs a scrolling page calls [givePageToScroll] itself.
+            contentHost = root.findViewById(R.id.fragment_container)
+            MeBottomNav.configure(
+                nav,
+                content = contentHost,
+                onOpen = { opened += it },
+                onTarget = { launched += it },
+            )
             MeBottomNav.sync(nav, select)
             activity.setContentView(root)
         }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Put a page taller than the viewport inside the content host and lay it out, so it can really
+     * scroll. Robolectric lays nothing out by itself and ScrollView.scrollTo CLAMPS to its child's
+     * measured height, so without the explicit pass a scroll would stay at 0 and the collapse test
+     * would fail for the wrong reason.
+     */
+    private fun givePageToScroll() {
+        compose.runOnUiThread {
+            scroller = ScrollView(themed).apply {
+                addView(View(themed), FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX))
+            }
+            contentHost.addView(scroller, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
+            contentHost.measure(
+                View.MeasureSpec.makeMeasureSpec(VIEWPORT_PX, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(VIEWPORT_PX, View.MeasureSpec.EXACTLY),
+            )
+            contentHost.layout(0, 0, VIEWPORT_PX, VIEWPORT_PX)
+        }
+        compose.waitForIdle()
+    }
+
+    /** Scroll the content host by [dy] px and let the bar react, the way a finger would. */
+    private fun scrollContentBy(dy: Int) {
+        compose.runOnUiThread { scroller.scrollTo(0, (scroller.scrollY + dy).coerceAtLeast(0)) }
         compose.waitForIdle()
     }
 
@@ -177,5 +219,54 @@ class MeBottomNavTest {
         compose.runOnUiThread { MeBottomNav.sync(nav, pages.first().id) }
         compose.waitForIdle()
         compose.onAllNodes(isSelected()).assertCountEquals(1)
+    }
+
+    /**
+     * #673 the bar collapses to icons when the page scrolls, and returns when it scrolls back.
+     *
+     * NOT "the collapse parameter exists" and NOT "setting collapsed shrinks the bar": both of
+     * those passed for as long as #532's collapse sat unused in this app, because nothing in a
+     * View shell ever wrote BottomNavIslandView.collapsed. This scrolls the content host that
+     * MeBottomNav was handed and asserts the RENDERED bar moved, which needs a live driver.
+     */
+    @Test
+    fun `scrolling the page collapses the bar to icons, and scrolling up brings the labels back`() {
+        show(pages.first().id)
+        givePageToScroll()
+        val expanded = island().height
+        assertFalse("the bar started collapsed, so the scroll proves nothing", nav.collapsed)
+        assertTrue("no labels are drawn before any scroll", labelCount() > 0)
+
+        scrollContentBy(SCROLL_PX)
+
+        assertTrue(
+            "scrolling the page did not collapse the bar: nothing drives collapsed in this " +
+                "shell, which is how #532 reached Cloud Me as a no-op",
+            nav.collapsed,
+        )
+        assertEquals("labels survived the collapse", 0, labelCount())
+        val collapsed = island().height
+        assertTrue(
+            "the collapse did not shrink the island: $expanded px expanded, $collapsed px collapsed",
+            collapsed < expanded - 1f,
+        )
+
+        scrollContentBy(-SCROLL_PX)
+
+        assertFalse("scrolling up left the bar collapsed", nav.collapsed)
+        assertEquals("the labels did not come back", nav.items.size, labelCount())
+        near("the island did not return to its expanded height", expanded, island().height)
+    }
+
+    /** How many of the bar's items currently draw a label node. */
+    private fun labelCount() = nav.items.count {
+        compose.onAllNodesWithTag(BottomNavTags.label(it.id), useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private companion object {
+        const val VIEWPORT_PX = 1080
+        const val PAGE_PX = 6000
+        const val SCROLL_PX = 400
     }
 }

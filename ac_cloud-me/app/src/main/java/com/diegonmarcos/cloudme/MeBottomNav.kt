@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudme
 
 import android.content.Context
+import android.view.ViewGroup
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
@@ -17,6 +18,8 @@ import com.google.android.material.color.MaterialColors
  * you are still on), the theme's inverse pair for the pill, and that DrawerLayout already
  * clears the system bars for its content. MainActivity and MeBottomNavTest both call [configure],
  * so the test measures the bar the app shows.
+ *
+ * [configure] takes the content host because the bar's scroll-collapse is driven from it (#673).
  */
 object MeBottomNav {
 
@@ -31,7 +34,12 @@ object MeBottomNav {
      * Opening moves the pill; launching does not, so the bar keeps pointing at the page the
      * user comes back to.
      */
-    fun configure(nav: BottomNavIslandView, onOpen: (String) -> Unit, onTarget: (String) -> Unit) {
+    fun configure(
+        nav: BottomNavIslandView,
+        content: ViewGroup,
+        onOpen: (String) -> Unit,
+        onTarget: (String) -> Unit,
+    ) {
         val ctx = nav.context
         fun attr(id: Int) = Color(MaterialColors.getColor(ctx, id, "MeBottomNav"))
         nav.items = items(ctx)
@@ -44,6 +52,11 @@ object MeBottomNav {
         // system-bar inset, and the island sits inside that content. Reading the live inset
         // again would lift the bar twice (#477).
         nav.insets = WindowInsets(0, 0, 0, 0)
+        // #673 scroll-collapse, from the content host: scrolling a page collapses the bar to
+        // icons. #532 shipped this as an island parameter and nothing in a View shell ever set
+        // it, so the behaviour never reached Cloud Me at all. Required, not optional, so it
+        // cannot quietly go unset again.
+        nav.collapseOnScrollIn(content)
         nav.onSelect = { id ->
             val section = Sections.byId(id)
             when {

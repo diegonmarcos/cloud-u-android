@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.ui
 
 import android.content.Context
+import android.view.ViewGroup
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
@@ -39,11 +40,17 @@ object ShellBottomNav {
         )
     }
 
-    fun configure(nav: BottomNavIslandView, mode: String) {
+    fun configure(nav: BottomNavIslandView, mode: String, content: ViewGroup) {
         nav.items = items(nav.context, mode)
         nav.colorScheme = colorScheme(nav.context)
         // ShellActivity.applyEdgeToEdgeInsets pads shell_linear by the system-bar inset, and the
         // island sits inside it. Reading the live inset again would lift the bar twice (#477).
         nav.insets = WindowInsets(0, 0, 0, 0)
+        // #673 scroll-collapse. [content] is the shell's content host, so scrolling any page
+        // collapses the bar to icons. Required rather than optional: #532's collapse was inert in
+        // this shell for as long as nothing here drove it, and an argument that can be omitted is
+        // the same defect waiting to happen again. Re-configuring replaces the driver, never
+        // stacks another one.
+        nav.collapseOnScrollIn(content)
     }
 }

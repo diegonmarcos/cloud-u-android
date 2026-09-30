@@ -5,8 +5,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -52,6 +54,10 @@ abstract class ShellIslandHarness {
 
     protected lateinit var nav: BottomNavIslandView
     protected lateinit var frame: FrameLayout
+    /** activity_main's content host, stood up here so the bar's scroll-collapse driver has the
+     *  same thing to observe that the shell gives it (#673). */
+    protected lateinit var content: FrameLayout
+    protected lateinit var scroller: ScrollView
     protected lateinit var themed: ContextThemeWrapper
     protected val picked = mutableListOf<String>()
     protected val repicked = mutableListOf<String>()
@@ -66,17 +72,59 @@ abstract class ShellIslandHarness {
         compose.runOnUiThread {
             themed = ContextThemeWrapper(activity, R.style.Theme_Superapp)
             nav = BottomNavIslandView(themed)
-            ShellBottomNav.configure(nav, com.diegonmarcos.superapp.launcher.Sections.defaultMode())
+            // activity_main's content host. EMPTY here, and laid out by nobody: the geometry tests
+            // measure exact pixels off this frame, so nothing is added to it and no layout pass is
+            // forced. A test that needs a scrolling page calls [givePageToScroll] itself.
+            content = FrameLayout(themed)
+            ShellBottomNav.configure(nav, com.diegonmarcos.superapp.launcher.Sections.defaultMode(), content)
             nav.selectedId = select
             nav.onSelect = { picked += it; nav.selectedId = it }
             nav.onReselect = { repicked += it }
             frame = FrameLayout(themed).apply {
+                addView(content, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                 addView(nav, FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             }
             activity.setContentView(frame)
         }
         compose.waitForIdle()
+    }
+
+    /**
+     * Put a page taller than the viewport inside the content host and lay it out, so the host can
+     * really scroll. Robolectric lays nothing out on its own and ScrollView.scrollTo CLAMPS to its
+     * child's measured height, so without the explicit pass a scroll would silently stay at 0 and
+     * a collapse test would fail for the wrong reason.
+     */
+    protected fun givePageToScroll() {
+        compose.runOnUiThread {
+            scroller = ScrollView(themed).apply {
+                addView(View(themed), FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX))
+            }
+            content.addView(scroller, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
+            layOut(content)
+        }
+        compose.waitForIdle()
+    }
+
+    protected fun layOut(view: View) {
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(VIEWPORT_PX, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(VIEWPORT_PX, View.MeasureSpec.EXACTLY),
+        )
+        view.layout(0, 0, VIEWPORT_PX, VIEWPORT_PX)
+    }
+
+    /** Scroll the content host by [dy] px and let the bar react, the way a finger would. */
+    protected fun scrollContentBy(dy: Int) {
+        compose.runOnUiThread { scroller.scrollTo(0, (scroller.scrollY + dy).coerceAtLeast(0)) }
+        compose.waitForIdle()
+    }
+
+    companion object {
+        const val VIEWPORT_PX: Int = 1080
+        const val PAGE_PX: Int = 6000
     }
 
     /** Bounds in the island host's own coordinates (px). */

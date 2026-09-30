@@ -109,7 +109,12 @@ class MainActivity : AppCompatActivity() {
     /** The bar is libs:bottomnav's island (#531); MeBottomNav fills it from [Sections.bottom]
      *  and routes a tap: a page section opens here, a launch section leaves the app. */
     private fun buildBottomNav() {
-        MeBottomNav.configure(bottomNav, onOpen = { open(it) }, onTarget = { onTarget(it) })
+        MeBottomNav.configure(
+            bottomNav,
+            content = findViewById(R.id.fragment_container),
+            onOpen = { open(it) },
+            onTarget = { onTarget(it) },
+        )
     }
 
     private fun buildDrawer() {

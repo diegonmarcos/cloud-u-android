@@ -2091,7 +2091,8 @@ open class ShellActivity : AppCompatActivity(),
     /** Refill the bottom-nav island for the current Apps/Admin mode: each item's icon is its
      *  section's iconForMode and its label the section's label, both from build.json, so
      *  renaming a section is a build.json edit. Safe to call repeatedly. */
-    private fun refreshBottomNavIconsForMode() = ShellBottomNav.configure(bottomNav, modePrefs.mode)
+    private fun refreshBottomNavIconsForMode() =
+        ShellBottomNav.configure(bottomNav, modePrefs.mode, findViewById(R.id.fragment_container))
 
     // ── toolbar (right-side Back action) ─────────────────────────────────
 

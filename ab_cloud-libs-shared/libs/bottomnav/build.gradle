@@ -5,7 +5,10 @@
 // icon-only bar (#465/#493). It now holds the port of superapp's View-era design
 // (CloudBottomNavView + bg_nav_island + bg_bottom_nav_item_checked + the bottom_nav_* tokens):
 // a full-pill island at 80% width, a selected PILL around icon+label, concentric end insets, a
-// one-dimen bottom clearance plus the live cutout inset, and scroll-collapse to icons only. It
+// one-dimen bottom clearance plus the live cutout inset, and scroll-collapse to icons only —
+// driven in a Compose shell by BottomNavCollapse and in a View shell by
+// BottomNavIslandView.collapseOnScrollIn, which #673 added because the View shells drove the
+// collapse from nowhere and so never showed it. It
 // is ported, not wrapped: there is no AndroidView here. Items are injected (BottomNavEntry), so
 // no app's menu is baked in. cloud-mail's five-item table (BottomNav.kt) is its first consumer.
 // superapp consumes it since #531 through BottomNavIslandView, the Compose host an XML shell
