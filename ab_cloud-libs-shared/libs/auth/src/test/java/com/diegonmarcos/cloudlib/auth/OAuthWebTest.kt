@@ -105,7 +105,7 @@ class OAuthWebTest {
         captures = listOf("cookie", "redirect"),
     )
 
-    @Test fun `decide names every failure in order: declared, installed, granted, answering`() {
+    @Test fun `decide names every failure in order - declared, installed, granted, answering`() {
         assertEquals(AuthMission.Outcome.NotDeclared, AuthMission.decide(null, true, true, true))
         assertEquals(AuthMission.Outcome.NotDeclared, AuthMission.decide(contract.copy(action = ""), true, true, true))
         assertEquals(AuthMission.Outcome.NotInstalled(contract.pkg), AuthMission.decide(contract, false, false, false))
