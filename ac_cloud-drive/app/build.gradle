@@ -43,12 +43,20 @@ def codeFinal = { ->
     long mins = java.time.Duration.between(base, built).toMinutes()
     return mins > 0 ? (int) (3000000L + mins) : 3000000
 }()
-def shortSha = (System.getenv('GITHUB_SHA')
-                ?: providers.exec {
-                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
-                       ignoreExitValue = true
-                   }.standardOutput.asText.get().trim())
-                .take(8)
+// The built commit, FULL 40 hex. A released APK used to carry only an 8-char short sha
+// (and Cloud-Drive.apk.source is a content digest, not a git sha), so nobody could name
+// the exact commit of the build installed on a phone. GITHUB_SHA first: Actions checks out
+// shallow/detached and the env is the one value the runner guarantees; git is the local
+// fallback. An empty answer (no git, no env) fails the build rather than baking "".
+def fullSha = (System.getenv('GITHUB_SHA')
+               ?: providers.exec {
+                      commandLine 'git', 'rev-parse', 'HEAD'
+                      ignoreExitValue = true
+                  }.standardOutput.asText.get()).trim()
+if (!(fullSha ==~ /[0-9a-f]{40}/)) {
+    throw new GradleException("the built git sha must be 40 hex (GITHUB_SHA or git rev-parse HEAD), got '${fullSha}'")
+}
+def shortSha = fullSha.take(8)
 def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'").with {
     setTimeZone(java.util.TimeZone.getTimeZone('UTC'))
     format(new java.util.Date())
@@ -413,6 +421,7 @@ android {
             abiFilters.addAll(abis as List)
         }
         buildConfigField "String", "GIT_SHORT_SHA",   "\"${shortSha}\""
+        buildConfigField "String", "GIT_SHA",         "\"${fullSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
         buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""

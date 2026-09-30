@@ -1,5 +1,8 @@
 package com.diegonmarcos.clouddrive.configs
 
+import android.os.Build
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import com.diegonmarcos.clouddrive.BuildConfig
@@ -62,7 +66,15 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
         item {
             DriveCard(stringResource(R.string.configs_about), summary = BuildConfig.VERSION_NAME, tag = DriveTags.CONFIGS_CARD) {
                 AboutRow(stringResource(R.string.configs_version), BuildConfig.VERSION_NAME + " · " + BuildConfig.VERSION_CODE)
-                AboutRow(stringResource(R.string.configs_built), BuildConfig.BUILD_TIMESTAMP + " · sha-" + BuildConfig.GIT_SHORT_SHA)
+                AboutRow(stringResource(R.string.configs_built), BuildConfig.BUILD_TIMESTAMP)
+                // On-device provenance: the exact commit this APK was built from. Short on screen,
+                // the full 40-hex sha to the clipboard on tap — "which commit is this build?" is
+                // answerable from the phone with no adb and no release-shelf digest to decode.
+                val copied = stringResource(R.string.configs_commit_copied)
+                AboutRow(stringResource(R.string.configs_commit), BuildConfig.GIT_SHORT_SHA, tag = DriveTags.ABOUT_COMMIT) {
+                    actions.copyText(BuildConfig.GIT_SHA)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) Toast.makeText(ctx, copied, Toast.LENGTH_SHORT).show()
+                }
                 AboutRow(stringResource(R.string.configs_engines), stringResource(R.string.configs_engines_value, rcloneVersion ?: "?"))
                 AboutRow(stringResource(R.string.sync_store), Places.initialLocations().first.path)
             }
@@ -71,8 +83,11 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
 }
 
 @Composable
-private fun AboutRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide), verticalAlignment = Alignment.CenterVertically) {
+private fun AboutRow(label: String, value: String, tag: String? = null, onClick: (() -> Unit)? = null) {
+    var m = Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide)
+    if (onClick != null) m = m.clickable(onClick = onClick)
+    if (tag != null) m = m.testTag(tag)
+    Row(m, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(DriveMetrics.padWide))
         Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)

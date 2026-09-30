@@ -380,6 +380,8 @@
     <string name="configs_about">About</string>
     <string name="configs_version">Version</string>
     <string name="configs_built">Built</string>
+    <string name="configs_commit">Commit</string>
+    <string name="configs_commit_copied">Full commit sha copied</string>
     <string name="configs_engines">Engines</string>
     <string name="configs_engines_value">git-sync (JGit) · file-editor · rclone %1$s · mounts</string>
 
