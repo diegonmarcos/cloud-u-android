@@ -99,14 +99,27 @@ abstract class ShellIslandHarness {
      */
     protected fun givePageToScroll() {
         compose.runOnUiThread {
-            scroller = ScrollView(themed).apply {
-                addView(View(themed), FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX))
-            }
+            scroller = ScrollView(themed).apply { addView(page(), pageLayout()) }
             content.addView(scroller, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
             layOut(content)
         }
         compose.waitForIdle()
     }
+
+    /**
+     * A page taller than any viewport, for a ScrollView that has to really scroll.
+     *
+     * minimumHeight, and not [pageLayout]'s height alone: ScrollView measures its child with an
+     * UNSPECIFIED height spec, and a bare View answers UNSPECIFIED with its SUGGESTED MINIMUM — 0 —
+     * whatever its LayoutParams ask for. A 0-tall page makes ScrollView.scrollTo clamp every scroll
+     * to 0, so the bar is never told about one and a collapse test fails reporting that nothing
+     * drives it. Every ScrollView in these tests is built from this, so none of them can scroll
+     * only in appearance.
+     */
+    protected fun page(): View = View(themed).apply { minimumHeight = PAGE_PX }
+
+    protected fun pageLayout(): FrameLayout.LayoutParams =
+        FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX)
 
     protected fun layOut(view: View) {
         view.measure(
@@ -118,7 +131,14 @@ abstract class ShellIslandHarness {
 
     /** Scroll the content host by [dy] px and let the bar react, the way a finger would. */
     protected fun scrollContentBy(dy: Int) {
-        compose.runOnUiThread { scroller.scrollTo(0, (scroller.scrollY + dy).coerceAtLeast(0)) }
+        compose.runOnUiThread {
+            val want = (scroller.scrollY + dy).coerceAtLeast(0)
+            scroller.scrollTo(0, want)
+            // A page that did not move is a bar that is RIGHT not to collapse, so without this the
+            // collapse assertion blames the driver for the page's defect — which is how a scroll
+            // clamped to 0 read as a dead driver for two shipped commits.
+            org.junit.Assert.assertEquals("the page did not scroll", want, scroller.scrollY)
+        }
         compose.waitForIdle()
     }
 

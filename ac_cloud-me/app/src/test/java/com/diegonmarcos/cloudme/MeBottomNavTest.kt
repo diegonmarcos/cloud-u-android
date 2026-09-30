@@ -111,7 +111,15 @@ class MeBottomNavTest {
     private fun givePageToScroll() {
         compose.runOnUiThread {
             scroller = ScrollView(themed).apply {
-                addView(View(themed), FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX))
+                // minimumHeight, and not layout_height alone: ScrollView measures its child with an
+                // UNSPECIFIED height spec, and a bare View answers UNSPECIFIED with its SUGGESTED
+                // MINIMUM — 0 — whatever its LayoutParams ask for. A 0-tall page makes the clamp
+                // above pin every scroll to 0, so the bar is never told about one and this test
+                // fails reporting that nothing drives the collapse.
+                addView(
+                    View(themed).apply { minimumHeight = PAGE_PX },
+                    FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX),
+                )
             }
             contentHost.addView(scroller, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
             contentHost.measure(
@@ -125,7 +133,14 @@ class MeBottomNavTest {
 
     /** Scroll the content host by [dy] px and let the bar react, the way a finger would. */
     private fun scrollContentBy(dy: Int) {
-        compose.runOnUiThread { scroller.scrollTo(0, (scroller.scrollY + dy).coerceAtLeast(0)) }
+        compose.runOnUiThread {
+            val want = (scroller.scrollY + dy).coerceAtLeast(0)
+            scroller.scrollTo(0, want)
+            // A page that did not move is a bar that is RIGHT not to collapse, so without this the
+            // collapse assertion blames the driver for the page's defect — which is how a scroll
+            // clamped to 0 read as a dead driver for two shipped commits.
+            assertEquals("the page did not scroll", want, scroller.scrollY)
+        }
         compose.waitForIdle()
     }
 

@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.ui
 
 import android.app.Application
-import android.view.View
 import android.widget.FrameLayout
 import android.widget.ScrollView
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -93,12 +92,13 @@ class ShellBottomNavCollapseTest : ShellIslandHarness() {
         givePageToScroll()
         // A scrolling view in the window but OUTSIDE the content host, like the drawer's list.
         compose.runOnUiThread {
-            val outsider = ScrollView(themed).apply {
-                addView(View(themed), FrameLayout.LayoutParams(VIEWPORT_PX, PAGE_PX))
-            }
+            val outsider = ScrollView(themed).apply { addView(page(), pageLayout()) }
             frame.addView(outsider, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
             layOut(outsider)
             outsider.scrollTo(0, Scroll.PX)
+            // The scroll this test is about has to have HAPPENED, or the assertions below hold for
+            // a bar that was simply never disturbed and the scoping claim is worth nothing.
+            assertEquals("the outside view did not scroll", Scroll.PX, outsider.scrollY)
         }
         compose.waitForIdle()
 
