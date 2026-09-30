@@ -49,6 +49,23 @@ object GitAuthChain {
         }
 
         /**
+         * #653 THE RUNG WILL SERVE THE REQUEST ITSELF, holding the credential on
+         * its own side. The chain STOPS here exactly as it does for
+         * [Credential] — the rung answered — but there is no token, because the
+         * caller was never meant to receive one.
+         *
+         * This is the shape the fleet rung has: git-proxy-api authenticates the
+         * phone with the Authelia bearer it already has, and talks to GitHub with
+         * a credential the phone never sees. Modelling that as [Credential] would
+         * have forced the rung to hand a GitHub token back to the device, which is
+         * the precise thing it exists to avoid, and modelling it as a failure
+         * would make the working path look broken.
+         *
+         * [why] says how the rung proved it can serve — the fact the page shows.
+         */
+        class Served(val why: String) : Answer()
+
+        /**
          * The rung could not be reached at all — down, unroutable, timed out, or
          * not built yet. THE CHAIN CONTINUES: this is the case the whole
          * declaration exists for.
@@ -181,6 +198,17 @@ object GitAuthChain {
                     answeredBy = rung.id
                     credential = answer.token
                     steps += Step(rung.id, rung.label, index, Result.ANSWERED, "${rung.label} signed in")
+                }
+                // #653 ANSWERED WITH NO TOKEN. `credential` is deliberately left
+                // null, so nothing is written to the store and the caller can tell
+                // "this rung serves it" from "here is a credential" by asking for
+                // the token and getting nothing.
+                is Answer.Served -> {
+                    answeredBy = rung.id
+                    steps += Step(
+                        rung.id, rung.label, index, Result.ANSWERED,
+                        "${rung.label} signed in, and serves it (${answer.why})",
+                    )
                 }
                 is Answer.Unreachable ->
                     steps += Step(

@@ -76,7 +76,11 @@ object GitHubRepos {
                 fork = o.bool("fork"),
                 defaultBranch = o.str("default_branch", "main"),
                 description = o.str("description"),
-                sizeKb = o.long("size"),
+                // #653 BOTH SPELLINGS, because both sources are real: GitHub's own body
+                // says `size`, and the fleet proxy's projection says `size_kb` (its
+                // declared contract renames the field). Reading one and not the other
+                // would silently show every repository as 0 KB on the fleet path.
+                sizeKb = if (o["size"] != null) o.long("size") else o.long("size_kb"),
                 updatedAt = o.str("updated_at"),
                 pushedAt = o.str("pushed_at"),
                 cloneUrl = o.str("clone_url"),

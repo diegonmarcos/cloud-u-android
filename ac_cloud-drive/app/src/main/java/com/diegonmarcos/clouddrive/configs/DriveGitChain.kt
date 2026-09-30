@@ -90,27 +90,36 @@ object DriveGitChain {
      * reached, and told no.
      */
     private fun fleet(config: JSONObject, bearer: String): GitAuthChain.Answer {
-        val url = config.optString("token_url")
-        if (url.isBlank()) return GitAuthChain.Answer.NoImplementation("no token_url is declared")
+        val url = config.optString("repos_url")
+        if (url.isBlank()) return GitAuthChain.Answer.NoImplementation("no repos_url is declared")
         // No bearer means we cannot even ask. That is indistinguishable from the
         // fleet being unreachable, and must behave identically.
         if (bearer.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet credential on this phone")
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
+            connection.instanceFollowRedirects = false
             connection.requestMethod = "GET"
             connection.connectTimeout = config.optInt("connect_timeout_ms", 4000)
             connection.readTimeout = config.optInt("read_timeout_ms", 8000)
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("Authorization", "Bearer $bearer")
             when (val code = connection.responseCode) {
-                in 200..299 -> {
-                    val body = connection.inputStream.bufferedReader().readText()
-                    val token = JSONObject(body).optString("token").ifBlank { JSONObject(body).optString("github_token") }
-                    if (token.isNotBlank()) GitAuthChain.Answer.Credential(token)
-                    else GitAuthChain.Answer.Unreachable("the fleet answered without a credential")
-                }
+                // #653 ANSWERED, AND THE PHONE HOLDS NOTHING. The body is a repo
+                // PROJECTION, never a credential, so this rung is Served and not
+                // Credential — nothing is written to the credential store, and the
+                // caller lists from the proxy rather than from GitHub.
+                in 200..299 -> GitAuthChain.Answer.Served("listing served by the fleet")
                 401, 403 -> GitAuthChain.Answer.Declined("the fleet refused this identity (HTTP $code)")
-                // 404 is the #647-not-built-yet case, and it is a fall-through.
+                // #653 A REDIRECT IS NOT REACHABILITY. Caddy's Authelia matcher
+                // answers 3xx for ANY path under the proxy's prefix BEFORE it dials
+                // the upstream — measured identical for a route that does not exist,
+                // with the container stopped. So a 3xx says only "we did not get
+                // past the edge", which is a fall-through like any other. Redirects
+                // are not followed, precisely so this cannot be mistaken for a 200
+                // from the portal's login page.
+                in 300..399 -> GitAuthChain.Answer.Unreachable(
+                    "the edge redirected (HTTP $code) without reaching the service; this bearer did not satisfy the gate",
+                )
                 else -> GitAuthChain.Answer.Unreachable("the fleet answered HTTP $code")
             }
         } catch (t: Throwable) {
