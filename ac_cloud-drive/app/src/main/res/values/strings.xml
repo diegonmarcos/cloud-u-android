@@ -255,8 +255,8 @@
     <string name="git_chain_order">Credential chain: %1$s</string>
     <string name="git_chain_start">Get a credential</string>
     <string name="git_chain_running">asking each provider in turn…</string>
-    <!-- The whole UX tax of the GitHub rung, once per device: a short code, typed at GitHub. -->
-    <string name="git_chain_prompt">Enter %1$s at %2$s</string>
+    <!-- #653 the string that read "Enter %1$s at %2$s" is DELETED with the device grant it
+         served. No rung asks the owner to read a code off this screen and retype it. -->
     <string name="git_chain_answered">%1$s supplied the credential</string>
     <string name="git_login_hint">The vault config import delivers the credential that lists this account\'s repositories, private ones included</string>
     <string name="git_login_ssh_active">cloning with your SSH key</string>

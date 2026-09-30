@@ -3,7 +3,6 @@ package com.diegonmarcos.clouddrive.configs
 import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
-import com.diegonmarcos.cloudlib.gh.GhDeviceLogin
 import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import org.json.JSONObject
@@ -34,7 +33,21 @@ import java.net.URL
 object DriveGitChain {
 
     const val RUNG_FLEET = "fleet_proxy"
-    const val RUNG_GITHUB = "gh_device_flow"
+
+    /**
+     * #653 THE GITHUB RUNG NO LONGER MINTS ANYTHING. Its kind used to be
+     * `gh_device_flow` and it drove an OAuth device grant whose whole user
+     * interface was a code to read and a URL to type it at — the UX the owner
+     * rejected three times. It is now `gh_on_device`: the rung answers with a
+     * GitHub credential that is ALREADY on this phone (the #566 vault import's,
+     * under the one declared id) and answers with nothing when there is none.
+     *
+     * That keeps the owner's ranking intact — "if our servers are down we can do
+     * gh, if not we can use our flow" — without the phone ever OBTAINING a GitHub
+     * credential interactively. Obtaining one is the fleet's job now, and on the
+     * fleet rung the phone does not hold one at all.
+     */
+    const val RUNG_GITHUB = "gh_on_device"
 
     /** The declared id every rung writes under. Declared, never typed here. */
     fun credentialId(): String = Declarations.authCredentialIds["git"].orEmpty()
@@ -51,14 +64,14 @@ object DriveGitChain {
      * fall-through, not as a rung that was never declared.
      */
     fun rungs(
+        ctx: Context,
         declared: List<AuthDeclaration.GitRung> = AuthDeclaration.gitChain,
         bearer: String = "",
-        onPhase: (GhDeviceLogin.Phase) -> Unit = {},
     ): List<GitAuthChain.Rung> = declared.map { rung ->
         GitAuthChain.Rung(rung.id, rung.label) {
             when (rung.kind) {
                 RUNG_FLEET -> fleet(rung.config, bearer)
-                RUNG_GITHUB -> github(rung.config, onPhase)
+                RUNG_GITHUB -> onDevice(ctx)
                 else -> GitAuthChain.Answer.NoImplementation("kind '${rung.kind}' is not implemented")
             }
         }
@@ -108,20 +121,29 @@ object DriveGitChain {
     }
 
     /**
-     * RUNG 2 — direct to GitHub, through the device grant against GITHUB'S OWN
-     * app. Works when our servers are down, and needs nothing registered on our
-     * side. [onPhase] is how the short code reaches the screen; the token never
-     * travels that way.
+     * RUNG 2 — direct to GitHub with a credential that is ALREADY ON THIS PHONE.
+     *
+     * #653 THERE IS NO GRANT HERE ANY MORE. This rung used to run an OAuth device
+     * grant: it printed a short code, printed a URL, and polled. That is the
+     * "code to copy, URL to open" ceremony the owner rejected, and it is deleted
+     * rather than restyled — no code, no verification URI, no poll loop, and no
+     * phase machine to carry them to a screen.
+     *
+     * What is left is the honest fallback the owner asked for: "if our servers are
+     * down we can do gh". gh and gix can only use a credential, never mint one, so
+     * this rung reads the ONE store under the ONE declared id — the id the #566
+     * vault import writes — and answers with it. NOTHING is obtained here, so this
+     * rung can never ask the owner to type anything.
+     *
+     * NO CREDENTIAL IS A DECLINE, not an error: the fleet rung above it needs no
+     * GitHub credential at all, so an empty store is a perfectly normal state and
+     * the chain says so in words instead of opening a browser.
      */
-    private fun github(config: JSONObject, onPhase: (GhDeviceLogin.Phase) -> Unit): GitAuthChain.Answer {
-        val scope = config.optString("scope").ifBlank { GhDeviceLogin.SCOPE }
-        return when (val phase = GhDeviceLogin.login(scope = scope, onPhase = onPhase)) {
-            is GhDeviceLogin.Phase.Granted -> GitAuthChain.Answer.Credential(phase.token)
-            is GhDeviceLogin.Phase.Failed -> GitAuthChain.Answer.Declined(phase.message)
-            // login() only ever returns Granted or Failed; anything else means the
-            // flow ended without deciding, which is a non-answer, not a success.
-            else -> GitAuthChain.Answer.Declined("the grant ended without a credential")
-        }
+    private fun onDevice(ctx: Context): GitAuthChain.Answer {
+        if (credentialId().isBlank()) return GitAuthChain.Answer.NoImplementation("no credential id is declared")
+        val held = DriveAuthApply.vaultGitToken(ctx)
+        return if (held.isNotBlank()) GitAuthChain.Answer.Credential(held)
+        else GitAuthChain.Answer.Declined("no GitHub credential is on this device; the vault import delivers one")
     }
 
     /**
@@ -136,9 +158,8 @@ object DriveGitChain {
     fun resolve(
         ctx: Context,
         bearer: String = "",
-        onPhase: (GhDeviceLogin.Phase) -> Unit = {},
     ): GitAuthChain.Outcome = GitAuthChain.resolve(
-        chain = rungs(bearer = bearer, onPhase = onPhase),
+        chain = rungs(ctx = ctx, bearer = bearer),
         store = GitCredentialStore(ctx),
         credentialId = credentialId(),
     )

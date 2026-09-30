@@ -48,7 +48,6 @@ GIX_PIN="$SHARED/libs/gix/data/gix-binary.json"
 GIX_GRADLE="$SHARED/libs/gix/build.gradle"
 GIX_RUNNER="$SHARED/libs/gix/src/main/java/com/diegonmarcos/cloudlib/gix/GixRunner.kt"
 GH_RUNNER="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhRunner.kt"
-GH_LOGIN="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhDeviceLogin.kt"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
@@ -61,7 +60,7 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 # the fix the defect.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 for required in "$SHARED_BJ" "$BJ" "$WALKER" "$WALKER_TEST" "$WIRING" "$READER" "$PAGE" \
-                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER" "$GH_LOGIN"; do
+                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -343,20 +342,20 @@ PYTHON
     return $bad
 }
 
-# c7 <GitAuthChain.kt> <GhDeviceLogin.kt> <GhRunner.kt> <GitReposScreen.kt> : no token surfaces
+# c7 <GitAuthChain.kt> <GhRunner.kt> <GitReposScreen.kt> : no token surfaces
+# #653 the fourth input was GhDeviceLogin.kt, whose Granted phase carried the minted
+# token. That file is DELETED, so there is no phase carrier left to redact.
 c7() {
-    local walker="$1" login="$2" runner="$3" page="$4" bad=0
+    local walker="$1" runner="$2" page="$3" bad=0
     # A redacted toString on both carriers, so a stray log line or string template
     # cannot print the secret.
     grep -qE 'override fun toString\(\): String = "Credential\(token=<redacted>\)"' "$walker" \
         || { echo "    Answer.Credential's toString is not redacted"; bad=1; }
     grep -qE 'credential=<redacted>' "$walker" \
         || { echo "    the Outcome's toString is not redacted"; bad=1; }
-    grep -qE 'override fun toString\(\): String = "Granted\(token=<redacted>\)"' "$login" \
-        || { echo "    the granted phase's toString is not redacted"; bad=1; }
     # Nothing logs or persists a token outside the one store.
     local leak
-    leak="$(grep -nE 'Log\.[a-z]+\(.*(token|secret)|println\(.*token|putString\(.*token' "$walker" "$login" "$runner" "$page" || true)"
+    leak="$(grep -nE 'Log\.[a-z]+\(.*(token|secret)|println\(.*token|putString\(.*token' "$walker" "$runner" "$page" || true)"
     [ -z "$leak" ] || { echo "    a token leaves memory:"; printf '%s\n' "$leak" | sed 's/^/        /'; bad=1; }
     # The token travels in the ENVIRONMENT, never argv — argv is world-readable
     # through /proc/<pid>/cmdline and every process listing.
@@ -522,7 +521,7 @@ c6 "$GIX_PIN" "$GIX_RUNNER" "$WALKER" "$WIRING" "$PAGE" \
     || fail "push could reach gitoxide, which has no push"
 
 echo "── C7 no token is ever rendered or logged ──"
-c7 "$WALKER" "$GH_LOGIN" "$GH_RUNNER" "$PAGE" && pass "both carriers redact their toString, the token rides the environment, and the page's state holds none" \
+c7 "$WALKER" "$GH_RUNNER" "$PAGE" && pass "both carriers redact their toString, the token rides the environment, and the page's state holds none" \
     || fail "a token can reach a log, a process listing or the screen"
 
 # ══ MUT every check above goes RED when its property is broken ══════════════
@@ -543,7 +542,7 @@ _stage() {
     rm -rf "$W"; mkdir -p "$W"
     cp "$SHARED_BJ" "$W/shared.json";      cp "$BJ" "$W/drive.json"
     cp "$WALKER" "$W/GitAuthChain.kt";     cp "$WIRING" "$W/DriveGitChain.kt"
-    cp "$PAGE" "$W/GitReposScreen.kt";     cp "$GH_LOGIN" "$W/GhDeviceLogin.kt"
+    cp "$PAGE" "$W/GitReposScreen.kt"
     cp "$GH_PIN" "$W/gh.json";             cp "$GH_GRADLE" "$W/gh.gradle"
     cp "$GIX_PIN" "$W/gix.json";           cp "$GIX_GRADLE" "$W/gix.gradle"
     cp "$GIX_RUNNER" "$W/GixRunner.kt";    cp "$GH_RUNNER" "$W/GhRunner.kt"
@@ -701,16 +700,16 @@ _stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$
     _red "C6 a caller routes push to gix" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
 
 # ── C7 the token ──
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
+_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
     _sub "$W/GitAuthChain.kt" 'override fun toString(): String = "Credential(token=<redacted>)"' \
                               'override fun toString(): String = "Credential(token=$token)"'
-    _red "C7 Answer.Credential prints the token" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
+    _red "C7 Answer.Credential prints the token" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
     _sub "$W/GhRunner.kt" 'put("GH_TOKEN", token)' 'add("--token"); add(token)'
-    _red "C7 the token moves from the environment into argv (/proc-readable)" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
+    _red "C7 the token moves from the environment into argv (/proc-readable)" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
     printf '\nprivate val leak = Log.d("chain", "token=$token")\n' >>"$W/GitAuthChain.kt"
-    _red "C7 a token reaches a log line" c7 "$W/GitAuthChain.kt" "$W/GhDeviceLogin.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
+    _red "C7 a token reaches a log line" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW of them hollow or void ──"
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))

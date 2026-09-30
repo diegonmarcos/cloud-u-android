@@ -3636,10 +3636,9 @@
           "holds_github_credential": false
         },
         "github": {
-          "_doc": "Direct to GitHub through the gh CLI's device flow — what works when our servers are down, with ZERO registration on our side. The endpoints, the verification URI and the client ids are NOT repeated here: they live in the ONE pin that also carries the binary's hashes (ab_cloud-libs-shared/libs/gh/data/gh-binary.json), because an endpoint declared apart from the binary it belongs to is a second source of truth that drifts the moment gh is upgraded. `scope` is what the git rung needs: HTTPS clone/fetch/push plus the REST repo listing that #641/#642 left without a credential (/user/repos is REST, not the git protocol, so it needs a token however it was obtained). The honest UX tax, stated once: the owner reads a short code and types it at github.com/login/device, once per device.",
+          "_doc": "#653 THE DEVICE GRANT IS DELETED FROM THIS RUNG. It used to be kind `gh_device_flow`: a short code the owner read off the phone plus a verification URI he typed it at, and a poll loop behind them. That is the UX the owner rejected three times, and it is GONE rather than restyled — GhDeviceLogin.kt is deleted, and so are the pin's device_code_url, token_url, verification_uri and client_ids, because a baked endpoint with no caller grows a caller back. What survives is the fallback he actually asked for, in his words: 'if our servers are down we can do gh if not we can use our flow'. gh and gix can USE a GitHub credential but neither can mint one, so this rung answers with the credential ALREADY on the phone — the #566 vault import's, read out of the ONE store under the ONE declared id (auth.applies.git.credential_id, #629) — and DECLINES in words when there is none, which is a perfectly normal state because the rung above it needs no GitHub credential at all. `scope` is gone with the grant that requested it: this rung asks GitHub for nothing. The pin stays, because the binary and its hashes are still what gets exec'd. THE RANK IS UNCHANGED AND THAT IS THE WHOLE POINT: fleet first.",
           "label": "GitHub",
-          "kind": "gh_device_flow",
-          "scope": "repo read:org",
+          "kind": "gh_on_device",
           "pin": "libs/gh/data/gh-binary.json",
           "holds_github_credential": true
         }

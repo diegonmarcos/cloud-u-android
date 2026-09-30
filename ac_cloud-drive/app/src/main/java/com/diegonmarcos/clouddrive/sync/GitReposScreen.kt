@@ -81,7 +81,6 @@ import java.util.Date
 import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
-import com.diegonmarcos.cloudlib.gh.GhDeviceLogin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -226,33 +225,23 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
      * to infer from a credential appearing. That is the #639/#452 lesson: a chain that
      * degrades silently looks exactly like a chain that works.
      *
-     * The token is never put into [chain]: only the narrative, the answering provider's
-     * label and the short USER code go there. The credential itself goes straight from the
-     * outcome into the listing fetch, and [DriveGitChain] has already filed it in the one
-     * store under the one declared id.
+     * #653 NOTHING IS TYPED BY THE OWNER ON ANY RUNG. The code display, the verification
+     * URI display and the phase callback that fed them are DELETED, along with the device
+     * grant behind them: the fleet rung needs no GitHub credential at all, and the gh rung
+     * uses one that is already on the phone. So the only things this state ever carries are
+     * the declared order, the narrative and the answering provider's label — no token, and
+     * now no code either, because there is no longer a code to carry.
      */
     fun startChain() {
-        chain = chain.copy(running = true, prompt = "", narrative = "", answeredBy = "")
+        chain = chain.copy(running = true, narrative = "", answeredBy = "")
         scope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                DriveGitChain.resolve(
-                    ctx.applicationContext,
-                    onPhase = { phase ->
-                        // The short code the GitHub rung asks for — the whole UX tax, once
-                        // per device. A Granted phase carries the token, so it is NOT
-                        // surfaced here; only Prompt is.
-                        if (phase is GhDeviceLogin.Phase.Prompt) {
-                            chain = chain.copy(code = phase.userCode, prompt = phase.verificationUri)
-                        }
-                    },
-                )
+                DriveGitChain.resolve(ctx.applicationContext)
             }
             chain = chain.copy(
                 running = false,
                 narrative = outcome.narrative(),
                 answeredBy = outcome.answeredByLabel.orEmpty(),
-                code = if (outcome.ok) "" else chain.code,
-                prompt = if (outcome.ok) "" else chain.prompt,
             )
             outcome.token?.takeIf { it.isNotBlank() }?.let { token ->
                 login = login.copy(identity = page.owner, token = token, fromVault = false)
@@ -437,15 +426,14 @@ private data class GitLogin(
  * declaration so the page states the ranking it will actually follow; [narrative] is the
  * chain's account of what happened, every skipped rung included.
  *
- * NO TOKEN LIVES HERE. [code] is the short USER code GitHub asks the owner to type and
- * [prompt] is the page he types it at — both public by design. The credential never enters
- * this state, so nothing that renders or logs it can leak the secret.
+ * NO TOKEN LIVES HERE, AND #653 NO CODE EITHER. This state used to carry a `code` and a
+ * `prompt` — the device grant's short user code and the URL to type it at. Both fields are
+ * deleted with the flow that filled them: there is nothing for the owner to read off this
+ * screen and retype anywhere. What is left describes the chain, never a secret.
  */
 private data class GitChainState(
     val running: Boolean = false,
     val order: String = "",
-    val code: String = "",
-    val prompt: String = "",
     val narrative: String = "",
     val answeredBy: String = "",
 )
@@ -520,13 +508,9 @@ private fun GitLoginBox(
                     onStartChain, filled = !chain.running,
                 )
             }
-            // The one short code, and where to type it. This is the whole UX tax of the
-            // GitHub rung and it is stated plainly rather than buried.
-            if (chain.code.isNotBlank()) Text(
-                stringResource(R.string.git_chain_prompt, chain.code, chain.prompt),
-                Modifier.padding(top = DriveMetrics.gap),
-                style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace,
-            )
+            // #653 THE CODE LINE IS GONE. A monospace line reading "Enter XXXX-XXXX at
+            // github.com/login/device" used to sit here. Nothing replaces it: there is no
+            // code to show, because no rung mints a credential interactively any more.
             // WHY THE PREVIOUS RUNG WAS SKIPPED, in words. Shown for success as well as
             // failure: a fall-through that only surfaces when everything fails is a
             // fall-through nobody can see working.

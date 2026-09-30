@@ -178,18 +178,17 @@ android {
     defaultConfig {
         minSdk 26
         // The pin, baked so the chain can state what it runs without shelling
-        // out first, and so GhRunner can name the .so it execs. The device-flow
-        // endpoints are baked for the same reason the rest of the fleet bakes
-        // its declarations: no URL is typed into Kotlin.
+        // out first, and so GhRunner can name the .so it execs.
+        //
+        // #653 THE DEVICE-FLOW BAKES ARE GONE, with the flow they served. This
+        // module no longer MINTS a GitHub credential — it only USES one that is
+        // already on the device (the vault import's), because the owner's sign-in
+        // is now an ordinary Authelia browser login and the GitHub work happens
+        // server-side in git-proxy-api. A device code typed on a phone was never
+        // the ask, and a baked device_code_url with no caller is a second source
+        // of truth waiting to grow one back.
         buildConfigField 'String', 'GH_VERSION', "\"${ghPin.version}\""
         buildConfigField 'String', 'GH_JNI_NAME', "\"${ghPin.jni_name}\""
-        buildConfigField 'String', 'GH_DEVICE_CODE_URL', "\"${ghPin.device_code_url}\""
-        buildConfigField 'String', 'GH_TOKEN_URL', "\"${ghPin.token_url}\""
-        buildConfigField 'String', 'GH_VERIFICATION_URI', "\"${ghPin.verification_uri}\""
-        // The client ids MEASURED inside the pinned binary. Baked as a list so
-        // GhDeviceLogin can fall through to the second if GitHub retires the
-        // first, and so the tester can diff the bake against the pin.
-        buildConfigField 'String', 'GH_CLIENT_IDS', "\"${ghPin.client_ids.join(',')}\""
         buildConfigField 'String', 'GH_ARM64_SHA256', "\"${ghPin.binaries['arm64-v8a'].binary_sha256}\""
         buildConfigField 'String', 'GH_X86_64_SHA256', "\"${ghPin.binaries['x86_64'].binary_sha256}\""
     }

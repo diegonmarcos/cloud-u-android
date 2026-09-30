@@ -87,15 +87,4 @@ class GhRunner(context: Context) {
         }
     }
 
-    companion object {
-        /**
-         * The GitHub App client ids compiled into the pinned binary, straight off
-         * data/gh-binary.json::client_ids. These are GITHUB'S OWN app's ids, not
-         * ours: both were exercised live against the device-code endpoint, which
-         * is why this rung needs nothing registered on our side. Not a literal
-         * list — the pin is baked into [BuildConfig.GH_CLIENT_IDS].
-         */
-        val CLIENT_IDS: List<String> =
-            BuildConfig.GH_CLIENT_IDS.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-    }
 }
