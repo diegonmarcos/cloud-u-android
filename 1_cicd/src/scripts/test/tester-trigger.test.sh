@@ -58,7 +58,7 @@ for bj in */build.json; do
     block="$(sed -n '/^    paths:$/,/^[^ ]/p' "$wf" | sed -n 's/^      - "\(.*\)"$/\1/p')"
 
     # (1) NOTHING may exclude the tester directory from the trigger.
-    if printf '%s\n' "$block" | grep -q "^!$app/$tdir"; then
+    if grep -q "^!$app/$tdir" <<<"$block"; then
         bad "$wf excludes $app/$tdir from on:push:paths — editing a tester would run nothing"
     else
         ok "$wf watches $app/$tdir"
@@ -77,7 +77,7 @@ for bj in */build.json; do
 
     # (3) …and the publish identity must still NOT see it, or every tester edit
     #     puts a byte-identical APK on every phone in the fleet.
-    if sh "$IDENTITY" paths "$app" | grep -qx -e "$app/$tdir" -e "$app/$tdir/.*"; then
+    if grep -qx -e "$app/$tdir" -e "$app/$tdir/.*" <<<"$(sh "$IDENTITY" paths "$app")"; then
         bad "$IDENTITY hashes $app/$tdir — a tester edit would republish an unchanged APK"
     else
         ok "$IDENTITY excludes $app/$tdir from the publish identity"

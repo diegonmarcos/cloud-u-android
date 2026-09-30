@@ -260,7 +260,7 @@ expect_caught() {
         printf '%s\n' "$out" | sed 's/^/    /'
         return 1
     fi
-    if printf '%s' "$out" | grep -q "$pattern"; then
+    if grep -q "$pattern" <<<"$out"; then
         ok "$name"
     else
         fail "$name: the guard failed but not for the expected reason. Output:"
@@ -312,7 +312,7 @@ out="$(run_guard "$SB" "$DIST_WITH_PEER" check)"
 if [ "$?" -eq 0 ]; then
     fail "a peer appearing in the published dist is caught"
     printf '%s\n' "$out" | sed 's/^/    /'
-elif printf '%s' "$out" | grep -q "profile v4-split peer .* exists in the published dist but NOT in build.json"; then
+elif grep -q "profile v4-split peer .* exists in the published dist but NOT in build.json" <<<"$out"; then
     ok "a peer appearing in the published dist is caught"
 else
     fail "a peer appearing in the published dist — guard failed for the wrong reason. Output:"
@@ -330,7 +330,7 @@ for case in missing empty garbage no-wireguard; do
     esac
     if out="$(run_guard "$SB" "$DIST" check)"; then
         fail "fetch failure ($case reference) was treated as a PASS"
-    elif printf '%s' "$out" | grep -qE "FAIL: .*(could not read|EMPTY|not valid JSON|no 'wireguard' object)"; then
+    elif grep -qE "FAIL: .*(could not read|EMPTY|not valid JSON|no 'wireguard' object)" <<<"$out"; then
         ok "a $case reference fails closed"
     else
         fail "fetch failure ($case reference) failed for the wrong reason. Output:"
@@ -342,7 +342,7 @@ DIST="$WORK/dist-emptywg.json"
 printf '{"wireguard": {}}\n' > "$DIST"
 if out="$(run_guard "$SB" "$DIST" check)"; then
     fail "a dist declaring no profiles was treated as a PASS"
-elif printf '%s' "$out" | grep -q "declares NO wireguard profiles"; then
+elif grep -q "declares NO wireguard profiles" <<<"$out"; then
     ok "a dist declaring no profiles fails closed"
 else
     fail "a dist declaring no profiles failed for the wrong reason. Output:"

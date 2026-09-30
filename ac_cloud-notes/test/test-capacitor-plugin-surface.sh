@@ -121,7 +121,7 @@ printf '%s\n' "$report"
 if [ "$status" -ne 0 ]; then
   fail "plugin-surface derivation could not run (exit $status) — see ERROR above"
 else
-  printf '%s\n' "$report" | grep -q '^DERIVED ' \
+  grep -q '^DERIVED ' <<<"$report" \
     && ok "$(printf '%s\n' "$report" | grep '^DERIVED ')" \
     || fail "derivation printed no DERIVED line"
 

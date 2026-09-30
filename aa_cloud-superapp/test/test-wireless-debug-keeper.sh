@@ -93,41 +93,41 @@ print("\n".join(out))
 echo "== #290 wireless debugging re-arm =="
 
 # ── T1 ── the keeper writes the setting on
-if dowork | grep -q 'Settings\.Global\.putInt' && dowork | grep -q 'ADB_WIFI_ENABLED, 1'; then
+if grep -q 'Settings\.Global\.putInt' <<<"$(dowork)" && grep -q 'ADB_WIFI_ENABLED, 1' <<<"$(dowork)"; then
   ok "T1 doWork writes adb_wifi_enabled=1"
 else
   bad "T1 doWork does not write adb_wifi_enabled=1 — the keeper keeps nothing"
 fi
 
 # ── T2 ── periodic, not one-time
-if code "$APPKT" | grep -q 'enqueueUniquePeriodicWork'; then
+if grep -q 'enqueueUniquePeriodicWork' <<<"$(code "$APPKT")"; then
   ok "T2 the keeper is enqueued as periodic unique work"
 else
   bad "T2 no enqueueUniquePeriodicWork in App.kt — nothing re-arms between launches, which IS #290"
 fi
-if code "$APPKT" | grep -q 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>'; then
+if grep -q 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>' <<<"$(code "$APPKT")"; then
   ok "T2b the periodic request is built for WirelessDebugKeeper"
 else
   bad "T2b the periodic request is not for WirelessDebugKeeper"
 fi
 
 # ── T3 ── the period is the 15-minute floor, stated in minutes
-if code "$APPKT" | grep -A2 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>' \
-   | grep -qE '\b15,[[:space:]]*java\.util\.concurrent\.TimeUnit\.MINUTES'; then
+if grep -qE '\b15,[[:space:]]*java\.util\.concurrent\.TimeUnit\.MINUTES' \
+   <<<"$(code "$APPKT" | grep -A2 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>')"; then
   ok "T3 the period is 15 MINUTES — WorkManager's floor, so it is the period actually in force"
 else
   bad "T3 the period is not 15 minutes; anything below the floor is silently clamped and the edit does nothing"
 fi
 
 # ── T4 ── KEEP, so a cold start does not restart the period
-if code "$APPKT" | grep -q 'ExistingPeriodicWorkPolicy\.KEEP'; then
+if grep -q 'ExistingPeriodicWorkPolicy\.KEEP' <<<"$(code "$APPKT")"; then
   ok "T4 the periodic policy is KEEP"
 else
   bad "T4 the periodic policy is not KEEP — REPLACE restarts the 15 minutes on every app launch"
 fi
 
 # ── T5 ── the heavy worker is NOT on the timer
-if code "$APPKT" | grep -q 'PeriodicWorkRequestBuilder<.*PrivilegedPlaneWorker>'; then
+if grep -q 'PeriodicWorkRequestBuilder<.*PrivilegedPlaneWorker>' <<<"$(code "$APPKT")"; then
   bad "T5 PrivilegedPlaneWorker is on a period — that is the pairing/autoconnect loop running forever"
 else
   ok "T5 PrivilegedPlaneWorker is not on a period; only the cheap re-arm repeats"
@@ -147,14 +147,14 @@ else
 fi
 
 # ── T7 ── read before write, so an already-on setting is left alone
-if dowork | grep -q 'Settings\.Global\.getInt'; then
+if grep -q 'Settings\.Global\.getInt' <<<"$(dowork)"; then
   ok "T7 the current value is read before writing"
 else
   bad "T7 no read — the setting is rewritten every 15 minutes whether or not anything cleared it"
 fi
 
 # ── T8 ── never retry
-if dowork | grep -q 'Result\.retry'; then
+if grep -q 'Result\.retry' <<<"$(dowork)"; then
   bad "T8 doWork can return Result.retry() — backoff re-runs stack on top of the period"
 else
   ok "T8 doWork never retries"

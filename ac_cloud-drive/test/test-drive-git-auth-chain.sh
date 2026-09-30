@@ -289,7 +289,7 @@ PYTHON
     grep -qE 'setRequestProperty\(FleetGit\.sessionHeader\(\), session\)' "$wiring" \
         || { echo "    the fleet leg does not send the DECLARED session header"; bad=1; }
     for f_ in "$wiring" "$client"; do
-        _code "$f_" | grep -qE '"Authorization", *"Bearer' \
+        grep -qE '"Authorization", *"Bearer' <<<"$(_code "$f_")" \
             && { echo "    $(basename "$f_") sends a literal Authorization: Bearer — authelia_web yields a cookie, so this would present an EMPTY credential and read the refusal as a fall-through"; bad=1; }
     done
     # A redirect must NOT be followed, or the portal's login page returns 200 and a dead
@@ -408,7 +408,7 @@ PYTHON
         || { echo "    the web dialog does not load the declared portal page"; bad=1; }
     grep -qE 'portalUrl = p\.optString\("portal_url"\)' "$providers_kt" \
         || { echo "    portal_url is not parsed off the declaration"; bad=1; }
-    _code "$ui" | grep -qE '"https?://' \
+    grep -qE '"https?://' <<<"$(_code "$ui")" \
         && { echo "    SignInUi holds a URL literal — the portal must be declared"; bad=1; }
     # A rung's failure names the NEXT STEP, not just itself.
     grep -qF 'no fleet sign-in on this phone yet — the Authelia sign-in below starts one' "$wiring" \
@@ -444,7 +444,7 @@ c3() {
     # chain: a dead socket must not take the next provider down with it.
     # The catch and its Unreachable sit on separate lines, so this reads the two
     # lines after the catch rather than one line in isolation.
-    grep -A2 'catch (t: Throwable)' "$walker" | grep -qE 'Answer\.Unreachable' \
+    grep -qE 'Answer\.Unreachable' <<<"$(grep -A2 'catch (t: Throwable)' "$walker")" \
         || { echo "    a rung that throws is not turned into a fall-through"; bad=1; }
     # Only EXHAUSTION fails. There must be no early return that abandons the walk
     # before the list ends.

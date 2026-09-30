@@ -144,7 +144,7 @@ reply(writer, "200 OK", "ok\n")
 MUT
 replace_body "$d" "$WORK/mut-1"
 out="$(run_guard "$d")"
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'DevControlBridge.host()'; then
+if [ $? -ne 0 ] && grep -q 'DevControlBridge.host()' <<<"$out"; then
     ok "guard rejects the handler routing through DevControlBridge.host()"
 else
     fail "guard ACCEPTED the original defect (host() route):"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -158,7 +158,7 @@ reply(writer, "200 OK", "update queued\n")
 MUT
 replace_body "$d" "$WORK/mut-2"
 out="$(run_guard "$d")"
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'update queued'; then
+if [ $? -ne 0 ] && grep -q 'update queued' <<<"$out"; then
     ok "guard rejects a reply asserting an outcome it did not observe"
 else
     fail "guard ACCEPTED the literal \"update queued\":"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -171,7 +171,7 @@ reply(writer, "501 Not Implemented", """{"ok":false}""", "application/json")
 MUT
 replace_body "$d" "$WORK/mut-3"
 out="$(run_guard "$d")"
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'requestCheck'; then
+if [ $? -ne 0 ] && grep -q 'requestCheck' <<<"$out"; then
     ok "guard rejects a handler that never starts the work"
 else
     fail "guard ACCEPTED a handler with no requestCheck call:"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -191,7 +191,7 @@ open(path, "w", encoding="utf-8").write(s.replace('"%s" ->' % route, '"system/up
 PY
 done
 out="$(run_guard "$d")"
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'checking nothing'; then
+if [ $? -ne 0 ] && grep -q 'checking nothing' <<<"$out"; then
     ok "guard reports that it is checking nothing when the route is renamed"
 else
     fail "guard swept a tree with NO implementations and called it green:"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -251,7 +251,7 @@ else fail "G0 pristine group sandbox is red:"; printf '%s\n' "$out" | sed 's/^/ 
 d="$(gbox 1)"
 if gman "$d" "d['group_scoped_dispatch']=[]"; then
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DRIVE:.*dispatchToHost("; then
+    if [ $? -ne 0 ] && grep -q "$DRIVE:.*dispatchToHost(" <<<"$out"; then
         ok "G1 an UNDECLARED group handler colliding with a route key stays red"
     else fail "G1 undeclared group handler slipped through:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi
@@ -259,7 +259,7 @@ fi
 d="$(gbox 2)"
 if gman "$d" "d['group_scoped_dispatch'][0]['path']='gone/Moved.kt'"; then
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'gone/Moved.kt.*does not exist'; then
+    if [ $? -ne 0 ] && grep -q 'gone/Moved.kt.*does not exist' <<<"$out"; then
         ok "G2 a stale exemption (path gone) is red"
     else fail "G2 stale exemption accepted:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi
@@ -267,7 +267,7 @@ fi
 d="$(gbox 3)"
 if gman "$d" "d['group_scoped_dispatch'].append({'path':'$DCS','why':'x'})"; then
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DCS.*registers no"; then
+    if [ $? -ne 0 ] && grep -q "$DCS.*registers no" <<<"$out"; then
         ok "G3 declaring a real route table (DevControlServer) as group-scoped is refused"
     else fail "G3 a root route table was exempted:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi
@@ -275,7 +275,7 @@ fi
 d="$(gbox 4)"
 if gmut "$d" "$DRIVE" "s=s.replace('AppDebugServer.route(', 'OtherServer.route(')"; then
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DRIVE.*registers no"; then
+    if [ $? -ne 0 ] && grep -q "$DRIVE.*registers no" <<<"$out"; then
         ok "G4 a declared file that stops being a group handler loses its exemption"
     else fail "G4 exemption outlived its reason:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi
@@ -287,7 +287,7 @@ fi
 d="$(gbox 5)"
 if gmut "$d" "$DCS" "import re; s=re.sub(r'\"state\" -> \{.*?\n                \}\n', '\"state\" -> reply(writer, \"200 OK\", \"empty\", \"text/plain\")\n', s, count=1, flags=re.S)"; then
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DCS.*GET /api/state never calls dispatchToHost("; then
+    if [ $? -ne 0 ] && grep -q "$DCS.*GET /api/state never calls dispatchToHost(" <<<"$out"; then
         ok "G5 a one-liner GET /api/state that never dispatches is red (no borrowing from the next branch)"
     else fail "G5 one-liner state branch passed on a neighbour's call:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi

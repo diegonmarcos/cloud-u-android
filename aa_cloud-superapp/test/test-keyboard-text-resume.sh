@@ -171,8 +171,8 @@ callers=$(grep -rlF 'AiRouter.summarise(' "$LIBS/libs" --include=*.kt | sort)
 [ "$(printf '%s\n' "$callers" | grep -c .)" = 2 ] \
   && ok "T4 exactly two files call AiRouter.summarise (bar + binder)" \
   || bad "T4 callers of AiRouter.summarise: $(echo $callers)"
-printf '%s\n' "$callers" | grep -q 'EnhanceBarView.kt' && ok "T4 the keyboard's Resume is one of them" || bad "T4 keyboard caller missing"
-printf '%s\n' "$callers" | grep -q 'TextToolsService.kt' && ok "T4 cloud-mail's binder is the other" || bad "T4 binder caller missing"
+grep -q 'EnhanceBarView.kt' <<<"$callers" && ok "T4 the keyboard's Resume is one of them" || bad "T4 keyboard caller missing"
+grep -q 'TextToolsService.kt' <<<"$callers" && ok "T4 cloud-mail's binder is the other" || bad "T4 binder caller missing"
 # The binder must decide NOTHING about summarising, or it becomes a second summariser.
 lacks "$SVC" 'AiRouter.maxChars' "T4 the binder does not re-implement the input budget"
 lacks "$SVC" 'summaryTruncatedNote' "T4 the binder does not re-implement the truncation note"
@@ -181,17 +181,17 @@ lacks "$SVC" 'summaryTruncatedNote' "T4 the binder does not re-implement the tru
 hasf "$J/latin/EnhanceBarView.kt" 'if (held == Held.SUMMARY) { showStatus(str(R.string.resume_bar_no_replace)); return }' \
      "T5 applyOutput refuses to write a summary into the field"
 # The guard has to come BEFORE the write, not merely exist in the same function.
-if awk '/private fun applyOutput\(\)/{f=1} f&&/held == Held.SUMMARY/{print "guard";exit} f&&/TextEnhancer.apply/{print "write";exit}' \
-     "$J/latin/EnhanceBarView.kt" | grep -q guard
+if grep -q guard <<<"$(awk '/private fun applyOutput\(\)/{f=1} f&&/held == Held.SUMMARY/{print "guard";exit} f&&/TextEnhancer.apply/{print "write";exit}' \
+     "$J/latin/EnhanceBarView.kt")"
 then ok "T5 the refusal precedes every write in applyOutput"; else bad "T5 applyOutput can write before it checks"; fi
 hasf "$J/latin/EnhanceBarView.kt" 'held = Held.SUMMARY' "T5 a finished Resume marks the box as holding a summary"
 hasf "$J/latin/EnhanceBarView.kt" 'held = Held.REWRITE' "T5 a finished Generate marks it as holding a rewrite"
 # resume() must not apply, and must not leave a Replace armed to apply for it.
-if awk '/private fun resume\(\)/{f=1} f&&/^    private fun applyOutput/{exit} f' "$J/latin/EnhanceBarView.kt" \
-   | grep -qE 'applyOutput\(\)|TextEnhancer\.apply'
+if grep -qE 'applyOutput\(\)|TextEnhancer\.apply' \
+   <<<"$(awk '/private fun resume\(\)/{f=1} f&&/^    private fun applyOutput/{exit} f' "$J/latin/EnhanceBarView.kt")"
 then bad "T5 resume() reaches an apply path"; else ok "T5 resume() reaches no apply path"; fi
-if awk '/private fun resume\(\)/{f=1} f&&/^    private fun applyOutput/{exit} f' "$J/latin/EnhanceBarView.kt" \
-   | grep -qF 'applyWhenReady = false'
+if grep -qF 'applyWhenReady = false' \
+   <<<"$(awk '/private fun resume\(\)/{f=1} f&&/^    private fun applyOutput/{exit} f' "$J/latin/EnhanceBarView.kt")"
 then ok "T5 resume() disarms a Replace armed before it"; else bad "T5 resume() leaves applyWhenReady armed"; fi
 # cloud-mail's AI Resume has the same duty on the other side of the binder.
 hasf "$MAIL/app/sterna/ui/message/ResumeBox.kt" 'IT NEVER TOUCHES THE STORED MESSAGE' \
@@ -280,7 +280,7 @@ n=$(grep -c '^    RESUME' "$J/latin/utils/ToolbarUtils.kt" || true)
 hasf "$J/settings/screens/PromptPreview.kt" 'readOnly = true' "T8 the prompt row is read-only"
 hasf "$J/settings/screens/PromptPreview.kt" 'onValueChange = {}' "T8 the prompt row discards edits"
 for pref in PREF_ENHANCE_PROMPT PREF_SUMMARY_PROMPT; do
-  if grep -rF "$pref" "$J" --include=*.kt --include=*.java | grep -qE 'putString|edit \{'; then
+  if grep -qE 'putString|edit \{' <<<"$(grep -rF "$pref" "$J" --include=*.kt --include=*.java)"; then
     bad "T8 $pref is written somewhere — the prompt would then have two values"
   else ok "T8 $pref stores nothing"; fi
 done

@@ -156,7 +156,7 @@ has "$READER" 'text = { Text(stringResource(R.string.message_show_images)) }' \
 # Code only: the KDoc above EXPLAINS that RESUME draws itself, and matching the explanation would
 # have failed on the very comment that makes the rule readable.
 has "$PANEL" 'if (!tool.inOverflow) return' "S2 the panel routes an outcome by inOverflow"
-grep -vE '^\s*(\*|//|/\*)' "$PANEL" | grep -q 'TextTool\.RESUME' \
+grep -q 'TextTool\.RESUME' <<<"$(grep -vE '^\s*(\*|//|/\*)' "$PANEL")" \
   && bad "S2 the panel still names RESUME in code instead of asking inOverflow" \
   || ok "S2 the panel names no single tool in code"
 

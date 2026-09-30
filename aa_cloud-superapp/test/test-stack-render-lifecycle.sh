@@ -108,8 +108,8 @@ echo "== the notification render path owns no threads of its own =="
 # proves its callback touches no Context). What must not come back is an
 # executor in the path that paints notification ROWS, because that path calls
 # dp() on every row it draws.
-if awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE" \
-     | grep -q 'Executors\.'; then
+if grep -q 'Executors\.' \
+     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
   bad "T3: renderNtfyGroups owns an executor again — nothing cancels it on teardown"
 else
   ok "T3: renderNtfyGroups schedules nothing the view does not own"
@@ -229,8 +229,8 @@ CLOSURE
 # notifRowView; it sets colours and a typeface on views it already holds, and
 # that is what makes the skip safe. If it ever starts measuring, T4 would go
 # blind rather than loud — so the claim is made here instead.
-if awk '/val paint: \(Boolean\) -> Unit = \{/,/^        \}$/' "$CODE" \
-     | grep -qE '(^|[^.[:alnum:]_])(dp\(|resources)'; then
+if grep -qE '(^|[^.[:alnum:]_])(dp\(|resources)' \
+     <<<"$(awk '/val paint: \(Boolean\) -> Unit = \{/,/^        \}$/' "$CODE")"; then
   bad "T4: the swipe repaint closure now measures — it runs from an animator callback the view lifecycle does not cancel, and T4 cannot see inside it"
 else
   ok "T4: the swipe repaint closure touches views only, never a Context"
@@ -239,22 +239,22 @@ fi
 echo "== the two paths that actually crashed are scoped, by name =="
 # T4 is the rule; these two are the evidence. Both were the same defect: work
 # posted to a Handler that survived the fragment.
-if awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE" \
-     | grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {'; then
+if grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {' \
+     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
   ok "T5: the ntfy poll's repaint is cancelled with the view"
 else
   bad "T5: the ntfy poll no longer paints from the view's scope — the crash is back"
 fi
-if awk '/private fun startRefresh/,/^    }$/' "$CODE" \
-     | grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {'; then
+if grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {' \
+     <<<"$(awk '/private fun startRefresh/,/^    }$/' "$CODE")"; then
   ok "T5: the refresh watchdog is cancelled with the view"
 else
   bad "T5: the watchdog is no longer view-scoped — it fires finishRefresh into a dead Context"
 fi
 # The poll must still run OFF the main thread — a lifecycle fix that moved a
 # blocking socket read onto the UI thread would trade a crash for an ANR.
-if awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE" \
-     | grep -q 'withContext(kotlinx.coroutines.Dispatchers.IO)'; then
+if grep -q 'withContext(kotlinx.coroutines.Dispatchers.IO)' \
+     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
   ok "T5: the poll itself still runs off the main thread"
 else
   bad "T5: the network poll is on the main thread now — an ANR instead of a crash"

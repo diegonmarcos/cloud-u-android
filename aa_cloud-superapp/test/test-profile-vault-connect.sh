@@ -108,16 +108,16 @@ DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].id' "$BJ" | sort)
 DISPATCHED=$(awk '/when \(section.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
 [ -n "$DISPATCHED" ] && ok "T3: the fragment dispatches on $(echo $DISPATCHED | wc -w) section ids" || bad "T3: no when(section.id) dispatch found"
 for id in $DISPATCHED; do
-    echo "$DECLARED" | grep -qx "$id" && ok "T3: dispatched section '$id' is declared" \
+    grep -qx "$id" <<<"$DECLARED" && ok "T3: dispatched section '$id' is declared" \
                                       || bad "T3: the fragment dispatches on '$id', which build.json does not declare"
 done
 for id in $DECLARED; do
-    echo "$DISPATCHED" | grep -qx "$id" && ok "T3: declared section '$id' has a renderer" \
+    grep -qx "$id" <<<"$DISPATCHED" && ok "T3: declared section '$id' has a renderer" \
                                         || bad "T3: build.json declares '$id' but nothing renders it (it would fall to raw)"
 done
 LABELS=$(jq -r '.ui.vault_connect.cockpit.sections[].label' "$BJ")
 while IFS= read -r l; do
-    codeof "$PF" | grep -qF "\"$l\"" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
+    grep -qF "\"$l\"" <<<"$(codeof "$PF")" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
 done <<< "$LABELS"
 VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
 SCHEMA="$APP/../../cloud-vault/E0_configs/schema.json"
@@ -138,7 +138,7 @@ echo "== T4: rendering writes nothing; every apply is a tap =="
 RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure|render[A-Za-z]*|importedValue)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
 [ -n "$RENDER_FNS" ] && ok "T4: found the fetch + render functions" || bad "T4: render functions not found"
 for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting'; do
-    if grep -qF "$pat" "$VC" || echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply' | grep -qF "$pat"; then
+    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply')"; then
         bad "T4: the fetch/render path touches $pat"
     else
         ok "T4: no $pat on the fetch/render path"
@@ -150,20 +150,20 @@ APPLIES=$(grep -n 'VaultCockpit.apply' "$PF" | cut -d: -f1)
 [ -n "$APPLIES" ] && ok "T4: $(echo "$APPLIES" | wc -l) apply call sites" || bad "T4: no VaultCockpit.apply* call in the fragment"
 for ln in $APPLIES; do
     ctx=$(sed -n "$((ln-8)),${ln}p" "$PF")
-    echo "$ctx" | grep -qE 'applyButton\(|setPositiveButton\(' && ok "T4: apply at line $ln is behind a button" \
+    grep -qE 'applyButton\(|setPositiveButton\(' <<<"$ctx" && ok "T4: apply at line $ln is behind a button" \
                                                                || bad "T4: apply at line $ln is not behind a button"
 done
 grep -q 'fun applyMesh' "$CP" && grep -q 'Config.parse' "$CP" \
     && ok "T4: the mesh apply goes through the WireGuard parser" || bad "T4: mesh apply does not parse"
 
 echo "== T5: the code and the browser session are never stored =="
-echo "$RENDER_FNS" | grep -q 'box.setText("")' && ok "T5: the code box is emptied once sent" \
+grep -q 'box.setText("")' <<<"$RENDER_FNS" && ok "T5: the code box is emptied once sent" \
                                                || bad "T5: the code stays on screen after use"
-echo "$RENDER_FNS" | grep -qE 'Prefs\(.*\)\.[a-z]+ *= *code' && bad "T5: the code is written to prefs" \
+grep -qE 'Prefs\(.*\)\.[a-z]+ *= *code' <<<"$RENDER_FNS" && bad "T5: the code is written to prefs" \
                                                           || ok "T5: the code is never assigned into prefs"
 grep -q 'private var vaultSession: String? = null' "$PF" && ok "T5: the browser session is a fragment field" \
                                                           || bad "T5: no in-memory session field"
-codeof "$PF" | grep -E 'vaultSession' | grep -qE 'Prefs|edit\(|putString' && bad "T5: the session reaches a store" \
+grep -qE 'Prefs|edit\(|putString' <<<"$(codeof "$PF" | grep -E 'vaultSession')" && bad "T5: the session reaches a store" \
                                                                           || ok "T5: the session never reaches a store"
 grep -q 'class Cookie' "$VC" && grep -q '"Cookie" to cookie' "$VC" \
     && ok "T5: the session travels as a Cookie header (same gate, Remote-User)" || bad "T5: no cookie auth on the vault route"
@@ -175,7 +175,7 @@ grep -q 'fun devices(bundle: JSONObject)' "$CP" && grep -q '"wg_peer"' "$CP" \
     && ok "T6: devices come from the bundle's electronics wg_peer entries" || bad "T6: devices are not derived from the vault"
 grep -q 'addressesOf(conf).any { it in mine }' "$CP" \
     && ok "T6: a profile is the device's when its Address line carries the declared address" || bad "T6: mesh ownership is not by address"
-if codeof "$CP" | grep -qE '10\.0\.0\.[0-9]+|fd0c:1d0[01]::|termux|galaxy|surface'; then
+if grep -qE '10\.0\.0\.[0-9]+|fd0c:1d0[01]::|termux|galaxy|surface' <<<"$(codeof "$CP")"; then
     bad "T6: an address, hostname or device name is a Kotlin literal in VaultCockpit"
 else
     ok "T6: no address, hostname or device name literal in VaultCockpit"
@@ -189,7 +189,7 @@ grep -q 'AppInventory.plan(' "$PF" && grep -q 'StoreImport.show(this, plan)' "$P
     && ok "T7: the compare is AppInventory.plan + StoreImport.show" || bad "T7: a second plan/summary"
 grep -q 'AppInventory.parse(' "$CP" && grep -q 'AppInventory.KIND' "$CP" \
     && ok "T7: an inventory in the vault is read by the one parser" || bad "T7: a second inventory parser"
-codeof "$PF" | grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' && bad "T7: the profile installs on its own" \
+grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' <<<"$(codeof "$PF")" && bad "T7: the profile installs on its own" \
                                                                    || ok "T7: no installer in the profile"
 NAME_PF=$(grep -oE 'APPS_EXPORT_NAME = "[^"]+"' "$PF" | cut -d'"' -f2)
 NAME_STORE=$(grep -oE 'EXPORT_NAME = "[^"]+"' "$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt" | cut -d'"' -f2)
@@ -202,15 +202,15 @@ FT="$APP/app/src/test/java/com/diegonmarcos/superapp/profile/FleetCockpitViewTes
 IDS="$RES/values/ids.xml"
 [ -f "$FV" ] && ok "T8: FleetCockpitView.kt exists" || bad "T8: no FleetCockpitView.kt — the chrome was not split out"
 # The render path builds the hero and one card per section through the chrome object.
-echo "$RENDER_FNS" | grep -q 'FleetCockpitView.hero(' && ok "T8: the Fleet tab draws a hero" || bad "T8: no hero on the Fleet tab"
-echo "$RENDER_FNS" | grep -q 'FleetCockpitView.card(ctx, section.label, section.id' \
+grep -q 'FleetCockpitView.hero(' <<<"$RENDER_FNS" && ok "T8: the Fleet tab draws a hero" || bad "T8: no hero on the Fleet tab"
+grep -q 'FleetCockpitView.card(ctx, section.label, section.id' <<<"$RENDER_FNS" \
     && ok "T8: one card per declared section, labelled and tagged from the declaration" \
     || bad "T8: the sections are not drawn as FleetCockpitView cards"
 # The OLD idiom — a bare headline per section — is gone from the render path.
-echo "$RENDER_FNS" | grep -q 'sectionHeader(ctx, section.label)' \
+grep -q 'sectionHeader(ctx, section.label)' <<<"$RENDER_FNS" \
     && bad "T8: the render path still draws the OLD headline-per-section page" \
     || ok "T8: no headline-per-section on the render path"
-echo "$RENDER_FNS" | grep -q 'sectionHeader(ctx, getString(R.string.vault_cockpit_raw))' \
+grep -q 'sectionHeader(ctx, getString(R.string.vault_cockpit_raw))' <<<"$RENDER_FNS" \
     && bad "T8: the raw remainder is still the OLD headline, not a card" \
     || ok "T8: the raw remainder is a card too"
 # Lights: the shared component, painted from the model's summing, never a literal.
@@ -218,12 +218,12 @@ grep -q 'fun sectionLight(rows: List<Row>, observed: Boolean' "$CP" && grep -q '
     && ok "T8: the card and hero lights are summed in the model" || bad "T8: no sectionLight/overallLight in VaultCockpit"
 grep -q 'StatusLight.text(ctx, state)' "$FV" && grep -q 'StatusLight.colour(ctx, state)' "$FV" && grep -q 'StatusLight.description(ctx, rowLabel, state)' "$FV" \
     && ok "T8: the chrome paints glyph, colour and spoken description from StatusLight" || bad "T8: the chrome does not paint from StatusLight"
-codeof "$FV" | grep -qE '0x[0-9A-Fa-f]{6,8}|Color\.parseColor|#[0-9A-Fa-f]{6}' \
+grep -qE '0x[0-9A-Fa-f]{6,8}|Color\.parseColor|#[0-9A-Fa-f]{6}' <<<"$(codeof "$FV")" \
     && bad "T8: FleetCockpitView carries a colour literal — a private copy of a palette or light colour" \
     || ok "T8: no colour literal in the chrome (palette + StatusLight only)"
-codeof "$PF" | grep -q 'private val NEUTRAL = 0x' && bad "T8: the fragment still owns a private grey" || ok "T8: the fragment's grey is StatusLight's Unknown"
+grep -q 'private val NEUTRAL = 0x' <<<"$(codeof "$PF")" && bad "T8: the fragment still owns a private grey" || ok "T8: the fragment's grey is StatusLight's Unknown"
 # Power-Saving-safe: drawn once, no animation, no ticker.
-codeof "$FV" | grep -qE 'animate\(\)|ObjectAnimator|ValueAnimator|postDelayed|Handler\(' \
+grep -qE 'animate\(\)|ObjectAnimator|ValueAnimator|postDelayed|Handler\(' <<<"$(codeof "$FV")" \
     && bad "T8: the chrome animates or ticks — not Power-Saving-safe" || ok "T8: the chrome draws once, no animation, no ticker"
 # The circle-icon language: OVAL badges, an orb on the hero.
 grep -q 'GradientDrawable.OVAL' "$FV" && ok "T8: badges are OVAL (the homescreen circle-icon language)" || bad "T8: no round badge in the chrome"
@@ -237,7 +237,7 @@ jq -e '.ui.vault_connect.cockpit.device_icons._default' "$BJ" >/dev/null && ok "
 for icon in $(jq -r '.ui.vault_connect.cockpit.device_icons[]' "$BJ"); do
     [ -f "$RES/drawable/$icon.xml" ] && ok "T8: device icon $icon is a drawable" || bad "T8: device icon '$icon' has no drawable"
 done
-codeof "$FV" "$PF" | grep -qE '"ic_[a-z_]+"' && bad "T8: an icon name is a Kotlin literal on the cockpit" || ok "T8: icon names live only in build.json"
+grep -qE '"ic_[a-z_]+"' <<<"$(codeof "$FV" "$PF")" && bad "T8: an icon name is a Kotlin literal on the cockpit" || ok "T8: icon names live only in build.json"
 jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
     && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
     || bad "T8: no section declares observed:false — the keyboard's light would be a guess"

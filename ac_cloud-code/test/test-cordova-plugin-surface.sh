@@ -34,7 +34,7 @@ else
   derived="$(printf '%s\n' "$report" | grep '^DERIVED ' || true)"
   [ -n "$derived" ] && ok "$derived" || fail "derivation printed no DERIVED line"
 
-  if printf '%s\n' "$report" | grep -q '^MISSING '; then
+  if grep -q '^MISSING ' <<<"$report"; then
     fail "a service the web bundle calls is registered by no installed plugin — it throws on the phone"
   else
     ok "every Cordova service name the bundle calls is registered by an installed plugin"
@@ -49,7 +49,7 @@ fi
 # `cordova prepare` restores from would come back on the next platform add.
 while IFS= read -r p; do
   [ -n "$p" ] || continue
-  if printf '%s\n' "$report" | grep -q "^NOTLOADED .*($p)"; then
+  if grep -q "^NOTLOADED .*($p)" <<<"$report"; then
     ok "removed plugin $p is not loaded by this flavour"
   else
     fail "build.json removes $p but the derivation did not see it as not-installed"

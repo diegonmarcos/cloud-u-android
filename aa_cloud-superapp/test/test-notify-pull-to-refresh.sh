@@ -75,7 +75,7 @@ echo "== the hierarchy it wraps actually supports the drag =="
 # asks it canScrollVertically(-1) before claiming a drag. One child, and that
 # child a ScrollView, is what makes the lookup find the right view: a drag
 # below the top scrolls, a pull at the top spins.
-if awk '/val host = SwipeRefreshLayout\(ctx\)/,/^        }$/' "$CODE" | grep -q 'addView(scroll)'; then
+if grep -q 'addView(scroll)' <<<"$(awk '/val host = SwipeRefreshLayout\(ctx\)/,/^        }$/' "$CODE")"; then
   ok "T3: the ScrollView is the SwipeRefreshLayout's child"
 else
   bad "T3: the SwipeRefreshLayout no longer wraps the ScrollView"
@@ -110,13 +110,13 @@ f=$(grep -c 'finishRefresh(timedOut = ' "$CODE")
 # is the stronger one it was standing in for: pollTopics answers for EVERY
 # requested topic on every path including total transport failure, so the settle
 # after the paint loop is reached whatever came back.
-if awk '/private fun pollTopics/,/^    }$/' "$CODE" | grep -q 'catch (_: Throwable)'; then
+if grep -q 'catch (_: Throwable)' <<<"$(awk '/private fun pollTopics/,/^    }$/' "$CODE")"; then
   ok "T4: a poll that fails outright still returns a verdict per topic"
 else
   bad "T4: pollTopics can now escape without answering — the counter would stick"
 fi
-if awk '/viewLifecycleOwner.lifecycleScope.launch \{/,/^        }$/' "$CODE" \
-     | grep -q 'if (counted) ntfyPollSettled()'; then
+if grep -q 'if (counted) ntfyPollSettled()' \
+     <<<"$(awk '/viewLifecycleOwner.lifecycleScope.launch \{/,/^        }$/' "$CODE")"; then
   ok "T4: the poll settles on the one path every outcome reaches"
 else
   bad "T4: the poll no longer settles — the spinner would run forever"
@@ -127,10 +127,10 @@ fi
 # runnable to the main-thread Handler, which runs it after the fragment is gone.
 # The watchdog now waits on the view's own scope, so it is cancelled with the
 # view instead of firing finishRefresh (→ stateLine → dp) into a dead Context.
-if awk '/private fun startRefresh/,/^    }$/' "$CODE" | grep -q 'postDelayed'; then
+if grep -q 'postDelayed' <<<"$(awk '/private fun startRefresh/,/^    }$/' "$CODE")"; then
   bad "T5: the watchdog is back on postDelayed — it outlives the view it repaints"
-elif awk '/private fun startRefresh/,/^    }$/' "$CODE" \
-       | grep -q 'viewLifecycleOwner.lifecycleScope.launch'; then
+elif grep -q 'viewLifecycleOwner.lifecycleScope.launch' \
+       <<<"$(awk '/private fun startRefresh/,/^    }$/' "$CODE")"; then
   ok "T5: a watchdog backstops a callback that never runs, and dies with the view"
 else
   bad "T5: no watchdog — a poll that never settles hangs the spinner forever"
@@ -158,7 +158,7 @@ grep -q '"nothing new"' "$CODE" && grep -q '"\$fresh new"' "$CODE" \
 has "$AGG" 'val unreachable = ntfyCache.count { !it.value.ok }' \
   && ok "T9: channels that could not be reached are counted apart" \
   || bad "T9: an unreachable channel is folded into the success count"
-if awk '/val color = when \{/,/^        }$/' "$CODE" | grep -q 'timedOut || unreachable > 0 -> SIGNAL_UNKNOWN'; then
+if grep -q 'timedOut || unreachable > 0 -> SIGNAL_UNKNOWN' <<<"$(awk '/val color = when \{/,/^        }$/' "$CODE")"; then
   ok "T9: any unknown in the answer paints grey, never the green of a clean result"
 else
   bad "T9: an incomplete measurement can be painted as a clean result"
@@ -167,7 +167,7 @@ fi
 echo "== the refresh does not damage what the page already knew =="
 # Advancing the watermark here would clear every "N new" chip at the moment the
 # refresh had just earned them.
-if awk '/private fun startRefresh/,/^    }$/' "$CODE" | grep -q 'markSeen'; then
+if grep -q 'markSeen' <<<"$(awk '/private fun startRefresh/,/^    }$/' "$CODE")"; then
   bad "T10: a refresh advances the watermark and erases its own result"
 else
   ok "T10: the unread watermark is left alone by a refresh"
@@ -179,7 +179,7 @@ b=$(grep -c 'rebuildBodies()' "$CODE")
 [ "$b" -eq 3 ] \
   && ok "T11: one rebuild path, called by the toggle row and by the gesture" \
   || bad "T11: $b rebuildBodies sites — expected 3 (definition + 2 callers)"
-if awk '/private fun rebuildBodies/,/^    }$/' "$CODE" | grep -q 'archiveBox?.removeAllViews()'; then
+if grep -q 'archiveBox?.removeAllViews()' <<<"$(awk '/private fun rebuildBodies/,/^    }$/' "$CODE")"; then
   ok "T11: the shared rebuild empties the Archive before the bodies re-file"
 else
   bad "T11: the rebuild no longer empties the Archive — boxes will double"
@@ -188,7 +188,7 @@ fi
 echo "== the swipe joined the existing way to update, it did not replace it =="
 # There was no refresh BUTTON on this page to remove. What did exist is the
 # filter row, which re-renders the bodies as a side effect; it still does.
-if awk '/private fun onFilterChanged/,/^    }$/' "$CODE" | grep -q 'rebuildBodies()'; then
+if grep -q 'rebuildBodies()' <<<"$(awk '/private fun onFilterChanged/,/^    }$/' "$CODE")"; then
   ok "T12: the filter row still re-renders the bodies"
 else
   bad "T12: the toggle row lost its re-render — the swipe replaced it"

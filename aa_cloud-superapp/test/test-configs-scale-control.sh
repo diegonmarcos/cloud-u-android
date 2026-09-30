@@ -93,15 +93,15 @@ echo "== T2: the range is declared once =="
 # exactly the kind of sentence that must stay writable. An assertion that a
 # CODE shape is absent has to read code, or the honest fix for the next person
 # is to delete the explanation.
-if sed -E 's,//.*,,' "$DISPLAY" | grep -vE '^\s*(\*|/\*)' \
-     | grep -qE 'coerceIn\([0-9]+, *[0-9]+\)'; then
+if grep -qE 'coerceIn\([0-9]+, *[0-9]+\)' \
+     <<<"$(sed -E 's,//.*,,' "$DISPLAY" | grep -vE '^\s*(\*|/\*)')"; then
   bad "T2: SystemDisplay clamps to literal numbers — that is the declared range written twice (#170), and it silently ate step 0"
 else
   ok "T2: SystemDisplay holds no literal scale range"
 fi
 FACTOR="$(body "$DISPLAY" "    " "fun factor(scale: Int)")"
-if printf '%s' "$FACTOR" | grep -q 'Config.scale' &&
-   printf '%s' "$FACTOR" | grep -q 'coerceIn('; then
+if grep -q 'Config.scale' <<<"$FACTOR" &&
+   grep -q 'coerceIn(' <<<"$FACTOR"; then
   ok "T2: factor clamps to the DECLARED bounds, so widening build.json widens the band"
 else
   bad "T2: factor does not clamp to the declared bounds — a wider declaration would not reach the device"
@@ -164,17 +164,17 @@ ROW="$(body "$CFG" "    " "private fun sliderRow(")"
 if [ -z "$ROW" ]; then
   bad "T5: sliderRow not found"
 else
-  printf '%s' "$ROW" | grep -q 'tickMark =' \
+  grep -q 'tickMark =' <<<"$ROW" \
     && ok "T5: the marks are the platform's own tickMark — drawn once per step, from the SeekBar's own range" \
     || bad "T5: no tickMark — a hand-drawn tick bar would be a second copy of the range and would drift off the stops"
-  printf '%s' "$ROW" | grep -q 'override fun onProgressChanged' \
-    && printf '%s' "$ROW" | grep -q 'readout.text = p.toString()' \
+  grep -q 'override fun onProgressChanged' <<<"$ROW" \
+    && grep -q 'readout.text = p.toString()' <<<"$ROW" \
     && ok "T5: the current step is shown and follows the finger, not the release" \
     || bad "T5: nothing shows the current step live — 'we can see in which level is' is the whole request"
-  printf '%s' "$ROW" | grep -q 'preset.value.coerceIn(min, max)' \
+  grep -q 'preset.value.coerceIn(min, max)' <<<"$ROW" \
     && ok "T5: a preset button moves THIS slider's handle, inside the declared bounds" \
     || bad "T5: the preset buttons do not move the handle"
-  printf '%s' "$ROW" | grep -q 'for (preset in presets)' \
+  grep -q 'for (preset in presets)' <<<"$ROW" \
     && ok "T5: one button per declared preset, in declared order — a third size is a data edit" \
     || bad "T5: the buttons are not a loop over the declared presets, so adding one is a Kotlin change"
 fi
@@ -182,7 +182,7 @@ fi
 echo "== T6: #349 does not come back through the new button =="
 if [ -n "$ROW" ]; then
   for banned in rerenderPage notifyLauncherThemeChanged recreate; do
-    if printf '%s' "$ROW" | grep -q "$banned"; then
+    if grep -q "$banned" <<<"$ROW"; then
       bad "T6: sliderRow reaches $banned — a tap on the Modes page reloads it and loses the tab (#349)"
     else
       ok "T6: sliderRow never reaches $banned"
@@ -190,7 +190,7 @@ if [ -n "$ROW" ]; then
   done
   # The positive half: the fix has to be that the row updates ITSELF. A button
   # that neither reloads nor repaints just leaves a stale handle on screen.
-  printf '%s' "$ROW" | grep -q 'bar.progress = ' \
+  grep -q 'bar.progress = ' <<<"$ROW" \
     && ok "T6: it repaints in place by setting progress on the bar it built" \
     || bad "T6: nothing updates the view in place, so the only way to show the restore is a reload"
 fi

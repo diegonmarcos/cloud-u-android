@@ -132,7 +132,7 @@ fixture_selects() {
             printf 'ERROR  fixture module-paths %s failed: %s\n' "$module" "$output"
             exit 2
         }
-        if printf '%s\n' "$output" | grep -qx "$probe"; then
+        if grep -qx "$probe" <<<"$output"; then
             selected="$selected $module"
         fi
     done
@@ -235,13 +235,13 @@ PYEOF
     total="$(echo "$SHIPPED" | wc -w | tr -d ' ')"
     expected=0
     for module in $SHIPPED; do
-        awk -v m="$module" '$1 == m { $1 = ""; print }' "$WORK/expected-closures" \
-            | grep -qw updater && expected=$((expected + 1))
+        grep -qw updater \
+            <<<"$(awk -v m="$module" '$1 == m { $1 = ""; print }' "$WORK/expected-closures")" && expected=$((expected + 1))
     done
     selected=0
     for module in $SHIPPED; do
-        bash "$BUILD_SH" module-paths "$module" 2>/dev/null \
-            | grep -qx 'ab_cloud-libs-shared/libs/updater' && selected=$((selected + 1))
+        grep -qx 'ab_cloud-libs-shared/libs/updater' \
+            <<<"$(bash "$BUILD_SH" module-paths "$module" 2>/dev/null)" && selected=$((selected + 1))
     done
     if [ "$selected" -eq "$expected" ]; then
         ok "34a089d7's libs/updater change selects $selected of $total library APKs — exactly those that compile it"

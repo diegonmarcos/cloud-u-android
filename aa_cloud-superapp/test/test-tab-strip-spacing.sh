@@ -41,13 +41,13 @@ done
 # ── the checks as functions, so T4 can run them on mutated copies ──
 t2() {   # $1 = AppTabsStyle.kt
     local c; c=$(codeof "$1")
-    echo "$c" | grep -q 'R.dimen.tab_strip_top_inset' || return 1
-    echo "$c" | grep -q 'R.dimen.tab_strip_bottom_inset' || return 1
-    echo "$c" | grep -q 'topMargin = top + liveInset' || return 1
-    echo "$c" | grep -q 'bottomMargin = bottom' || return 1
-    echo "$c" | grep -q 'setOnApplyWindowInsetsListener(tabLayout)' || return 1
-    echo "$c" | grep -qE '^\s*insets$' || return 1
-    echo "$c" | grep -q 'underTopChrome: Boolean' || return 1
+    grep -q 'R.dimen.tab_strip_top_inset' <<<"$c" || return 1
+    grep -q 'R.dimen.tab_strip_bottom_inset' <<<"$c" || return 1
+    grep -q 'topMargin = top + liveInset' <<<"$c" || return 1
+    grep -q 'bottomMargin = bottom' <<<"$c" || return 1
+    grep -q 'setOnApplyWindowInsetsListener(tabLayout)' <<<"$c" || return 1
+    grep -qE '^\s*insets$' <<<"$c" || return 1
+    grep -q 'underTopChrome: Boolean' <<<"$c" || return 1
     return 0
 }
 t3() {   # $1 = source root; every strip site takes the geometry from AppTabsStyle
@@ -55,8 +55,8 @@ t3() {   # $1 = source root; every strip site takes the geometry from AppTabsSty
     sites=$(grep -rl 'AppTabsStyle.apply(' "$root" --include=*.kt | grep -v '/AppTabsStyle.kt$')
     for f in $sites; do
         n=$((n+1))
-        codeof "$f" | grep -q 'tab_strip_' && return 1
-        codeof "$f" | grep -q 'setOnApplyWindowInsetsListener' && return 1
+        grep -q 'tab_strip_' <<<"$(codeof "$f")" && return 1
+        grep -q 'setOnApplyWindowInsetsListener' <<<"$(codeof "$f")" && return 1
     done
     [ "$n" -ge 3 ]
 }

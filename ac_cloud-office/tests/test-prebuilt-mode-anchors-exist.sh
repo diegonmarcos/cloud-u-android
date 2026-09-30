@@ -140,7 +140,7 @@ echo "== T4: the COOL bundle really is on the RELEASE graph =="
 # doing that, the anchor can be dropped from the spec — but that is a decision,
 # not something to discover from a build that suddenly wants Node.
 if grep -qF 'generateReleaseAssets.dependsOn' "$CONTROL" \
-   && grep -F 'generateReleaseAssets.dependsOn' "$CONTROL" | grep -qF 'generateCoolReleaseAssets'; then
+   && grep -qF 'generateCoolReleaseAssets' <<<"$(grep -F 'generateReleaseAssets.dependsOn' "$CONTROL")"; then
     ok "generateReleaseAssets dependsOn generateCoolReleaseAssets — the npm/webpack build IS on the release graph and must be neutralised"
 else
     bad "generateReleaseAssets no longer dependsOn generateCoolReleaseAssets at $PIN — prebuilt_mode's cool-bundle-release anchor may be obsolete; confirm before keeping it"

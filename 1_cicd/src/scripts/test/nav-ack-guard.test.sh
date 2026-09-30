@@ -245,7 +245,7 @@ for ROUTE in $ROUTES; do
         d="$(sandbox)"; emit_body "$ROUTE" defect > "$WORK/body"
         replace_body "$d" "$FIRST" "$ROUTE" "$WORK/body"
         out="$(run_guard "$d")"
-        if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'DevControlBridge.host()'; then
+        if [ $? -ne 0 ] && grep -q 'DevControlBridge.host()' <<<"$out"; then
             ok "$ROUTE: guard rejects the branch reaching DevControlBridge.host() itself"
         else
             fail "$ROUTE: guard ACCEPTED the branch reaching host():"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -259,7 +259,7 @@ for ROUTE in $ROUTES; do
         d="$(sandbox)"; emit_body "$ROUTE" literal > "$WORK/body"
         replace_body "$d" "$FIRST" "$ROUTE" "$WORK/body"
         out="$(run_guard "$d")"
-        if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'an outcome it has not'; then
+        if [ $? -ne 0 ] && grep -q 'an outcome it has not' <<<"$out"; then
             ok "$ROUTE: guard rejects a reply asserting an unobserved outcome"
         else
             fail "$ROUTE: guard ACCEPTED an unobserved success literal:"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -272,7 +272,7 @@ for ROUTE in $ROUTES; do
     d="$(sandbox)"; emit_body "$ROUTE" gutted > "$WORK/body"
     replace_body "$d" "$FIRST" "$ROUTE" "$WORK/body"
     out="$(run_guard "$d")"
-    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'never calls'; then
+    if [ $? -ne 0 ] && grep -q 'never calls' <<<"$out"; then
         ok "$ROUTE: guard rejects a handler that does none of the real work"
     else
         fail "$ROUTE: guard ACCEPTED a handler with the work deleted:"; printf '%s\n' "$out" | sed 's/^/       /'
@@ -310,7 +310,7 @@ for f in $HANDLERS; do
 done
 copy_declared "$d"
 out="$(run_guard "$d")"
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'checking nothing'; then
+if [ $? -ne 0 ] && grep -q 'checking nothing' <<<"$out"; then
     ok "guard reports that it is checking nothing when a route is renamed away"
 else
     fail "guard swept a tree with NO implementations and called it green:"; printf '%s\n' "$out" | sed 's/^/       /'

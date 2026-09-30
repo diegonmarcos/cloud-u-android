@@ -73,12 +73,12 @@ app_name="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['nam
 workflow="$ROOT/../1_cicd/src/cicd/ship-$app_name.yml"
 if [ -f "$workflow" ]; then
   title_line="$(grep -m1 '^name:' "$workflow")"
-  if printf '%s\n' "$title_line" | grep -q "Cloud Notes"; then
+  if grep -q "Cloud Notes" <<<"$title_line"; then
     ok "ship workflow '$app_name' is titled Cloud Notes (resolved from build.json::name)"
   else
     fail "ship workflow '$app_name' title '$title_line' does not name the product (Cloud Notes)"
   fi
-  if printf '%s\n' "$title_line" | grep -qi "AFFiNE"; then
+  if grep -qi "AFFiNE" <<<"$title_line"; then
     fail "ship workflow '$app_name' title '$title_line' declares the upstream project (AFFiNE) as the product"
   else
     ok "ship workflow '$app_name' title does not spell the upstream project (AFFiNE)"

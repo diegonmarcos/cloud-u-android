@@ -118,7 +118,7 @@ else
 fi
 # embedChild is the fixed-host-id pool that renders blank on rebuild; the
 # notification path must never reach it.
-if awk '/private fun renderNotificationCenter/,/^    }/' "$CODE" | grep -q 'embedChild'; then
+if grep -q 'embedChild' <<<"$(awk '/private fun renderNotificationCenter/,/^    }/' "$CODE")"; then
   bad "T8: the notification centre now embeds a child fragment"
 else
   ok "T8: no child fragment in the notification centre"

@@ -252,7 +252,7 @@ fi
 KEYS="$(grep -o 'const val KEY_[A-Z_]*' "$PREFS" | awk '{print $3}')"
 if [ -z "$KEYS" ]; then
     fail "W4 no preference key constants found in WriterPrefs.kt — the naming has changed and this check reads nothing"
-elif printf '%s\n' "$KEYS" | grep -qiE 'token|api_?key|secret|credential'; then
+elif grep -qiE 'token|api_?key|secret|credential' <<<"$KEYS"; then
     fail "W4 WriterPrefs declares a credential-shaped key: $(printf '%s ' $KEYS) — a second copy of the owner's provider key on the device is what the binder design exists to prevent"
 else
     pass "W4 WriterPrefs declares no token, key or secret slot ($(printf '%s\n' "$KEYS" | wc -l) keys checked)"

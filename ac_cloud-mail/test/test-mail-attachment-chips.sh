@@ -53,11 +53,11 @@ echo "== cloud-mail attachment chips: named in the list, opened from it, at no c
 # The whole task turns on this. `attachments` (RFC 8621 4.1.4) is derived and body-free, so it rides
 # the chained Email/get the page already issues. A fetch per row would be 50 round trips per page.
 has "$JMAP" 'internal val EMAIL_LIST_PROPERTIES' "A1 the list property set is named once"
-awk '/internal val EMAIL_LIST_PROPERTIES/,/^        \)/' "$JMAP" | grep -q '"attachments"' \
+grep -q '"attachments"' <<<"$(awk '/internal val EMAIL_LIST_PROPERTIES/,/^        \)/' "$JMAP")" \
   && ok "A1 the list property set asks for attachments" \
   || bad "A1 the list property set does NOT ask for attachments ($JMAP)"
 # It must NOT have brought the body along with it: bodyValues on a 50-row page is the regression.
-awk '/internal val EMAIL_LIST_PROPERTIES/,/^        \)/' "$JMAP" | grep -q 'bodyValues\|htmlBody\|textBody' \
+grep -q 'bodyValues\|htmlBody\|textBody' <<<"$(awk '/internal val EMAIL_LIST_PROPERTIES/,/^        \)/' "$JMAP")" \
   && bad "A1 the list property set pulls BODY content onto every page ($JMAP)" \
   || ok "A1 the list set carries no body content"
 # One request per page: the get is CHAINED off the query by back-reference, not issued per id.
@@ -71,7 +71,7 @@ n=$(grep -c 'EMAIL_LIST_PROPERTIES' "$JMAP")
 # The search/crawl set is deliberately separate and deliberately WITHOUT attachments: neither writes
 # an `emails` row, and the crawl walks the whole account.
 has "$JMAP" 'internal val EMAIL_INDEX_PROPERTIES' "A2 the index set is named separately"
-awk '/internal val EMAIL_INDEX_PROPERTIES/,/^        \)/' "$JMAP" | grep -q '"attachments"' \
+grep -q '"attachments"' <<<"$(awk '/internal val EMAIL_INDEX_PROPERTIES/,/^        \)/' "$JMAP")" \
   && bad "A2 the crawl now drags attachments over the whole account ($JMAP)" \
   || ok "A2 the crawl set stays lean"
 
@@ -158,10 +158,10 @@ has "$ROW" 'MAX_ATTACHMENT_CHIPS' "A5 and are capped, so 20 files cannot make a 
 # ── A6 a chip tap downloads; it does not open the message ──
 has "$ROW" 'clickable(enabled = !busy, onClick = onOpen)' "A6 the chip has its own click"
 # THE assertion of this section: the chip's handler must NOT be the row's onClick.
-awk '/private fun AttachmentChip\(/,/^}/' "$ROW" | grep -q 'onClick = onOpen' \
+grep -q 'onClick = onOpen' <<<"$(awk '/private fun AttachmentChip\(/,/^}/' "$ROW")" \
   && ok "A6 the chip's tap is its own handler" \
   || bad "A6 the chip's tap is not wired to its own handler ($ROW)"
-awk '/private fun AttachmentChip\(/,/^}/' "$ROW" | grep -q 'onClick()\|onClick = onClick' \
+grep -q 'onClick()\|onClick = onClick' <<<"$(awk '/private fun AttachmentChip\(/,/^}/' "$ROW")" \
   && bad "A6 the chip falls through to opening the message ($ROW)" \
   || ok "A6 the chip does not fall through to the message"
 has "$INBOXUI" 'onOpenAttachment = { part -> viewModel.openAttachment(email, part) }' \
@@ -222,7 +222,7 @@ has "$INBOXVM" 'status_attachment_too_large' "A11 our own ceiling is said plainl
 has "$ROW" 'CircularProgressIndicator' "A11 a download in progress is visible on the chip"
 has "$INBOXVM" '_openingAttachment.value = null' "A11 the progress state is always released"
 # The catch must not swallow: an empty catch block is the silent no-op this cannot be.
-awk '/private fun download\(/,/^    }/' "$INBOXVM" | grep -q '_message.value = app.getString' \
+grep -q '_message.value = app.getString' <<<"$(awk '/private fun download\(/,/^    }/' "$INBOXVM")" \
   && ok "A11 the failure reaches the user, not just logcat" \
   || bad "A11 a failed tap is silent ($INBOXVM)"
 

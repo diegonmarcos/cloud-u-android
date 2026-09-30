@@ -108,8 +108,8 @@ has "$SCREEN" 'settings_filters_foreign_body_unavailable' \
 has "$SCREEN" 'fontFamily = FontFamily.Monospace' "S6 Sieve is shown as the indented code it is"
 # Read-only on purpose: an editor here would be a Sieve editor, and a parser filling the rule list
 # from this text would drop every construct the rule model has no field for.
-awk '/private fun ForeignScriptBody\(foreign: ForeignScript\)/,/^}/' "$SCREEN" \
-  | grep -qE 'OutlinedTextField|TextField\(|onValueChange' \
+grep -qE 'OutlinedTextField|TextField\(|onValueChange' \
+  <<<"$(awk '/private fun ForeignScriptBody\(foreign: ForeignScript\)/,/^}/' "$SCREEN")" \
   && bad "S6 the foreign script is editable - a partial Sieve editor drops what it cannot parse" \
   || ok "S6 the foreign script is read-only"
 
@@ -131,7 +131,7 @@ for key in settings_filters_foreign_warning settings_filters_takeover_title sett
   unnamed=""
   for d in "$RES"/values "$RES"/values-*; do
     [ -f "$d/strings.xml" ] || continue
-    grep "name=\"$key\"" "$d/strings.xml" | grep -q '%1\$s' || unnamed="$unnamed $(basename "$d")"
+    grep -q '%1\$s' <<<"$(grep "name=\"$key\"" "$d/strings.xml")" || unnamed="$unnamed $(basename "$d")"
   done
   [ -z "$unnamed" ] && ok "S7 $key names the script in every locale" \
                     || bad "S7 $key does not name the script in:$unnamed"

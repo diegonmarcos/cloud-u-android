@@ -73,8 +73,8 @@ echo "== it commits at the save moment, not mid-typing =="
 has "$PF" 'setOnFocusChangeListener { v, hasFocus ->' \
   && ok "T2: conversion hangs off focus loss" \
   || bad "T2: the blur listener is gone"
-if awk '/addTextChangedListener\(object : TextWatcher/,/^            }\)/' "$PF" \
-     | grep -q 'prefs.birth ='; then
+if grep -q 'prefs.birth =' \
+     <<<"$(awk '/addTextChangedListener\(object : TextWatcher/,/^            }\)/' "$PF")"; then
   bad "T2: a TextWatcher writes prefs.birth — that reorders under a typing finger"
 else
   ok "T2: no keystroke watcher rewrites the stored date"

@@ -147,8 +147,8 @@ done
 # on the files GitHub actually reads.
 for wf in .github/workflows/ship-*.yml; do
     grep -q '^        run: sh .*cloud-android-publish-guard\.sh ' "$wf" || continue
-    if grep '^        run: sh .*cloud-android-publish-guard\.sh ' "$wf" \
-         | grep -qE '\b(success|failure|cancelled|always)\(\)'; then
+    if grep -qE '\b(success|failure|cancelled|always)\(\)' \
+         <<<"$(grep '^        run: sh .*cloud-android-publish-guard\.sh ' "$wf")"; then
         bad "$(basename "$wf"): a status function is passed to the guard as an argument — GitHub will not parse this workflow"
     else
         ok

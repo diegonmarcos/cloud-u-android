@@ -106,7 +106,7 @@ fi
 echo "── E1 every engine is linked at both ends (build.json depends_on + app/build.gradle) ──"
 DEPENDS_ON="$(python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["modules"]["app"]["depends_on"]))' "$BUILD_JSON")"
 while IFS='|' read -r name dir ns; do
-    if printf '%s\n' "$DEPENDS_ON" | grep -qxF "$name"; then
+    if grep -qxF "$name" <<<"$DEPENDS_ON"; then
         pass "$name in modules.app.depends_on"
     else
         fail "$name is a linked engine but absent from modules.app.depends_on"

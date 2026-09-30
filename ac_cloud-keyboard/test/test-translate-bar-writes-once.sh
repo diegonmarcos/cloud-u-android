@@ -82,9 +82,9 @@ if check_body "$APPLY" "apply()"; then
         inside { print }')"
     if [ -z "$OWNED_BRANCH" ]; then
         fail "apply() no longer branches on output == Output.OWNED — the state that stops the second copy is gone"
-    elif ! printf '%s\n' "$OWNED_BRANCH" | grep -q 'releaseOutput('; then
+    elif ! grep -q 'releaseOutput(' <<<"$OWNED_BRANCH"; then
         fail "apply()'s OWNED branch does not call releaseOutput() — finishing the composing region IS the apply"
-    elif printf '%s\n' "$OWNED_BRANCH" | grep -qE 'commitText\(|replaceInField\('; then
+    elif grep -qE 'commitText\(|replaceInField\(' <<<"$OWNED_BRANCH"; then
         fail "apply() commits text while it already owns a composing region — that is the translation landing twice (701653aaa)"
     else
         pass "apply() finishes the region it owns instead of committing a second copy"
@@ -94,9 +94,9 @@ fi
 # ── 2. pushOutput() revises by composing region, never by character count ────
 PUSH="$(body "$BAR" 'private fun pushOutput(out: String)')"
 if check_body "$PUSH" "pushOutput()"; then
-    if ! printf '%s\n' "$PUSH" | grep -q 'setComposingText('; then
+    if ! grep -q 'setComposingText(' <<<"$PUSH"; then
         fail "pushOutput() no longer uses setComposingText — the atomic replace is the only revision with no length to get wrong"
-    elif printf '%s\n' "$PUSH" | grep -qE 'deleteSurroundingText\(|commitText\('; then
+    elif grep -qE 'deleteSurroundingText\(|commitText\(' <<<"$PUSH"; then
         fail "pushOutput() deletes or commits to revise its output — retracting by character count is what ate the owner's words (701653aaa)"
     else
         pass "pushOutput() revises the composing region it owns and nothing else"

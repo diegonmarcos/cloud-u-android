@@ -65,7 +65,7 @@ done
 # the file -- "script" appears in prose too, and a comment is not a policy.
 dropped=$(sed -n '/private val DROPPED_WITH_CONTENT/,/^)/p' "$SANI")
 for el in script noscript iframe object embed form input svg math link meta base; do
-  printf '%s' "$dropped" | grep -q "\"$el\"" \
+  grep -q "\"$el\"" <<<"$dropped" \
     && ok "H2 <$el> is dropped with its content" \
     || bad "H2 <$el> is NOT in DROPPED_WITH_CONTENT"
 done
@@ -109,14 +109,14 @@ has "$SCREEN" 'scheme == "data" || scheme == "cid" || scheme == "about"' \
 # The other half, and the one sanitisation could break: `src` must SURVIVE the pass, or the
 # "load images" button would have nothing to load and the pictures would never appear.
 schemes=$(sed -n '/private val URL_ATTRIBUTE_SCHEMES/,/^)/p' "$SANI")
-printf '%s' "$schemes" | grep -q '"src" to setOf("http", "https", "cid", "data")' \
+grep -q '"src" to setOf("http", "https", "cid", "data")' <<<"$schemes" \
   && ok "H4 a remote src survives sanitisation, so the affordance has something to load" \
   || bad "H4 sanitisation strips the src the load-images affordance needs"
 # …and what the affordance CANNOT see must not survive, or a picture arrives with no way to ask
 # for it: hasRemoteRefs reads `src`, so srcset and background may not be kept.
 attrs=$(sed -n '/private val ELEMENT_ATTRIBUTES/,/^)/p' "$SANI")
 for a in srcset background poster; do
-  printf '%s' "$attrs" | grep -q "\"$a\"" \
+  grep -q "\"$a\"" <<<"$attrs" \
     && bad "H4 $a is kept, but the images affordance cannot see it" \
     || ok "H4 $a is dropped -- the affordance reads src, so nothing may arrive past it"
 done

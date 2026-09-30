@@ -125,7 +125,7 @@ has "$VM" 'UnsubscribeHeader.parse(anchor.listUnsubscribe, anchor.listUnsubscrib
 # CODE lines only. The KDoc above explains that a scan reading the word "unsubscribe" is reading
 # the attacker's own text, and grepping the whole file made the explanation trip the assertion --
 # which would have taught the next reader to delete the explanation.
-if grep -vE '^\s*(//|\*|/\*)' "$SCAN" | grep -qiE '"[^"]*unsubscribe[^"]*"|"[^"]*opt.?out[^"]*"'; then
+if grep -qiE '"[^"]*unsubscribe[^"]*"|"[^"]*opt.?out[^"]*"' <<<"$(grep -vE '^\s*(//|\*|/\*)' "$SCAN")"; then
   bad "U2 the word list is hardcoded in the scanner"
 else
   ok "U2 the word list is not hardcoded in the scanner"

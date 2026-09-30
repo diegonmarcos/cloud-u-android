@@ -163,7 +163,7 @@ print("DONE\t%d" % len(findings))
 PY
 )"
 
-echo "$OUT" | grep -q '^DIE' && { echo "$OUT" | sed -n 's/^DIE\t/ERROR: /p' >&2; exit 2; }
+grep -q '^DIE' <<<"$OUT" && { echo "$OUT" | sed -n 's/^DIE\t/ERROR: /p' >&2; exit 2; }
 
 echo "== T1: the rule set was actually built from the declared modules =="
 echo "$OUT" | sed -n 's/^INFO\t/  /p'

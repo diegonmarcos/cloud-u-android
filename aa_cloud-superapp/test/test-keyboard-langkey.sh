@@ -33,10 +33,10 @@ has "$TU" 'LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH' "T1 tap -> KeyCode.LANGUA
 has "$TU" 'LANGUAGE_SWITCH -> KeyCode.SYSTEM_INPUT_METHOD_PICKER' "T1 long-press -> KeyCode.SYSTEM_INPUT_METHOD_PICKER"
 
 # T2 same dispatch as the keyboard globe (no new KeyCode, no new handler)
-awk '/case KeyCode.LANGUAGE_SWITCH:/{f=1} f&&/handleLanguageSwitchKey\(\)/{print "hit"; exit}' "$IL" | grep -q hit \
+grep -q hit <<<"$(awk '/case KeyCode.LANGUAGE_SWITCH:/{f=1} f&&/handleLanguageSwitchKey\(\)/{print "hit"; exit}' "$IL")" \
   && ok "T2 InputLogic: LANGUAGE_SWITCH -> handleLanguageSwitchKey" || bad "T2 LANGUAGE_SWITCH dispatch"
 has "$IL" 'mLatinIME.switchToNextSubtype()' "T2 handleLanguageSwitchKey -> LatinIME.switchToNextSubtype (cycle per pref)"
-awk '/case KeyCode.SYSTEM_INPUT_METHOD_PICKER:/{f=1} f&&/showInputPickerDialog\(\)/{print "hit"; exit}' "$IL" | grep -q hit \
+grep -q hit <<<"$(awk '/case KeyCode.SYSTEM_INPUT_METHOD_PICKER:/{f=1} f&&/showInputPickerDialog\(\)/{print "hit"; exit}' "$IL")" \
   && ok "T2 InputLogic: SYSTEM_INPUT_METHOD_PICKER -> showInputPickerDialog" || bad "T2 picker dispatch"
 has "$J/keyboard/PointerTracker.java" 'code == KeyCode.LANGUAGE_SWITCH' "T2 keyboard globe long-press path exists (CUSTOM_CODE_SHOW_INPUT_METHOD_PICKER)"
 has "$J/keyboard/KeyboardActionListenerImpl.kt" 'latinIME.showInputPickerDialog()' "T2 globe long-press ends in the same showInputPickerDialog"

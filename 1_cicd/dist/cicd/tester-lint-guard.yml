@@ -1,0 +1,32 @@
+name: "tester lint guard — no tester verdict is decided by a SIGPIPE race"
+
+# WHY THIS EXISTS (#634). Under `set -o pipefail`, `producer | grep -q PAT`
+# returns 141 whenever grep matches before the producer has finished writing,
+# so a MATCH reads as a failure. A `has` check flakes red; a `hasnt` check goes
+# green on the very defect it exists to catch. 176 such lines sat in 45
+# testers, and one of them passed a planted defect 50 runs out of 50.
+#
+# WHY EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER. The subject is
+# every tester directory a build.json declares plus the fleet's own guard
+# testers, so a path filter here would be a second list of those directories to
+# keep in step with the first. The check reads text and finishes in about a
+# second, so narrowing when it runs could only ever cost a miss.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pipefail-grep-q:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The self-check inside re-proves the race on this runner and drives the
+      # rule over planted fixtures in both directions before it reads the tree.
+      - name: No tester pipes into grep -q while pipefail is on
+        run: bash 1_cicd/src/scripts/test/pipefail-grep-q.test.sh

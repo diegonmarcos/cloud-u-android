@@ -119,7 +119,7 @@ has "$AGG" 'renderStats(ctx, body, panel); renderInboxNotifications(ctx, body, p
 # Each inbox branch is two lines: the kind, then its renderers. -A2 covers the
 # branch without reaching the next one.
 for k in mail_accounts chat_matrix chat_mattermost; do
-  grep -A2 -F "\"$k\"" "$CODE" | grep -q 'renderInboxNotifications' \
+  grep -q 'renderInboxNotifications' <<<"$(grep -A2 -F "\"$k\"" "$CODE")" \
     && ok "T7: $k draws its inbox notifications" \
     || bad "T7: $k lost its inbox notifications"
 done
@@ -195,7 +195,7 @@ PY2
 echo "== the unresolved case is quiet for the user =="
 # T12: an undeclared inbox is a gap only whoever edits build.json can close, so
 # it must not be spelled out on the phone. The branch renders nothing and logs.
-if awk '/val app = inboxApp\(panel\)/,/^        }$/' "$CODE" | grep -q 'body.addView'; then
+if grep -q 'body.addView' <<<"$(awk '/val app = inboxApp\(panel\)/,/^        }$/' "$CODE")"; then
   bad "T12: the unresolved branch draws into the card again — build.json prose on the phone"
 else
   ok "T12: the unresolved branch draws nothing"
@@ -211,7 +211,7 @@ p=$(grep -cF 'StackFilters.pruneRead(' "$CODE")
   || bad "T9: $p pruneRead calls — a partial view prunes, and read rows will reappear"
 # The watermark must be read+advanced OUTSIDE the `filters.isNotEmpty()` branch,
 # or a page with no toggle row reports its whole history as "N new" forever.
-if awk '/val filters = Sections.stackFiltersFor/,0' "$CODE" | grep -q 'StackFilters.markSeen'; then
+if grep -q 'StackFilters.markSeen' <<<"$(awk '/val filters = Sections.stackFiltersFor/,0' "$CODE")"; then
   bad "T10: markSeen sits after/inside the filters branch again"
 else
   has "$AGG" 'StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())' \

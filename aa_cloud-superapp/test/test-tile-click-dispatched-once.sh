@@ -132,13 +132,13 @@ fi
 # A routing ARM (`startsWith(...) ->`), not any mention of startsWith: the
 # click legitimately tests the prefix once, to decide whether the target is the
 # kind the App-Tabs shelf records. That is bookkeeping. A `when` arm is routing.
-if printf '%s\n' "$CLICK" | grep -qE 'startsWith\("[^"]*"\)[^-]*->' \
-   || printf '%s\n' "$CLICK" | grep -q 'when {'; then
+if grep -qE 'startsWith\("[^"]*"\)[^-]*->' <<<"$CLICK" \
+   || grep -q 'when {' <<<"$CLICK"; then
   bad "T2: onTileClicked routes as well as counting — a re-entry mid-tap lands back on the click path, which is the defect"
 else
   ok "T2: onTileClicked counts the tap and delegates the routing"
 fi
-if printf '%s\n' "$CLICK" | grep -q '^        routeTarget(tileId)$'; then
+if grep -q '^        routeTarget(tileId)$' <<<"$CLICK"; then
   ok "T2: onTileClicked hands the target to the router"
 else
   bad "T2: onTileClicked no longer calls routeTarget — the click goes nowhere"
@@ -163,8 +163,8 @@ echo "== the round trip that makes the fix necessary is still there =="
 # Deleting the re-home would also stop the duplicate — and would put the
 # Constellation screen back over Home with Back leaving for Home. The fix is
 # to stop double-COUNTING the trip, not to stop taking it.
-if awk '/private fun dispatchHomeAction/,/^        val anchor/' "$SHELL_CODE" \
-     | grep -q 'screenPageForTarget'; then
+if grep -q 'screenPageForTarget' \
+     <<<"$(awk '/private fun dispatchHomeAction/,/^        val anchor/' "$SHELL_CODE")"; then
   ok "T4: an action page is still re-homed into the section that declares it"
 else
   bad "T4: the re-home is gone — Back from such a page leaves for whatever launched it"
@@ -213,8 +213,8 @@ fi
 echo "== the second delivery was removed, not hidden =="
 # A time window would make the log read clean while both dispatches carried on,
 # and would eat a genuine fast double tap somewhere else.
-if printf '%s\n%s\n' "$CLICK" "$ROUTE" \
-     | grep -qE 'elapsedRealtime|uptimeMillis|currentTimeMillis|lastClick|DEBOUNCE|debounce'; then
+if grep -qE 'elapsedRealtime|uptimeMillis|currentTimeMillis|lastClick|DEBOUNCE|debounce' \
+     <<<"$(printf '%s\n%s\n' "$CLICK" "$ROUTE")"; then
   bad "T6: a time-based guard is in the dispatch path — that hides a double dispatch instead of removing it, and breaks a real fast double tap"
 else
   ok "T6: no debounce — the duplicate is gone because the second delivery is gone"

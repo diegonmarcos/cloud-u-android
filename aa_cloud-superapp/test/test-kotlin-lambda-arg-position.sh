@@ -261,7 +261,7 @@ object Sample {
     }
 }
 KT
-if python3 "$SCANNER" dir "$FIXTURE" 2>/dev/null | grep -q '|rewrite|'; then
+if grep -q '|rewrite|' <<<"$(python3 "$SCANNER" dir "$FIXTURE" 2>/dev/null)"; then
     echo "ok     self-check: the scanner still catches the shape it was written for"
 else
     echo "FAIL   self-check: the scanner no longer catches its own fixture"

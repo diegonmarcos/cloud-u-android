@@ -96,7 +96,7 @@ echo "== T2: that name follows the fleet pattern =="
 # An INDEPENDENT shape check, so setting BOTH fields to a display name still
 # fails here. Same pattern as test-app-names-pattern.sh T1, restated on this side
 # because the value being checked is the one that reaches the home screen.
-if printf '%s' "$NAME" | grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$'; then
+if grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' <<<"$NAME"; then
     ok "'$NAME' matches the fleet's cloud-<x> / c3-<x> pattern"
 else
     bad "$FLAG is '$NAME', which is not cloud-<x> or c3-<x> — this value is what the launcher, the About box and the WebView <title> print verbatim, and aa_cloud-superapp/test/test-app-names-pattern.sh fails the whole fleet on it"
@@ -153,7 +153,7 @@ if [ "$SELFTEST" -eq 1 ]; then
     WRONG="Cloud Office"
     t1=0; t2=0
     [ "$WRONG" = "$EXPECTED" ] || t1=1
-    printf '%s' "$WRONG" | grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' || t2=1
+    grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' <<<"$WRONG" || t2=1
     if [ "$t1" -eq 1 ] && [ "$t2" -eq 1 ]; then
         ok "'$WRONG', the value the fleet guard rejected, fails T1 and T2 as it must"
     else

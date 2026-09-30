@@ -114,7 +114,7 @@ grep -q "implementation project(':libs:auth')" "$GRADLE" && pass "linked in app/
 [ -d "$APP/libs/auth" ] && fail "a local libs/auth copy shadows the shared module" || pass "no local copy of the module"
 for f in SignIn SignInUi UserRegistry VaultConnect VaultFile ProfileJourney DeviceGrant ConfigArtifact AuthDeclaration; do
     [ -f "$LIB_SRC/$f.kt" ] && pass "lib carries $f.kt" || fail "lib lacks $f.kt"
-    find "$SRC" -name "$f.kt" | grep -q . && fail "$f.kt is ALSO in this app — a copy, not a reference" || true
+    grep -q . <<<"$(find "$SRC" -name "$f.kt")" && fail "$f.kt is ALSO in this app — a copy, not a reference" || true
 done
 SA="$ROOT/aa_cloud-superapp/build.json"
 if [ -f "$SA" ]; then

@@ -74,7 +74,7 @@ for i in $(seq 0 $((COUNT - 1))); do
         continue
     fi
     neutralised=$((neutralised + 1))
-    if printf '%s\n' "$ADDED" | grep -qF -- "$line"; then
+    if grep -qF -- "$line" <<<"$ADDED"; then
         ok "$id: patches/0002 adds '$line'"
     else
         bad "$id: patches/0002 adds no line containing '$line' — the anchor is specified and unanswered, which is exactly the five-of-six patch this tester exists to catch"
@@ -85,7 +85,7 @@ done
     || bad "no anchor carried action neutralise — this run asserted nothing about the patch"
 
 echo "== T3: the configure mode is DECLARED, not worked around =="
-if printf '%s\n' "$ADDED" | grep -q 'AC_ARG_WITH(\[prebuilt-engine\]'; then
+if grep -q 'AC_ARG_WITH(\[prebuilt-engine\]' <<<"$ADDED"; then
     ok "configure.ac gains --with-prebuilt-engine as a declared option"
 else
     bad "patches/0002 adds no AC_ARG_WITH([prebuilt-engine]) — a mode that is not declared is a hack around configure.ac:884"
@@ -105,8 +105,8 @@ echo "== T5: fonts.conf is still generated for OUR application id =="
 # Taking the released fonts.conf verbatim ships Collabora's own cache path: a
 # different application's private data directory, unreadable at our uid. Green
 # build, signed APK, and every document open re-scans the font set.
-if printf '%s\n' "$ADDED" | grep -q "@@APPLICATION_ID@@" \
-   && printf '%s\n' "$ADDED" | grep -q "unpack/etc/fonts/fonts.conf"; then
+if grep -q "@@APPLICATION_ID@@" <<<"$ADDED" \
+   && grep -q "unpack/etc/fonts/fonts.conf" <<<"$ADDED"; then
     ok "fonts.conf is excluded from the copied payload and generated instead"
 else
     bad "patches/0002 does not both exclude the released fonts.conf and generate one — see build.json::upstream.engine.assets.rebrand"

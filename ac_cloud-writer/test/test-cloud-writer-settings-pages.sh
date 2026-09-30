@@ -230,7 +230,7 @@ ENH="$(code "$SRC/TextEnhanceActivity.kt")"
 # still passed it, because the refresh function further down mentions the same
 # call. What has to be true is that THE ROW IS FED IT: the line after the
 # preview's summary argument.
-if printf '%s\n' "$ENH" | grep -A1 'getString(R.string.enhance_prompt_summary),' | grep -q 'WriterPrefs.enhancePrompt(this),'; then
+if grep -q 'WriterPrefs.enhancePrompt(this),' <<<"$(printf '%s\n' "$ENH" | grep -A1 'getString(R.string.enhance_prompt_summary),')"; then
     pass "P4 the preview row is handed WriterPrefs.enhancePrompt(this) — the same call a run makes"
 else
     fail "P4 the Text Enhancements page does not build its preview from WriterPrefs.enhancePrompt(this)"
@@ -243,7 +243,7 @@ fi
 # would delete. Anchored to the whole line: a loose match would also be satisfied by
 # the two reads inside refreshPrompt() itself, which is the assertion checking its
 # own plumbing rather than the page.
-if printf '%s\n' "$ENH" | grep -qx '        promptGeneration.value'; then
+if grep -qx '        promptGeneration.value' <<<"$ENH"; then
     pass "P4 and recomposes it when a setting changes, so the paragraph moves under the owner's thumb"
 else
     fail "P4 nothing re-reads the preview after a pick; it would only update on reopening, which is indistinguishable from a literal"
@@ -267,12 +267,12 @@ fi
 
 # ── P5  Pruébalo actually runs ──────────────────────────────────────────────
 
-if printf '%s' "$ENH" | grep -q 'runner.run(WriterTool.ENHANCE'; then
+if grep -q 'runner.run(WriterTool.ENHANCE' <<<"$ENH"; then
     pass "P5 the try-it box calls WriterToolRunner.run — the same path as the main screen's button"
 else
     fail "P5 the try-it box does not run anything through WriterToolRunner; a decorative test box is worse than none"
 fi
-if printf '%s' "$ENH" | grep -q 'outcome.error ?: getString(R.string.run_no_reason)'; then
+if grep -q 'outcome.error ?: getString(R.string.run_no_reason)' <<<"$ENH"; then
     pass "P5 and a failed run reports the engine's own reason rather than falling silent"
 else
     fail "P5 the try-it box has a path that ends without saying anything"
@@ -301,17 +301,17 @@ if [ "$COLS" = "8" ] && [ "$WIDTHS" = "8" ]; then
 else
     fail "P7/214 $COLS column headings against $WIDTHS widths; a column without a width draws at zero and vanishes"
 fi
-if printf '%s' "$AI" | grep -qE '\* *100|100 *\*|/ *100|cents|centim'; then
+if grep -qE '\* *100|100 *\*|/ *100|cents|centim' <<<"$AI"; then
     fail "P7/217 the price column scales its number. It must not: the registry holds US dollars per million tokens and the table prints that unchanged. Scaling is what made the column a hundred times too high."
 else
     pass "P7/217 no scaling between the registry's price and the cell"
 fi
-if printf '%s' "$AI" | grep -q 'String.format(Locale.US, "%.3f"'; then
+if grep -q 'String.format(Locale.US, "%.3f"' <<<"$AI"; then
     pass "P7/186 three decimals, fixed to Locale.US so a decimal point cannot become a comma"
 else
     fail "P7/186 the price format is not a three-decimal Locale.US format"
 fi
-if printf '%s' "$AI" | grep -q 'R.string.ai_pricing_baked, provider.pricingAsOf'; then
+if grep -q 'R.string.ai_pricing_baked, provider.pricingAsOf' <<<"$AI"; then
     pass "P7/219 the as-of date is drawn under the table, so no price is read as today's"
 else
     fail "P7/219 the table does not print the date its prices were taken — that is exactly how a 0.966 was read as 0.280"

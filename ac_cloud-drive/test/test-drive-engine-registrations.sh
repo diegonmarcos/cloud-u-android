@@ -109,7 +109,7 @@ for copy in "$SHIP_DIST" "$SHIP_GH"; do
     fi
 done
 while IFS='|' read -r name dir rel; do
-    if printf '%s\n' "$SRC_PATHS" | grep -qF "\"$rel/**\""; then
+    if grep -qF "\"$rel/**\"" <<<"$SRC_PATHS"; then
         pass "$rel/** is watched"
     else
         fail "$rel/** is not in the ship workflow's paths"

@@ -81,8 +81,8 @@ echo "== (a) the rebuild: a toggle is not a mode =="
 # anything.
 HOOK="$(body "$SHELL_KT" "    " "fun notifyLauncherThemeChanged()")"
 RESTART="$(body "$STYLE" "    " "fun restartForModeChange(activity: Activity)")"
-if printf '%s' "$HOOK" | grep -q 'restartForModeChange' &&
-   printf '%s' "$RESTART" | grep -q 'activity.recreate()'; then
+if grep -q 'restartForModeChange' <<<"$HOOK" &&
+   grep -q 'activity.recreate()' <<<"$RESTART"; then
   ok "T1: notifyLauncherThemeChanged -> restartForModeChange -> Activity.recreate()"
 else
   bad "T1: could not read the recreate out of the mode-change hook — T2/T3 would assert nothing"
@@ -93,7 +93,7 @@ TOGGLED="$(body "$CFG" "    " "private fun onToggleChanged()")"
 if [ -z "$TOGGLED" ]; then
   bad "T2: onToggleChanged not found"
 else
-  if printf '%s' "$TOGGLED" | grep -q 'notifyLauncherThemeChanged'; then
+  if grep -q 'notifyLauncherThemeChanged' <<<"$TOGGLED"; then
     bad "T2: onToggleChanged still asks for a MODE change — every switch rebuilds the Activity (#349a)"
   else
     ok "T2: onToggleChanged does not reach the recreate hook"
@@ -101,10 +101,10 @@ else
   # It still has to DO the work the recreate was standing in for, or the fix is
   # a regression wearing a green tester: the stars/pets/island views live in the
   # activity shell and cannot re-read themselves.
-  printf '%s' "$TOGGLED" | grep -q 'applyLauncherChrome()' \
+  grep -q 'applyLauncherChrome()' <<<"$TOGGLED" \
     && ok "T2: it re-applies the launcher chrome (the public, idempotent hook)" \
     || bad "T2: onToggleChanged no longer re-applies the launcher chrome"
-  printf '%s' "$TOGGLED" | grep -q 'applyShellLiveToggles' \
+  grep -q 'applyShellLiveToggles' <<<"$TOGGLED" \
     && ok "T2: it pushes the shell-owned toggles (stars / pets / island) live" \
     || bad "T2: nothing re-applies stars/pets/island — the recreate was doing that"
 fi
@@ -129,7 +129,7 @@ else
 fi
 # A sandbox or a mode names no style; either reaching the hook would recreate
 # the Activity for nothing. The one call must sit inside fillThemes.
-if body "$PRESETS" "    " "private fun fillThemes(" | grep -q 'notifyLauncherThemeChanged'; then
+if grep -q 'notifyLauncherThemeChanged' <<<"$(body "$PRESETS" "    " "private fun fillThemes(")"; then
   ok "T3: that call is inside fillThemes, not fillSandboxes/fillModes"
 else
   bad "T3: the recreate hook is not in fillThemes — a theme pick no longer recreates"
@@ -141,7 +141,7 @@ fi
 # uses it; that is a dialog choice, not a toggle, and belongs to #340's surface.)
 for fn in "private fun toggleTile" "private fun toggleGrid" "private fun toggleRow" \
           "private fun onToggleChanged"; do
-  if body "$CFG" "    " "$fn" | grep -q 'rerenderPage'; then
+  if grep -q 'rerenderPage' <<<"$(body "$CFG" "    " "$fn")"; then
     bad "T4: ${fn##* } still rebuilds the page on a flip (#349a)"
   else
     ok "T4: ${fn##* } does not rebuild the page"
@@ -151,7 +151,7 @@ done
 # above can be clean while every call site rebuilds — which is exactly how this
 # shipped. onCreateView is where the mode tiles, the screensaver picker, the
 # master and the grid are all wired, and none of them may reach rerenderPage.
-if body "$CFG" "    " "override fun onCreateView(" | grep -q 'rerenderPage'; then
+if grep -q 'rerenderPage' <<<"$(body "$CFG" "    " "override fun onCreateView(")"; then
   bad "T4: a control wired in onCreateView still answers a tap with a full page rebuild (#349a)"
 else
   ok "T4: nothing wired in onCreateView rebuilds the page"
@@ -181,26 +181,26 @@ grep -q 'repaints.clear()' "$CFG" \
   && ok "T5: the registry is emptied by onCreateView, so it cannot hold dead views" \
   || bad "T5: the registry is never cleared — a rebuilt page would repaint detached views"
 TILE="$(body "$CFG" "    " "private fun toggleTile(")"
-if printf '%s' "$TILE" | grep -q 'prefs: LauncherSettingsPrefs'; then
+if grep -q 'prefs: LauncherSettingsPrefs' <<<"$TILE"; then
   ok "T5: toggleTile takes the store, not an on/off snapshot"
 else
   bad "T5: toggleTile still takes a captured boolean — it can only refresh by being rebuilt"
 fi
-printf '%s' "$TILE" | grep -q 'repaints +=' \
+grep -q 'repaints +=' <<<"$TILE" \
   && ok "T5: a tile registers its own repaint" \
   || bad "T5: a tile registers no repaint — it cannot follow a master flip"
-printf '%s' "$TILE" | grep -q 'onFlip(item, !prefs.toggle(item))' \
+grep -q 'onFlip(item, !prefs.toggle(item))' <<<"$TILE" \
   && ok "T5: a tap reads the CURRENT stored value, not the one captured at build time" \
   || bad "T5: the tap still flips a captured value — right once, wrong every time after"
 
 # ── T6 ────────────────────────────────────────────────────────────────────────
 ROW="$(body "$CFG" "    " "private fun toggleRow(")"
-if printf '%s' "$ROW" | grep -q 'checked: () -> Boolean'; then
+if grep -q 'checked: () -> Boolean' <<<"$ROW"; then
   ok "T6: the master asks its children rather than being told once"
 else
   bad "T6: the master takes a snapshot boolean — a child flip cannot move it"
 fi
-if printf '%s' "$ROW" | grep -q 'setOnCheckedChangeListener(null)'; then
+if grep -q 'setOnCheckedChangeListener(null)' <<<"$ROW"; then
   ok "T6: the master detaches its listener before a programmatic sync"
 else
   bad "T6: syncing the master re-enters onChange and writes its position over every child"
@@ -227,7 +227,7 @@ grep -q 'outState.putString(STATE_SELECTED_PAGE, selectedPageId)' "$TABS" \
   && ok "T8: what it saves is the selected page id" \
   || bad "T8: the selected page is not what gets saved"
 START="$(body "$TABS" "    " "private fun startIndex(")"
-if printf '%s' "$START" | grep -q 'saved?.getString(STATE_SELECTED_PAGE)'; then
+if grep -q 'saved?.getString(STATE_SELECTED_PAGE)' <<<"$START"; then
   ok "T8: startIndex reads the restored page"
 else
   bad "T8: startIndex ignores the restored page — saving it changes nothing"

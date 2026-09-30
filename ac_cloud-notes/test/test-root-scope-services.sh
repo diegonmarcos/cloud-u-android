@@ -100,7 +100,7 @@ scope_rc=$?
 
 if [ "$scope_rc" -ne 0 ]; then
   fail "root-scope derivation could not run: $scope_report"
-elif printf '%s\n' "$scope_report" | grep -q '^BAD '; then
+elif grep -q '^BAD ' <<<"$scope_report"; then
   printf '%s\n' "$scope_report" | sed -n 's/^BAD /    scope-bound service resolved at root: /p'
   fail "$(printf '%s\n' "$scope_report" | grep -c '^BAD ') scope-bound service(s) resolved on the ROOT provider in $(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['tests']['root_scope']['entrypoint'])" "$ROOT/build.json") — each one throws ComponentNotFoundError on first render and blanks the WebView"
 else

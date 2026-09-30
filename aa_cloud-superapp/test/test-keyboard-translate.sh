@@ -157,17 +157,17 @@ resync=$(awk '/fun onHostOutputDropped\(\)/,/^    }/' "$T/TranslateBarView.kt")
 if [ -z "$resync" ]; then
   bad "T9 onHostOutputDropped body not found (anchor drifted) — loop proof unchecked"
 else
-  echo "$resync" | grep -qE 'ic\.|icp|buffer\.|onChanged\(' \
+  grep -qE 'ic\.|icp|buffer\.|onChanged\(' <<<"$resync" \
     && bad "T9 the drop handler writes to the field or the buffer — it can re-enter" \
     || ok "T9 the drop handler only reads state and shows views, so it cannot loop"
-  echo "$resync" | grep -q 'output = Output.LOST' \
+  grep -q 'output = Output.LOST' <<<"$resync" \
     && ok "T9 the drop handler's only transition is OWNED -> LOST" \
     || bad "T9 drop handler does not reach LOST"
 fi
 has "$J/latin/LatinIME.java" 'mTranslateBar.onHostOutputDropped();' "T9 LatinIME reports the dropped composing span"
 has "$J/latin/LatinIME.java" 'isTranslateBarActive() && composingSpanEnd < 0' "T9 and only when the span is actually gone"
 has "$J/latin/LatinIME.java" 'mTranslateBar.onHidden();' "T9 LatinIME hands the region over before hiding the bar"
-awk '/void toggleTranslateBar/,/^    }/' "$J/latin/LatinIME.java" | grep -q 'commitTyped' \
+grep -q 'commitTyped' <<<"$(awk '/void toggleTranslateBar/,/^    }/' "$J/latin/LatinIME.java")" \
   && ok "T9 a half-typed word is committed before the bar starts composing" \
   || bad "T9 opening the bar would replace the user's word in progress"
 # The design's own proof, run: python3 translate-resync-model.py
@@ -193,7 +193,7 @@ for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
   if [ -z "$body" ]; then
     bad "T10 ${f##*/} onEdit body not found (anchor drifted) — fall-through unchecked"
   else
-    echo "$body" | grep -qE 'return false|isEmpty\)? (&&|return)' \
+    grep -qE 'return false|isEmpty\)? (&&|return)' <<<"$body" \
       && bad "T10 ${f##*/} onEdit can fall through onto the field behind the bar" \
       || ok "T10 ${f##*/} onEdit never lets an editing key reach the hidden field"
   fi
@@ -240,14 +240,14 @@ for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
 done
 
 # The defect left open by the previous agent, in the one copy that is left.
-awk '/fun selectWordAt/,/^    }/' "$E" | grep -q 'selectWhitespaceRun' \
+grep -q 'selectWhitespaceRun' <<<"$(awk '/fun selectWordAt/,/^    }/' "$E")" \
   && ok "T11 a long press on a space no longer selects the words on both sides" \
   || bad "T11 selectWordAt still runs both scans outwards from the space"
 
 # Undo of a programmatic replacement: the owner gets their own text back.
 has "$E" 'fun undo(): Boolean' "T11 the shared editor can undo a whole-buffer replacement"
 has "$E" 'fun replaceAll' "T11 and every programmatic replacement goes through it"
-awk '/private fun generate/,/^    }$/' "$J/latin/EnhanceBarView.kt" | grep -q 'editor.replaceAll' \
+grep -q 'editor.replaceAll' <<<"$(awk '/private fun generate/,/^    }$/' "$J/latin/EnhanceBarView.kt")" \
   && ok "T11 a generated rewrite landing in the enhance box is undoable" \
   || bad "T11 the enhance bar still overwrites the box with no way back"
 has "$T/TranslateBarView.kt" 'if (editor.canUndo())' "T11 translate offers Undo only when there is text to restore"
@@ -286,7 +286,7 @@ onevent=$(awk '/public void onEvent\(@NonNull final Event event\)/,/^    }/' "$J
 if [ -z "$onevent" ]; then
   bad "T11 onEvent body not found (anchor drifted) — key routing unchecked"
 else
-  echo "$onevent" | grep -q 'mTranslateBar\.\|mEnhanceBar\.' \
+  grep -q 'mTranslateBar\.\|mEnhanceBar\.' <<<"$onevent" \
     && bad "T11 onEvent still names the bars one by one instead of asking activeTextBox()" \
     || ok "T11 onEvent routes keys through the accessor, not through a list of bars"
 fi

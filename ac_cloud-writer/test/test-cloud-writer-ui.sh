@@ -172,7 +172,7 @@ PY
 # ── T5  the price table is still one line per model (task 214) ──────────────
 
 TABLE="$(code "$SRC/WriterSettingsUi.kt")"
-if printf '%s' "$TABLE" | grep -q 'maxLines = 1'; then
+if grep -q 'maxLines = 1' <<<"$TABLE"; then
     pass "T5/214 the price table's cells are single-line, so a model cannot wrap onto a second row"
 else
     fail "T5/214 the price table's cells are no longer capped at one line. One cell wrapping is enough to take a model onto two rows, which is the layout task 214 was raised about."

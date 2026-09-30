@@ -121,7 +121,7 @@ read -r default base leaks <<< "$lang"
   || fail "first run sets lang from navigator.language — a Spanish phone boots in Spanish (#299)"
 
 # ── licence boundary: the GPL binaries stay pruned ─────────────────────────
-head -3 "$ROOT/license.txt" | grep -q 'Permission is hereby granted, free of charge' \
+grep -q 'Permission is hereby granted, free of charge' <<<"$(head -3 "$ROOT/license.txt")" \
   && ok "license.txt is the MIT grant" || fail "license.txt is not the MIT text Acode was vendored under"
 for d in $(python3 -c 'import json,sys; print(" ".join(json.load(open(sys.argv[1]))["upstream"]["pruned"]))' "$ROOT/build.json"); do
   [ ! -e "$ROOT/$d" ] && ok "pruned: $d" || fail "$d is back in the tree — build.json::upstream.pruned says it must not be"

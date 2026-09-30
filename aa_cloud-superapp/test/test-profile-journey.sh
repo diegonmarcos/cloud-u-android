@@ -152,7 +152,7 @@ grep -q '"authelia_bearer" -> Kind.AUTHELIA_BEARER' "$SI" && grep -q '"authelia_
 echo "== T2: no provider, endpoint, client id, user, address or device literal in Kotlin (app AND lib) =="
 KT=("$SI" "$UI" "$AD" "$CFA" "$DG" "$PF" "$PJ" "$PV" "$UR" "$CA")
 for id in $IDS; do
-    grep -v -- '-> Kind\.' <<<"$(codeof "${KT[@]}")" | grep -qE "\"$id\"" && bad "T2: provider id '$id' is a Kotlin literal" || ok "T2: '$id' is not a Kotlin literal"
+    grep -qE "\"$id\"" <<<"$(grep -v -- '-> Kind\.' <<<"$(codeof "${KT[@]}")")" && bad "T2: provider id '$id' is a Kotlin literal" || ok "T2: '$id' is not a Kotlin literal"
 done
 for u in $(jq -r '.auth.sign_in.providers[] | .device_code_url // empty, .token_url // empty, .userinfo_url // empty, (.client_id | select(. != "" and . != null))' "$SHARED"); do
     grep -qF "$u" <<<"$(codeof "${KT[@]}")" && bad "T2: '$u' is a Kotlin literal" || ok "T2: '$u' lives only in the shared build.json"
@@ -221,7 +221,7 @@ grep -q '^SIGN_IN WHO DEVICE GET$' <<<"$STEPS" && ok "T4: in order sign in → w
 grep -q 'ProfileJourney.tag(step)' "$PV" && grep -q 'fun tag(step: Step): String = "step:"' "$PJ" && ok "T4: every card is tagged step:<name>" || bad "T4: cards are not tagged by step"
 grep -q 'FleetCockpitView.card(' "$PV" && grep -q 'FleetCockpitView.hero(' "$PV" && grep -q 'FleetCockpitView.pill(' "$PF" \
     && ok "T4: the chrome is the cockpit's (hero, card, pill)" || bad "T4: the journey does not use the cockpit chrome"
-codeof "$PV" "$PJ" | grep -qE '0x[0-9A-Fa-f]{6,8}' && bad "T4: a colour literal in the journey view" || ok "T4: no colour literal — the palette and the shared light own every ink"
+grep -qE '0x[0-9A-Fa-f]{6,8}' <<<"$(codeof "$PV" "$PJ")" && bad "T4: a colour literal in the journey view" || ok "T4: no colour literal — the palette and the shared light own every ink"
 for step in $(echo "$STEPS" | tr 'A-Z' 'a-z'); do
     jq -e --arg s "$step" '.ui.vault_connect.cockpit.journey_icons[$s] | select(. != null and . != "")' "$BJ" >/dev/null \
         && ok "T4: badge for step '$step' is declared in build.json" || bad "T4: cockpit.journey_icons has no '$step'"
@@ -239,7 +239,7 @@ echo "== T5: the token and the session never reach a store =="
 grep -qE 'SharedPreferences|\.edit\(\)|putString|ConfigsPrefs|writeText' <<<"$(codeof "$SI" "$UI" "$DG" "$CFA" "$AD")" && bad "T5: the lib writes a store" || ok "T5: the lib (SignIn, the surface, the grant, the fetches) touches no store"
 grep -q 'data class Session(val provider: String, val identity: String)' "$SI" && ok "T5: the session holds provider + identity, no credential" \
                                                                               || bad "T5: the session carries more than provider + identity"
-grep -E 'accessToken' <<<"$(codeof "$PF" "$UI" "$DG")" | grep -qE 'Prefs|edit\(|putString' && bad "T5: the device-grant token reaches a store" || ok "T5: the token is used once and dropped"
+grep -qE 'Prefs|edit\(|putString' <<<"$(grep -E 'accessToken' <<<"$(codeof "$PF" "$UI" "$DG")")" && bad "T5: the device-grant token reaches a store" || ok "T5: the token is used once and dropped"
 grep -q 'accessToken' <<<"$(codeof "$PF")" && bad "T5: the device-grant token reaches the fragment at all" || ok "T5: the fragment never sees a device-grant token"
 grep -q 'secret = token' "$SI" && ok "T5: the userinfo call redacts the token from echoed bodies" || bad "T5: userinfo does not pass the token as the redacted secret"
 STORES=$(codeof "$PF" | grep -c 'setAutheliaCredential(')
