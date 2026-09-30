@@ -28,13 +28,13 @@ on:
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
       # ── end MANAGED-PATHS-HEADER ──
-      - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
-      - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
-      - "ac_cloud-nix-on-droid/**"
       # #644 — the shared declarative link store is BAKED INTO this app's bootstrap
       # zip (usr/lib/cloud-store) and hashed into its content address, so an engine
       # fix here must start a run and publish, not sit inert behind a green tick.
+      - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
+      - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ab_cloud-terminal-store/**"
+      - "ac_cloud-nix-on-droid/**"
 permissions:
   contents: write   # gh release upload
 
