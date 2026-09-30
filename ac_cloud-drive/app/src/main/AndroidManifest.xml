@@ -27,6 +27,13 @@
          is exactly the "looked like it worked" failure this feature is built to avoid. -->
     <uses-permission android:name="${terminalPackage}.permission.RUN_COMMAND" />
 
+    <!-- #684 sign-in rides the fleet's own browser: an AUTH MISSION is fired at cloud-browser for
+         a result, and its activity is guarded by a SIGNATURE-level permission (fleet apps share
+         the one constellation key, so holding it proves this app is fleet). Both names are the
+         declared contract (ab_cloud-libs-shared/build.json::auth.browser_mission) with the
+         browser's package resolved from the constellation manifest by app/build.gradle. -->
+    <uses-permission android:name="${authMissionPermission}" />
+
     <queries>
         <package android:name="com.diegonmarcos.clouddrive" />
         <!-- #642 the terminal is resolved by package to tell "not installed" apart from
@@ -34,6 +41,9 @@
              exactly like uninstalled. The MAIN/LAUNCHER query below would cover it today,
              but only for as long as the terminal keeps a launcher icon. -->
         <package android:name="${terminalPackage}" />
+        <!-- #684 the browser is resolved by package too, so "not installed" and "refused"
+             stay two different facts for the auth mission (same rule as the terminal). -->
+        <package android:name="${authMissionPackage}" />
 
         <!-- The Apps tab launches the fleet's data apps (and Tidal) through the system
              launcher. A package query per tile would be a second list of packages to

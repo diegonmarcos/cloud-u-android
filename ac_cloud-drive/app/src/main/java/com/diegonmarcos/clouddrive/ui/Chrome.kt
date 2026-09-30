@@ -162,6 +162,11 @@ object DriveTags {
      * provider is offered here, not merely that something is.
      */
     const val SYNC_GIT_FLEET_LOGIN = "sync_git_fleet_login"
+    /** #684 one of the two parallel way-cards (GitHub / Cloud git), its sign-in button, its state line and its details disclosure. */
+    const val SYNC_GIT_WAY = "sync_git_way"
+    const val SYNC_GIT_WAY_SIGNIN = "sync_git_way_signin"
+    const val SYNC_GIT_WAY_STATE = "sync_git_way_state"
+    const val SYNC_GIT_WAY_DETAILS = "sync_git_way_details"
     const val SYNC_HISTORY = "sync_history"
     const val SYNC_REMOTE_CARD = "sync_remote_card"
     const val SYNC_JOB_ROW = "sync_job_row"

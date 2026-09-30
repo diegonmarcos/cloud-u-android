@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="search_hint">Search or enter URL</string>
+    <!-- #684 the fleet auth-mission surface (AuthMissionActivity) -->
+    <string name="auth_mission_label">Fleet sign-in</string>
+    <string name="auth_mission_done">Done — I am signed in</string>
+    <string name="auth_mission_no_cookie">No session yet — finish signing in above first.</string>
 </resources>

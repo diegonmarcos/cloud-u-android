@@ -13,8 +13,8 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 24,
-    "version_name": "0.5.0-dev",
+    "version_code": 25,
+    "version_name": "0.6.0-dev",
     "abi_filters": [
       "arm64-v8a"
     ],
@@ -392,6 +392,21 @@
             "id": "private",
             "label": "Private",
             "icon": "lock"
+          }
+        ],
+        "_doc_ways": "#684 THE TWO PARALLEL, ALWAYS-VISIBLE WAYS into the personal section, in render order — the owner rejected the one-chain-one-affordance shape where whichever rung answered took the section over. Each way is its own card: its own large sign-in button, its own status light and one-line state, its own repository listing below it, and rows that clone FROM the leg that listed them. `rung` names an auth.git_chain rung of ab_cloud-libs-shared/build.json; the rung's KIND is the only thing GitReposScreen dispatches on (fleet_proxy ⇒ Authelia session, listing and in-process clone on that session — f45bbbe31's engine; gh_on_device ⇒ the vault credential or the rung's declared web_client sign-in, the GitHub REST listing and the terminal/engine clone). Neither card gates, hides or replaces the other: both can be signed in at once and both lists can show at once. The declared chain (auth.git_chain.order) STAYS as the automatic no-tap resolution order and for gh/gix credential resolution; what this changes is the PAGE. A way naming a rung the chain does not declare renders its card with the one line that says so, never a placeholder; a way with no rung is dropped at parse. Both sign-ins ride the fleet's own browser (auth.browser_mission) and say so when they fall back to the in-app dialog.",
+        "ways": [
+          {
+            "id": "github",
+            "rung": "github",
+            "label": "GitHub",
+            "icon": "code"
+          },
+          {
+            "id": "cloud",
+            "rung": "gitea",
+            "label": "Cloud git",
+            "icon": "cloud"
           }
         ],
         "_doc_login_ways": "#641 THE ONE way into the personal section, plus the user's own key. The `webauth` way is GONE: it drove an OAuth 2.0 device grant against a GitHub APP client, and GitHub Apps ship with Device Flow OFF, so every press of Start ended in `device_flow_disabled`. The HTTPS credential is the one the vault config import delivers (auth.applies.git.credential_id, #629) and there is no browser login to fall back to - a browser one would need a GitHub OAuth App, which is a different kind of app and does not exist yet. `ssh_key` is the user's EXISTING key: the path and passphrase libs:git-sync's ManagedRepo/GitCredentialStore already hold (sync_auth_key_path on the per-repo sheet), used as GitAuth.Ssh - no second key mechanism is built here, and SSH cannot list an account, so that way clones only.",

@@ -53,6 +53,9 @@ object AuthDeclaration {
     ) {
         /** Does the phone hold a GitHub credential of its own on this leg? */
         val holdsGithubCredential: Boolean get() = config.optBoolean("holds_github_credential", false)
+
+        /** #684 the rung's declared authorization-code web client, or null when it declares none. */
+        val webClient: OAuthWeb.Client? get() = OAuthWeb.parse(config.optJSONObject("web_client"))
     }
 
     data class Declaration(
@@ -62,6 +65,8 @@ object AuthDeclaration {
         val signIn: JSONObject,
         val grantRemedies: List<GrantRemedy> = emptyList(),
         val gitChain: List<GitRung> = emptyList(),
+        /** #684 `auth.browser_mission`, `{package}` resolved by the bake; null when undeclared. */
+        val browserMission: AuthMission.Contract? = null,
     )
 
     val current: Declaration by lazy { parse(decode(BuildConfig.AUTH_B64)) }
@@ -78,6 +83,13 @@ object AuthDeclaration {
      * attempts and dropping a rung stops it being tried.
      */
     val gitChain: List<GitRung> get() = current.gitChain
+
+    /**
+     * #684 The declared auth-mission contract for the fleet's browser — how a sign-in leaves
+     * the small in-app dialog for a full-screen browser and comes back as an activity result.
+     * Null means no mission is declared, and every caller must then say it fell back.
+     */
+    val browserMission: AuthMission.Contract? get() = current.browserMission
 
     /**
      * #629 The declared remedy for [message], or null when nothing is declared for it. First match
@@ -135,6 +147,7 @@ object AuthDeclaration {
                 }
             },
             gitChain = gitChain(root.optJSONObject("git_chain")),
+            browserMission = AuthMission.parse(root.optJSONObject("browser_mission")),
         )
     }
 

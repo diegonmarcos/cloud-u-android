@@ -32,4 +32,8 @@
     <string name="auth_code_expired">✗ The code expired before it was approved.</string>
     <string name="auth_approved">✓ Approved · %1$s</string>
     <string name="auth_identity_only">✓ %1$s proved %2$s. That provider grants an identity only — fetch your config with a way that grants it.</string>
+
+    <!-- #684 the authorization-code web flow's FALLBACK dialog (when the fleet's browser is absent). -->
+    <string name="auth_oauth_caption">Sign in below. When the provider sends you back, the landing is captured here and this dialog closes. Nothing is written to disk.</string>
+    <string name="auth_oauth_blocked">This sign-in stays on %1$s; %2$s was not opened.</string>
 </resources>

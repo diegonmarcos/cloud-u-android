@@ -238,7 +238,6 @@
          the repository names are DECLARATIONS (build.json::ui.sync.git), never strings: what
          lives here is only the wording the page itself owns. -->
     <string name="git_section_other">Other clones in the store</string>
-    <string name="git_login_title">Personal repositories</string>
     <!-- #629 the vault-delivered git credential: the supported path, not a browser login -->
     <string name="git_login_from_vault">Credential: from vault (%1$s)</string>
     <string name="git_login_vault_note">The config import delivered this credential, so the private listing and every clone work without a browser login.</string>
@@ -262,8 +261,6 @@
          prefix comes back for ANY path, even with the container stopped, so it is stated as
          what it is and never as "signed in" or as "the service is down". -->
     <string name="git_fleet_blocked">The fleet edge redirected (HTTP %1$d) before reaching the service, so this sign-in did not satisfy the gate. Nothing is known about the service itself from this.</string>
-    <string name="git_login_hint">The vault config import delivers the credential that lists this account\'s repositories, private ones included</string>
-    <string name="git_login_ssh_active">cloning with your SSH key</string>
     <string name="git_login_ssh_cannot_list">An SSH key clones but cannot list an account: the listing needs the vault credential.</string>
     <string name="git_listing_loading">listing repositories…</string>
     <string name="git_listing_failed">listing failed: %1$s</string>
@@ -429,4 +426,33 @@
          gate answers instead of the git server. The message names the next step: the Authelia
          sign-in on this same page. -->
     <string name="git_fleet_clone_no_session">No fleet session is on this phone — the Authelia sign-in on this page starts one; the clone rides it.</string>
+    <!-- #684 THE TWO PARALLEL WAY-CARDS (GitHub / Cloud git). The card names are DECLARED
+         (ui.sync.git.ways); what lives here is the state vocabulary every card shares: one
+         bold line per state, and every failure names its next step. -->
+    <string name="git_way_signin">Sign in with %1$s</string>
+    <string name="git_way_signed_out">Signed out</string>
+    <string name="git_way_signed_in">Signed in as %1$s</string>
+    <string name="git_way_repos">Signed in as %1$s · %2$d repositories</string>
+    <string name="git_way_signing_in">signing in…</string>
+    <string name="git_way_exchanging">exchanging the code for a token…</string>
+    <string name="git_way_details">Details</string>
+    <string name="git_way_details_hide">Hide details</string>
+    <string name="git_way_rung_undeclared">The %1$s rung is not declared in this build, so this way has no mechanism.</string>
+    <!-- a declared ABSENCE, not a placeholder: the button is disabled and this line says why -->
+    <string name="git_way_client_absent">GitHub client not yet declared — the button wakes when the client id and secret are declared.</string>
+    <!-- the browser mission's outcomes, one line each, copied from TerminalGit's enumeration style -->
+    <string name="git_way_mission_not_declared">No browser auth mission is declared in this build — signing in through the in-app fallback dialog.</string>
+    <string name="git_way_mission_not_installed">The fleet browser (%1$s) is not installed — signing in through the in-app fallback dialog.</string>
+    <string name="git_way_mission_not_granted">The fleet browser is installed but this app does not hold %1$s: the two apps are not signed by the same key. Signing in through the in-app fallback dialog.</string>
+    <string name="git_way_mission_no_activity">The fleet browser answers no %1$s activity. Signing in through the in-app fallback dialog.</string>
+    <string name="git_way_mission_refused">The fleet browser refused the mission: %1$s</string>
+    <string name="git_way_mission_cancelled">Sign-in cancelled in the browser. Next step: press Sign in again.</string>
+    <string name="git_way_mission_malformed">The browser answered something this build cannot read: %1$s</string>
+    <string name="git_way_state_mismatch">The GitHub landing carried another attempt's state and was refused. Next step: press Sign in again.</string>
+    <string name="git_way_denied">GitHub declined the sign-in: %1$s</string>
+    <string name="git_way_exchange_failed">GitHub did not hand over a token: %1$s</string>
+    <string name="git_way_filed">Signed in with GitHub; the credential is filed under the declared id and the listing follows.</string>
+    <!-- a fleet-proxy-listed GitHub row with no on-phone credential -->
+    <string name="git_way_private_needs_credential">%1$s is private: cloning it needs the GitHub sign-in or the vault credential on this phone, or the Cloud git mirror. The fleet listing alone cannot clone it.</string>
+    <string name="git_way_cloud_identity">the fleet</string>
 </resources>

@@ -15,6 +15,15 @@
         <package android:name="com.diegonmarcos.cloudbrowser" />
     </queries>
 
+    <!-- #684 THE FLEET AUTH MISSION cloud-browser answers. The permission is SIGNATURE-level:
+         only an app signed with the ONE constellation key (every fleet app) can start the mission,
+         so no third-party app can ask this browser for a session cookie. Both names are the
+         declared contract (ab_cloud-libs-shared/build.json::auth.browser_mission) with this app's
+         package resolved by app/build.gradle. -->
+    <permission
+        android:name="${authMissionPermission}"
+        android:protectionLevel="signature" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -41,6 +50,21 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="http" />
                 <data android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!-- #684 the auth-mission answerer: exported but GUARDED by the signature permission
+             above, and reachable only through the declared action. A fleet app fires it FOR A
+             RESULT and gets the capture back; it is never launched from a launcher. -->
+        <activity
+            android:name=".AuthMissionActivity"
+            android:exported="true"
+            android:permission="${authMissionPermission}"
+            android:label="@string/auth_mission_label"
+            android:theme="@style/Theme.CloudBrowser">
+            <intent-filter>
+                <action android:name="${authMissionAction}" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

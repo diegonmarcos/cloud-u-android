@@ -300,7 +300,7 @@ PYTHON
         # NOT merely that the branch exists: its BODY is what matters. A
         # `in 300..399 -> Outcome.Listed(...)` satisfies a presence-only grep while
         # reporting the edge's login page as a successful listing.
-        grep -qE 'in 300\.\.399 -> (Outcome\.Blocked|GitAuthChain\.Answer\.Unreachable)' "$f_" \
+        grep -qE 'in 300\.\.399 -> (Page\.Stop\(Outcome\.Blocked|Outcome\.Blocked|GitAuthChain\.Answer\.Unreachable)' "$f_" \
             || { echo "    $(basename "$f_") does not map a 3xx to Blocked/Unreachable — the edge answers 3xx for ANY path under the prefix, even with the container stopped, so it proves nothing either way and must never read as success"; bad=1; }
     done
     return $bad
@@ -1096,7 +1096,7 @@ _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"
     printf '\nprivate fun patchLanding(u: String) = u.replace("https://api.diegonmarcos.com/repos", "https://api.diegonmarcos.com/git/repos")\n' >>"$W/FleetGit.kt"
     _red "C8 the app repairs #655's prefix drop client-side, hiding the edge defect" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
 _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
-    _sub "$W/FleetGit.kt" 'in 300..399 -> Outcome.Blocked(code)' 'in 300..399 -> Outcome.Listed(emptyList())'
+    _sub "$W/FleetGit.kt" 'in 300..399 -> Page.Stop(Outcome.Blocked(code))' 'in 300..399 -> Page.Ok(emptyList())'
     _red "C8 a 3xx from the edge reported as a successful empty listing" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
 
 # ── C7 the token ──

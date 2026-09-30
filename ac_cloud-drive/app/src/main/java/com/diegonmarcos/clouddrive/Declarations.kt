@@ -47,6 +47,15 @@ object Declarations {
      */
     data class GitLoginWayDecl(val id: String, val label: String, val icon: String, val kind: String, val provider: String, val scope: String, val lists: Boolean)
 
+    /**
+     * #684 ONE OF THE TWO PARALLEL WAYS into the personal section — GitHub and Cloud git — each an
+     * always-visible card with its own sign-in, its own listing and its own clone leg. [rung] names
+     * the declared git_chain rung whose KIND decides the card's mechanism (fleet_proxy ⇒ the
+     * Authelia session, gh_on_device ⇒ a GitHub credential); the page dispatches on that kind and
+     * on nothing typed here. Neither way gates, hides or replaces the other.
+     */
+    data class GitWayDecl(val id: String, val rung: String, val label: String, val icon: String)
+
     /** One per-repository operation. [destructive] ⇒ the row asks before running it. */
     data class GitOpDecl(val id: String, val label: String, val icon: String, val destructive: Boolean)
 
@@ -104,6 +113,7 @@ object Declarations {
         val sections: List<GitSectionDecl>,
         val personalGroups: List<GitGroupDecl>,
         val loginWays: List<GitLoginWayDecl>,
+        val ways: List<GitWayDecl>,
         val api: GitApiDecl,
         val remoteModes: List<GitRemoteModeDecl>,
         val ops: List<GitOpDecl>,
@@ -319,6 +329,12 @@ object Declarations {
                 val id = w.str("id"); if (id.isBlank()) null
                 else GitLoginWayDecl(id, w.str("label", id), w.str("icon"), w.str("kind"), w.str("provider"), w.str("scope"), w.bool("lists"))
             },
+            // #684 a way with no rung has no mechanism and is dropped rather than drawn as a
+            // placeholder card (#648: a surface exists when its mechanism exists).
+            ways = objects(o["ways"]).mapNotNull { w ->
+                val id = w.str("id"); val rung = w.str("rung")
+                if (id.isBlank() || rung.isBlank()) null else GitWayDecl(id, rung, w.str("label", id), w.str("icon"))
+            },
             api = GitApiDecl(api.str("base_url"), api.str("repos_path"), (api.int("max_pages") ?: 1).coerceAtLeast(1), api.str("web_url")),
             remoteModes = objects(o["remote_modes"]).mapNotNull { m ->
                 val id = m.str("id"); if (id.isBlank()) null else GitRemoteModeDecl(id, m.str("label", id), m.str("icon"), m.str("url"), m.bool("read_only"))
@@ -471,14 +487,14 @@ object Declarations {
     fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null, sync: SyncDecl? = null): Set<String> =
         (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } +
             (volumes?.classes?.map { it.icon } ?: emptyList()) + (sync?.pages?.map { it.icon } ?: emptyList()) +
-            (sync?.git?.let { g -> g.sections.map { it.icon } + g.personalGroups.map { it.icon } + g.loginWays.map { it.icon } + g.remoteModes.map { it.icon } + g.ops.map { it.icon } } ?: emptyList())
+            (sync?.git?.let { g -> g.sections.map { it.icon } + g.personalGroups.map { it.icon } + g.loginWays.map { it.icon } + g.ways.map { it.icon } + g.remoteModes.map { it.icon } + g.ops.map { it.icon } } ?: emptyList())
             ).filter { it.isNotBlank() }.toSet()
 
     /** #608 the page with nothing declared: every list empty, so the screen says so. */
     // #642 the trailing null is `terminal`: the empty page hands nothing to cloud-terminal.
     // Stated rather than defaulted — a default would let a real page lose its git handoff
     // silently, and this is the one place where having none is the correct answer.
-    val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList(), null)
+    val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList(), null)
 
     /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin.
      *  #641 `webauth` is gone with the GitHub device grant it drove. */

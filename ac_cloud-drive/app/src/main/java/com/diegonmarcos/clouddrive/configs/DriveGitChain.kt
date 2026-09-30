@@ -4,6 +4,7 @@ import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.sync.FleetGit
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
+import com.diegonmarcos.cloudlib.auth.OAuthWeb
 import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import org.json.JSONObject
@@ -52,6 +53,30 @@ object DriveGitChain {
 
     /** The declared id every rung writes under. Declared, never typed here. */
     fun credentialId(): String = Declarations.authCredentialIds["git"].orEmpty()
+
+    /** #684 the rung of [kind], in declared order — the page resolves a way's rung through this. */
+    fun rung(id: String): AuthDeclaration.GitRung? = AuthDeclaration.gitChain.firstOrNull { it.id == id }
+
+    /**
+     * #684 THE GITHUB WEB SIGN-IN'S CLIENT, off the github rung's declared `web_client`. Null
+     * when the rung declares none; declared-but-unconfigured (no id or no baked secret) is
+     * the state the page draws as a DISABLED button with one line — a declared absence.
+     */
+    fun webClient(): OAuthWeb.Client? =
+        AuthDeclaration.gitChain.firstOrNull { it.kind == RUNG_GITHUB }?.webClient
+
+    /**
+     * #684 FILE A TOKEN THE WEB SIGN-IN MINTED, in the ONE store under the ONE declared id —
+     * the same id the vault import writes and the same id [onDevice] reads, so the very next
+     * chain walk answers with it and gh/gix resolve it. A blank id files nothing: inventing
+     * one is how a credential silently splits in two (#629).
+     */
+    fun file(ctx: Context, token: String): Boolean {
+        val id = credentialId()
+        if (id.isBlank() || token.isBlank()) return false
+        GitCredentialStore(ctx).setSecret(id, token)
+        return true
+    }
 
     /**
      * The chain, in DECLARED ORDER, with an implementation for each declared

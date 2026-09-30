@@ -284,6 +284,26 @@ if (uiDecl.sync?.git?.terminal != null) {
     term.package = terminalPackage
     term.remove('fleet')
 }
+// #684 THE BROWSER AUTH MISSION's package and permission, for the MANIFEST. The contract itself
+// is ab_cloud-libs-shared/build.json::auth.browser_mission and is baked by libs:auth for the
+// code path; the manifest cannot read JSON, so the <uses-permission> and <queries> lines take
+// the SAME answer the shared bake takes — the fleet id resolved against the SAME constellation
+// manifest — as placeholders. A retyped package here would be the second copy this resolution
+// exists to avoid. A declared fleet id the manifest lacks is a hard error, as for the terminal.
+def authMissionPackage = ''
+def authMissionPermission = ''
+def sharedAuthFile = new File(rootDir, '../ab_cloud-libs-shared/build.json')
+def sharedMission = sharedAuthFile.exists() ? new groovy.json.JsonSlurper().parse(sharedAuthFile).auth?.browser_mission : null
+if (sharedMission != null) {
+    def missionFleet = fleetById[sharedMission.fleet]
+    if (missionFleet == null) {
+        throw new GradleException(
+            "ab_cloud-libs-shared/build.json::auth.browser_mission.fleet '${sharedMission.fleet}' is not in the " +
+            "constellation fleet manifest ($fleetAppsFile) — the manifest would ask for a permission no package declares.")
+    }
+    authMissionPackage = missionFleet.package.toString()
+    authMissionPermission = sharedMission.permission.toString().replace('{package}', authMissionPackage)
+}
 def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiVolumesDecl = uiDecl.volumes.findAll { k, v -> !k.startsWith('_') }
@@ -412,7 +432,9 @@ android {
         // #642 the manifest's <uses-permission> for the terminal's RUN_COMMAND cannot read
         // build.json, and a retyped package literal there would be the second copy this whole
         // resolution exists to avoid — so it interpolates the SAME answer the UI declaration got.
-        manifestPlaceholders = [terminalPackage: terminalPackage]
+        manifestPlaceholders = [terminalPackage: terminalPackage,
+                                authMissionPackage: authMissionPackage,
+                                authMissionPermission: authMissionPermission]
         ndk {
             def abiOverride = System.getenv('CLOUDDRIVE_ABIS')
             def abis = (abiOverride?.trim()) \

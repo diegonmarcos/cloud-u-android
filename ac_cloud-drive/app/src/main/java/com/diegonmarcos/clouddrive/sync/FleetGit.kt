@@ -106,6 +106,18 @@ object FleetGit {
         return cloneUrlFrom(config?.optString("clone_url").orEmpty(), order, owner, name, listed)
     }
 
+    /**
+     * #684 WHETHER A REPOSITORY THIS RUNG LISTED CLONES ON THE SESSION. Only a rung that
+     * DECLARES a clone_url template does: that template is the fleet edge the same session
+     * satisfies. A fleet_proxy rung WITHOUT one (git-proxy-api) lists GitHub repositories
+     * whose own clone_url points at github.com — dialing that with the Authelia cookie
+     * attached would carry the fleet session to a third party, so such a listing clones
+     * anonymously when public and says plainly what a private row needs. Declared, so a
+     * rung gains the session leg by declaring its edge and never by a Kotlin edit.
+     */
+    fun clonesOnSession(rungId: String): Boolean =
+        rung(rungId)?.config?.optString("clone_url").orEmpty().isNotBlank()
+
     internal const val CLONE_SOURCE_DECLARED = "declared"
     internal const val CLONE_SOURCE_LISTED = "listed"
 
@@ -159,16 +171,62 @@ object FleetGit {
     }
 
     /**
-     * List the account's repositories through the proxy, presenting only [bearer].
+     * #684 THE PAGE SIZE the listing URL asks for, off the declared query (`limit=`). It is a
+     * PAGE size, not a cap: a full page means there may be more, so pagination follows until a
+     * short one. Absent, one page of unknown size is assumed complete. Pure, JVM-tested.
+     */
+    internal fun pageLimit(base: String): Int =
+        Regex("[?&]limit=(\\d+)").find(base)?.groupValues?.get(1)?.toIntOrNull()?.coerceAtLeast(1) ?: Int.MAX_VALUE
+
+    /** #684 [base] with `page=[page]` set, replacing any existing one. Pure, JVM-tested. */
+    internal fun pagedUrl(base: String, page: Int): String {
+        val stripped = base.replace(Regex("([?&])page=\\d+"), "$1").replace(Regex("[?&]$"), "")
+        val sep = if (stripped.contains('?')) "&" else "?"
+        return stripped + sep + "page=" + page.coerceAtLeast(1)
+    }
+
+    /** #684 a page is the LAST when it came back shorter than the page size. Pure, JVM-tested. */
+    internal fun isLastPage(count: Int, limit: Int): Boolean = count < limit
+
+    private sealed class Page {
+        class Ok(val repos: List<GitHubRepos.Repo>) : Page()
+        class Stop(val outcome: Outcome) : Page()
+    }
+
+    /**
+     * #684 LIST THE ACCOUNT'S REPOSITORIES, EVERY PAGE (Owner Amendment 2, rule 2). Presenting
+     * only the session, following pages until a short one — gitea's /repos/search paginates and
+     * the declared `limit` is a page size, never a cap. The two ways' lists are independent facts
+     * and are NEVER merged: this returns exactly what THIS rung's own API answered.
      *
-     * Reuses [GitHubRepos.parse] for the array: the proxy's projection keeps the
-     * upstream field names, so a second parser would be a second thing to keep in step.
+     * A non-200 on the FIRST page is the leg's verdict (Refused / Blocked / Unreachable); a
+     * non-200 on a later page ends the walk and returns what was already gathered rather than
+     * discarding a good prefix. Reuses [GitHubRepos.parse] — gitea keeps GitHub's field shape.
      */
     fun repos(session: String, rungId: String = ""): Outcome {
         val config = rung(rungId)?.config
-        val url = config?.optString("repos_url").orEmpty()
-        if (url.isBlank()) return Outcome.Unreachable("no fleet repos_url is declared")
+        val base = config?.optString("repos_url").orEmpty()
+        if (base.isBlank()) return Outcome.Unreachable("no fleet repos_url is declared")
         if (session.isBlank()) return Outcome.Unreachable("no fleet session on this phone")
+        val field = config?.optString("repos_field").orEmpty().ifBlank { "repos" }
+        val limit = pageLimit(base)
+        val maxPages = config?.optInt("max_pages", 20)?.coerceAtLeast(1) ?: 20
+        val all = mutableListOf<GitHubRepos.Repo>()
+        var page = 1
+        while (page <= maxPages) {
+            when (val r = onePage(pagedUrl(base, page), session, config, field)) {
+                is Page.Ok -> {
+                    all += r.repos
+                    if (isLastPage(r.repos.size, limit)) return Outcome.Listed(all)
+                    page++
+                }
+                is Page.Stop -> return if (all.isEmpty()) r.outcome else Outcome.Listed(all)
+            }
+        }
+        return Outcome.Listed(all)
+    }
+
+    private fun onePage(url: String, session: String, config: JSONObject?, field: String): Page {
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = false
@@ -184,16 +242,14 @@ object FleetGit {
                     // git-proxy-api's projection says "repos", gitea's search says
                     // "data". The item fields parse with the one existing parser —
                     // gitea keeps GitHub's field shape deliberately.
-                    val field = config?.optString("repos_field").orEmpty().ifBlank { "repos" }
-                    val repos = GitHubRepos.parse(JSONObject(body).optJSONArray(field)?.toString().orEmpty())
-                    Outcome.Listed(repos)
+                    Page.Ok(GitHubRepos.parse(JSONObject(body).optJSONArray(field)?.toString().orEmpty()))
                 }
-                401, 403 -> Outcome.Refused(code, "the fleet refused this identity")
-                in 300..399 -> Outcome.Blocked(code)
-                else -> Outcome.Unreachable("the fleet answered HTTP $code")
+                401, 403 -> Page.Stop(Outcome.Refused(code, "the fleet refused this identity"))
+                in 300..399 -> Page.Stop(Outcome.Blocked(code))
+                else -> Page.Stop(Outcome.Unreachable("the fleet answered HTTP $code"))
             }
         } catch (t: Throwable) {
-            Outcome.Unreachable(t.message ?: t.javaClass.simpleName)
+            Page.Stop(Outcome.Unreachable(t.message ?: t.javaClass.simpleName))
         } finally {
             connection.disconnect()
         }
