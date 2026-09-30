@@ -58,6 +58,47 @@ class TerminalBridge(
         activity.runOnUiThread { (activity as? MainActivity)?.openBrowser(url) }
     }
 
+    // ── Terminal selector (frontend Configs overlay) ──────────────────────────
+
+    /** The choices for the Configs "Terminal" field: EVERY declared backend in
+     *  declared order plus the selected key. The options are never listed in
+     *  JS or here — a third env in terminal-targets.json appears on its own. */
+    @JavascriptInterface
+    fun terminals(): String {
+        val arr = JSONArray()
+        TerminalTargets.all().forEach { t ->
+            arr.put(JSONObject().put("key", t.key).put("label", t.label)
+                .put("host", t.host).put("port", t.port))
+        }
+        return JSONObject().put("selected", TerminalTargets.forBackend(backendKey()).key)
+            .put("backends", arr).toString()
+    }
+
+    /** Select [key] as the terminal every pty and fs call routes through, then
+     *  PROBE it and report back via window.__termProbe(key, err|null). A key
+     *  the JSON does not declare is refused rather than silently falling back,
+     *  and an unreachable terminal (not installed, sshd not running, key not
+     *  authorised) comes back as the named error instead of a dead tab. */
+    @JavascriptInterface
+    fun selectTerminal(key: String) {
+        if (TerminalTargets.all().none { it.key == key }) {
+            emitRaw("window.__termProbe(${q(key)},${q("'$key' is not a declared terminal")})")
+            return
+        }
+        IdePrefs.setTerminalBackend(activity, key)
+        probeTerminal()
+    }
+
+    /** Probe the SELECTED terminal; result via window.__termProbe. */
+    @JavascriptInterface
+    fun probeTerminal() {
+        executor.submit {
+            val t = TerminalTargets.effectiveTarget(activity, backendKey())
+            val err = ssh.testConnection(t)?.let { "${t.label} (${t.host}:${t.port}) unreachable: $it" }
+            emitRaw("window.__termProbe(${q(t.key)},${if (err == null) "null" else q(err)})")
+        }
+    }
+
     // ── PTY ───────────────────────────────────────────────────────────────────
 
     @JavascriptInterface

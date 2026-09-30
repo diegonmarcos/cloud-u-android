@@ -224,6 +224,83 @@ else
     fi
 fi
 
+echo "== T5: the frontend Configs page offers EVERY declared terminal, and a dead one is loud =="
+# The Configs page the user actually opens is the WebView overlay
+# (hub/src/main/assets/frontend), not ConfigsActivity; until this block it had
+# no terminal field at all, only a button to the native screen. The overlay
+# learns its options from AndroidTerm.terminals() at runtime, so the claim
+# "both declared terminals are reachable choices" is proved by RUNNING the real
+# configs.js against the bridge's answer built from the declaration, plus a
+# check that the bridge's answer is the whole declared list.
+FE="$APP/hub/src/main/assets/frontend"
+BRIDGE="$KT/TerminalBridge.kt"
+command -v node >/dev/null || { echo "ERROR: node required" >&2; exit 2; }
+
+# (a) bridge: terminals() iterates the declared list unfiltered, and
+# selectTerminal refuses a key the declaration does not hold.
+body() { awk -v f="fun $1(" 'index($0,f){on=1} on{print; n+=gsub(/\{/,"{"); n-=gsub(/\}/,"}"); if(n==0 && seen) exit; if(n>0) seen=1}' "$BRIDGE"; }
+TB="$(body terminals)"; SB="$(body selectTerminal)"
+if printf '%s' "$TB" | grep -q 'TerminalTargets\.all()\.forEach' && ! printf '%s' "$TB" | grep -qE 'filter|take\(|drop\('; then
+    ok "T5a AndroidTerm.terminals() returns every entry of TerminalTargets.all()"
+else
+    bad "T5a AndroidTerm.terminals() does not return the whole declared list — a declared terminal would be missing from the Configs field"
+fi
+if printf '%s' "$SB" | grep -q 'TerminalTargets\.all()\.none' && printf '%s' "$SB" | grep -q '__termProbe'; then
+    ok "T5b selectTerminal refuses an undeclared key out loud"
+else
+    bad "T5b selectTerminal accepts a key without checking the declaration, or refuses it silently — forBackend would quietly fall back to another terminal"
+fi
+PB="$(body probeTerminal)"
+if printf '%s' "$PB" | grep -q 'testConnection' && printf '%s' "$PB" | grep -q 't\.label' && printf '%s' "$PB" | grep -q 't\.port'; then
+    ok "T5c the probe names the terminal it could not reach"
+else
+    bad "T5c the selection probe does not test the connection or does not name label/port — a missing terminal would look like a dead tab again"
+fi
+
+# (b) run configs.js for real against the bridge shape built from the JSON.
+DECL="$(jq -c '{selected: (.backends|keys_unsorted[0]), backends: [.backends|to_entries[]|{key, label:.value.label, host:.value.host, port:.value.port}]}' "$TGT")"
+WANT="$(jq -r '.backends|keys_unsorted|join(",")' "$TGT")"
+OUT="$(DECL="$DECL" node - "$FE/js/configs.js" <<'JS' 2>&1
+const fs = require("fs");
+const els = {};
+const mk = (id) => els[id] || (els[id] = { id, value: "", hidden: true, style: {}, textContent: "", children: [],
+  _h: {}, addEventListener(ev, f) { this._h[ev] = f; }, appendChild(c) { this.children.push(c); },
+  set innerHTML(v) { this.children = []; } });
+global.document = { getElementById: mk, createElement: () => ({}) };
+global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+global.alert = () => {};
+global.window = global;
+const picked = [];
+let probes = 0;
+window.AndroidTerm = { terminals: () => process.env.DECL, selectTerminal: (k) => picked.push(k), probeTerminal: () => probes++ };
+eval(fs.readFileSync(process.argv[2], "utf8"));
+Configs.open();
+const sel = els["cfg-terminal"];
+const keys = sel.children.map((o) => o.value);
+for (const k of keys) sel._h.change({ target: { value: k } });
+window.__termProbe(keys[1], "Cloud Terminal (nix) (127.0.0.1:8024) unreachable: Connection refused");
+const st = els["cfg-terminal-status"];
+console.log(JSON.stringify({ keys: keys.join(","), picked: picked.join(","), probes, status: st.textContent, red: !!st.style.color }));
+JS
+)"
+GOT_KEYS="$(printf '%s' "$OUT" | jq -r '.keys' 2>/dev/null)"
+if [ "$GOT_KEYS" = "$WANT" ] && [ "$(printf '%s' "$OUT" | jq -r '.picked')" = "$WANT" ]; then
+    ok "T5d the Configs Terminal field offers and selects every declared terminal ($WANT)"
+else
+    bad "T5d the Configs Terminal field offers '${GOT_KEYS:-?}' but the declaration holds '$WANT' — a declared terminal is not a reachable choice ($OUT)"
+fi
+if [ "$(printf '%s' "$OUT" | jq -r '.probes')" -ge 1 ] && [ "$(printf '%s' "$OUT" | jq -r '.red')" = true ] \
+   && printf '%s' "$OUT" | jq -r '.status' | grep -q '127.0.0.1:8024'; then
+    ok "T5e opening Configs probes the selected terminal and an unreachable one renders red, named"
+else
+    bad "T5e an unreachable terminal is not shown loudly on the Configs page ($OUT)"
+fi
+if grep -q '<select id="cfg-terminal"></select>' "$FE/index.html"; then
+    ok "T5f the Terminal field carries no hand-written options"
+else
+    bad "T5f index.html's cfg-terminal is missing or lists options by hand — a second declaration of the terminals"
+fi
+
 echo
 echo "── MyTerminal targets: $PASS passed, $FAIL failed ──"
 [ "$FAIL" -eq 0 ]

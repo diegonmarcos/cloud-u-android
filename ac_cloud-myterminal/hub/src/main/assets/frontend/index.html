@@ -87,7 +87,9 @@
       <div class="cfg-body">
         <section class="cfg-section">
           <div class="cfg-section-title">Terminal / SSH</div>
-          <div class="cfg-hint">Backend (Termux / Nix-on-Droid), host / port / user, Test connection, SSH key.</div>
+          <label class="cfg-row"><span>Terminal</span><select id="cfg-terminal"></select></label>
+          <div id="cfg-terminal-status" class="cfg-hint"></div>
+          <div class="cfg-hint">Every tab, file and Store command runs in the selected terminal. Host / port / user, Test connection, SSH key and setup steps:</div>
           <button id="cfg-ssh-open" class="cfg-btn">Open SSH settings</button>
         </section>
         <section class="cfg-section">
