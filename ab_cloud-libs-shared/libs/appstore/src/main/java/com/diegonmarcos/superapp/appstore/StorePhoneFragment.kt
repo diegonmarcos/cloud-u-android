@@ -91,7 +91,9 @@ class StorePhoneFragment : Fragment() {
     private var cacheBtn: TextView? = null
     // Set when a tap has already taken the provably-installed bytes and the only
     // thing left is unproven: the next tap discards the only copy, and the toast
-    // has said so in those words. Cleared on every reload.
+    // has already said so in those words. It stays armed across reloads on
+    // purpose — leaving the tab does not un-warn the user — and is cleared by the
+    // discard itself, or as soon as a later install proves an entry redundant.
     private var armedToDiscard = false
 
     // #565 export / import. Registered at construction, as the Activity Result
@@ -164,7 +166,9 @@ class StorePhoneFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() { list = null; stateViews.clear(); super.onDestroyView() }
+    override fun onDestroyView() {
+        list = null; cacheBtn = null; stateViews.clear(); super.onDestroyView()
+    }
 
     /** Every launchable app, fleet included, as [AppInventory] JSON. */
     private fun exportTo(uri: Uri) {
@@ -528,12 +532,17 @@ class StorePhoneFragment : Fragment() {
         val armed = armedToDiscard
         thread(name = "store-cache-plan") {
             val p = runCatching { ApkCache.plan(app) }.getOrNull() ?: return@thread
-            val free = if (armed) p.keptBytes else p.redundantBytes
-            val count = if (armed) p.kept.size else p.redundant.size
+            // An install that landed since the warning turns an unproven entry
+            // redundant, and then there is nothing left to warn about: disarm,
+            // rather than offer to discard nothing.
+            val stillArmed = armed && p.kept.isNotEmpty()
+            val free = if (stillArmed) p.keptBytes else p.redundantBytes
+            val count = if (stillArmed) p.kept.size else p.redundant.size
             btn.post {
                 if (!isAdded) return@post
+                armedToDiscard = stillArmed
                 btn.text = when {
-                    armed -> app.getString(R.string.store_cache_clear_discard, count, free / 1_000_000)
+                    stillArmed -> app.getString(R.string.store_cache_clear_discard, count, free / 1_000_000)
                     count == 0 -> app.getString(R.string.store_cache_clear_empty)
                     else -> app.getString(R.string.store_cache_clear_n, count, free / 1_000_000)
                 }
