@@ -516,11 +516,23 @@ class BottomNavIslandTest {
 
     @Test
     fun `the nav is a Compose port and not a wrapped View`() {
-        val src = File("src/main/kotlin").walk().filter { it.isFile && it.extension == "kt" }
-            .joinToString("\n") { it.readText() }
+        val files = File("src/main/kotlin").walk().filter { it.isFile && it.extension == "kt" }.toList()
+        val src = files.joinToString("\n") { it.readText() }
         assertTrue("sources not found from ${File(".").absolutePath}", src.contains("fun BottomNavIsland("))
         val wrap = Regex("""AndroidView\s*\(|import androidx\.compose\.ui\.viewinterop|import android\.view\.|import android\.widget\.(?!Toast\b)""")
-        assertFalse("the nav wraps the View toolkit: ${wrap.find(src)?.value}", wrap.containsMatchIn(src))
+        // The Compose surface must stay a port, never a wrapper. The lib also ships one SANCTIONED
+        // View entry point, because superapp and cloud-me are View/fragment hosts and cannot
+        // consume a Compose-only API; a custom View cannot exist without android.view. That
+        // exemption is DATA, declared here by name, so a SECOND interop file cannot appear
+        // unnoticed: any undeclared file that touches the View toolkit fails this test.
+        for (f in files.filter { it.name !in INTEROP }) {
+            assertFalse(
+                "the Compose surface in ${f.name} wraps the View toolkit: ${wrap.find(f.readText())?.value}",
+                wrap.containsMatchIn(f.readText()),
+            )
+        }
+        assertEquals("a declared View-interop file is gone; drop it from INTEROP",
+            INTEROP, files.map { it.name }.filter { it in INTEROP }.toSet())
         assertTrue("the nav ships a drawable again", File("src/main/res/drawable").list().isNullOrEmpty())
     }
 
@@ -528,5 +540,10 @@ class BottomNavIslandTest {
         const val ROOT = "test_root"
         const val LIST = "test_list"
         const val INNER = "test_inner"
+
+        /** The declared View-interop surface: the only files allowed to touch the View toolkit
+         *  (#673's scroll-collapse driver is a ViewTreeObserver listener). Adding a file here is
+         *  a deliberate architectural decision, which is why it is a list and not a wildcard. */
+        val INTEROP = setOf("BottomNavIslandView.kt")
     }
 }
