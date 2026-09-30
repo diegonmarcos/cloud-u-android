@@ -108,10 +108,46 @@ class StoreCloudFragment : Fragment() {
             fleet.filter { it.pkg.isNotEmpty() }.associate { it.pkg to it.label })
     }
 
+    // #642: THE LIBS TAB'S TABLES, and not a second grouping mechanism.
+    //
+    // An APP is filed by [shelves] above — the launcher's central
+    // classification — which is why Cloud ▸ Apps has always drawn headed
+    // tables. A LIB has no launcher entry, so that classifier returns nothing
+    // for every one of them and all 46 rows fell into ONE unnamed run: the
+    // flat list. So the fleet data declares each lib's category as the SAME
+    // (heading, order) pair, and [shelfOf] hands it to the code that already
+    // draws the Apps tables. Nothing below this line knows a lib from an app.
+    //
+    // DATA, both directions: the categories, their order and their membership
+    // are `lib_apks.categories` in ab_cloud-libs-shared/lib-apks/build.json,
+    // carried here by regen.sh in the same {id,label,members} shape as the
+    // groups. Adding a lib or a whole category is that edit and nothing else —
+    // no label, id or count is written here. A lib no category lists has no
+    // shelf and heads "Other", exactly like an app the launcher does not file.
+    private val libShelves: Map<String, AppStoreHost.Shelf> by lazy {
+        val filed = HashMap<String, AppStoreHost.Shelf>()
+        fleetObjects("lib_categories").forEachIndexed { index, category ->
+            // The ORDER key is the declaration's own index, zero-padded so it
+            // still sorts as a string beside the host's folder orders.
+            val shelf = AppStoreHost.Shelf(
+                category.optString("label", category.getString("id")), "%03d".format(index))
+            val members = category.optJSONArray("members")
+            for (i in 0 until (members?.length() ?: 0))
+                members?.optString(i)?.takeIf { it.isNotEmpty() }?.let { filed[it] = shelf }
+        }
+        filed
+    }
+
+    /** The shelf a row is filed on — its declared lib category, else the host's
+     *  classification of its package. ONE lookup, so the heading drawn over a
+     *  run and the key that orders it cannot read different answers. */
+    private fun shelfOf(app: Fleet.App): AppStoreHost.Shelf? =
+        libShelves[app.id] ?: shelves[app.pkg]
+
     /** The heading a row is drawn under: its ML application (#405) when its
-     *  name declares one, else its classification shelf, else none. */
+     *  name declares one, else its shelf, else none. */
     private fun headingOf(app: Fleet.App): String? =
-        applicationOf(app.id)?.replaceFirstChar { it.uppercase() } ?: shelves[app.pkg]?.heading
+        applicationOf(app.id)?.replaceFirstChar { it.uppercase() } ?: shelfOf(app)?.heading
 
     // Tabs are a VIEW over the fleet: one per group data/regen.sh declares, in
     // its declared order, holding the members it lists and skipping a group with
@@ -129,7 +165,7 @@ class StoreCloudFragment : Fragment() {
                 .mapNotNull { index -> members?.optString(index)?.let(everyRow::get) }
             Tab(group.optString("label", group.getString("id")), group.optString("blurb"),
                 rows.sortedWith(compareBy(
-                    { applicationOf(it.id) ?: shelves[it.pkg]?.order ?: UNSHELVED },
+                    { applicationOf(it.id) ?: shelfOf(it)?.order ?: UNSHELVED },
                     { it.label.lowercase() })))
         }.filter { it.rows.isNotEmpty() }
     }

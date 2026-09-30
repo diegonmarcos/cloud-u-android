@@ -456,6 +456,35 @@ regen_constellation() {
         return 1
     fi
 
+    # ── Lib categories: the tables INSIDE the Libs tab (#642) ────────────────
+    # A group is a TAB; a category is a table within one. Apps get their tables
+    # from the launcher's central classification, which knows nothing about a
+    # library package - so every lib row landed in one unnamed run and the tab
+    # read as a flat list. The categories are declared once, in render order,
+    # beside the scan rule that already owns what the libs ARE, and are carried
+    # here in the SAME {id,label,members} shape as the groups so the page reads
+    # one shape for both. No per-row `category` field: a second statement of
+    # this same fact is the group_members mistake (#405) with a new name.
+    local libcatbj libcats libcat_problems
+    libcatbj="$UNIX/ab_cloud-libs-shared/lib-apks/build.json"
+    libcats="$(jq -c '[ (.lib_apks.categories // [])[]
+        | { id, label: (.label // .id), members: (.members // []) } ]' "$libcatbj")"
+    # A member that is not a lib row is a category left pointing at a renamed or
+    # deleted module: the row it names is drawn nowhere and the table it should
+    # head silently loses an entry. An UNLISTED lib is NOT an error - FIRE RULE
+    # #6 says a new module ships with no edit here, and the page heads it
+    # "Other" - so only the stale direction fails.
+    libcat_problems="$(jq -rn --argjson apps "$apps" --argjson cats "$libcats" '
+        [ $apps[] | select(.kind == "lib") | .id ] as $libs
+        | ( $cats[] as $c | $c.members[] | select(IN($libs[]) | not)
+              | "lib category \($c.id) names \(.), which is not a lib row in the fleet" ),
+          ( [ $cats[].members[] ] | group_by(.)[] | select(length > 1)
+              | "lib \(.[0]) is filed under more than one category" )')"
+    if [ -n "$libcat_problems" ]; then
+        printf 'ERROR: lib_apks.categories disagrees with the fleet:\n%s\n' "$libcat_problems" >&2
+        return 1
+    fi
+
     # Reference rows go OUT of `apps` on purpose: Fleet.parse reads only `apps`,
     # so the updater, both auto-update workers, PrivilegedGrants and the recovery
     # screens can never be handed an entry with no package. installable:false is
@@ -468,7 +497,7 @@ regen_constellation() {
     # fleet already baked to 61,368 base64 bytes before the groups existed, so
     # the indentation alone was about to break every build that links the
     # updater. One entry per line keeps a diff readable per entry at compact size.
-    jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" '
+    jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" --argjson libcats "$libcats" '
         # members is the same group stamp read from the tab side, so the page
         # builds its tabs without reading any entry field Fleet.parse owns.
         [ (.constellation.groups // [])[] | .id as $id
@@ -476,6 +505,7 @@ regen_constellation() {
                 members: [ ($apps[], $catalogue[]) | select(.group == $id) | .id ] } ] as $groups
         | "{\"version\":1,",
           "\"groups\":[", ($groups | map(tojson) | join(",\n")), "],",
+          "\"lib_categories\":[", ($libcats | map(tojson) | join(",\n")), "],",
           "\"apps\":[", ($apps | map(tojson) | join(",\n")), "],",
           "\"catalogue\":[", ($catalogue | map(tojson) | join(",\n")), "]}"
         ' "$selfbj" > "$HERE/constellation-fleet.json"

@@ -214,6 +214,78 @@ for claimed in $(jq -r --arg re "$SCHEME" '.apps[]
     || bad "$claimed wears the ML name but its build.gradle declares no ML runtime"
 done
 
+echo "== T8: #642 the Libs tab is TABLES, from the one declaration, through the Apps mechanism =="
+# A group is a TAB; a category is a table inside one. Libs rendered flat not
+# because they used a different mechanism but because the SAME one had no data:
+# AppStoreHost.classify files a package the launcher knows, and it knows no
+# library package, so all 46 rows came back unshelved and sat in one unnamed
+# run. T8 asserts the three things that fix has to be, and each on the side a
+# hollow version would not survive.
+LIBCAT_BJ="$ROOT/ab_cloud-libs-shared/lib-apks/build.json"
+[ -f "$LIBCAT_BJ" ] || { echo "ERROR: missing $LIBCAT_BJ" >&2; exit 2; }
+
+# (a) The declaration and the generated fleet are ONE list, in one order. Checked
+#     on the whole array rather than a count: two lists of equal length in
+#     different orders would pass a count and render the tables in the wrong
+#     order, which is the #383 regression one level down.
+jq -n -e --slurpfile fleet "$FLEET" --slurpfile bj "$LIBCAT_BJ" \
+  '($fleet[0].lib_categories // []) as $f | ($bj[0].lib_apks.categories // []) as $d
+   | ($f | length) > 0 and ($f | map({id, label, members})) == ($d | map({id, label, members}))' >/dev/null \
+  && ok "the fleet's lib_categories are lib_apks.categories, in declared order" \
+  || bad "lib_categories differ from lib_apks.categories — rerun data/regen.sh"
+
+# (b) Every row of the Libs TAB is filed on exactly one table. Derived from the
+#     tab's own members, so a lib added to the fleet is caught here rather than
+#     discovered as an untitled row on the device. Both directions: an unfiled
+#     lib AND a category naming a row that is not in the tab.
+unfiled="$(jq -r '[.lib_categories[].members[]] as $filed
+    | (.groups[] | select(.id == "libs") | .members[]) | select(IN($filed[]) | not)' "$FLEET")"
+[ -z "$unfiled" ] \
+  && ok "every row in the Libs tab is filed under a category" \
+  || bad "Libs row(s) under no category, so they draw in one unnamed run again: $(printf '%s' "$unfiled" | tr '\n' ' ')"
+stray="$(jq -r '[.groups[] | select(.id == "libs") | .members[]] as $tab
+    | .lib_categories[] as $c | $c.members[] | select(IN($tab[]) | not)
+    | "\($c.id) names \(.)"' "$FLEET")"
+[ -z "$stray" ] \
+  && ok "no category names a row outside the Libs tab" \
+  || bad "category member(s) that are not Libs rows: $(printf '%s' "$stray" | tr '\n' '; ')"
+dupe="$(jq -r '[.lib_categories[].members[]] | group_by(.)[] | select(length > 1) | .[0]' "$FLEET")"
+[ -z "$dupe" ] \
+  && ok "no lib is filed under two categories" \
+  || bad "lib(s) in more than one category: $(printf '%s' "$dupe" | tr '\n' ' ')"
+
+# (c) ZERO KOTLIN. Adding a lib or a category must be the data edit above and
+#     nothing else, so the page may not write a single category id or label —
+#     the same rule T5 holds for groups and (e) holds for ML applications. This
+#     is the assertion that fails if someone "helpfully" hardcodes the tables.
+for literal in $(jq -r '.lib_categories[] | .id, .label' "$FLEET" | tr ' ' '\036'); do
+  literal="$(printf '%s' "$literal" | tr '\036' ' ')"
+  command grep -nF "\"$literal\"" "$PAGE" \
+    && bad "StoreCloudFragment hardcodes lib category literal \"$literal\"" \
+    || ok "no \"$literal\" literal on the page"
+done
+
+# (d) ... and it must group libs through the mechanism it already had, not a
+#     second one beside it. The category IS an AppStoreHost.Shelf — the same
+#     (heading, order) pair the host's classifier returns — and ONE lookup
+#     feeds both the heading and the sort key, so the two cannot disagree.
+command grep -qF 'fleetObjects("lib_categories")' "$PAGE" \
+  && ok "the tables are built from the fleet's declared lib_categories" \
+  || bad "the page does not read lib_categories — the Libs tab is flat again"
+command grep -qF 'AppStoreHost.Shelf(' "$PAGE" \
+  && ok "a lib category IS a Shelf: the Apps grouping type, not a new one" \
+  || bad "the page builds its own lib-heading type instead of AppStoreHost.Shelf"
+# The heading and the ordering key must both go through shelfOf. A direct
+# shelves[...] read left on either side is exactly how the two drift apart.
+for needle in 'shelfOf(app)?.heading' 'shelfOf(it)?.order'; do
+  command grep -qF "$needle" "$PAGE" \
+    && ok "$needle — one shelf lookup feeds it" \
+    || bad "missing $needle: the heading and the sort key can disagree"
+done
+command grep -nE 'shelves\[[a-z]+\.pkg\]\?\.(heading|order)' "$PAGE" \
+  && bad "a direct shelves[...] heading/order read is back beside shelfOf — two grouping paths" \
+  || ok "shelfOf is the only heading/order source"
+
 echo
-echo "== RESULT(#405 groups+ml-naming): $PASS passed, $FAIL failed =="
+echo "== RESULT(#405 groups+ml-naming, #642 lib tables): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
