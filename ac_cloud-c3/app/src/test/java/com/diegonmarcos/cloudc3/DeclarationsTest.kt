@@ -102,11 +102,15 @@ class DeclarationsTest {
     @Test
     fun `each content tab's declared sub-pages parse`() {
         // DECLARED means IMPLEMENTED (#648): these are exactly the pages that have a
-        // fragment today. The feeds, the ntfy centre and the container dashboards are
-        // deliberately absent until theirs land, which is what makes "no placeholder in a
-        // shipped tab" an assertable property rather than a promise.
-        assertEquals(listOf("public", "private"), Declarations.parsePages(uiText("topology")).map { it.id })
-        assertEquals(listOf("health"), Declarations.parsePages(uiText("observ")).map { it.id })
+        // fragment today. The `topology`/`observability` pages ARE the SuperApp's two
+        // stacks (feed cards, ntfy centre, container dashboards — C3StackFragment over
+        // ui.sections[c3].stack_*), carried whole per the owner's escalation; dagu and the
+        // WG mesh arrived with them. The SuperApp's sample-stub page ids stay undeclared,
+        // which is what keeps "no placeholder in a shipped tab" assertable.
+        assertEquals(listOf("topology", "public", "private"),
+            Declarations.parsePages(uiText("topology")).map { it.id })
+        assertEquals(listOf("observability", "health", "dagu", "mesh"),
+            Declarations.parsePages(uiText("observ")).map { it.id })
         assertEquals(listOf("about"), Declarations.parsePages(uiText("configs")).map { it.id })
     }
 

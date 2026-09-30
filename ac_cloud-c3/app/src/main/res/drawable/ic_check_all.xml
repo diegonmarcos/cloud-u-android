@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Double tick: "everything in this group is read". A single tick reads as
+     one item; two say the whole box was cleared, which is what the button in
+     a notification group header actually does.
+
+     Stroked, not filled: an open tick path filled solid collapses into a
+     wedge. The chevron next to it gets away with fill because its path is
+     already the shape it wants to be. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?android:attr/textColorPrimary">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M2,12.5l4,4 8.5,-8.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M10,14.5l2.5,2.5 8.5,-8.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

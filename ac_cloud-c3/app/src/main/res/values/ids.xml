@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #648 the stack pages' embedded-child host ids — MOVED with C3StackFragment. STABLE
+     resource ids on purpose: View.generateViewId() crashes on FragmentManager restore
+     because the regenerated id no longer matches the saved-state host id; a fixed pool
+     survives process death, which a launcher-adjacent app sees many times an hour. -->
+<resources>
+    <item name="stack_embed_0" type="id" />
+    <item name="stack_embed_1" type="id" />
+    <item name="stack_embed_2" type="id" />
+    <item name="stack_embed_3" type="id" />
+    <item name="stack_embed_4" type="id" />
+    <item name="stack_embed_5" type="id" />
+    <item name="stack_embed_6" type="id" />
+    <item name="stack_embed_7" type="id" />
+</resources>

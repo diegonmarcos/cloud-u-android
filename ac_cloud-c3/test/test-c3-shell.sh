@@ -143,10 +143,14 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
-# t4 <build.json> <drawable dir> : declared icon <-> drawable file, BOTH directions
+# t4 <build.json> <drawable dir> <src dir> : declared icon <-> drawable file, BOTH directions.
+# #648 "declared" now also covers the carried c3 section (ui.sections — every `icon` value
+# anywhere inside it, the stacks' tiles included) and the drawables Kotlin names directly
+# (R.drawable.X, and the quoted "ic_*" names iconResFor-style lookups resolve at runtime) —
+# the carried pages resolve icons both ways, and either one missing draws a BLANK square.
 t4() {
-    python3 - "$1" "$2" <<'PYTHON'
-import json, os, sys
+    python3 - "$1" "$2" "$3" <<'PYTHON'
+import json, os, re, sys
 ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
 declared = set()
 declared.update(t.get("icon") for t in (ui.get("tabs") or []))
@@ -155,6 +159,26 @@ for key in ("topology", "observ", "configs"):
     for p in ((ui.get(key) or {}).get("pages") or []):
         declared.add(p.get("icon"))
 if ui.get("icon_default"): declared.add(ui["icon_default"])
+def walk_icons(node):
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k in ("icon", "icon_apps", "icon_admin") and isinstance(v, str):
+                declared.add(v)
+            else:
+                walk_icons(v)
+    elif isinstance(node, list):
+        for item in node:
+            walk_icons(item)
+walk_icons(ui.get("sections") or [])
+# Kotlin-side references: compile-time R.drawable ids and runtime getIdentifier names.
+for dirpath, _d, files_ in os.walk(sys.argv[3]):
+    for f in files_:
+        if not f.endswith(".kt"): continue
+        text = open(os.path.join(dirpath, f), encoding="utf-8").read()
+        code = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+        code = re.sub(r"//[^\n]*", "", code)
+        declared.update(re.findall(r"R\.drawable\.([a-z0-9_]+)", code))
+        declared.update(re.findall(r'"(ic_[a-z0-9_]+)"', code))
 declared = {d for d in declared if d}
 files = {f[:-4] for f in os.listdir(sys.argv[2]) if f.endswith(".xml")}
 launcher = {"ic_launcher_background", "ic_launcher_foreground"}
@@ -356,7 +380,7 @@ echo "── #648 cloud-c3: declared, implemented, and not drawing under the cut
 t1 "$BJ"                              && pass "T1 ui.tabs is the five declared tabs, in order, Home centre" || fail "T1 the tab declaration is wrong"
 t2 "$BJ" "$MAIN"                      && pass "T2 declaration <-> shell dispatch agree BOTH ways: no orphan either side" || fail "T2 declaration and dispatch disagree"
 t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" || fail "T3 a second list of tab ids exists"
-t4 "$BJ" "$DRAWABLE"                  && pass "T4 every declared icon is a real drawable, and every drawable is declared" || fail "T4 an icon would draw blank, or a drawable is dead"
+t4 "$BJ" "$DRAWABLE" "$SRC"           && pass "T4 every declared icon is a real drawable, and every drawable is declared" || fail "T4 an icon would draw blank, or a drawable is dead"
 t5 "$BJ" "$MANIFEST" "$ROOT"          && pass "T5 the Apps tab launches the three REAL siblings, each queried, none renamed" || fail "T5 an Apps tile cannot open what it names"
 t6 "$BJ" "$TABS" "$SRC"               && pass "T6 NO PLACEHOLDER: every declared page resolves to a real fragment, and no not-built body exists" || fail "T6 a shipped tab can render a placeholder"
 t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's View contract" || fail "T7 the shell is not a fragment host, or forks the nav"
@@ -395,7 +419,7 @@ A="/ac_cloud-c3"
 c_t1() { t1 "$1$A/build.json"; }
 c_t2() { t2 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt"; }
 c_t3() { t3 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
-c_t4() { t4 "$1$A/build.json" "$1$A/app/src/main/res/drawable"; }
+c_t4() { t4 "$1$A/build.json" "$1$A/app/src/main/res/drawable" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
 c_t5() { t5 "$1$A/build.json" "$1$A/app/src/main/AndroidManifest.xml" "$1"; }
 c_t6() { t6 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
 c_t7() { t7 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/C3BottomNav.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }

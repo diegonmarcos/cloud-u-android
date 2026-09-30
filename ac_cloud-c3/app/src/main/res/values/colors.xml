@@ -28,6 +28,10 @@
          (#570/#573): a status light makes a promise, and two greens that differ are one of
          them lying. This app is an OPS surface, so that property matters here more than
          anywhere — a green here is a claim about a live machine. -->
+    <!-- The stack cards' title/header blue — SAME name and value as the SuperApp's
+         cloud_primary, moved with the panels that paint it (#648). -->
+    <color name="cloud_primary">#FF1565C0</color>
+
     <color name="status_light_on">#FF3DDC84</color>
     <color name="status_light_off">#FFF87171</color>
     <color name="status_light_unknown">#FFB0B8C4</color>

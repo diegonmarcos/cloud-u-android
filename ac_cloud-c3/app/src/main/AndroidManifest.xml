@@ -19,7 +19,12 @@
         <package android:name="com.diegonmarcos.watchtower" />
     </queries>
 
+    <!-- #648 MOVED with the pages that need it: the Gitea Repos card reads the mirror at
+         http://10.0.0.6:3002 and the NTFY centre polls http://10.0.0.6:8090 — mesh peers,
+         cleartext by policy exactly as the SuperApp's own config enumerates them. Public
+         internet stays HTTPS-only (base-config). -->
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

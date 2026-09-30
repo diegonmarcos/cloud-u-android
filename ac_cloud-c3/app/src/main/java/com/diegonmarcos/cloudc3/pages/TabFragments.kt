@@ -11,6 +11,9 @@ import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudc3.Declarations
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
+import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
+import com.diegonmarcos.cloudc3.cloud.C3StackFragment
+import com.diegonmarcos.superapp.ops.dagu.DaguFragment
 
 /**
  * #648 the three paged content tabs. Each one is only two things: WHICH declaration it
@@ -25,13 +28,17 @@ import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
  */
 
 /**
- * TOPOLOGY — the address estate, the SuperApp's two `c3_public` / `c3_private` cards that
- * sat under its Addresses heading. The SAME [C3HealthFragment] renders both, scoped, which
- * is exactly how the SuperApp embedded it.
+ * TOPOLOGY — the SuperApp's Topology tab CARRIED WHOLE (#648, owner-escalated): the
+ * `topology` page is [C3StackFragment] over the carried section's stack_topology — the
+ * Index row, the Addresses heading with the c3_public/c3_private cards, the Containers
+ * heading with the Infra Apps / User Apps dashboards, the Stack dashboard with its four
+ * declared anchors, and the More row. The Public/Private pages stay: the same two cards
+ * standalone, exactly as this app already shipped them — nothing is deleted in a copy job.
  */
 class TopologyFragment : PagedFragment() {
     override fun pages(): List<Declarations.PageDecl> = Declarations.topologyPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
+        "topology" -> C3StackFragment.newInstance(C3StackFragment.STACK_TOPOLOGY)
         "public" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PUBLIC)
         "private" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PRIVATE)
         else -> null
@@ -39,13 +46,19 @@ class TopologyFragment : PagedFragment() {
 }
 
 /**
- * OBSERV — what the estate is doing. Today that is Health, the SuperApp's own
- * `page:c3/health`: both tables with their counts, the full declared estate in one view.
+ * OBSERV — the SuperApp's Observability tab CARRIED WHOLE (#648): the `observability`
+ * page is [C3StackFragment] over stack_observability — the Index row, the FIVE feed cards
+ * (Analytics, GHA, Dagu, GH Repos, Gitea Repos), the NTFY centre and the More row. Health
+ * stays as it shipped; Dagu is libs:ops' own [DaguFragment] (the SuperApp's page:c3/dagu);
+ * WG mesh is [C3MeshFragment] (its page:wg/status, the More row's target).
  */
 class ObservFragment : PagedFragment() {
     override fun pages(): List<Declarations.PageDecl> = Declarations.observPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
+        "observability" -> C3StackFragment.newInstance(C3StackFragment.STACK_OBSERVABILITY)
         "health" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_ALL)
+        "dagu" -> DaguFragment.newInstance()
+        "mesh" -> C3MeshFragment.newInstance()
         else -> null
     }
 }

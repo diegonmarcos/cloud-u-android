@@ -33,4 +33,27 @@
          APK this is unreachable: test-c3-shell.sh fails the build if any declared page has
          no body. -->
     <string name="page_has_no_body">No page is implemented for “%1$s”. The declaration lists it, so this is a bug, not an empty page.</string>
+
+    <!-- C3 · WG Mesh — MOVED from the SuperApp with C3MeshFragment/MeshView (#648),
+         wording unchanged. -->
+    <string name="mesh_title">C3 · WG Mesh</string>
+    <string name="mesh_status_v1">%1$d nodes · %2$d peerings · %3$d transports (snapshot wg-mesh/v1)</string>
+    <string name="mesh_section_nodes">Nodes</string>
+    <string name="mesh_section_peers">Peer relationships</string>
+
+    <!-- The NTFY centre's group-level "mark all read" tick — MOVED with the card (#648). -->
+    <string name="notif_mark_group_read">Mark all read</string>
+
+    <!-- StatusLight's four words + the screen-reader line — MOVED with StatusLight (#648),
+         same names and wording as the SuperApp's so the same fact reads the same. -->
+    <string name="status_light_on">On</string>
+    <string name="status_light_off">Off</string>
+    <string name="status_light_unknown">Unknown</string>
+    <string name="status_light_unverifiable">Not verifiable</string>
+    <string name="status_light_description">%1$s: %2$s</string>
+
+    <!-- A stack tile whose page: target has no fragment in THIS app (the SuperApp's own
+         page_samples stubs — reports, stack, workflows, vms, logs, gha). Stated on tap,
+         never a silent dead tile. -->
+    <string name="stack_page_not_here">%1$s is a SuperApp stub page (page_samples) and is not shipped in this app.</string>
 </resources>

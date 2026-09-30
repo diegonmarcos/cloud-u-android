@@ -65,6 +65,19 @@ def uiObservB64        = b64(buildJson.ui.observ         ?: [:])
 def uiConfigsB64       = b64(buildJson.ui.configs        ?: [:])
 def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 
+// #648 THE CARRIED C3 SECTION: ui.sections[id=c3] is the SuperApp's declaration block,
+// verbatim. The two stacks it carries ARE the Topology / Observability pages, so they are
+// baked from that one copy rather than restated; ui.ntfy and ui.tile_columns travel the
+// same way the SuperApp bakes them (UI_NTFY_B64 / UI_TILE_COLUMNS), so NtfyCatalog,
+// NtfyScopes and IndexTiles read the identical shapes they read there.
+def c3Section = (buildJson.ui.sections ?: []).find { it.id == 'c3' }
+if (c3Section == null) throw new GradleException("build.json::ui.sections carries no c3 section — the Topology/Observability stacks would bake empty and the tabs would draw nothing")
+if (!c3Section.stack_topology || !c3Section.stack_observability) throw new GradleException("ui.sections[c3] is missing stack_topology / stack_observability — half the c3 surface would silently vanish")
+def stackTopologyB64   = b64(c3Section.stack_topology)
+def stackObservB64     = b64(c3Section.stack_observability)
+def uiNtfyB64          = b64(buildJson.ui.ntfy ?: [:])
+def tileColumns        = (buildJson.ui.tile_columns ?: 5) as int
+
 // #648 the declared service estate, MOVED with the page that renders it. Same encoding the
 // SuperApp used (base64 of the raw JSON array) so Services.kt is its parser unchanged. A
 // MISSING file would bake the empty string and draw an empty table that looks exactly like a
@@ -75,6 +88,16 @@ if (!svcPubFile.exists())  throw new GradleException("missing data/services_publ
 if (!svcPrivFile.exists()) throw new GradleException("missing data/services_private.json — the Topology and Observ tables would bake empty and look fine")
 def servicesPublicB64  = svcPubFile.bytes.encodeBase64().toString()
 def servicesPrivateB64 = svcPrivFile.bytes.encodeBase64().toString()
+
+// #648 the container dashboards and the WG mesh page read the SAME two snapshots the
+// SuperApp bakes (data/cloud_services.json → CLOUD_SERVICES_B64, data/mesh.json →
+// MESH_JSON_B64) — carried as copies, asserted present for the same #276 reason as above.
+def cloudSvcFile = file("../data/cloud_services.json")
+def meshFile     = file("../data/mesh.json")
+if (!cloudSvcFile.exists()) throw new GradleException("missing data/cloud_services.json — the three container dashboards would bake empty and look fine")
+if (!meshFile.exists())     throw new GradleException("missing data/mesh.json — the WG mesh page would bake empty and look fine")
+def cloudServicesB64 = cloudSvcFile.bytes.encodeBase64().toString()
+def meshJsonB64      = meshFile.bytes.encodeBase64().toString()
 
 // Stack scan — baked into BuildConfig for the About page.
 def repoRoot = rootDir
@@ -161,6 +184,12 @@ android {
         buildConfigField "String", "C3_OPS_BASE_URL",       "\"${c3OpsBaseUrl}\""
         buildConfigField "String", "SERVICES_PUBLIC_B64",  "\"${servicesPublicB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64", "\"${servicesPrivateB64}\""
+        buildConfigField "String", "UI_STACK_TOPOLOGY_B64", "\"${stackTopologyB64}\""
+        buildConfigField "String", "UI_STACK_OBSERV_B64",   "\"${stackObservB64}\""
+        buildConfigField "String", "UI_NTFY_B64",           "\"${uiNtfyB64}\""
+        buildConfigField "int",    "UI_TILE_COLUMNS",       "${tileColumns}"
+        buildConfigField "String", "CLOUD_SERVICES_B64",    "\"${cloudServicesB64}\""
+        buildConfigField "String", "MESH_JSON_B64",         "\"${meshJsonB64}\""
         buildConfigField "String", "UI_STACK_LANGUAGES_JSON_B64",  "\"${stackLanguagesB64}\""
         buildConfigField "String", "UI_STACK_FRAMEWORKS_JSON_B64", "\"${stackFrameworksB64}\""
         buildConfigField "String", "UI_STACK_FOLDER_TREE_B64",     "\"${stackTreeB64}\""
@@ -222,6 +251,10 @@ dependencies {
     // superapp, mail, wallet, me and drive draw. This app supplies its OWN entries
     // from ui.tabs and does not use the module's cloud-mail item table.
     implementation project(':libs:bottomnav')
+    // #648 the SuperApp's page:c3/dagu is libs:ops' DaguFragment, and DaguPrefs is the ONE
+    // store of the Authelia bearer the feed cards' Re-run buttons and the container sheet's
+    // actions send — shared BY REFERENCE, same as every module above.
+    implementation project(':libs:ops')
 
     // #648 Compose survives for ONE reason: libs:bottomnav's island is an
     // AbstractComposeView, so the app needs the compiler and runtime even though its own
@@ -245,6 +278,9 @@ dependencies {
     // Kotlin file and every shell tester green. Same coordinate ac_cloud-drive and ac_cloud-wallet
     // link for the same theme parent.
     implementation 'com.google.android.material:material:1.12.0'
+    // #648 the stack pages' pull-down-to-refresh host — the same widget, same version, the
+    // SuperApp's AggregatorStackFragment wraps its ScrollView in.
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 
     // The JVM unit phase (build.json::tests.unit) runs these on every ship.
     testImplementation 'junit:junit:4.13.2'

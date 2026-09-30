@@ -8,8 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import android.widget.Toast
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
+import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
+import com.diegonmarcos.cloudc3.cloud.C3StackFragment
 import com.diegonmarcos.cloudc3.pages.AppsFragment
 import com.diegonmarcos.cloudc3.pages.ConfigsFragment
 import com.diegonmarcos.cloudc3.pages.HomeFragment
@@ -37,7 +41,9 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
  *    inset it reads for itself.
  *  - there is no hardcoded top margin. Nothing here is tuned to a device.
  */
-class MainActivity : AppCompatActivity(), C3HealthFragment.UrlClickListener {
+class MainActivity : AppCompatActivity(),
+    C3HealthFragment.UrlClickListener,
+    C3StackFragment.TargetListener {
 
     private lateinit var nav: BottomNavIslandView
     private lateinit var content: FrameLayout
@@ -106,6 +112,67 @@ class MainActivity : AppCompatActivity(), C3HealthFragment.UrlClickListener {
     override fun onUrlClicked(url: String) {
         runCatching {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }
+    }
+
+    /**
+     * #648 the stack pages' navigation seam — the role the SuperApp's tile dispatcher
+     * played, sized to the targets the carried c3 stacks actually declare:
+     *
+     *   http(s)://…       → the system browser, same as a health row's tap.
+     *   extapp:<id>       → launch the sibling APK ui.external_apps names; a missing app
+     *                       is stated, never a tap that does nothing.
+     *   page:<sec>/<id>   → the page's own fragment where one exists in this app, pushed
+     *                       full-screen with Back returning to the stack that sent it.
+     *                       page:c3/health, page:c3/dagu and page:wg/status ARE here; the
+     *                       SuperApp's sample-stub pages (reports, stack, workflows, vms,
+     *                       logs, gha) are not shipped in this app and the tap SAYS SO —
+     *                       the same honest verdict everywhere else on these pages.
+     */
+    override fun onTargetClicked(target: String) {
+        when {
+            target.isBlank() -> Unit
+            target.startsWith("http") -> onUrlClicked(target)
+            target.startsWith("extapp:") -> {
+                val id = target.removePrefix("extapp:").substringBefore('#').substringBefore('/')
+                val app = Declarations.externalApps.firstOrNull { it.id == id }
+                val intent = app?.let {
+                    runCatching { packageManager.getLaunchIntentForPackage(it.packageName) }.getOrNull()
+                }
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { startActivity(intent) }
+                } else {
+                    Toast.makeText(this,
+                        getString(R.string.apps_launch_failed, app?.display ?: id),
+                        Toast.LENGTH_SHORT).show()
+                }
+            }
+            target.startsWith("page:") -> {
+                // The page id, its `#anchor` suffix dropped: the three pages this app
+                // ships carry no in-page anchors of their own.
+                val page = target.removePrefix("page:").substringBefore('#')
+                val fragment: Fragment? = when (page) {
+                    "c3/health" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_ALL)
+                    "c3/dagu"   -> com.diegonmarcos.superapp.ops.dagu.DaguFragment.newInstance()
+                    "wg/status" -> C3MeshFragment.newInstance()
+                    else        -> null
+                }
+                if (fragment != null) {
+                    supportFragmentManager.commit {
+                        setReorderingAllowed(true)
+                        add(R.id.fragment_container, fragment)
+                        addToBackStack(target)
+                    }
+                } else {
+                    Toast.makeText(this,
+                        getString(R.string.stack_page_not_here, target),
+                        Toast.LENGTH_SHORT).show()
+                }
+            }
+            else -> Toast.makeText(this,
+                getString(R.string.stack_page_not_here, target),
+                Toast.LENGTH_SHORT).show()
         }
     }
 
