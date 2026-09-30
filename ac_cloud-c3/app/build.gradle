@@ -1,0 +1,235 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    // #648 the whole chrome is Compose (C3Shell in MainActivity), over the fleet's
+    // bottom-nav island — the same toolchain ac_cloud-drive's shell compiles against.
+    id 'org.jetbrains.kotlin.plugin.compose'
+    // Declarations.kt parses the baked ui.* blobs with kotlinx-serialization-json, so
+    // the JVM suite exercises the real parser against this repository's own build.json.
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+def gradleScriptStartMs = System.currentTimeMillis()
+
+def buildJson = new groovy.json.JsonSlurper().parse(file('../build.json'))
+
+// Version code: minutes since 2026-01-01 UTC over a 3,000,000 base.
+//
+// NOT build.json's version_code plus a CI run number: that counter is per-WORKFLOW, so
+// the moment an app was built by a different workflow than the one that produced the
+// installed APK the number handed out was SMALLER than the last published one and Android
+// refused the update with "Update version code N is older than current M". Wall clock only
+// ever moves forward and is identical for every workflow, runner and trigger. Same encoding
+// as ac_cloud-drive / ac_cloud-wallet / ac_cloud-mail, so the whole fleet is comparable.
+// COMMS_BUILD_TIMESTAMP is honoured when CI provides one so the code matches the release tag.
+def codeFinal = { ->
+    def base  = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    if (stamp) {
+        try {
+            built = java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+        } catch (ignored) { }
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}()
+
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
+def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'").with {
+    setTimeZone(java.util.TimeZone.getTimeZone('UTC'))
+    format(new java.util.Date())
+}
+
+def logSinkUrl    = (buildJson.diagnostics?.log_sink_url    ?: '')
+def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-c3')
+
+def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
+
+// ── the declarations, baked ────────────────────────────────────────────────
+// ONE bake per declared list. Declarations.kt is the only decoder; no screen reads
+// a BuildConfig blob. ui.tabs is the single source of truth for the bottom nav.
+def uiTabsB64          = b64(buildJson.ui.tabs           ?: [])
+def uiDefaultTab       = (buildJson.ui.default_tab       ?: '').toString()
+def uiIconDefault      = (buildJson.ui.icon_default      ?: 'stack').toString()
+def uiExternalAppsB64  = b64(buildJson.ui.external_apps  ?: [])
+def uiTopologyB64      = b64(buildJson.ui.topology       ?: [:])
+def uiObservB64        = b64(buildJson.ui.observ         ?: [:])
+def uiConfigsB64       = b64(buildJson.ui.configs        ?: [:])
+def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
+
+// Stack scan — baked into BuildConfig for the About page.
+def repoRoot = rootDir
+def stackExtMap = [
+    "kt": "Kotlin", "java": "Java", "xml": "XML (resources/manifest)",
+    "json": "JSON (config)", "gradle": "Gradle (Groovy)", "kts": "Gradle (Kotlin DSL)",
+    "sh": "Shell", "md": "Markdown", "nix": "Nix", "pro": "ProGuard",
+]
+def stackSkipDirs = ["build", ".gradle", ".idea", "dist", ".result"]
+def stackStats = [:]
+[new File(repoRoot, "app/src/main"),
+ new File(repoRoot, "build.json"),   new File(repoRoot, "build.sh"),
+ new File(repoRoot, "flake.nix"),    rootDir].each { root ->
+    if (!root.exists()) return
+    if (root.isFile()) {
+        def ext = root.name.tokenize(".").last().toLowerCase()
+        def label = stackExtMap[ext]
+        if (label != null) {
+            def loc = 0; try { loc = root.readLines("UTF-8").size() } catch (Throwable t) {}
+            def b = stackStats[label] ?: [files: 0, loc: 0]; b.files += 1; b.loc += loc; stackStats[label] = b
+        }
+        return
+    }
+    root.eachFileRecurse { f ->
+        if (!f.isFile()) return
+        def rel = f.absolutePath.replace(rootDir.absolutePath + "/", "")
+        if (stackSkipDirs.any { rel.startsWith(it) || rel.contains("/${it}/") }) return
+        def ext = f.name.tokenize(".").last().toLowerCase()
+        def label = stackExtMap[ext]; if (label == null) return
+        def loc = 0; try { loc = f.readLines("UTF-8").size() } catch (Throwable t) { return }
+        def b = stackStats[label] ?: [files: 0, loc: 0]; b.files += 1; b.loc += loc; stackStats[label] = b
+    }
+}
+def stackLanguagesB64 = b64(stackStats)
+def stackDeps = new TreeSet()
+def depPattern = ~/\b(implementation|api|compileOnly|runtimeOnly)\s*[\(\s]\s*['"]([^'":]+:[^'":]+:[^'"]+)['"]/
+[rootDir].findAll { it.exists() }.each { root ->
+    root.eachFileRecurse { f ->
+        if (!f.isFile() || !(f.name.endsWith(".gradle") || f.name.endsWith(".gradle.kts"))) return
+        def text = ""; try { text = f.text } catch (Throwable t) { return }
+        depPattern.matcher(text).each { m -> stackDeps.add(m[2]) }
+    }
+}
+def stackFrameworksB64 = b64(stackDeps.toList())
+// Deliberately a placeholder, the ac_cloud-drive / ac_cloud-wallet precedent: javac caps a
+// single constant at 65,535 bytes and a real folder tree of this repository blows past it.
+// The About page shows the language and framework tallies above instead.
+def stackTreeB64 = "—".bytes.encodeBase64().toString()
+
+android {
+    namespace 'com.diegonmarcos.cloudc3'
+    compileSdk 36
+
+    defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        // Never a strings.xml literal: that copy drifts from the fleet roster.
+        resValue "string", "app_name", buildJson.name
+        applicationId 'com.diegonmarcos.cloudc3'
+        minSdk 26
+        targetSdk 35
+        // English is the fleet's base language (#299): package-time filter, so no merged
+        // library locale (libs:bottomnav and the rest) can make the app come up in another.
+        resConfigs "en"
+        versionCode codeFinal
+        versionName "${buildJson.android.version_name} (sha-${shortSha})"
+        ndk {
+            def abiOverride = System.getenv('CLOUDC3_ABIS')
+            def abis = (abiOverride?.trim()) \
+                ? abiOverride.split(',').collect { it.trim() }.findAll { it } \
+                : (buildJson.android.abi_filters ?: ['arm64-v8a'])
+            abiFilters.addAll(abis as List)
+        }
+        buildConfigField "String", "GIT_SHORT_SHA",   "\"${shortSha}\""
+        buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
+        buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
+        buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
+        buildConfigField "String", "UI_TABS_B64",           "\"${uiTabsB64}\""
+        buildConfigField "String", "UI_DEFAULT_TAB",        "\"${uiDefaultTab}\""
+        buildConfigField "String", "UI_ICON_DEFAULT",       "\"${uiIconDefault}\""
+        buildConfigField "String", "UI_EXTERNAL_APPS_B64",  "\"${uiExternalAppsB64}\""
+        buildConfigField "String", "UI_TOPOLOGY_B64",       "\"${uiTopologyB64}\""
+        buildConfigField "String", "UI_OBSERV_B64",         "\"${uiObservB64}\""
+        buildConfigField "String", "UI_CONFIGS_B64",        "\"${uiConfigsB64}\""
+        buildConfigField "String", "C3_OPS_BASE_URL",       "\"${c3OpsBaseUrl}\""
+        buildConfigField "String", "UI_STACK_LANGUAGES_JSON_B64",  "\"${stackLanguagesB64}\""
+        buildConfigField "String", "UI_STACK_FRAMEWORKS_JSON_B64", "\"${stackFrameworksB64}\""
+        buildConfigField "String", "UI_STACK_FOLDER_TREE_B64",     "\"${stackTreeB64}\""
+        buildConfigField "long",   "STACK_GRADLE_CONFIG_MS",  "${System.currentTimeMillis() - gradleScriptStartMs}L"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
+
+    // ONE shared Cloud-constellation key — same key as every other app in the fleet.
+    signingConfigs {
+        debug {
+            def envStore = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (envStore == null || envStore.isEmpty() || !file(envStore).exists()) {
+                throw new GradleException("ONE shared constellation key required; run via build.sh / set ANDROID_KEYSTORE_FILE; no fallback")
+            }
+            storeFile     file(envStore)
+            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias      System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword   System.getenv("ANDROID_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        debug   { debuggable true;  signingConfig signingConfigs.debug }
+        release { debuggable true; minifyEnabled false
+                  proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  signingConfig signingConfigs.debug }
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/NOTICE.md', 'META-INF/LICENSE.md',
+                         'META-INF/NOTICE',    'META-INF/LICENSE']
+        }
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation project(':libs:analytics')
+    implementation project(':libs:core')
+    implementation project(':libs:updater')
+    // #648 the fleet's bottom-nav island: the five tabs are the same Compose pill
+    // superapp, mail, wallet, me and drive draw. This app supplies its OWN entries
+    // from ui.tabs and does not use the module's cloud-mail item table.
+    implementation project(':libs:bottomnav')
+
+    // The Compose toolchain of the WHOLE chrome. Same BOM libs:bottomnav pins, so
+    // app and library compose against one toolchain.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.animation:animation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    implementation 'androidx.core:core-ktx:1.15.0'
+
+    // The JVM unit phase (build.json::tests.unit) runs these on every ship.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

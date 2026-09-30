@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #648 EVERY caption the chrome prints. Kotlin screens hold no user-facing literal
+     (test/test-c3-shell.sh): a caption is either a declaration (build.json::ui labels) or a
+     string here. The launcher label itself comes from build.gradle (resValue app_name), which
+     is build.json::name — the application's one name (#351). English is the base language
+     (#299) and this is the only values/ tree: there is no values-xx to drift from it. -->
+<resources>
+    <!-- The StatusLight vocabulary — SAME names and words as the superapp's (#570/#573). -->
+    <string name="status_light_on">On</string>
+    <string name="status_light_off">Off</string>
+    <string name="status_light_unknown">Unknown</string>
+    <string name="status_light_unverifiable">Not verifiable</string>
+    <string name="status_light_description">%1$s: %2$s</string>
+
+    <!-- Chrome -->
+    <string name="chrome_close">Close</string>
+    <string name="chrome_retry">Retry</string>
+    <string name="chrome_cancel">Cancel</string>
+    <!-- Drawn when a tab id reaches the shell that ui.tabs does not declare. The shell shows
+         this rather than a blank pane, so a declaration/dispatch mismatch is VISIBLE at
+         runtime as well as fatal in the tester. -->
+    <string name="chrome_unknown_tab">This tab is not declared</string>
+    <string name="chrome_loading">Loading…</string>
+    <!-- Every content tab reaches the same c3-infra-api; one failure wording for all of them. -->
+    <string name="ops_unreachable">Cannot reach the ops API</string>
+    <string name="ops_empty">Nothing reported</string>
+
+    <!-- Apps tab. The three labels themselves are declarations (ui.external_apps[].label), so
+         they are NOT repeated here; these are the two states a tile can be in. -->
+    <string name="apps_open">Open</string>
+    <string name="apps_not_installed">Not installed</string>
+    <string name="apps_launch_failed">Could not open %1$s</string>
+
+    <!-- Configs ▸ About -->
+    <string name="about_version">Version</string>
+    <string name="about_build">Build</string>
+    <string name="about_commit">Commit</string>
+    <string name="about_languages">Languages</string>
+    <string name="about_frameworks">Frameworks</string>
+</resources>

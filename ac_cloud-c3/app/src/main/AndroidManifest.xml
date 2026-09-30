@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
+    <queries>
+        <!-- #648 the Apps tab launches the three C3 sibling APKs. On API 30+ an unqueried
+             package is INVISIBLE, and invisible reads exactly like uninstalled — so each is
+             named here to tell "not installed" apart from "refused". The ids and labels stay
+             in build.json::ui.external_apps; these are the manifest's visibility declarations,
+             which Android requires as literals and cannot read from a baked blob. -->
+        <package android:name="com.diegonmarcos.watchdog" />
+        <package android:name="com.diegonmarcos.morpheus" />
+        <package android:name="com.diegonmarcos.watchtower" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudC3"
+        tools:targetApi="31">
+
+        <!-- #648 the Compose chrome: C3Shell over the fleet's bottom-nav island. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CloudC3">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

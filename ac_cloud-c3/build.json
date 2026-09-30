@@ -1,0 +1,252 @@
+{
+  "name": "cloud-c3",
+  "description": "Diego's Cloud C3 — the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648) so the ops surface is its own icon instead of a page inside the launcher. A five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Topology · Observ · Home · Apps · Configs — every tab, sub-page and icon name declared in ui.* below and baked through BuildConfig, exactly the mechanism ac_cloud-drive uses. ONE tab declaration (ui.tabs) is the single source of truth: reordering that array reorders the nav, and no tab id is spelled in Kotlin outside C3Shell's dispatch, which test/test-c3-shell.sh diffs against this file in BOTH directions. Topology is the mesh/stack view; Observ is the observability surface (health, workflows, runs, logs, reports); Home is the overview; Apps LAUNCHES the three C3 sibling APKs that already exist as their own fleet members — Watchdog (com.diegonmarcos.watchdog), Morpheus (com.diegonmarcos.morpheus) and WatchTower (com.diegonmarcos.watchtower) — through ui.external_apps, the same extapp: idiom the SuperApp used, so nothing is re-implemented here; Configs holds the app's own settings and About. The ops data comes from ui.c3_ops.base_url, the SAME c3-infra-api the SuperApp's C3 pages read, so this APK is a new FRONT over the existing engine and not a second back end. Dark is the default theme, set at the declaration (#336, #337). English is the base language (#299): resConfigs \"en\" and a values/-only res tree. Build via Nix devShell, one APK out.",
+  "category": "android",
+  "vendored_engine": null,
+  "android": {
+    "application_id": "com.diegonmarcos.cloudc3",
+    "_doc_application_id": "The `c3-` / `cloud-` prefix is a DIRECTORY and fleet-name convention and is deliberately NOT in the applicationId — the ac_c3-watchtower precedent, whose own _doc records why: a wrong package compiles, ships, installs, and leaves a tab that opens nothing. `cloudc3` matches `clouddrive` / `cloudwallet`: the fleet name with its separator dropped.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "log_sink_url": "",
+    "log_sink_stream": "cloud-c3"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-C3.apk",
+      "release": "Cloud-C3-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Cloud-C3.apk",
+        "gh_asset": "Cloud-C3.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      }
+    ],
+    "auto_update": {
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "max_installs_per_pass": 3
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-c3",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-C3.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Cloud-C3.apk"
+    }
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:updater",
+        "libs:bottomnav"
+      ]
+    },
+    "libs:core": {
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ — settings.gradle points projectDir here instead of at a local copy, so a fix lands in every app at build time and copies cannot drift.",
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Shared BY REFERENCE, same as libs:core. Not listed in app.depends_on and not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which is what gives every app the constellation-wide debug API (127.0.0.1:38090+, own-process logcat) without per-app wiring that would drift.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:updater": {
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/. Also the reader of the constellation fleet manifest: since #276's fix it falls back to aa_cloud-superapp/data/constellation-fleet.json when an app carries no data/ dir of its own, and throws if neither exists — which is why this app needs no data/ dir for the fleet bake.",
+      "dir": "../ab_cloud-libs-shared/libs/updater",
+      "type": "library"
+    },
+    "libs:analytics": {
+      "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "THE fleet bottom-nav island (#565/#579): the five tabs are drawn by the same Compose declaration superapp, mail, wallet, me and drive render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here. This app reuses the four shared symbols (BottomNavEntry, BottomNavIsland, bottomNavInsets, rememberBottomNavCollapse) and declares its OWN five entries from ui.tabs; it deliberately does NOT reuse bottomnav's `bottomNavItems`, which is cloud-mail's item table and merely lives in that module.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    }
+  },
+  "ui": {
+    "_doc": "EVERY declarative list this app renders. app/build.gradle bakes each into BuildConfig as base64 JSON and Declarations.kt decodes it once; no screen reads a BuildConfig blob itself and no tab id, label or icon name is spelled in Kotlin.",
+    "_doc_tabs": "#648 THE ONE tab declaration, in display order, Home deliberately the centre item the way every other fleet five-tab shell places it. Order is load-bearing: reordering this array reorders the bottom nav and nothing else changes, which is the property test/test-c3-shell.sh asserts. The ids are the ONLY tab ids in the app: C3Shell dispatches on them and the tester diffs that dispatch against this array in both directions, so a tab declared with no screen and a screen with no declared tab are both build failures.",
+    "default_tab": "home",
+    "tabs": [
+      {
+        "id": "topology",
+        "label": "Topology",
+        "icon": "stack"
+      },
+      {
+        "id": "observ",
+        "label": "Observ",
+        "icon": "workflows"
+      },
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home"
+      },
+      {
+        "id": "apps",
+        "label": "Apps",
+        "icon": "robot"
+      },
+      {
+        "id": "configs",
+        "label": "Configs",
+        "icon": "settings"
+      }
+    ],
+    "icon_default": "stack",
+    "_doc_c3_ops": "The SAME c3-infra-api the SuperApp's C3 pages read (its build.json::ui.c3_ops). This APK is a new FRONT over the existing engine, not a second back end, so the base URL is declared once here and OpsClient is the only file that names a route.",
+    "c3_ops": {
+      "base_url": "https://api.diegonmarcos.com/c3-infra-api"
+    },
+    "_doc_external_apps": "#648 THE APPS TAB. Watchdog, Morpheus and WatchTower are ALREADY standalone fleet members with their own directories, build.json, ship workflow and applicationId — so this tab LAUNCHES them and declares no page of its own. This is the same extapp: idiom the SuperApp's ui.sections[c3] used for exactly these three, moved here with the section. A tile resolves its package against the device rather than assuming it is installed, so a missing app reads as 'not installed' instead of a tap that does nothing.",
+    "external_apps": [
+      {
+        "id": "c3-watchdog",
+        "label": "Watchdog",
+        "icon": "health",
+        "package": "com.diegonmarcos.watchdog",
+        "fleet_id": "watchdog"
+      },
+      {
+        "id": "c3-morpheus",
+        "label": "Morpheus",
+        "icon": "robot",
+        "package": "com.diegonmarcos.morpheus",
+        "fleet_id": "morpheus"
+      },
+      {
+        "id": "c3-watchtower",
+        "label": "WatchTower",
+        "icon": "reports",
+        "package": "com.diegonmarcos.watchtower",
+        "fleet_id": "watchtower"
+      }
+    ],
+    "_doc_pages": "The sub-pages each content tab offers, from ONE declaration per tab. These are the pages the SuperApp's ui.sections[c3] carried as `hidden: true` entries behind its two facet tiles: Topology's stack/vms/mesh and Observ's health/workflows/runs/logs/reports.",
+    "topology": {
+      "pages": [
+        {
+          "id": "stack",
+          "label": "Stack",
+          "icon": "stack"
+        },
+        {
+          "id": "vms",
+          "label": "VMs",
+          "icon": "vms"
+        }
+      ]
+    },
+    "observ": {
+      "pages": [
+        {
+          "id": "health",
+          "label": "Health",
+          "icon": "health"
+        },
+        {
+          "id": "workflows",
+          "label": "Workflows",
+          "icon": "workflows"
+        },
+        {
+          "id": "logs",
+          "label": "Logs",
+          "icon": "logs"
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "icon": "reports"
+        }
+      ]
+    },
+    "configs": {
+      "pages": [
+        {
+          "id": "general",
+          "label": "General",
+          "icon": "settings"
+        },
+        {
+          "id": "about",
+          "label": "About",
+          "icon": "info"
+        }
+      ]
+    }
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep",
+        "jq"
+      ],
+      "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran."
+    },
+    "unit": {
+      "_doc": "Runs gradle test (build.sh test) on every ship. app/src/test carries the declaration parser's JVM suite, which exercises the SAME parser the phone runs against this repository's own build.json.",
+      "task": "test",
+      "enabled": true
+    }
+  }
+}

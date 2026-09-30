@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #648 THE palette of the chrome, one declaration each. Every value is the fleet's
+     (aa_cloud-superapp colors.xml, libs:bottomnav colors.xml) or derived from one, so
+     cloud-c3 reads as the same product as the superapp it was lifted out of — the same
+     values ac_cloud-drive declares. C3Theme.kt reads these into the Material scheme; no
+     Kotlin file names a colour literal (test/test-c3-shell.sh asserts it). -->
+<resources>
+    <!-- Window: the black end of superapp's black→purple gradient, one step lighter than the
+         island fill so the islands read as boxes standing on the page. -->
+    <color name="c3_background">#FF07040F</color>
+    <!-- Card / sheet surface = the island fill libs:bottomnav declares (bottom_nav_island_fill). -->
+    <color name="c3_surface">#FF140B26</color>
+    <!-- Toolbar island, selected row, pressed chip. -->
+    <color name="c3_surface_raised">#FF1F1238</color>
+    <!-- Hairline = superapp glass_border. -->
+    <color name="c3_outline">#33A78BFA</color>
+    <!-- Accent = superapp island_accent: the lit pill, the hero border. -->
+    <color name="c3_accent">#FFB794F4</color>
+    <!-- Accent ON A CARD = superapp theme_cloud_accent, the variant that clears 4.5:1 over a
+         13%-white card as well as over black. -->
+    <color name="c3_accent_on_card">#FFC7AEFB</color>
+    <!-- Ink on an accent surface (the selected pill's label) = superapp tile_ink. -->
+    <color name="c3_on_accent">#FF14082B</color>
+    <color name="c3_text">#FFFFFFFF</color>
+    <color name="c3_text_secondary">#AAFFFFFF</color>
+
+    <!-- The StatusLight, SAME names and SAME values as the superapp's and cloud-drive's
+         (#570/#573): a status light makes a promise, and two greens that differ are one of
+         them lying. This app is an OPS surface, so that property matters here more than
+         anywhere — a green here is a claim about a live machine. -->
+    <color name="status_light_on">#FF3DDC84</color>
+    <color name="status_light_off">#FFF87171</color>
+    <color name="status_light_unknown">#FFB0B8C4</color>
+</resources>

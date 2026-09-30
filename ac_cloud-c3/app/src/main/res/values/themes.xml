@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Dark is the fleet-wide default (#336, #337). Forced DARK, not DayNight: the Compose
+         chrome (C3Theme) paints its own dark surfaces from colors.xml, so a system light-mode
+         switch would recolour only the system chrome and leave the content dark. The
+         declaration lives here, in the theme parent; C3Theme carries the Compose half. -->
+    <style name="Theme.CloudC3" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/c3_background</item>
+        <!-- The View half of "no black font on the dark page". Theme.Material3.Dark already
+             resolves light text for its OWN attributes, but a platform dialog that reads
+             android:textColor* must land on THIS palette and not on a framework default. -->
+        <item name="android:textColorPrimary">@color/c3_text</item>
+        <item name="android:textColorSecondary">@color/c3_text_secondary</item>
+        <item name="android:textColorTertiary">@color/c3_text_secondary</item>
+        <item name="android:textColorHint">@color/c3_text_secondary</item>
+        <item name="colorOnBackground">@color/c3_text</item>
+        <item name="colorOnSurface">@color/c3_text</item>
+        <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
+        <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="lollipop">true</item>
+        <!-- Dark page top and bottom -> LIGHT system-bar glyphs. -->
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+    </style>
+</resources>
