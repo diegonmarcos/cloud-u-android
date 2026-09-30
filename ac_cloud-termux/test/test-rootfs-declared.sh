@@ -205,6 +205,78 @@ grep -q 'cloudRootfsArtifact.digest_asset' "$G" && grep -q 'cloudRootfsArtifact.
     && ok "gradle still names the two #618 sidecars ($digest_asset, $url_asset) — only to assert their ABSENCE now" \
     || bad "the #618 sidecar names are not read from rootfs.json::artifact any more"
 
+echo "── 5: #644 the declarative link store is wired to THIS terminal ──"
+#
+# The engine's own semantics (generations, atomic switch, rollback, verify,
+# repair) are mutation-proved once, offline, in the #644 section of
+# ac_cloud-nix-on-droid/test/test-bootstrap-baked.sh — one engine, one set of
+# proofs. What can only be wrong HERE is the wiring, and every piece of it is a
+# place a green tick could hide a store that never runs: staged but not bound,
+# bound but never entered, entered but not required by the gradle gate.
+S="$ROOT/ab_cloud-terminal-store"
+E="$APP/enter.sh"; [ -f "$E" ] || E="$R/enter.sh"
+G="$APP/app/build.gradle"
+
+if [ -f "$S/cloud-store" ] && [ -f "$S/render-store.py" ]; then
+    ok "the shared store exists at ab_cloud-terminal-store (ONE engine, two terminals that stay separate)"
+else
+    bad "ab_cloud-terminal-store is missing — build-rootfs.sh stages it into the APK assets"
+fi
+
+# The tool list is the one rootfs.json already keeps, so adding a tool is an edit
+# to THAT list. Proved by equality, not by reading the renderer.
+WANT="$(json "$R/rootfs.json" '" ".join(d["binaries"])')"
+GOT="$(python3 "$S/render-store.py" termux 2>/dev/null | sed -n "s/^CLOUD_STORE_TOOLS='\(.*\)'$/\1/p")"
+if [ -n "$GOT" ] && [ "$GOT" = "$WANT" ]; then
+    ok "the rendered store declaration IS rootfs.json::binaries ($GOT) — a new tool is a data-only edit here too"
+else
+    bad "the store renders '$GOT' but rootfs.json::binaries is '$WANT' — the store would manage a different set of links than the rootfs installs"
+fi
+
+# No nix in this terminal, and the declaration must say so rather than imply one.
+PM="$(python3 "$S/render-store.py" termux 2>/dev/null | sed -n "s/^CLOUD_STORE_PACKAGE_MANAGER='\(.*\)'$/\1/p")"
+[ "$PM" = none ] && ok "this terminal declares package_manager 'none' — it has no nix, so the generations/rollback are implemented, not delegated" \
+    || bad "the termux declaration claims package manager '$PM'; there is no nix in this rootfs for it to drive"
+
+grep -q 'ab_cloud-terminal-store' "$R/build-rootfs.sh" \
+    && ok "build-rootfs.sh stages the store beside enter.sh (APK assets, NOT the tarball — an engine fix must not cost a ~400 MB rebuild)" \
+    || bad "build-rootfs.sh does not stage the store, so the assets gradle requires would never exist"
+
+grep -q 'render-store.py' "$R/build-rootfs.sh" \
+    && ok "build-rootfs.sh renders the declaration at build time, so it cannot drift from rootfs.json" \
+    || bad "build-rootfs.sh ships no rendered declaration — the engine would have nothing to read"
+
+grep -q 'mkdir -p /usr/lib/cloud-store' "$R/install-in-rootfs.sh" \
+    && ok "install-in-rootfs.sh creates the bind mountpoint (proot binds onto an existing path; an empty dir is all the tarball carries)" \
+    || bad "the rootfs has no /usr/lib/cloud-store mountpoint, so enter.sh's bind would have nowhere to land"
+
+if grep -q 'b \$HERE/cloud-store:/usr/lib/cloud-store' "$E" && grep -q 'login-exec' "$E"; then
+    ok "enter.sh binds the store and execs through login-exec, so every session initialises and verifies it"
+else
+    bad "enter.sh does not both bind the store and enter through login-exec — a staged store nothing runs is the #644 defect with extra steps"
+fi
+
+# Guarded, because a login is worth more than a store: #638 is what a boot path
+# that can fail looks like from the owner's end.
+grep -q '\[ -d "\$HERE/cloud-store" \]' "$E" \
+    && ok "the store wiring is guarded on presence — an APK built before #644 still reaches a shell" \
+    || bad "enter.sh wires the store unconditionally; a missing asset would cost the terminal its shell"
+
+MISSING=""
+for f in cloud-store declaration.sh login-init.sh login-exec; do
+    grep -q "cloud-store/$f" "$G" || MISSING="$MISSING $f"
+done
+[ -z "$MISSING" ] && ok "verifyCloudRootfs requires all four store assets, so a staging failure is a red build not a silent loss" \
+    || bad "app/build.gradle's asset gate does not require:$MISSING"
+
+grep -q 'cloud-store' "$R/verify-rootfs.sh" \
+    && ok "verify-rootfs.sh stages the store too, so the runtime half exercises the path the phone takes" \
+    || bad "verify-rootfs.sh ignores the store — enter.sh would correctly decline to wire it and the runtime tester would pass over nothing"
+
+grep -q '"ab_cloud-terminal-store/\*\*"' "$WF" \
+    && ok "the ship workflow watches ab_cloud-terminal-store, so an engine fix starts a run and publishes" \
+    || bad "$WF does not watch the shared store: an engine fix would sit inert behind a green tick"
+
 echo
 [ "$fail" -eq 0 ] && echo "PASS test-rootfs-declared" || echo "FAIL test-rootfs-declared"
 exit "$fail"

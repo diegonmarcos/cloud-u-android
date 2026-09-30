@@ -55,6 +55,19 @@ def load_render_store():
     return module
 
 
+def profile_missing(generation: str, tools) -> list:
+    """#644 -- declared tool names with nothing behind them in the realized profile.
+
+    default_packages.binaries is maintained beside attrs and provides and can
+    drift from both; a drifted name becomes a link that dangles on every phone,
+    which is the #638/#640/#641 shape one layer up. Pure, so the tester proves
+    both verdicts without a nix profile.
+    """
+    return [t for t in tools
+            if not os.path.islink(os.path.join(generation, "bin", t))
+            and not os.path.exists(os.path.join(generation, "bin", t))]
+
+
 def store_init_line(install_dir: str) -> str:
     """#644 -- the line that makes a login initialise, verify and repair the store.
 
@@ -450,9 +463,7 @@ def main() -> int:
             # maintained beside attrs and provides, so it CAN drift from them.
             # Proving it here is what makes "adding a tool is a data-only edit"
             # true rather than merely intended.
-            store_missing = [t for t in store_tools
-                             if not os.path.islink(os.path.join(generation, "bin", t))
-                             and not os.path.exists(os.path.join(generation, "bin", t))]
+            store_missing = profile_missing(generation, store_tools)
             if store_missing:
                 print(f"FAIL: default_packages.binaries names {store_missing}, which the realized "
                       f"profile does not provide -- the link store would ship dangling links. "

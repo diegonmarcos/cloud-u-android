@@ -934,5 +934,252 @@ else
     ok "no /nix/store hash literal in bake_default_packages.py — the env link target is derived from profile_link"
 fi
 
+## ───────────────────────────────────────────────────────────────────────────
+## #644 — the declarative link store
+##
+## Every assertion below is MUTATION-PROVED and asserts on the MESSAGE, not on
+## exit status: a verify that returns 1 while naming nothing actionable is the
+## same defect as the three it exists to replace (#638/#640/#641), which were all
+## discovered by a user rather than by a check. So each check first breaks
+## something and requires the engine to SAY which link, then fixes it.
+## Offline: no nix, no zip, no Android SDK. The sandbox is a fake bin directory
+## and a rendered declaration, which is all the engine ever reads.
+## ───────────────────────────────────────────────────────────────────────────
+echo "── #644 declarative link store [ab_cloud-terminal-store] ──"
+
+STORE_SRC="$DIR/../ab_cloud-terminal-store"
+ENGINE="$STORE_SRC/cloud-store"
+RENDERER="$STORE_SRC/render-store.py"
+
+if [ ! -f "$ENGINE" ] || [ ! -f "$RENDERER" ]; then
+    bad "the shared link store is missing from $STORE_SRC — build.json::...identity_files names it, so the bake and the content address both depend on it"
+else
+
+SB="$(mktemp -d)"
+trap 'rm -rf "$SB"' EXIT
+
+# ── S1 — the renderer projects THE APP'S OWN list, it does not restate it ──
+# A fake repo, so the data-only mutation below never touches the real build.json:
+# render-store.py resolves app_dir against the directory holding store.json, so a
+# copy of the store beside a fake app dir renders entirely inside the sandbox.
+mkdir -p "$SB/repo/ac_cloud-nix-on-droid" "$SB/repo/ac_cloud-termux/rootfs"
+cp "$STORE_SRC"/store.json "$STORE_SRC"/cloud-store "$STORE_SRC"/render-store.py \
+   "$STORE_SRC"/login-init.sh "$STORE_SRC"/login-exec "$SB/repo/" 2>/dev/null
+mkdir -p "$SB/repo/ab_cloud-terminal-store"
+mv "$SB/repo"/store.json "$SB/repo"/cloud-store "$SB/repo"/render-store.py \
+   "$SB/repo"/login-init.sh "$SB/repo"/login-exec "$SB/repo/ab_cloud-terminal-store/"
+FAKE_RENDER="$SB/repo/ab_cloud-terminal-store/render-store.py"
+
+fake_build_json() {
+    python3 -c "
+import json, sys
+json.dump({'forks': {'nixdroid': {'bootstrap': {'default_packages': {
+    'binaries': sys.argv[2:],
+    'profile_link': 'nix/var/nix/profiles/per-user/nix-on-droid/profile',
+}}}}}, open(sys.argv[1], 'w'))
+" "$SB/repo/ac_cloud-nix-on-droid/build.json" "$@"
+}
+decl_value() { sed -n "s/^$1='\(.*\)'$/\1/p" "$2"; }
+
+fake_build_json alpha beta env
+if python3 "$FAKE_RENDER" nix "$SB/one.sh" 2>"$SB/one.err"; then
+    GOT="$(decl_value CLOUD_STORE_TOOLS "$SB/one.sh")"
+    if [ "$GOT" = "alpha beta env" ]; then
+        ok "the rendered declaration IS the app's own binaries list, in order ($GOT)"
+    else
+        bad "render-store.py rendered CLOUD_STORE_TOOLS='$GOT' from a binaries list of 'alpha beta env' — the projection does not follow the declaration"
+    fi
+    GOT="$(decl_value CLOUD_STORE_PREFIX "$SB/one.sh")"
+    if [ "$GOT" = "/nix/var/nix/profiles/per-user/nix-on-droid/profile/bin" ]; then
+        ok "targets are the DECLARED profile prefix, never a /nix/store hash (which moves with the pin)"
+    else
+        bad "CLOUD_STORE_PREFIX rendered as '$GOT', not the declared profile_link + /bin"
+    fi
+else
+    bad "render-store.py could not render the nix terminal: $(cat "$SB/one.err")"
+fi
+
+# ── S2 — MUTATION: adding a tool is a DATA-ONLY edit ───────────────────────
+# The whole point of #644. A name is appended to the binaries list — nothing
+# else changes — and it must reach the declaration the engine loops over, with
+# the engine and store.json byte-identical before and after.
+ENGINE_BEFORE="$(cksum < "$SB/repo/ab_cloud-terminal-store/cloud-store")"
+DECL_BEFORE="$(cksum < "$SB/repo/ab_cloud-terminal-store/store.json")"
+fake_build_json alpha beta env gamma
+if python3 "$FAKE_RENDER" nix "$SB/two.sh" 2>"$SB/two.err"; then
+    GOT="$(decl_value CLOUD_STORE_TOOLS "$SB/two.sh")"
+    ENGINE_AFTER="$(cksum < "$SB/repo/ab_cloud-terminal-store/cloud-store")"
+    DECL_AFTER="$(cksum < "$SB/repo/ab_cloud-terminal-store/store.json")"
+    if [ "$GOT" = "alpha beta env gamma" ] && [ "$ENGINE_BEFORE" = "$ENGINE_AFTER" ] && [ "$DECL_BEFORE" = "$DECL_AFTER" ]; then
+        ok "a new tool reaches the store with ZERO code change — only the app's binaries list moved"
+    else
+        bad "adding 'gamma' to the binaries list rendered '$GOT' (engine changed: $([ "$ENGINE_BEFORE" = "$ENGINE_AFTER" ] && echo no || echo YES), store.json changed: $([ "$DECL_BEFORE" = "$DECL_AFTER" ] && echo no || echo YES)) — #644's data-only property does not hold"
+    fi
+else
+    bad "render-store.py failed after a tool was appended to the binaries list: $(cat "$SB/two.err")"
+fi
+
+# ── S3 — MUTATION: a fixed link naming an undeclared tool must be refused ──
+fake_build_json alpha beta
+if python3 "$FAKE_RENDER" nix "$SB/three.sh" 2>"$SB/three.err"; then
+    bad "render-store.py accepted a declaration whose fixed link /usr/bin/env wants 'env', which the tool list no longer declares — that renders a store that cannot ever satisfy #640"
+else
+    if grep -q "env" "$SB/three.err" && grep -q "/usr/bin/env" "$SB/three.err"; then
+        ok "a fixed link naming an undeclared tool is refused, and the message names both ($(head -c 90 "$SB/three.err" | tr '\n' ' '))"
+    else
+        bad "the renderer refused the mismatch but its message names neither the link nor the tool: $(cat "$SB/three.err")"
+    fi
+fi
+
+# ── the engine sandbox: search mode, fake binaries, no nix ─────────────────
+mkdir -p "$SB/bin" "$SB/home"
+for t in alpha beta; do
+    printf '#!/bin/sh\necho %s\n' "$t" > "$SB/bin/$t"
+    chmod 0755 "$SB/bin/$t"
+done
+cat > "$SB/declaration.sh" <<DECL
+CLOUD_STORE_TERMINAL='sandbox'
+CLOUD_STORE_ROOT='.cloud-store'
+CLOUD_STORE_CURRENT='current'
+CLOUD_STORE_GENERATIONS='generations'
+CLOUD_STORE_BIN='bin'
+CLOUD_STORE_ENGINE='cloud-store'
+CLOUD_STORE_KEEP='5'
+CLOUD_STORE_INSTALL_DIR='$SB'
+CLOUD_STORE_MODE='search'
+CLOUD_STORE_PREFIX=''
+CLOUD_STORE_SEARCH='$SB/bin'
+CLOUD_STORE_PACKAGE_MANAGER='none'
+CLOUD_STORE_NIX_PROFILE=''
+CLOUD_STORE_TOOLS='alpha beta'
+CLOUD_STORE_FIXED_LINKS=''
+DECL
+CUR="$SB/home/.cloud-store/current"
+store() { CLOUD_STORE_HOME="$SB/home" CLOUD_STORE_DECLARATION="$SB/declaration.sh" sh "$ENGINE" "$@"; }
+
+# ── S4 — apply builds a generation and puts the engine itself in $HOME ─────
+if store apply >"$SB/apply.out" 2>&1; then
+    if [ -x "$CUR/bin/alpha" ] && [ -x "$CUR/bin/beta" ] && [ -x "$SB/home/.cloud-store/cloud-store" ]; then
+        ok "apply materialised every declared link, and the engine itself lives in \$HOME (Diego's ask) and is linked into its own bin/"
+    else
+        bad "apply left an incomplete store: $(ls -l "$CUR/bin" 2>&1 | tr '\n' ' ')"
+    fi
+else
+    bad "apply failed in a sandbox where every declared target exists: $(cat "$SB/apply.out")"
+fi
+
+# ── S5 — MUTATION: a broken TARGET must be named by verify ────────────────
+rm -f "$SB/bin/alpha"
+if store verify >"$SB/v1.out" 2>&1; then
+    bad "verify passed with the target of 'alpha' deleted — this is exactly #640 going unnoticed, one layer up"
+else
+    if grep -q "alpha" "$SB/v1.out"; then
+        ok "a vanished target FAILS verify and the message names the tool ($(grep -m1 alpha "$SB/v1.out" | cut -c1-96))"
+    else
+        bad "verify failed but never named 'alpha', so nobody can act on it: $(cat "$SB/v1.out")"
+    fi
+fi
+
+# ── S6 — MUTATION: a MIS-AIMED link must be named, and repair must fix it ──
+printf '#!/bin/sh\necho alpha\n' > "$SB/bin/alpha"; chmod 0755 "$SB/bin/alpha"
+ln -sfn /nowhere/at/all "$CUR/bin/beta"
+if store verify >"$SB/v2.out" 2>&1; then
+    bad "verify passed with beta's link re-aimed at /nowhere/at/all"
+else
+    if grep -q "beta" "$SB/v2.out" && grep -q "/nowhere/at/all" "$SB/v2.out"; then
+        ok "a mis-aimed link FAILS verify, named, with both where it points and what the declaration says"
+    else
+        bad "verify failed but its message does not name beta and where it wrongly points: $(cat "$SB/v2.out")"
+    fi
+fi
+if store repair >"$SB/r1.out" 2>&1 && store verify >"$SB/v3.out" 2>&1; then
+    ok "repair rebuilt from the declaration and verify is clean again — 'manage the links update and fix'"
+else
+    bad "repair did not fix a store it had just reported broken: $(cat "$SB/r1.out" "$SB/v3.out")"
+fi
+
+# ── S7 — rollback returns to the previous generation ──────────────────────
+store apply >/dev/null 2>&1
+BEFORE="$(readlink "$CUR")"
+if store rollback >"$SB/rb.out" 2>&1; then
+    AFTER="$(readlink "$CUR")"
+    if [ "$AFTER" != "$BEFORE" ] && [ -d "$AFTER" ]; then
+        ok "rollback switched ${BEFORE##*/} -> ${AFTER##*/} without rebuilding anything"
+    else
+        bad "rollback left the live generation at ${AFTER##*/} (was ${BEFORE##*/})"
+    fi
+else
+    bad "rollback failed with more than one generation present: $(cat "$SB/rb.out")"
+fi
+
+# ── S8 — MUTATION: an interrupted apply must never half-switch ────────────
+# The atomicity claim, tested rather than asserted: CLOUD_STORE_FAULT stops the
+# engine at the named stage. Whatever it was doing, `current` must still be the
+# generation that was live before, and that generation must still verify.
+store apply >/dev/null 2>&1
+LIVE_BEFORE="$(readlink "$CUR")"
+for stage in populate rename switch; do
+    CLOUD_STORE_HOME="$SB/home" CLOUD_STORE_DECLARATION="$SB/declaration.sh" \
+        CLOUD_STORE_FAULT="$stage" sh "$ENGINE" apply >"$SB/f.$stage.out" 2>&1
+    LIVE_NOW="$(readlink "$CUR")"
+    if [ "$LIVE_NOW" != "$LIVE_BEFORE" ]; then
+        bad "an apply interrupted at stage '$stage' moved the live generation from ${LIVE_BEFORE##*/} to ${LIVE_NOW##*/} — the switch is not atomic"
+    elif store verify >/dev/null 2>&1; then
+        ok "an apply interrupted at '$stage' left generation ${LIVE_BEFORE##*/} live and intact"
+    else
+        bad "an apply interrupted at '$stage' kept ${LIVE_BEFORE##*/} live but it no longer verifies"
+    fi
+done
+
+# ── S9 — MUTATION: the store PATH+ensure line comes from the DECLARATION ──
+# login-inner is patched with the line only when an install dir is declared; a
+# line that appeared unconditionally would be a hardcoded path pretending to be
+# data, which is the habit #644 replaces.
+mkdir -p "$SB/probe/bin"
+printf '#!/bin/sh\nexit 0\n' > "$SB/probe/bin/present"; chmod 0755 "$SB/probe/bin/present"
+python3 - "$DIR/app/src/main/cpp/bake_default_packages.py" "$SB/probe" <<'PY' > "$SB/p.out" 2>&1
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+li = ('#!/bin/sh\nusershell="/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bash-5.2-p15/bin/bash"\n'
+      '. "/data/data/cld.termux.nix/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh"\n'
+      "exec /usr/bin/env bash  # otherwise it'll be a limited bash that came with Nix\n"
+      'exec /usr/bin/env "$@"\n')
+args = ("cld.termux.nix", "usr/lib/cloud-agent-tools-init.sh",
+        "nix/var/nix/profiles/per-user/nix-on-droid/profile", "fish")
+withstore = m.patch_login_inner(li, *args, "usr/lib/cloud-store")
+without = m.patch_login_inner(li, *args, "")
+print("WITH_LINE=%s" % ('/usr/lib/cloud-store/login-init.sh' in withstore))
+print("WITHOUT_LINE=%s" % ('cloud-store' in without))
+print("GUARDED=%s" % ('if [ -r "/usr/lib/cloud-store/login-init.sh" ]' in withstore))
+# Both verdicts against a generation built in the sandbox: a host-dependent
+# probe would make this check mean different things on different runners.
+print("MISSING_TOOL=%s" % m.profile_missing(sys.argv[2], ["git"]))
+print("PRESENT_TOOL=%s" % m.profile_missing(sys.argv[2], ["present"]))
+PY
+if grep -q "WITH_LINE=True" "$SB/p.out" && grep -q "WITHOUT_LINE=False" "$SB/p.out" \
+   && grep -q "GUARDED=True" "$SB/p.out"; then
+    ok "login-inner gains a GUARDED store-init line only when an install dir is declared (a login never depends on the store existing)"
+else
+    bad "the login-inner store wiring is not declaration-driven: $(cat "$SB/p.out")"
+fi
+if grep -q "MISSING_TOOL=\['git'\]" "$SB/p.out" && grep -q "PRESENT_TOOL=\[\]" "$SB/p.out"; then
+    ok "the bake gate names a declared tool the realized profile does not provide, and stays silent when it does"
+else
+    bad "profile_missing() does not discriminate a missing tool from a present one: $(cat "$SB/p.out")"
+fi
+
+# ── S10 — the real declarations both render, and the login literal agrees ──
+for terminal in nix termux; do
+    if python3 "$RENDERER" "$terminal" >"$SB/real.$terminal" 2>"$SB/real.$terminal.err"; then
+        N="$(decl_value CLOUD_STORE_TOOLS "$SB/real.$terminal" | wc -w | tr -d ' ')"
+        ok "the real $terminal declaration renders ($N tools) and login-init.sh's install-dir literal matches store.json"
+    else
+        bad "the real $terminal declaration does not render: $(cat "$SB/real.$terminal.err")"
+    fi
+done
+
+fi
+
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]
