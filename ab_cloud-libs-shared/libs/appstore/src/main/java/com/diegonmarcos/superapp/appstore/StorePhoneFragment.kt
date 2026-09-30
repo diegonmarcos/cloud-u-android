@@ -86,6 +86,13 @@ class StorePhoneFragment : Fragment() {
     // have installed?". Read from ApkCache's download records — no second
     // bookkeeping, and no hashing on the UI thread.
     private val cached = HashMap<String, ApkCache.Entry>()
+    // #666 the clear-cache button, kept so its label can carry the REAL count and
+    // megabytes it would free, recomputed on every reload rather than described.
+    private var cacheBtn: TextView? = null
+    // Set when a tap has already taken the provably-installed bytes and the only
+    // thing left is unproven: the next tap discards the only copy, and the toast
+    // has said so in those words. Cleared on every reload.
+    private var armedToDiscard = false
 
     // #565 export / import. Registered at construction, as the Activity Result
     // API requires; the system picker owns where the file lives.
@@ -118,7 +125,10 @@ class StorePhoneFragment : Fragment() {
             // the user needs a way to say "drop it all" that does not mean
             // Settings ▸ Clear cache — which no longer reaches these bytes, on
             // purpose, because the OS doing that silently WAS the bug.
-            addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() })
+            // #666 the label states the measured count and megabytes; reload()
+            // rewrites it from ApkCache.plan, so it is never an estimate.
+            addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
+                .also { cacheBtn = it })
         })
         col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
         col.addView(filterToggle(ctx))
@@ -148,7 +158,7 @@ class StorePhoneFragment : Fragment() {
             into.post {
                 if (!isAdded) return@post
                 into.removeAllViews()
-                built.onSuccess { rows = it; render(ctx, into, it); then?.invoke() }
+                built.onSuccess { rows = it; render(ctx, into, it); refreshCacheLabel(); then?.invoke() }
                     .onFailure { into.addView(caption(ctx, ctx.getString(R.string.store_phone_list_failed, it.message))) }
             }
         }
@@ -473,14 +483,61 @@ class StorePhoneFragment : Fragment() {
         }
     }
 
-    /** #625 the user's own "clear cache": every cached APK, gone, counted. */
+    /**
+     * #666 the user's own "clear cache", in two tiers so that a tap can never be
+     * the thing that loses a download.
+     *
+     * Tier one takes only the bytes [ApkCache.clearRedundant] can PROVE are
+     * redundant — the installed package hashes to them. Whatever is left is the
+     * only copy of something whose install is not proven (a failed install, a
+     * download interrupted mid-update), so it is kept and the toast says, in
+     * real counts and megabytes, that a second tap discards it. Tier two runs
+     * only on that second tap. #625's data loss must not come back through this
+     * button.
+     */
     private fun clearCache() {
         val app = requireContext().applicationContext
+        val discard = armedToDiscard
         thread(name = "store-cache-clear") {
-            val e = ApkCache.clear(app)
-            toastLater(app, app.getString(R.string.store_cache_cleared,
-                e.deleted.size, e.freedBytes / 1_000_000))
-            view?.post { if (isAdded) reload() }
+            val e = if (discard) ApkCache.clear(app) else ApkCache.clearRedundant(app)
+            val left = if (discard) ApkCache.Plan(emptyList(), emptyList()) else ApkCache.plan(app)
+            toastLater(app, when {
+                discard -> app.getString(R.string.store_cache_discarded,
+                    e.deleted.size, e.freedBytes / 1_000_000)
+                left.kept.isEmpty() -> app.getString(R.string.store_cache_cleared,
+                    e.deleted.size, e.freedBytes / 1_000_000)
+                // #233: a surface that cannot act must say so. Name the count and
+                // the megabytes, and name what a second tap would cost.
+                else -> app.getString(R.string.store_cache_some_kept,
+                    e.deleted.size, e.freedBytes / 1_000_000,
+                    left.kept.size, left.keptBytes / 1_000_000)
+            })
+            view?.post {
+                if (!isAdded) return@post
+                armedToDiscard = left.kept.isNotEmpty()
+                reload()
+            }
+        }
+    }
+
+    /** #666 the clear-cache label, measured. Off the main thread — deciding
+     *  redundancy hashes every cached APK and the installed package beside it. */
+    private fun refreshCacheLabel() {
+        val app = context?.applicationContext ?: return
+        val btn = cacheBtn ?: return
+        val armed = armedToDiscard
+        thread(name = "store-cache-plan") {
+            val p = runCatching { ApkCache.plan(app) }.getOrNull() ?: return@thread
+            val free = if (armed) p.keptBytes else p.redundantBytes
+            val count = if (armed) p.kept.size else p.redundant.size
+            btn.post {
+                if (!isAdded) return@post
+                btn.text = when {
+                    armed -> app.getString(R.string.store_cache_clear_discard, count, free / 1_000_000)
+                    count == 0 -> app.getString(R.string.store_cache_clear_empty)
+                    else -> app.getString(R.string.store_cache_clear_n, count, free / 1_000_000)
+                }
+            }
         }
     }
 

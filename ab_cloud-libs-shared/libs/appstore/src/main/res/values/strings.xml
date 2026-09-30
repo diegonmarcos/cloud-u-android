@@ -54,6 +54,18 @@
          surface at all while the OS was quietly reclaiming cacheDir. -->
     <string name="store_cache_clear">\u2327  Clear APK cache</string>
     <string name="store_cache_cleared">Cleared %1$d cached APK(s), %2$d MB freed.</string>
+    <!-- #666 The button states what it would actually free, counted and measured
+         by ApkCache.plan on every reload - never an estimate, and never a bare
+         verb. "Discard" is the second tier: those bytes are the ONLY copy of a
+         download whose install is not proven, so taking them is named as a loss
+         rather than as freeing space. -->
+    <string name="store_cache_clear_n">⌧  Clear %1$d cached APK(s) · %2$d MB</string>
+    <string name="store_cache_clear_empty">⌧  APK cache: nothing to clear</string>
+    <string name="store_cache_clear_discard">⌧  DISCARD %1$d unproven APK(s) · %2$d MB</string>
+    <!-- NOT store_cache_kept: that name is already taken by the row line below,
+         and a duplicate resource name is an aapt2 error. -->
+    <string name="store_cache_some_kept">Cleared %1$d installed APK(s), %2$d MB freed. %3$d APK(s), %4$d MB kept: not proven installed, and this is the only copy. Tap again to discard them.</string>
+    <string name="store_cache_discarded">Discarded %1$d unproven APK(s), %2$d MB — those downloads are gone.</string>
     <string name="store_cache_matches">cached build %1$d (%2$d MB) \u00b7 matches what is installed</string>
     <string name="store_cache_waiting">cached build %1$d (%2$d MB) \u00b7 installed: %3$s \u2014 kept for the install</string>
     <string name="store_cache_kept">nothing was installed; the download is kept in the cache</string>

@@ -41,23 +41,36 @@ import java.security.MessageDigest
  * delete". That is a statement about a message, not about the device. This one
  * asks the device, and it is careful about what it can actually prove:
  *
- * - PROVEN, by hashing: the file on disk is byte-for-byte the artifact that was
- *   downloaded and identified ([Record.sha256], recorded at download time).
- * - PROVEN, by PackageManager: the installed package has the SAME package name,
- *   the SAME versionCode and the SAME signing certificate as that artifact's own
- *   manifest.
- * - NOT PROVEN, and deliberately not claimed: that the installed APK is
- *   byte-identical to the cached one. An app cannot read another package's
- *   base.apk without root, so nothing here can hash it. A different build that
- *   shared the package name, versionCode AND signing certificate would satisfy
- *   the checks above — for THIS fleet that means a rebuild of the same
- *   version_code, which the ship engine's wall-clock version_code makes
- *   vanishingly unlikely, but it is a heuristic and it is named as one.
+ * - PROVEN, by hashing the file on disk: it is byte-for-byte the artifact that
+ *   was downloaded and identified ([Record.sha256], recorded at download time).
+ * - PROVEN, by hashing the INSTALLED PACKAGE: [installedSha256] hashes the APK
+ *   Android is actually running, reached through `ApplicationInfo.sourceDir`,
+ *   and that digest must equal the cached artifact's. This is THE rule. An
+ *   earlier revision of this file claimed "an app cannot read another package's
+ *   base.apk without root, so nothing here can hash it" and settled for
+ *   versionCode + signing certificate instead. That claim is wrong: `/data/app`
+ *   denies LISTING but still permits traversal to a path the platform itself
+ *   handed us, and `base.apk` is world-readable — which is how every APK
+ *   extractor on the phone works unrooted. The heuristic it justified is also
+ *   too weak to act on: a REBUILT same-version APK has a different digest and
+ *   an identical versionCode and certificate, and #517/#518 are a whole history
+ *   of versionCode confusion in this fleet.
+ * - FALLBACK, named as one: when [installedSha256] cannot read those bytes (a
+ *   split-APK install, a path that will not open), the old versionCode +
+ *   certificate comparison decides, and the reason says out loud that the
+ *   evidence is weaker.
+ *
+ * The digest is read from the DEVICE, never from [Record.sha256] on both sides
+ * — comparing the cache against itself would pass unconditionally, which is the
+ * hollow shape of this check and the one the guard mutates for.
  *
  * Everything short of that keeps the file. A declined dialog, a failure, a
  * missing record, a file that no longer hashes to what was downloaded: all of
  * them are [Retention.Kept], with the reason, because the cost of keeping bytes
- * is disk and the cost of dropping them is the whole download again.
+ * is disk and the cost of dropping them is the whole download again. Note which
+ * way the fallbacks fail: every "cannot tell" ends in a keep, so even if the
+ * platform someday stops handing over those bytes, the cost is disk, not a
+ * 267 MB download.
  */
 object ApkCache {
 
@@ -164,6 +177,82 @@ object ApkCache {
     }
 
     /**
+     * The retention DECISION, taken without touching a byte. [Decision.proof]
+     * non-null means the install is proven and the file is free to go; null
+     * means keep, and [Decision.reason] says why either way.
+     *
+     * Separate from [reapIfInstalled] so the Store can tell the user what a
+     * clear WOULD free before they tap it, using this exact rule rather than a
+     * second, looser copy of it.
+     */
+    class Decision(val proof: String?, val reason: String)
+
+    fun decide(ctx: Context, apk: File): Decision {
+        fun keep(why: String) = Decision(null, why)
+        if (!isOurs(ctx, apk))
+            return keep("${apk.name} is not a file this cache owns — nothing touched")
+        val rec = record(apk)
+            ?: return keep("${apk.name} has no download record, so nothing can be " +
+                "compared against what is installed — kept")
+        val onDisk = runCatching { ApkIntegrity.sha256(apk) }.getOrNull()
+        if (onDisk != rec.sha256)
+            return keep("${apk.name} no longer hashes to the artifact that was " +
+                "downloaded (${onDisk?.take(12) ?: "unreadable"}… vs ${rec.sha256.take(12)}…) — " +
+                "kept, and NOT treated as installed")
+        val installed = installedInfo(ctx, rec.pkg)
+            ?: return keep("${rec.pkg} is not installed on this device, whatever the " +
+                "installer reported — ${apk.name} kept for the retry")
+        val code = versionCodeOf(installed)
+        if (code != rec.versionCode)
+            return keep("${rec.pkg} is installed at versionCode $code, not the cached " +
+                "${rec.versionCode} — something else installed it, so ${apk.name} is kept")
+        // THE RULE. Hash the APK the device is actually running and compare it to
+        // the artifact that was downloaded. Read from the INSTALLED PACKAGE —
+        // passing rec.sha256 in here would be the cache agreeing with itself.
+        val installedSha = installedSha256(ctx, rec.pkg)
+        if (installedSha != null) {
+            if (installedSha != rec.sha256)
+                return keep("${rec.pkg} at versionCode $code is installed from DIFFERENT bytes " +
+                    "than the cached artifact (installed ${installedSha.take(12)}… vs cached " +
+                    "${rec.sha256.take(12)}…) — ${apk.name} kept, because a matching versionCode " +
+                    "is not a matching build")
+            return Decision("the installed package's own APK hashes to ${rec.sha256.take(12)}…, " +
+                "byte-for-byte the artifact that was downloaded",
+                "${apk.name} is redundant: ${rec.pkg} versionCode $code is installed from exactly " +
+                    "these bytes")
+        }
+        val installedCert = certOf(installed)
+        if (rec.cert != null && installedCert != null && rec.cert != installedCert)
+            return keep("${rec.pkg} at versionCode $code is signed by a DIFFERENT " +
+                "certificate than the cached artifact — ${apk.name} kept, and this is worth " +
+                "looking at")
+        val weaker = "the installed APK's own bytes could not be read (split install, or the " +
+            "path would not open), so this rests on " +
+            (if (rec.cert != null && installedCert != null)
+                "package, versionCode and signing certificate matching"
+             else "package and versionCode matching only") +
+            " — weaker evidence than a digest, said out loud"
+        return Decision(weaker, "${apk.name} looks redundant on weaker evidence: $weaker")
+    }
+
+    /**
+     * sha256 of the APK Android is ACTUALLY running for [pkg], or null when
+     * those bytes cannot be read — which is a "cannot tell", never a match.
+     *
+     * `ApplicationInfo.sourceDir` is the platform's own path to the installed
+     * `base.apk`. `/data/app` refuses to be LISTED but still allows traversal to
+     * a name you were given, and `base.apk` is world-readable, so this needs no
+     * root. A split install has no single file to compare against a single
+     * downloaded APK, so it returns null rather than hashing the base alone.
+     */
+    fun installedSha256(ctx: Context, pkg: String): String? = runCatching {
+        val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
+        if (!ai.splitSourceDirs.isNullOrEmpty()) return null
+        val f = File(ai.sourceDir ?: return null)
+        if (f.isFile && f.canRead()) ApkIntegrity.sha256(f) else null
+    }.getOrNull()
+
+    /**
      * Delete [apk] IF AND ONLY IF the cached artifact is provably the thing now
      * installed. See the class header for exactly what "provably" covers.
      *
@@ -171,33 +260,9 @@ object ApkCache {
      * disk, a wrong decision costs the user a download.
      */
     fun reapIfInstalled(ctx: Context, apk: File): Retention {
-        if (!isOurs(ctx, apk))
-            return Retention.Kept("${apk.name} is not a file this cache owns — nothing touched")
-        val rec = record(apk)
-            ?: return Retention.Kept("${apk.name} has no download record, so nothing can be " +
-                "compared against what is installed — kept")
-        val onDisk = runCatching { ApkIntegrity.sha256(apk) }.getOrNull()
-        if (onDisk != rec.sha256)
-            return Retention.Kept("${apk.name} no longer hashes to the artifact that was " +
-                "downloaded (${onDisk?.take(12) ?: "unreadable"}… vs ${rec.sha256.take(12)}…) — " +
-                "kept, and NOT treated as installed")
-        val installed = installedInfo(ctx, rec.pkg)
-            ?: return Retention.Kept("${rec.pkg} is not installed on this device, whatever the " +
-                "installer reported — ${apk.name} kept for the retry")
-        val code = versionCodeOf(installed)
-        if (code != rec.versionCode)
-            return Retention.Kept("${rec.pkg} is installed at versionCode $code, not the cached " +
-                "${rec.versionCode} — something else installed it, so ${apk.name} is kept")
-        val installedCert = certOf(installed)
-        if (rec.cert != null && installedCert != null && rec.cert != installedCert)
-            return Retention.Kept("${rec.pkg} at versionCode $code is signed by a DIFFERENT " +
-                "certificate than the cached artifact — ${apk.name} kept, and this is worth " +
-                "looking at")
-        val proof = if (rec.cert != null && installedCert != null)
-            "package, versionCode and signing certificate all match"
-        else
-            "package and versionCode match (no signing certificate available on this API level " +
-                "to compare — weaker evidence, said out loud)"
+        val d = decide(ctx, apk)
+        val proof = d.proof ?: return Retention.Kept(d.reason)
+        val rec = record(apk) ?: return Retention.Kept(d.reason)
         val size = apk.length()
         drop(apk)
         val gone = !apk.exists()
@@ -284,7 +349,47 @@ object ApkCache {
         return Eviction(bytes, freed, unverified)
     }
 
-    /** The user's own "clear cache". Deletes everything, reports what went. */
+    /**
+     * What a manual clear would do, measured off the files that are there now
+     * and decided by [decide] — the SAME rule the reap uses, so the button
+     * cannot promise one thing and do another. [redundantBytes] is free to take;
+     * [keptBytes] is the only copy of something whose install is not proven, and
+     * the Store has to say so before it takes it.
+     */
+    class Plan(val redundant: List<Entry>, val kept: List<Entry>) {
+        val redundantBytes: Long get() = redundant.sumOf { it.bytes }
+        val keptBytes: Long get() = kept.sumOf { it.bytes }
+    }
+
+    fun plan(ctx: Context): Plan {
+        val (redundant, kept) = entries(ctx).partition { decide(ctx, it.file).proof != null }
+        return Plan(redundant, kept)
+    }
+
+    /**
+     * The safe half of the manual clear: drop every cached APK whose install is
+     * PROVEN, and leave the rest alone. This is what the button does first, so a
+     * tap can never be the thing that loses a download — #625 must not come back
+     * through the manual door.
+     */
+    fun clearRedundant(ctx: Context): Eviction {
+        var bytes = 0L
+        val names = ArrayList<String>()
+        for (e in plan(ctx).redundant) {
+            val size = e.bytes
+            val r = reapIfInstalled(ctx, e.file)
+            if (r is Retention.Reaped) { bytes += size; names += e.file.name }
+            else Log.i(TAG, "left ${e.file.name} in place: ${r.reason}")
+        }
+        Log.i(TAG, "cleared the provably-installed half of the apk cache: " +
+            "${names.size} file(s), ${bytes / 1_000_000} MB")
+        return Eviction(bytes, names, emptyList())
+    }
+
+    /** The user's own "clear cache". Deletes everything, reports what went.
+     *  Reachable only after [clearRedundant] has already taken the free bytes
+     *  and the user has been told, in counts and megabytes, that what is left is
+     *  the only copy. */
     fun clear(ctx: Context): Eviction {
         val all = entries(ctx)
         var bytes = 0L
