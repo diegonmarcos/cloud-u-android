@@ -496,11 +496,16 @@ fi
 # the pre-#638 unconditional env exec, and against the pre-#641 bash usershell.
 echo "── #638/#641 the baked usr/lib/login-inner boots, with no /usr/bin/env, into the baked fish ──"
 LOGIN_SHELL="$(q forks.nixdroid.bootstrap.default_packages.login_shell_attr)"
+# The store's shipped install dir, so D1 patches WITH the store line and runs the
+# REAL engine: the shipped prompt-arrives property used to be proven on a flow
+# that omitted the store step entirely and stubbed the shell -- exactly the two
+# steps the phone hung in.
+D1_STORE_DIR="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['store']['install_dir'])" "$DIR/../ab_cloud-terminal-store/store.json")"
 D1_WORKDIR="$(mktemp -d)"
-D1_RESULT="$(python3 - "$DIR/app/src/main/cpp" "$D1_WORKDIR" "$TO" "$FALLBACK" "$PROFILE_LINK" "$LOGIN_SHELL" <<'PYEOF' 2>&1 | sed -n 's/^RESULT://p'
-import os, subprocess, sys
+D1_RESULT="$(python3 - "$DIR/app/src/main/cpp" "$D1_WORKDIR" "$TO" "$FALLBACK" "$PROFILE_LINK" "$LOGIN_SHELL" "$DIR/../ab_cloud-terminal-store" "$D1_STORE_DIR" <<'PYEOF' 2>&1 | sed -n 's/^RESULT://p'
+import os, shutil, subprocess, sys
 
-cpp_dir, work, app_id, fallback, profile_link, login_shell = sys.argv[1:7]
+cpp_dir, work, app_id, fallback, profile_link, login_shell, store_src, store_dir = sys.argv[1:9]
 sys.path.insert(0, cpp_dir)
 import bake_default_packages as bake
 
@@ -542,7 +547,8 @@ else
 fi
 '''
 
-patched = bake.patch_login_inner(fixture, app_id, fallback, profile_link, login_shell)
+patched = bake.patch_login_inner(fixture, app_id, fallback, profile_link,
+                                 login_shell, store_dir)
 
 # Two independent un-applications of the two fixes, each the shape that shipped.
 # A no-op replace means the fix is absent, the mutant equals the patched file, and
@@ -553,11 +559,38 @@ pre638 = patched.replace(
     bake.ENV_EXEC)
 pre638 = pre638.replace('exec "$@"', bake.ENV_EXEC_ARGV)
 pre641 = patched.replace(f"/{profile_link}/bin/{login_shell}", OLD_SHELL)
+# The hang fix, un-applied: the probed exec back to upstream's bare one. Both
+# literals are the patcher's own constants, so a drifted probe makes this a
+# no-op replace -- reported below as a dead assertion, never silently green.
+noprobe = patched.replace(bake.USERSHELL_PROBE, bake.USERSHELL_EXEC)
 
 # Sandbox: every absolute /usr/ path AND the baked profile move under $work, so
 # /usr/bin/env is genuinely absent (as on a fresh install) and the login shell is
 # the one this bake step really points at -- without touching the runner's fs.
 os.makedirs(f"{work}/usr/bin", exist_ok=True)
+
+# The REAL store, under the sandbox's /usr: the shipped engine, the shipped
+# login-init.sh and the declaration render-store.py really renders for the nix
+# terminal -- so the ensure fork D1 boots through is the one the phone runs, not
+# an omitted step. Two sandbox-only rewrites on the DECLARATION COPY: its
+# install-dir literal moves under $work (render-store asserts the shipped value,
+# the sandbox relocates it), and its fixed links are dropped -- materialise_fixed
+# would otherwise aim the RUNNER'S /usr/bin/env at a /nix path (S4-S10 and the
+# #640 section own that behaviour; D1 owns the boot).
+store_sb = f"{work}/{store_dir}"
+os.makedirs(store_sb, exist_ok=True)
+shutil.copy(f"{store_src}/login-init.sh", f"{store_sb}/login-init.sh")
+shutil.copy(f"{store_src}/cloud-store", f"{store_sb}/cloud-store")
+os.chmod(f"{store_sb}/cloud-store", 0o755)
+subprocess.run([sys.executable, f"{store_src}/render-store.py", "nix",
+                f"{store_sb}/declaration.sh"], check=True, capture_output=True)
+decl = open(f"{store_sb}/declaration.sh").read().replace("/usr/", f"{work}/usr/")
+decl = "\n".join("CLOUD_STORE_FIXED_LINKS=''" if l.startswith("CLOUD_STORE_FIXED_LINKS=")
+                 else l for l in decl.splitlines()) + "\n"
+open(f"{store_sb}/declaration.sh", "w").write(decl)
+os.makedirs(f"{work}/home", exist_ok=True)
+RUN_ENV = dict(os.environ, HOME=f"{work}/home", CLOUD_STORE_HOME=f"{work}/home",
+               CLOUD_STORE_INSTALL_DIR=store_sb)
 os.makedirs(os.path.dirname(f"{work}/{fallback}"), exist_ok=True)
 open(f"{work}/{fallback}", "w").write('export PATH="/nonexistent/bin:$PATH"\n')
 SHELL_BIN = f"{work}/{profile_link}/bin/{login_shell}"
@@ -568,7 +601,7 @@ def sandbox(text):
     return text.replace("/usr/", f"{work}/usr/").replace(f"/{profile_link}/", f"{work}/{profile_link}/")
 
 
-def run(text, name, args, env_present, shell_present=True):
+def run(text, name, args, env_present, shell_present=True, shell_wedged=False):
     path = f"{work}/{name}"
     open(path, "w").write(sandbox(text))
     envbin = f"{work}/usr/bin/env"
@@ -578,11 +611,15 @@ def run(text, name, args, env_present, shell_present=True):
     elif os.path.exists(envbin):
         os.remove(envbin)
     if shell_present:
-        open(SHELL_BIN, "w").write('#!/bin/sh\necho FISH_REACHED\n')
+        # The wedged stand-in fails the liveness probe (any use, incl. `-c
+        # exit`, fails) without costing the tester the probe's 5s deadline.
+        body = '#!/bin/sh\nexit 1\n' if shell_wedged else '#!/bin/sh\necho FISH_REACHED\n'
+        open(SHELL_BIN, "w").write(body)
         os.chmod(SHELL_BIN, 0o755)
     elif os.path.exists(SHELL_BIN):
         os.remove(SHELL_BIN)
-    p = subprocess.run(["bash", path, *args], capture_output=True, text=True)
+    p = subprocess.run(["bash", path, *args], capture_output=True, text=True,
+                       env=RUN_ENV)
     return p.returncode, p.stdout + p.stderr
 
 
@@ -590,6 +627,16 @@ why = []
 rc, out = run(patched, "patched", [], False)
 if rc != 0 or "FISH_REACHED" not in out:
     why.append(f"fresh-install boot rc={rc} out={out.strip()!r}")
+# The REAL engine ran, it built a real generation, and the login still reached
+# the shell: `current` is the ONE symlink an apply flips, so its existence after
+# the boot above is proof step 3 executed instead of being omitted.
+if not os.path.islink(f"{work}/home/.cloud-store/current"):
+    why.append("the real cloud-store engine never built a generation during the boot -- D1 is once again proving a flow that skips the store step")
+# A WEDGED login shell (executable, cannot run) must cost the user the shell of
+# choice, never the terminal: one named stderr line, then upstream's bash.
+rc, out = run(patched, "patched-wedged", [], False, shell_wedged=True)
+if "FISH_REACHED" in out or "liveness probe" not in out:
+    why.append(f"wedged-shell boot rc={rc} out={out.strip()!r} -- the blank-screen hang shape")
 # The #640 interaction: once /usr/bin/env EXISTS, a surviving `exec /usr/bin/env
 # bash` would fire and bash would be the login shell forever. It must still be fish.
 rc, out = run(patched, "patched-envok", [], True)
@@ -627,10 +674,18 @@ if "FISH_REACHED" in out:
 if OLD_SHELL not in pre641:
     fwhy.append("the mutation was a no-op: no bash literal to restore")
 print("RESULT:FISH " + ("OK" if not fwhy else "SURVIVED " + "; ".join(fwhy)))
+
+pwhy = []
+if noprobe == patched:
+    pwhy.append("un-applying the probe was a no-op: the patched file carries no USERSHELL_PROBE text")
+rc, out = run(noprobe, "noprobe-wedged", [], False, shell_wedged=True)
+if "liveness probe" in out or "FISH_REACHED" in out:
+    pwhy.append(f"unprobed exec still produced a verdict on a wedged shell rc={rc} out={out.strip()!r}")
+print("RESULT:PROBE " + ("OK" if not pwhy else "SURVIVED " + "; ".join(pwhy)))
 PYEOF
 )"
 case "$(echo "$D1_RESULT" | sed -n 1p)" in
-    OK) ok "the patched usr/lib/login-inner reaches the baked $LOGIN_SHELL with no nix profile — with /usr/bin/env absent AND present — still execs a caller's argv, and still falls back to bash if the shell is missing" ;;
+    OK) ok "the patched usr/lib/login-inner reaches the baked $LOGIN_SHELL with no nix profile — through the REAL cloud-store ensure (a generation was built) — still execs a caller's argv, falls back to bash if the shell is missing, and a WEDGED shell costs one named stderr line + bash, never a blank screen" ;;
     *)  bad "the baked usr/lib/login-inner does not boot into $LOGIN_SHELL on a fresh install: $(echo "$D1_RESULT" | sed -n 1p)" ;;
 esac
 case "$(echo "$D1_RESULT" | sed -n 2p)" in
@@ -641,7 +696,44 @@ case "$(echo "$D1_RESULT" | sed -n 3p)" in
     "FISH OK") ok "mutation proved: leaving usershell at the zip's own bash means $LOGIN_SHELL is never reached" ;;
     *)         bad "MUTATION SURVIVED: un-retargeting usershell still reached $LOGIN_SHELL, so that assertion proves nothing: $(echo "$D1_RESULT" | sed -n 3p)" ;;
 esac
+case "$(echo "$D1_RESULT" | sed -n 4p)" in
+    "PROBE OK") ok "mutation proved: un-applying the liveness probe turns a wedged shell back into a silent dead end — the wedged-shell assertion discriminates" ;;
+    *)          bad "MUTATION SURVIVED: the unprobed exec still passed the wedged-shell assertion, so it proves nothing: $(echo "$D1_RESULT" | sed -n 4p)" ;;
+esac
 rm -rf "$D1_WORKDIR"
+
+# ── the hang class itself: every injected blocking-capable login step is BOUNDED ──
+# The two steps between the banner and the prompt that CAN block forever are the
+# store's ensure fork and the login-shell exec. Each must carry a coreutils
+# `timeout N` and a LOUD stderr skip; each pin is mutation-proved by stripping
+# the timeout on a copy. (The #612 stderr-notice pin above is untouched.)
+STORE_INIT="$DIR/../ab_cloud-terminal-store/login-init.sh"
+if grep -Eq 'timeout [0-9]+ "\$CLOUD_STORE_INSTALL_DIR/\$CLOUD_STORE_ENGINE" ensure' "$STORE_INIT"; then
+    ok "login-init.sh bounds the cloud-store ensure fork with a coreutils timeout"
+else
+    bad "login-init.sh forks the cloud-store engine UNBOUNDED — under single-threaded proot that is the post-banner hang"
+fi
+if grep -q 'echo .*cloud-store init skipped.*>&2' "$STORE_INIT"; then
+    ok "a skipped store init says so on stderr — never a silent || true"
+else
+    bad "login-init.sh discards the ensure failure silently — the store can rot with no line ever naming it"
+fi
+if grep -q 'timeout 5 "\$usershell" -c exit' "$BAKE_PY" \
+   && grep -q 'liveness probe.*>&2' "$BAKE_PY"; then
+    ok "the baked login-shell exec is preceded by a bounded liveness probe with a named stderr skip"
+else
+    bad "the login-shell exec is unbounded (or its skip is silent) — a wedged fish is a blank screen forever"
+fi
+MUT_TB="$(mktemp)"; MUT_TS="$(mktemp)"
+awk '{gsub(/timeout [0-9]+ /,"")}1' "$BAKE_PY" > "$MUT_TB"
+awk '{gsub(/timeout [0-9]+ /,"")}1' "$STORE_INIT" > "$MUT_TS"
+if grep -Eq 'timeout [0-9]+ "\$CLOUD_STORE_INSTALL_DIR/\$CLOUD_STORE_ENGINE" ensure' "$MUT_TS" \
+   || grep -q 'timeout 5 "\$usershell" -c exit' "$MUT_TB"; then
+    bad "MUTATION SURVIVED: stripping every timeout still passes the boundedness pins, so they pin nothing"
+else
+    ok "mutation proved: stripping any timeout fails its boundedness pin"
+fi
+rm -f "$MUT_TB" "$MUT_TS"
 
 # ── #641 — /etc/profile is upstream's, it is broken on a fresh install, and it
 #           is the line Diego's phone actually printed ─────────────────────
@@ -1158,7 +1250,8 @@ m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 li = ('#!/bin/sh\nusershell="/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bash-5.2-p15/bin/bash"\n'
       '. "/data/data/cld.termux.nix/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh"\n'
       "exec /usr/bin/env bash  # otherwise it'll be a limited bash that came with Nix\n"
-      'exec /usr/bin/env "$@"\n')
+      'exec /usr/bin/env "$@"\n'
+      'exec -a "-${usershell##*/}" "$usershell"\n')
 args = ("cld.termux.nix", "usr/lib/cloud-agent-tools-init.sh",
         "nix/var/nix/profiles/per-user/nix-on-droid/profile", "fish")
 withstore = m.patch_login_inner(li, *args, "usr/lib/cloud-store")

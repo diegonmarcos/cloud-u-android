@@ -189,7 +189,43 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
         raise ValueError(f"expected exactly one env exec of the caller's argv:\n  {ENV_EXEC_ARGV}")
     login_inner = login_inner.replace(ENV_EXEC_ARGV, 'exec "$@"', 1)
 
-    return retarget_usershell(login_inner, profile_link, login_shell)
+    return probe_usershell_exec(
+        retarget_usershell(login_inner, profile_link, login_shell))
+
+
+# The post-banner hang -- the LAST statement a login runs is upstream's
+# `exec -a "-${usershell##*/}" "$usershell"`, and it is UNBOUNDED: upstream's -x
+# test only proves the file is executable, not that the shell can run. A fish
+# that wedges under the old proot-static (rust fish 4.x has form there) is a
+# blank screen forever, after the welcome banner, with nothing printed. Both
+# literals below are module constants so the tester can un-apply the probe
+# textually and prove its own assertion discriminates.
+USERSHELL_EXEC = 'exec -a "-${usershell##*/}" "$usershell"'
+USERSHELL_PROBE = (
+    'if ! command -v timeout >/dev/null 2>&1 '
+    '|| timeout 5 "$usershell" -c exit >/dev/null 2>&1; then\n'
+    f'    {USERSHELL_EXEC}\n'
+    '  fi\n'
+    '  echo "⚠ login shell $usershell failed its 5s liveness probe; falling back to bash" >&2\n'
+    '  exec -l bash'
+)
+
+
+def probe_usershell_exec(login_inner: str) -> str:
+    """Bound the login-shell exec with a liveness probe; bash is the net.
+
+    `timeout 5 "$usershell" -c exit` is the cheapest complete life sign a shell
+    has: it must exec, parse and exit. A shell that cannot do that in 5s does
+    not get the terminal -- the login says so in ONE stderr line and falls back
+    to upstream's own `exec -l bash`, so a prompt ALWAYS arrives. When `timeout`
+    itself is absent (a broken profile) the probe abstains rather than exiling a
+    healthy shell to bash. Pure str -> str like every patch here, so the tester
+    executes both verdicts.
+    """
+    if login_inner.count(USERSHELL_EXEC) != 1:
+        raise ValueError("expected exactly one usershell exec in usr/lib/login-inner:\n"
+                         f"  {USERSHELL_EXEC}")
+    return login_inner.replace(USERSHELL_EXEC, USERSHELL_PROBE, 1)
 
 
 def retarget_usershell(login_inner: str, profile_link: str, login_shell: str) -> str:

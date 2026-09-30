@@ -17,5 +17,12 @@ if [ -r "$CLOUD_STORE_INSTALL_DIR/declaration.sh" ]; then
     . "$CLOUD_STORE_INSTALL_DIR/declaration.sh"
     PATH="${HOME:-/root}/$CLOUD_STORE_ROOT/$CLOUD_STORE_CURRENT/$CLOUD_STORE_BIN:$PATH"
     export PATH
-    "$CLOUD_STORE_INSTALL_DIR/$CLOUD_STORE_ENGINE" ensure >/dev/null 2>&1 || true
+    # Rule 1, enforced rather than hoped: `ensure` forks the engine and, behind
+    # it, dozens of subprocesses -- under single-threaded ptrace proot that once
+    # wedged the nix terminal right after the welcome banner, forever, silently.
+    # Bounded, and LOUD on the skip (the #612 probe-then-skip shape). coreutils
+    # `timeout` is on PATH here: the profile PATH export precedes this line in
+    # both terminals, and coreutils is a baked attr.
+    timeout 10 "$CLOUD_STORE_INSTALL_DIR/$CLOUD_STORE_ENGINE" ensure >/dev/null 2>&1 \
+        || echo "⚠ cloud-store init skipped (timed out or failed); shell continues" >&2
 fi
