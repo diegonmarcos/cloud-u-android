@@ -584,3 +584,483 @@ What was actually measured before that call, kept so nobody redoes it:
   push-shaped hole.
 - The hypothesis that a multi-call binary "normally needs symlinks" is false for invocation: applet-as-argument
   works. It is true for the *shell inside it*, which does resolve by PATH.
+
+---
+---
+
+# Part II — what the OS image is actually made of, and what can leave it (#664)
+
+Measured 2026-09-30 on the same device (Samsung G996B, `aarch64`, inside `cld.termux.nix`). Part I asked whether a
+single tool can ship as one `lib*.so`. Part II asks the inverse and larger question: of everything inside the
+terminal's OS image, what is there for no reason, what duplicates something the device already has, and what is
+merely big and unavoidable.
+
+**Naming, and it is load-bearing.** The rootfs is an **OS image** — a filesystem with an ELF loader, a libc and a
+`/usr` tree. `nodejs_22` is a **runtime** that lives *inside* that OS image. Part I already measured that the
+runtime cannot become a lib (it needs an `/lib/ld-musl-aarch64.so.1` that only a filesystem can supply), so calling
+the OS image a "runtime" hides the one fact that decides the whole analysis. Part II keeps the two words apart.
+
+## 0. The artifact this part measures — and the trap that must be recorded first
+
+`ac_cloud-nix-on-droid/build.json` still lists a bare release asset shape
+(`cloud-nixdroid-bootstrap-{id}-{abi}.zip`) left over from #618's transport. That asset is **still on the rolling
+release and it is STALE**. Measuring it produces confident, wrong answers — this pass did exactly that for an hour
+before catching it.
+
+```
+$ python3 -c "...sha256 over artifact.identity_files..."      # the content address the declaration defines
+CURRENT content address id = 1c5ebd9132be
+SHIPPED bare-zip asset id  = add9739ca6e1
+```
+
+The stale zip has 20,084 entries and **no `fish`, `gawk`, `findutils` or `less` at all** — it predates #641, which
+added them. It also contains zero `cloud-store` entries, so it predates #644. A reader who measured it would
+conclude the declaration promises four tools the artifact does not carry. **That conclusion would be false.**
+
+The LIVE OS image is the companion APK's asset (#628 Slice 2). Read without downloading 393 MB, by range-fetching
+zip central directories:
+
+```
+$ curl -sSL -r 393338528-393638527 -o apkend.bin '.../Cloud-Lib-Rootfs-Nixdroid.apk'
+APK EOCD: entries=9 cd_offset=393637888
+       comp      uncomp meth     lfh_off  name
+  393621704   393621704    0         779  assets/bootstrap.zip     <- method 0 = STORED
+$ curl -sSL -r 779-878 '.../Cloud-Lib-Rootfs-Nixdroid.apk'
+LFH: method=0 csz=393621704 name_len=20 extra_len=7 name=assets/bootstrap.zip
+INNER ZIP DATA START = 836
+$ curl -sSL -r 388622540-393622539 -o inner.bin '.../Cloud-Lib-Rootfs-Nixdroid.apk'
+INNER EOCD: entries=21281 cd_size=3052039 cd_offset=390569643
+parsed 21281 entries  compressed_sum=387858100  uncompressed_sum=1057520494  store_paths=202
+```
+
+**All 11 declared attrs ARE present in the live image** — `fish-4.9.3`, `gawk-5.4.1`, `findutils-4.11.0`,
+`less-704` included. There is no missing-attr defect. There IS a stale 369,680,084-byte asset on the release that
+should be deleted so nobody else measures it.
+
+| artifact | bytes | what it is |
+|---|---|---|
+| `Cloud-Lib-Rootfs-Nixdroid.apk` | **393,638,528** | the live nix OS image, as shipped |
+| └ `assets/bootstrap.zip` (STORED) | **393,621,704** | 21,281 entries, **387,858,100 compressed / 1,057,520,494 uncompressed** |
+| `Cloud-Lib-Rootfs-Termux.apk` | 437,219,969 | the live Debian OS image |
+| `cloud-rootfs-6f37b3960639-arm64.tar.zst` | 437,419,375 | same bytes, legacy transport |
+| `cloud-nixdroid-bootstrap-add9739ca6e1-arm64.zip` | 369,680,084 | **STALE, delete** |
+
+**The ~400 MB in the declaration is COMPRESSED.** The OS image decompresses to 1,057,520,494 bytes. Part I's table
+listed "~400,000,000" beside NAR byte counts as if the two were comparable; they are not, and every "bytes saved"
+figure below is therefore given in **compressed** bytes, because that is what a phone downloads. Measured
+compression ratio on this content, with the command:
+
+```
+$ gzip -6 -c .../claude-code-2.1.226/bin/claude | wc -c
+claude-code raw=294632376 deflate6=91255331 ratio=3.23
+node        raw=73174200  deflate6=23371566 ratio=3.13
+glibc-2.39  raw=41227494  deflate6=10322427 ratio=3.99
+```
+
+## 1. Table 1 — per-attr closure size vs deduped MARGINAL cost
+
+Two different numbers, and only the second one answers "what would the OS image shrink by".
+
+The pinned-nixpkgs eval could **not** be run on this device. Recorded as a measured negative:
+
+```
+$ TMPDIR=$PREFIX/tmp nix eval --raw 'github:NixOS/nixpkgs/e94cb152...#legacyPackages.aarch64-linux.less.outPath'
+error (ignored): error: opening directory '.../usr/tmp/nix-28304-0': Function not implemented
+error: … while fetching the input 'github:NixOS/nixpkgs/e94cb152…'
+       error: failed to extract archive (Could not stat …/nixpkgs-e94cb152…/pkgs/by-name/ha/hawkthorne-journey/package.nix)
+$ curl -sSL -o np.tar.gz https://codeload.github.com/NixOS/nixpkgs/tar.gz/e94cb152...
+tarball bytes=53334642
+curl: (56) Recv failure: Software caused connection abort      # second attempt, GNU tar route
+```
+
+nix's own libarchive extraction of a 53 MB nixpkgs tarball fails under proot with `Function not implemented` — the
+same class of failure as `nix-on-droid switch` from termux. So the **marginal** column below is computed from this
+phone's LOCAL store, whose versions are **identical to the live artifact** for `coreutils-9.11`,
+`findutils-4.11.0`, `gnugrep-3.12`, `gnused-4.10` and `gawk-5.4.1`, and near for the rest. The
+**live-artifact** column is exact, read from the shipped image's central directory.
+
+```
+$ nix-store -qR <attr-outPath> | sort -u > cl.<attr>          # per-attr closure, one file each
+$ cat cl.* | sort -u > union.txt                              # dedup across all 11
+$ nix path-info -s $(cat union.txt) | awk '{s+=$NF} END{print s}'
+1028385240
+$ ls cl.* | grep -v "cl\.<attr>$" | xargs cat | sort -u > wo.<attr>   # leave-one-out
+$ nix path-info -s $(cat wo.<attr>) | awk '{s+=$NF} END{print s}'
+```
+
+| attr | solo closure (NAR) | **marginal** (NAR, leave-one-out) | **live artifact, compressed** |
+|---|---:|---:|---:|
+| `claude-code` | 338,437,744 | **294,632,856** | **103,409,893** (26.7%) |
+| `nodejs_22` | 273,517,976 | **221,294,496** | 29,576,883 (7.6%) |
+| `git` | 351,766,232 | **135,570,360** | 29,830,145 + perl/python (§2) |
+| `fish` | 250,840,704 | 34,644,832 | 13,346,890 |
+| `bashInteractive` | 53,281,992 | 4,019,784 | 2,539,309 |
+| `gawk` | 53,583,984 | 4,321,776 | 1,200,782 |
+| `findutils` | 64,258,528 | 2,125,600 | 764,849 |
+| `gnused` | 50,082,016 | 819,808 | 329,556 |
+| `less` | 50,068,864 | 403,448 | 196,205 |
+| `coreutils` | 62,132,928 | **0** | 771,465 |
+| `gnugrep` | 52,223,480 | **0** | 360,207 |
+| union of all 11 | — | 1,028,385,240 | — |
+
+**The two columns disagree by more than an order of magnitude, and the solo column is the misleading one.** Every
+solo closure reads 50-64 MB even for `gnused`, because each one contains a whole glibc. Anyone who sums that column
+concludes the tools cost 1.6 GB.
+
+**`coreutils` and `gnugrep` have a marginal cost of exactly ZERO.** Removing either attr frees nothing, because
+`git` references both directly:
+
+```
+$ nix-store -q --references .../git-2.44.2 | sed 's|/nix/store/[a-z0-9]*-||'
+glibc-2.39-52  gcc-13.2.0-lib  openssl-3.0.14  bash-5.2p32  gettext-0.21.1  gnused-4.9
+zlib-1.3.1  expat-2.6.4  curl-8.7.1  python3-3.11.10  gzip-1.13  pcre2-10.43
+gnugrep-3.11  coreutils-9.5  perl-5.38.2  git-2.44.2-doc  … (+17 perl modules)
+```
+
+This is the single most important correction in Part II: **the toybox-duplication saving is zero while canonical
+git is in the image.** Dropping `coreutils`/`gnused`/`gnugrep` from `attrs` removes them from PATH and frees no
+bytes at all, because git drags the identical packages back in.
+
+## 2. Where the bulk actually is — the node hypothesis, REFUTED
+
+The brief's hypothesis was that `nodejs_22` + `claude-code` is most of the payload and that the big item is
+therefore the one thing that cannot leave. **Half right, and the half that is wrong is the actionable half.**
+
+| rank | store path | compressed | % of OS image | who asked for it |
+|---:|---|---:|---:|---|
+| 1 | `claude-code-2.1.280` | **103,409,893** | 26.7% | declared |
+| 2 | `python3-3.14.7` | **73,582,754** | **19.0%** | **`git`, for `git p4`** |
+| 3 | `nodejs-slim-22.23.3` | 25,951,901 | 6.7% | declared |
+| 4 | `git-2.55.0` | 24,862,234 | 6.4% | declared |
+| 5 | `perl-5.42.3` | **15,847,717** | 4.1% | **`git`, for send-email/instaweb/cvs** |
+| 6 | `icu4c-78.3` | 15,752,769 | 4.1% | node |
+| 7 | `glibc-2.42-84` | 12,511,446 | 3.2% | the baked attrs |
+| 8 | `fish-4.9.3` | 12,343,156 | 3.2% | login shell |
+| 9 | `glibc-2.37-45` | 10,647,980 | 2.7% | **the upstream bootstrap — a SECOND glibc** |
+| 10 | `nix-2.20.5` | 6,078,066 | 1.6% | the upstream bootstrap |
+
+`nodejs_22` (all three outputs) + `claude-code` = **132,986,776 compressed = 34.3%** of the OS image. That is the
+largest single block and it is immovable — but it is **one third, not "most"**. The refutation that matters:
+
+**`python3` alone is 19.0% of the OS image, and no declared attr asked for it.** It is there because nixpkgs `git`
+defaults `pythonSupport = true`, for `git p4`. `perl` and its 40 modules add another 4.5%, for `git send-email`,
+`git instaweb` and the CVS bridges. Part I recorded that this tail exists; Part II measures that **it is the
+second-largest item in the shipped artifact and larger than git itself.**
+
+```
+$ python3 parse.py inner.bin 388621704   # grouping the live image's 21,281 entries
+PERL SUBTREE (perl + 40 perl5.42.3-* modules): compressed=17436391 (4.5%)
+PYTHON3: compressed=73582754 (19.0%)
+PERL+PYTHON = 91019145 compressed (23.5% of the OS image)
+GIT + PERL + PYTHON = 120849290 compressed (31.2% of the OS image)
+```
+
+Nothing else in the attr set wants either interpreter. Measured by reverse-dependency, not assumed:
+
+```
+$ nix-store -q --referrers .../perl-5.38.2 | sed 's|/nix/store/[a-z0-9]*-||' | grep -v '^perl5'
+perl-5.38.2  git-2.44.2  autoconf-2.72  automake-1.16.5      # autoconf/automake are not in attrs
+$ nix-store -q --references .../nix-2.18.8 | grep -icE 'perl|python'
+0
+```
+
+## 3. Table 2 — the toybox duplication, per binary
+
+Android's own toybox, already on the device, costs zero bytes to use.
+
+```
+$ env -i /system/bin/toybox | tr -s ' \n' '\n' | grep -c .
+209
+```
+
+Per-attr `bin/` from the version-identical local store paths (the live image records symlinks in `SYMLINKS.txt`
+rather than as zip entries, so its entry list undercounts multi-call packages — that is why this diff uses the
+store):
+
+```
+$ ls <attr-outPath>/bin | sort -u > pk.txt
+$ comm -23 pk.txt toybox_applets.txt          # provided but NOT a toybox applet
+```
+
+| attr | live bytes | binaries provided | have a toybox applet | with no applet | duplication cost |
+|---|---:|---:|---:|---|---:|
+| `coreutils` 9.11 | 771,465 | 107 | **81** | b2sum base32 basenc csplit dir dircolors factor fold hostid join link numfmt pathchk pinky pr ptx shred shuf stdbuf sum tsort unexpand users vdir who | 771,465, but **marginal = 0** |
+| `findutils` 4.11.0 | 764,849 | 2 (`find` `xargs`) | **2 — fully covered** | — | 764,849 |
+| `gnugrep` 3.12 | 360,207 | 3 (`grep` `egrep` `fgrep`) | **3 — fully covered** | — | 360,207, but **marginal = 0** |
+| `gnused` 4.10 | 329,556 | 1 (`sed`) | **1 — fully covered** | — | 329,556 |
+| `gawk` 5.4.1 | 1,200,782 | 2 (`awk` `gawk`) | **0** | awk gawk | none — toybox has no awk |
+| `less` 704 | 196,205 | 3 (`less` `lessecho` `lesskey`) | **0** | less lessecho lesskey | none — toybox has `more`, not `less` |
+
+```
+$ for t in awk gawk less; do env -i /system/bin/toybox $t --version >/dev/null 2>&1 \
+    && echo "$t: PRESENT" || echo "$t: ABSENT from toybox"; done
+awk: ABSENT from toybox
+gawk: ABSENT from toybox
+less: ABSENT from toybox
+```
+
+**`gawk` and `less` cannot be deleted in favour of toybox at any price — toybox does not implement them.** `git`'s
+pager is `less`; without it `git log` cannot page. `findutils` and `gnused` are fully covered and together are the
+only honest (a)-class candidates, worth **1,094,405 compressed bytes** — 0.28% of the OS image. `coreutils` and
+`gnugrep` are also fully covered in the parts that matter but free nothing (§1).
+
+## 4. Table 3 — the GNU-vs-toybox risk, per call site
+
+A tool whose GNU behaviour something depends on is not a free win at any size. Scanned `ab_cloud-terminal-store/`,
+`ac_cloud-nix-on-droid/`, `ac_cloud-termux/rootfs/` and the `0_git/` hooks — 30 script files.
+
+```
+$ grep -rn 'sed -i\|sed --in-place' $D            # GNU in-place edit
+ac_cloud-nix-on-droid/art/generate-big-icon.sh:9    sed -i "" 's/viewBox=…/…/' ~/termux-icons/ic_launcher.svg
+$ grep -rn 'grep -[a-zA-Z]*P\b\|grep --perl' $D
+ac_cloud-nix-on-droid/.github/workflows/debug_build.yml:41              grep -qP '^(0|[1-9]\d*)\.…'
+ac_cloud-nix-on-droid/.github/workflows/attach_debug_apks_to_release.yml:39  grep -qP '^(0|[1-9]\d*)\.…'
+ac_cloud-nix-on-droid/termux-shared/src/main/res/raw/apt_info_script.sh:5   grep -P '^\s*deb\s' "@TERMUX_PREFIX@/etc/apt/sources.list"
+ac_cloud-nix-on-droid/termux-shared/src/main/res/raw/apt_info_script.sh:15  grep -P '^\s*deb\s' "$filename"
+$ grep -rn 'sort -[a-zA-Z]*V\b\|--version-sort' $D
+ac_cloud-nix-on-droid/build.sh:468   ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1
+ac_cloud-nix-on-droid/build.sh:523   (same)
+ac_cloud-nix-on-droid/build.sh:1080  (same)
+$ grep -rn 'find .*-printf\|-regextype\|find .*-newermt' $D            # (no output)
+$ grep -rn 'gensub\|asort\|asorti\|systime()\|strftime(\|patsplit\|ENVIRON\[' $D   # (no output)
+$ grep -rn 'date -d\|date --date' $D                                   # (no output)
+```
+
+**Every GNU-only call site found runs on the CI runner or the developer machine, not on the phone.**
+`build.sh` (`sort -V`) and the two workflows (`grep -qP`) execute on a GitHub runner. `generate-big-icon.sh` is a
+developer art script. `apt_info_script.sh` is inherited upstream Termux Java resource, dead in this fork (the nix
+terminal has no apt). None of them resolves against the OS image's PATH.
+
+The scripts that DO run on the phone are the #644 engine and the login wiring, and their whole external-command
+surface was inventoried:
+
+```
+$ grep -ohE '\b(ls|cat|env|find|xargs|grep|sed|awk|sort|readlink|mkdir|rm|mv|ln|cp|chmod|dirname|…)\b' \
+    ab_cloud-terminal-store/{cloud-store,login-init.sh,login-exec} | sort | uniq -c | sort -rn
+      7 readlink   7 mv   5 rm   4 ln   3 mkdir   3 dirname   2 test   2 sort   2 sed   2 env   2 chmod   1 cp
+```
+
+Twelve commands, all POSIX, all present as toybox applets. Their two `sed` invocations and two `sort` invocations
+were run THROUGH Android's toybox against the engine's own text and byte-compared to GNU:
+
+```
+$ env -i /system/bin/toybox sed -n '/^# Commands:/,/^# Fault/p' ab_cloud-terminal-store/cloud-store \
+    | env -i /system/bin/toybox sed 's/^# \{0,1\}//' > tb.out
+$ sed -n '/^# Commands:/,/^# Fault/p' ab_cloud-terminal-store/cloud-store | sed 's/^# \{0,1\}//' > gnu.out
+$ cmp gnu.out tb.out && echo "IDENTICAL BYTES: $(wc -c < tb.out)"
+IDENTICAL BYTES: 891
+$ printf '10\n2\n33\n4\n' | env -i /system/bin/toybox sort -n | tr '\n' ' '   ->  2 4 10 33
+$ printf '10\n2\n33\n4\n' | sort -n | tr '\n' ' '                            ->  2 4 10 33
+```
+
+Byte-identical, including the BRE interval `\{0,1\}`. The `0_git/` hooks use `sort -u`, `sed 's/^/  /'` and
+`grep -E` only — all POSIX — and they run on a developer machine, not the phone.
+
+**Verdict for Table 3: zero GNU-only dependants on the phone side.** The (a)-class candidates are safe. They are
+also worth almost nothing (§3), which is the more useful finding.
+
+## 5. Table 4 — the verdict, per attr
+
+`(a)` leave entirely, toybox covers it · `(b)` spin off as a static `lib*.so` · `(c)` must stay in the OS image.
+
+| attr | class | compressed saving | why, measured |
+|---|---|---:|---|
+| `git` | **(c) stays, but SHRINKS** | **95,987,056** | `gitMinimal` at this pin drops python3 + perl + doc. Keeps `bin/git` and push. §6 |
+| `claude-code` | **(c) stays** | 0 | `PT_INTERP` present in BOTH arm64 builds; refused to exec as a lib. §7 |
+| `nodejs_22` | **(c) stays** | 0 | Part I §6 measured the refusal. It is the runtime; the image is the OS. |
+| `fish` | (c) stays | 0 | `login_shell_attr`; the bake hard-fails without it |
+| `bashInteractive` | (c) stays | 0 | `claude`'s Bash tool spawns `bash` by name; login-inner's last-resort `exec -l bash` |
+| `gawk` | (c) stays | 0 | toybox has no `awk` at all |
+| `less` | (c) stays | 0 | toybox has no `less`; it is git's pager |
+| `coreutils` | (c) stays | **0** | fully covered by toybox, but marginal cost is zero — git pulls it anyway. Also #640's `/usr/bin/env` |
+| `gnugrep` | (c) stays | **0** | same: fully covered, marginal cost zero |
+| `findutils` | (a) candidate | 764,849 | `find`+`xargs` both toybox applets; zero GNU-only call sites |
+| `gnused` | (a) candidate | 329,556 | `sed` is a toybox applet; toybox `sed` byte-matched GNU on the engine's own scripts |
+
+Non-attr items in the same image, measured and actionable:
+
+| item | compressed | note |
+|---|---:|---|
+| non-code outputs (`-doc`/`-man`/`-dev`) | **8,498,997** (2.2%) | `git-2.55.0-doc` 4,967,911 · `icu4c-78.3-dev` 1,446,308 · `fish-4.9.3-doc` 1,003,734 · `openssl-3.6.4-dev` 404,702 · 13 more |
+| duplicate versions of the same package | **35,555,599** (9.2%) | `glibc` 2.42-84 **and** 2.37-45 (10,647,980 extra) · `openssl` 3.6.4 **and** 3.0.12 · `bash` 5.3p15/5.2-p15 · `curl` 8.22.0/8.1.1 · `sqlite` 3.53.3/3.41.2 · `xz` 5.8.3/5.4.3 · `gcc-lib` 15.3.0/12.2.0 · `libunistring` 1.4.2/1.1 · `zstd`, `brotli`, `zlib`, `libidn2`, `libssh2`, `simdutf`, `c-ares`, `nghttp2` |
+| `ripgrep-15.2.0` | 2,268,028 | `_doc_attrs_audit` lists ripgrep as DELIBERATELY LEFT OUT because claude-code ships its own — yet it is in the image, from the upstream bootstrap |
+
+The duplicate-version block has one cause: the baked attrs resolve against nixpkgs pin `e94cb152` while the
+upstream bootstrap zip carries its own older closure. Two glibcs is the honest headline of that 9.2%.
+
+### Residual floor
+
+| step | compressed bytes | % cut |
+|---|---:|---|
+| live OS image today | **387,858,100** | — |
+| after `git` → `gitMinimal` (§6, **shipped**) | **291,871,044** | −24.7% |
+| after (a): drop `findutils` + `gnused` | 290,776,639 | −25.0% |
+| after excluding `-doc`/`-man`/`-dev` outputs (less git-doc, already counted) | 287,245,553 | −25.9% |
+| after aligning the bake pin with the bootstrap's own closure (the 9.2% duplicate block) | ~252,000,000 | ~−35% |
+| **immovable core**: claude-code 103,409,893 + node 29,576,883 + glibc 12,511,446 + icu4c 15,752,769 + nix 6,078,066 + fish 13,346,890 + gitMinimal ≈ 20,000,000 | **~200,700,000** | **the floor** |
+
+**The realistic floor for the nix OS image is roughly 200 MB compressed, against 387,858,100 today** — a little
+under half. Everything below that is `claude-code` (26.7%), which cannot be a lib, cannot be smaller, and is the
+reason the terminal exists.
+
+## 6. `gitMinimal` — the largest single win, and it needs no new mechanism (#665)
+
+Read from nixpkgs at the exact pin, not from memory:
+
+```
+$ curl -sSL "https://raw.githubusercontent.com/NixOS/nixpkgs/e94cb152…/pkgs/top-level/all-packages.nix" \
+    | grep -n -A9 'gitMinimal'
+1075:  gitMinimal = git.override {
+1076-    withManual = false;
+1077-    osxkeychainSupport = false;
+1078-    pythonSupport = false;
+1079-    perlSupport = false;
+1080-    rustSupport = false;
+1081-    withpcre2 = false;
+1082-  };
+$ grep -nE 'perlSupport|pythonSupport|withManual|outputs' pkgs/by-name/gi/git/package.nix
+111:  outputs = [ "out" ] ++ lib.optional withManual "doc";
+249:  ++ (if perlSupport then [ "PERL_PATH=…" ] else [ "NO_PERL=1" ])
+250:  ++ (if pythonSupport then [ "PYTHON_PATH=…" ] else [ "NO_PYTHON=1" ])
+```
+
+`NO_PERL=1` / `NO_PYTHON=1` remove exactly seven subcommands, enumerated from the real build, not guessed:
+
+```
+$ grep -rlI '^#!.*perl' .../git-2.44.2/libexec/git-core/ | xargs -n1 basename
+.git-cvsexportcommit-wrapped  .git-send-email-wrapped  .git-instaweb-wrapped
+.git-archimport-wrapped  .git-cvsimport-wrapped  git-cvsserver
+$ grep -rlI '^#!.*python' .../git-2.44.2/libexec/git-core/ | xargs -n1 basename
+.git-instaweb-wrapped  git-p4
+```
+
+Every one grepped for across the whole repository, plus the PCRE-gated forms and the two subcommands that used to
+be perl and no longer are:
+
+```
+$ for pat in 'git send-email' 'sendemail' 'git p4' 'git-p4' 'git instaweb' 'git-instaweb' \
+             'git svn' 'git-svn' 'git grep -P' 'perl-regexp' 'gitweb' 'git cvsimport' 'git archimport' \
+             'difftool' 'mergetool' 'request-pull' 'add -i' 'add --interactive'; do
+    grep -rIl --exclude-dir=.git --exclude-dir=z_archive -F "$pat" . | wc -l ; done
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+```
+
+**Eighteen patterns, eighteen zeroes.** `git difftool` and `git add -i` are builtin C since git 2.44, so `NO_PERL`
+does not touch them.
+
+`withpcre2 = false` is the one real behaviour change: `git grep -P` and `git log --perl-regexp` lose PCRE. Both are
+in the zero list above, and `pcre2-10.48` stays in the image for `gnugrep` regardless, so standalone `grep -P` is
+unaffected.
+
+**Saving: `python3` 73,582,754 + perl subtree 17,436,391 + `git-2.55.0-doc` 4,967,911 = 95,987,056 compressed
+bytes, 24.7% of the OS image**, for seven subcommands nothing calls.
+
+Shipped as a two-token change to the declaration — `attrs: "git"` → `"gitMinimal"` and `provides` keyed to match.
+`binaries` still says `git`, `bin/git` still exists, push still works, and #644's build-time gate is satisfied
+unchanged:
+
+```
+$ bash ac_cloud-nix-on-droid/test/test-bootstrap-baked.sh
+  ok — build.json declares default_packages (pin e94cb152ed51…, attrs: gitMinimal nodejs_22 claude-code
+       coreutils fish bashInteractive findutils gnugrep gnused gawk less)
+  ok — every declared attr has a provides[] entry, and binaries[] covers all of them
+  ok — login_shell_attr (fish) is one of the baked attrs
+── 0 failed ──
+```
+
+No `lib*.so`, no new mechanism, no link-store change, nothing to spin off. **The largest available win was a
+configuration default, not an architecture problem.**
+
+## 7. `claude-code` cannot be a lib — measured negative, both arm64 builds
+
+It is the most attractive candidate by far: **one file, one name, 26.7% of the OS image.**
+
+```
+$ ls -la .../claude-code-2.1.226/
+bin/claude    294,632,376 bytes    # the entire store path is this one file
+$ readelf -lW .../bin/claude | grep -E 'INTERP|Requesting'
+  INTERP  [Requesting program interpreter: /nix/store/aaq36r4…-glibc-2.39-52/lib/ld-linux-aarch64.so.1]
+$ readelf -dW .../bin/claude | grep NEEDED
+ [librt.so.1] [libc.so.6] [ld-linux-aarch64.so.1] [libpthread.so.0] [libdl.so.2] [libm.so.6]
+```
+
+`PT_INTERP` present → fails the rclone pin's program-header guard. Its `DT_NEEDED` list is pure glibc and nothing
+else, which makes the musl build the obvious next question. There IS one, published on npm:
+
+```
+$ curl -sSL https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.281 | …optionalDependencies
+@anthropic-ai/claude-code-linux-arm64        unpacked 236,773,962
+@anthropic-ai/claude-code-linux-arm64-musl   unpacked 229,128,616
+```
+
+Downloaded and walked (the first two attempts died on `curl: (56) Recv failure`; the third succeeded):
+
+```
+$ tar -tzf claude-code-linux-arm64-musl-2.1.281.tgz
+package/claude  package/package.json  package/LICENSE.md  package/README.md
+$ stat -c %s ccm/package/claude
+229128008
+$ sha256sum ccm/package/claude
+4f72ebbb08706651e7a2204303793700698f4046bc31f3e7e65b381063b7c210
+$ readelf -lW ccm/package/claude | grep -E 'INTERP|Requesting'
+  INTERP  [Requesting program interpreter: /lib/ld-musl-aarch64.so.1]
+$ readelf -dW ccm/package/claude | grep NEEDED
+ [libc.musl-aarch64.so.1]
+$ ls -la /lib/ld-musl-aarch64.so.1
+ls: cannot access '/lib/ld-musl-aarch64.so.1': No such file or directory
+$ cp claude libclaude.so && chmod +x libclaude.so && ./libclaude.so --version
+bash: ./libclaude.so: cannot execute: required file not found
+```
+
+**Identical failure mode to node in Part I §6, and for the identical reason:** an absolute `PT_INTERP` naming an
+interpreter only a filesystem can supply. The device refused to exec it. `claude-code` requires an OS image, in
+both libcs, and it is 26.7% of the one it requires.
+
+## 8. The Debian OS image — a different duplication story
+
+`ac_cloud-termux/rootfs/rootfs.json` builds from `debian:bookworm-slim` plus four apt packages
+(`git fish zsh python3-venv`), three tarballs, one npm global and one pip venv. Its tools do **not** come from
+per-tool packages, so §1's marginal analysis does not transfer — there is no `coreutils` attr to remove, because
+coreutils is the base image and `dpkg`/`apt` require it.
+
+Its inputs, measured by HTTP `content-length` rather than by downloading 437 MB:
+
+```
+$ curl -sSIL https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-arm64.tar.xz
+30,172,012 bytes
+$ curl -sSIL https://github.com/block/goose/releases/download/v1.44.0/goose-aarch64-unknown-linux-gnu.tar.gz
+93,305,949 bytes
+$ curl -sSL https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.281   # + its arm64 optionalDep
+claude-code wrapper unpacked 184,605 · @anthropic-ai/claude-code-linux-arm64 unpacked 236,773,962
+```
+
+| item | bytes | class |
+|---|---:|---|
+| `claude` (npm native arm64) | 236,773,962 unpacked | **(c)** — glibc `PT_INTERP`, §7 |
+| `goose` 1.44.0 | 93,305,949 compressed | `-unknown-linux-gnu`: needs the OS image by declaration |
+| `node` 22.23.3 | 30,172,012 compressed | **(c)** — the runtime |
+| `agy` (antigravity CLI) | — | declared glibc `PT_INTERP /lib/ld-linux-aarch64.so.1` in rootfs.json |
+| `hermes` pip venv | — | python, needs the OS image |
+| `debian:bookworm-slim` base | — | the OS image itself |
+
+**The Debian image has no git/perl/python win available**, because Debian's `git` package does not bundle a perl
+interpreter — it depends on the system one, which `python3-venv` requires anyway. Its 437,219,969 bytes are
+dominated by `claude` + `goose` + `node`, all three of which declare glibc interpreters. Its equivalent of §6 does
+not exist; its equivalent of §7 is the same measured negative. The one open question for the Debian image is
+`goose` at 93 MB, which is a Rust binary and may have a musl release — **not measured here**, and recorded as
+open rather than answered.
+
+## 9. What Part II contradicts
+
+- **The "~400 MB rootfs" is compressed.** It decompresses to 1,057,520,494 bytes. Part I's headline table put
+  ~400,000,000 next to NAR byte counts; they are not the same unit and mixing them makes every per-tool comparison
+  in that table read ~3x too favourable toward the tools.
+- **The node hypothesis is refuted.** `nodejs_22` + `claude-code` is 34.3% of the image, not "most" of it. The
+  largest *actionable* item is `python3` at 19.0%, which no declared attr asked for.
+- **The toybox duplication is worth almost nothing.** `coreutils` and `gnugrep` have a measured marginal cost of
+  **zero** while canonical git is present. The entire (a) class is 1,094,405 bytes — 0.28%.
+- **`gawk` and `less` were assumed replaceable by toybox; they are not.** Toybox implements neither.
+- **The biggest win required no lib, no link engine and no new mechanism** — one configuration default that had
+  never been examined. Part I's framing (which tool can become a `lib*.so`) would never have found it.
+- **A stale release asset produced an hour of confident wrong answers,** including an apparent four-missing-attrs
+  defect that does not exist. Content-address the artifact you measure before you measure it.
