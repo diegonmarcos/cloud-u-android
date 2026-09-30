@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.updater.Fleet
 import org.json.JSONObject
 
@@ -152,6 +153,20 @@ object PhoneAppActions {
         return Action(Kind.ORIGIN, label, page, null)
     }
 
-    private fun appInfo(pkg: String) =
+    /** Android's own settings page for [pkg] — App info here, App settings on
+     *  a fleet row's Details sheet, and where the platform's Force stop lives. */
+    fun appInfo(pkg: String) =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
+
+    /**
+     * Force-stop [pkg] through the shell channel ladder — the ONE Stop door,
+     * shared by Phone Apps and the Cloud fleet rows, so there is no second
+     * privileged path to keep in step. Returns the channel's output ("OK" in
+     * it = stopped), or null when NO channel is armed — the caller must then
+     * say so and offer [appInfo], never do nothing. Blocking: off the main thread.
+     */
+    fun forceStop(ctx: Context, pkg: String): String? =
+        // Package names are [A-Za-z0-9._] by the platform's own rule, so the
+        // id is safe in a shell word as it stands.
+        ShellChannels.active(ctx)?.exec(ctx, "am force-stop $pkg 2>&1 && echo OK")
 }

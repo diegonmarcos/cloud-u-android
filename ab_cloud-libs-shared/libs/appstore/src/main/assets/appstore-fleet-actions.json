@@ -1,0 +1,15 @@
+{
+  "_doc": "Store ▸ Cloud: the buttons a fleet row and its Details sheet offer, IN ORDER, with their captions. The Kotlin only maps an id to what it does (StoreCloudFragment.rowAction / ApkDetailSheet.detailAction); order and wording are this file. Direct install moved OFF the row into Details beside App settings, and the row gained Stop (force-stop through the shell channel ladder ShellChannels, the same door Phone Apps' Stop uses) immediately before Uninstall. When no shell channel is armed, Stop says so and offers App settings, where Android's own Force stop lives. test-store-fleet-actions.sh holds: row ends [..., stop, uninstall], row has no direct_install, details has direct_install and app_settings, and every id has a handler.",
+  "_doc_fields": "id = the verb the code dispatches on; label = the caption drawn; color = the button fill (ARGB hex) on the row. Details entries also carry `detail`, the right-hand hint on the sheet's action line.",
+  "row": [
+    { "id": "details",   "label": "Details",          "color": "0xFF2A2A33" },
+    { "id": "open",      "label": "Open",             "color": "0xFF2A2A33" },
+    { "id": "install",   "label": "Install / Update", "color": "0xFF7C3AED" },
+    { "id": "stop",      "label": "Stop",             "color": "0xFF9C4221" },
+    { "id": "uninstall", "label": "Uninstall",        "color": "0xFF4A4A55" }
+  ],
+  "details": [
+    { "id": "direct_install", "label": "Direct install", "detail": "system install sheet, no shell channel needed" },
+    { "id": "app_settings",   "label": "App settings",   "detail": "Android's page: Force stop, storage, permissions" }
+  ]
+}

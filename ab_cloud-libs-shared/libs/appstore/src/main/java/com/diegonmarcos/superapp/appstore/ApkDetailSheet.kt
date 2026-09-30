@@ -8,6 +8,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
+import android.widget.Toast
+import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.VersionOrder
@@ -67,6 +69,13 @@ object ApkDetailSheet {
             verifyExact(activity, app, installed, availableCard)
         }
 
+        // Direct install + App settings, in the order and wording
+        // appstore-fleet-actions.json declares.
+        val actions = card(ctx); pane.addView(actions)
+        actions.addView(blockTitle(ctx, "Actions"))
+        for (a in FleetActions.details(ctx))
+            actions.addView(action(ctx, a.label, a.detail) { detailAction(activity, app, a) })
+
         pane.addView(note(ctx,
             "INSTALLED is read straight from PackageManager. AVAILABLE's size/timestamp/sha256 " +
             "come from one HEAD probe of the release asset. The available build's exact " +
@@ -89,6 +98,46 @@ object ApkDetailSheet {
             }
         }
     }
+
+    // ── ACTIONS ──────────────────────────────────────────────────────────
+
+    /** One declared Details action. An id with no handler says so on tap. */
+    private fun detailAction(activity: FragmentActivity, app: Fleet.App, a: FleetActions.Action) {
+        val ctx: Context = activity
+        when (a.id) {
+            "direct_install" -> directInstall(activity, app)
+            "app_settings" -> {
+                val pkg = Fleet.installedId(ctx, app)
+                if (pkg == null) toast(ctx, ctx.getString(R.string.store_fleet_not_installed, app.label))
+                else runCatching { activity.startActivity(PhoneAppActions.appInfo(pkg)) }
+                    .onFailure { toast(ctx, "${a.label}: ${it.message}") }
+            }
+            else -> toast(ctx, "'${a.id}' is declared in ${FleetActions.ASSET} but this build has no handler for it")
+        }
+    }
+
+    /**
+     * THE FLOOR: fetch through the ordinary verified source ladder and hand the
+     * result to the SYSTEM package installer. Needs no privileged shell channel,
+     * which is the point — a device that lost its channel can still install the
+     * build that gives it back. Kept apart from Install / Update because it
+     * always shows Android's confirmation sheet; a silent fallback inside that
+     * button would be indistinguishable from the silent path never working.
+     */
+    private fun directInstall(activity: FragmentActivity, app: Fleet.App) {
+        val ctx: Context = activity
+        if (app.blocked) return toast(ctx, "${app.label}: not published yet — nothing to install")
+        toast(ctx, "Fetching ${app.label}…")
+        thread(name = "fleet-bootstrap-${app.id}") {
+            val r = BootstrapInstall.launch(ctx, app)
+            activity.runOnUiThread {
+                r.onSuccess { c -> toast(ctx, "${app.label}: ${c.versionName ?: c.versionCode}\n${c.evidence}") }
+                 .onFailure { toast(ctx, "${app.label}: ${it.message}") }
+            }
+        }
+    }
+
+    private fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 
     // ── INSTALLED ────────────────────────────────────────────────────────
 

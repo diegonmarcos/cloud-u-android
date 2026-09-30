@@ -20,7 +20,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
@@ -818,30 +817,10 @@ class StoreCloudFragment : Fragment() {
 
         val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         actionRows[app.id] = actions
-        // #496: installed vs. available, side by side, and the downgrade
-        // gate's own preview — see ApkDetailSheet. One tap from the row a
-        // user already expanded to reach every other action here.
-        actions.addView(btn(ctx, "Details", 0xFF2A2A33.toInt()) {
-            ApkDetailSheet.show(requireActivity(), app, states[app.id])
-        })
-        actions.addView(btn(ctx, "Open", 0xFF2A2A33.toInt()) { openApp(ctx, Fleet.installedId(ctx, app) ?: app.pkg) })
-        if (!app.blocked) {
-            val installBtn = btn(ctx, "Install / Update", 0xFF7C3AED.toInt()) { install(ctx, app) }
-            installBtns[app.id] = installBtn
-            actions.addView(installBtn)
-        }
-        // THE RECOVERY FLOOR, on every row. "Install / Update" above needs a
-        // privileged shell channel; this one needs nothing at all beyond the
-        // standard Android install confirmation, which is the whole point —
-        // a device that has lost its privileged channel cannot install the
-        // build that would give it back, and that dead end had no escape from
-        // inside the app.
-        if (!app.blocked)
-            actions.addView(btn(ctx, "Direct", 0xFF1F6F43.toInt()) { directInstall(ctx, app) })
-        actions.addView(btn(ctx, "Uninstall", 0xFF4A4A55.toInt()) {
-            runCatching { Fleet.uninstall(ctx, Fleet.installedId(ctx, app) ?: app.pkg) }
-                .onFailure { Toast.makeText(ctx, "Uninstall: ${it.message}", Toast.LENGTH_LONG).show() }
-        })
+        // Order and captions are appstore-fleet-actions.json; this only says
+        // what each declared id DOES. Direct install lives on the Details
+        // sheet now (still one tap from here), and Stop sits before Uninstall.
+        for (a in FleetActions.row(ctx)) rowAction(ctx, app, a)?.let { actions.addView(it) }
         into.addView(actions)
     }
     /** The rows of the visible tab. Perms draws no batch actions, so it has none. */
@@ -939,27 +918,54 @@ class StoreCloudFragment : Fragment() {
         }
     }
 
+    /** One declared row button. Null only for Install on an unpublished app,
+     *  which has nothing to install. An id with no handler is still drawn and
+     *  says so on tap — never a button that does nothing. */
+    private fun rowAction(ctx: Context, app: Fleet.App, a: FleetActions.Action): View? = when (a.id) {
+        // #496: installed vs. available, side by side, plus Direct install and
+        // App settings — see ApkDetailSheet.
+        "details" -> btn(ctx, a.label, a.color) { ApkDetailSheet.show(requireActivity(), app, states[app.id]) }
+        "open" -> btn(ctx, a.label, a.color) { openApp(ctx, Fleet.installedId(ctx, app) ?: app.pkg) }
+        "install" -> if (app.blocked) null
+                     else btn(ctx, a.label, a.color) { install(ctx, app) }.also { installBtns[app.id] = it }
+        "stop" -> btn(ctx, a.label, a.color) { stop(ctx, app) }
+        "uninstall" -> btn(ctx, a.label, a.color) {
+            runCatching { Fleet.uninstall(ctx, Fleet.installedId(ctx, app) ?: app.pkg) }
+                .onFailure { Toast.makeText(ctx, "Uninstall: ${it.message}", Toast.LENGTH_LONG).show() }
+        }
+        else -> btn(ctx, a.label, 0xFF4A4A55.toInt()) {
+            Toast.makeText(ctx, "'${a.id}' is declared in ${FleetActions.ASSET} but this build has no handler for it",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
     /**
-     * THE FLOOR, one tap from every row: fetch through the ordinary verified
-     * source ladder and hand the result to the SYSTEM package installer.
-     *
-     * Deliberately a separate button rather than a silent fallback inside
-     * [install]. The two are not the same offer — this one always shows the
-     * Android confirmation sheet — and a fallback that quietly changes what
-     * the button does is indistinguishable, from the user's side, from the
-     * silent path never having worked.
+     * Force-stop through the shell channel ladder — the same door Phone Apps'
+     * Stop uses ([PhoneAppActions.forceStop]). With no channel armed it says
+     * so and offers App settings, where Android's own Force stop lives.
      */
-    private fun directInstall(ctx: Context, app: Fleet.App) {
-        Toast.makeText(ctx, "Fetching ${app.label}…", Toast.LENGTH_SHORT).show()
-        thread(name = "fleet-bootstrap-${app.id}") {
-            val r = BootstrapInstall.launch(ctx, app)
+    private fun stop(ctx: Context, app: Fleet.App) {
+        val pkg = Fleet.installedId(ctx, app)
+            ?: return Toast.makeText(ctx, "${app.label}: not installed — nothing to stop", Toast.LENGTH_SHORT).show()
+        if (pkg == ctx.packageName)
+            return Toast.makeText(ctx, getString(R.string.store_phone_why_self), Toast.LENGTH_LONG).show()
+        thread(name = "fleet-stop-${app.id}") {
+            val out = PhoneAppActions.forceStop(ctx, pkg)
             view?.post {
-                r.onSuccess { c ->
-                    Toast.makeText(ctx,
-                        "${app.label}: ${c.versionName ?: c.versionCode}\n${c.evidence}",
-                        Toast.LENGTH_LONG).show()
-                }.onFailure {
-                    Toast.makeText(ctx, "${app.label}: ${it.message}", Toast.LENGTH_LONG).show()
+                if (!isAdded) return@post
+                when {
+                    out == null -> AlertDialog.Builder(requireActivity())
+                        .setTitle(FleetActions.label(ctx, "stop") + " — " + app.label)
+                        .setMessage(getString(R.string.store_fleet_stop_no_channel))
+                        .setPositiveButton(FleetActions.label(ctx, "app_settings")) { _, _ ->
+                            runCatching { startActivity(PhoneAppActions.appInfo(pkg)) }
+                                .onFailure { Toast.makeText(ctx, "${app.label}: ${it.message}", Toast.LENGTH_LONG).show() }
+                        }
+                        .show()
+                    out.contains("OK") -> Toast.makeText(ctx,
+                        getString(R.string.store_phone_stopped, app.label), Toast.LENGTH_SHORT).show()
+                    else -> Toast.makeText(ctx,
+                        getString(R.string.store_phone_failed, app.label, out.trim()), Toast.LENGTH_LONG).show()
                 }
             }
         }

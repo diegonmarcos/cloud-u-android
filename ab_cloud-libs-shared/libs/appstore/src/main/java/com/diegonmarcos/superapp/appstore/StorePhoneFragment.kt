@@ -574,9 +574,7 @@ class StorePhoneFragment : Fragment() {
                 }
             }
             PhoneAppActions.Kind.STOP -> thread(name = "store-phone-stop") {
-                // Package names are [A-Za-z0-9._] by the platform's own rule,
-                // so the id is safe in a shell word as it stands.
-                val out = ShellChannels.active(ctx)?.exec(ctx, "am force-stop ${r.pkg} 2>&1 && echo OK")
+                val out = PhoneAppActions.forceStop(ctx, r.pkg)
                 toastLater(ctx, if (out?.contains("OK") == true) ctx.getString(R.string.store_phone_stopped, r.label)
                                 else ctx.getString(R.string.store_phone_failed, r.label, out?.trim() ?: ctx.getString(R.string.store_phone_why_no_shell)))
             }
