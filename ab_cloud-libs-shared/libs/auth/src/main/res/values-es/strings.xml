@@ -30,4 +30,8 @@
     <string name="auth_code_expired">✗ El código caducó antes de aprobarse.</string>
     <string name="auth_approved">✓ Aprobado · %1$s</string>
     <string name="auth_identity_only">✓ %1$s demostró %2$s. Ese proveedor solo da una identidad: descarga tu configuración con una vía que la conceda.</string>
+
+    <!-- #684 el diálogo de RESPALDO del flujo web con código de autorización (cuando falta el navegador de la flota). -->
+    <string name="auth_oauth_caption">Inicia sesión abajo. Cuando el proveedor te devuelva, la llegada se captura aquí y este diálogo se cierra. No se escribe nada en disco.</string>
+    <string name="auth_oauth_blocked">Este inicio de sesión se queda en %1$s; no se abrió %2$s.</string>
 </resources>

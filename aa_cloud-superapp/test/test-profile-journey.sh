@@ -172,7 +172,10 @@ echo "== T3: every journey string exists in every locale, none is dead (app), an
 USED=$(grep -ohE 'R\.string\.(journey|sign_in)_[a-z_]+' "$PF" "$PV" | sed 's/R\.string\.//' | sort -u)
 [ "$(echo "$USED" | grep -c .)" -ge 40 ] && ok "T3: $(echo "$USED" | grep -c .) journey strings used" || bad "T3: too few journey strings used — labels are literals"
 grep -q 'name="sign_in_' "$RES/values/strings.xml" && bad "T3: this app still declares sign_in_* strings — the surface's words are the lib's" || ok "T3: the sign-in words live in the lib alone"
-LUSED=$(grep -ohE 'R\.string\.auth_[a-z_]+' "$UI" | sed 's/R\.string\.//' | sort -u)
+# EVERY Kotlin file of the lib, not SignInUi.kt alone: the surface grew a second
+# file (OAuthWebDialog.kt) and its captions read as dead strings, failing every
+# SuperApp ship on a string that was in use.
+LUSED=$(grep -rohE --include='*.kt' 'R\.string\.auth_[a-z_]+' "$LSRC" | sed 's/R\.string\.//' | sort -u)
 [ "$(echo "$LUSED" | grep -c .)" -ge 20 ] && ok "T3: the lib names $(echo "$LUSED" | grep -c .) auth_* strings" || bad "T3: the lib's surface types its captions"
 for loc in "$LRES"/values*/strings.xml; do
     for s in $LUSED; do grep -q "name=\"$s\"" "$loc" || bad "T3: lib string $s missing from ${loc#$LIB/}"; done
