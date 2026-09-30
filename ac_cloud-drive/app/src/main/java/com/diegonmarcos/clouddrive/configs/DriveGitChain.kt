@@ -2,6 +2,7 @@ package com.diegonmarcos.clouddrive.configs
 
 import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.sync.FleetGit
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
 import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
@@ -66,11 +67,11 @@ object DriveGitChain {
     fun rungs(
         ctx: Context,
         declared: List<AuthDeclaration.GitRung> = AuthDeclaration.gitChain,
-        bearer: String = "",
+        session: String = "",
     ): List<GitAuthChain.Rung> = declared.map { rung ->
         GitAuthChain.Rung(rung.id, rung.label) {
             when (rung.kind) {
-                RUNG_FLEET -> fleet(rung.config, bearer)
+                RUNG_FLEET -> fleet(rung.config, session)
                 RUNG_GITHUB -> onDevice(ctx)
                 else -> GitAuthChain.Answer.NoImplementation("kind '${rung.kind}' is not implemented")
             }
@@ -78,23 +79,26 @@ object DriveGitChain {
     }
 
     /**
-     * RUNG 1 — our own Authelia-fronted proxy (#647). Preferred whenever
-     * reachable, because on this leg the PHONE HOLDS NO GITHUB CREDENTIAL: the
-     * server mints it.
+     * RUNG 1 — our own Authelia-fronted proxy (#647). Ranked first because on this
+     * leg the PHONE HOLDS NO GITHUB CREDENTIAL AT ALL: it presents the fleet
+     * session the owner's ordinary browser login earned, and git-proxy-api talks to
+     * GitHub with a token that never leaves the server. Nothing is minted for the
+     * device here, which is why this rung answers [GitAuthChain.Answer.Served]
+     * rather than a credential.
      *
-     * EVERY WAY THIS CAN FAIL IS A FALL-THROUGH. Not built yet (#647 is in flight
-     * in cloud-infra), our servers down, this network unable to see them, no
-     * bearer on this phone to authenticate with — a phone cannot tell those apart
-     * and they all mean "try GitHub". Only an explicit refusal (401/403) is
-     * reported as DECLINED, because that one says something different: we were
-     * reached, and told no.
+     * EVERY WAY THIS CAN FAIL IS A FALL-THROUGH. Not deployed, our servers down,
+     * this network unable to see them, no fleet sign-in on this phone yet — a phone
+     * cannot tell those apart and they all mean "try the next rung". Only an
+     * explicit refusal (401/403) is reported as DECLINED, because that one says
+     * something different, and says it about a service that is demonstrably UP: the
+     * service validates the credential ITSELF, independent of the edge.
      */
-    private fun fleet(config: JSONObject, bearer: String): GitAuthChain.Answer {
+    private fun fleet(config: JSONObject, session: String): GitAuthChain.Answer {
         val url = config.optString("repos_url")
         if (url.isBlank()) return GitAuthChain.Answer.NoImplementation("no repos_url is declared")
-        // No bearer means we cannot even ask. That is indistinguishable from the
+        // No session means we cannot even ask. That is indistinguishable from the
         // fleet being unreachable, and must behave identically.
-        if (bearer.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet credential on this phone")
+        if (session.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet sign-in on this phone yet")
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = false
@@ -102,7 +106,10 @@ object DriveGitChain {
             connection.connectTimeout = config.optInt("connect_timeout_ms", 4000)
             connection.readTimeout = config.optInt("read_timeout_ms", 8000)
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer $bearer")
+            // #653 THE HEADER IS DECLARED, and it is NOT Authorization. authelia_web
+            // yields a session cookie, not a bearer, so "Bearer $x" would present an
+            // empty credential and the refusal would read as a fall-through.
+            connection.setRequestProperty(FleetGit.sessionHeader(), session)
             when (val code = connection.responseCode) {
                 // #653 ANSWERED, AND THE PHONE HOLDS NOTHING. The body is a repo
                 // PROJECTION, never a credential, so this rung is Served and not
@@ -118,7 +125,7 @@ object DriveGitChain {
                 // are not followed, precisely so this cannot be mistaken for a 200
                 // from the portal's login page.
                 in 300..399 -> GitAuthChain.Answer.Unreachable(
-                    "the edge redirected (HTTP $code) without reaching the service; this bearer did not satisfy the gate",
+                    "the edge redirected (HTTP $code) without reaching the service; this sign-in did not satisfy the gate",
                 )
                 else -> GitAuthChain.Answer.Unreachable("the fleet answered HTTP $code")
             }
@@ -166,9 +173,9 @@ object DriveGitChain {
      */
     fun resolve(
         ctx: Context,
-        bearer: String = "",
+        session: String = "",
     ): GitAuthChain.Outcome = GitAuthChain.resolve(
-        chain = rungs(ctx = ctx, bearer = bearer),
+        chain = rungs(ctx = ctx, session = session),
         store = GitCredentialStore(ctx),
         credentialId = credentialId(),
     )

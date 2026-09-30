@@ -258,6 +258,10 @@
     <!-- #653 the string that read "Enter %1$s at %2$s" is DELETED with the device grant it
          served. No rung asks the owner to read a code off this screen and retype it. -->
     <string name="git_chain_answered">%1$s supplied the credential</string>
+    <!-- #653 the edge answered instead of the service. A redirect under the proxy's path
+         prefix comes back for ANY path, even with the container stopped, so it is stated as
+         what it is and never as "signed in" or as "the service is down". -->
+    <string name="git_fleet_blocked">The fleet edge redirected (HTTP %1$d) before reaching the service, so this sign-in did not satisfy the gate. Nothing is known about the service itself from this.</string>
     <string name="git_login_hint">The vault config import delivers the credential that lists this account\'s repositories, private ones included</string>
     <string name="git_login_ssh_active">cloning with your SSH key</string>
     <string name="git_login_ssh_cannot_list">An SSH key clones but cannot list an account: the listing needs the vault credential.</string>

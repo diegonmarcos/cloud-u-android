@@ -253,11 +253,32 @@ fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — libs:git-sync is the engine"; else pass "no JGit in the app: every verb goes through the engine"; fi
 if grep -qE 'setForce\(true\)' "$ENGINE" && grep -qE 'ResetCommand\.ResetType\.HARD\)\.setRef\(ref\.name\)' "$ENGINE"; then pass "forcePush takes the fast-forward check off; forcePull resets HARD onto the fetched remote ref"; else fail "the force verbs are not implemented as force (a synonym for push/pull would pass every name check)"; fi
 
-echo "── P5 #641 there is NO browser login on this page, and no GitHub App anywhere ──"
+echo "── P5 #653 there is no GITHUB login on this page, and no GitHub App anywhere ──"
 # The provider was a GitHub APP (`Ov23li` client_id prefix) and GitHub Apps ship with Device
-# Flow OFF, so Start could never work. These are the INVERTED assertions: the affordance, the
-# surface and the client id must all be absent, and the vault credential is the only way in.
-if grep -qE 'SignInWays|SignInHost|SignInResult' "$PAGE"; then fail "the page hosts a sign-in surface again — the vault credential is the only git auth path"; else pass "no sign-in surface on the page: no Start button to press"; fi
+# Flow OFF, so Start could never work. The client id must still be absent everywhere.
+#
+# #653 NARROWED, FOR THE SAME REASON A3 WAS. This forbade ANY libs:auth sign-in surface on
+# the page, and that was right when the only login the page could host was a GITHUB device
+# grant. That flow no longer exists anywhere in this app: GhDeviceLogin.kt is deleted, and
+# the surface the page must now host is the fleet's OWN browser login — authelia_web, the
+# declared session_provider of the fleet rung, which is what makes a credential-free listing
+# possible at all. Forbidding it would forbid the fix.
+#
+# What is asserted instead is the half that always mattered: NO GITHUB SIGN-IN SURFACE. A
+# sign-in surface is permitted ONLY scoped to the DECLARED session_provider, read off the
+# declaration rather than typed, so the page cannot offer a second provider without the
+# declaration changing and cannot name github under any spelling.
+if grep -qE 'SignInWays|SignInHost|SignInResult' "$PAGE"; then
+    if grep -qE 'policy = listOf\(FleetGit\.sessionProvider\(\)\)' "$PAGE"; then
+        pass "the page's one sign-in surface is scoped to the DECLARED session_provider"
+    else
+        fail "a sign-in surface on the page is not scoped to the declared session_provider — it could offer any way, including a GitHub one"
+    fi
+    if grep -qE 'policy = listOf\("' "$PAGE"; then fail "the page scopes its sign-in to a LITERAL provider id instead of the declared one"; else pass "the scope is declared, not typed"; fi
+else
+    pass "no sign-in surface on the page at all"
+fi
+if grep -qiE 'policy *= *listOf\([^)]*github|Open\.Device|DeviceFlowDialog|SignIn\.Kind\.DEVICE_FLOW' "$PAGE"; then fail "a GitHub / device-flow sign-in surface is on the page"; else pass "no GitHub and no device-flow sign-in surface on the page"; fi
 if grep -qE 'webauth' "$PAGE"; then fail "the page still reads a webauth way"; else pass "no webauth way is read in Kotlin"; fi
 if grep -rqE 'Ov23li' "$SHARED_BJ" "$BJ" "$PAGE"; then fail "a GitHub App client id is back in the declarations"; else pass "no Ov23li client id in either declaration or on the page"; fi
 python3 - "$SHARED_BJ" <<'PYTHON'

@@ -143,12 +143,22 @@ object DriveTags {
     const val SYNC_GIT_VAULT_NOTE = "sync_git_vault_note"
     /**
      * #646 the declared git-auth chain's own account of itself: the order it will
-     * try (before anything runs), the short code the GitHub rung asks for, and
-     * afterwards which provider answered and why the ones before it were skipped.
-     * A chain that degrades silently is the #639/#452 shape; this tag is where it
-     * has to say so out loud.
+     * try (before anything runs) and afterwards which provider answered and why the
+     * ones before it were skipped. A chain that degrades silently is the #639/#452
+     * shape; this tag is where it has to say so out loud.
+     *
+     * #653 "the short code the GitHub rung asks for" used to be listed here too. It
+     * is gone with the device grant: no rung asks the owner to type anything.
      */
     const val SYNC_GIT_CHAIN = "sync_git_chain"
+
+    /**
+     * #653 the fleet's own browser login, on the Git page — the ONE sign-in way this
+     * surface offers, scoped to the declared `session_provider` of the fleet rung
+     * (authelia_web). Tagged separately from the chain so a test can assert WHICH
+     * provider is offered here, not merely that something is.
+     */
+    const val SYNC_GIT_FLEET_LOGIN = "sync_git_fleet_login"
     const val SYNC_HISTORY = "sync_history"
     const val SYNC_REMOTE_CARD = "sync_remote_card"
     const val SYNC_JOB_ROW = "sync_job_row"

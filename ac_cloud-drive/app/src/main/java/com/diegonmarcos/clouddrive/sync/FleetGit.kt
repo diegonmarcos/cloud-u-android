@@ -61,10 +61,23 @@ object FleetGit {
     fun healthUrl(): String = rung()?.config?.optString("health_url").orEmpty()
 
     /**
-     * The declared sign-in provider whose bearer authorises this rung. Declared, so the
-     * page asks for the right login without naming a provider in Kotlin.
+     * The declared sign-in provider whose session authorises this rung — `authelia_web`,
+     * the ordinary browser login. Declared, so the page offers the right way without
+     * naming a provider in Kotlin.
      */
-    fun bearerProvider(): String = rung()?.config?.optString("bearer_provider").orEmpty()
+    fun sessionProvider(): String = rung()?.config?.optString("session_provider").orEmpty()
+
+    /**
+     * Which header carries that session. DECLARED, because it is not `Authorization`:
+     * `authelia_web` yields a cookie (libs:auth's WebAuthDialog sets `bearer = ""` and
+     * delivers the session through onWebSession), and the edge accepts the interactive
+     * session as its non-bearer fallback. Sending `Authorization: Bearer ` here would
+     * present an EMPTY credential and read the refusal as a fall-through.
+     */
+    fun sessionHeader(): String = rung()?.config?.optString("session_header").ifBlankOrNull("Cookie")
+
+    private fun String?.ifBlankOrNull(fallback: String): String =
+        if (this.isNullOrBlank()) fallback else this
 
     /** What a call to the fleet produced. No variant carries a credential. */
     sealed class Outcome {
@@ -91,10 +104,10 @@ object FleetGit {
      * Reuses [GitHubRepos.parse] for the array: the proxy's projection keeps the
      * upstream field names, so a second parser would be a second thing to keep in step.
      */
-    fun repos(bearer: String): Outcome {
+    fun repos(session: String): Outcome {
         val url = reposUrl()
         if (url.isBlank()) return Outcome.Unreachable("no fleet repos_url is declared")
-        if (bearer.isBlank()) return Outcome.Unreachable("no fleet bearer on this phone")
+        if (session.isBlank()) return Outcome.Unreachable("no fleet session on this phone")
         val config = rung()?.config
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
@@ -103,7 +116,7 @@ object FleetGit {
             connection.connectTimeout = config?.optInt("connect_timeout_ms", 4000) ?: 4000
             connection.readTimeout = config?.optInt("read_timeout_ms", 8000) ?: 8000
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer $bearer")
+            connection.setRequestProperty(sessionHeader(), session)
             when (val code = connection.responseCode) {
                 in 200..299 -> {
                     val body = connection.inputStream.bufferedReader().readText()

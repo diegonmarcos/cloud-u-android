@@ -81,6 +81,9 @@ import java.util.Date
 import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
+import com.diegonmarcos.cloudlib.auth.SignInHost
+import com.diegonmarcos.cloudlib.auth.SignInResult
+import com.diegonmarcos.cloudlib.auth.SignInWays
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,6 +136,30 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // ranking it will actually follow rather than a ranking somebody typed here.
     var chain by remember { mutableStateOf(GitChainState(order = DriveGitChain.declaredOrder())) }
     LaunchedEffect(Unit) { coordinator.refresh() }
+
+    /**
+     * #653 THE FLEET SIGN-IN'S HOST. The browser login's session arrives through
+     * [SignInHost.onWebSession] — NOT through SignInResult.bearer, which libs:auth leaves
+     * empty for this way — and is kept in [FleetSession], a process-lifetime field with no
+     * writer to any store. Nothing here persists a credential, which is what
+     * test-drive-configs-sign-in's "the drive host stores no bearer" requires.
+     *
+     * The artifact a fleet login also returns is NOT applied here: the app's own
+     * configs surface owns that, and applying it twice would be a second apply path.
+     * Deliberately worded without naming another page — this page states its own
+     * state and never sends the owner somewhere else (#639).
+     */
+    val fleetHost = remember {
+        object : SignInHost {
+            override fun onSignedIn(result: SignInResult) {
+                chain = chain.copy(signedIn = FleetSession.present)
+            }
+            override fun onWebSession(cookie: String) {
+                FleetSession.remember(cookie)
+                chain = chain.copy(signedIn = FleetSession.present)
+            }
+        }
+    }
 
     // #606 the store's git folder — the ONE place a clone lands, resolved from the declaration.
     val root = remember { SharedStore.gitRoot().absolutePath }
@@ -202,6 +229,31 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         )
     }
 
+    /**
+     * #653 THE SAME LISTING, SERVED BY THE FLEET, with no GitHub credential anywhere.
+     * Only the fleet session is presented; the proxy's answer is a projection that cannot
+     * carry a credential back. Every non-success is reported in words, and the three
+     * states are kept APART on purpose — a redirect means the edge answered and says
+     * nothing about the service, so it must never read as either working or broken.
+     */
+    fun fetchFleetListing() {
+        listing = listing.copy(loading = true, error = "")
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) { FleetGit.repos(FleetSession.cookie) }
+            listing = when (outcome) {
+                is FleetGit.Outcome.Listed -> GitListing(loaded = true, repos = outcome.repos, complete = true)
+                is FleetGit.Outcome.Refused -> GitListing(loaded = true, error = outcome.why)
+                is FleetGit.Outcome.Blocked -> GitListing(
+                    loaded = true,
+                    error = ctx.getString(R.string.git_fleet_blocked, outcome.code),
+                )
+                is FleetGit.Outcome.Unreachable -> GitListing(loaded = true, error = outcome.why)
+            }
+            // The identity is the page's declared owner; no credential is held for it.
+            if (outcome is FleetGit.Outcome.Listed) login = login.copy(identity = page.owner, fromVault = false)
+        }
+    }
+
     /** The account's own repositories, with the token the sign-in proved. */
     fun fetchListing(token: String) {
         listing = listing.copy(loading = true, error = "")
@@ -236,16 +288,23 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         chain = chain.copy(running = true, narrative = "", answeredBy = "")
         scope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                DriveGitChain.resolve(ctx.applicationContext)
+                DriveGitChain.resolve(ctx.applicationContext, session = FleetSession.cookie)
             }
             chain = chain.copy(
                 running = false,
                 narrative = outcome.narrative(),
                 answeredBy = outcome.answeredByLabel.orEmpty(),
             )
-            outcome.token?.takeIf { it.isNotBlank() }?.let { token ->
-                login = login.copy(identity = page.owner, token = token, fromVault = false)
-                fetchListing(token)
+            val token = outcome.token?.takeIf { it.isNotBlank() }
+            when {
+                // #653 THE FLEET ANSWERED AND THERE IS NO TOKEN — the whole point. The
+                // listing comes from the proxy, which holds the GitHub credential on its
+                // own side, so this branch runs on a phone with ZERO GitHub credential.
+                outcome.ok && token == null -> fetchFleetListing()
+                token != null -> {
+                    login = login.copy(identity = page.owner, token = token, fromVault = false)
+                    fetchListing(token)
+                }
             }
         }
     }
@@ -327,6 +386,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                         SectionHeader(section.label, count = if (listing.loaded) listing.repos.size else null)
                         GitLoginBox(
                             page = page, login = login, listing = listing, chain = chain,
+                            fleetHost = fleetHost,
                             onSshKeyPath = { login = login.copy(sshKeyPath = it) },
                             onUseSsh = { login = login.copy(ssh = it) },
                             onRetry = { if (login.token.isNotBlank()) fetchListing(login.token) },
@@ -436,6 +496,8 @@ private data class GitChainState(
     val order: String = "",
     val narrative: String = "",
     val answeredBy: String = "",
+    /** #653 a fleet browser login has landed in THIS process (memory only, never stored). */
+    val signedIn: Boolean = false,
 )
 
 /** The authenticated listing, or why there is none. */
@@ -468,6 +530,7 @@ private fun GitLoginBox(
     login: GitLogin,
     listing: GitListing,
     chain: GitChainState,
+    fleetHost: SignInHost,
     onSshKeyPath: (String) -> Unit,
     onUseSsh: (Boolean) -> Unit,
     onRetry: () -> Unit,
@@ -508,6 +571,18 @@ private fun GitLoginBox(
                     onStartChain, filled = !chain.running,
                 )
             }
+            // #653 THE FLEET'S OWN BROWSER LOGIN, and the ONLY sign-in way this page
+            // offers. `policy` is the DECLARED session_provider of the fleet rung, so
+            // exactly one way is drawn and this page can never grow a GitHub login: what
+            // it offers is whatever the declaration names, and the declaration names
+            // authelia_web. THIS IS NOT A SECOND AUTH SURFACE — it is libs:auth's own
+            // composable, the fleet's ONE sign-in, scoped to one provider.
+            if (!chain.signedIn) SignInWays(
+                host = fleetHost,
+                policy = listOf(FleetGit.sessionProvider()),
+                modifier = Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_FLEET_LOGIN),
+                pill = { label, tag, onClick -> Pill(label, onClick, modifier = Modifier.testTag(tag)) },
+            )
             // #653 THE CODE LINE IS GONE. A monospace line reading "Enter XXXX-XXXX at
             // github.com/login/device" used to sit here. Nothing replaces it: there is no
             // code to show, because no rung mints a credential interactively any more.

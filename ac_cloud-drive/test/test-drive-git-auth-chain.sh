@@ -47,6 +47,7 @@ GH_GRADLE="$SHARED/libs/gh/build.gradle"
 GIX_PIN="$SHARED/libs/gix/data/gix-binary.json"
 GIX_GRADLE="$SHARED/libs/gix/build.gradle"
 GIX_RUNNER="$SHARED/libs/gix/src/main/java/com/diegonmarcos/cloudlib/gix/GixRunner.kt"
+FLEET_CLIENT="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/FleetGit.kt"
 GH_RUNNER="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhRunner.kt"
 
 FAILURES=0
@@ -60,7 +61,7 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 # the fix the defect.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 for required in "$SHARED_BJ" "$BJ" "$WALKER" "$WALKER_TEST" "$WIRING" "$READER" "$PAGE" \
-                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER"; do
+                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER" "$FLEET_CLIENT"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -217,6 +218,89 @@ c2b() {
     return $bad
 }
 
+# c8 <shared build.json> <DriveGitChain.kt> <FleetGit.kt> : the fleet rung dials the
+# routes the SERVICE declares, under its base path, and the app never patches a landing
+#
+# #655 THE EDGE DROPS THE PREFIX ON THE AUTHELIA RETURN. `handle_path /<prefix>/*` strips
+# the prefix for everything in the block INCLUDING the forward_auth subrequest, so Authelia
+# builds `rd` from the already-stripped URI and a completed login can land the owner on
+# /repos instead of /git/repos. That is an edge defect on 26 blocks of that Caddy config and
+# it is filed there. THIS CHECK EXISTS TO KEEP IT FILED THERE: if the app ever "fixes" it by
+# rewriting the return URL or re-adding the prefix client-side, the real defect becomes
+# invisible and outlives the workaround. So the assertion is about the LANDING, not the
+# login: the declared paths must carry the service's base path, and no Kotlin may synthesise
+# or patch one.
+c8() {
+    local bj="$1" wiring="$2" client="$3" bad=0
+    python3 - "$bj" <<'PYTHON' || bad=1
+import json, sys
+f = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["git_chain"]["providers"]["fleet"]
+bad = 0
+# The route that never existed. A 404 reads as a clean fall-through, so a wrong path
+# here makes the fleet leg skip FOREVER while looking healthy.
+if "token_url" in f:
+    print("    the fleet rung declares token_url again: git-proxy-api never served a "
+          "credential-mint route, and a rung that hands the phone a GitHub token is a "
+          "rung on which the phone holds one"); bad = 1
+# Every declared URL must sit under the service's own base path, which is what #655
+# strips. A path that has already lost it would 404 for ever.
+for key in ("health_url", "repos_url", "tarball_url"):
+    url = f.get(key, "")
+    if not url:
+        print("    the fleet rung declares no %s" % key); bad = 1
+    elif "/git/" not in url and not url.endswith("/git"):
+        print("    %s (%r) does not carry the service's /git base path — this is the #655 "
+              "prefix-drop shape baked into the declaration" % (key, url)); bad = 1
+# The session, and the header that carries it, are both declared.
+if f.get("session_provider") != "authelia_web":
+    print("    the fleet rung's session_provider is %r; the ordinary browser login is "
+          "authelia_web" % f.get("session_provider")); bad = 1
+if f.get("session_header", "").lower() != "cookie":
+    print("    session_header is %r. authelia_web yields a SESSION COOKIE, not a bearer "
+          "(libs:auth leaves SignInResult.bearer empty for that way), so Authorization "
+          "would present an empty credential" % f.get("session_header")); bad = 1
+if f.get("holds_github_credential") is not False:
+    print("    the fleet rung claims to hold a GitHub credential; the whole point is that "
+          "it does not"); bad = 1
+sys.exit(1 if bad else 0)
+PYTHON
+    # NOTHING composes or repairs a fleet URL in Kotlin. Comments are stripped first so
+    # the prose explaining the defect does not read as the defect.
+    # ONE FILE AT A TIME: _code takes a single path, so `_code "$a" "$b"` scanned only
+    # $a and the client was never looked at. That exact bug made this check hollow and
+    # the mutation block below caught it.
+    local synth
+    for f_ in "$wiring" "$client"; do
+        synth="$(_code "$f_" | grep -nE '"https?://|/git/repos|\brd=|api\.diegonmarcos' || true)"
+        [ -z "$synth" ] || { echo "    $(basename "$f_") builds or repairs a fleet URL / Authelia return in Kotlin:"; \
+                             printf '%s\n' "$synth" | sed 's/^/        /'; bad=1; }
+    done
+    # The declared header is USED, not a literal Authorization.
+    grep -qE 'setRequestProperty\(FleetGit\.sessionHeader\(\), session\)' "$wiring" \
+        || { echo "    the fleet leg does not send the DECLARED session header"; bad=1; }
+    for f_ in "$wiring" "$client"; do
+        _code "$f_" | grep -qE '"Authorization", *"Bearer' \
+            && { echo "    $(basename "$f_") sends a literal Authorization: Bearer — authelia_web yields a cookie, so this would present an EMPTY credential and read the refusal as a fall-through"; bad=1; }
+    done
+    # A redirect must NOT be followed, or the portal's login page returns 200 and a dead
+    # path passes for a live one.
+    for f_ in "$wiring" "$client"; do
+        grep -qE 'instanceFollowRedirects = false' "$f_" \
+            || { echo "    $(basename "$f_") follows redirects: the portal's login page would come back as a 200"; bad=1; }
+        # NOT merely that the branch exists: its BODY is what matters. A
+        # `in 300..399 -> Outcome.Listed(...)` satisfies a presence-only grep while
+        # reporting the edge's login page as a successful listing.
+        grep -qE 'in 300\.\.399 -> (Outcome\.Blocked|GitAuthChain\.Answer\.Unreachable)' "$f_" \
+            || { echo "    $(basename "$f_") does not map a 3xx to Blocked/Unreachable — the edge answers 3xx for ANY path under the prefix, even with the container stopped, so it proves nothing either way and must never read as success"; bad=1; }
+    done
+    return $bad
+}
+
+echo "── C8 #655 the declared routes carry the service's base path, and the app patches no landing ──"
+c8 "$SHARED_BJ" "$WIRING" "$FLEET_CLIENT" \
+    && pass "the fleet rung declares the service's real routes under /git, rides the declared session header, and no Kotlin builds or repairs a URL" \
+    || fail "the fleet rung's routes, session header, or redirect handling do not match the service that shipped"
+
 echo "── C2 reordering the declaration reorders the REAL attempts ──"
 c2 "$SHARED_BJ" && pass "the declared order is the attempted order, reversing it changes who answers, and a removed rung is never tried" \
     || fail "the attempt order does not follow the declaration"
@@ -277,9 +361,16 @@ c3b() {
              echo "    yet would surface as an error"; bad=1; }
     grep -qE '401, 403 -> GitAuthChain\.Answer\.Declined' "$wiring" \
         || { echo "    an explicit refusal is not distinguished from unreachability"; bad=1; }
-    # No bearer on the phone is indistinguishable from the fleet being down and
-    # must behave identically.
-    grep -qE 'bearer\.isBlank\(\) *\) return GitAuthChain\.Answer\.Unreachable' "$wiring" \
+    # No fleet sign-in on the phone is indistinguishable from the fleet being down
+    # and must behave identically.
+    #
+    # #653 THE VARIABLE IS `session`, NOT `bearer`, and the rename is the point: this
+    # rung rides the Authelia SESSION COOKIE that authelia_web's browser login earns
+    # (libs:auth leaves SignInResult.bearer EMPTY for that way and delivers the
+    # session through onWebSession). A leg that sent "Bearer \$bearer" would present an
+    # empty credential and read the refusal as a fall-through. The INVARIANT this
+    # check enforces is unchanged; only the honest name of the thing moved.
+    grep -qE 'session\.isBlank\(\) *\) return GitAuthChain\.Answer\.Unreachable' "$wiring" \
         || { echo "    a phone with no fleet credential does not fall through"; bad=1; }
     # An undeclared/unimplemented KIND keeps its declared position instead of
     # vanishing from the chain.
@@ -542,7 +633,7 @@ _stage() {
     rm -rf "$W"; mkdir -p "$W"
     cp "$SHARED_BJ" "$W/shared.json";      cp "$BJ" "$W/drive.json"
     cp "$WALKER" "$W/GitAuthChain.kt";     cp "$WIRING" "$W/DriveGitChain.kt"
-    cp "$PAGE" "$W/GitReposScreen.kt"
+    cp "$PAGE" "$W/GitReposScreen.kt";   cp "$FLEET_CLIENT" "$W/FleetGit.kt"
     cp "$GH_PIN" "$W/gh.json";             cp "$GH_GRADLE" "$W/gh.gradle"
     cp "$GIX_PIN" "$W/gix.json";           cp "$GIX_GRADLE" "$W/gix.gradle"
     cp "$GIX_RUNNER" "$W/GixRunner.kt";    cp "$GH_RUNNER" "$W/GhRunner.kt"
@@ -633,9 +724,9 @@ _stage && _green "c3b" c3b "$W/DriveGitChain.kt" && {
                                'else -> GitAuthChain.Answer.Declined("the fleet answered HTTP $code")'
     _red "C3 an absent #647 (any unexpected status) surfaces as a refusal, not a fall-through" c3b "$W/DriveGitChain.kt"; }
 _stage && _green "c3b" c3b "$W/DriveGitChain.kt" && {
-    _sub "$W/DriveGitChain.kt" 'if (bearer.isBlank()) return GitAuthChain.Answer.Unreachable' \
-                               'if (bearer.isBlank()) return GitAuthChain.Answer.Declined'
-    _red "C3 a phone with no fleet credential is reported as declined instead of falling through" c3b "$W/DriveGitChain.kt"; }
+    _sub "$W/DriveGitChain.kt" 'if (session.isBlank()) return GitAuthChain.Answer.Unreachable' \
+                               'if (session.isBlank()) return GitAuthChain.Answer.Declined'
+    _red "C3 a phone with no fleet sign-in is reported as declined instead of falling through" c3b "$W/DriveGitChain.kt"; }
 
 # ── C4 one credential, one id ──
 _stage && _green "c4" c4 "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/drive.json" && {
@@ -698,6 +789,33 @@ _stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$
 _stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
     printf '\nprivate fun pushViaGix() = GixRunner.run("push")\n' >>"$W/DriveGitChain.kt"
     _red "C6 a caller routes push to gix" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+
+# ── C8 #655 the declared landing, and no client-side repair of it ──
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"]["repos_url"] = "https://api.diegonmarcos.com/repos"'
+    _red "C8 the #655 prefix drop baked into the declaration (repos_url loses /git)" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"]["token_url"] = "https://api.diegonmarcos.com/pub/git/credential"'
+    _red "C8 the credential-mint route that never existed, re-declared" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"]["session_header"] = "Authorization"'
+    _red "C8 the session declared as a bearer header, which would send an EMPTY credential" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"]["holds_github_credential"] = True'
+    _red "C8 the fleet rung claiming it holds a GitHub credential" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _sub "$W/DriveGitChain.kt" 'connection.setRequestProperty(FleetGit.sessionHeader(), session)' \
+                               'connection.setRequestProperty("Authorization", "Bearer $session")'
+    _red "C8 a literal Authorization: Bearer back in the fleet leg" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _sub "$W/FleetGit.kt" 'connection.instanceFollowRedirects = false' 'connection.instanceFollowRedirects = true'
+    _red "C8 redirects followed, so the portal's login page returns 200 and a dead path passes for a live one" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    printf '\nprivate fun patchLanding(u: String) = u.replace("https://api.diegonmarcos.com/repos", "https://api.diegonmarcos.com/git/repos")\n' >>"$W/FleetGit.kt"
+    _red "C8 the app repairs #655's prefix drop client-side, hiding the edge defect" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _sub "$W/FleetGit.kt" 'in 300..399 -> Outcome.Blocked(code)' 'in 300..399 -> Outcome.Listed(emptyList())'
+    _red "C8 a 3xx from the edge reported as a successful empty listing" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
 
 # ── C7 the token ──
 _stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {

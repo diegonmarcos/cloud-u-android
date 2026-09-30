@@ -81,8 +81,32 @@ a1() {
 # a3 <GitReposScreen.kt> <strings.xml> : #641 no browser login on the page, in any shape
 a3() {
     local f="$1" str="$2" bad=0
-    grep -qE 'SignInWays|SignInHost|SignInResult|webauth' "$f" \
-        && { echo "    a sign-in surface is back on the page — the vault credential is the only git auth path"; bad=1; }
+    # #653 NARROWED, ON PURPOSE, AND STILL LOAD-BEARING. This forbade ANY libs:auth
+    # sign-in surface on the page, because when it was written the only login the page
+    # could host was a GITHUB device grant — the thing #641 had just deleted. That flow
+    # no longer exists anywhere in this app, and the surface the page must now host is
+    # the fleet's OWN browser login: `authelia_web`, which is what makes the
+    # credential-free path possible at all. Forbidding it would forbid the fix.
+    #
+    # So the assertion becomes the one that always mattered: NO GITHUB SIGN-IN SURFACE.
+    # A sign-in surface is permitted ONLY when it is scoped to the DECLARED
+    # session_provider of the fleet rung, read off the declaration rather than typed —
+    # so the page cannot grow a second provider without changing the declaration, and
+    # cannot name github at all.
+    if grep -qE 'SignInWays|SignInHost|SignInResult|webauth' "$f"; then
+        grep -qE 'policy = listOf\(FleetGit\.sessionProvider\(\)\)' "$f" \
+            || { echo "    a sign-in surface on the page is NOT scoped to the declared session_provider — it could offer any way, including a GitHub one"; bad=1; }
+        # A literal provider id in the policy is the second source of truth that lets a
+        # github way back in without touching the declaration.
+        grep -qE 'policy = listOf\("' "$f" \
+            && { echo "    the page scopes its sign-in to a LITERAL provider id instead of the declared one"; bad=1; }
+    fi
+    # github must not be nameable as a sign-in way here under any spelling.
+    grep -qiE 'policy *= *listOf\([^)]*github|Open\.Device|DeviceFlowDialog|SignIn\.Kind\.DEVICE_FLOW' "$f" \
+        && { echo "    a GitHub / device-flow sign-in surface is back on the page"; bad=1; }
+    # `webauth` was the deleted GitHub way's own id and must never reappear as one.
+    grep -qE 'webauth' "$f" \
+        && { echo "    the deleted GitHub webauth way is named on the page again"; bad=1; }
     # The page states which of the TWO states it is in, and nothing else.
     grep -qE 'R\.string\.git_login_vault_absent' "$f" \
         || { echo "    the page does not say anything when there is no vault credential"; bad=1; }
@@ -174,7 +198,7 @@ r2() {
 
 echo "── A the vault is the primary git credential path ──"
 a1 "$PAGE" && pass "the page authenticates from the vault-delivered credential and lists with it, untapped" || fail "the git credential does not come from the vault-delivered config"
-a3 "$PAGE" "$STR" && pass "#646 no libs:auth sign-in surface and no provider-setting breadcrumb on the page, and the credential-absent line names the declared chain" || fail "the page hosts a sign-in surface, points at a provider setting, or misstates the credential-absent case"
+a3 "$PAGE" "$STR" && pass "#653 no GITHUB sign-in surface on the page (the one it hosts is scoped to the declared session_provider), no provider-setting breadcrumb, and the credential-absent line names the declared chain" || fail "the page hosts a GitHub or unscoped sign-in surface, points at a provider setting, or misstates the credential-absent case"
 a4 "$APPLY" && pass "one store, the declared credential_id, and a fresh phone keeps the token" || fail "the vault credential is not stored/read through libs:git-sync's own store"
 python3 - "$BJ" <<'PYTHON'
 import json, sys
@@ -203,13 +227,38 @@ s=s.replace('DriveAuthApply.vaultGitToken(ctx.applicationContext)','DrivePrefs(c
 open(p,'w',encoding='utf-8').write(s)" "$copy"
 if a1 "$copy" >/dev/null 2>&1; then fail "MUT a credential from somewhere other than the vault passed — A1 does not hold"; else pass "MUT the credential resolved outside the vault-delivered config goes RED"; fi
 
+# #653 THE ASSERTION THAT MUST SURVIVE THE NARROWING. A3 now PERMITS a sign-in surface
+# scoped to the declared session_provider, so the old mutation (any SignInWays at all)
+# would no longer be caught — and a guard that is narrowed without re-proving the half it
+# keeps has become decoration. These three mutations prove the kept half is live: a GITHUB
+# sign-in surface on this page still goes RED, under three different spellings.
 copy="$MUT/page2.kt"; cp "$PAGE" "$copy"
 python3 -c "
 import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
-s=s.replace('        Text(','        SignInWays(host = host, policy = listOf(\"github\"))\n        Text(',1)
+s=s.replace('        Text(','        SignInWays(host = fleetHost, policy = listOf(\"github\"))\n        Text(',1)
 open(p,'w',encoding='utf-8').write(s)" "$copy"
 cmp -s "$PAGE" "$copy" && fail "MUT the mutation did not change the page (tester is stale)" \
-    || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT a sign-in surface back on the page passed — A3 does not hold"; else pass "MUT a browser login put back on the page goes RED"; fi; }
+    || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT a github sign-in surface back on the page passed — A3 does not hold"; else pass "MUT a github-scoped sign-in surface on the page goes RED"; fi; }
+
+# The same thing said with the DEVICE-FLOW dialog instead of a policy id.
+copy="$MUT/page2b.kt"; cp "$PAGE" "$copy"
+python3 -c "
+import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
+s=s.replace('        Text(','        if (p.kind == SignIn.Kind.DEVICE_FLOW) DeviceFlowDialog(p)\n        Text(',1)
+open(p,'w',encoding='utf-8').write(s)" "$copy"
+cmp -s "$PAGE" "$copy" && fail "MUT the device-flow mutation did not change the page (tester is stale)" \
+    || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT a device-flow dialog back on the page passed — A3 does not hold"; else pass "MUT a device-flow dialog on the page goes RED"; fi; }
+
+# And the loophole the narrowing could have opened: an UNSCOPED sign-in surface, which
+# offers every declared way and would therefore offer a github one the moment a github
+# provider is ever declared again.
+copy="$MUT/page2c.kt"; cp "$PAGE" "$copy"
+python3 -c "
+import sys;p=sys.argv[1];s=open(p,encoding='utf-8').read()
+s=s.replace('policy = listOf(FleetGit.sessionProvider()),','')
+open(p,'w',encoding='utf-8').write(s)" "$copy"
+cmp -s "$PAGE" "$copy" && fail "MUT the unscoped mutation did not change the page (tester is stale)" \
+    || { if a3 "$copy" "$STR" >/dev/null 2>&1; then fail "MUT an UNSCOPED sign-in surface passed — A3's scoping requirement is inert"; else pass "MUT dropping the declared scope from the page's sign-in goes RED"; fi; }
 
 # #646 repointed at the line that exists now. The invariant is unchanged: prose that sends the
 # owner to a provider setting instead of stating the page's own state must go RED.
