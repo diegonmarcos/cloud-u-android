@@ -350,15 +350,46 @@ class StoreCloudFragment : Fragment() {
             lp.setMargins(0, 0, 0, dp(ctx, 8)); layoutParams = lp
         }
         tabBtns.clear()
-        // ONE builder over both lines, so the two can never drift into two
-        // differently-styled control sets. tabBtns.size IS the running tab
-        // index, which is what keeps renderTab's group/feed/Perms mapping
-        // correct across the split.
-        for (line in listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)) {
-            if (line.isEmpty()) continue
-            val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (label in line) {
-                val t = tabButton(ctx, tabBtns.size, label)
+        // #671 A DIFFERENT CLASS OF CONTROL GETS A DIFFERENT CONTROL LANGUAGE.
+        //
+        // Two rows was necessary and not sufficient: identical pills on both
+        // rows still said "seven tabs that happened to wrap". The rows do not
+        // do the same KIND of thing, and that is measurable rather than a
+        // matter of taste. A line-1 tab SELECTS A SUBSET — each declared group
+        // filters the rows below it. A line-2 entry filters nothing: both feeds
+        // are repo-wide (their declared endpoints carry no type at all) and the
+        // Perms page walks the whole fleet. A filter and a destination drawn
+        // identically claim to be the same control, so:
+        //
+        //   SEGMENTED   line 1 — pills that stretch to fill the width, bold,
+        //               filled when active. A segmented control: pick exactly
+        //               one of a partition.
+        //   DESTINATION line 2 — wrap-content text chips, left-aligned, no
+        //               fill, accent-coloured when active. Links to somewhere
+        //               else, which is what they are.
+        //
+        // Separated by real space and a hairline, so the eye sees two tables
+        // rather than one block. The rule is not "add margin" — the two lines
+        // read as different kinds of thing because they ARE.
+        //
+        // STILL ONE BUILDER. [tabButton] takes the style as an argument, so
+        // there is no second renderer and the two appearances cannot drift into
+        // two code paths. Line membership is still purely which declaration the
+        // tab came from, and tabBtns.size is still the running tab index, which
+        // is what keeps renderTab's group/feed/Perms mapping correct.
+        val lines = listOf(
+            tabs.map { it.label } to TabStyle.SEGMENTED,
+            (FeedViewer.labels(feeds) + PERMS) to TabStyle.DESTINATION)
+        for ((labels, style) in lines) {
+            if (labels.isEmpty()) continue
+            // Only BETWEEN lines, so a page with one line draws no stray rule.
+            if (column.childCount > 0) column.addView(lineDivider(ctx))
+            val strip = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                if (style == TabStyle.DESTINATION) gravity = Gravity.START
+            }
+            for (label in labels) {
+                val t = tabButton(ctx, tabBtns.size, label, style)
                 tabBtns.add(t); strip.addView(t)
             }
             column.addView(strip)
@@ -367,20 +398,57 @@ class StoreCloudFragment : Fragment() {
         return column
     }
 
-    /** One tab pill. [index] is its position in the page's single tab ordering,
-     *  captured here so a button in the second strip still selects itself. */
-    private fun tabButton(ctx: Context, index: Int, label: String) = TextView(ctx).apply {
-        text = label; gravity = Gravity.CENTER; textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD; maxLines = 1
-        setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        isClickable = true
-        setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
+    /** The two control languages one [tabButton] can wear. */
+    private enum class TabStyle { SEGMENTED, DESTINATION }
+
+    /** The hairline plus the real space that makes line 2 a second table rather
+     *  than a continuation of the first. */
+    private fun lineDivider(ctx: Context) = View(ctx).apply {
+        setBackgroundColor(0xFF2A2A33.toInt())
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 1))
+            .apply { setMargins(0, dp(ctx, 12), 0, dp(ctx, 8)) }
     }
 
+    /**
+     * THE ONE tab-button builder, for both lines. [index] is its position in the
+     * page's single tab ordering, captured here so a button in the second strip
+     * still selects itself; [style] is its control language (#671), carried as
+     * the view's tag so [paintTabs] stays one pass over one list.
+     *
+     * SEGMENTED stretches (weight 1f) because a partition should fill its bar.
+     * DESTINATION wraps its content and sits left, because a set of links is
+     * not a partition and stretching it to the edges would imply it is.
+     */
+    private fun tabButton(ctx: Context, index: Int, label: String, style: TabStyle) = TextView(ctx).apply {
+        text = label; maxLines = 1
+        tag = style
+        isClickable = true
+        setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
+        if (style == TabStyle.SEGMENTED) {
+            gravity = Gravity.CENTER; textSize = 13f; typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        } else {
+            gravity = Gravity.CENTER_VERTICAL; textSize = 12f; typeface = Typeface.DEFAULT
+            setPadding(dp(ctx, 2), dp(ctx, 6), dp(ctx, 14), dp(ctx, 6))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+    }
+
+    /** #671 selection has to read differently too: filling a destination chip
+     *  the way a segmented pill fills would put the two languages back into
+     *  one. Each button carries its own style as its tag, so this stays a
+     *  single pass over one list. */
     private fun paintTabs() = tabBtns.forEachIndexed { i, t ->
-        t.setBackgroundColor(if (i == tab) 0xFF7C3AED.toInt() else 0xFF2A2A33.toInt())
-        t.setTextColor(if (i == tab) 0xFFFFFFFF.toInt() else cDim)
+        val on = i == tab
+        if (t.tag == TabStyle.DESTINATION) {
+            t.setBackgroundColor(0x00000000)
+            t.setTextColor(if (on) 0xFFB794F4.toInt() else cDim)
+        } else {
+            t.setBackgroundColor(if (on) 0xFF7C3AED.toInt() else 0xFF2A2A33.toInt())
+            t.setTextColor(if (on) 0xFFFFFFFF.toInt() else cDim)
+        }
     }
 
     private fun renderTab(ctx: Context) {

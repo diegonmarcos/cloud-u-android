@@ -304,7 +304,11 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # (b) The per-type line is the declared groups, and the other line is the
 #     declared feeds plus the page's own Perms. Asserted as the LINE LIST that
 #     the builder iterates, so a tab cannot be moved between lines by accident.
-command grep -qF 'listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)' "$PAGE" \
+# #671 paired each line with its control language, so the line list is now
+# (labels to style) rather than a bare list. What is asserted is unchanged: line
+# 1 IS the declared groups and line 2 IS the declared feeds plus Perms.
+command grep -qF 'tabs.map { it.label } to TabStyle.SEGMENTED' "$PAGE" \
+  && command grep -qF '(FeedViewer.labels(feeds) + PERMS) to TabStyle.DESTINATION' "$PAGE" \
   && ok "line 1 = declared groups, line 2 = declared feeds + Perms" \
   || bad "the tab lines are not built from the two declarations"
 
@@ -331,7 +335,7 @@ builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
 
 # (d) An EMPTY line draws NO strip. A row reserving height for controls that are
 #     not there is the affordance-that-cannot-act shape (#233).
-command grep -qF 'if (line.isEmpty()) continue' "$PAGE" \
+command grep -qE 'if \((labels|line)\.isEmpty\(\)\) continue' "$PAGE" \
   && ok "a line with no tabs draws no strip at all" \
   || bad "an empty tab line would still draw a strip"
 
@@ -353,6 +357,78 @@ perms_lits="$(command grep -c '"Perms"' "$PAGE")"
   && ok "Perms is named once, as the PERMS constant" \
   || bad "\"Perms\" appears $perms_lits times - an inline copy is back beside the constant"
 
+echo "== T10: #671 the two lines are two CONTROL LANGUAGES, not two rows of the same pill =="
+# A line-1 tab SELECTS A SUBSET; a line-2 entry filters nothing (both feeds are
+# repo-wide, and Perms walks the whole fleet). Drawing them identically claims
+# they are the same control. Every assertion below is SCOPED to the body of the
+# function it is about - a whole-file grep for a layout property asserts nothing,
+# which is how the #660 horizontal check stayed green while tabBar was wrong.
+body_of() { # body_of <fun signature fragment>
+  awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"
+}
+TABBAR="$(body_of 'private fun tabBar(')"
+TABBTN="$(body_of 'private fun tabButton(')"
+PAINT="$(body_of 'private fun paintTabs()')"
+for pair in "tabBar:$TABBAR" "tabButton:$TABBTN"; do
+  [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*}'s body - every assertion about it would verify nothing"
+done
+
+# (a) The two lines carry DIFFERENT styles. Asserted on tabBar's own body, so
+#     pairing both lines with one style fails here.
+#     Asserted on the PAIRINGS (`to TabStyle.X`), not on the style names. A bare
+#     name check passed with BOTH lines set to SEGMENTED, because tabBar also
+#     mentions DESTINATION in its gravity line - it was asserting that the words
+#     appear, not that the lines differ. Caught by mutation.
+paired="$(printf '%s' "$TABBAR" | command grep -oE 'to TabStyle\.[A-Z]+' | sort -u | wc -l)"
+[ "$paired" -ge 2 ] \
+  && ok "tabBar pairs line 1 and line 2 with two DIFFERENT control languages" \
+  || bad "tabBar pairs every line with the same style ($paired distinct) - identical pills are back"
+
+# (b) ONE builder still, and it is the thing that VARIES by style. A builder
+#     that ignores its style argument is the same defect wearing a parameter.
+builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
+[ "$builders" = "1" ] \
+  && ok "exactly one tab-button builder feeds both lines" \
+  || bad "expected 1 tabButton builder, found $builders - the two languages can drift apart"
+printf '%s' "$TABBTN" | command grep -qF 'style == TabStyle.SEGMENTED' \
+  && ok "the builder branches on the style it is handed" \
+  || bad "tabButton takes a style and ignores it - both lines would draw the same"
+# The two branches must differ in the thing that makes a segmented control
+# segmented: one stretches (weight 1f), the other wraps.
+printf '%s' "$TABBTN" | command grep -qE 'LayoutParams\(0, LinearLayout\.LayoutParams\.WRAP_CONTENT, 1f\)' \
+  && printf '%s' "$TABBTN" | command grep -qE 'LayoutParams\.WRAP_CONTENT, LinearLayout\.LayoutParams\.WRAP_CONTENT' \
+  && ok "one style stretches to fill the bar and the other wraps its content" \
+  || bad "both styles size the same way, so line 2 still reads as a partition"
+
+# (c) SELECTION reads differently too. Filling a destination chip the way a
+#     segmented pill fills puts the two languages back into one.
+printf '%s' "$PAINT" | command grep -qF 'TabStyle.DESTINATION' \
+  && ok "paintTabs paints a destination differently from a segmented pill" \
+  || bad "paintTabs paints every tab alike - the active state re-merges the two languages"
+
+# (d) REAL SEPARATION, and only BETWEEN lines. A page with one line must not
+#     draw a stray rule above it.
+printf '%s' "$TABBAR" | command grep -qF 'lineDivider(ctx)' \
+  && ok "a divider separates the two lines" \
+  || bad "nothing separates the two lines - they read as one block"
+printf '%s' "$TABBAR" | command grep -qF 'if (column.childCount > 0)' \
+  && ok "the divider is drawn only BETWEEN lines, never above the first" \
+  || bad "the divider is not conditional - a single-line bar would draw a stray rule"
+DIV="$(body_of 'private fun lineDivider(')"
+printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, [0-9]+\), 0, dp\(ctx, [0-9]+\)\)' \
+  && ok "the divider carries real vertical space, not just a hairline" \
+  || bad "the divider has no margins - a 1px rule with no space is still one block"
+
+# (e) Everything #660 proved must survive: membership still derived, empty line
+#     still draws nothing.
+printf '%s' "$TABBAR" | command grep -qF 'listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)' \
+  || printf '%s' "$TABBAR" | command grep -qF 'tabs.map { it.label } to TabStyle.SEGMENTED' \
+  && ok "line membership is still which declaration the tab came from" \
+  || bad "the tab lines are no longer built from the two declarations"
+printf '%s' "$TABBAR" | command grep -qF 'if (labels.isEmpty()) continue' \
+  && ok "a line with no tabs still draws no strip at all" \
+  || bad "an empty tab line would draw a strip (or its divider)"
+
 echo
-echo "== RESULT(#405 groups+ml-naming, #642 lib tables, #660 tab lines): $PASS passed, $FAIL failed =="
+echo "== RESULT(#405 groups+ml-naming, #642 lib tables, #660/#671 tab lines): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
