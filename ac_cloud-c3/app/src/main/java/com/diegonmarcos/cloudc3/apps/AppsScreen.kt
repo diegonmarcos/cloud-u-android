@@ -65,10 +65,12 @@ fun AppsScreen(reselectTick: Int) {
         items(tiles, key = { it.id }) { tile ->
             val present = installed[tile.id] == true
             AppTile(
-                label = tile.label,
+                // DERIVED from the one declared name (#351): "c3-watchdog" prints
+                // "Watchdog". No display label is stored anywhere.
+                label = tile.display,
                 icon = tile.icon,
                 present = present,
-                onOpen = { launch(ctx, tile.packageName, tile.label) },
+                onOpen = { launch(ctx, tile.packageName, tile.display) },
             )
         }
     }

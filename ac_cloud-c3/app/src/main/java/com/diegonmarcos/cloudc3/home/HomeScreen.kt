@@ -51,7 +51,7 @@ fun HomeScreen(reselectTick: Int) {
         item {
             C3Card(title = TITLE_APPS) {
                 Column {
-                    Declarations.externalApps.forEach { C3Row(it.label, it.packageName) }
+                    Declarations.externalApps.forEach { C3Row(it.display, it.packageName) }
                 }
             }
         }

@@ -25,9 +25,13 @@
 #       ui.icon_default — a declared glyph that silently falls back is the
 #       #170/#380 shape, two lists agreeing by luck.
 #   T5  the Apps tab LAUNCHES the three real sibling APKs: each declared package
-#       equals that sibling's own build.json application_id, and each is declared
-#       in AndroidManifest <queries> — without which API 30+ reports an absent
-#       package for an app that is installed, so "Not installed" would be a lie.
+#       equals that sibling's own build.json application_id, each id IS that
+#       sibling's fleet name, no tile carries a display `label` beside a fleet
+#       package (#351's one name, the regression #224 reverted, and the rule the
+#       superapp's test-app-names-pattern.sh T4 already enforces repo-wide), and
+#       each package is declared in AndroidManifest <queries> — without which API
+#       30+ reports an absent package for an app that IS installed, so the tile's
+#       "Not installed" would be a lie.
 #   T6  no Kotlin file outside the chrome declaration holds a dp/sp literal, and
 #       no screen holds a user-facing caption literal: a caption is a declaration
 #       or an R.string.
@@ -196,28 +200,41 @@ manifest = open(sys.argv[2], encoding="utf-8").read()
 root = sys.argv[3]
 tiles = ui.get("external_apps") or []
 bad = []
-want = {"Watchdog": "ac_c3-watchdog", "Morpheus": "ac_c3-morpheus", "WatchTower": "ac_c3-watchtower"}
-labels = [t.get("label") for t in tiles]
-if sorted(labels) != sorted(want):
-    bad.append("the Apps tab declares %s, not the three the owner named %s" % (labels, sorted(want)))
+want = {"c3-watchdog": "ac_c3-watchdog", "c3-morpheus": "ac_c3-morpheus", "c3-watchtower": "ac_c3-watchtower"}
+ids = [t.get("id") for t in tiles]
+if sorted(ids) != sorted(want):
+    bad.append("the Apps tab declares %s, not the three the owner named %s" % (ids, sorted(want)))
 queried = set(re.findall(r'<package android:name="([^"]+)"', manifest))
 for t in tiles:
-    label, pkg = t.get("label"), t.get("package")
-    sib = want.get(label)
+    tid, pkg = t.get("id"), t.get("package")
+    # #351/#224 THE ONE NAME. A tile may not carry a display label beside a fleet
+    # package: that is a second statement of the application's name and it drifts.
+    # The superapp's test-app-names-pattern.sh T4 fails the build on it, and this
+    # check fails here too so the rule is asserted where the declaration lives.
+    if "label" in t:
+        bad.append("Apps tile %r carries a label %r beside a fleet package — an application has "
+                   "ONE name (#351) and the id IS it; #224 reverted exactly this"
+                   % (tid, t.get("label")))
+    sib = want.get(tid)
     if sib is None:
         continue
     sib_bj = os.path.join(root, sib, "build.json")
     if not os.path.isfile(sib_bj):
-        bad.append("%s names sibling %s, which has no build.json — the tile opens nothing" % (label, sib))
+        bad.append("%s names sibling %s, which has no build.json — the tile opens nothing" % (tid, sib))
         continue
-    real = (json.load(open(sib_bj, encoding="utf-8")).get("android") or {}).get("application_id")
+    sib_json = json.load(open(sib_bj, encoding="utf-8"))
+    real = (sib_json.get("android") or {}).get("application_id")
     if pkg != real:
         bad.append("%s declares package %r but %s/build.json's application_id is %r — "
                    "a wrong package compiles, ships, installs and leaves a tab that opens nothing"
-                   % (label, pkg, sib, real))
+                   % (tid, pkg, sib, real))
+    # The id must BE that sibling's fleet name, which is what the tile shows.
+    if sib_json.get("name") != tid:
+        bad.append("Apps tile id %r is not %s/build.json::name %r — the tile would show a name "
+                   "the fleet does not use" % (tid, sib, sib_json.get("name")))
     if pkg not in queried:
         bad.append("%s's package %r is not in AndroidManifest <queries> — on API 30+ an unqueried "
-                   "package is INVISIBLE, so an installed app would read 'Not installed'" % (label, pkg))
+                   "package is INVISIBLE, so an installed app would read 'Not installed'" % (tid, pkg))
 for b in bad:
     print("    " + b)
 sys.exit(1 if bad else 0)
@@ -382,6 +399,21 @@ d["ui"]["external_apps"][0]["package"]="com.diegonmarcos.c3watchdog"
 json.dump(d,open(p,"w"),indent=2)
 PY
 }
+m_add_label() { python3 - "$1/ac_cloud-c3/build.json" <<'PY'
+import json,sys,collections
+p=sys.argv[1]; d=json.load(open(p),object_pairs_hook=collections.OrderedDict)
+# The exact regression #224 reverted: a private display name beside a fleet package.
+d["ui"]["external_apps"][0]["label"]="Watchdog"
+json.dump(d,open(p,"w"),indent=2)
+PY
+}
+m_rename_id() { python3 - "$1/ac_cloud-c3/build.json" <<'PY'
+import json,sys,collections
+p=sys.argv[1]; d=json.load(open(p),object_pairs_hook=collections.OrderedDict)
+d["ui"]["external_apps"][0]["id"]="watchdog"   # not the sibling's fleet name
+json.dump(d,open(p,"w"),indent=2)
+PY
+}
 m_drop_query() { python3 - "$1/ac_cloud-c3/app/src/main/AndroidManifest.xml" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read()
@@ -428,6 +460,8 @@ mutate "a parallel list of tab ids is added"               c_t3 m_parallel_list
 mutate "a tab declares an icon the catalog lacks"          c_t4 m_unknown_icon
 mutate "an Apps tile names a package no sibling has"       c_t5 m_wrong_package
 mutate "a sibling package is dropped from <queries>"       c_t5 m_drop_query
+mutate "an Apps tile regains a display label (#224)"       c_t5 m_add_label
+mutate "an Apps tile id stops being the fleet name"        c_t5 m_rename_id
 mutate "a screen sizes itself with a dp literal"           c_t6 m_size_literal
 mutate "cloud-mail's bottomNavItems table is consumed"     c_t7 m_mail_table
 mutate "a shared bottomnav symbol stops being imported"    c_t7 m_drop_shared_import
@@ -437,4 +471,4 @@ if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  7 properties asserted, 11 mutations each proved able to go red"
+echo "PASS  7 properties asserted, 13 mutations each proved able to go red"

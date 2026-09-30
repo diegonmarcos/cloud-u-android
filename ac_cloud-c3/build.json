@@ -155,27 +155,22 @@
       "base_url": "https://api.diegonmarcos.com/c3-infra-api"
     },
     "_doc_external_apps": "#648 THE APPS TAB. Watchdog, Morpheus and WatchTower are ALREADY standalone fleet members with their own directories, build.json, ship workflow and applicationId — so this tab LAUNCHES them and declares no page of its own. This is the same extapp: idiom the SuperApp's ui.sections[c3] used for exactly these three, moved here with the section. A tile resolves its package against the device rather than assuming it is installed, so a missing app reads as 'not installed' instead of a tap that does nothing.",
+    "_doc_external_apps_no_label": "THERE IS NO `label` HERE, AND THAT IS THE #351/#224 RULE, not an omission. An application has ONE name — the fleet name in its own build.json::name — and a label sitting beside a package is a SECOND statement of it that drifts; #224 is literally the commit that reverted a display name back to the fleet name, and aa_cloud-superapp/test/test-app-names-pattern.sh T4 fails the build on any object that names one of our packages next to a disagreeing label. The id IS the name and is what the tile shows. The owner's request named these three as 'Watchdog', 'Morpheus' and 'Watchtower'; the fleet spells them c3-watchdog / c3-morpheus / c3-watchtower, and the spelling shown is the fleet's — reported to the owner rather than settled by adding a private display name here.",
     "external_apps": [
       {
         "id": "c3-watchdog",
-        "label": "Watchdog",
         "icon": "health",
-        "package": "com.diegonmarcos.watchdog",
-        "fleet_id": "watchdog"
+        "package": "com.diegonmarcos.watchdog"
       },
       {
         "id": "c3-morpheus",
-        "label": "Morpheus",
         "icon": "robot",
-        "package": "com.diegonmarcos.morpheus",
-        "fleet_id": "morpheus"
+        "package": "com.diegonmarcos.morpheus"
       },
       {
         "id": "c3-watchtower",
-        "label": "WatchTower",
         "icon": "reports",
-        "package": "com.diegonmarcos.watchtower",
-        "fleet_id": "watchtower"
+        "package": "com.diegonmarcos.watchtower"
       }
     ],
     "_doc_pages": "The sub-pages each content tab offers, from ONE declaration per tab. These are the pages the SuperApp's ui.sections[c3] carried as `hidden: true` entries behind its two facet tiles: Topology's stack/vms/mesh and Observ's health/workflows/runs/logs/reports.",

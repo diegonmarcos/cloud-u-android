@@ -223,6 +223,14 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     implementation 'androidx.core:core-ktx:1.15.0'
+    // res/values/themes.xml declares Theme.CloudC3 with parent Theme.Material3.Dark.NoActionBar,
+    // and THAT STYLE LIVES HERE. The chrome is pure Compose and needs no View widget from this
+    // library, but the launch window still needs a real theme to inherit: without this dependency
+    // aapt2 fails the whole app with "Android resource linking failed / error: failed linking
+    // references" — which is what run 240522adf died on, at :app:processDebugResources, with every
+    // Kotlin file and every shell tester green. Same coordinate ac_cloud-drive and ac_cloud-wallet
+    // link for the same theme parent.
+    implementation 'com.google.android.material:material:1.12.0'
 
     // The JVM unit phase (build.json::tests.unit) runs these on every ship.
     testImplementation 'junit:junit:4.13.2'

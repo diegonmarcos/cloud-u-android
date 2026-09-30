@@ -30,16 +30,31 @@ object Declarations {
     /**
      * One Apps-tab tile: a SIBLING APK, not a page. [packageName] is resolved against the
      * device rather than assumed installed, so a missing app reads as "not installed"
-     * instead of a tap that does nothing. [fleetId] is the constellation fleet id, kept so
-     * the tile can be matched to a fleet entry without re-deriving it from the package.
+     * instead of a tap that does nothing.
+     *
+     * THERE IS NO `label`: [id] is the fleet name and is what the tile shows. A display
+     * name beside a package would be a second statement of the application's one name
+     * (#351), which is what #224 reverted and what the superapp's test-app-names-pattern.sh
+     * T4 fails the build on.
      */
     data class ExternalAppDecl(
         val id: String,
-        val label: String,
         val icon: String,
         val packageName: String,
-        val fleetId: String,
-    )
+    ) {
+        /**
+         * What the tile PRINTS: the fleet name with its family prefix dropped, so
+         * `c3-watchdog` reads "Watchdog" — the three words the owner asked for, and the
+         * spelling he used ("Watchdog", "Morpheus", "Watchtower").
+         *
+         * DERIVED, never declared. That is the whole point: a stored display name beside a
+         * fleet package is a second statement of the app's one name and drifts from it
+         * (#351, reverted in #224, and failed by the superapp's app-names guard). A pure
+         * function of [id] cannot drift — rename the app and this follows with no edit.
+         */
+        val display: String
+            get() = id.substringAfter('-', id).replaceFirstChar { it.uppercaseChar() }
+    }
 
     // ── the baked declarations, decoded once ───────────────────────────────
 
@@ -102,13 +117,7 @@ object Declarations {
     fun parseExternalApps(text: String): List<ExternalAppDecl> = objects(element(text)).mapNotNull { o ->
         val id = o.str("id")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
         val pkg = o.str("package")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-        ExternalAppDecl(
-            id = id,
-            label = o.str("label") ?: id,
-            icon = o.str("icon") ?: "",
-            packageName = pkg,
-            fleetId = o.str("fleet_id") ?: id,
-        )
+        ExternalAppDecl(id = id, icon = o.str("icon") ?: "", packageName = pkg)
     }
 
     /** Every icon name any declaration uses — what the testers hold IconCatalog to. */
