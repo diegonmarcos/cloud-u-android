@@ -429,7 +429,24 @@ object SourceResolver {
             c.setRequestProperty("Accept", "application/json")
             val code = c.responseCode
             if (code == 404) return null
-            if (code !in 200..299) error("HTTP $code from $url")
+            // #668 SAY WHAT THE SERVER SAID. "HTTP 403 from <url>" named the
+            // request but not the reason, and the reason was sitting unread in
+            // the error body: GitHub answers an exhausted quota with 403 and
+            // "API rate limit exceeded for <ip>", which is a DIFFERENT problem
+            // from a 403 meaning forbidden and leads somewhere different. Read
+            // from errorStream, because inputStream throws on a non-2xx.
+            //
+            // Provider-agnostic on purpose: this lifts whatever `message` the
+            // body carries rather than parsing rate-limit headers, so it needs
+            // no knowledge of which API it is talking to and cannot rot when a
+            // declared source changes.
+            if (code !in 200..299) {
+                val why = runCatching {
+                    c.errorStream?.bufferedReader()?.use { it.readText() }
+                        ?.let { JSONObject(it).optString("message") }
+                }.getOrNull()?.takeIf { it.isNotEmpty() }
+                error(if (why == null) "HTTP $code from $url" else "HTTP $code from $url — $why")
+            }
             return c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
     }

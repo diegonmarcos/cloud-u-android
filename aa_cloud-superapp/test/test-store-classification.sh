@@ -222,6 +222,41 @@ else:
     else: bad("StoreCloudFragment does not build its feed tabs from FeedViewer.labels")
     if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
     else: bad("FeedViewer.parse is not separable from the asset")
+    # (h) #668 THE PAGE SIZE IS DATA. It lives in the declared url's query, so
+    #     raising it is an asset edit. A page size written in Kotlin - as a
+    #     literal or appended to the url - is the same defect as a hardcoded
+    #     host, and (b) above cannot see it because it only knows declared
+    #     strings. Derived from the declaration, so it covers whatever the
+    #     declared sizes actually are.
+    sizes = {m for f in feeds for m in re.findall(r"per_page=(\d+)", f.get("url", ""))}
+    if sizes:
+        pinned = sorted({"%s: per_page=%s" % (fn, s) for fn, t in store_files.items()
+                         for s in sizes if ("per_page=%s" % s) in t or ('"%s"' % s) in t})
+        if not pinned: ok("the page size (%s) is declared in the url, not written in Kotlin" % ", ".join(sorted(sizes)))
+        else: bad("a page size is hardcoded in the store's code: %s" % "; ".join(pinned))
+    else: bad("no declared feed carries a per_page — the page size is not data")
+    if not re.search(r'per_page|[?&]page=|"\+\s*\w*[Pp]erPage', viewer):
+        ok("FeedViewer builds no paging query of its own")
+    else: bad("FeedViewer assembles paging onto the url instead of reading it declared")
+    # (i) #668 A 403 MUST NAME ITS CAUSE. An exhausted anonymous GitHub quota
+    #     answers 403 with its reason in the BODY, and the old error read the
+    #     status only - so a self-healing rate limit and a real permissions
+    #     failure produced the same sentence. The reader already separates
+    #     failure from empty (e); this asserts the failure carries the server's
+    #     own words, and that it is read from errorStream, since inputStream
+    #     throws on a non-2xx and would swallow the reason.
+    resolver = store_files.get("SourceResolver.kt", "")
+    if "errorStream" in resolver: ok("a non-2xx reads the server's own message off errorStream")
+    else: bad("SourceResolver discards the error body, so a 403 cannot name its cause")
+    if re.search(r'error\((?:.|\n)*?\$code(?:.|\n)*?\$why', resolver) or \
+       re.search(r'"HTTP \$code from \$url — \$why"', resolver):
+        ok("the thrown message carries both the status and the reason")
+    else: bad("the thrown message does not carry the server's reason alongside the status")
+    # ... and no cache may soften it: a stale feed shown as live is worse than
+    #     one that says it could not read.
+    cache = [n for n in ("DiskLruCache", "useCache = true", "setUseCaches(true)", "CacheControl") if n in viewer]
+    if not cache: ok("the reader caches nothing, so a 403 cannot be hidden behind stale rows")
+    else: bad("FeedViewer caches feed content (%s) — a stale feed would render as live" % cache)
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
