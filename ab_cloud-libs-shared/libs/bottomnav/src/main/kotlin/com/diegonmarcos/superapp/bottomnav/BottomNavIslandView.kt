@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.widget.ScrollView
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ColorScheme
@@ -65,10 +66,17 @@ public class BottomNavIslandView @JvmOverloads constructor(
      *
      * The rule is [collapseFor] — the SAME function [BottomNavCollapse] applies to its own delta,
      * so a View shell and a Compose shell collapse on one definition rather than two that can
-     * drift. Attached ONCE, to the window's observer, so fragments swapped into [content] later
-     * drive the bar with no re-attachment and a host adopting the bar writes no Kotlin beyond
-     * this call. It only observes: nothing here consumes a scroll or an inset, so #477's
-     * read-never-consume rule holds by construction.
+     * drift. Called ONCE by the host: pages swapped into [content] later are picked up on their
+     * own, so a shell adopting the bar writes no Kotlin beyond this call. It only observes:
+     * nothing here consumes a scroll or an inset, so #477's read-never-consume rule holds by
+     * construction.
+     *
+     * Two notification channels, ONE measurement ([onContentScrolled]) and one rule. A scroll
+     * listener on each scrolling view is the channel that does the work; the window's
+     * ViewTreeObserver is the backstop. The direct listener exists because View.onScrollChanged
+     * reaches the ViewTreeObserver only while the view is attached to a window, and calls a
+     * directly-registered listener unconditionally. A second notification for the same scroll is
+     * harmless: it re-measures the same offset and reads a delta of zero.
      *
      * Scoped to [content]'s own subtree, so scrolling elsewhere in the window — a navigation
      * drawer's list — measures a zero delta and leaves the bar alone.
@@ -83,12 +91,53 @@ public class BottomNavIslandView @JvmOverloads constructor(
     public fun collapseOnScrollIn(content: ViewGroup) {
         detachCollapse()
         collapseContent = content
-        collapseListener = ViewTreeObserver.OnScrollChangedListener {
-            val now = scrolledOffset(content)
-            collapsed = collapseFor(collapsed, (now - collapseOffset).toFloat())
-            collapseOffset = now
-        }
+        collapseListener = ViewTreeObserver.OnScrollChangedListener { onContentScrolled() }
+        removeOnAttachStateChangeListener(collapseAttachment)
+        addOnAttachStateChangeListener(collapseAttachment)
+        // The direct channel, and the one that does the work. Views added to the content host
+        // later — every fragment the shell swaps in — are picked up by the layout hook.
+        content.removeOnLayoutChangeListener(collapseLayout)
+        content.addOnLayoutChangeListener(collapseLayout)
+        hookScrollables(content)
         attachCollapse()
+    }
+
+    /** One scroll event, from either channel: re-measure the offset and apply the rule once. */
+    private fun onContentScrolled() {
+        val content = collapseContent ?: return
+        val now = scrolledOffset(content)
+        collapsed = collapseFor(collapsed, (now - collapseOffset).toFloat())
+        collapseOffset = now
+    }
+
+    private val collapseScroll = View.OnScrollChangeListener { _, _, _, _, _ -> onContentScrolled() }
+
+    private val collapseLayout = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        // A fragment that just arrived is only measurably scrollable once it has been laid out,
+        // which is also the moment it becomes possible to hook.
+        collapseContent?.let { hookScrollables(it) }
+    }
+
+    /**
+     * Put the direct listener on every view under [root] that can scroll vertically. Idempotent —
+     * the slot holds one listener and this sets the same one — and re-run after every layout, so a
+     * page swapped in later is covered without the host re-configuring anything.
+     *
+     * Only scrollable views are touched, so the single OnScrollChangeListener slot is taken on the
+     * few views that have scroll to report rather than on the whole tree.
+     */
+    private fun hookScrollables(root: View) {
+        // A ScrollView is hooked on sight. canScrollVertically alone is a LAYOUT-dependent answer —
+        // false until the view has been measured — so a page hooked at the moment it is added would
+        // be missed; by type it cannot be. android.widget, so this costs no dependency, and it is
+        // every scrolling surface the View shells actually have. canScrollVertically then covers
+        // the rest (NestedScrollView, and a RecyclerView once laid out).
+        if (root is ScrollView || root.canScrollVertically(1) || root.canScrollVertically(-1)) {
+            root.setOnScrollChangeListener(collapseScroll)
+        }
+        if (root is ViewGroup) {
+            for (i in 0 until root.childCount) hookScrollables(root.getChildAt(i))
+        }
     }
 
     /** Re-arm on the live observer, removing first so no call can leave two listeners behind. */
@@ -106,15 +155,15 @@ public class BottomNavIslandView @JvmOverloads constructor(
         collapseContent?.viewTreeObserver?.takeIf { it.isAlive }?.removeOnScrollChangedListener(listener)
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        // The observer a detached view hands out is a floating one. Re-arm on the window's.
-        attachCollapse()
-    }
+    // A listener rather than an onAttachedToWindow override: AbstractComposeView overrides both
+    // window-attach callbacks to run the composition, and hooking alongside it keeps this driver
+    // out of the way of that.
+    private val collapseAttachment = object : View.OnAttachStateChangeListener {
+        // The observer a DETACHED view hands out is a floating one that is merged away on attach,
+        // so the listener has to be re-armed on the window's own observer here.
+        override fun onViewAttachedToWindow(v: View): Unit = attachCollapse()
 
-    override fun onDetachedFromWindow() {
-        detachCollapse()
-        super.onDetachedFromWindow()
+        override fun onViewDetachedFromWindow(v: View): Unit = detachCollapse()
     }
 
     @Composable
