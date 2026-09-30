@@ -3640,6 +3640,10 @@
           "health_url": "https://git.diegonmarcos.com/api/v1/version",
           "repos_url": "https://git.diegonmarcos.com/api/v1/repos/search?limit=50",
           "repos_field": "data",
+          "_doc_clone_url": "#669 THE CLONE RIDES THE SAME SESSION THE LISTING RODE, so the URL it dials must be one that session can satisfy. Gitea's own clone_url projection is MESH-INTERNAL (http://10.0.0.6:3002/{owner}/{name}.git) — real, and reachable only with the phone's WireGuard up. `clone_url` is the PUBLIC-EDGE template for the same repositories: the Authelia session cookie passes the gate there and gitea serves behind it. Templated on {owner} and {name} from the LISTING'S OWN item, never the page's declared owner — re-templating onto a declared owner is exactly the wrong-leg clone c10 pins. MEASURED 2026-09-30: an Authelia BEARER can never work on this edge (the edge FORWARDS Authorization and gitea rejects it as its own token, 401 'invalid username, password or token'), and gitea basic auth never passes the gate (302) — the session COOKIE is the only workable public-edge mechanism, which is why a fleet-listed clone goes through the IN-PROCESS engine with the session attached and never through a terminal handoff that cannot present it.",
+          "_doc_clone_url_order": "#669 WHICH URL IS ATTEMPTED IS DECLARED, NOT TYPED IN KOTLIN. `declared` names this rung's clone_url template (the public edge — what a phone off the mesh needs); `listed` names the listing item's own clone_url (gitea's mesh-internal projection). The FIRST resolvable entry is dialed, and there is no silent fall-through past it: a failure is reported in words with its next step, never retried against another host.",
+          "clone_url": "https://git.diegonmarcos.com/{owner}/{name}.git",
+          "clone_url_order": ["declared", "listed"],
           "connect_timeout_ms": 4000,
           "read_timeout_ms": 8000,
           "holds_github_credential": false

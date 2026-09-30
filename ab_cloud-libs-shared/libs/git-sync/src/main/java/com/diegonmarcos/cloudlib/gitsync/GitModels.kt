@@ -77,6 +77,19 @@ sealed class GitAuth {
     object None : GitAuth()
     data class Https(val username: String, val secret: String) : GitAuth()
     data class Ssh(val privateKeyPath: String, val passphrase: String?, val knownHostsPath: String) : GitAuth()
+
+    /**
+     * #669 an HTTP SESSION riding a named header — an Authelia session cookie on a
+     * gate-fronted git host. NOT a username/password pair: the gate takes the raw
+     * header (e.g. `Cookie: authelia_session=...`), and sending the same value as
+     * an Authorization bearer is MEASURED to collide with gitea's own token auth
+     * (401), so the header NAME is data the declaration provides, never a literal.
+     * The value lives in process memory only; [toString] is redacted so holding
+     * this in state or a log line cannot leak it.
+     */
+    data class Session(val header: String, val value: String) : GitAuth() {
+        override fun toString(): String = "Session(header=$header, value=<redacted>)"
+    }
 }
 
 /** The outcome of a transport operation, in words the UI can show as-is. */

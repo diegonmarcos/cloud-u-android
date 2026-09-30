@@ -423,4 +423,8 @@
          item with no clone URL is a defect in that server's answer and is said out loud —
          never silently re-templated onto another host, which is a clone from the wrong leg. -->
     <string name="git_clone_url_missing">The listing gave no clone URL for %1$s, so nothing was cloned.</string>
+    <!-- #669 a fleet-listed clone needs the fleet session it was listed with; without one the
+         gate answers instead of the git server. The message names the next step: the Authelia
+         sign-in on this same page. -->
+    <string name="git_fleet_clone_no_session">No fleet session is on this phone — the Authelia sign-in on this page starts one; the clone rides it.</string>
 </resources>

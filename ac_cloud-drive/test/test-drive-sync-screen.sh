@@ -79,7 +79,7 @@ if grep -qE 'StatusLightRow|light = light' "$CARDS" && grep -qE 'tag = DriveTags
 if grep -qE 'append\(" *↑"\)\.append\(glance\.ahead\)\.append\(" ↓"\)\.append\(glance\.behind\)' "$CARDS" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS" && grep -qE 'R\.string\.git_meta_branch, glance\?\.branch' "$CARDS"; then pass "the dense row's glance: branch ↑ahead ↓behind clean/changed, state when not SAFE; the upstream is in the Metadata panel (#608)"; else fail "the glance line is incomplete"; fi
 
 echo "── G3 stepped one-tap sync ──"
-if grep -qE 'enum class Step \{ STAGING, COMMITTING, PULLING, PUSHING \}' "$COORD" && grep -qE 'e\.stageAll\(\)' "$COORD" && grep -qE 'e\.commit\(repo\.syncMessage' "$COORD" && grep -qE 'e\.pull\(rebase = repo\.pullRebase, auth = credentials\.authFor\(repo\)\)' "$COORD" && grep -qE 'e\.push\(auth = credentials\.authFor\(repo\)\)' "$COORD"; then pass "stage → commit → pull → push through the engine's verbs, step published"; else fail "the stepped sync is not the engine's four verbs"; fi
+if grep -qE 'enum class Step \{ STAGING, COMMITTING, PULLING, PUSHING \}' "$COORD" && grep -qE 'e\.stageAll\(\)' "$COORD" && grep -qE 'e\.commit\(repo\.syncMessage' "$COORD" && grep -qE 'e\.pull\(rebase = repo\.pullRebase, auth = authFor\(repo\)\)' "$COORD" && grep -qE 'e\.push\(auth = authFor\(repo\)\)' "$COORD"; then pass "stage → commit → pull → push through the engine's verbs, step published"; else fail "the stepped sync is not the engine's four verbs"; fi
 if grep -qE 'GitSyncCoordinator\.Step\.values\(\)\.forEach' "$CARDS" && grep -qE 'sync_step_uninterruptible' "$CARDS"; then pass "the card names the step in flight and the uninterruptible push"; else fail "steps not rendered"; fi
 
 echo "── G4 per-repo settings ──"

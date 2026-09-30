@@ -333,6 +333,28 @@ class GitEngineTest {
         }
     }
 
+    @Test fun sessionAuthNeverPrintsItsValueAndOnlyTouchesHttpTransports() {
+        // #669 the session is an Authelia cookie held in process memory; a stray
+        // string template or log line on the carrier must not leak it.
+        val session = GitAuth.Session(header = "Cookie", value = "authelia_session=SECRET")
+        assertFalse("$session", "$session".contains("SECRET"))
+        assertTrue("$session", "$session".contains("<redacted>"))
+        // On a non-HTTP transport the callback is a no-op, so a Session against a
+        // local/file remote clones anonymously instead of crashing: clone, fetch
+        // and pull all take the same withAuth path.
+        GitEngine.init(work).use { e ->
+            write(work, "f", "1\n"); e.stageAll(); e.commit("c1", "T", "t@x")
+            e.addRemote("origin", bareUrl)
+            assertTrue(e.push("origin").ok)
+        }
+        val other = File(root, "session-clone")
+        GitEngine.clone(bareUrl, other, auth = session).use { o ->
+            assertTrue(File(other, "f").isFile)
+            assertTrue(o.fetch("origin", auth = session).ok)
+            assertTrue(o.pull("origin", auth = session).ok)
+        }
+    }
+
     @Test fun branchesAreReadOnlyByConstruction() {
         // The fleet rule: a manager may display branches, never create them. The
         // engine's public surface has no verb that does — checked by name so a

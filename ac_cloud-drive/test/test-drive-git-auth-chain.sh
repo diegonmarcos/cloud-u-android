@@ -48,6 +48,9 @@ GIX_PIN="$SHARED/libs/gix/data/gix-binary.json"
 GIX_GRADLE="$SHARED/libs/gix/build.gradle"
 GIX_RUNNER="$SHARED/libs/gix/src/main/java/com/diegonmarcos/cloudlib/gix/GixRunner.kt"
 FLEET_CLIENT="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/FleetGit.kt"
+GIT_MODELS="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitModels.kt"
+GIT_ENGINE="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
+COORD="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/GitSyncCoordinator.kt"
 GH_RUNNER="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhRunner.kt"
 SIGNIN="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignIn.kt"
 SIGNIN_UI="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
@@ -63,7 +66,8 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 # the fix the defect.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 for required in "$SHARED_BJ" "$BJ" "$WALKER" "$WALKER_TEST" "$WIRING" "$READER" "$PAGE" \
-                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER" "$FLEET_CLIENT"; do
+                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER" "$FLEET_CLIENT" \
+                "$GIT_MODELS" "$GIT_ENGINE" "$COORD"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -764,6 +768,132 @@ echo "── C10 #669 a listed repository clones from the leg that listed it ─
 c10 "$PAGE" && pass "the listing's clone URL travels to the clone, a blank one is loud, and the terminal clones what it is given" \
     || fail "a gitea-listed repository could clone from github.com — the wrong leg, silently"
 
+# c11 <shared bj> <FleetGit> <GitModels> <GitEngine> <coordinator> <page> : #669 a
+# FLEET-LISTED repository CLONES on the session that listed it, in-process.
+#
+# MEASURED, 2026-09-30, on the device: through the public edge, the Authelia session
+# COOKIE is the only mechanism that both passes the gate and reaches gitea usable — a
+# BEARER passes the gate but the edge FORWARDS Authorization and gitea rejects it as its
+# own token (401 "invalid username, password or token"), and gitea basic auth never
+# passes the gate at all (302). The terminal's git cannot present the app's session, so
+# the fleet clone leg must be the IN-PROCESS engine with the session on the transport.
+# Five properties, each asserted on the message:
+#  · WHICH URL IS DIALED IS DECLARED: the gitea rung carries a clone_url template for
+#    the public edge and a clone_url_order naming the candidates; the client resolves
+#    both off the declaration and holds no template of its own.
+#  · THE SESSION RIDES THE CLONE: libs:git-sync grows a GitAuth.Session (header + value,
+#    toString redacted) and the engine attaches it to the HTTP transport on clone AND on
+#    the later fetch/pull path — via the DECLARED header name.
+#  · A BEARER NEVER REACHES GITEA: no Authorization/Bearer literal anywhere on the leg.
+#  · EVERY ENGINE CALL IS SESSION-AWARE: the coordinator assembles auth in exactly one
+#    place, from FleetSession (process memory) + the declared header — the store, which
+#    must never hold the session, is consulted nowhere else.
+#  · EVERY FAILURE IS LOUD AND NAMES ITS NEXT STEP: a redirect mid-clone reads as "the
+#    gate answered — sign in", a 401/403 as "the fleet refused", no session as an offer
+#    of the sign-in on the same page, and nothing falls through to another host.
+c11() {
+    local bj="$1" client="$2" models="$3" engine="$4" coord="$5" page="$6" bad=0
+    python3 - "$bj" <<'PYTHON' || bad=1
+import json, sys
+g = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["git_chain"]["providers"]["gitea"]
+bad = 0
+t = g.get("clone_url", "")
+if not t.startswith("https://git.diegonmarcos.com/"):
+    print("    gitea's clone_url (%r) is not the public edge — the mesh projection is"
+          " unreachable off WireGuard, and any other host is the wrong leg" % t); bad = 1
+if "{owner}" not in t or "{name}" not in t:
+    print("    clone_url (%r) does not template {owner}/{name} from the LISTING'S item —"
+          " a fixed owner is the re-templating c10 exists to forbid" % t); bad = 1
+order = g.get("clone_url_order")
+if not isinstance(order, list) or not order:
+    print("    no clone_url_order: which URL is attempted would be Kotlin's decision"); bad = 1
+else:
+    if set(order) - {"declared", "listed"}:
+        print("    clone_url_order names an unknown source: %r" % order); bad = 1
+    if "declared" not in order:
+        print("    clone_url_order (%r) drops the declared edge template — a phone off"
+              " the mesh could never clone" % order); bad = 1
+sys.exit(1 if bad else 0)
+PYTHON
+    # The client resolves template AND order off the declaration; c9 already forbids
+    # it a host literal, so together the URL is data end to end.
+    grep -qE 'optString\("clone_url"\)' "$client" \
+        || { echo "    FleetGit does not read the declared clone_url template"; bad=1; }
+    grep -qE 'optJSONArray\("clone_url_order"\)' "$client" \
+        || { echo "    FleetGit does not read the declared candidate order"; bad=1; }
+    # THE SESSION AUTH EXISTS and cannot print its value.
+    grep -qE 'data class Session\(val header: String, val value: String\) : GitAuth\(\)' "$models" \
+        || { echo "    libs:git-sync has no Session auth (header + value)"; bad=1; }
+    grep -qE 'override fun toString\(\): String = "Session\(header=\$header, value=<redacted>\)"' "$models" \
+        || { echo "    GitAuth.Session's toString is not redacted — UI state or a log line could leak the cookie"; bad=1; }
+    # THE ENGINE ATTACHES IT on the HTTP transport, for clone AND for the shared
+    # withAuth path every later fetch/pull rides. Occurrences, not lines.
+    local wired
+    wired="$(_code "$engine" | grep -oE 'setTransportConfigCallback\(sessionCallback\(auth\)\)' | wc -l | tr -d ' ')"
+    [ "$wired" = "2" ] \
+        || { echo "    the engine wires the session $wired time(s); clone and withAuth (fetch/pull/push) are the two"; bad=1; }
+    grep -qE 'if \(transport is TransportHttp\) transport\.setAdditionalHeaders\(mapOf\(auth\.header to auth\.value\)\)' "$engine" \
+        || { echo "    the session does not ride TransportHttp.setAdditionalHeaders under the DECLARED header name"; bad=1; }
+    # A BEARER NEVER REACHES GITEA: measured to collide with gitea's own token auth.
+    local bearer f_
+    for f_ in "$engine" "$coord" "$page"; do
+        bearer="$(_code "$f_" | grep -nE '"Authorization"|Bearer ' || true)"
+        [ -z "$bearer" ] || { echo "    $(basename "$f_") spells Authorization/Bearer on the clone leg:"; \
+                              printf '%s\n' "$bearer" | sed 's/^/        /'; bad=1; }
+    done
+    # ONE AUTH ASSEMBLY POINT in the coordinator: the session from PROCESS MEMORY on
+    # the DECLARED header; the store consulted only inside it.
+    grep -qE 'const val AUTH_SESSION = "session"' "$coord" \
+        || { echo "    the coordinator has no session auth kind"; bad=1; }
+    grep -qE 'GitAuth\.Session\(FleetGit\.sessionHeader\(\), FleetSession\.cookie\)' "$coord" \
+        || { echo "    the session auth is not assembled from the declared header + the in-memory session"; bad=1; }
+    local stores
+    stores="$(_code "$coord" | grep -oE 'credentials\.authFor\(' | wc -l | tr -d ' ')"
+    [ "$stores" = "1" ] \
+        || { echo "    the coordinator reads the credential store from $stores places; every engine call must"; \
+             echo "    go through the ONE session-aware authFor, or a session repository dials anonymously"; bad=1; }
+    # THE PAGE ROUTES A FLEET-LISTED ROW HERE — in-process, never the terminal, which
+    # cannot present the session.
+    grep -qE 'if \(listing\.rungId\.isNotBlank\(\)\) cloneViaFleet\(listing\.rungId, gh\)' "$page" \
+        || { echo "    a fleet-listed row does not clone on the leg that listed it"; bad=1; }
+    grep -qE 'authKind = GitSyncCoordinator\.AUTH_SESSION' "$page" \
+        || { echo "    the fleet clone does not carry the session auth kind"; bad=1; }
+    grep -qE 'FleetGit\.cloneUrl\(rungId, gh\.owner, gh\.name, gh\.cloneUrl\)' "$page" \
+        || { echo "    the fleet clone URL is not resolved from the declaration for the ITEM'S owner/name"; bad=1; }
+    python3 - "$page" <<'PYTHON' || bad=1
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r'fun cloneViaFleet\(.*?\n    \}', src, re.S)
+if not m:
+    print("    cloneViaFleet is missing"); sys.exit(1)
+if "Terminal" in m.group(0):
+    print("    cloneViaFleet hands off to the terminal, whose git cannot present the"
+          " app's Authelia session — the clone would always bounce off the gate"); sys.exit(1)
+PYTHON
+    # LOUD, WITH A NEXT STEP: no session offers the sign-in; a redirect names the gate
+    # and the sign-in; a refusal names the fleet; the coordinator rewrites a failed
+    # session clone through that explainer.
+    grep -qE 'R\.string\.git_fleet_clone_no_session' "$page" \
+        || { echo "    a clone with no session is not loud about the sign-in that starts one"; bad=1; }
+    # _code, not a whole-file grep: the KDoc above the explainer QUOTES both wordings,
+    # so a comment must not satisfy a check about the code (the exact hollow the
+    # mutation block caught on this check's first landing). And grep -c, never -q:
+    # under pipefail, -q's early exit SIGPIPEs the _code stage and a MATCH reads as
+    # a failed pipeline — c10's own trap, re-caught here as an intermittent MUT-VOID.
+    [ "$(_code "$client" | grep -cF 'did not satisfy')" -ge 1 ] \
+        || { echo "    a redirect mid-clone is not worded as the gate answering (sign in again)"; bad=1; }
+    [ "$(_code "$client" | grep -cF 'the fleet refused this clone')" -ge 1 ] \
+        || { echo "    a 401/403 mid-clone is not worded as the fleet's own refusal"; bad=1; }
+    grep -qE 'if \(authKind == AUTH_SESSION\) FleetGit\.explainCloneFailure\(why\) else why' "$coord" \
+        || { echo "    a failed session clone reaches the page as raw transport prose with no next step"; bad=1; }
+    return $bad
+}
+
+echo "── C11 #669 a fleet-listed repository clones ON the session that listed it ──"
+c11 "$SHARED_BJ" "$FLEET_CLIENT" "$GIT_MODELS" "$GIT_ENGINE" "$COORD" "$PAGE" \
+    && pass "the edge clone URL and its order are declared, the session rides the transport in-process on the declared header, no bearer can reach gitea, and every failure names its next step" \
+    || fail "the gitea leg lists but cannot clone — or clones on the wrong mechanism"
+
 # ══ MUT every check above goes RED when its property is broken ══════════════
 #
 # This block is the only part of the file that can tell a real assertion from a
@@ -787,6 +917,8 @@ _stage() {
     cp "$GIX_PIN" "$W/gix.json";           cp "$GIX_GRADLE" "$W/gix.gradle"
     cp "$GIX_RUNNER" "$W/GixRunner.kt";    cp "$GH_RUNNER" "$W/GhRunner.kt"
     cp "$SIGNIN_UI" "$W/SignInUi.kt";      cp "$SIGNIN" "$W/SignIn.kt"
+    cp "$GIT_MODELS" "$W/GitModels.kt";    cp "$GIT_ENGINE" "$W/GitEngine.kt"
+    cp "$COORD" "$W/GitSyncCoordinator.kt"
 }
 
 # _sub <file> <old> <new> : an EXACT replacement that MUST actually apply. A
@@ -1017,6 +1149,53 @@ _stage && _green "c10" c10 "$W/GitReposScreen.kt" && {
 _stage && _green "c10" c10 "$W/GitReposScreen.kt" && {
     _sub "$W/GitReposScreen.kt" 'fun cloneViaTerminal(name: String, url: String)' 'fun cloneViaTerminal(name: String)'
     _red "C10 the terminal handoff grows its own URL back" c10 "$W/GitReposScreen.kt"; }
+
+# ── C11 #669 the clone rides the session that listed the repository ──
+_c11() { c11 "$W/shared.json" "$W/FleetGit.kt" "$W/GitModels.kt" "$W/GitEngine.kt" "$W/GitSyncCoordinator.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c11" _c11 && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["gitea"].pop("clone_url")'
+    _red "C11 the edge clone template undeclared — gitea lists and can never clone off-mesh" _c11; }
+_stage && _green "c11" _c11 && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["gitea"]["clone_url_order"] = ["listed"]'
+    _red "C11 the declared edge dropped from the candidate order" _c11; }
+_stage && _green "c11" _c11 && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["gitea"]["clone_url"] = "https://github.com/{owner}/{name}.git"'
+    _red "C11 the clone template re-pointed at another host — the wrong leg, declared" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitModels.kt" 'override fun toString(): String = "Session(header=$header, value=<redacted>)"' \
+                           'override fun toString(): String = "Session(header=$header, value=$value)"'
+    _red "C11 GitAuth.Session prints the cookie" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitEngine.kt" 'is GitAuth.Session -> cmd.setTransportConfigCallback(sessionCallback(auth))' \
+                           'is GitAuth.Session -> Unit'
+    _red "C11 the clone silently drops the session and dials anonymously" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitEngine.kt" 'transport.setAdditionalHeaders(mapOf(auth.header to auth.value))' \
+                           'transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer " + auth.value))'
+    _red "C11 the session sent as a bearer — measured to collide with gitea's own token auth" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitSyncCoordinator.kt" 'GitAuth.Session(FleetGit.sessionHeader(), FleetSession.cookie)' \
+                                    'credentials.authFor(repo)'
+    _red "C11 the coordinator stops assembling the session auth (store-only, which cannot hold it)" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitSyncCoordinator.kt" 'val auth = authFor(repo)' 'val auth = credentials.authFor(repo)'
+    _red "C11 an engine call bypasses the session-aware auth — a session repository dials anonymously" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitSyncCoordinator.kt" 'GitOpResult(false, if (authKind == AUTH_SESSION) FleetGit.explainCloneFailure(why) else why)' \
+                                    'GitOpResult(false, why)'
+    _red "C11 a failed session clone surfaces as raw transport prose with no next step" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitReposScreen.kt" 'if (listing.rungId.isNotBlank()) cloneViaFleet(listing.rungId, gh)' \
+                                'if (false) Unit'
+    _red "C11 a fleet-listed row re-routed off the leg that listed it" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/GitReposScreen.kt" 'handoff = ctx.getString(R.string.git_fleet_clone_no_session)' \
+                                'return'
+    _red "C11 a clone with no session goes quiet instead of offering the sign-in" _c11; }
+_stage && _green "c11" _c11 && {
+    _sub "$W/FleetGit.kt" '"the gate answered instead of the fleet git ($why) — this session did not satisfy it; the Authelia sign-in on this page starts a fresh one"' \
+                          'why'
+    _red "C11 a redirect mid-clone stops naming the gate and the sign-in that fixes it" _c11; }
 
 echo "── $MUTATIONS mutations, $HOLLOW of them hollow or void ──"
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))

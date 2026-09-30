@@ -31,6 +31,20 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     private val registry = RepoRegistry(File(ctx.filesDir, GitSyncWorker.REGISTRY_FILE))
     private val credentials = GitCredentialStore(ctx)
+
+    /**
+     * #669 THE ONE PLACE A REPOSITORY'S AUTH IS ASSEMBLED for this coordinator's
+     * engine calls. An [AUTH_SESSION] repository was listed AND cloned on the fleet
+     * session, which lives in PROCESS MEMORY ONLY ([FleetSession]) — the credential
+     * store cannot hold it (test-drive-configs-sign-in: the drive host stores no
+     * bearer), so it is attached here, on the DECLARED header, every time the
+     * engine touches that repository's transport. Everything else is the store's:
+     * one store, one id, unchanged.
+     */
+    private fun authFor(repo: ManagedRepo): com.diegonmarcos.cloudlib.gitsync.GitAuth =
+        if (repo.authKind == AUTH_SESSION)
+            com.diegonmarcos.cloudlib.gitsync.GitAuth.Session(FleetGit.sessionHeader(), FleetSession.cookie)
+        else credentials.authFor(repo)
     val history = SyncHistory(File(ctx.filesDir, SyncHistory.FILE))
 
     data class Glance(
@@ -107,11 +121,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                         } else steps += "nothing to commit"
                         if (e.remotes().none { it.name == "origin" }) return@use GitOpResult(true, steps.joinToString(", ") + ", no remote 'origin'")
                         running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
-                        val pulled = e.pull(rebase = repo.pullRebase, auth = credentials.authFor(repo))
+                        val pulled = e.pull(rebase = repo.pullRebase, auth = authFor(repo))
                         steps += pulled.summary
                         if (!pulled.ok) return@use GitOpResult(false, steps.joinToString(", "), pulled.details)
                         running.update { it + (repo.id to Running(repo.id, Step.PUSHING)) }
-                        val pushed = e.push(auth = credentials.authFor(repo))
+                        val pushed = e.push(auth = authFor(repo))
                         steps += pushed.summary
                         GitOpResult(pushed.ok, steps.joinToString(", "), pushed.details)
                     }
@@ -202,7 +216,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     GitEngine(File(repo.path)).use { e ->
-                        val auth = credentials.authFor(repo)
+                        val auth = authFor(repo)
                         when (opId) {
                             OP_FETCH -> e.fetch(auth = auth)
                             OP_PULL -> e.pull(rebase = repo.pullRebase, auth = auth)
@@ -295,8 +309,15 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 if (token.isNotBlank()) credentials.setSecret(id, token)
                 runCatching {
                     if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
-                    else { GitEngine.clone(url, dir, auth = credentials.authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
-                }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+                    else { GitEngine.clone(url, dir, auth = authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
+                }.getOrElse {
+                    val why = it.message ?: it.toString()
+                    // #669 a fleet-session clone that fails must name its NEXT STEP —
+                    // a redirect means the gate, not gitea, answered (sign in again);
+                    // a 401/403 means the fleet itself refused. Never a silent
+                    // fall-through to another host: this is the only URL attempted.
+                    GitOpResult(false, if (authKind == AUTH_SESSION) FleetGit.explainCloneFailure(why) else why)
+                }
                     .also { if (it.ok) registry.upsert(managed) }
             }
             val now = System.currentTimeMillis() / 1000
@@ -329,6 +350,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         const val AUTH_NONE = "none"
         const val AUTH_HTTPS = "https"
         const val AUTH_SSH = "ssh"
+        /**
+         * #669 the repository rides the FLEET SESSION (Authelia cookie, process
+         * memory only) on the declared header — never a stored secret, never a
+         * bearer. Set by the fleet-listed clone path; [authFor] resolves it.
+         */
+        const val AUTH_SESSION = "session"
         /** The declared op ids this coordinator performs; the page's own dispatch covers the read-only rest. */
         const val OP_FETCH = "fetch"
         const val OP_PULL = "pull"

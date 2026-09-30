@@ -21,6 +21,7 @@ import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.TransportHttp
 import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.eclipse.jgit.transport.ssh.jsch.JschConfigSessionFactory
@@ -389,6 +390,7 @@ class GitEngine(val workTree: File) : AutoCloseable {
             is GitAuth.None -> Unit
             is GitAuth.Https -> setCredentialsProvider(UsernamePasswordCredentialsProvider(auth.username, auth.secret))
             is GitAuth.Ssh -> setTransportConfigCallback(sshCallback(auth))
+            is GitAuth.Session -> setTransportConfigCallback(sessionCallback(auth))
         }
         return this
     }
@@ -413,6 +415,7 @@ class GitEngine(val workTree: File) : AutoCloseable {
                 is GitAuth.None -> Unit
                 is GitAuth.Https -> cmd.setCredentialsProvider(UsernamePasswordCredentialsProvider(auth.username, auth.secret))
                 is GitAuth.Ssh -> cmd.setTransportConfigCallback(sshCallback(auth))
+                is GitAuth.Session -> cmd.setTransportConfigCallback(sessionCallback(auth))
             }
             cmd.call().close()
             return GitEngine(dir)
@@ -443,6 +446,21 @@ class GitEngine(val workTree: File) : AutoCloseable {
                 if (transport is SshTransport) transport.setSshSessionFactory(factory)
             }
         }
+
+        /**
+         * #669 the SESSION rides the HTTP transport as the one declared header —
+         * JGit's [TransportHttp.setAdditionalHeaders] — and touches nothing else:
+         * no credentials provider (nothing to answer a 401 challenge with, because
+         * the gate this serves never issues one the session could satisfy) and no
+         * effect on a non-HTTP transport, so a Session against an ssh:// remote is
+         * simply anonymous rather than a crash. The header NAME comes with the
+         * auth (declared upstream, e.g. Cookie); this engine never spells the
+         * Authorization header, which the fleet's gitea is measured to reject.
+         */
+        internal fun sessionCallback(auth: GitAuth.Session): TransportConfigCallback =
+            TransportConfigCallback { transport ->
+                if (transport is TransportHttp) transport.setAdditionalHeaders(mapOf(auth.header to auth.value))
+            }
 
         /** Exposed for the host: a credentials provider for HTTPS remotes when it needs one outside the engine. */
         fun httpsCredentials(username: String, secret: String): CredentialsProvider =

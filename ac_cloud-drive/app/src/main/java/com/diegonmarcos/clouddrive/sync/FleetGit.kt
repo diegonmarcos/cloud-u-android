@@ -88,6 +88,57 @@ object FleetGit {
     private fun String?.ifBlankOrNull(fallback: String): String =
         if (this.isNullOrBlank()) fallback else this
 
+    /**
+     * #669 THE CLONE URL FOR A REPOSITORY THIS RUNG LISTED. Which URL, and in what
+     * order candidates are considered, is DECLARED on the rung (`clone_url` +
+     * `clone_url_order`), never typed here: `declared` resolves the rung's template
+     * against the LISTING ITEM'S owner and name (the public edge, which the same
+     * session that listed can satisfy); `listed` is the item's own clone_url
+     * (gitea's mesh-internal projection, reachable only on WireGuard). The FIRST
+     * resolvable entry wins and there is no silent fall-through past it — a clone
+     * that fails says so in words instead of quietly dialing another host.
+     */
+    fun cloneUrl(rungId: String, owner: String, name: String, listed: String): String {
+        val config = rung(rungId)?.config
+        val order = config?.optJSONArray("clone_url_order")
+            ?.let { array -> (0 until array.length()).map { array.optString(it) } }
+            .orEmpty()
+        return cloneUrlFrom(config?.optString("clone_url").orEmpty(), order, owner, name, listed)
+    }
+
+    internal const val CLONE_SOURCE_DECLARED = "declared"
+    internal const val CLONE_SOURCE_LISTED = "listed"
+
+    /** The pure rule behind [cloneUrl], exercised on the JVM against both orders. */
+    internal fun cloneUrlFrom(template: String, order: List<String>, owner: String, name: String, listed: String): String =
+        order.ifEmpty { listOf(CLONE_SOURCE_DECLARED, CLONE_SOURCE_LISTED) }.firstNotNullOfOrNull { source ->
+            when (source) {
+                CLONE_SOURCE_DECLARED ->
+                    if (template.isBlank() || owner.isBlank() || name.isBlank()) null
+                    else template.replace("{owner}", owner).replace("{name}", name)
+                CLONE_SOURCE_LISTED -> listed.ifBlank { null }
+                else -> null
+            }
+        }.orEmpty()
+
+    /**
+     * #669 EVERY CLONE FAILURE ON THE FLEET LEG NAMES ITS NEXT STEP. JGit reports a
+     * transport failure as prose, and the two failures that matter here read alike
+     * to a person: a REDIRECT means the Authelia gate answered instead of gitea (the
+     * session did not satisfy it — sign in), and a 401/403 means gitea itself
+     * refused (a different fact, about a service that is UP). Anything else passes
+     * through unrewritten: an invented explanation is worse than a raw one.
+     */
+    fun explainCloneFailure(why: String): String = when {
+        listOf("401", "403", "not authorized", "authentication not supported")
+            .any { why.contains(it, ignoreCase = true) } ->
+            "the fleet refused this clone ($why) — the fleet git itself said no to this identity; it is up and past the gate"
+        listOf("302", "303", "307", "redirect", "invalid advertisement", "expected pkt-line")
+            .any { why.contains(it, ignoreCase = true) } ->
+            "the gate answered instead of the fleet git ($why) — this session did not satisfy it; the Authelia sign-in on this page starts a fresh one"
+        else -> why
+    }
+
     /** What a call to the fleet produced. No variant carries a credential. */
     sealed class Outcome {
         /** The proxy listed the account. [repos] came from ITS projection, not GitHub's body. */

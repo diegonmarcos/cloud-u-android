@@ -126,7 +126,10 @@ fi
 # set — falls back to the declared remote-mode template. Re-templating every row onto the
 # declared owner/host is what sent gitea-listed repositories to github.com, silently.
 if grep -qE 'url = \(if \(ssh\) listedSshUrl else listedUrl\)\.ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'coordinator\.cloneInto\(' "$CARDS"; then pass "every row's Clone hands the listing's URL (declared template only when nothing was listed) to the one clone path"; else fail "the Git page does not clone the listed URL through the coordinator"; fi
-if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD_KT" && grep -qE 'GitEngine\.clone\(url, dir, auth = credentials\.authFor\(managed\)\)' "$COORD_KT" && grep -qE 'registry\.upsert\(managed\)' "$COORD_KT"; then pass "the page's clone lands in the store's git folder, through the engine, into the ONE registry"; else fail "the page's clone does not go through SharedStore.repoDir + GitEngine.clone + the registry"; fi
+# #669 the clone's auth is assembled by the coordinator's ONE session-aware authFor
+# (a fleet-session repository rides the in-memory cookie; everything else is the store's
+# credentials.authFor inside it — test-drive-git-auth-chain C11 pins that wiring).
+if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD_KT" && grep -qE 'GitEngine\.clone\(url, dir, auth = authFor\(managed\)\)' "$COORD_KT" && grep -qE 'registry\.upsert\(managed\)' "$COORD_KT"; then pass "the page's clone lands in the store's git folder, through the engine, into the ONE registry"; else fail "the page's clone does not go through SharedStore.repoDir + GitEngine.clone + the registry"; fi
 
 echo "── S3b one-time migration of stray root clones into the git folder ──"
 # #606 a phone updated across the git_subdir change keeps its clones at the store ROOT; the

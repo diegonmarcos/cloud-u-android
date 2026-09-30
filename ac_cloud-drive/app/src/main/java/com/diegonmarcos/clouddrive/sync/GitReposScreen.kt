@@ -243,6 +243,35 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     /**
+     * #669 A FLEET-LISTED REPOSITORY CLONES ON THE SESSION THAT LISTED IT. The
+     * terminal handoff is deliberately NOT taken here: the terminal's git cannot
+     * present the app's Authelia session cookie, so a fleet clone through it can
+     * only ever bounce off the gate. The IN-PROCESS engine carries the session on
+     * the rung's DECLARED header, against the rung's DECLARED clone URL for this
+     * item's owner/name (FleetGit.cloneUrl — template and order both data, and both
+     * fleet hosts, so the session can never travel to a third party). Every refusal
+     * is loud and names its next step; nothing falls through to another host.
+     */
+    fun cloneViaFleet(rungId: String, gh: GitHubRepos.Repo) {
+        if (!FleetSession.present) {
+            handoff = ctx.getString(R.string.git_fleet_clone_no_session)
+            return
+        }
+        val url = FleetGit.cloneUrl(rungId, gh.owner, gh.name, gh.cloneUrl)
+        if (url.isBlank()) {
+            handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
+            return
+        }
+        coordinator.cloneInto(
+            name = gh.name,
+            url = url,
+            authKind = GitSyncCoordinator.AUTH_SESSION,
+            username = "",
+            token = "",
+        )
+    }
+
+    /**
      * #653 THE SAME LISTING, SERVED BY THE FLEET, with no GitHub credential anywhere.
      * Only the fleet session is presented; the proxy's answer is a projection that cannot
      * carry a credential back. Every non-success is reported in words, and the three
@@ -258,7 +287,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             // list from a service the chain just measured as unreachable.
             val outcome = withContext(Dispatchers.IO) { FleetGit.repos(FleetSession.cookie, rungId) }
             listing = when (outcome) {
-                is FleetGit.Outcome.Listed -> GitListing(loaded = true, repos = outcome.repos, complete = true)
+                is FleetGit.Outcome.Listed -> GitListing(loaded = true, repos = outcome.repos, complete = true, rungId = rungId)
                 is FleetGit.Outcome.Refused -> GitListing(loaded = true, error = outcome.why)
                 is FleetGit.Outcome.Blocked -> GitListing(
                     loaded = true,
@@ -422,13 +451,15 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                     repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
                                     cloning = gh.name in cloning, expanded = expanded == key,
                                     onToggle = { expanded = if (expanded == key) "" else key },
-                                    // #669 a LISTED repository clones from the URL its OWN listing
-                                    // declared — gitea's items name the fleet's git host, GitHub's
-                                    // name github.com. A blank one is that server's defect, said
-                                    // out loud; falling through to the page's github template here
-                                    // would clone the wrong leg silently.
+                                    // #669 a LISTED repository clones from the LEG that listed it —
+                                    // a fleet-listed row rides the fleet session in-process (the
+                                    // terminal cannot present it), a GitHub-listed row clones the
+                                    // URL its own listing declared. A blank one is that server's
+                                    // defect, said out loud; falling through to the page's github
+                                    // template here would clone the wrong leg silently.
                                     onClone = {
-                                        if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
+                                        if (listing.rungId.isNotBlank()) cloneViaFleet(listing.rungId, gh)
+                                        else if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
                                         else clone(gh.name, gh.cloneUrl, gh.sshUrl)
                                     },
                                 )
@@ -525,13 +556,20 @@ private data class GitChainState(
     val signedIn: Boolean = false,
 )
 
-/** The authenticated listing, or why there is none. */
+/**
+ * The authenticated listing, or why there is none. #669 [rungId] is the declared id of
+ * the FLEET rung that served it — blank when the listing came from GitHub with the vault
+ * token. It is what routes a row's clone back to the leg that listed it: a fleet-listed
+ * repository clones in-process with the fleet session on the rung's declared clone URL,
+ * because the terminal's git cannot present an Authelia session cookie.
+ */
 private data class GitListing(
     val loading: Boolean = false,
     val loaded: Boolean = false,
     val repos: List<GitHubRepos.Repo> = emptyList(),
     val complete: Boolean = true,
     val error: String = "",
+    val rungId: String = "",
 )
 
 /**
