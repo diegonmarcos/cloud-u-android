@@ -370,6 +370,33 @@ out="$(sh "$IDENTITY" compute ab_cloud-libs-shared/lib-apks --paths-from "$WORK/
     && ok "a missing path list is refused rather than silently widened to the whole app" \
     || fail "--paths-from on a missing file exited $status: '$out'"
 
+# A scope that EXISTS but names nothing (#635). Each of these used to hash as
+# a constant and exit 0, so the gate compared equal on every later run and
+# skipped the asset for good. Every refusal must name what it refused.
+printf '\n  \n' > "$WORK/scope-empty"
+out="$(sh "$IDENTITY" compute ab_cloud-libs-shared/lib-apks --paths-from "$WORK/scope-empty" 2>&1)"; status=$?
+[ "$status" -ne 0 ] && contains "$out" "names no inputs at all" \
+    && ok "an empty scope is refused rather than hashed into an identity that never moves" \
+    || fail "--paths-from on an empty scope exited $status: '$out'"
+
+printf '%s\n' ab_cloud-libs-shared/libs/updater ab_cloud-libs-shared/libs/no-such-module-635 > "$WORK/scope-typo"
+out="$(sh "$IDENTITY" compute ab_cloud-libs-shared/lib-apks --paths-from "$WORK/scope-typo" 2>&1)"; status=$?
+[ "$status" -ne 0 ] && contains "$out" "'ab_cloud-libs-shared/libs/no-such-module-635' names nothing" \
+    && ok "a scope entry that names nothing is refused, by name, beside a real one" \
+    || fail "--paths-from with an entry naming nothing exited $status: '$out'"
+
+printf '%s\n' 'ab_cloud-libs-shared/libs/updater/**' > "$WORK/scope-glob"
+out="$(sh "$IDENTITY" compute ab_cloud-libs-shared/lib-apks --paths-from "$WORK/scope-glob" 2>&1)"; status=$?
+[ "$status" -ne 0 ] && contains "$out" "'ab_cloud-libs-shared/libs/updater/**' names nothing" \
+    && ok "a glob entry (this mode does not expand globs) is refused, by name" \
+    || fail "--paths-from with a glob entry exited $status: '$out'"
+
+out="$(GITHUB_OUTPUT= sh "$GATE" check ab_cloud-libs-shared/lib-apks --asset Cloud-Lib-Updater.apk \
+        --paths-from "$WORK/scope-typo" 2>&1)"; status=$?
+[ "$status" -ne 0 ] && contains "$out" "no-such-module-635" && ! contains "$out" "skip=" \
+    && ok "the gate itself refuses that scope — no skip= verdict is ever emitted for it" \
+    || fail "gate on a scope naming nothing exited $status: '$out'"
+
 out="$(sh "$GATE" check ab_cloud-libs-shared/lib-apks --asset Cloud-Lib-Updater.apk 2>&1)"; status=$?
 [ "$status" -ne 0 ] && contains "$out" "needs --paths-from" \
     && ok "--asset without a scope is refused — it would gate one asset on the whole app" \

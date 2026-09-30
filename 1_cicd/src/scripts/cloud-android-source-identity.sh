@@ -96,6 +96,30 @@ done
     echo "$APP: --paths-from names no such file: $PATHS_FROM" >&2; exit 3; }
 [ -d "$ROOT/$APP" ] || { echo "no such app dir: $APP (root=$ROOT)" >&2; exit 2; }
 
+# ── a --paths-from scope must name something, entry by entry (#635) ──
+# An entry git cannot resolve at HEAD (a typo, a moved directory, a `foo/**`
+# glob this mode does not expand) hashes below as the literal "missing" — a
+# constant. So does a scope that names nothing at all. Either way the identity
+# stops seeing the asset's real inputs while still printing a confident 64-hex
+# answer with status 0, and the gate then skips a republish that was needed:
+# the silently suppressed update this file exists to prevent. The workflow
+# mode keeps "missing" (a watched path that was deleted must still move the
+# identity once); an explicit scope is a declaration, and a declaration that
+# names nothing is wrong. Checked here, in the main shell, for the same reason
+# as the two guards above. Same resolution as _explain, so the two cannot
+# disagree about what "names something" means.
+if [ -n "$PATHS_FROM" ]; then
+    _named=0
+    while IFS= read -r _p || [ -n "$_p" ]; do
+        case "$_p" in *[![:space:]]*) ;; *) continue ;; esac   # blank: _paths skips it too
+        git -C "$ROOT" rev-parse -q --verify "HEAD:$_p" >/dev/null || {
+            echo "$APP: --paths-from entry '$_p' names nothing at HEAD ($PATHS_FROM) — it would hash as a constant and silently narrow the gate" >&2; exit 3; }
+        _named=$((_named + 1))
+    done < "$PATHS_FROM"
+    [ "$_named" -gt 0 ] || {
+        echo "$APP: --paths-from $PATHS_FROM names no inputs at all — an identity of nothing never moves, so the gate would skip forever" >&2; exit 3; }
+fi
+
 # Checked HERE, in the main shell, for exactly the reason the line above is:
 # the tester-directory exclusion (_tests_dir, below) is read from build.json
 # with jq, and `compute` runs `_explain | sha256sum`, so every `exit` inside
