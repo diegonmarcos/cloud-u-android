@@ -76,6 +76,10 @@ public final class TerminalSession extends TerminalOutput {
     private final String[] mEnv;
     private final Integer mTranscriptRows;
 
+    /** #698 -- a line the APP, not the shell, puts at the top of this session before the shell's
+     *  first byte: the one place a start-path fault the shell cannot see can be said on screen. */
+    private String mPreamble;
+
 
     private static final String LOG_TAG = "TerminalSession";
 
@@ -109,6 +113,11 @@ public final class TerminalSession extends TerminalOutput {
         }
     }
 
+    /** Must be called before the session is first sized, which is what starts the shell; null prints nothing. */
+    public void setPreamble(String preamble) {
+        mPreamble = preamble;
+    }
+
     /** The terminal title as set through escape sequences or null if none set. */
     public String getTitle() {
         return (mEmulator == null) ? null : mEmulator.getTitle();
@@ -122,6 +131,10 @@ public final class TerminalSession extends TerminalOutput {
      */
     public void initializeEmulator(int columns, int rows, int cellWidthPixels, int cellHeightPixels) {
         mEmulator = new TerminalEmulator(this, columns, rows, cellWidthPixels, cellHeightPixels, mTranscriptRows, mClient);
+        if (mPreamble != null) {
+            byte[] line = (mPreamble + "\r\n").getBytes(StandardCharsets.UTF_8);
+            mEmulator.append(line, line.length);
+        }
 
         int[] processId = new int[1];
         mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns, cellWidthPixels, cellHeightPixels);

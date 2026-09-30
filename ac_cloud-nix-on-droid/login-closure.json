@@ -1,0 +1,31 @@
+{
+  "_doc": "#698 -- what app/src/main/cpp/verify_login_closure.py checks inside the baked rootfs zip before app/build.gradle's bakeBootstrap lets it be staged for the rootfs lib. Every absolute path the scanned login scripts name must resolve in the zip through bin/login's own proot binds; everything the login executes must be in EXECUTABLES.txt with a resolvable interpreter. The bake's other gates look at the CI runner's /nix/store and rootfs-lib's verifyRootfsPayload only checks that the payload file exists, so until this gate a rootfs missing its bin/sh target, its login shell, `timeout` or an ELF interpreter shipped green and died on the phone at exit 127.",
+  "_doc_not_in_build_json": "Its own file for the reason fleet-lib.json gives: build.json is the first of the rootfs artifact's identity_files, so a key added there moves the content address and republishes the ~400 MB lib for a change that alters no byte of it. This file only VERIFIES the bytes, so it must not version them.",
+  "scan": [
+    "bin/login",
+    "usr/lib/login-inner",
+    "etc/static/profile",
+    "usr/lib/cloud-agent-tools-init.sh",
+    "usr/lib/cloud-store/login-init.sh",
+    "usr/lib/cloud-store/declaration.sh"
+  ],
+  "_doc_scan": "The files a login reads, in order: bin/login (the app execs it), login-inner (proot runs it), /etc/profile (read by the `exec -l bash` fallback), the baked PATH script and the store init it sources, and the store declaration that init sources through a variable. Full-line comments are skipped; $HOME and Android host paths are outside the rootfs and skipped.",
+  "run": [
+    "usr/lib/cloud-store/cloud-store"
+  ],
+  "_doc_run": "Executed by the login but named only through variables (login-init.sh runs \"$CLOUD_STORE_INSTALL_DIR/$CLOUD_STORE_ENGINE\"), so no literal reaches the scan. Literals that resolve to an ELF or a shebang script are checked as executables automatically.",
+  "path_commands": [
+    "timeout",
+    "bash"
+  ],
+  "_doc_path_commands": "Run BY NAME off the profile PATH by the bounded login (be6480364): `timeout` bounds the store init and the login-shell liveness probe, `bash` is the fallback shell. timeout is provided by coreutils but declared nowhere in build.json, so without this entry an attr cleanup could drop it and the bounding would silently disappear. build.json default_packages.binaries are checked the same way without being repeated here.",
+  "absent_by_design": {
+    "etc/UNINTIALISED": "upstream's first-run wizard gate; bake_default_packages.py drops its target so the interactive, networked wizard never runs. If it ever resolves, the phone opens into a y/N prompt and a network fetch instead of a shell.",
+    "bin/.proot-static.new": "bin/login's in-place upgrade drop-in, created at run time, never shipped",
+    "usr/lib/.login-inner.new": "bin/login's in-place upgrade drop-in, created at run time, never shipped",
+    "nix/store/*-fakeProcStat": "upstream's optional /proc/stat stand-in; the pinned bootstrap never shipped it and bin/login binds it only when it exists",
+    "nix/store/*-fakeProcUptime": "upstream's optional /proc/uptime stand-in; the pinned bootstrap never shipped it and bin/login binds it only when it exists",
+    "nix/store/*-nix-on-droid-session-init.sh/*": "upstream's /etc/profile sources a generation only `nix-on-droid switch` builds; #641 guards it with -e and falls back to the baked PATH script"
+  },
+  "_doc_absent_by_design": "Referenced by the login but deliberately NOT shipped. Each must NOT resolve (shipping one is itself a defect), and each must still match something the scanned scripts reference: a stale exemption would silently excuse a future real one. Patterns are fnmatch over rootfs-relative paths, never store hashes, which move with every pin."
+}

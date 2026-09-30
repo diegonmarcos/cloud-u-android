@@ -70,6 +70,13 @@ android {
         // literal, so the two agree by construction.
         buildConfigField "String", "CLOUD_ROOTFS_LIB_PACKAGE", "\"" + rootfsLibPackage() + "\""
 
+        // #698 -- the rootfs content address THIS build was made against, by the
+        // same function rootfs-lib stamps its versionName with. The Store updates
+        // this app and that lib independently, so any pairing can be installed;
+        // TermuxInstaller.rootfsVersionNotice says so on the terminal screen when
+        // the rootfs about to run is not this one.
+        buildConfigField "String", "CLOUD_ROOTFS_LIB_VERSION", "\"" + bootstrapArtifactId(bootstrapSpec().artifact) + "\""
+
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
@@ -503,6 +510,25 @@ task bakeBootstrap() {
                 throw new GradleException("bake_default_packages.py failed (exit " + toolingResult.exitValue
                         + "); see log above")
         }
+
+        // #698 -- the login closure gate, on the bytes that will ship. The bake's
+        // own gates look at the CI runner's /nix/store and rootfs-lib's
+        // verifyRootfsPayload only checks the file exists; this opens the zip and
+        // resolves every path bin/login and login-inner need the way the phone
+        // will. It verifies the payload and shapes none of it, so its declaration
+        // lives in ../login-closure.json, outside the identity_files.
+        def closureGate = new File(projectDir, "src/main/cpp/verify_login_closure.py")
+        if (!closureGate.exists())
+            throw new GradleException("missing " + closureGate + " (the login closure gate)")
+        def closureResult = exec {
+            commandLine "python3", closureGate.absolutePath, baked.absolutePath,
+                    new File(projectDir.parentFile, "build.json").absolutePath,
+                    new File(projectDir.parentFile, "login-closure.json").absolutePath
+            ignoreExitValue = true
+        }
+        if (closureResult.exitValue != 0)
+            throw new GradleException("verify_login_closure.py: the baked rootfs would not log in on the phone (exit "
+                    + closureResult.exitValue + "); see the FAIL lines above")
 
         // #628 Slice 2 -- stage the FINAL (id-patched, tooling-baked) zip for
         // rootfs-lib instead of publishing it to a GH release. NO network in

@@ -362,6 +362,12 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
     }
 
     public void addNewSession(boolean isFailSafe, String sessionName) {
+        addNewSession(isFailSafe, sessionName, null);
+    }
+
+    /** #698 -- {@code preamble}, when not null, is a line the app prints at the top of the new
+     *  session before the shell's first byte (see {@link TerminalSession#setPreamble}). */
+    public void addNewSession(boolean isFailSafe, String sessionName, String preamble) {
         TermuxService service = mActivity.getTermuxService();
         if (service == null) return;
 
@@ -382,6 +388,8 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
             if (newTermuxSession == null) return;
 
             TerminalSession newTerminalSession = newTermuxSession.getTerminalSession();
+            // Before setCurrentSession: attaching it to the view is what sizes it and starts the shell.
+            newTerminalSession.setPreamble(preamble);
             setCurrentSession(newTerminalSession);
 
             mActivity.getDrawer().closeDrawers();

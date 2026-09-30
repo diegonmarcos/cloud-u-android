@@ -286,6 +286,23 @@ final class TermuxInstaller {
         }
     }
 
+    /**
+     * #698 -- one line for the terminal screen when the rootfs about to run is
+     * not the one this APK was built against, else null. The Store updates this
+     * app and cloud-lib-rootfs-nixdroid independently, each by its own sha256,
+     * so a new terminal over an older rootfs is an ordinary state -- and it used
+     * to run that rootfs's login silently, whatever that login did. Both sides
+     * carry the same content address ({@link BuildConfig#CLOUD_ROOTFS_LIB_VERSION}
+     * and the lib's manifest version), so equality is the whole check.
+     */
+    static String rootfsVersionNotice() {
+        String installed = readInstalledBootstrapVersion();
+        if (BuildConfig.CLOUD_ROOTFS_LIB_VERSION.equals(installed)) return null;
+        return "⚠ rootfs " + (installed == null ? "(unversioned)" : installed)
+            + " is installed, this terminal was built for " + BuildConfig.CLOUD_ROOTFS_LIB_VERSION
+            + " -- update cloud-lib-rootfs-nixdroid and this app from the Store's Cloud tab.";
+    }
+
     /** Performs bootstrap setup if necessary. */
     static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {
         String bootstrapErrorMessage;
