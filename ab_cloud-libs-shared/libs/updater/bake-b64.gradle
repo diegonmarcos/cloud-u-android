@@ -1,0 +1,30 @@
+// bakeB64(blob) — THE one way a derived base64 blob becomes a BuildConfig String.
+//
+// A baked String is a CONSTANT_Utf8 entry in the class file and JVMS 4.4.7 caps
+// ONE at 65,535 bytes. So `buildConfigField "String", X, "\"${blob}\""` stops
+// compiling the moment `blob` outgrows that, and what you get is javac saying
+// "constant string too long" about a generated BuildConfig.java — in a step
+// named "JVM unit tests", before any test runs, naming nothing that would help.
+// #567 hit this on the fleet manifest (c866529e8), #646 on the folder tree.
+//
+// So the blob is emitted as parts joined at class-init. String.join is NOT a
+// constant expression, so no cap applies at all, and every READER still sees one
+// ordinary String — zero Kotlin edits. Base64 is [A-Za-z0-9+/=] only, so a part
+// never needs escaping inside a Java literal.
+//
+// ONE COPY (#654). This was pasted inline into superapp app/build.gradle,
+// libs:appstore and libs:updater beside a helper only the superapp could reach,
+// and copies of a workaround drift one at a time. It lives in :libs:updater
+// because every module that bakes the fleet already depends on it, so this
+// directory is already in each of those apps' ship paths and publish-gate
+// identity: an edit here rebuilds exactly the apps that call it. Use it as
+//     apply from: '<relative path>/libs/updater/bake-b64.gradle'
+//     buildConfigField "String", "X_B64", bakeB64(blob)
+// The fleet manifest guard fails any other gradle script that chunks a blob.
+ext.bakeB64 = { String blob ->
+    if (blob.length() == 0) return '""'
+    def parts = (0..<blob.length()).step(60000).collect {
+        '"' + blob.substring(it, Math.min(it + 60000, blob.length())) + '"'
+    }
+    'String.join("", new String[]{' + parts.join(', ') + '})'
+}

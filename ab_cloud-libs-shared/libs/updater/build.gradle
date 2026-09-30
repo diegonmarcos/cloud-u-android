@@ -42,6 +42,9 @@ if (!fleetFile.exists()) {
         "is why this throws instead of defaulting to \"\".")
 }
 def fleetB64 = fleetFile.text.bytes.encodeBase64().toString()
+// bakeB64(): the ONE chunked bake (#654). It lives beside this file, so every app
+// that links :libs:updater can apply it by the same relative path.
+apply from: 'bake-b64.gradle'
 def ghcr = buildJson.release.ghcr
 def au   = buildJson.release.auto_update
 // #625 THE APK CACHE POLICY, DECLARED ONCE.
@@ -164,7 +167,7 @@ android {
         // at class-init time, which is NOT a constant expression and has no cap, so the
         // readers' one CONSTELLATION_FLEET_B64 String is unchanged and the manifest can
         // keep growing. The fleet-manifest guard fails any bake that goes back to one literal.
-        buildConfigField "String",  "CONSTELLATION_FLEET_B64",     'String.join("", new String[]{' + (0..<fleetB64.length()).step(60000).collect { '"' + fleetB64.substring(it, Math.min(it + 60000, fleetB64.length())) + '"' }.join(', ') + '})'
+        buildConfigField "String",  "CONSTELLATION_FLEET_B64",     bakeB64(fleetB64)
     }
 
     buildFeatures { buildConfig = true }

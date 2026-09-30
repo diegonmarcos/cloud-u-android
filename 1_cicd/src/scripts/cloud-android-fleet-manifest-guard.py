@@ -123,40 +123,65 @@ PLACEHOLDER_ASSIGN = re.compile(
 # clothes: String.join over 70,000-char parts still emits an over-cap constant.
 CHUNK_STEP = re.compile(r"""\.step\(\s*(\d+)\s*\)""")
 CONSTANT_UTF8_CAP = 65535
+# ── #654 ONE chunking helper ──────────────────────────────────────────────────
+# The chunked form was pasted inline three times — superapp app/build.gradle,
+# libs:appstore, libs:updater — beside a bakeB64 only the superapp could reach.
+# Copies of a workaround drift one at a time, and the copy nobody fixed is where
+# the next over-cap constant lands. So the chunking lives in ONE script every
+# baker applies, and any other gradle script that slices a blob (`.step(`) or
+# emits the parts (`new String[]`) is a copy. Named here so that moving the
+# helper fails this guard loudly: the moved file is no longer exempt.
+BAKE_HELPER = "ab_cloud-libs-shared/libs/updater/bake-b64.gradle"
+INLINE_CHUNK = re.compile(r"""new\s+String\s*\[\s*\]|\.step\(""")
+
+
+def gradle_scripts(root):
+    """(path, lines) of every gradle script — build files AND applied scripts, so
+    the helper's own chunk step is checked like any build file's."""
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames
+                       if d not in (".git", "build", ".gradle", "node_modules", "z_archive")]
+        for name in filenames:
+            if not name.endswith((".gradle", ".gradle.kts")):
+                continue
+            path = os.path.join(dirpath, name)
+            try:
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    yield path, handle.read().splitlines()
+            except OSError:
+                continue
+
+
+def find_inline_chunks(root):
+    """Every gradle script other than BAKE_HELPER that chunks a blob itself."""
+    helper = os.path.join(root, BAKE_HELPER)
+    return [(path, number, line.strip())
+            for path, lines in gradle_scripts(root) if path != helper
+            for number, line in enumerate(lines, 1)
+            if not line.lstrip().startswith("//") and INLINE_CHUNK.search(line)]
 
 
 def find_bakes(root):
     """Every build file that bakes a GROWING_B64 constant as one literal."""
     hits = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames
-                       if d not in (".git", "build", ".gradle", "node_modules", "z_archive")]
-        for name in filenames:
-            if name not in ("build.gradle", "build.gradle.kts"):
+    for path, lines in gradle_scripts(root):
+        for number, line in enumerate(lines, 1):
+            if line.lstrip().startswith("//"):
                 continue
-            path = os.path.join(dirpath, name)
-            try:
-                with open(path, encoding="utf-8", errors="replace") as handle:
-                    lines = handle.read().splitlines()
-            except OSError:
-                continue
-            for number, line in enumerate(lines, 1):
-                if line.lstrip().startswith("//"):
-                    continue
-                found = SINGLE_CONSTANT_BAKE.search(line)
-                if found:
-                    placeholder = re.compile(PLACEHOLDER_ASSIGN.pattern % re.escape(found.group(2)))
-                    if not any(placeholder.match(other) for other in lines):
-                        hits.append((path, number, found.group(1), line.strip()))
-                # A chunk step at or over the cap is the defect wearing the fix's
-                # clothes — String.join over 70,000-char parts is still one
-                # over-cap constant per part. `.step()` in these build files is
-                # only ever a blob being chunked.
-                for step in CHUNK_STEP.finditer(line):
-                    if int(step.group(1)) >= CONSTANT_UTF8_CAP:
-                        hits.append((path, number,
-                                     "a blob in %s-char parts, each one still over the cap"
-                                     % step.group(1), line.strip()))
+            found = SINGLE_CONSTANT_BAKE.search(line)
+            if found:
+                placeholder = re.compile(PLACEHOLDER_ASSIGN.pattern % re.escape(found.group(2)))
+                if not any(placeholder.match(other) for other in lines):
+                    hits.append((path, number, found.group(1), line.strip()))
+            # A chunk step at or over the cap is the defect wearing the fix's
+            # clothes — String.join over 70,000-char parts is still one
+            # over-cap constant per part. `.step()` in these build files is
+            # only ever a blob being chunked.
+            for step in CHUNK_STEP.finditer(line):
+                if int(step.group(1)) >= CONSTANT_UTF8_CAP:
+                    hits.append((path, number,
+                                 "a blob in %s-char parts, each one still over the cap"
+                                 % step.group(1), line.strip()))
     return hits
 
 
@@ -735,10 +760,18 @@ def main():
             "      This blob is DERIVED, so it grows when nobody edits it: the fleet manifest\n"
             "      crossed on 2026-09-24 at 68,072 bytes (#567), and the L5 folder tree crossed\n"
             "      on 2026-09-29 at 65,624 because #646 added two library DIRECTORIES to a\n"
-            "      constant with 147 bytes left. Bake it as String.join(\"\", new String[]{...})\n"
-            "      parts — not a constant expression, so no cap — as libs/updater/build.gradle\n"
-            "      and aa_cloud-superapp/app/build.gradle's bakeB64 do.\n"
-            "      %s" % (os.path.relpath(path, root), number, what, CONSTANT_UTF8_CAP, line))
+            "      constant with 147 bytes left. Bake it with bakeB64(blob) from %s —\n"
+            "      String.join(\"\", new String[]{...}) parts, not a constant expression, so no cap.\n"
+            "      %s" % (os.path.relpath(path, root), number, what, CONSTANT_UTF8_CAP,
+                          BAKE_HELPER, line))
+
+    for path, number, line in find_inline_chunks(root):
+        failures.append(
+            "%s:%d chunks a blob inline.\n"
+            "      The chunking lives in ONE place, %s: apply it and call\n"
+            "      bakeB64(blob) (#654). It was pasted three times before, and a copy is where\n"
+            "      the next over-cap constant lands — the one nobody remembered to fix.\n"
+            "      %s" % (os.path.relpath(path, root), number, BAKE_HELPER, line))
 
     consumers = find_consumers(root)
     if not consumers:

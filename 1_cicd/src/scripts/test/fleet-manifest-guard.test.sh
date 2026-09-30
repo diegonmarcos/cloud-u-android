@@ -39,6 +39,17 @@ if (!fleetFile.exists()) {
 }
 def fleetB64 = fleetFile.text.bytes.encodeBase64().toString()
 GRADLE
+    # #654 the ONE chunking helper, where the real tree keeps it. The healthy tree
+    # carries it, so "healthy tree passes" is also the proof that it is exempt.
+    cat > "$root/ab_cloud-libs-shared/libs/updater/bake-b64.gradle" <<'GRADLE'
+ext.bakeB64 = { String blob ->
+    if (blob.length() == 0) return '""'
+    def parts = (0..<blob.length()).step(60000).collect {
+        '"' + blob.substring(it, Math.min(it + 60000, blob.length())) + '"'
+    }
+    'String.join("", new String[]{' + parts.join(', ') + '})'
+}
+GRADLE
 
     printf 'dependencies {\n    implementation project(":libs:updater")\n}\n' \
         > "$root/aa_cloud-superapp/app/build.gradle"
@@ -233,10 +244,44 @@ reinstate_single_constant_bake() {
     printf 'android { defaultConfig {\n    buildConfigField "String", "CONSTELLATION_FLEET_B64", "\\"${fleetB64}\\""\n} }\n' \
         >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
 }
+add_helper_bake() {
+    printf 'apply from: "bake-b64.gradle"\nandroid { defaultConfig {\n    buildConfigField "String", "CONSTELLATION_FLEET_B64", bakeB64(fleetB64)\n} }\n' \
+        >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
+    grep -q 'bakeB64(fleetB64)' "$1/ab_cloud-libs-shared/libs/updater/build.gradle" \
+        || { echo "MUTATION DID NOT APPLY: no helper bake written" >&2; exit 2; }
+}
+# ── #654 ONE chunking helper ─────────────────────────────────────────────────
+# The chunked form used to be ACCEPTED wherever it was written, which is how it
+# came to be pasted three times beside a helper only the superapp could reach.
+# Chunking is now the helper's alone: the same line, inline, is a copy.
 add_chunked_bake() {
     printf 'android { defaultConfig {\n    buildConfigField "String", "CONSTELLATION_FLEET_B64", %s\n} }\n' \
         "'String.join(\"\", new String[]{' + (0..<fleetB64.length()).step(60000).collect { '\"' + fleetB64.substring(it, Math.min(it + 60000, fleetB64.length())) + '\"' }.join(', ') + '})'" \
         >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
+    grep -q 'new String\[\]' "$1/ab_cloud-libs-shared/libs/updater/build.gradle" \
+        || { echo "MUTATION DID NOT APPLY: no inline chunked bake written" >&2; exit 2; }
+}
+# A private copy of the helper — the superapp's own `def bakeB64`, which is what
+# #654 removed — is a second chunking site even though every call looks right.
+paste_a_second_helper() {
+    sed 's/^ext\.bakeB64 = /def bakeB64 = /' "$1/ab_cloud-libs-shared/libs/updater/bake-b64.gradle" \
+        >> "$1/aa_cloud-superapp/app/build.gradle"
+    grep -q '^def bakeB64 = ' "$1/aa_cloud-superapp/app/build.gradle" \
+        || { echo "MUTATION DID NOT APPLY: no second helper pasted" >&2; exit 2; }
+}
+# The helper is not a build.gradle, so the chunk-step check must reach it too:
+# widening ITS step is the one place left where the cap could come back.
+widen_the_helper_step() {
+    sed -i 's/60000/70000/g' "$1/ab_cloud-libs-shared/libs/updater/bake-b64.gradle"
+    grep -q 'step(70000)' "$1/ab_cloud-libs-shared/libs/updater/bake-b64.gradle" \
+        || { echo "MUTATION DID NOT APPLY: helper step unchanged" >&2; exit 2; }
+}
+# The exemption is a declared PATH, so moving the helper cannot pass silently.
+move_the_helper() {
+    mkdir -p "$1/ab_cloud-libs-shared/gradle"
+    mv "$1/ab_cloud-libs-shared/libs/updater/bake-b64.gradle" "$1/ab_cloud-libs-shared/gradle/"
+    [ -f "$1/ab_cloud-libs-shared/gradle/bake-b64.gradle" ] \
+        || { echo "MUTATION DID NOT APPLY: helper not moved" >&2; exit 2; }
 }
 # ── #646 the SAME cap, on a DIFFERENT derived blob ────────────────────────────
 # The fleet manifest was not special. The L5 folder tree is derived the same way
@@ -414,7 +459,7 @@ case_is "healthy tree passes"                            0 untouched
 case_is "own data/ override is accepted"                 0 add_valid_override
 case_is "original rootDir + empty-string defect is CAUGHT" 1 reinstate_defect
 case_is "removing the GradleException is CAUGHT"         1 drop_the_throw
-case_is "chunked String.join bake is accepted"           0 add_chunked_bake
+case_is "the fleet baked through the ONE helper is accepted" 0 add_helper_bake
 case_is "manifest baked as ONE string constant is CAUGHT" 1 reinstate_single_constant_bake
 case_is "missing canonical manifest is CAUGHT"           1 delete_canonical
 case_is "manifest listing no applications is CAUGHT"     1 empty_the_fleet
@@ -430,6 +475,17 @@ case_is "chunking at a step over the cap is CAUGHT"           1 widen_the_chunk_
 case_is "a four-byte placeholder bake is accepted"             0 add_placeholder_tree_bake
 case_is "a placeholder app that starts scanning for real is CAUGHT" 1 scan_for_real_in_a_placeholder_app \
         "as ONE string constant"
+
+echo
+echo "ONE chunking helper — no gradle script inlines the chunking (task #654)"
+case_is "the fleet chunked INLINE, not through the helper, is CAUGHT" 1 add_chunked_bake \
+        "chunks a blob inline"
+case_is "a second copy of the helper in a build file is CAUGHT"       1 paste_a_second_helper \
+        "chunks a blob inline"
+case_is "the helper's own step widened over the cap is CAUGHT"        1 widen_the_helper_step \
+        "still over the cap"
+case_is "the helper moved off its declared path is CAUGHT"            1 move_the_helper \
+        "chunks a blob inline"
 
 echo
 echo "A runtime payload is a real fleet LIBRARY the store installs (task #628)"
