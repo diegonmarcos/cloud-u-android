@@ -448,7 +448,7 @@
     <string name="git_way_mission_refused">The fleet browser refused the mission: %1$s</string>
     <string name="git_way_mission_cancelled">Sign-in cancelled in the browser. Next step: press Sign in again.</string>
     <string name="git_way_mission_malformed">The browser answered something this build cannot read: %1$s</string>
-    <string name="git_way_state_mismatch">The GitHub landing carried another attempt's state and was refused. Next step: press Sign in again.</string>
+    <string name="git_way_state_mismatch">The GitHub landing carried another attempt\'s state and was refused. Next step: press Sign in again.</string>
     <string name="git_way_denied">GitHub declined the sign-in: %1$s</string>
     <string name="git_way_exchange_failed">GitHub did not hand over a token: %1$s</string>
     <string name="git_way_filed">Signed in with GitHub; the credential is filed under the declared id and the listing follows.</string>
