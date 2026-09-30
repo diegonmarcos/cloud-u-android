@@ -24,9 +24,10 @@ import com.diegonmarcos.superapp.launcher.themes.minimalist.MinimalistBlackFragm
  */
 class LauncherNavController(private val host: NavHost) {
 
-    /** The two headings the Configs grid groups its tiles under. */
-    private val GROUP_PAGES = "Pages"
-    private val GROUP_ACTIONS = "Actions"
+    /** The two fallback headings, owned by [Sections] so the grid and the
+     *  menus ([Sections.headingOf]) cannot name them differently. */
+    private val GROUP_PAGES = Sections.GROUP_PAGES
+    private val GROUP_ACTIONS = Sections.GROUP_ACTIONS
 
     /** Cursor into [Sections.swipeWalk]; authoritative for swipe stepping,
      *  re-synced when the user navigates by other means (tail of [goSection]). */

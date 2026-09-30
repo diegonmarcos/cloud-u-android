@@ -172,10 +172,13 @@ print(len(w))
 # declares none, which is every section but this one. Pinned so it stays the only
 # one: an unreviewed second constant here is how a declared heading gets quietly
 # replaced by a literal.
-KTGROUPS=$(grep -cE '^\s*private val GROUP_[A-Z]+ = "' "$NAV" || true)
-[ "$KTGROUPS" = 2 ] \
-  && ok "LauncherNavController names exactly 2 headings in Kotlin (the Pages fallback + Actions)" \
-  || bad "$KTGROUPS hardcoded GROUP_ constants in LauncherNavController, expected 2"
+# #697 moved the pair from LauncherNavController into Sections so the grid and
+# the menus share them; the controller may only alias, never spell, a heading.
+KTGROUPS=$(grep -cE '^\s*const val GROUP_[A-Z]+ = "' "$SECTIONS" || true)
+NAVLIT=$(grep -cE 'val GROUP_[A-Z]+ = "' "$NAV" || true)
+[ "$KTGROUPS" = 2 ] && [ "$NAVLIT" = 0 ] \
+  && ok "Sections names exactly 2 headings in Kotlin (the Pages fallback + Actions), the nav controller none" \
+  || bad "$KTGROUPS hardcoded GROUP_ constants in Sections (expected 2), $NAVLIT in LauncherNavController (expected 0)"
 
 echo "== T5: NO ORPHANED PAGE — every declared page is reachable =="
 # THE check this file exists for. A page is reachable when it draws a tile (not
@@ -278,6 +281,69 @@ for pid in presets controls onehand notify; do
               || bad "no SectionPages branch for $pid — its new tile opens the fallback placeholder" ;;
   esac
 done
+
+echo "== T9: NO PAGE WAS LOST — the id set before the regroup == the id set now, minus declared retirements (#697) =="
+# T5 walks what is left and the COUNT pin above only sees a net change: delete one
+# page and add another and both stay green. This is a SET check against the ids
+# as they stood at 171d9e048~1, the last declaration before #649 regrouped the
+# section — the pages the owner had working. A page may leave the set only by
+# being named in build.json `retired_pages` with the pages its content lives on
+# now, and those must be real, visible pages. A NEW page fails here too, on
+# purpose: adding one to Configs is a decision, and it is recorded by adding its
+# id to BEFORE below.
+check "$(python3 - "$BJ" <<'PY'
+import json, sys
+BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
+          'profile', 'wg', 'kde', 'ai', 'perms', 'store', 'about',
+          'websearch', 'localsearch', 'textenhance', 'library', 'tokens',
+          'store-cloud', 'store-phone',
+          'update', 'kde_connect', 'animations'}
+sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
+               if s['id'] == 'config')
+pages   = sec['pages']
+now     = {p['id'] for p in pages}
+retired = sec.get('retired_pages', {})
+tiled   = {p['id'] for p in pages if not p.get('hidden') and not p.get('is_action')}
+problems = []
+lost = sorted(BEFORE - now - set(retired))
+if lost:  problems.append('LOST %r — gone from pages and not declared in retired_pages' % lost)
+new = sorted(now - BEFORE)
+if new:   problems.append('NEW %r — add the id to BEFORE in this tester if it is meant' % new)
+for rid, into in sorted(retired.items()):
+    if rid not in BEFORE: problems.append('retired %r never existed' % rid)
+    if rid in now:        problems.append('retired %r is still declared' % rid)
+    if not into:          problems.append('retired %r names no successor' % rid)
+    for s in into:
+        if s not in tiled: problems.append('retired %r -> %r, which is not a visible page' % (rid, s))
+print('; '.join(problems) or 'OK')
+PY
+)" "every pre-regroup config page id is still declared, or retired into visible successors (launcher → its four tabs)"
+
+echo "== T10: the rail and the drawer list Configs under the SAME declared headings as the grid (#697) =="
+# #649 reached the phone grid only. On a two-pane screen Configs renders through
+# SectionMenuFragment (the rail), and the drawer expands `section:config` in
+# HomeDrawerFragment; both walked section.pages flat, so an unfolded screen
+# showed fourteen rows with no Launcher, Watchdog, Setup or Observability.
+MENU="$KT/launcher/SectionMenuFragment.kt"
+DRAWER="$KT/launcher/HomeDrawerFragment.kt"
+for f in "$MENU" "$DRAWER"; do
+  n=${f##*/}
+  grep -qF 'val (g, s) = Sections.headingOf(section, page)' "$f" \
+    && ok "$n asks Sections.headingOf for each page's heading" \
+    || bad "$n does not read the declared heading — it lists Configs flat"
+  grep -qE 'g\.uppercase\(\)\)\.setEnabled\(false\)' "$f" \
+    && ok "$n prints the group heading as a disabled row" \
+    || bad "$n never prints the group heading (Launcher / Watchdog)"
+  grep -qE '\$s"\)\.setEnabled\(false\)' "$f" \
+    && ok "$n prints the subgroup heading as a disabled row" \
+    || bad "$n never prints the subgroup heading (Setup / Observability)"
+done
+grep -qF 'section.pages.none { it.group.isNotBlank() || it.subgroup.isNotBlank() } -> "" to ""' "$SECTIONS" \
+  && ok "a section that declares no heading gets none in its menus (every section but Configs is unchanged)" \
+  || bad "headingOf no longer returns blank for an undeclared section — every menu would grow a PAGES banner"
+grep -qF 'page.isAction -> GROUP_ACTIONS to ""' "$SECTIONS" \
+  && ok "menus put is_action pages under Actions, as the grid does" \
+  || bad "headingOf lost the is_action → Actions rule — the three actions would list under Observability"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

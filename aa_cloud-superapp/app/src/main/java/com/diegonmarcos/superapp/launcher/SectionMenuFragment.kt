@@ -62,7 +62,19 @@ class SectionMenuFragment : Fragment() {
         when {
             section.pages.isNotEmpty() -> {
                 // Same flattening NavigationView requires — see HomeDrawerFragment.
+                // Declared headings (#649) become disabled rows, the same way a
+                // tile group's title does below — see [Sections.headingOf].
+                var shownGroup = ""; var shownSub = ""
                 for (page in section.pages) {
+                    val (g, s) = Sections.headingOf(section, page)
+                    if (g.isNotEmpty() && g != shownGroup) {
+                        menu.add(groupId, id++, Menu.NONE, g.uppercase()).setEnabled(false)
+                        shownGroup = g; shownSub = ""
+                    }
+                    if (s.isNotEmpty() && s != shownSub) {
+                        menu.add(groupId, id++, Menu.NONE, "  $s").setEnabled(false)
+                        shownSub = s
+                    }
                     val pageItemId = id++
                     val pageItem = menu.add(groupId, pageItemId, Menu.NONE, page.label)
                     page.iconName?.let {

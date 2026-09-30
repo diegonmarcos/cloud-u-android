@@ -1028,6 +1028,31 @@ object Sections {
     fun tabOwnerOf(sectionId: String, pageId: String): Page? =
         byId(sectionId)?.allPages?.firstOrNull { it.id != pageId && pageId in it.tabs }
 
+    /** The fallback heading for a page that declares none, and the heading
+     *  every `is_action` page sits under. The only two heading words Kotlin
+     *  owns; every other one is [Page.group] / [Page.subgroup] from build.json. */
+    const val GROUP_PAGES = "Pages"
+    const val GROUP_ACTIONS = "Actions"
+
+    /**
+     * The (group, subgroup) headings [page] is LISTED under outside the grid —
+     * the tablet rail ([SectionMenuFragment]) and the drawer's expansion of a
+     * section ([HomeDrawerFragment]). Both used to walk `section.pages` flat,
+     * so #649's Launcher / Watchdog ▸ Setup / Observability reached the phone
+     * grid and nowhere else: an unfolded screen showed Configs as one list of
+     * fourteen rows with no structure at all.
+     *
+     * Blank pair when [section] declares no headings, so every other section's
+     * menus stay exactly as they were. A menu prints a heading row when the pair
+     * changes from the previous page's, the same run-is-the-group rule
+     * [TileGridFragment] draws by.
+     */
+    fun headingOf(section: Section, page: Page): Pair<String, String> = when {
+        section.pages.none { it.group.isNotBlank() || it.subgroup.isNotBlank() } -> "" to ""
+        page.isAction -> GROUP_ACTIONS to ""
+        else -> page.group.ifBlank { GROUP_PAGES } to page.subgroup
+    }
+
     /**
      * The app row [page] declares — [Page.appsFromTileGroup]'s whole group in
      * its declared order, then [Page.appsExtraTileIds] appended in theirs.

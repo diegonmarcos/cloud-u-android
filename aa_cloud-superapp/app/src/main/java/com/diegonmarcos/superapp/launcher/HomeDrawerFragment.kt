@@ -206,7 +206,22 @@ class HomeDrawerFragment : Fragment() {
                 if (tile.id.startsWith("section:")) {
                     val sid = tile.id.removePrefix("section:")
                     val section = Sections.byId(sid) ?: continue
+                    // Declared headings (#649) as disabled rows at the same
+                    // NBSP indent, so Configs expands as Launcher / Watchdog ▸
+                    // Setup / Observability, not a flat run — see
+                    // [Sections.headingOf].
+                    val pad = "  ".repeat(6)
+                    var shownGroup = ""; var shownSub = ""
                     for (page in section.pages) {
+                        val (g, s) = Sections.headingOf(section, page)
+                        if (g.isNotEmpty() && g != shownGroup) {
+                            sub.add(groupId, id++, Menu.NONE, pad + g.uppercase()).setEnabled(false)
+                            shownGroup = g; shownSub = ""
+                        }
+                        if (s.isNotEmpty() && s != shownSub) {
+                            sub.add(groupId, id++, Menu.NONE, "$pad$pad$s").setEnabled(false)
+                            shownSub = s
+                        }
                         val pageItemId = id++
                         // Visual indent so children read clearly as
                         // children of their parent tile. NBSP (U+00A0) is
