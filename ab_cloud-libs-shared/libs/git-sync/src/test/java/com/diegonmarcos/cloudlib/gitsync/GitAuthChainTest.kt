@@ -222,6 +222,96 @@ class GitAuthChainTest {
         assertNull("no declared id means nothing is filed, not filed somewhere else", outcome.credentialId)
     }
 
+    // ── #653 SIGNED IN WITH NO GITHUB CREDENTIAL ANYWHERE ──────────────────
+    //
+    // THE ASSERTION THAT MATTERS, and the reason it is here rather than against a
+    // live endpoint: a suite that "proved" the credential-free login by calling the
+    // proxy would go green when the proxy is UP and red when it is DOWN, and would
+    // therefore never have proved anything about credentials at all. git-proxy-api
+    // has already been observed 502 (dropped by the load-shedder), and at the edge
+    // a 3xx comes back for ANY path under the prefix even with the container
+    // stopped. So the property is asserted where it actually lives: in what the
+    // chain does with an Answer that carries no token.
+
+    @Test
+    fun `a Served rung signs in and the chain ends holding NO credential`() {
+        val r = Recorder()
+        val outcome = GitAuthChain.resolve(
+            listOf(
+                r.rung("fleet", "Cloud fleet") { GitAuthChain.Answer.Served("listing served by the fleet") },
+                r.rung("github", "GitHub", credential("ghp_should_never_be_reached")),
+            ),
+            store = null,
+            credentialId = "vault-git-https",
+        )
+        // It ANSWERED: this is a success, not a fall-through.
+        assertTrue("a served rung must count as answering", outcome.ok)
+        assertEquals("fleet", outcome.answeredBy)
+        // AND THE CHAIN STOPPED, so the GitHub rung was never even asked. If it had
+        // been, a GitHub credential would have reached the phone by the back door —
+        // which is the exact thing ranking the fleet first exists to prevent.
+        assertEquals(listOf("fleet"), r.asked)
+        // NO CREDENTIAL, ANYWHERE. Not returned, and not filed under the declared id.
+        assertNull("a served rung must not yield a token", outcome.token)
+        assertNull("nothing may be filed when there is no credential", outcome.credentialId)
+        // And it SAYS so, so the page can tell "the fleet serves this" from "the
+        // fleet handed us a token" without inspecting a null.
+        assertTrue(
+            "the narrative must state that the rung serves it: ${outcome.narrative()}",
+            outcome.narrative().contains("serves it"),
+        )
+    }
+
+    @Test
+    fun `a Served rung writes nothing to the store, even with a declared id`() {
+        // A real store would be an Android dependency; the property is that resolve()
+        // never reaches a write at all when no credential exists, so a store that
+        // FAILS THE TEST IF TOUCHED is the honest probe. `store = null` would pass
+        // vacuously through the safe call, so the id is declared and the assertion is
+        // on credentialId staying null — the one observable of "nothing was filed".
+        val outcome = GitAuthChain.resolve(
+            listOf(GitAuthChain.Rung("fleet", "Cloud fleet") { GitAuthChain.Answer.Served("served") }),
+            store = null,
+            credentialId = "vault-git-https",
+        )
+        assertTrue(outcome.ok)
+        assertNull(outcome.token)
+        assertNull(
+            "a declared id must NOT be claimed when the rung supplied no credential",
+            outcome.credentialId,
+        )
+    }
+
+    @Test
+    fun `a Served rung is distinguishable from an unreachable one, which is the 502 case`() {
+        // The three states that must never be conflated, as the chain sees them.
+        // Served = the service answered and serves it. Unreachable = down (502) or
+        // redirected by the edge (3xx, which proves nothing). Declined = reached and
+        // refused (401/403), which is evidence the service is UP.
+        val served = GitAuthChain.resolve(
+            listOf(GitAuthChain.Rung("fleet", "Cloud fleet") { GitAuthChain.Answer.Served("ok") }),
+            store = null, credentialId = "vault-git-https",
+        )
+        val down = GitAuthChain.resolve(
+            listOf(GitAuthChain.Rung("fleet", "Cloud fleet") { GitAuthChain.Answer.Unreachable("the fleet answered HTTP 502") }),
+            store = null, credentialId = "vault-git-https",
+        )
+        val refused = GitAuthChain.resolve(
+            listOf(GitAuthChain.Rung("fleet", "Cloud fleet") { GitAuthChain.Answer.Declined("the fleet refused this identity (HTTP 401)") }),
+            store = null, credentialId = "vault-git-https",
+        )
+        assertTrue("a served rung is a success", served.ok)
+        assertFalse("a 502 is NOT a success", down.ok)
+        assertFalse("a refusal is NOT a success", refused.ok)
+        // And each says which it was, in words — a dead service must never be able
+        // to read as a working credential-free login.
+        assertTrue(served.narrative().contains("serves it"))
+        assertTrue("a 502 must surface as unreachable: ${down.narrative()}", down.narrative().contains("unreachable"))
+        assertTrue("a 401 must surface as declined: ${refused.narrative()}", refused.narrative().contains("declined"))
+        assertFalse("a 502 must never claim the rung served it", down.narrative().contains("serves it"))
+        assertFalse("a 401 must never claim the rung served it", refused.narrative().contains("serves it"))
+    }
+
     // ── A TOKEN IS NEVER RENDERED ──────────────────────────────────────────
 
     @Test
