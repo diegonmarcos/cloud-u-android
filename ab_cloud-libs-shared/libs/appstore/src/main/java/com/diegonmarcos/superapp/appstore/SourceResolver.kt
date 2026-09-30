@@ -445,11 +445,29 @@ object SourceResolver {
                     c.errorStream?.bufferedReader()?.use { it.readText() }
                         ?.let { JSONObject(it).optString("message") }
                 }.getOrNull()?.takeIf { it.isNotEmpty() }
-                error(if (why == null) "HTTP $code from $url" else "HTTP $code from $url — $why")
+                throw HttpStatus(code, url, if (why == null) "HTTP $code from $url" else "HTTP $code from $url — $why",
+                    quota = isQuota(code, c), resetEpoch = c.getHeaderField("X-RateLimit-Reset")?.toLongOrNull())
             }
             return c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
     }
+
+    /**
+     * #668 a non-2xx, TYPED, so a reader can say WHICH failure it was instead
+     * of re-parsing a sentence. Still an IllegalStateException with the same
+     * message, so every caller that caught the old error() is unchanged.
+     * [quota] is decided from HTTP conventions, not from any one provider:
+     * 429 (RFC 6585), a Retry-After (RFC 9110), or the X-RateLimit-Remaining: 0
+     * convention GitHub and most public APIs share - GitHub answers an
+     * exhausted anonymous quota with 403 plus that header, which is exactly
+     * the case that must not read as "forbidden".
+     */
+    class HttpStatus(val code: Int, val url: String, message: String,
+                     val quota: Boolean = false, val resetEpoch: Long? = null) : IllegalStateException(message)
+
+    // A Retry-After on a 503 is maintenance, not quota - so only 403 is read.
+    private fun isQuota(code: Int, c: HttpURLConnection) = code == 429 || code == 403 &&
+        (c.getHeaderField("Retry-After") != null || c.getHeaderField("X-RateLimit-Remaining") == "0")
 
     /** GET [url] as a JSON object. Null on 404; throws on anything else. */
     fun getJson(url: String): JSONObject? = getBody(url)?.let { JSONObject(it) }

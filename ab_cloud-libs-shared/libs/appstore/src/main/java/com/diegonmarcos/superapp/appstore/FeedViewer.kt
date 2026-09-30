@@ -13,6 +13,9 @@ import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
+import java.io.IOException
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * #642 — THE STORE'S READ-ONLY FEEDS: commits, and CI-CD runs.
@@ -45,12 +48,15 @@ object FeedViewer {
 
     const val FEEDS_ASSET = "appstore-feeds.json"
 
-    /** One declared feed. [items] is null when the response IS the array. */
+    /** One declared feed. [items] is null when the response IS the array.
+     *  [proxy] is null until the fleet serves this feed; when set it is tried
+     *  FIRST and [url] stays the public fallback (#668). */
     class Feed(
         val id: String,
         val label: String,
         val blurb: String,
         val url: String,
+        val proxy: String?,
         val items: String?,
         val ref: String,
         val title: String,
@@ -82,7 +88,8 @@ object FeedViewer {
             val id = f.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val url = f.optString("url").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             Feed(id = id, label = f.optString("label", id), blurb = f.optString("blurb"),
-                url = url, items = f.optString("items").takeIf { it.isNotEmpty() },
+                url = url, proxy = f.optString("proxy").takeIf { it.isNotEmpty() && it != "null" },
+                items = f.optString("items").takeIf { it.isNotEmpty() },
                 ref = f.optString("ref"), title = f.optString("title"),
                 subtitle = f.optString("subtitle"), link = f.optString("link"),
                 state = f.optString("state").takeIf { it.isNotEmpty() },
@@ -103,18 +110,51 @@ object FeedViewer {
      * called on a worker thread by [render].
      */
     fun load(feed: Feed): List<Entry> {
-        val body = SourceResolver.getBody(feed.url) ?: return emptyList()
+        // #668 the fleet proxy is an OPTIMISATION, never a dependency: public
+        // data must stay readable with the fleet down, so any proxy failure
+        // falls through to the public url, and is kept (suppressed) so the
+        // sentence can still say the proxy failed too.
+        val proxy = feed.proxy ?: return read(feed, feed.url)
+        return try { read(feed, proxy) } catch (viaProxy: Exception) {
+            try { read(feed, feed.url) } catch (direct: Exception) { direct.addSuppressed(viaProxy); throw direct }
+        }
+    }
+
+    /** One url's entries. There is NO path from a failed read to an empty
+     *  list: a 404 or a body without the declared array THROWS, so the only
+     *  way to draw "nothing in this feed" is a 2xx that carried an empty one. */
+    private fun read(feed: Feed, url: String): List<Entry> {
+        val body = SourceResolver.getBody(url) ?: throw SourceResolver.HttpStatus(404, url, "HTTP 404 from $url")
         val root = JSONTokener(body).nextValue()
         val array = when {
             feed.items != null -> (root as? JSONObject)?.optJSONArray(feed.items)
             else -> root as? JSONArray
-        } ?: return emptyList()
+        } ?: error("$url answered without the declared ${feed.items ?: "top-level list"}")
         return (0 until array.length()).mapNotNull { i ->
             val item = array.optJSONObject(i) ?: return@mapNotNull null
             Entry(ref = fill(feed.ref, item), title = fill(feed.title, item),
                 subtitle = fill(feed.subtitle, item), link = fill(feed.link, item),
                 state = feed.state?.let { path(item, it) } ?: "")
         }
+    }
+
+    /**
+     * #668 WHICH failure, in words. Quota, unreachable, refused and wrong-shape
+     * lead to different places (wait / check the network / check the url / the
+     * endpoint changed), so they must not share one sentence - and none of them
+     * may read as an empty feed. Pure, so it is testable without a device.
+     */
+    fun explain(t: Throwable): String {
+        val why = when {
+            t is SourceResolver.HttpStatus && t.quota ->
+                "Rate limit reached — not an empty feed. ${t.message}. It refills by itself" +
+                    (t.resetEpoch?.let { " at " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(it * 1000)) } ?: "") + "."
+            t is SourceResolver.HttpStatus && t.code == 404 -> "Not found — not an empty feed. ${t.message}"
+            t is SourceResolver.HttpStatus -> "Refused by the server — ${t.message}"
+            t is IOException -> "Unreachable — nothing was read. ${t.javaClass.simpleName}: ${t.message.orEmpty()}"
+            else -> "The feed answered, but not in the shape its declaration describes — ${t.message}"
+        }
+        return why + t.suppressed.joinToString("") { " (Fleet proxy tried first: ${explain(it)})" }
     }
 
     /**
@@ -165,7 +205,7 @@ object FeedViewer {
                         status.visibility = View.GONE
                         for (e in entries) list.addView(row(ctx, feed, e, open))
                     }
-                }.onFailure { status.text = "Could not read this feed — ${it.message}" }
+                }.onFailure { status.text = explain(it) }
             }
         }
     }

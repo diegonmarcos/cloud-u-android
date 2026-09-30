@@ -175,13 +175,13 @@ else:
     #     code. This is the assertion that fails when someone hardcodes a tab.
     owned = set()
     for f in feeds:
-        for key in ("id", "label", "url", "items", "state"):
+        for key in ("id", "label", "url", "proxy", "items", "state"):
             if f.get(key): owned.add(f[key])
         for key in ("ok", "bad"):
             owned.update(f.get(key) or [])
         # the repo/host out of the endpoint, and every templated field path
-        m = re.match(r"https?://([^/]+)/([^?]*)", f.get("url", ""))
-        if m:
+        for m in (re.match(r"https?://([^/]+)/([^?]*)", f.get(k) or "") for k in ("url", "proxy")):
+            if not m: continue
             owned.add(m.group(1))
             owned.update(p for p in m.group(2).split("/") if p)
         for key in ("ref", "title", "subtitle", "link"):
@@ -257,6 +257,50 @@ else:
     cache = [n for n in ("DiskLruCache", "useCache = true", "setUseCaches(true)", "CacheControl") if n in viewer]
     if not cache: ok("the reader caches nothing, so a 403 cannot be hidden behind stale rows")
     else: bad("FeedViewer caches feed content (%s) — a stale feed would render as live" % cache)
+    # (j) #668 NO FAILURE DRAWS AS EMPTY. (e) only proves two branches exist;
+    #     it stayed green while a 404 or a body without the declared array
+    #     returned emptyList() into the SUCCESS branch and drew "Nothing in this
+    #     feed." The fetch path (load .. explain) may hold no emptyList at all:
+    #     the only empty draw is a 2xx carrying an empty array.
+    fetch = viewer[viewer.find("fun load("):viewer.find("fun explain(")] if "fun explain(" in viewer else ""
+    if fetch and "emptyList" not in fetch and "throw SourceResolver.HttpStatus(404" in fetch:
+        ok("a 404 and a shapeless body throw; the fetch path has no route to an empty list")
+    else: bad("the feed fetch can turn a failure into an empty list (404/shape -> 'Nothing in this feed')")
+    # (k) #668 SAY WHICH. The failure branch renders explain(), and explain()
+    #     has a distinct sentence for each cause the owner has to act on
+    #     differently: quota (wait), unreachable (network), refused (url/auth).
+    if re.search(r"onFailure\s*\{\s*status\.text\s*=\s*explain\(it\)", viewer):
+        ok("the failure branch draws explain(), not a generic sentence")
+    else: bad("the feed's failure branch does not go through explain()")
+    ex = viewer[viewer.find("fun explain("):viewer.find("fun fill(")] if "fun explain(" in viewer else ""
+    causes = {"quota": r"HttpStatus && t\.quota\s*->", "unreachable": r"t is IOException\s*->",
+              "refused": r"t is SourceResolver\.HttpStatus\s*->"}
+    missing = [k for k, rx in causes.items() if not re.search(rx, ex)]
+    if not missing: ok("explain() names quota, unreachable and refused as separate causes")
+    else: bad("explain() does not distinguish: %s" % missing)
+    #     ... and the quota verdict is TYPED at the one request path, from HTTP
+    #     conventions (429; 403 + X-RateLimit-Remaining: 0 is GitHub's exhausted
+    #     anonymous quota), not re-parsed out of a sentence.
+    if "throw HttpStatus(" in resolver and re.search(r"code == 429", resolver) \
+       and re.search(r'"X-RateLimit-Remaining"\) == "0"', resolver):
+        ok("getBody throws a typed HttpStatus whose quota flag reads 429 and X-RateLimit-Remaining: 0")
+    else: bad("SourceResolver does not type a quota failure (429 / X-RateLimit-Remaining: 0)")
+    # (l) #668 PUBLIC DATA NEVER NEEDS THE FLEET. Every feed's `url` is a
+    #     public address, and the proxy - when declared - is only tried first:
+    #     a proxy failure must fall through to `url`.
+    mesh = [f.get("id") for f in feeds if re.match(r"https?://(10\.|localhost|127\.|[^/]*\.internal)", f.get("url", ""))]
+    if not mesh: ok("every feed's url is public, so reading it never requires the fleet")
+    else: bad("feed url points into the mesh, so public data now needs the fleet up: %s" % mesh)
+    if re.search(r"read\(feed, proxy\)\s*\}\s*catch[^{]*\{\s*try\s*\{\s*read\(feed, feed\.url\)", fetch):
+        ok("a declared proxy is tried first and falls back to the public url")
+    else: bad("a proxy failure does not fall back to the public url")
+    # (m) #674 ADOPTION IS DATA. Every feed declares a `proxy` key (null until
+    #     the route exists) and the reader parses it, so adopting the proxy is
+    #     setting values in the asset - no Kotlin.
+    noproxy = [f.get("id") for f in feeds if "proxy" not in f]
+    if feeds and not noproxy and re.search(r'optString\("proxy"\)', viewer):
+        ok("all %d feed(s) declare a proxy slot the reader parses — adoption is a data edit" % len(feeds))
+    else: bad("proxy adoption is not a data edit (undeclared on %s, or not parsed)" % (noproxy or "reader"))
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
