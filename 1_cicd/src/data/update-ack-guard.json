@@ -10,6 +10,16 @@
   "route_dispatch_subjects": [
     "op"
   ],
+  "_doc_group_scoped_dispatch": "Files whose `when (op)` dispatches the sub-ops of ONE AppDebugServer route group, not the root /api/ table these routes live in. AppDebugServer.appRoute splits /api/<group>/<rest> and hands the handler only <rest>, so drive's `\"state\" ->` is GET /api/git/state — a read of the repo registry file — and not DevControlServer's GET /api/state, which snapshots the foreground Activity. dispatchToHost is DevControlServer's private main-thread Activity hop; a registry read has no Activity to reach, so requiring it there would demand a call whose result means nothing. DECLARED, NOT INFERRED: inferring 'any file that calls AppDebugServer.route( is exempt' would let the next group handler inherit the exemption silently; instead an undeclared file that collides with a route key still fails, and the author has to come here and say why. The guard re-checks every entry on each run (file exists AND still registers an AppDebugServer.route( group), so an entry cannot outlive the reason it was granted. The honesty of these groups' own acknowledgements is their file's contract, not this manifest's: drive's /api/git/clone answers ok:false on timeout and reads its outcome back from the coordinator's opResults.",
+  "group_scoped_dispatch": [
+    {
+      "path": "ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/debugapi/DriveDebugApi.kt",
+      "groups": [
+        "git"
+      ],
+      "why": "gitRoute's `when (op)` serves /api/git/{state,chain,list,clone}; `state` there is a registry read (GET /api/git/state), not the Activity snapshot GET /api/state."
+    }
+  ],
   "routes": [
     {
       "route": "system/update",

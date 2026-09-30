@@ -41,6 +41,15 @@ fail() { printf 'FAIL   %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# The files the manifest declares group-scoped (see group_scoped_dispatch). The
+# guard refuses a declaration whose file is missing, so every sandbox carries
+# them — derived from the manifest, not listed here.
+copy_declared() {
+    for f in $(python3 -c 'import json,sys; [print(e["path"]) for e in json.load(open(sys.argv[1])).get("group_scoped_dispatch", [])]' "$ROOT/$MANIFEST"); do
+        mkdir -p "$1/$(dirname "$f")"; [ -e "$1/$f" ] || cp "$ROOT/$f" "$1/$f"
+    done
+}
+
 ROUTE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["routes"][0]["route"])' "$ROOT/$MANIFEST")"
 if [ -z "$ROUTE" ]; then
     fail "could not read the route key out of $MANIFEST"
@@ -69,6 +78,7 @@ for f in $HANDLERS; do
     mkdir -p "$PRISTINE/$(dirname "$f")"
     cp "$ROOT/$f" "$PRISTINE/$f"
 done
+copy_declared "$PRISTINE"
 
 # Fresh copy of the pristine sandbox; prints its path.
 sandbox() {
@@ -202,6 +212,84 @@ if [ $? -eq 0 ]; then
     ok "guard reads code, not comments — the fix may explain what it replaced"
 else
     fail "guard tripped over a COMMENT quoting the defect:"; printf '%s\n' "$out" | sed 's/^/       /'
+fi
+
+# ── G. group_scoped_dispatch: declared, re-earned, and never a blanket. ──────
+#    Drive's `when (op)` serves /api/git/{state,...}: AppDebugServer hands a
+#    group handler only the sub-op, so its "state" is a registry read and not
+#    GET /api/state. The manifest exempts that file BY NAME. These cases prove
+#    the exemption cannot be inherited, cannot rot, and cannot be pointed at a
+#    real route table. Each mutation is checked to have actually changed the
+#    sandbox, because a no-op mutation prints the same green as a working guard.
+G_FILES="$(cd "$ROOT" && python3 - "$MANIFEST" <<'PY2'
+import json, sys
+print("\n".join(e["path"] for e in json.load(open(sys.argv[1]))["group_scoped_dispatch"]))
+PY2
+)"
+G_FILES="$G_FILES
+$(cd "$ROOT" && find . -name DevControlServer.kt -not -path './z_archive/*' | sed 's|^\./||')"
+GP="$WORK/g-pristine"
+mkdir -p "$GP/1_cicd/src/scripts" "$GP/1_cicd/src/data"
+cp "$ROOT/$GUARD" "$GP/1_cicd/src/scripts/"
+cp "$ROOT/$MANIFEST" "$GP/1_cicd/src/data/"
+for f in $G_FILES; do mkdir -p "$GP/$(dirname "$f")"; cp "$ROOT/$f" "$GP/$f"; done
+DRIVE="$(printf '%s\n' "$G_FILES" | head -1)"
+DCS="$(printf '%s\n' "$G_FILES" | grep DevControlServer.kt | head -1)"
+gbox() { rm -rf "$WORK/g-$1"; cp -r "$GP" "$WORK/g-$1"; printf '%s' "$WORK/g-$1"; }
+# Apply a python edit ($3) to file $2 inside sandbox $1; fail loudly if it changed nothing.
+gmut() {
+    cp "$1/$2" "$WORK/before"
+    python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); $3; open(p,'w').write(s)" "$1/$2"
+    if cmp -s "$1/$2" "$WORK/before"; then fail "mutation did not apply to $2 — case proves nothing"; return 1; fi
+}
+gman() { gmut "$1" "$MANIFEST" "import json; d=json.loads(s); $2; s=json.dumps(d)"; }
+
+out="$(run_guard "$GP")"
+if [ $? -eq 0 ]; then ok "G0 route tables + declared group handler pass together"
+else fail "G0 pristine group sandbox is red:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+
+d="$(gbox 1)"
+if gman "$d" "d['group_scoped_dispatch']=[]"; then
+    out="$(run_guard "$d")"
+    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DRIVE:.*dispatchToHost("; then
+        ok "G1 an UNDECLARED group handler colliding with a route key stays red"
+    else fail "G1 undeclared group handler slipped through:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+fi
+
+d="$(gbox 2)"
+if gman "$d" "d['group_scoped_dispatch'][0]['path']='gone/Moved.kt'"; then
+    out="$(run_guard "$d")"
+    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'gone/Moved.kt.*does not exist'; then
+        ok "G2 a stale exemption (path gone) is red"
+    else fail "G2 stale exemption accepted:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+fi
+
+d="$(gbox 3)"
+if gman "$d" "d['group_scoped_dispatch'].append({'path':'$DCS','why':'x'})"; then
+    out="$(run_guard "$d")"
+    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DCS.*registers no"; then
+        ok "G3 declaring a real route table (DevControlServer) as group-scoped is refused"
+    else fail "G3 a root route table was exempted:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+fi
+
+d="$(gbox 4)"
+if gmut "$d" "$DRIVE" "s=s.replace('AppDebugServer.route(', 'OtherServer.route(')"; then
+    out="$(run_guard "$d")"
+    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DRIVE.*registers no"; then
+        ok "G4 a declared file that stops being a group handler loses its exemption"
+    else fail "G4 exemption outlived its reason:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+fi
+
+#    A one-liner branch used to bleed into the NEXT branch's braces and borrow
+#    its dispatchToHost( — GET /api/state answering without dispatching passed.
+#    The reply carries NO brace on purpose: a "{}" literal is itself brace-counted
+#    and closed the body early, so the pre-fix guard caught that variant by luck.
+d="$(gbox 5)"
+if gmut "$d" "$DCS" "import re; s=re.sub(r'\"state\" -> \{.*?\n                \}\n', '\"state\" -> reply(writer, \"200 OK\", \"empty\", \"text/plain\")\n', s, count=1, flags=re.S)"; then
+    out="$(run_guard "$d")"
+    if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$DCS.*GET /api/state never calls dispatchToHost("; then
+        ok "G5 a one-liner GET /api/state that never dispatches is red (no borrowing from the next branch)"
+    else fail "G5 one-liner state branch passed on a neighbour's call:"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 fi
 
 echo

@@ -59,6 +59,15 @@ skip() { printf 'skip   %s\n' "$1"; }
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# The files the manifest declares group-scoped (see group_scoped_dispatch). The
+# guard refuses a declaration whose file is missing, so every sandbox carries
+# them — derived from the manifest, not listed here.
+copy_declared() {
+    for f in $(python3 -c 'import json,sys; [print(e["path"]) for e in json.load(open(sys.argv[1])).get("group_scoped_dispatch", [])]' "$ROOT/$MANIFEST"); do
+        mkdir -p "$1/$(dirname "$f")"; [ -e "$1/$f" ] || cp "$ROOT/$f" "$1/$f"
+    done
+}
+
 run_guard() { python3 "$1/$GUARD" --root "$1" 2>&1; }
 
 # ── 0. The tree as it stands is clean. ────────────────────────────────────────
@@ -224,6 +233,7 @@ for ROUTE in $ROUTES; do
         mkdir -p "$PRISTINE/$(dirname "$f")"
         cp "$ROOT/$f" "$PRISTINE/$f"
     done
+    copy_declared "$PRISTINE"
 
     sandbox() { CASE=$((CASE + 1)); rm -rf "$WORK/c$CASE"; cp -r "$PRISTINE" "$WORK/c$CASE"; printf '%s' "$WORK/c$CASE"; }
 
@@ -298,6 +308,7 @@ for f in $HANDLERS; do
     mkdir -p "$d/$(dirname "$f")"
     sed "s|\"$FIRSTROUTE\" ->|\"system/renamed-away\" ->|" "$ROOT/$f" > "$d/$f"
 done
+copy_declared "$d"
 out="$(run_guard "$d")"
 if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'checking nothing'; then
     ok "guard reports that it is checking nothing when a route is renamed away"
