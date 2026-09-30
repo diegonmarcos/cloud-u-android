@@ -286,6 +286,73 @@ command grep -nE 'shelves\[[a-z]+\.pkg\]\?\.(heading|order)' "$PAGE" \
   && bad "a direct shelves[...] heading/order read is back beside shelfOf — two grouping paths" \
   || ok "shelfOf is the only heading/order source"
 
+echo "== T9: #660 a tab that is not a TYPE OF APK is not on the type line =="
+# A declared group is a type of apk and picking one narrows the fleet. Commits,
+# CI-CD and Perms narrow nothing: the feeds' declared endpoints carry no type,
+# and the Perms tab walks the whole fleet. So they get their own line, and WHICH
+# line a tab sits on is which declaration it came from - never a list here.
+FEEDS_ASSET="$LIBS/appstore/src/main/assets/appstore-feeds.json"
+[ -f "$FEEDS_ASSET" ] || { echo "ERROR: missing $FEEDS_ASSET" >&2; exit 2; }
+
+# (a) The two lines must not be concatenated back into one. This is the exact
+#     regression direction: one list of labels is what #660 was filed about.
+merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\.labels' "$PAGE")"
+[ -z "$merged" ] \
+  && ok "the group labels and the feed labels are not concatenated into one strip" \
+  || bad "groups + feeds are back in ONE tab line (#660 reverted): $merged"
+
+# (b) The per-type line is the declared groups, and the other line is the
+#     declared feeds plus the page's own Perms. Asserted as the LINE LIST that
+#     the builder iterates, so a tab cannot be moved between lines by accident.
+command grep -qF 'listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)' "$PAGE" \
+  && ok "line 1 = declared groups, line 2 = declared feeds + Perms" \
+  || bad "the tab lines are not built from the two declarations"
+
+# (c) TWO strips inside one column, from ONE button builder - not a second
+#     differently-styled control set beside the first.
+#
+#     SCOPED TO tabBar's OWN BODY. Grepping the whole file for
+#     "orientation = LinearLayout.VERTICAL" passes on a dozen unrelated cards and
+#     columns, so it stayed green with tabBar flipped back to HORIZONTAL - it was
+#     asserting that the file contains a vertical layout SOMEWHERE, which it
+#     always will. Caught by mutation, not by reading it.
+tabbar_body="$(awk '/private fun tabBar\(/{f=1} f{print} f && /^    }$/{exit}' "$PAGE")"
+[ -n "$tabbar_body" ] || bad "could not isolate tabBar's body - the assertion below would verify nothing"
+printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTICAL' \
+  && ok "tabBar itself is a column that can hold more than one strip" \
+  || bad "tabBar is still a single horizontal row"
+printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.HORIZONTAL' \
+  && ok "and the strips inside it are horizontal" \
+  || bad "tabBar builds no horizontal strip - the tabs would stack one per line"
+builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
+[ "$builders" = "1" ] \
+  && ok "exactly one tab-button builder feeds both lines" \
+  || bad "expected 1 tabButton builder, found $builders - the two lines can drift apart"
+
+# (d) An EMPTY line draws NO strip. A row reserving height for controls that are
+#     not there is the affordance-that-cannot-act shape (#233).
+command grep -qF 'if (line.isEmpty()) continue' "$PAGE" \
+  && ok "a line with no tabs draws no strip at all" \
+  || bad "an empty tab line would still draw a strip"
+
+# (e) ZERO KOTLIN for a new tab. Every tab label comes off a declaration, so no
+#     label may be written here - except Perms, which this page owns and names
+#     once as a constant. Derived from BOTH declarations, so the assertion count
+#     grows when either gains an entry: a pinned list would not move.
+for label in $(jq -r '.groups[].label' "$FLEET" | tr ' ' '\036') \
+             $(jq -r '.feeds[].label' "$FEEDS_ASSET" | tr ' ' '\036'); do
+  label="$(printf '%s' "$label" | tr '\036' ' ')"
+  command grep -nF "\"$label\"" "$PAGE" \
+    && bad "StoreCloudFragment hardcodes tab label \"$label\" instead of reading its declaration" \
+    || ok "tab label \"$label\" is not written on the page"
+done
+# ... and Perms is named exactly once, as the constant the exemption above rests
+# on. Twice means an inline copy came back beside it.
+perms_lits="$(command grep -c '"Perms"' "$PAGE")"
+[ "$perms_lits" = "1" ] \
+  && ok "Perms is named once, as the PERMS constant" \
+  || bad "\"Perms\" appears $perms_lits times - an inline copy is back beside the constant"
+
 echo
-echo "== RESULT(#405 groups+ml-naming, #642 lib tables): $PASS passed, $FAIL failed =="
+echo "== RESULT(#405 groups+ml-naming, #642 lib tables, #660 tab lines): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

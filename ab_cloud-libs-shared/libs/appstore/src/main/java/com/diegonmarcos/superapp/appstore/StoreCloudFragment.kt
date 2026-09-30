@@ -317,28 +317,65 @@ class StoreCloudFragment : Fragment() {
     }
 
     // ── tabs: one per declared group, then Perms ─────────────────────────────
+    /**
+     * #660 — TWO LINES, because these are two different kinds of tab.
+     *
+     * One line per KIND OF TAB, not one line for all of them. A declared group
+     * is a TYPE OF APK: Apps, Libs, Lite-ML, Tiny-ML partition the fleet, and
+     * picking one narrows what the page is showing you. Commits, CI-CD and
+     * Perms narrow nothing — the feeds are repo-wide (their declared endpoints
+     * carry no type at all) and Perms walks the WHOLE fleet. Sitting them in
+     * the per-type row states that they are peers of Apps and Libs, which is
+     * the one thing they are not.
+     *
+     * It was also simply out of room. Seven weight-1 tabs across one
+     * MATCH_PARENT row at 13sp with maxLines=1 ellipsize into stubs; the feeds
+     * took it from five to seven, which is what made a latent crowding problem
+     * a visible one.
+     *
+     * WHICH LINE A TAB SITS ON IS NOT WRITTEN HERE. It is which declaration the
+     * tab came from: `constellation.groups` is the per-type line,
+     * libs:appstore's own feed declaration plus [PERMS] is the line that is not
+     * a type. So a new group appears on the first line and a new feed on the
+     * second with no edit to this file — the same rule the tables follow.
+     *
+     * A line with NO tabs draws NO strip. An empty row that reserves height for
+     * controls that are not there is the affordance-that-cannot-act shape: it
+     * says "something goes here" about nothing.
+     */
     private fun tabBar(ctx: Context): View {
-        val bar = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
+        val column = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             lp.setMargins(0, 0, 0, dp(ctx, 8)); layoutParams = lp
         }
         tabBtns.clear()
-        // The group count is data, so five or more tabs share one row: one line
-        // each, with tighter sides, keeps the bar a single height.
-        (tabs.map { it.label } + FeedViewer.labels(feeds) + "Perms").forEachIndexed { i, label ->
-            val t = TextView(ctx).apply {
-                text = label; gravity = Gravity.CENTER; textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD; maxLines = 1
-                setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                isClickable = true
-                setOnClickListener { if (tab != i) { tab = i; filter = 0; paintTabs(); renderTab(ctx) } }
+        // ONE builder over both lines, so the two can never drift into two
+        // differently-styled control sets. tabBtns.size IS the running tab
+        // index, which is what keeps renderTab's group/feed/Perms mapping
+        // correct across the split.
+        for (line in listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)) {
+            if (line.isEmpty()) continue
+            val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for (label in line) {
+                val t = tabButton(ctx, tabBtns.size, label)
+                tabBtns.add(t); strip.addView(t)
             }
-            tabBtns.add(t); bar.addView(t)
+            column.addView(strip)
         }
         paintTabs()
-        return bar
+        return column
+    }
+
+    /** One tab pill. [index] is its position in the page's single tab ordering,
+     *  captured here so a button in the second strip still selects itself. */
+    private fun tabButton(ctx: Context, index: Int, label: String) = TextView(ctx).apply {
+        text = label; gravity = Gravity.CENTER; textSize = 13f
+        typeface = Typeface.DEFAULT_BOLD; maxLines = 1
+        setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
+        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        isClickable = true
+        setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
     }
 
     private fun paintTabs() = tabBtns.forEachIndexed { i, t ->
@@ -1130,6 +1167,11 @@ class StoreCloudFragment : Fragment() {
         /** Sorts after every folder order and every application name. */
         const val UNSHELVED = "￿"
         const val OTHER = "Other"
+
+        /** The one tab this page owns rather than reads from a declaration, and
+         *  the reason it is named once: #660's guard asserts that every OTHER
+         *  tab label is absent from this file, and it needs a name to exempt. */
+        const val PERMS = "Perms"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE
