@@ -87,7 +87,7 @@ s2() {
 # s3 <StoreSeed.kt> : per-repository reporting, logged AND persisted
 s3() {
     local f="$1" bad=0
-    grep -qE 'report\.lines\(\)\.forEach \{ Log\.i\(TAG, it\) \}' "$f" || { echo "    the report is not logged line by line"; bad=1; }
+    grep -qE 'report\.lines\(\)\.forEach \{ DriveDebugLog\.i\(applicationContext, TAG, it\) \}' "$f" || { echo "    the report is not logged line by line (DriveDebugLog = logcat + Download/'s debug log)"; bad=1; }
     grep -qE 'reportFile\(applicationContext\)\.writeText\(report\.text\(\)\)' "$f" || { echo "    the report is not persisted for the UI to read"; bad=1; }
     return $bad
 }

@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.clouddrive.DriveDebugLog
 import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.SharedStore
 import com.diegonmarcos.cloudlib.gitsync.GitBranchInfo
@@ -120,6 +121,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             withContext(Dispatchers.IO) {
                 registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = result.summary))
                 history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, result.summary, result.details))
+                // On-device debug log: the SAME sentence the history holds — the engine's own
+                // summary, never a credential (the token lives in GitCredentialStore alone).
+                if (result.ok) DriveDebugLog.i(ctx, TAG, "sync ${repo.name}: ${result.summary}")
+                else DriveDebugLog.e(ctx, TAG, "sync ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
             }
             running.update { it - repo.id }
             refresh()
@@ -225,6 +230,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             withContext(Dispatchers.IO) {
                 registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = "$opId: ${result.summary}"))
                 history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, "$opId: ${result.summary}", result.details))
+                if (result.ok) DriveDebugLog.i(ctx, TAG, "$opId ${repo.name}: ${result.summary}")
+                else DriveDebugLog.e(ctx, TAG, "$opId ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
             }
             opResults.update { it + (repo.id to result) }
             running.update { it - repo.id }
@@ -278,6 +285,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         cloning.update { it + name }
         scope.launch {
             val dir = SharedStore.repoDir(name)
+            // The clone's decision point, on the device: the URL's HOST and the destination —
+            // never the full URL (a listing URL could carry a credential in its userinfo) and
+            // never the token, which travels only through GitCredentialStore.
+            DriveDebugLog.i(ctx, TAG, "clone start: host=${hostOf(url)} dest=${dir.name} auth=$authKind")
             val result = withContext(Dispatchers.IO) {
                 val id = RepoRegistry.idFor(dir.absolutePath)
                 val managed = ManagedRepo(id = id, name = name, path = dir.absolutePath, remoteUrl = url, authKind = authKind, authUsername = username, sshKeyPath = sshKeyPath)
@@ -291,6 +302,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             val now = System.currentTimeMillis() / 1000
             withContext(Dispatchers.IO) {
                 history.append(SyncEvent(now, RepoRegistry.idFor(dir.absolutePath), name, SyncHistory.TRIGGER_MANUAL, result.ok, "clone: ${result.summary}", result.details))
+                if (result.ok) DriveDebugLog.i(ctx, TAG, "clone $name: ${result.summary}")
+                else DriveDebugLog.e(ctx, TAG, "clone $name FAILED: host=${hostOf(url)} dest=${dir.name} ${result.summary} ${result.details}".trim())
             }
             opResults.update { it + (RepoRegistry.idFor(dir.absolutePath) to result) }
             cloning.update { it - name }
@@ -299,6 +312,17 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     companion object {
+        private const val TAG = "GitSync"
+
+        /**
+         * The URL's HOST alone, for the on-device debug log: a host names which leg a clone
+         * rode (fleet gitea vs github) and can never carry a credential, while a full URL's
+         * userinfo could. Covers both https URLs and the scp-like ssh form (git@host:o/r).
+         */
+        fun hostOf(url: String): String =
+            runCatching { java.net.URI(url).host }.getOrNull()
+                ?: url.substringAfter('@', url).substringBefore(':').substringBefore('/').ifBlank { "?" }
+
         const val DEFAULT_AUTHOR = "cloud-drive"
         const val DEFAULT_EMAIL = "cloud-drive@localhost"
         const val ORIGIN = "origin"

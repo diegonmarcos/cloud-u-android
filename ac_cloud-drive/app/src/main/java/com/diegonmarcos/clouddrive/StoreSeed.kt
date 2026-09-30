@@ -1,7 +1,6 @@
 package com.diegonmarcos.clouddrive
 
 import android.content.Context
-import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -48,7 +47,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         // rather than by position — StoreMigration says why that matters. Every decision is
         // logged, the ones that changed nothing included: no silent skip.
         StoreMigration.migrate(SharedStore.root(), BuildConfig.GIT_SUBDIR, family.repos.map { it.name }.toSet()).forEach { move ->
-            Log.i(TAG, "migration ${move.name}: ${move.decision}")
+            DriveDebugLog.i(applicationContext, TAG, "migration ${move.name}: ${move.decision}")
             if (!StoreMigration.isComplete(move.to)) return@forEach
             val decl = family.repos.firstOrNull { it.name == move.name }
             registry.upsert(
@@ -89,7 +88,10 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
             }
         }
         val report = SeedReport(declared.size, outcomes)
-        report.lines().forEach { Log.i(TAG, it) }
+        // Every per-repository outcome ALSO lands in the on-device debug log
+        // (Download/drive-debug/), so an incomplete or failing pass is readable off the
+        // phone with no adb — the outcome text carries a reason, never a credential.
+        report.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
         // Persisted next to the registry so the Sync ▸ Git page can show "9/12, will retry: …"
         // on the device instead of the user inferring it from a folder listing.
         runCatching { reportFile(applicationContext).writeText(report.text()) }

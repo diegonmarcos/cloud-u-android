@@ -636,7 +636,9 @@
   "diagnostics": {
     "_doc": "On-device DevControlServer diagnostics → cloud sink.",
     "log_sink_url": "https://api.diegonmarcos.com/pub/analytics/openobserve",
-    "log_sink_stream": "cloud-drive"
+    "log_sink_stream": "cloud-drive",
+    "_doc_debug_log_dir": "The Download/ subfolder DriveDebugLog writes the app's own on-device debug log into, same family as the superapp's Download/superapp-logs/. Declared here (baked as BuildConfig.DEBUG_LOG_DIR by app/build.gradle) so the folder name lives in data, never in Kotlin. The log carries the git flow's decision points — clone start/result, sync outcomes, seed outcomes — with UTC timestamps and an explicit Z offset, because a local-time log read from a UTC shell has been misread as stale before. Readable off the phone with no adb: any file manager or Termux (~/storage/Download).",
+    "debug_log_dir": "drive-debug"
   },
   "auth": {
     "_doc": "#587 What a sign-in through Configs > Sign in (libs:auth, the fleet's ONE sign-in module) yields for THIS app. The artifact is the same consolidated document the superapp fetches (/pub/superapp/config/<user>, or the vault bundle); this app applies only the sections named here, and says so per section instead of writing a blob. `git.github_token` is the credential the shared store's clone/push needs: it is stored in libs:git-sync's keystore-backed GitCredentialStore for every managed repository whose auth is https, and repointed on every later sign-in. `rclone.remotes` are rclone.conf sections (name -> type + options) merged through RcloneConfig.upsert - declared here because a remote's secret is what a drive sign-in should bring; the artifact does not carry the section yet (no host emits it), and the apply reports that absence instead of pretending. Nothing else in the artifact (WireGuard keys, mail passwords, AI tokens) is this app's to write.",
