@@ -54,11 +54,11 @@
     "min_viewport_px": 360
   },
   "shared_store": {
-    "_doc": "#575 THE ONE on-phone repo store is cloud-drive's (ac_cloud-drive/build.json::storage.shared_root). `app` is that fleet application id (build.json::name), never a path: tools/resolve-targets.py reads the sibling app's declaration at build time and writes the root into src/cloud/targets.gen.json, and index.js composes every on-device path as <cordova externalRootDirectory>/<root>/<relative>. No device-absolute path is written here — the user id in it changes under a second profile — and this app clones NOTHING: the Backlog reads and writes the clone cloud-drive's git manager keeps there.",
+    "_doc": "#575 THE ONE on-phone repo store is cloud-drive's (ac_cloud-drive/build.json::storage.shared_root). `app` is that fleet application id (build.json::name), never a path: tools/resolve-targets.py reads the sibling app's declaration at build time and writes the root AND its git folder (storage.git_subdir, #606/#676 — the ONE place the store keeps clones) into src/cloud/targets.gen.json, and index.js composes every on-device git-tree path as <cordova externalRootDirectory>/<root>/<git_subdir>/<relative>. No device-absolute path is written here — the user id in it changes under a second profile — and this app clones NOTHING: the Backlog reads and writes the clone cloud-drive's git manager keeps there.",
     "app": "cloud-drive"
   },
   "backlog": {
-    "_doc": "Backlog reads the ONE existing source: the dist output of cloud-data-my-ai-memory/1.1.Product-Backlog (built by its own build.js). Nothing here re-derives it: `entry` is loaded and rendered as-is, and every other view is reached through the links that file itself carries ('Views: per project · per status …'). That repository is PRIVATE and this APK is PUBLIC, so the backlog is never baked into the bundle; it is read on the device from the clone cloud-drive keeps in the shared store (#575): source_dir is RELATIVE to shared_store's root. The tab lets the owner point it elsewhere (kept in localStorage), and its edit / folder actions open the same files in Acode's editor, so a change is written back into that clone for cloud-drive to commit and push.",
+    "_doc": "Backlog reads the ONE existing source: the dist output of cloud-data-my-ai-memory/1.1.Product-Backlog (built by its own build.js). Nothing here re-derives it: `entry` is loaded and rendered as-is, and every other view is reached through the links that file itself carries ('Views: per project · per status …'). That repository is PRIVATE and this APK is PUBLIC, so the backlog is never baked into the bundle; it is read on the device from the clone cloud-drive keeps in the shared store (#575): source_dir is RELATIVE to the store's git folder (shared_root/git_subdir, #676). The tab lets the owner point it elsewhere (kept in localStorage), and its edit / folder actions open the same files in Acode's editor, so a change is written back into that clone for cloud-drive to commit and push.",
     "source_dir": "cloud-data-my-ai-memory/1.1.Product-Backlog/dist/",
     "entry": "P-Backlog-sts.md"
   },
@@ -67,7 +67,7 @@
     "entry": "P-Backlog-bat.md"
   },
   "repos": {
-    "_doc": "On-device directory whose children are listed as repositories (a child holding .git): the shared store's root itself (#575), so what cloud-drive cloned is what Repos lists. `root` is RELATIVE to shared_store's root ('' = the root). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
+    "_doc": "On-device directory whose children are listed as repositories (a child holding .git): the shared store's git folder itself (#575/#676: shared_root/git_subdir, where cloud-drive actually clones), so what cloud-drive cloned is what Repos lists. `root` is RELATIVE to that git folder ('' = the folder itself). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
     "root": ""
   },
   "browser": {

@@ -89,10 +89,16 @@ out(nav.backlog?.source_dir?.startsWith("cloud-data-my-ai-memory/"), "Backlog re
 const resolver = read("tools/resolve-targets.py");
 out(/def shared_root\(app_root, fleet_id\)/.test(resolver) && /"shared_root": shared_root\(app_root, nav\["shared_store"\]\["app"\]\)/.test(resolver), "resolve-targets.py emits shared_root from nav.shared_store.app");
 out(/\("storage"\) or \{\}\)\.get\("shared_root"\)/.test(resolver) && /root\.startswith\("\/"\)/.test(resolver), "the resolver reads build.json::storage.shared_root and refuses an absolute one");
+// #676 clones live under the store's git folder (cloud-drive's storage.git_subdir):
+// the resolver copies it, and every git-tree path index.js composes goes through it.
+// A path composed at the store's ROOT is a second tree — the bug this pins shut.
+out(/def git_subdir\(app_root, fleet_id\)/.test(resolver) && /"git_subdir": git_subdir\(app_root, nav\["shared_store"\]\["app"\]\)/.test(resolver), "resolve-targets.py emits git_subdir from the same store declaration (#676)");
+out(/\("storage"\) or \{\}\)\.get\("git_subdir"\)/.test(resolver) && /sub\.startswith\("\/"\) or "\/" in sub/.test(resolver), "the resolver reads storage.git_subdir and refuses an absolute or nested one");
 out(/function sharedRoot\(\) \{\s*return `\$\{cordova\.file\.externalRootDirectory\}\$\{targets\.shared_root\}\/`;/.test(index), "index.js composes the root from the device's externalRootDirectory + targets.shared_root");
-out(/stored\("backlog\.dir", storePath\(nav\.backlog\.source_dir\)\)/.test(index) && /stored\("repos\.root", storePath\(nav\.repos\.root\)\)/.test(index), "Backlog and Repos default to paths under the store");
+out(/function gitPath\(relative\) \{\s*return `\$\{sharedRoot\(\)\}\$\{targets\.git_subdir\}\/\$\{relative\}`;/.test(index), "index.js composes every git-tree path through the store's declared git folder (#676)");
+out(/stored\("backlog\.dir", gitPath\(nav\.backlog\.source_dir\)\)/.test(index) && /stored\("repos\.root", gitPath\(nav\.repos\.root\)\)/.test(index), "Backlog and Repos default to paths under the store's git folder");
 out(!/\/storage\/emulated/.test(index), "index.js writes no device-absolute /storage path");
-out(/openFile\(`\$\{dir\}\$\{current\}`/.test(index) && /openFolder\(storePath\(repoName\)/.test(index), "Backlog WRITES through the store: edit-in-place and open-repository actions go through Acode's editor");
+out(/openFile\(`\$\{dir\}\$\{current\}`/.test(index) && /openFolder\(gitPath\(repoName\)/.test(index), "Backlog WRITES through the store: edit-in-place and open-repository actions go through Acode's editor");
 const configXml = read("config.xml");
 out(/<uses-permission android:name="android\.permission\.MANAGE_EXTERNAL_STORAGE" \/>/.test(configXml), "config.xml declares MANAGE_EXTERNAL_STORAGE — without it targetSdk 36 cannot read the store");
 out(/system\.manageAllFiles\(/.test(index), "the Backlog's cannot-read branch offers the all-files grant");

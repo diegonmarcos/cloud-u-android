@@ -60,8 +60,11 @@ function sharedRoot() {
 	return `${cordova.file.externalRootDirectory}${targets.shared_root}/`;
 }
 
-function storePath(relative) {
-	return sharedRoot() + relative;
+// #676 clones live in the store's ONE git folder (#606/#608: cloud-drive's
+// storage.git_subdir, copied by the same resolver): composing a git-tree path
+// at the store's ROOT is a second tree, the bug this function closes.
+function gitPath(relative) {
+	return `${sharedRoot()}${targets.git_subdir}/${relative}`;
 }
 
 // ── Backlog: render the ONE existing source, as-is ─────────────────────────
@@ -69,7 +72,7 @@ function storePath(relative) {
 // the same folder (one localStorage key), through this one renderer.
 async function renderBacklogView(panel, title, entry, ...extra) {
 	const md = markdownIt({ html: false, linkify: true });
-	let dir = stored("backlog.dir", storePath(nav.backlog.source_dir));
+	let dir = stored("backlog.dir", gitPath(nav.backlog.source_dir));
 	let current = entry;
 	const body = el("div", { className: "cloud-md" });
 
@@ -134,7 +137,7 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 		className: "icon git",
 		title: "Open the repository",
 		onclick: () => {
-			openFolder(storePath(repoName), { name: repoName });
+			openFolder(gitPath(repoName), { name: repoName });
 			showTab("editor");
 		},
 	});
@@ -148,7 +151,7 @@ function renderBacklog(panel) {
 
 // ── Repos: small engine behind the seam ────────────────────────────────────
 async function renderRepos(panel) {
-	const root = stored("repos.root", storePath(nav.repos.root));
+	const root = stored("repos.root", gitPath(nav.repos.root));
 	const list = el("div", { className: "cloud-list" }, "Scanning …");
 	const change = el("button", {
 		className: "icon folder_open",

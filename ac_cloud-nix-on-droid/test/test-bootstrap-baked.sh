@@ -235,11 +235,25 @@ if grep -q 'requestManageStorageExternalPermission' "$ACTIVITY"; then
 else
     bad "TermuxActivity never requests MANAGE_EXTERNAL_STORAGE — the check leads nowhere (#612)"
 fi
-if grep -q 'All-Files-Access' "$BAKE_PY"; then
-    ok "bin/login prints a legible notice when the shared store is not readable"
+# #676 the pin targets the ECHOED stderr line itself, not the phrase: the file's
+# own comments also say All-Files-Access, so a grep for the phrase alone stays
+# green after the echo is deleted (a hollow green). The probe may degrade to no
+# bind — that mechanism stands — but its one loud line must exist.
+notice_echoed() { grep -q 'echo .*shared store not mounted.*All-Files-Access.*>&2' "$1"; }
+if notice_echoed "$BAKE_PY"; then
+    ok "bin/login echoes the shared-store-not-mounted notice to stderr"
 else
-    bad "bin/login binds an unreadable shared store silently — no All-Files-Access notice (#612)"
+    bad "bin/login binds an unreadable shared store silently — no All-Files-Access notice reaches stderr (#612)"
 fi
+# MUTATION PROOF: strip the echo line from a copy; the assertion must go red there.
+MUT612="$(mktemp)"
+grep -v 'shared store not mounted' "$BAKE_PY" > "$MUT612"
+if notice_echoed "$MUT612"; then
+    bad "MUTATION SURVIVED: deleting the not-mounted echo left the notice pin green — it proves nothing (#676)"
+else
+    ok "mutation proved: deleting the not-mounted echo turns the notice pin red"
+fi
+rm -f "$MUT612"
 
 # ── #605 — bin/login's proot-static exec must resolve to THIS app's own
 #           prefix, never the different (and not-installed) com.termux.nix
