@@ -43,6 +43,13 @@ done
 
 usermod -s "$DEFAULT_SHELL" root
 
+# #644 — the bind mountpoint for the declarative link store. proot binds onto an
+# existing path, so the directory has to be in the tree even though everything
+# in it arrives from outside (the APK's assets, via enter.sh): an empty dir in
+# the tarball is what keeps the engine itself out of it, so an engine fix ships
+# with app code instead of rebuilding this ~400 MB image.
+mkdir -p /usr/lib/cloud-store
+
 apt-get clean
 rm -rf /var/lib/apt/lists/* /root/.npm /tmp/*
 

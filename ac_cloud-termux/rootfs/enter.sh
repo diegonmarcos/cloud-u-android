@@ -75,6 +75,17 @@ if [ ! -r /proc/uptime ]; then
 fi
 [ ! -d /storage/emulated/0 ] || binds="$binds -b /storage/emulated/0:/sdcard"
 
+# #644 — the declarative link store, staged beside this file by build-rootfs.sh
+# and bound at the same path the nix terminal extracts its copy to. Guarded on
+# presence so an APK built before #644 (or one whose staging failed) still logs
+# in: the store is worth this terminal's tooling, never this terminal's shell.
+# install-in-rootfs.sh creates the mountpoint inside the tree.
+store_entry=""
+if [ -d "$HERE/cloud-store" ] && [ -d "$ROOTFS/usr/lib/cloud-store" ]; then
+    binds="$binds -b $HERE/cloud-store:/usr/lib/cloud-store"
+    store_entry="/bin/sh /usr/lib/cloud-store/login-exec"
+fi
+
 # #612: auto-mount shared storage and the cloud-drive shared store into $HOME
 # (bound as /root below), so both survive a rootfs update like the rest of
 # $HOME does. CloudDrive is ac_cloud-drive/build.json::storage.shared_root, THE
@@ -101,4 +112,4 @@ exec "$HERE/proot" --kill-on-exit --link2symlink --sysvipc -0 -r "$ROOTFS" \
     /usr/bin/env -i HOME=/root USER=root LOGNAME=root SHELL="$login_shell" \
         TERM="${TERM:-xterm-256color}" COLORTERM="${COLORTERM:-truecolor}" LANG=C.UTF-8 TMPDIR=/tmp \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    "$login_shell" $login "$@"
+    $store_entry "$login_shell" $login "$@"

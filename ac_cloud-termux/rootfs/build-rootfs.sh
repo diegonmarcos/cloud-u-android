@@ -52,4 +52,19 @@ python3 -c 'import sys, zipfile; open(sys.argv[3], "wb").write(zipfile.ZipFile(s
 chmod 0755 "$OUT/proot"
 
 cp "$HERE/enter.sh" "$OUT/enter.sh"
-ls -l "$OUT"
+
+# ── #644: the declarative link store, staged BESIDE enter.sh, not inside the
+# tarball. The store itself is built in $HOME (which enter.sh binds as /root and
+# which survives a rootfs replacement); only the engine, its rendered declaration
+# and the login wiring are shipped, and shipping them as APK assets means an
+# engine fix rides an app-code update instead of rebuilding ~400 MB of Debian
+# (#618's rule). enter.sh binds this directory onto /usr/lib/cloud-store, the
+# same path the nix terminal extracts its copy to, so ONE declaration and ONE
+# engine serve two apps that stay separate.
+STORE_SRC="$HERE/../../ab_cloud-terminal-store"
+mkdir -p "$OUT/cloud-store"
+cp "$STORE_SRC/cloud-store" "$STORE_SRC/login-init.sh" "$STORE_SRC/login-exec" "$OUT/cloud-store/"
+python3 "$STORE_SRC/render-store.py" termux "$OUT/cloud-store/declaration.sh"
+chmod 0755 "$OUT/cloud-store/cloud-store" "$OUT/cloud-store/login-exec"
+
+ls -l "$OUT" "$OUT/cloud-store"

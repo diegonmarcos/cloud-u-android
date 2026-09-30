@@ -26,6 +26,12 @@ for f in rootfs.tar.zst rootfs.sha256 proot enter.sh; do
     cp "$ART/$f" "$STAGE/"
 done
 chmod 0700 "$STAGE/proot" "$STAGE/enter.sh"
+# #644 — the link store ships beside enter.sh (not in the tarball), so stage it
+# the way the APK does or enter.sh will correctly decline to wire it and this
+# tester would pass over a store that was never there.
+[ -d "$ART/cloud-store" ] || { echo "FAIL $ART/cloud-store is missing: build-rootfs.sh did not stage the #644 link store"; exit 1; }
+cp -R "$ART/cloud-store" "$STAGE/cloud-store"
+chmod 0700 "$STAGE/cloud-store/cloud-store" "$STAGE/cloud-store/login-exec"
 
 # A failed unpack or a missing root entry must fail here, not drop into bash.
 enter() { HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$STAGE/enter.sh" "$@"; }

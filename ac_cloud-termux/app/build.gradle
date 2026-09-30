@@ -54,7 +54,7 @@ android {
         // companion APK (network-free transport instead of #618's runtime
         // fetch), which changes this app's own staging code — bumped so the
         // Store sees it as an update independently of the rootfs content address.
-        versionCode 1007
+        versionCode 1008
         versionName "0.118.3"
 
         if (appVersionName) versionName = appVersionName
@@ -467,7 +467,14 @@ tasks.register('verifyCloudRootfs') {
     dependsOn 'stageRootfsPayload'
     description = 'Fail unless assets/ holds proot and enter.sh — and NOTHING from the #618 fetch-by-url scheme.'
     doLast {
-        ['proot', 'enter.sh'].each { name ->
+        // #644 — the declarative link store ships as assets beside enter.sh, NOT
+        // inside the tarball, so an engine fix rides an app-code update instead
+        // of rebuilding ~400 MB. Required here for the same reason proot is: a
+        // missing one means enter.sh declines to wire the store and the terminal
+        // silently loses every managed link.
+        ['proot', 'enter.sh',
+         'cloud-store/cloud-store', 'cloud-store/declaration.sh',
+         'cloud-store/login-init.sh', 'cloud-store/login-exec'].each { name ->
             def f = new File(cloudRootfsAssetsDir, name)
             if (!f.isFile() || f.length() == 0) {
                 throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${cloudRootfsAssetsDir} first (CI does)")
