@@ -100,6 +100,16 @@
     "category": "app"
   },
   {
+    "name": "git-proxy-api",
+    "service": "git-proxy-api",
+    "vm": "oci-E2-f_1",
+    "public_url": "api.diegonmarcos.com/git",
+    "auth": "two_factor",
+    "private_dns": "git-proxy-api.app:8123",
+    "port": 8123,
+    "category": "app"
+  },
+  {
     "name": "google-personal-mcp",
     "service": "google-personal-mcp",
     "vm": "oci-A1-f_0",
