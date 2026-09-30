@@ -13,7 +13,7 @@
     },
     "aa_cloud-superapp": {
       "first_test": "Has 91 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green \u2014 its own task, not this one.",
-      "shell_testers": 93,
+      "shell_testers": 94,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
@@ -91,6 +91,15 @@
       "unit_task_declared": true,
       "unit_test_sources": 1,
       "workflow": "ship-cloud-c3.yml"
+    },
+    "ac_cloud-c3-webserver": {
+      "first_test": "#687 RENAMED from the bare cloud- id into the cloud-c3 family, and REBUILT: the server is a Rust crate (server/) compiled static-musl per ABI and exec'd from nativeLibraryDir; the #288 Route D rootfs + proot bake is deleted. Has 1 shell tester (test/test-c3-webserver.sh): the route table in server/src/routes.rs is the ONE declaration (every route literal in the crate is a ROUTES path, dispatch walks the table, no handler is attached elsewhere); the five tabs Pages/API/Home/Files/Configs are read from that table in order with Home centre and the shell has a view per tab in BOTH directions; the shell is DERIVED (no caption or /__tab__/ href typed, its pure render block run under node draws a planted route and drops a removed one); no placeholder wording in a shipped tab; the binary ships as lib*.so with legacy jni packaging, a PT_INTERP is refused, Kotlin execs nativeLibraryDir/BuildConfig name and types no port or path; and the retired spellings appear nowhere. Nine mutations each go red. The crate's own cargo test runs in the ship workflow's server job on the binary's architecture: the table is well-formed, every declared route dispatches to itself and answers 200 with the right content type end to end over a real socket, a planted row appears in /__api__/routes and a removed one disappears, an escape is 404, POST is 405. NOT COVERED: nothing execs the binary on a real phone before install \u2014 the static-musl-from-nativeLibraryDir shape is the one libs:gix/rclone/gh have proven on device, but this binary's first run on hardware is the install itself.",
+      "shell_testers": 1,
+      "ship_has_published_nothing_guard": true,
+      "ship_runs_testers": true,
+      "unit_task_declared": false,
+      "unit_test_sources": 0,
+      "workflow": "ship-cloud-c3-webserver.yml"
     },
     "ac_cloud-camera": {
       "first_test": "Minimal fork of GrapheneOS Camera: assert the patch series applies to the pinned upstream revision, so a silent patch-drop cannot ship an unpatched build.",
@@ -271,15 +280,6 @@
       "unit_task_declared": true,
       "unit_test_sources": 0,
       "workflow": "ship-cloud-wallet.yml"
-    },
-    "ac_cloud-webserver": {
-      "first_test": "Has 1 shell tester (test/test-webserver-rootfs.sh, #288 Route D): every shipped ABI has a rootfs pin read THROUGH ac_cloud-nix-on-droid's declaration plus a binary pin, the rootfs pin is never restated here, resolve_runtime.py's ELF reader agrees with readelf on a real ELF, the resolver maps loader + libraries into a rootfs that has them and refuses one that lacks a library, the bake runs before assets merge, the Kotlin types no loader/store path, and targetSdk stays <= 28. The REAL rootfs and binary are checked on every build by bakeWebserver (sha256 + resolution). NOT COVERED: nothing executes proot on Android -- SELinux/seccomp on a real phone is unverified until install.",
-      "shell_testers": 1,
-      "ship_has_published_nothing_guard": true,
-      "ship_runs_testers": true,
-      "unit_task_declared": false,
-      "unit_test_sources": 0,
-      "workflow": "ship-cloud-webserver.yml"
     },
     "ac_cloud-writer": {
       "first_test": "Has 6 shell testers, executed. Two prove the routing and the absence of a credential; two prove the four configuration pages exist AND are backed by this app's own store, which is the assertion task 209 lacked; two prove the Material 3 design system is in place and has not been undone \u2014 the toolchain restated in build.gradle still matches build.json, no screen draws outside the theme, no hardcoded hex palette or raw-pixel padding has crept back, the price table's cells are still single-line (task 214), and every home-screen card description exists in Spanish (task 221). The gap that remains is that NONE of this is a rendered screen: there is no instrumentation test and no JVM in the container that maintains this app, so a green run proves the APK compiles and the source has the right shape, never that the screen looks right. Only a device screenshot does that.",

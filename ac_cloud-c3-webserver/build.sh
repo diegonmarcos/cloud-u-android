@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ cloud-webserver — Universal Build Dispatcher                      ║
+# ║ cloud-c3-webserver — Universal Build Dispatcher                   ║
 # ║                                                                  ║
-# ║ my-webserver under the baked proot + glibc rootfs (#288 Route D). ║
-# ║ Single APK, gradle multi-module. All toolchain (AGP, gradle,      ║
-# ║ kotlin, JDK, android-sdk) comes from flake.nix — never assume     ║
-# ║ host has them.                                                    ║
+# ║ A Rust HTTP server (server/) compiled static-musl per ABI and     ║
+# ║ exec'd from the APK's nativeLibraryDir; one Kotlin shell around  ║
+# ║ it. All toolchain (AGP, gradle, kotlin, JDK, android-sdk, cargo)  ║
+# ║ comes from flake.nix — never assume host has them.               ║
 # ║                                                                  ║
 # ║ Commands:                                                        ║
-# ║   build       gradle assembleDebug → dist/<release.artifact.debug>║
+# ║   server      cargo build the server for the active ABI variant   ║
+# ║   build       server + gradle assembleDebug → dist/<artifact>     ║
 # ║   release     gradle assembleRelease (signed if keystore present) ║
 # ║   dev         install + launch on connected device (adb)          ║
 # ║   test        gradle test (JVM unit tests)                        ║
@@ -148,10 +149,10 @@ prefer_host() {
 # NO FALLBACK: without the vault the build fails rather than quietly shipping
 # an app that generates a key the env has never heard of.
 _resolve_ssh_key() {
-  # NOT USED BY CLOUD-WEBSERVER, and it returns before touching the vault.
+  # NOT USED BY CLOUD-C3-WEBSERVER, and it returns before touching the vault.
   #
   # The shared ssh key exists so an app can reach a phone terminal. This app
-  # runs its own server under its own proot and ssh's nowhere, so requiring the
+  # runs its own server in its own process and ssh's nowhere, so requiring the
   # key would make every build depend on a secret it never reads.
   #
   # Kept, call sites untouched, so this build.sh stays diffable against the
@@ -251,8 +252,35 @@ _enforce_signature() {
   log "sign-enforce: OK $(basename "$apk") signed by the ONE shared constellation key"
 }
 
+# ── the Rust server (build.json::server) ───────────────────────────────
+# One static musl executable per ABI, built by cargo from the crate build.json
+# names, for the Rust target build.json maps the active variant's ABI to. CI
+# builds it in the ship workflow's `server` job on a runner of that architecture
+# and hands the result over through C3_WEBSERVER_BIN_DIR, in which case nothing
+# is compiled here; app/build.gradle::stageServer reads the same variable.
+step_server() {
+  if [ -n "${C3_WEBSERVER_BIN_DIR:-}" ]; then
+    log "server: prebuilt binaries in $C3_WEBSERVER_BIN_DIR (C3_WEBSERVER_BIN_DIR) — not compiling"
+    return 0
+  fi
+  local abi target crate
+  abi="$(_variant_field '.abis[0]')"
+  [ -n "$abi" ] || abi="$(_release_var '.android.abi_filters[0]')"
+  target="$(_release_var ".server.targets[\"$abi\"]")"
+  crate="$(_release_var '.server.crate_dir')"
+  [ -n "$target" ] || { errlog "build.json::server.targets has no Rust target for ABI $abi"; exit 1; }
+  [ -n "$crate" ]  || { errlog "build.json::server.crate_dir is empty"; exit 1; }
+  log "server: cargo build --release --target $target (in $crate/)"
+  if command -v cargo >/dev/null 2>&1; then
+    (cd "$SCRIPT_DIR/$crate" && cargo build --release --target "$target")
+  else
+    in_nix sh -c "cd '$SCRIPT_DIR/$crate' && cargo build --release --target '$target'"
+  fi
+}
+
 step_build() {
   log "Build: $(_release_var '.name') (debug APK)"
+  step_server
   _resolve_signing
   _resolve_ssh_key
   _export_variant_abis
@@ -266,6 +294,7 @@ step_build() {
 
 step_release() {
   log "Build: $(_release_var '.name') (release APK)"
+  step_server
   _resolve_signing
   _resolve_ssh_key
   in_nix gradle :app:assembleRelease
@@ -709,6 +738,7 @@ step_gh_release() {
 }
 
 case "$CMD" in
+  server)     step_server ;;
   build)      step_build ;;
   release)    step_release ;;
   dev)        step_dev ;;

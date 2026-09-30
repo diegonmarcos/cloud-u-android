@@ -1,0 +1,21 @@
+[package]
+name = "c3-webserver"
+version = "0.1.0"
+edition = "2021"
+description = "The phone's local web server: a static-musl HTTP/1.1 server whose route table is the ONE declaration the app's Pages and API tabs are derived from."
+
+[[bin]]
+name = "c3-webserver"
+path = "src/main.rs"
+
+[dependencies]
+# std does everything here except statvfs (free space on the served root).
+# Same single dependency as da_c3-watchdog, the crate whose musl build recipe
+# this server's ship job copies.
+libc = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

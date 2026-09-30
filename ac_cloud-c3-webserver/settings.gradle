@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "cloud-webserver"
+rootProject.name = "cloud-c3-webserver"
 
 def buildJson = new groovy.json.JsonSlurper().parse(file('build.json'))
 buildJson.modules.each { name, _spec ->

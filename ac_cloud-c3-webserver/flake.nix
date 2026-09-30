@@ -1,5 +1,5 @@
 {
-  description = "cloud-webserver — Nix devShell wrapping the Android Gradle build (gradle + AGP + Android SDK + JDK 17). All toolchain pinned; same input → same APK.";
+  description = "cloud-c3-webserver — Nix devShell wrapping the Android Gradle build (gradle + AGP + Android SDK + JDK 17) plus cargo for the Rust server. All toolchain pinned; same input → same APK.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
@@ -18,11 +18,11 @@
         };
 
         # ── Pin SDK/build-tools in one place. Mirrored in
-        #    build.json::toolchain. NO NDK / cmake: this app has ZERO native
-        #    code — one Kotlin activity, one service and assets only, and
-        #    `ndk { abiFilters }` only selects which prebuilt .so to pack (it
-        #    never invokes the NDK). Dropping the ~3 GB NDK derivation keeps
-        #    the devShell lean and the build reproducible on a full nix store.
+        #    build.json::toolchain. NO NDK / cmake: the native code here is a
+        #    Rust crate built by cargo for a *-unknown-linux-musl target, not
+        #    by the NDK, and `ndk { abiFilters }` only selects which .so to
+        #    pack (it never invokes the NDK). Dropping the ~3 GB NDK
+        #    derivation keeps the devShell lean.
         baseAndroidArgs = {
           toolsVersion        = "26.1.1";
           platformToolsVersion = "35.0.2";
@@ -46,11 +46,12 @@
         emulatorSdk = emulatorEnv.androidsdk;
       in {
         devShells.default = pkgs.mkShell {
-          name = "cloud-webserver-devshell";
+          name = "cloud-c3-webserver-devshell";
           buildInputs = with pkgs; [
             jdk17
             gradle_8
             kotlin
+            cargo rustc      # build.sh server: the Rust crate in server/
             androidSdk
             adb-sync
             android-tools     # adb, fastboot
@@ -66,17 +67,17 @@
           GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/35.0.0/aapt2";
 
           shellHook = ''
-            echo "cloud-webserver devShell"
+            echo "cloud-c3-webserver devShell"
             echo "  java=$(java -version 2>&1 | head -1)"
             echo "  gradle=$(gradle --version | grep '^Gradle' || true)"
             echo "  android-sdk=$ANDROID_HOME"
-            echo "Commands: ./build.sh {build|release|dev|test|lint|clean|shell|ship|emulator}"
+            echo "Commands: ./build.sh {server|build|release|dev|test|lint|clean|shell|ship|emulator}"
           '';
         };
 
         # Separate, heavy shell for `build.sh emulator` only.
         devShells.emulator = pkgs.mkShell {
-          name = "cloud-webserver-emulator-devshell";
+          name = "cloud-c3-webserver-emulator-devshell";
           buildInputs = with pkgs; [
             jdk17
             emulatorSdk       # emulator + avdmanager + arm64 system image
@@ -88,7 +89,7 @@
           JAVA_HOME = "${pkgs.jdk17}/lib/openjdk";
         };
 
-        packages.default = pkgs.runCommandLocal "cloud-webserver-stub" {} ''
+        packages.default = pkgs.runCommandLocal "cloud-c3-webserver-stub" {} ''
           mkdir -p $out
           echo "TODO: hermetic APK build needs gradle wrapper checked in + dependency lockfile" > $out/README
         '';

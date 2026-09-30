@@ -1,0 +1,130 @@
+{
+  "name": "cloud-c3-webserver",
+  "description": "The phone's local web server, as an APK: a Rust HTTP server compiled natively for Android (static musl, exec'd from nativeLibraryDir) behind a five-tab shell — Pages, API, Home, Files, Configs — whose Pages and API tabs are derived from the server's own route table.",
+  "category": "android",
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "_doc": "WHY THERE IS NO ROOTFS ANY MORE. The previous binary was a glibc Node build that bionic cannot load, so the APK carried a proot + glibc rootfs (#288 Route D) to run it. The server is now a Rust crate in server/ that the ship workflow compiles for aarch64-unknown-linux-musl on an arm64 runner (the da_c3-watchdog recipe): a static executable with no PT_INTERP and no DT_NEEDED, the ONE shape the fleet has proven to exec from nativeLibraryDir on a phone (libs:gix, libs:rclone, libs:gh). No rootfs is baked, no loader is mapped, no proot runs, no cross-repo pin is followed: the server and its shell live in this directory and the route table the app's Pages and API tabs render is the server's own (server/src/routes.rs), so a route added there appears in the tabs and a route removed disappears, with no second list anywhere.",
+  "server": {
+    "_doc": "THE ONE declaration of the binary the APK carries. server/ is the crate; bin_name is its [[bin]]; the ship workflow builds it per ABI with the Rust target named here and hands the result to gradle through C3_WEBSERVER_BIN_DIR/<abi>/<bin_name>; app/build.gradle::stageServer refuses a missing file and a PT_INTERP and lands it as jniLibs/<abi>/<jni_name>; ServerProcess.kt execs applicationInfo.nativeLibraryDir/<jni_name>. The lib*.so name is not decoration: only such a name is extracted to nativeLibraryDir, which is the one place an app may exec from on API 29+.",
+    "crate_dir": "server",
+    "bin_name": "c3-webserver",
+    "jni_name": "libc3webserver.so",
+    "targets": {
+      "arm64-v8a": "aarch64-unknown-linux-musl",
+      "x86_64": "x86_64-unknown-linux-musl"
+    }
+  },
+  "runtime": {
+    "_doc": "Baked into BuildConfig by app/build.gradle and passed to the server positionally as <port> <root>. The server binds 127.0.0.1 only and refuses every other peer.",
+    "port": 8000,
+    "serve_root": "/storage/emulated/0"
+  },
+  "android": {
+    "application_id": "com.diegonmarcos.cloudwebserver",
+    "_doc_application_id": "Identity, not brand (#405/#495): the package id stays through the rename to cloud-c3-webserver, exactly as ac_c3-watchdog keeps com.diegonmarcos.watchdog, because moving it forces a manual reinstall on every phone.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 28,
+    "_doc_target_sdk": "28 for the STORAGE model, no longer for exec. At 28 READ_EXTERNAL_STORAGE grants the whole of runtime.serve_root; from 29 scoped storage would need MANAGE_EXTERNAL_STORAGE or per-tree grants to serve shared storage. exec is not a reason to stay any more: the server runs from nativeLibraryDir, which is allowed at every targetSdk.",
+    "version_code": 2,
+    "version_name": "0.2.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "modules": {
+    "_doc": "settings.gradle iterates this. One module and no shared library.",
+    "app": {
+      "type": "application"
+    }
+  },
+  "toolchain": {
+    "agp": "8.7.3",
+    "gradle": "8.10.2",
+    "kotlin": "1.9.24",
+    "jdk": "17",
+    "rust": "stable",
+    "_doc_rust": "The server crate builds with the stable channel and no nightly feature; the ship workflow pins it through dtolnay/rust-toolchain@stable as da_c3-watchdog does."
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps, resolved by build.sh::_resolve_signing from the vault. No fallback key.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "release": {
+    "_doc": "Per-APK distribution, same data-driven block as every app here; build.sh oras-push and gh-release read it.",
+    "artifact": {
+      "debug": "Cloud-C3-WebServer.apk",
+      "release": "Cloud-C3-WebServer-release.apk"
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-c3-webserver",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "auto_update": {
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "max_installs_per_pass": 3
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "tag_pattern": "ac_cloud-c3-webserver-v*",
+      "asset_name": "Cloud-C3-WebServer.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a"
+        ],
+        "artifact_debug": "Cloud-C3-WebServer.apk",
+        "gh_asset": "Cloud-C3-WebServer.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest",
+        "_doc": "supported_abis is exactly the one ABI each APK's binary is built for: an aarch64 static executable cannot start on a 32-bit-only phone."
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64"
+        ],
+        "artifact_debug": "Cloud-C3-WebServer-x86_64.apk",
+        "gh_asset": "Cloud-C3-WebServer-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ]
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. The Rust crate's own suite (cargo test, including the end-to-end run of the real server) executes in the ship workflow's server job, on the runner that builds the binary.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "node",
+        "grep",
+        "jq"
+      ],
+      "_doc_requires": "node runs the shell's pure render block to prove the tabs draw exactly what the route table says. A tester that shells out to a tool which is not installed does not fail, it answers from the tool's absence, so a missing one is fatal at the engine's preflight."
+    }
+  }
+}

@@ -15,7 +15,7 @@ class WebServerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val runtime = WebServerRuntime(this)
+        val runtime = ServerProcess(this)
         val channel = NotificationChannel("server", getString(R.string.notification_channel),
             NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -25,7 +25,6 @@ class WebServerService : Service() {
             .setContentText(getString(R.string.notification_text, runtime.serveRoot, runtime.url))
             .build())
         if (process?.isAlive != true) {
-            // ponytail: first start unpacks ~160 MB; off the main thread, no progress UI.
             Thread { process = runtime.start(File(filesDir, "webserver.log")) }.start()
         }
         return START_STICKY

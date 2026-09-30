@@ -2924,6 +2924,13 @@
                 "label": "C3",
                 "icon": "ic_p_watchdog",
                 "target": "extapp:cloud-c3"
+              },
+              {
+                "_doc": "The phone's local web server (#687), an APK in the cloud-c3 family. extapp:, not page: — the app is published, so the tile opens it or offers the install. The caption names the FUNCTION, never the application (T7): the app's identity travels in target.",
+                "id": "c3-webserver",
+                "label": "Web Server",
+                "icon": "ic_p_watchdog",
+                "target": "extapp:cloud-c3-webserver"
               }
             ]
           }
@@ -7446,6 +7453,15 @@
         "hub_package": "com.diegonmarcos.cloudc3",
         "install_package": "com.diegonmarcos.cloudc3",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-C3.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "cloud-c3-webserver (#687) — the phone's local web server is an APK in the cloud-c3 family, and Cloud ▸ Apps ▸ Configs opens it with extapp:cloud-c3-webserver. Sections.externalApp() reads ONLY this array, so with no entry here that tile snacks 'Unknown app' AFTER the tap instead of offering the APK. NO `label`: the id IS the application's one name (#351); the launcher derives the caption by dropping the family prefix. install_apk_url mirrors ac_cloud-c3-webserver/build.json::release.gh_release.asset_name (Cloud-C3-WebServer.apk, the arm64 rolling-latest asset). The applicationId stays com.diegonmarcos.cloudwebserver through the rename: identity, not brand, the ac_c3-watchdog / com.diegonmarcos.watchdog split.",
+        "id": "cloud-c3-webserver",
+        "folder": "sys_dev",
+        "hub_package": "com.diegonmarcos.cloudwebserver",
+        "install_package": "com.diegonmarcos.cloudwebserver",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-C3-WebServer.apk",
         "forks": {}
       },
       {

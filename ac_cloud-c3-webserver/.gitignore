@@ -1,0 +1,5 @@
+build/
+dist/
+.gradle/
+server/target/
+server-dist/

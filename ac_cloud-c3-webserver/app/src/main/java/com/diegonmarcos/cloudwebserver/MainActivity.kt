@@ -19,7 +19,7 @@ class MainActivity : Activity() {
         }
         startForegroundService(Intent(this, WebServerService::class.java))
 
-        val url = WebServerRuntime(this).url
+        val url = ServerProcess(this).url
         val web = WebView(this)
         web.settings.javaScriptEnabled = true
         web.webViewClient = object : WebViewClient() {
