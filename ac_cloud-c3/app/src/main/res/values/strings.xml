@@ -56,4 +56,32 @@
          page_samples stubs — reports, stack, workflows, vms, logs, gha). Stated on tap,
          never a silent dead tile. -->
     <string name="stack_page_not_here">%1$s is a SuperApp stub page (page_samples) and is not shipped in this app.</string>
+
+    <!-- Home ▸ down containers (FleetDown). Every number is measured or counted from the
+         declaration; the three failure faces each say WHY, so none can read as "all up". -->
+    <string name="down_title">Down containers</string>
+    <string name="down_measuring">Measuring %1$d declared containers across %2$d VMs…</string>
+    <string name="down_unreachable">Fleet status unavailable — c3-infra-api did not answer (%1$s). Nothing below is known to be up.\n%2$s</string>
+    <string name="down_nothing_declared">No container is declared on any mesh VM in this build (data/services_*.json vs data/mesh.json). This is a broken bake, not a healthy fleet.</string>
+    <string name="down_all_up">All %1$d declared containers on %2$d VMs are running.</string>
+    <string name="down_summary">%1$d of %2$d declared containers are not running. Tap one to act on it.</string>
+    <string name="down_vm_heading">%1$s — %2$d down</string>
+    <string name="down_vm_blind">%1$s — %2$d declared containers NOT measured: %3$s</string>
+    <string name="down_row">%1$s %2$s · %3$s</string>
+    <string name="down_refresh">↻ Refresh (measured %1$s)</string>
+    <string name="down_state_missing">missing — no such container on its VM</string>
+    <string name="down_state_unread">state unreadable: %1$s</string>
+
+    <!-- Container sheet: the action read-back, the stop confirmation and the log viewer. -->
+    <string name="sheet_working">… %1$s %2$s, then reading its state back</string>
+    <string name="sheet_readback_confirmed">✓ read back: %1$s</string>
+    <string name="sheet_readback_unconfirmed">✗ read back: %1$s — the action did not take effect</string>
+    <string name="sheet_stop_confirm_title">Stop %1$s?</string>
+    <string name="sheet_stop_confirm_body">Anything that depends on it goes down with it, and nothing restarts it by itself (compose restart is off fleet-wide).</string>
+    <string name="sheet_stop_confirm_yes">Stop</string>
+    <string name="sheet_logs">Logs</string>
+    <string name="sheet_logs_detail">docker logs --tail</string>
+    <string name="sheet_logs_loading">… reading %1$s logs</string>
+    <string name="sheet_logs_title">%1$s · %2$s</string>
+    <string name="sheet_logs_empty">The container has written no log lines.</string>
 </resources>

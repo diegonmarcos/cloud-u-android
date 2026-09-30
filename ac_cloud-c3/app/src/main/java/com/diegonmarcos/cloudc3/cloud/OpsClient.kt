@@ -41,9 +41,18 @@ object OpsClient {
     enum class Kind { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER, NETWORK, NO_TOKEN, NOT_CONFIGURED }
 
     sealed class Outcome {
-        data class Ok(val message: String) : Outcome()
+        /** [body] is the whole response; [message] is the one-line summary a status line prints. */
+        data class Ok(val message: String, val body: String = "") : Outcome()
         data class Failed(val kind: Kind, val message: String) : Outcome()
     }
+
+    /**
+     * Read-only GET against the same API, same bearer, same named failures. The Home page's
+     * down list and the sheet's read-back use it: a status nobody could fetch must reach the
+     * screen as a [Outcome.Failed], never as an empty body that reads as "nothing is down".
+     */
+    fun get(path: String, bearer: String, what: String): Outcome =
+        request("GET", path, bearer, what, null)
 
     /** Container-level: the box itself. */
     fun container(vm: String, name: String, action: String, bearer: String): Outcome =
@@ -93,7 +102,10 @@ object OpsClient {
      * [json] is null for the container/service routes: they are addressed
      * entirely by their path, so an empty POST is the whole request.
      */
-    private fun post(path: String, bearer: String, what: String, json: String? = null): Outcome {
+    private fun post(path: String, bearer: String, what: String, json: String? = null): Outcome =
+        request("POST", path, bearer, what, json)
+
+    private fun request(method: String, path: String, bearer: String, what: String, json: String?): Outcome {
         val base = BuildConfig.C3_OPS_BASE_URL.trimEnd('/')
         if (base.isEmpty()) {
             return fail(Kind.NOT_CONFIGURED,
@@ -107,14 +119,14 @@ object OpsClient {
         }
 
         val url = base + path
-        Log.i(TAG, "POST $url (token ${bearer.length} chars, not logged)")
+        Log.i(TAG, "$method $url (token ${bearer.length} chars, not logged)")
         var conn: HttpURLConnection? = null
         val code: Int
         val body: String
         try {
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                doOutput = true
+                requestMethod = method
+                doOutput = method == "POST"
                 connectTimeout = 8_000
                 readTimeout = 30_000          // start/update can be slow
                 instanceFollowRedirects = false
@@ -123,7 +135,7 @@ object OpsClient {
                 setRequestProperty("Authorization", "Bearer $bearer")
                 setRequestProperty("User-Agent", "Cloud-SuperApp-C3Ops/1")
             }
-            conn.outputStream.use {
+            if (method == "POST") conn.outputStream.use {
                 it.write(json?.toByteArray(Charsets.UTF_8) ?: ByteArray(0))
             }
             code = conn.responseCode
@@ -149,7 +161,7 @@ object OpsClient {
                 "name recorded in data/services_*.json.\n$snippet")
             code >= 500 -> fail(Kind.SERVER, "HTTP $code — the ops API errored.\n$snippet")
             code !in 200..299 -> fail(Kind.SERVER, "HTTP $code.\n$snippet")
-            else -> Outcome.Ok("✓ $what" + if (snippet.isBlank()) "" else "\n$snippet")
+            else -> Outcome.Ok("✓ $what" + if (snippet.isBlank()) "" else "\n$snippet", body)
         }
     }
 

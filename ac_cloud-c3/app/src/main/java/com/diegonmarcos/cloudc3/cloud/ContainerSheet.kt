@@ -11,8 +11,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
+import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 
 /**
@@ -27,7 +29,7 @@ import com.google.android.material.tabs.TabLayout
  *
  *   Infos    | Container: where it runs, how it is addressed
  *            | App:       what it serves and who may reach it
- *   Actions  | Container: start · stop · restart · update
+ *   Actions  | Container: start · stop · restart · update · logs
  *            | App:       open · copy · service start · service stop
  *
  * THE SPLIT IS NOT COSMETIC. c3-infra-api addresses a container and its
@@ -43,7 +45,12 @@ import com.google.android.material.tabs.TabLayout
  */
 object ContainerSheet {
 
-    fun show(activity: FragmentActivity, containerName: String, label: String, openUrl: String) {
+    /** [onDismiss] lets the Home down list re-measure once the sheet closes, so a box an
+     *  action brought back leaves the list on the reading that proved it, not on a guess. */
+    fun show(
+        activity: FragmentActivity, containerName: String, label: String, openUrl: String,
+        onDismiss: (() -> Unit)? = null,
+    ) {
         val ctx = activity
         val pub = Services.publicServices().firstOrNull { it.name == containerName }
         val priv = Services.privateServices().firstOrNull { it.name == containerName }
@@ -77,7 +84,10 @@ object ContainerSheet {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 420))
         })
 
-        val dialog = BottomSheetDialog(ctx).apply { setContentView(root) }
+        val dialog = BottomSheetDialog(ctx).apply {
+            setContentView(root)
+            onDismiss?.let { cb -> setOnDismissListener { cb() } }
+        }
 
         fun render(index: Int) {
             pane.removeAllViews()
@@ -163,12 +173,16 @@ object ContainerSheet {
             card.addView(note(ctx, "No VM recorded for $name, so there is no /vms/{vm}/containers/ " +
                 "path to call. Add it to data/services_*.json and the buttons appear."))
         } else {
-            for ((verb, act) in listOf("Start" to "start", "Stop" to "stop",
+            for ((verb, act) in listOf("Start" to "start", "Stop" to FleetDown.STOP,
                                        "Restart" to "restart", "Update" to "update")) {
                 card.addView(action(ctx, verb, "$act container") {
-                    dispatch(status) { OpsClient.container(vm, name, act, bearer) }
+                    if (act == FleetDown.STOP) confirmStop(ctx, name) { containerAction(ctx, status, vm, name, act, bearer) }
+                    else containerAction(ctx, status, vm, name, act, bearer)
                 })
             }
+            card.addView(action(ctx, ctx.getString(R.string.sheet_logs), ctx.getString(R.string.sheet_logs_detail)) {
+                showLogs(ctx, status, vm, name, bearer)
+            })
         }
 
         val card2 = card(ctx); pane.addView(card2)
@@ -194,9 +208,10 @@ object ContainerSheet {
             })
         }
         if (vm.isNotBlank()) {
-            for ((verb, act) in listOf("Start service" to "start", "Stop service" to "stop")) {
+            for ((verb, act) in listOf("Start service" to "start", "Stop service" to FleetDown.STOP)) {
                 card2.addView(action(ctx, verb, "$act $service") {
-                    dispatch(status) { OpsClient.service(vm, service, act, bearer) }
+                    val go = { dispatch(status) { OpsClient.service(vm, service, act, bearer) } }
+                    if (act == FleetDown.STOP) confirmStop(ctx, service, go) else go()
                 })
             }
         }
@@ -209,6 +224,74 @@ object ContainerSheet {
                 "Configs → Profile → Config import, or paste it in the Dagu login; both write the " +
                 "same token. Open and Copy work without it."))
         }
+    }
+
+    /**
+     * A container action's REAL outcome. [FleetDown.act] makes the call and then reads the
+     * container's state back from the API, so the line printed is what the box IS after the
+     * tap — never the 2xx alone — and it is green only when that read-back shows what the
+     * action promised.
+     */
+    private fun containerAction(
+        ctx: Context, status: TextView, vm: String, name: String, act: String, bearer: String,
+    ) {
+        show(status, ctx.getString(R.string.sheet_working, act, name))
+        Thread {
+            val r = FleetDown.act(act, { OpsClient.container(vm, name, act, bearer) },
+                                  { FleetDown.state(vm, name, bearer) })
+            val call = when (val c = r.call) {
+                is OpsClient.Outcome.Ok -> c.message.lineSequence().first()
+                is OpsClient.Outcome.Failed -> "✗ ${c.kind}\n${c.message}"
+            }
+            val verdict = ctx.getString(
+                if (r.confirmed) R.string.sheet_readback_confirmed else R.string.sheet_readback_unconfirmed,
+                stateText(ctx, r.after))
+            status.post { show(status, "$call\n$verdict", ok = r.confirmed) }
+        }.apply { isDaemon = true }.start()
+    }
+
+    /** Stop takes a running service away from whoever uses it, so it asks first. */
+    private fun confirmStop(ctx: Context, name: String, go: () -> Unit) {
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle(ctx.getString(R.string.sheet_stop_confirm_title, name))
+            .setMessage(R.string.sheet_stop_confirm_body)
+            .setPositiveButton(R.string.sheet_stop_confirm_yes) { _, _ -> go() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showLogs(ctx: Context, status: TextView, vm: String, name: String, bearer: String) {
+        show(status, ctx.getString(R.string.sheet_logs_loading, name))
+        Thread {
+            val r = FleetDown.logs(vm, name, bearer)
+            status.post {
+                when (r) {
+                    is OpsClient.Outcome.Failed -> show(status, "✗ ${r.kind}\n${r.message}", ok = false)
+                    is OpsClient.Outcome.Ok -> {
+                        status.visibility = View.GONE
+                        MaterialAlertDialogBuilder(ctx)
+                            .setTitle(ctx.getString(R.string.sheet_logs_title, name, vm))
+                            .setView(ScrollView(ctx).apply {
+                                addView(TextView(ctx).apply {
+                                    text = r.body.ifBlank { ctx.getString(R.string.sheet_logs_empty) }
+                                    typeface = Typeface.MONOSPACE; textSize = 11f
+                                    setTextIsSelectable(true)
+                                    setPadding(dp(ctx, 18), dp(ctx, 8), dp(ctx, 18), dp(ctx, 8))
+                                })
+                            })
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    }
+                }
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    /** One [FleetDown.State] as a caption — shared by the Home down list and the read-back. */
+    fun stateText(ctx: Context, s: FleetDown.State): String = when (s) {
+        is FleetDown.State.Docker -> s.word
+        FleetDown.State.Missing -> ctx.getString(R.string.down_state_missing)
+        is FleetDown.State.Unread -> ctx.getString(R.string.down_state_unread, s.why)
     }
 
     private fun dispatch(status: TextView, call: () -> OpsClient.Outcome) {
