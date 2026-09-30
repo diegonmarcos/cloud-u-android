@@ -104,7 +104,9 @@ echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
 # The declared public set is rendered as a compact row that offers Clone into store; the
 # URL is the DECLARED remote-mode shape substituted once (ui.sync.git.remote_modes), and
 # the private/fork facts ride the row as badges. test-drive-git-page.sh owns the rest.
-if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store with the declared URL, composed once"; else fail "clone-into-store composition missing"; fi
+# #669 the declared shape is the FALLBACK for rows with no listing item; a listed row clones
+# its own listing's URL (test-drive-git-auth-chain.sh C10 owns that rule and its mutations).
+if grep -qE 'ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store; the declared URL is composed once, as the no-listing fallback"; else fail "clone-into-store composition missing"; fi
 if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'if \(isPrivate\) CapsuleBadge\(stringResource\(R\.string\.chrome_private\)\)' "$CARDS"; then pass "the dense row is tagged and carries the private badge"; else fail "declared cards incomplete"; fi
 
 echo "── G8 Rclone and Mounts, same language ──"

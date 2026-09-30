@@ -184,8 +184,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
      * The declaration's absence is the ONLY case that falls back to the in-process JGit path,
      * and it says so: a build with no terminal block is a misconfiguration, not a mode.
      */
-    fun cloneViaTerminal(name: String): Boolean {
-        val url = page.cloneUrl(name, Declarations.REMOTE_HTTPS)
+    fun cloneViaTerminal(name: String, url: String): Boolean {
         val dest = SharedStore.repoDir(name)
         val outcome = TerminalGit.run(ctx, page.terminal, Declarations.GIT_OP_CLONE, url, dest)
         handoff = when (outcome) {
@@ -209,15 +208,29 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         return outcome is TerminalGit.Outcome.Sent
     }
 
-    /** Clone [name] through the terminal; only an undeclared handoff falls back to JGit. */
-    fun clone(name: String) {
-        if (page.terminal != null) { cloneViaTerminal(name); return }
+    /**
+     * Clone [name] through the terminal; only an undeclared handoff falls back to JGit.
+     *
+     * #669 THE URL IS THE LISTING'S, NEVER RE-TEMPLATED. [listedUrl]/[listedSshUrl] are the
+     * clone URLs the server that LISTED the repository declared for it (gitea's items point
+     * at the fleet's own git host, GitHub's at github.com). Rebuilding the URL from the
+     * page's declared owner and host — what this function used to do for every row — sent a
+     * gitea-listed repository to github.com/<declared owner>/<name>: a clone from the WRONG
+     * LEG that reads as the right one until the repository is not there. Blank means the row
+     * is a DECLARED public repo with no listing item, for which the declared template is the
+     * truth; a LISTED item with a blank URL never reaches here (the row says so instead).
+     */
+    fun clone(name: String, listedUrl: String = "", listedSshUrl: String = "") {
+        if (page.terminal != null) {
+            cloneViaTerminal(name, listedUrl.ifBlank { page.cloneUrl(name, Declarations.REMOTE_HTTPS) })
+            return
+        }
         handoff = ctx.getString(R.string.git_terminal_not_declared)
         val ssh = login.ssh && login.sshKeyPath.isNotBlank()
         val mode = if (ssh) Declarations.REMOTE_SSH else Declarations.REMOTE_HTTPS
         coordinator.cloneInto(
             name = name,
-            url = page.cloneUrl(name, mode),
+            url = (if (ssh) listedSshUrl else listedUrl).ifBlank { page.cloneUrl(name, mode) },
             authKind = when {
                 ssh -> GitSyncCoordinator.AUTH_SSH
                 login.token.isNotBlank() -> GitSyncCoordinator.AUTH_HTTPS
@@ -409,7 +422,15 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                     repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
                                     cloning = gh.name in cloning, expanded = expanded == key,
                                     onToggle = { expanded = if (expanded == key) "" else key },
-                                    onClone = { clone(gh.name) },
+                                    // #669 a LISTED repository clones from the URL its OWN listing
+                                    // declared — gitea's items name the fleet's git host, GitHub's
+                                    // name github.com. A blank one is that server's defect, said
+                                    // out loud; falling through to the page's github template here
+                                    // would clone the wrong leg silently.
+                                    onClone = {
+                                        if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
+                                        else clone(gh.name, gh.cloneUrl, gh.sshUrl)
+                                    },
                                 )
                                 if (expanded == key && cloned != null) {
                                     GitRepoOpsBox(

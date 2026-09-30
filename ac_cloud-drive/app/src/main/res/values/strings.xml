@@ -419,4 +419,8 @@
     <string name="git_terminal_refused_by">cloud-terminal refused the handoff: %1$s</string>
     <string name="git_terminal_no_op">No %1$s command is declared for cloud-terminal.</string>
     <string name="git_terminal_not_declared">No cloud-terminal handoff is declared in this build.</string>
+    <!-- #669 a LISTED repository must be cloned from the server that listed it. A listing
+         item with no clone URL is a defect in that server's answer and is said out loud —
+         never silently re-templated onto another host, which is a clone from the wrong leg. -->
+    <string name="git_clone_url_missing">The listing gave no clone URL for %1$s, so nothing was cloned.</string>
 </resources>

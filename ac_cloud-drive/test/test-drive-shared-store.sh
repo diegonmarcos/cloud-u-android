@@ -121,7 +121,11 @@ if grep -qE 'fun urlFor\(owner: String, name: String\): String = url\.replace\("
 else
     fail "Declarations.GitPageDecl does not compose the clone URL from the declared remote modes"
 fi
-if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'coordinator\.cloneInto\(' "$CARDS"; then pass "every row's Clone hands the declared URL to the one clone path"; else fail "the Git page does not clone through the declared URL / the coordinator"; fi
+# #669 a LISTED row clones the URL its own listing declared (gitea's items name the fleet's
+# git host, GitHub's name github.com); only a row with NO listing item — the declared public
+# set — falls back to the declared remote-mode template. Re-templating every row onto the
+# declared owner/host is what sent gitea-listed repositories to github.com, silently.
+if grep -qE 'url = \(if \(ssh\) listedSshUrl else listedUrl\)\.ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'coordinator\.cloneInto\(' "$CARDS"; then pass "every row's Clone hands the listing's URL (declared template only when nothing was listed) to the one clone path"; else fail "the Git page does not clone the listed URL through the coordinator"; fi
 if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD_KT" && grep -qE 'GitEngine\.clone\(url, dir, auth = credentials\.authFor\(managed\)\)' "$COORD_KT" && grep -qE 'registry\.upsert\(managed\)' "$COORD_KT"; then pass "the page's clone lands in the store's git folder, through the engine, into the ONE registry"; else fail "the page's clone does not go through SharedStore.repoDir + GitEngine.clone + the registry"; fi
 
 echo "── S3b one-time migration of stray root clones into the git folder ──"

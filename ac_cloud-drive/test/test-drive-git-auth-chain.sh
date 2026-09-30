@@ -734,6 +734,36 @@ echo "── C7 no token is ever rendered or logged ──"
 c7 "$WALKER" "$GH_RUNNER" "$PAGE" && pass "both carriers redact their toString, the token rides the environment, and the page's state holds none" \
     || fail "a token can reach a log, a process listing or the screen"
 
+# c10 <page> : #669 a LISTED repository is cloned from ITS OWN listing's URL.
+#
+# MEASURED, 2026-09-30, on the device itself: gitea's /api/v1/repos/search lists
+# 23 repositories under owner `diego` — not the page's declared owner — and each
+# item's clone_url names the fleet's own git host. The page used to rebuild every
+# clone URL from the declared owner and the github remote-mode template, so a
+# repository LISTED BY GITEA was CLONED FROM GITHUB: the gitea leg listed, and
+# its clone silently rode the other leg. An anonymous clone from the fleet's
+# gitea was proven to land on disk the same day; what stood between the owner
+# and his repos was this re-templating, not the transport.
+c10() {
+    # grep -c, never grep -q: under pipefail, -q's early exit SIGPIPEs the _code
+    # stage and a MATCH reads as a failed pipeline — a red that lies about green.
+    local page="$1" bad=0
+    # the personal row hands the listing item's clone URL (and ssh URL) to clone()
+    [ "$(_code "$page" | grep -cE 'clone\(gh\.name, gh\.cloneUrl, gh\.sshUrl\)')" -ge 1 ] \
+        || { echo "    the personal row does not clone the URL its listing declared"; bad=1; }
+    # a blank listed URL is LOUD, not a silent re-template onto another host
+    [ "$(_code "$page" | grep -cE 'if \(gh\.cloneUrl\.isBlank\(\)\) handoff = ctx\.getString\(R\.string\.git_clone_url_missing')" -ge 1 ] \
+        || { echo "    a listing item with no clone URL falls through silently"; bad=1; }
+    # the terminal handoff clones the url it is GIVEN — it cannot re-template
+    [ "$(_code "$page" | grep -cE 'fun cloneViaTerminal\(name: String, url: String\)')" -ge 1 ] \
+        || { echo "    cloneViaTerminal builds its own URL instead of taking the listing's"; bad=1; }
+    return $bad
+}
+
+echo "── C10 #669 a listed repository clones from the leg that listed it ──"
+c10 "$PAGE" && pass "the listing's clone URL travels to the clone, a blank one is loud, and the terminal clones what it is given" \
+    || fail "a gitea-listed repository could clone from github.com — the wrong leg, silently"
+
 # ══ MUT every check above goes RED when its property is broken ══════════════
 #
 # This block is the only part of the file that can tell a real assertion from a
@@ -975,6 +1005,18 @@ _stage && _green "c9" _c9 && {
 _stage && _green "c9" _c9 && {
     _sub "$W/GitReposScreen.kt" 'fetchFleetListing(outcome.answeredBy.orEmpty())' 'fetchFleetListing("")'
     _red "C9 the listing goes to the family's first endpoint instead of the rung that answered" _c9; }
+
+# ── C10 #669 the clone rides the leg that listed the repository ──
+_stage && _green "c10" c10 "$W/GitReposScreen.kt" && {
+    _sub "$W/GitReposScreen.kt" 'else clone(gh.name, gh.cloneUrl, gh.sshUrl)' 'else clone(gh.name)'
+    _red "C10 the personal clone re-templated onto the declared owner and host (the wrong leg)" c10 "$W/GitReposScreen.kt"; }
+_stage && _green "c10" c10 "$W/GitReposScreen.kt" && {
+    _sub "$W/GitReposScreen.kt" 'if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)' \
+                                'if (false) handoff = ""'
+    _red "C10 a blank listed clone URL goes quiet instead of loud" c10 "$W/GitReposScreen.kt"; }
+_stage && _green "c10" c10 "$W/GitReposScreen.kt" && {
+    _sub "$W/GitReposScreen.kt" 'fun cloneViaTerminal(name: String, url: String)' 'fun cloneViaTerminal(name: String)'
+    _red "C10 the terminal handoff grows its own URL back" c10 "$W/GitReposScreen.kt"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW of them hollow or void ──"
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
