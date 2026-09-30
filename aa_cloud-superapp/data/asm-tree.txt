@@ -267,7 +267,9 @@ Drawer (← swipe) ── HomeDrawerFragment
   Bottom-nav sections (ui.bottom_nav order, label+icon from ui.sections) + Labs + Configs, each with 2-level expand
 
 Dynamic Island pill ── toolbar
-  Tap → opens Termux (com.termux.nix) per ui.dynamic_island_action
+  Tap → opens Cloud MyTerminal (extapp:cloud-myterminal) per ui.dynamic_island_action
+        SECOND pill. The first is the now-playing mini-island (music_playing_island),
+        whose tap target is the package holding the live media session.
 
 Search sheet ── SearchSheetFragment (scope chips)
   Cloud-Apps    = cloud sections + tiles + home actions

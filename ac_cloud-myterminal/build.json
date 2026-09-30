@@ -18,7 +18,7 @@
     "compile_sdk": 35,
     "min_sdk": 26,
     "target_sdk": 34,
-    "version_code": 1,
+    "version_code": 2,
     "version_name": "0.1.0-dev",
     "_doc_abi_filters": "Hub is pure-JVM (no native libs) so ABI filtering is irrelevant to it; kept for schema parity with aa_cloud-superapp / ea_cloud-comms. The forks declare their own abi_filters.",
     "abi_filters": [
@@ -135,6 +135,19 @@
     "matomo": {
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
+    }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which ship-cloud-myterminal.yml invokes before it builds. Until #675 this block was absent, so the shell phase printed COVERAGE-GAP and exited 0: the only question this app's pipeline asked was whether Gradle exited 0, and Gradle cannot see that the setup instructions named a port the SSH client never dialled, or that the backend switcher enumerated its two options in Kotlin.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "A tester that shells out to a tool which is not installed does not fail \u2014 it returns a verdict from the tool's ABSENCE, and for a ban-shaped assertion (`no upstream package id appears here`) that absence reads as a PASS. Naming the tools makes a missing one fatal at the engine's preflight.",
+      "requires": [
+        "jq",
+        "awk",
+        "grep",
+        "python3"
+      ]
     }
   }
 }

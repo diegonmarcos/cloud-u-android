@@ -64,10 +64,16 @@ class ConfigsActivity : AppCompatActivity() {
         ) { startUpdateCheck() })
 
         // ── Terminal setup instructions (shown on the page) ───────────────
+        // GENERATED from data/terminal-targets.json, one block per declared
+        // backend. It used to be a single hand-written string naming both envs
+        // and their ports, which is a SECOND declaration of the port: it told
+        // the reader to start the nix-on-droid sshd on 8022 while the JSON
+        // dialled 8024, so following the instructions exactly still produced a
+        // terminal that would not connect.
         body.addView(Ui.header(
             this,
             getString(R.string.cfg_terminal_setup_title),
-            getString(R.string.cfg_terminal_setup_steps),
+            getString(R.string.cfg_terminal_setup_steps, terminalSetupBlocks()),
         ))
 
         // ── Terminal backend switcher ─────────────────────────────────────
@@ -80,10 +86,16 @@ class ConfigsActivity : AppCompatActivity() {
                 backendTarget.host, backendTarget.port),
             enabled = true,
         ) {
-            val next = if (currentBackend == IdePrefs.BACKEND_TERMUX)
-                IdePrefs.BACKEND_NIXONDROID else IdePrefs.BACKEND_TERMUX
-            IdePrefs.setTerminalBackend(this, next)
-            recreate()
+            // Advance to the NEXT declared backend, wrapping. Cycling the
+            // declared list is what keeps the choice DATA: this used to be an
+            // if/else over the two IdePrefs constants, so a third entry in
+            // terminal-targets.json would have been switcher-unreachable.
+            val keys = TerminalTargets.all().map { it.key }
+            if (keys.size > 1) {
+                val at = keys.indexOf(backendTarget.key)
+                IdePrefs.setTerminalBackend(this, keys[(at + 1) % keys.size])
+                recreate()
+            }
         })
 
         // ── Terminal connection overrides ─────────────────────────────────
@@ -138,6 +150,20 @@ class ConfigsActivity : AppCompatActivity() {
         // Reset the gate when the overlay is gone so a second tap re-opens it.
         if (supportFragmentManager.findFragmentByTag(UpdateOverlay.TAG) == null) overlayShown = false
     }
+
+    /**
+     * One sshd-setup block per DECLARED backend, built from
+     * data/terminal-targets.json so the ports, users and install command in the
+     * instructions are the same values the app dials. Nothing here names a
+     * backend; a new entry in the JSON gets a block for free.
+     */
+    private fun terminalSetupBlocks(): String =
+        TerminalTargets.all().joinToString("\n") { t ->
+            getString(
+                R.string.cfg_terminal_setup_env_block,
+                t.label.uppercase(), t.user, t.host, t.port, t.sshdInstall,
+            )
+        }
 
     private fun showTerminalConnDialog(backend: String) {
         val effective = TerminalTargets.effectiveTarget(this, backend)

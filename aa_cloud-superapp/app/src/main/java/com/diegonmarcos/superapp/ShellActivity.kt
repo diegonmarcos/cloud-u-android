@@ -589,11 +589,16 @@ open class ShellActivity : AppCompatActivity(),
             // Updated whenever onPrepareOptionsMenu fires (mode toggle,
             // back-stack change, drawer open) AND after a profile edit.
             refreshDynamicIsland()
-            // Tap the island → fire whatever `ui.dynamic_island_action`
-            // resolves to. The declared value is `app:com.termux.nix`
-            // (open the Nix-on-Droid Termux app); the supported forms
-            // are build.json::ui._vocab_dynamic_island_action and the
-            // build fails on anything else. Parsed at runtime so editing
+            // Tap the SECOND toolbar pill → fire whatever
+            // `ui.dynamic_island_action` resolves to. (The FIRST pill is
+            // music_playing_island, the now-playing mini-island; its target
+            // is the package that owns the live media session, so it is
+            // discovered at runtime and is not declarable.) The declared
+            // value is `extapp:cloud-myterminal`, which opens Cloud
+            // MyTerminal through ui.external_apps and offers the install
+            // when it is absent; the supported forms are
+            // build.json::ui._vocab_dynamic_island_action and the build
+            // fails on anything else. Parsed at runtime so editing
             // build.json + rebuilding is the only edit needed.
             findViewById<View>(R.id.dynamic_island)?.apply {
                 isClickable = true
@@ -1133,7 +1138,15 @@ open class ShellActivity : AppCompatActivity(),
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     /** Parse [BuildConfig.UI_DYNAMIC_ISLAND_ACTION] and dispatch. Formats:
-     *   • `app:<packageName>`  → launch that app's main activity.
+     *   • `app:<packageName>`  → launch that app's main activity. For a
+     *     THIRD-PARTY package, whose id is the only handle we have on it.
+     *   • `extapp:<id>`        → resolve `id` in build.json::ui.external_apps
+     *     and hand it to [launchExternalApp], which walks fork → hub → alt
+     *     and then OFFERS THE INSTALL from the entry's install_apk_url. This
+     *     is the form a FLEET app must use: `app:` pins one literal package
+     *     and can do nothing but apologise when it is missing, which is how
+     *     the island spent #675 bound to an upstream terminal id that no
+     *     fleet build installs.
      *   • `shortcut:<id>`      → fire a shortcut-style intent (currently
      *     unused, reserved for future bindings like `shortcut:wallet`).
      *  Tolerant of an uninstalled target — shows a short Toast instead of
@@ -1160,6 +1173,8 @@ open class ShellActivity : AppCompatActivity(),
                     android.widget.Toast.makeText(this, "$pkg not installed", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
+            "extapp"        -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+                                    ?.let { launchExternalApp(it) }
             "shortcut"      -> parts.getOrNull(1)?.let { handleShortcutById(it) }
             else            -> {}
         }

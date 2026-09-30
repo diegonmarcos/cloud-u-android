@@ -1,17 +1,19 @@
 {
-  "_doc": "SSH targets for cloud-myterminal's terminal \u2014 it SSHes into the selected phone env's sshd on localhost (Android shares 127.0.0.1 across app sandboxes, so no cross-UID barrier). The Configs 'Terminal backend' switcher (IdePrefs.terminalBackend) picks which env per session. EDIT host/port/user to match your real sshd: termux sshd default is 8022 (the 'phone' ssh alias uses 8023); nix-on-droid sshd is 8024 on this fleet's phone (its sshd_config sets Port 8024) \u2014 verified, not assumed. Auth is KEY-based: the hub generates its OWN ssh key on first use \u2014 add the public key (Configs \u2192 'Terminal SSH key') to ~/.ssh/authorized_keys in EACH env. No secrets here.",
+  "_doc": "SSH targets for cloud-myterminal's terminal \u2014 it SSHes into the selected phone env's sshd on localhost (Android shares 127.0.0.1 across app sandboxes, so no cross-UID barrier). The Configs 'Terminal backend' switcher (IdePrefs.terminalBackend) picks which env per session. EDIT host/port/user to match your real sshd: termux sshd default is 8022 (the 'phone' ssh alias uses 8023); nix-on-droid sshd is 8024 on this fleet's phone (its sshd_config sets Port 8024) \u2014 verified, not assumed. Auth is KEY-based: the hub generates its OWN ssh key on first use \u2014 add the public key (Configs \u2192 'Terminal SSH key') to ~/.ssh/authorized_keys in EACH env. No secrets here.\n\nTHESE ARE THE FLEET'S OWN TERMINALS, NOT THE UPSTREAM ONES. `termux` is ac_cloud-termux (Cloud Terminal, termux lineage) and `nix-on-droid` is ac_cloud-nix-on-droid (Cloud Terminal (Nix)); they stay SEPARATE entries because they are different runtimes (one nix profile, one Debian-style apt/pkg), not two spellings of one thing. This app reaches them over loopback SSH and never by packageName, so no com.termux* / cld.termux* id appears anywhere in it \u2014 which is also why it cannot repeat #605, where an upstream id was used where the fork's was meant and login could not find proot-static.\n\n`backends` IS THE SET OF CHOICES, not a default plus a special case. Configs \u2192 'Terminal backend' cycles the keys of this object in declared order (TerminalTargets.all), so adding a third env here gives it a switcher entry, a connection-override card and a setup block with no Kotlin edit; before #675 that switcher was a two-way Kotlin if/else over the two constants and a third entry would have been unreachable.\n\n`sshd_install` is the ONE command that puts sshd in that env, and it is here rather than in strings.xml because the setup instructions are GENERATED from this file (R.string.cfg_terminal_setup_env_block, filled per backend). Before #675 the instructions were one hand-written string that told the reader to start the nix-on-droid sshd on port 8022 while this file connected to 8024 \u2014 two declarations of one port, so the app asked for a listener it would never dial and the failure looked like a dead terminal.",
   "backends": {
     "termux": {
       "label": "Termux",
       "host": "127.0.0.1",
       "port": 8023,
-      "user": "termux"
+      "user": "termux",
+      "sshd_install": "pkg install openssh"
     },
     "nix-on-droid": {
       "label": "Nix-on-Droid",
       "host": "127.0.0.1",
       "port": 8024,
-      "user": "nix-on-droid"
+      "user": "nix-on-droid",
+      "sshd_install": "nix-shell -p openssh"
     }
   }
 }

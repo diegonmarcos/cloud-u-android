@@ -18,6 +18,10 @@ object TerminalTargets {
         val host:  String,
         val port:  Int,
         val user:  String,
+        /** The one command that installs sshd in this env — declared, because
+         *  the setup instructions are generated per backend rather than
+         *  hand-written once for two envs that do not share a package manager. */
+        val sshdInstall: String = "",
     )
 
     private val root: JSONObject by lazy {
@@ -37,14 +41,34 @@ object TerminalTargets {
             backends.has(IdePrefs.BACKEND_TERMUX) -> IdePrefs.BACKEND_TERMUX
             else                            -> backends.keys().next()
         }
-        val obj = backends.getJSONObject(resolvedKey)
+        return target(resolvedKey)
+    }
+
+    /** Build a [Target] from the `backends.<key>` object. Caller guarantees the key. */
+    private fun target(key: String): Target {
+        val obj = root.getJSONObject("backends").getJSONObject(key)
         return Target(
-            key   = resolvedKey,
-            label = obj.getString("label"),
-            host  = obj.getString("host"),
-            port  = obj.getInt("port"),
-            user  = obj.getString("user"),
+            key         = key,
+            label       = obj.getString("label"),
+            host        = obj.getString("host"),
+            port        = obj.getInt("port"),
+            user        = obj.getString("user"),
+            sshdInstall = obj.optString("sshd_install", ""),
         )
+    }
+
+    /**
+     * EVERY declared backend, in the order `terminal-targets.json::backends`
+     * declares them. This is what makes the choice of terminal DATA: the
+     * Configs switcher cycles this list and the setup instructions are
+     * generated from it, so a third env is a JSON edit and nothing here or in
+     * ConfigsActivity names a specific backend. The two constants in [IdePrefs]
+     * remain only as the documented default and the fallback [forBackend] uses
+     * when a stored preference names a backend the JSON no longer declares.
+     */
+    fun all(): List<Target> {
+        val backends = root.getJSONObject("backends")
+        return backends.keys().asSequence().map { target(it) }.toList()
     }
 
     /**
