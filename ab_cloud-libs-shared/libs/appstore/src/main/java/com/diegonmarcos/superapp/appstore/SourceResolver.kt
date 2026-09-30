@@ -413,8 +413,16 @@ object SourceResolver {
             ?.takeIf { s -> s.length == 64 && s.all { it in '0'..'9' || it in 'a'..'f' } }
     }.getOrNull()
 
-    /** GET [url] as JSON. Null on 404 (the thing does not exist); throws on anything else. */
-    fun getJson(url: String): JSONObject? {
+    /**
+     * GET [url] as a JSON body. Null on 404 (the thing does not exist); throws
+     * on anything else.
+     *
+     * Split out of [getJson] for #642's feed reader, which reads endpoints whose
+     * top level is an ARRAY — and a second connection helper beside this one is
+     * how two fetch paths end up with two sets of timeouts and two redirect
+     * policies. ONE request, and the caller picks the parser.
+     */
+    fun getBody(url: String): String? {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.instanceFollowRedirects = true; c.connectTimeout = TIMEOUT_MS; c.readTimeout = TIMEOUT_MS
@@ -422,9 +430,12 @@ object SourceResolver {
             val code = c.responseCode
             if (code == 404) return null
             if (code !in 200..299) error("HTTP $code from $url")
-            return JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+            return c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
     }
+
+    /** GET [url] as a JSON object. Null on 404; throws on anything else. */
+    fun getJson(url: String): JSONObject? = getBody(url)?.let { JSONObject(it) }
 
     private const val TIMEOUT_MS = 15_000
 }

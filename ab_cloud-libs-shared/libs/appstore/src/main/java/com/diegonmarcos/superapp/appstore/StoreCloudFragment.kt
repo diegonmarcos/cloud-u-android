@@ -170,6 +170,12 @@ class StoreCloudFragment : Fragment() {
         }.filter { it.rows.isNotEmpty() }
     }
 
+    // #642 the read-only feed tabs, one per entry in libs:appstore's own
+    // assets/appstore-feeds.json, sitting between the fleet groups and Perms.
+    // An unreadable declaration is NO feed tabs at all, so this page is exactly
+    // what it was before the feeds existed rather than a tab that cannot load.
+    private val feeds by lazy { FeedViewer.feeds(requireContext()) }
+
     private val statusViews = HashMap<String, TextView>()
     // The collapsed row shows a one-line summary; the full status line lives in
     // the detail pane, so both need painting from the same state.
@@ -320,7 +326,7 @@ class StoreCloudFragment : Fragment() {
         tabBtns.clear()
         // The group count is data, so five or more tabs share one row: one line
         // each, with tighter sides, keeps the bar a single height.
-        (tabs.map { it.label } + "Perms").forEachIndexed { i, label ->
+        (tabs.map { it.label } + FeedViewer.labels(feeds) + "Perms").forEachIndexed { i, label ->
             val t = TextView(ctx).apply {
                 text = label; gravity = Gravity.CENTER; textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD; maxLines = 1
@@ -344,10 +350,31 @@ class StoreCloudFragment : Fragment() {
         body.removeAllViews()
         statusViews.clear(); actionRows.clear(); installBtns.clear()
         fullStatusViews.clear(); dots.clear(); quickBtns.clear(); filterChips.clear()
-        // Past the last group is Perms. Each blurb is data beside its group, so
-        // the caption naming the out-of-process engines moves with the engines.
+        // Past the last group are the declared feeds (#642), then Perms. Each
+        // blurb is data beside its group or its feed, so the caption naming the
+        // out-of-process engines moves with the engines.
         val shown = tabs.getOrNull(tab)
-        if (shown != null) renderFleet(ctx, shown.rows, shown.blurb) else renderPerms(ctx)
+        val feed = feeds.getOrNull(tab - tabs.size)
+        when {
+            shown != null -> renderFleet(ctx, shown.rows, shown.blurb)
+            feed != null -> renderFeed(ctx, feed)
+            else -> renderPerms(ctx)
+        }
+    }
+
+    /**
+     * #642 — one declared read-only feed: the repo's commits, or its CI-CD runs.
+     *
+     * Deliberately NOT given the header bar, the filter chips or the progress
+     * row the fleet tabs carry. Those act on a selection of installable rows and
+     * there are none here: a feed row's only action is to open the link the feed
+     * itself supplied. A Check all button on a page with nothing to check is the
+     * control that lies about what the screen can do.
+     */
+    private fun renderFeed(ctx: Context, feed: FeedViewer.Feed) {
+        val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        body.addView(host)
+        FeedViewer.render(ctx, host, feed, FeedViewer.opener(ctx))
     }
 
     private fun renderFleet(ctx: Context, list: List<Fleet.App>, blurb: String) {

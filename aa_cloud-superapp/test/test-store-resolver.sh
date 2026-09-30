@@ -104,7 +104,12 @@ def validate(doc):
 
 print("== T1: declaration honesty, proven by mutation ==")
 doc = json.loads(read(mapf))
-maps = sorted(os.path.basename(p) for p in glob.glob(os.path.join(lib, "assets/*.json")))
+# ONE INSTALL-SOURCE MAP, derived from CONTENT rather than from the filename —
+# see the same rule in test-store-phone-bar.sh. A pinned name would let a second
+# resolver in as resolver2.json; this will not, and it no longer trips over a
+# declaration that installs nothing (#642's read-only feed reader).
+maps = sorted(os.path.basename(p) for p in glob.glob(os.path.join(lib, "assets/*.json"))
+              if {"sources", "resolver"} & set(json.loads(read(p))))
 if maps == ["appstore-install-sources.json"]: ok("the resolver lives inside the ONE #564 map (%s)" % maps[0])
 else: bad("a second asset map: %s" % maps)
 viol = validate(doc)

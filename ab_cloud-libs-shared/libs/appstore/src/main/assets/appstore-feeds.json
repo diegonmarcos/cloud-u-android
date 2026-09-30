@@ -1,0 +1,30 @@
+{
+  "_doc": "#642 THE ONE DECLARATION of the Store's read-only feeds: the repo's COMMITS and its CI-CD runs. Read by FeedViewer; nothing in Kotlin names a repository, an endpoint, a JSON field or a status word. One tab per entry, in this order, so a third feed (releases, issues, a second repo) is an entry here and no Kotlin at all. FeedViewer is a READER: every row's action is 'open the link the feed itself gave us', so there is nothing here that can install, write or authenticate. That is why these endpoints are the unauthenticated public ones - a token would buy nothing a reader needs and would be one more secret on the device.",
+  "_doc_fields": "`url` is fetched through SourceResolver.getBody, the store's one request path. `items` names the array inside the response; omit it when the response IS the array (GitHub's /commits). `title`/`subtitle`/`ref`/`link` are templates: every {a.b.c} is looked up as a dotted path in the item and substituted, and a path the item does not carry substitutes empty - so a feed that changes shape degrades to a thinner row instead of crashing the tab. `ref` is the short identifier drawn at the head of the row (a sha, a run number). `state` is the field whose value is matched against `ok`/`bad` below to colour the row; a value in neither list is drawn neutral, which is what an in-flight run must look like - 'not finished' is not 'failed'.",
+  "feeds": [
+    {
+      "id": "commits",
+      "label": "Commits",
+      "blurb": "The repository's commit feed, newest first. Read-only: a row opens the commit on GitHub.",
+      "url": "https://api.github.com/repos/diegonmarcos/cloud-u-android/commits?per_page=30",
+      "ref": "{sha}",
+      "title": "{commit.message}",
+      "subtitle": "{commit.author.name}  ·  {commit.author.date}",
+      "link": "{html_url}"
+    },
+    {
+      "id": "cicd",
+      "label": "CI · CD",
+      "blurb": "The CI-CD run feed, newest first. A run still going is drawn neutral, not red — unfinished is not failed. A row opens the run's own log page.",
+      "url": "https://api.github.com/repos/diegonmarcos/cloud-u-android/actions/runs?per_page=30",
+      "items": "workflow_runs",
+      "ref": "{head_sha}",
+      "title": "{name}",
+      "subtitle": "{status}  ·  {conclusion}  ·  {created_at}",
+      "link": "{html_url}",
+      "state": "conclusion",
+      "ok": ["success"],
+      "bad": ["failure", "timed_out", "startup_failure", "action_required"]
+    }
+  ]
+}

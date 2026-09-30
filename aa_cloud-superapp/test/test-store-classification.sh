@@ -151,6 +151,78 @@ named = ["%s: %s" % (f, k) for f, t in store_files.items() for k in keys if '"%s
 if keys and not named: ok("no installer package from the map (%s) is written into the store's code" % ", ".join(keys))
 else: bad("an installer package is hardcoded outside the one map (#102): %s" % named)
 
+print("== T7: #642 the COMMITS and CI-CD feeds are a READER over ONE declaration ==")
+# Same rule as the install-source map above, applied to the feeds: the store may
+# hold no repository, endpoint, JSON field or status word of its own. Every
+# assertion is derived FROM the declaration, so it grows with the file - a third
+# feed is covered the moment it is declared, and a test that only ever sees
+# today's two is exactly the hollow shape this file already avoids for stores.
+feeds_asset = os.path.join(store_dir, "../../../../../assets/appstore-feeds.json")
+if not os.path.exists(feeds_asset):
+    bad("appstore-feeds.json is missing — the feed tabs cannot be declared")
+else:
+    decl = json.loads(read(feeds_asset))
+    feeds = decl.get("feeds", [])
+    viewer = store_files.get("FeedViewer.kt", "")
+    if not viewer: bad("FeedViewer.kt is missing — nothing renders the declared feeds")
+    # (a) The declaration is usable: every feed needs the id/label/url a tab is
+    #     built from. A feed short of one draws a nameless tab that cannot fetch.
+    short = [f.get("id", "?") for f in feeds if not (f.get("id") and f.get("label") and f.get("url"))]
+    if feeds and not short: ok("all %d declared feed(s) carry id, label and url" % len(feeds))
+    else: bad("feed(s) with no id/label/url, or no feed declared at all: %s" % (short or "none declared"))
+    # (b) ZERO KOTLIN for a new feed. No id, label, url, host, items key, state
+    #     field or status word from the declaration may appear in the store's
+    #     code. This is the assertion that fails when someone hardcodes a tab.
+    owned = set()
+    for f in feeds:
+        for key in ("id", "label", "url", "items", "state"):
+            if f.get(key): owned.add(f[key])
+        for key in ("ok", "bad"):
+            owned.update(f.get(key) or [])
+        # the repo/host out of the endpoint, and every templated field path
+        m = re.match(r"https?://([^/]+)/([^?]*)", f.get("url", ""))
+        if m:
+            owned.add(m.group(1))
+            owned.update(p for p in m.group(2).split("/") if p)
+        for key in ("ref", "title", "subtitle", "link"):
+            owned.update(re.findall(r"\{([A-Za-z0-9_.]+)\}", f.get(key, "")))
+    owned = {w for w in owned if len(w) > 2}
+    leaked = sorted({"%s: %r" % (fn, w) for fn, t in store_files.items()
+                     for w in owned if '"%s"' % w in t})
+    if owned and not leaked:
+        ok("none of the %d declared feed strings is written in the store's code" % len(owned))
+    else: bad("a feed string is hardcoded outside the one declaration: %s" % "; ".join(leaked[:6]))
+    # (c) ONE REQUEST PATH. The reader must not open a connection of its own —
+    #     a second one is a second timeout and a second redirect policy.
+    if "SourceResolver.getBody(" in viewer: ok("the reader fetches through SourceResolver, the store's one request path")
+    else: bad("FeedViewer does not fetch through SourceResolver — it has its own network path")
+    own_net = re.search(r"openConnection|HttpURLConnection|URL\(", viewer)
+    if not own_net: ok("FeedViewer opens no connection of its own")
+    else: bad("FeedViewer opens its own connection (%s) beside SourceResolver" % own_net.group(0))
+    # (d) A READER CANNOT ACT. No install, commit or uninstall reachable from it.
+    acts = [n for n in ("Fleet.commit(", "Fleet.install", "FleetInstall.run(", "Fleet.uninstall(",
+                        "BootstrapInstall.") if n in viewer]
+    if not acts: ok("the feed reader reaches no install or uninstall path")
+    else: bad("FeedViewer can act on the device: %s" % acts)
+    # (e) EMPTY IS NOT FAILED. Both outcomes must be drawn, and drawn
+    #     differently: a fetch that threw and rendered as an empty list is the
+    #     quiet-green shape that keeps costing this repo days.
+    if "onFailure" in viewer and "isEmpty()" in viewer:
+        ok("a failed fetch and an empty feed are separate branches")
+    else: bad("FeedViewer does not distinguish a failed fetch from an empty feed")
+    # (f) IN-FLIGHT IS NEUTRAL. A run that has not finished carries a state in
+    #     neither ok nor bad, and must not be coloured as a failure.
+    if re.search(r"in feed\.ok\s*->", viewer) and re.search(r"in feed\.bad\s*->", viewer) \
+       and re.search(r"else\s*->", viewer):
+        ok("a state in neither ok nor bad falls to a neutral else — unfinished is not failed")
+    else: bad("FeedViewer has no neutral branch: an in-flight run would be coloured as a verdict")
+    # (g) The strip is a RENDERING of the declaration, and parse() is separable
+    #     so a test can hand it a feed list it invented.
+    if "FeedViewer.labels(feeds)" in cloud: ok("the tab strip is FeedViewer.labels over the declared feeds")
+    else: bad("StoreCloudFragment does not build its feed tabs from FeedViewer.labels")
+    if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
+    else: bad("FeedViewer.parse is not separable from the asset")
+
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
 PY

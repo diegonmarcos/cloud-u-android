@@ -87,7 +87,14 @@ src = json.loads(read(os.path.join(lib, "assets/appstore-install-sources.json"))
 installers = sorted(src["sources"])
 dup = ["%s: %s" % (f, k) for f, t in kt.items() for k in installers if '"%s"' % k in t]
 dup += [f for f, t in kt.items() if '"deeplink"' in t and f != "PhoneAppActions.kt"]
-maps = [os.path.basename(p) for p in glob.glob(os.path.join(lib, "assets/*.json"))]
+# THE INVARIANT IS ONE INSTALL-SOURCE MAP, not one file in assets/. Derived from
+# CONTENT — a file declaring `sources` or `resolver` is an install-source map —
+# so this stays strict where it matters (a second map cannot slip in under a new
+# filename, which a pinned-name check would have allowed) and stops failing on a
+# declaration that installs nothing: #642's read-only commits/CI-CD feed reader
+# is not an installer map and never was.
+maps = sorted(os.path.basename(p) for p in glob.glob(os.path.join(lib, "assets/*.json"))
+              if {"sources", "resolver"} & set(json.loads(read(p))))
 if installers and not dup and maps == ["appstore-install-sources.json"]:
     ok("one map (%s), read only by PhoneAppActions" % ", ".join(installers))
 else: bad("a second installer map or a hardcoded installer: %s %s" % (dup, maps))
