@@ -1,0 +1,306 @@
+package com.diegonmarcos.clouddrive.debugapi
+
+import android.content.Context
+import com.diegonmarcos.clouddrive.BuildConfig
+import com.diegonmarcos.clouddrive.DriveDebugLog
+import com.diegonmarcos.clouddrive.GitSyncWorker
+import com.diegonmarcos.clouddrive.SharedStore
+import com.diegonmarcos.clouddrive.configs.DriveAuthApply
+import com.diegonmarcos.clouddrive.configs.DriveGitChain
+import com.diegonmarcos.clouddrive.sync.FleetGit
+import com.diegonmarcos.clouddrive.sync.FleetSession
+import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
+import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
+import com.diegonmarcos.superapp.devtools.AppDebugServer
+import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
+/**
+ * #669 THE SYNC ▸ GIT FLOW, EXERCISABLE FROM THE PHONE'S OWN SHELL.
+ *
+ * cloud-drive already answers on loopback: libs:core pulls libs:devtools in with an
+ * `api` dependency, whose [AppDebugServer] binds the first free 127.0.0.1 port in
+ * 38090..38139 and gates every route except /api/system/ping behind the fleet's ONE
+ * Bearer token ([com.diegonmarcos.superapp.devtools.FleetToken] — SuperApp mints it,
+ * siblings adopt it over the signature-guarded provider, and an unauthorized banner
+ * proves liveness). This file adds nothing to that transport and NO SECOND SERVER:
+ * it registers this app's own route groups on the shared server, the exact
+ * extension point [AppDebugServer.route] was built for. Loopback bind, token gate,
+ * port-conflict handling and discovery (/api/docs) are therefore the fleet's,
+ * not re-implemented here.
+ *
+ * WHY: the git flow's static suites are green while the flow on the OWNED PHONE can
+ * still be broken — a chain that falls through for a live-network reason, a listing
+ * the edge redirects, a clone that rides the wrong leg. An agent in termux IS on the
+ * phone, so these routes let it run the REAL chain/listing/clone in-process and read
+ * the same outcomes the page shows.
+ *
+ * EVERY HANDLER REUSES THE PAGE'S PATH — [DriveGitChain.resolve], [FleetGit.repos],
+ * [GitSyncCoordinator.cloneInto] — and never re-implements a verb. A route that
+ * cloned through its own JGit call would be a second clone implementation whose
+ * green says nothing about the page.
+ *
+ * NEVER A SECRET IN A RESPONSE. No token, cookie value or Authorization value is
+ * ever echoed or logged: the chain route reads the outcome's narrative (whose
+ * toString is redacted by design), the state route reports session PRESENCE as a
+ * boolean only, listings carry names and owners but no URLs (a listing URL's
+ * userinfo could carry a credential), and clone responses name only the URL's HOST
+ * via [GitSyncCoordinator.hostOf]. The session route accepts a cookie and answers
+ * with a boolean.
+ *
+ * EVERY RESPONSE CARRIES AN HONEST STATUS: `ok` plus the same loud words the page
+ * would show. A clone that fails returns the engine's own failure sentence, never
+ * an empty 200.
+ */
+object DriveDebugApi {
+
+    private const val TAG = "DriveDebugApi"
+
+    /** A clone over mobile data can be legitimately slow; past this the route
+     *  reports timeout WITHOUT killing the clone — it keeps running and the
+     *  outcome lands in /api/git/state's lastSync + the on-device debug log. */
+    private const val CLONE_WAIT_MS = 120_000L
+    private const val POLL_MS = 250L
+
+    private const val TAIL_DEFAULT = 200
+    private const val TAIL_MAX = 2_000
+
+    @Volatile
+    private var registered = false
+
+    /** The page's own coordinator class over the SAME registry file and store the
+     *  screen and the worker use — a repository cloned here and one cloned from
+     *  the page are indistinguishable afterwards. */
+    @Volatile
+    private var coordinator: GitSyncCoordinator? = null
+
+    private fun coordinator(ctx: Context): GitSyncCoordinator =
+        coordinator ?: synchronized(this) {
+            coordinator ?: GitSyncCoordinator(
+                ctx.applicationContext,
+                CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            ).also { coordinator = it }
+        }
+
+    /** Idempotent; called by [DriveDebugApiProvider] before Application.onCreate. */
+    fun register(ctx: Context) {
+        if (registered) return
+        registered = true
+        val app = ctx.applicationContext
+
+        AppDebugServer.route(
+            "health",
+            listOf(AppDebugServer.Op("", "", "app alive: applicationId, version_code, store root path")),
+        ) { _, _ -> healthJson(app) }
+
+        AppDebugServer.route(
+            "git",
+            listOf(
+                AppDebugServer.Op("state", "", "registered repos (name, path, remote HOST only, authKind, lastSync) + whether a fleet session is present (boolean only)"),
+                AppDebugServer.Op("chain", "", "run DriveGitChain.resolve with the in-process session; outcome narrative + answeredBy, never a token"),
+                AppDebugServer.Op("list", "rung=<declared rung id, optional>", "run the fleet listing (FleetGit.repos) with the in-process session; count + names/owners, no URLs"),
+                AppDebugServer.Op("clone", "name=<repo>&url=<clone url, optional — blank resolves it from the fleet listing the way the page does>", "clone through the page's own path (GitSyncCoordinator.cloneInto) and wait for the real outcome"),
+            ),
+        ) { op, query -> gitRoute(app, op, query) }
+
+        AppDebugServer.route(
+            "session",
+            listOf(AppDebugServer.Op("", "cookie=<fleet session cookie>", "inject a fleet web session into FleetSession for test purposes; the value is held in-process only and NEVER echoed — the answer is a boolean")),
+        ) { _, query -> sessionJson(query) }
+
+        AppDebugServer.route(
+            "log",
+            listOf(AppDebugServer.Op("tail", "lines=N (default $TAIL_DEFAULT, max $TAIL_MAX)", "tail of the on-device debug log (Download/${BuildConfig.DEBUG_LOG_DIR}/)")),
+        ) { op, query -> if (op == "tail") logTailJson(app, query) else null }
+    }
+
+    // ── /api/health ─────────────────────────────────────────────────────────
+
+    private fun healthJson(ctx: Context): String {
+        val root = runCatching { SharedStore.root().absolutePath }.getOrElse { "unavailable: ${it.message}" }
+        return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}"}"""
+    }
+
+    // ── /api/git/* ──────────────────────────────────────────────────────────
+
+    private fun gitRoute(ctx: Context, op: String, query: Map<String, String>): String? = when (op) {
+        "state" -> stateJson(ctx)
+        "chain" -> chainJson(ctx)
+        "list" -> listJson(query["rung"].orEmpty())
+        "clone" -> cloneJson(ctx, query)
+        else -> null
+    }
+
+    /** The registry the page and the worker share, plus session PRESENCE — a boolean
+     *  and nothing else. The remote is reported as its HOST only: a full URL's
+     *  userinfo could carry a credential. */
+    private fun stateJson(ctx: Context): String {
+        val repos = runCatching {
+            RepoRegistry(File(ctx.filesDir, GitSyncWorker.REGISTRY_FILE)).load()
+        }.getOrElse { return errJson("registry read failed: ${it.message ?: it}") }
+        return buildString {
+            append("""{"ok":true,"fleet_session_present":${FleetSession.present},"count":${repos.size},"repos":[""")
+            repos.forEachIndexed { i, r ->
+                if (i > 0) append(',')
+                append("""{"name":"${esc(r.name)}",""")
+                append(""""path":"${esc(r.path)}",""")
+                append(""""remote_host":"${esc(GitSyncCoordinator.hostOf(r.remoteUrl))}",""")
+                append(""""auth_kind":"${esc(r.authKind)}",""")
+                append(""""last_sync_epoch":${r.lastSyncEpochSeconds},""")
+                append(""""last_sync_summary":"${esc(r.lastSyncSummary)}"}""")
+            }
+            append("]}")
+        }
+    }
+
+    /** The REAL chain, with the in-process session. The narrative is the page's own
+     *  account of every rung; the outcome's token is deliberately never read here. */
+    private fun chainJson(ctx: Context): String {
+        val outcome = runCatching { DriveGitChain.resolve(ctx, session = FleetSession.cookie) }
+            .getOrElse { return errJson("chain threw: ${it.message ?: it}") }
+        return """{"ok":${outcome.ok},"answered_by":${jsonStr(outcome.answeredBy)},"narrative":"${esc(outcome.narrative())}"}"""
+    }
+
+    /** The REAL fleet listing. Names and owners only — the listing's clone URLs stay
+     *  in-process (they feed /api/git/clone), because a listing URL can carry a
+     *  credential in its userinfo. */
+    private fun listJson(rungId: String): String =
+        when (val out = runCatching { FleetGit.repos(FleetSession.cookie, rungId) }
+            .getOrElse { return errJson("listing threw: ${it.message ?: it}") }) {
+            is FleetGit.Outcome.Listed -> buildString {
+                append("""{"ok":true,"status":"listed","count":${out.repos.size},"repos":[""")
+                out.repos.forEachIndexed { i, r ->
+                    if (i > 0) append(',')
+                    append("""{"name":"${esc(r.name)}","owner":"${esc(r.owner)}","private":${r.private}}""")
+                }
+                append("]}")
+            }
+            is FleetGit.Outcome.Refused ->
+                """{"ok":false,"status":"refused","http":${out.code},"why":"${esc(out.why)}"}"""
+            is FleetGit.Outcome.Blocked ->
+                """{"ok":false,"status":"blocked","http":${out.code},"why":"the edge redirected without reaching the service"}"""
+            is FleetGit.Outcome.Unreachable ->
+                """{"ok":false,"status":"unreachable","why":"${esc(out.why)}"}"""
+        }
+
+    /**
+     * THE PAGE'S CLONE, DRIVEN AND WAITED ON. Same decision order as
+     * GitReposScreen.clone: a caller-supplied URL is the listing's truth; a blank one
+     * is resolved the way the page resolves it — the chain names the rung that
+     * answered, that rung's listing supplies the URL — and a repository the listing
+     * does not carry is a loud error, never a re-templated guess (#669's wrong-leg
+     * defect). The clone itself is ONLY [GitSyncCoordinator.cloneInto]; this route
+     * then waits on the coordinator's own opResults for the engine's real outcome.
+     *
+     * SEAM(#669-AUTH): the credential presented is today's committed path — the
+     * vault import's GitHub token when one is on the phone, none otherwise. When
+     * GitEngine session auth lands on main, cloneInto inherits it and this route
+     * rides along with no edit here.
+     */
+    private fun cloneJson(ctx: Context, query: Map<String, String>): String {
+        val name = query["name"].orEmpty().trim()
+        if (name.isBlank()) return errJson("clone needs ?name=<repo>")
+        val c = coordinator(ctx)
+        if (c.cloning.value.contains(name)) return errJson("'$name' is already cloning")
+
+        var url = query["url"].orEmpty().trim()
+        var leg = "caller-supplied url"
+        if (url.isBlank()) {
+            val chain = runCatching { DriveGitChain.resolve(ctx, session = FleetSession.cookie) }
+                .getOrElse { return errJson("chain threw: ${it.message ?: it}") }
+            if (!chain.ok) return errJson("no rung answered, so no listing can name the URL: ${chain.narrative()}")
+            val rung = chain.answeredBy.orEmpty()
+            when (val out = runCatching { FleetGit.repos(FleetSession.cookie, rung) }
+                .getOrElse { return errJson("listing threw: ${it.message ?: it}") }) {
+                is FleetGit.Outcome.Listed -> {
+                    val hit = out.repos.firstOrNull { it.name == name }
+                        ?: return errJson("'$name' is not in the fleet listing (rung '$rung', ${out.repos.size} repos)")
+                    if (hit.cloneUrl.isBlank()) return errJson("the listing carries no clone URL for '$name'")
+                    url = hit.cloneUrl
+                    leg = "fleet listing (rung '$rung')"
+                }
+                is FleetGit.Outcome.Refused -> return errJson("the fleet refused this identity (HTTP ${out.code})")
+                is FleetGit.Outcome.Blocked -> return errJson("the edge redirected (HTTP ${out.code}) without reaching the service")
+                is FleetGit.Outcome.Unreachable -> return errJson("the fleet is unreachable: ${out.why}")
+            }
+        }
+
+        // The DESTINATION IS THE COORDINATOR'S TO PICK, not this route's: clones are
+        // parallel per source (the same name from gitea and from GitHub are two
+        // different clones), so the outcome is read back by DIFFING the
+        // coordinator's own opResults rather than precomputing a store path.
+        val before = c.opResults.value
+        val token = runCatching { DriveAuthApply.vaultGitToken(ctx) }.getOrDefault("")
+        c.cloneInto(
+            name = name,
+            url = url,
+            authKind = if (token.isBlank()) GitSyncCoordinator.AUTH_NONE else GitSyncCoordinator.AUTH_HTTPS,
+            username = GitSyncCoordinator.DEFAULT_AUTHOR,
+            token = token,
+        )
+        val host = GitSyncCoordinator.hostOf(url)
+        fun outcome(): String? {
+            val r = c.opResults.value.entries.firstOrNull { (k, v) -> before[k] !== v }?.value ?: return null
+            return """{"ok":${r.ok},"status":"${if (r.ok) "cloned" else "failed"}","host":"${esc(host)}","leg":"${esc(leg)}","summary":"${esc(r.summary)}","details":"${esc(r.details)}"}"""
+        }
+        if (!c.cloning.value.contains(name)) {
+            // Either it already finished (a very fast failure records its outcome
+            // first) or cloneInto's own guard refused to start — tell which.
+            return outcome()
+                ?: errJson("the coordinator refused to start the clone (blank input or a duplicate in flight)")
+        }
+
+        val deadline = System.currentTimeMillis() + CLONE_WAIT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (!c.cloning.value.contains(name)) {
+                return outcome()
+                    ?: errJson("the clone finished but recorded no outcome — read /api/git/state and /api/log/tail")
+            }
+            Thread.sleep(POLL_MS)
+        }
+        return """{"ok":false,"status":"timeout","host":"${esc(host)}","leg":"${esc(leg)}","why":"no outcome within ${CLONE_WAIT_MS / 1000}s — the clone keeps running; read /api/git/state and /api/log/tail for its result"}"""
+    }
+
+    // ── /api/session ────────────────────────────────────────────────────────
+
+    /** GUARDED as the transport guards everything: loopback-only + fleet Bearer.
+     *  The cookie is written into [FleetSession] — process memory, no store, same
+     *  slot the sign-in host writes — and the answer is a BOOLEAN. There is no read
+     *  route for it and this route never echoes it. */
+    private fun sessionJson(query: Map<String, String>): String {
+        val cookie = query["cookie"].orEmpty()
+        if (cookie.isBlank()) {
+            return errJson("need ?cookie=<fleet session> — held in process memory only, never echoed or persisted")
+        }
+        FleetSession.remember(cookie)
+        return """{"ok":true,"session_present":${FleetSession.present}}"""
+    }
+
+    // ── /api/log/tail ───────────────────────────────────────────────────────
+
+    private fun logTailJson(ctx: Context, query: Map<String, String>): String {
+        val n = (query["lines"]?.toIntOrNull() ?: TAIL_DEFAULT).coerceIn(1, TAIL_MAX)
+        val text = DriveDebugLog.tail(ctx, n)
+        return """{"ok":true,"lines":$n,"text":"${esc(text)}"}"""
+    }
+
+    // ── helpers ─────────────────────────────────────────────────────────────
+
+    private fun errJson(why: String): String = """{"ok":false,"why":"${esc(why)}"}"""
+
+    private fun jsonStr(s: String?): String = if (s == null) "null" else "\"${esc(s)}\""
+
+    /** Same escaping the shared server uses, plus control chars a log tail can carry. */
+    internal fun esc(s: String): String = buildString(s.length) {
+        for (ch in s) when (ch) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else -> if (ch < ' ') append("\\u%04x".format(ch.code)) else append(ch)
+        }
+    }
+}

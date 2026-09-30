@@ -153,6 +153,39 @@ t6() {
     return $bad
 }
 
+# t7 <DriveDebugLog.kt> : ONE FILE, MANY LINES — the append MECHANISM.
+# Measured on the owner's phone (2026-09-30): 13 files of one line each,
+# "drive-debug.log.txt", "drive-debug.log (1).txt" … (12).txt. MediaStore
+# renamed the text/plain row to <name>.txt on insert, the exact-name re-query
+# then matched nothing, and every line minted a fresh " (N)" row. Four pins:
+#   a) the resolved row Uri is CACHED for the process (one insert, ever)
+#   b) the re-query matches the name MediaStore actually stored (<name> OR
+#      <name>.txt), so a restarted process appends instead of duplicating
+#   c) exactly ONE insert call in the logger, and the stream opens in "wa"
+#      (append) mode — "w" would also produce one line per file
+#   d) with All-Files-Access (this app IS a file manager) the write is a plain
+#      path APPEND, no MediaStore naming semantics at all
+t7() {
+    local logger="$1" bad=0
+    [ "$(_code "$logger" | grep -cE 'private var cachedRow')" -ge 1 ] \
+        || { echo "    the row Uri is not cached — every line re-resolves and can re-insert"; bad=1; }
+    [ "$(_code "$logger" | grep -cE 'cachedRow = target')" -ge 1 ] \
+        || { echo "    the inserted row is never remembered — the cache is decorative"; bad=1; }
+    [ "$(_code "$logger" | grep -cE 'var uri(: Uri\?)? = cachedRow')" -ge 1 ] \
+        || { echo "    the append never consults the cache"; bad=1; }
+    [ "$(_code "$logger" | grep -cE '"\$name\.txt"')" -ge 1 ] \
+        || { echo "    the re-query ignores the .txt MediaStore appends — a restarted process mints ' (N)' duplicates again"; bad=1; }
+    [ "$(_code "$logger" | grep -c 'cr.insert(')" -eq 1 ] \
+        || { echo "    not exactly one insert call — a second insert is a second file"; bad=1; }
+    [ "$(_code "$logger" | grep -cE 'uri \?: cr\.insert\(')" -ge 1 ] \
+        || { echo "    the insert is not guarded by 'no existing row' — a fresh row per write"; bad=1; }
+    [ "$(_code "$logger" | grep -cE 'openOutputStream\(target, "wa"\)')" -ge 1 ] \
+        || { echo "    the stream is not opened in append mode — every write truncates to one line"; bad=1; }
+    [ "$(_code "$logger" | grep -cE 'isExternalStorageManager\(\)')" -ge 1 ] \
+        || { echo "    no All-Files-Access plain-path append — the file manager's own permission unused"; bad=1; }
+    return $bad
+}
+
 echo "── T1 the folder is declared once, baked, and no Kotlin literal ──"
 t1 "$BJ" "$GRADLE" "$LOGGER" && pass "diagnostics.debug_log_dir → BuildConfig.DEBUG_LOG_DIR → Download/, no hardcoded name" \
     || fail "the debug-log folder is missing, hardcoded, or not under Download/"
@@ -176,6 +209,10 @@ t5 "$SEED" && pass "every seed outcome and migration decision lands in Download/
 echo "── T6 no secret can reach the logger ──"
 t6 "$SRC_MAIN" && pass "no token/cookie/session/authorization value and no raw url at any call site" \
     || fail "a credential could land in a world-readable Download/ file"
+
+echo "── T7 one file, many lines: cached row + .txt-aware re-query + append mode ──"
+t7 "$LOGGER" && pass "one insert ever, cached Uri, .txt-aware match, 'wa' stream, All-Files-Access path append" \
+    || fail "the log can shatter into one-line ' (N)' files again (measured: 13 of them)"
 
 # ══ MUT every check above goes RED when its property is broken ══════════════
 MUT="$(mktemp -d)"
@@ -269,6 +306,21 @@ _stage && _green "t6" t6 "$W" && {
 _stage && _green "t6" t6 "$W" && {
     _sub "$W/sync/GitSyncCoordinator.kt" 'host=${hostOf(url)} dest=${dir.name} auth=$authKind' 'url=$url dest=${dir.name} auth=$authKind'
     _red "T6 the raw url (userinfo-capable) at a call site is caught" t6 "$W"; }
+_stage && _green "t7" t7 "$W/DriveDebugLog.kt" && {
+    _sub "$W/DriveDebugLog.kt" 'cachedRow = target' 'Unit'
+    _red "T7 the inserted row forgotten — every line re-resolves" t7 "$W/DriveDebugLog.kt"; }
+_stage && _green "t7" t7 "$W/DriveDebugLog.kt" && {
+    _sub "$W/DriveDebugLog.kt" 'arrayOf(name, "$name.txt", "$relativePath/")' 'arrayOf(name, name, "$relativePath/")'
+    _red "T7 the re-query blind to MediaStore's .txt rename — the measured 13-file storm" t7 "$W/DriveDebugLog.kt"; }
+_stage && _green "t7" t7 "$W/DriveDebugLog.kt" && {
+    _sub "$W/DriveDebugLog.kt" 'openOutputStream(target, "wa")' 'openOutputStream(target, "w")'
+    _red "T7 truncate-on-write — one line per file by another road" t7 "$W/DriveDebugLog.kt"; }
+_stage && _green "t7" t7 "$W/DriveDebugLog.kt" && {
+    _sub "$W/DriveDebugLog.kt" 'Environment.isExternalStorageManager()' 'false'
+    _red "T7 the All-Files-Access plain append dropped" t7 "$W/DriveDebugLog.kt"; }
+_stage && _green "t7" t7 "$W/DriveDebugLog.kt" && {
+    _sub "$W/DriveDebugLog.kt" 'val target = uri ?: cr.insert(' 'val target = cr.insert('
+    _red "T7 an unconditional insert — a fresh row per write even with a cache" t7 "$W/DriveDebugLog.kt"; }
 
 echo
 if [ "$FAILURES" -eq 0 ] && [ "$HOLLOW" -eq 0 ]; then

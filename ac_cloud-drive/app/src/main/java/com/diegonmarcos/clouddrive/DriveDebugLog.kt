@@ -71,19 +71,54 @@ object DriveDebugLog {
     private val relativePath: String
         get() = "${Environment.DIRECTORY_DOWNLOADS}/${BuildConfig.DEBUG_LOG_DIR}"
 
+    /**
+     * The ONE MediaStore row this process appends to, resolved once and reused.
+     *
+     * MEASURED DEFECT (2026-09-30, the owner's phone): every write re-resolved the
+     * row by DISPLAY_NAME=drive-debug.log — but MediaStore had RENAMED the row to
+     * `drive-debug.log.txt` on insert (a text/plain row whose display name lacks a
+     * .txt extension gets one appended), so the exact-name query matched nothing,
+     * every line inserted a fresh row, and Download's same-name semantics minted
+     * `drive-debug.log (1).txt` … `(12).txt` — THIRTEEN FILES OF ONE LINE EACH.
+     * Two fixes, both required: the resolved Uri is CACHED for the process
+     * lifetime (one insert, ever), and [findRow] matches the name MediaStore
+     * actually stored (exact OR with the .txt it appends), so a restarted process
+     * finds yesterday's row instead of minting a duplicate.
+     */
+    @Volatile
+    private var cachedRow: Uri? = null
+
     /** Android 10+: append to our own MediaStore row in Download/<dir>/, rolling past the cap. */
     private fun appendViaMediaStore(ctx: Context, payload: String) {
+        // With All-Files-Access (this app IS a file manager — MANAGE_EXTERNAL_STORAGE
+        // is its normal state) a plain path append is legal on 11+ and genuinely
+        // appends: ONE file, many lines, no MediaStore naming semantics at all.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            appendLegacy(payload)
+            return
+        }
         val cr = ctx.contentResolver
-        var row = findRow(ctx, FILE_NAME)
-        if (row != null && row.second > MAX_BYTES) {
+        var uri: Uri? = cachedRow
+        var size = -1L
+        val cached = uri
+        if (cached != null) {
+            size = runCatching { cr.openFileDescriptor(cached, "r")?.use { it.statSize } ?: -1L }.getOrDefault(-1L)
+            if (size < 0) { cachedRow = null; uri = null } // row deleted under us
+        }
+        if (uri == null) {
+            findRow(ctx, FILE_NAME)?.let { uri = it.first; size = it.second }
+        }
+        val full = uri
+        if (full != null && size > MAX_BYTES) {
             // Roll: the previous generation becomes .1 (any older .1 is dropped first).
             findRow(ctx, "$FILE_NAME.1")?.let { cr.delete(it.first, null, null) }
             runCatching {
-                cr.update(row.first, ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, "$FILE_NAME.1") }, null, null)
+                cr.update(full, ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, "$FILE_NAME.1") }, null, null)
             }
-            row = null
+            cachedRow = null
+            uri = null
         }
-        val uri = row?.first ?: cr.insert(
+        val target = uri ?: cr.insert(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, FILE_NAME)
@@ -91,18 +126,25 @@ object DriveDebugLog {
                 put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
             },
         ) ?: return
-        cr.openOutputStream(uri, "wa")?.use { it.write(payload.toByteArray()) }
+        cachedRow = target
+        cr.openOutputStream(target, "wa")?.use { it.write(payload.toByteArray()) }
     }
 
-    /** Our row for [name] under Download/<dir>/, with its size — or null before the first write. */
+    /**
+     * Our row for [name] under Download/<dir>/, with its size — or null before the
+     * first write. Matches [name] exactly OR as `<name>.txt`, because MediaStore
+     * appends `.txt` to a text/plain display name whose extension it does not
+     * recognise (`.log` is not in its map) — matching only the name WE asked for
+     * is exactly what turned this log into thirteen one-line files.
+     */
     private fun findRow(ctx: Context, name: String): Pair<Uri, Long>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         val projection = arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads.SIZE)
         ctx.contentResolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             projection,
-            "${MediaStore.Downloads.DISPLAY_NAME}=? AND ${MediaStore.Downloads.RELATIVE_PATH}=?",
-            arrayOf(name, "$relativePath/"),
+            "(${MediaStore.Downloads.DISPLAY_NAME}=? OR ${MediaStore.Downloads.DISPLAY_NAME}=?) AND ${MediaStore.Downloads.RELATIVE_PATH}=?",
+            arrayOf(name, "$name.txt", "$relativePath/"),
             null,
         )?.use { c ->
             if (c.moveToFirst()) {
@@ -112,6 +154,30 @@ object DriveDebugLog {
         }
         return null
     }
+
+    /**
+     * #669 the tail of this log, for the loopback debug API (/api/log/tail) — the same
+     * bytes a file manager reads from Download/<dir>/, served in-process so an agent on
+     * the phone needs no storage grant. Reads our own MediaStore row (or the legacy
+     * file) whole — the rotation caps it at [MAX_BYTES] — and keeps the last [lines].
+     * The log carries no secret by the rule at the top of this file, so tailing it
+     * cannot either.
+     */
+    fun tail(ctx: Context, lines: Int): String = runCatching {
+        val direct = File(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), BuildConfig.DEBUG_LOG_DIR), FILE_NAME)
+        val text = if (direct.exists()) {
+            // The All-Files-Access append path — the same file, read the same way.
+            direct.readText()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val row = findRow(ctx, FILE_NAME) ?: return@runCatching "no debug log yet\n"
+            ctx.contentResolver.openInputStream(row.first)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
+        } else {
+            val f = File(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), BuildConfig.DEBUG_LOG_DIR), FILE_NAME)
+            if (!f.exists()) return@runCatching "no debug log yet\n"
+            f.readText()
+        }
+        text.lines().takeLast(lines.coerceAtLeast(1)).joinToString("\n")
+    }.getOrElse { "debug log read failed: $it\n" }
 
     /** Android 9 and below: a plain file in the public Download/<dir>/, same rotation. */
     private fun appendLegacy(payload: String) {

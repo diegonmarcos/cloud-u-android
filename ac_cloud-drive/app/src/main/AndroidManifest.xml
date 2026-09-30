@@ -128,5 +128,14 @@
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />
+
+        <!-- #669 registers the Sync▸Git debug routes (health/git/session/log) on the
+             fleet's loopback AppDebugServer (127.0.0.1:38090+, fleet Bearer) before
+             Application.onCreate — same init trick as libs:devtools' DebugInitProvider.
+             Not exported and not a real provider: onCreate is the whole point. -->
+        <provider
+            android:name=".debugapi.DriveDebugApiProvider"
+            android:authorities="${applicationId}.drivedebugapi"
+            android:exported="false" />
     </application>
 </manifest>
