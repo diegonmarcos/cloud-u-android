@@ -27,6 +27,7 @@ Usage:
 "add text to a generated file" job as the login-inner patch above, on a zip
 this function already has open.
 """
+import importlib.util
 import os
 import re
 import stat
@@ -35,6 +36,36 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+
+# #644 -- the declarative link store, shared with ac_cloud-termux. Located from
+# this file rather than passed in, so wiring it needed no new gradle argument and
+# no edit to cloud-nix-on-droid-fork-engine.sh (whose vendored build.sh copy must
+# stay byte-identical to it).
+STORE_SRC = Path(__file__).resolve().parents[5] / "ab_cloud-terminal-store"
+
+
+def load_render_store():
+    """ab_cloud-terminal-store/render-store.py, imported by path (its name has a dash)."""
+    path = STORE_SRC / "render-store.py"
+    if not path.is_file():
+        raise ValueError(f"the shared link store is missing: {path}")
+    spec = importlib.util.spec_from_file_location("render_store", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def store_init_line(install_dir: str) -> str:
+    """#644 -- the line that makes a login initialise, verify and repair the store.
+
+    Guarded on readability, so a bootstrap built before this block (or one whose
+    store failed to bake) still reaches a shell: the store is worth a terminal's
+    tooling, never a terminal's existence. Pure str -> str like every other patch
+    here, so the tester asserts the real line.
+    """
+    return (f'if [ -r "/{install_dir}/login-init.sh" ]; then\n'
+            f'  . "/{install_dir}/login-init.sh"\n'
+            'fi')
 
 SESSION_INIT_TEMPLATE = (
     '. "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/'
@@ -100,7 +131,7 @@ def env_target_unreachable(env_rel, existing, new_files, new_executables):
 
 
 def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
-                      profile_link: str, login_shell: str) -> str:
+                      profile_link: str, login_shell: str, store_install_dir: str = "") -> str:
     """The text edits #595/#638/#641 make to the generated usr/lib/login-inner.
 
     Pure str -> str so test/test-bootstrap-baked.sh can run the REAL patch
@@ -113,6 +144,12 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
         raise ValueError(f"expected session-init line not found in usr/lib/login-inner:\n  {want}")
     head, _, tail = login_inner.rpartition(want)
     fallback_line = f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi'
+    # #644 -- and the store, UNCONDITIONALLY: outside the if/else above, because
+    # the branch that runs depends on whether a real nix-on-droid generation was
+    # ever built, while the link store has to be initialised and verified either
+    # way. It goes after, so the profile PATH the fallback exports is already set.
+    if store_install_dir:
+        fallback_line = fallback_line + "\n" + store_init_line(store_install_dir)
     login_inner = head + fallback_line + tail
 
     # #641 -- this exec GOES, it is not merely guarded any more, and #640 is why:
@@ -316,10 +353,26 @@ def main() -> int:
                 1,
             )
 
+            # ── #644: the declarative link store, and its login wiring ─────
+            try:
+                render_store = load_render_store()
+                store_decl = render_store.load()["store"]
+                store_dir = store_decl["install_dir"]
+                store_files = {
+                    store_decl["engine"]: ((STORE_SRC / store_decl["engine"]).read_bytes(), True),
+                    "login-init.sh": ((STORE_SRC / "login-init.sh").read_bytes(), False),
+                    "login-exec": ((STORE_SRC / "login-exec").read_bytes(), True),
+                    "declaration.sh": (render_store.render("nix").encode(), False),
+                }
+                store_tools = render_store.tools_of("nix")
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+
             # ── patch login-inner's session-init line and its env execs ────
             try:
                 login_inner = patch_login_inner(login_inner, app_id, fallback_script,
-                                                profile_link, login_shell)
+                                                profile_link, login_shell, store_dir)
                 etc_profile = patch_etc_profile(etc_profile, fallback_script)
             except ValueError as e:
                 print(f"FAIL: {e}", file=sys.stderr)
@@ -388,6 +441,35 @@ def main() -> int:
             if why:
                 print(f"FAIL: the {login_shell} login shell would not be runnable: {why}", file=sys.stderr)
                 return 1
+
+            # ── #644: every tool the store declares must really be in the profile
+            # The store links $HOME/.cloud-store/current/bin/<tool> at profile
+            # bin/<tool> for each name in default_packages.binaries. A name in
+            # that list with no binary behind it is a link that dangles on every
+            # phone -- the #638/#640/#641 shape, one layer up -- and the list is
+            # maintained beside attrs and provides, so it CAN drift from them.
+            # Proving it here is what makes "adding a tool is a data-only edit"
+            # true rather than merely intended.
+            store_missing = [t for t in store_tools
+                             if not os.path.islink(os.path.join(generation, "bin", t))
+                             and not os.path.exists(os.path.join(generation, "bin", t))]
+            if store_missing:
+                print(f"FAIL: default_packages.binaries names {store_missing}, which the realized "
+                      f"profile does not provide -- the link store would ship dangling links. "
+                      f"Add the attr that provides them, or drop the names.", file=sys.stderr)
+                return 1
+
+            for name, (data, executable) in store_files.items():
+                rel = f"{store_dir}/{name}"
+                if rel in existing:
+                    print(f"FAIL: the input zip already carries {rel}; a second entry would make "
+                          "which one wins depend on extraction order", file=sys.stderr)
+                    return 1
+                new_files[rel] = data
+                if executable:
+                    new_executables.append(rel)
+            print(f"#644 store: {len(store_files)} files at {store_dir}, "
+                  f"{len(store_tools)} declared tools", file=sys.stderr)
 
             fallback_body = (
                 "# #595 -- baked default tooling, sourced by usr/lib/login-inner when\n"

@@ -85,6 +85,17 @@ def check_login_init(decl):
     return want
 
 
+def tools_of(terminal):
+    """The tool list a terminal declares, resolved through its own declaration.
+
+    Exposed because bake_default_packages.py gates the realized nix profile
+    against it: a name here with no binary behind it is a link that dangles on
+    every phone, which is the defect class #644 exists to close.
+    """
+    term = load()["terminals"][terminal]
+    return _value(term["tools"], term["app_dir"])
+
+
 def render(terminal):
     decl = load()
     install_dir = check_login_init(decl)

@@ -31,6 +31,10 @@ on:
       - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ac_cloud-nix-on-droid/**"
+      # #644 — the shared declarative link store is BAKED INTO this app's bootstrap
+      # zip (usr/lib/cloud-store) and hashed into its content address, so an engine
+      # fix here must start a run and publish, not sit inert behind a green tick.
+      - "ab_cloud-terminal-store/**"
 permissions:
   contents: write   # gh release upload
 

@@ -48,8 +48,14 @@
           "identity_files": [
             "build.json",
             "app/src/main/cpp/patch_bootstrap_ids.py",
-            "app/src/main/cpp/bake_default_packages.py"
+            "app/src/main/cpp/bake_default_packages.py",
+            "../ab_cloud-terminal-store/store.json",
+            "../ab_cloud-terminal-store/cloud-store",
+            "../ab_cloud-terminal-store/render-store.py",
+            "../ab_cloud-terminal-store/login-init.sh",
+            "../ab_cloud-terminal-store/login-exec"
           ],
+          "_doc_identity_files_store": "#644 -- the five ab_cloud-terminal-store entries are here because the link store is BAKED INTO THIS ZIP (usr/lib/cloud-store) and the login-inner patch sources it. Leave them out and an engine fix keeps the old content address: the asset is not uploaded, no phone refetches, and CI is green over a rootfs that still carries the broken engine -- the exact false-green shape #618's address was introduced to prevent. Paths are app-relative and resolved with os.path.join/new File(projectDir.parentFile, ...) by both readers (cloud-android-fleet-manifest-guard.py::_content_address and app/build.gradle::bootstrapArtifactId), so \"../\" reaches the repo root.",
           "digest_asset": "bootstrap.zip.sha256",
           "url_asset": "bootstrap.zip.url"
         },
@@ -126,7 +132,7 @@
         "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",
         "asset": "Cloud-Lib-Rootfs-Nixdroid.apk",
         "assets": { "arm64": "Cloud-Lib-Rootfs-Nixdroid.apk", "x86_64": "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk" },
-        "paths_from": ["ac_cloud-nix-on-droid/build.json", "ac_cloud-nix-on-droid/app/src/main/cpp/patch_bootstrap_ids.py", "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py", "ac_cloud-nix-on-droid/rootfs-lib"],
+        "paths_from": ["ac_cloud-nix-on-droid/build.json", "ac_cloud-nix-on-droid/app/src/main/cpp/patch_bootstrap_ids.py", "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py", "ac_cloud-nix-on-droid/rootfs-lib", "ab_cloud-terminal-store"],
         "package": "com.diegonmarcos.cloudlib.rootfsnixdroid"
       }
     ],

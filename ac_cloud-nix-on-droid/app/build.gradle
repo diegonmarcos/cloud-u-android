@@ -45,8 +45,8 @@ android {
         // bootstrap to one read out of the installed rootfs-nixdroid companion
         // lib (TermuxInstaller.openBootstrapFromLib), so the Store treats this
         // as an update rather than a no-op reinstall.
-        versionCode 188044
-        versionName "0.118.0_v0.3.8_nix"
+        versionCode 188045
+        versionName "0.118.0_v0.3.9_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
         ndk {
