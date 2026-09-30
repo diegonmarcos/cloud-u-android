@@ -43,6 +43,12 @@ case "$command" in
     # ── CONFIG ──
     config)            sh "$SCRIPTS/cloud-android-ship-repo-config-gen.sh" ;;
     workflow)          sh "$SCRIPTS/cloud-android-ship-repo-workflow-gen.sh" ;;
+    # The ONE derived artefact whose inputs are every app's test directory
+    # rather than 1_cicd/src, so the commit that adds a tester is the commit
+    # that must refresh it. `workflow` refreshes it too, but it purges and
+    # rebuilds the whole of 1_cicd/dist on the way and races anyone else
+    # working in the tree; this is the narrow path.
+    test-coverage)     python3 "$SCRIPTS/cloud-android-test-coverage-gen.py" "$CLOUD_ANDROID_ROOT" ;;
     secrets)           sh "$SCRIPTS/cloud-android-ship-repo-secrets.sh" "$@" ;;
     # ── CICD (inside android-builder container) ──
     cicd-ship)         sh "$SCRIPTS/cloud-android-ship-ci-builder-dispatch.sh" ship "$@" ;;
@@ -72,6 +78,8 @@ BUILD:
 CONFIG:
     config                     Generate cloud-data configs from sources
     workflow                   Generate GHA workflows from templates
+    test-coverage              Refresh 1_cicd/dist/data/test-coverage.json only
+                               (run this after adding or changing a tester)
     secrets [sol] [action]     Manage sops secrets (show|edit|encrypt|decrypt)
 
 CICD (inside android-builder container):

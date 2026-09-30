@@ -32,9 +32,22 @@ on:
 permissions:
   contents: read
 
+# Two runs of this job can both want to push the refreshed inventory (see the
+# comparison step), and the loser of that race would be a red main for a
+# regeneration that already landed. Keep one run per ref; a cancelled older run
+# is superseded, not a verdict.
+concurrency:
+  group: generated-up-to-date-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   regenerate-and-compare:
     runs-on: ubuntu-latest
+    # Write, for ONE file: 1_cicd/dist/data/test-coverage.json, pushed back to
+    # main by the comparison step below. Every other kind of drift is still
+    # read-only and still red.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -53,9 +66,40 @@ jobs:
       # would report tail's status instead, and this repository has shipped
       # that exact false green before.
 
+      # WHY ONE FILE IS DERIVED HERE AND NOT BY THE AUTHOR.
+      #
+      # Every other generated file in this repository is derived from
+      # 1_cicd/src, so "you edited the source and forgot to regenerate" is one
+      # person's omission inside one directory, and a red gate teaching them is
+      # both correct and cheap.
+      #
+      # 1_cicd/dist/data/test-coverage.json is not that shape. Its inputs are
+      # EVERY app's test directory, so the commit that makes it stale is a
+      # commit that adds a tester — somewhere else entirely, by an author with
+      # no reason to be thinking about 1_cicd. That happened three times in one
+      # day (#673, #676, #669), each time costing a full red-main cycle that
+      # blocked every ship, and the instruction this step used to print made it
+      # worse: './build.sh workflow' purges and rebuilds the whole of
+      # 1_cicd/dist and races everyone else working in the tree (it emptied 55
+      # files under 1_cicd/dist/cicd on 2026-09-30).
+      #
+      # So for that one artefact the derivation is the engine's job. Same shape
+      # as cloud-infra's ship-gen-configs, which has refreshed its dist/ this
+      # way for months. Deliberately NOT a commit-time hook: this tree is
+      # worked by several agents at once, and a hook would derive the inventory
+      # from whatever untracked files happened to be lying in their working
+      # copies — measured, not feared (an uncommitted FleetGitTest.kt made the
+      # count read 13 where the committed tree says 12). A runner's checkout is
+      # the only place the inputs are unambiguous.
+      #
+      # The relaxation is exactly one path. Anything else that drifts is still
+      # red, and on a pull request even this file is red — with the NARROW
+      # command named, because there is nothing safe to push to.
       - name: Committed output matches what the sources produce
         run: |
           set -euo pipefail
+
+          derived="1_cicd/dist/data/test-coverage.json"
 
           # --porcelain and NOT `git diff --exit-code`: a plain diff sees only
           # tracked files, and the largest single piece of drift found when this
@@ -64,17 +108,50 @@ jobs:
           # file, which `git diff` reports as nothing at all.
           drift="$(git status --porcelain)"
 
-          if [ -n "$drift" ]; then
+          if [ -z "$drift" ]; then
+            echo "Generated output matches the committed tree."
+            exit 0
+          fi
+
+          # grep -v, so a run where the inventory drifted ALONGSIDE something
+          # else still reports the something else and still goes red.
+          other="$(printf '%s\n' "$drift" | grep -v -- "$derived" || true)"
+
+          if [ -n "$other" ]; then
             echo "::error::Generated files are out of date. Run './build.sh workflow' and commit the result."
             echo
             echo "Paths that differ from what the sources produce:"
-            printf '%s\n' "$drift"
+            printf '%s\n' "$other"
             echo
             git --no-pager diff
             exit 1
           fi
 
-          echo "Generated output matches the committed tree."
+          echo "Only the derived test-coverage inventory drifted:"
+          git --no-pager diff -- "$derived"
+
+          if [ "${GITHUB_EVENT_NAME}" != "push" ] || [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::$derived is out of date. Run './build.sh test-coverage' and commit that one file. Do NOT run './build.sh workflow' for this -- it rebuilds all of 1_cicd/dist and races other work in the tree."
+            exit 1
+          fi
+
+          # Stage the ONE path, explicitly. `git add -A` here would sweep in
+          # anything the generator happened to leave behind.
+          git add -- "$derived"
+
+          # Why this cannot loop: a commit pushed with GITHUB_TOKEN does not
+          # trigger workflows, and [skip ci] says so a second time.
+          git \
+            -c user.name="Claude" \
+            -c user.email="noreply@anthropic.com" \
+            commit -m "ci(test-coverage): refresh the derived inventory from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
+
+          if ! git push origin HEAD:main; then
+            echo "::error::could not push the refreshed inventory -- main moved underneath this run. Nothing is lost: run './build.sh test-coverage' and commit 1_cicd/dist/data/test-coverage.json."
+            exit 1
+          fi
+
+          echo "Refreshed $derived and pushed it to main."
 
       # A gate that has never been watched failing is decoration. This proves,
       # on every run, that the comparison above can actually go red: it edits a
