@@ -22,6 +22,15 @@
 # therefore stranded the good copy at the root forever, and "always move" would
 # have destroyed the good copy in git/.
 #
+# #683 measured again 2026-09-30, ONE layer further out: the seed registered NO
+# CredentialsProvider at all while the page's own clone carries the declared
+# credential, so front-diegonmarcos — declared public, held private upstream —
+# failed with "Authentication is required" and the honest 11/12 verdict promised
+# a retry that can never succeed on a credential-less device. Hence S5/S6: the
+# seed resolves the ONE declared credential path (vault first, then
+# auth.git_chain — never a second mechanism), and wanting a credential is a
+# TERMINAL outcome, distinct from a transient failure, that is never retried.
+#
 #   S1  the seed loop attempts EVERY declared repository: no early return, and a
 #       failure is recorded rather than swallowed.
 #   S2  an incomplete pass returns Result.retry(), never Result.success() — this
@@ -101,6 +110,29 @@ s4() {
     return $bad
 }
 
+# s5 <StoreSeed.kt> : #683 the seed resolves the DECLARED credential path — vault first, then
+#     the declared chain — and hands it to the engine; no second credential mechanism.
+s5() {
+    local f="$1" bad=0
+    grep -qE 'DriveAuthApply\.vaultGitToken\(applicationContext\)' "$f" || { echo "    the seed does not consult the vault-delivered credential (the declared primary path)"; bad=1; }
+    grep -qE 'DriveGitChain\.resolve\(applicationContext\)' "$f" || { echo "    the seed does not walk the declared chain (auth.git_chain) — a repo needing auth fails with no CredentialsProvider"; bad=1; }
+    grep -qE 'GitAuth\.Https\(decl\.githubOwner, token\)' "$f" || { echo "    the resolved credential is not handed to the engine's clone"; bad=1; }
+    grep -qE 'GitEngine\.clone\(url, dir, auth = auth, depth = BuildConfig\.SEED_DEPTH\)' "$f" || { echo "    the clone does not carry the resolved auth"; bad=1; }
+    return $bad
+}
+
+# s6 <StoreSeed.kt> <SeedReport.kt> : #683 wanting a credential is TERMINAL, never a retry
+s6() {
+    local seed="$1" report="$2" bad=0
+    grep -qE 'token\.isBlank\(\) && authDemanded\(why\)' "$seed" || { echo "    an auth demand on a credential-less device is not told apart from a transient failure"; bad=1; }
+    grep -qE 'SeedOutcome\.NEEDS_CREDENTIAL' "$seed" || { echo "    the structural case never becomes the terminal needs-credential outcome"; bad=1; }
+    grep -qE 'BLOCKED = setOf\(NEEDS_CREDENTIAL\)' "$report" || { echo "    needs-credential is not the blocked (terminal, unfinished) kind"; bad=1; }
+    # In RESUMABLE it would retry forever against a clone that cannot succeed — s4's verbatim
+    # set already pins this, but say it here in this defect's own words too.
+    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED\)$' "$report" || { echo "    needs-credential leaked into the resumable kinds — the unwinnable retry is back"; bad=1; }
+    return $bad
+}
+
 # m1 <StoreMigration.kt> : the completeness ladder exists and is the three real things
 m1() {
     local f="$1" bad=0
@@ -128,6 +160,8 @@ s1 "$SEED" && pass "every declared repository is attempted and every outcome rec
 s2 "$SEED" && pass "an incomplete pass returns retry(), so the tail is resumed" || fail "an incomplete seed still reports success — the store stays truncated forever"
 s3 "$SEED" && pass "the pass is reported per repository, logged and persisted" || fail "the seed's outcome is not visible per repository"
 s4 "$REPORT" && pass "the verdict is measured against the DECLARED set" || fail "SeedReport.complete can pass a truncated store"
+s5 "$SEED" && pass "the seed clone carries the credential of the ONE declared path (vault, then auth.git_chain)" || fail "the seed still clones with no CredentialsProvider — an auth-requiring repository fails every pass"
+s6 "$SEED" "$REPORT" && pass "wanting a credential is a TERMINAL outcome, told apart from a transient failure" || fail "a credential-less device is promised a retry that can never succeed"
 
 echo "── M the migration ──"
 m1 "$MIGRATION" && pass "the migration picks the COMPLETE copy, wherever it starts" || fail "the migration still decides by position"
@@ -194,9 +228,35 @@ mutate "deletion without the COMPLETE guard" m2 "$MIGRATION" \
     's = s.replace("if (destScore == COMPLETE)", "if (destScore >= 0)")'
 mutate "the verdict ignores the declared count" s4 "$REPORT" \
     's = s.replace("outcomes.size == declared && resumable.isEmpty()", "resumable.isEmpty()")'
+# #683 the two guards this round exists for, mutated by hand where the helper's
+# one-file shape does not fit:
+#   strip the declared-chain resolution → the seed is back to no CredentialsProvider
+mutate "the declared credential chain stripped from the seed" s5 "$SEED" \
+    's = s.replace("DriveGitChain.resolve(applicationContext)", "NoChain()").replace("GitAuth.Https(decl.githubOwner, token)", "GitAuth.None")'
+#   report the credential-less case as the retried FAILED → the unwinnable retry is back
+cp "$SEED" "$MUT/seed-retry.kt"
+python3 - "$MUT/seed-retry.kt" <<'PYTHON'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+s = s.replace("SeedOutcome(decl.name, SeedOutcome.NEEDS_CREDENTIAL,", "SeedOutcome(decl.name, SeedOutcome.FAILED,")
+s = s.replace("token.isBlank() && authDemanded(why)", "false")
+open(p, "w", encoding="utf-8").write(s)
+PYTHON
+if s6 "$MUT/seed-retry.kt" "$REPORT" >/dev/null 2>&1; then fail "MUT needs-credential downgraded to a retried FAILED: the mutation passed"; else pass "MUT needs-credential downgraded to a retried FAILED goes RED"; fi
+#   make needs-credential resumable → the report itself would promise the retry
+cp "$REPORT" "$MUT/report-resumable.kt"
+python3 - "$MUT/report-resumable.kt" <<'PYTHON'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED)", "RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_CREDENTIAL)")
+open(p, "w", encoding="utf-8").write(s)
+PYTHON
+if s6 "$SEED" "$MUT/report-resumable.kt" >/dev/null 2>&1 || s4 "$MUT/report-resumable.kt" >/dev/null 2>&1; then fail "MUT needs-credential made resumable: the mutation passed"; else pass "MUT needs-credential made resumable goes RED (s4 and s6 both)"; fi
 
 # the unmutated tree must still be green, or every mutation above proves nothing
-s1 "$SEED" >/dev/null 2>&1 && s2 "$SEED" >/dev/null 2>&1 && m1 "$MIGRATION" >/dev/null 2>&1 && m2 "$MIGRATION" >/dev/null 2>&1 \
+s1 "$SEED" >/dev/null 2>&1 && s2 "$SEED" >/dev/null 2>&1 && s5 "$SEED" >/dev/null 2>&1 && s6 "$SEED" "$REPORT" >/dev/null 2>&1 && m1 "$MIGRATION" >/dev/null 2>&1 && m2 "$MIGRATION" >/dev/null 2>&1 \
     && pass "MUT control: the unmutated sources pass every mutated check" \
     || fail "MUT control: the unmutated sources do NOT pass — the mutations above prove nothing"
 

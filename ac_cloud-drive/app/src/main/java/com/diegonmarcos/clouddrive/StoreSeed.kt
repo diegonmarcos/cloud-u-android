@@ -8,6 +8,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.diegonmarcos.clouddrive.configs.DriveAuthApply
+import com.diegonmarcos.clouddrive.configs.DriveGitChain
+import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
@@ -22,9 +25,19 @@ import java.io.File
  * worker clones it SHALLOW through libs:git-sync's own [GitEngine] and registers it in the SAME
  * [RepoRegistry] the Git sub-page and [GitSyncWorker] read. One git, one registry, one store.
  *
- * PUBLIC ONLY: an anonymous clone of a private repository fails every time, so seeding one
- * would bake a permanent red. Those stay declared-not-cloned on Configs ▸ Git, where the
- * user can type the token the credential store then holds.
+ * DECLARED-PUBLIC ONLY, WITH THE ONE CREDENTIAL ANYWAY (#683). The seed set stays the
+ * manifest's public repositories (a declared-private one stays declared-not-cloned on the
+ * Git page), but the DECLARATION and the PROVIDER can drift apart: front-diegonmarcos was
+ * measured 2026-09-30 answering "Authentication is required" to the anonymous seed clone —
+ * declared public, held private upstream. So every seed clone now carries the SAME
+ * credential the Git page's own clone carries, resolved through the SAME declared path —
+ * the vault-delivered token first ([DriveAuthApply.vaultGitToken]), then the declared chain
+ * (`ab_cloud-libs-shared/build.json::auth.git_chain`, walked by [DriveGitChain.resolve]) —
+ * never a second credential mechanism. And a clone the provider refuses for want of a
+ * credential the device does not hold is a STRUCTURAL failure, not a transient one: it
+ * becomes the terminal [SeedOutcome.NEEDS_CREDENTIAL], because retrying cannot mint a
+ * credential and "will retry" on it would burn battery and quota against a clone that can
+ * never succeed. The vault import or a fleet sign-in is the way out, and the report says so.
  *
  * #629 COMPLETE, RESUMABLE AND PER-REPO REPORTED. The first draft was none of the three: a
  * clone failure was swallowed (`Log.w` then `return@forEach`) and the pass returned
@@ -60,6 +73,14 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
             )
         }
         val declared = Declarations.seedRepos
+        // #683 THE SEED'S CREDENTIAL IS THE PAGE'S CREDENTIAL: the vault-delivered token under
+        // the ONE declared id first (the primary path needs no negotiation), then the declared
+        // chain — the SAME resolver the Sync ▸ Git page uses, so there is no second mechanism to
+        // drift. With no interactive fleet session the fleet rungs fall through instantly and
+        // cheaply; blank simply means "this device holds none", which the clone arm then reports
+        // as the terminal needs-credential outcome instead of an unwinnable retry.
+        val token = DriveAuthApply.vaultGitToken(applicationContext)
+            .ifBlank { runCatching { DriveGitChain.resolve(applicationContext).token.orEmpty() }.getOrDefault("") }
         val outcomes = declared.map { decl ->
             val dir = SharedStore.repoDir(decl.name)
             val url = family.cloneUrl(decl).orEmpty()
@@ -70,9 +91,19 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
                 // than attempted against a torn-down thread and logged as if they were broken.
                 isStopped -> SeedOutcome(decl.name, SeedOutcome.DEFERRED, "the worker was stopped before this repository was reached")
                 else -> {
-                    val cloned = runCatching { GitEngine.clone(url, dir, depth = BuildConfig.SEED_DEPTH).close() }
+                    val auth = if (token.isBlank()) GitAuth.None else GitAuth.Https(decl.githubOwner, token)
+                    val cloned = runCatching { GitEngine.clone(url, dir, auth = auth, depth = BuildConfig.SEED_DEPTH).close() }
                     if (cloned.isFailure) {
-                        SeedOutcome(decl.name, SeedOutcome.FAILED, cloned.exceptionOrNull()?.message ?: cloned.exceptionOrNull()?.javaClass?.simpleName ?: "clone failed")
+                        val why = cloned.exceptionOrNull()?.message ?: cloned.exceptionOrNull()?.javaClass?.simpleName ?: "clone failed"
+                        // #683 STRUCTURAL, NOT TRANSIENT: the provider demanded a credential and
+                        // this device holds none the declared path can answer with. A retry
+                        // cannot mint one, so this is TERMINAL — never the retried FAILED. A
+                        // refusal WITH a credential in hand stays FAILED: the next pass
+                        // re-resolves the chain and a fresh vault import can change the answer.
+                        if (token.isBlank() && authDemanded(why))
+                            SeedOutcome(decl.name, SeedOutcome.NEEDS_CREDENTIAL, "$why — the vault import or a fleet sign-in delivers one")
+                        else
+                            SeedOutcome(decl.name, SeedOutcome.FAILED, why)
                     } else {
                         registry.upsert(
                             ManagedRepo(
@@ -102,6 +133,16 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
 
     companion object {
         private const val TAG = "StoreSeed"
+
+        /**
+         * #683 Was this clone refusal the transport DEMANDING a credential? JGit's wording for
+         * the anonymous case is "Authentication is required but no CredentialsProvider has been
+         * registered" (measured on the device, 2026-09-30, against front-diegonmarcos); the
+         * refused-credential and raw-HTTP shapes ("not authorized", 401/403) are matched too.
+         * Pure text, so the JVM suite exercises it against the measured message.
+         */
+        internal fun authDemanded(why: String): Boolean =
+            listOf("authentication", "not authorized", "401", "403").any { why.contains(it, ignoreCase = true) }
         const val WORK_NAME = "cloud-drive-store-seed"
         const val REPORT_FILE = "store-seed-report.txt"
 

@@ -32,10 +32,21 @@ data class SeedOutcome(val name: String, val kind: String, val detail: String) {
         /** The manifest names it but declares no upstream to clone from. Retrying cannot help. */
         const val UNDECLARED = "undeclared"
 
+        /**
+         * #683 The provider demanded a credential and this device holds none the declared chain
+         * (vault import first, then `auth.git_chain`) can answer with. TERMINAL, like
+         * [UNDECLARED]: a retry cannot mint a credential, so looping on it would burn battery
+         * and quota against a clone that can never succeed. Distinct from [FAILED] because the
+         * way out is different — not another pass, but the vault import or a fleet sign-in.
+         */
+        const val NEEDS_CREDENTIAL = "needs-credential"
+
         /** The kinds a repository can carry and still leave the store finished. */
         val SETTLED = setOf(PRESENT, SEEDED, UNDECLARED)
         /** The kinds another pass could still turn into a clone. */
         val RESUMABLE = setOf(FAILED, DEFERRED)
+        /** #683 Terminal but NOT finished: no retry can help, and the store still lacks the repository. */
+        val BLOCKED = setOf(NEEDS_CREDENTIAL)
     }
 }
 
@@ -44,17 +55,25 @@ data class SeedReport(val declared: Int, val outcomes: List<SeedOutcome>) {
 
     val present: List<SeedOutcome> get() = outcomes.filter { it.kind in SeedOutcome.SETTLED }
     val resumable: List<SeedOutcome> get() = outcomes.filter { it.kind in SeedOutcome.RESUMABLE }
+    /** #683 the repositories no pass can reach without a credential this device does not hold. */
+    val blocked: List<SeedOutcome> get() = outcomes.filter { it.kind in SeedOutcome.BLOCKED }
 
     /**
-     * The store is finished when EVERY declared repository produced an outcome and none of them is
-     * resumable. Counting only the successes — or only the absence of exceptions — is how a
-     * nine-of-twelve store reported itself green.
+     * The pass is TERMINAL when EVERY declared repository produced an outcome and none of them is
+     * resumable — this is what drives retry-vs-success, and counting only the successes (or only
+     * the absence of exceptions) is how a nine-of-twelve store reported itself green. #683 a
+     * [blocked] repository is deliberately terminal too: a retry cannot mint the credential it
+     * lacks, so the worker must not loop on it — but the TALLY still refuses to call such a
+     * store "complete", because it is not.
      */
     val complete: Boolean get() = outcomes.size == declared && resumable.isEmpty()
 
     /** The one-line verdict the tail of the report carries. */
-    fun tally(): String = "seed ${present.size}/$declared " +
-        (if (complete) "complete" else "INCOMPLETE, will retry: " + resumable.joinToString { it.name })
+    fun tally(): String = "seed ${present.size}/$declared " + when {
+        !complete -> "INCOMPLETE, will retry: " + resumable.joinToString { it.name }
+        blocked.isNotEmpty() -> "settled; needs a credential (no retry — the vault import or a fleet sign-in delivers one): " + blocked.joinToString { it.name }
+        else -> "complete"
+    }
 
     /** One line per repository, then the tally — nothing aggregated away. */
     fun lines(): List<String> = outcomes.map { it.line() } + tally()

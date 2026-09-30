@@ -61,6 +61,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.EngineActivity
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.SharedStore
+import com.diegonmarcos.clouddrive.StoreSeedWorker
 import com.diegonmarcos.clouddrive.ui.CapsuleBadge
 import com.diegonmarcos.clouddrive.ui.DriveCard
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
@@ -163,6 +164,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     // #606 the store's git folder — the ONE place a clone lands, resolved from the declaration.
     val root = remember { SharedStore.gitRoot().absolutePath }
+    // #683 THE FIRST-RUN SEED'S LAST VERDICT, on the page that owns the store. The tally was
+    // persisted for exactly this and then read by nothing: an incomplete pass, or one blocked
+    // for want of a credential, was only readable off Download/drive-debug/. What is shown is
+    // the report's OWN tally line — the same words the log carries, never new prose and never
+    // a credential — and a cleanly complete pass draws nothing.
+    val seedTally = remember { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() }
     val clonedByName = repos.associateBy { File(it.path).name }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
@@ -377,6 +384,16 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 handoff,
                 Modifier.fillMaxWidth()
                     .testTag(DriveTags.SYNC_GIT_HANDOFF)
+                    .padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (seedTally.isNotBlank() && !seedTally.endsWith("complete")) item {
+            Text(
+                seedTally,
+                Modifier.fillMaxWidth()
+                    .testTag(DriveTags.SYNC_GIT_SEED)
                     .padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
