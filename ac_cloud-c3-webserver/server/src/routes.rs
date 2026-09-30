@@ -53,7 +53,9 @@ pub const ROUTES: &[Route] = &[
 
 /// Exact match over the table; the catch-all row otherwise.
 pub fn find(path: &str) -> &'static Route {
-    let p = if path.len() > 1 { path.trim_end_matches('/') } else { path };
+    // Trailing slashes are noise; an all-slash path is the root, not the catch-all.
+    let trimmed = path.trim_end_matches('/');
+    let p = if trimmed.is_empty() { "/" } else { trimmed };
     for r in ROUTES {
         if r.path != CATCH_ALL && r.path == p {
             return r;
