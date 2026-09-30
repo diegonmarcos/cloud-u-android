@@ -1,6 +1,6 @@
 {
   "name": "cloud-c3",
-  "description": "Diego's Cloud C3 — the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648) so the ops surface is its own icon instead of a page inside the launcher. A five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Topology · Observ · Home · Apps · Configs — every tab, sub-page and icon name declared in ui.* below and baked through BuildConfig, exactly the mechanism ac_cloud-drive uses. ONE tab declaration (ui.tabs) is the single source of truth: reordering that array reorders the nav, and no tab id is spelled in Kotlin outside C3Shell's dispatch, which test/test-c3-shell.sh diffs against this file in BOTH directions. Topology is the mesh/stack view; Observ is the observability surface (health, workflows, runs, logs, reports); Home is the overview; Apps LAUNCHES the three C3 sibling APKs that already exist as their own fleet members — Watchdog (com.diegonmarcos.watchdog), Morpheus (com.diegonmarcos.morpheus) and WatchTower (com.diegonmarcos.watchtower) — through ui.external_apps, the same extapp: idiom the SuperApp used, so nothing is re-implemented here; Configs holds the app's own settings and About. The ops data comes from ui.c3_ops.base_url, the SAME c3-infra-api the SuperApp's C3 pages read, so this APK is a new FRONT over the existing engine and not a second back end. Dark is the default theme, set at the declaration (#336, #337). English is the base language (#299): resConfigs \"en\" and a values/-only res tree. Build via Nix devShell, one APK out.",
+  "description": "Diego's Cloud C3 - the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648). A five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) - Topology, Observ, Home, Apps, Configs - declared in ui.* below and baked through BuildConfig. THE SHELL IS VIEWS AND HOSTS FRAGMENTS, not Compose: the pages this app exists to show are the SuperApp's C3 Fragments, and they are MOVED here rather than reauthored, so the rendering, wording and behaviour are the ones that already shipped. BottomNavIslandView is libs:bottomnav's own documented View-side contract for exactly this case (the SuperApp, cloud-me and cloud-wallet shells use it), so hosting fragments is a first-class path. Topology is the address estate: the SuperApp's c3_public and c3_private cards, one C3HealthFragment scoped two ways over the declared service tables. Observ is Health, the SuperApp's own page:c3/health. Home is the overview. Apps LAUNCHES the three C3 sibling APKs that already exist as their own fleet members through ui.external_apps, the same extapp: idiom the SuperApp used, so nothing is re-implemented; the printed name is DERIVED from each fleet id by dropping the family prefix, because an application has ONE name (#351). Configs holds About. A PAGE IS DECLARED WHEN ITS FRAGMENT EXISTS AND NOT BEFORE: there is no not-built body and no flag that could excuse one, which is what lets test/test-c3-shell.sh assert that every declared page renders real content - the guard whose absence let an empty five-tab APK ship green. Still to arrive, and absent from this file until they do: the five feed cards, the ntfy centre and the three container dashboards. The top offset is the MEASURED systemBars u displayCutout inset, read in a non-consuming listener (#407/#477), never a tuned margin. Dark is the default theme (#336, #337). English is the base language (#299). Build via Nix devShell, one APK out.",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -9,8 +9,8 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 1,
-    "version_name": "0.1.0-dev",
+    "version_code": 2,
+    "version_name": "0.2.0-dev",
     "abi_filters": [
       "arm64-v8a"
     ]
@@ -126,30 +126,30 @@
       {
         "id": "topology",
         "label": "Topology",
-        "icon": "stack"
+        "icon": "ic_p_c3_stack"
       },
       {
         "id": "observ",
         "label": "Observ",
-        "icon": "workflows"
+        "icon": "ic_p_c3_workflows"
       },
       {
         "id": "home",
         "label": "Home",
-        "icon": "home"
+        "icon": "ic_home"
       },
       {
         "id": "apps",
         "label": "Apps",
-        "icon": "robot"
+        "icon": "ic_robot"
       },
       {
         "id": "configs",
         "label": "Configs",
-        "icon": "settings"
+        "icon": "ic_settings"
       }
     ],
-    "icon_default": "stack",
+    "icon_default": "ic_p_c3_stack",
     "_doc_c3_ops": "The SAME c3-infra-api the SuperApp's C3 pages read (its build.json::ui.c3_ops). This APK is a new FRONT over the existing engine, not a second back end, so the base URL is declared once here and OpsClient is the only file that names a route.",
     "c3_ops": {
       "base_url": "https://api.diegonmarcos.com/c3-infra-api"
@@ -159,73 +159,57 @@
     "external_apps": [
       {
         "id": "c3-watchdog",
-        "icon": "health",
+        "icon": "ic_p_c3_health",
         "package": "com.diegonmarcos.watchdog"
       },
       {
         "id": "c3-morpheus",
-        "icon": "robot",
+        "icon": "ic_robot",
         "package": "com.diegonmarcos.morpheus"
       },
       {
         "id": "c3-watchtower",
-        "icon": "reports",
+        "icon": "ic_p_c3_reports",
         "package": "com.diegonmarcos.watchtower"
       }
     ],
-    "_doc_pages": "The sub-pages each content tab offers, from ONE declaration per tab. These are the pages the SuperApp's ui.sections[c3] carried as `hidden: true` entries behind its two facet tiles: Topology's stack/vms/mesh and Observ's health/workflows/runs/logs/reports.",
+    "_doc_pages": "THE RULE (#648): a page appears here when its fragment exists, and not before. There is no `implemented: false` and no not-built body to ship behind — an escape-hatch flag is how an empty tab ships green. The pages still to arrive are the SuperApp's five feed cards (github_run_stats / github_runs / dagu_runs / github_commits / gitea_commits), its ntfy centre and its three container dashboards; they are ABSENT from this file until their fragments land, which is what lets test-c3-shell.sh assert that every declared page resolves to real content.",
     "topology": {
+      "_doc": "The address estate: the SuperApp's two c3_public / c3_private cards that sat under its Addresses heading. ONE fragment renders both, scoped — exactly how the SuperApp embedded it.",
       "pages": [
         {
-          "id": "stack",
-          "label": "Stack",
-          "icon": "stack"
+          "id": "public",
+          "label": "Public",
+          "icon": "ic_p_c3_stack"
         },
         {
-          "id": "vms",
-          "label": "VMs",
-          "icon": "vms"
+          "id": "private",
+          "label": "Private",
+          "icon": "ic_p_c3_health"
         }
       ]
     },
     "observ": {
+      "_doc": "What the estate is doing. Today that is Health — the SuperApp's own page:c3/health, both tables with their counts in one view.",
       "pages": [
         {
           "id": "health",
           "label": "Health",
-          "icon": "health"
-        },
-        {
-          "id": "workflows",
-          "label": "Workflows",
-          "icon": "workflows"
-        },
-        {
-          "id": "logs",
-          "label": "Logs",
-          "icon": "logs"
-        },
-        {
-          "id": "reports",
-          "label": "Reports",
-          "icon": "reports"
+          "icon": "ic_p_c3_health"
         }
       ]
     },
     "configs": {
+      "_doc": "This app's own settings. About is real because everything it shows is baked by gradle; a General page arrives when it has something to set.",
       "pages": [
-        {
-          "id": "general",
-          "label": "General",
-          "icon": "settings"
-        },
         {
           "id": "about",
           "label": "About",
-          "icon": "info"
+          "icon": "ic_settings"
         }
       ]
-    }
+    },
+    "_doc_icons": "An icon name here is a DRAWABLE name in res/drawable, resolved by getIdentifier at runtime (the ac_cloud-me contract). It is no longer a Compose vocabulary key: the shell is Views, because the pages this app hosts are the Fragments the SuperApp already had. A name with no drawable resolves to 0 and draws a blank square, so test-c3-shell.sh asserts every declared name has a file and every file is declared — in both directions."
   },
   "tests": {
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",

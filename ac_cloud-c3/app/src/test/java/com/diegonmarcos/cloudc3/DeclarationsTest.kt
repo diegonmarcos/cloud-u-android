@@ -101,10 +101,24 @@ class DeclarationsTest {
 
     @Test
     fun `each content tab's declared sub-pages parse`() {
-        assertEquals(listOf("stack", "vms"), Declarations.parsePages(uiText("topology")).map { it.id })
-        assertEquals(listOf("health", "workflows", "logs", "reports"),
-            Declarations.parsePages(uiText("observ")).map { it.id })
-        assertEquals(listOf("general", "about"), Declarations.parsePages(uiText("configs")).map { it.id })
+        // DECLARED means IMPLEMENTED (#648): these are exactly the pages that have a
+        // fragment today. The feeds, the ntfy centre and the container dashboards are
+        // deliberately absent until theirs land, which is what makes "no placeholder in a
+        // shipped tab" an assertable property rather than a promise.
+        assertEquals(listOf("public", "private"), Declarations.parsePages(uiText("topology")).map { it.id })
+        assertEquals(listOf("health"), Declarations.parsePages(uiText("observ")).map { it.id })
+        assertEquals(listOf("about"), Declarations.parsePages(uiText("configs")).map { it.id })
+    }
+
+    @Test
+    fun `every declared icon name looks like a drawable name, not a vocabulary key`() {
+        // The shell is Views and resolves icons with getIdentifier, so a name must be a real
+        // resource name. "health" or "robot" (the old Compose keys) resolve to 0 and draw a
+        // blank square, which is why the shell tester also checks the file exists.
+        val names = Declarations.iconNames()
+        assertTrue("no declared icon may be blank", names.none { it.isBlank() })
+        assertTrue("every declared icon must be a drawable name (ic_*): $names",
+            names.all { it.startsWith("ic_") })
     }
 
     @Test
@@ -139,7 +153,7 @@ class DeclarationsTest {
         ui["tabs"]!!.jsonArray.forEach { names += it.jsonObject["icon"]!!.jsonPrimitive.content }
         ui["external_apps"]!!.jsonArray.forEach { names += it.jsonObject["icon"]!!.jsonPrimitive.content }
         names += ui["icon_default"]!!.jsonPrimitive.content
-        assertTrue("an icon name must be a short vocabulary key, never a resource path",
+        assertTrue("an icon name is a bare drawable name, never a path or an @reference",
             names.all { it.isNotBlank() && !it.contains('/') && !it.startsWith("@") })
     }
 }

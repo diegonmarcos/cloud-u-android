@@ -16,8 +16,8 @@ import kotlinx.serialization.json.contentOrNull
  *
  * The parse functions take the JSON TEXT, not BuildConfig, so the JVM suite
  * (DeclarationsTest) exercises the exact parser the phone runs against this
- * repository's own build.json — a declared icon name IconCatalog does not know, or a
- * tab with no screen, fails there before it fails on a device.
+ * repository's own build.json — a declared icon name with no drawable, or a tab with no
+ * page, fails there before it fails on a device.
  */
 object Declarations {
 
@@ -120,7 +120,11 @@ object Declarations {
         ExternalAppDecl(id = id, icon = o.str("icon") ?: "", packageName = pkg)
     }
 
-    /** Every icon name any declaration uses — what the testers hold IconCatalog to. */
+    /**
+     * Every icon name any declaration uses. These are DRAWABLE names now, not Compose
+     * vocabulary keys, so the tester holds them against res/drawable in both directions:
+     * a name with no file resolves to 0 and draws a blank square.
+     */
     fun iconNames(): Set<String> =
         (tabs.map { it.icon } +
             externalApps.map { it.icon } +

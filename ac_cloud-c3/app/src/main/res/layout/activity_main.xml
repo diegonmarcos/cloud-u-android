@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #648 the cloud-c3 shell: a fragment host above the fleet's bottom-nav island.
+
+     WHY VIEWS AND NOT COMPOSE. The pages this app exists to show are the SuperApp's
+     C3 pages, and they are Fragments. Building the shell in Compose made a spin-off
+     into a rewrite; libs:bottomnav's BottomNavIslandView is the library's own
+     documented View-side contract for exactly this case (the SuperApp, cloud-me and
+     cloud-wallet shells all use it), so hosting fragments is a first-class path, not
+     a workaround.
+
+     NO fitsSystemWindows HERE, deliberately. This root does not declare it and nothing
+     consumes the window insets: MainActivity attaches a NON-consuming listener that
+     reads systemBars ∪ displayCutout and pads the content, then returns the insets
+     untouched so the island below still receives them. #477 is the reason — a strip
+     that CONSUMED the inset starved the views under it — and #407 is the reason the
+     top offset is read from the real cutout rather than tuned as a margin. There is no
+     hardcoded top margin anywhere in this file. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/shell_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/c3_background">
+
+    <!-- The page. Every tab replaces this one container, the way the SuperApp's shell
+         does, so a page arrives as the Fragment it already is. -->
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- The fleet's ONE bottom nav (#531/#565): the same Compose island the SuperApp,
+         mail, wallet, me and drive draw. Below the content so nothing a page draws can
+         hide under it. C3BottomNav feeds it build.json::ui.tabs; the island owns its
+         own geometry and reads its own bottom inset. -->
+    <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>
