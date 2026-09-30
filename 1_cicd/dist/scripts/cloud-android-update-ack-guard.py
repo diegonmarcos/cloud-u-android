@@ -131,6 +131,20 @@ def branch_body(code_lines, start):
     indentation heuristic: the two handlers in scope are indented differently
     from each other already, and a rule a reformat can switch off is not a rule.
     """
+    # A branch whose first line opens no brace is a single expression, and it
+    # ends where its parentheses close. Without this the brace count below ran
+    # on past it into the NEXT branch's block — so `"state" -> reply(..."200")`
+    # followed by a `"haptic" -> { dispatchToHost(...) }` borrowed haptic's
+    # call and passed required_calls on work it never did.
+    if "{" not in code_lines[start][1]:
+        parens = 0
+        out = []
+        for i in range(start, len(code_lines)):
+            out.append(code_lines[i])
+            parens += code_lines[i][1].count("(") - code_lines[i][1].count(")")
+            if parens <= 0:
+                break
+        return out
     depth = 0
     opened = False
     out = []
@@ -181,7 +195,36 @@ def dispatch_regions(code_lines, subjects):
     return covered
 
 
-def check_route(root, spec, exclude_prefixes, subjects):
+def group_scoped_problems(root, entries):
+    """Every declared group-scoped file must still be one, or the entry is stale.
+
+    The exemption skips a whole file's `when (op)` tables, so it has to be
+    re-earned on every run: the file must exist and must still register its
+    handlers through AppDebugServer.route(, whose ops are group-relative. A
+    DevControlServer renamed onto a declared path, or an entry left behind
+    after its file moved, fails here instead of exempting whatever lands there.
+    """
+    problems = []
+    for e in entries:
+        path = os.path.join(root, e["path"])
+        if not os.path.isfile(path):
+            problems.append(
+                "%s  declared in group_scoped_dispatch but does not exist — a stale "
+                "exemption exempts whatever next lands on that path" % e["path"]
+            )
+            continue
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            code = "\n".join(c for _, c in strip_comments(enumerate(fh.read().splitlines(), 1)))
+        if "AppDebugServer.route(" not in code:
+            problems.append(
+                "%s  declared in group_scoped_dispatch but registers no "
+                "AppDebugServer.route( group — its `when (op)` is not group-relative, "
+                "so it may be a root route table and must be guarded" % e["path"]
+            )
+    return problems
+
+
+def check_route(root, spec, exclude_prefixes, subjects, group_scoped=frozenset()):
     key = '"%s" ->' % spec["route"]
     label = spec.get("label", spec["route"])
     problems = []
@@ -191,7 +234,10 @@ def check_route(root, spec, exclude_prefixes, subjects):
         with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
             raw = list(enumerate(fh.read().splitlines(), start=1))
         code_lines = strip_comments(raw)
-        regions = dispatch_regions(code_lines, subjects)
+        # A declared group-scoped file's `when (op)` dispatches sub-ops of
+        # /api/<group>/, never the root table's routes. See the manifest's
+        # group_scoped_dispatch for why this is declared rather than inferred.
+        regions = set() if rel in group_scoped else dispatch_regions(code_lines, subjects)
         for idx, (lineno, code) in enumerate(code_lines):
             if key not in code or idx not in regions:
                 continue
@@ -266,9 +312,14 @@ def main():
         )
         return 2
 
+    scoped_entries = manifest.get("group_scoped_dispatch", [])
+    group_scoped = frozenset(e["path"] for e in scoped_entries)
     failures = 0
+    for p in group_scoped_problems(root, scoped_entries):
+        print("FAIL   %s" % p)
+        failures += 1
     for spec in manifest["routes"]:
-        found, problems = check_route(root, spec, exclude, subjects)
+        found, problems = check_route(root, spec, exclude, subjects, group_scoped)
         label = spec.get("label", spec["route"])
         if problems:
             for p in problems:
