@@ -1276,7 +1276,7 @@ class ProfileFragment : Fragment() {
         VaultConnect.Imported.last = sections
         VaultConnect.Imported.bundle = body.optJSONObject("bundle") ?: body
         show(status, GREEN, getString(
-            R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
+            R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size, tabLabel(infosTab)))
         selectedTab = infosTab
         importedThisSession = true
         if (redrawNow && isAdded && !isStateSaved) { importedThisSession = false; redraw() }

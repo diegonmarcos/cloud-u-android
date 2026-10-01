@@ -86,7 +86,7 @@
 
     <!-- Import configs -->
     <string name="import_title">Import configs</string>
-    <string name="import_subtitle">Paste the JSON blob below — keys + URLs are stored encrypted at rest. Or open the DECRYPTED vault export: it goes to Profile ▸ Fleet, never into this store.</string>
+    <string name="import_subtitle">Paste the JSON blob below — keys + URLs are stored encrypted at rest. Or open the DECRYPTED vault export: it goes to Configs ▸ Account, never into this store.</string>
     <string name="import_input_hint">{ "wg": …, "mail": …, "ssh": …, "auth": … }</string>
     <string name="import_save">Save</string>
     <string name="import_clear">Clear</string>
@@ -99,8 +99,8 @@
     <!-- #585 The loud refusal of the sops-encrypted vault file. Says what was read, why it cannot be used, and both ways out. -->
     <string name="import_encrypted">✗ This file is still sops-encrypted: %1$d values read as ENC[…] for %2$d age recipients (sections: %3$s). This phone holds no age key, so it can read none of them. Nothing stored. Either decrypt it where the key is — sops -d profile-secrets.json &gt; profile.json — and open THAT file, or use Connect ▸ Vault export: the server decrypts for you.</string>
     <string name="import_unrecognised">✗ Nothing stored: this JSON has sections %1$s and this app knows none of them. It takes the decrypted vault export (root schema_version plus its sections) or the paste shape above (%2$s).</string>
-    <string name="import_bundle_read">Read the decrypted vault export: %1$d values in %2$d sections. Save puts it on Profile ▸ Fleet.</string>
-    <string name="import_bundle_landed">✓ Vault export loaded: %1$d values in %2$d sections. Nothing is applied yet — open Configs ▸ Profile ▸ Fleet and apply per section, exactly as after a server fetch.</string>
+    <string name="import_bundle_read">Read the decrypted vault export: %1$d values in %2$d sections. Save puts it on Configs ▸ Account (read on Infos, applied per item on its Setup tab).</string>
+    <string name="import_bundle_landed">✓ Vault export loaded: %1$d values in %2$d sections. Nothing is applied yet — read it on Configs ▸ Account ▸ Infos and apply it item by item on its Setup tab, exactly as after a server fetch.</string>
     <string name="import_blob_read">Read a paste-shape blob: sections %1$s (ignored: %2$s). Save stores them and keeps what is already here.</string>
     <string name="import_blob_stored">✓ Stored %1$d keys in sections %2$s (ignored: %3$s). Sections already stored were kept.</string>
     <string name="import_blob_no_keys">✗ Sections %1$s are present but carry no keys — nothing stored.</string>
@@ -485,7 +485,7 @@
     <string name="vault_connect_no_bearer">Store an Authelia bearer (with its account email) above first.</string>
     <string name="vault_connect_no_code">Enter the code from the email.</string>
     <string name="vault_connect_sent">✓ Code sent. Check your mail, then press Fetch.</string>
-    <string name="vault_connect_fetched">✓ Fetched %1$d values in %2$d sections. See the Imported tab.</string>
+    <string name="vault_connect_fetched">✓ Fetched %1$d values in %2$d sections — read them on %3$s.</string>
     <string name="vault_imported_empty">Nothing imported yet. Use Connect ▸ Vault configs to fetch.</string>
     <string name="vault_imported_caption">Display only. Nothing here has been applied to any app. Values over %1$d characters are shortened; tap one to show it in full.</string>
     <string name="vault_connect_code_rejected">The server refused the code: wrong, expired or already used. Mail a new one.</string>
