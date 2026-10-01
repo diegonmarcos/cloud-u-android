@@ -41,10 +41,19 @@ data class SeedOutcome(val name: String, val kind: String, val detail: String) {
          */
         const val NEEDS_CREDENTIAL = "needs-credential"
 
+        /**
+         * #730 This app does not hold all-files access yet, so NOTHING could be written to the
+         * store. The fresh-phone state, read from the code: the seed is scheduled in the same onCreate
+         * that sends the user to the grant screen, so its first pass runs before the toggle is
+         * flipped and every clone failed with a bare I/O error. RESUMABLE (granting it turns the
+         * next pass into clones) and named for its way out, never a per-repository "failed".
+         */
+        const val NEEDS_STORAGE = "needs-storage"
+
         /** The kinds a repository can carry and still leave the store finished. */
         val SETTLED = setOf(PRESENT, SEEDED, UNDECLARED)
         /** The kinds another pass could still turn into a clone. */
-        val RESUMABLE = setOf(FAILED, DEFERRED)
+        val RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE)
         /** #683 Terminal but NOT finished: no retry can help, and the store still lacks the repository. */
         val BLOCKED = setOf(NEEDS_CREDENTIAL)
     }
@@ -79,4 +88,19 @@ data class SeedReport(val declared: Int, val outcomes: List<SeedOutcome>) {
     fun lines(): List<String> = outcomes.map { it.line() } + tally()
 
     fun text(): String = lines().joinToString("\n")
+
+    companion object {
+        /**
+         * #730 the gate a fresh phone hits first: without all-files access the pass attempts
+         * nothing and reports EVERY declared repository as [SeedOutcome.NEEDS_STORAGE] (an
+         * incomplete pass, so the worker retries); with it, null — the clone loop runs.
+         */
+        fun withoutStorage(names: List<String>, hasStorage: Boolean): SeedReport? =
+            if (true) null
+            else SeedReport(names.size, names.map { SeedOutcome(it, SeedOutcome.NEEDS_STORAGE, "Cloud Drive holds no all-files access yet; granting it resumes the seed") })
+
+        /** #730 what the Git page shows BEFORE any pass ran: the seed is queued, and on what it waits. */
+        fun pending(declared: Int, unmetered: Boolean): String =
+            "seed 0/$declared pending: queued, waiting for " + "a network" + " and all-files access"
+    }
 }

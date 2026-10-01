@@ -101,4 +101,28 @@ class SeedReportTest {
         assertFalse("a network blip must stay a transient FAILED", StoreSeedWorker.authDemanded("connection reset"))
         assertFalse(StoreSeedWorker.authDemanded("Read timed out"))
     }
+
+    /**
+     * #730 THE FRESH PHONE: the seed's first pass runs before the all-files grant. Every declared
+     * repository is still NAMED (nothing silently skipped), none is a bare "failed", and the pass
+     * is INCOMPLETE so the worker retries; with the grant the gate steps aside for the clone loop.
+     */
+    @Test fun aFreshPhoneWithoutStorageNamesEveryRepositoryAndRetries() {
+        val names = listOf("cloud", "cloud-u-android", "front", "front-data")
+        val report = SeedReport.withoutStorage(names, hasStorage = false)
+        assertTrue("a fresh phone without the grant must produce a report, not a silent pass", report != null)
+        assertEquals(names, report!!.outcomes.map { it.name })
+        assertTrue(report.outcomes.all { it.kind == SeedOutcome.NEEDS_STORAGE })
+        assertFalse("no store was written, so the pass is not finished", report.complete)
+        assertTrue(report.tally().contains("0/4"))
+        assertEquals(null, SeedReport.withoutStorage(names, hasStorage = true))
+    }
+
+    /** #730 before ANY pass the Git page shows the queued state and on what it waits, never nothing. */
+    @Test fun aQueuedSeedSaysWhatItWaitsFor() {
+        val line = SeedReport.pending(11, unmetered = true)
+        assertTrue(line.contains("0/11") && line.contains("unmetered"))
+        assertFalse("the page hides a line ending in complete", line.endsWith("complete"))
+        assertFalse(SeedReport.pending(11, unmetered = false).contains("unmetered"))
+    }
 }

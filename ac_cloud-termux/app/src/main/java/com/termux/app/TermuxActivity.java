@@ -250,11 +250,9 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (!bindService(serviceIntent, this, 0))
             throw new RuntimeException("bindService() failed");
 
-        // #612: the cloud-drive shared store and /storage/emulated/0 are bound into the proot
-        // root by enter.sh, but All-Files-Access (MANAGE_EXTERNAL_STORAGE) is a special access
-        // that is NOT granted at install and cannot be self-granted. Without it the shared-store
-        // bind is silently empty. If it is missing, send the user straight to this app's
-        // All-Files-Access toggle so they can grant it. Once per launch (onCreate), never a loop.
+        // #612/#730: the cloud-drive shared store and /storage/emulated/0 are bound into the
+        // proot root by enter.sh only when shared storage is readable, and no storage grant is
+        // given at install. Ask for the one this app's target SDK needs. Once per launch.
         requestManageStorageIfNeeded();
 
         // Send the {@link TermuxConstants#BROADCAST_TERMUX_OPENED} broadcast to notify apps that Termux
@@ -262,9 +260,21 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         TermuxUtils.sendTermuxOpenedBroadcast(this);
     }
 
-    /** #612: on Android 11+, if this app is not yet an external-storage manager, open the
-     * per-app All-Files-Access settings screen so the cloud-drive shared store bind is not empty. */
+    /** #612/#730: ask for whichever storage grant governs THIS app's TARGET sdk. Below 30
+     * (gradle.properties targets 28) the platform keeps the app on legacy storage, where only
+     * the runtime READ/WRITE_EXTERNAL_STORAGE grant opens /storage/emulated/0 and
+     * All-Files-Access is ignored -- so the old isExternalStorageManager() gate sent a fresh
+     * phone to a toggle that never mounted anything. Both legacy permissions, because a
+     * READ-less grant still cannot list the store. Once per launch (onCreate), never a loop. */
     private void requestManageStorageIfNeeded() {
+        if (getApplicationInfo().targetSdkVersion < Build.VERSION_CODES.R) {
+            String[] legacy = {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+            // One dialog for both (same permission group), and straight through Activity: the
+            // PermissionUtils helper sleeps the UI thread for a second before asking.
+            if (!PermissionUtils.checkPermissions(this, legacy))
+                requestPermissions(legacy, PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION);
+            return;
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())
             return;
         Uri pkg = Uri.parse("package:" + getPackageName());

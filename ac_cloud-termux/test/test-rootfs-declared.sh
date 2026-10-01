@@ -125,21 +125,23 @@ grep -q 'Os.symlink(new File(dir, "enter.sh")' "$J/cloud/CloudRootfs.java" \
 ids="$(grep -v '^[[:space:]]*#' "$R/enter.sh" | grep -n '/data/data\|com\.termux\|cld\.termux' || true)"
 [ -z "$ids" ] && ok "enter.sh hardcodes no app id or /data/data path" || bad "enter.sh hardcodes an app path: $ids"
 
-echo "── 5: #612 All-Files-Access is asked for, and its absence is legible ──"
-# All-Files-Access (MANAGE_EXTERNAL_STORAGE) is declared in the manifest but is a
-# special access that is NOT granted at install and cannot be self-granted, so the
-# app must send the user to the toggle and enter.sh must not mount an empty tree in
-# silence. Both are greps over source: delete either and this section goes red.
+echo "── 5: #612/#730 the storage grant this target needs is asked for, and its absence is legible ──"
+# No storage grant exists at install. Below target 30 (gradle.properties) the
+# platform ignores All-Files-Access and only the legacy READ/WRITE runtime grant
+# opens shared storage, so the app must ask for THAT; and enter.sh must not mount
+# an empty tree, nor leave an empty mount point, in silence. The cross-app half
+# (mount target == cloud-drive's store, mutation-proven) is
+# ac_cloud-drive/test/test-drive-fresh-phone.sh.
 ACT="$J/app/TermuxActivity.java"
-grep -q 'Environment.isExternalStorageManager()' "$ACT" \
-    && ok "TermuxActivity checks isExternalStorageManager() on launch" \
-    || bad "TermuxActivity has no isExternalStorageManager() first-run check — the terminal never asks for All-Files-Access (#612)"
-grep -q 'ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION' "$ACT" \
-    && ok "TermuxActivity opens this app's All-Files-Access settings screen" \
-    || bad "TermuxActivity never fires ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION — the check leads nowhere"
-grep -q 'All-Files-Access' "$R/enter.sh" \
+grep -q 'getApplicationInfo().targetSdkVersion < Build.VERSION_CODES.R' "$ACT" \
+    && ok "TermuxActivity picks the storage grant by its target sdk" \
+    || bad "TermuxActivity does not branch on its target sdk — a target-28 app asking only for All-Files-Access never mounts (#730)"
+grep -q 'requestPermissions(legacy, PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION)' "$ACT" \
+    && ok "TermuxActivity requests the legacy READ/WRITE grant" \
+    || bad "TermuxActivity never requests the legacy storage grant"
+grep -q 'storage access is not granted' "$R/enter.sh" \
     && ok "enter.sh prints a legible notice when the shared store is not readable" \
-    || bad "enter.sh binds an unreadable shared store silently — no All-Files-Access notice (#612)"
+    || bad "enter.sh binds an unreadable shared store silently — no storage-access notice (#612)"
 
 echo "── 6: #628 the tree ships as the cloud-lib-rootfs-termux companion APK, and extraction is sha256-gated ──"
 G="$APP/app/build.gradle"

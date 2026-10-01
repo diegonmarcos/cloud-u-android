@@ -134,6 +134,7 @@ def gitSyncUnmetered = gitSyncDecl.require_unmetered_network == null ? true : gi
 def seedDecl      = storageDecl.seed ?: [:]
 def seedEnabled   = seedDecl.enabled == null ? false : seedDecl.enabled
 def seedDepth     = (seedDecl.depth ?: 1) as int
+def seedUnmetered = seedDecl.require_unmetered_network == null ? true : seedDecl.require_unmetered_network
 def gitReposFile = file('../data/drive-git-repos.json')
 def gitReposB64  = b64(gitReposFile.exists()
     ? new groovy.json.JsonSlurper().parse(gitReposFile) : [:])
@@ -479,6 +480,7 @@ android {
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
         buildConfigField "boolean", "SEED_ENABLED",       "${seedEnabled}"
         buildConfigField "int",     "SEED_DEPTH",         "${seedDepth}"
+        buildConfigField "boolean", "SEED_REQUIRE_UNMETERED", "${seedUnmetered}"
         buildConfigField "String",  "SHARED_ROOT",               "\"${sharedRoot}\""
         buildConfigField "String",  "GIT_SUBDIR",                "\"${gitSubdir}\""
         buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"

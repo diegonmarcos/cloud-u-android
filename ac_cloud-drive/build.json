@@ -48,7 +48,9 @@
       "enabled": true,
       "manifest": "data/drive-git-repos.json",
       "depth": 1,
-      "public_only": true
+      "public_only": true,
+      "_doc_require_unmetered_network": "#730 the seed's network constraint, DECLARED like git_sync's instead of hardcoded in StoreSeed.kt. true: the first-run seed (hundreds of MB of shallow worktrees) waits for an unmetered network, so a phone set up on mobile data or a metered hotspot does not seed until it joins Wi-Fi. Until a pass runs, the Sync ▸ Git page shows the pending reason instead of nothing.",
+      "require_unmetered_network": true
     }
   },
   "ui": {

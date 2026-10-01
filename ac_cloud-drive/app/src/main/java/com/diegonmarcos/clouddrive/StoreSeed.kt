@@ -10,6 +10,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
+import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
@@ -52,6 +53,16 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
 
     override fun doWork(): Result {
         if (!BuildConfig.SEED_ENABLED) return Result.success()
+        // #730 THE FRESH-PHONE GATE, before anything touches the store (the migration included):
+        // this pass is scheduled by the same onCreate that sends the user to the all-files grant,
+        // so on a fresh install it runs before the toggle is flipped. Every repository is then
+        // reported as needing storage — logged, persisted for the Git page — and the pass is
+        // retried; MainActivity.onResume re-kicks it the moment the grant arrives.
+        SeedReport.withoutStorage(Declarations.seedRepos.map { it.name }, Places.hasAllFilesAccess(applicationContext))?.let { blocked ->
+            blocked.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
+            runCatching { reportFile(applicationContext).writeText(blocked.text()) }
+            return Result.retry()
+        }
         val family = Declarations.gitFamily
         val registry = RepoRegistry(File(applicationContext.filesDir, GitSyncWorker.REGISTRY_FILE))
         // #606/#629 the one-time migration runs BEFORE the seed loop, so the seed then finds a
@@ -172,12 +183,31 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
          * identical one would restart a download the user is already waiting on. A pass that
          * ended incomplete is still in RETRY state, so KEEP resumes it rather than dropping it.
          */
-        fun schedule(context: Context) {
+        fun schedule(context: Context) = enqueue(context, ExistingWorkPolicy.KEEP)
+
+        /**
+         * #730 the all-files grant just arrived: REPLACE the queued pass, because a pass that
+         * ended needs-storage sits in WorkManager's exponential back-off and KEEP would leave the
+         * store empty for that whole delay. Nothing useful is lost — a pass without the grant
+         * cannot write a byte.
+         */
+        fun kick(context: Context) = enqueue(context, ExistingWorkPolicy.REPLACE)
+
+        private fun enqueue(context: Context, policy: ExistingWorkPolicy) {
             if (!BuildConfig.SEED_ENABLED) return
+            // #730 the network constraint is DECLARED (build.json::storage.seed.require_unmetered_network).
+            val network = if (BuildConfig.SEED_REQUIRE_UNMETERED) NetworkType.UNMETERED else NetworkType.CONNECTED
             val request = OneTimeWorkRequestBuilder<StoreSeedWorker>()
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, request)
+            WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, policy, request)
+            // Before any pass has run the Git page would show nothing at all — exactly what a
+            // phone waiting for Wi-Fi looked like. The queued state gets the report's own words.
+            if (lastReport(context).isBlank()) {
+                val pending = SeedReport.pending(Declarations.seedRepos.size, BuildConfig.SEED_REQUIRE_UNMETERED)
+                DriveDebugLog.i(context, TAG, pending)
+                runCatching { reportFile(context).writeText(pending) }
+            }
         }
     }
 }

@@ -92,16 +92,23 @@ fi
 # ONE declaration (SharedStore.kt resolves it under
 # Environment.getExternalStorageDirectory()) -- keep this literal in sync with
 # that value, not a copy of it.
-mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"
-# /storage/emulated/0 exists as a directory even without All-Files-Access, but is
+# /storage/emulated/0 exists as a directory even without storage access, but is
 # then not traversable, so binding it would mount an empty tree silently. Probe
 # readability and, when it fails, say why in one line instead of a dark mount.
 if ls /storage/emulated/0 >/dev/null 2>&1; then
-    binds="$binds -b /storage/emulated/0:$HOME/emulated"
+    mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"
+    # The GUEST side is /root/..., not $HOME/...: $HOME is bound as /root below, so
+    # inside the root ~ is /root and a bind at the host path $HOME/x is a path no
+    # shell ever visits -- ~/cloud-drive-shared-store stayed the empty mkdir above.
+    binds="$binds -b /storage/emulated/0:/root/emulated"
     mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
-    [ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:$HOME/cloud-drive-shared-store"
+    [ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:/root/cloud-drive-shared-store"
 else
-    echo "⚠ cloud-drive shared store needs All-Files-Access — enable it in Settings ▸ Apps ▸ Cloud Terminal (Termux) ▸ All files access" >&2
+    # #730 no mount point is left behind: an empty ~/cloud-drive-shared-store reads as
+    # an empty STORE, which is the fresh-phone report this replaces. rmdir only ever
+    # removes an EMPTY directory, so nothing the user put there is touched.
+    rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true
+    echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2
 fi
 
 # $HOME is bound as /root, so credentials, git config and work survive a

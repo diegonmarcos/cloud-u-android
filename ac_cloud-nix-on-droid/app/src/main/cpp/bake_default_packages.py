@@ -575,10 +575,13 @@ def main() -> int:
             # describe a route through Settings -- TermuxActivity.requestManageStorageIfNeeded()
             # deep-links straight to this package's All-Files-Access toggle on every launch that
             # lacks the grant, so prose telling the user to go find it himself is redundant.
+            # #730: the mount points exist only while bound, and an unbound EMPTY one is removed
+            # (rmdir never removes a non-empty dir): an empty ~/cloud-drive-shared-store reads as
+            # an empty STORE, which is how a fresh phone without the grant was misreported.
             mount_setup = BIN_LOGIN_TRACE + (
-                'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
                 'if CLOUD_LS_ERR="$(ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
                 '  cloud_trace "storage: /storage/emulated/0 is readable, binding ~/emulated"\n'
+                '  mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
                 '  BIND_HOME_EMULATED="-b /storage/emulated/0:$HOME/emulated"\n'
                 f'  mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
                 f'  if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
@@ -591,7 +594,8 @@ def main() -> int:
                 '  cloud_trace "storage: ls /storage/emulated/0 failed: $CLOUD_LS_ERR"\n'
                 '  BIND_HOME_EMULATED=""\n'
                 '  BIND_HOME_SHARED_STORE=""\n'
-                '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted yet." >&2\n'
+                '  rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
+                '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
                 'fi\n'
                 'cloud_trace "exec proot-static"\n\n'
             )

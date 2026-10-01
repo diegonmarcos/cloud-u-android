@@ -59,6 +59,8 @@ import androidx.compose.ui.platform.LocalContext
 class MainActivity : ComponentActivity(), DriveActions {
 
     private lateinit var prefs: DrivePrefs
+    /** #730 the all-files grant as last seen, so onResume can tell the moment it ARRIVES. */
+    private var hadStorageAccess = false
     private var filesController: FilesController? = null
 
     private val openTreeLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? -> persistTreeGrant(uri) }
@@ -83,7 +85,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         // (System.java manageAllFiles → ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, guarded
         // by Environment.isExternalStorageManager), through this app's own helper so nothing is
         // duplicated. A grant already held asks nothing; below Android 11 there is no such screen.
-        if (!Places.hasAllFilesAccess(this)) requestStorageAccess()
+        hadStorageAccess = Places.hasAllFilesAccess(this)
+        if (!hadStorageAccess) requestStorageAccess()
         EngineActivity.declareFromBuild(this)
         setContent { DriveTheme { Root() } }
         Updater.start(this)
@@ -92,6 +95,18 @@ class MainActivity : ComponentActivity(), DriveActions {
         // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
         // repositories, cloned shallow into the store the first time it does not hold them.
         StoreSeedWorker.schedule(this)
+    }
+
+    /**
+     * #730 the fresh-phone path: onCreate scheduled the seed and sent the user to the all-files
+     * toggle; they come back HERE with the grant. The seed's pass that ran without it is waiting
+     * out a retry back-off, so it is replaced now rather than leaving the store empty meanwhile.
+     */
+    override fun onResume() {
+        super.onResume()
+        val has = Places.hasAllFilesAccess(this)
+        if (has && !hadStorageAccess) StoreSeedWorker.kick(this)
+        hadStorageAccess = has
     }
 
     @Composable

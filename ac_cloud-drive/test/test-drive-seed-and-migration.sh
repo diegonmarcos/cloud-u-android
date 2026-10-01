@@ -106,7 +106,8 @@ s4() {
     local f="$1" bad=0
     grep -qE 'outcomes\.size == declared && resumable\.isEmpty\(\)' "$f" \
         || { echo "    complete is not 'every declared repository, none resumable'"; bad=1; }
-    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED\)' "$f" || { echo "    failed/deferred are not the resumable kinds"; bad=1; }
+    # #730 needs-storage is resumable too: the all-files grant turns the next pass into clones.
+    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE\)' "$f" || { echo "    failed/deferred/needs-storage are not the resumable kinds"; bad=1; }
     return $bad
 }
 
@@ -129,7 +130,7 @@ s6() {
     grep -qE 'BLOCKED = setOf\(NEEDS_CREDENTIAL\)' "$report" || { echo "    needs-credential is not the blocked (terminal, unfinished) kind"; bad=1; }
     # In RESUMABLE it would retry forever against a clone that cannot succeed — s4's verbatim
     # set already pins this, but say it here in this defect's own words too.
-    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED\)$' "$report" || { echo "    needs-credential leaked into the resumable kinds — the unwinnable retry is back"; bad=1; }
+    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE\)$' "$report" || { echo "    needs-credential leaked into the resumable kinds — the unwinnable retry is back"; bad=1; }
     return $bad
 }
 
@@ -250,7 +251,7 @@ python3 - "$MUT/report-resumable.kt" <<'PYTHON'
 import sys
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
-s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED)", "RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_CREDENTIAL)")
+s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE)", "RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_CREDENTIAL)")
 open(p, "w", encoding="utf-8").write(s)
 PYTHON
 if s6 "$SEED" "$MUT/report-resumable.kt" >/dev/null 2>&1 || s4 "$MUT/report-resumable.kt" >/dev/null 2>&1; then fail "MUT needs-credential made resumable: the mutation passed"; else pass "MUT needs-credential made resumable goes RED (s4 and s6 both)"; fi
