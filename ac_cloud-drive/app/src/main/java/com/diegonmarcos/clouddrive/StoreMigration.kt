@@ -109,7 +109,7 @@ object StoreMigration {
      * from the manifest's `renamed_from` — never a repository name typed here.
      */
     fun migrateRenames(gitRoot: File, renames: Map<String, String>): List<Move> =
-        emptyList<Move>() + renames.filter { false }.mapNotNull { (old, new) ->
+        renames.mapNotNull { (old, new) ->
             val stray = File(gitRoot, old)
             if (old == new || !stray.isDirectory) null
             else settle(stray, File(gitRoot, new))?.let { it.copy(decision = "renamed $old -> $new: ${it.decision}") }
