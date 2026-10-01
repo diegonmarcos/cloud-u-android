@@ -230,7 +230,6 @@
         "libs:core",
         "libs:updater",
         "libs:mail",
-        "libs:feed",
         "libs:net",
         "libs:ops",
         "libs:chat",
@@ -304,15 +303,6 @@
         "libs:core"
       ],
       "comment": "Mail — FairEmail-derived, JMAP-extended. Source upstream: github.com/M66B/FairEmail (GPLv3). Tracking clone lives at ../ac_mail-fairmail/."
-    },
-    "libs:feed": {
-      "dir": "../ab_cloud-libs-shared/libs/feed",
-      "type": "library",
-      "depends_on": [
-        "libs:core"
-      ],
-      "comment": "RSS reader + ntfy notifications integration.",
-      "_doc_not_linked": "Declared so gradle can resolve the module tree, but the APP no longer depends on it: libs:feed ships as Cloud-Lib-Feed.apk and is reached through core's DataBackendClient (app rss/RemoteFeed.kt). This is the libs-are-the-backend split - the RSS/Atom fetcher lives in the engine APK, the app keeps only the UI."
     },
     "libs:net": {
       "dir": "../ab_cloud-libs-shared/libs/net",
@@ -1079,6 +1069,12 @@
       "min_contract": 1,
       "login_poll_ms": 1000,
       "login_max_ms": 960000
+    },
+    "feed": {
+      "_doc": "engine-apk-split move 4: the RSS pane (rss/RemoteFeed.kt) binds Cloud-Lib-Feed.apk; libs:feed is in no module map here, so a feed change republishes that APK and not this app.",
+      "fleet": "lib-feed",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
     }
   },
   "ui": {

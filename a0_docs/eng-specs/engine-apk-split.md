@@ -41,7 +41,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | cropper, gesture, panoramaviewer, scrollbar | GUI (upstream) | excluded from lib APKs | media-center | per frame | stay |
 | datamanager | engine + fragment | 3.50 / – / – / 7.45 | superapp | – | **blocked**: `PACKAGE_USAGE_STATS` is special access, granted per package |
 | devtools | in-process debug API | 2.19 / – / – / 5.46 | every app (via core) | – | **stays** — it inspects the host process |
-| feed | engine, **already moved** | 2.24 / – / – / 5.55 | nothing (superapp uses `RemoteFeed`) | per refresh | done; see F3 |
+| **feed** | engine | 2.24 / – / – / 5.55 | nothing (superapp binds it by handshake) | per refresh | **MOVE 4** (stage 4); closes F3 for feed |
 | file-editor | GUI (Compose editor) | 15.83 / – / – / 54.27 | drive | per keystroke | stays |
 | fin | GUI | 3.46 / – / – / 7.36 | me | – | stays |
 | firewall | engine (firestack VPN) + fragment | 22.10 / 19.45 / – / 6.48 | superapp | per connection | later, not safe: VPN consent and always-on are per package (net-wg is the precedent, but it moves the user's VPN identity) |
@@ -185,6 +185,27 @@ which has no testers of its own, and gh/Drive retroactively. K6 is red on the pr
 tree (4 findings: both apps' modules, both workflows).
 
 **Not verified on a device.** Same as moves 1–2.
+
+## Move 4 — feed: the SuperApp stops declaring libs:feed (stage 4)
+
+The fetcher already ran only in Cloud-Lib-Feed.apk, but the SuperApp still declared the
+module (F3), so its ship watched `libs/feed/**` and a feed edit republished the SuperApp.
+
+| piece | where | what changed |
+|---|---|---|
+| engine | `libs/feed/…/AndroidManifest.xml` | `FeedBackendService` gains `${applicationId}.ENGINE` and CONTRACT 1 |
+| client | `aa_cloud-superapp/…/rss/RemoteFeed.kt` | the handshake before any bind (was: bind by a typed package + class name); missing / too-old / failed are thrown with a sentence naming the Store, so the pane says why instead of "No items" |
+| declaration | SuperApp `build.json::engines.feed`, `app/build.gradle` | package from fleet row `lib-feed`; unknown id fails the build. Visible through the SuperApp's `QUERY_ALL_PACKAGES` |
+| unlinked | SuperApp `build.json::modules` (entry + `app.depends_on`), `ship-cloud-superapp.yml` (3 copies) | a libs/feed change republishes Cloud-Lib-Feed.apk only |
+
+**Checks.** The contract guard gains **K7** (the client resolves action + package with
+meta-data, refuses a lower contract, and only then builds its `DataBackendClient`) and
+**K8** (the app can see the engine: `<queries>` names `${<key>EnginePackage}` bound by
+`manifestPlaceholders`, or the app holds `QUERY_ALL_PACKAGES`). Both are generic over every
+declared engine, so Agenda and News, which have no client testers, are held by them once
+they declare theirs. Seven new guard-test cases (two K6 for feed, two K7, three K8); the
+five K7/K8 cases fail against the previous guard. `test-engine-services.sh` E8 requires the
+feed engine (14 mutations).
 
 ## Stage 3 — what was not moved, and why
 

@@ -32,7 +32,18 @@ CLIENT=ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/sync/GhEngin
 SVC=$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt
 MF=$GH/src/main/AndroidManifest.xml
 WF=.github/workflows/ship-cloud-drive.yml
-for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF"; do
+DRIVEMF=ac_cloud-drive/app/src/main/AndroidManifest.xml
+DRIVEGRADLE=ac_cloud-drive/app/build.gradle
+# the SuperApp binds two engines (gh, feed) and sees them through QUERY_ALL_PACKAGES, not <queries>
+FEED=ab_cloud-libs-shared/libs/feed
+SABJ=aa_cloud-superapp/build.json
+SAMF=aa_cloud-superapp/app/src/main/AndroidManifest.xml
+SAFEED=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/rss/RemoteFeed.kt
+SAGH=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/profile/GhEngine.kt
+SAWF=.github/workflows/ship-cloud-superapp.yml
+for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF" \
+         "$ROOT/$DRIVEMF" "$ROOT/$DRIVEGRADLE" "$ROOT/$FEED/src/main/AndroidManifest.xml" "$ROOT/$SABJ" "$ROOT/$SAMF" \
+         "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
@@ -42,6 +53,9 @@ stage() {
         "$WORK/t/ab_cloud-libs-shared/lib-apks" "$(dirname "$WORK/t/$CLIENT")" "$WORK/t/.github/workflows"
     cp "$ROOT/$FLEET" "$WORK/t/$FLEET"; cp "$ROOT/$LIBBJ" "$WORK/t/$LIBBJ"; cp "$ROOT/$WF" "$WORK/t/$WF"
     cp -r "$ROOT/$GH" "$WORK/t/$GH"; cp "$ROOT/$DRIVEBJ" "$WORK/t/$DRIVEBJ"; cp "$ROOT/$CLIENT" "$WORK/t/$CLIENT"
+    local f; for f in "$DRIVEMF" "$DRIVEGRADLE" "$SABJ" "$SAMF" "$SAFEED" "$SAGH" "$SAWF"; do
+        mkdir -p "$(dirname "$WORK/t/$f")"; cp "$ROOT/$f" "$WORK/t/$f"; done
+    cp -r "$ROOT/$FEED" "$WORK/t/$FEED"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -83,8 +97,42 @@ landed "$DRIVEBJ" '"libs:gh"' && red "K6 the app declares the engine's module ag
 stage; sub "$WF" '      - "ab_cloud-libs-shared/libs/git-sync/**"' '      - "ab_cloud-libs-shared/libs/gh/**"
       - "ab_cloud-libs-shared/libs/git-sync/**"'
 landed "$WF" 'libs/gh/**' && red "K6 the app's ship workflow watches the engine again (an engine edit re-ships it)" "K6"
+stage; js "$SABJ" 'd["modules"]["libs:feed"] = {"dir": "../ab_cloud-libs-shared/libs/feed", "type": "library"}'
+landed "$SABJ" '"libs:feed"' && red "K6 the SuperApp declares the feed engine's module again (finding F3)" "K6"
+stage; sub "$SAWF" '      - "ab_cloud-libs-shared/libs/mail/**"' '      - "ab_cloud-libs-shared/libs/feed/**"
+      - "ab_cloud-libs-shared/libs/mail/**"'
+landed "$SAWF" 'libs/feed/**' && red "K6 the SuperApp's ship workflow watches the feed engine again" "K6"
+stage; python3 - "$WORK/t/$CLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "        if (found < needed) return Check.TooOld(pkg, found, needed)\n"
+assert gate in s
+open(p, "w").write(s.replace(gate, ""))
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$CLIENT" \
+    && red "K7 the client binds without refusing a contract below the needed one" "K7"
+stage; python3 - "$WORK/t/$SAFEED" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+bind = """        if (client == null) synchronized(this) {
+            if (client == null) client = DataBackendClient(ctx.applicationContext, service.packageName, service.name)
+        }
+"""
+first = "        val pm = ctx.packageManager\n"
+assert bind in s and first in s
+open(p, "w").write(s.replace(bind, "").replace(first, first + bind.replace("service.packageName, service.name", "BuildConfig.FEED_ENGINE_PACKAGE, \"planted.Service\"")))
+PYTHON
+landed "$SAFEED" 'planted.Service' && red "K7 the client binds by class name before the handshake accepts the engine" "K7"
+stage; sub "$DRIVEMF" '<package android:name="${ghEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${ghEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$DRIVEMF" \
+    && red "K8 the app does not query the engine's package (invisible on Android 11+, finding F2)" "K8"
+stage; sub "$DRIVEGRADLE" 'ghEnginePackage: ghEnginePackage]' 'ghEnginePackage: "com.example.planted"]'
+landed "$DRIVEGRADLE" 'com.example.planted' && red "K8 the queried placeholder is not the package the build resolved" "K8"
+stage; sub "$SAMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
+landed "$SAMF" 'PLANTED_NOT_QUERY_ALL' && red "K8 an app that drops QUERY_ALL_PACKAGES and queries nothing cannot see its engines" "K8"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
-landed "$DRIVEBJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
+js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
+landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "PASS — the engine contract guard fails on every broken binding and passes the real one"; else echo "FAIL — $FAILURES case(s)"; exit 1; fi

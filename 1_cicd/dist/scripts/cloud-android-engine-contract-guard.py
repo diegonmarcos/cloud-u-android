@@ -26,7 +26,15 @@ For every engine any app declares, from the declarations alone:
       one makes an engine change republish that app again -- the coupling the
       split removed (engine-apk-split: Cloud Agenda kept declaring libs:cal long
       after it stopped linking it, so every calendar edit re-shipped it). This
-      covers apps with no testers of their own, which is why it lives here.
+      covers apps with no testers of their own, which is why it lives here;
+  K7  the client handshakes before it binds: it resolves the declared action in
+      the declared package with its meta-data, refuses a contract below the
+      needed one, and only then builds a DataBackendClient -- a bind by class
+      name reads an old or missing engine as a dead call;
+  K8  the app can SEE the engine: its manifest queries ${<key>EnginePackage},
+      bound by app/build.gradle's manifestPlaceholders, or holds
+      QUERY_ALL_PACKAGES. On Android 11+ an unqueried package is invisible and
+      reads exactly like "not installed" (engine-apk-split F2).
 
 Vacuity is a failure: no declared engine, or a client with no calls, checks nothing.
 Usage: cloud-android-engine-contract-guard.py <repo root>
@@ -115,6 +123,41 @@ def client_calls(app_dir, key):
     return None, set(), ""
 
 
+def handshake(path, key):
+    """K7: the client's code orders resolve-with-meta-data < contract floor < bind, or a reason string."""
+    text = code(path)
+    up = key.upper().replace("-", "_")
+    resolve = text.find("resolveService(Intent(BuildConfig.%s_ENGINE_ACTION).setPackage(" % up)
+    if resolve < 0 or "PackageManager.GET_META_DATA" not in text[resolve:resolve + 200]:
+        return "does not resolve the declared action in the declared package with its meta-data"
+    if "BuildConfig.%s_ENGINE_PACKAGE" % up not in text or "BuildConfig.%s_ENGINE_MIN_CONTRACT" % up not in text:
+        return "does not take the package and the needed contract from the declaration"
+    floor = text.find("if (found < needed)")
+    bind = text.find("DataBackendClient(")
+    if floor < 0:
+        return "binds without refusing a contract below the needed one"
+    if bind < 0 or not resolve < floor < bind:
+        return "builds its DataBackendClient before the handshake has accepted the engine"
+    return None
+
+
+def visible(app_dir, key):
+    """K8: the engine package is queryable from this app, or a reason string."""
+    mf = os.path.join(app_dir, "app", "src", "main", "AndroidManifest.xml")
+    if not os.path.isfile(mf):
+        return "has no app manifest"
+    root = ET.parse(mf).getroot()
+    if any(p.get(A + "name") == "android.permission.QUERY_ALL_PACKAGES" for p in root.iter("uses-permission")):
+        return None
+    holder = "%sEnginePackage" % key
+    if "${%s}" % holder not in [p.get(A + "name") for q in root.iter("queries") for p in q.iter("package")]:
+        return "manifest <queries> does not name ${%s}: on Android 11+ the engine is invisible and reads as not installed" % holder
+    gradle = [os.path.join(app_dir, "app", g) for g in ("build.gradle", "build.gradle.kts")]
+    if not any(os.path.isfile(g) and re.search(r"\b%s\s*[:=]\s*%s\b" % (holder, holder), code(g)) for g in gradle):
+        return "app/build.gradle does not bind the manifest placeholder %s to the resolved package" % holder
+    return None
+
+
 def coupled(root, modules):
     """K6: every app module entry or ship-workflow watch line that reaches an engine module."""
     engines = {os.path.normpath(d): os.path.basename(d) for d in modules.values()
@@ -186,6 +229,12 @@ def check(root):
                            % (where, os.path.relpath(path, root), missing, sorted(methods)))
             if key_read != CONTRACT_KEY:
                 bad.append("K5 %s: %s reads contract key %r, the engines declare %r" % (where, os.path.relpath(path, root), key_read, CONTRACT_KEY))
+            why = handshake(path, key)
+            if why:
+                bad.append("K7 %s: %s %s" % (where, os.path.relpath(path, root), why))
+            why = visible(app_dir, key)
+            if why:
+                bad.append("K8 %s: %s" % (where, why))
     if declared == 0:
         bad.append("no app declares build.json::engines -- this guard checked nothing")
     return declared, bad

@@ -503,6 +503,24 @@ def ghEngineMaxMs   = ghEngineDecl.login_max_ms as long
 if (ghEngineMinContract < 1 || ghEnginePollMs <= 0 || ghEngineMaxMs < ghEnginePollMs) {
     throw new GradleException("build.json::engines.gh needs min_contract >= 1 and 0 < login_poll_ms <= login_max_ms (#713)")
 }
+// THE feed ENGINE the RSS pane binds (build.json::engines.feed, engine-apk-split move 4): same
+// resolution as gh above, so a feed change republishes Cloud-Lib-Feed.apk and not this app.
+def feedEngineDecl = buildJson.engines?.feed
+if (feedEngineDecl == null) {
+    throw new GradleException("build.json::engines.feed is not declared — the RSS pane would bind nothing")
+}
+def feedEngineFleet = (new groovy.json.JsonSlurper().parseText(constellationFleetJson).apps ?: []).find { it.id == feedEngineDecl.fleet }
+if (feedEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.feed.fleet '${feedEngineDecl.fleet}' is not in data/constellation-fleet.json — " +
+        "the RSS pane would bind a package no Store row installs")
+}
+def feedEnginePackage = feedEngineFleet.package.toString()
+def feedEngineAction  = feedEngineDecl.action.toString().replace('{package}', feedEnginePackage)
+def feedEngineMinContract = feedEngineDecl.min_contract as int
+if (feedEngineMinContract < 1) {
+    throw new GradleException("build.json::engines.feed.min_contract must be >= 1")
+}
 def consolidatedCfg  = (profileDefault.consolidated_config ?: '').toString()
 // WireGuard defaults — first-run seed for WireGuardPrefs. User edits at
 // runtime via Configs → WireGuard. The interface private key + peer preshared
@@ -911,6 +929,9 @@ android {
         buildConfigField "int",    "GH_ENGINE_MIN_CONTRACT", "${ghEngineMinContract}"
         buildConfigField "long",   "GH_ENGINE_POLL_MS",      "${ghEnginePollMs}L"
         buildConfigField "long",   "GH_ENGINE_LOGIN_MAX_MS", "${ghEngineMaxMs}L"
+        buildConfigField "String", "FEED_ENGINE_PACKAGE",      "\"${feedEnginePackage}\""
+        buildConfigField "String", "FEED_ENGINE_ACTION",       "\"${feedEngineAction}\""
+        buildConfigField "int",    "FEED_ENGINE_MIN_CONTRACT", "${feedEngineMinContract}"
         buildConfigField "String", "UI_CONSOLIDATED_CONFIG", "\"${consolidatedCfg}\""
         buildConfigField "String", "UI_WG_TUNNEL_NAME",              "\"${wgTunnelName}\""
         buildConfigField "String", "UI_WG_INTERFACE_ADDRESS",        "\"${wgIfAddress}\""
@@ -1050,10 +1071,9 @@ dependencies {
     // that owns them, and a launcher does not link an IME to read a model list.
     implementation project(':libs:text-tools')
     implementation project(':libs:mail')
-    // libs:feed is NOT linked: it ships as Cloud-Lib-Feed.apk and the app
-    // reaches it through core's DataBackendClient (see rss/RemoteFeed.kt).
-    // Re-adding this line puts the fetcher back in the app and makes the
-    // engine APK dead weight.
+    // libs:feed is NOT linked and NOT in build.json::modules: the RSS pane binds
+    // Cloud-Lib-Feed.apk (rss/RemoteFeed.kt, build.json::engines.feed), so a feed
+    // change republishes that APK alone. The contract guard's K6 fails a re-add.
     implementation project(':libs:net')
     // libs:keyboard + libs:media MOVED to ac_cloud-keyboard (standalone constellation APK).
     implementation project(':libs:ops')

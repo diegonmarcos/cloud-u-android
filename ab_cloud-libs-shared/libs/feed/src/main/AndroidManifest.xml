@@ -7,10 +7,21 @@
 
     <application>
         <!-- Guarded by the constellation's signature-level permission: only
-             APKs signed with the Cloud key can bind it. -->
+             APKs signed with the Cloud key can bind it. The action is how a
+             handshaking client FINDS the service, and CONTRACT is the version
+             it reads through PackageManager before binding (engine-apk-split,
+             move 4: the SuperApp's RSS pane binds this and no app declares
+             libs:feed, so a change here ships Cloud-Lib-Feed.apk alone). -->
         <service
             android:name="com.diegonmarcos.superapp.feed.FeedBackendService"
             android:exported="true"
-            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
     </application>
 </manifest>
