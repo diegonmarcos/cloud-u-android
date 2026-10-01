@@ -50,13 +50,17 @@ class GhRunner(context: Context) {
 
     /**
      * Run gh with [args], authenticating with [token] if one is given. The token
-     * goes into the environment, never into [args].
+     * goes into the environment, never into [args]. #689 a gh that cannot even be
+     * exec'd is an outcome too ([EXEC_FAILED], with the platform's words), never an
+     * exception thrown into a caller's coroutine.
      */
-    fun run(args: List<String>, token: String? = null): Result {
+    fun run(args: List<String>, token: String? = null): Result = try {
         val process = start(args, token)
         process.outputStream.close()
         val text = process.inputStream.bufferedReader().readText()
-        return Result(process.waitFor(), text)
+        Result(process.waitFor(), text)
+    } catch (e: Exception) {
+        Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
     }
 
     /** One gh process: argv as given, stderr folded into stdout, environment built from nothing. */
@@ -119,7 +123,7 @@ class GhRunner(context: Context) {
      * clipboard (measured: it warns and names desktop tools); the page copies the code itself.
      * No GH_TOKEN is ever passed here — gh refuses to log in while one is set.
      */
-    fun login(host: String, onLine: (String) -> Unit): Result {
+    fun login(host: String, onLine: (String) -> Unit): Result = try {
         val process = start(
             listOf("auth", "login", "--hostname", host, "--git-protocol", "https", "--web",
                 "--insecure-storage", "--skip-ssh-key", "--clipboard=false"),
@@ -128,7 +132,9 @@ class GhRunner(context: Context) {
         process.outputStream.close()
         val out = StringBuilder()
         process.inputStream.bufferedReader().forEachLine { out.appendLine(it); onLine(it) }
-        return Result(process.waitFor(), out.toString())
+        Result(process.waitFor(), out.toString())
+    } catch (e: Exception) {
+        Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
     }
 
     /** #689 the signed-in account's own repositories, public and private, as gh's JSON [fields]. */
@@ -144,15 +150,24 @@ class GhRunner(context: Context) {
      */
     fun credential(host: String): Credential? {
         if (!isAvailable) return null
-        val process = start(listOf("auth", "git-credential", "get"), token = null)
-        process.outputStream.bufferedWriter().use { it.write("protocol=https\nhost=$host\n\n") }
-        val answer = process.inputStream.bufferedReader().readText()
-        return if (process.waitFor() == 0) GhOutput.credential(answer) else null
+        return try {
+            val process = start(listOf("auth", "git-credential", "get"), token = null)
+            process.outputStream.bufferedWriter().use { it.write("protocol=https\nhost=$host\n\n") }
+            val answer = process.inputStream.bufferedReader().readText()
+            if (process.waitFor() == 0) GhOutput.credential(answer) else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /** A git credential gh answered with. Its toString never prints the secret. */
     class Credential(val username: String, val secret: String) {
         override fun toString(): String = "Credential(username=$username, secret=<redacted>)"
+    }
+
+    companion object {
+        /** #689 the exit code of a gh that could not be started at all; no real exit code is negative. */
+        const val EXEC_FAILED = -1
     }
 }
 

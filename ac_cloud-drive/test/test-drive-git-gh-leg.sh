@@ -30,7 +30,8 @@
 #       helper, never into a Result; the page dispatches the GitHub way to it,
 #       lists with `gh repo list`, clones gh's rows in-process into the ONE
 #       store with the listing's own URL, and says every failure LOUDLY with
-#       its next step.
+#       its next step; a gh that cannot even start is an outcome the page
+#       words, never an exception that crashes it.
 #   G4  THE PIN'S PATTERNS ARE MEASURED: the device-code and page patterns the
 #       phone runs (gh-binary.json::login_output, baked into GhOutput) are
 #       EXECUTED here against the transcript measured on the pinned binary.
@@ -183,6 +184,14 @@ else:
         print("    credential() does not read the answer straight into a Credential"); bad = 1
 if 'override fun toString(): String = "Credential(username=$username, secret=<redacted>)"' not in src:
     print("    GhRunner.Credential's toString is not redacted"); bad = 1
+# a gh that cannot be exec'd is an OUTCOME the page words, never an exception thrown into its
+# coroutine (which would crash the app instead of saying why)
+for name in ("run", "login"):
+    b = body(name)
+    if "catch (e: Exception)" not in b or "Result(EXEC_FAILED," not in b:
+        print("    %s() lets an exec failure escape as an exception: the page would crash instead of saying why" % name); bad = 1
+if "catch (e: Exception)" not in cred:
+    print("    credential() lets an exec failure escape as an exception"); bad = 1
 sys.exit(1 if bad else 0)
 PYTHON
     # THE PAGE: the GitHub way is gh's; list with gh; clone gh's rows on gh's credential.
@@ -229,6 +238,7 @@ git_gh_list_failed|tap Retry
 git_gh_list_unreadable|tap Retry
 git_gh_unconfirmed|Sign in with GitHub again
 git_gh_missing|reinstall Cloud Drive
+git_gh_status_failed|reinstall Cloud Drive
 STEPS
     # the listing reads exactly the fields it asks gh for — closed both ways.
     python3 - "$list" <<'PYTHON' || bad=1
@@ -415,10 +425,19 @@ _green g3 g3 "$SHARED_BJ" "$MUT/GhRunner.kt" "$PAGE" "$LIST" "$COORD" "$STR" "$W
 # G3 — the credential lands in a Result a caller could show
 cp "$RUNNER" "$MUT/GhRunner.kt"
 _green g3 g3 "$SHARED_BJ" "$MUT/GhRunner.kt" "$PAGE" "$LIST" "$COORD" "$STR" "$WIRING" && {
-    _sub "$MUT/GhRunner.kt" '        return if (process.waitFor() == 0) GhOutput.credential(answer) else null' '        val kept = Result(process.waitFor(), answer)
-        return if (kept.ok) GhOutput.credential(answer) else null'
+    _sub "$MUT/GhRunner.kt" '            if (process.waitFor() == 0) GhOutput.credential(answer) else null' '            val kept = Result(process.waitFor(), answer)
+            if (kept.ok) GhOutput.credential(answer) else null'
     _applied "$RUNNER" "$MUT/GhRunner.kt" 'val kept = Result(' \
         && _red "G3 gh's credential answer kept in a Result" g3 "$SHARED_BJ" "$MUT/GhRunner.kt" "$PAGE" "$LIST" "$COORD" "$STR" "$WIRING"; }
+# G3 — an exec failure escapes run() as an exception
+cp "$RUNNER" "$MUT/GhRunner.kt"
+_green g3 g3 "$SHARED_BJ" "$MUT/GhRunner.kt" "$PAGE" "$LIST" "$COORD" "$STR" "$WIRING" && {
+    _sub "$MUT/GhRunner.kt" '    } catch (e: Exception) {
+        Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
+    }' '    } finally {
+    }'
+    _applied "$RUNNER" "$MUT/GhRunner.kt" '} finally {' \
+        && _red "G3 a gh that cannot start throws into the page instead of answering" g3 "$SHARED_BJ" "$MUT/GhRunner.kt" "$PAGE" "$LIST" "$COORD" "$STR" "$WIRING"; }
 # G3 — a failure line loses its next step
 cp "$STR" "$MUT/strings.xml"
 _green g3 g3 "$SHARED_BJ" "$RUNNER" "$PAGE" "$LIST" "$COORD" "$MUT/strings.xml" "$WIRING" && {
@@ -459,7 +478,7 @@ _green g4 g4 "$PIN" "$GH_GRADLE" "$MUT/GhRunner.kt" && {
         && _red "G4 any URL gh prints would be opened" g4 "$PIN" "$GH_GRADLE" "$MUT/GhRunner.kt"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
-[ "$MUTATIONS" -ge 20 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
+[ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
 
 echo

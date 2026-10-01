@@ -466,6 +466,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             st.signedIn -> ghAuth.copy(checked = true, signedIn = true, login = st.login, error = "")
             // gh holds a login GitHub did not confirm (offline, revoked): say that, not "signed out".
             st.state.isNotBlank() -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_unconfirmed, st.login, st.state))
+            // gh could not answer at all (it would not start, or failed before any JSON): its words, not "signed out".
+            !r.ok -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_status_failed, r.exitCode, lastLine(r.output)))
             else -> ghAuth.copy(checked = true, signedIn = false, login = "")
         }
         if (st.signedIn) fetchGhListing()

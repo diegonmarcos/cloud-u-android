@@ -454,6 +454,7 @@
     <string name="git_gh_missing">gh is missing from this build (%1$s was not installed with the app) — reinstall Cloud Drive.</string>
     <string name="git_gh_undeclared">The GitHub rung declares no gh host or list limit, so this build cannot run gh.</string>
     <string name="git_gh_not_signed_in">gh not signed in — tap Sign in with GitHub.</string>
+    <string name="git_gh_status_failed">gh could not say who it is signed in as (exit %1$d): %2$s — reopen this page, or reinstall Cloud Drive if gh does not start.</string>
     <string name="git_gh_unconfirmed">gh holds a sign-in for %1$s but GitHub did not confirm it (%2$s) — check the network and reopen this page, or Sign in with GitHub again.</string>
     <string name="git_gh_waiting">waiting for GitHub to approve the code…</string>
     <string name="git_gh_code">One-time code %1$s (copied). Enter it on the GitHub page that opened; gh finishes by itself once it is approved.</string>
