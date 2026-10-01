@@ -277,4 +277,51 @@ guard. Engine tester: E4 accepts a typed-wire engine whose stub answers `methods
 - **feed, news — not touched in stage 3**; closed by moves 4 and 5.
 - **F2 (Cloud Agenda / Cloud News cannot see their engine on Android 11+)** — closed in
   stage 4 (move 5 for News; the section above for Agenda).
-- Everything stage 1 marked **stays** or **blocked** is unchanged.
+- Everything stage 1 marked **stays** or **blocked** is re-examined in stage 4, below.
+
+## Stage 4 — every "stays" and "blocked" module, re-examined against the code
+
+The requirement is that no non-GUI library change republishes an app. Each module stage 1
+kept in place was re-read (2026-10-01, origin/main after move 6). None of them is moved;
+each keeps one reason, read from its source. Three kinds of reason survive, and only the
+first is an impossibility:
+
+**A. It has to run in the host's process or uid — a separate install cannot do its job.**
+
+| module | reason (from the source) |
+|---|---|
+| core | it IS the contract both sides link (`IDataBackend`, `DataBackendClient`, `CONSTELLATION_DATA`, the crash provider); an engine cannot carry the thing that lets it be reached |
+| devtools | the in-process debug API reads the host's own logcat and process state; Android filters logcat by uid, so another package sees nothing of the host |
+| updater | it installs the host's own update (and its companions) through `PackageInstaller`; an updater updated separately is one package whose breakage leaves every app with no in-app way back |
+| analytics | consent, the per-install visitor id and the site ids are per app (baked from each consumer's `build.json::analytics`), the launch event fires from a ContentProvider before `Application.onCreate`, the retry queue must keep events with no engine installed, and upstream forks consume it with no `libs:core` — only the ~40-line HTTP POST could cross, so a split moves no change surface |
+| webserver | a static server whose default document root is the host's own `getExternalFilesDir()/www`; another uid cannot read it |
+| watchdog | single consumer (C3 Watchdog), and it is that app's own surface: `WatchdogBridge` is a `JavascriptInterface` on the host's WebView, and `BridgeReceiver` is the door the terminal addresses by the app's package, with its state in the app's `filesDir` |
+| auth | draws `SignInWays` (Compose) in the host's tree and its whole output is credentials the host stores; a split puts them on IPC and in a second uid |
+| text-tools, translate, voice, net | already the client halves of engines that run in another APK (the keyboard, Cloud-Keyboard-Libs, Cloud-Lib-Net-Wg) |
+| media, search, battery | draw in the host (the sticker/GIF panel per keystroke; `SearchSheet` per keystroke; `BatteryIconView` and the battery dialogs) |
+
+**B. A per-package grant — movable only if the user grants the same permission a second
+time, to a package with no launcher icon.** Not an impossibility; an owner decision, so
+they stay until it is taken.
+
+| module | the grant |
+|---|---|
+| contacts | `READ_CONTACTS` (`DeviceContacts` reads `ContactsContract`). A split that keeps the read in Cloud Contacts and moves only `MergeEngine`/`SocialImport` needs no second grant, but needs the move-6 contract treatment for `Person`/`RawContact` |
+| datamanager | `PACKAGE_USAGE_STATS` special access (`UsageStatsManager`, `NetworkStatsManager`) |
+| health | Health Connect permissions are granted per package (`PermissionController`) |
+| shizuku-adb-debug-tools | the Shizuku grant is per package (`Shizuku.requestPermission`) |
+| kde-connect | device-admin enrolment is per package (`DeviceAdminReceiver`) |
+| firewall | `VpnService` consent and always-on are per package; net-wg shows it can be done, at the cost of moving the user's VPN identity |
+
+**C. It works on a directory tree in the caller's storage.** A file descriptor carries one
+file, not a tree, so the move-6 mechanism does not apply.
+
+| module | the tree |
+|---|---|
+| git-sync | JGit working trees in the shared store (`<storage>/CloudDrive/git`), plus `GitSyncScreen` |
+| mounts | SFTP/SMB/WebDAV transfers land in the caller's storage, plus `MountsScreen` (Compose) |
+| rclone | jobs read and write the shared store, plus `RcloneScreen` (Compose). The binary-only split (Drive execs `librclone.so` from the lib APK in its own uid) still needs an on-device check that an app may exec another package's extracted native lib |
+
+GUI modules (appstore, bottomnav, browser, chat, cropper, file-editor, fin, gesture,
+keyboard, launcher-*, mail, maps, ops, panoramaviewer, scrollbar, wallet) are out of scope
+by the requirement.
