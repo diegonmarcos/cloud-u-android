@@ -72,3 +72,10 @@ jobs:
       # A check on that has to see both halves at once.
       - name: A tester edit must trigger the run that executes it
         run: bash 1_cicd/src/scripts/test/tester-trigger.test.sh
+
+      # What the stamp WRITES, not only what the gate concludes. The sidecar
+      # was a content digest and nothing else, so no published APK could name
+      # the commit it was built from. Line 2 is now that commit, and the stamp
+      # refuses to upload one that is not a 40-hex sha present in this repo.
+      - name: Every published .source names a real commit
+        run: bash 1_cicd/src/scripts/test/publish-source-commit.test.sh

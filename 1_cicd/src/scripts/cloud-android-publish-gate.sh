@@ -14,7 +14,11 @@
 #                    updated_at does not move — so no phone sees an update.
 #   stamp <app-dir> [variant-id]
 #       last step of a job that DID publish: uploads <asset>.source carrying
-#       the identity those bytes were built from.
+#       the identity those bytes were built from (line 1) and the full 40-hex
+#       git commit they were built from (line 2).
+#   verify-source <file>
+#       exit 0 only when line 2 of a .source file is 40 hex AND names a commit
+#       in this repository. stamp refuses to upload a sidecar that fails it.
 #
 # ONE JOB, MANY ASSETS: --asset NAME --paths-from FILE
 #   ship-cloud-libs builds every module under ab_cloud-libs-shared/libs/ as its
@@ -44,6 +48,29 @@ set -eu
 
 ROOT="${CLOUD_ANDROID_ROOT:-$(_d="$(cd "$(dirname "$0")" && pwd)"; while [ "$_d" != "/" ] && [ ! -e "$_d/.git" ]; do _d="$(dirname "$_d")"; done; printf '%s' "$_d")}"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# THE SIDECAR CARRIES TWO FACTS, ONE PER LINE.
+#   line 1  the input identity — the digest `check` compares, unchanged, so a
+#           push that moves nothing still skips. It is NOT a commit: it is a
+#           hash of build inputs, and reading it as one is how a release came
+#           to name no commit at all.
+#   line 2  the full 40-hex git sha those bytes were built from — what the
+#           owner, the Store and a cache comparison read to say "this build".
+# A legacy one-line sidecar still gates correctly (line 1 is all `check`
+# reads) and simply names no commit until its next publish.
+_verify_source() {
+    sha="$(sed -n 2p "$1" | tr -d '[:space:]')"
+    case "$sha" in
+        *[!0-9a-f]*|"") echo "[publish-gate] $1: line 2 is '$sha', not a git sha" >&2; return 1 ;;
+    esac
+    [ "${#sha}" -eq 40 ] || { echo "[publish-gate] $1: '$sha' is ${#sha} hex, a full git sha is 40" >&2; return 1; }
+    git -C "$ROOT" cat-file -e "$sha^{commit}" 2>/dev/null \
+        || { echo "[publish-gate] $1: $sha is not a commit in this repository" >&2; return 1; }
+}
+if [ "${1:-}" = "verify-source" ]; then
+    [ -n "${2:-}" ] || { echo "usage: $(basename "$0") verify-source <file>" >&2; exit 2; }
+    _verify_source "$2"; exit 0
+fi
 
 CMD="${1:-}"
 APP="${2:-}"; APP="${APP%/}"
@@ -142,7 +169,7 @@ check)
     if ! gh release download "$TAG" --pattern "$ASSET.source" --dir "$tmp" --clobber >/dev/null 2>&1; then
         rm -rf "$tmp"; publish "could not read $ASSET.source from $TAG — publishing"
     fi
-    prev="$(tr -d '[:space:]' < "$tmp/$ASSET.source")"
+    prev="$(head -n 1 "$tmp/$ASSET.source" | tr -d '[:space:]')"
     rm -rf "$tmp"
 
     if [ "$prev" = "$IDENTITY" ]; then
@@ -173,10 +200,16 @@ stamp)
         log "workflow_dispatch: not stamping (set PUBLISH_GATE_STAMP=1 to force)"; exit 0
     fi
     tmp="$(mktemp -d)"
-    printf '%s\n' "$IDENTITY" > "$tmp/$ASSET.source"
+    # HEAD, not GITHUB_SHA: HEAD is the tree these bytes were built from,
+    # whatever ref the job checked out. A shallow checkout still has it.
+    COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+    printf '%s\n%s\n' "$IDENTITY" "$COMMIT" > "$tmp/$ASSET.source"
+    if ! _verify_source "$tmp/$ASSET.source"; then
+        rm -rf "$tmp"; log "refusing to stamp $ASSET.source: it would name no real commit"; exit 1
+    fi
     gh release upload "$TAG" "$tmp/$ASSET.source" --clobber
     rm -rf "$tmp"
-    log "stamped $ASSET.source on $TAG = $IDENTITY"
+    log "stamped $ASSET.source on $TAG = $IDENTITY @ $COMMIT"
     ;;
 
 *)  echo "unknown command: $CMD" >&2; exit 2 ;;

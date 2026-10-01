@@ -70,11 +70,11 @@ t2() {
 t3() {
     local r="$1" bad=0 nc
     nc="$(_fun "$r" notifyConfirm)"
-    printf '%s\n' "$nc" | grep -qE 'fun notifyConfirm\(.*\): Boolean' \
+    grep -qE 'fun notifyConfirm\(.*\): Boolean' <<<"$nc" \
         || { echo "    notifyConfirm does not report whether the notification is visible"; bad=1; }
-    printf '%s\n' "$nc" | grep -qE 'nm\.areNotificationsEnabled\(\)' \
+    grep -qE 'nm\.areNotificationsEnabled\(\)' <<<"$nc" \
         || { echo "    visibility ignores the app-level notification switch"; bad=1; }
-    printf '%s\n' "$nc" | grep -qE 'importance != NotificationManager\.IMPORTANCE_NONE' \
+    grep -qE 'importance != NotificationManager\.IMPORTANCE_NONE' <<<"$nc" \
         || { echo "    visibility ignores a muted Updater channel"; bad=1; }
     [ "$(_code "$r" | grep -cE 'val shown = notifyConfirm\(')" -eq 1 ] \
         || { echo "    onReceive discards notifyConfirm's answer"; bad=1; }
@@ -117,7 +117,7 @@ t4() {
     while read -r code name; do
         want="$(printf '%s\n' "$AOSP" | awk -v c="$code" '$1==c{print $2}')"
         if [ -z "$want" ]; then echo "    $code is mapped but not in the AOSP fixture — add it there first"; bad=1
-        elif ! printf '%s' "$name" | grep -qE "^INSTALL_(FAILED|PARSE_FAILED)_${want}\b"; then
+        elif ! grep -qE "^INSTALL_(FAILED|PARSE_FAILED)_${want}\b" <<<"$name"; then
             echo "    $code is labelled $name, AOSP calls it $want"; bad=1; fi
     done < <(_fun "$r" legacyStatusName | sed -nE 's/^[[:space:]]+(-[0-9]+) -> "([A-Z_]+).*/\1 \2/p')
     [ "$(_fun "$r" legacyStatusName | grep -cE '^[[:space:]]+-115 -> "INSTALL_FAILED_ABORTED')" -eq 1 ] \
