@@ -16,7 +16,7 @@ class StarGestureGate(private val onStar: (x: Float, y: Float) -> Boolean) {
     private var starOwned = false
 
     fun admits(isDown: Boolean, x: Float, y: Float): Boolean {
-        if (isDown) starOwned = onStar(x, y)
-        return true // MUTANT M1
+        if (isDown && !starOwned) starOwned = onStar(x, y) // MUTANT M2
+        return !starOwned
     }
 }
