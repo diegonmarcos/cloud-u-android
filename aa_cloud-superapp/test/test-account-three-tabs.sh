@@ -385,7 +385,7 @@ grep -qF 'renderDeviceSelector(ctx, hero.slot, devices)' "$PF" && ok "G: the dev
 pills_ok() {   # $1 = ProfileFragment.kt; every page-kind way and every lib way draws FleetCockpitView.pill
     local bw; bw=$(fnof "$1" buildWay | codeof)
     for k in KIND_GITHUB_SSH_PAT KIND_GH_AUTH_LOGIN KIND_VAULT_FILE; do
-        awk -v k="$k" '$0 ~ "if \\(way.kind == "k"\\) \\{" {f=1} f{print} f&&/return$/{exit}' <<<"$bw" | grep -qF 'cell.addView(wayPill(ctx, way)' \
+        grep -qF 'cell.addView(wayPill(ctx, way)' <<<"$(awk -v k="$k" '$0 ~ "if \\(way.kind == "k"\\) \\{" {f=1} f{print} f&&/return$/{exit}' <<<"$bw")" \
             || { echo "$k does not draw the shared pill"; return 1; }
     done
     grep -qF 'pickButton(' <<<"$bw" && { echo "buildWay still draws a plain button"; return 1; }
@@ -399,7 +399,7 @@ gh_ok() {   # $1 = ProfileFragment.kt, $2 = GhEngine.kt, $3 = build.json; prints
     jq -e '.ui.profile.connect.lines[] | select(.id == "github") | .ways[] | select(.kind == "gh_auth_login" and .label == "WebAuth" and (.rung | length > 0))' "$3" >/dev/null \
         || { echo "the GitHub line declares no WebAuth way naming its git-chain rung"; return 1; }
     jq -e '.engines.gh | .fleet == "lib-gh" and .min_contract >= 1' "$3" >/dev/null || { echo "engines.gh is not declared against the lib-gh row"; return 1; }
-    awk '$0 ~ /if \(way.kind == KIND_GH_AUTH_LOGIN\) \{/ {f=1} f{print} f&&/return$/{exit}' <<<"$bw" | grep -qF 'ghSignIn(way, status)' \
+    grep -qF 'ghSignIn(way, status)' <<<"$(awk '$0 ~ /if \(way.kind == KIND_GH_AUTH_LOGIN\) \{/ {f=1} f{print} f&&/return$/{exit}' <<<"$bw")" \
         || { echo "the WebAuth pill does not start ghSignIn"; return 1; }
     grep -qF 'GhEngine(ctx)' <<<"$gs" && grep -qF 'engine.login(host)' <<<"$gs" && grep -qF 'engine.token(host)' <<<"$gs" \
         || { echo "ghSignIn does not run gh's own login through the engine"; return 1; }
