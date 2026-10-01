@@ -1,0 +1,40 @@
+name: "dns resolver guard — every fleet lookup goes through Android's resolver"
+
+# WHY THIS WORKFLOW EXISTS AT ALL (#741).
+# The SuperApp's Configs > Mesh > DNS page decides where the phone's names are
+# answered: it is applied at the SuperApp's VPN, and "Mirror Android" passes
+# through to Private DNS. An app follows that choice only while it asks
+# Android's resolver. A public server written into code, a resolv.conf naming
+# one, a DoH client, a raw :53 socket or a bundled binary with its own resolver
+# answers from somewhere the menu never sees, and nothing on the phone shows it.
+# cloud-android-dns-resolver-guard.py fails on any of those outside the two
+# places allowed to talk DNS (the SuperApp's DNS layer with firestack, and the
+# shared libs/sysdns shim), as declared in 1_cicd/src/data/dns-resolver-guard.json.
+#
+# WHY EVERY PUSH, WITH NO PATH FILTER. The commit this guard has to catch can
+# touch any file in any app, so there is no honest path to filter on; the same
+# reasoning as one-pdf-engine-guard.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dns-resolver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it plants every bypass shape (and the brief's own
+      # 8.8.8.8 lookup in a real app) and requires red for each, so the green
+      # below means something.
+      - name: The guard still fails on every way past Android's resolver
+        run: bash 1_cicd/src/scripts/test/dns-resolver-guard.test.sh
+
+      - name: No fleet code resolves names past Android's resolver
+        run: python3 1_cicd/src/scripts/cloud-android-dns-resolver-guard.py .

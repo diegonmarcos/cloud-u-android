@@ -197,6 +197,8 @@ android {
         buildConfigField 'String', 'GIX_VERBS', "\"${gixPin.verbs.join(',')}\""
         buildConfigField 'String', 'GIX_ARM64_SHA256', "\"${gixPin.binaries['arm64-v8a'].binary_sha256}\""
         buildConfigField 'String', 'GIX_X86_64_SHA256', "\"${gixPin.binaries['x86_64'].binary_sha256}\""
+        // #741 how long a tunnel to a remote may sit quiet before libs:sysdns's ResolverProxy ends it.
+        buildConfigField 'int', 'GIX_PROXY_IDLE_MS', "${gixPin.sandbox.idle_close_ms as int}"
     }
 
     sourceSets {
@@ -233,6 +235,8 @@ kotlin {
 }
 
 dependencies {
+    // #741 how gix resolves a remote's name inside an app: the fleet's one bridge to Android's resolver.
+    implementation project(':libs:sysdns')
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 

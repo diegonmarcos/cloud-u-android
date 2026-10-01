@@ -1,6 +1,8 @@
 package com.diegonmarcos.cloudlib.gix
 
 import android.content.Context
+import android.util.Log
+import com.diegonmarcos.cloudlib.sysdns.ResolverProxy
 import java.io.File
 
 /**
@@ -53,10 +55,16 @@ class GixRunner(context: Context) {
         }
         check(isAvailable) { "gix is not installed: ${binary.absolutePath} is missing" }
         cacheDir.mkdirs()
-        val process = ProcessBuilder(listOf(binary.absolutePath, verb) + args)
+        val builder = ProcessBuilder(listOf(binary.absolutePath, verb) + args)
             .redirectErrorStream(true)
             .directory(cacheDir)
-            .start()
+        // #741 gitoxide is a musl static build: its resolver reads an /etc/resolv.conf the app does
+        // not have. The fleet's one bridge to Android's resolver (libs:sysdns) is its HTTPS_PROXY,
+        // so a remote's name resolves where the SuperApp's DNS menu decides; Android's CA stores
+        // go in SSL_CERT_DIR for a build that reads native roots.
+        builder.environment()["SSL_CERT_DIR"] = ResolverProxy.CA_DIRS
+        net?.let { builder.environment()["HTTPS_PROXY"] = it.url }
+        val process = builder.start()
         val text = StringBuilder()
         process.inputStream.bufferedReader().forEachLine { line ->
             text.append(line).append('\n')
@@ -80,6 +88,13 @@ class GixRunner(context: Context) {
         run(VERB_FETCH, listOf("--repository", repo.absolutePath), onLine)
 
     companion object {
+        /** One proxy per process, any host and port a clone URL names, never cut for quiet (gix-binary.json::sandbox). */
+        private val net: ResolverProxy? by lazy {
+            runCatching { ResolverProxy("gix", hosts = null, port = null, idleMs = BuildConfig.GIX_PROXY_IDLE_MS) { Log.i("GixEngine", it) } }
+                .onFailure { Log.e("GixEngine", "gix-net: loopback proxy would not start; gix cannot resolve names", it) }
+                .getOrNull()
+        }
+
         const val VERB_CLONE = "clone"
         const val VERB_FETCH = "fetch"
 

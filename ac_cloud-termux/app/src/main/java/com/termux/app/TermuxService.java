@@ -25,6 +25,7 @@ import com.termux.R;
 import com.termux.app.settings.properties.TermuxAppSharedProperties;
 import com.termux.app.terminal.TermuxTerminalSessionClient;
 import com.termux.app.utils.PluginUtils;
+import com.termux.cloud.CloudDnsBridge;
 import com.termux.shared.data.IntentUtils;
 import com.termux.shared.models.errors.Errno;
 import com.termux.shared.shell.ShellUtils;
@@ -119,6 +120,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
     public void onCreate() {
         Logger.logVerbose(LOG_TAG, "onCreate");
         runStartForeground();
+        // #741 the rootfs shell resolves through Android's resolver, never a server of its own.
+        CloudDnsBridge.start();
     }
 
     @SuppressLint("Wakelock")

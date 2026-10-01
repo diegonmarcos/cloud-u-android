@@ -1,6 +1,8 @@
 package com.diegonmarcos.cloudlib.rclone
 
 import android.content.Context
+import android.util.Log
+import com.diegonmarcos.cloudlib.sysdns.ResolverProxy
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -29,9 +31,21 @@ class RcloneRunner(context: Context) {
 
     private fun base(): List<String> = listOf(binary.absolutePath, "--config", configFile.absolutePath, "--cache-dir", cacheDir.absolutePath)
 
+    /**
+     * #741 rclone is a linux Go build (cgo off): left alone it looks names up in an
+     * /etc/resolv.conf the app does not have and finds no CA roots. Every rclone child gets the
+     * fleet's one bridge to Android's resolver (libs:sysdns, data/sysdns.json::_doc) as
+     * HTTPS_PROXY, so a remote's name resolves where the SuperApp's DNS menu decides, and
+     * Android's CA stores as SSL_CERT_DIR.
+     */
+    private fun process(args: List<String>): ProcessBuilder = ProcessBuilder(args).also { pb ->
+        pb.environment()["SSL_CERT_DIR"] = ResolverProxy.CA_DIRS
+        net?.let { pb.environment()["HTTPS_PROXY"] = it.url }
+    }
+
     /** Run to completion, capture stdout; stderr lines go to [onStderr]. */
     fun capture(args: List<String>, onStderr: (String) -> Unit = {}): Pair<Int, String> {
-        val p = ProcessBuilder(base() + args).redirectErrorStream(false).start()
+        val p = process(base() + args).redirectErrorStream(false).start()
         val errThread = Thread { p.errorStream.bufferedReader().forEachLine(onStderr) }.apply { isDaemon = true; start() }
         val out = p.inputStream.bufferedReader().readText()
         val rc = p.waitFor(); errThread.join(2000)
@@ -66,7 +80,7 @@ class RcloneRunner(context: Context) {
      */
     fun start(job: RcloneJob, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle {
         val args = base() + job.arguments() + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
-        val p = ProcessBuilder(args).redirectErrorStream(true).start()
+        val p = process(args).redirectErrorStream(true).start()
         val handle = Handle(p)
         Thread {
             p.inputStream.bufferedReader().forEachLine { line ->
@@ -88,5 +102,18 @@ class RcloneRunner(context: Context) {
         val (rc, _) = capture(listOf("copyto", remotePath, File(downloadDir, name).absolutePath)) { errs.append(it).append('\n') }
         if (rc != 0) error(errs.toString().ifBlank { "rclone copyto exited $rc" })
         File(downloadDir, name)
+    }
+
+    companion object {
+        /**
+         * One proxy per process, any host a remote names, any port (remotes are the user's), never
+         * cut for quiet (rclone-binary.json::sandbox). Null if loopback would not open: rclone then
+         * fails on its lookup and says so.
+         */
+        private val net: ResolverProxy? by lazy {
+            runCatching { ResolverProxy("rclone", hosts = null, port = null, idleMs = BuildConfig.RCLONE_PROXY_IDLE_MS) { Log.i("RcloneEngine", it) } }
+                .onFailure { Log.e("RcloneEngine", "rclone-net: loopback proxy would not start; rclone cannot resolve names", it) }
+                .getOrNull()
+        }
     }
 }

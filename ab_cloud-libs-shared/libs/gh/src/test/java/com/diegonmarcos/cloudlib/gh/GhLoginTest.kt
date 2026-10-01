@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudlib.gh
 
+import com.diegonmarcos.cloudlib.sysdns.ResolverProxy
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.Base64
@@ -105,25 +106,25 @@ class GhLoginTest {
         )
     }
 
-    // ── GhNetProxy: how gh reaches GitHub from an app with no /etc/resolv.conf ──
+    // ── ResolverProxy: how gh reaches GitHub from an app with no /etc/resolv.conf ──
 
-    private fun connect(proxy: GhNetProxy, target: String, auth: String?): Pair<String, Socket> {
+    private fun connect(proxy: ResolverProxy, target: String, auth: String?): Pair<String, Socket> {
         val port = proxy.url.substringAfterLast(':').toInt()
         val s = Socket("127.0.0.1", port).apply { soTimeout = 5_000 }
         val head = "CONNECT $target HTTP/1.1\r\nHost: $target\r\n" +
             (auth?.let { "Proxy-Authorization: Basic " + Base64.getEncoder().encodeToString(it.toByteArray()) + "\r\n" } ?: "") + "\r\n"
         s.getOutputStream().write(head.toByteArray())
         // Byte-wise, up to the blank line, so a tunnel's first byte is still unread afterwards.
-        return GhNetProxy.readHead(s.getInputStream())!!.first() to s
+        return ResolverProxy.readHead(s.getInputStream())!!.first() to s
     }
 
-    private fun credentialOf(proxy: GhNetProxy) = proxy.url.substringAfter("//").substringBefore('@')
+    private fun credentialOf(proxy: ResolverProxy) = proxy.url.substringAfter("//").substringBefore('@')
 
     @Test
     fun theProxyTunnelsOnlyForItsOwnGhToItsOwnHosts() {
         val echo = ServerSocket(0)
         thread(isDaemon = true) { echo.accept().use { c -> c.getOutputStream().write(c.getInputStream().read()) } }
-        val proxy = GhNetProxy(setOf("localhost"), echo.localPort, idleMs = 60_000) {}
+        val proxy = ResolverProxy("gh", setOf("localhost"), echo.localPort, idleMs = 60_000) {}
 
         val (open, s) = connect(proxy, "localhost:${echo.localPort}", credentialOf(proxy))
         s.use {
@@ -148,7 +149,7 @@ class GhLoginTest {
 
     @Test
     fun anUnreachableHostIsNamedWithAndroidsReason() {
-        val proxy = GhNetProxy(setOf("no-such-host.invalid"), 443, idleMs = 60_000) {}
+        val proxy = ResolverProxy("gh", setOf("no-such-host.invalid"), 443, idleMs = 60_000) {}
         val (status, s) = connect(proxy, "no-such-host.invalid:443", credentialOf(proxy))
         s.close()
         assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach no-such-host.invalid: DNS: no address for no-such-host.invalid"))
@@ -158,14 +159,14 @@ class GhLoginTest {
     @Test
     fun aRefusedPortIsNamedAsTcpNotDns() {
         val closed = ServerSocket(0).run { localPort.also { close() } }
-        val proxy = GhNetProxy(setOf("127.0.0.1"), closed, idleMs = 60_000) {}
+        val proxy = ResolverProxy("gh", setOf("127.0.0.1"), closed, idleMs = 60_000) {}
         val (status, s) = connect(proxy, "127.0.0.1:$closed", credentialOf(proxy))
         s.close()
         assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach 127.0.0.1: TCP: 127.0.0.1:$closed refused the connection"))
-        assertTrue(GhNetProxy.probe("no-such-host.invalid").startsWith("DNS: "))
-        assertTrue(GhNetProxy.probe("127.0.0.1", closed).startsWith("TCP: "))
+        assertTrue(ResolverProxy.probe("no-such-host.invalid").startsWith("DNS: "))
+        assertTrue(ResolverProxy.probe("127.0.0.1", closed).startsWith("TCP: "))
         val open = ServerSocket(0)
-        open.use { assertTrue(GhNetProxy.probe("127.0.0.1", it.localPort).contains("reachable")) }
+        open.use { assertTrue(ResolverProxy.probe("127.0.0.1", it.localPort).contains("reachable")) }
     }
 
     /**
@@ -185,7 +186,7 @@ class GhLoginTest {
                 c.close()
             }
         }
-        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 60_000) {}
+        val proxy = ResolverProxy("gh", setOf("localhost"), gitHub.localPort, idleMs = 60_000) {}
         val (open, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
         s.use {
             assertEquals("HTTP/1.1 200 Connection established", open)
@@ -195,7 +196,7 @@ class GhLoginTest {
                 "which Go reports as \"unexpected EOF\"", answer.isFailure)
         }
         assertTrue("the engine kept no word of where the tunnel broke", waitFor(5_000) { proxy.lastDrop != null })
-        assertTrue(proxy.lastDrop!!, proxy.lastDrop!!.contains(GhNetProxy.BROKEN) && proxy.lastDrop!!.contains("localhost:${gitHub.localPort}"))
+        assertTrue(proxy.lastDrop!!, proxy.lastDrop!!.contains(ResolverProxy.BROKEN) && proxy.lastDrop!!.contains("localhost:${gitHub.localPort}"))
     }
 
     /** A fake GitHub that answers each byte with itself, after [delayFor] ms for that byte's ordinal. */
@@ -221,7 +222,7 @@ class GhLoginTest {
     @Test
     fun aTunnelGitHubHasAnsweredIsEndedOnceQuiet() {
         val gitHub = answering()
-        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 300) {}
+        val proxy = ResolverProxy("gh", setOf("localhost"), gitHub.localPort, idleMs = 300) {}
         val (_, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
         s.use {
             s.getOutputStream().write(7)
@@ -235,7 +236,7 @@ class GhLoginTest {
     @Test
     fun aRequestWaitingForItsAnswerIsNeverCutForQuiet() {
         val gitHub = answering { i -> if (i == 1) 1_200L else 0L }
-        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 300) {}
+        val proxy = ResolverProxy("gh", setOf("localhost"), gitHub.localPort, idleMs = 300) {}
         val (_, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
         s.use {
             s.getOutputStream().write(1)

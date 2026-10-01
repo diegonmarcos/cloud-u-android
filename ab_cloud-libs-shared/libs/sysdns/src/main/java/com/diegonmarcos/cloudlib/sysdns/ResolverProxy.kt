@@ -1,4 +1,4 @@
-package com.diegonmarcos.cloudlib.gh
+package com.diegonmarcos.cloudlib.sysdns
 
 import java.io.IOException
 import java.io.InputStream
@@ -19,47 +19,57 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
 /**
- * HOW gh REACHES GITHUB FROM INSIDE AN APP. The official linux gh resolves names with Go's own
- * resolver, which reads /etc/resolv.conf; an Android app has none, so every lookup went to
- * 127.0.0.1:53, nothing answered, and the sign-in died before it reached GitHub, printing gh's
- * "check your internet connection" (data/gh-binary.json::_doc_sandbox has the sources).
+ * HOW A BUNDLED BINARY RESOLVES A NAME FROM INSIDE AN APP (data/sysdns.json::_doc). Linux builds
+ * of gh and rclone resolve with Go's own resolver and gix with musl's; both read /etc/resolv.conf,
+ * which an Android app has none of, so every lookup went to 127.0.0.1:53, nothing answered, and
+ * the binary died on its first name (gh printed "check your internet connection"). Had they found
+ * a resolver, it would have been one the app picked, not the one the SuperApp's DNS menu applies.
  *
- * This is a CONNECT proxy on loopback, in the engine's own process. gh is given
- * `HTTPS_PROXY=http://<user>:<pass>@127.0.0.1:<port>`, so Go dials the proxy by IP (no lookup) and
- * asks it for a tunnel; the proxy resolves the name with Android's resolver, connects, and copies
- * bytes. TLS is end to end between gh and GitHub, so all the proxy ever sees is the host name.
+ * This is a CONNECT proxy on loopback, in the engine's own process. The binary is given
+ * `HTTPS_PROXY=http://<user>:<pass>@127.0.0.1:<port>` ([url]), so it dials the proxy by IP (no
+ * lookup) and asks it for a tunnel; the proxy resolves the name with Android's resolver — under
+ * the SuperApp's VPN that is the menu's upstream, with Private DNS honoured otherwise — connects,
+ * and copies bytes. TLS is end to end, so all the proxy ever sees is the host name.
+ *
+ * #729 it began as libs:gh's GhNetProxy; #741 moved it here unchanged in behaviour so every
+ * bundled binary takes the same path instead of each growing its own resolver.
  *
  * NOT AN OPEN RELAY. Loopback is shared by every app on the phone, so two checks run before a
- * tunnel opens: the request must carry this process's random credential (only gh children of
- * this engine are given it), and the target must be one of [hosts] on [tlsPort]. Each refusal is
- * a status line naming the reason, which Go turns into gh's own error line, and a log line.
+ * tunnel opens: the request must carry this process's random credential (only children of this
+ * engine are given it), and the target must be allowed: one of [hosts] (null: any name the
+ * engine's user configured, as rclone's remotes are) on [port] (null: any). Each refusal is a
+ * status line naming the reason, which the binary turns into its own error line, and a log line.
  */
-class GhNetProxy(
-    private val hosts: Set<String>,
-    /** HTTPS. A parameter only so GhLoginTest can tunnel to a local echo server. */
-    private val tlsPort: Int = 443,
-    /** How long a tunnel GitHub has answered may sit silent before it is ended (gh-binary.json::idle_close_ms). */
+class ResolverProxy(
+    /** Who runs it, for log lines and refusals: "gh" logs as gh-net and refuses as "the gh engine". */
+    private val owner: String,
+    /** The only names it tunnels to; null tunnels to any. */
+    private val hosts: Set<String>?,
+    /** The only port it tunnels to (HTTPS for gh); null tunnels to any. */
+    private val port: Int?,
+    /** How long a tunnel upstream has answered may sit silent before it is ended; 0 never (gh-binary.json::idle_close_ms). */
     private val idleMs: Int,
     private val log: (String) -> Unit,
 ) {
 
-    private val user = "gh"
+    private val tag = "$owner-net"
+    private val user = owner
     private val pass = ByteArray(18).also { SecureRandom().nextBytes(it) }
         .let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
     private val expected = "Basic " + Base64.getEncoder().encodeToString("$user:$pass".toByteArray())
     private val server = ServerSocket(0, 16, InetAddress.getByName("127.0.0.1"))
 
-    /** What gh gets as HTTPS_PROXY. Carries the credential: never log it. */
+    /** What the binary gets as HTTPS_PROXY. Carries the credential: never log it. */
     val url: String = "http://$user:$pass@127.0.0.1:${server.localPort}"
 
     init {
-        thread(isDaemon = true, name = "gh-net") {
+        thread(isDaemon = true, name = tag) {
             while (true) {
-                val client = try { server.accept() } catch (e: IOException) { log("gh-net: stopped: ${e.message}"); break }
-                thread(isDaemon = true, name = "gh-net-conn") { serve(client) }
+                val client = try { server.accept() } catch (e: IOException) { log("$tag: stopped: ${e.message}"); break }
+                thread(isDaemon = true, name = "$tag-conn") { serve(client) }
             }
         }
-        log("gh-net: listening on 127.0.0.1:${server.localPort} for ${hosts.joinToString()}")
+        log("$tag: listening on 127.0.0.1:${server.localPort} for ${hosts?.joinToString() ?: "any host"}${port?.let { " on :$it" } ?: ""}")
     }
 
     private fun serve(client: Socket) = client.use {
@@ -68,37 +78,39 @@ class GhNetProxy(
         val request = head.first().split(' ')
         val target = request.getOrNull(1).orEmpty()
         val host = target.substringBeforeLast(':')
-        val port = target.substringAfterLast(':').toIntOrNull()
+        val asked = target.substringAfterLast(':').toIntOrNull()
         val auth = head.drop(1).firstOrNull { it.startsWith("proxy-authorization:", ignoreCase = true) }
             ?.substringAfter(':')?.trim()
         val refusal = when {
             auth != expected -> "407 Proxy Authentication Required"
-            request.firstOrNull() != "CONNECT" -> "405 the gh engine only tunnels CONNECT"
-            host !in hosts || port != tlsPort -> "403 the gh engine does not tunnel to $target"
+            request.firstOrNull() != "CONNECT" -> "405 the $owner engine only tunnels CONNECT"
+            asked == null || (hosts != null && host !in hosts) || (port != null && asked != port) ->
+                "403 the $owner engine does not tunnel to $target"
             else -> null
         }
-        if (refusal != null) {
-            log("gh-net: refused ${request.firstOrNull()} $target: $refusal")
-            reply(client.getOutputStream(), refusal)
+        if (refusal != null || asked == null) {
+            log("$tag: refused ${request.firstOrNull()} $target: $refusal")
+            reply(client.getOutputStream(), refusal ?: "403 the $owner engine does not tunnel to $target")
             return@use
         }
         val upstream = Socket()
         try {
-            upstream.connect(InetSocketAddress(host, tlsPort), CONNECT_TIMEOUT_MS)
+            // THE LOOKUP: Android's resolver, for this app's uid, on this app's network.
+            upstream.connect(InetSocketAddress(host, asked), CONNECT_TIMEOUT_MS)
         } catch (e: IOException) {
-            // The real cause, for gh's error line and the log: which layer failed, in Android's words.
-            val why = "502 cannot reach $host: ${cause(host, tlsPort, e)}"
-            log("gh-net: $why")
+            // The real cause, for the binary's error line and the log: which layer failed, in Android's words.
+            val why = "502 cannot reach $host: ${cause(host, asked, e)}"
+            log("$tag: $why")
             reply(client.getOutputStream(), why)
             upstream.close()
             return@use
         }
         upstream.use {
             val via = "$target (${upstream.inetAddress.hostAddress})"
-            log("gh-net: tunnel open to $via")
+            log("$tag: tunnel open to $via")
             reply(client.getOutputStream(), "200 Connection established")
             val ended = relay(client, input, upstream)
-            log("gh-net: tunnel to $via $ended")
+            log("$tag: tunnel to $via $ended")
             if (ended.startsWith(BROKEN)) lastDrop = "tunnel to $via $ended"
         }
     }
@@ -135,7 +147,7 @@ class GhNetProxy(
         val lastMove = AtomicLong(now())
         val upFailure = AtomicReference<IOException?>()
         upstream.soTimeout = idleMs // wakes the loop below to look at the clock; not a deadline
-        val toGitHub = thread(isDaemon = true, name = "gh-net-up") {
+        val toGitHub = thread(isDaemon = true, name = "$tag-up") {
             val buf = ByteArray(BUF)
             val out = upstream.getOutputStream()
             while (true) {
@@ -199,13 +211,16 @@ class GhNetProxy(
     }
 
     companion object {
+        /** Android's CA stores, for a linux binary's SSL_CERT_DIR (data/sysdns.json::_doc_ssl_cert_dirs). */
+        val CA_DIRS: String = BuildConfig.SSL_CERT_DIRS
+
         private const val CONNECT_TIMEOUT_MS = 20_000
         private const val HEAD_MAX = 8192
         private const val BUF = 16 * 1024
         /** A read that timed out: not a byte count, a cue to look at the clock. */
         private const val QUIET_CHECK = -2
-        internal const val QUIET = "ended: quiet after GitHub's answer"
-        internal const val BROKEN = "BROKEN by the network"
+        const val QUIET = "ended: quiet after GitHub's answer"
+        const val BROKEN = "BROKEN by the network"
 
         private fun now() = System.nanoTime() / 1_000_000
 
@@ -214,7 +229,7 @@ class GhNetProxy(
          * sentence for every failed lookup, so a firewall, a dead resolver and a refused port all
          * read the same on the card. Android's own message follows the layer.
          */
-        internal fun cause(host: String, port: Int, e: IOException): String = when (e) {
+        fun cause(host: String, port: Int, e: IOException): String = when (e) {
             is UnknownHostException -> "DNS: no address for $host from Android's resolver (this uid, Private DNS honoured)"
             is SocketTimeoutException -> "TCP: $host:$port did not answer"
             is ConnectException -> "TCP: $host:$port refused the connection"
@@ -233,7 +248,7 @@ class GhNetProxy(
         }
 
         /** The request line and headers, up to the blank line; null if the client gave up first. */
-        internal fun readHead(input: InputStream): List<String>? {
+        fun readHead(input: InputStream): List<String>? {
             val bytes = java.io.ByteArrayOutputStream()
             var last4 = 0 // the last four bytes read; an Int shift drops the oldest
             while (true) {

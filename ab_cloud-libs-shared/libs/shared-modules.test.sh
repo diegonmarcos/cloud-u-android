@@ -96,8 +96,10 @@ note ok "no module name owns more than one directory"
 #    path resolves to superapp's, so cloud-browser would take superapp's GHCR
 #    image (updater) or superapp's log stream (devtools).
 while read -r bg; do
-    # Only actual parses count — a mention of build.json in a comment is fine.
-    command grep -q 'parse(file(' "$bg" || continue
+    # Only actual parses OF A build.json count — a mention in a comment is fine, and so
+    # is a module reading its own pin (libs/rclone's data/rclone-binary.json, #741's
+    # libs/sysdns data/sysdns.json): that file has no per-app copy to confuse it with.
+    command grep -q 'parse(file(.*build\.json' "$bg" || continue
     # A module MAY additionally fall back to its own repo for a key the consumer
     # does not define (libs/voice does), but the FIRST read must be the app's.
     command grep -q 'parse(file("${rootDir}/build.json"))' "$bg" \

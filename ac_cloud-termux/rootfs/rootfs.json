@@ -142,10 +142,13 @@
     ]
   },
   "nameservers": [
-    "1.1.1.1",
-    "8.8.8.8"
+    "127.0.0.1"
   ],
-  "_doc_nameservers": "docker export leaves /etc/resolv.conf empty, and Android has no /etc/resolv.conf to bind in.",
+  "_doc_nameservers": "docker export leaves /etc/resolv.conf empty, and Android has no /etc/resolv.conf to bind in, so build-rootfs.sh writes one from this list. #741: it names NO public server any more (it named two public resolvers, Cloudflare's and Google's, so every shell lookup went past the SuperApp's DNS menu and past Private DNS). 127.0.0.1 is the bridge: enter.sh runs proot with -p, which moves a guest's :53 on loopback to dns_bridge.port, where the app answers every query with Android's own resolver (libs/sysdns SystemDnsBridge). glibc, musl, Go and node in this tree all reach it the same way; rootfs/verify-rootfs.sh resolves a name through it under the shipped proot and goes red without -p.",
+  "dns_bridge": {
+    "_doc": "Where the bridge listens is libs:sysdns's to declare (bridge_port), not this file's: the app that answers and the tester that proves the path both read it there.",
+    "source": "ab_cloud-libs-shared/libs/sysdns/data/sysdns.json"
+  },
   "proot": {
     "_doc": "The Android-built static proot that #348 already pins inside the cloud-terminal-nix bootstrap. Static means no PT_INTERP: the same binary runs on bionic Android and on the glibc CI runner, so CI tests the exact bytes the phone executes. Read from that app's build.json rather than pinned twice.",
     "source_build_json": "ac_cloud-nix-on-droid/build.json",

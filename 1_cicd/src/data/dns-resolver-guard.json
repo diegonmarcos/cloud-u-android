@@ -1,0 +1,61 @@
+{
+  "_doc": "#741 ONE RESOLVER FOR THE FLEET, enforced. The SuperApp's Configs > Mesh > DNS page decides where every name the phone looks up is answered (applied at its VPN by firestack; 'Mirror Android' passes through to Private DNS). An app inherits that choice only while it asks Android's resolver; a public server written into code, a resolv.conf naming one, a DNS-over-HTTPS client or a raw socket to :53 each answer from somewhere the menu never sees. 1_cicd/src/scripts/cloud-android-dns-resolver-guard.py reads every tracked file under the fleet's app and library trees and fails on any of the patterns below outside the two places allowed to talk DNS at all. Read by the guard and by its tester; nothing in either names a server or a path on its own.",
+  "_doc_scan": "Path prefixes of the fleet's own trees (apps, libraries, engines, terminal rootfs declarations). 1_cicd is not scanned: it is where this guard and its fixtures live.",
+  "scan": ["aa_", "ab_", "ac_", "a_solutions/"],
+  "_doc_skip": "Never read: build outputs, vendored dependency trees and binary or lock files, which are not code the fleet writes.",
+  "skip_dirs": ["/dist/", "/node_modules/", "/build/"],
+  "skip_suffixes": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".jar", ".so", ".apk", ".aar", ".zip", ".gz", ".zst", ".tar", ".ttf", ".otf", ".woff", ".woff2", ".mp3", ".mp4", ".pdf", ".bin", ".keystore", ".lock", ".lockb"],
+  "_doc_rules": "Each rule is a regular expression applied per line, optionally only to files with the listed suffixes; needles are plain substrings at least one of which every match contains, so a file holding none of them is never read line by line (the whole fleet is scanned on every push). public-dns-ip lists the public resolvers an app could pin; resolv-nameserver catches any resolv.conf line naming something other than the loopback bridge (libs/sysdns), which is also how a mesh resolver hardcoded per app shows up; the rest are the ways code brings its own resolver.",
+  "rules": {
+    "public-dns-ip": {
+      "needles": ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112", "208.67.222.222", "208.67.220.220", "94.140.14.14", "94.140.15.15", "76.76.2.0", "185.228.168.9", "2606:4700:4700::", "2001:4860:4860::"],
+      "why": "a public DNS server written into the fleet's code: lookups through it skip the SuperApp's DNS menu",
+      "pattern": "(?<![\\d.])(?:1\\.1\\.1\\.1|1\\.0\\.0\\.1|8\\.8\\.8\\.8|8\\.8\\.4\\.4|9\\.9\\.9\\.9|149\\.112\\.112\\.112|208\\.67\\.222\\.222|208\\.67\\.220\\.220|94\\.140\\.14\\.14|94\\.140\\.15\\.15|76\\.76\\.2\\.0|185\\.228\\.168\\.9|2606:4700:4700::1111|2606:4700:4700::1001|2001:4860:4860::8888|2001:4860:4860::8844)(?![\\d.])"
+    },
+    "resolv-nameserver": {
+      "needles": ["nameserver"],
+      "why": "a resolv.conf naming a server other than 127.0.0.1, the loopback bridge to Android's resolver (libs/sysdns)",
+      "pattern": "nameserver[ \\t]+(?!127\\.0\\.0\\.1\\b|::1\\b)[0-9a-fA-F:.]{3,}"
+    },
+    "custom-resolver-lib": {
+      "needles": ["dnsoverhttps", "DnsOverHttps", "org.xbill.DNS", "dnsjava:dnsjava", "org.minidns", "hickory-resolver", "trust-dns-resolver"],
+      "why": "a resolver library of the app's own (DoH client, dnsjava, minidns, hickory/trust-dns): it answers from its own upstream, not Android's",
+      "pattern": "okhttp-dnsoverhttps|okhttp3\\.dnsoverhttps|\\bDnsOverHttps\\b|org\\.xbill\\.DNS|dnsjava:dnsjava|org\\.minidns|\\bhickory-resolver\\b|\\btrust-dns-resolver\\b"
+    },
+    "custom-okhttp-dns": {
+      "needles": ["Dns", ".dns("],
+      "why": "an OkHttp Dns of the app's own instead of Dns.SYSTEM",
+      "pattern": "(?:object\\s*:\\s*|implements\\s+)(?:okhttp3\\.)?Dns\\b|\\.dns\\(\\s*(?!Dns\\.SYSTEM\\b)[A-Za-z_]",
+      "suffixes": [".kt", ".java", ".kts"]
+    },
+    "doh-endpoint": {
+      "needles": ["/dns-query", "dns.google", "cloudflare-dns.com", "dns.quad9.net", "doh.opendns.com", "dns.adguard-dns.com"],
+      "why": "a DNS-over-HTTPS endpoint: lookups sent there never reach Android's resolver",
+      "pattern": "/dns-query\\b|\\bdns\\.google\\b|cloudflare-dns\\.com|dns\\.quad9\\.net|doh\\.opendns\\.com|dns\\.adguard-dns\\.com"
+    },
+    "raw-dns-port": {
+      "needles": ["53)", "53 )"],
+      "why": "a socket aimed at port 53: a hand-rolled DNS client",
+      "pattern": "InetSocketAddress\\([^)]*,\\s*53\\s*\\)|DatagramPacket\\([^)]*,\\s*53\\s*\\)",
+      "suffixes": [".kt", ".java"]
+    }
+  },
+  "_doc_allow": "The ONLY trees allowed to name servers or speak DNS, each with the reason. Everything else that matches a rule is a failure.",
+  "allow": {
+    "aa_cloud-superapp/": "The SuperApp IS the fleet's DNS layer: its VPN, the WireGuard profiles' DNS lines and the Configs > Mesh > DNS presets (#740) are where upstream servers, including the mesh resolver for the split-DNS rule, are declared once for every app.",
+    "ab_cloud-libs-shared/libs/firewall/": "firestack, the engine the SuperApp's VPN runs: its DNS transports (DoH, DoT, dns53) are how the menu's choice is applied.",
+    "ab_cloud-libs-shared/libs/sysdns/": "The shared shim (#741) that bridges bundled binaries and terminal shells to Android's resolver."
+  },
+  "_doc_exempt": "Single literals in vendored or unrelated code that match a rule but are not a DNS server, pinned to the file AND the text: the same file gaining any other match still fails.",
+  "exempt": [
+    {"path": "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt", "match": "(no route to 1.1.1.1)", "reason": "A comment explaining an IPv6-only carrier, not a lookup."},
+    {"path": "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/data/platform/util/StringExtensions.kt", "match": "* - 1.1.1.1:", "reason": "Upstream Bitwarden KDoc examples of host:port strings for its URI validator."},
+    {"path": "ac_cloud-vault/app/src/test/kotlin/com/x8bit/bitwarden/data/util/StringExtensionsTest.kt", "match": "\"1.1.1.1:", "reason": "Upstream Bitwarden test inputs for the same validator."},
+    {"path": "ac_cloud-vault/app/src/test/kotlin/com/x8bit/bitwarden/ui/platform/feature/settings/accountsecurity/loginapproval/LoginApprovalScreenTest.kt", "match": "ipAddress = \"1.0.0.1\"", "reason": "Upstream Bitwarden fixture: the IP a login request came from."},
+    {"path": "ac_cloud-vault/app/src/test/kotlin/com/x8bit/bitwarden/ui/platform/feature/settings/accountsecurity/loginapproval/LoginApprovalViewModelTest.kt", "match": "ipAddress = \"1.0.0.1\"", "reason": "Upstream Bitwarden fixture: the IP a login request came from."},
+    {"path": "ac_cloud-vault/network/src/test/kotlin/com/bitwarden/network/interceptor/PermissionInterceptorTest.kt", "match": "8.8.8.8", "reason": "Upstream Bitwarden test of its permission interceptor against a public host, mocked."},
+    {"path": "ac_cloud-vault/network/src/test/kotlin/com/bitwarden/network/service/AuthRequestsServiceTest.kt", "match": "1.0.0.1\"", "reason": "Upstream Bitwarden fixture: the IP a login request came from."},
+    {"path": "ac_cloud-vault/network/src/test/kotlin/com/bitwarden/network/service/NewAuthRequestServiceTest.kt", "match": "1.0.0.1\"", "reason": "Upstream Bitwarden fixture: the IP a login request came from."},
+    {"path": "ac_cloud-notes/blocksuite/affine/shared/src/__tests__/utils/url.unit.spec.ts", "match": "expect(isValidUrl('1.", "reason": "Upstream BlockSuite test that a bare IP is not a URL."}
+  ]
+}

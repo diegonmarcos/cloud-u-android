@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import com.diegonmarcos.cloudlib.sysdns.ResolverProxy
 import java.io.File
 
 /**
@@ -34,7 +35,7 @@ import java.io.File
  *
  * THE SANDBOX IS NOT A LINUX BOX: no /etc/resolv.conf and no /etc/ssl. [start] hands gh the CA
  * directories (SSL_CERT_DIR) and a loopback CONNECT proxy that resolves with Android's resolver
- * (HTTPS_PROXY → [GhNetProxy]); without them gh died on its first lookup and printed "check your
+ * (HTTPS_PROXY → libs:sysdns [ResolverProxy]); without them gh died on its first lookup and printed "check your
  * internet connection" (data/gh-binary.json::_doc_sandbox).
  *
  * EVERY gh RUN IS LOGGED under [TAG]: its verb, its exit, and on failure gh's own last words.
@@ -98,7 +99,7 @@ class GhRunner(private val context: Context) {
             put("GH_PROMPT_DISABLED", "1")
             // The two things the app sandbox lacks (the pin's _doc_sandbox): Android's CA
             // directories, and a way to resolve a name.
-            put("SSL_CERT_DIR", BuildConfig.GH_CERT_DIRS)
+            put("SSL_CERT_DIR", ResolverProxy.CA_DIRS)
             net?.let { put("HTTPS_PROXY", it.url) }
             if (!token.isNullOrBlank()) put("GH_TOKEN", token)
         }
@@ -180,7 +181,7 @@ class GhRunner(private val context: Context) {
         return (listOf(if (net != null) "gh-net tunnel up" else "gh-net tunnel DID NOT START ($netFailure), so gh had to resolve names itself") +
             listOf(if (blocked) "Android is BLOCKING this engine's network (process importance $importance: it fell out of the foreground)"
                 else "Android is not blocking this engine's network (process importance $importance)") +
-            BuildConfig.GH_PROXY_HOSTS.split(',').map { GhNetProxy.probe(it) } +
+            BuildConfig.GH_PROXY_HOSTS.split(',').map { ResolverProxy.probe(it) } +
             // #729 where gh's connection died, when the network killed it under gh: gh itself
             // only reads "unexpected EOF" or a reset, which names no layer and no address.
             listOfNotNull(net?.lastDrop?.let { "last gh-net drop: $it" }) +
@@ -227,8 +228,8 @@ class GhRunner(private val context: Context) {
          * The one proxy per engine process, or null if loopback would not open — then gh runs
          * without it, fails on its lookup, and says so in its own words.
          */
-        private val net: GhNetProxy? by lazy {
-            runCatching { GhNetProxy(BuildConfig.GH_PROXY_HOSTS.split(',').toSet(), idleMs = BuildConfig.GH_PROXY_IDLE_MS) { Log.i(TAG, it) } }
+        private val net: ResolverProxy? by lazy {
+            runCatching { ResolverProxy("gh", BuildConfig.GH_PROXY_HOSTS.split(',').toSet(), 443, idleMs = BuildConfig.GH_PROXY_IDLE_MS) { Log.i(TAG, it) } }
                 .onFailure { netFailure = it.message ?: it.javaClass.simpleName }
                 .onFailure { Log.e(TAG, "gh-net: loopback proxy would not start; gh cannot resolve names", it) }
                 .getOrNull()

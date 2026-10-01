@@ -736,6 +736,11 @@
       "dir": "../ab_cloud-libs-shared/libs/rclone",
       "type": "library"
     },
+    "libs:sysdns": {
+      "_doc_dir": "#741 Not an engine and not linked by the app: libs:rclone compiles it, so settings.gradle must include it. It is how the bundled rclone binary resolves a remote's name inside this app, through Android's resolver and therefore the SuperApp's DNS menu (ab_cloud-libs-shared/libs/sysdns/data/sysdns.json::_doc).",
+      "dir": "../ab_cloud-libs-shared/libs/sysdns",
+      "type": "library"
+    },
     "libs:mounts": {
       "_doc_dir": "Engine library #567 push 4: ftp / sftp / ssh / webdav mounts with browse-through. Declared fleet connections stay in data/drive-connections.json; the library receives them as models.",
       "engine": true,

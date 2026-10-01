@@ -142,6 +142,8 @@ android {
         buildConfigField 'String', 'RCLONE_JNI_NAME', "\"${rclonePin.jni_name}\""
         buildConfigField 'String', 'RCLONE_ARM64_SHA256', "\"${rclonePin.binaries['arm64-v8a'].binary_sha256}\""
         buildConfigField 'String', 'RCLONE_X86_64_SHA256', "\"${rclonePin.binaries['x86_64'].binary_sha256}\""
+        // #741 how long a tunnel to a remote may sit quiet before libs:sysdns's ResolverProxy ends it.
+        buildConfigField 'int', 'RCLONE_PROXY_IDLE_MS', "${rclonePin.sandbox.idle_close_ms as int}"
     }
 
     sourceSets {
@@ -179,6 +181,8 @@ kotlin {
 }
 
 dependencies {
+    // #741 how rclone resolves a remote's name inside an app: the fleet's one bridge to Android's resolver.
+    implementation project(':libs:sysdns')
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'

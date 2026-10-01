@@ -4,6 +4,9 @@ plugins {
 
 // #470 — the glibc root filesystem this terminal ships (see ../rootfs/rootfs.json).
 def cloudRootfs = new groovy.json.JsonSlurper().parse(file("$projectDir/../rootfs/rootfs.json"))
+// #741 the shell's DNS bridge: its port and its one source, both libs/sysdns's (rootfs.json::dns_bridge).
+def cloudDnsBridgeJson = file("$projectDir/../../${cloudRootfs.dns_bridge.source}")
+def cloudDnsBridge = new groovy.json.JsonSlurper().parse(cloudDnsBridgeJson)
 
 // #628 — the companion lib APK (:rootfs-lib) that now carries the rootfs
 // payload. ONE declaration of its applicationId, in build.json::release
@@ -22,6 +25,14 @@ def cloudRootfsLibPackage = new groovy.json.JsonSlurper()
 if (!cloudRootfsLibPackage) throw new GradleException("build.json::release.companions[] declares no 'rootfs-termux' entry")
 
 android {
+    // #741 SystemDnsBridge is compiled from libs/sysdns BY REFERENCE (plain Java, its own
+    // source dir), so every terminal runs the one bridge and none carries a copy.
+    sourceSets {
+        main {
+            java.srcDirs += new File(cloudDnsBridgeJson.parentFile.parentFile, 'src/bridge/java')
+        }
+    }
+
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
@@ -54,8 +65,8 @@ android {
         // companion APK (network-free transport instead of #618's runtime
         // fetch), which changes this app's own staging code — bumped so the
         // Store sees it as an update independently of the rootfs content address.
-        versionCode 1008
-        versionName "0.118.3"
+        versionCode 1009
+        versionName "0.118.4"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
@@ -67,6 +78,8 @@ android {
         // #628 — the companion APK CloudRootfs.java resolves via PackageManager
         // to read the rootfs out of. Never a literal in the Java: one declaration.
         buildConfigField "String", "CLOUD_ROOTFS_LIB_PACKAGE", "\"${cloudRootfsLibPackage}\""
+        // #741 where CloudDnsBridge answers the rootfs shell's lookups (enter.sh's proot -p lands :53 here).
+        buildConfigField "int", "CLOUD_DNS_BRIDGE_PORT", "${cloudDnsBridge.bridge_port as int}"
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Termux)"

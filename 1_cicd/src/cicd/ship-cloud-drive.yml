@@ -49,6 +49,7 @@ on:
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
       - "ab_cloud-libs-shared/libs/mounts/**"
       - "ab_cloud-libs-shared/libs/rclone/**"
+      - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
 permissions:

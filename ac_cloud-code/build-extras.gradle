@@ -41,3 +41,20 @@ androidComponents {
         }
     }
 }
+
+// ── cloud-code (#741): the Alpine shell resolves through Android, not a server of its own ──
+// libs/sysdns's SystemDnsBridge is compiled in BY REFERENCE (plain Java, its own source
+// dir) so every fleet terminal runs the one bridge; its port is libs/sysdns's to declare.
+def cloudDnsBridgeJson = new File(rootProject.projectDir, '../../../ab_cloud-libs-shared/libs/sysdns/data/sysdns.json')
+def cloudDnsBridge = new groovy.json.JsonSlurper().parse(cloudDnsBridgeJson)
+android {
+    buildFeatures { buildConfig true }
+    defaultConfig {
+        buildConfigField 'int', 'CLOUD_DNS_BRIDGE_PORT', "${cloudDnsBridge.bridge_port as int}"
+    }
+    sourceSets {
+        main {
+            java.srcDirs += new File(cloudDnsBridgeJson.parentFile.parentFile, 'src/bridge/java')
+        }
+    }
+}

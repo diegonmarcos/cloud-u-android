@@ -36,7 +36,7 @@
 // below) and GhRunner's token rule (environment, never argv). The JVM suite
 // (src/test, lib-apks build.json::tests.unit) executes the sign-in itself:
 // GhLoginTest drives the login job with a fake gh that prints the code and
-// blocks, and runs GhNetProxy, the loopback tunnel gh needs inside an app.
+// blocks, and runs libs:sysdns's ResolverProxy, the loopback tunnel gh needs inside an app.
 
 plugins {
     id 'com.android.library'
@@ -206,11 +206,11 @@ android {
         buildConfigField 'String', 'GH_X86_64_SHA256', "\"${ghPin.binaries['x86_64'].binary_sha256}\""
         buildConfigField 'String', 'GH_LOGIN_CODE_PATTERN', "\"${ghPin.login_output.device_code}\""
         buildConfigField 'String', 'GH_LOGIN_URL_PATTERN', "\"${ghPin.login_output.verification_url}\""
-        // What the app sandbox lacks and gh needs (the pin's _doc_sandbox): the CA directories
-        // handed to gh as SSL_CERT_DIR, and the only hosts GhNetProxy tunnels to.
-        buildConfigField 'String', 'GH_CERT_DIRS', "\"${ghPin.sandbox.ssl_cert_dirs.join(':')}\""
+        // What the app sandbox lacks and gh needs (the pin's _doc_sandbox): the only hosts the
+        // libs:sysdns ResolverProxy tunnels gh to. The CA directories gh gets as SSL_CERT_DIR are
+        // libs:sysdns's (data/sysdns.json::ssl_cert_dirs), shared with every bundled binary.
         buildConfigField 'String', 'GH_PROXY_HOSTS', "\"${ghPin.sandbox.proxy_hosts.join(',')}\""
-        // How long a tunnel GitHub has answered may sit silent before GhNetProxy ends it (_doc_idle_close_ms).
+        // How long a tunnel GitHub has answered may sit silent before ResolverProxy ends it (_doc_idle_close_ms).
         buildConfigField 'int', 'GH_PROXY_IDLE_MS', "${ghPin.sandbox.idle_close_ms as int}"
     }
 
@@ -254,6 +254,8 @@ dependencies {
     // #705 GhBackendService extends core's DataBackendService, and core's manifest
     // defines the CONSTELLATION_DATA permission the service is guarded by.
     implementation project(':libs:core')
+    // #741 how gh resolves a name inside an app: the fleet's one bridge to Android's resolver.
+    implementation project(':libs:sysdns')
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 

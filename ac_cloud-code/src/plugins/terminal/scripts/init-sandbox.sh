@@ -123,6 +123,13 @@ ARGS="$ARGS -0"
 ARGS="$ARGS --link2symlink"
 ARGS="$ARGS --sysvipc"
 ARGS="$ARGS -L"
+# #741 the shell resolves through ANDROID's resolver, so through the SuperApp's
+# DNS menu, never a server of its own: resolv.conf names the loopback bridge,
+# rewritten here on every start so an install that baked a public server is
+# corrected too, and -p moves the guest's :53 on loopback up by 2000 to where
+# TerminalService runs libs/sysdns SystemDnsBridge (data/sysdns.json::bridge_port).
+printf 'nameserver 127.0.0.1\n' > "$PREFIX/alpine/etc/resolv.conf"
+ARGS="$ARGS -p"
 
 
 FAILSAFE=false

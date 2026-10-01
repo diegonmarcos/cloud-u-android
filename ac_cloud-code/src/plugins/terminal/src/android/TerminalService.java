@@ -56,9 +56,37 @@ public class TerminalService extends Service {
     private boolean isWakeLockHeld = false;
     private ProcessManager processManager;
 
+    /**
+     * #741 where the Alpine shell's DNS goes: init-sandbox.sh points its resolv.conf at 127.0.0.1
+     * and runs proot -p, so every lookup lands on 127.0.0.1:CLOUD_DNS_BRIDGE_PORT, and the fleet's
+     * one bridge (libs/sysdns, compiled in by build-extras.gradle) answers it with Android's own
+     * resolver for this app, i.e. with whatever the SuperApp's Configs > Mesh > DNS applies. A port
+     * another fleet terminal already holds is answered by that one, which resolves the same way.
+     */
+    private static com.diegonmarcos.cloudlib.sysdns.SystemDnsBridge dnsBridge;
+
+    private static synchronized void startDnsBridge() {
+        if (dnsBridge != null) return;
+        int port = com.foxdebug.acode.BuildConfig.CLOUD_DNS_BRIDGE_PORT;
+        if (Build.VERSION.SDK_INT < 29) {
+            // ponytail: no raw system resolver below Android 10; the shell has no DNS rather than a server of its own.
+            android.util.Log.e("CloudDnsBridge", "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail");
+            return;
+        }
+        try {
+            dnsBridge = new com.diegonmarcos.cloudlib.sysdns.SystemDnsBridge(port,
+                com.diegonmarcos.cloudlib.sysdns.SystemDnsBridge.android(),
+                line -> android.util.Log.i("CloudDnsBridge", line));
+        } catch (IOException e) {
+            android.util.Log.w("CloudDnsBridge", "127.0.0.1:" + port + " is taken (" + e.getMessage()
+                + "): another fleet terminal answers this shell's DNS");
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        startDnsBridge();
         processManager = new ProcessManager(this);
         if(Default_Foreground){
             createNotificationChannel();

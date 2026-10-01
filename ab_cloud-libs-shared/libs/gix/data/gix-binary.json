@@ -27,5 +27,9 @@
       "binary_sha256": "5b5ed6f15942e2f9680a129e6bb786433ca5583b23d46f404a4d0b7fc3b7fbd7",
       "binary_bytes": 23258656
     }
+  },
+  "_doc_sandbox": "#741 the gix tarball's target is linux-musl: musl's resolver reads /etc/resolv.conf, which an app does not have, and falls back to 127.0.0.1:53 where nothing answers (the device proof in _doc_proof_on_device ran in a shell, outside an app sandbox). GixRunner hands every gix child libs:sysdns's ResolverProxy as HTTPS_PROXY, which gitoxide reads from the environment like git does, so the name resolves through Android's resolver and the SuperApp's DNS menu. Any host and port (clone URLs are the user's); idle_close_ms 0, never cut for quiet, because a clone is one long download. UNVERIFIED ON A PHONE: nothing calls GixRunner yet (#705), so the first caller must show a clone of a host-named https remote succeeding from inside the app.",
+  "sandbox": {
+    "idle_close_ms": 0
   }
 }

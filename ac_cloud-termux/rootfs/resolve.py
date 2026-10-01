@@ -129,6 +129,8 @@ def resolve(decl, shared, toolset=None):
         die("artifact.identity_files must include ../ab_cloud-terminal-store/store.json — its toolset "
             "decides what this tree installs (#737), so a toolset edit must move the asset name")
 
+    bridge = json.load(open(os.path.join(REPO_ROOT, decl["dns_bridge"]["source"])))
+
     src = decl["proot"]
     boot = json.load(open(os.path.join(REPO_ROOT, src["source_build_json"])))
     boot = next(iter(boot["forks"].values()))["bootstrap"]
@@ -142,6 +144,7 @@ def resolve(decl, shared, toolset=None):
         "default_shell": shell,
         "smoke": smoke,
         "nameservers": decl["nameservers"],
+        "dns_bridge_port": bridge["bridge_port"],
         "base_image": decl["base_image"]["ref"],
         "asset_dir": decl["asset_dir"],
         "artifact": art,

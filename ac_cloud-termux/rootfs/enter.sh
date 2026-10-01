@@ -133,8 +133,15 @@ fi
 
 # $HOME is bound as /root, so credentials, git config and work survive a
 # rootfs update (which replaces the tree above) and stay visible to Termux.
+#
+# #741 -p is how a shell in here resolves names through ANDROID's resolver, so
+# through the SuperApp's DNS menu: the tree's /etc/resolv.conf names 127.0.0.1
+# (rootfs.json::nameservers), an app may not listen on :53, and -p moves a
+# guest's loopback port below 1024 up by 2000 -- so :53 reaches the app's
+# SystemDnsBridge on libs/sysdns data/sysdns.json::bridge_port. A guest server
+# binding a port below 1024 moves the same way (proot prints the new port).
 # shellcheck disable=SC2086 # $binds is a list of flags
-exec "$HERE/proot" --kill-on-exit --link2symlink --sysvipc -0 -r "$ROOTFS" \
+exec "$HERE/proot" --kill-on-exit --link2symlink --sysvipc -p -0 -r "$ROOTFS" \
     -b /dev -b /proc -b /sys -b /proc/self/fd:/dev/fd -b "$HOME:/root" $binds -w /root \
     /usr/bin/env -i HOME=/root USER=root LOGNAME=root SHELL="$login_shell" \
         TERM="${TERM:-xterm-256color}" COLORTERM="${COLORTERM:-truecolor}" LANG=C.UTF-8 TMPDIR=/tmp \

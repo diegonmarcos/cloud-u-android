@@ -358,7 +358,9 @@ const Terminal = {
             await Executor.execute(`tar --no-same-owner -xf ${filesDir}/alpine.tar.gz -C ${alpineDir}`);
 
             logger("⚙️  Applying basic configuration...");
-            await writeText(`${alpineDir}/etc/resolv.conf`, `nameserver 8.8.4.4 \nnameserver 8.8.8.8`);
+            // #741 the loopback DNS bridge, never a public server: init-sandbox.sh rewrites this on every
+            // start and runs proot -p, so lookups reach TerminalService's SystemDnsBridge (Android's resolver).
+            await writeText(`${alpineDir}/etc/resolv.conf`, `nameserver 127.0.0.1\n`);
 
             const rmWrapper = await readAsset("rm-wrapper.sh");
             await deleteFile(`${alpineDir}/bin/rm`).catch(() => {});

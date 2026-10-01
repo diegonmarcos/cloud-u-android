@@ -146,6 +146,37 @@ else
     sudo -n rm -rf /storage
 fi
 
+echo "── #741: a shell resolves through the app's bridge, never a server of its own ──"
+# The phone's path end to end except the bridge's own upstream: the tree's
+# resolv.conf, glibc's resolver, enter.sh's proot flags, and a responder where
+# the app's SystemDnsBridge listens (libs/sysdns data/sysdns.json::bridge_port).
+# It answers every A query with 192.0.2.53, so the address proves which server
+# the guest reached; the runner's own DNS would answer NXDOMAIN for this name.
+ns="$(sed -n 's/^nameserver[[:space:]]*//p' "$STAGE/rootfs/etc/resolv.conf" | tr '\n' ' ')"
+[ "$ns" = "127.0.0.1 " ] && echo "ok   the tree's resolv.conf names only the loopback bridge" \
+    || { echo "FAIL the tree's resolv.conf names '$ns': a shell would resolve past the SuperApp's DNS menu"; fail=1; }
+bridge_port="$(resolved dns_bridge_port)"
+python3 "$HERE/verify-dns-responder.py" "$bridge_port" > "$W/dns.ready" 2>&1 &
+dns_pid=$!
+for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$W/dns.ready" ] && break; sleep 0.5; done
+probe() {  # $1 = the enter.sh to run; prints the address the guest resolved
+    HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$1" -c "getent ahostsv4 fleet-dns-probe.test" 2>/dev/null </dev/null \
+        | awk '$1 ~ /^[0-9.]+$/ {print $1; exit}' || true
+}
+got="$(probe "$STAGE/enter.sh")"
+if [ "$got" = "192.0.2.53" ]; then echo "ok   getent in the guest answered from the bridge on 127.0.0.1:$bridge_port ($got)"
+else echo "FAIL getent in the guest got '$got', not the bridge's 192.0.2.53: the shell does not resolve through Android"; fail=1; fi
+sed 's|--sysvipc -p -0 -r|--sysvipc -0 -r|' "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
+if cmp -s "$STAGE/enter.sh" "$STAGE/enter-mutant.sh"; then
+    echo "FAIL MUTATION DID NOT APPLY: enter.sh has no '--sysvipc -p -0 -r' to remove -p from"; fail=1
+elif [ "$(probe "$STAGE/enter-mutant.sh")" = "192.0.2.53" ]; then
+    echo "FAIL MUTATION SURVIVED: without -p the guest still reached the bridge — the check proves nothing"; fail=1
+else
+    echo "ok   mutation proved: without -p the same lookup misses the bridge"
+fi
+rm -f "$STAGE/enter-mutant.sh"
+kill "$dns_pid" 2>/dev/null || true
+
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
 exit "$fail"

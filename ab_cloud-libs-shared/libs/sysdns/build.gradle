@@ -1,0 +1,70 @@
+// libs:sysdns — #741 the ONE way a fleet process that cannot use Android's resolver directly
+// reaches it anyway, so the SuperApp's Configs ▸ Mesh ▸ DNS choice applies to it too
+// (data/sysdns.json::_doc is the whole argument):
+//
+//   ResolverProxy    (src/main/java, Kotlin)  loopback CONNECT proxy for bundled binaries:
+//                    libs:gh, libs:rclone and libs:gix hand it to their binary as HTTPS_PROXY.
+//   SystemDnsBridge  (src/bridge/java, Java)  127.0.0.1:<bridge_port> DNS server for terminal
+//                    shells under proot; the terminal forks compile this one directory by
+//                    reference (AGP 4, no Kotlin), so it is kept out of src/main/java.
+//
+// NO APK OF ITS OWN: lib-apks/build.json::lib_apks.exclude says why. It installs nothing; it is
+// compiled into the engines and apps that depend on it, and lib-apks' settings.gradle includes
+// it for them. Its JVM suite runs in the Cloud Libs ship (lib-apks build.json::tests.unit).
+//
+// Nothing here names a DNS server. 1_cicd/src/data/dns-resolver-guard.json lists this module
+// as one of the two places allowed to talk DNS at all.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def sysdns = new groovy.json.JsonSlurper().parse(file('data/sysdns.json'))
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.sysdns'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField 'String', 'SSL_CERT_DIRS', "\"${sysdns.ssl_cert_dirs.join(':')}\""
+        buildConfigField 'int', 'BRIDGE_PORT', "${sysdns.bridge_port as int}"
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += 'src/bridge/java'
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
