@@ -57,6 +57,19 @@
       "comment": "Cloud Terminal (Termux) fork."
     }
   },
+  "modules": {
+    "_doc": "#744 Shared modules settings.gradle includes BY REFERENCE. Declared so the ship workflow watches them and the publish gate hashes them: a change to any of them must rebuild Cloud Terminal, not ride along unshipped. settings.gradle still names them as literals (upstream's file, not a loop over this map). Deliberately NOT in rootfs/rootfs.json's identity_files: linking core changes this app, never the ~400 MB rootfs.",
+    "libs:core": {
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>, the debug API); not linked directly.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
+    }
+  },
   "signing": {
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
@@ -121,7 +134,7 @@
     },
     "companions": [
       {
-        "_doc": "#628 Slice 2 — the rootfs is an INSTALLABLE fleet library APK, not a bare release asset (#618). Gated on its own paths_from so an app-code change never republishes the ~400 MB payload — the #618 regression this design exists to avoid. Built by the same job, toolchain and keystore as this app's own APK (_build_companions, called from build-fork) and uploaded to the SAME rolling release (_publish_companions), so no second signing path and no second channel are introduced.",
+        "_doc": "#628 Slice 2 \u2014 the rootfs is an INSTALLABLE fleet library APK, not a bare release asset (#618). Gated on its own paths_from so an app-code change never republishes the ~400 MB payload \u2014 the #618 regression this design exists to avoid. Built by the same job, toolchain and keystore as this app's own APK (_build_companions, called from build-fork) and uploaded to the SAME rolling release (_publish_companions), so no second signing path and no second channel are introduced.",
         "id": "rootfs-termux",
         "gradle_task": ":rootfs-lib:assembleRelease",
         "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",

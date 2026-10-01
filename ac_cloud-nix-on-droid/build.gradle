@@ -4,7 +4,12 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
+        // #744 AGP 8.7.3 + Kotlin 2.3.20 on Gradle 8.10.2 — the combination
+        // ac_cloud-agenda already ships libs:core with. libs:core and
+        // libs:devtools (fleet mesh membership) are Kotlin, need namespace +
+        // buildFeatures and compileSdk 36, none of which AGP 7.4.2 could build.
+        classpath 'com.android.tools.build:gradle:8.7.3'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20'
     }
 }
 

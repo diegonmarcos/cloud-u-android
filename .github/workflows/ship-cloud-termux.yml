@@ -30,6 +30,8 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-termux.yml"
       - "1_cicd/src/scripts/cloud-termux-fork-engine.sh"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-termux/**"

@@ -25,6 +25,13 @@ def cloudRootfsLibPackage = new groovy.json.JsonSlurper()
 if (!cloudRootfsLibPackage) throw new GradleException("build.json::release.companions[] declares no 'rootfs-termux' entry")
 
 android {
+    // #744 AGP 8: the namespace (R and BuildConfig's package) lives here, not in
+    // the manifest, and BuildConfig is opt-in — this app's own code reads it.
+    namespace 'com.termux'
+    buildFeatures {
+        buildConfig true
+    }
+
     // #741 SystemDnsBridge is compiled from libs/sysdns BY REFERENCE (plain Java, its own
     // source dir), so every terminal runs the one bridge and none carries a copy.
     sourceSets {
@@ -55,6 +62,17 @@ android {
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
+
+        // #744 Fleet mesh member: libs:core (+ devtools via `api`) merges the
+        // fleet provider, receiver, <queries> and the CONSTELLATION_DATA
+        // signature permission into this APK; without them the SuperApp and
+        // every sibling cannot see or reach this terminal.
+        implementation project(":libs:core")
+        // core's androidx.core 1.13.1 brings concurrent-futures and with it
+        // listenablefuture 1.0, whose one class guava 24.1-jre (above) already
+        // carries: a duplicate-class build failure. The empty 9999 artifact is
+        // guava's own published answer, the same line upstream termux-app added.
+        implementation "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"
     }
 
     defaultConfig {
@@ -65,7 +83,8 @@ android {
         // companion APK (network-free transport instead of #618's runtime
         // fetch), which changes this app's own staging code — bumped so the
         // Store sees it as an update independently of the rootfs content address.
-        versionCode 1009
+        // #744 bumped: this build joins the fleet mesh (libs:core) on AGP 8.
+        versionCode 1010
         versionName "0.118.4"
 
         if (appVersionName) versionName = appVersionName
@@ -183,14 +202,14 @@ android {
         }
     }
 
-    lintOptions {
+    lint {
         disable 'ProtectedPermissions'
     }
 
     // rootfs.tar.zst is already zstd; deflating it again costs build time and
     // makes AssetManager inflate 600 MB on the phone for nothing.
-    aaptOptions {
-        noCompress 'zst'
+    androidResources {
+        noCompress += 'zst'
     }
 
     testOptions {

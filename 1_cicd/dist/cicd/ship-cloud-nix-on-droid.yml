@@ -31,8 +31,14 @@ on:
       # #644 — the shared declarative link store is BAKED INTO this app's bootstrap
       # zip (usr/lib/cloud-store) and hashed into its content address, so an engine
       # fix here must start a run and publish, not sit inert behind a green tick.
+      # #744 libs:core + libs:devtools (fleet mesh), linked by settings.gradle.
+      # Listed HERE, not as build.json::modules: build.json is the first of the
+      # bootstrap artifact's identity_files, so a key there would move the
+      # rootfs content address and republish ~400 MB that did not change.
       - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-nix-on-droid/**"
 permissions:

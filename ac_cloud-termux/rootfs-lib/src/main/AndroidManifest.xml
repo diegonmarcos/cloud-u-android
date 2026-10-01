@@ -3,8 +3,7 @@
      payload library like the rest of ab_cloud-libs-shared/lib-apks: no
      activity, no permission, no launcher icon, bound by the sibling app
      (cld.termux) rather than opened by the user. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.diegonmarcos.cloudlib.rootfstermux">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:label="Cloud Lib Rootfs Termux"
