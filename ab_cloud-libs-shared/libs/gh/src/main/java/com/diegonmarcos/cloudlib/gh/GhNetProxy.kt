@@ -171,7 +171,7 @@ class GhNetProxy(
                 break
             }
             if (n == QUIET_CHECK) {
-                if (now() - lastMove.get() >= idleMs) how = QUIET // MUTATION 3b: quiet ignores a request still waiting
+                if (!ghWaiting.get() && now() - lastMove.get() >= idleMs) how = QUIET
             } else if (n < 0) {
                 how = "closed by GitHub"
             } else {
