@@ -96,11 +96,11 @@ data class SeedReport(val declared: Int, val outcomes: List<SeedOutcome>) {
          * incomplete pass, so the worker retries); with it, null — the clone loop runs.
          */
         fun withoutStorage(names: List<String>, hasStorage: Boolean): SeedReport? =
-            if (true) null
+            if (hasStorage) null
             else SeedReport(names.size, names.map { SeedOutcome(it, SeedOutcome.NEEDS_STORAGE, "Cloud Drive holds no all-files access yet; granting it resumes the seed") })
 
         /** #730 what the Git page shows BEFORE any pass ran: the seed is queued, and on what it waits. */
         fun pending(declared: Int, unmetered: Boolean): String =
-            "seed 0/$declared pending: queued, waiting for " + "a network" + " and all-files access"
+            "seed 0/$declared pending: queued, waiting for " + (if (unmetered) "an unmetered (Wi-Fi) network" else "a network") + " and all-files access"
     }
 }

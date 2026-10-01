@@ -76,15 +76,27 @@ for name in $(resolved smoke | python3 -c 'import json,sys; print(" ".join(k for
     fi
 done
 
-echo "── #612: shared storage + cloud-drive shared-store mountpoints exist in \$HOME ──"
-enter -c true >/dev/null 2>&1 || true
+echo "── #612/#730: no shared storage here, so no mount point may be left that reads as an empty store ──"
+# The runner has no readable /storage/emulated/0 — exactly a fresh phone before
+# the storage grant. enter.sh must say so and must NOT leave an empty
+# ~/cloud-drive-shared-store (an empty mount point is how a fresh phone's
+# missing grant was misread as an empty store). Pre-create both empty, the
+# state an earlier enter.sh left on upgraded phones, so this also proves they
+# are removed. The readable branch (bind at the guest's ~) is pinned by
+# ac_cloud-drive/test/test-drive-fresh-phone.sh.
+mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store"
+notice="$(enter -c true 2>&1 >/dev/null || true)"
 for d in emulated cloud-drive-shared-store; do
-    if [ -d "$W/home/$d" ]; then
-        echo "ok   \$HOME/$d (bind mountpoint for #612) was created"
+    if [ -e "$W/home/$d" ]; then
+        echo "FAIL \$HOME/$d is left behind with storage unreadable — it reads as an empty store"; fail=1
     else
-        echo "FAIL \$HOME/$d was not created by enter.sh"; fail=1
+        echo "ok   \$HOME/$d is not left behind while storage is unreadable"
     fi
 done
+case "$notice" in
+    *"storage access is not granted"*) echo "ok   enter.sh says the store is not mounted and why" ;;
+    *) echo "FAIL enter.sh printed no storage notice: '$(echo "$notice" | head -2)'"; fail=1 ;;
+esac
 
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
