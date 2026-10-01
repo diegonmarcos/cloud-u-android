@@ -30,6 +30,13 @@
 #   update             package layer: nix → `nix profile upgrade`, then apply
 #   packages           package-layer generations (nix)
 #   packages-rollback  package-layer rollback (nix)
+#   installed          package layer: what the profile holds (nix)
+#   search <q>         package layer: search nixpkgs (nix, --json)
+#   install <attr>     package layer: add nixpkgs#<attr> to the profile (nix)
+#   remove <name>      package layer: drop <name> from the profile (nix)
+#
+# The last four exist for #659: MyTerminal's Store tab is a UI over THIS engine
+# and must not keep a second path that drives nix (or pkg) on its own.
 #
 # Fault injection: CLOUD_STORE_FAULT=<populate|rename|switch> makes apply exit
 # at that stage. It exists so the atomicity claim above is TESTED rather than
@@ -367,6 +374,35 @@ packages_rollback() {
     apply
 }
 
+# #659: every package-layer verb the Store tab offers goes through here, against
+# the DECLARED profile, so there is one thing on the phone that drives nix.
+NIXF="nix-command flakes"
+
+installed() {
+    need_nix list || return 1
+    nix profile list --profile "$CLOUD_STORE_NIX_PROFILE" --extra-experimental-features "$NIXF"
+}
+
+search() {
+    [ -n "${1:-}" ] || die "search needs a query"
+    need_nix search || return 1
+    nix search nixpkgs "$1" --json --extra-experimental-features "$NIXF"
+}
+
+install_pkg() {
+    [ -n "${1:-}" ] || die "install needs a nixpkgs attribute"
+    need_nix install || return 1
+    nix profile install --profile "$CLOUD_STORE_NIX_PROFILE" "nixpkgs#$1" \
+        --extra-experimental-features "$NIXF"
+}
+
+remove_pkg() {
+    [ -n "${1:-}" ] || die "remove needs a package name"
+    need_nix remove || return 1
+    nix profile remove --profile "$CLOUD_STORE_NIX_PROFILE" "$1" \
+        --extra-experimental-features "$NIXF"
+}
+
 SELF="$0"
 case "${1:-ensure}" in
     apply)             apply ;;
@@ -380,6 +416,10 @@ case "${1:-ensure}" in
     update)            update ;;
     packages)          packages ;;
     packages-rollback) packages_rollback ;;
+    installed)         installed ;;
+    search)            search "${2:-}" ;;
+    install)           install_pkg "${2:-}" ;;
+    remove)            remove_pkg "${2:-}" ;;
     help|-h|--help)    sed -n '/^# Commands:/,/^# Fault/p' "$SELF" | sed 's/^# \{0,1\}//' ;;
     *)                 die "unknown command '$1' (try: help)" ;;
 esac

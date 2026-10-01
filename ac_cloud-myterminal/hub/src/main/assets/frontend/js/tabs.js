@@ -242,9 +242,8 @@ const Tabs = {
     return tabId;
   },
 
-  // ── Store tab: unix package manager for the terminal environment
-  // (Termux `pkg` / `nix profile`), no visible PTY (store.js drives its own
-  // hidden one).
+  // ── Store tab: the terminal's package manager, a UI over cloud-store
+  // (links + packages), no visible PTY (store.js drives its own hidden one).
   openStoreTab(profile = this.activeProfile) {
     const tabId = "T" + ++this.seq;
     const rootEl = document.createElement("div");

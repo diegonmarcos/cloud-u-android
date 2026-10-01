@@ -198,17 +198,20 @@ body { display: flex; flex-direction: column; }
   flex: 0 0 auto; padding: 6px; border-bottom: 1px solid var(--border);
   display: flex; gap: 6px; align-items: center;
 }
-.store-backend { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.store-ok { padding: 10px; color: #27ae60; font-size: 12px; }
+.store-bad { padding: 10px; color: #e74c3c; font-size: 12px; }
+.store-out { padding: 0 10px; font-size: 11px; white-space: pre-wrap; color: var(--muted); }
+.store-broken .store-item-name { color: #e74c3c; }
 .store-search-input {
   flex: 1 1 0; min-width: 0; background: var(--bg2); color: var(--fg);
   border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font: 13px monospace;
 }
 .store-search-input:focus { outline: none; border-color: var(--accent); }
-.store-search-btn, .store-refresh-btn {
+.store-toolbar button {
   flex: 0 0 auto; background: var(--bg2); color: var(--fg); border: 1px solid var(--border);
   border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
 }
-.store-search-btn:hover, .store-refresh-btn:hover { border-color: var(--accent); }
+.store-toolbar button:hover { border-color: var(--accent); }
 .store-panes { flex: 1 1 0; display: flex; min-height: 0; }
 .store-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
 .store-col:last-child { border-right: 0; }

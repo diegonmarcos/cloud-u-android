@@ -58,6 +58,10 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-myterminal.yml"
       - "ab_cloud-libs-shared/libs/analytics/**"
+      # #659: the Store tab is a UI over ab_cloud-terminal-store's cloud-store, and
+      # test/test-store-tab-drives-cloud-store.sh runs the tab against that engine —
+      # an engine edit must re-run it here.
+      - "ab_cloud-terminal-store/**"
       - "ac_cloud-myterminal/**"
 permissions:
   contents: write   # for gh release create
