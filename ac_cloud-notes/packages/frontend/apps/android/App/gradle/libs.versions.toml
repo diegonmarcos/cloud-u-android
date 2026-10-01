@@ -30,8 +30,10 @@ kotlinx-coroutines         = "1.10.2"
 kotlinx-datetime           = "0.6.2"
 kotlinx-serialization-json = "1.8.1"
 ksp                        = "2.2.20-2.0.4"
+# 26, not upstream's 24 (#743): the shared libs:core / libs:devtools declare minSdk
+# 26 and the manifest merger refuses a library above the app. See build.json::android.
 # @keep
-minSdk               = "24"
+minSdk               = "26"
 mozilla-rust-android = "0.9.6"
 okhttp-bom           = "5.0.0-alpha.14"
 richtext             = "1.0.0-alpha02"

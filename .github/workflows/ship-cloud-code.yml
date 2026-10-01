@@ -36,6 +36,8 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-code.yml"
       - "1_cicd/src/scripts/cloud-code-engine.sh"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ac_cloud-code/**"
       - "ac_cloud-myterminal/build.json"

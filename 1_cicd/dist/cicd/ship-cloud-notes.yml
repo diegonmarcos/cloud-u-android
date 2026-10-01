@@ -47,6 +47,8 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-notes.yml"
       - "1_cicd/src/scripts/cloud-notes-engine.sh"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ac_cloud-notes/**"
 permissions:
   contents: write   # gh release upload (rolling 'latest')

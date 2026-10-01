@@ -35,6 +35,8 @@ on:
       - "1_cicd/src/cicd/ship-cloud-office.yml"
       - "1_cicd/src/scripts/cloud-office-source-engine.sh"
       - "1_cicd/src/templates/ship-source-prebuilt-engine.yml.in"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-office/**"

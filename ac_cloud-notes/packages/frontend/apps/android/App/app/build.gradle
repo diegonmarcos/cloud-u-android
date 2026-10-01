@@ -116,6 +116,10 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
+    // cloud-notes (#743): fleet mesh member. libs:core (+ devtools via `api`)
+    // merges the fleet provider, receiver, <queries> and the signature
+    // permission into this APK; nothing here calls it (settings.gradle).
+    implementation project(':libs:core')
 
     implementation libs.androidx.appcompat
     implementation libs.androidx.browser

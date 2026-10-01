@@ -246,8 +246,20 @@
         "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), shared BY REFERENCE exactly like text-tools: cloud-drive, cloud-media-center, cloud-camera and cloud-mail all compile in the SAME directory. materialize places it at android/ml-l-image inside the fetched online tree; patch 0005's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: a second decode path is the duplicate-engine defect this fleet fixed (#170/#261).",
         "dir": "../ab_cloud-libs-shared/libs/ml-l-image",
         "materialize_to": "android/ml-l-image"
+      },
+      "core": {
+        "_doc": "#743 — fleet mesh membership. ab_cloud-libs-shared/libs/core manifest-merges the CONSTELLATION_DATA signature permission (defined AND requested), shared BY REFERENCE like the two above. materialize places it at android/libs/core; patch 0006's settings.gradle include expects it there, under the Gradle path :libs:core.",
+        "dir": "../ab_cloud-libs-shared/libs/core",
+        "materialize_to": "android/libs/core"
+      },
+      "devtools": {
+        "_doc": "#743 — pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER <queries>); android/app does not link it directly. Linked because that project path resolves against android/settings.gradle, which patch 0006 makes include it, and listed so a devtools change re-ships this app.",
+        "dir": "../ab_cloud-libs-shared/libs/devtools",
+        "materialize_to": "android/libs/devtools"
       }
     },
+    "build_json_to": "android/build.json",
+    "_doc_build_json_to": "#743 — where materialize LINKS this file inside the fetched online tree. libs:devtools reads the CONSUMING app's build.json by walking up from the gradle root (android/), and that root sits in a scratch tree outside the repository, so without the link no walk ever meets this file and the build stops at configuration time. Linked, never copied: a copy would be a second declaration of this app.",
     "_doc_sdk_packages": "android-37.0 and build-tools 37.0.0 are what upstream's app and lib modules ask for (AGP 9's compileSdk { version = release(37) } resolves to the MINOR package platforms;android-37.0, not platforms;android-37). android-36 is for the shared text-tools module, which declares compileSdk 36 and is built by the AGP 8 apps that share it."
   },
   "text_enhance": {

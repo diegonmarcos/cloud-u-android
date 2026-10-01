@@ -105,6 +105,15 @@ step_materialize() {
         ln -sfn "$(cd "$SCRIPT_DIR/$dir" && pwd)" "$ONLINE_DIR/$target"
         log "materialize: linked $name → $target"
     done < <(jq -r '.build.modules | to_entries[] | select(.value|type=="object") | [.key, .value.dir, .value.materialize_to] | @tsv' "$BUILD_JSON")
+
+    # The app's own build.json, LINKED for the same reason: libs:devtools reads the
+    # consuming app's declaration by walking up from the gradle root, and that root
+    # is in this scratch tree, where no walk ever meets the repository.
+    target="$(_json '.build.build_json_to')"
+    if [ -n "$target" ]; then
+        ln -sfn "$BUILD_JSON" "$ONLINE_DIR/$target"
+        log "materialize: linked build.json → $target"
+    fi
 }
 
 # ── payload ───────────────────────────────────────────────────────────

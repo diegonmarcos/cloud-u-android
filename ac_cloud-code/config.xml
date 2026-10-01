@@ -342,6 +342,10 @@
 
         <resource-file src="build-extras.gradle" target="app/build-extras.gradle" />
         <resource-file src="proguard-rules.pro" target="app/proguard-rules.pro" />
+        <!-- cloud-code (#743): Cordova applies settings-extras.gradle from the
+             settings.gradle it regenerates; ours includes the shared libs:core and
+             libs:devtools from build.json::modules. -->
+        <resource-file src="settings-extras.gradle" target="settings-extras.gradle" />
     </platform>
     <preference name="AndroidBlacklistSecureSocketProtocols" value="SSLv3,TLSv1" />
 </widget>

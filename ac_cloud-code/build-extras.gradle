@@ -58,3 +58,11 @@ android {
         }
     }
 }
+
+// ── cloud-code (#743): fleet mesh member ──
+// libs:core (+ devtools via `api`) merges the fleet provider, receiver, <queries>
+// and the signature permission into this APK; nothing here calls it.
+// settings-extras.gradle includes it from build.json::modules.
+dependencies {
+    implementation project(':libs:core')
+}

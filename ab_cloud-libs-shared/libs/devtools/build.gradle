@@ -15,9 +15,12 @@ if (project.extensions.findByName('kotlin') == null) {
 // gradle root is android/ and a Tauri app's is src-tauri/gen/android, while
 // build.json stays at the app root. "${rootDir}/build.json" failed their
 // configuration outright, which kept both out of the fleet mesh (#743).
+// Six levels, not analytics' four: Cloud Notes' Capacitor root is
+// packages/frontend/apps/android/App, five below its build.json. The first
+// hit wins, so every app that found it at rootDir still finds the same file.
 def buildJsonFile = { ->
     def d = rootDir
-    for (int i = 0; i < 4 && d != null; i++) {
+    for (int i = 0; i < 6 && d != null; i++) {
         def f = new File(d, "build.json")
         if (f.exists()) return f
         d = d.parentFile

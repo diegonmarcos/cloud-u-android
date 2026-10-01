@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Thu, 1 Oct 2026 16:18:26 +0000
+Subject: [PATCH] cloud-office: join the fleet mesh through the shared
+ libs:core
+
+Cloud Office is not a fleet mesh member. It is signed with the fleet key
+and already crosses an application boundary (Text Enhance binds the
+Cloud Keyboard over ITextTools), but its merged manifest carries none of
+the five things membership is made of: the CONSTELLATION_DATA
+<permission> and <uses-permission>, FleetTokenProvider at
+<package>.fleet, the FleetMemberReceiver that answers MESH_MEMBER, and
+the <queries> intent that lets it see the others. So SuperApp's Apps
+Mesh page and /api/fleet/peers in every member leave it out, and it
+serves no 380xx debug API, so a fault in it can only be guessed at.
+
+Every other member gets all five the same way, and so does this one
+now: by linking ab_cloud-libs-shared/libs/core, which declares the
+permission and carries libs:devtools with an `api` dependency. Nothing
+is copied - materialize links both directories into android/libs
+(build.json::build.modules), exactly as it already links text-tools and
+ml-l-image. libs:devtools reads the consuming app's build.json by
+walking up from this gradle root, which sits in a scratch tree outside
+the repository, so materialize links ac_cloud-office/build.json in as
+android/build.json too; without that link the build stops at
+configuration time.
+
+The Gradle paths are fixed by core itself: it depends on
+project(':libs:devtools'), which resolves against this settings.gradle,
+so both must be included under those exact names. Placing them under
+android/libs also gives the implicit ':libs' container a directory that
+exists, which Gradle 9 (this tree pins 9.5.0) otherwise refuses.
+
+Nothing else in the tree changes. core and devtools are Kotlin, built
+by the Kotlin Gradle plugin that patch 0003 already hands Kotlin back
+to; both declare minSdk 26, which is what android/app and android/lib
+already declare; compileSdk 36 is already installed for text-tools.
+---
+ android/app/build.gradle |  4 ++++
+ android/settings.gradle  | 12 +++++++++++-
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/android/app/build.gradle b/android/app/build.gradle
+index 38802c2..fc8315c 100644
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -85,6 +85,10 @@ dependencies {
+     implementation 'androidx.preference:preference:1.2.1'
+     implementation project(path: ':lib')
+ 
++    // #743: fleet mesh member. libs:core (+ devtools via `api`) merges the fleet provider,
++    // receiver, <queries> and the signature permission into this APK; nothing here calls it.
++    implementation project(':libs:core')
++
+     // https://stackoverflow.com/questions/75263047/duplicate-class-in-kotlin-android
+     constraints {
+         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
+diff --git a/android/settings.gradle b/android/settings.gradle
+index b153f4b..421c19a 100644
+--- a/android/settings.gradle
++++ b/android/settings.gradle
+@@ -1,4 +1,4 @@
+-include ':app', ':lib', ':text-tools', ':ml-l-image'
++include ':app', ':lib', ':text-tools', ':ml-l-image', ':libs:core', ':libs:devtools'
+ 
+ // SHARED BY REFERENCE, not copied. ab_cloud-libs-shared/libs/text-tools is the ITextTools
+ // binder contract and its client, and cloud-mail and the Cloud Keyboard already build the
+@@ -16,3 +16,13 @@ project(':text-tools').projectDir = new File(settingsDir, 'text-tools')
+ // a copy vendored in here would be the duplicate-engine defect this fleet fixed
+ // (#170/#261). materialize places it at android/ml-l-image.
+ project(':ml-l-image').projectDir = new File(settingsDir, 'ml-l-image')
++
++// #743 — fleet mesh membership. ab_cloud-libs-shared/libs/core, shared BY REFERENCE like
++// the two above, manifest-merges the CONSTELLATION_DATA signature permission (defined AND
++// requested) and, through its `api project(':libs:devtools')`, the fleet token provider,
++// the MESH_MEMBER receiver and its <queries>. The Gradle paths are not ours to choose:
++// core names devtools as ':libs:devtools', and that resolves against THIS file.
++// materialize places both under android/libs, which also gives the implicit ':libs'
++// container a real directory (Gradle 9 refuses one that does not exist).
++project(':libs:core').projectDir = new File(settingsDir, 'libs/core')
++project(':libs:devtools').projectDir = new File(settingsDir, 'libs/devtools')
