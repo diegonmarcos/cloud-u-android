@@ -116,6 +116,18 @@ regen_constellation() {
         + ( if ((.android.version_code // 0) > 0)
             then { version_code: .android.version_code } else {} end )'
 
+    # #728 THE ENGINES AN APP BINDS, carried onto its own fleet row. Store ▸
+    # Mesh draws every app -> engine link from this, so the link set is the
+    # apps' own build.json::engines (#705: fleet row, action, min_contract) and
+    # never a list in Kotlin. Emitted only where an app declares one; `binding`
+    # is the declaration's key (gh, cal, feed, news ...).
+    local engines='
+        ( (.engines // {}) | to_entries
+          | map(select(.key != "_doc" and (.value | type) == "object")
+                | { binding: .key, fleet: .value.fleet, action: .value.action,
+                    min_contract: .value.min_contract }) ) as $e
+        | if ($e | length) > 0 then { engines: $e } else {} end'
+
     # Scan EVERY sibling repo's build.json, not just ac_cloud-*/. Membership is a
     # property of the DATA, not of the directory name: a dir self-registers as a
     # top-level app (.android.application_id + .release.ghcr), a multi-lib repo
@@ -269,6 +281,7 @@ regen_constellation() {
                              blocked: (((.build // {}) | has("host")) and (.build.host == null)),
                              kind: (.release.kind // "app") }
                              + ('"$vers"')
+                             + ('"$engines"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         elif jq -e '(.forks // {}) | to_entries
                     | map(select(.key != "_doc" and (.value|type=="object")))
@@ -326,6 +339,7 @@ regen_constellation() {
                              blocked: ($f.blocked_on != null),
                              kind: (.release.kind // "app") }
                              + ('"$vers"')
+                             + ('"$engines"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         fi
     done

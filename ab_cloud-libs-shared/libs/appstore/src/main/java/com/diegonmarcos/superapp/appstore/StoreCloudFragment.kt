@@ -378,7 +378,7 @@ class StoreCloudFragment : Fragment() {
         // is what keeps renderTab's group/feed/Perms mapping correct.
         val lines = listOf(
             tabs.map { it.label } to TabStyle.SEGMENTED,
-            (FeedViewer.labels(feeds) + PERMS) to TabStyle.DESTINATION)
+            (FeedViewer.labels(feeds) + MESH + PERMS) to TabStyle.DESTINATION)
         for ((labels, style) in lines) {
             if (labels.isEmpty()) continue
             // Only BETWEEN lines, so a page with one line draws no stray rule.
@@ -462,6 +462,7 @@ class StoreCloudFragment : Fragment() {
         when {
             shown != null -> renderFleet(ctx, shown.rows, shown.blurb)
             feed != null -> renderFeed(ctx, feed)
+            tab == tabs.size + feeds.size -> renderMesh(ctx)
             else -> renderPerms(ctx)
         }
     }
@@ -479,6 +480,47 @@ class StoreCloudFragment : Fragment() {
         val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         body.addView(host)
         FeedViewer.render(ctx, host, feed, FeedViewer.opener(ctx))
+    }
+
+    /**
+     * #728 Store ▸ Mesh — every fleet member, the engines each app binds and
+     * who serves data to whom, drawn by [StoreMesh] from the fleet manifest and
+     * then re-drawn once the live probes land. Probing is off the main thread
+     * (a 50-port loopback sweep plus PackageManager reads); entering the tab
+     * again, or Re-probe, asks again.
+     */
+    private fun renderMesh(ctx: Context) {
+        val shownTab = tab
+        body.addView(buttonRow(ctx, btn(ctx, "Re-probe", 0xFF2A2A33.toInt()) { renderTab(ctx) }))
+        val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        body.addView(host)
+        val links = StoreMesh.links(fleetJson)
+        val draw = { live: StoreMesh.Live? ->
+            host.removeAllViews()
+            StoreMesh.render(ctx, host, fleetJson, fleet, links, live) { openDetail(ctx, it) }
+        }
+        draw(null)
+        val app = ctx.applicationContext
+        thread(name = "store-mesh-probe") {
+            val live = StoreMesh.probe(app, fleet, links)
+            host.post { if (tab == shownTab && host.isAttachedToWindow) draw(live) }
+        }
+    }
+
+    /** A mesh node's Store detail: its group's tab, the row expanded and
+     *  scrolled into view. A member no tab holds has no row to open. */
+    private fun openDetail(ctx: Context, app: Fleet.App) {
+        val target = tabs.indexOfFirst { t -> t.rows.any { it.id == app.id } }
+        if (target < 0) return
+        tab = target; filter = 0; expanded.add(app.id)
+        paintTabs(); renderTab(ctx)
+        val sv = view as? ScrollView ?: return
+        val row = dots[app.id] ?: return
+        sv.post {
+            var y = 0; var v: View? = row
+            while (v != null && v !== sv) { y += v.top; v = v.parent as? View }
+            sv.smoothScrollTo(0, y)
+        }
     }
 
     private fun renderFleet(ctx: Context, list: List<Fleet.App>, blurb: String) {
@@ -1246,6 +1288,9 @@ class StoreCloudFragment : Fragment() {
          *  the reason it is named once: #660's guard asserts that every OTHER
          *  tab label is absent from this file, and it needs a name to exempt. */
         const val PERMS = "Perms"
+
+        /** #728 the mesh view, owned by this page like Perms (see [renderMesh]). */
+        const val MESH = "Mesh"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE

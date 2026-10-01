@@ -308,8 +308,8 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # (labels to style) rather than a bare list. What is asserted is unchanged: line
 # 1 IS the declared groups and line 2 IS the declared feeds plus Perms.
 command grep -qF 'tabs.map { it.label } to TabStyle.SEGMENTED' "$PAGE" \
-  && command grep -qF '(FeedViewer.labels(feeds) + PERMS) to TabStyle.DESTINATION' "$PAGE" \
-  && ok "line 1 = declared groups, line 2 = declared feeds + Perms" \
+  && command grep -qF '(FeedViewer.labels(feeds) + MESH + PERMS) to TabStyle.DESTINATION' "$PAGE" \
+  && ok "line 1 = declared groups, line 2 = declared feeds + the page's own Mesh (#728) and Perms" \
   || bad "the tab lines are not built from the two declarations"
 
 # (c) TWO strips inside one column, from ONE button builder - not a second
