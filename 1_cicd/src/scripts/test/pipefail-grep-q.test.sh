@@ -7,7 +7,9 @@
 # WHY THIS EXISTS (#634). Under `set -o pipefail`, `producer | grep -q PAT` is
 # decided by scheduling, not by the text. grep -q exits on its first match; a
 # producer that still has output to write then dies of SIGPIPE, the pipeline
-# returns 141, and the MATCH reads as a failure. The producer only has to
+# returns 141, and the MATCH reads as a failure. (Where SIGPIPE is ignored, as
+# on GitHub's hosted runners, the write fails with EPIPE instead and the status
+# is 1: the same wrong verdict.) The producer only has to
 # outgrow one write for that to happen, and a tester's producer is usually a
 # whole Kotlin file through awk.
 #
@@ -54,6 +56,39 @@ command -v jq >/dev/null 2>&1 || {
 # skipped. A heredoc that never closes is reported rather than trusted, since
 # everything after it would otherwise pass unseen.
 read -r -d '' RULE <<'AWK' || true
+# The delimiter of a heredoc this line opens, or "". Quote-aware the way bash
+# is: a `<<` inside "..." or '...' or after a comment opens nothing, `<<<` is a
+# here-string, and `$(` (even inside "...") starts a fresh command context, so
+# x="$(cmd <<'EOF'" DOES open one. A per-line stack: C = command, D = "...".
+function heredoc(s,   i, j, c, st, n, rest, d) {
+    n = 1; st[1] = "C"
+    for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (st[n] == "D") {
+            if (c == "\\") i++
+            else if (c == "\"") n--
+            else if (substr(s, i, 2) == "$(") { st[++n] = "C"; i++ }
+            continue
+        }
+        if (c == "\\") { i++; continue }
+        if (c == "'") { j = index(substr(s, i + 1), "'"); i = j ? i + j : length(s); continue }
+        if (c == "\"") { st[++n] = "D"; continue }
+        if (substr(s, i, 2) == "$(") { st[++n] = "C"; i++; continue }
+        if (c == "(") { st[++n] = "C"; continue }
+        if (c == ")") { if (n > 1) n--; continue }
+        if (c == "#" && (i == 1 || substr(s, i - 1, 1) ~ /[[:space:]]/)) return ""
+        if (substr(s, i, 3) == "<<<") { i += 2; continue }
+        if (substr(s, i, 2) == "<<") {
+            rest = substr(s, i + 2)
+            if (match(rest, /^-?[[:space:]]*["']?[A-Za-z_][A-Za-z0-9_]*["']?/)) {
+                d = substr(rest, 1, RLENGTH); sub(/^-?[[:space:]]*["']?/, "", d); sub(/["']$/, "", d)
+                return d
+            }
+            i++
+        }
+    }
+    return ""
+}
 function flush(   i) {
     if (file == "") return
     if (hd != "") print "HEREDOC " file ":" hdline ": <<" hd " never ends, nothing after it was linted"
@@ -63,11 +98,7 @@ FNR == 1 { flush(); file = FILENAME; pf = 0; n = 0; hd = "" }
 hd != "" { t = $0; sub(/^\t+/, "", t); if (t == hd) hd = ""; next }
 /^[[:space:]]*#/ { next }
 {
-    if (match($0, /<<-?[[:space:]]*["']?[A-Za-z_][A-Za-z0-9_]*["']?/) \
-        && substr($0, RSTART - 1, 1) != "<" && substr($0, RSTART + 2, 1) != "<") {
-        hd = substr($0, RSTART, RLENGTH); hdline = FNR
-        sub(/^<<-?[[:space:]]*["']?/, "", hd); sub(/["']$/, "", hd)
-    }
+    d = heredoc($0); if (d != "") { hd = d; hdline = FNR }
     if ($0 ~ /(^|[;&|[:space:]])set[[:space:]]+([^#;]*[[:space:]])?-[A-Za-z]*o[[:space:]]+pipefail/) pf = 1
     if ($0 ~ /(^|[^|])\|&?[[:space:]]*[ef]?grep([[:space:]]+[^|;&()`[:space:]]+)*[[:space:]]+(-[[:alnum:]]*q[[:alnum:]]*|--quiet|--silent)([[:space:]]|$)/)
         hit[++n] = FNR ": " $0
@@ -80,14 +111,14 @@ AWK
 # a closed pipe. Run in a child shell so this file itself stays pipe-free.
 premise="$(bash <<'PREMISE'
 set -o pipefail
-{ echo hit; sleep 0.3; echo more; } | grep -q hit; old=$?
+{ echo hit; sleep 0.3; echo more; } 2>/dev/null | grep -q hit; old=$?
 grep -q hit <<<"$({ echo hit; sleep 0.3; echo more; })"; new=$?
 echo "$old $new"
 PREMISE
 )"
 read -r old new <<<"$premise"
 if [ "${old:-0}" -ne 0 ] && [ "${new:-1}" -eq 0 ]; then
-    ok "premise: under pipefail a MATCH piped into grep -q returned $old; the here-string form returned 0"
+    ok "premise: under pipefail a MATCH piped into grep -q returned $old (141 = SIGPIPE, 1 = EPIPE where SIGPIPE is ignored); the here-string form returned 0"
 else
     bad "premise did not reproduce (piped=$old here-string=$new) — the rule below would be guarding against nothing"
 fi
@@ -107,6 +138,8 @@ cmd |grep --quiet word
 cmd |& grep -q word
 cmd \
   | grep -qv word
+echo "a quoted <<EOF opens nothing"
+cmd | grep -q still-seen
 SH
 
 cat > "$FIX/clean.sh" <<'SH'
@@ -121,6 +154,10 @@ cmd | grep -q hit
 EOF
 cmd | grep -c hit
 cmd | grep -v quiet
+x="$(cat <<'EOT'
+cmd | grep -q inside-a-heredoc-in-a-substitution
+EOT
+)"
 [ "$(cmd | grep -c hit)" -eq 0 ]
 [ `cmd | grep -c hit` -eq 0 ]
 SH
@@ -139,13 +176,13 @@ never closed
 SH
 
 got="$(awk "$RULE" "$FIX/caught.sh" | sed -n 's|^HIT [^:]*:\([0-9]*\):.*|\1|p' | tr '\n' ' ')"
-[ "$got" = "3 4 5 6 7 8 10 " ] \
-    && ok "every spelling of a pipe into grep -q is caught: -q, -qE, -Fxq, -E -q, --quiet, |&, a continued line" \
-    || bad "planted pipes caught on lines [${got% }], expected [3 4 5 6 7 8 10]"
+[ "$got" = "3 4 5 6 7 8 10 12 " ] \
+    && ok "every spelling of a pipe into grep -q is caught: -q, -qE, -Fxq, -E -q, --quiet, |&, a continued line, and one after a quoted <<EOF" \
+    || bad "planted pipes caught on lines [${got% }], expected [3 4 5 6 7 8 10 12]"
 
 got="$(awk "$RULE" "$FIX/clean.sh")"
 [ "$got" = "PF $FIX/clean.sh" ] \
-    && ok "here-strings, ||, comments, heredoc bodies, non-quiet greps and a later [ -eq ] pass — and pipefail WAS seen (set -o errexit -o pipefail)" \
+    && ok "here-strings, ||, comments, heredoc bodies (one opened inside a quoted command substitution too), non-quiet greps and a later [ -eq ] pass — and pipefail WAS seen (set -o errexit -o pipefail)" \
     || bad "the pipe-free file was not judged clean: '$got'"
 
 got="$(awk "$RULE" "$FIX/no-pipefail.sh")"
