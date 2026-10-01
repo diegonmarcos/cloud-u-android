@@ -690,8 +690,7 @@
         "libs:rclone",
         "libs:mounts",
         "libs:bottomnav",
-        "libs:auth",
-        "libs:gix"
+        "libs:auth"
       ]
     },
     "libs:core": {
@@ -752,12 +751,7 @@
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
     },
-    "_doc_git_chain_libs": "#646 THE BINARY LIBRARY OF THE GIT AUTH+OPS CHAIN that this app still links, shared BY REFERENCE like every module here and NOT an engine: it exports no @Composable and hosts nothing, so it carries no `engine: true` (the libs:auth / libs:bottomnav precedent). It ships a sha256-pinned FULLY STATIC binary as jniLibs/<abi>/lib<name>.so the libs:rclone way — fetch-once-refuse-on-mismatch of the archive AND the extracted binary, plus an ELF program-header walk that refuses a PT_INTERP — and this app sets packaging.jniLibs.useLegacyPackaging = true, without which AGP would keep the payload compressed and extract NOTHING. #705 libs:gh, the other half of #646, is NOT linked any more: gh runs in Cloud-Lib-Gh.apk's own process and this app binds it (engines.gh), so a gh bump republishes that APK and not this one.",
-    "libs:gix": {
-      "_doc_dir": "#646 the in-process git leg: gitoxide as a 17.9 MB fully static binary that clones and fetches over HTTPS in ONE file, with no helper process and no rootfs. Canonical git cannot ship this way — `git-remote-https` is a SEPARATE executable and Android extracts only lib*.so. IT CANNOT PUSH (`gix push` is not a subcommand), and nothing pretends it can: data/gix-binary.json::verbs declares clone and fetch only, GixRunner refuses anything outside that declaration, and test/test-drive-git-auth-chain.sh fails the build if push is ever routed here. Push stays with the terminal handoff (#642's RUN_COMMAND) and with JGit inside libs:git-sync.",
-      "dir": "../ab_cloud-libs-shared/libs/gix",
-      "type": "library"
-    },
+    "_doc_git_chain_libs": "#646 the git auth+ops chain's two pinned static binaries, libs:gh and libs:gix, are NOT linked here any more. #705: gh runs in Cloud-Lib-Gh.apk's own process and this app binds it (engines.gh); gix was linked and called by nothing, so it ships only as Cloud-Lib-Gix.apk. A change to either republishes that one lib APK and not this app; their build-time refusals and gix's clone/fetch-only verbs are checked where they ship (ab_cloud-libs-shared/lib-apks/test/test-git-binaries.sh). packaging.jniLibs.useLegacyPackaging stays on for libs:rclone's binary.",
     "_doc_engine_flag": "#579 `engine: true` marks a module as one of the FOUR ENGINE LIBRARIES (the host contract: one @Composable <X>Screen(target, onOpenFile, onClose), a title string, the module boundary). Until #579 every Compose library this app linked WAS an engine, so test-drive-engine-modules.sh discovered engines as 'Compose library'; libs:bottomnav (the fleet's nav island, chrome not tooling) is the first Compose library here that is not one, so the role is now declared, not inferred."
   },
   "tests": {

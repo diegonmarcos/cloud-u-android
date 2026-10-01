@@ -135,3 +135,25 @@ reads an engine's source is downgraded to advisory; 10 mutations).
 
 **Not verified on a device** (none was reachable from the agent): the bind, the
 handshake strings and the sign-in poll are proven by CI build + static testers only.
+
+## Move 2 — gix: Cloud Drive stops carrying it
+
+gix was compiled into Cloud Drive (9.92 MB compressed `libgix.so`) and called from
+nowhere: no Kotlin outside `libs/gix` names `GixRunner` or the `cloudlib.gix` package.
+It already ships as `Cloud-Lib-Gix.apk` (Store row `lib-gix`, kind `lib`), so the move
+is an unlink.
+
+| piece | where | what changed |
+|---|---|---|
+| unlinked | Drive `build.json::modules` (module entry and `app.depends_on`), `app/build.gradle`, `ship-cloud-drive.yml` (3 copies) | Drive no longer compiles libs:gix and its ship no longer watches `libs/gix/**`, so a gix change republishes only Cloud-Lib-Gix.apk |
+| checks moved | `lib-apks/test/test-git-binaries.sh` (new) | the build-time refusals of both pinned binaries (C5), gix's clone/fetch-only verbs (C6) and gh's token-in-environment rule (C7) used to live in Drive's `test-drive-git-auth-chain.sh`; Drive's ship no longer runs when gh or gix change, so they now run on the Cloud Libs ship. 13 mutations |
+| Drive guard | `test-drive-git-auth-chain.sh` C6 | gix is not declared, not compiled and not watched by Drive, and no caller routes push to it. Red on the pre-move tree, green after; 5 mutations |
+
+**No engine service for gix, on purpose.** Nothing calls it, and the only things it does
+(clone, fetch) write into the shared store — the same uid barrier as git-sync and rclone.
+A service would need a caller that wants a repository inside the engine's private
+storage; there is none. `exec_native` is not set for gix for the same reason: nothing
+execs it from its own APK.
+
+**Not verified on a device**: the Drive APK shrinking is proven by the CI build and the
+published asset size only.

@@ -608,12 +608,9 @@ dependencies {
     implementation project(':libs:auth')
     // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
     // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
-    // GitAuthChain. libs:gix clones and fetches in-process; it is not an engine —
-    // no Compose surface, nothing for EngineActivity to host — and it lands a static
-    // payload in jniLibs, which is why packaging.jniLibs.useLegacyPackaging is
-    // load-bearing. #705 libs:gh is NOT here: gh runs in Cloud-Lib-Gh.apk and this
-    // app binds it (sync/GhEngine.kt, build.json::engines.gh).
-    implementation project(':libs:gix')
+    // GitAuthChain. #705 neither of its binaries is linked here: gh runs in
+    // Cloud-Lib-Gh.apk and this app binds it (sync/GhEngine.kt, build.json::engines.gh);
+    // libs:gix was linked and called by nothing, so it ships only as Cloud-Lib-Gix.apk.
     // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
     // libraries pin, so app and libraries compose against one toolchain.
     implementation platform('androidx.compose:compose-bom:2025.01.00')

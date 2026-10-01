@@ -22,11 +22,13 @@
 #       fall-through, not an error.
 #   C4  BOTH PROVIDERS WRITE THE SAME CREDENTIAL ID — one store, one id, and the
 #       id is never a literal in Kotlin.
-#   C5  A PT_INTERP-BEARING PAYLOAD IS REFUSED AT BUILD TIME, as is a hash or a
-#       byte-count mismatch, for both pinned binaries.
-#   C6  PUSH IS NEVER ROUTED TO GIX — gitoxide has no push, and the declaration
-#       is what enforces it.
-#   C7  NO TOKEN IS EVER RENDERED OR LOGGED.
+#   C5  MOVED (#705): the two pinned binaries' build-time refusals now live in
+#       ab_cloud-libs-shared/lib-apks/test/test-git-binaries.sh, because no app
+#       compiles libs:gh or libs:gix any more and only the Cloud Libs ship runs
+#       when they change.
+#   C6  GIX IS NOT IN THIS APP (#705) and no caller routes push to it. The
+#       pin-and-runner half (gitoxide has no push) moved with C5.
+#   C7  NO TOKEN IS EVER RENDERED OR LOGGED here (GhRunner's half moved with C5).
 #   MUT mutation-proof: each of the above goes RED when the property is broken.
 #
 # OWN-SOURCE ONLY. python3 and grep only, no network, no build.
@@ -42,16 +44,12 @@ WALKER_TEST="$SHARED/libs/git-sync/src/test/java/com/diegonmarcos/cloudlib/gitsy
 WIRING="$APP/app/src/main/java/com/diegonmarcos/clouddrive/configs/DriveGitChain.kt"
 READER="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/AuthDeclaration.kt"
 PAGE="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/GitReposScreen.kt"
-GH_PIN="$SHARED/libs/gh/data/gh-binary.json"
-GH_GRADLE="$SHARED/libs/gh/build.gradle"
-GIX_PIN="$SHARED/libs/gix/data/gix-binary.json"
-GIX_GRADLE="$SHARED/libs/gix/build.gradle"
-GIX_RUNNER="$SHARED/libs/gix/src/main/java/com/diegonmarcos/cloudlib/gix/GixRunner.kt"
+APP_GRADLE="$APP/app/build.gradle"
+SHIP_WF="$ROOT/1_cicd/src/cicd/ship-cloud-drive.yml"
 FLEET_CLIENT="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/FleetGit.kt"
 GIT_MODELS="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitModels.kt"
 GIT_ENGINE="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
 COORD="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/GitSyncCoordinator.kt"
-GH_RUNNER="$SHARED/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhRunner.kt"
 SIGNIN="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignIn.kt"
 SIGNIN_UI="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 
@@ -61,12 +59,11 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 
 # ── a file's CODE, with its comment lines stripped ──────────────────────────
 # Every grep below that looks for the ABSENCE of something runs through this.
-# Both build.gradle files now DOCUMENT the bug they used to have, quoting the
-# very arithmetic c5b forbids; a naive grep would match the explanation and call
-# the fix the defect.
+# Sources DOCUMENT what they no longer do (app/build.gradle explains why gix is
+# not linked); a naive grep would match the explanation and call it the defect.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 for required in "$SHARED_BJ" "$BJ" "$WALKER" "$WALKER_TEST" "$WIRING" "$READER" "$PAGE" \
-                "$GH_PIN" "$GH_GRADLE" "$GIX_PIN" "$GIX_GRADLE" "$GIX_RUNNER" "$GH_RUNNER" "$FLEET_CLIENT" \
+                "$APP_GRADLE" "$SHIP_WF" "$FLEET_CLIENT" \
                 "$GIT_MODELS" "$GIT_ENGINE" "$COORD"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -557,11 +554,11 @@ PYTHON
     return $bad
 }
 
-# c7 <GitAuthChain.kt> <GhRunner.kt> <GitReposScreen.kt> : no token surfaces
+# c7 <GitAuthChain.kt> <GitReposScreen.kt> : no token surfaces
 # #653 the fourth input was GhDeviceLogin.kt, whose Granted phase carried the minted
 # token. That file is DELETED, so there is no phase carrier left to redact.
 c7() {
-    local walker="$1" runner="$2" page="$3" bad=0
+    local walker="$1" page="$2" bad=0
     # A redacted toString on both carriers, so a stray log line or string template
     # cannot print the secret.
     grep -qE 'override fun toString\(\): String = "Credential\(token=<redacted>\)"' "$walker" \
@@ -570,18 +567,10 @@ c7() {
         || { echo "    the Outcome's toString is not redacted"; bad=1; }
     # Nothing logs or persists a token outside the one store.
     local leak
-    leak="$(grep -nE 'Log\.[a-z]+\(.*(token|secret)|println\(.*token|putString\(.*token' "$walker" "$runner" "$page" || true)"
+    leak="$(grep -nE 'Log\.[a-z]+\(.*(token|secret)|println\(.*token|putString\(.*token' "$walker" "$page" || true)"
     [ -z "$leak" ] || { echo "    a token leaves memory:"; printf '%s\n' "$leak" | sed 's/^/        /'; bad=1; }
-    # The token travels in the ENVIRONMENT, never argv — argv is world-readable
-    # through /proc/<pid>/cmdline and every process listing.
-    grep -qE 'put\("GH_TOKEN", token\)' "$runner" \
-        || { echo "    the token is not passed to gh in the environment"; bad=1; }
-    # `gh auth token` PRINTS the credential to stdout; it must never be INVOKED.
-    # Comment lines are stripped first: this file documents that it does not call
-    # that command, and prose saying so must not read as the call itself.
-    if grep -vE '^\s*(\*|//|/\*)' "$runner" | grep -nE '"auth" *, *"token"'; then
-        echo "    gh auth token is invoked, which prints the credential to stdout"; bad=1
-    fi
+    # #705 GhRunner's half (token in the environment, never `gh auth token`) moved to
+    # lib-apks/test/test-git-binaries.sh with libs:gh.
     # The page's chain state carries the public USER code and the narrative, and
     # no token: a data class holding the secret would put it in UI state.
     grep -qE 'private data class GitChainState\(' "$page" \
@@ -604,122 +593,26 @@ c4 "$WALKER" "$WIRING" "$BJ" && pass "one setSecret, the id a parameter off auth
     || fail "the credential could be split across ids or stores"
 
 
-# c5_one <name> <pin.json> <build.gradle> : the payload is refused at BUILD time
-c5_one() {
-    local name="$1" pin="$2" gradle="$3" bad=0
-    # THE ARCHIVE, before anything is extracted from it.
-    grep -qE 'fetchPinned\(url, tar, pin\.tar_sha256\)' "$gradle" \
-        || { echo "    $name: the tarball's own sha256 is not checked"; bad=1; }
-    grep -qE 'if \(actual != sha256\)' "$gradle" \
-        || { echo "    $name: fetchPinned does not refuse a wrong archive hash"; bad=1; }
-    # THE EXTRACTED BINARY: hash, exact byte count, and no dynamic loader. All
-    # three, per module — a guard present in one and absent in the other is how
-    # exactly one unverified binary ships.
-    grep -qE 'if \(actual != pin\.binary_sha256\)' "$gradle" \
-        || { echo "    $name: the extracted binary's sha256 is not checked"; bad=1; }
-    grep -qE 'if \(staged\.length\(\) != \(long\) pin\.binary_bytes\)' "$gradle" \
-        || { echo "    $name: the extracted binary's byte count is not checked"; bad=1; }
-    grep -qE "pinJson\.interp == 'none' && hasProgramInterpreter\(staged\)" "$gradle" \
-        || { echo "    $name: a PT_INTERP-bearing payload is not refused"; bad=1; }
-    grep -qE 'if \(type == 3\) return true' "$gradle" \
-        || { echo "    $name: the program-header walk does not look for PT_INTERP (type 3)"; bad=1; }
-    # Every refusal DELETES the staged file. One left on disk is one the next
-    # build's up-to-date check hands straight to the packager.
-    local deletes
-    deletes="$(_code "$gradle" | grep -cE 'staged\.delete\(\)')"
-    [ "${deletes:-0}" -ge 3 ] \
-        || { echo "    $name: only ${deletes:-0} refusal(s) delete the staged binary; all three must"; bad=1; }
-    # THE PIN states the property those guards enforce, per ABI, or they enforce
-    # nothing: `interp` is what turns the program-header walk into a refusal.
-    python3 - "$pin" "$name" <<'PYTHON' || bad=1
-import json, sys
-p = json.load(open(sys.argv[1], encoding="utf-8")); name = sys.argv[2]; bad = 0
-if p.get("interp") != "none":
-    print("    %s: the pin does not declare interp=none, so the PT_INTERP guard is inert" % name); bad += 1
-if not p.get("binaries"):
-    print("    %s: no ABI is pinned at all" % name); bad += 1
-for abi, b in sorted((p.get("binaries") or {}).items()):
-    for field in ("tar_sha256", "binary_sha256"):
-        v = b.get(field) or ""
-        if len(v) != 64 or v.strip("0123456789abcdef"):
-            print("    %s/%s: %s is not a sha256: %r" % (name, abi, field, v)); bad += 1
-    n = b.get("binary_bytes")
-    if not isinstance(n, int) or n <= 0:
-        print("    %s/%s: binary_bytes is not a positive integer: %r" % (name, abi, n)); bad += 1
-sys.exit(1 if bad else 0)
-PYTHON
-    return $bad
-}
-
-# c5b <build.gradle...> : the entry is read by GRADLE, never by hand
-#
-# THIS IS #646's OWN REGRESSION GUARD, and the reason this ticket needed a second
-# landing. The first attempt hand-walked 512-byte ustar headers and advanced past
-# each entry's data with ((size + 511L) / 512L) * 512L — correct C, and wrong
-# Groovy, where `/` on two Longs is BigDecimal division and the whole expression
-# is just size + 511. The walk left the header grid on the FIRST entry of the real
-# gh tarball and parsed man-page bytes as an octal size field, which is the
-# "ST/]OWNER/RE" under radix 8 that turned main red. No offset arithmetic, and no
-# part of a hand-rolled tar reader, may come back into either module.
-c5b() {
-    local bad=0 g name
-    for g in "$@"; do
-        name="$(basename "$g")"
-        grep -qE 'archiveOperations\.tarTree\(archiveOperations\.gzip\(tarGz\)\)' "$g" \
-            || { echo "    $name: the entry is not read through Gradle's own tar reader with gzip STATED"; bad=1; }
-        grep -qE '@javax\.inject\.Inject abstract ArchiveOperations getArchiveOperations\(\)' "$g" \
-            || { echo "    $name: ArchiveOperations is not an injected service — the configuration cache would refuse it"; bad=1; }
-        # An absent or ambiguous entry still REFUSES rather than staging a short
-        # file: an empty jniLibs payload installs an app whose binary is not there.
-        grep -qE 'if \(matched\.size\(\) != 1\)' "$g" \
-            || { echo "    $name: a missing or ambiguous entry is not refused"; bad=1; }
-        local handrolled
-        handrolled="$(_code "$g" | grep -nE 'parseLong\(sizeField|/ 512L|511L|GZIPInputStream|header\[156\]|cString\(header')"
-        [ -z "$handrolled" ] || {
-            echo "    $name: ustar is being parsed by hand again — that is exactly #646's red:"
-            printf '%s\n' "$handrolled" | sed 's/^/        /'; bad=1; }
-    done
-    return $bad
-}
-
-echo "── C5 the pinned payload is REFUSED at build time ──"
-c5_one gh "$GH_PIN" "$GH_GRADLE" && pass "gh: archive hash, binary hash, exact byte count and PT_INTERP all refuse, and the pin declares interp=none" \
-    || fail "an unverified or dynamically linked gh could reach jniLibs"
-c5_one gix "$GIX_PIN" "$GIX_GRADLE" && pass "gix: the same four refusals, on the same declared property" \
-    || fail "an unverified or dynamically linked gix could reach jniLibs"
-c5b "$GH_GRADLE" "$GIX_GRADLE" && pass "both modules read their entry through Gradle's tar reader; no hand-rolled ustar, no offset arithmetic" \
-    || fail "a hand-rolled tar walk is back — #646's red"
-
-# c6 <gix pin> <GixRunner.kt> <GitAuthChain.kt> <DriveGitChain.kt> <page> :
-# push is NEVER routed to gix
+# c6 <drive build.json> <app/build.gradle> <ship workflow> <caller...> : gix is not
+# compiled into this app, and no caller routes push to it.
+# #705 Cloud Drive linked libs:gix (10 MB of static gitoxide) and called it from
+# nowhere; it ships as Cloud-Lib-Gix.apk alone now, so a gix change republishes that
+# APK and not this one. Linking it back, or watching its directory, re-couples them.
 c6() {
-    local pin="$1" runner="$2" bad=0; shift 2
-    # THE DECLARATION forbids it. Measured: gitoxide 0.59.0 answers `push` with
-    # "error: unrecognized subcommand", so a build that declared the verb would
-    # spawn a process that can only ever fail.
-    python3 - "$pin" <<'PYTHON' || bad=1
+    local bj="$1" gradle="$2" wf="$3" bad=0; shift 3
+    python3 - "$bj" <<'PYTHON' || bad=1
 import json, sys
-verbs = json.load(open(sys.argv[1], encoding="utf-8")).get("verbs")
-if not isinstance(verbs, list) or not verbs:
-    print("    gix declares no verbs, so nothing constrains what it may be asked to run"); sys.exit(1)
-if "push" in verbs:
-    print("    gix declares a push verb; gitoxide has no push subcommand"); sys.exit(1)
-if sorted(verbs) != ["clone", "fetch"]:
-    print("    gix declares %r; clone and fetch are the measured pair" % (verbs,)); sys.exit(1)
+m = json.load(open(sys.argv[1], encoding="utf-8")).get("modules", {})
+if "libs:gix" in m:
+    print("    build.json::modules declares libs:gix again"); sys.exit(1)
+if "libs:gix" in (m.get("app", {}).get("depends_on") or []):
+    print("    the app module depends on libs:gix again"); sys.exit(1)
 PYTHON
-    # THE RUNNER refuses an undeclared verb BEFORE spawning anything, and reads
-    # the list off the baked pin instead of holding a literal of its own.
-    grep -qE 'require\(verb in VERBS\)' "$runner" \
-        || { echo "    GixRunner does not refuse an undeclared verb before spawning"; bad=1; }
-    grep -qE 'val VERBS: List<String> = BuildConfig\.GIX_VERBS' "$runner" \
-        || { echo "    GixRunner's verb list is not the baked pin"; bad=1; }
-    local literal
-    literal="$(_code "$runner" | grep -nE 'listOf\("clone"|listOf\("fetch"|"push"')"
-    [ -z "$literal" ] || {
-        echo "    GixRunner holds a literal verb list, or names push:"
-        printf '%s\n' "$literal" | sed 's/^/        /'; bad=1; }
-    # AND NO CALLER ROUTES PUSH THERE. Prose about it is fine and wanted; code is
-    # not, so every caller is read with its comments stripped.
+    [ "$(_code "$gradle" | grep -cF "project(':libs:gix')")" -eq 0 ] \
+        || { echo "    app/build.gradle compiles libs:gix again"; bad=1; }
+    [ "$(grep -cF 'ab_cloud-libs-shared/libs/gix/' "$wf")" -eq 0 ] \
+        || { echo "    the ship workflow watches libs/gix again, so a gix change republishes Cloud Drive"; bad=1; }
+    # No caller routes push there. Prose about it is fine; code is not.
     local f routed
     for f in "$@"; do
         routed="$(_code "$f" | grep -nE '[Gg]ix.*[Pp]ush|[Pp]ush.*[Gg]ix')"
@@ -730,13 +623,13 @@ PYTHON
     return $bad
 }
 
-echo "── C6 push is NEVER routed to gix ──"
-c6 "$GIX_PIN" "$GIX_RUNNER" "$WALKER" "$WIRING" "$PAGE" \
-    && pass "the pin declares clone and fetch only, the runner refuses the rest off that pin, and no caller sends push there" \
-    || fail "push could reach gitoxide, which has no push"
+echo "── C6 gix is not in this app, and nothing routes push to it ──"
+c6 "$BJ" "$APP_GRADLE" "$SHIP_WF" "$WALKER" "$WIRING" "$PAGE" \
+    && pass "neither declared, compiled nor watched, and no caller sends push to gix" \
+    || fail "gix is coupled back into Cloud Drive, or push is routed to it"
 
 echo "── C7 no token is ever rendered or logged ──"
-c7 "$WALKER" "$GH_RUNNER" "$PAGE" && pass "both carriers redact their toString, the token rides the environment, and the page's state holds none" \
+c7 "$WALKER" "$PAGE" && pass "both carriers redact their toString and the page's state holds none" \
     || fail "a token can reach a log, a process listing or the screen"
 
 # c10 <page> : #669 a LISTED repository is cloned from ITS OWN listing's URL.
@@ -914,9 +807,7 @@ _stage() {
     cp "$SHARED_BJ" "$W/shared.json";      cp "$BJ" "$W/drive.json"
     cp "$WALKER" "$W/GitAuthChain.kt";     cp "$WIRING" "$W/DriveGitChain.kt"
     cp "$PAGE" "$W/GitReposScreen.kt";   cp "$FLEET_CLIENT" "$W/FleetGit.kt"
-    cp "$GH_PIN" "$W/gh.json";             cp "$GH_GRADLE" "$W/gh.gradle"
-    cp "$GIX_PIN" "$W/gix.json";           cp "$GIX_GRADLE" "$W/gix.gradle"
-    cp "$GIX_RUNNER" "$W/GixRunner.kt";    cp "$GH_RUNNER" "$W/GhRunner.kt"
+    cp "$APP_GRADLE" "$W/app.gradle";      cp "$SHIP_WF" "$W/ship.yml"
     cp "$SIGNIN_UI" "$W/SignInUi.kt";      cp "$SIGNIN" "$W/SignIn.kt"
     cp "$GIT_MODELS" "$W/GitModels.kt";    cp "$GIT_ENGINE" "$W/GitEngine.kt"
     cp "$COORD" "$W/GitSyncCoordinator.kt"
@@ -1028,50 +919,24 @@ _stage && _green "c4" c4 "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/drive.js
     _red "C4 a blank id is unguarded, so the token is filed under an invented one" \
          c4 "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/drive.json"; }
 
-# ── C5 the pinned payload, and #646's own regression ──
-_stage && _green "c5 gh" c5_one gh "$W/gh.json" "$W/gh.gradle" && {
-    _sub "$W/gh.gradle" "pinJson.interp == 'none' && hasProgramInterpreter(staged)" 'false'
-    _red "C5 gh: a PT_INTERP-bearing payload is no longer refused" c5_one gh "$W/gh.json" "$W/gh.gradle"; }
-_stage && _green "c5 gh" c5_one gh "$W/gh.json" "$W/gh.gradle" && {
-    _sub "$W/gh.gradle" 'if (staged.length() != (long) pin.binary_bytes)' 'if (false)'
-    _red "C5 gh: the exact byte count is no longer enforced" c5_one gh "$W/gh.json" "$W/gh.gradle"; }
-_stage && _green "c5 gh" c5_one gh "$W/gh.json" "$W/gh.gradle" && {
-    _sub "$W/gh.gradle" 'if (actual != pin.binary_sha256)' 'if (false)'
-    _red "C5 gh: the extracted binary's sha256 is no longer checked" c5_one gh "$W/gh.json" "$W/gh.gradle"; }
-_stage && _green "c5 gh" c5_one gh "$W/gh.json" "$W/gh.gradle" && {
-    _json "$W/gh.json" 'd["interp"] = "glibc"'
-    _red "C5 gh: the pin stops declaring interp=none, making the guard inert" c5_one gh "$W/gh.json" "$W/gh.gradle"; }
-_stage && _green "c5 gix" c5_one gix "$W/gix.json" "$W/gix.gradle" && {
-    _json "$W/gix.json" 'd["binaries"]["arm64-v8a"]["binary_bytes"] = 0'
-    _red "C5 gix: an unpinned byte count" c5_one gix "$W/gix.json" "$W/gix.gradle"; }
-_stage && _green "c5b" c5b "$W/gh.gradle" "$W/gix.gradle" && {
-    _sub "$W/gh.gradle" 'archiveOperations.tarTree(archiveOperations.gzip(tarGz))' \
-                        'archiveOperations.tarTree(tarGz)'
-    _red "C5 the gzip compression is guessed from the file name instead of stated" c5b "$W/gh.gradle" "$W/gix.gradle"; }
-_stage && _green "c5b" c5b "$W/gh.gradle" "$W/gix.gradle" && {
-    _sub "$W/gh.gradle" '        target.parentFile.mkdirs(); target.delete()' \
-                        '        long size = Long.parseLong(sizeField, 8)
-        long skip = ((size + 511L) / 512L) * 512L
-        target.parentFile.mkdirs(); target.delete()'
-    _red "C5 #646's OWN RED: a hand-rolled ustar walk back in libs:gh" c5b "$W/gh.gradle" "$W/gix.gradle"; }
-_stage && _green "c5b" c5b "$W/gh.gradle" "$W/gix.gradle" && {
-    _sub "$W/gix.gradle" 'if (matched.size() != 1)' 'if (false)'
-    _red "C5 gix: an absent entry stages a short file instead of refusing" c5b "$W/gh.gradle" "$W/gix.gradle"; }
-
-# ── C6 push never reaches gitoxide ──
-_stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
-    _json "$W/gix.json" 'd["verbs"].append("push")'
-    _red "C6 push declared as a gix verb" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
-    _sub "$W/GixRunner.kt" 'require(verb in VERBS)' 'require(verb.isNotBlank())'
-    _red "C6 the runner stops refusing an undeclared verb" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
-    _sub "$W/GixRunner.kt" 'val VERBS: List<String> = BuildConfig.GIX_VERBS' \
-                           'val VERBS: List<String> = listOf("clone", "fetch", "push") + BuildConfig.GIX_VERBS'
-    _red "C6 the runner holds a literal verb list beside the pin" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c6" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
+# ── C6 gix stays out of this app ──
+_stage && _green "c6" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
+    _json "$W/drive.json" 'd["modules"]["libs:gix"] = {"dir": "../ab_cloud-libs-shared/libs/gix", "type": "library"}'
+    _red "C6 build.json declares libs:gix again" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c6" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
+    _json "$W/drive.json" 'd["modules"]["app"]["depends_on"].append("libs:gix")'
+    _red "C6 the app module depends on libs:gix again" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c6" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
+    _sub "$W/app.gradle" "    implementation project(':libs:auth')" "    implementation project(':libs:auth')
+    implementation project(':libs:gix')"
+    _red "C6 app/build.gradle compiles libs:gix again" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c6" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
+    _sub "$W/ship.yml" '      - "ab_cloud-libs-shared/libs/git-sync/**"' '      - "ab_cloud-libs-shared/libs/git-sync/**"
+      - "ab_cloud-libs-shared/libs/gix/**"'
+    _red "C6 the ship workflow watches libs/gix again" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c6" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt" && {
     printf '\nprivate fun pushViaGix() = GixRunner.run("push")\n' >>"$W/DriveGitChain.kt"
-    _red "C6 a caller routes push to gix" c6 "$W/gix.json" "$W/GixRunner.kt" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
+    _red "C6 a caller routes push to gix" c6 "$W/drive.json" "$W/app.gradle" "$W/ship.yml" "$W/GitAuthChain.kt" "$W/DriveGitChain.kt" "$W/GitReposScreen.kt"; }
 
 # ── C8 #655 the declared landing, and no client-side repair of it ──
 _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
@@ -1104,16 +969,13 @@ _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"
     _red "C8 a 3xx from the edge reported as a successful empty listing" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
 
 # ── C7 the token ──
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
+_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GitReposScreen.kt" && {
     _sub "$W/GitAuthChain.kt" 'override fun toString(): String = "Credential(token=<redacted>)"' \
                               'override fun toString(): String = "Credential(token=$token)"'
-    _red "C7 Answer.Credential prints the token" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
-    _sub "$W/GhRunner.kt" 'put("GH_TOKEN", token)' 'add("--token"); add(token)'
-    _red "C7 the token moves from the environment into argv (/proc-readable)" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
-_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt" && {
+    _red "C7 Answer.Credential prints the token" c7 "$W/GitAuthChain.kt" "$W/GitReposScreen.kt"; }
+_stage && _green "c7" c7 "$W/GitAuthChain.kt" "$W/GitReposScreen.kt" && {
     printf '\nprivate val leak = Log.d("chain", "token=$token")\n' >>"$W/GitAuthChain.kt"
-    _red "C7 a token reaches a log line" c7 "$W/GitAuthChain.kt" "$W/GhRunner.kt" "$W/GitReposScreen.kt"; }
+    _red "C7 a token reaches a log line" c7 "$W/GitAuthChain.kt" "$W/GitReposScreen.kt"; }
 
 # ── C9 #669 gitea first, and the loop that closes ──
 _c9() { c9 "$W/shared.json" "$W/FleetGit.kt" "$W/GitReposScreen.kt" "$W/SignInUi.kt" "$W/SignIn.kt" "$W/DriveGitChain.kt"; }

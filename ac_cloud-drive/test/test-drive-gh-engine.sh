@@ -252,8 +252,8 @@ _green d1 d1 "$MUT/b.json" "$GRADLE" "$MAIN" "$WF" && {
     _applied "$BJ" "$MUT/b.json" '"libs:gh"' && _red "D1 build.json declares libs:gh again" d1 "$MUT/b.json" "$GRADLE" "$MAIN" "$WF"; }
 cp "$GRADLE" "$MUT/app.gradle"
 _green d1 d1 "$BJ" "$MUT/app.gradle" "$MAIN" "$WF" && {
-    _sub "$MUT/app.gradle" "    implementation project(':libs:gix')" "    implementation project(':libs:gh')
-    implementation project(':libs:gix')"
+    _sub "$MUT/app.gradle" "    implementation project(':libs:auth')" "    implementation project(':libs:auth')
+    implementation project(':libs:gh')"
     _applied "$GRADLE" "$MUT/app.gradle" "project(':libs:gh')" && _red "D1 app/build.gradle links :libs:gh again" d1 "$BJ" "$MUT/app.gradle" "$MAIN" "$WF"; }
 mkdir -p "$MUT/java/x"; cp "$PAGE" "$MUT/java/x/GitReposScreen.kt"
 _green d1 d1 "$BJ" "$GRADLE" "$MUT/java" "$WF" && {

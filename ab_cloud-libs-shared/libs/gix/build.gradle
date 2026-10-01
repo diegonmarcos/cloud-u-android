@@ -11,20 +11,25 @@
 // IT CANNOT PUSH, and this module does not pretend it can: `gix push` answers
 // `error: unrecognized subcommand 'push'`. data/gix-binary.json::verbs declares
 // clone and fetch and NOTHING else, GixRunner refuses any verb outside that
-// declaration, and #646's tester fails the build if push is ever routed here.
+// declaration, and lib-apks/test/test-git-binaries.sh fails the build if either
+// stops being true.
 // Push is the terminal handoff (#642's RUN_COMMAND, shipped at 74225166b) or
 // JGit, which already does it inside libs:git-sync.
 //
-// Shared BY REFERENCE the way every module on this shelf is: lib-apks discovers
-// this directory and ships cloud-lib-gix as its own installable APK (#474
-// naming, from the one declaration in aa_cloud-superapp/data/regen.sh), and an
-// app that wants the engine names it in its own build.json::modules.
+// #705 SHIPPED ONLY AS ITS OWN APK: lib-apks discovers this directory and ships
+// cloud-lib-gix as Cloud-Lib-Gix.apk (#474 naming, from the one declaration in
+// aa_cloud-superapp/data/regen.sh), which the Store installs. Cloud Drive linked
+// it and called it from nowhere, so it no longer does: a gix bump republishes
+// that one APK and no app. It has no engine service yet — clone and fetch write
+// into the shared store, which an engine in its own uid cannot reach
+// (a0_docs/eng-specs/engine-apk-split.md). Do not add it back to an app's
+// build.json::modules to "use" it; that re-couples every gix change to that app.
 //
 // NO COMPOSE ON PURPOSE: this module renders nothing. It is an engine, and the
 // screen that reports on it belongs to the app that hosts it.
 //
-// TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
-// app's own `gradle test`, and that app's ship workflow watches this directory.
+// TESTED where it ships: ab_cloud-libs-shared/lib-apks/test/ runs on every Cloud
+// Libs ship, which is the only workflow that watches this directory now.
 
 plugins {
     id 'com.android.library'
