@@ -27,6 +27,11 @@
 #       is a real module.
 #   E7  the gh engine holds INTERNET: gh's whole job is talking to GitHub, from
 #       the engine's process now.
+#   E9  #729 the gh engine holds its own network for a sign-in: LOGIN_START
+#       builds the GhLogin job with GhLoginKeeper.hold, and the manifest declares
+#       that keeper as a specialUse foreground service with both permissions.
+#       gh polls GitHub while the user is in the browser; Android 15 cuts the
+#       network of a backgrounded process and the poll died as a DNS failure.
 #   E8  every engine an app BINDS by handshake is found here: gh (Cloud Drive),
 #       cal (Cloud Me and Cloud Agenda, engine-apk-split move 3), feed (SuperApp,
 #       move 4), news (Cloud News, move 5) and ml-l-image-mlkit (the image scan
@@ -164,6 +169,17 @@ for module in modules:
             perms = [p.get(A + "name") for p in tree.getroot().iter("uses-permission")]
             if "android.permission.INTERNET" not in perms:
                 no("E7 gh: the engine runs gh, which talks to GitHub, without INTERNET")
+            # E9
+            for perm in ("android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_SPECIAL_USE"):
+                if perm not in perms:
+                    no("E9 gh: the sign-in keeper cannot run in the foreground without %s" % perm)
+            keepers = [s for s in tree.getroot().iter("service") if (s.get(A + "name") or "").endswith(".GhLoginKeeper")]
+            if len(keepers) != 1 or "specialUse" not in (keepers[0].get(A + "foregroundServiceType") or "") \
+                    or keepers[0].get(A + "exported") != "false":
+                no("E9 gh: GhLoginKeeper is not declared once as a non-exported specialUse foreground service")
+            if not re.search(r"GhLogin\(host,\s*hold\s*=\s*\{\s*GhLoginKeeper\.hold\(", text):
+                no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
+                   "the moment the browser is up")
 
 for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit"):
     if must not in found:
@@ -173,8 +189,8 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
-echo "── E1-E7 every engine on the shelf is bindable, versioned, guarded and runnable ──"
-engines "$LIBS" "$BJ" && pass "every engine service is exported and signature-guarded, findable by \${applicationId}.ENGINE, versioned, lists exactly what it answers, links core, extracts what it execs; gh holds INTERNET" \
+echo "── E1-E9 every engine on the shelf is bindable, versioned, guarded and runnable ──"
+engines "$LIBS" "$BJ" && pass "every engine service is exported and signature-guarded, findable by \${applicationId}.ENGINE, versioned, lists exactly what it answers, links core, extracts what it execs; gh holds INTERNET and its sign-in holds the network" \
     || fail "an engine on the shelf cannot be bound, found, versioned or run as declared"
 
 # ══ MUT ════════════════════════════════════════════════════════════════════
@@ -227,7 +243,7 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _sub "$M_SVC" '        LOGIN_POLL -> Login.poll()
 ' ''
     python3 -c 'import sys; sys.exit(0 if "LOGIN_POLL -> Login.poll()" not in open(sys.argv[1]).read() else 1)' "$M_SVC" \
-        && _applied "$R_SVC" "$M_SVC" 'LOGIN_START -> Login.start(runner, arg(args, 0))' \
+        && _applied "$R_SVC" "$M_SVC" 'LOGIN_START -> Login.start(runner, arg(args, 0), applicationContext)' \
         && _red "E4 the engine lists a method it no longer answers (an older client would break)" engines "$MUT/libs" "$MUT/build.json"; }
 _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _sub "$M_SVC" 'class GhBackendService : DataBackendService()' 'class GhBackendService : android.app.Service()'
@@ -253,6 +269,20 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     python3 -c 'import sys; sys.exit(0 if "android.permission.INTERNET" not in open(sys.argv[1]).read() else 1)' "$M_MF" \
         && _applied "$R_MF" "$M_MF" '<application>' \
         && _red "E7 the gh engine runs gh without INTERNET" engines "$MUT/libs" "$MUT/build.json"; }
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SVC" 'GhLogin(host, hold = { GhLoginKeeper.hold(ctx) })' 'GhLogin(host)'
+    _applied "$R_SVC" "$M_SVC" 'job = GhLogin(host) {' \
+        && _red "E9 the sign-in runs without holding the engine's network" engines "$MUT/libs" "$MUT/build.json"; }
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_MF" '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+' ''
+    python3 -c 'import sys; sys.exit(0 if "FOREGROUND_SERVICE_SPECIAL_USE" not in open(sys.argv[1]).read() else 1)' "$M_MF" \
+        && _applied "$R_MF" "$M_MF" 'android.permission.FOREGROUND_SERVICE" />' \
+        && _red "E9 the keeper's foreground type has no permission" engines "$MUT/libs" "$MUT/build.json"; }
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_MF" 'android:foregroundServiceType="specialUse"' 'android:foregroundServiceType="dataSync"'
+    _applied "$R_MF" "$M_MF" '"dataSync"' \
+        && _red "E9 the keeper's declared type does not match the type it starts with" engines "$MUT/libs" "$MUT/build.json"; }
 _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _sub "$M_MF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
     _applied "$R_MF" "$M_MF" 'engine.VERSION' \

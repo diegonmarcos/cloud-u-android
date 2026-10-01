@@ -167,4 +167,37 @@ class GhLoginTest {
         val open = ServerSocket(0)
         open.use { assertTrue(GhNetProxy.probe("127.0.0.1", it.localPort).contains("reachable")) }
     }
+
+    /**
+     * #729 gh's token poll runs while the user is in the browser, so the engine's network has to be
+     * held from BEFORE gh starts until AFTER gh exits (on the phone the hold is GhLoginKeeper, a
+     * foreground service; Android 15 cut the poll's network as a DNS failure without it). Held late,
+     * released early or not at all, and the order below is different.
+     */
+    @Test
+    fun theEngineHoldsItsNetworkFromBeforeGhStartsUntilGhHasExited() {
+        val events = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val gh = fakeGh(transcript)
+        val job = GhLogin("github.com", hold = { events += "hold"; { events += "release" } }) { onLine ->
+            events += "gh"; GhRunner.drain(gh, onLine)
+        }.start()
+        try {
+            assertTrue("the one-time code never reached the job", waitFor(5_000) { job.code.isNotEmpty() })
+            assertEquals("the hold is taken before gh runs and kept while gh polls", listOf("hold", "gh"), events.toList())
+        } finally {
+            gh.destroy()
+        }
+        assertTrue("the job never noticed gh ending", waitFor(5_000) { !job.running })
+        assertTrue("the hold was never released", waitFor(5_000) { "release" in events })
+        assertEquals(listOf("hold", "gh", "release"), events.toList())
+    }
+
+    /** A gh run that throws still gives the hold back: a stuck foreground service outlives every sign-in. */
+    @Test
+    fun aSignInThatThrowsStillReleasesTheHold() {
+        val released = java.util.concurrent.atomic.AtomicInteger()
+        val job = GhLogin("github.com", hold = { { released.incrementAndGet(); Unit } }) { throw IllegalStateException("gh blew up") }.start()
+        assertTrue("the job never ended", waitFor(5_000) { !job.running })
+        assertTrue("a thrown sign-in kept the hold", waitFor(5_000) { released.get() == 1 })
+    }
 }

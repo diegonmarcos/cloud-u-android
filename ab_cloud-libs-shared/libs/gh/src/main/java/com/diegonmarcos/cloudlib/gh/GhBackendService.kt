@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudlib.gh
 
+import android.content.Context
 import android.util.Log
 import com.diegonmarcos.superapp.core.DataBackendService
 import org.json.JSONObject
@@ -59,7 +60,7 @@ class GhBackendService : DataBackendService() {
         CREDENTIAL -> runner.credential(arg(args, 0))
             ?.let { JSONObject().put("username", it.username).put("secret", it.secret).toString() }
             ?: "{}"
-        LOGIN_START -> Login.start(runner, arg(args, 0))
+        LOGIN_START -> Login.start(runner, arg(args, 0), applicationContext)
         LOGIN_POLL -> Login.poll()
         else -> throw IllegalArgumentException("the gh engine does not answer '$method'")
     }
@@ -79,9 +80,9 @@ class GhBackendService : DataBackendService() {
         private var job: GhLogin? = null
 
         @Synchronized
-        fun start(runner: GhRunner, host: String): String {
+        fun start(runner: GhRunner, host: String, ctx: Context): String {
             val running = job?.running == true
-            if (!running) job = GhLogin(host) { onLine -> runner.login(host, onLine) }.start()
+            if (!running) job = GhLogin(host, hold = { GhLoginKeeper.hold(ctx) }) { onLine -> runner.login(host, onLine) }.start()
             else Log.i(GhRunner.TAG, "gh auth login: already running; the client follows that one")
             return JSONObject().put("started", !running).toString()
         }

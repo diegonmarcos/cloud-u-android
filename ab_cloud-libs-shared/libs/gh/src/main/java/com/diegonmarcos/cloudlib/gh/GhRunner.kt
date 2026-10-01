@@ -171,7 +171,15 @@ class GhRunner(private val context: Context) {
         val vpn = runCatching {
             cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
         }.getOrNull() == true
+        // #729 a process Android has pushed out of a valid lifecycle loses its network, and every
+        // lookup then fails like a dead resolver. Say which it is: BLOCKED is Android's own verdict
+        // for this uid, and the importance is how foreground this process was when gh gave up.
+        @Suppress("DEPRECATION")
+        val blocked = runCatching { cm?.activeNetworkInfo?.detailedState == android.net.NetworkInfo.DetailedState.BLOCKED }.getOrNull() == true
+        val importance = android.app.ActivityManager.RunningAppProcessInfo().also { android.app.ActivityManager.getMyMemoryState(it) }.importance
         return (listOf(if (net != null) "gh-net tunnel up" else "gh-net tunnel DID NOT START ($netFailure), so gh had to resolve names itself") +
+            listOf(if (blocked) "Android is BLOCKING this engine's network (process importance $importance: it fell out of the foreground)"
+                else "Android is not blocking this engine's network (process importance $importance)") +
             BuildConfig.GH_PROXY_HOSTS.split(',').map { GhNetProxy.probe(it) } +
             listOfNotNull(if (vpn) "a VPN carries ${context.packageName}'s traffic: if its firewall does not allow this app, that is the block" else null))
             .joinToString(" · ", prefix = "engine check: ")
@@ -249,22 +257,41 @@ class GhRunner(private val context: Context) {
  * [run] is the login itself (GhRunner.login in the engine, a fake gh in GhLoginTest), so the
  * job, the line reading and the pin's patterns are exercised as one, the way the phone runs them.
  */
-class GhLogin(private val host: String, private val run: (onLine: (String) -> Unit) -> GhRunner.Result) {
+class GhLogin(
+    private val host: String,
+    /**
+     * #729 keeps the engine's network for as long as gh runs (GhLoginKeeper on the phone) and
+     * answers its own release. Taken in [start], on the caller's thread, while the app that asked
+     * is still on screen; released only once gh has exited, whatever its verdict.
+     */
+    private val hold: () -> (() -> Unit) = { {} },
+    private val run: (onLine: (String) -> Unit) -> GhRunner.Result,
+) {
     @Volatile var code = ""; private set
     @Volatile var url = ""; private set
     @Volatile var ended: GhRunner.Result? = null; private set
+    @Volatile private var release: () -> Unit = {}
 
     private val thread = Thread({
-        ended = run { line ->
-            if (line.isNotBlank()) Log.i(GhRunner.TAG, "gh auth login: $line")
-            if (code.isEmpty()) GhOutput.deviceCode(line)?.let { code = it }
-            if (url.isEmpty()) GhOutput.verificationUrl(line, host)?.let { url = it }
+        val r = try {
+            run { line ->
+                if (line.isNotBlank()) Log.i(GhRunner.TAG, "gh auth login: $line")
+                if (code.isEmpty()) GhOutput.deviceCode(line)?.let { code = it }
+                if (url.isEmpty()) GhOutput.verificationUrl(line, host)?.let { url = it }
+            }
+        } finally {
         }
+        release() // MUTANT 1: released only when gh returns
+        ended = r
     }, "gh-login").apply { isDaemon = true }
 
     val running: Boolean get() = ended == null && thread.isAlive
 
-    fun start(): GhLogin = apply { Log.i(GhRunner.TAG, "gh auth login: starting for $host"); thread.start() }
+    fun start(): GhLogin = apply {
+        Log.i(GhRunner.TAG, "gh auth login: starting for $host")
+        release = hold()
+        thread.start()
+    }
 }
 
 /**

@@ -111,7 +111,7 @@ class GhNetProxy(
          * read the same on the card. Android's own message follows the layer.
          */
         internal fun cause(host: String, port: Int, e: IOException): String = when (e) {
-            is UnknownHostException -> "DNS: no address for $host"
+            is UnknownHostException -> "DNS: no address for $host from Android's resolver (this uid, Private DNS honoured)"
             is SocketTimeoutException -> "TCP: $host:$port did not answer"
             is ConnectException -> "TCP: $host:$port refused the connection"
             is NoRouteToHostException -> "TCP: no route to $host:$port"

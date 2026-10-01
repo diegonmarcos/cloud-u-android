@@ -10,6 +10,11 @@
     <!-- #726 a failed sign-in says whether a VPN (a firewall's included) carries this engine's
          traffic; reading that needs the network's capabilities. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- #729 GhLoginKeeper: gh's sign-in polls GitHub while the user is in the browser, and
+         Android 15 cuts a backgrounded process's network, so the engine holds the foreground for
+         exactly that long. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application>
         <!-- Guarded by the constellation's signature-level permission: only APKs signed
@@ -26,6 +31,15 @@
             <meta-data
                 android:name="com.diegonmarcos.cloud.engine.CONTRACT"
                 android:value="1" />
+        </service>
+
+        <service
+            android:name="com.diegonmarcos.cloudlib.gh.GhLoginKeeper"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the GitHub CLI sign-in polling GitHub while the user approves its one-time code in the browser" />
         </service>
     </application>
 </manifest>
