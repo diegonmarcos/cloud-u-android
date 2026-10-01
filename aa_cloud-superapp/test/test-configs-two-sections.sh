@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Tester: #649 — Configs is TWO declared sections, Launcher and Watchdog, and
-# Watchdog has TWO subsections, Setup and Observability. Actions is untouched.
+# Tester: #649/#723 — Configs is TWO declared sections, Launcher and Watchdog,
+# and Watchdog has THREE subsections, Setup, Mesh and Observability. #723 moved
+# WireGuard and KDE (now labelled Peer Control) out of Setup into Mesh and deleted
+# the AI page outright. Actions is untouched.
 #
 # WHAT THIS FILE IS FOR. A regroup this size has one failure mode that no other
 # tester in this directory can see: an ORPHANED PAGE. Every page still exists,
@@ -42,7 +44,7 @@ for f in "$BJ" "$SECTIONS" "$NAV" "$GRID" "$PAGES"; do
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: the two sections and the two subsections, in declaration order =="
+echo "== T1: the two sections and the three Watchdog subsections, in declaration order =="
 # Both the NAMES and the ORDER, read off the file the grid reads. Groups are runs
 # of consecutive entries, so this doubles as the consecutiveness check: a member
 # parked elsewhere in the array shows up here as a repeated heading.
@@ -55,10 +57,11 @@ for p in pages:
     if p.get('hidden') or p.get('is_action'): continue
     key = (p.get('group', ''), p.get('subgroup', ''))
     if key != last: shape.append(key); last = key
-want = [('Launcher', ''), ('Watchdog', 'Setup'), ('Watchdog', 'Observability')]
+want = [('Launcher', ''), ('Watchdog', 'Setup'), ('Watchdog', 'Mesh'),
+        ('Watchdog', 'Observability')]
 print('OK' if shape == want else 'heading runs = %r' % (shape,))
 PY
-)" "Launcher, then Watchdog ▸ Setup, then Watchdog ▸ Observability — each appearing ONCE"
+)" "Launcher, then Watchdog ▸ Setup, ▸ Mesh, ▸ Observability — each appearing ONCE"
 
 echo "== T2: each heading holds exactly the pages the owner named =="
 check "$(python3 - "$BJ" <<'PY'
@@ -71,14 +74,15 @@ def members(g, s=''):
             and p.get('group', '') == g and p.get('subgroup', '') == s]
 want = {
     ('Launcher', ''):                  ['Presets', 'Controls', 'One-Hand', 'Notify'],
-    ('Watchdog', 'Setup'):             ['Account', 'WireGuard', 'KDE', 'AI', 'Permissions', 'Store'],
+    ('Watchdog', 'Setup'):             ['Account', 'Permissions', 'Store'],
+    ('Watchdog', 'Mesh'):              ['WireGuard', 'Peer Control'],
     ('Watchdog', 'Observability'):     ['About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Launcher = Presets/Controls/One-Hand/Notify; Setup = Account/WireGuard/KDE/AI/Permissions/Store; Observability = About"
+)" "Launcher = Presets/Controls/One-Hand/Notify; Setup = Account/Permissions/Store; Mesh = WireGuard/Peer Control; Observability = About"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -165,7 +169,7 @@ w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action'
 print(len(w))
 ")
 [ "$WORDS" = 15 ] \
-  && ok "T4 derived 15 words from the declaration (2 groups + 2 subgroups + 11 page labels)" \
+  && ok "T4 derived 15 words from the declaration (2 groups + 3 subgroups + 10 page labels)" \
   || bad "T4 derived $WORDS words, expected 15 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
@@ -217,9 +221,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 21 ] \
-  && ok "21 config pages declared — the set T5 walks is the whole set (#649: 22 minus the dissolved launcher page)" \
-  || bad "$COUNT config pages, expected 21 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 15 ] \
+  && ok "15 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs)" \
+  || bad "$COUNT config pages, expected 15 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -303,10 +307,17 @@ sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
 pages   = sec['pages']
 now     = {p['id'] for p in pages}
 retired = sec.get('retired_pages', {})
+removed = sec.get('removed_pages', {})
 tiled   = {p['id'] for p in pages if not p.get('hidden') and not p.get('is_action')}
 problems = []
-lost = sorted(BEFORE - now - set(retired))
-if lost:  problems.append('LOST %r — gone from pages and not declared in retired_pages' % lost)
+lost = sorted(BEFORE - now - set(retired) - set(removed))
+if lost:  problems.append('LOST %r — gone from pages and declared in neither retired_pages nor removed_pages' % lost)
+# #723: a DELETION is declared too, with its reason — never inferred from absence.
+for rid, why in sorted(removed.items()):
+    if rid not in BEFORE: problems.append('removed %r never existed' % rid)
+    if rid in now:        problems.append('removed %r is still declared' % rid)
+    if rid in retired:    problems.append('%r is both retired and removed' % rid)
+    if not str(why).strip(): problems.append('removed %r gives no reason' % rid)
 new = sorted(now - BEFORE)
 if new:   problems.append('NEW %r — add the id to BEFORE in this tester if it is meant' % new)
 for rid, into in sorted(retired.items()):
@@ -317,7 +328,16 @@ for rid, into in sorted(retired.items()):
         if s not in tiled: problems.append('retired %r -> %r, which is not a visible page' % (rid, s))
 print('; '.join(problems) or 'OK')
 PY
-)" "every pre-regroup config page id is still declared, or retired into visible successors (launcher → its four tabs)"
+)" "every pre-regroup config page id is still declared, retired into visible successors (launcher → its four tabs), or removed with a reason (ai + its five tabs)"
+
+REMOVED=$(python3 -c "
+import json
+sec = next(s for s in json.load(open('$BJ'))['ui']['sections'] if s['id'] == 'config')
+print(','.join(sorted(sec.get('removed_pages', {}))))
+")
+[ "$REMOVED" = "ai,library,localsearch,textenhance,tokens,websearch" ] \
+  && ok "removed_pages is exactly the AI page and its five tabs — nothing else left Configs by deletion" \
+  || bad "removed_pages = [$REMOVED] — the deletion escape hatch now covers a different set than #723 declared"
 
 echo "== T10: the rail and the drawer list Configs under the SAME declared headings as the grid (#697) =="
 # #649 reached the phone grid only. On a two-pane screen Configs renders through
@@ -344,6 +364,90 @@ grep -qF 'section.pages.none { it.group.isNotBlank() || it.subgroup.isNotBlank()
 grep -qF 'page.isAction -> GROUP_ACTIONS to ""' "$SECTIONS" \
   && ok "menus put is_action pages under Actions, as the grid does" \
   || bad "headingOf lost the is_action → Actions rule — the three actions would list under Observability"
+
+echo "== T11: THE RENDERED GRID — exact headings, sub-headings and tile order (#723) =="
+# T1/T2 check the declaration piecewise. This replays what the phone grid DRAWS,
+# end to end, using the same rules the Kotlin applies and that T6/T7/T10 pin:
+#   Sections drops `hidden` pages; sectionGrid maps each page to a tile whose
+#   group is Actions for is_action and else the declared group (fallback Pages),
+#   and puts every non-Actions tile first, Actions after; TileGridFragment prints
+#   a group header when the group changes (resetting the sub-header) and a
+#   sub-header when the subgroup changes, both uppercased.
+# The expected sequence below IS the owner's spec, written out once: the screen
+# path, the titles and the icon order the architect checks on the phone. The
+# Configs star's extra actions (starActionsOf) append after Animations from a
+# different declaration and are deliberately outside this assertion.
+check "$(python3 - "$BJ" <<'PY'
+import json, sys
+pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
+             if s['id'] == 'config')['pages']
+vis = [p for p in pages if not p.get('hidden')]
+tiles = [(('Actions' if p.get('is_action') else (p.get('group') or 'Pages')),
+          ('' if p.get('is_action') else p.get('subgroup', '')),
+          p['label'], p.get('icon')) for p in vis]
+tiles = [t for t in tiles if t[0] != 'Actions'] + [t for t in tiles if t[0] == 'Actions']
+out, g0, s0 = [], None, None
+for g, s, label, icon in tiles:
+    if g and g != g0: out.append('H:' + g.upper()); g0, s0 = g, None
+    if s and s != s0: out.append('S:' + s.upper()); s0 = s
+    out.append('%s[%s]' % (label, icon))
+want = ['H:LAUNCHER',
+        'Presets[ic_p_sol_personal]', 'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
+        'H:WATCHDOG',
+        'S:SETUP',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
+        'S:MESH',          'WireGuard[ic_wg]', 'Peer Control[ic_kde]',
+        'S:OBSERVABILITY', 'About[ic_settings]',
+        'H:ACTIONS',
+        'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
+if out == want: print('OK')
+else:
+    import difflib
+    print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
+                                           if l[:1] in '+-' and l[:3] not in ('+++', '---')))
+PY
+)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] WATCHDOG ▸ SETUP[Account,Permissions,Store] ▸ MESH[WireGuard,Peer Control] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
+
+echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
+# Deleting a declaration and leaving its door behind is the dead-tile failure:
+# a Kotlin branch, a page:config/<id> target or a fragment for a page that no
+# longer exists. The id list is READ from removed_pages, so a later removal is
+# covered without editing this file.
+check "$(python3 - "$BJ" "$KT" <<'PY'
+import json, os, re, sys
+sec = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')
+gone = sorted(sec.get('removed_pages', {}))
+if not gone: print('removed_pages is empty — this check has no subject'); sys.exit()
+raw = open(sys.argv[1]).read()
+hits = []
+for g in gone:
+    if re.search(r'page:config/%s\b' % re.escape(g), raw): hits.append('build.json targets page:config/%s' % g)
+    if any(g in p.get('tabs', []) for p in sec['pages']): hits.append('a page still lists %s as a tab' % g)
+for root, _, files in os.walk(sys.argv[2]):
+    for f in files:
+        if not f.endswith('.kt'): continue
+        src = open(os.path.join(root, f)).read()
+        src = re.sub(r'/\*.*?\*/', '', src, flags=re.S); src = re.sub(r'(?m)//.*$', '', src)
+        for g in gone:
+            if re.search(r'page:config/%s\b' % re.escape(g), src): hits.append('%s targets page:config/%s' % (f, g))
+            if re.search(r'pageId == "%s"' % re.escape(g), src):   hits.append('%s still routes pageId == "%s"' % (f, g))
+print('; '.join(hits) or 'OK')
+PY
+)" "no build.json target, tab list or Kotlin route names ai/websearch/localsearch/textenhance/library/tokens"
+[ ! -d "$KT/ai" ] \
+  && ok "the AI page's fragments (superapp/ai/) are deleted, not left compiled behind no route" \
+  || bad "superapp/ai/ still exists — the AI page's fragments outlived the page"
+check "$(python3 - "$BJ" <<'PY'
+import json, sys
+by_id = {p['id']: p for p in next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
+                                  if s['id'] == 'config')['pages']}
+k = by_id.get('kde')
+print('OK' if k and k['label'] == 'Peer Control' and not k.get('hidden') and not k.get('action')
+      else 'kde = %r' % (k,))
+PY
+)" "Peer Control is the kde page renamed — same id, so page:config/kde still opens KdeConnectFragment"
+grep -qE 'sectionId == "config" && pageId == "kde" +-> .*KdeConnectFragment' "$PAGES" \
+  && ok "SectionPages still routes config/kde to KdeConnectFragment" \
+  || bad "config/kde no longer resolves to KdeConnectFragment — the Peer Control tile opens a placeholder"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

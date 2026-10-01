@@ -316,9 +316,10 @@ hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"
 has "$FRAGMENT" "profileTabs()"                    "the strip is built from the declared tabs"
 has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the tabs come from the baked build.json blob"
 has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
-# AI is not a tab; the AI cockpit card still links to the page that already exists.
+# AI is not a tab; and #723 deleted the Configs AI page, so the cockpit card no
+# longer links anywhere — Account applies the AI tokens itself.
 hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
-has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "the AI page route still exists for the cockpit card"
+hasnt_code "$FRAGMENT" 'page:config/ai'         "no link to the deleted AI page survives"
 hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
 # The route must be the one the DATA declares, not a plausible-looking string.
 has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "the cockpit's WireGuard link uses the declared section target"

@@ -230,85 +230,6 @@
     <string name="control_tile_open_action">Abrir ajustes</string>
     <string name="control_no_menu">%1$s no tiene pantalla de ajustes — toca el icono para cambiarlo.</string>
 
-    <!-- ══════════════════════════════════════════════════════════════════════
-         Configs ▸ AI. Five tabs: WebSearch, LocalSearch, Text Enhance, Library,
-         Tokens Fleet. The tab names are the agents' own names and stay as they
-         are, the same way the owner would say them out loud.
-         ══════════════════════════════════════════════════════════════════════ -->
-
-    <string name="ai_not_built_headline">Este agente todavía no existe.</string>
-    <string name="ai_not_built_generic_title">Agente</string>
-    <string name="ai_not_built_generic_detail">Esta pestaña contendrá los ajustes del agente en cuanto el agente exista.</string>
-
-    <string name="ai_websearch_title">WebSearch</string>
-    <string name="ai_websearch_detail">Cuando Cloud SuperApp tenga un agente de búsqueda web, esta pestaña será donde se configuren su proveedor, su presupuesto y qué hace con los resultados. Hoy no hay aquí nada que busque en la web.</string>
-
-    <string name="ai_localsearch_title">LocalSearch</string>
-    <string name="ai_localsearch_detail">Cuando Cloud SuperApp tenga un agente de búsqueda local — el que busca en este teléfono en lugar de en la web — esta pestaña será donde se configure. Hoy no hay aquí nada que busque en este dispositivo.</string>
-
-    <string name="ai_library_title">Library</string>
-    <string name="ai_library_detail">Cuando Cloud SuperApp tenga el agente organizador Library — el que mueve los archivos a su sitio — esta pestaña será donde se configuren sus reglas y sus carpetas. Hoy no hay nada en esta página que mueva ningún archivo.</string>
-
-    <!-- Tokens Fleet. -->
-    <string name="ai_tokens_title">Tokens Fleet</string>
-    <string name="ai_tokens_intro">La clave de API y el modelo con los que enruta cada aplicación de la flota. Se leen de la aplicación que los guarda, no de una copia guardada aquí.</string>
-    <string name="ai_roster_empty">No hay ninguna aplicación de AI-Routing declarada — build.json::ui.ai_routing_peers está vacío o no llegó a esta compilación.</string>
-
-    <!-- Peer states. Each one is a DIFFERENT repair. -->
-    <string name="ai_peer_asking">Preguntando…</string>
-    <string name="ai_peer_ready">Instalada y respondiendo.</string>
-    <string name="ai_peer_not_installed">No está instalada en este teléfono. Instálala para llegar a sus ajustes desde aquí.</string>
-    <string name="ai_peer_unreachable">Instalada, pero no responde. Ábrela una vez — una aplicación forzada a detenerse sigue detenida hasta que lo haces.</string>
-    <string name="ai_peer_too_old">Instalada, pero esta versión es demasiado antigua para responder. Actualízala.</string>
-    <string name="ai_peer_timed_out">No respondió a tiempo. La aplicación puede estar ocupada o bloqueada; inténtalo de nuevo.</string>
-    <string name="ai_peer_routes">Instalada. Enruta a través de Cloud Keyboard y no guarda ninguna clave propia.</string>
-    <string name="ai_peer_console">Esta aplicación. No guarda ninguna clave de API y no enruta nada — es la consola que estás mirando.</string>
-    <string name="ai_peer_unknown_role">%1$s está declarada con un rol que esta compilación no conoce.</string>
-    <string name="ai_peer_retry">Reintentar</string>
-
-    <!-- The key. Masked by default; revealed only on a deliberate tap. -->
-    <string name="ai_key_absent">Sin clave</string>
-    <string name="ai_key_masked">Clave puesta · ••••</string>
-    <string name="ai_key_masked_with_hint">Clave puesta · ••••%1$s</string>
-    <string name="ai_key_not_needed">Este proveedor no necesita clave.</string>
-    <string name="ai_key_reveal">Mostrar</string>
-    <string name="ai_key_hide">Ocultar</string>
-    <string name="ai_key_set">Poner clave</string>
-    <string name="ai_key_clear">Borrar clave</string>
-    <string name="ai_key_save">Guardar</string>
-    <string name="ai_key_hint_field">Pega la clave de API del proveedor</string>
-    <string name="ai_key_set_title">Poner la clave de %1$s</string>
-    <string name="ai_key_clear_title">¿Borrar la clave de %1$s?</string>
-    <string name="ai_key_clear_message">La aplicación que guarda esta clave se quedará sin ninguna, y todo lo que enrute a través de ella dejará de funcionar hasta que se ponga una nueva.</string>
-    <string name="ai_key_reveal_failed">No se pudo leer la clave.</string>
-    <string name="ai_save_failed">No se pudo guardar ese cambio.</string>
-
-    <!-- The model picker. Prices are UNITED STATES DOLLARS PER MILLION TOKENS,
-         printed exactly as the registry holds them — never scaled, never
-         converted to euros. The heading is where the unit is stated, so the
-         heading is where the currency has to survive translation intact. -->
-    <string name="ai_model_price_heading">Modelo — precio en dólares estadounidenses por millón de tokens (entrada / salida)</string>
-    <string name="ai_model_row">%1$s · %2$s $ / %3$s $ por millón</string>
-    <string name="ai_model_row_no_price">%1$s · sin precio en el registro</string>
-    <string name="ai_model_unknown_chosen">Esta aplicación está puesta en %1$s, que no está en el registro de modelos que conoce esta compilación. Elige uno de abajo para cambiarlo.</string>
-    <string name="ai_models_none">Este proveedor no lista ningún modelo en el registro.</string>
-    <string name="ai_pricing_as_of">Precios a fecha de %1$s.</string>
-
-    <!-- Text Enhance — a fleet VIEW, with a door into the app that owns each
-         set of settings. -->
-    <string name="ai_enhance_title">Text Enhance</string>
-    <string name="ai_enhance_intro">Cómo está configurada cada aplicación de la flota. Se editan en la aplicación que las guarda — el botón la abre.</string>
-    <string name="ai_enhance_own_copy">Guarda su propia copia de estos ajustes, editable en la propia aplicación. No se pueden leer desde aquí.</string>
-    <string name="ai_enhance_unreadable">No se pudieron leer los ajustes de esta aplicación.</string>
-    <string name="ai_enhance_ownership_note">Cloud SuperApp no guarda ningún ajuste de Enhance propio: no tiene ninguna superficie que reescriba texto, así que un ajuste guardado aquí no cambiaría nada en ninguna parte.</string>
-    <string name="ai_enhance_open">Abrir %1$s</string>
-    <string name="ai_enhance_provider">Proveedor: %1$s</string>
-    <string name="ai_enhance_style">Estilo: %1$s</string>
-    <string name="ai_enhance_tone">Tono: %1$s</string>
-    <string name="ai_enhance_length">Longitud: %1$s</string>
-    <string name="ai_enhance_language">Idioma de salida: %1$s</string>
-    <string name="ai_enhance_summary">Forma del resumen: %1$s</string>
-
     <!-- One-Hand stars. Sirius, Canopus and Centauri are the stars' own names
          and stay; "Recent Tabs" is not a star name but a description of what
          the fourth one holds, so it is translated — and translated the same
@@ -407,7 +328,6 @@
     <string name="vault_cockpit_ai_tokens">tokens de IA</string>
     <string name="vault_cockpit_ai_peer_down">la app que sirve la IA no responde</string>
     <string name="vault_cockpit_ai_unmapped">sin proveedor de dispositivo asignado en build.json</string>
-    <string name="vault_cockpit_open_ai">Abrir página de IA</string>
     <string name="vault_cockpit_apps_row">conjunto de apps declarado</string>
     <string name="vault_cockpit_apps_none">La bóveda aún no declara un conjunto de apps para %1$s. Exporta la lista de este dispositivo y añádela a cloud-vault configs/apps.</string>
     <string name="vault_cockpit_apps_plan">Comparar con lo instalado (%1$d declaradas)</string>

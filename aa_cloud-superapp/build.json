@@ -4586,9 +4586,11 @@
         "label": "Configs",
         "icon": "ic_settings",
         "module": null,
-        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Watchdog\", \"Setup\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Watchdog \u25b8 Setup + Watchdog \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array.",
+        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Watchdog\", \"Setup\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Watchdog \u25b8 Setup + Watchdog \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723: Watchdog now has THREE sub-sections in this order — Setup (Account · Permissions · Store), Mesh (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages).",
         "_doc_retired_pages": "#697. A config page id that no longer exists, mapped to the pages its content lives on now. The page set is guarded: test-configs-two-sections.sh T9 holds the ids as they stood before #649 regrouped this section and fails if any of them is missing from `pages` without being named here, or if a page named here is still declared, or if one of its successors is not. So a page cannot be dropped by a regroup — removing one is a declared act with a declared destination. `launcher` is the only entry: #649 dissolved the page that wore four tabs and made those four tabs direct pages under the Launcher heading. Read by the tester only; the app routes by `pages` and never needs to know what was retired.",
         "retired_pages": { "launcher": ["presets", "controls", "onehand", "notify"] },
+        "_doc_removed_pages": "#723. A config page id that was DELETED rather than moved, with the reason. Distinct from retired_pages on purpose: a retired page names the visible pages its content lives on now, and these have none in Configs — the owner removed the AI page outright because AI tokens are managed in Account (the vault cockpit AI card applies them), so the five-tab AI strip and every tab under it went with it, and the Account card's link to the page was removed rather than left pointing at nothing. Guarded by test-configs-two-sections.sh T9 (the id may not be declared, must have existed, must carry a reason) and T12 (no route, page: target or Kotlin branch may still name it). Read by the tester only.",
+        "removed_pages": { "ai": "AI page deleted; AI tokens are managed in Account", "websearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "localsearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "textenhance": "tab of the deleted AI page; each app keeps its own Text Enhance editor", "library": "tab of the deleted AI page (an unbuilt agent placeholder)", "tokens": "tab of the deleted AI page; AI tokens are managed in Account" },
         "pages": [
           {
             "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
@@ -4630,39 +4632,6 @@
             "subgroup": "Setup"
           },
           {
-            "_doc": "WireGuard is a CHILD of Configs. It lives in its own module-backed section (sections[wg], module libs:net) but is surfaced here as a real config page so it appears in the Configs grid + Home-Apps Configs row in order. action=section:wg opens that section; sections[wg].parent=config makes Back from it return to Configs (MainActivity.navigateUpToParent).",
-            "id": "wg",
-            "label": "WireGuard",
-            "icon": "ic_wg",
-            "action": "section:wg",
-            "group": "Watchdog",
-            "subgroup": "Setup"
-          },
-          {
-            "id": "kde",
-            "label": "KDE",
-            "icon": "ic_kde",
-            "group": "Watchdog",
-            "subgroup": "Setup"
-          },
-          {
-            "_doc": "AI is ONE page wearing FIVE tabs, declared the way Launcher and Home declare theirs — `tabs` naming page ids of this same section, so SectionPages hands it the SAME SectionTabsFragment and this app still has one tab mechanism rather than a second one to restyle and re-fix in parallel.",
-            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE (see Home's _doc_tabs_order), and this array is the owner's own order from the request, kept verbatim. That means a cold open lands on WebSearch, which is one of the three tabs whose agent DOES NOT EXIST YET and which says exactly that. It is deliberate rather than overlooked: the owner named the order and reordering their list to put the working tab first is not a decision to take on their behalf. Moving `tokens` to the front of this array is the whole of changing it, with no Kotlin edit.",
-            "_doc_what_is_real": "THREE OF THESE FIVE TABS HAVE NO AGENT BEHIND THEM. websearch, localsearch and library are where agents the owner described in the future tense (\"cloud-sa WILL HAVE agent for websearch\") get configured once they exist; each renders AiNotBuiltFragment, which states that the agent is not built and offers NO control at all, because a dead control reads as a broken feature rather than an absent one. textenhance and tokens are backed by things that exist today and are the only two that do anything.",
-            "id": "ai",
-            "label": "AI",
-            "icon": "ic_ai_sparkle",
-            "tabs": [
-              "websearch",
-              "localsearch",
-              "textenhance",
-              "library",
-              "tokens"
-            ],
-            "group": "Watchdog",
-            "subgroup": "Setup"
-          },
-          {
             "id": "perms",
             "label": "Permissions",
             "icon": "ic_settings",
@@ -4683,46 +4652,28 @@
             "subgroup": "Setup"
           },
           {
+            "_doc": "WireGuard is a CHILD of Configs. It lives in its own module-backed section (sections[wg], module libs:net) but is surfaced here as a real config page so it appears in the Configs grid + Home-Apps Configs row in order. action=section:wg opens that section; sections[wg].parent=config makes Back from it return to Configs (MainActivity.navigateUpToParent).",
+            "id": "wg",
+            "label": "WireGuard",
+            "icon": "ic_wg",
+            "action": "section:wg",
+            "group": "Watchdog",
+            "subgroup": "Mesh"
+          },
+          {
+            "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Watchdog ▸ Setup into the new Watchdog ▸ Mesh sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption.",
+            "id": "kde",
+            "label": "Peer Control",
+            "icon": "ic_kde",
+            "group": "Watchdog",
+            "subgroup": "Mesh"
+          },
+          {
             "id": "about",
             "label": "About",
             "icon": "ic_settings",
             "group": "Watchdog",
             "subgroup": "Observability"
-          },
-          {
-            "_doc": "Tab 1 of AI — the websearch agent's settings, once cloud-superapp has a websearch agent. It does not have one, so this renders AiNotBuiltFragment and says so. hidden = reached through the AI strip, not as its own Configs tile.",
-            "id": "websearch",
-            "label": "WebSearch",
-            "icon": "ic_ai_sparkle",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 2 of AI — the local-search agent's settings, once that agent exists. Not built; AiNotBuiltFragment.",
-            "id": "localsearch",
-            "label": "LocalSearch",
-            "icon": "ic_ai_sparkle",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 3 of AI — a FLEET VIEW of the Text Enhance settings the apps that actually have the feature hold, with a deep link into each app's own editor. Deliberately NOT a third editable copy: cloud-superapp links neither libs:keyboard nor libs:text-tools' engines and has no Enhance surface anywhere, so settings stored here would be settings nothing in this app could ever spend — a page of controls that changes nothing, which is the same defect as a search box that does not search. See AiTextEnhanceFragment's header for the full reasoning and for what would have to become true to make an owned copy the right answer.",
-            "id": "textenhance",
-            "label": "Text Enhance",
-            "icon": "ic_ai_sparkle",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 4 of AI — the Library organiser agent (the one that moves files) settings, once that agent exists. Not built; AiNotBuiltFragment.",
-            "id": "library",
-            "label": "Library",
-            "icon": "ic_ai_sparkle",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 5 of AI — Tokens Fleet, and the only tab here that reaches another application. Lists every AI-Routing peer, whether it is installed and answering, whether it holds a provider key, and which model it is set to; the key can be replaced and the model changed from here. It reads the model list out of the serving app's own registry over ITextTools rather than holding a copy — see AiTokensFleetFragment. hidden = reached through the AI strip.",
-            "id": "tokens",
-            "label": "Tokens Fleet",
-            "icon": "ic_ai_sparkle",
-            "hidden": true
           },
           {
             "_doc": "Store tab 1 — the fleet store that used to be the whole page (libs:appstore StoreCloudFragment). The LABEL keeps the word Constellation deliberately; the id does not, because the id is identity and the label is only display. hidden = reached through the Store strip, not as its own Configs tile.",

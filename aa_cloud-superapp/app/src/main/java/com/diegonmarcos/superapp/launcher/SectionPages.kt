@@ -12,9 +12,6 @@ import com.diegonmarcos.superapp.apps.RecentAppsFragment
 
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.ai.AiNotBuiltFragment
-import com.diegonmarcos.superapp.ai.AiTextEnhanceFragment
-import com.diegonmarcos.superapp.ai.AiTokensFleetFragment
 import com.diegonmarcos.superapp.chat.ChatPages
 import com.diegonmarcos.superapp.mail.MailPages
 import com.diegonmarcos.superapp.ops.OpsPages
@@ -74,22 +71,6 @@ object SectionPages {
         sectionId == "wg"    && pageId == "status"      -> C3MeshFragment.newInstance()
         sectionId == "feed"  && pageId == "all"         -> RssFeedFragment.newInstance()
         sectionId == "config" && pageId == "profile"   -> ProfileFragment.newInstance()
-        // Configs ▸ AI's FIVE TABS. The `ai` page id itself is not here: it declares `tabs`, so
-        // the branch at the top of this `when` already answered it with the shared strip, and a
-        // second answer below would be unreachable.
-        //
-        // THREE OF THESE HAVE NO AGENT BEHIND THEM YET and say so. They share one fragment because
-        // nothing distinguishes them but the sentence, and the sentence is a string resource — the
-        // title and the detail line are passed in, so a placeholder cannot be shipped with a
-        // hardcoded, untranslatable string in it.
-        sectionId == "config" && pageId == "websearch" -> AiNotBuiltFragment.newInstance(
-            R.string.ai_websearch_title, R.string.ai_websearch_detail)
-        sectionId == "config" && pageId == "localsearch" -> AiNotBuiltFragment.newInstance(
-            R.string.ai_localsearch_title, R.string.ai_localsearch_detail)
-        sectionId == "config" && pageId == "library" -> AiNotBuiltFragment.newInstance(
-            R.string.ai_library_title, R.string.ai_library_detail)
-        sectionId == "config" && pageId == "textenhance" -> AiTextEnhanceFragment.newInstance()
-        sectionId == "config" && pageId == "tokens"      -> AiTokensFleetFragment.newInstance()
         // Launcher's three tabs. The `launcher` id names the strip
         // (build.json::ui.sections[config].pages[launcher].tabs), so each screen
         // needed an id of its own — nothing any of them stores moved with the

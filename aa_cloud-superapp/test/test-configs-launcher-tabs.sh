@@ -66,7 +66,7 @@ PY
 
 echo "== T2: every tab STILL declared in this section is a real hidden page, not its owner =="
 # The generic rule, which #649 left standing for the two pages that are still
-# strips (ai, store) after Launcher stopped being one. It is asserted over
+# strip (store) after Launcher stopped being one — #723 deleted the AI strip. It is asserted over
 # whatever `tabs` the file declares rather than over a hand list, so it neither
 # went vacuous nor needed editing when four of its subjects became direct tiles —
 # and it reports WHICH owners it actually checked, because a rule that silently
@@ -91,18 +91,18 @@ if not owners:
                     'has no subject left and must be deleted, not left passing')
 print('; '.join(problems) or 'OK')
 PY
-)" "the tab owners left in Configs (ai, store) name real hidden pages of the same section"
+)" "the tab owner left in Configs (store) names real hidden pages of the same section"
 # Assert the subject set separately and by name: a silent
-# change from {ai,store} to {ai} is this check losing half its coverage.
+# change from {store} to {} is this check losing all its coverage.
 OWNERS=$(python3 -c "
 import json
 pages = next(s for s in json.load(open('$BJ'))['ui']['sections']
              if s['id'] == 'config')['pages']
 print(','.join(p['id'] for p in pages if p.get('tabs')))
 ")
-[ "$OWNERS" = "ai,store" ] \
-  && ok "T2's subjects are exactly ai and store — Launcher is no longer among them (#649)" \
-  || bad "the Configs tab owners are now [$OWNERS], not [ai,store] — T2 checks a different set than it claims"
+[ "$OWNERS" = "store" ] \
+  && ok "T2's subject is exactly store — Launcher (#649) and AI (#723) are no longer strips" \
+  || bad "the Configs tab owners are now [$OWNERS], not [store] — T2 checks a different set than it claims"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
