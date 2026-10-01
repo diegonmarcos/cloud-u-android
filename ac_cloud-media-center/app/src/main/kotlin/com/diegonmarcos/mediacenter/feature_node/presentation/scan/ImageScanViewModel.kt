@@ -1,6 +1,6 @@
 /*
  * Task #460 — image content reading. Runs the shared scan engine
- * (libs:ml-l-image-mlkit: ImageScanEngine — ZXing decode + ML Kit text
+ * (libs:ml-l-image: ImageScanEngine — ZXing decode + ML Kit text
  * recognition) off the main thread and reduces the raw results into the
  * sheet's contract. Permission refusal is detected BEFORE the engine so it
  * can name the real reason instead of being swallowed into "no barcode".

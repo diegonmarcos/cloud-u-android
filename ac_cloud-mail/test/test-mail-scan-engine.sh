@@ -4,14 +4,14 @@
 # ╚════════════════════════════════════════════━━━━━━━━━━━━━━━━━━━━━━╝
 #
 # What this certifies: that an image attachment's CONTENT can be scanned
-# through the single shared image-scan engine (libs:ml-l-image-mlkit:
+# through the single shared image-scan engine (libs:ml-l-image:
 # ImageScanEngine = ZXing barcode decode + ML Kit OCR), exactly as
 # cloud-drive, cloud-media-center and cloud-camera consume it — and NOT
 # through a private copy of the decode path (#170/#261).
 #
 # Each assertion exists because the naive version passes while the feature is
 # broken:
-#   * "build.json mentions ml-l-image-mlkit" passes on a comment. M1 asserts
+#   * "build.json mentions ml-l-image" passes on a comment. M1 asserts
 #     the module is declared in build.json (which is what drives settings.gradle's
 #     include loop AND the ship workflow's path triggers), M2 asserts the app
 #     build script links it.
@@ -36,7 +36,7 @@ import re
 import sys
 
 APP = os.environ["APP_DIR"]
-ALT = os.path.join(APP, "..", "ab_cloud-libs-shared/libs/ml-l-image-mlkit")
+ALT = os.path.join(APP, "..", "ab_cloud-libs-shared/libs/ml-l-image")
 failures = []
 checked = 0
 
@@ -116,12 +116,12 @@ def src(path):
 build_json = json.load(open(os.path.join(APP, "build.json"), encoding="utf-8"))
 
 # ── M1: build.json declares the shared module BY REFERENCE ──
-mod = (build_json.get("modules") or {}).get("libs:ml-l-image-mlkit")
-check("M1 build.json::modules[libs:ml-l-image-mlkit] exists",
+mod = (build_json.get("modules") or {}).get("libs:ml-l-image")
+check("M1 build.json::modules[libs:ml-l-image] exists",
       isinstance(mod, dict),
       "settings.gradle's include loop and the ship workflow both read this map")
 check("M1 … mapped BY REFERENCE to ab_cloud-libs-shared (not a vendored copy)",
-      isinstance(mod, dict) and "../ab_cloud-libs-shared/libs/ml-l-image-mlkit" in str(mod.get("dir", "")),
+      isinstance(mod, dict) and "../ab_cloud-libs-shared/libs/ml-l-image" in str(mod.get("dir", "")),
       "the module must point at the shared directory — a copy is the defect this fleet fixed")
 settings = read(os.path.join(APP, "settings.gradle"))
 check("M1 settings.gradle drives includes from build.json::modules",
@@ -132,8 +132,8 @@ check("M1 settings.gradle drives includes from build.json::modules",
 gradle_path = os.path.join(APP, "app/build.gradle.kts")
 gradle = read(gradle_path)
 gradle_nc = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", gradle, flags=re.S))
-check("M2 app/build.gradle.kts declares implementation project(':libs:ml-l-image-mlkit')",
-      re.search(r'implementation\s*\(\s*project\(\s*":libs:ml-l-image-mlkit"\s*\)\s*\)', gradle_nc) is not None,
+check("M2 app/build.gradle.kts declares implementation project(':libs:ml-l-image')",
+      re.search(r'implementation\s*\(\s*project\(\s*":libs:ml-l-image"\s*\)\s*\)', gradle_nc) is not None,
       "the mail code must actually link the shared engine")
 
 # ── M4: the only scan definition imports the SHARED engine, no private copy ──

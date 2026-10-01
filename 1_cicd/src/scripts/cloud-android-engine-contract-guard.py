@@ -9,7 +9,9 @@ tester suite may only read its own source (a tester that reaches across is
 downgraded to advisory by cloud-android-test-engine.sh), so the one check that
 needs BOTH sides lives here, in a guard that runs on every push.
 
-For every engine any app declares, from the declarations alone:
+For every engine any app declares (build.json::engines), or any shared client
+module declares for all of its consumers (<module>/engine-client.json, same
+shape), from the declarations alone:
 
   K1  the declared Store row exists and is a lib, and its package is the
       package of an engine module on the shelf (<application_id_prefix>.<module>);
@@ -21,15 +23,18 @@ For every engine any app declares, from the declarations alone:
       lists -- an engine that drops one breaks every installed copy of that app;
   K5  the client reads the same CONTRACT key the engine declares;
   K6  no app compiles or watches an engine: no build.json::modules entry points
-      at an engine module's directory, and no ship workflow watches it. Either
+      at an engine module's directory, no app's settings/gradle file or other
+      module map names it (Camera, Media Center and Office wire modules there),
+      and no ship workflow watches it. Any of them
       one makes an engine change republish that app again -- the coupling the
       split removed (engine-apk-split: Cloud Agenda kept declaring libs:cal long
       after it stopped linking it, so every calendar edit re-shipped it). This
       covers apps with no testers of their own, which is why it lives here;
   K7  the client handshakes before it binds: it resolves the declared action in
       the declared package with its meta-data, refuses a contract below the
-      needed one, and only then builds a DataBackendClient -- a bind by class
-      name reads an old or missing engine as a dead call;
+      needed one, and only then binds (a DataBackendClient, or bindService for an
+      engine with a typed wire) -- a bind by class name reads an old or missing
+      engine as a dead call;
   K8  the app can SEE the engine: its manifest queries ${<key>EnginePackage},
       bound by app/build.gradle's manifestPlaceholders, or holds
       QUERY_ALL_PACKAGES. On Android 11+ an unqueried package is invisible and
@@ -59,6 +64,18 @@ def code(path):
     """A source file with its comment lines dropped: prose may NAME a call it does not make."""
     with open(path, encoding="utf-8") as f:
         return "\n".join(l for l in f.read().split("\n") if not re.match(r"\s*(\*|//|/\*)", l))
+
+
+def main_dir(client_dir):
+    """An app's app/src/main, or a library module's src/main."""
+    app = os.path.join(client_dir, "app", "src", "main")
+    return app if os.path.isdir(app) else os.path.join(client_dir, "src", "main")
+
+
+def gradle_files(client_dir):
+    names = [os.path.join(client_dir, "app", g) for g in ("build.gradle", "build.gradle.kts")]
+    names += [os.path.join(client_dir, g) for g in ("build.gradle", "build.gradle.kts")]
+    return [g for g in names if os.path.isfile(g)]
 
 
 def sources(root):
@@ -115,7 +132,7 @@ def engine_service(module_dir):
 def client_calls(app_dir, key):
     """(file, method names its ask(...) calls name, the CONTRACT key it reads) for the engine `key`."""
     marker = "BuildConfig.%s_ENGINE_ACTION" % key.upper().replace("-", "_")
-    for path in sources(os.path.join(app_dir, "app", "src", "main")):
+    for path in sources(main_dir(app_dir)):
         text = code(path)
         if marker not in text:
             continue
@@ -137,7 +154,7 @@ def handshake(path, key):
     if "BuildConfig.%s_ENGINE_PACKAGE" % up not in text or "BuildConfig.%s_ENGINE_MIN_CONTRACT" % up not in text:
         return "does not take the package and the needed contract from the declaration"
     floor = text.find("if (found < needed)")
-    bind = text.find("DataBackendClient(")
+    bind = min([i for i in (text.find("DataBackendClient("), text.find("bindService(")) if i >= 0] or [-1])
     if floor < 0:
         return "binds without refusing a contract below the needed one"
     if bind < 0 or not resolve < floor < bind:
@@ -147,7 +164,7 @@ def handshake(path, key):
 
 def visible(app_dir, key):
     """K8: the engine package is queryable from this app, or a reason string."""
-    mf = os.path.join(app_dir, "app", "src", "main", "AndroidManifest.xml")
+    mf = os.path.join(main_dir(app_dir), "AndroidManifest.xml")
     if not os.path.isfile(mf):
         return "has no app manifest"
     root = ET.parse(mf).getroot()
@@ -156,9 +173,9 @@ def visible(app_dir, key):
     holder = "%sEnginePackage" % key
     if "${%s}" % holder not in [p.get(A + "name") for q in root.iter("queries") for p in q.iter("package")]:
         return "manifest <queries> does not name ${%s}: on Android 11+ the engine is invisible and reads as not installed" % holder
-    gradle = [os.path.join(app_dir, "app", g) for g in ("build.gradle", "build.gradle.kts")]
-    if not any(os.path.isfile(g) and re.search(r"\b%s\s*[:=]\s*%s\b" % (holder, holder), code(g)) for g in gradle):
-        return "app/build.gradle does not bind the manifest placeholder %s to the resolved package" % holder
+    gradle = gradle_files(app_dir)
+    if not any(re.search(r"\b%s\s*[:=]\s*%s\b" % (holder, holder), code(g)) for g in gradle):
+        return "its build.gradle does not bind the manifest placeholder %s to the resolved package" % holder
     return None
 
 
@@ -183,6 +200,22 @@ def coupled(root, modules):
                 if d in engines:
                     bad.append("K6 %s/build.json::modules.%s is the %s engine -- that app would compile it, and every "
                                "engine change would republish it" % (os.path.basename(os.path.dirname(bj)), key, engines[d]))
+    # The same coupling spelled outside build.json::modules: an include in settings.gradle(.kts),
+    # a project(...) in app/build.gradle(.kts), or another module map's "dir" (Office's
+    # build.modules). Matched as a whole path component, so libs/ml-l-image does not hit
+    # libs/ml-l-image-mlkit.
+    for bj in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
+        app_dir = os.path.dirname(bj)
+        files = [bj] + gradle_files(app_dir) + [f for f in (os.path.join(app_dir, "settings.gradle"),
+                                                           os.path.join(app_dir, "settings.gradle.kts")) if os.path.isfile(f)]
+        for f in files:
+            text = open(f, encoding="utf-8").read() if f.endswith(".json") else code(f)
+            for d, name in sorted(engines.items()):
+                if os.path.normpath(app_dir) == os.path.normpath(os.path.join(root, LIB_APKS)):
+                    continue
+                if re.search(r"[/:]libs[/:]%s['\"]" % re.escape(name), text):
+                    bad.append("K6 %s names the %s engine module -- that app would compile it, and every engine "
+                               "change would republish it" % (os.path.relpath(f, root), name))
     for wf in sorted(glob.glob(os.path.join(root, ".github", "workflows", "ship-*.yml"))):
         text = open(wf, encoding="utf-8").read()
         for d, name in sorted(engines.items()):
@@ -193,15 +226,24 @@ def coupled(root, modules):
     return bad
 
 
+def declarations(root, modules):
+    """(client dir, declaration file) for every app build.json and every shared client module's engine-client.json."""
+    out = [(os.path.dirname(bj), bj) for bj in sorted(glob.glob(os.path.join(root, "*", "build.json")))]
+    dirs = sorted({os.path.dirname(d) for d in modules.values()})
+    out += [(os.path.join(base, m), os.path.join(base, m, "engine-client.json"))
+            for base in dirs for m in sorted(os.listdir(base))
+            if os.path.isfile(os.path.join(base, m, "engine-client.json"))]
+    return out
+
+
 def check(root):
     bad = []
     fleet = {a["id"]: a for a in json.load(open(os.path.join(root, FLEET), encoding="utf-8"))["apps"]}
     modules = engine_modules(root)
     declared = 0
     bad += coupled(root, modules)
-    for bj in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
-        app_dir = os.path.dirname(bj)
-        app = os.path.basename(app_dir)
+    for app_dir, bj in declarations(root, modules):
+        app = os.path.relpath(app_dir, root) if bj.endswith("engine-client.json") else os.path.basename(app_dir)
         engines = json.load(open(bj, encoding="utf-8")).get("engines") or {}
         for path in undeclared_binds(app_dir, [k for k in engines if not k.startswith("_")]):
             bad.append("K9 %s binds an engine that %s/build.json::engines does not declare -- no handshake, "
@@ -210,7 +252,7 @@ def check(root):
             if key.startswith("_"):
                 continue
             declared += 1
-            where = "%s/build.json::engines.%s" % (app, key)
+            where = "%s/%s::engines.%s" % (app, os.path.basename(bj), key)
             row = fleet.get(decl.get("fleet"))
             if row is None:
                 bad.append("K1 %s names Store row %r, which the fleet manifest does not have" % (where, decl.get("fleet")))

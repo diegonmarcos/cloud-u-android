@@ -24,7 +24,7 @@ index 2784fe4..bece8c4 100644
 +    // The shared image-scan engine (task #461). Cloud Office is a CALLER: it captures
 +    // the current page view in the browser and hands the pixels over; the decode,
 +    // the OCR and the typed-payload parsing all stay in the ONE shared module.
-+    implementation project(':ml-l-image-mlkit')
++    implementation project(':ml-l-image')
 +
      implementation 'androidx.appcompat:appcompat:1.7.1'
      implementation 'com.google.android.material:material:1.13.0'
@@ -46,7 +46,7 @@ index 0000000..81f6bd3
 + * captured in the browser and posted over COOLMessageHandler as a base64 JPEG.
 + *
 + * NOTHING IS REIMPLEMENTED. The scan engine is the ONE shared
-+ * libs:ml-l-image-mlkit (ImageScanEngine = ZXing barcode decode + ML Kit OCR)
++ * libs:ml-l-image (ImageScanEngine = ZXing barcode decode + ML Kit OCR)
 + * that the other apps compile in by reference from ab_cloud-libs-shared. This
 + * file only decodes the posted pixels and says what came back — a private copy
 + * of the decode path is the exact defect #170/#261 this fleet fixed.
@@ -245,7 +245,7 @@ index ac15c6e..9876410 100644
 +++ b/android/settings.gradle
 @@ -1,4 +1,4 @@
 -include ':app', ':lib', ':text-tools'
-+include ':app', ':lib', ':text-tools', ':ml-l-image-mlkit'
++include ':app', ':lib', ':text-tools', ':ml-l-image'
  
  // SHARED BY REFERENCE, not copied. ab_cloud-libs-shared/libs/text-tools is the ITextTools
  // binder contract and its client, and cloud-mail and the Cloud Keyboard already build the
@@ -258,8 +258,8 @@ index ac15c6e..9876410 100644
 +// typed-payload parsing), shared BY REFERENCE exactly like :text-tools above. The
 +// SAME module cloud-drive, cloud-media-center, cloud-camera and cloud-mail build;
 +// a copy vendored in here would be the duplicate-engine defect this fleet fixed
-+// (#170/#261). materialize places it at android/ml-l-image-mlkit.
-+project(':ml-l-image-mlkit').projectDir = new File(settingsDir, 'ml-l-image-mlkit')
++// (#170/#261). materialize places it at android/ml-l-image.
++project(':ml-l-image').projectDir = new File(settingsDir, 'ml-l-image')
 diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
 index 1d12400..1501847 100644
 --- a/browser/src/control/Control.Menubar.ts
@@ -320,7 +320,7 @@ index 1d12400..1501847 100644
  			}
 +		} else if (id === 'cloudscancontents') {
 +			// Cloud Office, task #461 — scan WHAT IS IN THE CURRENT VIEW (barcode +
-+			// OCR) through the shared ml-l-image-mlkit engine. The capture is the
++			// OCR) through the shared ml-l-image engine. The capture is the
 +			// canvas the user is looking at: #document-canvas holds the composited
 +			// viewport, and toDataURL is a browser API that needs no COOL round-trip.
 +			// The snapshot is downscaled to 1600px (the engine's MAX_DECODE_DIMENSION)

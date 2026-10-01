@@ -346,7 +346,7 @@ dependencies {
     // libs:text-tools above. cloud-drive, cloud-media-center and cloud-camera
     // compile the SAME directory; scanning an image attachment's contents here
     // reads the same engine, never a copy of it (#170/#261).
-    implementation(project(":libs:ml-l-image-mlkit"))
+    implementation(project(":libs:ml-l-image"))
 
     // Self-update. The SAME library Constellation - the owner's app store - drives its
     // own updates with, pulling the SAME GHCR image the store distributes for this app.

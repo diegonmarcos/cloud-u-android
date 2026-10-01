@@ -15,8 +15,10 @@
 #   E1  the service is exported and guarded by CONSTELLATION_DATA (signature).
 #   E2  a client can FIND it: an intent-filter action of exactly ${applicationId}.ENGINE.
 #   E3  it declares its CONTRACT as a positive integer.
-#   E4  its class extends DataBackendService and methodNames() names exactly the
-#       methods dispatch() answers — a method the engine answers but does not
+#   E4  its class extends DataBackendService -- or, for an engine whose input is
+#       not a string (the image scan takes a file descriptor), is a Service whose
+#       binder is its typed wire's Stub and answers methods() with methodNames()
+#       -- and methodNames() names exactly the methods dispatch() answers — a method the engine answers but does not
 #       list cannot be found by a client degrading knowingly, and one it lists
 #       but does not answer is a contract it does not keep.
 #   E5  the module compiles against libs:core (the base class and the permission).
@@ -27,7 +29,9 @@
 #       the engine's process now.
 #   E8  every engine an app BINDS by handshake is found here: gh (Cloud Drive),
 #       cal (Cloud Me and Cloud Agenda, engine-apk-split move 3), feed (SuperApp,
-#       move 4) and news (Cloud News, move 5). An engine whose contract meta-data
+#       move 4), news (Cloud News, move 5) and ml-l-image-mlkit (the image scan
+#       Drive, Mail, Camera, Media Center and Office reach through libs:ml-l-image,
+#       move 6). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
@@ -42,6 +46,7 @@ BJ="$SHARED/lib-apks/build.json"
 GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
                 "$LIBS/news/src/main/AndroidManifest.xml" \
+                "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -116,8 +121,11 @@ for module in modules:
         if len(src) != 1:
             no("E4 %s: %s is declared but its class is not in the module's sources" % (module, cls)); continue
         text = code(src[0])
-        if not re.search(r"class\s+%s\s*:\s*DataBackendService\(\)" % re.escape(simple), text):
-            no("E4 %s: %s does not extend DataBackendService" % (module, simple))
+        typed = re.search(r"class\s+%s\s*:\s*Service\(\)" % re.escape(simple), text) \
+            and re.search(r"object\s*:\s*I\w+\.Stub\(\)", text) \
+            and re.search(r"override\s+fun\s+methods\(\)\s*:\s*Array<String>\s*=\s*methodNames\(\)", text)
+        if not re.search(r"class\s+%s\s*:\s*DataBackendService\(\)" % re.escape(simple), text) and not typed:
+            no("E4 %s: %s neither extends DataBackendService nor serves a typed wire Stub whose methods() is methodNames()" % (module, simple))
         consts = dict(re.findall(r'const\s+val\s+(\w+)\s*=\s*"([^"]*)"', text))
         def resolve(tok):
             tok = tok.strip()
@@ -157,7 +165,7 @@ for module in modules:
             if "android.permission.INTERNET" not in perms:
                 no("E7 gh: the engine runs gh, which talks to GitHub, without INTERNET")
 
-for must in ("gh", "cal", "feed", "news"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -184,7 +192,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -265,8 +273,33 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _applied "$LIBS/news/src/main/AndroidManifest.xml" "$MUT/libs/news/src/main/AndroidManifest.xml" 'engine.VERSION' \
         && _red "E8 the news engine Cloud News binds stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
 
+M_IMGMF="$MUT/libs/ml-l-image-mlkit/src/main/AndroidManifest.xml"
+M_IMGSVC="$MUT/libs/ml-l-image-mlkit/src/main/java/com/diegonmarcos/superapp/image/ImageScanBackendService.kt"
+R_IMGSVC="$LIBS/ml-l-image-mlkit/src/main/java/com/diegonmarcos/superapp/image/ImageScanBackendService.kt"
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_IMGMF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" "$M_IMGMF" 'engine.VERSION' \
+        && _red "E8 the image engine five apps bind stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_IMGSVC" 'override fun methods(): Array<String> = methodNames()' 'override fun methods(): Array<String> = arrayOf(BARCODE)'
+    _applied "$R_IMGSVC" "$M_IMGSVC" '= arrayOf(BARCODE)' \
+        && _red "E4 the typed wire's methods() stops answering with methodNames() (a client would not see ocr)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_IMGSVC" 'private val binder = object : IImageScanEngine.Stub() {' 'private val binder = object : android.os.Binder() {'
+    _applied "$R_IMGSVC" "$M_IMGSVC" 'object : android.os.Binder()' \
+        && _red "E4 a Service() engine that serves no typed wire Stub" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_IMGSVC" '        OCR -> scanner.ocrJson(image)
+' ''
+    python3 -c 'import sys; sys.exit(0 if "OCR -> scanner" not in open(sys.argv[1]).read() else 1)' "$M_IMGSVC" \
+        && _applied "$R_IMGSVC" "$M_IMGSVC" 'BARCODE -> scanner' \
+        && _red "E4 the typed engine lists ocr but its dispatch no longer answers it" engines "$MUT/libs" "$MUT/build.json"; }
+
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
-[ "$MUTATIONS" -ge 15 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
+[ "$MUTATIONS" -ge 19 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
 
 echo

@@ -608,7 +608,7 @@ class InAppGallery : AppCompatActivity() {
 
     /**
      * Task #461 — scan the CONTENT of the captured photo on screen through the
-     * ONE shared image-scan engine (libs:ml-l-image-mlkit: ImageContentScanner
+     * ONE shared image-scan engine (libs:ml-l-image: ImageContentScanner
      * wraps ImageScanEngine = ZXing barcode decode + ML Kit OCR). This is the
      * camera's natural visual trigger: a camera's captured image is the thing
      * meant to be read, and [ImageContentScanner] runs the same engine

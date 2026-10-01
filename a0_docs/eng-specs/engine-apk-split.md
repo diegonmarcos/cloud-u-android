@@ -55,7 +55,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | mail (lib) | GUI (fragments, layouts) | 7.33 / – / – / 14.23 | superapp | – | stays |
 | maps | GUI (MapLibre view) | 37.75 / 11.26 / 19.51 / 15.33 | nav | per frame | stays (draws in the host) |
 | media | mixed: sticker/GIF payload + panel | 9.36 / – / 5.73 / 8.79 | keyboard, keyboard-engines | panel per keystroke | stays |
-| ml-l-image-mlkit | engine (ZXing + ML Kit OCR) | 28.48 / 11.06 / 1.49 / 9.87 | drive, mail, camera, media-center | per image | **next candidate**: four apps republish per engine change today; needs a contract/engine split (consumers render its typed `BarcodePayload`), image crosses as a file descriptor |
+| **ml-l-image-mlkit** | engine (ZXing + ML Kit OCR) | 28.48 / 11.06 / 1.49 / 9.87 | nothing (drive, mail, camera, media-center, office compile the contract `libs:ml-l-image`) | per image | **MOVE 6** (stage 4): contract/engine split, the image crosses as a file descriptor |
 | ml-l-text-mlkit | engine | 40.78 / 17.38 / 0.32 / 9.21 | keyboard-engines only | – | already separate (Cloud-Keyboard-Libs) |
 | ml-l-voice-vosk | engine | 21.20 / 9.03 / – / 5.74 | keyboard-engines only | – | already separate |
 | mounts | mixed: SFTP/SMB/WebDAV + `MountsScreen` | 21.42 / – / – / 64.94 | drive | per browse/transfer | blocked like git-sync: transfers land in per-package storage |
@@ -240,9 +240,33 @@ is why K1–K8 never looked at them and F2 shipped; K9 is red on origin/main bef
 (both bridges) and before this change (CalBridge), and its guard-test case fails against
 the previous guard.
 
+## Move 6 — ml-l-image-mlkit: five apps reach the image scan through a contract, and the image crosses as a file descriptor
+
+Stage 3 skipped this module: its consumers hand it a `File` in their own storage (Drive,
+Mail's attachment cache), a `content://` Uri (Camera, Media Center) or a `Bitmap` (Office's
+page capture), none of which an engine in another uid can open, and core's `IDataBackend`
+carries strings only. The standard Android answer: the **caller** opens the image and hands
+the engine a `ParcelFileDescriptor` over binder.
+
+| piece | where | what it does |
+|---|---|---|
+| contract | `libs/ml-l-image` (new; excluded from lib APKs) | `IImageScanEngine.scan(method, ParcelFileDescriptor)`; the types consumers render (`BarcodeScan`, `OcrResult`, `BarcodePayload` + parser, same FQNs); the client `ImageScanEngine` with the same public API — so no consumer's Kotlin or Office's Java changed |
+| client | `ImageScanEngine` | File → `ParcelFileDescriptor.open`, Uri → `openFileDescriptor`, Bitmap → PNG in the caller's cache (unlinked once open); handshake first; keeps the old result contract (null barcode for none/unreadable, OCR `error` as tiebreaker — now also "install / update the engine") |
+| declaration | `libs/ml-l-image/engine-client.json` | same shape as `build.json::engines`; the module's `build.gradle` resolves the package from fleet row `lib-ml-l-image-mlkit` into its BuildConfig and its own manifest's `<queries>` (a library's placeholders are substituted by `ProcessLibraryManifest`, verified in AGP 8.7.3's source), so every consumer — Office's patched upstream tree included — merges the query |
+| engine | `libs/ml-l-image-mlkit` | `ImageScanBackendService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `barcode`, `ocr`); reads the descriptor to the end (64 MB cap) and runs ZXing / ML Kit in its own process |
+| unlinked | Drive, Mail, Camera (build.json + gradle + settings), Media Center (settings + gradle), Office (`build.modules`, patch 0005, native-lib allowance), 4 ship workflows ×3 | no app compiles ZXing, ML Kit or `libmlkit_google_ocr_pipeline.so`; an engine edit ships Cloud-Lib-Ml-L-Image-Mlkit.apk alone. Media Center's ship now watches the contract it compiles (it never watched the module before) |
+
+**Checks.** Contract guard: client declarations are read from a shared module's
+`engine-client.json` as well as apps' `build.json`; K7 accepts a typed-wire bind
+(`bindService`) after the floor; **K6 also reads settings/gradle files and other module maps**
+(Camera, Media Center and Office wire modules there and K6 never saw them — on the pre-move
+tree it reports all five consumers). Five new guard cases, each failing against the previous
+guard. Engine tester: E4 accepts a typed-wire engine whose stub answers `methods()` with
+`methodNames()`; E8 requires the image engine (19 mutations).
+
 ## Stage 3 — what was not moved, and why
 
-- **ml-l-image-mlkit — skipped.** Five consumers (Drive, Mail, Camera, Media Center and
+- **ml-l-image-mlkit — skipped in stage 3, moved in stage 4 (move 6).** Five consumers (Drive, Mail, Camera, Media Center and
   Office's materialized tree, which stage 1 did not count) hand the engine a `File` in
   their own storage (Drive, Mail's attachment cache) or a `content://` URI (Camera,
   Media Center). An engine in its own uid cannot open the first and needs a per-call URI

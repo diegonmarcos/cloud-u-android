@@ -1,0 +1,75 @@
+// libs:ml-l-image — the CONTRACT half of the shared image scan (engine-apk-split move 6).
+// Every consumer compiles THIS module; none compiles the engine. It holds the wire
+// (IImageScanEngine.aidl), the typed results the apps render (BarcodeScan, OcrResult,
+// BarcodePayload + its parser) and the client (ImageScanEngine) that opens the caller's
+// File / content Uri / Bitmap, hands the ENGINE (libs:ml-l-image-mlkit, Cloud-Lib-
+// Ml-L-Image-Mlkit.apk) a file descriptor, and reads JSON back. ZXing, ML Kit and the
+// native OCR pipeline live only in the engine APK, so an engine change ships that APK
+// alone; a change HERE is a contract change and rightly re-ships the consumers.
+plugins {
+    id 'com.android.library'
+    // Conditional, exactly like libs:analytics: AGP 8 consumers need the Kotlin plugin
+    // applied, media-center is AGP 9 where Kotlin is built in and applying it is an error.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+// The engine this client binds: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one
+// thing that does not move: Office links this directory into a scratch tree outside the
+// repository, and the canonical path still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.image
+if (engineDecl == null) throw new GradleException("libs:ml-l-image: engine-client.json::engines.image is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:ml-l-image: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:ml-l-image: engine-client.json::engines.image.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def imageEnginePackage     = engineFleet.package.toString()
+def imageEngineAction      = engineDecl.action.toString().replace('{package}', imageEnginePackage)
+def imageEngineMinContract = engineDecl.min_contract as int
+if (imageEngineMinContract < 1) throw new GradleException("libs:ml-l-image: engines.image.min_contract must be >= 1")
+
+android {
+    namespace 'com.diegonmarcos.superapp.image'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "IMAGE_ENGINE_PACKAGE",      "\"${imageEnginePackage}\""
+        buildConfigField "String", "IMAGE_ENGINE_ACTION",       "\"${imageEngineAction}\""
+        buildConfigField "int",    "IMAGE_ENGINE_MIN_CONTRACT", "${imageEngineMinContract}"
+        // Resolved in THIS library's manifest (ProcessLibraryManifest merges with the
+        // library's own placeholders), so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [imageEnginePackage: imageEnginePackage]
+    }
+
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // BarcodePayloadParser is pure JVM; its suite runs in the unit phase of every consumer.
+    testImplementation 'junit:junit:4.13.2'
+}

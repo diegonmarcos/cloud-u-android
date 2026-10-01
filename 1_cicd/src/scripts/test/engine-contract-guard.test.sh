@@ -48,10 +48,16 @@ NEWSCLIENT=ac_cloud-news/app/src/main/java/com/diegonmarcos/cloudnews/NewsBridge
 NEWSMF=ac_cloud-news/app/src/main/AndroidManifest.xml
 NEWSGRADLE=ac_cloud-news/app/build.gradle
 NEWSWF=.github/workflows/ship-cloud-news.yml
+# the image scan: a SHARED client (libs:ml-l-image, engine-client.json) binding a typed-wire engine
+IMG=ab_cloud-libs-shared/libs/ml-l-image
+IMGENGINE=ab_cloud-libs-shared/libs/ml-l-image-mlkit
+IMGCLIENT=$IMG/src/main/java/com/diegonmarcos/superapp/image/ImageScanEngine.kt
+IMGSVC=$IMGENGINE/src/main/java/com/diegonmarcos/superapp/image/ImageScanBackendService.kt
 for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF" \
          "$ROOT/$DRIVEMF" "$ROOT/$DRIVEGRADLE" "$ROOT/$FEED/src/main/AndroidManifest.xml" "$ROOT/$SABJ" "$ROOT/$SAMF" \
          "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF" "$ROOT/$NEWS/src/main/AndroidManifest.xml" "$ROOT/$NEWSBJ" \
-         "$ROOT/$NEWSCLIENT" "$ROOT/$NEWSMF" "$ROOT/$NEWSGRADLE" "$ROOT/$NEWSWF"; do
+         "$ROOT/$NEWSCLIENT" "$ROOT/$NEWSMF" "$ROOT/$NEWSGRADLE" "$ROOT/$NEWSWF" "$ROOT/$IMG/engine-client.json" \
+         "$ROOT/$IMGCLIENT" "$ROOT/$IMGSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
@@ -65,6 +71,7 @@ stage() {
                       "$NEWSBJ" "$NEWSCLIENT" "$NEWSMF" "$NEWSGRADLE" "$NEWSWF"; do
         mkdir -p "$(dirname "$WORK/t/$f")"; cp "$ROOT/$f" "$WORK/t/$f"; done
     cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
+    cp -r "$ROOT/$IMG" "$WORK/t/$IMG"; cp -r "$ROOT/$IMGENGINE" "$WORK/t/$IMGENGINE"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -149,6 +156,24 @@ stage; sub "$DRIVEGRADLE" 'ghEnginePackage: ghEnginePackage]' 'ghEnginePackage: 
 landed "$DRIVEGRADLE" 'com.example.planted' && red "K8 the queried placeholder is not the package the build resolved" "K8"
 stage; sub "$SAMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
 landed "$SAMF" 'PLANTED_NOT_QUERY_ALL' && red "K8 an app that drops QUERY_ALL_PACKAGES and queries nothing cannot see its engines" "K8"
+stage; sub "$IMGSVC" 'const val OCR = "ocr"' 'const val OCR = "text"'
+landed "$IMGSVC" '"text"' && red "K4 the image engine renames a method the shared client still calls" "K4"
+stage; sub "$DRIVEGRADLE" "    implementation project(':libs:ml-l-image')" "    implementation project(':libs:ml-l-image-mlkit')"
+landed "$DRIVEGRADLE" "project(':libs:ml-l-image-mlkit')" && red "K6 an app's gradle file links the image engine again (no module map entry needed)" "K6"
+stage; python3 - "$WORK/t/$IMGCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "        if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$IMGCLIENT" \
+    && red "K7 the shared typed-wire client binds without a contract floor" "K7"
+stage; sub "$IMG/src/main/AndroidManifest.xml" '<package android:name="${imageEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${imageEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$IMG/src/main/AndroidManifest.xml" \
+    && red "K8 the shared client module stops querying its engine for every consumer" "K8"
+stage; js "$IMG/engine-client.json" 'd["engines"]["image"]["fleet"] = "lib-ml-l-image-renamed"'
+landed "$IMG/engine-client.json" 'lib-ml-l-image-renamed' && red "K1 a shared client module names a Store row that does not exist" "K1"
 stage; cat > "$WORK/t/$(dirname "$CLIENT")/PlantedBridge.kt" <<'KOTLIN'
 package com.diegonmarcos.clouddrive.sync
 class PlantedBridge(ctx: android.content.Context) {
@@ -159,7 +184,8 @@ KOTLIN
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
-landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
+js "$IMG/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "PASS — the engine contract guard fails on every broken binding and passes the real one"; else echo "FAIL — $FAILURES case(s)"; exit 1; fi

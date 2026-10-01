@@ -18,10 +18,10 @@ include(":app")
 // OCR + typed-payload parsing), shared BY REFERENCE from ab_cloud-libs-shared.
 // Cloud-drive and cloud-media-center compile in the SAME directory; this app
 // now does too — one engine, no private copy to drift (#170/#261). projectDir
-// is mandatory: the default would resolve to ./libs/ml-l-image-mlkit, which
+// is mandatory: the default would resolve to ./libs/ml-l-image, which
 // does not exist in this app. Same AGP-9 consumption path media-center uses.
-include(":libs:ml-l-image-mlkit")
-project(":libs:ml-l-image-mlkit").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image-mlkit")
+include(":libs:ml-l-image")
+project(":libs:ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image")
 // Gradle 9 fails outright on a project directory that does not exist, and the
 // implicit ':libs' container resolves to <root>/libs which this app does not
 // have. Point it at the shared root, exactly as media-center does; the leaf

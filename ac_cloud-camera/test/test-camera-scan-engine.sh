@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # What this certifies: that a captured photo's CONTENT can be scanned through
-# the single shared image-scan engine (libs:ml-l-image-mlkit:
+# the single shared image-scan engine (libs:ml-l-image:
 # ImageScanEngine = ZXing barcode decode + ML Kit OCR), exactly as
 # cloud-drive and cloud-media-center consume it — and NOT through a private
 # copy of the decode path (#170/#261). The camera already decodes barcodes in
@@ -13,7 +13,7 @@
 #
 # Each assertion exists because the naive version passes while the feature is
 # broken:
-#   * "build.gradle mentions ml-l-image-mlkit" passes on a comment. C1 asserts
+#   * "build.gradle mentions ml-l-image" passes on a comment. C1 asserts
 #     include + projectDir in settings.gradle.kts so Gradle 9 actually resolves
 #     the module, C2 asserts the implementation dependency.
 #   * "the scanner calls ImageScanEngine" is downstream of the wrapper
@@ -36,7 +36,7 @@ import re
 import sys
 
 APP = os.environ["APP_DIR"]
-ALT = os.path.join(os.environ["APP_DIR"], "..", "ab_cloud-libs-shared/libs/ml-l-image-mlkit")
+ALT = os.path.join(os.environ["APP_DIR"], "..", "ab_cloud-libs-shared/libs/ml-l-image")
 failures = []
 checked = 0
 
@@ -121,13 +121,13 @@ def src(path):
 # ── C1: settings.gradle.kts includes the shared module BY REFERENCE ──
 settings_path = os.path.join(APP, "settings.gradle.kts")
 settings = read(settings_path)
-check("C1 settings.gradle.kts includes :libs:ml-l-image-mlkit",
-      re.search(r'include\s*\(\s*":libs:ml-l-image-mlkit"\s*\)', settings) is not None,
+check("C1 settings.gradle.kts includes :libs:ml-l-image",
+      re.search(r'include\s*\(\s*":libs:ml-l-image"\s*\)', settings) is not None,
       "without the include Gradle cannot resolve the project() dependency")
 check("C1 … mapped BY REFERENCE to ab_cloud-libs-shared (not a vendored copy)",
-      'ml-l-image-mlkit").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image-mlkit")' in settings
-      or 'ml-l-image-mlkit").projectDir = file("../ab_cloud-libs-shared/libs' in settings
-      or '../ab_cloud-libs-shared/libs/ml-l-image-mlkit' in settings,
+      'ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image")' in settings
+      or 'ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs' in settings
+      or '../ab_cloud-libs-shared/libs/ml-l-image' in settings,
       "the module must point at the shared directory — a copy is the defect this fleet fixed")
 check("C1 … the ':libs' container is mapped so Gradle 9 does not fail on a missing dir",
       re.search(r'project\s*\(\s*":libs"\s*\)\.projectDir', settings) is not None,
@@ -137,8 +137,8 @@ check("C1 … the ':libs' container is mapped so Gradle 9 does not fail on a mis
 gradle_path = os.path.join(APP, "app/build.gradle.kts")
 gradle = read(gradle_path)
 gradle_nc = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", gradle, flags=re.S))
-check("C2 app/build.gradle.kts declares implementation project(':libs:ml-l-image-mlkit')",
-      re.search(r'implementation\s*\(?\s*project\(\s*":libs:ml-l-image-mlkit"\s*\)\s*\)?', gradle_nc) is not None,
+check("C2 app/build.gradle.kts declares implementation project(':libs:ml-l-image')",
+      re.search(r'implementation\s*\(?\s*project\(\s*":libs:ml-l-image"\s*\)\s*\)?', gradle_nc) is not None,
       "the camera code must actually link the shared engine")
 
 # ── C3: the only scan definition imports the SHARED engine, no private copy ──

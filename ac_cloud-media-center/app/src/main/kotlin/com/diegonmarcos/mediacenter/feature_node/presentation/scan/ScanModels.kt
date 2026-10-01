@@ -2,7 +2,7 @@
  * Task #460 — read what is IN an image (barcode decode + OCR).
  *
  * The UI contract for the scan feature. ImageScanViewModel runs the shared
- * scan engine (libs:ml-l-image-mlkit) off the main thread and reduces its
+ * scan engine (libs:ml-l-image) off the main thread and reduces its
  * two raw results (BarcodeScan?, OcrResult) into one state the sheet renders.
  * The reductions here are what let the UI say WHY nothing came back — an
  * empty result box is this fleet's dominant defect shape and it is banned:

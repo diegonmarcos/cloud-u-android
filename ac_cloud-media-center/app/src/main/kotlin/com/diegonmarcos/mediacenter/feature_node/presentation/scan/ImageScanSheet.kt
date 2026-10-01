@@ -275,7 +275,7 @@ private fun ColumnScope.OcrSection(
         )
     }
     // Bind to a local: ocr.language is a public-API property from another module
-    // (libs:ml-l-image-mlkit), so Kotlin refuses to smart-cast it to non-null.
+    // (libs:ml-l-image), so Kotlin refuses to smart-cast it to non-null.
     val language = ocr.language
     Text(
         text = if (language.isNullOrBlank()) {

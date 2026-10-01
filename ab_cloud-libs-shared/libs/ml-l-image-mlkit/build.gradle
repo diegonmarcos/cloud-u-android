@@ -1,10 +1,11 @@
-// libs:ml-l-image-mlkit — the ONE shared image-scan engine (task #459/#460).
-// ZXing decodes the barcodes, ML Kit text-recognition reads the pixels, and the
-// typed-payload parser turns a raw decode into an ACTION the UI can present
-// (open URL, join WiFi, add contact, add calendar event) instead of a string
-// dump. cloud-drive and cloud-media-center BOTH consume this module; a second
-// private copy in either app is the duplicate-engine defect this fleet has
-// fixed before (#170, #261), so the code lives here and nowhere else.
+// libs:ml-l-image-mlkit — the ONE shared image-scan ENGINE (task #459/#460), shipped
+// only as Cloud-Lib-Ml-L-Image-Mlkit.apk since engine-apk-split move 6. ZXing decodes
+// the barcodes and ML Kit text-recognition reads the pixels, inside this APK's process;
+// Drive, Mail, Camera, Media Center and Office compile the CONTRACT half (libs:ml-l-image:
+// the IImageScanEngine wire, the typed payload and the client) and hand this engine a file
+// descriptor. So no app links ZXing, ML Kit or the native OCR pipeline, and an edit here
+// republishes this APK alone. Do not add this module back to an app's module map: the
+// engine contract guard's K6 fails it.
 //
 // ZXing was already a dependency of libs/wallet + the wallet + superapp APKs,
 // so no new ML runtime enters the fleet for barcode decoding. ML Kit already
@@ -66,8 +67,8 @@ dependencies {
     // of MB never sit in the APK.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
 
-    // BarcodePayloadParser is pure JVM with no Android imports; the typed
-    // payload is the contract both apps render actions from, so it is tested
-    // here in the unit phase of EVERY consumer build, not once on a device.
-    testImplementation 'junit:junit:4.13.2'
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
+    implementation project(':libs:core')
+    // The wire (IImageScanEngine) this service implements.
+    implementation project(':libs:ml-l-image')
 }

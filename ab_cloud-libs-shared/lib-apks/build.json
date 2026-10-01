@@ -10,6 +10,7 @@
     ],
     "_doc_exclude": "Modules that must NOT ship as a standalone APK, each with the reason. An exclusion is a claim about install-time behaviour, so it belongs in data next to the scan rule rather than as a silent skip in gradle.",
     "exclude": {
+      "ml-l-image": "The CONTRACT half of the image scan (engine-apk-split move 6): the IImageScanEngine wire, the typed payload and the client that Drive, Mail, Camera, Media Center and Office compile. It has no component and installs nothing; the engine it binds ships as Cloud-Lib-Ml-L-Image-Mlkit.apk, which compiles this module in.",
       "cropper": "Upstream image-cropper UI for cloud-media-center, moved into the shared root with the rest of its libs/. It was never a lib APK — media-center was not a scan root — and a standalone cropper APK installs nothing anyone can open. Excluded so the shipped set is exactly what it was before the merge.",
       "gesture": "Same: upstream gesture helper, compiled into cloud-media-center only.",
       "panoramaviewer": "Same: upstream panorama viewer, compiled into cloud-media-center only.",

@@ -4,7 +4,7 @@
  * A camera's natural "scan" is the thing it just captured: the user holds the
  * phone up to a code or a page, so a scan meant for content must read the
  * photograph, not only decode the live preview. This class runs the shared
- * engine (libs:ml-l-image-mlkit — ImageScanEngine: ZXing barcode decode + ML
+ * engine (libs:ml-l-image — ImageScanEngine: ZXing barcode decode + ML
  * Kit OCR) over a captured image's content Uri, off whatever thread the
  * caller chooses. It is deliberately a thin shell: the engine, the typed
  * payload parser and the failure vocabulary all live in the one shared

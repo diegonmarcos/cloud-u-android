@@ -64,10 +64,10 @@
       "_doc_why_by_reference": "The analytics note above says no module was shared by reference from ab_cloud-libs-shared any more; that was true of libs:analytics, a Java/AGP-9 module this Kotlin/Compose tree on AGP 8.9 could not consume. This one is a Kotlin Android library on the same toolchain with core-ktx as its only dependency, which is why it can be.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
     },
-    "libs:ml-l-image-mlkit": {
+    "libs:ml-l-image": {
       "type": "library",
       "_doc": "The ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), shared BY REFERENCE from ab_cloud-libs-shared/libs/ exactly like libs:text-tools. cloud-drive, cloud-media-center, cloud-camera already compile in the SAME directory; scanning an image attachment's CONTENT here reuses that engine, so this app never carries a second copy of the decode path (#170/#261).",
-      "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit"
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-image"
     },
     "libs:bottomnav": {
       "type": "library",

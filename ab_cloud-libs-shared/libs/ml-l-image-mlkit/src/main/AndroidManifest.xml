@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- libs:ml-l-image-mlkit — shared scan engine (ZXing barcode decode + ML Kit
-     OCR), consumed by cloud-drive and cloud-media-center by reference; the lib
-     APK factory also ships it as cloudlib.mllimagemlkit. No components: no
-     <activity>, <service> or <provider> — everything is called in-process. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<!-- libs:ml-l-image-mlkit — the image-scan ENGINE (ZXing barcode decode + ML Kit OCR),
+     shipped only as Cloud-Lib-Ml-L-Image-Mlkit.apk (engine-apk-split move 6). Consumers
+     compile libs:ml-l-image and bind this service with a file descriptor of the image. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.superapp.image.mlkit.ImageScanBackendService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

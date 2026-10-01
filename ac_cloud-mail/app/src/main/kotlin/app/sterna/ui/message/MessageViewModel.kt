@@ -411,7 +411,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
      *  [openingAttachment] — the guard has to cover the download, not just the engine call. */
     private var scanningAttachment = false
 
-    /** The ONE shared image-scan engine (libs:ml-l-image-mlkit), created lazily: most sessions
+    /** The ONE shared image-scan engine (libs:ml-l-image), created lazily: most sessions
      *  never scan anything, and ML Kit's text-recognition client is a singleton per options, so
      *  one instance per reading-scope is already reuse, not churn. */
     private val scanEngine: ImageScanEngine by lazy { ImageScanEngine(application) }
@@ -1496,7 +1496,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Task #461 — scan the CONTENT of an image attachment (barcode + OCR) through
-     * the ONE shared image-scan engine ([ImageScanEngine] in libs:ml-l-image-mlkit),
+     * the ONE shared image-scan engine ([ImageScanEngine] in libs:ml-l-image),
      * the same module cloud-drive, cloud-media-center and cloud-camera run — never
      * a copy of the decode path (#170/#261). The part's bytes go through the SAME
      * download and cache path as [openAttachment] (the sender's name reaches the

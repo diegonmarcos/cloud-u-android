@@ -241,7 +241,7 @@ class ImageViewerActivity : ComponentActivity() {
 
     @Composable
     private fun ScanSheet(engine: ImageScanEngine, file: File, say: (String) -> Unit, close: () -> Unit) {
-        val result by produceState<Result<BarcodePayload?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { engine.decodeBarcode(file)?.payload } } }
+        val result by produceState<Result<BarcodePayload?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { engine.check()?.let { error(it) }; engine.decodeBarcode(file)?.payload } } }
         Column(Modifier.padding(DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
             val r = result
             when {

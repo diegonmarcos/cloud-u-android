@@ -711,9 +711,9 @@
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
     },
-    "libs:ml-l-image-mlkit": {
+    "libs:ml-l-image": {
       "_doc_dir": "THE shared scan engine (task #459/#460): ZXing barcode decode + ML Kit text-recognition + typed-payload parsing, shared BY REFERENCE the same way libs:core and libs:updater are. cloud-media-center consumes the SAME directory — one engine, two apps, no private copy to drift.",
-      "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit",
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-image",
       "type": "library"
     },
     "_doc_engines": "#567 THE FOUR ENGINE LIBRARIES. The owner's vision for this application: the main APK is CHROME, and every tooling is a full engine in its OWN library — libs:file-editor (the full text editor), libs:git-sync (the native git manager that finishes the #437/#448 GitSync story: status, stage/unstage, commit, push/pull, branch list, log, diff, remotes, conflicts — GitSync's UX, over JGit), libs:rclone (remotes config + declared/ad-hoc sync jobs with progress + remote browsing, over a sha256-pinned static rclone binary) and libs:mounts (ftp/sftp/ssh/webdav connections with browse-through). Each lives on the shared shelf and is shared BY REFERENCE like every other module here, so lib-apks also ships each one as cloud-lib-{name}. THE MODULE BOUNDARY IS LAW: a library imports nothing from any application (test/test-drive-engine-modules.sh fails on the first lib -> app import). Compose only (#565): each exports ONE @Composable screen that this app's EngineActivity hosts (push 5). Landed as independently green pushes — (1) skeletons + declarations, (2) git-sync, (3) file-editor, (4) rclone + mounts, (5) drive wiring — so a module on main is never half-wired: until its engine push lands, a skeleton renders its own title and nothing else, and the app does not route to it.",
@@ -765,7 +765,7 @@
       "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran."
     },
     "unit": {
-      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. #579 the app module now carries its own JVM suite (app/src/test: the Files state reducers, the archive path model, the transfer/rename plans, the Zip-Slip guard, the sync history and the per-repo schedule decision, the declarations, and a Robolectric Compose layout-tree test of the shell and the Files pane). The module graph also includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose, and the four engine libraries' suites. #577 adds PdfConvertTest and PdfLayoutTest, which run the PDF converter and the reader's page layout as real code on the CI runner.",
+      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. #579 the app module now carries its own JVM suite (app/src/test: the Files state reducers, the archive path model, the transfer/rename plans, the Zip-Slip guard, the sync history and the per-repo schedule decision, the declarations, and a Robolectric Compose layout-tree test of the shell and the Files pane). The module graph also includes :libs:ml-l-image, whose typed-payload parser suite lives in this app's unit phase on purpose, and the four engine libraries' suites. #577 adds PdfConvertTest and PdfLayoutTest, which run the PDF converter and the reader's page layout as real code on the CI runner.",
       "task": "test",
       "enabled": true
     }

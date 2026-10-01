@@ -49,10 +49,8 @@
         "expect_count": 15,
         "_doc_expect_count": "All fifteen, by directory rather than by name: a hand-written list of .so files is a second copy of upstream's DT_NEEDED graph and goes stale the first time Collabora adds one. The count is the assertion — if the APK stops carrying exactly fifteen, the build stops rather than shipping an app that dlopens something that is not there.",
         "_doc_verified_by_extraction": "RE-VERIFIED 2026-09-11 BY EXTRACTING, not by reading the table. The ZIP central directory (6,375 entries, 591,403 bytes) was range-fetched and parsed: lib/arm64-v8a holds exactly 15 .so, expect_count agrees; 0 entries end .a, .h or .hxx, so the link-time half is confirmed absent; assets/dist holds 3,384 entries, which is the COOL web UI we rebuild. lib/arm64-v8a/libandroidapp.so and liblo-native-code.so are both STORED (compression method 0), so they can be lifted with a byte range and no inflate. libandroidapp.so was pulled out in full — 6,322,632 bytes, matching this table — and parsed as a 64-bit AArch64 ELF (e_machine 183). THE ENGINE CAN BE EXTRACTED; that question is closed and needs no further re-litigation.",
-        "expected_extra": [
-          "lib/arm64-v8a/libmlkit_google_ocr_pipeline.so"
-        ],
-        "_doc_expected_extra": "Task #461 — the one shared image-scan engine (ml-l-image-mlkit) is linked into this app's Android shell, and its ML Kit text-recognition dependency ships a native OCR pipeline (libmlkit_google_ocr_pipeline.so) that the released engine APK predates. The build's native-lib assertion now compares the RELEASED engine's libraries byte-for-byte (they must all still be present, unrelinked) and allows exactly the libraries NAMED here as extras — a new .so that is not on this list is still a failure. This is a library dependency, not a relink of the engine."
+        "expected_extra": [],
+        "_doc_expected_extra": "Empty since engine-apk-split move 6. Task #461 linked the shared image scan into this shell, and its ML Kit text-recognition dependency brought a native OCR pipeline (libmlkit_google_ocr_pipeline.so) the released engine APK predates, so it was named here as the one allowed extra. The scan engine now runs only in Cloud-Lib-Ml-L-Image-Mlkit.apk and this shell compiles the contract half (libs:ml-l-image), which carries no native code, so no extra is expected and any new .so is a failure again."
       },
       "assets": {
         "_doc": "The engine's DATA half — .rdb type libraries, fonts, share/registry, config — is likewise already built, and already in the APK. Upstream's copyUnpackAssets / copyAssets / createFullConfig gradle tasks read it out of ${liboInstdir}, i.e. out of an engine build tree; taking it from the artefact is the same files by a shorter road. assets/dist is DELIBERATELY EXCLUDED: that is layer 2, the COOL web UI, and it is the thing we rebuild.",
@@ -244,10 +242,10 @@
         "dir": "../ab_cloud-libs-shared/libs/text-tools",
         "materialize_to": "android/text-tools"
       },
-      "ml-l-image-mlkit": {
-        "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), shared BY REFERENCE exactly like text-tools: cloud-drive, cloud-media-center, cloud-camera and cloud-mail all compile in the SAME directory. materialize places it at android/ml-l-image-mlkit inside the fetched online tree; patch 0005's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: a second decode path is the duplicate-engine defect this fleet fixed (#170/#261).",
-        "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit",
-        "materialize_to": "android/ml-l-image-mlkit"
+      "ml-l-image": {
+        "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), shared BY REFERENCE exactly like text-tools: cloud-drive, cloud-media-center, cloud-camera and cloud-mail all compile in the SAME directory. materialize places it at android/ml-l-image inside the fetched online tree; patch 0005's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: a second decode path is the duplicate-engine defect this fleet fixed (#170/#261).",
+        "dir": "../ab_cloud-libs-shared/libs/ml-l-image",
+        "materialize_to": "android/ml-l-image"
       }
     },
     "_doc_sdk_packages": "android-37.0 and build-tools 37.0.0 are what upstream's app and lib modules ask for (AGP 9's compileSdk { version = release(37) } resolves to the MINOR package platforms;android-37.0, not platforms;android-37). android-36 is for the shared text-tools module, which declares compileSdk 36 and is built by the AGP 8 apps that share it."

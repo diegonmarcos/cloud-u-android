@@ -41,8 +41,8 @@ project(":libs:scrollbar").projectDir = file("../ab_cloud-libs-shared/libs/scrol
 // typed-payload parsing. The SAME module cloud-drive compiles in — one engine,
 // two apps, no private copy to drift. projectDir mandatory for the same reason
 // as analytics above.
-include(":libs:ml-l-image-mlkit")
-project(":libs:ml-l-image-mlkit").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image-mlkit")
+include(":libs:ml-l-image")
+project(":libs:ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image")
 
 // Crash telemetry. libs:core carries CoreInitProvider, which installs the
 // uncaught-exception handler that POSTs the stack trace plus the tail of this

@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # What this certifies: that the office patch series wires the ONE shared
-# image-scan engine (libs:ml-l-image-mlkit: ImageScanEngine = ZXing barcode
+# image-scan engine (libs:ml-l-image: ImageScanEngine = ZXing barcode
 # decode + ML Kit OCR) into the Collabora tree BY REFERENCE — never by
 # vendoring a copy (#170/#261) — and that a phone can reach it: a menu row in
 # every mobile*-array the app's document_menu declares, a live-in-read-only
@@ -56,27 +56,27 @@ def check(label, condition, detail=""):
         failures.append(label)
 
 # ── O1: build.json declares the shared module, by reference, materialized ──
-mod = ((spec.get("build") or {}).get("modules") or {}).get("ml-l-image-mlkit")
-check("O1 build.json::build.modules[ml-l-image-mlkit] exists",
+mod = ((spec.get("build") or {}).get("modules") or {}).get("ml-l-image")
+check("O1 build.json::build.modules[ml-l-image] exists",
       isinstance(mod, dict))
 check("O1 … dir points at ab_cloud-libs-shared (not a vendored copy)",
-      isinstance(mod, dict) and "../ab_cloud-libs-shared/libs/ml-l-image-mlkit" == mod.get("dir"),
+      isinstance(mod, dict) and "../ab_cloud-libs-shared/libs/ml-l-image" == mod.get("dir"),
       "a copy is the defect this fleet fixed")
 check("O1 … materialize_to places it where settings.gradle expects it",
-      isinstance(mod, dict) and mod.get("materialize_to") == "android/ml-l-image-mlkit")
+      isinstance(mod, dict) and mod.get("materialize_to") == "android/ml-l-image")
 
 # ── O2: patch 0005 includes the module in the gradle build, by reference ──
 check("O2 patch adds the settings.gradle include",
-      re.search(r'include \':app\', \':lib\', \':text-tools\', \':ml-l-image-mlkit\'', patch_text) is not None
-      or re.search(r"\+include ':app', ':lib', ':text-tools', ':ml-l-image-mlkit'", patch_text) is not None,
+      re.search(r'include \':app\', \':lib\', \':text-tools\', \':ml-l-image\'', patch_text) is not None
+      or re.search(r"\+include ':app', ':lib', ':text-tools', ':ml-l-image'", patch_text) is not None,
       "patch 0005 must extend the existing include line")
-check("O2 patch points the project at settingsDir/ml-l-image-mlkit",
-      re.search(r"project\(':ml-l-image-mlkit'\)\.projectDir = new File\(settingsDir, 'ml-l-image-mlkit'\)", patch_text) is not None,
+check("O2 patch points the project at settingsDir/ml-l-image",
+      re.search(r"project\(':ml-l-image'\)\.projectDir = new File\(settingsDir, 'ml-l-image'\)", patch_text) is not None,
       "the module must resolve to the materialized shared dir")
 
 # ── O3: the lib links the module ──
-check("O3 patch adds implementation project(':ml-l-image-mlkit') to lib/build.gradle",
-      re.search(r"implementation project\(':ml-l-image-mlkit'\)", patch_text) is not None,
+check("O3 patch adds implementation project(':ml-l-image') to lib/build.gradle",
+      re.search(r"implementation project\(':ml-l-image'\)", patch_text) is not None,
       "the office code must actually link the shared engine")
 
 # ── O4: the Java surface imports the SHARED engine and asks BOTH halves ──
