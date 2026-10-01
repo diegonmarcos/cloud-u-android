@@ -1,3 +1,7 @@
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -18,17 +22,19 @@ val androidJson = buildJson["android"] as Map<String, Any?>
 
 // versionCode: minutes since 2026-01-01 UTC over a 3,000,000 base, the fleet's
 // encoding, so it only ever moves forward whichever workflow built it.
-// COMMS_BUILD_TIMESTAMP (yyyyMMdd.HHmmss) wins when CI sets it.
+// COMMS_BUILD_TIMESTAMP (yyyyMMdd.HHmmss) wins when CI sets it. (java.time is
+// imported above: inside a build script a bare `java.` resolves to the
+// project's `java` extension, not the package.)
 val fleetVersionCode: Int = run {
-    val base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
-    var built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    val base = LocalDateTime.of(2026, 1, 1, 0, 0)
+    var built = LocalDateTime.now(ZoneOffset.UTC)
     val stamp = System.getenv("COMMS_BUILD_TIMESTAMP")
     if (!stamp.isNullOrBlank()) {
         runCatching {
-            built = java.time.LocalDateTime.parse(stamp, java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"))
+            built = LocalDateTime.parse(stamp, DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"))
         }
     }
-    val mins = java.time.Duration.between(base, built).toMinutes()
+    val mins = Duration.between(base, built).toMinutes()
     if (mins > 0) (3000000L + mins).toInt() else 3000000
 }
 
