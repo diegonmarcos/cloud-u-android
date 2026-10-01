@@ -28,6 +28,15 @@ import java.io.FileInputStream
  * VPN (key icon) and rules take effect live. The blocked set is recomputed on
  * every network/screen change.
  *
+ * #726 THE TUN IS DEFAULT-DENY FOR WHAT IT HAS NOT SEEN. Android resolves the excluded
+ * packages to uids when the tun is established, so an app installed AFTER that falls into the
+ * tun with no rule at all and loses DNS and every connection, silently. The engine split made
+ * that the normal case: a fleet engine APK (Cloud-Lib-Gh.apk) installed while the firewall
+ * was on had no network while the same binary run from another app did. So an install
+ * rebuilds the tun at once ([packageReceiver]), the fleet's engines can never be captured
+ * ([FLEET_ENGINES]), and every rebuild names the packages it captures in logcat and in the
+ * notification.
+ *
  * Direction IN/OUT and running alongside the WireGuard tunnel are the staged
  * firestack merge (libs/firewall/phase3-firestack/); the drain-engine enforces
  * transport + background + block-all only.
@@ -39,12 +48,13 @@ class FirewallVpnService : VpnService() {
     private var drainThread: Thread? = null
     private var netCallback: ConnectivityManager.NetworkCallback? = null
     private var screenReceiver: BroadcastReceiver? = null
+    private var packageReceiver: BroadcastReceiver? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return when (intent?.action) {
             ACTION_STOP -> { teardown(); stopSelf(); START_NOT_STICKY }
             else -> {
-                startForeground(NOTIF_ID, buildNotification(0))
+                startForeground(NOTIF_ID, buildNotification())
                 onConditionsChanged(); registerWatchers(); START_STICKY
             }
         }
@@ -54,7 +64,7 @@ class FirewallVpnService : VpnService() {
     private fun effectiveBlocked(ctx: Context): Set<String> {
         val t = FirewallConditions.transport(ctx)
         return FirewallRules.configured(ctx)
-            .filterKeys { it != packageName } // never block the launcher itself
+            .filterKeys { it != packageName && it !in FLEET_ENGINES } // never the launcher, never a fleet engine
             .filter { (pkg, rule) ->
                 FirewallDecider.interimBlocked(rule, t, FirewallConditions.isBackground(ctx, pkg))
             }
@@ -95,7 +105,8 @@ class FirewallVpnService : VpnService() {
             teardown(); stopSelf(); return
         }
         FirewallPrefs.setEnabled(ctx, true)
-        startForeground(NOTIF_ID, buildNotification(blocked.size))
+        Log.i(TAG, "tun up: capturing ${blocked.sorted().ifEmpty { listOf("nothing") }.joinToString()}; every other app bypasses it")
+        startForeground(NOTIF_ID, buildNotification(blocked))
         if (blocked.isNotEmpty()) startDrain()
     }
 
@@ -123,6 +134,19 @@ class FirewallVpnService : VpnService() {
                     addAction(Intent.ACTION_SCREEN_OFF)
                     addAction(Intent.ACTION_USER_PRESENT)
                 })
+            }
+        }
+        // An app installed after the tun went up is captured until the next rebuild; rebuild now.
+        // An update keeps its uid, which the tun already excludes, so only a fresh install counts.
+        if (packageReceiver == null) {
+            packageReceiver = object : BroadcastReceiver() {
+                override fun onReceive(c: Context?, i: Intent?) {
+                    if (i?.getBooleanExtra(Intent.EXTRA_REPLACING, false) == true) return
+                    Log.i(TAG, "installed ${i?.data?.schemeSpecificPart}: rebuilding the tun so it is not captured")
+                    onConditionsChanged()
+                }
+            }.also {
+                registerReceiver(it, IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply { addDataScheme("package") })
             }
         }
     }
@@ -159,6 +183,8 @@ class FirewallVpnService : VpnService() {
         netCallback = null
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         screenReceiver = null
+        packageReceiver?.let { runCatching { unregisterReceiver(it) } }
+        packageReceiver = null
     }
 
     override fun onDestroy() { teardown(); super.onDestroy() }
@@ -169,15 +195,16 @@ class FirewallVpnService : VpnService() {
         stopSelf()
     }
 
-    private fun buildNotification(blockedCount: Int): Notification {
+    private fun buildNotification(blocked: Set<String> = emptySet()): Notification {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, "Firewall", NotificationManager.IMPORTANCE_LOW)
         )
-        val text = if (blockedCount == 0) "On — no app blocked under the current network"
-        else "$blockedCount app(s) blocked from the network"
+        val text = if (blocked.isEmpty()) "On — no app blocked under the current network"
+        else "Blocked: ${blocked.sorted().joinToString()}"
         return Notification.Builder(this, CHANNEL)
             .setContentTitle("Firewall active")
             .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setOngoing(true)
             .build()
@@ -191,5 +218,8 @@ class FirewallVpnService : VpnService() {
         private const val TUN_ADDR6 = "fd00:1:1:1::1"
         private const val CHANNEL = "firewall"
         private const val NOTIF_ID = 0x10C
+
+        /** constellation-fleet.json's kind=lib packages, baked by build.gradle. */
+        val FLEET_ENGINES: Set<String> = BuildConfig.FLEET_ENGINES.split(',').filter { it.isNotBlank() }.toSet()
     }
 }

@@ -151,6 +151,20 @@ class GhLoginTest {
         val proxy = GhNetProxy(setOf("no-such-host.invalid"), 443) {}
         val (status, s) = connect(proxy, "no-such-host.invalid:443", credentialOf(proxy))
         s.close()
-        assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach no-such-host.invalid: "))
+        assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach no-such-host.invalid: DNS: no address for no-such-host.invalid"))
+    }
+
+    // #726 the card has to say WHICH layer failed: gh's own line is the same for all of them.
+    @Test
+    fun aRefusedPortIsNamedAsTcpNotDns() {
+        val closed = ServerSocket(0).run { localPort.also { close() } }
+        val proxy = GhNetProxy(setOf("127.0.0.1"), closed) {}
+        val (status, s) = connect(proxy, "127.0.0.1:$closed", credentialOf(proxy))
+        s.close()
+        assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach 127.0.0.1: TCP: 127.0.0.1:$closed refused the connection"))
+        assertTrue(GhNetProxy.probe("no-such-host.invalid").startsWith("DNS: "))
+        assertTrue(GhNetProxy.probe("127.0.0.1", closed).startsWith("TCP: "))
+        val open = ServerSocket(0)
+        open.use { assertTrue(GhNetProxy.probe("127.0.0.1", it.localPort).contains("reachable")) }
     }
 }

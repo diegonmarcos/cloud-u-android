@@ -3,10 +3,14 @@ package com.diegonmarcos.cloudlib.gh
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.ConnectException
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.NoRouteToHostException
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.security.SecureRandom
 import java.util.Base64
 import kotlin.concurrent.thread
@@ -77,9 +81,8 @@ class GhNetProxy(
         try {
             upstream.connect(InetSocketAddress(host, tlsPort), CONNECT_TIMEOUT_MS)
         } catch (e: IOException) {
-            // The real cause, for gh's error line and the log: an unresolvable name, a refused
-            // or timed-out connection — Android's words, not a guess.
-            val why = "502 cannot reach $host: ${e.message ?: e.javaClass.simpleName}"
+            // The real cause, for gh's error line and the log: which layer failed, in Android's words.
+            val why = "502 cannot reach $host: ${cause(host, tlsPort, e)}"
             log("gh-net: $why")
             reply(client.getOutputStream(), why)
             upstream.close()
@@ -101,6 +104,29 @@ class GhNetProxy(
     companion object {
         private const val CONNECT_TIMEOUT_MS = 20_000
         private const val HEAD_MAX = 8192
+
+        /**
+         * #726 WHICH LAYER FAILED, never "check your internet connection": gh prints that one
+         * sentence for every failed lookup, so a firewall, a dead resolver and a refused port all
+         * read the same on the card. Android's own message follows the layer.
+         */
+        internal fun cause(host: String, port: Int, e: IOException): String = when (e) {
+            is UnknownHostException -> "DNS: no address for $host"
+            is SocketTimeoutException -> "TCP: $host:$port did not answer"
+            is ConnectException -> "TCP: $host:$port refused the connection"
+            is NoRouteToHostException -> "TCP: no route to $host:$port"
+            else -> e.javaClass.simpleName
+        } + " (${e.message})"
+
+        /** Can THIS process reach [host]:[port]? Resolved with Android's resolver, as a tunnel would be. */
+        fun probe(host: String, port: Int = 443): String = Socket().use { s ->
+            try {
+                s.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
+                "$host:$port reachable (${s.inetAddress.hostAddress})"
+            } catch (e: IOException) {
+                cause(host, port, e)
+            }
+        }
 
         /** The request line and headers, up to the blank line; null if the client gave up first. */
         internal fun readHead(input: InputStream): List<String>? {

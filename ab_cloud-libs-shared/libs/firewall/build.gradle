@@ -21,12 +21,30 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Resolved like libs:updater resolves it (projectDir, so both consumers — the SuperApp and
+// lib-apks — read the same file). Missing or engine-less is a build failure: an empty list
+// builds a firewall that silently blackholes every engine installed after its tun went up.
+def fleetJsonFile = new File(projectDir, '../../../aa_cloud-superapp/data/constellation-fleet.json').canonicalFile
+if (!fleetJsonFile.exists()) throw new GradleException("libs:firewall: ${fleetJsonFile.path} is missing — FLEET_ENGINES is derived from it")
+def fleetEngines = new groovy.json.JsonSlurper().parse(fleetJsonFile).apps.findAll { it.kind == 'lib' }*.package.join(',')
+if (!fleetEngines) throw new GradleException("libs:firewall: constellation-fleet.json has no kind=lib rows — refusing to bake an empty FLEET_ENGINES")
+
 android {
     namespace 'com.diegonmarcos.superapp.firewall'
     compileSdk 36
 
     defaultConfig {
         minSdk 26
+        // #726 THE FLEET'S ENGINE APKs NEVER FALL INTO THE TUN. Derived, not listed: every
+        // kind=lib row of constellation-fleet.json, so an engine split out tomorrow is exempt
+        // the day it gets its fleet row. An engine is a bound service with no screen, so the
+        // firewall reads it as permanently "background", and a rule written for the app that
+        // binds it could never reach it anyway: its traffic is that app's traffic.
+        buildConfigField 'String', 'FLEET_ENGINES', "\"${fleetEngines}\""
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

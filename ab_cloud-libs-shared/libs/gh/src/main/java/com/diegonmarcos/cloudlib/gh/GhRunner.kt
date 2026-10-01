@@ -1,6 +1,8 @@
 package com.diegonmarcos.cloudlib.gh
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import java.io.File
 
@@ -39,7 +41,7 @@ import java.io.File
  * The device-flow lines are logged as gh prints them (a one-time code is shown on screen anyway).
  * The credential never is: [credential] logs whether gh answered, never what.
  */
-class GhRunner(context: Context) {
+class GhRunner(private val context: Context) {
 
     val binary: File = File(context.applicationInfo.nativeLibraryDir, BuildConfig.GH_JNI_NAME)
 
@@ -154,7 +156,27 @@ class GhRunner(context: Context) {
         drain(process, onLine)
     } catch (e: Exception) {
         Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
-    }.also { logged(listOf("auth", "login"), it) }
+    }.let { if (it.ok) it else Result(it.exitCode, it.output.trimEnd() + "\n" + networkCheck()) }
+        .also { logged(listOf("auth", "login"), it) }
+
+    /**
+     * #726 THE ENGINE'S OWN READING OF ITS NETWORK, appended to a failed sign-in. gh's
+     * "error connecting to github.com / check your internet connection" is its line for ANY failed
+     * lookup, so it cannot tell a dead tunnel from a firewall from a refused port. This line can:
+     * whether gh-net is up, whether THIS uid resolves and reaches each declared host (DNS / TCP,
+     * Android's words), and whether a VPN carries this uid's traffic, the firewall's included.
+     */
+    private fun networkCheck(): String {
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        val vpn = runCatching {
+            cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        }.getOrNull() == true
+        return (listOf(if (net != null) "gh-net tunnel up" else "gh-net tunnel DID NOT START ($netFailure), so gh had to resolve names itself") +
+            BuildConfig.GH_PROXY_HOSTS.split(',').map { GhNetProxy.probe(it) } +
+            listOfNotNull(if (vpn) "a VPN carries ${context.packageName}'s traffic: if its firewall does not allow this app, that is the block" else null))
+            .joinToString(" · ", prefix = "engine check: ")
+            .also { Log.i(TAG, it) }
+    }
 
     /** #689 the signed-in account's own repositories, public and private, as gh's JSON [fields]. */
     fun repoList(limit: Int, fields: String): Result =
@@ -196,9 +218,13 @@ class GhRunner(context: Context) {
          */
         private val net: GhNetProxy? by lazy {
             runCatching { GhNetProxy(BuildConfig.GH_PROXY_HOSTS.split(',').toSet()) { Log.i(TAG, it) } }
+                .onFailure { netFailure = it.message ?: it.javaClass.simpleName }
                 .onFailure { Log.e(TAG, "gh-net: loopback proxy would not start; gh cannot resolve names", it) }
                 .getOrNull()
         }
+
+        /** Why [net] is null, for the card: a failed sign-in must not read like the phone being offline. */
+        @Volatile private var netFailure: String? = null
 
         /**
          * Read gh's output LINE BY LINE AS IT ARRIVES, handing each to [onLine] at once, until gh

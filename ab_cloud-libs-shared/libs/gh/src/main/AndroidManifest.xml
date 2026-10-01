@@ -7,6 +7,9 @@
     <!-- gh talks to GitHub from THIS process now, so the permission follows the engine
          instead of being required of every app that shows a GitHub card. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- #726 a failed sign-in says whether a VPN (a firewall's included) carries this engine's
+         traffic; reading that needs the network's capabilities. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application>
         <!-- Guarded by the constellation's signature-level permission: only APKs signed

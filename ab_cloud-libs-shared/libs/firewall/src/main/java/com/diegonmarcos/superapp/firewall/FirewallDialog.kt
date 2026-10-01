@@ -85,7 +85,10 @@ class FirewallDialog : DialogFragment() {
         root.addView(TextView(ctx).apply {
             text = "Per-app rules apply while the firewall is on. Enabling takes " +
                 "the device VPN slot, so the WireGuard tunnel can't run at the " +
-                "same time (the staged firestack merge unifies them)."
+                "same time (the staged firestack merge unifies them). The fleet's " +
+                "${FirewallVpnService.FLEET_ENGINES.size} engine APKs are never blocked: they " +
+                "carry no screen and work for the app that binds them. The notification names " +
+                "every app the firewall is blocking right now."
             setTextColor(0x77FFFFFF.toInt())
             textSize = 11f
             setPadding(0, dp(6), 0, dp(12))
