@@ -38,7 +38,10 @@ data class NavContext(
 }
 
 data class FloatingNavConfig(
+    /** Build kill-switch: false = the feature does not exist on this build. */
     val enabled: Boolean,
+    /** Where the user's on/off switch starts before they touch it. */
+    val defaultOn: Boolean,
     val pollMs: Long,
     /** Distance from the top edge (dp) — default just below the dynamic island. */
     val topOffsetDp: Int,
@@ -106,6 +109,7 @@ data class FloatingNavConfig(
             }
             return FloatingNavConfig(
                 enabled = o.optBoolean("enabled", true),
+                defaultOn = o.optBoolean("default_on", false),
                 pollMs = o.optLong("poll_ms", 1000L).coerceAtLeast(250L),
                 topOffsetDp = o.optInt("top_offset_dp", 88).coerceIn(0, 600),
                 widthPct = o.optInt("width_pct", 90).coerceIn(40, 100),

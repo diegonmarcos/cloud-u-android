@@ -64,6 +64,12 @@
 #       is exactly how the Cloud > Apps > Data Apps row went on firing its own
 #       Haptics.tap before calling in, two Vibrator pulses per tap on every tile
 #       in that row, with this file green over it (#167)
+#   T8  one GESTURE is one dispatch too. ShellActivity.dispatchTouchEvent reads
+#       the home swipes ahead of every view, so a drag from the Configs star to
+#       Store was also a swipe-right (open_last_android_app): Store AND the last
+#       app opened. The detector may only be fed through StarGestureGate, and
+#       the gate's hit-test must name the Configs star. The gate's behaviour is
+#       proven by StarGestureGateTest (JVM); this pins the wiring it relies on.
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -276,6 +282,26 @@ PY
   else
     ok "T7: $(printf '%s\n' "$RENDERERS" | wc -l | tr -d ' ') tile renderer(s) leave the per-tap bookkeeping to onTileClicked"
   fi
+fi
+
+# T8 — the touch entry point feeds the swipe detector only through the gate.
+DISPATCH="$(python3 - "$SHELL_KT" <<'PY2'
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"override fun dispatchTouchEvent\(.*?\n    \}\n", src, re.S)
+print(m.group(0) if m else "")
+PY2
+)"
+if [ -z "$DISPATCH" ]; then
+  bad "T8: ShellActivity.dispatchTouchEvent not found — this check is asserting nothing"
+elif ! printf '%s' "$DISPATCH" | grep -q 'navSwipeGesture.onTouchEvent'; then
+  bad "T8: dispatchTouchEvent no longer feeds navSwipeGesture — re-read the gate before deleting it"
+elif ! printf '%s' "$DISPATCH" | tr '\n' ' ' | grep -Eq 'starGestureGate\.admits\([^;]*\)[[:space:]]*navSwipeGesture\.onTouchEvent'; then
+  bad "T8: navSwipeGesture is fed without starGestureGate.admits — a star drag doubles as a home swipe"
+elif ! sed -n '/StarGestureGate {/,/override fun dispatchTouchEvent/p' "$SHELL_KT" | grep -q 'R.id.configs_canopus_star'; then
+  bad "T8: the gate's hit-test does not name the Configs star"
+else
+  ok "T8: home swipes see no gesture that starts on a star"
 fi
 
 echo

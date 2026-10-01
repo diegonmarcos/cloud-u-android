@@ -10,9 +10,11 @@ import android.content.Context
  * the overlay off without a rebuild, and it restarted itself every time
  * MainActivity opened. This is the switch that was missing.
  *
- * The default is whatever build.json says, so a device that never touches the
- * toggle behaves exactly as before; the pref only exists once someone has an
- * opinion.
+ * The default is build.json::ui.floating_nav.default_on (OFF), NOT `enabled`:
+ * `enabled` is the build's kill-switch and stays true so the switch can be
+ * turned on at all. The pref only exists once someone has an opinion, so a
+ * device that never touched the toggle follows the declared default, and one
+ * that switched it on keeps it on.
  *
  * Deliberately app-side rather than in libs:launcher-onehand: the edge handles
  * and this overlay are two different services with two different permissions,
@@ -37,9 +39,9 @@ object FloatingNavPrefs {
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    /** Build.json's value until the user overrides it. */
+    /** The user's choice, else build.json's `default_on`. */
     fun enabled(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_ENABLED, FloatingNavConfig.get().enabled)
+        FloatingNavConfig.get().enabled // MUTANT M1
 
     fun setEnabled(ctx: Context, on: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()

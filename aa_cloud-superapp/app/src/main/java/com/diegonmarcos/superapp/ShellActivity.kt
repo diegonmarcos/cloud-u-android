@@ -922,8 +922,31 @@ open class ShellActivity : AppCompatActivity(),
         }
     }
 
+    /**
+     * The home swipes are read HERE, ahead of every view, so they also saw the
+     * stars' own press-drag-release. Dragging from the Configs star out to
+     * Store is a fast sideways move on the Home root: the detector took it for
+     * a swipe-right and opened the last Android app, then the star's release
+     * opened Store as well. One gesture, two destinations. A gesture that
+     * STARTS on a star belongs to that star, so the detector never sees it.
+     */
+    private val starGestureGate = com.diegonmarcos.superapp.launcher.StarGestureGate { x, y ->
+        // Every home star: the drag ones (Sirius, Canopus, Centauri, Recent
+        // Tabs) and Polaris, whose tap is no swipe but is no less the star's.
+        intArrayOf(R.id.all_apps_sirius_star, R.id.configs_canopus_star,
+                   R.id.active_apps_centauri_star, R.id.recent_tabs_star,
+                   R.id.search_polaris_star).any { id ->
+            val v = findViewById<View>(id) ?: return@any false
+            if (!v.isShown) return@any false
+            val at = IntArray(2); v.getLocationInWindow(at)
+            x >= at[0] && x < at[0] + v.width && y >= at[1] && y < at[1] + v.height
+        }
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-        if (::navSwipeGesture.isInitialized) navSwipeGesture.onTouchEvent(ev)
+        if (::navSwipeGesture.isInitialized &&
+            starGestureGate.admits(ev.actionMasked == android.view.MotionEvent.ACTION_DOWN, ev.x, ev.y))
+            navSwipeGesture.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
     }
 
