@@ -490,7 +490,6 @@
     <string name="vault_imported_caption">Display only. Nothing here has been applied to any app. Values over %1$d characters are shortened; tap one to show it in full.</string>
     <string name="vault_connect_code_rejected">The server refused the code: wrong, expired or already used. Mail a new one.</string>
     <string name="vault_connect_server_not_ready">The vault endpoint is not deployed or not configured on the server yet. This is not a problem with your token.</string>
-    <string name="vault_imported_pending">pending</string>
     <string name="vault_tab_imported">Fleet</string>
     <string name="vault_cockpit_caption">The vault against this device, section by section. Rendering changes nothing: every Apply is its own tap, and applies only that section.</string>
     <string name="vault_cockpit_device_label">This device is</string>
@@ -500,13 +499,9 @@
     <string name="vault_cockpit_pick_first">Choose which device this is first.</string>
     <string name="vault_cockpit_section_absent">Not in this vault export: %1$s. Declare it in cloud-vault configs/ and rebuild the bundle.</string>
     <string name="vault_cockpit_apply">Apply %1$s</string>
-    <string name="vault_cockpit_state_match">matches</string>
-    <string name="vault_cockpit_state_differs">differs</string>
-    <string name="vault_cockpit_state_absent">not on this device</string>
-    <string name="vault_cockpit_state_pending">pending in the vault</string>
     <string name="vault_cockpit_reading">reading…</string>
     <string name="vault_cockpit_mail_none">No vault mail account has the local part of %1$s. Set the account email in Connect.</string>
-    <string name="vault_cockpit_keyboard_device">held by the keyboard; not readable from here</string>
+    <string name="vault_cockpit_keyboard_device">cloud-keyboard keeps its lists: it imports only from its own Clipboard settings, so this page can neither write nor read them</string>
     <string name="vault_cockpit_mesh_none">The vault declares no mesh profile whose address is this device\'s (%1$s).</string>
     <string name="vault_cockpit_mesh_confirm">Replaces this device\'s tunnel — address, DNS, MTU, peers AND private key — with the vault\'s profile for %1$s. What is stored now is lost.</string>
     <string name="vault_cockpit_open_wireguard">Open WireGuard</string>
@@ -566,8 +561,6 @@
     <string name="journey_signed_in_as">Signed in as %1$s via %2$s</string>
     <string name="journey_bearer_stored">Bearer stored for %1$s</string>
     <string name="journey_not_signed_in">Not signed in — pick a provider below.</string>
-    <string name="journey_sign_in_caption">The fleet\'s own SSO is primary. A GitHub login also grants the private repos; Google proves an address only. Every route ends in the same place: your config, fetched once.</string>
-    <string name="journey_way_ssh">%1$s · SSH key</string>
     <string name="journey_use_stored_bearer">Use the stored bearer (%1$s)</string>
     <string name="journey_mail_code">Authelia mailed you a code?</string>
     <string name="journey_mail_code_title">Authelia · mailed code</string>
@@ -592,7 +585,6 @@
     <string name="journey_vault_not_fetched">not fetched</string>
     <string name="journey_vault_header">Vault export</string>
     <string name="journey_vault_fetch_open">Fetch &amp; open Fleet</string>
-    <string name="journey_vault_on_tab">Fetch your vault from the Vault tab — it lands here on Fleet.</string>
     <!-- #614 Repos tab -->
     <string name="profile_repos_header">Repos</string>
     <string name="profile_repos_caption">Your repositories, from the fleet declaration. Tap one to open it.</string>
@@ -603,4 +595,49 @@
     <string name="journey_fetched_snack">Config fetched</string>
     <string name="journey_identity_only_done">%1$s proved %2$s</string>
     <!-- the device-grant dialog, one for every provider that speaks RFC 8628 -->
+
+    <!-- #695 Configs ▸ Account: Connect lines, Infos read-out, Cloud Constellation Setup items -->
+    <string name="connect_caption">Sign in on either line. A fetch of your vault configs fills %1$s; %2$s then applies them to the machine you pick below.</string>
+    <string name="connect_way_ssh">SSH key</string>
+    <string name="connect_way_pat">Token (PAT)</string>
+    <string name="connect_way_not_offered">%1$s — your account\'s sign-in policy does not offer this way.</string>
+    <string name="connect_way_unwired">%1$s — not available in this app yet: %2$s</string>
+    <string name="connect_line_held">Held on this line: %1$s</string>
+    <string name="connect_line_idle">Nothing held on this line yet.</string>
+    <string name="connect_held_session">browser session (memory only)</string>
+    <string name="connect_held_bearer">bearer for %1$s</string>
+    <string name="connect_held_github">GitHub token (from the vault)</string>
+    <string name="connect_held_ssh">SSH key (from the vault)</string>
+    <string name="connect_held_header">Credentials on this device</string>
+    <string name="connect_pat_title">GitHub · token</string>
+    <string name="connect_pat_caption">Paste a GitHub token that can read %1$s. It reads ONE file, %2$s, over GitHub\'s contents API, for this one request only: the box is emptied as soon as it is read, and the token is never stored, logged or shown again.</string>
+    <string name="connect_pat_hint">github_pat_… or ghp_…</string>
+    <string name="connect_pat_go">Fetch the vault configs</string>
+    <string name="connect_pat_empty">Paste a token first.</string>
+    <string name="connect_pat_auth_hint">The token cannot read %1$s: it is expired, or lacks read access (Contents: read) to that private repository.</string>
+    <string name="connect_fetching">… fetching %1$s</string>
+    <string name="connect_device_header">This device</string>
+    <string name="connect_device_caption">Which peer / machine of the fetched configs this phone is. %1$s applies everything for this pick; only its id is stored.</string>
+    <string name="connect_device_none">Fetch your vault configs first: the machines to pick from come from them.</string>
+    <string name="infos_caption">Your vault configs as fetched: %1$d sections. Display only — applying is %2$s. A secret shows as •••• with its length and is never drawn; a long list is counted, not listed.</string>
+    <string name="infos_empty">Nothing fetched yet. Sign in on %1$s and fetch your vault configs; they land here, section by section.</string>
+    <string name="infos_section_summary">%1$d values · %2$d masked · %3$d pending</string>
+    <string name="infos_row_masked">•••• masked (%1$d chars)</string>
+    <string name="infos_row_collapsed">%1$d entries (counted, not listed)</string>
+    <string name="infos_row_pending">pending · %1$s</string>
+    <string name="setup_config_header">Your config (per peer)</string>
+    <string name="setup_config_none">No config artifact fetched in this session — sign in with Authelia on %1$s to fetch it.</string>
+    <string name="setup_change_device">Pick the device on %1$s</string>
+    <string name="setup_person_header">Contact card on this device</string>
+    <string name="setup_mail_accounts">The vault declares %1$d accounts. cloud-sa\'s own mail holds one at a time: Apply picks which.</string>
+    <string name="setup_mail_cloud_mail">cloud-mail, the separate mail app, takes accounts only through its own setup screen — none of these can be written into it from here, so there they stay not applied until you add them in cloud-mail.</string>
+    <string name="setup_item_applied">✓ applied</string>
+    <string name="setup_item_not_applied">✗ not applied — %1$s</string>
+    <string name="setup_item_unverifiable">○ not verifiable — this app cannot read that side</string>
+    <string name="setup_why_differs">this device holds something else</string>
+    <string name="setup_why_absent">nothing on this device yet</string>
+    <string name="setup_why_pending">the vault does not carry it yet</string>
+    <string name="setup_about_applied">✓ %1$d fields written: %2$s</string>
+    <string name="setup_about_nothing">✗ Nothing written: the vault\'s about.profile carries none of the declared fields.</string>
+    <string name="journey_get_on_setup">Getting happens here; applying happens on %1$s, item by item.</string>
 </resources>

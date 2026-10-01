@@ -48,6 +48,8 @@ object VaultCockpit {
     data class Section(
         val id: String, val label: String, val vault: List<String>,
         val icon: String = "", val observed: Boolean = true,
+        /** #695 `fields`: device field → vault key, for a section compared field by field (about). */
+        val fields: Map<String, String> = emptyMap(),
     )
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
@@ -64,8 +66,10 @@ object VaultCockpit {
         val sections = (0 until arr.length()).map { i ->
             val s = arr.getJSONObject(i)
             val v = s.optJSONArray("vault") ?: JSONArray()
+            val f = s.optJSONObject("fields") ?: JSONObject()
             Section(s.getString("id"), s.getString("label"), (0 until v.length()).map { v.getString(it) },
-                s.optString("icon"), s.optBoolean("observed", true))
+                s.optString("icon"), s.optBoolean("observed", true),
+                f.keys().asSequence().associateWith { f.getString(it) })
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
         val icons = o.optJSONObject("device_icons") ?: JSONObject()
@@ -270,6 +274,39 @@ object VaultCockpit {
         )
     }
 
+    /**
+     * #695 EVERY account `mail.accounts` declares, addressed at [domain] (the
+     * vault names local parts; the domain is the signed-in address's). Empty when
+     * no domain is known yet, so no address is ever composed from a guess.
+     */
+    fun mailAccounts(bundle: JSONObject, domain: String): List<MailDeclared> {
+        val mail = bundle.optJSONObject("mail") ?: return emptyList()
+        if (domain.isBlank()) return emptyList()
+        val accounts = mail.optJSONObject("accounts") ?: return emptyList()
+        val passwords = mail.optJSONObject("passwords")
+        val host = mail.optJSONObject("endpoints")?.optString("domain").orEmpty()
+        return accounts.keys().asSequence().mapNotNull { key ->
+            val a = accounts.optJSONObject(key) ?: return@mapNotNull null
+            val local = a.optString("name").trim()
+            if (local.isBlank()) return@mapNotNull null
+            val pw = passwords?.opt(a.optString("pass_env"))
+            MailDeclared(key, "$local@$domain", (pw as? String)?.takeIf { it.isNotBlank() }, host)
+        }.toList()
+    }
+
+    /** One item per declared account against [deviceEmail], the address the
+     *  device's mail holds: applied when it is that one, absent when it holds
+     *  none, differs otherwise. Never a password. */
+    fun mailAccountRows(accounts: List<MailDeclared>, deviceEmail: String): List<Row> = accounts.map { d ->
+        Row(d.email, if (d.password == null) "password not in the vault" else "password in the vault",
+            deviceEmail.ifBlank { "—" },
+            when {
+                deviceEmail == d.email -> State.MATCH
+                deviceEmail.isBlank() -> State.ABSENT
+                else -> State.DIFFERS
+            })
+    }
+
     fun mailRows(d: MailDeclared?, prefs: JmapPrefs): List<Row> {
         if (d == null) return emptyList()
         val emailState = if (prefs.email == d.email) State.MATCH else if (prefs.email.isBlank()) State.ABSENT else State.DIFFERS
@@ -295,6 +332,39 @@ object VaultCockpit {
         prefs.email = d.email
         if (d.password != null) prefs.password = d.password
         return "✓ ${d.email} applied" + if (d.password == null) " (no password in the vault)" else ""
+    }
+
+    // ── about: the contact card (#695) ───────────────────────────────────
+
+    /**
+     * `about.profile` against the device's contact card, one row per declared
+     * field ([fields]: device field → vault key). [device] answers a field's
+     * current value, or null for a field the device does not have — which is a
+     * PENDING row that says so, never a silent skip.
+     */
+    fun aboutRows(bundle: JSONObject, fields: Map<String, String>, device: (String) -> String?): List<Row> {
+        val profile = bundle.optJSONObject("about")?.optJSONObject("profile") ?: return emptyList()
+        return fields.map { (field, key) ->
+            val v = profile.optString(key).trim()
+            val d = device(field)?.trim()
+            val state = when {
+                d == null -> State.PENDING
+                v.isBlank() -> State.PENDING
+                d.isBlank() -> State.ABSENT
+                d == v -> State.MATCH
+                else -> State.DIFFERS
+            }
+            Row(field, v.ifBlank { "not in the vault" }, d?.ifBlank { "—" } ?: "no such field on this device", state)
+        }
+    }
+
+    /** Writes every declared field the vault carries through [set]; returns the fields written. */
+    fun applyAbout(bundle: JSONObject, fields: Map<String, String>, set: (String, String) -> Boolean): List<String> {
+        val profile = bundle.optJSONObject("about")?.optJSONObject("profile") ?: return emptyList()
+        return fields.mapNotNull { (field, key) ->
+            val v = profile.optString(key).trim()
+            if (v.isNotBlank() && set(field, v)) field else null
+        }
     }
 
     // ── keyboard & clipboards ────────────────────────────────────────────

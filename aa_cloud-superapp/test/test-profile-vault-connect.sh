@@ -86,20 +86,15 @@ for loc in "$RES"/values*/strings.xml; do
 done
 [ "$FAIL" = 0 ] && ok "T2: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
-echo "== T3: the Fleet COCKPIT (an Infos section since #626), and its sections are data =="
-# #626 collapsed the eight-tab strip to Setup | Infos. The cockpit was NOT
-# deleted with its tab: it moved whole into the declared `fleet` Infos section,
-# so this check follows it there — the only way "moved, not dropped" is provable.
-grep -q '"fleet"  -> renderImported(ctx, group)' "$PF" \
-    && ok "T3: the cockpit renders as the declared fleet Infos section" || bad "T3: nothing renders the cockpit any more"
-python3 - "$BJ" <<'PYFLEET'
-import json, sys
-secs = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]
-f = [s for s in secs if s["id"] == "fleet"]
-sys.exit(0 if f and f[0]["mode"] == "render" else 1)
-PYFLEET
-[ $? = 0 ] && ok "T3: build.json declares the fleet section, and it RENDERS (not a link)" \
-           || bad "T3: ui.profile.infos.sections declares no rendering fleet section"
+echo "== T3: the Fleet COCKPIT (on Cloud Constellation Setup since #695), and its sections are data =="
+# #626 moved the cockpit into an Infos section; #695 moved it whole onto the
+# Setup tab, where the fetched config is APPLIED. This check follows it there —
+# the only way "moved, not dropped" is provable.
+grep -q 'renderImported(ctx, into)' <<<"$(awk '/private fun renderSetup\(/{f=1} f{print} f&&/^    }$/{exit}' "$PF")" \
+    && ok "T3: the cockpit renders on the Setup tab (renderSetup → renderImported)" || bad "T3: nothing renders the cockpit any more"
+grep -q 'renderSetup(ctx, setup)' "$PF" && jq -e '[.ui.profile.tabs[] | select(.id == "setup")] | length == 1' "$BJ" >/dev/null \
+    && ok "T3: build.json declares the setup tab, and the fragment renders the cockpit's page into it" \
+    || bad "T3: the setup tab is not declared, or renderSetup is not its column"
 grep -q 'infosTab = tabs.indexOfFirst { it.column === col }' "$PF" \
     && ok "T3: the Infos index is read off the tab list" || bad "T3: the Infos index is not derived from the list"
 grep -q 'for (section in VaultCockpit.layout.sections)' "$PF" \
@@ -120,12 +115,14 @@ while IFS= read -r l; do
     grep -qF "\"$l\"" <<<"$(codeof "$PF")" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
 done <<< "$LABELS"
 VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
-SCHEMA="$APP/../../cloud-vault/E0_configs/schema.json"
-[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/E0_configs/schema.json"
+# #695 the vault re-lettered E0_configs/ → C_A1-configs/; the old path made this
+# cross-check silently skip (a moved path disarms a tester).
+SCHEMA="$APP/../../cloud-vault/C_A1-configs/schema.json"
+[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/C_A1-configs/schema.json"
 if [ -f "$SCHEMA" ]; then
     for v in $VAULT_IDS; do
         if jq -e --arg v "$v" '.sections[] | select(.id == $v)' "$SCHEMA" >/dev/null; then ok "T3: vault section '$v' exists in cloud-vault schema.json"
-        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault E0_configs/apps, not yet in schema.json — #570 gap)"
+        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault C_A1-configs/apps, not yet in schema.json — #570 gap)"
         else bad "T3: cockpit names vault section '$v', which cloud-vault schema.json does not declare"; fi
     done
 else
@@ -138,7 +135,9 @@ echo "== T4: rendering writes nothing; every apply is a tap =="
 RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure|render[A-Za-z]*|importedValue)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
 [ -n "$RENDER_FNS" ] && ok "T4: found the fetch + render functions" || bad "T4: render functions not found"
 for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting'; do
-    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply')"; then
+    # The per-peer config Apply (#695: on Setup) is a tap, checked below like every apply;
+    # reading ConfigAutoImport.SECTIONS to list them writes nothing.
+    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply' | grep -v 'ConfigAutoImport.apply(' | grep -v 'ConfigAutoImport.SECTIONS')"; then
         bad "T4: the fetch/render path touches $pat"
     else
         ok "T4: no $pat on the fetch/render path"
@@ -152,6 +151,12 @@ for ln in $APPLIES; do
     ctx=$(sed -n "$((ln-8)),${ln}p" "$PF")
     grep -qE 'applyButton\(|setPositiveButton\(' <<<"$ctx" && ok "T4: apply at line $ln is behind a button" \
                                                                || bad "T4: apply at line $ln is not behind a button"
+done
+CAPPLY=$(grep -n 'ConfigAutoImport.apply(' "$PF" | cut -d: -f1)
+[ "$(echo "$CAPPLY" | grep -c .)" = 1 ] && ok "T4: exactly one per-peer config apply on the page" || bad "T4: ConfigAutoImport.apply is called $(echo "$CAPPLY" | grep -c .) times"
+for ln in $CAPPLY; do
+    grep -qE 'pickButton\(|applyButton\(' <<<"$(sed -n "$((ln-3)),${ln}p" "$PF")" && ok "T4: the config apply at line $ln is behind a button" \
+                                                                        || bad "T4: the config apply at line $ln is not behind a button"
 done
 grep -q 'fun applyMesh' "$CP" && grep -q 'Config.parse' "$CP" \
     && ok "T4: the mesh apply goes through the WireGuard parser" || bad "T4: mesh apply does not parse"
@@ -241,11 +246,11 @@ grep -qE '"ic_[a-z_]+"' <<<"$(codeof "$FV" "$PF")" && bad "T8: an icon name is a
 jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
     && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
     || bad "T8: no section declares observed:false — the keyboard's light would be a guess"
-# Infos (which now holds the cockpit) is the default tab once the journey has been
-# walked (#573: before that, the page opens on Setup — where the sign-in and the
-# fetch live, and the cockpit has nothing to compare against yet).
-grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) setupTab else infosTab' "$PF" \
-    && ok "T8: the page opens on Infos once the journey is walked, on Setup before" || bad "T8: the page does not open on Infos after the journey"
+# Infos (the fetched configs) is the default tab once the journey has been walked
+# (#573/#695: before that, the page opens on Connect — where the sign-in and the
+# fetch live, and there is nothing to read or apply yet).
+grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else infosTab' "$PF" \
+    && ok "T8: the page opens on Infos once the journey is walked, on Connect before" || bad "T8: the page does not open on Infos after the journey"
 # The layout-tree test exists and reads the declared ids, which exist.
 [ -f "$FT" ] && ok "T8: FleetCockpitViewTest.kt exists" || bad "T8: no layout-tree test"
 for id in cockpit_hero cockpit_device_orb cockpit_hero_light cockpit_card cockpit_card_badge cockpit_card_light cockpit_card_body; do

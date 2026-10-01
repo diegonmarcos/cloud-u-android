@@ -475,6 +475,11 @@ def profileWizardB64  = profileWizardJson.bytes.encodeBase64().toString()
 // reordering or deep-linking a section needs no Kotlin — renderInfos reads only this.
 def profileInfosJson = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).infos ?: [:])
 def profileInfosB64  = profileInfosJson.bytes.encodeBase64().toString()
+// #695 the Connect tab's sign-in LINES are DATA: build.json::ui.profile.connect
+// (lines → ways, each dispatched on `kind` alone, plus the vault file the GitHub
+// ways read), baked whole so adding, dropping or relabelling a way needs no Kotlin.
+def profileConnectJson = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).connect ?: [:])
+def profileConnectB64  = profileConnectJson.bytes.encodeBase64().toString()
 def consolidatedCfg  = (profileDefault.consolidated_config ?: '').toString()
 // WireGuard defaults — first-run seed for WireGuardPrefs. User edits at
 // runtime via Configs → WireGuard. The interface private key + peer preshared
@@ -877,6 +882,7 @@ android {
         buildConfigField "String", "UI_PROFILE_TABS_B64",   "\"${profileTabsB64}\""
         buildConfigField "String", "UI_PROFILE_WIZARD_B64", "\"${profileWizardB64}\""
         buildConfigField "String", "UI_PROFILE_INFOS_B64",  "\"${profileInfosB64}\""
+        buildConfigField "String", "UI_PROFILE_CONNECT_B64", "\"${profileConnectB64}\""
         buildConfigField "String", "UI_CONSOLIDATED_CONFIG", "\"${consolidatedCfg}\""
         buildConfigField "String", "UI_WG_TUNNEL_NAME",              "\"${wgTunnelName}\""
         buildConfigField "String", "UI_WG_INTERFACE_ADDRESS",        "\"${wgIfAddress}\""

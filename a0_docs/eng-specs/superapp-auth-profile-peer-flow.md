@@ -333,3 +333,49 @@ rest as absent rather than pretend). Testers: `libs/auth/src/test`
 `test-profile-journey.sh` repointed at the lib and the shared declaration,
 drive's `test-drive-configs-sign-in.sh` and `DriveAuthApplyTest`.
 
+
+## 9. Account = Connect | Infos | Cloud Constellation Setup (#695)
+
+Interpreted ask: the Account page becomes exactly three tabs — sign in, read
+what the sign-in fetched, apply it to the machine this phone is — each
+declared, each honest about what it could not do. Restructured from #626's
+Setup | Infos; nothing rebuilt from zero.
+
+* **Tabs** are `build.json::ui.profile.tabs` = `{id, label}` × 3. Kotlin maps an
+  id to its column and names no label.
+* **Connect** is the #573 journey, whose step 1 is now the declared LINES
+  (`ui.profile.connect.lines`, baked `UI_PROFILE_CONNECT_B64`):
+  `Authelia → Gitea` = WebAuth | Bearer, `GitHub` = WebAuth | SSH / PAT. A way
+  is dispatched on `kind` alone: the two Authelia kinds are libs:auth's own
+  (`SignInWays` narrowed to that kind's providers the policy offers — the same
+  dialogs, cookie and bearer store cloud-drive uses); `github_ssh_pat` reads the
+  vault export (`vault_file`, inside `auth.config_source.git.repo`) with an SSH
+  key (JGit, bare, depth 1, deleted after) or a pasted token (contents API raw,
+  `github_contents_url`; one request, never stored). `gh_auth_login` — GitHub
+  CLI's own sign-in — has no handler in this APK (it does not ship gh), so the
+  way renders its declared note instead of a button. The fleet declares no
+  GitHub OAuth app, client id or client secret. Below the journey: the
+  VaultConnect fetch, WHICH machine this is (one stored id, shared with the
+  journey's peer pick), the credentials held (presence only).
+* **Infos** is the fetched bundle and nothing else: one card per section, rows
+  by `InfoMask` from the data. `ui.profile.infos.mask` (`paths`, `values`,
+  `collapse_over`) decides what is drawn; a masked row carries only its length;
+  no pattern, or one that does not compile, masks every leaf.
+* **Setup** applies for the picked machine: the per-peer config (the one
+  `ConfigAutoImport.apply`), the cockpit (`ui.vault_connect.cockpit`, now with
+  `about` → the contact card), the card itself, the repos, the wizard. Every
+  row is an item worded by ONE function: applied, or not applied with its
+  reason; the keyboard (unobservable) reads "not verifiable". Every account
+  `mail.accounts` declares is an item; cloud-mail accepts no account from
+  another app, and the card says so.
+
+Known limits, stated in the UI: private repositories on Cloud git are not
+served through the public edge yet (no fleet identity → gitea user mapping);
+GitHub WebAuth waits for gh to ship in this APK; cloud-keyboard imports its
+lists only from its own Clipboard settings.
+
+Testers: `test-account-three-tabs.sh` (lines, no OAuth app, mask on a
+synthetic and — beside the vault — the real export, verdicts, the token path;
+every rule mutation-proved), T11 of `test-profile-credentials-never-sync.sh`
+(the three tabs), `test-profile-journey.sh` (journey on Connect),
+`InfoMaskTest`, `SetupItemsTest`.

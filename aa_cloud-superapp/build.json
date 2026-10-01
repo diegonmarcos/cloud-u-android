@@ -11,7 +11,7 @@
     "compile_sdk": 35,
     "min_sdk": 26,
     "target_sdk": 34,
-    "version_code": 22,
+    "version_code": 23,
     "version_name": "0.1.1-dev",
     "_doc_abi_filters": "Native-library ABIs shipped in the APK. Defaults to arm64-v8a only because MapLibre Native (added in Push 2) ships ~15-18MB of .so per ABI; shipping all 4 default ABIs (arm64-v8a + armeabi-v7a + x86 + x86_64) inflates the APK from ~22MB to ~82MB. Every Samsung Galaxy from S8 (2017) onward + every modern Pixel is arm64, so this is safe for the user's device. To support 32-bit devices or x86 emulators, add 'armeabi-v7a' / 'x86_64' to this list and rebuild — no Kotlin / gradle edits needed.",
     "abi_filters": [
@@ -6123,31 +6123,50 @@
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json → baked into the app as data/mesh.json (BuildConfig.MESH_JSON_B64), the full wg-mesh/v1 node + peer + transport snapshot"
     },
-    "_doc_profile": "#626. The Configs → Account tab strip, in RENDER ORDER — TWO tabs, down from the eight of #614/#617/#622. Fully data-driven: ProfileFragment builds one tab per id here (baked as UI_PROFILE_TABS_B64) and nothing about the strip's membership or order is spelled out in Kotlin. Ids: setup (the ACCOUNT page — the shared libs:auth sign-in journey and the VaultConnect fetch surface at the TOP, the ui.profile.wizard steps BELOW them on the same page; Connect stopped being its own tab here) and infos (the sectioned read-out, ui.profile.infos.sections). The five tabs #626 removed — connect, vault, fleet, store, repos, wireguard — are gone as tabs: connect+vault MERGED into setup, and fleet/store/repos/wireguard became Infos SECTIONS (fleet and repos render, store and wireguard deep-link, since those two never displayed a datum of their own — they were link tabs). Reorder, add or drop an id here and the strip follows; the tab testers pin this array so a third tab or a reordered tab goes red.",
+    "_doc_profile": "#695. The Configs → Account tab strip, in RENDER ORDER — exactly THREE tabs, each {id, label}; the LABEL is the only user-visible word and lives only here. connect (sign in, two declared lines of ways, and WHICH peer/machine this device is — ui.profile.connect), infos (the fetched vault configs, rendered section by section from the data itself, secrets masked — ui.profile.infos.mask) and setup (\"Cloud Constellation Setup\": applies that config for the selected peer, one item per cockpit section, each saying applied / not applied / why, then the fleet wizard). Restructured from #626's Setup | Infos, nothing rebuilt from zero: the #573 journey + the VaultConnect fetch moved to connect; the #570 cockpit moved from an Infos section to setup, with the contact card, the repos and the wizard; the Infos read-out stopped being a hand-listed set of sections and became the fetched bundle. ProfileFragment maps id → column and nothing else about the strip is spelled out in Kotlin; test-account-three-tabs.sh pins this array (a fourth tab, a dropped or reordered tab, or a label moved into Kotlin goes red).",
     "profile": {
-      "tabs": ["setup", "infos"],
-      "_doc_infos": "#626 THE INFOS READ-OUT — the second and last tab of Configs ▸ Account, rendered by ProfileFragment.renderInfos from THIS list, in order. One entry per section: `id` (selects the renderer / the datum group), `label` (the section header, the only user-visible words), `mode` (`render` = this page draws the data; `link` = the section is a DEEP-LINK to the surface that already owns it, never a second copy of its control) and `route` (the launcher/tab target a `link` section dispatches — `tab:<id>` of this same strip, or a `page:`/`section:` launcher target). ACTIONS DO NOT LIVE HERE: the sign-in, the vault fetch, install-all, the clone and the WG import are the ui.profile.wizard steps, each delegating to its existing engine. WHAT EACH SECTION ABSORBED from the tabs #626 removed: person = the old infos tab (contact card, photos, the privacy disclosure and erase); tokens = the VAULT tab's credential read-out (which bearer/cookie is in play, the stored Authelia address, the GitHub token, the vault's applied stamp); vault = a LINK back to setup, where the fetch surface now lives (the tab itself only ever showed the auth line, which `tokens` carries); repos = the REPOS tab, verbatim, from profile_default.repos; wireguard = the WIREGUARD tab, which was a null-column LINK to section:wg and displayed nothing, so it stays a link; fleet = the FLEET tab, the whole #570 cockpit (device hero + one status-lit card per ui.vault_connect.cockpit.sections + the raw vault sections), moved not rewritten, so its comparisons and its per-card Apply are the same code; store = the STORE tab, a null-column LINK to page:config/store-phone, which owns the declared-app list. Adding a section is an entry here plus its renderer; a section declared with no renderer falls to the caption that says so, and the tester pins declared == dispatched so a hardcoded section goes red.",
-      "infos": {
-        "sections": [
-          { "id": "person",    "label": "Person details",        "mode": "render", "route": "" },
-          { "id": "tokens",    "label": "Tokens & credentials",  "mode": "render", "route": "" },
-          { "id": "vault",     "label": "Vault bundle",          "mode": "link",   "route": "tab:setup" },
-          { "id": "repos",     "label": "Repos",                 "mode": "render", "route": "" },
-          { "id": "wireguard", "label": "WireGuard profiles",    "mode": "link",   "route": "section:wg" },
-          { "id": "fleet",     "label": "Fleet & services",      "mode": "render", "route": "" },
-          { "id": "store",     "label": "Store apps",            "mode": "link",   "route": "page:config/store-phone" }
-        ]
+      "tabs": [
+        { "id": "connect", "label": "Connect" },
+        { "id": "infos",   "label": "Infos" },
+        { "id": "setup",   "label": "Cloud Constellation Setup" }
+      ],
+      "_doc_connect": "#695 THE SIGN-IN LINES of Configs ▸ Account ▸ Connect, rendered as step 1 of the #573 journey. Each line is one place to sign in and each of its ways is one pill, side by side: `kind` is the ONLY thing ProfileFragment dispatches on. authelia_web / authelia_bearer are libs:auth's own sign-in kinds (auth.sign_in in ab_cloud-libs-shared/build.json): the pill hosts the SHARED SignInWays narrowed to that one provider, so the dialog, the session cookie and the bearer store are the ones cloud-drive uses — never a copy. github_ssh_pat is this page's read of the vault export out of the private vault repo (auth.config_source.git.repo @ ref, path `vault_file`): an SSH key (JGit clone, bare, depth 1, deleted after) or a pasted token (the contents API, `github_contents_url`, raw), used once and never stored. A way whose kind this app does not dispatch renders its `note` as the reason it cannot start — never a dead button. gh_auth_login is GitHub CLI's own sign-in, carrying GitHub's public client inside the gh binary; the fleet registers NO GitHub OAuth app, client_id or client_secret of its own, and this APK does not ship gh. `note` on a line is what that line cannot do yet, stated plainly.",
+      "connect": {
+        "lines": [
+          { "id": "authelia", "label": "Authelia → Gitea",
+            "note": "Cloud git (gitea) rides this same Authelia session in cloud-drive, but through the public edge gitea does not yet know who you are: private repositories stay invisible there until the fleet identity is mapped to a gitea user. The vault configs below come through the fleet's vault route, which works today.",
+            "ways": [
+              { "id": "webauth", "label": "WebAuth", "kind": "authelia_web" },
+              { "id": "bearer",  "label": "Bearer",  "kind": "authelia_bearer" }
+            ] },
+          { "id": "github", "label": "GitHub",
+            "ways": [
+              { "id": "webauth", "label": "WebAuth", "kind": "gh_auth_login",
+                "note": "GitHub CLI's own sign-in (gh auth login, GitHub's public client inside gh). It runs in cloud-drive ▸ Sync ▸ Git, which ships gh; this APK does not, so it cannot start here — use SSH / PAT." },
+              { "id": "ssh_pat", "label": "SSH / PAT", "kind": "github_ssh_pat" }
+            ] }
+        ],
+        "vault_file": "C_A1-configs/profile-secrets.json",
+        "github_contents_url": "https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
       },
-      "_doc_wizard": "#622 THE FLEET WIZARD — the ordered, resumable flow that takes a fresh or half-configured phone to fully configured, rendered on the Profile 'setup' tab (Wizard.kt → renderWizard). FULLY DATA-DRIVEN: the steps, their ORDER, and each step's done-check id + delegation route live ONLY here (baked UI_PROFILE_WIZARD_B64). Reorder or drop a step and the wizard follows; nothing about membership or order is spelled out in Kotlin. Per step: `id` (also the rendered row tag wizard:<id>), `label` (row text), `check` (selects a REAL measurement in Wizard.done — NEVER a remembered boolean, so re-entering a done step cannot break it and a step undone elsewhere returns to pending; this is the #452 'green that verified nothing' rule), `route` (the EXISTING surface the step delegates to — a `tab:<id>` of this same strip, or a launcher `page:`/`section:` target; empty = terminal). Every step DELEGATES; there is no second implementation of sign-in, install, WG import or the cockpit here. DONE-CHECKS: identity/vault/permissions/apps/wireguard are real single measurements (session-or-bearer / appliedAt-or-bundle / Environment.isExternalStorageManager+notif-listener+DUMP / every declared kind=app pkg installed / WireGuardPrefs key+peers); repos measures the real GitHub-token prerequisite the private-repo clone needs (the clone itself lives in the cloud-drive app, not here); fleet is a real COMPOSITE (wireguard AND vault) because no synchronous mesh ping exists to call; finish re-measures every other step. test-profile-journey.sh pins the step order and that the checks are real, not flags. #626: the steps and their checks are UNCHANGED — only the `route` targets moved with the strip, because the strip is two tabs now. identity and vault route to `tab:setup` because their surfaces (the shared sign-in journey, the VaultConnect fetch) are on that very page, ABOVE these rows; repos and fleet route to `tab:infos`, where their read-outs became sections; permissions, apps and wireguard still leave for the launcher page that owns them.",
+      "_doc_infos": "#695 THE INFOS READ-OUT is the FETCHED vault configs and nothing else: one card per section of the bundle a Connect way fetched (order and labels from the vault's own schema.json when the fetch carries it, else the bundle's keys), every leaf drawn from the data. `mask` is the whole of what changes the drawing: `paths` (case-insensitive, against `section › key › …`) and `values` mask a leaf — the row then carries only the value's LENGTH, so the secret never reaches a view; `collapse_over` folds any object or list larger than this into one counted row (the keyboard's default clipboard list is 476 clips, and pasted tokens live in clips). MEASURED on the real bundle 2026-09-30: every token, password, key, WireGuard profile and clip text masks; ~200 rows draw. A declaration with no pattern, or a pattern that does not compile, masks EVERY leaf (InfoMask.maskAll). #626's hand-listed sections moved, none was lost: person → setup (contact card), tokens → connect (credentials held), repos → setup, fleet → setup (the cockpit), vault/wireguard/store were links and their surfaces are unchanged.",
+      "infos": {
+        "mask": {
+          "paths": ["token", "pass", "secret", "private", "credential", "bearer", "cookie", "key", "dkim", "ssh", "card", "iban", "relay", "^autocomplete › .* › text$"],
+          "values": ["PrivateKey", "PresharedKey", "-----BEGIN", "ENC\\[AES", "(?i)bearer\\s+\\S{16,}", "gh[pousr]_[A-Za-z0-9]{20,}", "github_pat_", "sk-[A-Za-z0-9_-]{20,}", "eyJ[A-Za-z0-9_-]{10,}\\.", "[A-Za-z0-9+/=]{40,}", "[A-Za-z0-9_-]{40,}"],
+          "collapse_over": 12
+        }
+      },
+      "_doc_wizard": "#622 THE FLEET WIZARD — the ordered, resumable flow that takes a fresh or half-configured phone to fully configured, rendered at the bottom of the Account 'setup' tab (Wizard.kt → renderWizard). FULLY DATA-DRIVEN: the steps, their ORDER, and each step's done-check id + delegation route live ONLY here (baked UI_PROFILE_WIZARD_B64). Per step: `id` (also the rendered row tag wizard:<id>), `label`, `check` (a REAL live measurement in Wizard.done — never a remembered boolean, #452) and `route` (the EXISTING surface the step delegates to — a `tab:<id>` of this same strip, or a launcher `page:`/`section:` target; empty = terminal). #695: the steps and their checks are UNCHANGED; only the tab routes follow the three-tab strip — identity and vault to `tab:connect` (sign-in and fetch live there), repos and fleet to `tab:setup` (the cockpit and the repos moved there). A `tab:` route naming no declared tab goes red in test-profile-journey.sh.",
       "wizard": {
         "steps": [
-        { "id": "identity",  "label": "Connect · identity (Authelia · GitHub · Google)", "check": "identity",    "route": "tab:setup" },
-        { "id": "vault",       "label": "Vault · fetch + import the bundle",               "check": "vault",       "route": "tab:setup" },
+        { "id": "identity",  "label": "Connect · identity (Authelia · GitHub · Google)", "check": "identity",    "route": "tab:connect" },
+        { "id": "vault",       "label": "Vault · fetch + import the bundle",               "check": "vault",       "route": "tab:connect" },
         { "id": "permissions", "label": "Permissions · files · notifications · dev",        "check": "permissions", "route": "page:config/perms" },
         { "id": "apps",        "label": "Apps · install every declared phone app",          "check": "apps",        "route": "page:config/store-phone" },
-        { "id": "repos",       "label": "Repos & Drive · clone the declared repos",         "check": "repos",       "route": "tab:infos" },
+        { "id": "repos",       "label": "Repos & Drive · clone the declared repos",         "check": "repos",       "route": "tab:setup" },
         { "id": "wireguard",   "label": "WireGuard · import the declared profiles",         "check": "wireguard",   "route": "section:wg" },
-        { "id": "fleet",       "label": "Fleet & services · mesh + cockpit checks",         "check": "fleet",       "route": "tab:infos" },
+        { "id": "fleet",       "label": "Fleet & services · mesh + cockpit checks",         "check": "fleet",       "route": "tab:setup" },
         { "id": "finish",      "label": "Finish · configured vs still-missing",             "check": "finish",      "route": "" }
         ]
       }
@@ -6423,6 +6442,23 @@
               "apps"
             ],
             "icon": "ic_home_apps"
+          },
+          {
+            "_doc": "#695 the owner's contact card: vault about.profile against this device's ProfilePrefs, one row per `fields` entry (device field → vault key). The card itself (editable, synced, erasable) is drawn right below it on Setup.",
+            "id": "about",
+            "label": "About · contact card",
+            "vault": [
+              "about"
+            ],
+            "icon": "ic_p_identities",
+            "fields": {
+              "name": "name",
+              "email": "email",
+              "company": "company",
+              "location": "location",
+              "website": "website",
+              "titles": "titles_v2"
+            }
           }
         ],
         "device_icons": {

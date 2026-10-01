@@ -229,13 +229,13 @@ hasnt_code "$FRAGMENT" "R.id.section_pane"         "no pane host ids are borrowe
 has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a redraw"
 
 # Connect IS the journey (#573); Mesh Data carries the tunnel key.
-has "$FRAGMENT" 'renderJourney(ctx, setup)'                             "the journey is the top of Setup (#626)"
+has "$FRAGMENT" 'renderJourney(ctx, connect)'                           "the journey is the top of Connect (#695)"
 has "$FRAGMENT" 'journey_use_stored_bearer'                             "the stored bearer is a step-1 pill on Connect"
 has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
 hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
 # #626 the section HEADER is the declaration's label now, not a Kotlin literal:
 # the contact card is the declared `person` section, drawn by renderPerson.
-has "$FRAGMENT" 'private fun renderPerson('                             "Infos has a person (contact card) section"
+has "$FRAGMENT" 'private fun renderPerson('                             "Setup has the contact card (renderPerson)"
 hasnt_code "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
 hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
 has "$FRAGMENT" 'journey_import_file'                                   "the manual file route survives as the last line of step 4"
@@ -287,28 +287,31 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: TWO tabs (#626 — Setup | Infos), declarative order in build.json; the export carries no private key =="
+echo "== T11: THREE tabs (#695 — Connect | Infos | Cloud Constellation Setup), declared {id, label} in build.json; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
-# The two tab literals live in the id→Tab map; the STRIP's order + membership
-# come from build.json::ui.profile.tabs (data), not this map's declaration order.
-has "$FRAGMENT" 'Tab("Setup", setup)'  "Setup tab present"
-has "$FRAGMENT" 'Tab("Infos", col)'    "Infos tab present"
-# #626 the six tabs that were COLLAPSED are gone as tabs — Connect and Vault
-# merged INTO Setup, the other four became Infos sections. A surviving literal
-# here would be a ninth column nobody renders, or a tab the declaration cannot
-# reach; both look exactly like the collapse having landed.
-for gone in 'Tab("Connect"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
-    hasnt_code "$FRAGMENT" "$gone" "the collapsed tab literal $gone is gone"
+# The id → column map is the ONLY tab knowledge in Kotlin; every LABEL is the
+# declaration's (build.json::ui.profile.tabs[].label).
+has "$FRAGMENT" 'val columns = mapOf("connect" to connect, "infos" to col, "setup" to setup)' "the id → column map names the three columns"
+has "$FRAGMENT" 'Tab(t.label, it)' "each tab's title is its declared label"
+# No tab label is a Kotlin literal, and none of the tabs the strip lost comes back.
+for gone in 'Tab("Setup"' 'Tab("Infos"' 'Tab("Connect"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
+    hasnt_code "$FRAGMENT" "$gone" "no tab label literal $gone"
 done
-# Connect MERGED, not deleted: the journey and the vault fetch render on Setup.
-has "$FRAGMENT" 'renderJourney(ctx, setup)' "the sign-in journey renders on Setup"
-has "$FRAGMENT" 'renderVault(ctx, setup)'   "the vault fetch renders on Setup (was its own tab)"
-has "$FRAGMENT" 'renderWizard(ctx, setup)'  "the wizard renders on Setup, below them"
-# And every tab now HAS a column: #614's null-column launch tabs are Infos links.
-hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives — a deep-link is an Infos section"
-# The strip is DATA: order + membership come from the baked build.json array.
-has "$FRAGMENT" "profileTabOrder()"                "the strip is built from the declared tab order"
-has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the order comes from the baked build.json blob"
+# NOTHING WAS DROPPED: every surface of the #626 page renders on one of the three.
+has "$FRAGMENT" 'renderJourney(ctx, connect)' "the sign-in journey renders on Connect"
+has "$FRAGMENT" 'renderVault(ctx, connect)'   "the vault fetch renders on Connect"
+has "$FRAGMENT" 'renderTokens(ctx, connect)'  "the credentials read-out renders on Connect"
+has "$FRAGMENT" 'renderInfos(ctx, col)'       "the fetched configs render on Infos"
+has "$FRAGMENT" 'renderSetup(ctx, setup)'     "Cloud Constellation Setup renders on Setup"
+SETUP_FN=$(awk '/private fun renderSetup\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
+for moved in 'renderConfigApply(ctx, into)' 'renderImported(ctx, into)' 'renderPerson(ctx, into)' 'renderRepos(ctx, into)' 'renderWizard(ctx, into)'; do
+    grep -qF "$moved" <<<"$SETUP_FN" && ok "Setup renders $moved" || bad "Setup does not render $moved"
+done
+# And every tab HAS a column: #614's null-column launch tabs are gone.
+hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"
+# The strip is DATA: ids, order and labels come from the baked build.json array.
+has "$FRAGMENT" "profileTabs()"                    "the strip is built from the declared tabs"
+has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the tabs come from the baked build.json blob"
 has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
 # AI is not a tab; the AI cockpit card still links to the page that already exists.
 hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
@@ -318,10 +321,10 @@ hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted he
 has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "the cockpit's WireGuard link uses the declared section target"
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# Still no child fragments and no borrowed launcher machinery, at two tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "two tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "two tabs still avoid the section mechanism"
-# #626 the page is called ACCOUNT now, and the words live in ONE declaration.
+# Still no child fragments and no borrowed launcher machinery, at three tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "three tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "three tabs still avoid the section mechanism"
+# #626 the page is called ACCOUNT, and the words live in ONE declaration.
 name_is_account() {   # $1 = build.json; 0 iff the Configs identity page reads "Account"
     python3 - "$1" <<'PYNAME'
 import json, sys
@@ -335,13 +338,14 @@ PYNAME
 name_is_account "$ROOT/build.json" && ok "T11-name: Configs ▸ Account — the tile/page label is the ONE declaration" \
                                    || bad "T11-name: the Configs identity page is not labelled Account"
 
-echo "-- T11-order: the strip is EXACTLY [setup, infos], in that order (#626) --"
-tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared order matches
+echo "-- T11-order: the strip is EXACTLY [connect, infos, setup], each with a label (#695) --"
+tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared ids match, in order, and every tab has a label
     python3 - "$1" <<'PY'
 import json, sys
-want = ["setup", "infos"]
-got = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs")
-sys.exit(0 if got == want else 1)
+want = ["connect", "infos", "setup"]
+tabs = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs") or []
+labelled = all(isinstance(t, dict) and str(t.get("label", "")).strip() for t in tabs)
+sys.exit(0 if labelled and [t.get("id") for t in tabs] == want else 1)
 PY
 }
 wg_has_externals() {   # $1 = build.json path; returns 0 iff warp+proton are declared
@@ -352,37 +356,36 @@ ids = {p["id"] for p in ext}
 sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
 PY
 }
-if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the two tabs in the required order"
-else bad "T11-order: build.json tab order is wrong"; fi
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the three tabs, labelled, in the required order"
+else bad "T11-order: build.json tab order or labels are wrong"; fi
 
-echo "-- T11-mutation: a THIRD tab, a dropped tab, a reordered tab, and a missing WG profile each go red --"
+echo "-- T11-mutation: a FOURTH tab, a dropped tab, a reordered tab, an unlabelled tab and a missing WG profile each go red --"
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 cp "$ROOT/build.json" "$SCRATCH/build.json"
 tab_order_ok "$SCRATCH/build.json" && wg_has_externals "$SCRATCH/build.json" \
     && ok "T11-mutation: the unmutated tree passes both gates" \
     || bad "T11-mutation: the unmutated tree should pass both gates"
-# (1) dropped tab
-python3 - "$SCRATCH/build.json" <<'PY'
+tab_mut() {   # $1 = python statement over t (the tabs list); prints nothing; 0 iff the mutation was caught
+    cp "$ROOT/build.json" "$SCRATCH/build.json"
+    python3 - "$SCRATCH/build.json" "$1" <<'PY'
 import json,sys
-p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"]=[t for t in d["ui"]["profile"]["tabs"] if t!="infos"]; json.dump(d,open(p,"w"))
+p=sys.argv[1]; d=json.load(open(p)); t=d["ui"]["profile"]["tabs"]; exec(sys.argv[2]); json.dump(d,open(p,"w"))
 PY
-tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a dropped tab was NOT caught" || ok "T11-mutation: a dropped tab is caught"
+    cmp -s "$ROOT/build.json" "$SCRATCH/build.json" && return 2
+    ! tab_order_ok "$SCRATCH/build.json"
+}
+for m in 't[:] = [x for x in t if x["id"] != "infos"]' \
+         't.append({"id": "vault", "label": "Vault"})' \
+         't[0], t[1] = t[1], t[0]' \
+         't[2]["label"] = ""'; do
+    tab_mut "$m"; rc=$?
+    case $rc in
+        0) ok "T11-mutation: caught — $m" ;;
+        2) bad "T11-mutation: the mutation did not apply (tester stale) — $m" ;;
+        *) bad "T11-mutation: NOT caught — $m" ;;
+    esac
+done
 cp "$ROOT/build.json" "$SCRATCH/build.json"
-# (1b) #626 a THIRD tab — the collapse is two tabs, so re-growing the strip goes red
-python3 - "$SCRATCH/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"].append("vault"); json.dump(d,open(p,"w"))
-PY
-tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a THIRD tab was NOT caught" || ok "T11-mutation: a third tab is caught"
-cp "$ROOT/build.json" "$SCRATCH/build.json"
-# (2) wrong order (swap the first two)
-python3 - "$SCRATCH/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p)); t=d["ui"]["profile"]["tabs"]; t[0],t[1]=t[1],t[0]; json.dump(d,open(p,"w"))
-PY
-tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a reordered tab was NOT caught" || ok "T11-mutation: a reordered tab is caught"
-cp "$ROOT/build.json" "$SCRATCH/build.json"
-# (3) missing WG profile (from the external block warp+proton live in)
 python3 - "$SCRATCH/build.json" <<'PY'
 import json,sys
 p=sys.argv[1]; d=json.load(open(p)); w=d["ui"]["wireguard_external_profiles"]; w["profiles"]=[x for x in w["profiles"] if x["id"]!="proton-vpn"]; json.dump(d,open(p,"w"))
@@ -390,21 +393,18 @@ PY
 wg_has_externals "$SCRATCH/build.json" && bad "T11-mutation: a missing WG profile was NOT caught" || ok "T11-mutation: a missing WG profile is caught"
 rm -rf "$SCRATCH"; trap - EXIT
 
-echo "-- T11-infos: the Infos read-out is DATA (#626) — every section, its order and its mode come from build.json --"
-# The whole point of the collapse: five tabs became SECTIONS of one page, and the
-# section list is a declaration. A hardcoded section is the defect this catches —
-# it would render for nobody who reads build.json and would survive every edit to it.
-has "$FRAGMENT" "UI_PROFILE_INFOS_B64"        "T11-infos: the fragment reads the baked section list"
-has "app/build.gradle" "UI_PROFILE_INFOS_B64" "T11-infos: the blob is baked"
-has "build.json" '"infos"'                    "T11-infos: build.json declares ui.profile.infos"
-has "$FRAGMENT" "for (s in sections)"         "T11-infos: renderInfos iterates the declared sections"
-has "$FRAGMENT" 'profileInfoSections()'       "T11-infos: …read off the declaration, not a literal list"
-# ACTIONS ARE NOT HERE: the read-out never re-implements an install, a clone or an import.
-hasnt_code "$FRAGMENT" "renderStore"             "T11-infos: no Store list is re-rendered here"
-hasnt_code "$FRAGMENT" "CONSTELLATION_FLEET_B64" "T11-infos: no copy of the declared fleet list — the Store page owns it"
-# NOTHING LOST: every datum the collapsed tabs showed has a home here.
-for absorbed in 'renderPerson(ctx, group)' 'renderTokens(ctx, group)' 'renderRepos(ctx, group)' 'renderImported(ctx, group)'; do
-    has "$FRAGMENT" "$absorbed" "T11-infos: $absorbed is wired into a section"
+echo "-- T11-infos: the Infos read-out is the FETCHED configs, not a hand-listed set (#695) --"
+# The mask rule and its proof live in test-account-three-tabs.sh; this block pins
+# that #626's hand-listed sections are gone and the read-out is the import itself.
+INFOS_FN=$(awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
+grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INFOS_FN" && ok "T11-infos: renderInfos reads the fetched sections" || bad "T11-infos: renderInfos does not read the fetched import"
+grep -qF 'mask.rows(section.id, bundle.opt(section.id))' <<<"$INFOS_FN" && ok "T11-infos: every row comes from the fetched bundle, through the mask" || bad "T11-infos: rows are not drawn from the fetched bundle"
+grep -qE '"(person|tokens|repos|fleet|vault|wireguard|store)"' <<<"$(codeof "$FRAGMENT" | awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}')" \
+    && bad "T11-infos: renderInfos still names a hand-listed section" || ok "T11-infos: renderInfos names no section of its own"
+jq -e '.ui.profile.infos.sections' "$ROOT/build.json" >/dev/null 2>&1 \
+    && bad "T11-infos: build.json still hand-lists ui.profile.infos.sections" || ok "T11-infos: no hand-listed section list is declared"
+for gone in 'UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))' 'profileInfoSections()' 'MODE_LINK' 'INFOS_NO_RENDERER'; do
+    hasnt_code "$FRAGMENT" "$gone" "T11-infos: the hand-listed read-out is gone ($gone)"
 done
 # PRESENCE, never the value: the credential read-out must not print a secret.
 if awk '/private fun renderTokens/,/^    }$/' "$ROOT/$FRAGMENT" \
@@ -413,86 +413,25 @@ if awk '/private fun renderTokens/,/^    }$/' "$ROOT/$FRAGMENT" \
 else
     ok "T11-infos: renderTokens reports presence, never a credential value"
 fi
-# The section LABELS are the declaration's words — not Kotlin literals.
-while IFS= read -r l; do
-    [ -n "$l" ] || continue
-    codeof "$FRAGMENT" | grep -qF "\"$l\"" && bad "T11-infos: section label '$l' is also a Kotlin literal" \
-                                             || ok "T11-infos: label '$l' lives only in build.json"
-done <<< "$(python3 -c 'import json,sys; print("\n".join(s["label"] for s in json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]))' "$ROOT/build.json")"
-
-echo "-- T11-infos-shape: every declared section is well-formed, and declared == dispatched --"
-# The set the fragment DISPATCHES on is read out of the when(s.id) block, so the
-# comparison is between two real lists rather than between a list and a belief.
-infos_ok() {   # $1 = build.json, $2 = ProfileFragment.kt; prints the first broken rule
-    local bj="$1" pf="$2" declared dispatched
-    python3 - "$bj" <<'PYSHAPE' || return 1
-import json, sys
-secs = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]
-ids = [s["id"] for s in secs]
-assert len(secs) >= 7, "fewer than seven sections"
-assert len(set(ids)) == len(ids), "duplicate section id"
-for s in secs:
-    assert s.get("label"), "%s has no label" % s["id"]
-    assert s.get("mode") in ("render", "link"), "%s has no render/link mode" % s["id"]
-    if s["mode"] == "link":
-        assert s.get("route"), "link section %s has no route" % s["id"]
-PYSHAPE
-    declared=$(python3 -c 'import json,sys; print("\n".join(sorted(s["id"] for s in json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"] if s["mode"]=="render")))' "$bj")
-    dispatched=$(awk '/when \(s\.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$pf" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
-    [ "$declared" = "$dispatched" ] || { echo "declared render sections [$(echo $declared)] != dispatched [$(echo $dispatched)]"; return 1; }
-    return 0
-}
-msg=$(infos_ok "$ROOT/build.json" "$ROOT/$FRAGMENT") \
-    && ok "T11-infos-shape: the sections are well-formed and every rendered id has a renderer" \
-    || bad "T11-infos-shape: $msg"
-
-echo "-- T11-infos-mutation: a hardcoded section, a dropped section and a reordered list each go red --"
+echo "-- T11-infos-mutation: a hand-listed read-out goes red --"
 SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
-# (1) a section that exists ONLY in Kotlin — the hardcode this gate is for
-cp "$ROOT/build.json" "$SCRATCH2/build.json"
-python3 - "$SCRATCH2/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p))
-s=d["ui"]["profile"]["infos"]["sections"]
-d["ui"]["profile"]["infos"]["sections"]=[x for x in s if x["id"]!="repos"]
-json.dump(d,open(p,"w"))
-PY
-infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
-    && bad "T11-infos-mutation: a section rendered but NOT declared was NOT caught" \
-    || ok "T11-infos-mutation: a hardcoded (dispatched, undeclared) section is caught"
-# (2) a section declared with no renderer — the mirror defect
-cp "$ROOT/build.json" "$SCRATCH2/build.json"
-python3 - "$SCRATCH2/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p))
-d["ui"]["profile"]["infos"]["sections"].append({"id":"health","label":"Health","mode":"render","route":""})
-json.dump(d,open(p,"w"))
-PY
-infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
-    && bad "T11-infos-mutation: a declared section with no renderer was NOT caught" \
-    || ok "T11-infos-mutation: a declared section with no renderer is caught"
-# (3) a link section with no route — a deep-link that goes nowhere
-cp "$ROOT/build.json" "$SCRATCH2/build.json"
-python3 - "$SCRATCH2/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p))
-for x in d["ui"]["profile"]["infos"]["sections"]:
-    if x["mode"]=="link": x["route"]=""
-json.dump(d,open(p,"w"))
-PY
-infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
-    && bad "T11-infos-mutation: a routeless link section was NOT caught" \
-    || ok "T11-infos-mutation: a routeless link section is caught"
-# (4) the fragment stops reading the declaration and iterates a literal list
-sed 's/val sections = profileInfoSections()/val sections = listOf(InfoSection("person", "Person details", MODE_RENDER, ""))/' \
+sed 's/val sections = VaultConnect.Imported.last/val sections = listOf(VaultConnect.Section("person", "Person details", emptyList()))/' \
     "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
 if cmp -s "$ROOT/$FRAGMENT" "$SCRATCH2/mut.kt"; then
     bad "T11-infos-mutation: the hardcode mutation did not apply (tester stale)"
 else
-    grep -qF 'val sections = profileInfoSections()' "$SCRATCH2/mut.kt" \
-        && bad "T11-infos-mutation: a hardcoded section list was NOT caught" \
-        || ok "T11-infos-mutation: a hardcoded section list is caught"
+    awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}' "$SCRATCH2/mut.kt" | grep -qF 'val sections = VaultConnect.Imported.last' \
+        && bad "T11-infos-mutation: a hand-listed Infos section was NOT caught" \
+        || ok "T11-infos-mutation: a hand-listed Infos section is caught"
 fi
+cp "$ROOT/build.json" "$SCRATCH2/build.json"
+python3 - "$SCRATCH2/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["infos"]["sections"]=[{"id":"person","label":"Person","mode":"render","route":""}]; json.dump(d,open(p,"w"))
+PY
+jq -e '.ui.profile.infos.sections' "$SCRATCH2/build.json" >/dev/null 2>&1 \
+    && ok "T11-infos-mutation: a re-grown hand-listed section list is caught" \
+    || bad "T11-infos-mutation: a re-grown hand-listed section list was NOT caught"
 rm -rf "$SCRATCH2"; trap - EXIT
 
 echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"

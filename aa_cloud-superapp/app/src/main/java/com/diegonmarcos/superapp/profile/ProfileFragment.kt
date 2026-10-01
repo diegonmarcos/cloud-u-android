@@ -36,28 +36,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Configs → ACCOUNT (#626) — TWO tabs, both declared in build.json::ui.profile.
+ * Configs → ACCOUNT (#695) — exactly THREE tabs, declared {id, label} in
+ * build.json::ui.profile.tabs; this file maps an id to its column and names no
+ * label, order or membership of its own.
  *
- * The eight-tab strip of #614/#617/#622 collapsed to two, and the collapse is a
- * DATA edit plus the renderers it names — nothing about membership, order or
- * section list is spelled out here:
+ *  • CONNECT — the #573 journey, whose step 1 is now the declared sign-in LINES
+ *    (ui.profile.connect: Authelia → Gitea = WebAuth | Bearer, GitHub = WebAuth |
+ *    SSH / PAT), each way dispatched on its `kind` alone and every Authelia way
+ *    hosted through the SHARED libs:auth SignInWays — the same dialogs, cookie
+ *    and bearer store cloud-drive uses. Then the VaultConnect fetch
+ *    ([renderVault]), WHICH machine this device is ([renderDevicePick] — Setup
+ *    applies for that pick), and the credentials held ([renderTokens]).
+ *  • INFOS — the FETCHED vault configs and nothing else ([renderInfos]): one card
+ *    per section of the bundle, every row from the data, secrets masked by the
+ *    declared rule ([InfoMask]); nothing on it applies anything.
+ *  • SETUP ("Cloud Constellation Setup") — applies that config for the selected
+ *    peer ([renderSetup]): the per-peer config Apply, the #570 cockpit (one card
+ *    per declared section — mail, keyboard, mesh, drive, ai, apps, about — every
+ *    row saying applied / not applied / why), the contact card, the repos, and
+ *    the #622 wizard.
  *
- *  • SETUP is the account page. The shared libs:auth sign-in journey
- *    ([renderJourney]) and the VaultConnect fetch surface ([renderVault]) — what
- *    used to be the Connect and Vault tabs — render at the TOP, and the fleet
- *    wizard's ordered steps ([renderWizard], build.json::ui.profile.wizard)
- *    render BELOW them on the same page. Connect is no longer its own tab.
- *  • INFOS is the read-out ([renderInfos], build.json::ui.profile.infos.sections):
- *    one section per declared entry, each either RENDERING its data (person,
- *    tokens, repos, fleet) or DEEP-LINKING to the surface that already owns it
- *    (vault → back to Setup, wireguard → section:wg, store → Store ▸ Phone).
- *    The five tabs #626 removed lost no datum: the Fleet cockpit moved here
- *    whole, Repos verbatim, the Vault tab's credential read-out became `tokens`,
- *    and the two link-only tabs (Store, WireGuard) stayed links.
- *
- * ACTIONS ARE THE WIZARD'S. Sign-in, vault fetch, install-all, clone and WG
- * import are wizard steps delegating to their existing engines exactly as #622
- * wired them; Infos adds no second control for any of them.
+ * RESTRUCTURED, NOT REBUILT: #626's Setup | Infos pieces all moved — journey +
+ * fetch to Connect, cockpit + person + repos + wizard to Setup, tokens to Connect
+ * — and the hand-listed Infos sections became the bundle itself.
  *
  * The contact card is bound to [ProfilePrefs] and auto-saves on every text
  * change (no explicit Save button) — the drawer header reads from the same
@@ -94,11 +95,19 @@ class ProfileFragment : Fragment() {
      *  until the strip is first built. */
     private var selectedTab = -1
 
+    /** Position of the Connect tab — the sign-in, the fetch and the device pick. */
+    private var connectTab = 0
+
     /** Position of the Infos tab, read off the strip's own list. */
     private var infosTab = 0
 
-    /** Position of the Setup tab — where the sign-in and the fetch now live. */
+    /** Position of the Setup tab — where the fetched config is applied. */
     private var setupTab = 0
+
+    /** The declared tab labels, in strip order — so a pointer to a tab names it in the declaration's words. */
+    private var tabLabels: List<String> = emptyList()
+
+    private fun tabLabel(index: Int): String = tabLabels.getOrNull(index).orEmpty()
 
     /** The strip itself, so the cockpit can send the owner to Connect. */
     private var strip: TabLayout? = null
@@ -158,15 +167,14 @@ class ProfileFragment : Fragment() {
         }
         scroll.addView(page)
 
-        // TWO content columns (#626), one per declared tab; `col` keeps its name
-        // so every field that only MOVED into an Infos section keeps its call
-        // site. There is no third column: the surfaces the removed tabs hosted
-        // are either on Setup (the sign-in journey, the vault fetch) or an Infos
-        // SECTION, and the two that were pure links stayed links.
-        val setup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        // THREE content columns (#695), one per declared tab id; `col` is the
+        // Infos read-out.
+        val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        page.addView(setup)
+        val setup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        page.addView(connect)
         page.addView(col)
+        page.addView(setup)
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -175,45 +183,44 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        // THE STRIP IS DATA (#614, two tabs since #626): build.json::ui.profile.tabs
-        // (UI_PROFILE_TABS_B64) lists one id per tab in render order, and this map
-        // is only the id → column lookup. Reorder, add or drop an id in build.json
-        // and the strip follows; nothing about the strip's membership or order is
-        // spelled out here.
-        val byId = mapOf(
-            "setup" to Tab("Setup", setup),
-            "infos" to Tab("Infos", col),
-        )
-        val tabs = profileTabOrder().mapNotNull { byId[it] }
+        // THE STRIP IS DATA (#614; three tabs since #695): build.json::ui.profile.tabs
+        // (UI_PROFILE_TABS_B64) lists {id, label} per tab in render order, and this
+        // map is only the id → column lookup. The LABEL comes off the declaration;
+        // an id with no column here draws no tab rather than an invented one.
+        val columns = mapOf("connect" to connect, "infos" to col, "setup" to setup)
+        val tabs = profileTabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } }
+        connectTab = tabs.indexOfFirst { it.column === connect }
         infosTab = tabs.indexOfFirst { it.column === col }
         setupTab = tabs.indexOfFirst { it.column === setup }
-        // The page opens on SETUP until the journey is walked once (#573): the
-        // cockpit (now an Infos section) has nothing to compare against before
-        // the vault is fetched. Once walked, the read-out is the page again.
+        tabLabels = tabs.map { it.title }
+        // The page opens on CONNECT until the journey is walked once (#573):
+        // Infos and Setup have nothing to show before the vault is fetched.
+        // Once walked, the read-out is the page again.
         if (selectedTab < 0) {
-            selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) setupTab else infosTab
+            selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else infosTab
         }
         root.addView(tabStrip(ctx, tabs))
         root.addView(scroll)
 
-        // ── SETUP: the connect surfaces at the TOP, the wizard BELOW ──────
-        // Sign-in first (the shared libs:auth journey), then the vault fetch that
-        // journey earns the credential for, then the ordered steps that measure
-        // and delegate. One page, in that order.
-        renderJourney(ctx, setup)
-        renderVault(ctx, setup)
-        renderWizard(ctx, setup)
+        // ── CONNECT: sign in, fetch, say which machine this is ────────────
+        renderJourney(ctx, connect)
+        renderVault(ctx, connect)
+        renderDevicePick(ctx, connect)
+        renderTokens(ctx, connect)
 
-        // ── INFOS: the declared sections, in declared order ───────────────
+        // ── INFOS: the fetched vault configs, section by section ──────────
         renderInfos(ctx, col)
+
+        // ── SETUP: apply that config for the picked machine ───────────────
+        renderSetup(ctx, setup)
 
         return root
     }
 
     /**
-     * The `person` Infos section: the contact card, its photos, the privacy
-     * disclosure and the erase action — what the old Infos tab was, unchanged,
-     * now one section among the declared list.
+     * The contact card on this device — its photos, the privacy disclosure and
+     * the erase action — unchanged since the old Infos tab; on Setup since #695,
+     * right under the `about` cockpit card that applies the vault's copy to it.
      */
     private fun renderPerson(ctx: android.content.Context, col: LinearLayout) {
         col.addView(caption(ctx, "Edit your contact card — auto-saved on change. Your initials in the drawer are derived from your name; the rest powers the Virtual Business Card."))
@@ -330,67 +337,73 @@ class ProfileFragment : Fragment() {
         })
     }
 
-    // ── Infos · THE SECTIONED READ-OUT (#626) ─────────────────────────────
-
-    /** One declared Infos section. [mode] is `render` (this page draws the data)
-     *  or `link` (a deep-link to the surface that already owns it, dispatched
-     *  through [openWizardRoute] — never a second copy of its control). */
-    private data class InfoSection(val id: String, val label: String, val mode: String, val route: String)
-
-    /** The declared sections, in order — build.json::ui.profile.infos.sections
-     *  (UI_PROFILE_INFOS_B64). An unparseable blob yields the empty list, so a
-     *  broken bake shows no read-out rather than an invented one. */
-    private fun profileInfoSections(): List<InfoSection> = runCatching {
-        val json = String(android.util.Base64.decode(
-            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))
-        val arr = org.json.JSONObject(json).optJSONArray("sections") ?: return emptyList()
-        (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            InfoSection(o.getString("id"), o.optString("label", o.getString("id")),
-                o.optString("mode", MODE_RENDER), o.optString("route", ""))
-        }
-    }.getOrDefault(emptyList())
+    // ── Infos · THE FETCHED VAULT CONFIGS (#695) ──────────────────────────
 
     /**
-     * THE READ-OUT. One section per DECLARED entry, in declared order, each
-     * tagged `infos:<id>`. Nothing about which sections exist, what they are
-     * called or which of them are links is written here: the list is data, and
-     * an id with no renderer says so instead of silently drawing nothing.
+     * THE READ-OUT is the bundle a Connect way fetched, and nothing else: one
+     * card per section of it — order and labels from the vault's own schema when
+     * the fetch carried it ([VaultConnect.sections]), else the bundle's keys —
+     * each tagged `infos:<section id>`, every row drawn from the data by
+     * [InfoMask.rows]. No section, field or label is written here, so a section
+     * the vault grows shows up the day it is fetched.
      *
-     * DENSE by intent (#621): this is a data page, so the rows are the caption
-     * scale and the headers carry the grouping — no card per datum.
+     * SECRETS NEVER REACH A VIEW: a masked row carries only its length (see
+     * [InfoMask]); what may be drawn is build.json::ui.profile.infos.mask.
+     * DISPLAY ONLY — applying is Setup's, per item.
      */
     private fun renderInfos(ctx: android.content.Context, into: LinearLayout) {
-        val sections = profileInfoSections()
-        if (sections.isEmpty()) return
-        for (s in sections) {
-            val group = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                tag = "infos:${s.id}"
+        val sections = VaultConnect.Imported.last
+        val bundle = VaultConnect.Imported.bundle
+        if (sections == null || bundle == null) {
+            into.addView(caption(ctx, getString(R.string.infos_empty, tabLabel(connectTab))))
+            into.addView(pickButton(ctx, tabLabel(connectTab)) { strip?.getTabAt(connectTab)?.select() })
+            return
+        }
+        into.addView(caption(ctx, getString(R.string.infos_caption, sections.size, tabLabel(setupTab))))
+        val mask = InfoMask.declared
+        for (section in sections) {
+            val rows = mask.rows(section.id, bundle.opt(section.id))
+            val card = FleetCockpitView.card(ctx, section.label, "infos:${section.id}",
+                Sections.iconResFor(ctx, ""), getString(R.string.vault_cockpit_card_toggle))
+            FleetCockpitView.paint(card.light,
+                if (rows.isEmpty()) StatusLight.State.UNKNOWN else StatusLight.State.ON, section.label)
+            card.summary.text = getString(R.string.infos_section_summary, rows.size,
+                rows.count { it.kind == InfoMask.Kind.MASKED }, rows.count { it.kind == InfoMask.Kind.PENDING })
+            if (rows.isEmpty()) card.body.addView(caption(ctx, getString(R.string.vault_cockpit_card_absent_summary)))
+            for (row in rows) {
+                card.body.addView(label(ctx, row.path.ifBlank { section.id }))
+                card.body.addView(infoValue(ctx, row))
             }
-            into.addView(group)
-            group.addView(sectionHeader(ctx, s.label))
-            if (s.mode == MODE_LINK) {
-                // Action-only surfaces keep ONE home. The section says where it
-                // is and goes there; it does not re-host the control.
-                group.addView(caption(ctx, INFOS_LINK_TEXT))
-                group.addView(pickButton(ctx, s.label) { openWizardRoute(s.route) })
-                continue
-            }
-            when (s.id) {
-                "person" -> renderPerson(ctx, group)
-                "tokens" -> renderTokens(ctx, group)
-                "repos"  -> renderRepos(ctx, group)
-                "fleet"  -> renderImported(ctx, group)
-                else     -> group.addView(caption(ctx, INFOS_NO_RENDERER))
-            }
+            into.addView(card.root)
         }
     }
 
+    /** One read-out value. A MASKED row has no text to show — only its length. */
+    private fun infoValue(ctx: android.content.Context, row: InfoMask.Row): TextView =
+        TextView(ctx).apply {
+            typeface = android.graphics.Typeface.MONOSPACE
+            when (row.kind) {
+                InfoMask.Kind.MASKED -> { text = getString(R.string.infos_row_masked, row.size); setTextColor(NEUTRAL) }
+                InfoMask.Kind.COLLAPSED -> { text = getString(R.string.infos_row_collapsed, row.size); setTextColor(NEUTRAL) }
+                InfoMask.Kind.PENDING -> { text = getString(R.string.infos_row_pending, row.text); setTextColor(NEUTRAL) }
+                InfoMask.Kind.SHOWN -> {
+                    setTextIsSelectable(true)
+                    val short = if (row.text.length > IMPORTED_PREVIEW_CHARS)
+                        row.text.take(IMPORTED_PREVIEW_CHARS) + "… (+${row.text.length - IMPORTED_PREVIEW_CHARS})"
+                    else row.text
+                    text = short
+                    if (short != row.text) {
+                        var full = false
+                        setOnClickListener { full = !full; text = if (full) row.text else short }
+                    }
+                }
+            }
+        }
+
     /**
-     * The `tokens` section: WHICH credential is in play, read live — the one
-     * datum the Vault tab displayed (its auth line) plus the stored identity,
-     * the GitHub token the repo clone needs and the vault's applied stamp.
+     * WHICH credential is in play, read live — the stored identity, the session,
+     * the GitHub token the repo clone needs and the vault's applied stamp. On
+     * Connect since #695 (it was #626's `tokens` Infos section).
      *
      * READ-OUT ONLY, and presence rather than value: no token, key or cookie is
      * ever printed here, and no control clears one — the clear buttons stay with
@@ -399,6 +412,7 @@ class ProfileFragment : Fragment() {
     private fun renderTokens(ctx: android.content.Context, into: LinearLayout) {
         val configs = ConfigsPrefs(ctx)
         val session = SignIn.Current.session
+        into.addView(sectionHeader(ctx, getString(R.string.connect_held_header)))
         into.addView(caption(ctx, TOKENS_TEXT))
         into.addView(infoRow(ctx, "Session", session?.let {
             "${SignIn.provider(it.provider)?.label ?: it.provider} · ${it.identity.ifBlank { "—" }}"
@@ -569,41 +583,131 @@ class ProfileFragment : Fragment() {
         paintJourney()
     }
 
+    // ── Connect · the declared sign-in LINES (#695) ───────────────────────
+
+    /** One way into a line: [kind] is the only thing dispatched on; [note] is
+     *  why it cannot start here when this app wires no handler for it. */
+    private data class Way(val id: String, val label: String, val kind: String, val note: String)
+
+    /** One line of ways, side by side; [note] is what the line cannot do yet. */
+    private data class Line(val id: String, val label: String, val note: String, val ways: List<Way>)
+
+    /** build.json::ui.profile.connect (UI_PROFILE_CONNECT_B64); a broken bake is no JSON. */
+    private fun connectDecl(): org.json.JSONObject = runCatching {
+        org.json.JSONObject(String(android.util.Base64.decode(
+            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_CONNECT_B64, android.util.Base64.NO_WRAP)))
+    }.getOrDefault(org.json.JSONObject())
+
+    /** The declared lines, in order; an unparseable blob yields none rather than invented ones. */
+    private fun connectLines(): List<Line> = runCatching {
+        val arr = connectDecl().optJSONArray("lines") ?: return emptyList()
+        (0 until arr.length()).map { i ->
+            val l = arr.getJSONObject(i)
+            val w = l.optJSONArray("ways") ?: org.json.JSONArray()
+            Line(l.getString("id"), l.optString("label", l.getString("id")), l.optString("note"),
+                (0 until w.length()).map { j ->
+                    val x = w.getJSONObject(j)
+                    Way(x.getString("id"), x.optString("label", x.getString("id")), x.optString("kind"), x.optString("note"))
+                })
+        }
+    }.getOrDefault(emptyList())
+
     /**
-     * Step 1: one pill per declared provider — in declared order, filtered by
-     * the artifact's `auth_providers` policy once one is known — dispatched on
-     * the provider's kind and grants only. A stored bearer is a sign-in that
-     * survives restarts, so it gets its own one-tap pill and its clear button.
+     * Step 1: the declared LINES, one row of ways each, side by side — every way
+     * drawn by [buildWay] from its kind, never from its label. Below each row,
+     * what the line holds now and what it cannot do yet (its declared note).
      */
     private fun buildSignInStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
-        body.addView(caption(ctx, getString(R.string.journey_sign_in_caption)))
+        body.addView(caption(ctx, getString(R.string.connect_caption, tabLabel(infosTab), tabLabel(setupTab))))
         val policy = s.registry?.authProviders.orEmpty()
-        val offered = SignIn.offered(policy)
         val status = statusView(ctx)
-        // THE shared sign-in surface (libs:auth, #587): one pill per declared way,
-        // the three dialogs and the fetches live there and are the same ones
-        // cloud-drive hosts. Drawn in the cockpit's pill so it reads as this page.
-        body.addView(ComposeView(ctx).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                SignInWays(host = signInHost, policy = policy, pill = { label, tag, onClick ->
-                    AndroidView(factory = { c -> FleetCockpitView.pill(c, label, onClick).apply { this.tag = tag } })
-                })
+        for (line in connectLines()) {
+            body.addView(label(ctx, line.label))
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                tag = "connect:${line.id}"
             }
-        })
-        // #614: the three explicit ways beside the declared pills.
-        //  • WebOAuth — the browser (OWebAuth) portal login, the same shared
-        //    dialog the vault route uses (one login, both fetches), not a copy.
-        body.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
-        //  • token + mail-code — the bearer way's own controls (a pasted/stored
-        //    token, and the Authelia mailed code), which stay with the bearer
-        //    provider, so a policy that does not offer it does not show them.
-        if (offered.any { it.kind == SignIn.Kind.AUTHELIA_BEARER }) buildStoredBearer(ctx, s, body, status)
-        // The SSH clone is this app's own way (JGit) beside the provider that grants the repo.
-        offered.firstOrNull { it.grants(SignIn.GRANT_REPO_ARTIFACT) }?.let { p ->
-            body.addView(pickButton(ctx, getString(R.string.journey_way_ssh, p.label)) { showGithubSshDialog() })
+            val extras = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            line.ways.forEachIndexed { i, way ->
+                val cell = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    tag = "connect:${line.id}:${way.id}"
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                        .apply { if (i > 0) marginStart = dp(ctx, 8) }
+                }
+                buildWay(ctx, s, way, policy, cell, extras, status)
+                row.addView(cell)
+            }
+            body.addView(row)
+            body.addView(extras)
+            body.addView(caption(ctx, lineHeld(ctx, line)))
+            if (line.note.isNotBlank()) body.addView(caption(ctx, line.note))
         }
         body.addView(status)
+    }
+
+    /**
+     * One way, by KIND. The two Authelia kinds are libs:auth's own vocabulary
+     * (a provider's `kind`, lower-cased) and host the SHARED [SignInWays]
+     * narrowed to exactly the providers of that kind the user's policy offers —
+     * the dialog, the cookie and the bearer store are cloud-drive's too. The
+     * GitHub read is this page's ([KIND_GITHUB_SSH_PAT]). Any other kind has no
+     * handler here and says why (its declared note) instead of drawing a button.
+     */
+    private fun buildWay(
+        ctx: android.content.Context, s: ProfileJourney.State, way: Way, policy: List<String>,
+        cell: LinearLayout, extras: LinearLayout, status: TextView,
+    ) {
+        if (way.kind == KIND_GITHUB_SSH_PAT) {
+            cell.addView(caption(ctx, way.label))
+            cell.addView(pickButton(ctx, getString(R.string.connect_way_ssh)) { showGithubSshDialog() })
+            cell.addView(pickButton(ctx, getString(R.string.connect_way_pat)) { showGithubPatDialog() })
+            return
+        }
+        val declared = SignIn.providers.filter { it.kind.name.lowercase() == way.kind }
+        val offered = SignIn.offered(policy).filter { it.kind.name.lowercase() == way.kind }
+        when {
+            offered.isNotEmpty() -> cell.addView(signInWay(ctx, way, offered.map { it.id }))
+            declared.isNotEmpty() -> cell.addView(caption(ctx, getString(R.string.connect_way_not_offered, way.label)))
+            else -> cell.addView(caption(ctx, getString(R.string.connect_way_unwired, way.label, way.note)))
+        }
+        // The bearer way's own controls (stored token, orphan link, mailed code)
+        // stay with it, so a policy that does not offer it does not show them.
+        if (offered.any { it.kind == SignIn.Kind.AUTHELIA_BEARER }) buildStoredBearer(ctx, s, extras, status)
+    }
+
+    /** THE shared sign-in surface (libs:auth, #587) for one way, drawn in the cockpit's pill with the way's declared label. */
+    private fun signInWay(ctx: android.content.Context, way: Way, providerIds: List<String>): View =
+        ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                SignInWays(host = signInHost, policy = providerIds, pill = { _, tag, onClick ->
+                    AndroidView(factory = { c -> FleetCockpitView.pill(c, way.label, onClick).apply { this.tag = tag } })
+                })
+            }
+        }
+
+    /** What [line] holds on this device right now — presence, never a value. */
+    private fun lineHeld(ctx: android.content.Context, line: Line): String {
+        val configs = ConfigsPrefs(ctx)
+        val held = line.ways.flatMap { way ->
+            when (way.kind) {
+                SignIn.Kind.AUTHELIA_WEB.name.lowercase() ->
+                    listOfNotNull(getString(R.string.connect_held_session).takeIf { vaultSession != null })
+                SignIn.Kind.AUTHELIA_BEARER.name.lowercase() ->
+                    listOfNotNull(configs.autheliaEmail.takeIf { configs.autheliaToken.isNotBlank() }
+                        ?.let { getString(R.string.connect_held_bearer, it) })
+                KIND_GITHUB_SSH_PAT -> listOfNotNull(
+                    getString(R.string.connect_held_github)
+                        .takeIf { configs.secret(VaultCockpit.SECTION_GIT, VaultCockpit.K_GITHUB_TOKEN).isNotBlank() },
+                    getString(R.string.connect_held_ssh)
+                        .takeIf { configs.secret(VaultCockpit.SECTION_SSH, VaultCockpit.K_VAULT_REPO_KEY).isNotBlank() },
+                )
+                else -> emptyList<String>()
+            }
+        }
+        return if (held.isEmpty()) getString(R.string.connect_line_idle)
+               else getString(R.string.connect_line_held, held.joinToString(" · "))
     }
 
     /** The bearer way's own controls: the stored token (one tap, clearable), an
@@ -660,34 +764,13 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * Step 4: what the artifact carries for the chosen peer and the ONE
-     * Apply (the chosen peer's profiles are what ConfigAutoImport writes);
-     * then the #566 vault export, whose fetch lands on the Fleet tab; and,
-     * last, the manual file route — the one entry that needs no credential.
+     * Step 4 on Connect: getting is here, APPLYING is Setup's (#695) — the step
+     * says so and goes there; then the manual file route, the one entry that
+     * needs no credential.
      */
     private fun buildGetStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
-        val artifact = UserRegistry.Current.artifact
-        val peer = s.chosenPeer
-        if (artifact != null && peer != null) {
-            body.addView(caption(ctx, getString(R.string.journey_get_caption, peer.label)))
-            for (section in ConfigAutoImport.SECTIONS) {
-                if (section == "wireguard")
-                    body.addView(caption(ctx, getString(R.string.journey_get_wireguard, UserRegistry.peerProfiles(artifact, peer.id).size, peer.label)))
-                else
-                    body.addView(caption(ctx, getString(if (artifact.has(section)) R.string.journey_get_line_present else R.string.journey_get_line_absent, section)))
-            }
-            val status = statusView(ctx)
-            body.addView(pickButton(ctx, getString(R.string.journey_apply)) {
-                val report = ConfigAutoImport.apply(ctx.applicationContext, artifact)
-                if (report.ok) { failedSteps -= ProfileJourney.Step.GET; UserRegistry.markApplied(ctx, stamp()) }
-                else failedSteps += ProfileJourney.Step.GET
-                show(status, if (report.ok) GREEN else RED, report.text())
-                paintJourney()
-                body.visibility = View.VISIBLE   // the report was just asked for; it stays on screen
-            })
-            body.addView(caption(ctx, getString(R.string.journey_vault_on_tab)))
-            body.addView(status)
-        }
+        body.addView(caption(ctx, getString(R.string.journey_get_on_setup, tabLabel(setupTab))))
+        body.addView(pickButton(ctx, tabLabel(setupTab)) { strip?.getTabAt(setupTab)?.select() })
         // #585: the file must be the DECRYPTED export. Said here, before the tap,
         // because the encrypted repo file is what the owner has at hand.
         body.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
@@ -697,17 +780,49 @@ class ProfileFragment : Fragment() {
         })
     }
 
-    // ── Setup · the VaultConnect fetch surface (#614, on Setup since #626) ─
+    /**
+     * Setup · the per-peer CONFIG (ex journey step 4, #573): what the fetched
+     * artifact carries for the peer picked on Connect, and the ONE Apply on this
+     * page (the chosen peer's profiles are what ConfigAutoImport writes). With no
+     * artifact or no pick it says which is missing instead of an Apply.
+     */
+    private fun renderConfigApply(ctx: android.content.Context, into: LinearLayout) {
+        into.addView(sectionHeader(ctx, getString(R.string.setup_config_header)))
+        val artifact = UserRegistry.Current.artifact
+        val peer = journeyState(ctx).chosenPeer
+        if (artifact == null || peer == null) {
+            into.addView(caption(ctx, if (artifact == null) getString(R.string.setup_config_none, tabLabel(connectTab))
+                                   else getString(R.string.journey_lock_pick_peer)))
+            return
+        }
+        into.addView(caption(ctx, getString(R.string.journey_get_caption, peer.label)))
+        for (section in ConfigAutoImport.SECTIONS) {
+            if (section == "wireguard")
+                into.addView(caption(ctx, getString(R.string.journey_get_wireguard, UserRegistry.peerProfiles(artifact, peer.id).size, peer.label)))
+            else
+                into.addView(caption(ctx, getString(if (artifact.has(section)) R.string.journey_get_line_present else R.string.journey_get_line_absent, section)))
+        }
+        val status = statusView(ctx)
+        into.addView(pickButton(ctx, getString(R.string.journey_apply)) {
+            val report = ConfigAutoImport.apply(ctx.applicationContext, artifact)
+            if (report.ok) { failedSteps -= ProfileJourney.Step.GET; UserRegistry.markApplied(ctx, stamp()) }
+            else failedSteps += ProfileJourney.Step.GET
+            show(status, if (report.ok) GREEN else RED, report.text())
+            paintJourney()
+        })
+        into.addView(status)
+    }
+
+    // ── Connect · the VaultConnect fetch surface (#614; on Connect since #695) ─
 
     /**
-     * The VaultConnect fetch surface. It sat on its own Vault TAB until #626
-     * merged Connect and Vault into Setup; it now renders directly below the
-     * sign-in journey, which is what earns the credential it spends. The
-     * credential is the durable bearer or the in-memory browser session; the
-     * WebOAuth browser login earns the session, the code box takes the mailed
-     * one-time code, and a successful fetch lands on the Fleet cockpit. Reuses
-     * the same [vaultStart]/[vaultFetch]/[VaultConnect] the journey used — no
-     * second client. RENDERING WRITES NOTHING; every call is behind a button.
+     * The VaultConnect fetch surface, directly below the sign-in journey, which
+     * is what earns the credential it spends. The credential is the durable
+     * bearer or the in-memory browser session; the WebOAuth browser login earns
+     * the session, the code box takes the mailed one-time code, and a successful
+     * fetch lands on Infos. Reuses the same [vaultStart]/[vaultFetch]/[VaultConnect]
+     * the journey used — no second client. RENDERING WRITES NOTHING; every call
+     * is behind a button.
      */
     private fun renderVault(ctx: android.content.Context, into: LinearLayout) {
         into.addView(sectionHeader(ctx, getString(R.string.journey_vault_header)))
@@ -720,12 +835,49 @@ class ProfileFragment : Fragment() {
         into.addView(status)
     }
 
-    // ── Infos ▸ repos · the owner's repositories (#614) ───────────────────
+    // ── Connect · WHICH machine this is (#695) ────────────────────────────
 
     /**
-     * The `repos` Infos SECTION (the Repos tab until #626, verbatim): the
-     * owner's repositories, DATA-DRIVEN from
-     * build.json::ui.profile_default.repos (UI_PROFILE_REPOS_B64) — the same
+     * The pick Setup applies for: one of the fetched bundle's declared devices
+     * ([VaultCockpit.devices]), chosen in a spinner, never typed. Only the id is
+     * stored. The journey's step 3 picks a peer of the config artifact and points
+     * this same choice at the peer's vault device, so both routes land in ONE
+     * stored value.
+     */
+    private fun renderDevicePick(ctx: android.content.Context, into: LinearLayout) {
+        into.addView(sectionHeader(ctx, getString(R.string.connect_device_header)))
+        val bundle = VaultConnect.Imported.bundle
+        if (bundle == null) {
+            into.addView(caption(ctx, getString(R.string.connect_device_none)))
+            return
+        }
+        into.addView(caption(ctx, getString(R.string.connect_device_caption, tabLabel(setupTab))))
+        renderDeviceSelector(ctx, into, VaultCockpit.devices(bundle))
+    }
+
+    // ── Setup · CLOUD CONSTELLATION SETUP (#695) ─────────────────────────
+
+    /**
+     * Applies the fetched config for the machine picked on Connect: the per-peer
+     * config ([renderConfigApply]), then the cockpit ([renderImported] — one card
+     * per declared section, every row applied / not applied / why), the contact
+     * card the `about` card applies to, the declared repos, and the wizard.
+     */
+    private fun renderSetup(ctx: android.content.Context, into: LinearLayout) {
+        renderConfigApply(ctx, into)
+        renderImported(ctx, into)
+        into.addView(sectionHeader(ctx, getString(R.string.setup_person_header)))
+        renderPerson(ctx, into)
+        into.addView(sectionHeader(ctx, getString(R.string.profile_repos_header)))
+        renderRepos(ctx, into)
+        renderWizard(ctx, into)
+    }
+
+    // ── Setup ▸ repos · the owner's repositories (#614) ───────────────────
+
+    /**
+     * The owner's repositories (the Repos tab until #626, verbatim), DATA-DRIVEN
+     * from build.json::ui.profile_default.repos (UI_PROFILE_REPOS_B64) — the same
      * declared set Configs ▸ About surfaces. The signed-in GitHub grant (scope
      * `repo`) is what a live listing would reuse, but the declared set is the
      * source of truth and needs no network to show. Each row opens the repo.
@@ -747,9 +899,8 @@ class ProfileFragment : Fragment() {
     // ── Setup · THE FLEET WIZARD (#622) ───────────────────────────────────
 
     /**
-     * The wizard, rendered BELOW the connect surfaces on the Setup tab (#626):
-     * the ordered, resumable fleet-configuration flow that is also the account
-     * centre. The steps, their order and each step's done-check + route
+     * The wizard, rendered at the BOTTOM of the Setup tab (#695): the ordered,
+     * resumable fleet-configuration flow that is also the account centre. The steps, their order and each step's done-check + route
      * are DATA ([Wizard.steps], from build.json::ui.profile.wizard). Each row
      * shows a REAL, live-measured done light ([Wizard.done] — never a stored
      * flag, #452) and, tapped, DELEGATES to the surface that step configures
@@ -809,15 +960,24 @@ class ProfileFragment : Fragment() {
         }
     }.getOrDefault(emptyList())
 
-    /** #614 the tab strip is data: build.json::ui.profile.tabs (UI_PROFILE_TABS_B64),
-     *  one id per tab in render order. An unparseable blob yields the empty list, so
-     *  a broken bake shows no strip rather than an invented one. */
-    private fun profileTabOrder(): List<String> = runCatching {
+    /** One declared tab: [id] selects the column, [label] is the only word drawn. */
+    private data class TabDecl(val id: String, val label: String)
+
+    /** #614/#695 the tab strip is data: build.json::ui.profile.tabs (UI_PROFILE_TABS_B64),
+     *  one {id, label} per tab in render order. An unparseable blob yields the empty
+     *  list, so a broken bake shows no strip rather than an invented one. */
+    private fun profileTabs(): List<TabDecl> = runCatching {
         val json = String(android.util.Base64.decode(
             com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_TABS_B64, android.util.Base64.NO_WRAP))
         val arr = org.json.JSONArray(json)
-        (0 until arr.length()).map { arr.getString(it) }
+        (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            TabDecl(o.getString("id"), o.optString("label", o.getString("id")))
+        }
     }.getOrDefault(emptyList())
+
+    /** The declared tab ids, in order — what a `tab:<id>` route resolves against. */
+    private fun profileTabOrder(): List<String> = profileTabs().map { it.id }
 
     private fun statusView(ctx: android.content.Context): TextView = TextView(ctx).apply {
         setTextAppearance(android.R.style.TextAppearance_Material_Caption)
@@ -847,9 +1007,9 @@ class ProfileFragment : Fragment() {
     // ── tabs ─────────────────────────────────────────────────────────────
 
     /**
-     * The Setup | Infos strip (#626).
+     * The Connect | Infos | Cloud Constellation Setup strip (#695; labels are the declaration's).
      *
-     * Two plain columns swapped by visibility — no child fragments, no pane
+     * Plain columns swapped by visibility — no child fragments, no pane
      * host ids, no build.json pages (see the note in [onCreateView]). It reuses
      * [AppTabsStyle] so the pills read exactly like the launcher's section
      * strips, which is the whole of what that idiom is worth here.
@@ -1094,24 +1254,33 @@ class ProfileFragment : Fragment() {
             when (val o = withContext(Dispatchers.IO) { VaultConnect.fetch(e, auth, code) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     showVaultFailure(status, o)
-                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
-                    // The gate schema.json asks for: an unknown version is refused whole.
-                    VaultConnect.unknownSchemaVersion(o.body, VaultConnect.knownSchemaVersions)?.let { v ->
-                        show(status, RED, "✗ " + getString(R.string.vault_connect_schema_unknown, v,
-                            VaultConnect.knownSchemaVersions.sorted().joinToString(", ")))
-                        return@launch
-                    }
-                    val sections = VaultConnect.sections(o.body)
-                    VaultConnect.Imported.last = sections
-                    VaultConnect.Imported.bundle = o.body.optJSONObject("bundle") ?: o.body
-                    show(status, GREEN, getString(
-                        R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
-                    selectedTab = infosTab
-                    parentFragmentManager.beginTransaction().detach(this@ProfileFragment).commitNow()
-                    parentFragmentManager.beginTransaction().attach(this@ProfileFragment).commitNow()
-                }
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)
             }
         }
+    }
+
+    /**
+     * EVERY route that fetched the vault export lands here (#695): the mailed-code
+     * fetch, the GitHub token read and the SSH clone. The schema gate first (an
+     * unknown version is refused whole), then the ONE in-memory import Infos and
+     * Setup read, then Infos. A dialog route passes [redrawNow] false: the page
+     * is redrawn when the dialog closes (importDialog's dismiss), never under it.
+     */
+    private fun landVault(status: TextView, body: org.json.JSONObject, redrawNow: Boolean = true): Boolean {
+        VaultConnect.unknownSchemaVersion(body, VaultConnect.knownSchemaVersions)?.let { v ->
+            show(status, RED, "✗ " + getString(R.string.vault_connect_schema_unknown, v,
+                VaultConnect.knownSchemaVersions.sorted().joinToString(", ")))
+            return false
+        }
+        val sections = VaultConnect.sections(body)
+        VaultConnect.Imported.last = sections
+        VaultConnect.Imported.bundle = body.optJSONObject("bundle") ?: body
+        show(status, GREEN, getString(
+            R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
+        selectedTab = infosTab
+        importedThisSession = true
+        if (redrawNow && isAdded && !isStateSaved) { importedThisSession = false; redraw() }
+        return true
     }
 
     private fun showVaultFailure(
@@ -1127,13 +1296,15 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * The `fleet` Infos SECTION (the Fleet tab until #626, moved whole): the COCKPIT.
+     * The COCKPIT, on Setup since #695 (the Fleet tab until #626, then an Infos
+     * section): what Cloud Constellation Setup applies, item by item.
      *
      * A hero card for the device this phone is — orb, name, mesh identity, the
-     * overall light and the device chooser — then one card per cockpit section
-     * (build.json::ui.vault_connect.cockpit) with the section's own light, a
-     * summary line, the comparison rows and its Apply; then one last card, raw,
-     * for every vault section no cockpit section names. The chrome is
+     * overall light and the way back to Connect, where it is picked — then one
+     * card per cockpit section (build.json::ui.vault_connect.cockpit) with the
+     * section's own light, a summary line, the rows (each saying applied / not
+     * applied / why, [renderRows]) and its Apply; then one last card, raw, for
+     * every vault section no cockpit section names. The chrome is
      * [FleetCockpitView]; the lights are the shared [StatusLight], summed per
      * card by [VaultCockpit.sectionLight] and over the page by
      * [VaultCockpit.overallLight]. RENDERING WRITES NOTHING — every apply is a tap.
@@ -1152,7 +1323,7 @@ class ProfileFragment : Fragment() {
             FleetCockpitView.paint(hero.light, StatusLight.State.UNKNOWN, hero.title.text.toString())
             hero.summary.text = getString(R.string.vault_cockpit_hero_empty)
             hero.slot.addView(pickButton(ctx, getString(R.string.vault_cockpit_connect_cta)) {
-                strip?.getTabAt(setupTab)?.select()
+                strip?.getTabAt(connectTab)?.select()
             })
             into.addView(hero.root)
             return
@@ -1166,7 +1337,10 @@ class ProfileFragment : Fragment() {
             Sections.iconResFor(ctx, VaultCockpit.deviceIcon(layout, device)))
         heroViews = hero
         into.addView(hero.root)
-        renderDeviceSelector(ctx, hero.slot, devices)
+        // The pick lives on Connect (#695); the hero says which it is and goes there.
+        hero.slot.addView(pickButton(ctx, getString(R.string.setup_change_device, tabLabel(connectTab))) {
+            strip?.getTabAt(connectTab)?.select()
+        })
         into.addView(caption(ctx, getString(R.string.vault_cockpit_caption)))
 
         for (section in VaultCockpit.layout.sections) {
@@ -1181,11 +1355,12 @@ class ProfileFragment : Fragment() {
             val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
             val rows: List<VaultCockpit.Row> = when (section.id) {
                 "mail"     -> renderMail(ctx, card.body, bundle, status)
-                "keyboard" -> VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)).also { renderRows(ctx, card.body, it) }
+                "keyboard" -> VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)).also { renderRows(ctx, card.body, it, section.observed) }
                 "mesh"     -> renderMesh(ctx, card.body, bundle, device, status)
                 "drive"    -> renderDrive(ctx, card.body, bundle, status)
                 "ai"       -> renderAi(ctx, card.body, bundle, status, card, section)
                 "apps"     -> renderApps(ctx, card.body, bundle, device)
+                "about"    -> renderAbout(ctx, card.body, bundle, section, status)
                 else       -> { sections.filter { it.id in section.vault }.forEach { renderRaw(ctx, card.body, it) }; emptyList() }
             }
             card.body.addView(status)
@@ -1230,12 +1405,14 @@ class ProfileFragment : Fragment() {
             cardStates.values.count { it == StatusLight.State.ON }, cardStates.size)
     }
 
-    /** One vault section, every leaf, read-only — the #566 view, kept for what no cockpit section owns. */
+    /** One vault section no cockpit section owns, read-only, through the SAME mask
+     *  as Infos (#695) — a section the vault grows tomorrow cannot leak here either. */
     private fun renderRaw(ctx: android.content.Context, into: LinearLayout, section: VaultConnect.Section) {
-        into.addView(label(ctx, "${section.label}  (${section.rows.size})"))
-        for (row in section.rows) {
-            into.addView(label(ctx, row.path))
-            into.addView(importedValue(ctx, row))
+        val rows = InfoMask.declared.rows(section.id, VaultConnect.Imported.bundle?.opt(section.id))
+        into.addView(label(ctx, "${section.label}  (${rows.size})"))
+        for (row in rows) {
+            into.addView(label(ctx, row.path.ifBlank { section.id }))
+            into.addView(infoValue(ctx, row))
         }
     }
 
@@ -1271,23 +1448,33 @@ class ProfileFragment : Fragment() {
         into.addView(spinner)
     }
 
-    /** Declared vs device, one line each, with the state glyph. */
-    private fun renderRows(ctx: android.content.Context, into: LinearLayout, rows: List<VaultCockpit.Row>) {
+    /**
+     * One Setup ITEM per row (#695): applied, or not applied AND WHY — never a
+     * tick for what is not done. [observed] false is a section whose device side
+     * this app cannot read (the keyboard): its rows say "not verifiable", whatever
+     * a comparison would have guessed.
+     */
+    private fun renderRows(ctx: android.content.Context, into: LinearLayout, rows: List<VaultCockpit.Row>, observed: Boolean = true) {
         for (row in rows) {
             into.addView(label(ctx, row.label))
             into.addView(TextView(ctx).apply {
                 typeface = android.graphics.Typeface.MONOSPACE
                 setTextIsSelectable(true)
-                val (glyph, colour) = when (row.state) {
-                    VaultCockpit.State.MATCH   -> "✓ " + getString(R.string.vault_cockpit_state_match) to GREEN
-                    VaultCockpit.State.DIFFERS -> "≠ " + getString(R.string.vault_cockpit_state_differs) to RED
-                    VaultCockpit.State.ABSENT  -> "– " + getString(R.string.vault_cockpit_state_absent) to RED
-                    VaultCockpit.State.PENDING -> "… " + getString(R.string.vault_cockpit_state_pending) to NEUTRAL
-                }
+                tag = "item:${row.state.name.lowercase()}"
+                val (verdict, colour) = itemVerdict(row.state, observed)
                 setTextColor(colour)
-                text = "$glyph\n  vault:  ${row.declared}\n  device: ${row.device}"
+                text = "$verdict\n  vault:  ${row.declared}\n  device: ${row.device}"
             })
         }
+    }
+
+    /** The verdict line and its ink for one item — the only place a state becomes words. */
+    private fun itemVerdict(state: VaultCockpit.State, observed: Boolean): Pair<String, Int> = when {
+        !observed -> getString(R.string.setup_item_unverifiable) to NEUTRAL
+        state == VaultCockpit.State.MATCH -> getString(R.string.setup_item_applied) to GREEN
+        state == VaultCockpit.State.DIFFERS -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_differs)) to RED
+        state == VaultCockpit.State.ABSENT -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_absent)) to RED
+        else -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_pending)) to NEUTRAL
     }
 
     private fun applyButton(ctx: android.content.Context, what: String, onApply: () -> Unit): View =
@@ -1302,19 +1489,36 @@ class ProfileFragment : Fragment() {
     // Every render* below returns the rows it drew, so the card's light is
     // computed from exactly what is on screen and never from a second reading.
 
+    /**
+     * EVERY account the vault's mail section declares (#695), each its own item:
+     * applied when it is the account cloud-sa's mail holds, not applied (and why)
+     * otherwise, one Apply each. The card's light is the signed-in address's
+     * account, as before — the one this device is meant to read. cloud-mail, the
+     * separate app, accepts no account from another app, and the card says so.
+     */
     private fun renderMail(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView): List<VaultCockpit.Row> {
         val email = ConfigsPrefs(ctx).autheliaEmail.ifBlank { prefs.email.trim() }
-        val declared = VaultCockpit.mailDeclared(bundle, email)
-        if (declared == null) {
+        val jmap = com.diegonmarcos.superapp.mail.JmapPrefs(ctx)
+        val accounts = VaultCockpit.mailAccounts(bundle, email.substringAfter('@', ""))
+        if (accounts.isEmpty()) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_mail_none, email.ifBlank { "—" })))
             return emptyList()
         }
-        val rows = VaultCockpit.mailRows(declared, com.diegonmarcos.superapp.mail.JmapPrefs(ctx))
-        renderRows(ctx, into, rows)
-        into.addView(applyButton(ctx, declared.email) {
-            show(status, GREEN, VaultCockpit.applyMail(com.diegonmarcos.superapp.mail.JmapPrefs(ctx), declared))
-            redraw()
-        })
+        into.addView(caption(ctx, getString(R.string.setup_mail_accounts, accounts.size)))
+        renderRows(ctx, into, VaultCockpit.mailAccountRows(accounts, jmap.email))
+        val declared = VaultCockpit.mailDeclared(bundle, email)
+        val rows: List<VaultCockpit.Row> = if (declared == null) emptyList() else VaultCockpit.mailRows(declared, jmap)
+        if (declared != null) {
+            into.addView(label(ctx, declared.email))
+            renderRows(ctx, into, rows)
+        }
+        for (d in accounts) {
+            into.addView(applyButton(ctx, d.email) {
+                show(status, GREEN, VaultCockpit.applyMail(com.diegonmarcos.superapp.mail.JmapPrefs(ctx), d))
+                redraw()
+            })
+        }
+        into.addView(caption(ctx, getString(R.string.setup_mail_cloud_mail)))
         return rows
     }
 
@@ -1459,21 +1663,46 @@ class ProfileFragment : Fragment() {
         return rows
     }
 
-    /** One value, shortened past [IMPORTED_PREVIEW_CHARS]; a tap toggles full text. */
-    private fun importedValue(ctx: android.content.Context, row: VaultConnect.Row): TextView =
-        TextView(ctx).apply {
-            val short = if (row.value.length > IMPORTED_PREVIEW_CHARS)
-                row.value.take(IMPORTED_PREVIEW_CHARS) + "… (+${row.value.length - IMPORTED_PREVIEW_CHARS})"
-            else row.value
-            text = if (row.pending) getString(R.string.vault_imported_pending) + " · " + short else short
-            typeface = android.graphics.Typeface.MONOSPACE
-            setTextIsSelectable(true)
-            if (row.pending) setTextColor(NEUTRAL)
-            if (short != row.value) {
-                var full = false
-                setOnClickListener { full = !full; text = if (full) row.value else short }
-            }
-        }
+    /**
+     * `about` (#695): the vault's contact card against this device's, one item per
+     * DECLARED field (the section's `fields`: device field → vault key), and one
+     * Apply that writes the fields the vault carries. The editable card itself is
+     * drawn right below the cockpit on Setup.
+     */
+    private fun renderAbout(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject,
+                            section: VaultCockpit.Section, status: TextView): List<VaultCockpit.Row> {
+        val rows = VaultCockpit.aboutRows(bundle, section.fields) { profileField(it) }
+        renderRows(ctx, into, rows)
+        into.addView(applyButton(ctx, section.label) {
+            val written = VaultCockpit.applyAbout(bundle, section.fields) { f, v -> setProfileField(f, v) }
+            show(status, if (written.isEmpty()) RED else GREEN,
+                if (written.isEmpty()) getString(R.string.setup_about_nothing)
+                else getString(R.string.setup_about_applied, written.size, written.joinToString(", ")))
+            redraw()
+        })
+        return rows
+    }
+
+    /** This device's contact-card field [field] — the ProfilePrefs vocabulary; null for a field it has not. */
+    private fun profileField(field: String): String? = when (field) {
+        "name" -> prefs.name
+        "email" -> prefs.email
+        "company" -> prefs.company
+        "location" -> prefs.location
+        "website" -> prefs.website
+        "titles" -> prefs.titles
+        else -> null
+    }
+
+    private fun setProfileField(field: String, value: String): Boolean = when (field) {
+        "name" -> { prefs.name = value; true }
+        "email" -> { prefs.email = value; true }
+        "company" -> { prefs.company = value; true }
+        "location" -> { prefs.location = value; true }
+        "website" -> { prefs.website = value; true }
+        "titles" -> { prefs.titles = value; true }
+        else -> false
+    }
 
     /** Retry a queued upload whenever this screen comes back — a plausible
      *  moment for connectivity to have returned since the last failure. */
@@ -1790,17 +2019,20 @@ class ProfileFragment : Fragment() {
         }.getOrDefault(trimmed)
     }
 
+    /** #695 the vault export's path inside the ONE declared vault repo (ui.profile.connect.vault_file). */
+    private fun vaultFile(): String = connectDecl().optString("vault_file")
+
     private fun showGithubSshDialog() {
         val ctx = requireContext()
         val repo = AuthDeclaration.configSource.gitRepo
-        val path = AuthDeclaration.configSource.gitPath
+        val path = vaultFile()
         var passField: EditText? = null
 
         val dialog = importDialog(
             title = "GitHub · SSH key",
             positive = "Clone & Import",
             buildBody = { body, _ ->
-                body.addView(caption(ctx, "Paste the private key that has read access to $repo, or import it from a file (a previously exported config works — the key is read from ssh.vault_repo_key).\n\nThis route CLONES the repository: GitHub offers no file-read over SSH, so the whole repo is fetched shallow and bare into the cache and deleted immediately after $path is read. Nothing is checked out. If you have a token, the GitHub login tile fetches only the one file."))
+                body.addView(caption(ctx, "Paste the private key that has read access to $repo, or import it from a file (a previously exported config works — the key is read from ssh.vault_repo_key).\n\nThis route CLONES the repository: GitHub offers no file-read over SSH, so the whole repo is fetched shallow and bare into the cache and deleted immediately after $path is read. Nothing is checked out. A token (the PAT way) reads only that one file instead."))
 
                 val key = EditText(ctx).apply {
                     hint = "-----BEGIN OPENSSH PRIVATE KEY-----"
@@ -1834,14 +2066,98 @@ class ProfileFragment : Fragment() {
                     go.isEnabled = false
                     show(status, NEUTRAL, "… cloning $repo over SSH (shallow, bare)")
                     val cacheDir = requireContext().cacheDir
-                    runFetch(status, { go.isEnabled = true }) {
-                        GitSshVault.fetchArtifact(cacheDir, key, pass)
+                    runVaultRead(status, { go.isEnabled = true }) {
+                        GitSshVault.fetchArtifact(cacheDir, key, pass, path)
                     }
                 }
             },
             onDismiss = { sshKeyField = null },
         )
         dialog.show()
+    }
+
+    // ── GitHub · token (the PAT half of SSH / PAT, #695) ─────────────────
+
+    /**
+     * Paste a GitHub token, read ONE file — the vault export — and land it. The
+     * token is this request's credential and nothing more: the box is emptied the
+     * moment it is read, it is never stored, logged or shown, and it rides only in
+     * a header (never a URL, never argv).
+     */
+    private fun showGithubPatDialog() {
+        val ctx = requireContext()
+        val repo = AuthDeclaration.configSource.gitRepo
+        var tokenField: EditText? = null
+        importDialog(
+            title = getString(R.string.connect_pat_title),
+            positive = getString(R.string.connect_pat_go),
+            buildBody = { body, _ ->
+                body.addView(caption(ctx, getString(R.string.connect_pat_caption, repo, vaultFile())))
+                val field = EditText(ctx).apply {
+                    hint = getString(R.string.connect_pat_hint)
+                    setSingleLine()
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                    imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                    importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+                }
+                tokenField = field
+                body.addView(field)
+            },
+            onGo = { go, status ->
+                val token = tokenField?.text?.toString()?.trim().orEmpty()
+                if (token.isEmpty()) {
+                    show(status, RED, "✗ " + getString(R.string.connect_pat_empty))
+                } else {
+                    tokenField?.setText("")
+                    go.isEnabled = false
+                    show(status, NEUTRAL, getString(R.string.connect_fetching, vaultFile()))
+                    val hint = getString(R.string.connect_pat_auth_hint, repo)
+                    runVaultRead(status, { go.isEnabled = true }) { fetchVaultFileWithToken(token, hint) }
+                }
+            },
+            onDismiss = { tokenField = null },
+        ).show()
+    }
+
+    /**
+     * The vault export over GitHub's contents API, raw (the file itself, not a
+     * base64 envelope): the URL is the declared `github_contents_url` filled with
+     * the ONE declared vault repo and ref. Blocking; call on IO. Through
+     * [ConfigSyncClient.request], so a 401/403/404 reads as it does on every route
+     * and the token is the redacted secret.
+     */
+    private fun fetchVaultFileWithToken(token: String, authHint: String): com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome {
+        val cs = AuthDeclaration.configSource
+        val url = connectDecl().optString("github_contents_url")
+            .replace("{repo}", cs.gitRepo).replace("{path}", vaultFile()).replace("{ref}", cs.gitRef)
+        return com.diegonmarcos.superapp.core.ConfigSyncClient.request(
+            url = url,
+            headers = mapOf("Authorization" to "Bearer $token", "X-GitHub-Api-Version" to "2022-11-28"),
+            secret = token,
+            authHint = authHint,
+            connectTimeoutMs = cs.connectTimeoutMs,
+            readTimeoutMs = cs.readTimeoutMs,
+            accept = "application/vnd.github.raw",
+        )
+    }
+
+    /** Fetch the vault export on IO and land it through [landVault]; the redraw waits for the dialog. */
+    private fun runVaultRead(
+        status: TextView,
+        done: () -> Unit,
+        fetch: () -> com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome,
+    ) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val o = withContext(Dispatchers.IO) { fetch() }) {
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
+                    show(status, RED, "✗ ${o.kind}\n${o.message}")
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
+                    landVault(status, o.body, redrawNow = false)
+                }
+            }
+            done()
+        }
     }
 
     /** One row of import tiles. */
@@ -1998,34 +2314,18 @@ class ProfileFragment : Fragment() {
          */
         private const val WG_ROUTE = "section:wg"
 
-        /** A `render` Infos section draws its own data here; a `link` one is a
-         *  deep-link to the surface that owns it. Both words are the
-         *  declaration's vocabulary (build.json::ui.profile.infos.sections[].mode),
-         *  named once so a typo in the blob is a missing section and not a
-         *  silently mis-rendered one. */
-        private const val MODE_RENDER = "render"
-        private const val MODE_LINK = "link"
-
-        /** Said on every link section, because "why is there no control here"
-         *  is the question a deep-link invites. The Store's declared-app list and
-         *  the WireGuard import each have ONE home; #617's Store tab and #614's
-         *  WireGuard tab were already links for exactly this reason. */
-        private const val INFOS_LINK_TEXT =
-            "This lives on the screen that owns it — opening it there keeps one copy " +
-            "of the list and one copy of the controls, instead of a second set here " +
-            "that can disagree with it."
-
-        /** A declared section with no renderer says so. An id can only arrive
-         *  here from the declaration, so the honest answer is "not wired yet",
-         *  never an empty space that reads as "nothing to report". */
-        private const val INFOS_NO_RENDERER =
-            "Declared in build.json::ui.profile.infos.sections, but no read-out is wired for it yet."
+        /** The one Connect way kind this page implements itself (build.json::
+         *  ui.profile.connect): read the vault export out of the vault repo with
+         *  an SSH key or a pasted token. Every other kind is libs:auth's, matched
+         *  generically, or has no handler and says why. Named once, so a typo in
+         *  the blob is a way that says it is not wired, not a silent one. */
+        private const val KIND_GITHUB_SSH_PAT = "github_ssh_pat"
 
         private const val TOKENS_TEXT =
             "Which credential is in play, re-read every time this page draws. " +
             "PRESENCE ONLY — no token, key or cookie is ever printed here, and " +
-            "nothing on this page clears one: each credential is cleared where it " +
-            "is stored, on Setup."
+            "nothing in this list clears one: each credential is cleared where it " +
+            "is stored, on the line above that holds it."
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400

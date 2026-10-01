@@ -57,15 +57,18 @@ object GitSshVault {
     private const val TAG = "ConfigSync"
 
     /**
-     * Clone, read [AuthDeclaration.ConfigSource.gitPath], return it as the same
+     * Clone, read [path] (the config artifact's by default; #695 Account ▸
+     * Connect passes the vault export's), return it as the same
      * [ConfigSyncClient.Outcome] every other import route produces — so the
-     * caller's apply-and-report path is identical for all four tiles.
+     * caller's landing is identical whichever way was taken.
      *
      * Blocking; call from a background dispatcher.
      */
-    fun fetchArtifact(cacheDir: File, privateKeyPem: String, passphrase: String): ConfigSyncClient.Outcome {
+    fun fetchArtifact(
+        cacheDir: File, privateKeyPem: String, passphrase: String,
+        path: String = AuthDeclaration.configSource.gitPath,
+    ): ConfigSyncClient.Outcome {
         val repo = AuthDeclaration.configSource.gitRepo
-        val path = AuthDeclaration.configSource.gitPath
         val ref = AuthDeclaration.configSource.gitRef
         if (repo.isBlank() || path.isBlank()) {
             return failed(
@@ -131,7 +134,7 @@ object GitSshVault {
                 ?: return failed(
                     ConfigSyncClient.Kind.NOT_FOUND,
                     "Cloned ${AuthDeclaration.configSource.gitRepo}@$ref, but it has no file at '$path'. " +
-                        "Check ab_cloud-libs-shared/build.json::auth.config_source.git.path.",
+                        "Check the declared path (auth.config_source.git.path, or ui.profile.connect.vault_file).",
                 )
             val bytes = walker.use { repository.open(it.getObjectId(0)).bytes }
             val body = String(bytes, Charsets.UTF_8)

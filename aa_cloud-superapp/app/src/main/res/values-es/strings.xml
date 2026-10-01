@@ -388,7 +388,6 @@
     <string name="vault_imported_caption">Solo lectura. Nada de esto se ha aplicado a ninguna app. Los valores de más de %1$d caracteres se acortan; toca uno para verlo entero.</string>
     <string name="vault_connect_code_rejected">El servidor rechazó el código: es incorrecto, ha caducado o ya se usó. Pide uno nuevo.</string>
     <string name="vault_connect_server_not_ready">El endpoint del vault aún no está desplegado o configurado en el servidor. El problema no es tu token.</string>
-    <string name="vault_imported_pending">pendiente</string>
     <string name="vault_tab_imported">Flota</string>
     <string name="vault_cockpit_caption">La bóveda frente a este dispositivo, sección por sección. Mostrar no cambia nada: cada Aplicar es un toque propio y aplica solo esa sección.</string>
     <string name="vault_cockpit_device_label">Este dispositivo es</string>
@@ -398,13 +397,9 @@
     <string name="vault_cockpit_pick_first">Elige primero qué dispositivo es este.</string>
     <string name="vault_cockpit_section_absent">No está en esta exportación de la bóveda: %1$s. Decláralo en cloud-vault configs/ y regenera el paquete.</string>
     <string name="vault_cockpit_apply">Aplicar %1$s</string>
-    <string name="vault_cockpit_state_match">coincide</string>
-    <string name="vault_cockpit_state_differs">difiere</string>
-    <string name="vault_cockpit_state_absent">no está en este dispositivo</string>
-    <string name="vault_cockpit_state_pending">pendiente en la bóveda</string>
     <string name="vault_cockpit_reading">leyendo…</string>
     <string name="vault_cockpit_mail_none">Ninguna cuenta de correo de la bóveda tiene la parte local de %1$s. Fija el correo de la cuenta en Conectar.</string>
-    <string name="vault_cockpit_keyboard_device">lo guarda el teclado; no se puede leer desde aquí</string>
+    <string name="vault_cockpit_keyboard_device">cloud-keyboard guarda sus listas: solo importa desde sus propios ajustes de Portapapeles, así que esta página no puede escribirlas ni leerlas</string>
     <string name="vault_cockpit_mesh_none">La bóveda no declara ningún perfil de malla cuya dirección sea la de este dispositivo (%1$s).</string>
     <string name="vault_cockpit_mesh_confirm">Sustituye el túnel de este dispositivo — dirección, DNS, MTU, pares Y clave privada — por el perfil de la bóveda para %1$s. Lo guardado ahora se pierde.</string>
     <string name="vault_cockpit_open_wireguard">Abrir WireGuard</string>
@@ -462,8 +457,6 @@
     <string name="journey_signed_in_as">Sesión iniciada como %1$s vía %2$s</string>
     <string name="journey_bearer_stored">Bearer guardado para %1$s</string>
     <string name="journey_not_signed_in">Sin sesión: elige un proveedor abajo.</string>
-    <string name="journey_sign_in_caption">El SSO propio de la flota es el principal. Un inicio con GitHub también da acceso a los repos privados; Google solo demuestra una dirección. Todas las rutas acaban en el mismo sitio: tu configuración, descargada una vez.</string>
-    <string name="journey_way_ssh">%1$s · clave SSH</string>
     <string name="journey_use_stored_bearer">Usar el bearer guardado (%1$s)</string>
     <string name="journey_mail_code">¿Authelia te envió un código por correo?</string>
     <string name="journey_mail_code_title">Authelia · código por correo</string>
@@ -488,7 +481,6 @@
     <string name="journey_vault_not_fetched">no descargada</string>
     <string name="journey_vault_header">Exportación de la bóveda</string>
     <string name="journey_vault_fetch_open">Descargar y abrir Flota</string>
-    <string name="journey_vault_on_tab">Descarga tu bóveda desde la pestaña Bóveda — aparece aquí en Flota.</string>
     <!-- #614 pestaña Repos -->
     <string name="profile_repos_header">Repos</string>
     <string name="profile_repos_caption">Tus repositorios, desde la declaración de la flota. Toca uno para abrirlo.</string>
@@ -498,4 +490,49 @@
     <string name="journey_fetched">✓ Autenticado · %1$d bytes · tu configuración está aquí; sigue con el paso 2</string>
     <string name="journey_fetched_snack">Configuración descargada</string>
     <string name="journey_identity_only_done">%1$s demostró %2$s</string>
+
+    <!-- #695 Configs ▸ Account: Connect lines, Infos read-out, Cloud Constellation Setup items -->
+    <string name="connect_caption">Inicia sesión en cualquiera de las dos líneas. Al descargar tu configuración de la bóveda se llena %1$s; %2$s la aplica después a la máquina que elijas abajo.</string>
+    <string name="connect_way_ssh">Clave SSH</string>
+    <string name="connect_way_pat">Token (PAT)</string>
+    <string name="connect_way_not_offered">%1$s — la política de inicio de sesión de tu cuenta no ofrece esta vía.</string>
+    <string name="connect_way_unwired">%1$s — aún no disponible en esta app: %2$s</string>
+    <string name="connect_line_held">En esta línea: %1$s</string>
+    <string name="connect_line_idle">Nada guardado en esta línea todavía.</string>
+    <string name="connect_held_session">sesión del navegador (solo en memoria)</string>
+    <string name="connect_held_bearer">bearer de %1$s</string>
+    <string name="connect_held_github">token de GitHub (de la bóveda)</string>
+    <string name="connect_held_ssh">clave SSH (de la bóveda)</string>
+    <string name="connect_held_header">Credenciales en este dispositivo</string>
+    <string name="connect_pat_title">GitHub · token</string>
+    <string name="connect_pat_caption">Pega un token de GitHub que pueda leer %1$s. Lee UN archivo, %2$s, por la API de contenidos de GitHub, solo para esta petición: la caja se vacía en cuanto se lee y el token nunca se guarda, registra ni vuelve a mostrarse.</string>
+    <string name="connect_pat_hint">github_pat_… o ghp_…</string>
+    <string name="connect_pat_go">Descargar la configuración</string>
+    <string name="connect_pat_empty">Pega primero un token.</string>
+    <string name="connect_pat_auth_hint">El token no puede leer %1$s: ha caducado o no tiene acceso de lectura (Contents: read) a ese repositorio privado.</string>
+    <string name="connect_fetching">… descargando %1$s</string>
+    <string name="connect_device_header">Este dispositivo</string>
+    <string name="connect_device_caption">Qué par / máquina de la configuración descargada es este teléfono. %1$s aplica todo para esta elección; solo se guarda su id.</string>
+    <string name="connect_device_none">Descarga primero tu configuración de la bóveda: las máquinas entre las que elegir vienen de ella.</string>
+    <string name="infos_caption">Tu configuración de la bóveda tal como se descargó: %1$d secciones. Solo lectura — aplicar es cosa de %2$s. Un secreto se ve como •••• con su longitud y nunca se dibuja; una lista larga se cuenta, no se lista.</string>
+    <string name="infos_empty">Aún no se ha descargado nada. Inicia sesión en %1$s y descarga tu configuración de la bóveda; aparece aquí, sección por sección.</string>
+    <string name="infos_section_summary">%1$d valores · %2$d ocultos · %3$d pendientes</string>
+    <string name="infos_row_masked">•••• oculto (%1$d caracteres)</string>
+    <string name="infos_row_collapsed">%1$d entradas (contadas, no listadas)</string>
+    <string name="infos_row_pending">pendiente · %1$s</string>
+    <string name="setup_config_header">Tu configuración (por par)</string>
+    <string name="setup_config_none">No se ha descargado el artefacto de configuración en esta sesión — inicia sesión con Authelia en %1$s para descargarlo.</string>
+    <string name="setup_change_device">Elegir el dispositivo en %1$s</string>
+    <string name="setup_person_header">Tarjeta de contacto en este dispositivo</string>
+    <string name="setup_mail_accounts">La bóveda declara %1$d cuentas. El correo propio de cloud-sa guarda una cada vez: Aplicar elige cuál.</string>
+    <string name="setup_mail_cloud_mail">cloud-mail, la app de correo aparte, solo acepta cuentas desde su propia pantalla de configuración — ninguna se puede escribir allí desde aquí, así que allí siguen sin aplicar hasta que las añadas en cloud-mail.</string>
+    <string name="setup_item_applied">✓ aplicado</string>
+    <string name="setup_item_not_applied">✗ no aplicado — %1$s</string>
+    <string name="setup_item_unverifiable">○ no verificable — esta app no puede leer ese lado</string>
+    <string name="setup_why_differs">este dispositivo tiene otra cosa</string>
+    <string name="setup_why_absent">aún no hay nada en este dispositivo</string>
+    <string name="setup_why_pending">la bóveda aún no lo incluye</string>
+    <string name="setup_about_applied">✓ %1$d campos escritos: %2$s</string>
+    <string name="setup_about_nothing">✗ No se escribió nada: about.profile de la bóveda no incluye ninguno de los campos declarados.</string>
+    <string name="journey_get_on_setup">Aquí se obtiene; se aplica en %1$s, elemento a elemento.</string>
 </resources>
