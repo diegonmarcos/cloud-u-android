@@ -6,6 +6,18 @@
          package, not QUERY_ALL_PACKAGES — the mesh only ever reads SuperApp. -->
     <queries>
         <package android:name="com.diegonmarcos.superapp" />
+        <!-- #733 every OTHER mesh member. Same-signature apps are NOT mutually
+             visible on Android 11+ (the documented automatic-visibility list
+             has no such entry), so without this FleetPeers.list — and so
+             /api/fleet/peers — saw only itself and SuperApp in every member
+             that does not happen to hold QUERY_ALL_PACKAGES. A <provider>
+             query needs an exact authority and ours are per-package, so the
+             marker is an intent action every member's FleetMemberReceiver
+             answers (below): one line here makes the whole fleet visible,
+             still with no broad grant. -->
+        <intent>
+            <action android:name="com.diegonmarcos.cloud.action.MESH_MEMBER" />
+        </intent>
     </queries>
 
     <application>
@@ -25,6 +37,20 @@
             android:authorities="${applicationId}.fleet"
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
+        <!-- #733 the visibility marker the <queries> intent above matches. It
+             must be EXPORTED — package-visibility matching skips non-exported
+             components — and it is guarded by the same signature permission as
+             the provider, so only a fleet member can ever deliver to it. It
+             does nothing on receipt: it exists to be matched, not called. -->
+        <receiver
+            android:name="com.diegonmarcos.superapp.devtools.FleetMemberReceiver"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloud.action.MESH_MEMBER" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

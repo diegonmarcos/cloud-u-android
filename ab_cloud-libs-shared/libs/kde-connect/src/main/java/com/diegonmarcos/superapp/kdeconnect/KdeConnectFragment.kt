@@ -104,13 +104,38 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
             setTextColor(0x99FFFFFF.toInt()); textSize = 12f; setPadding(0, 0, 0, dp(16))
         })
 
-        if (cfg.devices.isEmpty()) {
+        // #733 THE PEER SELECTOR, at the top: which peer this whole page talks
+        // to. The list is KdePeers.all() — declared KDE devices, then the wg
+        // mesh nodes — and only the selected peer's card is drawn, so every
+        // action below has exactly one target.
+        val peers = KdePeers.all()
+        if (peers.isEmpty()) {
             root.addView(TextView(ctx).apply {
-                text = "No devices declared in build.json::ui.kde_connect.devices"
+                text = "No peers declared in build.json::ui.kde_connect.devices or data/mesh.json"
                 setTextColor(0xFFFF8B8B.toInt())
             })
         }
-        for (device in cfg.devices) root.addView(buildCard(ctx, device))
+        val deviceBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val selector = Button(ctx).apply {
+            isAllCaps = false; textSize = 14f; tag = PEER_SELECTOR_TAG
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(10) }
+        }
+        fun show(peer: KdeConnectConfig.Device?) {
+            selector.text = peer?.let { "Peer: ${it.label} · ${it.wgIp}  ▾" } ?: "Peer: none"
+            rows.clear(); deviceBox.removeAllViews()
+            peer?.let { deviceBox.addView(buildCard(ctx, it)) }
+        }
+        selector.setOnClickListener {
+            android.app.AlertDialog.Builder(ctx).setTitle("Peer")
+                .setItems(peers.map { "${it.label} · ${it.wgIp}" }.toTypedArray()) { _, i ->
+                    KdePeers.select(ctx, peers[i].id); show(peers[i])
+                }.show()
+        }
+        if (peers.isNotEmpty()) root.addView(selector)
+        root.addView(deviceBox)
+        show(KdePeers.selected(ctx, peers))
 
         // ── Clipboard — right after the device cards, because everything it
         //    does needs a paired device to be there first.
@@ -389,6 +414,17 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         refreshPairButton(row)
     }
 
+    /** #733 the live link of the SELECTED peer (the one card on the page) —
+     *  never "whichever link happens to be open first". Matched by the id the
+     *  handshake reported, the declared id, or the address the link dialled. */
+    private fun selectedLiveId(): String? {
+        val row = rows.firstOrNull() ?: return null
+        return KdeConnectManager.connectedIds().firstOrNull { id ->
+            id == row.deviceId || id == row.device.id ||
+                KdeConnectManager.link(id)?.peerAddress?.hostAddress == row.host
+        }
+    }
+
     private fun toast(m: String) = Toast.makeText(requireContext(), m, Toast.LENGTH_SHORT).show()
     /** The full KDE Connect plugin catalog — active (we implement + advertise)
      *  in lavender, planned in gray. Data-driven from build.json plugins[]. */
@@ -454,7 +490,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         // Master input-share gate: when OFF the pad/keys send nothing (so the
         // phone in your pocket can't nudge the desktop cursor). Tap Start to arm.
         var inputOn = false
-        fun target(): String? = if (inputOn) KdeConnectManager.connectedIds().firstOrNull() else null
+        fun target(): String? = if (inputOn) selectedLiveId() else null
 
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -749,7 +785,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      *  re-dial the first device first (KDE reconnects on demand rather than
      *  holding one socket forever). */
     private fun targetOrReconnect(then: (String) -> Unit) {
-        val live = KdeConnectManager.connectedIds().firstOrNull()
+        val live = selectedLiveId()
         if (live != null) { then(live); return }
         val row = rows.firstOrNull() ?: return toastUnit("No device")
         if (row.deviceId?.let { KdeConnectManager.isPaired(it) } != true &&
@@ -768,7 +804,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
     /** A file was picked → stream it to the connected desktop via the KDE
      *  share payload channel (SharePlugin opens the TLS payload server). */
     private fun onFilePicked(uri: Uri) {
-        val id = KdeConnectManager.connectedIds().firstOrNull()
+        val id = selectedLiveId()
         if (id == null) { toastUnit("Connect & pair a desktop first"); return }
         val link = KdeConnectManager.link(id)
         if (link == null) { toastUnit("No live link"); return }
@@ -821,7 +857,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         }
         var lastX = 0f; var lastY = 0f
         pad.setOnTouchListener { v, e ->
-            val id = KdeConnectManager.connectedIds().firstOrNull()
+            val id = selectedLiveId()
             when (e.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> { lastX = e.x; lastY = e.y; true }
                 android.view.MotionEvent.ACTION_MOVE -> {
@@ -866,7 +902,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      *  (kdeconnect.remotedesktop), then exposes a full mouse + keyboard surface
      *  to drive it (mousepad senders: move/click/right-click/keys/arrows). */
     private fun buildRemoteDesktopCard(ctx: android.content.Context): View {
-        fun tgt(): String? = KdeConnectManager.connectedIds().firstOrNull()
+        fun tgt(): String? = selectedLiveId()
         val col = card(ctx, "Remote Desktop control",
             "Asks Plasma to start a remote-desktop session (KDE streams the screen via an RDP/virtual-monitor portal). Drive it with the pad/keys below; full on-phone viewing needs an RDP client.")
         // Stateful start/stop — label follows the session state.
@@ -1033,7 +1069,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         out.removeAllViews()
         val prefs = KdePluginPrefs(ctx)
         val handled = KdePluginRegistry.plugins.flatMap { it.incoming + it.outgoing }.toSet()
-        val target = KdeConnectManager.connectedIds().firstOrNull()
+        val target = selectedLiveId()
         // Representative sender packets (only fired when connected+paired).
         val probes: Map<String, () -> NetworkPacket?> = mapOf(
             "ping"               to { PingPlugin.build("Self-test") },
@@ -1082,5 +1118,9 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
     private fun toastUnit(m: String) { toast(m) }
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    companion object { fun newInstance() = KdeConnectFragment() }
+    companion object {
+        fun newInstance() = KdeConnectFragment()
+        /** #733 the peer selector's view tag (KdeConnectPeerSelectorTest finds it by this). */
+        const val PEER_SELECTOR_TAG = "kde-peer-selector"
+    }
 }

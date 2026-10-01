@@ -9,7 +9,9 @@ import org.json.JSONObject
  * declared peer over wg0. Self-contained — no dependency on the app module.
  */
 object KdeMesh {
-    data class Node(val name: String, val wgIp: String, val role: String)
+    /** [alias] is the node's human name (oci-apps, gcp-proxy); #733 Peer
+     *  Control lists it in its peer selector. */
+    data class Node(val name: String, val wgIp: String, val role: String, val alias: String = "")
 
     @Volatile private var cached: List<Node>? = null
 
@@ -23,7 +25,7 @@ object KdeMesh {
                 val n = arr.getJSONObject(i)
                 val ip = n.optString("wg_ip")
                 if (ip.isNotBlank()) {
-                    out += Node(n.optString("name", ip), ip, n.optString("role", ""))
+                    out += Node(n.optString("name", ip), ip, n.optString("role", ""), n.optString("alias", ""))
                 }
             }
         }

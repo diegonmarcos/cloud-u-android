@@ -12,11 +12,15 @@ import android.util.Log
  * the provider is the membership marker, so the list cannot drift out of sync
  * with a hardcoded roster the way a per-app manifest list would.
  *
- * Visibility note: Android 11+ filters package queries, but apps signed with the
- * same certificate stay mutually visible, and fleet membership IS the signing
- * key. That is why this needs no QUERY_ALL_PACKAGES — a broad grant in fifteen
- * apps to answer a question the signature already answers. If [list] ever comes
- * back shorter than the installed fleet, that assumption is what to check first.
+ * Visibility note (#733): Android 11+ filters package queries, and a shared
+ * signing certificate does NOT make two apps visible to each other — it is not
+ * on the platform's automatic-visibility list. The earlier note here assumed it
+ * was, so in every member without QUERY_ALL_PACKAGES this list held itself and
+ * SuperApp and nothing else. Visibility now comes from the devtools manifest:
+ * it queries the MESH_MEMBER action that every member's FleetMemberReceiver
+ * answers, so the whole fleet is visible with no broad grant. If [list] ever
+ * comes back shorter than the installed fleet, Apps Mesh ▸ Missing membership
+ * names the member that is blind and the ones it cannot see.
  */
 object FleetPeers {
     private const val TAG = "FleetPeers"

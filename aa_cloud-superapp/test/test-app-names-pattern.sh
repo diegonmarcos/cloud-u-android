@@ -122,6 +122,16 @@ print("== T5: nothing spells an application name the old way ==")
 def normalise(text):
     return re.sub(r"[^a-z0-9]", "", text.lower())
 normalised_names = [normalise(n) for n in names]
+# #733: a name only matches where it ENDS ON A WORD BOUNDARY of the caption.
+# Stripping spaces made "Cloud Mesh" read as "cloudmesh", which starts with
+# cloud-me's "cloudme" — a caption naming the mesh, not the app. The boundaries
+# are where the caption's own words end, so "Cloud Chat (Mattermost)" and
+# "CloudChat" still match cloud-chat and "Cloud Mesh" no longer matches cloud-me.
+def word_ends(text):
+    ends, n = set(), 0
+    for word in re.findall(r"[a-z0-9]+", text.lower()):
+        n += len(word); ends.add(n)
+    return ends
 for directory, data in sorted(build_files.items()):
     for path, node in walk(data):
         for key in ("label", "title", "name", "--with-app-name"):
@@ -131,7 +141,8 @@ for directory, data in sorted(build_files.items()):
             flat = normalise(value)
             if len(flat) <= len("cloud") + 1:
                 continue
-            if any(flat.startswith(n) or n.startswith(flat) for n in normalised_names):
+            ends = word_ends(value)
+            if any((flat.startswith(n) and len(n) in ends) or n.startswith(flat) for n in normalised_names):
                 check(False, "%s/build.json%s.%s = %r spells an application name outside the pattern"
                       % (directory, path, key, value))
 

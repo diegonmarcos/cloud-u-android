@@ -91,6 +91,9 @@ object SectionPages {
         // the strip branch at the top already answered it.
         sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()
         sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.appstore.StorePhoneFragment()
+        // #733 the Store's Apps Mesh page, reached from Configs ▸ Mesh too —
+        // the same AppsMesh.page, hosted on its own (no copy).
+        sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.appstore.AppsMeshFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
         // and libs:fin left with it. The tile that deep-linked to it is gone too

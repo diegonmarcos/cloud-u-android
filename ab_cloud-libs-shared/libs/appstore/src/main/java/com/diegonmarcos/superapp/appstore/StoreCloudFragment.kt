@@ -492,28 +492,16 @@ class StoreCloudFragment : Fragment() {
     }
 
     /**
-     * #728 Store ▸ Mesh — every fleet member, the engines each app binds and
-     * who serves data to whom, drawn by [StoreMesh] from the fleet manifest and
-     * then re-drawn once the live probes land. Probing is off the main thread
-     * (a 50-port loopback sweep plus PackageManager reads); entering the tab
-     * again, or Re-probe, asks again.
+     * #728/#733 Store ▸ Apps Mesh — [AppsMesh.page], the one page Configs ▸
+     * Mesh ▸ Apps Mesh also draws (AppsMeshFragment). This host adds the one
+     * thing only it has: a member's Store row ([openDetail]). The page probes
+     * off the main thread and redraws only while its view is still attached,
+     * so leaving the tab drops a late probe rather than drawing into it.
      */
     private fun renderMesh(ctx: Context) {
-        val shownTab = tab
-        body.addView(buttonRow(ctx, btn(ctx, "Re-probe", 0xFF2A2A33.toInt()) { renderTab(ctx) }))
         val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         body.addView(host)
-        val links = StoreMesh.links(fleetJson)
-        val draw = { live: StoreMesh.Live? ->
-            host.removeAllViews()
-            StoreMesh.render(ctx, host, fleetJson, fleet, links, live) { openDetail(ctx, it) }
-        }
-        draw(null)
-        val app = ctx.applicationContext
-        thread(name = "store-mesh-probe") {
-            val live = StoreMesh.probe(app, fleet, links)
-            host.post { if (tab == shownTab && host.isAttachedToWindow) draw(live) }
-        }
+        AppsMesh.page(this, host) { openDetail(ctx, it) }
     }
 
     /** A mesh node's Store detail: its group's tab, the row expanded and
@@ -1298,7 +1286,7 @@ class StoreCloudFragment : Fragment() {
          *  also holds their captions and icons (#732) — no caption is written here. */
         const val PERMS = "perms"
 
-        /** #728 the mesh view, owned by this page like Perms (see [renderMesh]). */
+        /** #728 the mesh view — #733 the shared Apps Mesh page (see [renderMesh]). */
         const val MESH = "mesh"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {

@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.devtools.FleetPeers
+import com.diegonmarcos.superapp.devtools.FleetToken
 import com.diegonmarcos.superapp.updater.Fleet
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -84,6 +85,10 @@ object StoreMesh {
         val shares: Map<String, List<String>>,
         /** fleet ids that hold the CONSTELLATION_DATA grant. */
         val granted: Set<String>,
+        /** #733 fleet id -> the fleet ids its OWN /api/fleet/peers lists. Only
+         *  members that answered are keys; a member it cannot see is a blind
+         *  spot in its package visibility (AppsMesh.Gap PEER_BLIND). */
+        val peerViews: Map<String, Set<String>> = emptyMap(),
     )
 
     enum class State { OK, ENGINE_MISSING, ENGINE_OLD, APP_ABSENT }
@@ -132,15 +137,56 @@ object StoreMesh {
             guarded(pm, pkg).takeIf { it.isNotEmpty() }?.let { shares[id] = it }
             if (pm.checkPermission(CONSTELLATION_PERM, pkg) == PackageManager.PERMISSION_GRANTED) granted.add(id)
         }
+        val peers = FleetPeers.list(ctx).mapNotNull { idOf[it] }.toSet()
+        var reachable = sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
+        // #733 "no debug API" must mean the member CANNOT serve one, not that it
+        // was merely asleep: wake every member that ships the provider and did
+        // not answer, then sweep again. A force-stopped app stays stopped, which
+        // is exactly the case the gap report then names.
+        val asleep = peers - reachable.keys
+        if (asleep.isNotEmpty()) {
+            asleep.forEach { pkgOf[it]?.let { pkg -> FleetPeers.wake(ctx, pkg) } }
+            Thread.sleep(WAKE_SETTLE_MS)
+            reachable = sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
+        }
+        val token = FleetToken.get(ctx)
+        val peerViews = reachable.mapNotNull { (id, port) ->
+            val body = get(port, "/api/fleet/peers", token) ?: return@mapNotNull null
+            runCatching {
+                val arr = JSONObject(body).getJSONArray("peers")
+                id to (0 until arr.length()).mapNotNull { idOf[arr.getJSONObject(it).optString("pkg")] }.toSet()
+            }.getOrNull()
+        }.toMap()
         return Live(
             installed = installed,
-            reachable = sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap(),
-            peers = FleetPeers.list(ctx).mapNotNull { idOf[it] }.toSet(),
+            reachable = reachable,
+            peers = peers,
             contracts = contracts,
             shares = shares,
             granted = granted,
+            peerViews = peerViews,
         )
     }
+
+    /** How long a woken member gets to bind its port before the second sweep. */
+    private const val WAKE_SETTLE_MS = 1500L
+
+    /**
+     * #733 One authenticated GET on a member's loopback debug API — the body,
+     * or null when it did not answer 200. Raw socket for the same reason as
+     * [ping]. Blocking; call off the main thread.
+     */
+    fun get(port: Int, path: String, token: String): String? = runCatching {
+        Socket().use { s ->
+            s.connect(InetSocketAddress("127.0.0.1", port), 400)
+            s.soTimeout = 3000
+            s.getOutputStream().write(("GET $path HTTP/1.0\r\nHost: 127.0.0.1\r\n" +
+                "Authorization: Bearer $token\r\n\r\n").toByteArray())
+            val raw = s.getInputStream().bufferedReader().readText()
+            if (!raw.startsWith("HTTP/1.0 200") && !raw.startsWith("HTTP/1.1 200")) null
+            else raw.substringAfter("\r\n\r\n", "")
+        }
+    }.getOrNull()
 
     private fun contractOf(pm: PackageManager, action: String, pkg: String): Int =
         runCatching {

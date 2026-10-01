@@ -31,7 +31,26 @@
   "pages": {
     "commits": { "icon": "📜", "style": "page" },
     "cicd":    { "icon": "⚙️", "style": "page" },
-    "mesh":    { "label": "Mesh",  "icon": "🕸️", "style": "page" },
+    "mesh":    { "label": "Apps Mesh", "icon": "🕸️", "style": "page" },
     "perms":   { "label": "Perms", "icon": "🔐", "style": "page" }
+  },
+  "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `member_actions` is what tapping a member offers, in this order, each `id` handled by AppsMesh.act (an id with no handler is not drawn, so a typo cannot ship a dead button). `store` is offered only where the page is hosted by the Store, which is the one host with a row to open. `tools` are the page-level buttons. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row.",
+  "apps_mesh": {
+    "member_actions": [
+      { "id": "api",     "label": "API" },
+      { "id": "start",   "label": "Start" },
+      { "id": "stop",    "label": "Stop" },
+      { "id": "open",    "label": "Open" },
+      { "id": "details", "label": "Details" },
+      { "id": "store",   "label": "Store row" }
+    ],
+    "tools": { "reprobe": "Re-probe", "export": "Export", "copy": "Copy all", "close": "Close" },
+    "gaps": {
+      "NO_PROVIDER":   { "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it", "fix": "link libs:core (it carries libs:devtools) into {repo}/build.json modules and rebuild" },
+      "NO_DEBUG_API":  { "label": "no debug API answered on 127.0.0.1:38090-38139", "fix": "provider present but the server never answered after a wake: open the app once (a force-stopped app stays stopped), then Re-probe" },
+      "NO_PERMISSION": { "label": "CONSTELLATION_DATA not held", "fix": "link libs:core into {repo} (core declares and requests the permission); if it already links it, reinstall from our release — a signature permission is granted only to the fleet key" },
+      "PEER_BLIND":    { "label": "cannot see the whole mesh ({seen} of {total}; missing {missing})", "fix": "rebuild {repo} on libs:devtools from #733 — its manifest now queries every mesh member" },
+      "ENGINE_BROKEN": { "label": "engine contract not reachable", "fix": "{fix}" }
+    }
   }
 }
