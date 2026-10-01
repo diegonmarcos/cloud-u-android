@@ -20,6 +20,11 @@
         </intent>
     </queries>
 
+    <!-- #741 /api/net/dns reads the default network's DNS servers and Private
+         DNS state (ConnectivityManager.getLinkProperties). A normal permission,
+         granted at install; without it every app answered that route blind. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application>
         <provider
             android:name="com.diegonmarcos.superapp.devtools.DebugInitProvider"

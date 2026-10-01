@@ -36,7 +36,7 @@ cfg = json.load(open(policy))
 for prefix in cfg["allow"]:
     os.makedirs(os.path.join(fx, prefix), exist_ok=True)
     open(os.path.join(fx, prefix, "placeholder.txt"), "w").write("allowed tree\n")
-for e in cfg["exempt"]:
+for e in cfg["exempt"] + cfg.get("probe", []):
     dst = os.path.join(fx, e["path"])
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy(os.path.join(root, e["path"]), dst)
@@ -118,6 +118,37 @@ elif judge; then bad "stale exemption: MUTATION SURVIVED — an exemption that e
 elif grep -q 'matches nothing any more' "$W/out"; then ok "stale exemption: red, and says which entry to delete"
 else bad "stale exemption: red for another reason: $(grep -m1 FAIL "$W/out")"; fi
 cp "$W/saved" "$FX/$first"
+
+# #758 the on-device probe every app serves: deleting it, or a part of it, is red.
+# probe_red <case> <path> <exact text to remove>
+probe_red() {
+    local case="$1" rel="$2" text="$3"
+    cp "$FX/$rel" "$W/probe-saved"
+    python3 - "$FX/$rel" "$text" <<'PY'
+import sys
+p, t = sys.argv[1:3]
+s = open(p, encoding="utf-8").read()
+open(p, "w", encoding="utf-8").write(s.replace(t, ""))
+PY
+    if grep -qF -- "$text" "$FX/$rel"; then bad "$case: MUTATION DID NOT APPLY"
+    elif judge; then bad "$case: MUTATION SURVIVED — the guard is green without: $text"
+    elif grep -q '\[probe\]' "$W/out"; then ok "$case: red, and names the probe"
+    else bad "$case: red for another reason: $(grep -m1 FAIL "$W/out")"; fi
+    cp "$W/probe-saved" "$FX/$rel"
+}
+SRV="ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+probe_red "the /api/net/dns route removed from every app" "$SRV" '"net/dns" ->'
+probe_red "/api/net/resolve stops asking Android's resolver" "$SRV" 'InetAddress.getAllByName(host)'
+probe_red "the probe stops reporting whether the app is behind the VPN" "$SRV" 'NetworkCapabilities.TRANSPORT_VPN'
+probe_red "the permission the probe reads the network with is dropped" \
+    "ab_cloud-libs-shared/libs/devtools/src/main/AndroidManifest.xml" 'android.permission.ACCESS_NETWORK_STATE'
+rm -f "$FX/$SRV"
+if judge; then bad "probe file deleted: MUTATION SURVIVED"
+elif grep -q '\[probe\]' "$W/out"; then ok "the debug server itself deleted: red"
+else bad "probe file deleted: red for another reason: $(grep -m1 FAIL "$W/out")"; fi
+cp "$ROOT/$SRV" "$FX/$SRV"
+if judge; then ok "the fixture is green again once the probe is restored"
+else bad "restored fixture is red: $(grep -m1 FAIL "$W/out")"; fi
 
 # ── the brief's mutation, on the REAL tree ───────────────────────────────────
 if python3 "$GUARD" "$ROOT" >"$W/real" 2>&1; then ok "the real tree is green before the plant"

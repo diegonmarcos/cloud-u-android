@@ -8,7 +8,8 @@ from somewhere that page never sees. This reads every tracked file under the
 fleet's trees and fails on any such pattern outside the declared allowlist.
 
 Everything it knows comes from 1_cicd/src/data/dns-resolver-guard.json: the
-trees to scan, the rules, the allowed trees and the pinned exemptions. An
+trees to scan, the rules, the allowed trees, the pinned exemptions and the
+on-device probe every app serves (#758: /api/net/dns + /api/net/resolve). An
 exemption or an allowed tree that no longer matches anything also fails, so the
 allowlist cannot quietly outlive what it excused.
 
@@ -80,6 +81,13 @@ def main(argv):
             used.add(hit)
     stale = ["exempt entry matches nothing any more, delete it: %s :: %s" % (e["path"], e["match"])
              for i, e in enumerate(cfg["exempt"]) if i not in used]
+    for e in cfg.get("probe", []):
+        full = os.path.join(root, e["path"])
+        text = open(full, encoding="utf-8").read() if os.path.isfile(full) else None
+        missing = e["must_contain"] if text is None else [m for m in e["must_contain"] if m not in text]
+        if missing:
+            bad.append("%s [probe] the on-device DNS probe lost %s (policy _doc_probe)"
+                       % (e["path"], ", ".join(repr(m) for m in missing)))
     for prefix in cfg["allow"]:
         if not os.path.isdir(os.path.join(root, prefix)):
             stale.append("allowed tree %s does not exist" % prefix)
@@ -94,8 +102,8 @@ def main(argv):
               "(1_cicd/src/data/dns-resolver-guard.json::_doc). A bundled binary uses libs/sysdns "
               "ResolverProxy; a terminal shell uses its SystemDnsBridge.")
         return 1
-    print("DNS resolver guard: no bypass outside %s (%d pinned exemption(s))"
-          % (", ".join(sorted(cfg["allow"])), len(cfg["exempt"])))
+    print("DNS resolver guard: no bypass outside %s (%d pinned exemption(s)); on-device probe intact in %d file(s)"
+          % (", ".join(sorted(cfg["allow"])), len(cfg["exempt"]), len(cfg.get("probe", []))))
     return 0
 
 

@@ -111,11 +111,6 @@ object DriveDebugApi {
         ) { _, query -> sessionJson(query) }
 
         AppDebugServer.route(
-            "net",
-            listOf(AppDebugServer.Op("resolve", "host=<name>", "#741 resolve <name> with Android's resolver for THIS app: the lookup every Kotlin path here and the rclone tunnel (libs:sysdns ResolverProxy) make, so under the SuperApp's VPN it is answered by the Configs > Mesh > DNS upstream; addresses + ms, or the resolver's failure in words")),
-        ) { op, query -> if (op == "resolve") resolveJson(query["host"].orEmpty()) else null }
-
-        AppDebugServer.route(
             "log",
             listOf(AppDebugServer.Op("tail", "lines=N (default $TAIL_DEFAULT, max $TAIL_MAX)", "tail of the on-device debug log (Download/${BuildConfig.DEBUG_LOG_DIR}/)")),
         ) { op, query -> if (op == "tail") logTailJson(app, query) else null }
@@ -126,22 +121,6 @@ object DriveDebugApi {
     private fun healthJson(ctx: Context): String {
         val root = runCatching { SharedStore.root().absolutePath }.getOrElse { "unavailable: ${it.message}" }
         return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}"}"""
-    }
-
-    // ── /api/net/resolve ────────────────────────────────────────────────────
-
-    /** #741 Android's answer for [host], as this app's uid gets it. No second resolver: the
-     *  point is to show what the DNS menu's choice gives the app, nothing chosen here. */
-    private fun resolveJson(host: String): String {
-        if (host.isBlank()) return errJson("host= is required: the name to resolve")
-        val start = System.nanoTime()
-        return runCatching { java.net.InetAddress.getAllByName(host).mapNotNull { it.hostAddress } }.fold(
-            { found ->
-                val ms = (System.nanoTime() - start) / 1_000_000
-                """{"ok":true,"host":"${esc(host)}","resolver":"android","addresses":[${found.joinToString(",") { "\"${esc(it)}\"" }}],"ms":$ms}"""
-            },
-            { e -> errJson("DNS: no address for $host from Android's resolver (${e.javaClass.simpleName}: ${e.message})") },
-        )
     }
 
     // ── /api/git/* ──────────────────────────────────────────────────────────

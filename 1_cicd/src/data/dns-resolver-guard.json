@@ -46,6 +46,13 @@
     "ab_cloud-libs-shared/libs/firewall/": "firestack, the engine the SuperApp's VPN runs: its DNS transports (DoH, DoT, dns53) are how the menu's choice is applied.",
     "ab_cloud-libs-shared/libs/sysdns/": "The shared shim (#741) that bridges bundled binaries and terminal shells to Android's resolver."
   },
+  "_doc_probe": "#758 the on-device half of this guard. Static rules can only say no code here brings its own resolver; whether the menu's choice actually reaches an app is read on the phone, from that app's own process, through the debug API every app gets from libs:devtools (linked by libs:core). AppDebugServer serves GET /api/net/dns (the default network for the app's uid, VPN or not, its DNS servers = the menu's upstreams under the SuperApp's VPN, Private DNS state) and GET /api/net/resolve?host= (Android's answer for that uid). Each entry is a file and the texts it must keep holding; losing one fails the guard, so the probe cannot be deleted or quietly turned into a second resolver (it must resolve with InetAddress, which is Android's).",
+  "probe": [
+    {"path": "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt",
+     "must_contain": ["\"net/dns\" ->", "\"net/resolve\" ->", "InetAddress.getAllByName(host)", "cm?.getLinkProperties(it)", "NetworkCapabilities.TRANSPORT_VPN", "/api/net/dns", "/api/net/resolve"]},
+    {"path": "ab_cloud-libs-shared/libs/devtools/src/main/AndroidManifest.xml",
+     "must_contain": ["android.permission.ACCESS_NETWORK_STATE"]}
+  ],
   "_doc_exempt": "Single literals in vendored or unrelated code that match a rule but are not a DNS server, pinned to the file AND the text: the same file gaining any other match still fails.",
   "exempt": [
     {"path": "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt", "match": "(no route to 1.1.1.1)", "reason": "A comment explaining an IPv6-only carrier, not a lookup."},

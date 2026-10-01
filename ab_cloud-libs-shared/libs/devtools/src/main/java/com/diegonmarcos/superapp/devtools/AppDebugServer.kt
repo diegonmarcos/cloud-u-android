@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.devtools
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
 import java.io.BufferedReader
@@ -293,6 +295,8 @@ object AppDebugServer {
                 }
                 "diagnostics/crashes" -> reply(writer, "200 OK", readCrashes(ctx))
                 "fleet/peers" -> reply(writer, "200 OK", peersJson(ctx), "application/json")
+                "net/dns" -> reply(writer, "200 OK", "{${dnsFields(ctx)}}", "application/json")
+                "net/resolve" -> reply(writer, "200 OK", resolveJson(ctx, query["host"].orEmpty()), "application/json")
                 "fleet/wake" -> {
                     val pkg = query["pkg"].orEmpty()
                     if (pkg.isBlank()) {
@@ -386,7 +390,13 @@ object AppDebugServer {
         append("""{"path":"/api/fleet/peers","description":"installed mesh members"},""")
         append("""{"path":"/api/fleet/wake","params":"pkg=<applicationId>",""")
         append(""""description":"start a member's process via its provider — no activity """)
-        append("""launch, so Android background-start restrictions do not apply"}""")
+        append("""launch, so Android background-start restrictions do not apply"},""")
+        append("""{"path":"/api/net/dns","description":"#741 the DNS this app inherits: whether its """)
+        append("""default network is the VPN, that network's DNS servers (under the SuperApp's VPN, the """)
+        append("""Configs > Mesh > DNS upstreams) and Android's Private DNS state"},""")
+        append("""{"path":"/api/net/resolve","params":"host=<name>","description":"#741 resolve <name> """)
+        append("""with Android's resolver for this app's uid: addresses + ms, or the failure in words, """)
+        append("""plus the /api/net/dns view it was answered under"}""")
         append("],")
         append(""""groups":[""")
         routeDocs.entries.sortedBy { it.key }.forEachIndexed { gi, (group, ops) ->
@@ -402,6 +412,58 @@ object AppDebugServer {
         }
         append("]}")
     }
+
+    /**
+     * #741 the DNS this app's uid inherits, as JSON fields (no braces).
+     *
+     * Every app reads it from its own process because that is the only place
+     * the answer is true: the default network is per uid (an app the VPN
+     * excludes sees the underlying one), and under the SuperApp's VPN that
+     * network's DNS servers ARE the upstreams the Configs > Mesh > DNS menu
+     * put in the tunnel, while "Mirror Android" leaves them empty and Private
+     * DNS answers instead. Nothing here picks a resolver; it reports Android's.
+     */
+    private fun dnsFields(ctx: Context): String {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        val net = runCatching { cm?.activeNetwork }.getOrNull()
+        val lp = runCatching { net?.let { cm?.getLinkProperties(it) } }.getOrNull()
+        val vpn = runCatching { net?.let { cm?.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) } }
+            .getOrNull() == true
+        val p28 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+        return dnsFields(
+            network = if (net == null) null else if (vpn) "vpn" else "direct",
+            servers = lp?.dnsServers?.mapNotNull { it.hostAddress }.orEmpty(),
+            privateActive = if (p28) lp?.isPrivateDnsActive else null,
+            privateServer = if (p28) lp?.privateDnsServerName else null,
+        )
+    }
+
+    internal fun dnsFields(network: String?, servers: List<String>, privateActive: Boolean?, privateServer: String?): String =
+        """"resolver":"android","network":${jsonStr(network)},""" +
+            """"upstreams":[${servers.joinToString(",") { jsonStr(it) }}],""" +
+            """"private_dns":{"active":$privateActive,"server":${jsonStr(privateServer)}}"""
+
+    /** #741 Android's answer for [host] as this uid gets it — the lookup every OkHttp,
+     *  HttpURLConnection and WebView request here makes, and the one libs:sysdns'
+     *  tunnel makes for a bundled binary. No second resolver: the point is to show
+     *  what the menu's choice gives the app. Moved here from cloud-drive (#758) so
+     *  every app that links libs:core answers it, not just the one that had it. */
+    private fun resolveJson(ctx: Context, host: String): String {
+        if (host.isBlank()) return """{"ok":false,"why":"host= is required: the name to resolve",${dnsFields(ctx)}}"""
+        val start = System.nanoTime()
+        return runCatching { InetAddress.getAllByName(host).mapNotNull { it.hostAddress } }.fold(
+            { found ->
+                val ms = (System.nanoTime() - start) / 1_000_000
+                """{"ok":true,"host":"${esc(host)}","addresses":[${found.joinToString(",") { jsonStr(it) }}],"ms":$ms,${dnsFields(ctx)}}"""
+            },
+            { e ->
+                val why = "DNS: no address for $host from Android's resolver (${e.javaClass.simpleName}: ${e.message})"
+                """{"ok":false,"host":"${esc(host)}","why":"${esc(why)}",${dnsFields(ctx)}}"""
+            },
+        )
+    }
+
+    private fun jsonStr(s: String?): String = if (s == null) "null" else "\"${esc(s)}\""
 
     /**
      * THE own-process logcat reader. Public because it is also what the
