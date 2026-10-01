@@ -1,0 +1,44 @@
+name: "mesh membership guard — no constellation app drops out of the fleet mesh"
+
+# #753. #743/#744 brought every `kind: app` fleet row into the mesh (libs:core
+# for CONSTELLATION_DATA, libs:devtools for the fleet provider, the MESH_MEMBER
+# receiver and the <queries> that let a member see its peers). Before that,
+# seventeen apps had never been members and nothing said so: a non-member looks
+# exactly like a member that has no peers yet. The published-APK audit
+# (cloud-android-mesh-membership-audit.py) can only see a dropout after it
+# ships; this holds the same property against the commit.
+#
+# EVERY PUSH, NO PATH FILTER: the edit that drops an app can be in the app, in
+# any shared lib on its route to core, in core or devtools' manifests, in a ship
+# workflow or in the fleet roster. A filter would be a second list of those.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mesh-membership:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it cuts each app's only route to core, a ship
+      # workflow's watch, and each manifest property on a copy, and requires the
+      # guard to fail naming it. A gate whose red path is unproven enforces nothing.
+      - name: The guard still fails when an app drops out
+        run: bash 1_cicd/src/scripts/test/mesh-source-guard.test.sh
+
+      - name: Every fleet app reaches libs:core and libs:devtools, and ships when they change
+        run: python3 1_cicd/src/scripts/cloud-android-mesh-source-guard.py .
+
+      # The lib side (#743): every Cloud-Lib APK that compiles devtools also
+      # links core, else it carries the provider without CONSTELLATION_DATA and
+      # every peer view is one short. ship-cloud-libs runs it only when lib-apks
+      # moves; a libs/*/build.gradle edge change can break it from outside.
+      - name: Every mesh-member Cloud-Lib APK links core
+        run: bash ab_cloud-libs-shared/lib-apks/test/test-mesh-membership.sh
