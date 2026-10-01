@@ -6,10 +6,15 @@
 # test-profile-credentials-never-sync.sh; the journey is test-profile-journey.sh;
 # InfoMaskTest / SetupItemsTest run the rules on the JVM. This file pins what
 # those cannot:
-#   A  CONNECT is two declared LINES of two ways each (Authelia → Gitea: WebAuth |
-#      Bearer; GitHub: WebAuth | SSH / PAT); every way is dispatched on its kind
-#      alone — libs:auth's kinds generically, one page kind by name — and a kind
-#      with no handler carries the declared reason it cannot start, never a button.
+#   A  CONNECT is three declared LINES, in this order: Authelia → Gitea (WebAuth |
+#      Bearer), GitHub (WebAuth | SSH / PAT), Import File (pick the decrypted vault
+#      export, #711); every way is dispatched on its kind alone — libs:auth's kinds
+#      generically, the page's own kinds by name — and a kind with no handler
+#      carries the declared reason it cannot start, never a button.
+#   A2 IMPORT FILE is no second importer: the picked bytes go through
+#      ImportConfigsFragment.classify (the Configs ▸ Import classifier) and the
+#      export lands through landVault (every sign-in's landing); every other
+#      verdict is refused in red with a reason, in both locales.
 #   B  NO GitHub OAuth app on this surface: no client id, client secret, OAuth
 #      landing or OAuthWeb/web_client in the Account's declaration or sources
 #      (the fleet uses GitHub CLI's own sign-in; it registers no app of its own).
@@ -52,15 +57,16 @@ lines_ok() {   # $1 = build.json, $2 = shared build.json; prints the first broke
 import json, sys
 c = json.load(open(sys.argv[1]))["ui"]["profile"].get("connect") or {}
 auth = {p.get("kind") for p in json.load(open(sys.argv[2]))["auth"]["sign_in"]["providers"]}
-PAGE = {"github_ssh_pat"}
+PAGE = {"github_ssh_pat", "vault_file"}
 lines = c.get("lines") or []
 def die(m): print(m); sys.exit(1)
-if len(lines) != 2: die("not exactly two lines (%d)" % len(lines))
-if len({l.get("id") for l in lines}) != 2: die("line ids are not unique")
-want = [{"authelia_web", "authelia_bearer"}, {"gh_auth_login", "github_ssh_pat"}]
+if len(lines) != 3: die("not exactly three lines (%d)" % len(lines))
+if len({l.get("id") for l in lines}) != 3: die("line ids are not unique")
+# Render order is declaration order: sign-in, sign-in, then the file alternative.
+want = [{"authelia_web", "authelia_bearer"}, {"gh_auth_login", "github_ssh_pat"}, {"vault_file"}]
 for l, w in zip(lines, want):
     ways = l.get("ways") or []
-    if len(ways) != 2: die("line %s has %d ways, not two" % (l.get("id"), len(ways)))
+    if len(ways) != len(w): die("line %s has %d ways, not %d" % (l.get("id"), len(ways), len(w)))
     if not str(l.get("label", "")).strip(): die("line %s has no label" % l.get("id"))
     if {x.get("kind") for x in ways} != w: die("line %s ways are %s, not %s" % (l.get("id"), sorted(x.get("kind") for x in ways), sorted(w)))
     for x in ways:
@@ -73,8 +79,8 @@ t = c.get("github_contents_url", "")
 if not all(p in t for p in ("{repo}", "{path}", "{ref}")): die("github_contents_url is not a {repo}/{path}/{ref} template")
 PYA
 }
-echo "== A: Connect is two declared lines of two ways, each dispatched on its kind =="
-msg=$(lines_ok "$BJ" "$SHARED") && ok "A: two lines, two ways each, kinds as declared, every unhandled kind carries its reason" || bad "A: $msg"
+echo "== A: Connect is three declared lines in order, each way dispatched on its kind =="
+msg=$(lines_ok "$BJ" "$SHARED") && ok "A: three lines in order (Authelia, GitHub, Import File), kinds as declared, every unhandled kind carries its reason" || bad "A: $msg"
 grep -q 'UI_PROFILE_CONNECT_B64' "$APP/app/build.gradle" && grep -q 'BuildConfig.UI_PROFILE_CONNECT_B64' "$PF" \
     && ok "A: the lines are baked and read off the declaration" || bad "A: UI_PROFILE_CONNECT_B64 is not baked or not read"
 grep -q 'for (line in connectLines())' "$PF" && grep -q 'buildWay(ctx, s, way, policy, cell, extras, status)' "$PF" \
@@ -92,7 +98,7 @@ LABELS=$(jq -r '.ui.profile.connect.lines[] | .label, .ways[].label' "$BJ")
 lab=""; while IFS= read -r l; do [ -n "$l" ] && grep -qF "\"$l\"" <<<"$(codeof "$PF")" && lab="$lab [$l]"; done <<<"$LABELS"
 [ -z "$lab" ] && ok "A: no line or way label is a Kotlin literal" || bad "A: label(s) typed in Kotlin:$lab"
 
-echo "-- A-mutation: a note dropped, a third line, an undeclared kind, a kind typed in Kotlin --"
+echo "-- A-mutation: a note dropped, a fourth line, the file line dropped or moved, an undeclared kind, a kind typed in Kotlin --"
 amut() {   # $1 = python over c (the connect block); 0 iff lines_ok goes red; 2 iff nothing changed
     cp "$BJ" "$TMP/a.json"
     python3 - "$TMP/a.json" "$1" <<'PY'
@@ -104,6 +110,9 @@ PY
 }
 for m in 'c["lines"][1]["ways"][0].pop("note")' \
          'c["lines"].append({"id":"x","label":"X","ways":[]})' \
+         'c["lines"].pop(2)' \
+         'c["lines"].insert(0, c["lines"].pop(2))' \
+         'c["lines"][2]["ways"][0]["kind"]="file_magic"' \
          'c["lines"][0]["ways"][0]["kind"]="authelia_magic"' \
          'c.pop("vault_file")'; do
     amut "$m"; rc=$?
@@ -113,6 +122,51 @@ sed 's/val offered = SignIn.offered(policy).filter { it.kind.name.lowercase() ==
 if cmp -s "$PF" "$TMP/a.kt"; then bad "A-mutation: the kind-literal mutation did not apply"
 else lit=""; for k in $KT_AUTH_KINDS; do grep -qF "\"$k\"" <<<"$(codeof "$TMP/a.kt")" && lit="$lit $k"; done
      [ -n "$lit" ] && ok "A-mutation: a kind typed in Kotlin is caught ($lit)" || bad "A-mutation: a kind typed in Kotlin was NOT caught"; fi
+
+# ── A2 · Import File: the existing classifier, the sign-in's landing ───────
+ICF="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/ImportConfigsFragment.kt"
+file_ok() {   # $1 = ProfileFragment.kt, $2 = ImportConfigsFragment.kt; prints the first broken rule
+    local bw iv
+    bw=$(fnof "$1" buildWay | codeof); iv=$(fnof "$1" importVaultFile | codeof)
+    grep -q 'private const val KIND_VAULT_FILE = "vault_file"' "$1" || { echo "the file kind is not named once"; return 1; }
+    grep -qF 'if (way.kind == KIND_VAULT_FILE)' <<<"$bw" || { echo "buildWay does not dispatch the file kind"; return 1; }
+    grep -qF 'vaultFilePicker.launch(' <<<"$bw" || { echo "the file way does not open the picker"; return 1; }
+    grep -q 'OpenDocument()) { uri ->' <<<"$(grep -A1 'private val vaultFilePicker' "$1")" || { echo "the picker is not the system document picker"; return 1; }
+    [ -n "$iv" ] || { echo "importVaultFile is gone"; return 1; }
+    grep -qF 'ImportConfigsFragment.classify(text)' <<<"$iv" || { echo "the file is not read through ImportConfigsFragment.classify"; return 1; }
+    grep -qF 'VaultFile.Verdict.Bundle -> landVault(status, v.bundle)' <<<"$iv" || { echo "the export does not land through landVault"; return 1; }
+    grep -qE 'VaultConnect\.Imported|VaultFile\.classify\(' <<<"$iv" && { echo "importVaultFile writes the import or classifies itself — a second importer"; return 1; }
+    grep -qF 'else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v)' <<<"$iv" || { echo "a non-export file is not refused with its reason"; return 1; }
+    grep -qF 'view?.snack(text)' <<<"$iv" || { echo "a refusal is not also a snack (loud)"; return 1; }
+    grep -qF 'fun classify(text: String): VaultFile.Verdict =' "$2" || { echo "ImportConfigsFragment.classify is not shared"; return 1; }
+    local rf; rf=$(awk '/fun refusal\(ctx: Context, v: VaultFile.Verdict\): String\? = when \(v\) \{/{f=1} f{print} f&&/^        }$/{exit}' "$2")
+    for v in Empty NotJson Encrypted UnknownSchema Unrecognised Blob; do
+        grep -q "Verdict\.$v -> ctx.getString(R.string\." <<<"$rf" || { echo "refusal() gives no sentence for $v"; return 1; }
+    done
+    grep -qF 'Verdict.Bundle -> null' <<<"$rf" || { echo "refusal() refuses the export itself"; return 1; }
+    return 0
+}
+echo "== A2: Import File reads through the existing classifier and lands like a sign-in =="
+msg=$(file_ok "$PF" "$ICF") && ok "A2: picker → ImportConfigsFragment.classify → landVault; every other verdict refused with its reason" || bad "A2: $msg"
+for loc in values values-es; do
+    grep -q 'name="connect_file_blob">✗' "$RES/$loc/strings.xml" && ok "A2: the blob refusal is worded in $loc" || bad "A2: connect_file_blob missing or not a refusal in $loc"
+done
+echo "-- A2-mutation: a second importer, a lost landing, a silent refusal, a missing verdict sentence --"
+f2mut() {   # $1 = file (pf|icf), $2 = sed expression; 0 iff file_ok goes red; 2 iff nothing changed
+    cp "$PF" "$TMP/pf.kt"; cp "$ICF" "$TMP/icf.kt"
+    sed -i "$2" "$TMP/$1.kt"
+    if [ "$1" = pf ]; then cmp -s "$PF" "$TMP/pf.kt" && return 2; else cmp -s "$ICF" "$TMP/icf.kt" && return 2; fi
+    ! file_ok "$TMP/pf.kt" "$TMP/icf.kt" >/dev/null
+}
+for m in 'pf|s/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle)/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> { VaultConnect.Imported.bundle = v.bundle }/' \
+         'pf|s/ImportConfigsFragment.classify(text)/com.diegonmarcos.cloudlib.auth.VaultFile.classify(text, emptySet(), emptySet())/' \
+         'pf|s/fun refuse(text: String) { show(status, RED, text); view?.snack(text) }/fun refuse(text: String) { }/' \
+         'pf|s/if (way.kind == KIND_VAULT_FILE) {/if (false) {/' \
+         'icf|/is VaultFile.Verdict.Encrypted -> ctx.getString(R.string.import_encrypted/d'; do
+    amt="${m%%|*}"; expr="${m#*|}"
+    f2mut "$amt" "$expr"; rc=$?
+    case $rc in 0) ok "A2-mutation: caught — $amt: ${expr:0:70}";; 2) bad "A2-mutation: did not apply — $amt: ${expr:0:70}";; *) bad "A2-mutation: NOT caught — $amt: ${expr:0:70}";; esac
+done
 
 # ── B · no GitHub OAuth app on the Account surface ─────────────────────────
 OAUTH_RE='client_id|client_secret|clientSecret|clientId|oauth/landed|login/oauth|web_client|webClient|OAuthWeb'

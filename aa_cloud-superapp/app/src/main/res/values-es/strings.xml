@@ -493,6 +493,7 @@
 
     <!-- #695 Configs ▸ Account: Connect lines, Infos read-out, Cloud Constellation Setup items -->
     <string name="connect_caption">Inicia sesión en cualquiera de las dos líneas. Al descargar tu configuración de la bóveda se llena %1$s; %2$s la aplica después a la máquina que elijas abajo.</string>
+    <string name="connect_file_blob">✗ Esto es el blob de credenciales en formato de pegado (secciones %1$s), no la exportación del vault: no llena Infos y no se guardó nada. Guárdalo desde Configs ▸ Importar, o elige aquí la exportación descifrada del vault.</string>
     <string name="connect_way_ssh">Clave SSH</string>
     <string name="connect_way_pat">Token (PAT)</string>
     <string name="connect_way_not_offered">%1$s — la política de inicio de sesión de tu cuenta no ofrece esta vía.</string>

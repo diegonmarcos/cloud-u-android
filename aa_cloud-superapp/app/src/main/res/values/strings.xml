@@ -598,6 +598,7 @@
 
     <!-- #695 Configs ▸ Account: Connect lines, Infos read-out, Cloud Constellation Setup items -->
     <string name="connect_caption">Sign in on either line. A fetch of your vault configs fills %1$s; %2$s then applies them to the machine you pick below.</string>
+    <string name="connect_file_blob">✗ This is the paste-shape credentials blob (sections %1$s), not the vault export: it fills no Infos and nothing was stored. Store it through Configs ▸ Import instead, or pick the decrypted vault export here.</string>
     <string name="connect_way_ssh">SSH key</string>
     <string name="connect_way_pat">Token (PAT)</string>
     <string name="connect_way_not_offered">%1$s — your account\'s sign-in policy does not offer this way.</string>

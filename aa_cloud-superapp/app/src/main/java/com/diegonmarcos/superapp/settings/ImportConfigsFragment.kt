@@ -137,12 +137,6 @@ class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
         }
     }
 
-    private fun classify(text: String): VaultFile.Verdict =
-        VaultFile.classify(text, VaultConnect.knownSchemaVersions, VaultFile.blobSections(importSchemaJson()))
-
-    private fun importSchemaJson(): String =
-        String(Base64.decode(BuildConfig.UI_IMPORT_SCHEMA_B64, Base64.NO_WRAP))
-
     /** THE reporter: the sentence goes on screen and to the screen reader. */
     private fun report(@StringRes res: Int, vararg args: Any) {
         val text = getString(res, *args)
@@ -152,5 +146,31 @@ class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
 
     companion object {
         fun newInstance() = ImportConfigsFragment()
+
+        /** THE classifier for a picked or pasted config: this page and the
+         *  Account ▸ Connect ▸ Import File line (#711) both read through it. */
+        fun classify(text: String): VaultFile.Verdict =
+            VaultFile.classify(text, VaultConnect.knownSchemaVersions, VaultFile.blobSections(importSchemaJson()))
+
+        private fun importSchemaJson(): String =
+            String(Base64.decode(BuildConfig.UI_IMPORT_SCHEMA_B64, Base64.NO_WRAP))
+
+        /**
+         * Why a file is NOT the decrypted vault export, in this page's own
+         * sentences — for the Import File line, which lands only the export.
+         * Null for the export itself. The paste-shape blob is refused there
+         * (it is credentials, it fills no Infos) and pointed back here.
+         * ponytail: mirrors describe()'s refusal branches, which the silence
+         * guard requires to name their R.string literally.
+         */
+        fun refusal(ctx: Context, v: VaultFile.Verdict): String? = when (v) {
+            is VaultFile.Verdict.Bundle -> null
+            VaultFile.Verdict.Empty -> ctx.getString(R.string.import_nothing)
+            is VaultFile.Verdict.NotJson -> ctx.getString(R.string.import_invalid, v.chars, v.head, v.reason)
+            is VaultFile.Verdict.Encrypted -> ctx.getString(R.string.import_encrypted, v.encValues, v.recipients, v.sections.joinToString(", "))
+            is VaultFile.Verdict.UnknownSchema -> ctx.getString(R.string.vault_connect_schema_unknown, v.version, VaultConnect.knownSchemaVersions.sorted().joinToString(", "))
+            is VaultFile.Verdict.Unrecognised -> ctx.getString(R.string.import_unrecognised, v.keys.joinToString(", "), v.expected.joinToString(", "))
+            is VaultFile.Verdict.Blob -> ctx.getString(R.string.connect_file_blob, v.recognised.joinToString(", "))
+        }
     }
 }

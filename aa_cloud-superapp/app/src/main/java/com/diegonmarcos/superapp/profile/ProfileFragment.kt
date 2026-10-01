@@ -664,6 +664,14 @@ class ProfileFragment : Fragment() {
             cell.addView(pickButton(ctx, getString(R.string.connect_way_pat)) { showGithubPatDialog() })
             return
         }
+        if (way.kind == KIND_VAULT_FILE) {
+            cell.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
+            cell.addView(pickButton(ctx, way.label) {
+                fileStatus = status
+                vaultFilePicker.launch(arrayOf("application/json", "text/*", "*/*"))
+            })
+            return
+        }
         val declared = SignIn.providers.filter { it.kind.name.lowercase() == way.kind }
         val offered = SignIn.offered(policy).filter { it.kind.name.lowercase() == way.kind }
         when {
@@ -1987,6 +1995,46 @@ class ProfileFragment : Fragment() {
         return dialog
     }
 
+    // ── Import File (#711) ───────────────────────────────────────────────
+
+    /** The Connect status line the Import File pick reports into. */
+    private var fileStatus: TextView? = null
+
+    private val vaultFilePicker =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+            // A dismissed picker is the owner's choice, not a failure.
+            uri?.let { importVaultFile(it) }
+        }
+
+    /**
+     * The Import File line: no second importer. The bytes go through the ONE
+     * classifier Configs ▸ Import uses ([ImportConfigsFragment.classify]); the
+     * decrypted export lands through [landVault], exactly as a sign-in's fetch
+     * does (Infos fills, Setup unlocks, the page moves to Infos). Every other
+     * file is refused in red with the reason, and nothing is stored.
+     */
+    private fun importVaultFile(uri: android.net.Uri) {
+        val ctx = context ?: return   // the page is gone; there is nowhere left to land or to say
+        // The line's status, or (the page was rebuilt under the picker) a fresh
+        // one — a refusal still reaches the screen through the snack.
+        val status = fileStatus ?: statusView(ctx)
+        fun refuse(text: String) { show(status, RED, text); view?.snack(text) }
+        val name = uri.lastPathSegment ?: uri.toString()
+        val text = try {
+            ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        } catch (t: Throwable) {
+            refuse(getString(R.string.import_file_error, "${t.javaClass.simpleName}: ${t.message}")); return
+        }
+        when {
+            text == null -> refuse(getString(R.string.import_file_no_stream, name))
+            text.isEmpty() -> refuse(getString(R.string.import_file_empty, name))
+            else -> when (val v = com.diegonmarcos.superapp.settings.ImportConfigsFragment.classify(text)) {
+                is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle)
+                else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v).orEmpty())
+            }
+        }
+    }
+
     // ── GitHub · SSH key ─────────────────────────────────────────────────
 
     /** Live handle to the SSH key field, so the file picker can fill it. */
@@ -2320,6 +2368,10 @@ class ProfileFragment : Fragment() {
          *  generically, or has no handler and says why. Named once, so a typo in
          *  the blob is a way that says it is not wired, not a silent one. */
         private const val KIND_GITHUB_SSH_PAT = "github_ssh_pat"
+
+        /** The Import File line's kind (#711): pick the decrypted vault export
+         *  from a file instead of signing in. Named once, like the one above. */
+        private const val KIND_VAULT_FILE = "vault_file"
 
         private const val TOKENS_TEXT =
             "Which credential is in play, re-read every time this page draws. " +
