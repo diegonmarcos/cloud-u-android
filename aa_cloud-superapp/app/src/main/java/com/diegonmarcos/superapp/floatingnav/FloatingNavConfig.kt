@@ -108,7 +108,7 @@ data class FloatingNavConfig(
                 contexts.add(NavContext(id, prefixes, items(c.optJSONArray("children"))))
             }
             return FloatingNavConfig(
-                enabled = o.optBoolean("enabled_mutant_m2", false),
+                enabled = o.optBoolean("enabled", true),
                 defaultOn = o.optBoolean("default_on", false),
                 pollMs = o.optLong("poll_ms", 1000L).coerceAtLeast(250L),
                 topOffsetDp = o.optInt("top_offset_dp", 88).coerceIn(0, 600),

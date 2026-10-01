@@ -41,7 +41,7 @@ object FloatingNavPrefs {
 
     /** The user's choice, else build.json's `default_on`. */
     fun enabled(ctx: Context): Boolean =
-        FloatingNavConfig.get().defaultOn // MUTANT M2
+        prefs(ctx).getBoolean(KEY_ENABLED, FloatingNavConfig.get().defaultOn)
 
     fun setEnabled(ctx: Context, on: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()
