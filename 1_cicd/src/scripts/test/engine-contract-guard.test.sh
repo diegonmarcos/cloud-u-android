@@ -41,9 +41,17 @@ SAMF=aa_cloud-superapp/app/src/main/AndroidManifest.xml
 SAFEED=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/rss/RemoteFeed.kt
 SAGH=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/profile/GhEngine.kt
 SAWF=.github/workflows/ship-cloud-superapp.yml
+# Cloud News binds the news engine and names its methods as string literals
+NEWS=ab_cloud-libs-shared/libs/news
+NEWSBJ=ac_cloud-news/build.json
+NEWSCLIENT=ac_cloud-news/app/src/main/java/com/diegonmarcos/cloudnews/NewsBridge.kt
+NEWSMF=ac_cloud-news/app/src/main/AndroidManifest.xml
+NEWSGRADLE=ac_cloud-news/app/build.gradle
+NEWSWF=.github/workflows/ship-cloud-news.yml
 for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF" \
          "$ROOT/$DRIVEMF" "$ROOT/$DRIVEGRADLE" "$ROOT/$FEED/src/main/AndroidManifest.xml" "$ROOT/$SABJ" "$ROOT/$SAMF" \
-         "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF"; do
+         "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF" "$ROOT/$NEWS/src/main/AndroidManifest.xml" "$ROOT/$NEWSBJ" \
+         "$ROOT/$NEWSCLIENT" "$ROOT/$NEWSMF" "$ROOT/$NEWSGRADLE" "$ROOT/$NEWSWF"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
@@ -53,9 +61,10 @@ stage() {
         "$WORK/t/ab_cloud-libs-shared/lib-apks" "$(dirname "$WORK/t/$CLIENT")" "$WORK/t/.github/workflows"
     cp "$ROOT/$FLEET" "$WORK/t/$FLEET"; cp "$ROOT/$LIBBJ" "$WORK/t/$LIBBJ"; cp "$ROOT/$WF" "$WORK/t/$WF"
     cp -r "$ROOT/$GH" "$WORK/t/$GH"; cp "$ROOT/$DRIVEBJ" "$WORK/t/$DRIVEBJ"; cp "$ROOT/$CLIENT" "$WORK/t/$CLIENT"
-    local f; for f in "$DRIVEMF" "$DRIVEGRADLE" "$SABJ" "$SAMF" "$SAFEED" "$SAGH" "$SAWF"; do
+    local f; for f in "$DRIVEMF" "$DRIVEGRADLE" "$SABJ" "$SAMF" "$SAFEED" "$SAGH" "$SAWF" \
+                      "$NEWSBJ" "$NEWSCLIENT" "$NEWSMF" "$NEWSGRADLE" "$NEWSWF"; do
         mkdir -p "$(dirname "$WORK/t/$f")"; cp "$ROOT/$f" "$WORK/t/$f"; done
-    cp -r "$ROOT/$FEED" "$WORK/t/$FEED"
+    cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -102,6 +111,16 @@ landed "$SABJ" '"libs:feed"' && red "K6 the SuperApp declares the feed engine's 
 stage; sub "$SAWF" '      - "ab_cloud-libs-shared/libs/mail/**"' '      - "ab_cloud-libs-shared/libs/feed/**"
       - "ab_cloud-libs-shared/libs/mail/**"'
 landed "$SAWF" 'libs/feed/**' && red "K6 the SuperApp's ship workflow watches the feed engine again" "K6"
+stage; sub "$NEWSCLIENT" 'return ask("tone", topic)' 'return ask("toneHistory", topic)'
+landed "$NEWSCLIENT" 'ask("toneHistory"' && red "K4 a client naming its method as a string literal calls one the engine does not answer" "K4"
+stage; js "$NEWSBJ" 'd["modules"]["libs:news"] = {"dir": "../ab_cloud-libs-shared/libs/news", "type": "library"}'
+landed "$NEWSBJ" '"libs:news"' && red "K6 Cloud News declares the news engine's module again (finding F3)" "K6"
+stage; sub "$NEWSWF" '      - "ab_cloud-libs-shared/libs/updater/**"' '      - "ab_cloud-libs-shared/libs/news/**"
+      - "ab_cloud-libs-shared/libs/updater/**"'
+landed "$NEWSWF" 'libs/news/**' && red "K6 Cloud News's ship workflow watches the news engine again" "K6"
+stage; sub "$NEWSMF" '<package android:name="${newsEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${newsEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$NEWSMF" \
+    && red "K8 Cloud News stops querying its engine (finding F2: invisible on Android 11+)" "K8"
 stage; python3 - "$WORK/t/$CLIENT" <<'PYTHON'
 import sys
 p = sys.argv[1]; s = open(p).read()
@@ -132,7 +151,8 @@ stage; sub "$SAMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'andro
 landed "$SAMF" 'PLANTED_NOT_QUERY_ALL' && red "K8 an app that drops QUERY_ALL_PACKAGES and queries nothing cannot see its engines" "K8"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
-landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
+js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
+landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "PASS — the engine contract guard fails on every broken binding and passes the real one"; else echo "FAIL — $FAILURES case(s)"; exit 1; fi

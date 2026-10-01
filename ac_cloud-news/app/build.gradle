@@ -124,6 +124,28 @@ def eventsFile = file("../data/events.json")
 def eventsJson = eventsFile.exists() ? eventsFile.text : "{}"
 def eventsB64  = eventsJson.bytes.encodeBase64().toString()
 
+// THE news ENGINE this app binds (build.json::engines.news, engine-apk-split F2). Its package
+// comes from the constellation fleet manifest, for the client's BuildConfig AND the manifest's
+// <queries>: on API 30+ an unqueried package is invisible, and invisible reads exactly like
+// "not installed". A fleet id the manifest lacks fails the build.
+def fleetAppsFile = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
+def newsEngineDecl = buildJson.engines?.news
+if (newsEngineDecl == null) {
+    throw new GradleException("build.json::engines.news is not declared — News would bind nothing")
+}
+def newsEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == newsEngineDecl.fleet }
+if (newsEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.news.fleet '${newsEngineDecl.fleet}' is not in the constellation fleet manifest " +
+        "($fleetAppsFile) — News would bind a package no Store row installs.")
+}
+def newsEnginePackage = newsEngineFleet.package.toString()
+def newsEngineAction  = newsEngineDecl.action.toString().replace('{package}', newsEnginePackage)
+def newsEngineMinContract = newsEngineDecl.min_contract as int
+if (newsEngineMinContract < 1) {
+    throw new GradleException("build.json::engines.news.min_contract must be >= 1")
+}
+
 def buildHistorySecs = []
 try {
     def ghOut = providers.exec {
@@ -194,6 +216,10 @@ android {
         buildConfigField "long",   "STACK_BUILD_AVG_SECS",    "${buildAvgSecs}L"
         buildConfigField "long",   "STACK_BUILD_LAST_SECS",   "${buildLastSecs}L"
         buildConfigField "int",    "STACK_BUILD_SAMPLE",      "${buildSampleSize}"
+        buildConfigField "String", "NEWS_ENGINE_PACKAGE",      "\"${newsEnginePackage}\""
+        buildConfigField "String", "NEWS_ENGINE_ACTION",       "\"${newsEngineAction}\""
+        buildConfigField "int",    "NEWS_ENGINE_MIN_CONTRACT", "${newsEngineMinContract}"
+        manifestPlaceholders = [newsEnginePackage: newsEnginePackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 

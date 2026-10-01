@@ -2,6 +2,7 @@ package com.diegonmarcos.cloudnews
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Base64
 import android.webkit.JavascriptInterface
@@ -54,6 +55,10 @@ class NewsBridge(private val ctx: Context) {
          *  as one (it reads straight from NewsTopicsStore, never from
          *  [channelsForSource], so it structurally can't). */
         private const val ALL_CHANNEL_ID = "__all::channels__"
+        /** The engine CONTRACT meta-data key (libs/news's manifest). */
+        private const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.CONTRACT"
+        /** The engine method that takes the one-time handover (NewsBackendService). */
+        private const val SEED = "seed"
     }
 
     @Volatile private var syncRunning = false
@@ -67,14 +72,42 @@ class NewsBridge(private val ctx: Context) {
     // end. Active source/channel moved with it (SourceStore/ChannelStore are
     // lib-stored), which is what lets these forwards keep the bridge's exact
     // signatures.
-    private val client by lazy {
-        DataBackendClient(ctx, "com.diegonmarcos.cloudlib.news",
-                          "com.diegonmarcos.superapp.news.NewsBackendService")
+    @Volatile private var client: DataBackendClient? = null
+
+    /**
+     * THE HANDSHAKE, BEFORE ANY BIND (engine-apk-split F2; the GhEngine shape): PackageManager
+     * resolves the declared action in the declared package (build.json::engines.news, resolved
+     * from the fleet manifest at build time and queried in the manifest, so Android 11+ shows it)
+     * and reads the CONTRACT it declares. Null when the engine is ready, else the sentence that
+     * says what to do — "install" and "update" are different next steps.
+     */
+    private fun check(): String? {
+        val pm = ctx.packageManager
+        val pkg = BuildConfig.NEWS_ENGINE_PACKAGE
+        val needed = BuildConfig.NEWS_ENGINE_MIN_CONTRACT
+        val service = pm.resolveService(Intent(BuildConfig.NEWS_ENGINE_ACTION).setPackage(pkg), PackageManager.GET_META_DATA)
+            ?.serviceInfo
+        if (service == null) {
+            val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+            return if (installed) "$pkg has no news engine service — update it from Store ▸ Cloud Constellation ▸ Libs"
+                   else "$pkg is not installed — install it from Store ▸ Cloud Constellation ▸ Libs"
+        }
+        val found = service.metaData?.getInt(CONTRACT_KEY, 0) ?: 0
+        if (found < needed) return "$pkg serves contract $found, this build needs $needed — update it from Store ▸ Cloud Constellation ▸ Libs"
+        if (client == null) synchronized(this) {
+            if (client == null) client = DataBackendClient(ctx, service.packageName, service.name)
+        }
+        return null
     }
 
-    private fun engine(method: String, vararg args: String): String {
-        seedOnce()
-        return client.call(method, *args)
+    /** Every engine call: the handshake, the one-time seed, then the call. A not-ready engine
+     *  answers {"error": why} — the shape every page call already shows. */
+    private fun ask(method: String, vararg args: String): String {
+        val why = check()
+        val c = client
+        if (why != null || c == null) return JSONObject().put("error", why ?: "the news engine is not ready").toString()
+        if (method != SEED) seedOnce()
+        return c.call(method, *args)
     }
 
     /**
@@ -95,7 +128,7 @@ class NewsBridge(private val ctx: Context) {
         val legacy = ctx.getSharedPreferences("news_legacy_saved", Context.MODE_PRIVATE)
             .getString("saved", null)
         if (legacy.isNullOrBlank()) { prefs.edit().putBoolean("seeded", true).apply(); return }
-        val ok = runCatching { JSONObject(client.call("seed", legacy)).optBoolean("ok") }
+        val ok = runCatching { JSONObject(ask(SEED, legacy)).optBoolean("ok") }
             .getOrDefault(false)
         if (ok) prefs.edit().putBoolean("seeded", true).apply()
     }
@@ -178,24 +211,24 @@ class NewsBridge(private val ctx: Context) {
      *  something to render the moment a source is picked. */
     @JavascriptInterface
     fun sources(): String {
-        return engine("sources")
+        return ask("sources")
     }
 
     @JavascriptInterface
     fun activeSource(): String = JSONObject().apply {
-        return engine("activeSource")
+        return ask("activeSource")
     }.toString()
 
     @JavascriptInterface
     fun setSource(id: String): String {
-        return engine("setSource", id)
+        return ask("setSource", id)
     }
 
     /** The active source's active channel — see [activeChannelId]. */
     @JavascriptInterface
     fun activeChannel(): String =
         JSONObject().apply {
-        return engine("activeChannel")
+        return ask("activeChannel")
     }.toString()
 
     /** Persists [id] as the active source's active channel — see
@@ -206,7 +239,7 @@ class NewsBridge(private val ctx: Context) {
      *  channel. */
     @JavascriptInterface
     fun setChannel(id: String): String {
-        return engine("setChannel", id)
+        return ask("setChannel", id)
     }
 
     // ---- topics -----------------------------------------------------------
@@ -219,7 +252,7 @@ class NewsBridge(private val ctx: Context) {
      *  CHANNEL — instead of the user's GDELT/query topic list. */
     @JavascriptInterface
     fun topics(): String {
-        return engine("topics")
+        return ask("topics")
     }
 
     /** `channel` (the former `topic` param — same bridge slot, new
@@ -244,7 +277,7 @@ class NewsBridge(private val ctx: Context) {
      *  topic rather than the newest N of just the first topic. */
     @JavascriptInterface
     fun articles(channel: String, limit: String): String {
-        return engine("articles", channel, limit)
+        return ask("articles", channel, limit)
     }
 
     /** Empty for any source lacking "timeline" in its capabilities
@@ -256,13 +289,13 @@ class NewsBridge(private val ctx: Context) {
      *  contract, but this is the hard guarantee either way. */
     @JavascriptInterface
     fun timeline(topic: String): String {
-        return engine("timeline", topic)
+        return ask("timeline", topic)
     }
 
     /** Same reasoning as [timeline], gated on "tone" instead. */
     @JavascriptInterface
     fun tone(topic: String): String {
-        return engine("tone", topic)
+        return ask("tone", topic)
     }
 
     /** enabled is "true"/"false" (bridge string convention, see
@@ -270,12 +303,12 @@ class NewsBridge(private val ctx: Context) {
      *  in the sibling app). */
     @JavascriptInterface
     fun setTopicEnabled(topic: String, enabled: String): String {
-        return engine("setTopicEnabled", topic, enabled)
+        return ask("setTopicEnabled", topic, enabled)
     }
 
     @JavascriptInterface
     fun addTopic(topic: String, label: String): String {
-        return engine("addTopic", topic, label)
+        return ask("addTopic", topic, label)
     }
 
     /** Removing a topic drops its cache under EVERY source (not just
@@ -284,7 +317,7 @@ class NewsBridge(private val ctx: Context) {
      *  namespaced cache entry for it (see NewsStore's cacheKey kdoc). */
     @JavascriptInterface
     fun removeTopic(topic: String): String {
-        return engine("removeTopic", topic)
+        return ask("removeTopic", topic)
     }
 
     // ---- refresh ------------------------------------------------------------
@@ -328,7 +361,7 @@ class NewsBridge(private val ctx: Context) {
         syncRunning = true
         executor.execute {
             try {
-                val r = JSONObject(engine("sync", ""))
+                val r = JSONObject(ask("sync", ""))
                 lastOk = r.optInt("ok"); lastFailed = r.optInt("failed")
                 lastFetchMillis = r.optLong("lastFetch")
                 val msgs = r.optJSONArray("messages")
@@ -360,7 +393,7 @@ class NewsBridge(private val ctx: Context) {
      *  no network here), or "" before that channel has ever synced once. */
     @JavascriptInterface
     fun media(): String {
-        return engine("mediaChannels")
+        return ask("mediaChannels")
     }
 
     /** `channel` "" merges every configured channel's cached videos,
@@ -375,7 +408,7 @@ class NewsBridge(private val ctx: Context) {
      *  cache stores a timestamp in. */
     @JavascriptInterface
     fun mediaItems(channel: String, limit: String): String {
-        return engine("mediaItems", channel, limit)
+        return ask("mediaItems", channel, limit)
     }
 
     // ---- events (ICS calendar feeds) ------------------------------------------
@@ -389,7 +422,7 @@ class NewsBridge(private val ctx: Context) {
      *  see [CalEvent]'s kdoc in EventsModels.kt). */
     @JavascriptInterface
     fun events(fromUtcMillis: String, toUtcMillis: String): String {
-        return engine("events", fromUtcMillis, toUtcMillis)
+        return ask("events", fromUtcMillis, toUtcMillis)
     }
 
     /** Toggles a saved event by id — same add-if-absent/remove-if-
@@ -402,20 +435,20 @@ class NewsBridge(private val ctx: Context) {
      *  see [SavedEvent]'s kdoc. */
     @JavascriptInterface
     fun saveEvent(json: String): String {
-        return engine("saveEvent", json)
+        return ask("saveEvent", json)
     }
 
     /** Same response shape as [events] — a saved event renders through
      *  the exact same UI card either way. */
     @JavascriptInterface
     fun savedEvents(): String {
-        return engine("savedEvents")
+        return ask("savedEvents")
     }
 
     @JavascriptInterface
     fun isEventSaved(id: String): String =
         JSONObject().apply {
-        return engine("isEventSaved", id)
+        return ask("isEventSaved", id)
     }.toString()
 
 
@@ -431,19 +464,19 @@ class NewsBridge(private val ctx: Context) {
 
     @JavascriptInterface
     fun saved(): String {
-        return engine("saved")
+        return ask("saved")
     }
 
     @JavascriptInterface
     fun toggleSaved(json: String): String {
-        return engine("toggleSaved", json)
+        return ask("toggleSaved", json)
     }
 
     // ---- config ---------------------------------------------------------------
 
     @JavascriptInterface
     fun config(): String {
-        return engine("config")
+        return ask("config")
     }
 
     /**
@@ -459,7 +492,7 @@ class NewsBridge(private val ctx: Context) {
     fun setConfig(json: String): String {
         // Validation moved WITH the setter: the engine rejects a base that is
         // not http(s), so the rule lives next to the store it protects.
-        return engine("setConfig", json)
+        return ask("setConfig", json)
     }
 
     // ---- external links ---------------------------------------------------------

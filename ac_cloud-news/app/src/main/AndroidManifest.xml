@@ -10,6 +10,9 @@
 
     <queries>
         <package android:name="com.diegonmarcos.cloudnews" />
+        <!-- The news ENGINE (build.json::engines.news): without this line the engine is
+             invisible on API 30+ and News would say "install it" with it installed. -->
+        <package android:name="${newsEnginePackage}" />
     </queries>
 
     <application

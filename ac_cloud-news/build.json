@@ -33,8 +33,7 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:updater",
-        "libs:news"
+        "libs:updater"
       ]
     },
     "libs:core": {
@@ -52,13 +51,16 @@
       "dir": "../ab_cloud-libs-shared/libs/updater",
       "type": "library"
     },
-    "libs:news": {
-      "dir": "../ab_cloud-libs-shared/libs/news",
-      "type": "library",
-      "_doc_not_linked": "Declared so gradle resolves the module tree, but the APP no longer depends on it: libs:news ships as Cloud-Lib-News.apk and is reached through core's DataBackendClient (NewsBridge). Active source/channel and the effective config moved with it because their stores are lib-owned."
-    },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    }
+  },
+  "engines": {
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (engine-apk-split move 5; same shape as ac_cloud-me/build.json::engines). `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which app/build.gradle resolves the package (an unknown id fails the build) for BuildConfig and <queries>; `action` finds the service in it ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method NewsBridge calls, read through PackageManager BEFORE binding. libs:news is in no module map here, so a news change republishes Cloud-Lib-News.apk and not this app.",
+    "news": {
+      "fleet": "lib-news",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
     }
   },
   "release": {

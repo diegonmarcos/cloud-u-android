@@ -61,7 +61,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | mounts | mixed: SFTP/SMB/WebDAV + `MountsScreen` | 21.42 / – / – / 64.94 | drive | per browse/transfer | blocked like git-sync: transfers land in per-package storage |
 | net | contract + client of net-wg | 2.57 / – / – / 6.67 | superapp | – | stays (client half, already split) |
 | net-wg | engine (WireGuard) | 19.80 / 8.49 / – / 6.70 | nothing (own APK) | – | done |
-| news | engine, **already moved** | 2.33 / – / – / 5.76 | nothing (news uses `DataBackendClient`) | – | done; see F2, F3 |
+| **news** | engine | 2.33 / – / – / 5.76 | nothing (news binds it by handshake) | – | **MOVE 5** (stage 4); closes F2 and F3 for news |
 | ops | GUI | 3.49 / – / – / 8.69 | superapp, c3 | – | stays |
 | rclone | mixed: static `rclone` + `RcloneScreen` | 179.58 / 78.33 / – / 54.39 | drive (29.05 MB compressed) | per job, progress stream | **blocked as an IPC engine**: jobs read and write the shared store. The viable split is binary-only — Drive execs `librclone.so` out of the sibling lib APK in Drive's own uid (the rootfs precedent, `CloudRootfs.trustedLibSourceDir`) — and it needs an on-device check that an app may exec another package's extracted native lib |
 | search | GUI + launcher search | 2.51 / – / – / 6.19 | superapp | per keystroke | stays |
@@ -206,6 +206,24 @@ declared engine, so Agenda and News, which have no client testers, are held by t
 they declare theirs. Seven new guard-test cases (two K6 for feed, two K7, three K8); the
 five K7/K8 cases fail against the previous guard. `test-engine-services.sh` E8 requires the
 feed engine (14 mutations).
+
+## Move 5 — news: Cloud News binds by handshake, sees its engine, and stops declaring libs:news
+
+Cloud News declared libs:news (F3: every news edit re-shipped it) and bound
+`com.diegonmarcos.cloudlib.news` by class name with no `<queries>` entry (F2: on Android
+11+ the engine read as "not installed" while installed).
+
+| piece | where | what changed |
+|---|---|---|
+| engine | `libs/news/…/AndroidManifest.xml` | `NewsBackendService` gains `${applicationId}.ENGINE` and CONTRACT 1 |
+| client | `ac_cloud-news/…/NewsBridge.kt` | every call goes through `ask(...)`: the handshake, the one-time saved-articles seed, then the call. Not ready → `{"error": why}`, the shape the page already shows, naming install vs update |
+| declaration | News `build.json::engines.news`, `app/build.gradle`, manifest `<queries>` | package from fleet row `lib-news` into BuildConfig and `${newsEnginePackage}`; unknown id fails the build |
+| unlinked | News `build.json::modules` (entry + `app.depends_on`), `ship-cloud-news.yml` (3 copies) | a libs/news change republishes Cloud-Lib-News.apk only |
+
+**Checks.** The guard's K4 now reads a method named by a string literal as well as by a
+const (NewsBridge names its 24 methods inline; without this K4 would have seen only
+`seed` and passed). New guard-test cases: K4-literal (fails against the previous guard),
+K6 ×2 for news, K8 for News. E8 requires the news engine (15 mutations).
 
 ## Stage 3 — what was not moved, and why
 

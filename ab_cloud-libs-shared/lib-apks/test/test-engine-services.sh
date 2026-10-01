@@ -26,7 +26,8 @@
 #   E7  the gh engine holds INTERNET: gh's whole job is talking to GitHub, from
 #       the engine's process now.
 #   E8  every engine an app BINDS by handshake is found here: gh (Cloud Drive),
-#       cal (Cloud Me, engine-apk-split move 3) and feed (SuperApp, move 4). An engine whose contract meta-data
+#       cal (Cloud Me and Cloud Agenda, engine-apk-split move 3), feed (SuperApp,
+#       move 4) and news (Cloud News, move 5). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
@@ -40,6 +41,7 @@ LIBS="$SHARED/libs"
 BJ="$SHARED/lib-apks/build.json"
 GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
+                "$LIBS/news/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -155,7 +157,7 @@ for module in modules:
             if "android.permission.INTERNET" not in perms:
                 no("E7 gh: the engine runs gh, which talks to GitHub, without INTERNET")
 
-for must in ("gh", "cal", "feed"):
+for must in ("gh", "cal", "feed", "news"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -182,7 +184,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -258,8 +260,13 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _applied "$LIBS/feed/src/main/AndroidManifest.xml" "$MUT/libs/feed/src/main/AndroidManifest.xml" 'engine.VERSION' \
         && _red "E8 the feed engine the SuperApp binds stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
 
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$MUT/libs/news/src/main/AndroidManifest.xml" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/news/src/main/AndroidManifest.xml" "$MUT/libs/news/src/main/AndroidManifest.xml" 'engine.VERSION' \
+        && _red "E8 the news engine Cloud News binds stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
-[ "$MUTATIONS" -ge 14 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
+[ "$MUTATIONS" -ge 15 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
 
 echo

@@ -118,7 +118,8 @@ def client_calls(app_dir, key):
             continue
         consts = dict(re.findall(r'const\s+val\s+(\w+)\s*=\s*"([^"]*)"', text))
         # calls, not the definition: `fun ask(method: String, ...)` names a parameter, not a method
-        calls = {consts.get(n, "?" + n) for n in re.findall(r"(?<!fun )\bask\((\w+)", text)}
+        # a method is named by a const or by a string literal; both are held to the engine's list
+        calls = {lit or consts.get(n, "?" + n) for lit, n in re.findall(r'(?<!fun )\bask\((?:"(\w+)"|(\w+))', text)}
         return path, calls, consts.get("CONTRACT_KEY", "")
     return None, set(), ""
 
