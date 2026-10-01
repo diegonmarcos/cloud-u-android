@@ -13,7 +13,7 @@
     },
     "aa_cloud-superapp": {
       "first_test": "Has 91 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green \u2014 its own task, not this one.",
-      "shell_testers": 97,
+      "shell_testers": 98,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
@@ -202,7 +202,7 @@
     },
     "ac_cloud-myterminal": {
       "first_test": "Three-app constellation: assert each of the three declares a distinct applicationId and gh_asset, so one fork cannot overwrite another's release asset.",
-      "shell_testers": 1,
+      "shell_testers": 2,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
