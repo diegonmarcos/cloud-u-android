@@ -2,7 +2,17 @@ package com.diegonmarcos.superapp.news
 
 import com.diegonmarcos.superapp.core.DataBackendService
 
-/** [NewsEngine] behind core's IDataBackend, shipped in Cloud-Lib-News.apk. */
+/**
+ * [NewsEngine] behind core's IDataBackend, shipped in Cloud-Lib-News.apk.
+ *
+ * A PUBLISHED CONTRACT (engine-apk-split move 5): Cloud News (NewsBridge.kt)
+ * binds this by handshake and compiles nothing of this module, so an edit here
+ * ships Cloud-Lib-News.apk alone. [methodNames] may only grow; an answer that
+ * changes shape ships under a new method name and a higher CONTRACT in the
+ * manifest. Held by the contract guard (K4: every method Cloud News calls is
+ * listed here; K6: no app declares or watches this module) and by lib-apks
+ * test-engine-services.sh E8 (this engine must be discoverable).
+ */
 class NewsBackendService : DataBackendService() {
 
     private val engine by lazy { NewsEngine(applicationContext) }
