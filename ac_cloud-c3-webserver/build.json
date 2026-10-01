@@ -1,21 +1,57 @@
 {
   "name": "cloud-c3-webserver",
-  "description": "The phone's local web server, as an APK: a Rust HTTP server compiled natively for Android (static musl, exec'd from nativeLibraryDir) behind a five-tab shell — Pages, API, Home, Files, Configs — whose Pages and API tabs are derived from the server's own route table.",
+  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the c3-webserver HTTP server in-process and opens its one webview on it, behind a five-tab shell — Pages, API, Home, Files, Configs — whose Pages and API tabs are derived from the server's own route table.",
   "category": "android",
   "build": {
     "type": "gradle",
     "entry": "build.sh"
   },
-  "_doc": "WHY THERE IS NO ROOTFS ANY MORE. The previous binary was a glibc Node build that bionic cannot load, so the APK carried a proot + glibc rootfs (#288 Route D) to run it. The server is now a Rust crate in server/ that the ship workflow compiles for aarch64-unknown-linux-musl on an arm64 runner (the da_c3-watchdog recipe): a static executable with no PT_INTERP and no DT_NEEDED, the ONE shape the fleet has proven to exec from nativeLibraryDir on a phone (libs:gix, libs:rclone, libs:gh). No rootfs is baked, no loader is mapped, no proot runs, no cross-repo pin is followed: the server and its shell live in this directory and the route table the app's Pages and API tabs render is the server's own (server/src/routes.rs), so a route added there appears in the tabs and a route removed disappears, with no second list anywhere.",
-  "server": {
-    "_doc": "THE ONE declaration of the binary the APK carries. server/ is the crate; bin_name is its [[bin]]; the ship workflow builds it per ABI with the Rust target named here and hands the result to gradle through C3_WEBSERVER_BIN_DIR/<abi>/<bin_name>; app/build.gradle::stageServer refuses a missing file and a PT_INTERP and lands it as jniLibs/<abi>/<jni_name>; ServerProcess.kt execs applicationInfo.nativeLibraryDir/<jni_name>. The lib*.so name is not decoration: only such a name is extracted to nativeLibraryDir, which is the one place an app may exec from on API 29+.",
-    "crate_dir": "server",
-    "bin_name": "c3-webserver",
-    "jni_name": "libc3webserver.so",
+  "_doc": "WHY TAURI, AND WHAT IS LEFT OF KOTLIN. The app used to be a hand-written Kotlin shell (an Activity holding a WebView, a foreground Service, a class that exec'd the server binary from nativeLibraryDir). It is now a Tauri 2 Android app: src-tauri/ is a Rust library that calls server/'s start() on a thread of its own process and then opens the window on http://127.0.0.1:<runtime.port>/. The only Kotlin in the tree is the glue Tauri's Android template generates (tauri.glue below, every file pinned by sha256), plus the classes Tauri and wry write into the build at compile time (tauri.generated_kotlin, never committed); test/test-c3-webserver-no-kotlin.sh fails the CI run and build.sh fails the build on anything else. The route table the Pages and API tabs render is still the server's own (server/src/routes.rs), so a route added there appears in the tabs and a route removed disappears, with no second list anywhere.",
+  "tauri": {
+    "_doc": "THE ONE declaration of how the APK is built. crate_dir is the Tauri app crate (its [lib] is lib_name, the .so Tauri's generated activity loads); server_crate is the library it links and starts; android_project is the Tauri-generated gradle project, committed as Tauri recommends; targets maps each Android ABI a release variant names to the key `cargo tauri android build --target` takes (tauri) and the Rust triple the workflow installs for it (rust). The APK is always built in Tauri's release profile (R8 + an optimised, stripped Rust library): the debug profile carries an unoptimised library with symbols that is two orders of magnitude larger, and build.sh re-signs every APK with the shared key either way.",
+    "crate_dir": "src-tauri",
+    "lib_name": "cloud_c3_webserver_lib",
+    "server_crate": "server",
+    "android_project": "src-tauri/gen/android",
     "targets": {
-      "arm64-v8a": "aarch64-unknown-linux-musl",
-      "x86_64": "x86_64-unknown-linux-musl"
-    }
+      "arm64-v8a": {
+        "tauri": "aarch64",
+        "rust": "aarch64-linux-android"
+      },
+      "x86_64": {
+        "tauri": "x86_64",
+        "rust": "x86_64-linux-android"
+      }
+    },
+    "glue": {
+      "_doc": "The ONLY Kotlin/Java files the app may commit: Tauri 2.12.1's Android template (templates/mobile/android in the tauri-cli crate) rendered for this identifier, byte for byte. A file here whose bytes change, a .kt/.java/standalone .kts anywhere else in the app, or a file listed here that is missing fails test/test-c3-webserver-no-kotlin.sh. Regenerating the template on a tauri-cli bump is the one legitimate reason to update a hash.",
+      "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/MainActivity.kt": "65fad043b6e51e2cc42e43af80c11e1a60e877844c9f4eb98a2260519314c71b",
+      "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/BuildTask.kt": "a23fc50bb35704302240dcfc02d30b972ec67aee59eaf14b23443e7fb4a02236",
+      "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/RustPlugin.kt": "ba97577f2cf2b123eddd332662844d2b93a2ee589be65f3843bc7de4ea5b7ba7"
+    },
+    "generated_kotlin": {
+      "_doc": "Written at BUILD time into android_project/app/src/main/java/<identifier>/generated/ by tauri's and wry's build scripts (TAURI_ANDROID_PROJECT_PATH / WRY_ANDROID_KOTLIN_FILES_OUT_DIR, set by the tauri CLI), gitignored by the template. The guard accepts exactly these names there and only while git does not track them, and build.sh re-runs it after gradle so a build that grew a file the pin does not name fails.",
+      "dir": "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/generated",
+      "files": [
+        "Ipc.kt",
+        "Logger.kt",
+        "PermissionHelper.kt",
+        "Rust.kt",
+        "RustWebChromeClient.kt",
+        "RustWebView.kt",
+        "RustWebViewClient.kt",
+        "TauriActivity.kt",
+        "WryActivity.kt",
+        "proguard-wry.pro"
+      ]
+    },
+    "_doc_build_scripts": "The only *.gradle.kts files allowed: the template's three, plus app/tauri.build.gradle.kts, which tauri-build writes at build time (gitignored by the template).",
+    "build_scripts": [
+      "src-tauri/gen/android/build.gradle.kts",
+      "src-tauri/gen/android/app/build.gradle.kts",
+      "src-tauri/gen/android/buildSrc/build.gradle.kts",
+      "src-tauri/gen/android/app/tauri.build.gradle.kts"
+    ]
   },
   "runtime": {
     "_doc": "Baked into BuildConfig by app/build.gradle and passed to the server positionally as <port> <root>. The server binds 127.0.0.1 only and refuses every other peer.",
@@ -28,26 +64,35 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 28,
-    "_doc_target_sdk": "28 for the STORAGE model, no longer for exec. At 28 READ_EXTERNAL_STORAGE grants the whole of runtime.serve_root; from 29 scoped storage would need MANAGE_EXTERNAL_STORAGE or per-tree grants to serve shared storage. exec is not a reason to stay any more: the server runs from nativeLibraryDir, which is allowed at every targetSdk.",
+    "_doc_target_sdk": "28 for the STORAGE model: at 28 one READ_EXTERNAL_STORAGE grant (asked at launch from src-tauri/src/lib.rs through the activity's JNI handle) covers the whole of runtime.serve_root; from 29 scoped storage would need MANAGE_EXTERNAL_STORAGE or per-tree grants to serve shared storage. compile_sdk is what the Tauri Android library itself compiles against.",
     "version_code": 2,
     "version_name": "0.2.0-dev",
     "abi_filters": [
       "arm64-v8a"
-    ]
+    ],
+    "gradle_module": "src-tauri/gen/android/app",
+    "_doc_gradle_module": "The Tauri project's app module; aa_cloud-superapp/test/test-app-names-pattern.sh T6 reads it to check the launcher label is build.json::name."
   },
   "modules": {
-    "_doc": "settings.gradle iterates this. One module and no shared library.",
-    "app": {
-      "type": "application"
-    }
+    "_doc": "No shared library module: the gradle project is src-tauri/gen/android (tauri.android_project), whose only module is the template's :app."
   },
   "toolchain": {
-    "agp": "8.7.3",
-    "gradle": "8.10.2",
-    "kotlin": "1.9.24",
+    "_doc": "Pinned here, read by the ship workflow and mirrored in flake.nix. agp/gradle/kotlin are the versions the pinned tauri-cli's Android template generates (src-tauri/gen/android/build.gradle.kts, gradle/wrapper/gradle-wrapper.properties); gradle itself comes from the committed wrapper.",
+    "tauri_cli": {
+      "version": "2.12.1",
+      "asset": "cargo-tauri-x86_64-unknown-linux-gnu.tgz",
+      "url": "https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v{version}/{asset}",
+      "sha256": "04ef3a9a2ed7b7dc479bef08ab40deee80065c99fc778f79ebce775eb72bbeff",
+      "_doc": "The prebuilt CLI tauri publishes for cargo-binstall (tauri-cli Cargo.toml [package.metadata.binstall]); the workflow downloads exactly this file and refuses any other sha256. The x86_64 build is the only Linux one published, so the APK is built on ubuntu-latest for every ABI (NDK cross-compile)."
+    },
+    "tauri": "2.12.1",
+    "ndk": "27.2.12479018",
+    "agp": "9.3.1",
+    "gradle": "9.6.1",
+    "kotlin": "2.2.10",
     "jdk": "17",
     "rust": "stable",
-    "_doc_rust": "The server crate builds with the stable channel and no nightly feature; the ship workflow pins it through dtolnay/rust-toolchain@stable as da_c3-watchdog does."
+    "_doc_rust": "Stable channel, no nightly feature; tauri 2.12 needs rustc >= 1.90. The ship workflow installs it through dtolnay/rust-toolchain@stable with the Android targets tauri.targets names."
   },
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps, resolved by build.sh::_resolve_signing from the vault. No fallback key.",
@@ -115,7 +160,7 @@
     ]
   },
   "tests": {
-    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. The Rust crate's own suite (cargo test, including the end-to-end run of the real server) executes in the ship workflow's server job, on the runner that builds the binary.",
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. The server crate's own suite (cargo test, including the end-to-end run of the real server over a socket) executes in the ship workflow's build job before the APK is built.",
     "shell": {
       "dir": "test",
       "requires": [

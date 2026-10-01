@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║ cloud-c3-webserver — the route table is the ONE declaration, the tabs   ║
-# ║ are derived from it, the binary ships natively, the rename is complete. ║
+# ║ are derived from it, the app is Rust + web (Tauri), the rename holds.   ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
 # THE FAILURES THIS EXISTS FOR. (1) The previous app's whole landing surface
@@ -24,11 +24,21 @@
 #       href; its only source is fetch('/__api__/routes'); and its PURE render
 #       block, run under node, draws a planted route and a planted tab and does
 #       not draw a removed one — the mutation pair at the layer the user sees.
+#       Home draws the Configs ▸ About shape: an Index cell per macro group,
+#       every group closing with "Go Back Up to Index", and "Copy All Infos"
+#       carrying every row (whose labels mirror superapp's own: see
+#       test-c3-webserver-about-mirror.sh, kept apart because it reads
+#       superapp's source and this file must stay own-source to stay fatal).
 #   T4  NO PLACEHOLDER IN A SHIPPED TAB: no not-built wording in ui/ or src/.
-#   T5  NATIVE, NOT PROOT. build.json::server names a lib*.so jni_name and a musl
-#       target per shipped ABI; gradle stages into jniLibs with legacy packaging
-#       and refuses a PT_INTERP; Kotlin execs nativeLibraryDir/<BuildConfig name>
-#       and holds no port, root or path literal; no bake/rootfs/proot remains.
+#   T5  TAURI SHAPE. build.json::tauri maps every shipped ABI to a tauri target;
+#       the app crate's [lib] is the declared lib_name and links the server
+#       crate; tauri.conf.json carries build.json's identity and declares NO
+#       window (one is opened in code only after start() has bound the port);
+#       lib.rs binds first, takes port and root from build.json via build.rs,
+#       asks the storage permission from Rust; the template's gradle reads
+#       build.json for identity, SDK levels and label; no service, no exec, no
+#       server binary, no rootfs residue. (The no-Kotlin pin itself is
+#       test-c3-webserver-no-kotlin.sh.)
 #   T6  RENAME LEDGER. The retired spellings (the old cloud- id without the c3-
 #       family, its asset and image names) appear nowhere in this app.
 #   M   mutation-proof: each defect above is planted in a copy and shown red.
@@ -44,7 +54,8 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 for tool in python3 node grep jq; do
   command -v "$tool" >/dev/null 2>&1 || { echo "ERROR $tool absent — a verdict from a missing tool is not a verdict"; exit 1; }
 done
-for f in "$APP/build.json" "$APP/server/src/routes.rs" "$APP/server/src/main.rs" "$APP/server/ui/shell.html" "$APP/app/build.gradle"; do
+for f in "$APP/build.json" "$APP/server/src/routes.rs" "$APP/server/src/lib.rs" "$APP/server/ui/shell.html" \
+         "$APP/src-tauri/src/lib.rs" "$APP/src-tauri/tauri.conf.json" "$APP/src-tauri/gen/android/app/build.gradle.kts"; do
   [ -f "$f" ] || { echo "ERROR missing source: $f — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -177,6 +188,21 @@ must(p.tabFromPath('/__tab__/files') === 'files' && p.tabFromPath('/') === null,
 must(p.defaultTab(p.tabsFrom(base)) === 'home', 'defaultTab is not home when home is declared');
 must(p.renderSections([{title:'T', rows:[['k','<v>']]}]).includes('&lt;v&gt;'), 'renderSections does not escape values');
 must(p.renderListing([{name:'a<b', isDir:true}], '/x').includes('data-dir="/x/a&lt;b"'), 'renderListing does not escape or join paths');
+// Home = the Configs ▸ About shape, whatever groups the server sends.
+const about = [{macro:'M-ONE', sections:[{title:'S1', rows:[['k1','v1']]}]},
+               {macro:'M-TWO', sections:[{title:'S2', rows:[['k2','<v2>']]}, {title:'S3', rows:[['k3','v3']]}]}];
+const home = p.renderAbout(about);
+const cells = (home.match(/class="cell" data-jump="macro-\d+"/g) || []).length;
+must(cells === about.length, 'the Home index has ' + cells + ' cells for ' + about.length + ' macro groups');
+const anchors = (home.match(/<h2 class="macro" id="macro-\d+">/g) || []).length;
+must(anchors === about.length, 'Home draws ' + anchors + ' macro headers for ' + about.length + ' groups');
+const backs = (home.match(/data-jump="about-index">Go Back Up to Index/g) || []).length;
+must(backs === about.length, 'Home has ' + backs + ' "Go Back Up to Index" links for ' + about.length + ' groups');
+must(home.indexOf('M-ONE') < home.indexOf('M-TWO'), 'Home reorders the server\'s macro groups');
+must(home.includes('id="about-index"') && home.includes('data-copy-about'), 'Home has no Index anchor or no Copy All Infos button');
+must(home.includes('&lt;v2&gt;') && home.includes('>S3<'), 'Home drops or fails to escape a section');
+const text = p.aboutText(about);
+must(['M-ONE','M-TWO','S1','S2','S3','k1: v1','k2: <v2>','k3: v3'].every(x => text.includes(x)), 'Copy All Infos omits a group, a section or a row: ' + JSON.stringify(text));
 """
     h = os.path.join(d, "h.js"); open(h, "w").write(harness)
     r = subprocess.run(["node", h, js], capture_output=True, text=True)
@@ -196,52 +222,77 @@ t4() {
   return 0
 }
 
-# ── t5 <app> : native binary, exec'd from nativeLibraryDir ─────────────────
+# ── t5 <app> : the Tauri shape ─────────────────────────────────────────────
 t5() {
   python3 - "$1" <<'PY'
 import json, os, re, sys
 app = sys.argv[1]
 bj = json.load(open(os.path.join(app, "build.json")))
 bad = []
-srv = bj.get("server") or {}
-if not re.fullmatch(r"lib[a-z0-9_]+\.so", srv.get("jni_name", "")):
-    bad.append("build.json::server.jni_name %r is not lib*.so — only that shape is extracted to nativeLibraryDir" % srv.get("jni_name"))
+def read(rel):
+    p = os.path.join(app, rel)
+    return open(p).read() if os.path.isfile(p) else ""
+tauri = bj.get("tauri") or {}
+TARGETS = {"aarch64", "armv7", "i686", "x86_64"}   # cargo-mobile2's Android target keys
 for v in bj["release"]["variants"]:
     for abi in v["abis"]:
-        t = (srv.get("targets") or {}).get(abi, "")
-        if not t.endswith("-unknown-linux-musl"):
-            bad.append("build.json::server.targets[%s] = %r is not a static musl target" % (abi, t))
-if "bake" in bj:
-    bad.append("build.json still carries a bake block — the rootfs route is retired")
-gradle = open(os.path.join(app, "app/build.gradle")).read()
-if not re.search(r"useLegacyPackaging\s*=\s*true", gradle):
-    bad.append("app/build.gradle does not set jniLibs.useLegacyPackaging = true — the binary would stay compressed in the APK and never reach nativeLibraryDir")
-if "hasProgramInterpreter" not in gradle or "PT_INTERP" not in gradle:
-    bad.append("app/build.gradle does not refuse a PT_INTERP — a dynamically linked binary would die ENOENT on the phone")
-if "jniLibs.srcDirs" not in gradle:
-    bad.append("app/build.gradle does not add the staged directory to jniLibs")
-for key in ("SERVER_JNI_NAME", "SERVER_PORT", "SERVE_ROOT"):
-    if key not in gradle:
-        bad.append("app/build.gradle bakes no BuildConfig.%s" % key)
-kt_dir = os.path.join(app, "app/src/main/java")
-kts = {}
-for base, _, files in os.walk(kt_dir):
-    for f in files:
-        if f.endswith(".kt"):
-            kts[f] = open(os.path.join(base, f)).read()
-allkt = "\n".join(kts.values())
-if "applicationInfo.nativeLibraryDir" not in allkt or "BuildConfig.SERVER_JNI_NAME" not in allkt:
-    bad.append("no Kotlin file execs applicationInfo.nativeLibraryDir/BuildConfig.SERVER_JNI_NAME")
-for f, text in kts.items():
-    code = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-    code = re.sub(r"//.*", "", code)
-    if re.search(r"\b%d\b" % bj["runtime"]["port"], code):
-        bad.append("%s types the port %d — it must come from BuildConfig" % (f, bj["runtime"]["port"]))
-    if "/storage/" in code or "/nix/" in code or "proot" in code.lower() or "rootfs" in code.lower():
-        bad.append("%s holds a path or a rootfs word — the app knows only BuildConfig" % f)
-for stale in ("resolve_runtime.py", "test/test-webserver-rootfs.sh"):
-    if os.path.exists(os.path.join(app, "app", stale)) or os.path.exists(os.path.join(app, stale)):
-        bad.append("%s still exists — Route D residue" % stale)
+        t = (tauri.get("targets") or {}).get(abi) or {}
+        if t.get("tauri") not in TARGETS:
+            bad.append("build.json::tauri.targets[%s].tauri = %r is not a tauri android target %s" % (abi, t.get("tauri"), sorted(TARGETS)))
+        if not str(t.get("rust", "")).startswith(str(t.get("tauri")) + "-linux-android"):
+            bad.append("build.json::tauri.targets[%s].rust = %r is not the Android triple of %r" % (abi, t.get("rust"), t.get("tauri")))
+for stale in ("server", "bake"):
+    if stale in bj:
+        bad.append("build.json still carries a %r block — the exec'd binary and the rootfs are retired" % stale)
+crate = tauri.get("crate_dir", "")
+cargo = read(os.path.join(crate, "Cargo.toml"))
+if not re.search(r'\[lib\][^\[]*name\s*=\s*"%s"' % re.escape(tauri.get("lib_name", "\0")), cargo, re.S):
+    bad.append("%s/Cargo.toml [lib] name is not build.json::tauri.lib_name — Tauri's activity would load a library that is not there" % crate)
+if not re.search(r'crate-type\s*=\s*\[[^\]]*"cdylib"', cargo):
+    bad.append("%s/Cargo.toml does not build a cdylib — nothing for Android to load" % crate)
+if not re.search(r'c3-webserver\s*=\s*\{\s*path\s*=\s*"\.\./%s"' % re.escape(tauri.get("server_crate", "\0")), cargo):
+    bad.append("%s/Cargo.toml does not link the server crate build.json::tauri.server_crate names" % crate)
+conf = json.loads(read(os.path.join(crate, "tauri.conf.json")) or "{}")
+if conf.get("identifier") != bj["android"]["application_id"]:
+    bad.append("tauri.conf.json identifier %r != build.json::android.application_id %r — the APK would change package" % (conf.get("identifier"), bj["android"]["application_id"]))
+if conf.get("productName") != bj["name"]:
+    bad.append("tauri.conf.json productName %r != build.json::name %r" % (conf.get("productName"), bj["name"]))
+if (conf.get("app") or {}).get("windows") != []:
+    bad.append("tauri.conf.json declares a window — Tauri opens declared windows BEFORE setup, so the webview would race the server's bind")
+lib = re.sub(r"//.*", "", read(os.path.join(crate, "src/lib.rs")))
+i_start, i_win = lib.find("c3_webserver::start("), lib.find("WebviewWindowBuilder::new(")
+if i_start < 0 or i_win < 0 or i_start > i_win:
+    bad.append("src-tauri/src/lib.rs must call c3_webserver::start( before WebviewWindowBuilder::new( — bind first, then open the window")
+if 'env!("C3_WEBSERVER_PORT")' not in lib or 'env!("C3_WEBSERVER_SERVE_ROOT")' not in lib:
+    bad.append("src-tauri/src/lib.rs does not take port and root from build.json (env! set by build.rs)")
+if re.search(r"\b%d\b" % bj["runtime"]["port"], lib) or bj["runtime"]["serve_root"] in lib:
+    bad.append("src-tauri/src/lib.rs types the port or the root — they come from build.json::runtime")
+if "READ_EXTERNAL_STORAGE" not in lib or "requestPermissions" not in lib:
+    bad.append("src-tauri/src/lib.rs does not ask for the storage permission — the served root would be unreadable")
+if "build.json" not in read(os.path.join(crate, "build.rs")):
+    bad.append("src-tauri/build.rs does not read build.json")
+proj = tauri.get("android_project", "")
+gradle = read(os.path.join(proj, "app/build.gradle.kts"))
+for want, why in ((r'JsonSlurper\(\)\s*\.parse\(\s*file\("[^"]*build\.json"\)', "read build.json"),
+                  (r'applicationId\s*=\s*androidJson\["application_id"\]', "take applicationId from build.json"),
+                  (r'namespace\s*=\s*androidJson\["application_id"\]', "take the namespace from build.json"),
+                  (r'targetSdk\s*=\s*\(androidJson\["target_sdk"\]', "take targetSdk from build.json"),
+                  (r'resValue\("string",\s*"app_name",\s*buildJson\["name"\]', "set the launcher label from build.json::name"),
+                  (r'useLegacyPackaging\s*=\s*true', "store the Rust library compressed (the size budget)"),
+                  (r'manifestPlaceholders\["usesCleartextTraffic"\]\s*=\s*"true"', "allow cleartext to the loopback server in every build type")):
+    if not re.search(want, gradle):
+        bad.append("%s/app/build.gradle.kts does not %s" % (proj, why))
+pkg_dir = os.path.join(proj, "app/src/main/java", bj["android"]["application_id"].replace(".", "/"))
+if not os.path.isdir(os.path.join(app, pkg_dir)):
+    bad.append("%s is missing — `cargo tauri android build` refuses a project whose package dir does not match the identifier" % pkg_dir)
+manifest = read(os.path.join(proj, "app/src/main/AndroidManifest.xml"))
+if "android.permission.READ_EXTERNAL_STORAGE" not in manifest:
+    bad.append("the manifest does not declare READ_EXTERNAL_STORAGE")
+if "<service" in manifest:
+    bad.append("the manifest declares a service — there is no hand-written Android component in this app")
+for stale in ("resolve_runtime.py", "test/test-webserver-rootfs.sh", "app", "settings.gradle", "build.gradle"):
+    if os.path.exists(os.path.join(app, stale)):
+        bad.append("%s still exists — the Kotlin shell / Route D residue" % stale)
 for b in bad:
     print("    " + b)
 sys.exit(1 if bad else 0)
@@ -265,7 +316,7 @@ t1 "$APP" && pass "T1 one route table: every route literal is a ROUTES path and 
 t2 "$APP" && pass "T2 five tabs, Home centre, declared in the table; every tab has a view and every view a tab" || fail "T2 tabs and views disagree"
 t3 "$APP" && pass "T3 the shell is derived: no caption or /__tab__/ href typed, and under node it draws a planted route and drops a removed one" || fail "T3 the shell hand-lists or misrenders"
 t4 "$APP" && pass "T4 no placeholder wording in a shipped tab" || fail "T4 a shipped tab can render a placeholder"
-t5 "$APP" && pass "T5 static musl binary staged as lib*.so with legacy packaging, PT_INTERP refused, exec'd from nativeLibraryDir, no rootfs residue" || fail "T5 the native shape is broken"
+t5 "$APP" && pass "T5 Tauri shape: ABIs mapped, lib + server crate linked, identity from build.json, bind before window, storage asked from Rust, no shell residue" || fail "T5 the Tauri shape is broken"
 t6 "$APP" && pass "T6 rename ledger clean: no retired spelling anywhere in this app" || fail "T6 a retired spelling survives"
 
 # ── M: mutation-proof ──────────────────────────────────────────────────────
@@ -273,12 +324,13 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 mutate() {
   local title="$1" check="$2" mut="$3" copy="$WORK/m$RANDOM$RANDOM"
   mkdir -p "$copy"; cp -R "$APP/." "$copy/"
-  rm -rf "$copy/server/target" "$copy/app/build" "$copy/build" "$copy/dist"
+  rm -rf "$copy/server/target" "$copy/src-tauri/target" "$copy/build" "$copy/dist" \
+         "$copy/src-tauri/gen/android/app/build" "$copy/src-tauri/gen/android/build" "$copy/src-tauri/gen/android/.gradle"
   "$mut" "$copy" || { fail "M: mutation '$title' did not apply — a mutation that does not mutate proves nothing"; return; }
   if "$check" "$copy" >/dev/null 2>&1; then fail "M: '$title' stayed GREEN — the check is vacuous"; else pass "M: '$title' goes red"; fi
 }
 m_route_outside() { python3 - "$1" <<'PY'
-import sys,re; p=sys.argv[1]+"/server/src/main.rs"; s=open(p).read()
+import sys,re; p=sys.argv[1]+"/server/src/lib.rs"; s=open(p).read()
 new=s.replace("    let route = routes::find(&req.path);", "    if req.path == \"/__planted__/x\" { return Resp::text(200, \"planted\"); }\n    let route = routes::find(&req.path);")
 assert new!=s; open(p,"w").write(new)
 PY
@@ -296,8 +348,8 @@ assert new!=s; open(p,"w").write(new)
 PY
 }
 m_no_legacy_packaging() { python3 - "$1" <<'PY'
-import sys,re; p=sys.argv[1]+"/app/build.gradle"; s=open(p).read()
-new=re.sub(r"packaging \{ jniLibs \{ useLegacyPackaging = true \} \}", "", s)
+import sys,re; p=sys.argv[1]+"/src-tauri/gen/android/app/build.gradle.kts"; s=open(p).read()
+new=re.sub(r"useLegacyPackaging\s*=\s*true", "useLegacyPackaging = false", s)
 assert new!=s; open(p,"w").write(new)
 PY
 }
@@ -324,9 +376,32 @@ new=s.replace("var rows = routes.filter(function (r) { return r.kind === kind; }
 assert new!=s; open(p,"w").write(new)
 PY
 }
-m_kotlin_port() { python3 - "$1" <<'PY'
-import sys,glob; p=glob.glob(sys.argv[1]+"/app/src/main/java/**/ServerProcess.kt", recursive=True)[0]; s=open(p).read()
-new=s.replace("val port: Int = BuildConfig.SERVER_PORT", "val port: Int = 8000")
+m_rust_port() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/src-tauri/src/lib.rs"; s=open(p).read()
+new=s.replace('env!("C3_WEBSERVER_PORT").parse()?', '"8000".parse()?')
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_window_before_bind() { python3 - "$1" <<'PY'
+import sys,json; p=sys.argv[1]+"/src-tauri/tauri.conf.json"; d=json.load(open(p))
+d["app"]["windows"]=[{"url":"http://127.0.0.1:8000/"}]; json.dump(d,open(p,"w"),indent=2)
+PY
+}
+m_identifier_drift() { python3 - "$1" <<'PY'
+import sys,json; p=sys.argv[1]+"/src-tauri/tauri.conf.json"; d=json.load(open(p))
+d["identifier"]="com.diegonmarcos.cloudc3webserver"; json.dump(d,open(p,"w"),indent=2)
+PY
+}
+m_about_no_back_link() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
+new=s.replace("""renderSections(g.sections) +
+      '<div class="back"><a data-jump="about-index">Go Back Up to Index</a></div>';""", "renderSections(g.sections);")
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_copy_all_drops_rows() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
+new=s.replace("return '# ' + s.title + '\\n' + s.rows.map(", "return '# ' + s.title + '\\n' + s.rows.slice(1).map(")
 assert new!=s; open(p,"w").write(new)
 PY
 }
@@ -336,8 +411,12 @@ mutate "a view with no declared tab"                        t2 m_view_orphan
 mutate "a hand-written tab link in the nav"                 t3 m_nav_hardcoded
 mutate "the render function silently drops a route"         t3 m_render_drops_route
 mutate "a not-built body in the shell"                      t4 m_placeholder
-mutate "legacy jni packaging removed"                       t5 m_no_legacy_packaging
-mutate "the port typed into Kotlin"                         t5 m_kotlin_port
+mutate "Home loses its Go Back Up to Index links"          t3 m_about_no_back_link
+mutate "Copy All Infos drops a row"                         t3 m_copy_all_drops_rows
+mutate "the Rust library stored uncompressed"               t5 m_no_legacy_packaging
+mutate "the port typed into the Tauri app"                  t5 m_rust_port
+mutate "a window declared in tauri.conf.json (races bind)"  t5 m_window_before_bind
+mutate "tauri.conf.json identifier drifts from build.json"  t5 m_identifier_drift
 mutate "the retired asset name put back"                    t6 m_old_asset
 
 echo

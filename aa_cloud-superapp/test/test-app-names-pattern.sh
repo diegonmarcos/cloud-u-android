@@ -158,14 +158,25 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 # Termux strings, exactly the fork case the comment above excludes. Measured
 # on the tree at the time: the narrower pattern covers the same 12 apps minus
 # ac_cloud-termux, and nothing else.
+#
+# A module may be Groovy (build.gradle) or Kotlin DSL (build.gradle.kts): the
+# Tauri template ac_cloud-c3-webserver builds with is the latter, and a T6 that
+# opened build.gradle only would skip it in silence — the #522 failure again.
+# In Kotlin DSL the parsed JSON is a Map, so the label reads buildJson["name"].
 reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\([^)]*build\.json")
-derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson\.name\b")
+derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson(\.name\b|\[\s*\"name\"\s*\])")
+def module_gradle(directory, module):
+    for name in ("build.gradle", "build.gradle.kts"):
+        path = os.path.join(root, directory, module, name)
+        if os.path.isfile(path):
+            return path
+    return None
 covered = 0
 for directory in sorted(build_files):
     data = build_files[directory]
     module = (data.get("android") or {}).get("gradle_module") or "app"
-    gradle = os.path.join(root, directory, module, "build.gradle")
-    if not os.path.isfile(gradle) or not data.get("name", "").startswith("cloud-"):
+    gradle = module_gradle(directory, module)
+    if gradle is None or not data.get("name", "").startswith("cloud-"):
         continue
     source = open(gradle).read()
     if not reads_build_json.search(source):
@@ -175,8 +186,8 @@ for directory in sorted(build_files):
         continue
     covered += 1
     check(derives_label.search(source) is not None,
-          "%s/%s/build.gradle reads build.json but does not set app_name from buildJson.name"
-          % (directory, module))
+          "%s reads build.json but does not set app_name from buildJson.name"
+          % os.path.relpath(gradle, root))
     resources = os.path.join(root, directory, module, "src")
     for base, _, files in os.walk(resources):
         if "strings.xml" in files and os.path.basename(base).startswith("values"):
@@ -190,8 +201,8 @@ check(covered > 0, "T6 found no application whose gradle reads its build.json �
 for directory, data in sorted(build_files.items()):
     module = (data.get("android") or {}).get("gradle_module")
     if module:
-        check(os.path.isfile(os.path.join(root, directory, module, "build.gradle")),
-              "%s/build.json::android.gradle_module = %r has no build.gradle — T6 would skip this app in silence"
+        check(module_gradle(directory, module) is not None,
+              "%s/build.json::android.gradle_module = %r has no build.gradle[.kts] — T6 would skip this app in silence"
               % (directory, module))
 
 print("== T7: a launcher tile shows a caption, never an application's identity ==")

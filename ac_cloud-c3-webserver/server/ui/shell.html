@@ -35,6 +35,11 @@
   .entry.dir .n::before { content:"▸ "; color:var(--acc); }
   pre { margin:0; padding:12px; overflow:auto; font:12px ui-monospace, monospace; white-space:pre-wrap; word-break:break-word; }
   .err { color:#ff8a8a; padding:12px; }
+  h2.macro { font-size:14px; margin:18px 2px 8px; color:var(--acc); letter-spacing:.04em; }
+  .index .cells { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px; padding:10px 12px; }
+  .index .cell { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:10px 8px; font:13px system-ui; text-align:left; }
+  .index .tool button, .back a { color:var(--acc); background:none; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font:13px system-ui; }
+  .back { margin:-4px 0 12px; text-align:right; }
   .badge { font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:4px; padding:1px 6px; margin-left:6px; }
 </style>
 </head>
@@ -96,6 +101,30 @@ function renderSections(sections) {
     return '<section><h2>' + esc(s.title) + '</h2>' + rows + '</section>';
   }).join('');
 }
+// Home: the cloud-superapp Configs ▸ About shape — an Index of the macro
+// groups first, then each group's sections, every group closing with the way
+// back up to the Index. Groups, labels and order are the server's
+// (/__api__/about); nothing here names one.
+function renderAbout(groups) {
+  var cells = groups.map(function (g, i) {
+    return '<button class="cell" data-jump="macro-' + i + '">' + esc(g.macro) + '</button>';
+  }).join('');
+  var out = '<section class="index" id="about-index"><h2>Index</h2><div class="cells">' + cells + '</div>' +
+    '<div class="tool"><button data-copy-about>Copy All Infos</button></div></section>';
+  groups.forEach(function (g, i) {
+    out += '<h2 class="macro" id="macro-' + i + '">' + esc(g.macro) + '</h2>' + renderSections(g.sections) +
+      '<div class="back"><a data-jump="about-index">Go Back Up to Index</a></div>';
+  });
+  return out;
+}
+// "Copy All Infos": the whole page as text, macro → section → key: value.
+function aboutText(groups) {
+  return groups.map(function (g) {
+    return '== ' + g.macro + ' ==\n' + g.sections.map(function (s) {
+      return '# ' + s.title + '\n' + s.rows.map(function (kv) { return kv[0] + ': ' + kv[1]; }).join('\n');
+    }).join('\n\n');
+  }).join('\n\n') + '\n';
+}
 // Configs: a flat object, nested objects one level deep as their own sections.
 function renderConfig(cfg) {
   var top = []; var nested = [];
@@ -142,7 +171,7 @@ function renderFile(file) {
 }
 if (typeof module !== 'undefined') {
   module.exports = { esc: esc, tabsFrom: tabsFrom, tabFromPath: tabFromPath, defaultTab: defaultTab, renderNav: renderNav,
-    renderRoutes: renderRoutes, renderSections: renderSections, renderConfig: renderConfig, renderListing: renderListing,
+    renderRoutes: renderRoutes, renderSections: renderSections, renderAbout: renderAbout, aboutText: aboutText, renderConfig: renderConfig, renderListing: renderListing,
     renderResults: renderResults, renderFile: renderFile, fmtBytes: fmtBytes };
 }
 </script>
@@ -157,6 +186,7 @@ if (typeof module !== 'undefined') {
   var ROUTES = [];
   var TABS = [];
   var files = { dir: '/', dot: false, q: '', mode: 'filename' };
+  var ABOUT = [];
 
   function j(url) {
     return fetch(url, { cache: 'no-store' }).then(function (r) {
@@ -169,7 +199,7 @@ if (typeof module !== 'undefined') {
   var views = {
     pages: function () { return Promise.resolve(renderRoutes(ROUTES, 'page')); },
     api: function () { return Promise.resolve(renderRoutes(ROUTES, 'api')); },
-    home: function () { return j('/__api__/about').then(function (r) { return renderSections(r.body); }); },
+    home: function () { return j('/__api__/about').then(function (r) { ABOUT = r.body; return renderAbout(ABOUT); }); },
     files: function () { return renderFiles(); },
     configs: function () { return j('/__api__/config').then(function (r) { return renderConfig(r.body); }); }
   };
@@ -206,7 +236,21 @@ if (typeof module !== 'undefined') {
     if (q) q.onkeydown = function (ev) { if (ev.key === 'Enter') { files.q = q.value.trim(); show('files', false); } };
   }
 
+  function copyText(text, button) {
+    var done = function () { button.textContent = 'Copied'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { legacyCopy(text); done(); });
+    } else { legacyCopy(text); done(); }
+  }
+  function legacyCopy(text) {
+    var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } finally { document.body.removeChild(t); }
+  }
+
   $main.addEventListener('click', function (ev) {
+    var jump = ev.target.closest('[data-jump]'); var copy = ev.target.closest('[data-copy-about]');
+    if (jump) { var to = document.getElementById(jump.getAttribute('data-jump')); if (to) to.scrollIntoView(); ev.preventDefault(); return; }
+    if (copy) { copyText(aboutText(ABOUT), copy); return; }
     var dir = ev.target.closest('[data-dir]'); var file = ev.target.closest('[data-file]');
     if (dir) { files.dir = dir.getAttribute('data-dir'); files.q = ''; show('files', false); ev.preventDefault(); }
     else if (file) {

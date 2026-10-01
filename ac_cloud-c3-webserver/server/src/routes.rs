@@ -44,7 +44,7 @@ pub const ROUTES: &[Route] = &[
     Route { kind: Kind::Api, path: "/__api__/routes", tab: None, summary: "This route table as JSON: kind, path, tab, summary", handler: api_routes },
     Route { kind: Kind::Api, path: "/__api__/health", tab: None, summary: "Liveness: pid, uptime, port, root", handler: api_health },
     Route { kind: Kind::Api, path: "/__api__/config", tab: None, summary: "Effective configuration: bind, port, root, limits, route counts", handler: api_config },
-    Route { kind: Kind::Api, path: "/__api__/about", tab: None, summary: "About this phone as sections of rows (what the Home tab renders)", handler: api_about },
+    Route { kind: Kind::Api, path: "/__api__/about", tab: None, summary: "About this phone: macro groups of sections of rows, the Configs ▸ About shape (what the Home tab renders)", handler: api_about },
     Route { kind: Kind::Api, path: "/__api__/ls", tab: None, summary: "Directory listing JSON: ?path=<dir>&dot=1", handler: api_ls },
     Route { kind: Kind::Api, path: "/__api__/read", tab: None, summary: "File content JSON, at most 5 MB: ?path=<file>", handler: api_read },
     Route { kind: Kind::Api, path: "/__api__/search", tab: None, summary: "Bounded breadth-first search: ?q=<text>&mode=filename|folder|content&path=<dir>&dot=1", handler: api_search },
@@ -200,12 +200,17 @@ fn api_config(ctx: &Ctx, _req: &Req) -> Resp {
 }
 
 fn api_about(ctx: &Ctx, _req: &Req) -> Resp {
-    let sections = crate::about::sections(ctx);
-    let out: Vec<String> = sections
+    let out: Vec<String> = crate::about::groups(ctx)
         .iter()
-        .map(|(title, rows)| {
-            let r: Vec<String> = rows.iter().map(|(k, v)| format!("[{},{}]", jstr(k), jstr(v))).collect();
-            format!("{{\"title\":{},\"rows\":[{}]}}", jstr(title), r.join(","))
+        .map(|(macro_label, sections)| {
+            let secs: Vec<String> = sections
+                .iter()
+                .map(|(title, rows)| {
+                    let r: Vec<String> = rows.iter().map(|(k, v)| format!("[{},{}]", jstr(k), jstr(v))).collect();
+                    format!("{{\"title\":{},\"rows\":[{}]}}", jstr(title), r.join(","))
+                })
+                .collect();
+            format!("{{\"macro\":{},\"sections\":[{}]}}", jstr(macro_label), secs.join(","))
         })
         .collect();
     Resp::json(200, format!("[{}]", out.join(",")))

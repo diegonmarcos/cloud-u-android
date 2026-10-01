@@ -1,12 +1,12 @@
 name: "Ship → Cloud-C3-WebServer APK (build + push to GHCR via ORAS + attach to GH Release)"
 
-# The phone's local web server, natively. The APK carries ONE native file: the
-# Rust server in ac_cloud-c3-webserver/server/, built here per ABI as a static
-# musl executable on a runner of that ABI's architecture (the da_c3-watchdog
-# recipe), handed to the gradle job as an artifact, and staged by
-# app/build.gradle::stageServer as jniLibs/<abi>/libc3webserver.so — the one
-# shape an app may exec from nativeLibraryDir. No rootfs, no proot, no loader,
-# no cross-repo pin: everything this workflow builds is under the app directory.
+# The phone's local web server, as a Tauri 2 Android app: Rust plus the
+# server's own web UI, no hand-written Kotlin. `cargo tauri android build`
+# cross-compiles ac_cloud-c3-webserver/src-tauri (which links server/) with the
+# NDK for the variant's ABI and runs the committed Tauri gradle project
+# (src-tauri/gen/android). Every tool is pinned in build.json::toolchain: the
+# tauri CLI is the prebuilt x86_64 binary tauri publishes, fetched by URL and
+# refused on any other sha256, which is why both ABIs build on ubuntu-latest.
 #
 # Same data-driven publish path as every other app: the engine reads
 # ac_cloud-c3-webserver/build.json::release, so no registry, tag or artifact
@@ -66,84 +66,10 @@ env:
   WORK_DIR: ac_cloud-c3-webserver
 
 jobs:
-  # ── The server, per ABI, on a runner of that architecture ─────────────────
-  # aarch64 is built NATIVELY on the arm64 runner rather than cross-linked from
-  # x86_64: that is the recipe cloud-u-linux's ship-c3-watchdog.yml already
-  # proves green, and its output is the one binary shape the fleet has run from
-  # nativeLibraryDir on a phone. `cargo test` runs here too, so the route table's
-  # own suite — including the end-to-end run of the real server — executes on
-  # the binary's own architecture before anything is packaged.
-  server:
-    name: "Server (${{ matrix.abi }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - abi: arm64
-            android_abi: arm64-v8a
-            runner: ubuntu-24.04-arm
-          - abi: x86_64
-            android_abi: x86_64
-            runner: ubuntu-latest
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: ac_cloud-c3-webserver
-    steps:
-      - uses: actions/checkout@v4
-
-      # The Rust target is DECLARED in build.json::server.targets per Android
-      # ABI; this step reads it rather than restating it in the matrix.
-      - name: Resolve the declared Rust target
-        id: target
-        run: |
-          set -eu
-          target="$(jq -r --arg abi "${{ matrix.android_abi }}" '.server.targets[$abi] // empty' build.json)"
-          [ -n "$target" ] || { echo "::error::build.json::server.targets has no Rust target for ${{ matrix.android_abi }}"; exit 1; }
-          echo "target=$target" >> "$GITHUB_OUTPUT"
-          echo "bin=$(jq -r '.server.bin_name' build.json)" >> "$GITHUB_OUTPUT"
-          echo "crate=$(jq -r '.server.crate_dir' build.json)" >> "$GITHUB_OUTPUT"
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ steps.target.outputs.target }}
-
-      - name: musl toolchain (+ binutils and file for the static check below)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools binutils file jq
-
-      - name: Test (the route table's own suite, end to end, on this architecture)
-        working-directory: ac_cloud-c3-webserver/${{ steps.target.outputs.crate }}
-        run: cargo test --release --target ${{ steps.target.outputs.target }}
-
-      - name: Build
-        working-directory: ac_cloud-c3-webserver/${{ steps.target.outputs.crate }}
-        run: cargo build --release --target ${{ steps.target.outputs.target }}
-
-      - name: Confirm it is static and carries no PT_INTERP
-        working-directory: ac_cloud-c3-webserver/${{ steps.target.outputs.crate }}
-        run: |
-          set -eu
-          f="target/${{ steps.target.outputs.target }}/release/${{ steps.target.outputs.bin }}"
-          file "$f"
-          file "$f" | grep -q 'static' || { echo "::error::$f is NOT static — it would not run from nativeLibraryDir" >&2; exit 1; }
-          if readelf -lW "$f" | grep -q 'INTERP'; then echo "::error::$f requests a program interpreter" >&2; exit 1; fi
-          mkdir -p "../server-dist/${{ matrix.android_abi }}"
-          cp "$f" "../server-dist/${{ matrix.android_abi }}/${{ steps.target.outputs.bin }}"
-
-      - name: Hand the binary to the packaging job
-        uses: actions/upload-artifact@v4
-        with:
-          name: c3-webserver-${{ matrix.abi }}
-          path: ac_cloud-c3-webserver/server-dist/${{ matrix.android_abi }}/${{ steps.target.outputs.bin }}
-          if-no-files-found: error
-          retention-days: 7
-
   build_and_publish:
     name: "Build APK + Push (${{ matrix.abi }})"
-    needs: server
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       # One job per ABI variant (build.json::release.variants[].id). arm64 is
       # the canonical phone build; x86_64 is for Waydroid / desktop emulators.
@@ -176,6 +102,34 @@ jobs:
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
+      # The toolchain this job uses, read from build.json — never restated here.
+      - name: Resolve the declared toolchain
+        id: tc
+        working-directory: ${{ env.WORK_DIR }}
+        run: |
+          set -eu
+          rust="$(jq -r --arg abi "${{ matrix.android_abi }}" '.tauri.targets[$abi].rust // empty' build.json)"
+          [ -n "$rust" ] || { echo "::error::build.json::tauri.targets has no Rust triple for ${{ matrix.android_abi }}"; exit 1; }
+          ndk="$(jq -r '.toolchain.ndk' build.json)"
+          sdk="$(jq -r '.android.compile_sdk' build.json)"
+          {
+            echo "rust_target=$rust"
+            echo "ndk=$ndk"
+            echo "sdk_packages=platforms;android-$sdk build-tools;$sdk.0.0 platform-tools ndk;$ndk"
+            echo "server_crate=$(jq -r '.tauri.server_crate' build.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ steps.tc.outputs.rust_target }}
+
+      # The server crate's own suite — the route table, the About groups, the
+      # real server end to end over a socket — on the host, before anything is
+      # packaged. Like the testers above, not gated on the publish gate.
+      - name: "Test → the server crate (cargo test)"
+        working-directory: ${{ env.WORK_DIR }}/${{ steps.tc.outputs.server_crate }}
+        run: cargo test
+
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
       # sha256 sidecar and a different OCI digest — and the Constellation store
@@ -191,15 +145,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
 
-      # The server built above for this ABI, at the path build.gradle::stageServer
-      # reads through C3_WEBSERVER_BIN_DIR/<android abi>/<bin_name>.
-      - name: Take the server binary from the server job
-        if: steps.gate.outputs.skip != 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: c3-webserver-${{ matrix.abi }}
-          path: ${{ env.WORK_DIR }}/server-dist/${{ matrix.android_abi }}
-
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
@@ -207,24 +152,33 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
+      - name: Set up Android SDK + NDK
         if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
         with:
-          # No cmake/ndk — the native code is the Rust binary built above by
-          # cargo for a musl target, never by the NDK. Pins mirror flake.nix.
-          packages: "platforms;android-35 platforms;android-34 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+          # compile_sdk and the NDK come from build.json; the NDK is what
+          # cargo-mobile2 links the Rust library with for the Android target.
+          packages: ${{ steps.tc.outputs.sdk_packages }}
 
-      - name: Set up Gradle 8.10.2 (cached)
+      # Gradle itself comes from the committed wrapper (src-tauri/gen/android);
+      # this only persists its caches between runs.
+      - name: Gradle caches
         if: steps.gate.outputs.skip != 'true'
-        # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
-        # cache service GitHub retired. Every save AND restore 400s ("Our services
-        # aren't available right now"), so the Gradle distribution, the dependency
-        # cache and the build cache were all discarded every run — org.gradle.caching
-        # was on and had nowhere to persist, and every build ran fully cold.
         uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: "8.10.2"
+
+      - name: Install the pinned tauri CLI (sha256-checked)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        run: |
+          set -eu
+          v="$(jq -r '.toolchain.tauri_cli.version' build.json)"
+          asset="$(jq -r '.toolchain.tauri_cli.asset' build.json)"
+          want="$(jq -r '.toolchain.tauri_cli.sha256' build.json)"
+          url="$(jq -r '.toolchain.tauri_cli.url' build.json | sed "s|{version}|$v|; s|{asset}|$asset|")"
+          curl -fsSL -o "$RUNNER_TEMP/$asset" "$url"
+          echo "$want  $RUNNER_TEMP/$asset" | sha256sum -c -
+          tar -C "$HOME/.cargo/bin" -xzf "$RUNNER_TEMP/$asset" cargo-tauri
+          cargo tauri --version
 
       # ── ONE shared Cloud-constellation signing key (vault) ──────────────
       # ALL constellation apps sign with the SAME key so cross-app
@@ -280,19 +234,40 @@ jobs:
           # CLOUDNAV_VARIANT selects the ABI variant (build.json::release
           # .variants[].id) → engine overrides ABI filter + artifact name.
           CLOUDNAV_VARIANT: ${{ matrix.abi }}
-          # The server job's binary: build.sh server compiles nothing when this
-          # is set, and stageServer takes <abi>/<bin_name> from here.
-          C3_WEBSERVER_BIN_DIR: ${{ github.workspace }}/ac_cloud-c3-webserver/server-dist
           # Kept for the engine's own `gh` calls.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x build.sh
+          # The tauri CLI requires NDK_HOME; the version is build.json::toolchain.ndk.
+          export NDK_HOME="$ANDROID_HOME/ndk/${{ steps.tc.outputs.ndk }}"
+          [ -d "$NDK_HOME" ] || { echo "::error::NDK $NDK_HOME was not installed"; exit 1; }
           if [ "${{ steps.variant.outputs.variant }}" = "release" ]; then
             ./build.sh release
           else
             ./build.sh build
           fi
           ls -la dist/
+
+      # The size budget is read off this line (the Kotlin-shell APK was 1.1 MB).
+      - name: APK size and what is in it
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        run: |
+          for f in dist/*.apk; do
+            echo "$f: $(stat -c %s "$f") bytes"
+            unzip -lv "$f" | awk 'NR>3 && ($8 ~ /\.so$|\.dex$/) {print "  " $8 ": " $1 " B unpacked, " $3 " B stored"}'
+          done
+
+      # cargo resolved the crate graph on this run; the lockfile is handed out so
+      # it can be committed and later runs build the same graph (--locked).
+      - name: Hand out the resolved Cargo.lock
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3-webserver-cargo-lock-${{ matrix.abi }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/src-tauri/Cargo.lock
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload APK as workflow artifact
         if: steps.gate.outputs.skip != 'true'

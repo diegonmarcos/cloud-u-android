@@ -2,21 +2,18 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ cloud-c3-webserver — Universal Build Dispatcher                   ║
 # ║                                                                  ║
-# ║ A Rust HTTP server (server/) compiled static-musl per ABI and     ║
-# ║ exec'd from the APK's nativeLibraryDir; one Kotlin shell around  ║
-# ║ it. All toolchain (AGP, gradle, kotlin, JDK, android-sdk, cargo)  ║
-# ║ comes from flake.nix — never assume host has them.               ║
+# ║ A Tauri 2 Android app: src-tauri/ (Rust) starts the server/      ║
+# ║ library in-process and opens a webview on it. No hand-written    ║
+# ║ Kotlin. Toolchain (cargo-tauri, NDK, SDK, JDK, cargo) comes from  ║
+# ║ flake.nix — never assume host has them.                          ║
 # ║                                                                  ║
 # ║ Commands:                                                        ║
-# ║   server      cargo build the server for the active ABI variant   ║
-# ║   build       server + gradle assembleDebug → dist/<artifact>     ║
-# ║   release     gradle assembleRelease (signed if keystore present) ║
-# ║   dev         install + launch on connected device (adb)          ║
-# ║   test        gradle test (JVM unit tests)                        ║
-# ║   instrument  gradle connectedAndroidTest (needs device)          ║
-# ║   lint        gradle lint                                         ║
-# ║   clean       gradle clean + rm -rf dist/                         ║
-# ║   shell       enter Nix devShell (gradle + sdk + jdk)             ║
+# ║   build       cargo tauri android build → dist/<variant artifact> ║
+# ║   release     same build → dist/<release artifact>                ║
+# ║   dev         build + install + launch on connected device (adb)  ║
+# ║   test        cargo test (the server crate, end to end)           ║
+# ║   clean       rm -rf dist/ + cargo targets + gradle build dirs    ║
+# ║   shell       enter Nix devShell (cargo-tauri + ndk + sdk + jdk)  ║
 # ║   ship        build + side-load via adb (USB-connected device)    ║
 # ║   oras-push   push APK as OCI artifact → ghcr (release.ghcr block)║
 # ║   oras-pull   pull APK from ghcr → dist/  [tag=latest]            ║
@@ -252,82 +249,75 @@ _enforce_signature() {
   log "sign-enforce: OK $(basename "$apk") signed by the ONE shared constellation key"
 }
 
-# ── the Rust server (build.json::server) ───────────────────────────────
-# One static musl executable per ABI, built by cargo from the crate build.json
-# names, for the Rust target build.json maps the active variant's ABI to. CI
-# builds it in the ship workflow's `server` job on a runner of that architecture
-# and hands the result over through C3_WEBSERVER_BIN_DIR, in which case nothing
-# is compiled here; app/build.gradle::stageServer reads the same variable.
-step_server() {
-  if [ -n "${C3_WEBSERVER_BIN_DIR:-}" ]; then
-    log "server: prebuilt binaries in $C3_WEBSERVER_BIN_DIR (C3_WEBSERVER_BIN_DIR) — not compiling"
-    return 0
-  fi
-  local abi target crate
+# ── the app (build.json::tauri) ──────────────────────────────────────
+# `cargo tauri android build` compiles src-tauri (which links server/) for the
+# active variant's ABI — build.json::tauri.targets maps it — then runs the
+# committed Tauri gradle project, which leaves an unsigned universal APK that
+# _enforce_signature signs with the ONE shared key. Always Tauri's release
+# profile, for the reason build.json::tauri._doc gives.
+#
+# The no-hand-written-Kotlin guard runs on both sides of it: before, so a
+# stray .kt is never compiled; after, so a build that generated a Kotlin file
+# build.json::tauri.generated_kotlin does not name fails here, not on a phone.
+TAURI_APK=""
+_tauri_build() {
+  local abi target crate project apks
   abi="$(_variant_field '.abis[0]')"
   [ -n "$abi" ] || abi="$(_release_var '.android.abi_filters[0]')"
-  target="$(_release_var ".server.targets[\"$abi\"]")"
-  crate="$(_release_var '.server.crate_dir')"
-  [ -n "$target" ] || { errlog "build.json::server.targets has no Rust target for ABI $abi"; exit 1; }
-  [ -n "$crate" ]  || { errlog "build.json::server.crate_dir is empty"; exit 1; }
-  log "server: cargo build --release --target $target (in $crate/)"
-  if command -v cargo >/dev/null 2>&1; then
-    (cd "$SCRIPT_DIR/$crate" && cargo build --release --target "$target")
-  else
-    in_nix sh -c "cd '$SCRIPT_DIR/$crate' && cargo build --release --target '$target'"
-  fi
+  target="$(_release_var ".tauri.targets[\"$abi\"].tauri")"
+  crate="$(_release_var '.tauri.crate_dir')"
+  project="$(_release_var '.tauri.android_project')"
+  [ -n "$target" ] || { errlog "build.json::tauri.targets has no tauri target for ABI $abi"; exit 1; }
+  sh "$SCRIPT_DIR/test/test-c3-webserver-no-kotlin.sh" check
+  log "tauri: cargo tauri android build --apk --ci --target $target (ABI $abi, in $crate/)"
+  (cd "$SCRIPT_DIR/$crate" && in_nix cargo tauri android build --apk --ci --target "$target")
+  sh "$SCRIPT_DIR/test/test-c3-webserver-no-kotlin.sh" check
+  apks="$(ls "$SCRIPT_DIR/$project"/app/build/outputs/apk/universal/release/*.apk 2>/dev/null || true)"
+  [ "$(printf '%s\n' "$apks" | grep -c . || true)" = "1" ] \
+    || { errlog "tauri: expected exactly one APK under $project/app/build/outputs/apk/universal/release, found: ${apks:-none}"; exit 1; }
+  TAURI_APK="$apks"
 }
 
 step_build() {
-  log "Build: $(_release_var '.name') (debug APK)"
-  step_server
+  log "Build: $(_release_var '.name') (Tauri, release profile)"
   _resolve_signing
   _resolve_ssh_key
-  _export_variant_abis
-  in_nix gradle :app:assembleDebug
+  _tauri_build
   mkdir -p "$DIST_DIR"
   local out="$DIST_DIR/$(_variant_artifact)"
-  cp "$SCRIPT_DIR/app/build/outputs/apk/debug/app-debug.apk" "$out"
+  cp "$TAURI_APK" "$out"
   _enforce_signature "$out"
-  log "→ $out"
+  log "→ $out ($(wc -c < "$out") B)"
 }
 
 step_release() {
   log "Build: $(_release_var '.name') (release APK)"
-  step_server
   _resolve_signing
   _resolve_ssh_key
-  in_nix gradle :app:assembleRelease
+  _tauri_build
   mkdir -p "$DIST_DIR"
   local out="$DIST_DIR/$(_release_var '.release.artifact.release')"
-  cp "$SCRIPT_DIR/app/build/outputs/apk/release/app-release.apk" "$out" 2>/dev/null \
-    || cp "$SCRIPT_DIR/app/build/outputs/apk/release/app-release-unsigned.apk" "${out%.apk}-unsigned.apk"
-  if [ -f "$out" ]; then _enforce_signature "$out"; else _enforce_signature "${out%.apk}-unsigned.apk"; fi
-  log "→ $DIST_DIR/"
+  cp "$TAURI_APK" "$out"
+  _enforce_signature "$out"
+  log "→ $out ($(wc -c < "$out") B)"
 }
 
 step_dev() {
-  log "Dev: launching on connected device (adb)"
-  command -v adb >/dev/null || in_nix adb devices
-  in_nix gradle :app:installDebug
+  log "Dev: build, install and launch on the connected device (adb)"
+  step_build
+  in_nix adb install -r "$DIST_DIR/$(_variant_artifact)"
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/$APP_MAIN"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
-step_instrument() {
-  # connectedAndroidTest builds the debug + androidTest APKs, so it needs the
-  # same signing + ABI resolution as step_build (engine bug, fixed 2026-07-10:
-  # without _resolve_signing this step only worked in a shell that happened to
-  # have ANDROID_KEYSTORE_* pre-exported — CI never could).
-  log "Test: instrumented (needs device)"
-  _resolve_signing
-  _resolve_ssh_key
-  _export_variant_abis
-  in_nix gradle connectedAndroidTest
+# The server crate's own suite: the route table, the About sections and the
+# real server end to end over a socket. Host-native, no Android needed.
+step_test()  { log "Test: cargo test (server crate)"; (cd "$SCRIPT_DIR/$(_release_var '.tauri.server_crate')" && in_nix cargo test); }
+step_clean() {
+  log "Clean"
+  rm -rf "$DIST_DIR" "$SCRIPT_DIR/$(_release_var '.tauri.crate_dir')/target" "$SCRIPT_DIR/$(_release_var '.tauri.server_crate')/target"
+  rm -rf "$SCRIPT_DIR/$(_release_var '.tauri.android_project')"/{build,app/build,buildSrc/build,.gradle}
 }
-step_lint()       { log "Lint"; in_nix gradle lint; }
-step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }
-step_shell()      { log "Entering Nix devShell"; exec nix develop "$SCRIPT_DIR"; }
+step_shell() { log "Entering Nix devShell"; exec nix develop "$SCRIPT_DIR"; }
 
 step_ship() {
   step_build
@@ -410,17 +400,6 @@ _variant_gh_asset() {
 }
 
 _variant_tag_suffix() { _variant_field '.ghcr_tag_suffix'; }
-
-# Export CLOUDNAV_ABIS (CSV) for gradle from the active variant. No-op when
-# unset → gradle reads build.json::android.abi_filters.
-_export_variant_abis() {
-  local csv; csv="$(_variant_field '.abis | join(",")')"
-  if [ -n "$csv" ]; then
-    export CLOUDNAV_ABIS="$csv"
-    log "Variant ${CLOUDNAV_VARIANT:-}: ABIs=$csv"
-  fi
-  return 0
-}
 
 _resolve_template() {
   local tmpl="$1"
@@ -738,13 +717,10 @@ step_gh_release() {
 }
 
 case "$CMD" in
-  server)     step_server ;;
   build)      step_build ;;
   release)    step_release ;;
   dev)        step_dev ;;
   test)       step_test ;;
-  instrument) step_instrument ;;
-  lint)       step_lint ;;
   clean)      step_clean ;;
   shell)      step_shell ;;
   ship)       step_ship ;;
