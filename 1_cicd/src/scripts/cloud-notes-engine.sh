@@ -255,10 +255,15 @@ step_gh_release_fork() {
   command -v gh >/dev/null 2>&1 || die "gh-release-fork: gh not on PATH"
   ( cd "$DIST_DIR" && sha256sum "$ASSET" | awk '{print $1}' > "$ASSET.sha256" )
   if ! gh release view "$tag" >/dev/null 2>&1; then
-    gh release create "$tag" --title "$tag" --generate-notes >/dev/null 2>&1 || true
+    # --latest: this IS the rolling head every /releases/latest/download/ URL
+    # resolves through. Unflagged, gh recomputes the pointer by recency, and
+    # cloud-android-release-latest-audit.sh fails the call as a hijacker.
+    gh release create "$tag" --title "$tag" --generate-notes --latest >/dev/null 2>&1 || true
   fi
   gh release upload "$tag" "$DIST_DIR/$ASSET" "$DIST_DIR/$ASSET.sha256" --clobber \
     || die "gh-release-fork: upload failed"
+  # Re-pin: a per-tag release created since may hold the pointer; take it back.
+  gh release edit "$tag" --latest >/dev/null 2>&1 || true
   log "gh-release-fork: OK $ASSET + .sha256 on release $tag"
 }
 
