@@ -31,7 +31,7 @@
     },
     "ab_cloud-libs-shared/lib-apks": {
       "first_test": "Assert the per-asset path sets it derives UNION to the workflow's whole trigger list \u2014 publish-gate-blast-radius.test.sh already asserts this; give it a tests block so it runs in the ship job too.",
-      "shell_testers": 1,
+      "shell_testers": 2,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
