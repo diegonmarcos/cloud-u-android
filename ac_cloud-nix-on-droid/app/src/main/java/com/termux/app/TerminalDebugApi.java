@@ -153,6 +153,19 @@ final class TerminalDebugApi {
             Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
         }
         String notice = TermuxInstaller.rootfsVersionNotice();
+        // #748: an extracted $PREFIX is not a working terminal. The phone reported "ready" over a
+        // bin/login that died at exit 127 before proot, so every check failed with the real cause
+        // buried in each stderr. "ready" now means a login ran `true` to the end.
+        // ponytail: one extra login per call; cache per rootfs version if that ever matters.
+        JSONObject login = run(app, "true", DEFAULT_TIMEOUT_MS);
+        if (!login.getBoolean("ok")) {
+            JSONObject failed = new JSONObject().put("ok", false).put("bootstrap", "login-failed")
+                .put("error", "the extracted rootfs cannot log in (`true` through bin/login exited "
+                    + login.get("exit") + "); see login.stderr")
+                .put("login", login);
+            if (notice != null) failed.put("rootfs", notice);
+            return failed;
+        }
         return new JSONObject().put("ok", true).put("bootstrap", notice == null ? "ready" : notice);
     }
 

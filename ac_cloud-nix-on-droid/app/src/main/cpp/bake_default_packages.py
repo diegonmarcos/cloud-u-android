@@ -396,28 +396,36 @@ def storage_setup(shared_root_name: str) -> str:
     traversable, so readability (ls), not existence, is probed; when it fails ls's own error is
     traced and ONE line says why. #730: nothing is left that reads as an empty STORE -- only our
     link or an EMPTY directory is ever removed (rmdir never removes content). The upstream ~/storage
-    tree (termux-setup-storage's links) is a second entry for the same storage, so its symlinks go."""
+    tree (termux-setup-storage's links) is a second entry for the same storage, so its symlinks go.
+
+    #748: EVERY command here that is not a shell builtin is named by its /system/bin path, as
+    upstream's own bin/login does for pgrep and mv. bin/login is mksh on the Android host, before
+    proot, and its PATH is the session's $PREFIX/bin -- which in this rootfs holds only login,
+    proot-static and an sh symlink into /nix/store that does not resolve outside proot. A bare `rm`
+    is "inaccessible or not found", exit 127, and under set -e that ends every login: the phone
+    showed `usr/bin/login[62]: rm: inaccessible or not found` for every command once an older
+    install's ~/storage tree gave the cleanup loop a link to remove."""
     store = f"/storage/emulated/0/{shared_root_name}"
     return (
         'cloud_storage_link() {\n'
-        '  [ -L "$1" ] || rmdir "$1" 2>/dev/null || true\n'
+        '  [ -L "$1" ] || /system/bin/rmdir "$1" 2>/dev/null || true\n'
         '  if [ -e "$1" ] && [ ! -L "$1" ]; then\n'
         '    echo "⚠ $1 is a directory with content, so it is not replaced by the link to $2" >&2\n'
         '  else\n'
-        '    ln -sfn "$2" "$1"\n'
+        '    /system/bin/ln -sfn "$2" "$1"\n'
         '  fi\n'
         '}\n'
         'cloud_storage_unlink() {\n'
-        '  if [ -L "$1" ]; then rm -f "$1"; else rmdir "$1" 2>/dev/null || true; fi\n'
+        '  if [ -L "$1" ]; then /system/bin/rm -f "$1"; else /system/bin/rmdir "$1" 2>/dev/null || true; fi\n'
         '}\n'
         'if [ -d "$HOME/storage" ] && [ ! -L "$HOME/storage" ]; then\n'
-        '  for l in "$HOME/storage"/*; do [ ! -L "$l" ] || rm -f "$l"; done\n'
-        '  rmdir "$HOME/storage" 2>/dev/null || true\n'
+        '  for l in "$HOME/storage"/*; do [ ! -L "$l" ] || /system/bin/rm -f "$l"; done\n'
+        '  /system/bin/rmdir "$HOME/storage" 2>/dev/null || true\n'
         'fi\n'
-        'if CLOUD_LS_ERR="$(ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
+        'if CLOUD_LS_ERR="$(/system/bin/ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
         '  cloud_trace "storage: /storage/emulated/0 is readable, linking ~/emulated"\n'
         '  cloud_storage_link "$HOME/emulated" /storage/emulated/0\n'
-        f'  mkdir -p "{store}" 2>/dev/null || true\n'
+        f'  /system/bin/mkdir -p "{store}" 2>/dev/null || true\n'
         f'  if [ -d "{store}" ]; then\n'
         f'    cloud_storage_link "$HOME/cloud-drive-shared-store" "{store}"\n'
         '  else\n'

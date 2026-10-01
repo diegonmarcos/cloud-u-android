@@ -53,6 +53,13 @@ grep -q 'PARTIAL_WAKE_LOCK' "$API" && grep -q 'startForegroundService' "$API" \
     && ok "holds a wake lock and the foreground service while a command runs (screen locked)" \
     || bad "nothing keeps the CPU or the process up with the screen locked"
 
+# #748 — "bootstrap: ready" over a bin/login that exited 127 for every command: ready() must
+# have run a login to the end before it says so.
+awk '/private static JSONObject ready\(/,/^    }$/' "$API" | grep -q 'run(app, "true"' \
+    && awk '/private static JSONObject ready\(/,/^    }$/' "$API" | grep -q '"login-failed"' \
+    && ok "bootstrap reports ready only after a login ran \`true\` (else login-failed with its stderr)" \
+    || bad "ready() reports the bootstrap ready without a login having run: an unloggable rootfs reads as ready"
+
 python3 - "$SELFTEST" "$SIBLING" <<'PY' && ok "selftest declares the #747 checks, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
 import json, sys
 want = ["claude --version", "node --version", "gh --version", "git --version", "zsh --version",

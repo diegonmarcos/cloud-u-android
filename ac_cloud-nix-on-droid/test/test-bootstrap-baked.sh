@@ -257,6 +257,11 @@ BAKE_PY="$DIR/app/src/main/cpp/bake_default_packages.py"
 # ~/storage tree). ~/emulated and ~/cloud-drive-shared-store must become links that
 # list the real content, ~/storage must go; without access both must go and the
 # notice must print. A mutant whose store link is dropped must turn this red.
+# #748 — and it runs with the PATH bin/login really has: the session's $PREFIX/bin,
+# which on the phone holds login, proot-static and an sh link into /nix/store that
+# only resolves inside proot, so here an EMPTY dir. /system/bin is rewritten to a dir
+# holding the toybox commands Android ships there. With the runner's own PATH a bare
+# `rm` passed this check while every login on the phone died at exit 127.
 storage_block_ok() {  # $1 = bake_default_packages.py
     T736="$(mktemp -d)"
     python3 - "$1" "$T736" "$SHARED_ROOT" <<'PY2' || { rm -rf "$T736"; return 1; }
@@ -265,19 +270,22 @@ spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 t = sys.argv[2]
 body = m.BIN_LOGIN_TRACE + m.storage_setup(sys.argv[3]).replace("/storage/emulated/0", t + "/storage/emulated/0")
-open(t + "/login.sh", "w").write("set -eu\n" + body)
+open(t + "/login.sh", "w").write("set -eu\n" + body.replace("/system/bin/", t + "/system/bin/"))
 PY2
     S="$T736/storage/emulated/0"; H="$T736/home"
-    mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-drive-shared-store" "$H/storage"
+    mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-drive-shared-store" "$H/storage" \
+        "$T736/prefix-bin" "$T736/system/bin"
+    for c in date ls ln rm rmdir mkdir; do ln -s "$(command -v $c)" "$T736/system/bin/$c"; done
     ln -s "$S/DCIM" "$H/storage/dcim"
+    SH="$(command -v sh)"
     r=0
-    HOME="$H" sh "$T736/login.sh" x 2>/dev/null || r=1
+    HOME="$H" PATH="$T736/prefix-bin" "$SH" "$T736/login.sh" x 2>/dev/null || r=1
     [ -L "$H/emulated" ] && [ -L "$H/cloud-drive-shared-store" ] || r=1
     ls "$H/emulated" 2>/dev/null | grep -qx Download || r=1
     ls "$H/cloud-drive-shared-store/git" 2>/dev/null | grep -qx cloud-probe-repo || r=1
     [ ! -e "$H/storage" ] || r=1
     chmod 000 "$S"
-    notice="$(HOME="$H" sh "$T736/login.sh" x 2>&1 >/dev/null)" || r=1
+    notice="$(HOME="$H" PATH="$T736/prefix-bin" "$SH" "$T736/login.sh" x 2>&1 >/dev/null)" || r=1
     chmod 755 "$S"
     [ ! -e "$H/emulated" ] && [ ! -L "$H/emulated" ] && [ ! -L "$H/cloud-drive-shared-store" ] || r=1
     case "$notice" in *"storage access is not granted"*) ;; *) r=1 ;; esac
@@ -297,6 +305,15 @@ elif storage_block_ok "$MUT736"; then
     bad "MUTATION SURVIVED: without the store link the executed storage check stayed green"
 else
     ok "mutation proved: dropping the store link turns the executed storage check red"
+fi
+# #748 — the phone's exact failure: the ~/storage cleanup's rm named bare.
+sed 's#|| /system/bin/rm -f "\$l"#|| rm -f "$l"#' "$BAKE_PY" > "$MUT736"
+if cmp -s "$BAKE_PY" "$MUT736"; then
+    bad "MUTATION DID NOT APPLY: the ~/storage cleanup's /system/bin/rm could not be un-qualified"
+elif storage_block_ok "$MUT736"; then
+    bad "MUTATION SURVIVED: a bare rm in bin/login (not on the host PATH) stayed green"
+else
+    ok "mutation proved: a bare rm in bin/login turns the executed storage check red (#748, exit 127 on the phone)"
 fi
 rm -f "$MUT736"
 # ~/emulated is the ONE entry for shared storage: the app no longer makes the upstream
