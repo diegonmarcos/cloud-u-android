@@ -132,7 +132,8 @@
         },
         "paths_from": [
           "ac_cloud-termux/rootfs",
-          "ac_cloud-termux/rootfs-lib"
+          "ac_cloud-termux/rootfs-lib",
+          "ab_cloud-terminal-store/store.json"
         ],
         "package": "com.diegonmarcos.cloudlib.rootfstermux"
       }

@@ -77,7 +77,7 @@ with binds and runs bin/sh over login-inner, which sources the baked PATH
 script and the store init and names the login shell under the profile link.
 Everything declared is read from build.json and login-closure.json; argv[4:]
 are mutations to plant."""
-import json, struct, sys, zipfile
+import importlib.util, json, os, struct, sys, zipfile
 
 out, build_json, closure_json, *mutations = sys.argv[1:]
 boot = json.load(open(build_json))["forks"]["nixdroid"]["bootstrap"]
@@ -124,7 +124,13 @@ for script in closure["scan"]:
     files.setdefault(script, "# synthetic\n")
 for rel in closure.get("run", []):
     files[rel] = "#!/bin/sh\nexit 0\n"
-commands = list(dict.fromkeys(tools["binaries"] + closure.get("path_commands", [])))
+# The gate's own reader, so the synthetic zip carries exactly what the gate will
+# demand: store.json::toolset + default_packages.binaries + path_commands (#737).
+spec = importlib.util.spec_from_file_location("gate", os.environ["GATE"])
+gate = importlib.util.module_from_spec(spec); spec.loader.exec_module(gate)
+commands = gate.declared_commands(build_json, closure)
+toolset_last = json.load(open(os.path.join(os.path.dirname(os.path.abspath(build_json)), "..",
+                                           "ab_cloud-terminal-store", "store.json")))["toolset"]["binaries"][-1]
 links = {"bin/sh": "/" + BASE_SH, link: "/" + GEN}
 for c in commands:
     links[f"{GEN}/bin/{c}"] = f"/{TOOLS}/{c}"
@@ -144,6 +150,7 @@ for m in mutations:
     elif m == "wizard-shipped":   files["etc/UNINTIALISED"] = "1\n"
     elif m == "dangling-profile": links[link] = "/nix/store/0000-missing-profile"
     elif m == "engine-not-chmod": executables.remove(closure["run"][0])
+    elif m == "no-toolset-tool":  del links[f"{GEN}/bin/{toolset_last}"]
     elif m == "exec-renamed":     files["bin/login"] = files["bin/login"].replace("/bin/proot-static", "/bin/proot")
     else: sys.exit(f"unknown mutation {m}")
 
@@ -158,6 +165,7 @@ with zipfile.ZipFile(out, "w") as z:
     z.writestr(entry("EXECUTABLES.txt"), "".join(e + "\n" for e in executables))
 EOF
 
+export GATE
 gate() { python3 "$GATE" "$1" "$BUILD_JSON" "$CLOSURE" >"$SB/out" 2>&1; }
 
 if python3 "$SB/mkroot.py" "$SB/clean.zip" "$BUILD_JSON" "$CLOSURE" 2>"$SB/mk.err" && gate "$SB/clean.zip"; then
@@ -192,6 +200,8 @@ mutation no-path-script   "$FALLBACK does not resolve"         "the PATH script 
 mutation wizard-shipped   "absent_by_design"                   "the first-run wizard's gate shipped again (a y/N prompt instead of a shell)"
 mutation dangling-profile "0000-missing-profile is not in the zip" "the default profile link dangles"
 mutation engine-not-chmod "run: $ENGINE"                       "the store engine the login executes never chmod-ed"
+TOOLSET_LAST="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["toolset"]["binaries"][-1])' "$DIR/../ab_cloud-terminal-store/store.json")"
+mutation no-toolset-tool  "PATH command '$TOOLSET_LAST'"       "#737: a tool store.json::toolset promises on both terminals ('$TOOLSET_LAST') is missing from the shipped profile"
 mutation exec-renamed     "binds nothing"                      "bin/login's proot exec line not recognised (the gate must not pass blind)"
 
 # A stale exemption would excuse a future real miss, so it is itself a failure.

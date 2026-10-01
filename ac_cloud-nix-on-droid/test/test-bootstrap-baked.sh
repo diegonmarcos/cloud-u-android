@@ -157,19 +157,58 @@ else
     bad "build.json has no complete forks.nixdroid.bootstrap.default_packages block — a fresh install would ship Nix and nothing else"
 fi
 
-# B2 — for every declared attr's binaries, something declares what to expect on PATH.
-if python3 -c "
+# B2 — for every declared attr's binaries, something declares what to expect on
+# PATH, and (#737) every name the terminal promises -- store.json::toolset plus
+# binaries[] -- has a DECLARED attr behind it. That second half is the
+# declaration-level gate: it fails here, before nix runs, when a toolset name has
+# no attr; the bake's profile_missing() and verify_login_closure.py then prove the
+# same names on the realized profile and on the shipped zip.
+toolset_cover() {  # <build.json> <store.json> -> prints the problems, exit 1 if any
+    python3 - "$1" "$2" <<'PY'
 import json, sys
-d = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['default_packages']
-attrs, provides, binaries = set(d.get('attrs', [])), d.get('provides', {}), set(d.get('binaries', []))
-missing_provides = attrs - set(provides)
-provided = {b for bins in provides.values() for b in bins}
-sys.exit(0 if not missing_provides and provided <= binaries else 1)
-" 2>/dev/null; then
-    ok "every declared attr has a provides[] entry, and binaries[] covers all of them"
+d = json.load(open(sys.argv[1]))['forks']['nixdroid']['bootstrap']['default_packages']
+toolset = json.load(open(sys.argv[2]))['toolset']['binaries']
+attrs, provides, binaries = d.get('attrs', []), d.get('provides', {}), d.get('binaries', [])
+provided = {b for a in attrs for b in provides.get(a, [])}
+problems = [f"attr {a} has no provides[] entry" for a in attrs if a not in provides]
+problems += [f"{b} is provided but declared nowhere (neither toolset nor binaries)"
+             for b in sorted(provided - set(toolset) - set(binaries))]
+problems += [f"{b} is promised (toolset/binaries) but no declared attr provides it"
+             for b in toolset + binaries if b not in provided]
+problems += [f"{b} restates a toolset name in binaries[]" for b in binaries if b in toolset]
+print("; ".join(problems))
+sys.exit(1 if problems else 0)
+PY
+}
+STORE_JSON_REAL="$DIR/../ab_cloud-terminal-store/store.json"
+if OUT="$(toolset_cover "$BUILD_JSON" "$STORE_JSON_REAL")"; then
+    ok "every declared attr has a provides[] entry, and every toolset + binaries name has an attr behind it ($(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["toolset"]["binaries"]))' "$STORE_JSON_REAL") toolset tools)"
 else
-    bad "default_packages.provides/binaries are incomplete for the declared attrs"
+    bad "default_packages does not cover what the terminal promises: $OUT"
 fi
+# B2m — MUTATION: drop the attr behind the LAST toolset name from a copy. The
+# copy must differ, and the check must name the orphaned tool.
+B2M="$(mktemp -d)"
+python3 - "$BUILD_JSON" "$STORE_JSON_REAL" "$B2M/build.json" <<'PY'
+import json, sys
+b = json.load(open(sys.argv[1])); dp = b['forks']['nixdroid']['bootstrap']['default_packages']
+victim = json.load(open(sys.argv[2]))['toolset']['binaries'][-1]
+attr = next(a for a in dp['attrs'] if victim in dp['provides'].get(a, []))
+dp['attrs'].remove(attr); del dp['provides'][attr]
+json.dump(b, open(sys.argv[3], 'w'))
+print(victim, file=open(sys.argv[3] + '.victim', 'w'))
+PY
+VICTIM="$(cat "$B2M/build.json.victim" 2>/dev/null)"
+if [ -z "$VICTIM" ] || cmp -s "$BUILD_JSON" "$B2M/build.json"; then
+    bad "B2 mutation DID NOT MUTATE (no attr removed from the copy)"
+elif OUT="$(toolset_cover "$B2M/build.json" "$STORE_JSON_REAL")"; then
+    bad "MUTATION SURVIVED: build.json with no attr for toolset tool '$VICTIM' passed the coverage check"
+elif echo "$OUT" | grep -q "$VICTIM is promised"; then
+    ok "mutation proved: removing the attr behind toolset tool '$VICTIM' is refused, by name"
+else
+    bad "B2 mutation went red for the wrong reason: $OUT"
+fi
+rm -rf "$B2M"
 
 # B3 — the bake script this all runs through is reachable.
 if [ -r "$DIR/app/src/main/cpp/bake_default_packages.py" ]; then
@@ -1408,12 +1447,14 @@ json.dump({'forks': {'nixdroid': {'bootstrap': {'default_packages': {
 " "$SB/repo/ac_cloud-nix-on-droid/build.json" "$@"
 }
 decl_value() { sed -n "s/^$1='\(.*\)'$/\1/p" "$2"; }
+# #737: every terminal's rendered list is store.json::toolset, THEN its own list.
+TOOLSET="$(python3 -c 'import json,sys; print(" ".join(json.load(open(sys.argv[1]))["toolset"]["binaries"]))' "$STORE_SRC/store.json")"
 
 fake_build_json alpha beta env
 if python3 "$FAKE_RENDER" nix "$SB/one.sh" 2>"$SB/one.err"; then
     GOT="$(decl_value CLOUD_STORE_TOOLS "$SB/one.sh")"
-    if [ "$GOT" = "alpha beta env" ]; then
-        ok "the rendered declaration IS the app's own binaries list, in order ($GOT)"
+    if [ -n "$TOOLSET" ] && [ "$GOT" = "$TOOLSET alpha beta env" ]; then
+        ok "the rendered declaration IS store.json::toolset followed by the app's own binaries list, in order"
     else
         bad "render-store.py rendered CLOUD_STORE_TOOLS='$GOT' from a binaries list of 'alpha beta env' — the projection does not follow the declaration"
     fi
@@ -1438,7 +1479,7 @@ if python3 "$FAKE_RENDER" nix "$SB/two.sh" 2>"$SB/two.err"; then
     GOT="$(decl_value CLOUD_STORE_TOOLS "$SB/two.sh")"
     ENGINE_AFTER="$(cksum < "$SB/repo/ab_cloud-terminal-store/cloud-store")"
     DECL_AFTER="$(cksum < "$SB/repo/ab_cloud-terminal-store/store.json")"
-    if [ "$GOT" = "alpha beta env gamma" ] && [ "$ENGINE_BEFORE" = "$ENGINE_AFTER" ] && [ "$DECL_BEFORE" = "$DECL_AFTER" ]; then
+    if [ "$GOT" = "$TOOLSET alpha beta env gamma" ] && [ "$ENGINE_BEFORE" = "$ENGINE_AFTER" ] && [ "$DECL_BEFORE" = "$DECL_AFTER" ]; then
         ok "a new tool reaches the store with ZERO code change — only the app's binaries list moved"
     else
         bad "adding 'gamma' to the binaries list rendered '$GOT' (engine changed: $([ "$ENGINE_BEFORE" = "$ENGINE_AFTER" ] && echo no || echo YES), store.json changed: $([ "$DECL_BEFORE" = "$DECL_AFTER" ] && echo no || echo YES)) — #644's data-only property does not hold"
@@ -1457,6 +1498,18 @@ else
     else
         bad "the renderer refused the mismatch but its message names neither the link nor the tool: $(cat "$SB/three.err")"
     fi
+fi
+
+# ── S4 — MUTATION (#737): an app list that restates a toolset name is refused ──
+# One list for both terminals only stays one list if a copy cannot creep back.
+RESTATED="${TOOLSET%% *}"
+fake_build_json alpha beta env "$RESTATED"
+if python3 "$FAKE_RENDER" nix "$SB/four.sh" 2>"$SB/four.err"; then
+    bad "render-store.py accepted a binaries list restating toolset tool '$RESTATED' -- the shared list could silently become two again"
+elif grep -q "restates $RESTATED" "$SB/four.err" && grep -q "toolset" "$SB/four.err"; then
+    ok "a binaries list restating toolset tool '$RESTATED' is refused, by name"
+else
+    bad "the restated toolset name was refused for the wrong reason: $(cat "$SB/four.err")"
 fi
 
 # ── the engine sandbox: search mode, fake binaries, no nix ─────────────────

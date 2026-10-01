@@ -93,8 +93,19 @@
             "gnugrep",
             "gnused",
             "gawk",
-            "less"
+            "less",
+            "zsh",
+            "gh",
+            "curl",
+            "jq",
+            "ripgrep",
+            "fd",
+            "openssh",
+            "sops",
+            "age",
+            "which"
           ],
+          "_doc_attrs_737": "#737 -- zsh, gh, curl, jq, ripgrep, fd, openssh, sops, age and which are here because ab_cloud-terminal-store/store.json::toolset now declares the tool set BOTH terminals ship, and this list is how the nix terminal installs it. That supersedes the #641 audit's 'deliberately left out' for curl, openssh and ripgrep: the bar is no longer 'a shell or an agent calls it by name' but 'the terminal is a complete agent workstation on first launch', and the termux terminal already carried all of them through the fleet tool belt. python3 stays out (#665). The names on PATH are NOT listed in `binaries` below -- they come from the toolset, and render-store.py refuses a repeat; `provides` still maps each attr to them so the declaration-level gate can prove every toolset name has an attr behind it before nix runs.",
           "login_shell_attr": "fish",
           "_doc_login_shell_attr": "#641 -- which baked attr becomes the LOGIN shell. bake_default_packages.py retargets the generated usr/lib/login-inner's `usershell=\"...\"` assignment at profile_link + /bin/<this>, and hard-fails the build if that path is not a real, chmod-ed zip entry. MEASURED, not inferred: the pinned aarch64 zip (sha256 64afc02d..., byte-identical to the pin) generates usershell=\"/nix/store/q2j9ncs2b0zd7gbla21ck3jj4knpj23y-bash-5.2-p15/bin/bash\" and contains no fish binary at all (only curl's and nix's fish COMPLETIONS), which is why #594 making fish the default for cloud-terminal-termux never reached this app. Upstream's own -x guard and its `exec -l bash` fallback below the assignment are left alone, so a fish that somehow did not ship still yields a shell.",
           "_doc_attrs_audit": "#641 -- audited as a whole rather than grown one defect at a time. git/nodejs_22/claude-code are #595's original agentic payload. coreutils (#640) is ls/cat/env. fish is the login shell. bashInteractive is NOT redundant with the bash inside the zip: that one is reachable only as /bin/sh and is on no PATH, while claude-code's own Bash tool spawns `bash` by name and login-inner's last-resort `exec -l bash` also resolves by name. findutils/gnugrep/gnused/gawk/less are what git subcommands and an agent's shell calls actually invoke (git's pager IS less; without it `git log` cannot page). DELIBERATELY LEFT OUT: curl and wget (the store already carries nix's own curl and nothing in the boot path needs a fetch), gnutar/gzip (only `git archive` wants them), procps, openssh, python3, ripgrep (claude-code ships its own), and the nix-on-droid/home-manager wizard machinery this whole block exists to avoid. Each addition is ~tens of MB in a payload that is already ~370 MB, so the bar is 'a shell or an agent calls it by name', not 'it would be nice to have'.",
@@ -111,11 +122,22 @@
             "gnugrep": ["grep"],
             "gnused": ["sed"],
             "gawk": ["awk"],
-            "less": ["less"]
+            "less": ["less"],
+            "zsh": ["zsh"],
+            "gh": ["gh"],
+            "curl": ["curl"],
+            "jq": ["jq"],
+            "ripgrep": ["rg"],
+            "fd": ["fd"],
+            "openssh": ["ssh"],
+            "sops": ["sops"],
+            "age": ["age"],
+            "which": ["which"]
           },
           "profile_link": "nix/var/nix/profiles/per-user/nix-on-droid/profile",
           "fallback_init_script": "usr/lib/cloud-agent-tools-init.sh",
-          "binaries": ["git", "node", "npm", "npx", "claude", "env", "ls", "cat", "fish", "bash", "find", "xargs", "grep", "sed", "awk", "less"]
+          "_doc_binaries": "#737 -- this terminal's tools BEYOND store.json::toolset (which every consumer prepends: render-store.py::tools_of). Repeating a toolset name here is refused at render time.",
+          "binaries": ["env", "ls", "cat", "bash", "find", "xargs", "grep", "sed", "awk", "less"]
         }
       }
     }

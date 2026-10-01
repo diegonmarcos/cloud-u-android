@@ -58,15 +58,26 @@ n_shared="$(json "$T/shared.json" 'len(d["binaries"])')"
                   || bad "fleet binaries missing from the resolved roster: $missing"
 
 echo "── 3: each guard refuses the declaration it exists to catch ──"
-# mutate <label> <python expression editing d>: the resolver must exit non-zero.
+# mutate <label> <python expression editing d> [expected text]: the resolver must
+# exit non-zero. `toolset` is store.json::toolset.binaries (#737). An edit that
+# raises, or leaves the declaration byte-identical, is a mutation that did not
+# mutate: it is a FAIL, never a pass on a stale copy from the previous round.
+STORE_JSON="$ROOT/ab_cloud-terminal-store/store.json"
 mutate() {
-    python3 -c '
+    rm -f "$T/mut.json"
+    if ! python3 -c '
 import json,sys
 d=json.load(open(sys.argv[1])); shared=json.load(open(sys.argv[2]))
+toolset=json.load(open(sys.argv[5]))["toolset"]["binaries"]
 exec(sys.argv[3])
-json.dump(d, open(sys.argv[4], "w"))' "$R/rootfs.json" "$T/shared.json" "$2" "$T/mut.json"
+json.dump(d, open(sys.argv[4], "w"))' "$R/rootfs.json" "$T/shared.json" "$2" "$T/mut.json" "$STORE_JSON" 2>"$T/mut.err" \
+       || python3 -c 'import json,sys; sys.exit(json.load(open(sys.argv[1])) != json.load(open(sys.argv[2])))' "$R/rootfs.json" "$T/mut.json"; then
+        bad "$1: the mutation DID NOT MUTATE ($(head -c 160 "$T/mut.err"))"; return
+    fi
     if ROOTFS_JSON="$T/mut.json" python3 "$R/resolve.py" check >"$T/out" 2>&1; then
         bad "$1: accepted — $(cat "$T/out")"
+    elif [ -n "${3:-}" ] && ! grep -q "$3" "$T/out"; then
+        bad "$1: refused for the wrong reason (wanted '$3') — $(tail -1 "$T/out")"
     else
         ok "$1: refused ($(tail -1 "$T/out" | cut -c1-110))"
     fi
@@ -74,9 +85,13 @@ json.dump(d, open(sys.argv[4], "w"))' "$R/rootfs.json" "$T/shared.json" "$2" "$T
 mutate "a declared binary loses its install source" \
     'k=[k for k in d["tarballs"] if not k.startswith("_")][0]; del d["tarballs"][k]'
 mutate "the default shell is not a declared binary" \
-    'import os; d["binaries"].remove(os.path.basename(d["default_shell"]))'
+    'd["default_shell"]="/usr/bin/no-such-shell"' "default_shell"
 mutate "a smoke command names an undeclared binary" \
-    'c=[v for k,v in d["smoke"].items() if not k.startswith("_")][0]; d["binaries"].remove(c[0]); d["tarballs"]={k:v for k,v in d["tarballs"].items() if c[0] not in v.get("provides",[k])}'
+    'd["smoke"]["planted"]=["no-such-tool","--version"]' "smoke.planted"
+mutate "#737: a toolset tool loses its termux install source" \
+    'del d["tarballs"]["fd"]' "'fd'"
+mutate "#737: a toolset tool is restated in rootfs.json" \
+    'd["binaries"].append(toolset[-1])' "store.json::toolset"
 mutate "a fleet binary is repeated here" \
     'd["binaries"].append(shared["binaries"][0])'
 mutate "the fleet pin is a branch, not a commit" \
@@ -87,6 +102,8 @@ mutate "the artifact url is written out instead of derived (#618)" \
     'd["artifact"]["url"]="https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/x.tar.zst"'
 mutate "rootfs.json is not in the artifact identity (#618)" \
     'd["artifact"]["identity_files"]=[p for p in d["artifact"]["identity_files"] if not p.endswith("rootfs.json")]'
+mutate "#737: store.json (the toolset) is not in the artifact identity" \
+    'd["artifact"]["identity_files"]=[p for p in d["artifact"]["identity_files"] if not p.endswith("store.json")]' "store.json"
 mutate "an artifact identity file does not exist (#618)" \
     'd["artifact"]["identity_files"]=d["artifact"]["identity_files"]+["rootfs/nothing-here.sh"]'
 
@@ -258,12 +275,12 @@ fi
 
 # The tool list is the one rootfs.json already keeps, so adding a tool is an edit
 # to THAT list. Proved by equality, not by reading the renderer.
-WANT="$(json "$R/rootfs.json" '" ".join(d["binaries"])')"
+WANT="$(python3 -c 'import json,sys; print(" ".join(json.load(open(sys.argv[1]))["toolset"]["binaries"] + json.load(open(sys.argv[2]))["binaries"]))' "$STORE_JSON" "$R/rootfs.json")"
 GOT="$(python3 "$S/render-store.py" termux 2>/dev/null | sed -n "s/^CLOUD_STORE_TOOLS='\(.*\)'$/\1/p")"
 if [ -n "$GOT" ] && [ "$GOT" = "$WANT" ]; then
-    ok "the rendered store declaration IS rootfs.json::binaries ($GOT) — a new tool is a data-only edit here too"
+    ok "the rendered store declaration IS store.json::toolset + rootfs.json::binaries — a new tool is a data-only edit here too"
 else
-    bad "the store renders '$GOT' but rootfs.json::binaries is '$WANT' — the store would manage a different set of links than the rootfs installs"
+    bad "the store renders '$GOT' but toolset + rootfs.json::binaries is '$WANT' — the store would manage a different set of links than the rootfs installs"
 fi
 
 # No nix in this terminal, and the declaration must say so rather than imply one.

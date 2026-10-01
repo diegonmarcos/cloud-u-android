@@ -271,6 +271,21 @@ def verify(fs: Rootfs, app_id, profile_link, commands, closure) -> list:
     return problems
 
 
+def declared_commands(build_json: str, closure: dict) -> list:
+    """Everything the login runs or the user is promised BY NAME off the profile PATH.
+
+    #737: store.json::toolset (the set BOTH terminals ship) comes first, then
+    this terminal's own default_packages.binaries, then the login's own
+    path_commands. store.json is found beside the app dir build.json sits in,
+    so a synthetic build.json in a sandbox never reads a different repo's list.
+    """
+    store_json = posixpath.join(posixpath.dirname(posixpath.abspath(build_json)),
+                                "..", "ab_cloud-terminal-store", "store.json")
+    toolset = json.load(open(store_json))["toolset"]["binaries"]
+    tooling = json.load(open(build_json))["forks"]["nixdroid"]["bootstrap"]["default_packages"]
+    return list(dict.fromkeys(toolset + tooling["binaries"] + closure.get("path_commands", [])))
+
+
 def main(argv) -> int:
     if len(argv) != 4:
         print(__doc__.strip().splitlines()[-1], file=sys.stderr)
@@ -279,7 +294,7 @@ def main(argv) -> int:
     bootstrap = json.load(open(build_json))["forks"]["nixdroid"]["bootstrap"]
     tooling = bootstrap["default_packages"]
     closure = json.load(open(closure_json))
-    commands = list(dict.fromkeys(tooling["binaries"] + closure.get("path_commands", [])))
+    commands = declared_commands(build_json, closure)
     with zipfile.ZipFile(zip_path) as zf:
         problems = verify(Rootfs(zf), bootstrap["package_name_rewrite"]["to"],
                           tooling["profile_link"], commands, closure)

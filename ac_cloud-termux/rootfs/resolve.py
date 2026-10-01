@@ -34,6 +34,12 @@ def die(msg):
     sys.exit(1)
 
 
+def load_toolset():
+    """#737 -- the tool set BOTH terminals ship: ab_cloud-terminal-store/store.json::toolset."""
+    store = os.environ.get("STORE_JSON", os.path.join(REPO_ROOT, "ab_cloud-terminal-store", "store.json"))
+    return json.load(open(store))["toolset"]["binaries"]
+
+
 def load():
     decl = json.load(open(os.environ.get("ROOTFS_JSON", os.path.join(HERE, "rootfs.json"))))
     src = decl["shared_toolbelt"]
@@ -49,9 +55,17 @@ def load():
     return decl, shared
 
 
-def resolve(decl, shared):
+def resolve(decl, shared, toolset=None):
     local_bins = decl["binaries"]
     shared_bins = shared["binaries"]
+    toolset = load_toolset() if toolset is None else toolset
+
+    # #737 -- the cross-terminal toolset is consumed, never restated here. It MAY
+    # overlap the fleet belt (gh, git, ...): those are two contracts, phones and
+    # AI containers, and the overlap is merged below, not duplicated.
+    dup = sorted(set(local_bins) & set(toolset))
+    if dup:
+        die(f"binaries {dup} are already declared in store.json::toolset — delete them from rootfs.json")
 
     # The terminal's list must not restate the fleet list: a repeated name is the
     # start of a second copy that drifts (#509, #527).
@@ -62,7 +76,7 @@ def resolve(decl, shared):
     if dup:
         die(f"apt_packages {dup} are already declared in the shared tool belt — delete them from rootfs.json")
 
-    binaries = list(shared_bins) + list(local_bins)
+    binaries = list(dict.fromkeys(list(shared_bins) + list(toolset) + list(local_bins)))
     apt = list(shared["apt_packages"]) + list(decl["apt_packages"])
     tarballs = {k: v for k, v in shared.get("tarballs", {}).items() if not k.startswith("_")}
     tarballs.update({k: v for k, v in decl.get("tarballs", {}).items() if not k.startswith("_")})
@@ -71,7 +85,9 @@ def resolve(decl, shared):
 
     # Every declared binary must come from somewhere this build installs.
     provided = set(apt)
-    for pkg, names in shared.get("apt_provides", {}).items():
+    apt_provides = {**shared.get("apt_provides", {}),
+                    **{k: v for k, v in decl.get("apt_provides", {}).items() if not k.startswith("_")}}
+    for pkg, names in apt_provides.items():
         if pkg in apt:
             provided.update(names)
     for name, t in tarballs.items():
@@ -109,6 +125,9 @@ def resolve(decl, shared):
         die(f"artifact.identity_files {missing} do not exist — the asset name would not address what builds the tree")
     if not any(p.endswith("rootfs.json") for p in art["identity_files"]):
         die("artifact.identity_files must include rootfs.json itself — every pin in it moves the tree")
+    if not any(p.endswith("ab_cloud-terminal-store/store.json") for p in art["identity_files"]):
+        die("artifact.identity_files must include ../ab_cloud-terminal-store/store.json — its toolset "
+            "decides what this tree installs (#737), so a toolset edit must move the asset name")
 
     src = decl["proot"]
     boot = json.load(open(os.path.join(REPO_ROOT, src["source_build_json"])))
