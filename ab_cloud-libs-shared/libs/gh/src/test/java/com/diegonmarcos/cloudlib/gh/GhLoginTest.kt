@@ -123,7 +123,7 @@ class GhLoginTest {
     fun theProxyTunnelsOnlyForItsOwnGhToItsOwnHosts() {
         val echo = ServerSocket(0)
         thread(isDaemon = true) { echo.accept().use { c -> c.getOutputStream().write(c.getInputStream().read()) } }
-        val proxy = GhNetProxy(setOf("localhost"), echo.localPort) {}
+        val proxy = GhNetProxy(setOf("localhost"), echo.localPort, idleMs = 60_000) {}
 
         val (open, s) = connect(proxy, "localhost:${echo.localPort}", credentialOf(proxy))
         s.use {
@@ -148,7 +148,7 @@ class GhLoginTest {
 
     @Test
     fun anUnreachableHostIsNamedWithAndroidsReason() {
-        val proxy = GhNetProxy(setOf("no-such-host.invalid"), 443) {}
+        val proxy = GhNetProxy(setOf("no-such-host.invalid"), 443, idleMs = 60_000) {}
         val (status, s) = connect(proxy, "no-such-host.invalid:443", credentialOf(proxy))
         s.close()
         assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach no-such-host.invalid: DNS: no address for no-such-host.invalid"))
@@ -158,7 +158,7 @@ class GhLoginTest {
     @Test
     fun aRefusedPortIsNamedAsTcpNotDns() {
         val closed = ServerSocket(0).run { localPort.also { close() } }
-        val proxy = GhNetProxy(setOf("127.0.0.1"), closed) {}
+        val proxy = GhNetProxy(setOf("127.0.0.1"), closed, idleMs = 60_000) {}
         val (status, s) = connect(proxy, "127.0.0.1:$closed", credentialOf(proxy))
         s.close()
         assertTrue(status, status.startsWith("HTTP/1.1 502 cannot reach 127.0.0.1: TCP: 127.0.0.1:$closed refused the connection"))
@@ -166,6 +166,83 @@ class GhLoginTest {
         assertTrue(GhNetProxy.probe("127.0.0.1", closed).startsWith("TCP: "))
         val open = ServerSocket(0)
         open.use { assertTrue(GhNetProxy.probe("127.0.0.1", it.localPort).contains("reachable")) }
+    }
+
+    /**
+     * #729 THE PHONE'S "Post .../access_token: unexpected EOF", REPRODUCED: GitHub's side of the
+     * tunnel dies after gh has written its poll (a fake GitHub that reads the POST, then resets).
+     * Go reads a clean TCP end under TLS as exactly that "unexpected EOF", naming nothing; the tunnel
+     * used to hand gh a clean end for every ending. A broken upstream must reach gh as a broken
+     * connection, and the engine must keep where and how it broke.
+     */
+    @Test
+    fun aTunnelTheNetworkBreaksMidPostReachesGhAsABreakNotAnEnd() {
+        val gitHub = ServerSocket(0)
+        thread(isDaemon = true) {
+            gitHub.accept().let { c ->
+                c.getInputStream().read(ByteArray(256)) // the POST arrives...
+                c.setSoLinger(true, 0) // ...and the connection dies under it: RST, as a dead path gives
+                c.close()
+            }
+        }
+        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 60_000) {}
+        val (open, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
+        s.use {
+            assertEquals("HTTP/1.1 200 Connection established", open)
+            s.getOutputStream().write("POST /login/oauth/access_token HTTP/1.1\r\nHost: github.com\r\n\r\n".toByteArray())
+            val answer = runCatching { s.getInputStream().read() }
+            assertTrue("a tunnel the network broke reached gh as a clean end (${answer.getOrNull()}), " +
+                "which Go reports as \"unexpected EOF\"", answer.isFailure)
+        }
+        assertTrue("the engine kept no word of where the tunnel broke", waitFor(5_000) { proxy.lastDrop != null })
+        assertTrue(proxy.lastDrop!!, proxy.lastDrop!!.contains(GhNetProxy.BROKEN) && proxy.lastDrop!!.contains("localhost:${gitHub.localPort}"))
+    }
+
+    /** A fake GitHub that answers each byte with itself, after [delayFor] ms for that byte's ordinal. */
+    private fun answering(delayFor: (Int) -> Long = { 0L }): ServerSocket = ServerSocket(0).also { server ->
+        thread(isDaemon = true) {
+            server.accept().use { c ->
+                var i = 0
+                while (true) {
+                    val b = c.getInputStream().read()
+                    if (b < 0) break
+                    Thread.sleep(delayFor(i++))
+                    c.getOutputStream().write(b)
+                }
+            }
+        }
+    }
+
+    /**
+     * #729 gh polls every 6s on one kept-alive connection, and the phone's upstream died while that
+     * connection sat idle; gh then wrote its next POST into it. Once GitHub has answered and the
+     * tunnel is quiet, it is ended cleanly, so Go drops the idle connection and dials a fresh one.
+     */
+    @Test
+    fun aTunnelGitHubHasAnsweredIsEndedOnceQuiet() {
+        val gitHub = answering()
+        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 300) {}
+        val (_, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
+        s.use {
+            s.getOutputStream().write(7)
+            assertEquals(7, s.getInputStream().read())
+            val after = runCatching { s.getInputStream().read() }
+            assertEquals("a quiet tunnel was kept open for gh's next poll to write into", -1, after.getOrNull())
+        }
+    }
+
+    /** ...but a request still waiting for its answer (gh spoke last) is never cut, however slow GitHub is. */
+    @Test
+    fun aRequestWaitingForItsAnswerIsNeverCutForQuiet() {
+        val gitHub = answering { i -> if (i == 1) 1_200L else 0L }
+        val proxy = GhNetProxy(setOf("localhost"), gitHub.localPort, idleMs = 300) {}
+        val (_, s) = connect(proxy, "localhost:${gitHub.localPort}", credentialOf(proxy))
+        s.use {
+            s.getOutputStream().write(1)
+            assertEquals("the first answer", 1, s.getInputStream().read())
+            s.getOutputStream().write(2) // gh's next request, answered 1.2s later: 4x the quiet limit
+            assertEquals("a request still waiting for GitHub was cut as quiet", 2, runCatching { s.getInputStream().read() }.getOrNull())
+        }
     }
 
     /**

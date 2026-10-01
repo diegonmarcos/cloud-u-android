@@ -210,6 +210,8 @@ android {
         // handed to gh as SSL_CERT_DIR, and the only hosts GhNetProxy tunnels to.
         buildConfigField 'String', 'GH_CERT_DIRS', "\"${ghPin.sandbox.ssl_cert_dirs.join(':')}\""
         buildConfigField 'String', 'GH_PROXY_HOSTS', "\"${ghPin.sandbox.proxy_hosts.join(',')}\""
+        // How long a tunnel GitHub has answered may sit silent before GhNetProxy ends it (_doc_idle_close_ms).
+        buildConfigField 'int', 'GH_PROXY_IDLE_MS', "${ghPin.sandbox.idle_close_ms as int}"
     }
 
     sourceSets {

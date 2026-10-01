@@ -17,7 +17,9 @@
     "proxy_hosts": [
       "github.com",
       "api.github.com"
-    ]
+    ],
+    "_doc_idle_close_ms": "WHY A QUIET TUNNEL IS CLOSED. gh's device flow sends its token poll every 6s at the earliest (cli/oauth v1.2.2 device.Wait: the 5s interval GitHub gives, times its 1.2 safety margin) and Go reuses one kept-alive connection for every poll. On a phone the upstream half of that connection can die while it sits idle (a NAT64 mapping dropped on an IPv6-only network, sockets Android destroys while the engine is frozen or loses its network); the proxy only noticed when the next poll's bytes hit the dead socket, and gh, having already written its POST, got 'unexpected EOF' and gave up (Go never retries a POST that was written: net/http shouldRetryRequest). So once GitHub has answered and nothing moves either way for this long, GhNetProxy ends the tunnel cleanly: Go sees its idle connection close, drops it, and the next poll dials a fresh tunnel. A request still waiting for its answer (gh spoke last) is never cut. Must stay well below the 6s poll so the close lands before the poll, not under it.",
+    "idle_close_ms": 3000
   },
   "version": "2.101.0",
   "url_template": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_linux_{arch}.tar.gz",

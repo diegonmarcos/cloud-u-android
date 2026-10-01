@@ -181,6 +181,9 @@ class GhRunner(private val context: Context) {
             listOf(if (blocked) "Android is BLOCKING this engine's network (process importance $importance: it fell out of the foreground)"
                 else "Android is not blocking this engine's network (process importance $importance)") +
             BuildConfig.GH_PROXY_HOSTS.split(',').map { GhNetProxy.probe(it) } +
+            // #729 where gh's connection died, when the network killed it under gh: gh itself
+            // only reads "unexpected EOF" or a reset, which names no layer and no address.
+            listOfNotNull(net?.lastDrop?.let { "last gh-net drop: $it" }) +
             listOfNotNull(if (vpn) "a VPN carries ${context.packageName}'s traffic: if its firewall does not allow this app, that is the block" else null))
             .joinToString(" · ", prefix = "engine check: ")
             .also { Log.i(TAG, it) }
@@ -225,7 +228,7 @@ class GhRunner(private val context: Context) {
          * without it, fails on its lookup, and says so in its own words.
          */
         private val net: GhNetProxy? by lazy {
-            runCatching { GhNetProxy(BuildConfig.GH_PROXY_HOSTS.split(',').toSet()) { Log.i(TAG, it) } }
+            runCatching { GhNetProxy(BuildConfig.GH_PROXY_HOSTS.split(',').toSet(), idleMs = BuildConfig.GH_PROXY_IDLE_MS) { Log.i(TAG, it) } }
                 .onFailure { netFailure = it.message ?: it.javaClass.simpleName }
                 .onFailure { Log.e(TAG, "gh-net: loopback proxy would not start; gh cannot resolve names", it) }
                 .getOrNull()
