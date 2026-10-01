@@ -25,7 +25,8 @@ import org.json.JSONObject
  */
 class InfoMask(paths: List<String>, values: List<String>, private val collapseOver: Int) {
 
-    enum class Kind { SHOWN, MASKED, PENDING, COLLAPSED }
+    /** EMPTY (#713): a declared field, or a leaf, the bundle does not fill. */
+    enum class Kind { SHOWN, MASKED, PENDING, COLLAPSED, EMPTY }
 
     /** One read-out line. [text] is empty for MASKED; [size] is the masked
      *  value's length, or a collapsed container's entry count. */
@@ -48,6 +49,32 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
         return out
     }
 
+    /** #713 One section of the schema the vault JSON fills (build.json::ui.profile.infos.schema). */
+    data class SchemaSection(val id: String, val label: String, val fields: List<String>)
+
+    /**
+     * #713 EVERY declared field of [section], in declared order — its own rows,
+     * through the same mask, when [data] (the bundle's section) fills it, ONE
+     * [Kind.EMPTY] row when it does not — then whatever [data] carries under a key
+     * no field starts with, so nothing fetched is hidden by the declaration.
+     * ponytail: extras are found at the section's top level only; a new key
+     * under a declared parent (computers › laptop) shows once its field is declared.
+     */
+    fun schemaRows(section: SchemaSection, data: Any?): List<Row> {
+        val out = mutableListOf<Row>()
+        for (field in section.fields) {
+            val v = field.split(SEP).fold(data) { cur, seg -> (cur as? JSONObject)?.opt(seg) }
+            if (unfilled(v)) out += Row(field, "", Kind.EMPTY) else walk(section.id, v, field, out)
+        }
+        val tops = section.fields.map { it.substringBefore(SEP) }.toSet()
+        (data as? JSONObject)?.let { o -> o.keys().forEach { k -> if (k !in tops) walk(section.id, o.opt(k), k, out) } }
+        return out
+    }
+
+    private fun unfilled(v: Any?): Boolean =
+        v == null || v == JSONObject.NULL || (v is String && v.isBlank()) ||
+            (v is JSONObject && v.length() == 0) || (v is JSONArray && v.length() == 0)
+
     private fun walk(section: String, v: Any?, path: String, out: MutableList<Row>) {
         when {
             v is JSONObject && v.optBoolean("pending") ->
@@ -56,8 +83,9 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
             v is JSONArray && v.length() > collapseOver -> out += Row(path, "", Kind.COLLAPSED, v.length())
             v is JSONObject && v.length() > 0 -> v.keys().forEach { k -> walk(section, v.opt(k), join(path, k), out) }
             v is JSONArray && v.length() > 0 -> (0 until v.length()).forEach { i -> walk(section, v.opt(i), join(path, "[$i]"), out) }
+            unfilled(v) -> out += Row(path, "", Kind.EMPTY)
             else -> {
-                val text = if (v == null || v == JSONObject.NULL) "null" else v.toString()
+                val text = v.toString()
                 out += if (hides(join(section, path), text)) Row(path, "", Kind.MASKED, text.length)
                        else Row(path, text, Kind.SHOWN)
             }
@@ -78,13 +106,29 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
             return InfoMask(list("paths"), list("values"), m.optInt("collapse_over", 12))
         }
 
-        /** The baked declaration (UI_PROFILE_INFOS_B64). */
-        val declared: InfoMask by lazy {
-            parse(runCatching {
+        /** #713 build.json::ui.profile.infos.schema.sections; a missing or broken block is no sections. */
+        fun parseSchema(o: JSONObject?): List<SchemaSection> {
+            val arr = o?.optJSONArray("sections") ?: return emptyList()
+            return (0 until arr.length()).mapNotNull { i ->
+                val s = arr.optJSONObject(i) ?: return@mapNotNull null
+                val id = s.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val f = s.optJSONArray("fields") ?: JSONArray()
+                SchemaSection(id, s.optString("label").ifBlank { id },
+                    (0 until f.length()).map { f.optString(it) }.filter { it.isNotBlank() })
+            }
+        }
+
+        private val baked: JSONObject? by lazy {
+            runCatching {
                 JSONObject(String(android.util.Base64.decode(
                     com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP)))
-                    .optJSONObject("mask")
-            }.getOrNull())
+            }.getOrNull()
         }
+
+        /** The baked declaration (UI_PROFILE_INFOS_B64). */
+        val declared: InfoMask by lazy { parse(baked?.optJSONObject("mask")) }
+
+        /** The baked schema (UI_PROFILE_INFOS_B64 `schema`). */
+        val schema: List<SchemaSection> by lazy { parseSchema(baked?.optJSONObject("schema")) }
     }
 }

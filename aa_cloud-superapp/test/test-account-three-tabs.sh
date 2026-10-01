@@ -26,6 +26,17 @@
 #      function, a mandatory reason, the unreadable keyboard "not verifiable",
 #      every declared mail account an item.
 #   E  the GitHub token (PAT) is used once: never stored, logged or in a URL.
+#   G  (#713) CONNECT ENDS AT THE VAULT EXPORT — nothing renders into the Connect
+#      column after renderVault — every way of every line is the SAME pill, and
+#      GitHub WebAuth is present and wired: gh's own sign-in in the gh engine
+#      (GhEngine, engines.gh), the page in cloud-browser, the token used once.
+#   F  (#713) INFOS IS THE WHOLE SCHEMA: the declared skeleton (ui.profile.infos.schema)
+#      matches cloud-vault's schema.json + sources.json when the vault sits beside;
+#      a port of InfoMask.schemaRows gives EVERY declared field a row (filled or
+#      empty) over a synthetic bundle (always) and the real export (when beside).
+#   H  (#713) SETUP IS BY APP: the Fleet Setup index renders FIRST, one row per
+#      mapped app, repainted from that app's own section; every cockpit section
+#      declares its applier and the mapping includes keyboard, mail, drive and mesh.
 # Every rule is mutation-proved below; each mutation is checked to have APPLIED.
 set -uo pipefail
 APP="${SA_APP:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -40,8 +51,9 @@ PF="$PKG/ProfileFragment.kt"
 IM="$PKG/InfoMask.kt"
 CP="$PKG/VaultCockpit.kt"
 GS="$PKG/GitSshVault.kt"
+GE="$PKG/GhEngine.kt"
 RES="$APP/app/src/main/res"
-for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$RES/values/strings.xml"; do
+for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$GE" "$RES/values/strings.xml"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
 # Code only — whole-line comments dropped, so prose about what must not happen
@@ -57,7 +69,7 @@ lines_ok() {   # $1 = build.json, $2 = shared build.json; prints the first broke
 import json, sys
 c = json.load(open(sys.argv[1]))["ui"]["profile"].get("connect") or {}
 auth = {p.get("kind") for p in json.load(open(sys.argv[2]))["auth"]["sign_in"]["providers"]}
-PAGE = {"github_ssh_pat", "vault_file"}
+PAGE = {"github_ssh_pat", "vault_file", "gh_auth_login"}
 lines = c.get("lines") or []
 def die(m): print(m); sys.exit(1)
 if len(lines) != 3: die("not exactly three lines (%d)" % len(lines))
@@ -91,9 +103,13 @@ grep -qF 'SignIn.offered(policy).filter { it.kind.name.lowercase() == way.kind }
 grep -qF 'getString(R.string.connect_way_unwired, way.label, way.note)' <<<"$BW" \
     && ok "A: a kind with no handler draws its declared reason" || bad "A: an unhandled kind does not say why"
 KT_AUTH_KINDS=$(jq -r '.auth.sign_in.providers[].kind' "$SHARED" | sort -u)
-lit=""; for k in $KT_AUTH_KINDS gh_auth_login; do grep -qF "\"$k\"" <<<"$(codeof "$PF")" && lit="$lit $k"; done
+lit=""; for k in $KT_AUTH_KINDS; do grep -qF "\"$k\"" <<<"$(codeof "$PF")" && lit="$lit $k"; done
 [ -z "$lit" ] && ok "A: no sign-in kind is a Kotlin literal in the fragment" || bad "A: kind literal(s) in Kotlin:$lit"
-grep -q 'private const val KIND_GITHUB_SSH_PAT = "github_ssh_pat"' "$PF" && ok "A: the one page kind is named once" || bad "A: the page kind is not named once"
+for k in GITHUB_SSH_PAT:github_ssh_pat GH_AUTH_LOGIN:gh_auth_login VAULT_FILE:vault_file; do
+    # (`vault_file` is also the connect block's JSON key, read by optString — that use is not a kind)
+    [ "$(codeof "$PF" | grep -v 'optString("vault_file")' | grep -cF "\"${k#*:}\"")" = 1 ] && grep -q "private const val KIND_${k%%:*} = \"${k#*:}\"" "$PF" \
+        && ok "A: the page kind ${k#*:} is named once" || bad "A: the page kind ${k#*:} is not named exactly once"
+done
 LABELS=$(jq -r '.ui.profile.connect.lines[] | .label, .ways[].label' "$BJ")
 lab=""; while IFS= read -r l; do [ -n "$l" ] && grep -qF "\"$l\"" <<<"$(codeof "$PF")" && lab="$lab [$l]"; done <<<"$LABELS"
 [ -z "$lab" ] && ok "A: no line or way label is a Kotlin literal" || bad "A: label(s) typed in Kotlin:$lab"
@@ -108,7 +124,7 @@ PY
     cmp -s "$BJ" "$TMP/a.json" && return 2
     ! lines_ok "$TMP/a.json" "$SHARED" >/dev/null
 }
-for m in 'c["lines"][1]["ways"][0].pop("note")' \
+for m in 'c["lines"][1]["ways"][0]["label"]=""' \
          'c["lines"].append({"id":"x","label":"X","ways":[]})' \
          'c["lines"].pop(2)' \
          'c["lines"].insert(0, c["lines"].pop(2))' \
@@ -181,7 +197,7 @@ oauth_free() {   # $1 = build.json, $2..$n = sources; prints the first hit
     return 0
 }
 echo "== B: the Account surface declares and names no GitHub OAuth app =="
-msg=$(oauth_free "$BJ" "$PF" "$IM" "$CP" "$GS") && ok "B: no client id, client secret, OAuth landing or web client on the Account surface" || bad "B: $msg"
+msg=$(oauth_free "$BJ" "$PF" "$IM" "$CP" "$GS" "$GE") && ok "B: no client id, client secret, OAuth landing or web client on the Account surface" || bad "B: $msg"
 jq -e '.ui.profile.connect.lines[].ways[] | select(.kind == "gh_auth_login") | .note | test("gh")' "$BJ" >/dev/null \
     && ok "B: GitHub WebAuth is declared as gh's own sign-in, not an app of the fleet's" || bad "B: the GitHub WebAuth way does not say it is gh's own sign-in"
 echo "-- B-mutation: a client id declared, a landing declared, a web client named in Kotlin --"
@@ -192,11 +208,14 @@ oauth_free "$TMP/b2.json" "$PF" >/dev/null && bad "B-mutation: a declared OAuth 
 sed 's/private fun showGithubPatDialog() {/private fun showGithubPatDialog() { val c = OAuthWeb.parse(null)/' "$PF" > "$TMP/b3.kt"
 cmp -s "$PF" "$TMP/b3.kt" && bad "B-mutation: the OAuthWeb mutation did not apply" \
     || { oauth_free "$BJ" "$TMP/b3.kt" >/dev/null && bad "B-mutation: OAuthWeb named in the fragment was NOT caught" || ok "B-mutation: OAuthWeb named in the fragment is caught"; }
+sed 's/        const val LOGIN_POLL = "loginPoll"/        const val LOGIN_POLL = "loginPoll"\n        const val GH_CLIENT_ID = "Iv1.planted"; val clientId = GH_CLIENT_ID/' "$GE" > "$TMP/b4.kt"
+cmp -s "$GE" "$TMP/b4.kt" && bad "B-mutation: the GhEngine client-id mutation did not apply" \
+    || { oauth_free "$BJ" "$PF" "$TMP/b4.kt" >/dev/null && bad "B-mutation: a client id in GhEngine was NOT caught" || ok "B-mutation: a client id planted in GhEngine is caught"; }
 
 # ── C · Infos: the fetched configs, masked ──────────────────────────────────
 echo "== C: Infos draws the fetched configs through the declared mask; a secret never reaches a view =="
 INF=$(fnof "$PF" renderInfos | codeof)
-grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INF" && grep -qF 'mask.rows(section.id, bundle.opt(section.id))' <<<"$INF" \
+grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INF" && grep -qF 'mask.schemaRows(section, bundle?.opt(section.id))' <<<"$INF" \
     && ok "C: every Infos row is a row of the fetched bundle, through the mask" || bad "C: Infos is not drawn from the fetched bundle through the mask"
 RAW=$(fnof "$PF" renderRaw | codeof)
 grep -qF 'InfoMask.declared.rows(' <<<"$RAW" && ok "C: the cockpit's raw remainder goes through the SAME mask" || bad "C: the raw remainder bypasses the mask"
@@ -295,7 +314,7 @@ verdict_ok() {   # $1 = ProfileFragment.kt; 0 iff ONE function turns a state int
     return 0
 }
 verdict_ok "$PF" && ok "D: one verdict function; MATCH alone reads applied; every other state reads not applied WITH its reason" || bad "D: the item verdicts are not the one mapping"
-grep -qF 'itemVerdict(row.state, observed)' <<<"$(fnof "$PF" renderRows)" && ok "D: every item row is worded by that function" || bad "D: renderRows does not word its items through itemVerdict"
+grep -qF 'itemVerdict(row.state, observed && row.observed)' <<<"$(fnof "$PF" renderRows)" && ok "D: every item row is worded by that function" || bad "D: renderRows does not word its items through itemVerdict"
 for loc in "$RES"/values*/strings.xml; do
     grep -qE 'name="setup_item_not_applied">[^<]*%1\$s' "$loc" && ok "D: ${loc#$APP/}: 'not applied' carries its reason (%1\$s)" || bad "D: ${loc#$APP/}: 'not applied' has no slot for the reason"
     for s in setup_item_applied setup_item_unverifiable setup_why_differs setup_why_absent setup_why_pending setup_mail_cloud_mail; do
@@ -307,8 +326,8 @@ grep -qF 'renderRows(ctx, card.body, it, section.observed)' "$PF" && jq -e '.ui.
 MAIL=$(fnof "$PF" renderMail | codeof)
 grep -qF 'VaultCockpit.mailAccounts(bundle,' <<<"$MAIL" && grep -qF 'VaultCockpit.mailAccountRows(accounts, jmap.email)' <<<"$MAIL" && grep -qF 'R.string.setup_mail_cloud_mail' <<<"$MAIL" \
     && ok "D: every declared mail account is an item, and what cloud-mail cannot take is said" || bad "D: the mail item does not list every declared account"
-DECL=$(jq -r '.ui.vault_connect.cockpit.sections[].id' "$BJ" | sort)
-DISP=$(awk '/when \(section.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
+DECL=$(jq -r '.ui.vault_connect.cockpit.sections[].apply' "$BJ" | sort)
+DISP=$(awk '/when \(section.apply\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
 [ "$DECL" = "$DISP" ] && ok "D: every declared Setup section has its renderer ($(echo $DECL))" || bad "D: declared [$(echo $DECL)] != dispatched [$(echo $DISP)]"
 jq -e '.ui.vault_connect.cockpit.sections[] | select(.id == "about") | .fields | length > 0' "$BJ" >/dev/null \
     && ok "D: the contact card's fields are declared, not typed" || bad "D: the about section declares no fields"
@@ -347,6 +366,218 @@ cmp -s "$PF" "$TMP/e1.kt" && bad "E-mutation: the store mutation did not apply" 
 sed 's/        val cs = AuthDeclaration.configSource\n        val url = connectDecl/&/; /private fun fetchVaultFileWithToken/{n; s/^\(        val cs = AuthDeclaration.configSource\)$/\1; android.util.Log.i("x", token)/}' "$PF" > "$TMP/e2.kt"
 cmp -s "$PF" "$TMP/e2.kt" && bad "E-mutation: the log mutation did not apply" \
     || { pat_clean "$TMP/e2.kt" && bad "E-mutation: a logged token was NOT caught" || ok "E-mutation: the token logged → RED"; }
+
+# ── G · Connect: nothing after the vault export; one pill design; GitHub WebAuth wired ──
+echo "== G: Connect ends at the vault export, every way is the same pill, GitHub WebAuth is gh's own sign-in =="
+connect_tail_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
+    local blk
+    blk=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/── INFOS:/{exit}' "$1" | codeof | grep -E '^ *render[A-Za-z]*\(')
+    [ "$(echo $blk)" = "renderJourney(ctx, connect) renderVault(ctx, connect)" ] || { echo "Connect renders [$(echo $blk)], not exactly journey then vault"; return 1; }
+    # No other call anywhere hands the Connect column to a renderer.
+    [ "$(codeof "$1" | grep -cE '\(ctx, connect\)')" = 2 ] || { echo "something else renders into the Connect column"; return 1; }
+    return 0
+}
+msg=$(connect_tail_ok "$PF") && ok "G: Connect renders the journey, then the vault export, and nothing after it" || bad "G: $msg"
+for gone in 'private fun renderTokens(' 'private fun renderDevicePick(' 'TOKENS_TEXT'; do
+    grep -qF "$gone" "$PF" && bad "G: the stale Connect tail survives ($gone)" || ok "G: the stale Connect tail is deleted ($gone)"
+done
+grep -qF 'renderDeviceSelector(ctx, hero.slot, devices)' "$PF" && ok "G: the device pick lives on the Setup hero, where it applies" || bad "G: the device pick has no home after leaving Connect"
+pills_ok() {   # $1 = ProfileFragment.kt; every page-kind way and every lib way draws FleetCockpitView.pill
+    local bw; bw=$(fnof "$1" buildWay | codeof)
+    for k in KIND_GITHUB_SSH_PAT KIND_GH_AUTH_LOGIN KIND_VAULT_FILE; do
+        awk -v k="$k" '$0 ~ "if \\(way.kind == "k"\\) \\{" {f=1} f{print} f&&/return$/{exit}' <<<"$bw" | grep -qF 'cell.addView(wayPill(ctx, way)' \
+            || { echo "$k does not draw the shared pill"; return 1; }
+    done
+    grep -qF 'pickButton(' <<<"$bw" && { echo "buildWay still draws a plain button"; return 1; }
+    grep -qF 'FleetCockpitView.pill(ctx, way.label, onClick)' <<<"$(fnof "$1" wayPill)" || { echo "wayPill is not the cockpit pill"; return 1; }
+    grep -qF 'FleetCockpitView.pill(c, way.label, onClick)' <<<"$(fnof "$1" signInWay)" || { echo "the Authelia ways are not the cockpit pill"; return 1; }
+    return 0
+}
+msg=$(pills_ok "$PF") && ok "G: Authelia → Gitea, GitHub and Import File all draw the one cockpit pill" || bad "G: $msg"
+gh_ok() {   # $1 = ProfileFragment.kt, $2 = GhEngine.kt, $3 = build.json; prints the first broken rule
+    local bw gs gp; bw=$(fnof "$1" buildWay | codeof); gs=$(fnof "$1" ghSignIn | codeof); gp=$(fnof "$1" ghPrompt | codeof)
+    jq -e '.ui.profile.connect.lines[] | select(.id == "github") | .ways[] | select(.kind == "gh_auth_login" and .label == "WebAuth" and (.rung | length > 0))' "$3" >/dev/null \
+        || { echo "the GitHub line declares no WebAuth way naming its git-chain rung"; return 1; }
+    jq -e '.engines.gh | .fleet == "lib-gh" and .min_contract >= 1' "$3" >/dev/null || { echo "engines.gh is not declared against the lib-gh row"; return 1; }
+    awk '$0 ~ /if \(way.kind == KIND_GH_AUTH_LOGIN\) \{/ {f=1} f{print} f&&/return$/{exit}' <<<"$bw" | grep -qF 'ghSignIn(way, status)' \
+        || { echo "the WebAuth pill does not start ghSignIn"; return 1; }
+    grep -qF 'GhEngine(ctx)' <<<"$gs" && grep -qF 'engine.login(host)' <<<"$gs" && grep -qF 'engine.token(host)' <<<"$gs" \
+        || { echo "ghSignIn does not run gh's own login through the engine"; return 1; }
+    grep -qF 'is GhEngine.Check.NotInstalled -> getString(R.string.connect_gh_missing' <<<"$gs" && grep -qF 'is GhEngine.Check.TooOld -> getString(R.string.connect_gh_old' <<<"$gs" \
+        || { echo "a missing or old engine is not its own sentence"; return 1; }
+    grep -qF 'fetchVaultFileWithToken(token, hint)' <<<"$gs" && grep -qF 'landVault(status, o.body)' <<<"$gs" \
+        || { echo "the gh token does not read the vault export once and land like a sign-in"; return 1; }
+    grep -qE 'putSecret|setAutheliaCredential|Prefs\(|Log\.' <<<"$gs$gp" && { echo "the gh path stores or logs something"; return 1; }
+    grep -qF 'AuthDeclaration.browserMission?.pkg' <<<"$gp" && grep -qF '.setPackage(browser))' <<<"$gp" \
+        || { echo "the sign-in page does not open in cloud-browser"; return 1; }
+    grep -qF 'BuildConfig.GH_ENGINE_ACTION' "$2" || { echo "GhEngine does not find the engine by its declared action"; return 1; }
+    return 0
+}
+msg=$(gh_ok "$PF" "$GE" "$BJ") && ok "G: GitHub WebAuth = gh auth login in the gh engine, page in cloud-browser, token read once and landed" || bad "G: $msg"
+for loc in values values-es; do
+    for s in connect_gh_caption connect_gh_missing connect_gh_old connect_gh_failed connect_gh_no_token connect_gh_prompt connect_gh_no_browser; do
+        grep -q "name=\"$s\"" "$RES/$loc/strings.xml" || bad "G: $s missing from $loc"
+    done
+done
+echo "-- G-mutation: a read-out after the vault export, a plain button on a line, WebAuth unwired, the page in any browser, the token stored --"
+gmut() {   # $1 = which check, $2 = sed expr on PF; 0 iff the check goes red; 2 iff nothing changed
+    sed "$2" "$PF" > "$TMP/g.kt"; cmp -s "$PF" "$TMP/g.kt" && return 2
+    case $1 in tail) ! connect_tail_ok "$TMP/g.kt" >/dev/null;; pills) ! pills_ok "$TMP/g.kt" >/dev/null;; gh) ! gh_ok "$TMP/g.kt" "$GE" "$BJ" >/dev/null;; esac
+}
+for m in 'tail|s/^        renderVault(ctx, connect)$/        renderVault(ctx, connect)\n        renderRepos(ctx, connect)/' \
+         'tail|s/^        renderVault(ctx, connect)$/        renderRepos(ctx, connect)\n        renderVault(ctx, connect)/' \
+         'pills|s/            cell.addView(wayPill(ctx, way) { ghSignIn(way, status) })/            cell.addView(pickButton(ctx, way.label) { ghSignIn(way, status) })/' \
+         'pills|s/^            cell.addView(wayPill(ctx, way) {$/            cell.addView(pickButton(ctx, way.label) {/' \
+         'gh|s/            cell.addView(wayPill(ctx, way) { ghSignIn(way, status) })/            cell.addView(caption(ctx, way.note))/' \
+         'gh|s/.setPackage(browser))/)/' \
+         'gh|s/            if (token == null) { show(status, RED, "✗ $failure"); return@launch }/            if (token == null) { show(status, RED, "✗ $failure"); return@launch }; ConfigsPrefs(ctx).putSecret("git", "github_token", token)/' \
+         'gh|s/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> Unit/'; do
+    w="${m%%|*}"; e="${m#*|}"
+    gmut "$w" "$e"; rc=$?
+    case $rc in 0) ok "G-mutation: caught — $w: ${e:0:80}";; 2) bad "G-mutation: did not apply — $w: ${e:0:80}";; *) bad "G-mutation: NOT caught — $w: ${e:0:80}";; esac
+done
+jq '(.ui.profile.connect.lines[1].ways) |= map(select(.kind != "gh_auth_login"))' "$BJ" > "$TMP/g1.json"
+cmp -s "$BJ" "$TMP/g1.json" && bad "G-mutation: dropping GitHub WebAuth did not apply" \
+    || { gh_ok "$PF" "$GE" "$TMP/g1.json" >/dev/null && bad "G-mutation: GitHub WebAuth dropped was NOT caught" || ok "G-mutation: GitHub WebAuth dropped from the GitHub line → RED"; }
+lines_ok "$TMP/g1.json" "$SHARED" >/dev/null && bad "G-mutation: A did not see the WebAuth way go" || ok "G-mutation: A also goes red when WebAuth is dropped"
+
+# ── F · Infos: every field of the declared schema ───────────────────────────
+echo "== F: Infos renders the WHOLE schema — every declared section and field, filled or empty =="
+schema_rows_cover() {   # $1 = build.json, $2 = bundle.json ("" = none); prints each declared field with no row; 1 iff any
+    python3 - "$1" "$2" <<'PYF'
+import json, sys
+s = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["schema"]["sections"]
+b = {}
+if sys.argv[2]:
+    b = json.load(open(sys.argv[2])); b = b.get("bundle", b)
+SEP = " › "
+def unfilled(v): return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, (dict, list)) and not v)
+def rows(sec, data):   # port of InfoMask.schemaRows: one row per field (or its leaves), then the extras
+    out = []
+    for f in sec["fields"]:
+        v = data
+        for seg in f.split(SEP): v = v.get(seg) if isinstance(v, dict) else None
+        out.append(f if unfilled(v) else f)   # a filled field walks to >= 1 row under its own path
+    tops = {f.split(SEP)[0] for f in sec["fields"]}
+    out += [k for k in (data or {}) if k not in tops]
+    return out
+miss = []
+if not s: miss.append("(no section declared)")
+for sec in s:
+    if not sec.get("fields"): miss.append(sec["id"] + " (no field declared)")
+    r = rows(sec, b.get(sec["id"]))
+    miss += ["%s › %s" % (sec["id"], f) for f in sec["fields"] if f not in r]
+for m in miss: print(m)
+sys.exit(1 if miss else 0)
+PYF
+}
+schema_code_ok() {   # $1 = InfoMask.kt, $2 = ProfileFragment.kt
+    local sr inf; sr=$(awk '/fun schemaRows\(/{f=1} f{print} f&&/^    }$/{exit}' "$1" | codeof); inf=$(fnof "$2" renderInfos | codeof)
+    grep -qF 'for (field in section.fields) {' <<<"$sr" || { echo "schemaRows does not walk every declared field"; return 1; }
+    grep -qF 'if (unfilled(v)) out += Row(field, "", Kind.EMPTY) else walk(section.id, v, field, out)' <<<"$sr" || { echo "an unfilled field is not an EMPTY row"; return 1; }
+    grep -qF 'if (k !in tops) walk(section.id, o.opt(k), k, out)' <<<"$sr" || { echo "keys beyond the schema are dropped"; return 1; }
+    grep -qF 'val schema = InfoMask.schema' <<<"$inf" && grep -qF 'val all = schema + sections.orEmpty()' <<<"$inf" && grep -qF 'for (section in all) {' <<<"$inf" \
+        || { echo "renderInfos does not iterate the declared schema"; return 1; }
+    grep -q 'return$' <<<"$inf" && { echo "renderInfos returns early, before the schema"; return 1; }
+    grep -qF 'InfoMask.Kind.EMPTY -> { text = getString(R.string.infos_row_empty)' "$2" || { echo "an EMPTY row is not drawn as empty"; return 1; }
+    return 0
+}
+msg=$(schema_code_ok "$IM" "$PF") && ok "F: renderInfos iterates the declared schema; every field is a row, filled or empty; extras still drawn" || bad "F: $msg"
+grep -q 'UI_PROFILE_INFOS_B64' "$APP/app/build.gradle" && grep -qF 'parseSchema(baked?.optJSONObject("schema"))' "$IM" \
+    && ok "F: the schema is baked with the mask and read off it" || bad "F: the schema is not baked or not read"
+out=$(schema_rows_cover "$BJ" "") && ok "F: with nothing fetched, every declared field still draws (as empty) — $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") fields in $(jq '.ui.profile.infos.schema.sections | length' "$BJ") sections" || bad "F: fields without a row: $(echo $out)"
+out=$(schema_rows_cover "$BJ" "$TMP/fixture.json") && ok "F: over the synthetic bundle every declared field draws" || bad "F: fields without a row: $(echo $out)"
+VAULT_DIR=""
+for v in "$APP/../../cloud-vault/C_A1-configs" "$APP/../../../cloud-vault/C_A1-configs"; do [ -f "$v/schema.json" ] && VAULT_DIR="$v" && break; done
+schema_drift() {   # $1 = build.json, $2 = C_A1-configs dir; prints the drift; 1 iff any
+    python3 - "$1" "$2" <<'PYD'
+import json, os, sys
+mine = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["schema"]
+d = sys.argv[2]; vs = json.load(open(os.path.join(d, "schema.json")))
+R = {"text", "json", "sops", "files", "tree", "literal", "pending"}
+want = []
+for s in vs["sections"]:
+    items = json.load(open(os.path.join(d, s["id"], "sources.json")))["items"]; fields = []
+    def walk(o, p):
+        if isinstance(o, dict) and o.get("kind") in R: fields.append(p); return
+        for k, v in o.items():
+            if not k.startswith("_"): walk(v, (p + " › " if p else "") + k)
+    walk(items, ""); want.append({"id": s["id"], "label": s.get("label", s["id"]), "fields": fields})
+bad = []
+if mine.get("schema_version") != vs.get("schema_version"): bad.append("schema_version %s != vault %s" % (mine.get("schema_version"), vs.get("schema_version")))
+if [x["id"] for x in mine["sections"]] != [x["id"] for x in want]: bad.append("sections %s != vault %s" % ([x["id"] for x in mine["sections"]], [x["id"] for x in want]))
+for a, b in zip(mine["sections"], want):
+    if a != b: bad.append("%s: declared %s != vault %s" % (a["id"], a["fields"], b["fields"]))
+for x in bad: print(x)
+sys.exit(1 if bad else 0)
+PYD
+}
+if [ -n "$VAULT_DIR" ]; then
+    out=$(schema_drift "$BJ" "$VAULT_DIR") && ok "F: the declared skeleton IS cloud-vault's schema.json + sources.json (no drift)" || bad "F: the skeleton drifted from the vault: $out"
+    out=$(schema_rows_cover "$BJ" "$VAULT_DIR/profile-secrets.json") && ok "F: over the REAL vault export every declared field draws (paths only, no value printed)" || bad "F: fields without a row in the real export: $(echo $out)"
+else
+    echo "  UNVERIFIABLE: cloud-vault is not checked out beside this repo — the skeleton's drift check did not run (the shape checks above did; InfoMaskTest pins the seven section ids)"
+fi
+echo "-- F-mutation: a field dropped from the skeleton, a section dropped, fields skipped, an early return, extras dropped --"
+jq '.ui.profile.infos.schema.sections[2].fields |= .[1:]' "$BJ" > "$TMP/f1.json"
+if cmp -s "$BJ" "$TMP/f1.json"; then bad "F-mutation: the field drop did not apply"
+elif [ -n "$VAULT_DIR" ]; then schema_drift "$TMP/f1.json" "$VAULT_DIR" >/dev/null && bad "F-mutation: a dropped field was NOT caught by the drift check" || ok "F-mutation: a field dropped from the skeleton → drift RED"
+else echo "  UNVERIFIABLE: F-mutation field-drop needs cloud-vault beside"; fi
+jq '.ui.profile.infos.schema.sections[0].fields = []' "$BJ" > "$TMP/f2.json"
+schema_rows_cover "$TMP/f2.json" "" >/dev/null && bad "F-mutation: a section with no fields was NOT caught" || ok "F-mutation: a section emptied of fields → RED"
+fmut() { sed "$2" "$1" > "$TMP/f.kt"; cmp -s "$1" "$TMP/f.kt" && return 2
+         if [ "$1" = "$IM" ]; then ! schema_code_ok "$TMP/f.kt" "$PF" >/dev/null; else ! schema_code_ok "$IM" "$TMP/f.kt" >/dev/null; fi; }
+for m in "$IM|s/        for (field in section.fields) {/        for (field in section.fields.take(1)) {/" \
+         "$IM|s/            if (unfilled(v)) out += Row(field, \"\", Kind.EMPTY) else walk(section.id, v, field, out)/            if (!unfilled(v)) walk(section.id, v, field, out)/" \
+         "$IM|s/if (k !in tops) walk(section.id, o.opt(k), k, out)/if (false) walk(section.id, o.opt(k), k, out)/" \
+         "$PF|s/        val all = schema + sections.orEmpty()/        val all = sections.orEmpty().map { InfoMask.SchemaSection(it.id, it.label, emptyList()) } + sections.orEmpty()/" \
+         "$PF|s/            into.addView(pickButton(ctx, tabLabel(connectTab)) { strip?.getTabAt(connectTab)?.select() })/&\n            return/"; do
+    f="${m%%|*}"; e="${m#*|}"
+    fmut "$f" "$e"; rc=$?
+    case $rc in 0) ok "F-mutation: caught — $(basename "$f"): ${e:0:70}";; 2) bad "F-mutation: did not apply — $(basename "$f"): ${e:0:70}";; *) bad "F-mutation: NOT caught — $(basename "$f"): ${e:0:70}";; esac
+done
+
+# ── H · Setup: the index first, then app by app ────────────────────────────
+echo "== H: Setup opens on the Fleet Setup index (one row per mapped app), then one section per app =="
+index_ok() {   # $1 = ProfileFragment.kt, $2 = build.json; prints the first broken rule
+    local rs fi pc
+    rs=$(fnof "$1" renderSetup | codeof | grep -E '^ *render[A-Za-z]*\(' | head -1)
+    [ "$(echo $rs)" = "renderFleetIndex(ctx, into)" ] || { echo "Setup's first table is [$(echo $rs)], not the Fleet Setup index"; return 1; }
+    fi=$(fnof "$1" renderFleetIndex | codeof); pc=$(fnof "$1" paintCard | codeof)
+    grep -qF 'for (section in VaultCockpit.layout.sections) {' <<<"$fi" && grep -qF 'tag = "setup-index:${section.id}"' <<<"$fi" \
+        || { echo "the index is not one tagged row per declared app"; return 1; }
+    grep -qF 'indexRows[card.tag]?.apply {' <<<"$pc" && grep -qF 'StatusLight.colour(context, state)' <<<"$pc" \
+        || { echo "an index row is not repainted from its own section's light"; return 1; }
+    grep -qF 'indexCards[section.id] = card' "$1" || { echo "an index row cannot open its section"; return 1; }
+    grep -qF 'renderWizard(ctx, into)' <<<"$(fnof "$1" renderSetup)" || { echo "the setup steps are gone"; return 1; }
+    local missing; missing=$(jq -r '[.ui.vault_connect.cockpit.sections[] | select((.apply // "") == "") | .id] | join(",")' "$2")
+    [ -z "$missing" ] || { echo "cockpit section(s) $missing declare no applier"; return 1; }
+    for need in keyboard mail drive mesh; do
+        jq -e --arg a "$need" '.ui.vault_connect.cockpit.sections[] | select(.apply == $a and (.vault | length > 0))' "$2" >/dev/null \
+            || { echo "no app section applies $need"; return 1; }
+    done
+    return 0
+}
+msg=$(index_ok "$PF" "$BJ") && ok "H: the index is Setup's first table, a row per mapped app ($(jq -r '[.ui.vault_connect.cockpit.sections[].id] | join(", ")' "$BJ")), painted from each section" || bad "H: $msg"
+grep -qF 'VaultCockpit.ownerEmail(bundle, VaultCockpit.layout)' <<<"$(fnof "$PF" renderMail)" \
+    && ok "H: mail lists every declared account even when nobody signed in (the vault's own address names the domain)" || bad "H: mail goes empty after a file import"
+grep -qF 'Row("repo · "' "$CP" && grep -qF 'State.PENDING, observed = false)' "$CP" && ! grep -qF '"declared list; cloud-drive reads it", if (repos != null) State.MATCH' "$CP" \
+    && ok "H: drive lists every declared repo as its own item, never ticked for being declared" || bad "H: the drive repo list is still one ticked row"
+echo "-- H-mutation: the index moved below the sections, a row not repainted, an applier dropped, the keyboard unmapped --"
+hm() { sed "$1" "$PF" > "$TMP/h.kt"; cmp -s "$PF" "$TMP/h.kt" && return 2; ! index_ok "$TMP/h.kt" "$BJ" >/dev/null; }
+for e in 's/^        renderFleetIndex(ctx, into)$/        renderConfigApply(ctx, into)\n        renderFleetIndex(ctx, into)/' \
+         's/        indexRows\[card.tag\]?.apply {/        indexRows["none"]?.apply {/' \
+         's/            indexCards\[section.id\] = card/            Unit/'; do
+    hm "$e"; rc=$?
+    case $rc in 0) ok "H-mutation: caught — ${e:0:80}";; 2) bad "H-mutation: did not apply — ${e:0:80}";; *) bad "H-mutation: NOT caught — ${e:0:80}";; esac
+done
+for jm in '(.ui.vault_connect.cockpit.sections[] | select(.id == "drive")) |= del(.apply)' \
+          '.ui.vault_connect.cockpit.sections |= map(select(.id != "keyboard"))' \
+          '.ui.vault_connect.cockpit.sections |= map(select(.id != "mail"))'; do
+    jq "$jm" "$BJ" > "$TMP/h.json"
+    if cmp -s "$BJ" "$TMP/h.json"; then bad "H-mutation: did not apply — $jm"
+    else index_ok "$PF" "$TMP/h.json" >/dev/null && bad "H-mutation: NOT caught — $jm" || ok "H-mutation: caught — $jm"; fi
+done
 
 echo
 echo "passed=$PASS failed=$FAIL"

@@ -40,21 +40,20 @@ import kotlinx.coroutines.withContext
  * build.json::ui.profile.tabs; this file maps an id to its column and names no
  * label, order or membership of its own.
  *
- *  • CONNECT — the #573 journey, whose step 1 is now the declared sign-in LINES
+ *  • CONNECT — the #573 journey, whose step 1 is the declared sign-in LINES
  *    (ui.profile.connect: Authelia → Gitea = WebAuth | Bearer, GitHub = WebAuth |
- *    SSH / PAT), each way dispatched on its `kind` alone and every Authelia way
- *    hosted through the SHARED libs:auth SignInWays — the same dialogs, cookie
- *    and bearer store cloud-drive uses. Then the VaultConnect fetch
- *    ([renderVault]), WHICH machine this device is ([renderDevicePick] — Setup
- *    applies for that pick), and the credentials held ([renderTokens]).
- *  • INFOS — the FETCHED vault configs and nothing else ([renderInfos]): one card
- *    per section of the bundle, every row from the data, secrets masked by the
- *    declared rule ([InfoMask]); nothing on it applies anything.
- *  • SETUP ("Cloud Constellation Setup") — applies that config for the selected
- *    peer ([renderSetup]): the per-peer config Apply, the #570 cockpit (one card
- *    per declared section — mail, keyboard, mesh, drive, ai, apps, about — every
- *    row saying applied / not applied / why), the contact card, the repos, and
- *    the #622 wizard.
+ *    SSH / PAT, Import File), every way one pill of the same design, dispatched on
+ *    its `kind` alone; the Authelia ways host the SHARED libs:auth SignInWays, and
+ *    GitHub WebAuth is gh's own sign-in in the gh engine ([GhEngine], #713). Then
+ *    the VaultConnect fetch ([renderVault]) — and nothing after it (#713).
+ *  • INFOS — the SCHEMA the vault JSON fills ([renderInfos]): one card per
+ *    declared section, every declared field filled (through the mask, [InfoMask])
+ *    or `empty`; nothing on it applies anything.
+ *  • SETUP ("Cloud Constellation Setup") — applies that config APP BY APP
+ *    ([renderSetup]): the Fleet Setup index (one row per mapped app, then the
+ *    #622 wizard's steps), the per-peer config Apply, the device pick on the hero,
+ *    one section per app the cockpit declaration maps (every item applied / not
+ *    applied / why, and that app's Apply), the contact card and the repos.
  *
  * RESTRUCTURED, NOT REBUILT: #626's Setup | Infos pieces all moved — journey +
  * fetch to Connect, cockpit + person + repos + wizard to Setup, tokens to Connect
@@ -115,6 +114,13 @@ class ProfileFragment : Fragment() {
     /** The cockpit hero, repainted whenever a card's light changes. */
     private var heroViews: FleetCockpitView.Hero? = null
 
+    /** The page's scroll, so a Fleet Setup index row can bring its app's section into view. */
+    private var pageScroll: ScrollView? = null
+
+    /** #713 The Fleet Setup index: one row per app, by cockpit section id, and the card each opens. */
+    private val indexRows = linkedMapOf<String, TextView>()
+    private val indexCards = mutableMapOf<String, FleetCockpitView.Card>()
+
     /** Every card's light by section id — what the hero's overall light sums. */
     private val cardStates = linkedMapOf<String, StatusLight.State>()
 
@@ -166,6 +172,7 @@ class ProfileFragment : Fragment() {
             )
         }
         scroll.addView(page)
+        pageScroll = scroll
 
         // THREE content columns (#695), one per declared tab id; `col` is the
         // Infos read-out.
@@ -203,10 +210,12 @@ class ProfileFragment : Fragment() {
         root.addView(scroll)
 
         // ── CONNECT: sign in, fetch, say which machine this is ────────────
+        // #713 NOTHING renders below the vault export: the device pick moved to
+        // the Setup hero (the only place that applies for it, and where the
+        // journey's peer pick already points it) and the credentials read-out
+        // repeated what each sign-in line already says it holds.
         renderJourney(ctx, connect)
         renderVault(ctx, connect)
-        renderDevicePick(ctx, connect)
-        renderTokens(ctx, connect)
 
         // ── INFOS: the fetched vault configs, section by section ──────────
         renderInfos(ctx, col)
@@ -340,12 +349,14 @@ class ProfileFragment : Fragment() {
     // ── Infos · THE FETCHED VAULT CONFIGS (#695) ──────────────────────────
 
     /**
-     * THE READ-OUT is the bundle a Connect way fetched, and nothing else: one
-     * card per section of it — order and labels from the vault's own schema when
-     * the fetch carried it ([VaultConnect.sections]), else the bundle's keys —
-     * each tagged `infos:<section id>`, every row drawn from the data by
-     * [InfoMask.rows]. No section, field or label is written here, so a section
-     * the vault grows shows up the day it is fetched.
+     * THE READ-OUT is the SCHEMA the vault JSON fills (#713): one card per
+     * section the vault declares (build.json::ui.profile.infos.schema, the
+     * vault's schema.json sections + each section's sources.json fields), each
+     * tagged `infos:<section id>`, and in it EVERY declared field — its value
+     * through the mask once the fetched bundle fills it, `empty` when it does
+     * not ([InfoMask.schemaRows]). A section or key the bundle carries beyond the
+     * declaration is drawn too, after it, so the schema never hides data. No
+     * section, field or label is written here.
      *
      * SECRETS NEVER REACH A VIEW: a masked row carries only its length (see
      * [InfoMask]); what may be drawn is build.json::ui.profile.infos.mask.
@@ -354,22 +365,26 @@ class ProfileFragment : Fragment() {
     private fun renderInfos(ctx: android.content.Context, into: LinearLayout) {
         val sections = VaultConnect.Imported.last
         val bundle = VaultConnect.Imported.bundle
+        val schema = InfoMask.schema
         if (sections == null || bundle == null) {
             into.addView(caption(ctx, getString(R.string.infos_empty, tabLabel(connectTab))))
             into.addView(pickButton(ctx, tabLabel(connectTab)) { strip?.getTabAt(connectTab)?.select() })
-            return
+        } else {
+            into.addView(caption(ctx, getString(R.string.infos_caption, sections.size, tabLabel(setupTab))))
         }
-        into.addView(caption(ctx, getString(R.string.infos_caption, sections.size, tabLabel(setupTab))))
+        val declared = schema.map { it.id }.toSet()
+        val all = schema + sections.orEmpty().filter { it.id !in declared }
+            .map { InfoMask.SchemaSection(it.id, it.label, emptyList()) }
         val mask = InfoMask.declared
-        for (section in sections) {
-            val rows = mask.rows(section.id, bundle.opt(section.id))
+        for (section in all) {
+            val rows = mask.schemaRows(section, bundle?.opt(section.id))
+            val empty = rows.count { it.kind == InfoMask.Kind.EMPTY }
             val card = FleetCockpitView.card(ctx, section.label, "infos:${section.id}",
                 Sections.iconResFor(ctx, ""), getString(R.string.vault_cockpit_card_toggle))
             FleetCockpitView.paint(card.light,
-                if (rows.isEmpty()) StatusLight.State.UNKNOWN else StatusLight.State.ON, section.label)
-            card.summary.text = getString(R.string.infos_section_summary, rows.size,
-                rows.count { it.kind == InfoMask.Kind.MASKED }, rows.count { it.kind == InfoMask.Kind.PENDING })
-            if (rows.isEmpty()) card.body.addView(caption(ctx, getString(R.string.vault_cockpit_card_absent_summary)))
+                if (rows.isEmpty() || empty == rows.size) StatusLight.State.UNKNOWN else StatusLight.State.ON, section.label)
+            card.summary.text = getString(R.string.infos_schema_summary, section.fields.size, rows.size - empty, empty,
+                rows.count { it.kind == InfoMask.Kind.MASKED })
             for (row in rows) {
                 card.body.addView(label(ctx, row.path.ifBlank { section.id }))
                 card.body.addView(infoValue(ctx, row))
@@ -386,6 +401,7 @@ class ProfileFragment : Fragment() {
                 InfoMask.Kind.MASKED -> { text = getString(R.string.infos_row_masked, row.size); setTextColor(NEUTRAL) }
                 InfoMask.Kind.COLLAPSED -> { text = getString(R.string.infos_row_collapsed, row.size); setTextColor(NEUTRAL) }
                 InfoMask.Kind.PENDING -> { text = getString(R.string.infos_row_pending, row.text); setTextColor(NEUTRAL) }
+                InfoMask.Kind.EMPTY -> { text = getString(R.string.infos_row_empty); setTextColor(NEUTRAL) }
                 InfoMask.Kind.SHOWN -> {
                     setTextIsSelectable(true)
                     val short = if (row.text.length > IMPORTED_PREVIEW_CHARS)
@@ -398,44 +414,6 @@ class ProfileFragment : Fragment() {
                     }
                 }
             }
-        }
-
-    /**
-     * WHICH credential is in play, read live — the stored identity, the session,
-     * the GitHub token the repo clone needs and the vault's applied stamp. On
-     * Connect since #695 (it was #626's `tokens` Infos section).
-     *
-     * READ-OUT ONLY, and presence rather than value: no token, key or cookie is
-     * ever printed here, and no control clears one — the clear buttons stay with
-     * the surface that stores each credential.
-     */
-    private fun renderTokens(ctx: android.content.Context, into: LinearLayout) {
-        val configs = ConfigsPrefs(ctx)
-        val session = SignIn.Current.session
-        into.addView(sectionHeader(ctx, getString(R.string.connect_held_header)))
-        into.addView(caption(ctx, TOKENS_TEXT))
-        into.addView(infoRow(ctx, "Session", session?.let {
-            "${SignIn.provider(it.provider)?.label ?: it.provider} · ${it.identity.ifBlank { "—" }}"
-        } ?: "—"))
-        into.addView(infoRow(ctx, "Vault credential", vaultAuthText(ctx)))
-        into.addView(infoRow(ctx, "Authelia address", configs.autheliaEmail.ifBlank { "—" }))
-        into.addView(infoRow(ctx, "Authelia bearer", held(configs.autheliaToken.isNotBlank())))
-        into.addView(infoRow(ctx, "GitHub token",
-            held(configs.secret(VaultCockpit.SECTION_GIT, VaultCockpit.K_GITHUB_TOKEN).isNotBlank())))
-        into.addView(infoRow(ctx, "Vault applied", UserRegistry.appliedAt(ctx).ifBlank { "—" }))
-        into.addView(infoRow(ctx, "Vault bundle in memory", held(VaultConnect.Imported.bundle != null)))
-    }
-
-    /** Presence, never the value. */
-    private fun held(present: Boolean): String = if (present) "stored" else "—"
-
-    /** One dense read-out row: key, value, caption scale, selectable. */
-    private fun infoRow(ctx: android.content.Context, key: String, value: String): TextView =
-        TextView(ctx).apply {
-            text = "$key  ·  $value"
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextIsSelectable(true)
-            setPadding(0, dp(ctx, 2), 0, dp(ctx, 2))
         }
 
     // ── Connect · THE JOURNEY (#573) ──────────────────────────────────────
@@ -587,7 +565,7 @@ class ProfileFragment : Fragment() {
 
     /** One way into a line: [kind] is the only thing dispatched on; [note] is
      *  why it cannot start here when this app wires no handler for it. */
-    private data class Way(val id: String, val label: String, val kind: String, val note: String)
+    private data class Way(val id: String, val label: String, val kind: String, val note: String, val rung: String = "")
 
     /** One line of ways, side by side; [note] is what the line cannot do yet. */
     private data class Line(val id: String, val label: String, val note: String, val ways: List<Way>)
@@ -607,7 +585,7 @@ class ProfileFragment : Fragment() {
             Line(l.getString("id"), l.optString("label", l.getString("id")), l.optString("note"),
                 (0 until w.length()).map { j ->
                     val x = w.getJSONObject(j)
-                    Way(x.getString("id"), x.optString("label", x.getString("id")), x.optString("kind"), x.optString("note"))
+                    Way(x.getString("id"), x.optString("label", x.getString("id")), x.optString("kind"), x.optString("note"), x.optString("rung"))
                 })
         }
     }.getOrDefault(emptyList())
@@ -658,18 +636,31 @@ class ProfileFragment : Fragment() {
         ctx: android.content.Context, s: ProfileJourney.State, way: Way, policy: List<String>,
         cell: LinearLayout, extras: LinearLayout, status: TextView,
     ) {
+        // #713 ONE BUTTON DESIGN on every line: the page's own kinds draw the same
+        // pill the libs:auth ways draw (FleetCockpitView.pill, the way's declared
+        // label), so Authelia → Gitea, GitHub and Import File read alike.
         if (way.kind == KIND_GITHUB_SSH_PAT) {
-            cell.addView(caption(ctx, way.label))
-            cell.addView(pickButton(ctx, getString(R.string.connect_way_ssh)) { showGithubSshDialog() })
-            cell.addView(pickButton(ctx, getString(R.string.connect_way_pat)) { showGithubPatDialog() })
+            cell.addView(wayPill(ctx, way) {
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+                    .setTitle(way.label)
+                    .setItems(arrayOf<CharSequence>(getString(R.string.connect_way_ssh), getString(R.string.connect_way_pat))) { _, which ->
+                        if (which == 0) showGithubSshDialog() else showGithubPatDialog()
+                    }
+                    .show()
+            })
+            return
+        }
+        if (way.kind == KIND_GH_AUTH_LOGIN) {
+            cell.addView(wayPill(ctx, way) { ghSignIn(way, status) })
+            extras.addView(caption(ctx, getString(R.string.connect_gh_caption)))
             return
         }
         if (way.kind == KIND_VAULT_FILE) {
-            cell.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
-            cell.addView(pickButton(ctx, way.label) {
+            cell.addView(wayPill(ctx, way) {
                 fileStatus = status
                 vaultFilePicker.launch(arrayOf("application/json", "text/*", "*/*"))
             })
+            extras.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
             return
         }
         val declared = SignIn.providers.filter { it.kind.name.lowercase() == way.kind }
@@ -694,6 +685,70 @@ class ProfileFragment : Fragment() {
                 })
             }
         }
+
+    /** A page-kind way's button: the same pill the shared sign-in draws, tagged by kind. */
+    private fun wayPill(ctx: android.content.Context, way: Way, onClick: () -> Unit): View =
+        FleetCockpitView.pill(ctx, way.label, onClick).apply { tag = "way:${way.kind}" }
+
+    /**
+     * #713 GitHub ▸ WebAuth: gh's OWN `auth login` in the gh engine ([GhEngine]) —
+     * GitHub CLI's public client inside gh, no OAuth app of the fleet's. gh prints
+     * a one-time code and the page to enter it at; the code is copied and the page
+     * opens in cloud-browser (the fleet's browser, only ever on the declared host).
+     * Once gh holds a token it reads the vault export ONCE through the PAT's own
+     * read ([fetchVaultFileWithToken]) and lands like every sign-in ([landVault]);
+     * the token is never stored, logged or shown. Already signed in: no new login.
+     * Every failure is one red line naming the next step.
+     */
+    private fun ghSignIn(way: Way, status: TextView) {
+        val ctx = requireContext()
+        val engine = GhEngine(ctx)
+        val host = AuthDeclaration.gitChain.firstOrNull { it.id == way.rung }?.config?.optString("host").orEmpty()
+        val why = when (val c = engine.check()) {
+            is GhEngine.Check.NotInstalled -> getString(R.string.connect_gh_missing, c.pkg)
+            is GhEngine.Check.TooOld -> getString(R.string.connect_gh_old, c.pkg, c.found, c.needed)
+            GhEngine.Check.Ready -> if (host.isBlank()) getString(R.string.connect_gh_no_host, way.rung) else ""
+        }
+        if (why.isNotBlank()) { show(status, RED, "✗ $why"); view?.snack(why); return }
+        show(status, NEUTRAL, getString(R.string.connect_gh_starting))
+        val appCtx = ctx.applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            var failure = ""
+            val token = withContext(Dispatchers.IO) {
+                engine.token(host) ?: run {
+                    val r = engine.login(host) { code, page ->
+                        view?.post { if (isAdded) ghPrompt(appCtx, status, code, GhEngine.pageOnHost(page, host)) }
+                    }
+                    when {
+                        !r.ok -> { failure = appCtx.getString(R.string.connect_gh_failed, r.output.trim().lines().lastOrNull().orEmpty()); null }
+                        else -> engine.token(host) ?: run { failure = appCtx.getString(R.string.connect_gh_no_token, host); null }
+                    }
+                }
+            }
+            if (token == null) { show(status, RED, "✗ $failure"); return@launch }
+            show(status, NEUTRAL, getString(R.string.connect_fetching, vaultFile()))
+            val hint = getString(R.string.connect_pat_auth_hint, AuthDeclaration.configSource.gitRepo)
+            when (val o = withContext(Dispatchers.IO) { fetchVaultFileWithToken(token, hint) }) {
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed -> show(status, RED, "✗ ${o.kind}\n${o.message}")
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)
+            }
+        }
+    }
+
+    /** gh's prompt: the code shown and copied (flagged sensitive), the page opened in cloud-browser. */
+    private fun ghPrompt(ctx: android.content.Context, status: TextView, code: String, page: String?) {
+        if (code.isNotBlank()) {
+            val clip = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clip.setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.connect_gh_code_clip), code))
+        }
+        show(status, NEUTRAL, getString(R.string.connect_gh_prompt, code.ifBlank { "…" }, page ?: "…"))
+        page ?: return
+        val browser = AuthDeclaration.browserMission?.pkg.orEmpty()
+        runCatching {
+            require(browser.isNotBlank())
+            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(page)).setPackage(browser))
+        }.onFailure { show(status, RED, "✗ " + getString(R.string.connect_gh_no_browser, browser.ifBlank { "—" }, page)) }
+    }
 
     /** What [line] holds on this device right now — presence, never a value. */
     private fun lineHeld(ctx: android.content.Context, line: Line): String {
@@ -843,42 +898,62 @@ class ProfileFragment : Fragment() {
         into.addView(status)
     }
 
-    // ── Connect · WHICH machine this is (#695) ────────────────────────────
-
-    /**
-     * The pick Setup applies for: one of the fetched bundle's declared devices
-     * ([VaultCockpit.devices]), chosen in a spinner, never typed. Only the id is
-     * stored. The journey's step 3 picks a peer of the config artifact and points
-     * this same choice at the peer's vault device, so both routes land in ONE
-     * stored value.
-     */
-    private fun renderDevicePick(ctx: android.content.Context, into: LinearLayout) {
-        into.addView(sectionHeader(ctx, getString(R.string.connect_device_header)))
-        val bundle = VaultConnect.Imported.bundle
-        if (bundle == null) {
-            into.addView(caption(ctx, getString(R.string.connect_device_none)))
-            return
-        }
-        into.addView(caption(ctx, getString(R.string.connect_device_caption, tabLabel(setupTab))))
-        renderDeviceSelector(ctx, into, VaultCockpit.devices(bundle))
-    }
-
     // ── Setup · CLOUD CONSTELLATION SETUP (#695) ─────────────────────────
 
     /**
-     * Applies the fetched config for the machine picked on Connect: the per-peer
-     * config ([renderConfigApply]), then the cockpit ([renderImported] — one card
-     * per declared section, every row applied / not applied / why), the contact
-     * card the `about` card applies to, the declared repos, and the wizard.
+     * Applies the fetched config for the machine picked on its hero, APP BY APP
+     * (#713): first the Fleet Setup INDEX — one row per app the cockpit maps
+     * ([renderFleetIndex]), each with its live status, then the wizard's steps —
+     * then the per-peer config ([renderConfigApply]), then one section per app
+     * ([renderImported] — what the device holds against what the JSON will apply,
+     * every item applied / not applied / why, and that app's own Apply), the
+     * contact card the `about` section applies to, and the declared repos.
      */
     private fun renderSetup(ctx: android.content.Context, into: LinearLayout) {
+        renderFleetIndex(ctx, into)
+        renderWizard(ctx, into)
         renderConfigApply(ctx, into)
         renderImported(ctx, into)
         into.addView(sectionHeader(ctx, getString(R.string.setup_person_header)))
         renderPerson(ctx, into)
         into.addView(sectionHeader(ctx, getString(R.string.profile_repos_header)))
         renderRepos(ctx, into)
-        renderWizard(ctx, into)
+    }
+
+    /**
+     * #713 THE FLEET SETUP INDEX — the first table on Setup: one row per app the
+     * cockpit declaration maps (build.json::ui.vault_connect.cockpit.sections,
+     * tagged `setup-index:<id>`), in its order. A row starts as "nothing fetched"
+     * or "reading"; [paintCard] rewrites it with that app's own light and tally
+     * the moment its section is drawn, so the index can never claim more than the
+     * section below it shows. Tapping a row opens that section and scrolls to it.
+     */
+    private fun renderFleetIndex(ctx: android.content.Context, into: LinearLayout) {
+        into.addView(sectionHeader(ctx, getString(R.string.setup_index_header)))
+        into.addView(caption(ctx, getString(R.string.setup_index_caption)))
+        indexRows.clear()
+        indexCards.clear()
+        val waiting = if (VaultConnect.Imported.bundle == null) getString(R.string.setup_index_unfetched, tabLabel(connectTab))
+                      else getString(R.string.setup_index_reading)
+        for (section in VaultCockpit.layout.sections) {
+            val row = TextView(ctx).apply {
+                tag = "setup-index:${section.id}"
+                setTextAppearance(android.R.style.TextAppearance_Material_Body1)
+                setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
+                setTextColor(NEUTRAL)
+                text = getString(R.string.setup_index_row, section.label, waiting)
+                setOnClickListener { openIndexed(section.id) }
+            }
+            indexRows[section.id] = row
+            into.addView(row)
+        }
+    }
+
+    /** Open [id]'s section and bring it into view. */
+    private fun openIndexed(id: String) {
+        val card = indexCards[id] ?: return
+        card.body.visibility = View.VISIBLE
+        pageScroll?.post { pageScroll?.smoothScrollTo(0, (card.root.parent as? View)?.top?.plus(card.root.top) ?: card.root.top) }
     }
 
     // ── Setup ▸ repos · the owner's repositories (#614) ───────────────────
@@ -918,8 +993,7 @@ class ProfileFragment : Fragment() {
     private fun renderWizard(ctx: android.content.Context, into: LinearLayout) {
         val steps = Wizard.steps()
         if (steps.isEmpty()) return
-        into.addView(sectionHeader(ctx, "Fleet setup"))
-        into.addView(caption(ctx, "Take this phone to fully configured. Each step shows its live state and opens the screen that configures it — re-run any step any time."))
+        into.addView(caption(ctx, getString(R.string.setup_wizard_caption)))
         for (step in steps) {
             val done = Wizard.done(ctx, step.check)
             into.addView(LinearLayout(ctx).apply {
@@ -1345,15 +1419,14 @@ class ProfileFragment : Fragment() {
             Sections.iconResFor(ctx, VaultCockpit.deviceIcon(layout, device)))
         heroViews = hero
         into.addView(hero.root)
-        // The pick lives on Connect (#695); the hero says which it is and goes there.
-        hero.slot.addView(pickButton(ctx, getString(R.string.setup_change_device, tabLabel(connectTab))) {
-            strip?.getTabAt(connectTab)?.select()
-        })
+        // #713 WHICH machine this is, picked right here — the one place that applies for it.
+        renderDeviceSelector(ctx, hero.slot, devices)
         into.addView(caption(ctx, getString(R.string.vault_cockpit_caption)))
 
         for (section in VaultCockpit.layout.sections) {
             val card = FleetCockpitView.card(ctx, section.label, section.id,
                 Sections.iconResFor(ctx, section.icon), getString(R.string.vault_cockpit_card_toggle))
+            indexCards[section.id] = card
             into.addView(card.root)
             if (section.vault.none { bundle.has(it) }) {
                 card.body.addView(caption(ctx, getString(R.string.vault_cockpit_section_absent, section.vault.joinToString(", "))))
@@ -1361,7 +1434,7 @@ class ProfileFragment : Fragment() {
                 continue
             }
             val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
-            val rows: List<VaultCockpit.Row> = when (section.id) {
+            val rows: List<VaultCockpit.Row> = when (section.apply) {
                 "mail"     -> renderMail(ctx, card.body, bundle, status)
                 "keyboard" -> VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)).also { renderRows(ctx, card.body, it, section.observed) }
                 "mesh"     -> renderMesh(ctx, card.body, bundle, device, status)
@@ -1403,6 +1476,10 @@ class ProfileFragment : Fragment() {
             ?: if (section.observed) getString(R.string.vault_cockpit_card_summary, t.match, t.differ, t.pending)
                else getString(R.string.vault_cockpit_card_unobserved_summary, rows.size)
         cardStates[card.tag] = state
+        indexRows[card.tag]?.apply {
+            text = getString(R.string.setup_index_row, card.label, card.summary.text)
+            setTextColor(StatusLight.colour(context, state))
+        }
         repaintHero()
     }
 
@@ -1469,7 +1546,7 @@ class ProfileFragment : Fragment() {
                 typeface = android.graphics.Typeface.MONOSPACE
                 setTextIsSelectable(true)
                 tag = "item:${row.state.name.lowercase()}"
-                val (verdict, colour) = itemVerdict(row.state, observed)
+                val (verdict, colour) = itemVerdict(row.state, observed && row.observed)
                 setTextColor(colour)
                 text = "$verdict\n  vault:  ${row.declared}\n  device: ${row.device}"
             })
@@ -1506,6 +1583,7 @@ class ProfileFragment : Fragment() {
      */
     private fun renderMail(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView): List<VaultCockpit.Row> {
         val email = ConfigsPrefs(ctx).autheliaEmail.ifBlank { prefs.email.trim() }
+            .ifBlank { VaultCockpit.ownerEmail(bundle, VaultCockpit.layout) }
         val jmap = com.diegonmarcos.superapp.mail.JmapPrefs(ctx)
         val accounts = VaultCockpit.mailAccounts(bundle, email.substringAfter('@', ""))
         if (accounts.isEmpty()) {
@@ -1566,7 +1644,8 @@ class ProfileFragment : Fragment() {
     }
 
     private fun renderDrive(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView): List<VaultCockpit.Row> {
-        val rows = VaultCockpit.driveRows(bundle, ConfigsPrefs(ctx))
+        val rows = VaultCockpit.driveSessionRows(AuthDeclaration.gitChain, getString(R.string.setup_drive_session_device)) +
+            VaultCockpit.driveRows(bundle, ConfigsPrefs(ctx), getString(R.string.setup_drive_repo_device))
         renderRows(ctx, into, rows)
         into.addView(applyButton(ctx, getString(R.string.vault_cockpit_drive_credentials)) {
             val line = VaultCockpit.applyDrive(bundle, ConfigsPrefs(ctx))
@@ -1737,6 +1816,9 @@ class ProfileFragment : Fragment() {
         statusBanner = null
         strip = null
         heroViews = null
+        pageScroll = null
+        indexRows.clear()
+        indexCards.clear()
         journey = null
         // The mailed code is never stored; it dies with the view that held it.
         mailCodeField = null
@@ -2373,11 +2455,9 @@ class ProfileFragment : Fragment() {
          *  from a file instead of signing in. Named once, like the one above. */
         private const val KIND_VAULT_FILE = "vault_file"
 
-        private const val TOKENS_TEXT =
-            "Which credential is in play, re-read every time this page draws. " +
-            "PRESENCE ONLY — no token, key or cookie is ever printed here, and " +
-            "nothing in this list clears one: each credential is cleared where it " +
-            "is stored, on the line above that holds it."
+        /** #713 GitHub ▸ WebAuth: gh's own `auth login`, run by the gh engine
+         *  ([GhEngine], build.json::engines.gh). Named once, like the two above. */
+        private const val KIND_GH_AUTH_LOGIN = "gh_auth_login"
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400

@@ -1071,6 +1071,16 @@
       }
     }
   },
+  "engines": {
+    "_doc": "#713 ENGINES THIS APP BINDS INSTEAD OF COMPILING — same contract as ac_cloud-drive/build.json::engines (#705): `fleet` is the Store row in data/constellation-fleet.json whose package app/build.gradle resolves (an unknown id fails the build), `action` finds the engine service in it, `min_contract` is the lowest engine CONTRACT that answers every method profile/GhEngine.kt calls (read through PackageManager before any bind), `login_poll_ms` / `login_max_ms` pace gh's device-flow sign-in, which the engine runs on its own thread and the client polls. The Account page's GitHub ▸ WebAuth is this engine's `gh auth login` — GitHub CLI's own public client inside gh, never an OAuth app of the fleet's. 1_cicd engine-contract-guard holds every app's client to the engine it binds.",
+    "gh": {
+      "fleet": "lib-gh",
+      "action": "{package}.ENGINE",
+      "min_contract": 1,
+      "login_poll_ms": 1000,
+      "login_max_ms": 960000
+    }
+  },
   "ui": {
     "_doc_permissions": "Data-driven master list for Configs/About → Permissions. `runtime` = standard runtime-grantable Android perms (Android 6+ dangerous perms — Camera/Mic/Location/Contacts/etc.). DevControlFragment reads this list, renders one row per entry with live grant state, and bulk-requests the union via ActivityResultContracts.RequestMultiplePermissions. Special-access perms (battery whitelist, default launcher, usage stats), Health Connect perms, and System auto-granted perms are computed AT RUNTIME inside DevControlFragment — they don't need a JSON list because they're either single-flag toggles or PackageManager-introspected sets.",
     "permissions": {
@@ -6130,7 +6140,7 @@
         { "id": "infos",   "label": "Infos" },
         { "id": "setup",   "label": "Cloud Constellation Setup" }
       ],
-      "_doc_connect": "#695 THE SIGN-IN LINES of Configs ▸ Account ▸ Connect, rendered as step 1 of the #573 journey. Each line is one place to sign in and each of its ways is one pill, side by side: `kind` is the ONLY thing ProfileFragment dispatches on. authelia_web / authelia_bearer are libs:auth's own sign-in kinds (auth.sign_in in ab_cloud-libs-shared/build.json): the pill hosts the SHARED SignInWays narrowed to that one provider, so the dialog, the session cookie and the bearer store are the ones cloud-drive uses — never a copy. github_ssh_pat is this page's read of the vault export out of the private vault repo (auth.config_source.git.repo @ ref, path `vault_file`): an SSH key (JGit clone, bare, depth 1, deleted after) or a pasted token (the contents API, `github_contents_url`, raw), used once and never stored. A way whose kind this app does not dispatch renders its `note` as the reason it cannot start — never a dead button. gh_auth_login is GitHub CLI's own sign-in, carrying GitHub's public client inside the gh binary; the fleet registers NO GitHub OAuth app, client_id or client_secret of its own, and this APK does not ship gh. `note` on a line is what that line cannot do yet, stated plainly. #711 THE THIRD LINE, Import File, is the no-sign-in alternative: kind vault_file opens the system file picker and hands the picked bytes to the SAME classifier the Configs ▸ Import page uses (libs:auth VaultFile.classify, via ImportConfigsFragment.classify) and, when they are the DECRYPTED vault export (the #566 emitter's profile-secrets.json), to the SAME landing every sign-in uses (landVault) — so Infos fills and Cloud Constellation Setup unlocks exactly as after a fetch. Anything else (sops-encrypted, not JSON, empty, unknown schema, the paste-shape blob, unrecognised sections) is refused in red with the Import page's own sentence for it; nothing is stored. Order of the three lines is render order; test-account-three-tabs.sh pins it.",
+      "_doc_connect": "#695 THE SIGN-IN LINES of Configs ▸ Account ▸ Connect, rendered as step 1 of the #573 journey. Each line is one place to sign in and each of its ways is one pill, side by side: `kind` is the ONLY thing ProfileFragment dispatches on. authelia_web / authelia_bearer are libs:auth's own sign-in kinds (auth.sign_in in ab_cloud-libs-shared/build.json): the pill hosts the SHARED SignInWays narrowed to that one provider, so the dialog, the session cookie and the bearer store are the ones cloud-drive uses — never a copy. github_ssh_pat is this page's read of the vault export out of the private vault repo (auth.config_source.git.repo @ ref, path `vault_file`): an SSH key (JGit clone, bare, depth 1, deleted after) or a pasted token (the contents API, `github_contents_url`, raw), used once and never stored. A way whose kind this app does not dispatch renders its `note` as the reason it cannot start — never a dead button. gh_auth_login is GitHub CLI's own sign-in, carrying GitHub's public client inside the gh binary; the fleet registers NO GitHub OAuth app or credential pair of its own. #713: this APK still ships no gh — it BINDS the gh engine (Cloud-Lib-Gh.apk, top-level `engines.gh`, profile/GhEngine.kt), the way names its git_chain rung (`rung`, whose `host` gh signs in to), the code page opens in cloud-browser (auth.browser_mission's package), and the token gh then holds reads `vault_file` once through the PAT's read, never stored. Every way of every line is the same pill (FleetCockpitView.pill); nothing renders on Connect below the vault export. `note` on a line is what that line cannot do yet, stated plainly. #711 THE THIRD LINE, Import File, is the no-sign-in alternative: kind vault_file opens the system file picker and hands the picked bytes to the SAME classifier the Configs ▸ Import page uses (libs:auth VaultFile.classify, via ImportConfigsFragment.classify) and, when they are the DECRYPTED vault export (the #566 emitter's profile-secrets.json), to the SAME landing every sign-in uses (landVault) — so Infos fills and Cloud Constellation Setup unlocks exactly as after a fetch. Anything else (sops-encrypted, not JSON, empty, unknown schema, the paste-shape blob, unrecognised sections) is refused in red with the Import page's own sentence for it; nothing is stored. Order of the three lines is render order; test-account-three-tabs.sh pins it.",
       "connect": {
         "lines": [
           { "id": "authelia", "label": "Authelia → Gitea",
@@ -6141,8 +6151,8 @@
             ] },
           { "id": "github", "label": "GitHub",
             "ways": [
-              { "id": "webauth", "label": "WebAuth", "kind": "gh_auth_login",
-                "note": "GitHub CLI's own sign-in (gh auth login, GitHub's public client inside gh). It runs in cloud-drive ▸ Sync ▸ Git, which ships gh; this APK does not, so it cannot start here — use SSH / PAT." },
+              { "id": "webauth", "label": "WebAuth", "kind": "gh_auth_login", "rung": "github",
+                "note": "GitHub CLI's own sign-in (gh auth login, GitHub's public client inside gh), run by the gh engine (Cloud-Lib-Gh.apk, engines.gh). The page to enter the code opens in cloud-browser. The token gh then holds reads the vault export once, exactly as a pasted PAT does, and is never stored by this app." },
               { "id": "ssh_pat", "label": "SSH / PAT", "kind": "github_ssh_pat" }
             ] },
           { "id": "file", "label": "Import File",
@@ -6159,6 +6169,26 @@
           "paths": ["token", "pass", "secret", "private", "credential", "bearer", "cookie", "key", "dkim", "ssh", "card", "iban", "relay", "^autocomplete › .* › text$"],
           "values": ["PrivateKey", "PresharedKey", "-----BEGIN", "ENC\\[AES", "(?i)bearer\\s+\\S{16,}", "gh[pousr]_[A-Za-z0-9]{20,}", "github_pat_", "sk-[A-Za-z0-9_-]{20,}", "eyJ[A-Za-z0-9_-]{10,}\\.", "[A-Za-z0-9+/=]{40,}", "[A-Za-z0-9_-]{40,}"],
           "collapse_over": 12
+        },
+        "_doc_schema": "#713 THE SCHEMA THE VAULT JSON FILLS, so Infos draws every section and every field — filled (its value, through the mask above) or `empty` — and not only what one export happens to carry. Sections and labels are cloud-vault C_A1-configs/schema.json#sections (schema_version 1); a section's fields are the resolver items of C_A1-configs/<section>/sources.json#items, as `›`-joined paths (a node carrying a resolver `kind` is one field). cloud-vault is private and CI cannot read it, so the skeleton is carried here; test-account-three-tabs.sh F re-derives it from the vault whenever cloud-vault sits beside this repo and goes red on any drift. A field or section the bundle carries beyond this skeleton is still drawn, after the declared ones.",
+        "schema": {
+          "schema_version": 1,
+          "sections": [
+            { "id": "mesh", "label": "Mesh",
+              "fields": ["profiles", "public_key"] },
+            { "id": "mail", "label": "Mail",
+              "fields": ["authoritative_store", "endpoints", "accounts", "passwords"] },
+            { "id": "ai", "label": "AI",
+              "fields": ["tokens › openrouter_my_ai_api", "tokens › openrouter_hermes_agent", "tokens › openrouter_3", "tokens › openrouter_4", "tokens › claude", "configs › claude_folder", "configs › mcps", "configs › hermes_build_json", "configs › hermes_config_template"] },
+            { "id": "git", "label": "Git",
+              "fields": ["github_token", "ssh_private_key", "ssh_public_key", "repos"] },
+            { "id": "about", "label": "About",
+              "fields": ["profile", "addresses", "date_of_birth", "profile_picture", "banner_picture"] },
+            { "id": "autocomplete", "label": "Autocomplete",
+              "fields": ["manifest", "default", "about_me", "agents", "cloud_keys", "personal_data", "urls_pub"] },
+            { "id": "electronics", "label": "Electronics",
+              "fields": ["computers › surface › type", "computers › surface › wg_peer", "computers › surface › mac", "phones › galaxy › type", "phones › galaxy › wg_peer", "phones › galaxy › model_and_mac", "watches", "other_devices", "kde_connect"] }
+          ]
         }
       },
       "_doc_wizard": "#622 THE FLEET WIZARD — the ordered, resumable flow that takes a fresh or half-configured phone to fully configured, rendered at the bottom of the Account 'setup' tab (Wizard.kt → renderWizard). FULLY DATA-DRIVEN: the steps, their ORDER, and each step's done-check id + delegation route live ONLY here (baked UI_PROFILE_WIZARD_B64). Per step: `id` (also the rendered row tag wizard:<id>), `label`, `check` (a REAL live measurement in Wizard.done — never a remembered boolean, #452) and `route` (the EXISTING surface the step delegates to — a `tab:<id>` of this same strip, or a launcher `page:`/`section:` target; empty = terminal). #695: the steps and their checks are UNCHANGED; only the tab routes follow the three-tab strip — identity and vault to `tab:connect` (sign-in and fetch live there), repos and fleet to `tab:setup` (the cockpit and the repos moved there). A `tab:` route naming no declared tab goes red in test-profile-journey.sh.",
@@ -6399,7 +6429,8 @@
         "sections": [
           {
             "id": "mail",
-            "label": "Mail",
+            "label": "Mail · cloud-mail",
+            "apply": "mail",
             "vault": [
               "mail"
             ],
@@ -6407,7 +6438,8 @@
           },
           {
             "id": "keyboard",
-            "label": "Keyboard & Clipboards",
+            "label": "Keyboard · cloud-keyboard autocomplete",
+            "apply": "keyboard",
             "vault": [
               "autocomplete"
             ],
@@ -6416,7 +6448,8 @@
           },
           {
             "id": "mesh",
-            "label": "Mesh",
+            "label": "WireGuard · mesh",
+            "apply": "mesh",
             "vault": [
               "mesh",
               "electronics"
@@ -6425,7 +6458,8 @@
           },
           {
             "id": "drive",
-            "label": "Drive (private repos)",
+            "label": "Drive · cloud-drive personal repos",
+            "apply": "drive",
             "vault": [
               "git"
             ],
@@ -6434,6 +6468,7 @@
           {
             "id": "ai",
             "label": "AI",
+            "apply": "ai",
             "vault": [
               "ai"
             ],
@@ -6442,6 +6477,7 @@
           {
             "id": "apps",
             "label": "Apps",
+            "apply": "apps",
             "vault": [
               "apps"
             ],
@@ -6451,6 +6487,7 @@
             "_doc": "#695 the owner's contact card: vault about.profile against this device's ProfilePrefs, one row per `fields` entry (device field → vault key). The card itself (editable, synced, erasable) is drawn right below it on Setup.",
             "id": "about",
             "label": "About · contact card",
+            "apply": "about",
             "vault": [
               "about"
             ],

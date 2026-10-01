@@ -50,6 +50,9 @@ object VaultCockpit {
         val icon: String = "", val observed: Boolean = true,
         /** #695 `fields`: device field → vault key, for a section compared field by field (about). */
         val fields: Map<String, String> = emptyMap(),
+        /** #713 `apply`: which applier draws this app's section — the ONLY thing Setup dispatches on.
+         *  Blank or unknown = the section's vault data shown raw, never an invented applier. */
+        val apply: String = "",
     )
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
@@ -69,7 +72,7 @@ object VaultCockpit {
             val f = s.optJSONObject("fields") ?: JSONObject()
             Section(s.getString("id"), s.getString("label"), (0 until v.length()).map { v.getString(it) },
                 s.optString("icon"), s.optBoolean("observed", true),
-                f.keys().asSequence().associateWith { f.getString(it) })
+                f.keys().asSequence().associateWith { f.getString(it) }, s.optString("apply"))
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
         val icons = o.optJSONObject("device_icons") ?: JSONObject()
@@ -145,7 +148,9 @@ object VaultCockpit {
     enum class State { MATCH, DIFFERS, ABSENT, PENDING }
 
     /** One comparison: what the vault declares against what the device holds. */
-    data class Row(val label: String, val declared: String, val device: String, val state: State)
+    /** [observed] false (#713): this app cannot read that item's device side, so it reads "not
+     *  verifiable" whatever its section — never a guessed tick. */
+    data class Row(val label: String, val declared: String, val device: String, val state: State, val observed: Boolean = true)
 
     /**
      * One card's light, from its rows, through the SHARED [StatusLight] states.
@@ -386,7 +391,7 @@ object VaultCockpit {
 
     // ── drive (private repos) ────────────────────────────────────────────
 
-    fun driveRows(bundle: JSONObject, prefs: ConfigsPrefs): List<Row> {
+    fun driveRows(bundle: JSONObject, prefs: ConfigsPrefs, deviceRepos: String): List<Row> {
         val git = bundle.optJSONObject("git") ?: return emptyList()
         fun secretRow(label: String, item: String, section: String, key: String): Row {
             val v = git.opt(item)
@@ -399,17 +404,42 @@ object VaultCockpit {
                 else -> Row(label, "•••• (${v.length} chars)", "•••• stored, different", State.DIFFERS)
             }
         }
+        // #713 one item per declared repo. Cloud Drive clones them itself (Sync ▸ Git) and
+        // this app cannot see its folders, so each is "not verifiable" — never the green
+        // tick the whole list used to get for merely being declared.
         val repos = git.optJSONArray("repos")
-        val repoRow = Row("repos", when {
-            repos != null -> (0 until repos.length()).joinToString(", ") { repos.opt(it).toString() }
-            pending(git.opt("repos")) -> pendingText(git.getJSONObject("repos"))
-            else -> "not in the vault"
-        }, "declared list; cloud-drive reads it", if (repos != null) State.MATCH else State.PENDING)
+        val repoRows = when {
+            repos != null -> (0 until repos.length()).map { i ->
+                val r = repos.opt(i)
+                Row("repo · " + ((r as? JSONObject)?.optString("repo")?.ifBlank { null } ?: r.toString()),
+                    "declared", deviceRepos, State.PENDING, observed = false)
+            }
+            pending(git.opt("repos")) -> listOf(Row("repos", pendingText(git.getJSONObject("repos")), deviceRepos, State.PENDING))
+            else -> listOf(Row("repos", "not in the vault", deviceRepos, State.PENDING))
+        }
         return listOf(
             secretRow("github token", "github_token", SECTION_GIT, K_GITHUB_TOKEN),
             secretRow("ssh key", "ssh_private_key", SECTION_SSH, K_VAULT_REPO_KEY),
-            repoRow,
-        )
+        ) + repoRows
+    }
+
+    /**
+     * #713 Cloud Drive's git sign-ins that carry NO credential of the vault's: the
+     * declared git-chain rungs that ride the fleet session (gitea, the fleet proxy).
+     * Cloud Drive signs them in itself through the shared libs:auth, which this app
+     * cannot read, so each is an item that says so rather than a silent gap.
+     */
+    fun driveSessionRows(chain: List<com.diegonmarcos.cloudlib.auth.AuthDeclaration.GitRung>, device: String): List<Row> =
+        chain.filter { !it.holdsGithubCredential }.map { r ->
+            Row("${r.label} · sign-in", "the fleet session (no credential in the vault)", device, State.PENDING, observed = false)
+        }
+
+    /** #713 The owner's address as the vault's own contact card carries it (the about
+     *  section's declared `email` field) — what mail accounts are addressed at when nobody
+     *  signed in, i.e. after an Import File. Blank when the vault has none. */
+    fun ownerEmail(bundle: JSONObject, layout: Layout): String {
+        val key = layout.sections.firstOrNull { it.apply == "about" }?.fields?.get("email") ?: return ""
+        return bundle.optJSONObject("about")?.optJSONObject("profile")?.optString(key).orEmpty().trim()
     }
 
     /** Both credentials into the one encrypted blob, at the paths

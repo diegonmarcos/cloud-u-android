@@ -480,6 +480,29 @@ def profileInfosB64  = profileInfosJson.bytes.encodeBase64().toString()
 // ways read), baked whole so adding, dropping or relabelling a way needs no Kotlin.
 def profileConnectJson = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).connect ?: [:])
 def profileConnectB64  = profileConnectJson.bytes.encodeBase64().toString()
+// #713 THE gh ENGINE the Account page's GitHub ▸ WebAuth binds (build.json::engines.gh) — the
+// same declaration and the same checks cloud-drive's build makes (#705). Its package comes from
+// the constellation manifest this file already bakes; an id the manifest lacks is a hard error,
+// because the way would bind a package no Store row installs. This app holds QUERY_ALL_PACKAGES
+// and libs:core's CONSTELLATION_DATA, so the engine needs no extra manifest line here.
+def ghEngineDecl = buildJson.engines?.gh
+if (ghEngineDecl == null) {
+    throw new GradleException("build.json::engines.gh is not declared — GitHub ▸ WebAuth would bind nothing (#713)")
+}
+def ghEngineFleet = (new groovy.json.JsonSlurper().parseText(constellationFleetJson).apps ?: []).find { it.id == ghEngineDecl.fleet }
+if (ghEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.gh.fleet '${ghEngineDecl.fleet}' is not in data/constellation-fleet.json — " +
+        "GitHub ▸ WebAuth would bind a package no Store row installs (#713)")
+}
+def ghEnginePackage = ghEngineFleet.package.toString()
+def ghEngineAction  = ghEngineDecl.action.toString().replace('{package}', ghEnginePackage)
+def ghEngineMinContract = ghEngineDecl.min_contract as int
+def ghEnginePollMs  = ghEngineDecl.login_poll_ms as long
+def ghEngineMaxMs   = ghEngineDecl.login_max_ms as long
+if (ghEngineMinContract < 1 || ghEnginePollMs <= 0 || ghEngineMaxMs < ghEnginePollMs) {
+    throw new GradleException("build.json::engines.gh needs min_contract >= 1 and 0 < login_poll_ms <= login_max_ms (#713)")
+}
 def consolidatedCfg  = (profileDefault.consolidated_config ?: '').toString()
 // WireGuard defaults — first-run seed for WireGuardPrefs. User edits at
 // runtime via Configs → WireGuard. The interface private key + peer preshared
@@ -883,6 +906,11 @@ android {
         buildConfigField "String", "UI_PROFILE_WIZARD_B64", "\"${profileWizardB64}\""
         buildConfigField "String", "UI_PROFILE_INFOS_B64",  "\"${profileInfosB64}\""
         buildConfigField "String", "UI_PROFILE_CONNECT_B64", "\"${profileConnectB64}\""
+        buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""
+        buildConfigField "String", "GH_ENGINE_ACTION",       "\"${ghEngineAction}\""
+        buildConfigField "int",    "GH_ENGINE_MIN_CONTRACT", "${ghEngineMinContract}"
+        buildConfigField "long",   "GH_ENGINE_POLL_MS",      "${ghEnginePollMs}L"
+        buildConfigField "long",   "GH_ENGINE_LOGIN_MAX_MS", "${ghEngineMaxMs}L"
         buildConfigField "String", "UI_CONSOLIDATED_CONFIG", "\"${consolidatedCfg}\""
         buildConfigField "String", "UI_WG_TUNNEL_NAME",              "\"${wgTunnelName}\""
         buildConfigField "String", "UI_WG_INTERFACE_ADDRESS",        "\"${wgIfAddress}\""

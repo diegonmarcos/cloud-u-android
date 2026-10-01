@@ -99,9 +99,10 @@ grep -q 'infosTab = tabs.indexOfFirst { it.column === col }' "$PF" \
     && ok "T3: the Infos index is read off the tab list" || bad "T3: the Infos index is not derived from the list"
 grep -q 'for (section in VaultCockpit.layout.sections)' "$PF" \
     && ok "T3: the tab iterates the baked layout" || bad "T3: the tab does not iterate ui.vault_connect.cockpit.sections"
-DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].id' "$BJ" | sort)
-DISPATCHED=$(awk '/when \(section.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
-[ -n "$DISPATCHED" ] && ok "T3: the fragment dispatches on $(echo $DISPATCHED | wc -w) section ids" || bad "T3: no when(section.id) dispatch found"
+# #713 the fragment dispatches on each section's declared APPLIER (`apply`), not its id.
+DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].apply' "$BJ" | sort)
+DISPATCHED=$(awk '/when \(section.apply\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
+[ -n "$DISPATCHED" ] && ok "T3: the fragment dispatches on $(echo $DISPATCHED | wc -w) declared appliers" || bad "T3: no when(section.apply) dispatch found"
 for id in $DISPATCHED; do
     grep -qx "$id" <<<"$DECLARED" && ok "T3: dispatched section '$id' is declared" \
                                       || bad "T3: the fragment dispatches on '$id', which build.json does not declare"

@@ -108,4 +108,26 @@ class InfoMaskTest {
         assertTrue(rows.any { it.kind == InfoMask.Kind.MASKED && it.path == "token" })
         assertTrue(InfoMask.parse(null).maskAll)
     }
+
+    @Test fun `#713 the baked schema is the vault's seven sections, and every declared field is a row, filled or empty`() {
+        val schema = InfoMask.schema
+        assertEquals(listOf("mesh", "mail", "ai", "git", "about", "autocomplete", "electronics"), schema.map { it.id })
+        val b = bundle()
+        for (s in schema) {
+            val rows = InfoMask.declared.schemaRows(s, b.opt(s.id))
+            for (f in s.fields) assertTrue("${s.id} › $f has no row", rows.any { it.path == f || it.path.startsWith(f + InfoMask.SEP) })
+        }
+        // The fixture leaves ai › tokens › claude and all of electronics unfilled: they read EMPTY, not absent.
+        val ai = schema.first { it.id == "ai" }
+        assertTrue(InfoMask.declared.schemaRows(ai, b.opt("ai")).any { it.path == "tokens › claude" && it.kind == InfoMask.Kind.EMPTY })
+        val el = schema.first { it.id == "electronics" }
+        assertTrue(InfoMask.declared.schemaRows(el, null).all { it.kind == InfoMask.Kind.EMPTY })
+        // A key the declaration does not name is still drawn: the schema adds rows, it never hides one.
+        val extra = InfoMask.declared.schemaRows(InfoMask.SchemaSection("x", "X", listOf("a")), JSONObject().put("b", "seen"))
+        assertTrue(extra.any { it.path == "a" && it.kind == InfoMask.Kind.EMPTY })
+        assertTrue(extra.any { it.path == "b" && it.kind == InfoMask.Kind.SHOWN && it.text == "seen" })
+        // The mask still holds on a declared field: the GitHub token is a length, never its text.
+        val git = InfoMask.declared.schemaRows(schema.first { it.id == "git" }, b.opt("git"))
+        assertTrue(git.any { it.path == "github_token" && it.kind == InfoMask.Kind.MASKED && it.text.isEmpty() })
+    }
 }

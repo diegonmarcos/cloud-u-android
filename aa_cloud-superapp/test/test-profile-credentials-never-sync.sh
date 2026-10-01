@@ -300,7 +300,10 @@ done
 # NOTHING WAS DROPPED: every surface of the #626 page renders on one of the three.
 has "$FRAGMENT" 'renderJourney(ctx, connect)' "the sign-in journey renders on Connect"
 has "$FRAGMENT" 'renderVault(ctx, connect)'   "the vault fetch renders on Connect"
-has "$FRAGMENT" 'renderTokens(ctx, connect)'  "the credentials read-out renders on Connect"
+# #713 Connect ends at the vault export: the credentials read-out (it repeated
+# what each sign-in line says it holds) is gone, and the device pick is Setup's.
+hasnt_code "$FRAGMENT" 'renderTokens(' "the duplicated credentials read-out is gone from Connect"
+hasnt_code "$FRAGMENT" 'renderDevicePick(' "the device pick no longer renders on Connect"
 has "$FRAGMENT" 'renderInfos(ctx, col)'       "the fetched configs render on Infos"
 has "$FRAGMENT" 'renderSetup(ctx, setup)'     "Cloud Constellation Setup renders on Setup"
 SETUP_FN=$(awk '/private fun renderSetup\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
@@ -398,7 +401,7 @@ echo "-- T11-infos: the Infos read-out is the FETCHED configs, not a hand-listed
 # that #626's hand-listed sections are gone and the read-out is the import itself.
 INFOS_FN=$(awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
 grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INFOS_FN" && ok "T11-infos: renderInfos reads the fetched sections" || bad "T11-infos: renderInfos does not read the fetched import"
-grep -qF 'mask.rows(section.id, bundle.opt(section.id))' <<<"$INFOS_FN" && ok "T11-infos: every row comes from the fetched bundle, through the mask" || bad "T11-infos: rows are not drawn from the fetched bundle"
+grep -qF 'mask.schemaRows(section, bundle?.opt(section.id))' <<<"$INFOS_FN" && ok "T11-infos: every row comes from the fetched bundle, through the mask, per declared field" || bad "T11-infos: rows are not drawn from the fetched bundle"
 grep -qE '"(person|tokens|repos|fleet|vault|wireguard|store)"' <<<"$(codeof "$FRAGMENT" | awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}')" \
     && bad "T11-infos: renderInfos still names a hand-listed section" || ok "T11-infos: renderInfos names no section of its own"
 jq -e '.ui.profile.infos.sections' "$ROOT/build.json" >/dev/null 2>&1 \
@@ -406,13 +409,6 @@ jq -e '.ui.profile.infos.sections' "$ROOT/build.json" >/dev/null 2>&1 \
 for gone in 'UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))' 'profileInfoSections()' 'MODE_LINK' 'INFOS_NO_RENDERER'; do
     hasnt_code "$FRAGMENT" "$gone" "T11-infos: the hand-listed read-out is gone ($gone)"
 done
-# PRESENCE, never the value: the credential read-out must not print a secret.
-if awk '/private fun renderTokens/,/^    }$/' "$ROOT/$FRAGMENT" \
-     | grep -qE 'autheliaToken\)|infoRow\(ctx, "[^"]*", *configs\.autheliaToken'; then
-    bad "T11-infos: renderTokens prints a token value"
-else
-    ok "T11-infos: renderTokens reports presence, never a credential value"
-fi
 echo "-- T11-infos-mutation: a hand-listed read-out goes red --"
 SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
 sed 's/val sections = VaultConnect.Imported.last/val sections = listOf(VaultConnect.Section("person", "Person details", emptyList()))/' \
