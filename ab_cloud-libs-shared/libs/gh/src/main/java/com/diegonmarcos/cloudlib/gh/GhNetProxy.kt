@@ -130,7 +130,7 @@ class GhNetProxy(
         val ghSpoke = AtomicLong()
         val gitHubSpoke = AtomicLong()
         val upFailure = AtomicReference<IOException?>()
-        upstream.soTimeout = 0 // MUTATION 2: no quiet timer, so a quiet tunnel is never ended. wakes the loop below to look at the clock; not a deadline
+        upstream.soTimeout = idleMs // wakes the loop below to look at the clock; not a deadline
         val toGitHub = thread(isDaemon = true, name = "gh-net-up") {
             val buf = ByteArray(BUF)
             val out = upstream.getOutputStream()
