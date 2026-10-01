@@ -158,6 +158,45 @@ _run
     && ok "a tester that runs git is still judged on its OWN source, not amnestied by .git" \
     || bad ".git counted as foreign source — any tester using git would be silently downgraded"
 
+# ── 3c. an application nested two levels down is judged on its own source ─
+# #705 ab_cloud-libs-shared/lib-apks walks up to the root THROUGH its parent, so
+# the trace names `<parent>` and `<parent>/.git`. Those are directory probes, not
+# source; counted as foreign they downgraded every lib-apks tester, and the
+# engine half of the app/engine split could not fail the Cloud Libs release.
+# Both polarities: the walk-up alone must not amnesty an own failure, and a real
+# read of a file in the parent must still be foreign.
+mkdir -p "$FIX/zz_parent/nested_app/test"
+cat >"$FIX/1_cicd/src/cicd/ship-zz-nested.yml" <<'YML'
+on:
+  push:
+    paths:
+      - "zz_parent/nested_app/**"
+env:
+  WORK_DIR: zz_parent/nested_app
+YML
+echo '{ "tests": { "shell": { "dir": "test" } } }' >"$FIX/zz_parent/nested_app/build.json"
+echo 'this nested application owns this line' >"$FIX/zz_parent/nested_app/mine.txt"
+echo 'the parent shelf owns this line' >"$FIX/zz_parent/shelf.txt"
+_nested() {  # _nested <body> : one tester that walks up to the root the house way
+    rm -f "$FIX"/zz_parent/nested_app/test/test-*.sh
+    cat >"$FIX/zz_parent/nested_app/test/test-nested.sh" <<TESTER
+#!/usr/bin/env bash
+ROOT="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && while [ "\$PWD" != "/" ] && [ ! -e "\$PWD/.git" ]; do cd ..; done; printf '%s' "\$PWD")"
+$1
+TESTER
+    chmod +x "$FIX/zz_parent/nested_app/test/test-nested.sh"
+    OUT="$(cd "$FIX" && CLOUD_ANDROID_ROOT="$FIX" sh "$ENGINE" shell zz_parent/nested_app 2>&1)"
+    RC=$?
+}
+_nested 'grep -q "NOT PRESENT" "$ROOT/zz_parent/nested_app/mine.txt" || exit 1'
+[ "$RC" -ne 0 ] && ! grep -q 'FOREIGN to' <<<"$OUT" \
+    && ok "a nested application's own-source failure is fatal, though its walk-up passed through the parent" \
+    || bad "the walk-up through the parent made a nested application's own failure foreign (exit $RC)"
+_nested 'grep -q "NOT PRESENT" "$ROOT/zz_parent/shelf.txt" || exit 1'
+[ "$RC" -eq 0 ] && grep -q 'FOREIGN to nested_app — it reached: zz_parent/shelf.txt' <<<"$OUT" \
+    && ok "a nested application reading a FILE in its parent is still foreign, named exactly" \
+    || bad "the parent exemption widened past the directory probe (exit $RC)"
+
 # ── 4. an underivable own-path set REFUSES TO RUN ─────────────────────────
 # The catastrophic mode. An empty set marks every path foreign, so every
 # failure downgrades and the suite can never go red again — while reporting a

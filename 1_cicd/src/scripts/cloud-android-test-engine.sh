@@ -268,6 +268,21 @@ shell)
     app_relative="${app_relative#"$ROOT"/}"
     printf '%s\n' "$app_relative" >>"$OWN_PATHS"
 
+    # #705 THE SAME WALK-UP, ONE LEVEL DEEPER. An application nested two levels
+    # down (ab_cloud-libs-shared/lib-apks) walks up THROUGH its parent, so the
+    # trace names `<parent>` and `<parent>/.git` — directory probes, not source.
+    # The `<app>` entry above cannot cover them (they are its ancestors, not its
+    # children), so lib-apks' every tester read as foreign and could not fail the
+    # Cloud Libs release: the engine-side half of the app/engine split was
+    # advisory. Each ancestor goes in with a leading '=', which _foreign_reach
+    # matches EXACTLY and never as a prefix, so a tester that actually reads
+    # <parent>/build.json still reports it as foreign.
+    anc="$app_relative"
+    while [ "${anc%/*}" != "$anc" ]; do
+        anc="${anc%/*}"
+        printf '=%s\n=%s/.git\n' "$anc" "$anc" >>"$OWN_PATHS"
+    done
+
     can_trace=yes
     command -v bash >/dev/null 2>&1 || {
         can_trace=no
@@ -282,7 +297,7 @@ shell)
     # name change the answer.
     _foreign_reach() {  # _foreign_reach <trace-file>
         awk -v root="$ROOT/" '
-            NR == FNR { own[FNR] = $0; nown = FNR; next }
+            NR == FNR { if (substr($0, 1, 1) == "=") exact[substr($0, 2)] = 1; else own[++nown] = $0; next }
             {
                 s = $0
                 while ((i = index(s, root)) > 0) {
@@ -300,6 +315,7 @@ shell)
                     # fleet configuration, and the fleet has its own workflows
                     # to fail in, under its own name.
                     if (p == ".git" || index(p, ".git/") == 1) continue
+                    if (p in exact) continue
                     hit = 0
                     for (k = 1; k <= nown; k++)
                         if (p == own[k] || index(p, own[k] "/") == 1) { hit = 1; break }
