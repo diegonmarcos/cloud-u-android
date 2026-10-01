@@ -35,7 +35,8 @@ public final class HelpActivity extends AppCompatActivity {
         mWebView = new WebView(this);
         WebSettings settings = mWebView.getSettings();
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setAppCacheEnabled(false);
+        // #744 setAppCacheEnabled is gone from compileSdk 33+: WebView dropped AppCache
+        // itself, so there is no cache left for it to disable. LOAD_NO_CACHE above stays.
         setContentView(progressLayout);
         mWebView.clearCache(true);
 
