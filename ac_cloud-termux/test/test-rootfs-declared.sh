@@ -327,6 +327,42 @@ grep -q '"ab_cloud-terminal-store/\*\*"' "$WF" \
     && ok "the ship workflow watches ab_cloud-terminal-store, so an engine fix starts a run and publishes" \
     || bad "$WF does not watch the shared store: an engine fix would sit inert behind a green tick"
 
+echo "── 7: #736 a phone runs THIS APK's enter.sh, and shared storage has one entry ──"
+# On a phone that had already staged the rootfs, isStaged() was true after every
+# update (it compares only the companion lib's digest), so stage() never ran and
+# the phone kept logging in through its FIRST enter.sh: the S21 showed exactly the
+# empty mount-point dirs of an enter.sh several fixes old. The current-rootfs path
+# must refresh enter.sh/proot before the terminal opens.
+IN="$J/app/TermuxInstaller.java"
+refreshes_when_staged() {  # $1 = TermuxInstaller.java
+    awk '/private static void stageCloudRootfs\(/ {on=1}
+         on && /CloudRootfs.isStaged\(activity\)/ {br=1}
+         br && /CloudRootfs.refreshFiles\(activity\);/ {ref=1}
+         br && /whenDone.run\(\);/ {found=ref; exit} END {exit !found}' "$1"
+}
+refreshes_when_staged "$IN" && grep -q 'Os.rename(tmp.getAbsolutePath(), target.getAbsolutePath())' "$CR" \
+    && ok "a staged phone gets this APK's enter.sh/proot on every start, swapped in by rename" \
+    || bad "an update that changes only enter.sh never reaches a phone that already staged the rootfs (#736)"
+MUT="$T/TermuxInstaller-no-refresh.java"
+grep -v 'CloudRootfs.refreshFiles(activity);' "$IN" > "$MUT"
+if cmp -s "$IN" "$MUT"; then bad "MUTATION DID NOT APPLY: no refreshFiles call to remove"
+elif refreshes_when_staged "$MUT"; then bad "MUTATION SURVIVED: without the refresh the pin stayed green"
+else ok "mutation proved: dropping the refresh turns the pin red"; fi
+# ~/emulated is the ONE entry for shared storage: the upstream ~/storage tree is not
+# made by the app (setupStorageSymlinks) and enter.sh removes one an older version
+# left. The runtime half (links resolve in the guest, ~/storage gone) is verify-rootfs.sh.
+no_storage_tree() {  # $1 = TermuxInstaller.java, $2 = enter.sh
+    ! awk '/static void setupStorageSymlinks\(/ {on=1} on && /Os.symlink\(/ {f=1} on && /^    }$/ {exit} END {exit !f}' "$1" \
+        && grep -q 'for l in "$HOME/storage"/\*; do \[ ! -L "$l" \] || rm -f "$l"; done' "$2"
+}
+no_storage_tree "$IN" "$R/enter.sh" \
+    && ok "no ~/storage tree is made, and enter.sh removes the one an older version left" \
+    || bad "a second shared-storage entry (~/storage) is still made or kept beside ~/emulated (#736)"
+sed 's|^        Logger.logInfo("termux-storage", "Shared storage is ~/emulated.*|        Os.symlink(Environment.getExternalStorageDirectory().getAbsolutePath(), new File(TermuxConstants.TERMUX_STORAGE_HOME_DIR, "shared").getAbsolutePath());|' "$IN" > "$MUT"
+if cmp -s "$IN" "$MUT"; then bad "MUTATION DID NOT APPLY: setupStorageSymlinks could not be re-planted"
+elif no_storage_tree "$MUT" "$R/enter.sh"; then bad "MUTATION SURVIVED: a re-planted ~/storage link stayed green"
+else ok "mutation proved: a re-planted ~/storage link turns the pin red"; fi
+
 echo
 [ "$fail" -eq 0 ] && echo "PASS test-rootfs-declared" || echo "FAIL test-rootfs-declared"
 exit "$fail"

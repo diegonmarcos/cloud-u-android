@@ -98,6 +98,54 @@ case "$notice" in
     *) echo "FAIL enter.sh printed no storage notice: '$(echo "$notice" | head -2)'"; fail=1 ;;
 esac
 
+echo "── #736: with shared storage readable, the GUEST shell lists the real storage and store ──"
+# The phone's report: ~/emulated and ~/cloud-drive-shared-store listed empty while
+# the file manager showed both full. Stage /storage/emulated/0 on the runner (the
+# probe path is the phone's own), leave the state an older enter.sh left behind
+# (empty mount-point dirs, termux-setup-storage's ~/storage tree), log in through
+# the shipped proot and list from INSIDE the root. A mutant without the guest bind
+# runs the same check and must go red: that is what proves an absolute symlink only
+# resolves in the guest because of that bind, and that this check can fail at all.
+S0=/storage/emulated/0
+if [ -e /storage ]; then
+    echo "FAIL /storage already exists on this runner; the readable branch cannot be staged without clobbering it"; fail=1
+elif ! sudo -n mkdir -p "$S0/CloudDrive/git/cloud-probe-repo" "$S0/Download" 2>/dev/null \
+        || ! sudo -n chown -R "$(id -u):$(id -g)" /storage; then
+    echo "FAIL cannot stage $S0 on this runner (no passwordless sudo): the readable branch is unproven"; fail=1
+else
+    readable_listing() {  # $1 = enter.sh to log in through; prints what the guest lists
+        rm -rf "$W/home/emulated" "$W/home/cloud-drive-shared-store" "$W/home/storage"
+        mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store" "$W/home/storage"
+        ln -s "$S0/DCIM" "$W/home/storage/dcim"
+        # sh -c inside the login shell, as above: the listing must not depend on fish syntax.
+        HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$1" -c \
+            "sh -c 'ls ~/emulated; echo SEP; ls ~/cloud-drive-shared-store/git'" 2>/dev/null </dev/null || true
+    }
+    readable_ok() {  # $1 = the listing
+        case "$1" in *CloudDrive*Download*SEP*cloud-probe-repo*) return 0 ;; esac
+        return 1
+    }
+    got="$(readable_listing "$STAGE/enter.sh")"
+    if readable_ok "$got"; then echo "ok   the guest lists ~/emulated and ~/cloud-drive-shared-store/git with real content"
+    else echo "FAIL the guest listing is not the real storage: '$(echo "$got" | tr '\n' ' ')'"; fail=1; fi
+    for d in emulated cloud-drive-shared-store; do
+        [ -L "$W/home/$d" ] && echo "ok   ~/$d is a symlink -> $(readlink "$W/home/$d")" \
+            || { echo "FAIL ~/$d is not a symlink (an empty directory left in place reads as empty storage)"; fail=1; }
+    done
+    [ ! -e "$W/home/storage" ] && echo "ok   the upstream ~/storage tree is gone: ~/emulated is the one shared-storage entry" \
+        || { echo "FAIL ~/storage is still there: a second entry for shared storage"; fail=1; }
+    sed 's|^    binds="$binds -b /storage/emulated/0"$|    :|' "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
+    if cmp -s "$STAGE/enter.sh" "$STAGE/enter-mutant.sh"; then
+        echo "FAIL MUTATION DID NOT APPLY: enter.sh has no guest bind line to remove"; fail=1
+    elif readable_ok "$(readable_listing "$STAGE/enter-mutant.sh")"; then
+        echo "FAIL MUTATION SURVIVED: without the guest bind the listing still passed — the check proves nothing"; fail=1
+    else
+        echo "ok   mutation proved: without the guest bind the same listing goes red"
+    fi
+    rm -f "$STAGE/enter-mutant.sh"
+    sudo -n rm -rf /storage
+fi
+
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
 exit "$fail"

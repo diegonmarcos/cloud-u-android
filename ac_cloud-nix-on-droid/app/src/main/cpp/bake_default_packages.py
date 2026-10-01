@@ -385,6 +385,53 @@ cloud_trace "bin/login: start, $(cloud_jobctl $$)"
 """
 
 
+def storage_setup(shared_root_name: str) -> str:
+    """#612/#736: bin/login's shared-storage block. ~/emulated and ~/cloud-drive-shared-store are
+    SYMLINKS to /storage/emulated/0 and its <shared_root_name> store. bin/login runs proot with no
+    -r (it binds individual dirs onto the real Android root, it does not chroot), so $HOME and
+    /storage are the same paths inside the session as outside it and a plain link needs no bind;
+    the binds this replaces only ever showed the terminal what the mount step happened to leave.
+
+    /storage/emulated/0 exists as a directory even without the storage grant, but is then not
+    traversable, so readability (ls), not existence, is probed; when it fails ls's own error is
+    traced and ONE line says why. #730: nothing is left that reads as an empty STORE -- only our
+    link or an EMPTY directory is ever removed (rmdir never removes content). The upstream ~/storage
+    tree (termux-setup-storage's links) is a second entry for the same storage, so its symlinks go."""
+    store = f"/storage/emulated/0/{shared_root_name}"
+    return (
+        'cloud_storage_link() {\n'
+        '  [ -L "$1" ] || rmdir "$1" 2>/dev/null || true\n'
+        '  if [ -e "$1" ] && [ ! -L "$1" ]; then\n'
+        '    echo "⚠ $1 is a directory with content, so it is not replaced by the link to $2" >&2\n'
+        '  else\n'
+        '    ln -sfn "$2" "$1"\n'
+        '  fi\n'
+        '}\n'
+        'cloud_storage_unlink() {\n'
+        '  if [ -L "$1" ]; then rm -f "$1"; else rmdir "$1" 2>/dev/null || true; fi\n'
+        '}\n'
+        'if [ -d "$HOME/storage" ] && [ ! -L "$HOME/storage" ]; then\n'
+        '  for l in "$HOME/storage"/*; do [ ! -L "$l" ] || rm -f "$l"; done\n'
+        '  rmdir "$HOME/storage" 2>/dev/null || true\n'
+        'fi\n'
+        'if CLOUD_LS_ERR="$(ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
+        '  cloud_trace "storage: /storage/emulated/0 is readable, linking ~/emulated"\n'
+        '  cloud_storage_link "$HOME/emulated" /storage/emulated/0\n'
+        f'  mkdir -p "{store}" 2>/dev/null || true\n'
+        f'  if [ -d "{store}" ]; then\n'
+        f'    cloud_storage_link "$HOME/cloud-drive-shared-store" "{store}"\n'
+        '  else\n'
+        f'    cloud_trace "storage: could not create {store}"\n'
+        '  fi\n'
+        'else\n'
+        '  cloud_trace "storage: ls /storage/emulated/0 failed: $CLOUD_LS_ERR"\n'
+        '  cloud_storage_unlink "$HOME/emulated"\n'
+        '  cloud_storage_unlink "$HOME/cloud-drive-shared-store"\n'
+        '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
+        'fi\n'
+    )
+
+
 def add_login_trace(login_inner: str) -> str:
     """#715 -- define the trace and the bounded shell start, and log the start.
 
@@ -554,56 +601,16 @@ def main() -> int:
             executables_txt = zin.read("EXECUTABLES.txt").decode()
             etc_profile = zin.read(ETC_PROFILE_ENTRY).decode()
 
-            # ── #612: auto-mount shared storage + the cloud-drive shared
-            # store into $HOME, the same generated-text-injection technique
-            # as the session-init patch below. bin/login runs with no -r (it
-            # binds individual dirs onto the real Android root, it does not
-            # chroot), so $HOME here is already the real on-device path and
-            # these two mountpoints just need to exist under it before the
-            # exec, guarded like the fakeProcStat/fakeProcUptime binds above
-            # them so a missing source (e.g. cloud-drive never opened yet)
-            # degrades to no bind instead of a failed one.
+            # ── #612/#736: shared storage + the cloud-drive shared store in
+            # $HOME (storage_setup), the same generated-text-injection
+            # technique as the session-init patch below, run before the exec.
             exec_line = f"exec /data/data/{app_id}/files/usr/bin/proot-static \\"
             if bin_login.count(exec_line) != 1:
                 print(f"FAIL: expected exactly one proot-static exec line in bin/login:\n  {exec_line}",
                       file=sys.stderr)
                 return 1
-            # /storage/emulated/0 exists as a directory even without All-Files-Access, but is
-            # then not traversable, so binding it would mount an empty tree silently. Probe
-            # readability (ls) rather than existence (-d); when it fails, state the fact in ONE
-            # line and skip both binds instead of mounting a dark tree. #639: the line does NOT
-            # describe a route through Settings -- TermuxActivity.requestManageStorageIfNeeded()
-            # deep-links straight to this package's All-Files-Access toggle on every launch that
-            # lacks the grant, so prose telling the user to go find it himself is redundant.
-            # #730: the mount points exist only while bound, and an unbound EMPTY one is removed
-            # (rmdir never removes a non-empty dir): an empty ~/cloud-drive-shared-store reads as
-            # an empty STORE, which is how a fresh phone without the grant was misreported.
-            mount_setup = BIN_LOGIN_TRACE + (
-                'if CLOUD_LS_ERR="$(ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
-                '  cloud_trace "storage: /storage/emulated/0 is readable, binding ~/emulated"\n'
-                '  mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
-                '  BIND_HOME_EMULATED="-b /storage/emulated/0:$HOME/emulated"\n'
-                f'  mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
-                f'  if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
-                f'    BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"\n'
-                '  else\n'
-                f'    cloud_trace "storage: could not create /storage/emulated/0/{shared_root_name}"\n'
-                '    BIND_HOME_SHARED_STORE=""\n'
-                '  fi\n'
-                'else\n'
-                '  cloud_trace "storage: ls /storage/emulated/0 failed: $CLOUD_LS_ERR"\n'
-                '  BIND_HOME_EMULATED=""\n'
-                '  BIND_HOME_SHARED_STORE=""\n'
-                '  rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
-                '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
-                'fi\n'
-                'cloud_trace "exec proot-static"\n\n'
-            )
-            bin_login = bin_login.replace(
-                exec_line,
-                mount_setup + exec_line + "\n  $BIND_HOME_EMULATED \\\n  $BIND_HOME_SHARED_STORE \\",
-                1,
-            )
+            mount_setup = BIN_LOGIN_TRACE + storage_setup(shared_root_name) + 'cloud_trace "exec proot-static"\n\n'
+            bin_login = bin_login.replace(exec_line, mount_setup + exec_line, 1)
 
             # ── #644: the declarative link store, and its login wiring ─────
             try:

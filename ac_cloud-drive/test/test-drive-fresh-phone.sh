@@ -29,10 +29,11 @@
 #       the store.
 #   F3  every PUBLIC cloud*/front* repository the manifest declares is seeded.
 #   F4  the seed's network constraint is declared in build.json, not hardcoded.
-#   F5  both terminals bind THE store — <shared storage>/<shared_root> from
-#       cloud-drive's build.json — at the path the guest's ~ resolves to.
-#   F6  without storage access neither terminal leaves an empty mount point that
-#       reads as an empty store.
+#   F5  both terminals LINK ~/cloud-drive-shared-store to THE store —
+#       <shared storage>/<shared_root> from cloud-drive's build.json — and the link
+#       resolves inside cloud-termux's root (#736).
+#   F6  without storage access neither terminal leaves a link or an empty mount
+#       point that reads as an empty store.
 #   F7  cloud-termux asks for the grant its TARGET sdk needs.
 #
 # OWN-SOURCE ONLY. python3 and grep only, no network, no build.
@@ -129,43 +130,52 @@ f4() {
 }
 
 # f5 <enter.sh> <bake_default_packages.py>
+# #736: both terminals LINK ~/cloud-drive-shared-store to THE store. Binds were what a
+# phone never saw (an older cloud-termux bound at host paths, leaving empty mkdir'd
+# mount points), and a link is what the terminal's ~ resolves to without one.
 f5() {
     local bad=0
     grep -q -- '-b "$HOME:/root"' "$1" || { echo "    enter.sh no longer binds \$HOME as /root — re-derive the guest path"; bad=1; }
-    grep -qF "binds=\"\$binds -b /storage/emulated/0/$SHARED_ROOT:/root/cloud-drive-shared-store\"" "$1" \
-        || { echo "    cloud-termux does not bind /storage/emulated/0/$SHARED_ROOT at the guest's ~/cloud-drive-shared-store"; bad=1; }
-    grep -q -- '-b /storage/emulated/0[^"]*:\$HOME/' "$1" && { echo "    cloud-termux binds at a HOST \$HOME path the guest never visits"; bad=1; }
-    grep -qF 'BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"' "$2" \
-        || { echo "    cloud-nix does not bind the store at ~/cloud-drive-shared-store"; bad=1; }
+    grep -qF "storage_link \"\$HOME/cloud-drive-shared-store\" /storage/emulated/0/$SHARED_ROOT" "$1" \
+        || { echo "    cloud-termux does not link ~/cloud-drive-shared-store to /storage/emulated/0/$SHARED_ROOT"; bad=1; }
+    # $HOME is /root inside the root: an absolute /storage/... link target resolves there
+    # only because /storage/emulated/0 is bound at the SAME guest path.
+    grep -qxF '    binds="$binds -b /storage/emulated/0"' "$1" \
+        || { echo "    cloud-termux does not bind /storage/emulated/0 at its own path in the guest — the links dangle inside the root"; bad=1; }
+    grep -q -- '-b /storage/emulated/0[^"]*:\(\$HOME\|/root\)/' "$1" && { echo "    cloud-termux still binds into ~ instead of linking"; bad=1; }
+    grep -qF 'store = f"/storage/emulated/0/{shared_root_name}"' "$2" \
+        && grep -qF 'cloud_storage_link "$HOME/cloud-drive-shared-store" "{store}"' "$2" \
+        || { echo "    cloud-nix does not link ~/cloud-drive-shared-store to the store"; bad=1; }
     return $bad
 }
 
 # f6 <enter.sh> <bake_default_packages.py>
 f6() {
-    python3 - "$1" "$2" <<'PY'
+    python3 - "$1" "$2" <<'PY2'
 import re, sys
 enter, bake = open(sys.argv[1]).read(), open(sys.argv[2]).read()
 bad = []
-# Termux: the mount points are made only inside the readable branch; the other branch removes empty ones.
+# Termux: the links are made only inside the readable branch; the other branch removes them.
 m = re.search(r'^if ls /storage/emulated/0 >/dev/null 2>&1; then\n(.*?)^else\n(.*?)^fi\n', enter, re.S | re.M)
 if not m: bad.append('enter.sh has no readable/unreadable branch')
 else:
-    pre = enter[:m.start()]
-    if re.search(r'^\s*mkdir -p "\$HOME/cloud-drive-shared-store"', pre, re.M) or re.search(r'^mkdir -p "\$HOME/emulated"', pre, re.M):
-        bad.append('enter.sh creates the mount points before knowing storage is readable')
-    if 'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"' not in m.group(1): bad.append('enter.sh does not create the mount points when binding')
-    if 'rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store"' not in m.group(2): bad.append('cloud-termux leaves an empty ~/cloud-drive-shared-store when storage is not granted')
-b = re.search(r"mount_setup = BIN_LOGIN_TRACE \+ \((.*?)\n            \)", bake, re.S)
-if not b: bad.append('the nix bin/login mount block is gone')
+    if re.search(r'^\s*(storage_link|mkdir -p) "\$HOME/(emulated|cloud-drive-shared-store)', enter[:m.start()], re.M):
+        bad.append('enter.sh makes ~/emulated or ~/cloud-drive-shared-store before knowing storage is readable')
+    for d in ('emulated', 'cloud-drive-shared-store'):
+        if f'storage_link "$HOME/{d}"' not in m.group(1): bad.append(f'enter.sh does not link ~/{d} when storage is readable')
+        if f'storage_unlink "$HOME/{d}"' not in m.group(2): bad.append(f'cloud-termux leaves ~/{d} behind when storage is not granted')
+b = re.search(r"^def storage_setup\(.*?^    \)\n", bake, re.S | re.M)
+if not b: bad.append('the nix bin/login storage block (storage_setup) is gone')
 else:
-    blk = b.group(1)
-    els = blk.find("'else\\n'\n                '  cloud_trace \"storage: ls")
-    mk = blk.find('mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"')
-    iff = blk.find('if CLOUD_LS_ERR=')
-    if mk < 0 or iff < 0 or mk < iff: bad.append('cloud-nix creates the mount points before knowing storage is readable')
-    if els < 0 or 'rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store"' not in blk[els:]: bad.append('cloud-nix leaves an empty ~/cloud-drive-shared-store when storage is not granted')
+    blk = b.group(0)
+    iff, els = blk.find("'if CLOUD_LS_ERR="), blk.find("'else\\n'\n        '  cloud_trace \"storage: ls")
+    for d in ('emulated', 'cloud-drive-shared-store'):
+        mk = blk.find(f'cloud_storage_link "$HOME/{d}"')
+        if mk < 0 or iff < 0 or mk < iff: bad.append(f'cloud-nix links ~/{d} before knowing storage is readable')
+        if els < 0 or f'cloud_storage_unlink "$HOME/{d}"' not in blk[els:]: bad.append(f'cloud-nix leaves ~/{d} behind when storage is not granted')
+    if 'storage_setup(shared_root_name)' not in bake: bad.append('bin/login is not given storage_setup')
 print('\n'.join('    ' + x for x in bad)); sys.exit(1 if bad else 0)
-PY
+PY2
 }
 
 # f7 <TermuxActivity.java> <AndroidManifest.xml> <gradle.properties>
@@ -188,8 +198,8 @@ run F1 "the seed is scheduled on first launch and re-kicked on the all-files gra
 run F2 "without all-files access the seed reports needs-storage for every repository and retries" f2 "$SEED"
 run F3 "every public cloud*/front* repository in the manifest is seeded" f3 "$MANIFEST"
 run F4 "the seed's network constraint is declared" f4 "$SEED" "$BUILD_JSON" "$GRADLE"
-run F5 "both terminals mount /storage/emulated/0/$SHARED_ROOT at the guest's ~/cloud-drive-shared-store" f5 "$ENTER" "$BAKE"
-run F6 "no empty mount point is left when storage is not granted" f6 "$ENTER" "$BAKE"
+run F5 "both terminals link ~/cloud-drive-shared-store to /storage/emulated/0/$SHARED_ROOT, resolvable in the guest" f5 "$ENTER" "$BAKE"
+run F6 "no link or empty mount point is left when storage is not granted" f6 "$ENTER" "$BAKE"
 run F7 "cloud-termux asks for the grant its target sdk needs" f7 "$TACT" "$TMAN" "$TPROPS"
 
 echo "── MUT: each check goes RED on its defect planted back ──"
@@ -210,9 +220,10 @@ mut F2b "$SEED" "s.replace('SeedReport.withoutStorage(', 'SeedReport.withoutStor
 # F3 un-seeds one public repository through the JSON itself (a duplicate key would lose to the original).
 mut F3 "$MANIFEST" "(lambda j, d: ([r.update(seed=False) for r in d['repos'] if r['name'] == 'front-data'], j.dumps(d, indent=1))[1])(__import__('json'), __import__('json').loads(s))" f3 MUTATED
 mut F4 "$SEED" "s.replace('if (BuildConfig.SEED_REQUIRE_UNMETERED) NetworkType.UNMETERED else NetworkType.CONNECTED', 'NetworkType.UNMETERED')" f4 MUTATED "$BUILD_JSON" "$GRADLE"
-mut F5 "$ENTER" "s.replace(':/root/cloud-drive-shared-store', ':\$HOME/cloud-drive-shared-store')" f5 MUTATED "$BAKE"
-mut F6a "$ENTER" "s.replace('rmdir \"\$HOME/emulated\" \"\$HOME/cloud-drive-shared-store\"', 'true')" f6 MUTATED "$BAKE"
-mut F6b "$BAKE" "s.replace(\"'  rmdir \", \"'  : \")" f6 "$ENTER" MUTATED
+mut F5a "$ENTER" "s.replace('    binds=\"\$binds -b /storage/emulated/0\"\n', '')" f5 MUTATED "$BAKE"
+mut F5b "$BAKE" "s.replace('cloud_storage_link \"\$HOME/cloud-drive-shared-store\" \"{store}\"', 'cloud_storage_link \"\$HOME/cloud-drive-shared-store\" \"{store}.old\"')" f5 "$ENTER" MUTATED
+mut F6a "$ENTER" "s.replace('    storage_unlink \"\$HOME/cloud-drive-shared-store\"\n', '')" f6 MUTATED "$BAKE"
+mut F6b "$BAKE" "s.replace(\"'  cloud_storage_unlink \\\"\$HOME/cloud-drive-shared-store\\\"\\\\n'\", \"''\")" f6 "$ENTER" MUTATED
 mut F7a "$TACT" "s.replace('Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE', 'Manifest.permission.WRITE_EXTERNAL_STORAGE')" f7 MUTATED "$TMAN" "$TPROPS"
 mut F7b "$TMAN" "s.replace('<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" />', '')" f7 "$TACT" MUTATED "$TPROPS"
 

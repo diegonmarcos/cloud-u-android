@@ -86,28 +86,48 @@ if [ -d "$HERE/cloud-store" ] && [ -d "$ROOTFS/usr/lib/cloud-store" ]; then
     store_entry="/bin/sh /usr/lib/cloud-store/login-exec"
 fi
 
-# #612: auto-mount shared storage and the cloud-drive shared store into $HOME
-# (bound as /root below), so both survive a rootfs update like the rest of
-# $HOME does. CloudDrive is ac_cloud-drive/build.json::storage.shared_root, THE
-# ONE declaration (SharedStore.kt resolves it under
+# #612/#736: ~/emulated and ~/cloud-drive-shared-store are SYMLINKS in $HOME to
+# /storage/emulated/0 and its CloudDrive store, and /storage/emulated/0 is bound
+# at the SAME path inside the root so one absolute target resolves for the guest
+# shell, the Termux failsafe shell and the documents provider alike. The binds
+# this replaces were invisible on a phone: an older enter.sh bound at host paths
+# the guest never visits, so the shell listed only the empty mkdir'd mount points.
+# CloudDrive is ac_cloud-drive/build.json::storage.shared_root, THE ONE
+# declaration (SharedStore.kt resolves it under
 # Environment.getExternalStorageDirectory()) -- keep this literal in sync with
 # that value, not a copy of it.
+storage_link() {  # $1 = link in $HOME, $2 = its absolute target
+    # An empty directory an older enter.sh left is replaced; rmdir never removes content.
+    [ -L "$1" ] || rmdir "$1" 2>/dev/null || true
+    if [ -e "$1" ] && [ ! -L "$1" ]; then
+        echo "⚠ $1 is a directory with content, so it is not replaced by the link to $2" >&2
+    else
+        ln -sfn "$2" "$1"
+    fi
+}
+storage_unlink() {  # $1 = link in $HOME: only our link or an empty directory goes
+    if [ -L "$1" ]; then rm -f "$1"; else rmdir "$1" 2>/dev/null || true; fi
+}
+# Exactly ONE entry for shared storage: the upstream ~/storage tree
+# (termux-setup-storage's links to DCIM, Download, ...) would be a second one. Only
+# its symlinks are removed, and the directory only once it is empty.
+if [ -d "$HOME/storage" ] && [ ! -L "$HOME/storage" ]; then
+    for l in "$HOME/storage"/*; do [ ! -L "$l" ] || rm -f "$l"; done
+    rmdir "$HOME/storage" 2>/dev/null || true
+fi
 # /storage/emulated/0 exists as a directory even without storage access, but is
-# then not traversable, so binding it would mount an empty tree silently. Probe
-# readability and, when it fails, say why in one line instead of a dark mount.
+# then not traversable, so a link to it would list nothing. Probe readability
+# and, when it fails, say why in one line instead of an empty listing.
 if ls /storage/emulated/0 >/dev/null 2>&1; then
-    mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"
-    # The GUEST side is /root/..., not $HOME/...: $HOME is bound as /root below, so
-    # inside the root ~ is /root and a bind at the host path $HOME/x is a path no
-    # shell ever visits -- ~/cloud-drive-shared-store stayed the empty mkdir above.
-    binds="$binds -b /storage/emulated/0:/root/emulated"
+    binds="$binds -b /storage/emulated/0"
+    storage_link "$HOME/emulated" /storage/emulated/0
     mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
-    [ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:/root/cloud-drive-shared-store"
+    [ ! -d /storage/emulated/0/CloudDrive ] || storage_link "$HOME/cloud-drive-shared-store" /storage/emulated/0/CloudDrive
 else
-    # #730 no mount point is left behind: an empty ~/cloud-drive-shared-store reads as
-    # an empty STORE, which is the fresh-phone report this replaces. rmdir only ever
-    # removes an EMPTY directory, so nothing the user put there is touched.
-    rmdir "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true
+    # #730 nothing is left behind that reads as an empty STORE, which is the
+    # fresh-phone report this replaces.
+    storage_unlink "$HOME/emulated"
+    storage_unlink "$HOME/cloud-drive-shared-store"
     echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2
 fi
 

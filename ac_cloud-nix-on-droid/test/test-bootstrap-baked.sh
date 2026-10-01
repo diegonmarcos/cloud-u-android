@@ -251,12 +251,72 @@ else
 fi
 
 BAKE_PY="$DIR/app/src/main/cpp/bake_default_packages.py"
-if grep -q 'BIND_HOME_EMULATED' "$BAKE_PY" && grep -q 'BIND_HOME_SHARED_STORE' "$BAKE_PY" \
-   && grep -q '\$HOME/emulated' "$BAKE_PY" && grep -q '\$HOME/cloud-drive-shared-store' "$BAKE_PY"; then
-    ok "bake_default_packages.py patches bin/login with both #612 auto-mount binds"
+# #736 — executed, not grepped: bin/login's storage block runs under POSIX sh against a
+# staged /storage/emulated/0 (the path rewritten into a temp dir), from the state an
+# older login and termux-setup-storage left on a phone (empty mount-point dirs, a
+# ~/storage tree). ~/emulated and ~/cloud-drive-shared-store must become links that
+# list the real content, ~/storage must go; without access both must go and the
+# notice must print. A mutant whose store link is dropped must turn this red.
+storage_block_ok() {  # $1 = bake_default_packages.py
+    T736="$(mktemp -d)"
+    python3 - "$1" "$T736" "$SHARED_ROOT" <<'PY2' || { rm -rf "$T736"; return 1; }
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+t = sys.argv[2]
+body = m.BIN_LOGIN_TRACE + m.storage_setup(sys.argv[3]).replace("/storage/emulated/0", t + "/storage/emulated/0")
+open(t + "/login.sh", "w").write("set -eu\n" + body)
+PY2
+    S="$T736/storage/emulated/0"; H="$T736/home"
+    mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-drive-shared-store" "$H/storage"
+    ln -s "$S/DCIM" "$H/storage/dcim"
+    r=0
+    HOME="$H" sh "$T736/login.sh" x 2>/dev/null || r=1
+    [ -L "$H/emulated" ] && [ -L "$H/cloud-drive-shared-store" ] || r=1
+    ls "$H/emulated" 2>/dev/null | grep -qx Download || r=1
+    ls "$H/cloud-drive-shared-store/git" 2>/dev/null | grep -qx cloud-probe-repo || r=1
+    [ ! -e "$H/storage" ] || r=1
+    chmod 000 "$S"
+    notice="$(HOME="$H" sh "$T736/login.sh" x 2>&1 >/dev/null)" || r=1
+    chmod 755 "$S"
+    [ ! -e "$H/emulated" ] && [ ! -L "$H/emulated" ] && [ ! -L "$H/cloud-drive-shared-store" ] || r=1
+    case "$notice" in *"storage access is not granted"*) ;; *) r=1 ;; esac
+    rm -rf "$T736"
+    return $r
+}
+if storage_block_ok "$BAKE_PY" && grep -qF 'storage_setup(shared_root_name)' "$BAKE_PY"; then
+    ok "bin/login links ~/emulated and ~/cloud-drive-shared-store to the real storage, drops ~/storage, and unlinks + explains without the grant (executed)"
 else
-    bad "bake_default_packages.py is missing the #612 bin/login mount patch (\$HOME/emulated, \$HOME/cloud-drive-shared-store)"
+    bad "bin/login's storage block does not give the session the real storage at ~/emulated and ~/cloud-drive-shared-store (#612/#736)"
 fi
+MUT736="$(mktemp)"
+grep -v 'cloud_storage_link "$HOME/cloud-drive-shared-store"' "$BAKE_PY" > "$MUT736"
+if cmp -s "$BAKE_PY" "$MUT736"; then
+    bad "MUTATION DID NOT APPLY: the store link line could not be removed"
+elif storage_block_ok "$MUT736"; then
+    bad "MUTATION SURVIVED: without the store link the executed storage check stayed green"
+else
+    ok "mutation proved: dropping the store link turns the executed storage check red"
+fi
+rm -f "$MUT736"
+# ~/emulated is the ONE entry for shared storage: the app no longer makes the upstream
+# ~/storage tree on a grant (bin/login removes one an older version left, checked above).
+NIX_INSTALLER="$DIR/app/src/main/java/com/termux/app/TermuxInstaller.java"
+makes_storage_tree() { awk '/static void setupStorageSymlinks\(/ {on=1} on && /Os.symlink\(/ {f=1} on && /^    }$/ {exit} END {exit !f}' "$1"; }
+if makes_storage_tree "$NIX_INSTALLER"; then
+    bad "setupStorageSymlinks still makes ~/storage — a second shared-storage entry beside ~/emulated (#736)"
+else
+    ok "a storage grant makes no ~/storage tree; ~/emulated is the one entry"
+fi
+sed 's|^        Logger.logInfo("termux-storage", "Shared storage is ~/emulated.*|        Os.symlink(Environment.getExternalStorageDirectory().getAbsolutePath(), new File(TermuxConstants.TERMUX_STORAGE_HOME_DIR, "shared").getAbsolutePath());|' "$NIX_INSTALLER" > "$MUT736"
+if cmp -s "$NIX_INSTALLER" "$MUT736"; then
+    bad "MUTATION DID NOT APPLY: setupStorageSymlinks could not be re-planted"
+elif makes_storage_tree "$MUT736"; then
+    ok "mutation proved: a re-planted ~/storage link turns the pin red"
+else
+    bad "MUTATION SURVIVED: a re-planted ~/storage link stayed green"
+fi
+rm -f "$MUT736"
 
 # ── #612 — the storage grant is asked for, and its absence is legible ──────
 # Which grant opens /storage/emulated/0 depends on the TARGET sdk, not the phone's:

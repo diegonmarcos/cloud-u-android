@@ -3,7 +3,6 @@ package com.termux.cloud;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.system.ErrnoException;
 import android.system.Os;
 
@@ -99,23 +98,11 @@ public final class CloudRootfs {
 
     /** Extracts ~400 MB out of the sibling lib APK the first time and after a rootfs change; call off the UI thread. */
     public static void stage(Context context) throws IOException, ErrnoException {
-        AssetManager assets = context.getAssets();
         File dir = stageDir();
         boolean firstEver = !new File(dir, DIGEST).exists();
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
 
-        for (String name : FILES) {
-            try (InputStream in = assets.open(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + name);
-                 OutputStream out = new FileOutputStream(new File(dir, name))) {
-                byte[] buffer = new byte[1 << 16];
-                int n;
-                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
-            }
-        }
-        //noinspection OctalInteger
-        Os.chmod(new File(dir, "proot").getAbsolutePath(), 0700);
-        //noinspection OctalInteger
-        Os.chmod(new File(dir, "enter.sh").getAbsolutePath(), 0700);
+        refreshFiles(context);
 
         String libSourceDir = trustedLibSourceDir(context);
         JSONObject manifest = readManifest(libSourceDir);
@@ -140,6 +127,45 @@ public final class CloudRootfs {
                 shell.delete();
             Os.symlink(new File(dir, "enter.sh").getAbsolutePath(), shell.getAbsolutePath());
             Logger.logInfo(LOG_TAG, "Login shell is now " + shell + " -> enter.sh (delete it to return to bash)");
+        }
+    }
+
+    /**
+     * #736: copies this APK's own {@link #FILES} over the staged ones whenever they differ, and
+     * is called on EVERY start, not only when the lib's rootfs digest moves. Gated on that digest
+     * alone, an update that changed only enter.sh never reached a phone that had already staged
+     * the rootfs: it kept logging in through the enter.sh of its first install. Each file is
+     * written beside its target and renamed over it, so a session still running the old proot
+     * keeps its inode instead of failing on a half-written binary.
+     */
+    public static void refreshFiles(Context context) throws IOException, ErrnoException {
+        File dir = stageDir();
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+        for (String name : FILES) {
+            byte[] want;
+            try (InputStream in = context.getAssets().open(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + name)) {
+                want = bytes(in);
+            }
+            File target = new File(dir, name);
+            if (target.isFile() && java.util.Arrays.equals(want, bytes(new FileInputStream(target)))) continue;
+            File tmp = new File(dir, name + ".new");
+            try (OutputStream out = new FileOutputStream(tmp)) {
+                out.write(want);
+            }
+            //noinspection OctalInteger
+            Os.chmod(tmp.getAbsolutePath(), 0700);
+            Os.rename(tmp.getAbsolutePath(), target.getAbsolutePath());
+            Logger.logInfo(LOG_TAG, "Refreshed " + target + " from this APK");
+        }
+    }
+
+    private static byte[] bytes(InputStream in) throws IOException {
+        try (InputStream src = in) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1 << 16];
+            int n;
+            while ((n = src.read(buffer)) != -1) out.write(buffer, 0, n);
+            return out.toByteArray();
         }
     }
 
