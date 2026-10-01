@@ -16,6 +16,9 @@
 #                            assert what was built: package id, and native
 #                            libraries byte-identical to the released ones
 #   ./build.sh all           the four above, in order
+#   ./build.sh runtime       install the signed APK on the adb device, open
+#                            runtime_check.sample_document and assert it renders
+#                            with no R8 casualty in the app's logcat
 #   ./build.sh host-deps     install build.host_packages on the build host
 #   ./build.sh asset-path    print where `build` leaves the signed APK
 #
@@ -299,6 +302,118 @@ PY
     log "build: $out ($(stat -c %s "$out") bytes)"
 }
 
+# ── runtime ───────────────────────────────────────────────────────────
+# The release APK is R8-optimised, and the prebuilt engine reaches Java by name
+# over JNI while cool.html reaches it through @JavascriptInterface. A keep rule
+# that is missing fails only when the app runs, so this runs it: install the
+# signed asset `build` left, open build.json::runtime_check.sample_document in
+# LOActivity, and judge from the app's own logcat and a screenshot. Needs a
+# booted device on adb (the workflow's emulator step); evidence lands in
+# $CLOUD_OFFICE_RUNTIME_OUT.
+step_runtime() {
+    local asset out
+    asset="$(step_asset_path)"
+    [ -f "$asset" ] || die "runtime: no $asset — run build first"
+    command -v adb >/dev/null 2>&1 || die "runtime: adb is not on PATH"
+    [ -n "$(_json '.runtime_check.activity')" ] || die "build.json::runtime_check is missing"
+    out="${CLOUD_OFFICE_RUNTIME_OUT:-$WORK_DIR/runtime}"
+    rm -rf "$out" && mkdir -p "$out"
+    python3 - "$BUILD_JSON" "$SCRIPT_DIR" "$asset" "$out" "$ABI" <<'PY' || die "runtime: the release APK did not open the sample document cleanly — evidence in $out"
+import json, os, re, struct, subprocess, sys, time
+bj, app_dir, apk, out, abi = sys.argv[1:6]
+cfg = json.load(open(bj))
+rc, pkg = cfg["runtime_check"], cfg["android"]["application_id"]
+
+def adb(*args, check=True):
+    r = subprocess.run(["adb", *args], capture_output=True)
+    if check and r.returncode != 0:
+        sys.exit("runtime: adb %s: %s" % (" ".join(args), (r.stderr or r.stdout).decode(errors="replace").strip()))
+    return r.stdout
+
+def sh(cmd, check=True):
+    return adb("shell", cmd, check=check).decode(errors="replace").strip()
+
+abis = sh("getprop ro.product.cpu.abilist")
+print("runtime: device ABIs", abis)
+if abi not in abis.split(","):
+    sys.exit("runtime: this image cannot run %s (abilist %s) — pick a runtime_check.emulator image "
+             "with ARM translation; this says nothing about R8" % (abi, abis))
+
+adb("logcat", "-G", "16M", check=False)
+adb("logcat", "-c")
+log_path = os.path.join(out, "logcat.txt")
+logcat = subprocess.Popen(["adb", "logcat", "-v", "threadtime"], stdout=open(log_path, "wb"), stderr=subprocess.DEVNULL)
+
+print("runtime:", adb("install", "-r", "-g", apk).decode(errors="replace").strip())
+sh("appops set %s MANAGE_EXTERNAL_STORAGE allow" % pkg)
+sample = os.path.join(app_dir, rc["sample_document"])
+dev = rc["device_dir"].rstrip("/") + "/" + os.path.basename(sample)
+adb("push", sample, dev)
+started = sh("am start -W -n %s/%s -a android.intent.action.VIEW -d file://%s -t %s"
+             % (pkg, rc["activity"], dev, rc["sample_mime"]))
+print(started)
+if "Error" in started:
+    sys.exit("runtime: am start refused the activity")
+
+markers, fatal = rc["loaded_markers"], rc["fatal_patterns"]
+start_re = re.compile(r"Start proc (\d+):%s(?::[\w.]+)?/" % re.escape(pkg))
+pid_re = re.compile(r"^\S+\s+\S+\s+(\d+)\s+\d+\s+[VDIWEF]\s")
+
+def scan():
+    lines = open(log_path, errors="replace").read().splitlines()
+    pids = set(start_re.findall("\n".join(lines))) | set(sh("pidof %s" % pkg, check=False).split())
+    own = [l for l in lines if (m := pid_re.match(l)) and m.group(1) in pids]
+    bad = [l for l in own if any(f in l for f in fatal)]
+    bad += [l for l in lines if ">>> %s <<<" % pkg in l or "ANR in %s" % pkg in l]
+    return own, bad, [m for m in markers if any(m in l for l in own)]
+
+def magenta_fraction():
+    # Raw screencap: width, height, format (1 = RGBA_8888) and, from API 28, a
+    # colour-space word, then the pixels.
+    raw = adb("exec-out", "screencap")
+    w, h, fmt = struct.unpack_from("<III", raw)
+    hdr = len(raw) - w * h * 4
+    if fmt != 1 or hdr not in (12, 16):
+        sys.exit("runtime: unexpected screencap format %d / header %d bytes" % (fmt, hdr))
+    px, (r0, g0, b0), tol = raw[hdr:], rc["render"]["color"], rc["render"]["tolerance"]
+    hits = sum(1 for r, g, b in zip(px[0::4], px[1::4], px[2::4])
+               if abs(r - r0) <= tol and abs(g - g0) <= tol and abs(b - b0) <= tol)
+    return hits / (w * h)
+
+deadline, failure, frac = time.time() + rc["load_timeout_s"], None, 0.0
+while True:
+    time.sleep(10)
+    own, bad, seen = scan()
+    if bad:
+        failure = "fatal line(s) from the app"
+        break
+    if markers[-1] in seen:
+        frac = magenta_fraction()
+        if frac >= rc["render"]["min_fraction"]:
+            time.sleep(5)
+            own, bad, seen = scan()
+            failure = "fatal line(s) from the app after render" if bad else None
+            break
+    if not sh("pidof %s" % pkg, check=False):
+        failure = "the app's process is gone"
+        break
+    if time.time() > deadline:
+        failure = "no render within %ds" % rc["load_timeout_s"]
+        break
+
+open(os.path.join(out, "screen.png"), "wb").write(adb("exec-out", "screencap", "-p", check=False))
+logcat.terminate()
+print("runtime: markers seen: %s" % (", ".join(seen) or "none"))
+print("runtime: page colour on %.1f%% of the screen (need %.1f%%)" % (frac * 100, rc["render"]["min_fraction"] * 100))
+for l in bad[:40]:
+    print("runtime: FATAL  " + l)
+if failure:
+    print("\n".join(own[-80:]))
+    sys.exit("runtime: " + failure)
+print("runtime: the release APK opened %s and core rendered it" % os.path.basename(sample))
+PY
+}
+
 # ── host-deps / asset-path: what the workflow needs from this engine ──
 step_host_deps() {
     mapfile -t packages < <(jq -r '.build.host_packages[]' "$BUILD_JSON")
@@ -315,6 +430,7 @@ case "${1:-help}" in
     payload)     step_payload ;;
     configure)   step_configure ;;
     build)       step_build ;;
+    runtime)     step_runtime ;;
     all)         step_materialize; step_payload; step_configure; step_build ;;
     *)           sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; /^set -euo/d' ;;
 esac

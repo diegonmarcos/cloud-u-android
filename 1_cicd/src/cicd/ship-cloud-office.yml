@@ -166,6 +166,48 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: bash "$WORK_DIR/build.sh" build
 
+      # The release build is R8-optimised and nothing static proves the engine's
+      # JNI lookups and cool.html's bridge survived it, so the signed APK is
+      # opened on an emulator BEFORE anything is published. The image and its
+      # size come from build.json::runtime_check.emulator; the verdict is the
+      # engine's `runtime` step.
+      - name: Runtime check inputs (build.json::runtime_check.emulator)
+        if: steps.gate.outputs.skip != 'true'
+        id: rt
+        run: jq -r '.runtime_check.emulator | to_entries[] | select(.key | startswith("_") | not) | "\(.key)=\(.value)"' "$WORK_DIR/build.json" >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Runtime under R8 — open a document through LOK on an emulator
+        if: steps.gate.outputs.skip != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          CLOUD_OFFICE_RUNTIME_OUT: ${{ github.workspace }}/runtime-evidence
+        with:
+          api-level: ${{ steps.rt.outputs.api_level }}
+          target: ${{ steps.rt.outputs.target }}
+          arch: ${{ steps.rt.outputs.arch }}
+          cores: ${{ steps.rt.outputs.cores }}
+          ram-size: ${{ steps.rt.outputs.ram_size }}
+          disk-size: ${{ steps.rt.outputs.disk_size }}
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash "$WORK_DIR/build.sh" runtime
+
+      - name: Upload runtime evidence (screenshot + logcat)
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-evidence
+          path: runtime-evidence/
+          if-no-files-found: warn
+
       - name: Attach to rolling GH Release
         id: publish
         if: steps.gate.outputs.skip != 'true'

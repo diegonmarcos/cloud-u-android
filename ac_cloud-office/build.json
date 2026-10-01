@@ -283,6 +283,54 @@
       "_doc_not_a_tester": "patches-apply.sh IS DELIBERATELY NOT NAMED test-*.sh, and that is a decision rather than the accident above. It is the strongest assertion this app has — it fetches the pin and applies the series for real — but Gerrit refuses both blob filtering and sha fetches, so it measured 471 MB and about ten minutes from this container. That is the wrong shape for a per-push tester on a workflow that triggers on every commit under ac_cloud-office/**, and a ten-minute network step on every doc edit is how a suite starts getting ignored. It belongs to the source-build workflow as a release gate, run once against the pin, and to agents by hand. When build.host is set and that workflow exists, it gets an explicit step there — not this prefix."
     }
   },
+  "runtime_check": {
+    "_doc": "#757 — THE RELEASE APK IS OPENED ON A DEVICE BEFORE IT IS PUBLISHED. Upstream turned R8 optimization on for release (android/app/build.gradle optimization.enable) and #745 re-pinned onto it, so every class the prebuilt libandroidapp.so reaches by JNI name, and every @JavascriptInterface method cool.html calls, now survives only if a keep rule says so. Nothing static proves that: the JNI-ABI tester reads names out of the .so, not what R8 left in the dex. `build.sh runtime` installs the signed asset `build` produced (the exact bytes the next step publishes), opens sample_document in LOActivity through LOK, and fails on any fatal_patterns line from the app's own processes, on a missing loaded_marker, or on a screenshot without render.color — the page colour of the sample, which only a tile painted by core can put on screen.",
+    "emulator": {
+      "_doc": "x86_64 because hosted runners have KVM only for x86. The engine is arm64-v8a only (android.abi_filters), so the image must carry ARM translation: google_apis images do from API 30, and `runtime` asserts ro.product.cpu.abilist names the ABI before installing rather than reading INSTALL_FAILED_NO_MATCHING_ABIS as an R8 verdict.",
+      "api_level": 34,
+      "target": "google_apis",
+      "arch": "x86_64",
+      "cores": 4,
+      "ram_size": "4096M",
+      "disk_size": "6000M"
+    },
+    "activity": "org.libreoffice.androidlib.LOActivity",
+    "sample_document": "tests/runtime-sample.fodt",
+    "sample_mime": "application/vnd.oasis.opendocument.text-flat-xml",
+    "device_dir": "/sdcard/Download",
+    "_doc_device_dir": "Opened as a file:// URI, which LOActivity hands to core as a path, so the app must be able to read shared storage: the manifest declares MANAGE_EXTERNAL_STORAGE and `runtime` sets that appop before launching.",
+    "loaded_markers": [
+      "postMobileMessage: coolclient",
+      "postMobileMessage: load url=",
+      "postMobileMessage: tilecombine"
+    ],
+    "_doc_loaded_markers": "What cool.html sends core, in order, as LOActivity.postMobileMessage logs it. All are reported so a failure says how far it got; the LAST is required — the client asks for tiles only after core has loaded the document and reported its status.",
+    "fatal_patterns": [
+      "ClassNotFoundException",
+      "NoClassDefFoundError",
+      "NoSuchMethodError",
+      "NoSuchMethodException",
+      "NoSuchFieldError",
+      "NoSuchFieldException",
+      "AbstractMethodError",
+      "IncompatibleClassChangeError",
+      "UnsatisfiedLinkError",
+      "JNI DETECTED ERROR",
+      "FATAL EXCEPTION",
+      "COOLMessageHandler"
+    ],
+    "_doc_fatal_patterns": "Matched only on lines logged by the app's own pids (plus a tombstone or ANR that names the package), so another process's noise cannot fail it. 'COOLMessageHandler' is the @JavascriptInterface object cool.html calls; the WebView names it only in a console error, e.g. when R8 renamed the method behind it. A rename the console does not report still fails, on the missing tilecombine.",
+    "render": {
+      "color": [
+        255,
+        0,
+        255
+      ],
+      "tolerance": 48,
+      "min_fraction": 0.02
+    },
+    "load_timeout_s": 900
+  },
   "release": {
     "kind": "app",
     "variants": [
