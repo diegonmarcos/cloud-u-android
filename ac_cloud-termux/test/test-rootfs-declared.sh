@@ -100,7 +100,11 @@ for abi in $(json "$APP/build.json" '" ".join(v["abis"][0] for v in d["release"]
 done
 grep -q 'rootfs/build-rootfs.sh' "$WF"  && ok "ship workflow builds the rootfs"       || bad "ship workflow never runs rootfs/build-rootfs.sh"
 grep -q 'rootfs/verify-rootfs.sh' "$WF" && ok "ship workflow runs the runtime tester" || bad "ship workflow never runs rootfs/verify-rootfs.sh — the runtime tester would never execute"
-grep -q 'needs: rootfs$' "$WF"          && ok "publishing waits for the verified rootfs" || bad "build_and_publish does not need the rootfs job"
+# `needs: rootfs`, or a list naming it (#636 added the run's build stamp beside
+# it). rootfs_plan is not rootfs: the rootfs job's own `needs: rootfs_plan` must
+# never be what satisfies this.
+grep -qE 'needs: (rootfs|\[(.*[[:space:],])?rootfs(,.*)?\])$' "$WF" \
+                                        && ok "publishing waits for the verified rootfs" || bad "build_and_publish does not need the rootfs job"
 grep -q 'CLOUD_ROOTFS_ASSET_DIR", "\\"${cloudRootfs.asset_dir}' "$APP/app/build.gradle" \
     && ok "gradle derives the asset dir from rootfs.json" || bad "app/build.gradle does not read asset_dir from rootfs.json"
 grep -q "preBuild.dependsOn tasks.named('verifyCloudRootfs')" "$APP/app/build.gradle" \
