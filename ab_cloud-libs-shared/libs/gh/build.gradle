@@ -15,18 +15,22 @@
 // the chain in libs:git-sync calls when the declaration reaches `github`;
 // reordering or removing that rung is an edit to the declaration, never here.
 //
-// Shared BY REFERENCE the way every module on this shelf is: lib-apks discovers
-// this directory and ships cloud-lib-gh as its own installable APK (#474 naming,
-// from the one declaration in aa_cloud-superapp/data/regen.sh), and an app that
-// wants the engine names it in its own build.json::modules.
+// #705 AN ENGINE, NOT A LIBRARY AN APP COMPILES. lib-apks discovers this
+// directory and ships cloud-lib-gh as its own installable APK (#474 naming, from
+// the one declaration in aa_cloud-superapp/data/regen.sh), and that APK is the
+// ONLY thing that compiles it: GhBackendService runs gh in the engine's own
+// process, and an app binds it over core's IDataBackend (cloud-drive's
+// sync/GhEngine.kt). A gh bump therefore republishes Cloud-Lib-Gh.apk and no app.
+// Do not add this module back to an app's build.json::modules — that re-couples
+// every gh change to that app's publish (a0_docs/eng-specs/engine-apk-split.md).
 //
 // NO COMPOSE ON PURPOSE. This module renders nothing: the chain's visible state
 // belongs to the page that hosts it (cloud-drive's Sync ▸ Git), so that one
 // screen can say which rung answered and why the one before it was skipped. A
 // screen here would be a second place for the chain to describe itself.
 //
-// TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
-// app's own `gradle test`, and that app's ship workflow watches this directory.
+// TESTED where it ships: ab_cloud-libs-shared/lib-apks/test/ runs on every Cloud
+// Libs ship, which is the only workflow that watches this directory now.
 
 plugins {
     id 'com.android.library'
@@ -232,6 +236,9 @@ kotlin {
 }
 
 dependencies {
+    // #705 GhBackendService extends core's DataBackendService, and core's manifest
+    // defines the CONSTELLATION_DATA permission the service is guarded by.
+    implementation project(':libs:core')
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 

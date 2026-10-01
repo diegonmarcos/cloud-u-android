@@ -668,6 +668,16 @@
       }
     }
   },
+  "engines": {
+    "_doc": "#705 ENGINES THIS APP BINDS INSTEAD OF COMPILING. Each is a Cloud-Lib-*.apk the Store installs (a fleet row of kind lib) whose service answers core's IDataBackend; this app links nothing of the engine's module, so an engine change republishes that one APK and not this app. Per engine: `fleet` is its Store row in aa_cloud-superapp/data/constellation-fleet.json, from which app/build.gradle resolves the package (an id the manifest lacks fails the build — no package is typed here or in Kotlin); `action` finds the service inside that package ({package} is substituted at build time and matches the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT (meta-data on the engine's service) that answers every method this app calls — the client reads it through PackageManager BEFORE binding, so an engine too old to serve this build is named as such instead of failing a call; `login_poll_ms` / `login_max_ms` pace the one long call, gh's device-flow sign-in, which the engine runs on its own thread and the client polls rather than holding a binder thread for minutes (gh's own code expires after 15).",
+    "gh": {
+      "fleet": "lib-gh",
+      "action": "{package}.ENGINE",
+      "min_contract": 1,
+      "login_poll_ms": 1000,
+      "login_max_ms": 960000
+    }
+  },
   "modules": {
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
     "app": {
@@ -681,7 +691,6 @@
         "libs:mounts",
         "libs:bottomnav",
         "libs:auth",
-        "libs:gh",
         "libs:gix"
       ]
     },
@@ -743,12 +752,7 @@
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
     },
-    "_doc_git_chain_libs": "#646 THE TWO BINARY LIBRARIES OF THE GIT AUTH+OPS CHAIN, both shared BY REFERENCE like every module here and both NOT engines: they export no @Composable and host nothing, so they carry no `engine: true` (the libs:auth / libs:bottomnav precedent). Each ships a sha256-pinned FULLY STATIC binary as jniLibs/<abi>/lib<name>.so the libs:rclone way — fetch-once-refuse-on-mismatch of the archive AND the extracted binary, plus an ELF program-header walk that refuses a PT_INTERP — and this app already sets packaging.jniLibs.useLegacyPackaging = true, without which AGP would keep the payloads compressed and extract NOTHING. They are linked HERE, and not only shipped as their own cloud-lib-* APKs, for two reasons: the chain's visible state belongs to this app's Sync ▸ Git page, and a library whose tests no consuming app runs is a hollow green.",
-    "libs:gh": {
-      "_doc_dir": "#646 rung 2 of the declared git auth chain (ab_cloud-libs-shared/build.json::auth.git_chain): the GitHub CLI as a 37.1 MB fully static binary, plus the device grant that turns it into a git credential. It authenticates against GITHUB'S OWN app — the client ids are compiled into the pinned binary and both were measured returning live device codes — so nothing is registered on our side and no provider setting has to be toggled. That is what makes it different from the GitHub APP client #641 deleted, which stays deleted. It also closes the leg #641/#642 left open: listing personal repositories is /user/repos, which is REST and not the git protocol, so it needs a token however it was obtained.",
-      "dir": "../ab_cloud-libs-shared/libs/gh",
-      "type": "library"
-    },
+    "_doc_git_chain_libs": "#646 THE BINARY LIBRARY OF THE GIT AUTH+OPS CHAIN that this app still links, shared BY REFERENCE like every module here and NOT an engine: it exports no @Composable and hosts nothing, so it carries no `engine: true` (the libs:auth / libs:bottomnav precedent). It ships a sha256-pinned FULLY STATIC binary as jniLibs/<abi>/lib<name>.so the libs:rclone way — fetch-once-refuse-on-mismatch of the archive AND the extracted binary, plus an ELF program-header walk that refuses a PT_INTERP — and this app sets packaging.jniLibs.useLegacyPackaging = true, without which AGP would keep the payload compressed and extract NOTHING. #705 libs:gh, the other half of #646, is NOT linked any more: gh runs in Cloud-Lib-Gh.apk's own process and this app binds it (engines.gh), so a gh bump republishes that APK and not this one.",
     "libs:gix": {
       "_doc_dir": "#646 the in-process git leg: gitoxide as a 17.9 MB fully static binary that clones and fetches over HTTPS in ONE file, with no helper process and no rootfs. Canonical git cannot ship this way — `git-remote-https` is a SEPARATE executable and Android extracts only lib*.so. IT CANNOT PUSH (`gix push` is not a subcommand), and nothing pretends it can: data/gix-binary.json::verbs declares clone and fetch only, GixRunner refuses anything outside that declaration, and test/test-drive-git-auth-chain.sh fails the build if push is ever routed here. Push stays with the terminal handoff (#642's RUN_COMMAND) and with JGit inside libs:git-sync.",
       "dir": "../ab_cloud-libs-shared/libs/gix",

@@ -31,7 +31,10 @@
 #       lists with `gh repo list`, clones gh's rows in-process into the ONE
 #       store with the listing's own URL, and says every failure LOUDLY with
 #       its next step; a gh that cannot even start is an outcome the page
-#       words, never an exception that crashes it.
+#       words, never an exception that crashes it. #705: gh runs in the gh
+#       ENGINE (Cloud-Lib-Gh.apk) and the page reaches it through GhEngine, so
+#       the next step for a missing or broken gh is the Store, not a reinstall
+#       of Cloud Drive (test-drive-gh-engine.sh pins the client itself).
 #   G4  THE PIN'S PATTERNS ARE MEASURED: the device-code and page patterns the
 #       phone runs (gh-binary.json::login_output, baked into GhOutput) are
 #       EXECUTED here against the transcript measured on the pinned binary.
@@ -197,9 +200,9 @@ PYTHON
     # THE PAGE: the GitHub way is gh's; list with gh; clone gh's rows on gh's credential.
     grep -qE 'DriveGitChain\.RUNG_GITHUB -> startGhLogin\(\)' "$page" \
         || { echo "    the GitHub way does not start gh's own sign-in"; bad=1; }
-    grep -qE 'ghRunner\.login\(ghHost\)' "$page" \
+    grep -qE 'ghEngine\.login\(ghHost\)' "$page" \
         || { echo    "    the page's sign-in does not run gh auth login on the declared host"; bad=1; }
-    grep -qE 'ghRunner\.repoList\(ghLimit, GitHubRepos\.GH_FIELDS\)' "$page" \
+    grep -qE 'ghEngine\.repoList\(ghLimit, GitHubRepos\.GH_FIELDS\)' "$page" \
         || { echo "    the GitHub listing is not gh repo list"; bad=1; }
     grep -qE 'else if \(listing\.viaGh\) cloneViaGh\(gh\)' "$page" \
         || { echo "    a row gh listed does not clone on gh's credential (it would fall to a terminal with none)"; bad=1; }
@@ -210,7 +213,7 @@ m = re.search(r"\n    fun cloneViaGh\(.*?\n    }\n", src, re.S)
 if not m:
     print("    there is no cloneViaGh"); sys.exit(1)
 b = m.group(0); bad = 0
-for need, why in (("ghRunner.credential(ghHost)", "does not ask gh for the credential"),
+for need, why in (("ghEngine.credential(ghHost)", "does not ask gh for the credential"),
                   ("coordinator.cloneInto(", "does not clone through the engine that lands in the ONE store"),
                   ("url = repo.cloneUrl,", "does not clone the listing's own URL (re-templating clones the wrong leg, #669)"),
                   ("authKind = GitSyncCoordinator.AUTH_HTTPS,", "does not record an https credential for the later sync"),
@@ -237,8 +240,9 @@ git_gh_clone_no_credential|tap Sign in with GitHub
 git_gh_list_failed|tap Retry
 git_gh_list_unreadable|tap Retry
 git_gh_unconfirmed|Sign in with GitHub again
-git_gh_missing|reinstall Cloud Drive
-git_gh_status_failed|reinstall Cloud Drive
+git_gh_missing|install it from Store ▸ Cloud Constellation ▸ Libs
+git_gh_engine_old|update it from Store ▸ Cloud Constellation ▸ Libs
+git_gh_status_failed|from Store ▸ Cloud Constellation ▸ Libs
 STEPS
     # the listing reads exactly the fields it asks gh for — closed both ways.
     python3 - "$list" <<'PYTHON' || bad=1

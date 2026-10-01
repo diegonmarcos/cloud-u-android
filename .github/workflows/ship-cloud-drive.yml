@@ -45,7 +45,6 @@ on:
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/file-editor/**"
-      - "ab_cloud-libs-shared/libs/gh/**"
       - "ab_cloud-libs-shared/libs/git-sync/**"
       - "ab_cloud-libs-shared/libs/gix/**"
       - "ab_cloud-libs-shared/libs/ml-l-image-mlkit/**"

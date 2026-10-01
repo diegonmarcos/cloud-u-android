@@ -1,0 +1,38 @@
+name: "engine contract guard — an engine an app binds still answers every call that app makes"
+
+# #705. An app that BINDS an engine (build.json::engines, e.g. cloud-drive ->
+# Cloud-Lib-Gh.apk) and the engine it binds now ship separately: an engine change
+# republishes only the engine's APK. Neither ship can see the other side — each
+# application's testers may read only its own source, and one that reaches across
+# is downgraded to advisory by cloud-android-test-engine.sh — so this is the one
+# check that holds both sides to the same contract: the Store row resolves to an
+# engine module, the action and contract key agree, the contract the app needs is
+# declared, and every method the app's client calls is one the engine lists.
+#
+# EVERY PUSH, NO PATH FILTER: the commit that breaks a binding can be on either
+# side, in either tree.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engine-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it breaks each property on a copy of the real
+      # binding and requires the guard to fail naming it, then requires a pass
+      # on the unbroken copy. A gate whose red path is unproven reads as
+      # enforcement and enforces nothing.
+      - name: The guard still fails when a binding breaks
+        run: bash 1_cicd/src/scripts/test/engine-contract-guard.test.sh
+
+      - name: Every engine an app binds answers what that app calls
+        run: python3 1_cicd/src/scripts/cloud-android-engine-contract-guard.py .

@@ -16,6 +16,10 @@
       "scrollbar": "Same: upstream fast-scrollbar, compiled into cloud-media-center only.",
       "keyboard": "Already ships as its own APK (Cloud-Keyboard.apk, ac_cloud-keyboard). A second package carrying the same LatinIME service would register a duplicate input method, and its clipboard/gesture ContentProvider authorities come from string resources that both packages would claim - INSTALL_FAILED_CONFLICTING_PROVIDER."
     },
+    "_doc_exec_native": "#705 Modules whose APK must let Android EXTRACT its native libraries at install. AGP keeps every .so stored uncompressed inside the APK and extracts nothing (measured on the published Cloud-Lib-*.apk, 2026-10-01: libgh.so, libgix.so and librclone.so are all stored), which is right for a library loaded with System.loadLibrary and fatal for a BINARY an engine execs: nativeLibraryDir is the one place an app may exec from on API 29+, and with nothing extracted it is empty, so the engine answers 'gh is not installed' from inside the very APK that carries gh. Listed per module, with the reason, because extraction costs every OTHER lib APK install-time disk for nothing; app/build.gradle applies it to exactly these flavors through the variant API (the same packaging.jniLibs.useLegacyPackaging switch cloud-drive sets for its own jniLibs), and a name here that is not a shipped module fails the build. A module whose service execs its own binary and is missing here is refused by test/test-engine-services.sh.",
+    "exec_native": {
+      "gh": "#705 GhBackendService execs libgh.so out of this APK's own nativeLibraryDir; Cloud Drive binds that service instead of carrying gh."
+    },
     "_doc_ids": "Flavor applicationId = <application_id_prefix>.<module name with '-' stripped>; release asset = <asset_prefix><Module-Name>.apk. Derived, never listed.",
     "application_id_prefix": "com.diegonmarcos.cloudlib",
     "asset_prefix": "Cloud-Lib-",
@@ -63,6 +67,13 @@
     "kotlin": "2.3.20",
     "compile_sdk": 36,
     "jdk": "17"
+  },
+  "tests": {
+    "_doc": "#705 Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which ship-cloud-libs.yml runs before it builds. These testers are the ENGINE side of the app/engine split: once an app binds an engine instead of compiling it, the app's own ship no longer watches the engine's directory, so the only pipeline that runs when an engine changes is this one, and the engine's side of the contract is checked HERE or nowhere.",
+    "shell": {
+      "dir": "test",
+      "requires": ["python3", "grep"]
+    }
   },
   "modules": {
     "_doc": "Only the wrapper lives here. The :libs:* modules are appended by settings.gradle from the lib_apks scan above, each pointing at the one canonical directory in ab_cloud-libs-shared/libs/.",

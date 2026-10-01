@@ -108,3 +108,30 @@ into Drive and called by nothing.
   to carry the service. Move 1 adds the handshake on the gh client (contract number on
   the engine's service, read through PackageManager before binding); hoisting it into
   `libs:core` is the step after review.
+
+## Move 1 — gh: Cloud Drive binds it, Cloud-Lib-Gh runs it
+
+| piece | where | what it does |
+|---|---|---|
+| engine | `ab_cloud-libs-shared/libs/gh/…/GhBackendService.kt` | `DataBackendService` in Cloud-Lib-Gh.apk; runs gh in the engine's own process; methods `status`, `repoList`, `credential`, `loginStart`, `loginPoll` (sign-in is polled: a binder call must not block for the minutes GitHub takes to approve a code) |
+| contract | engine manifest | service exported, guarded by `CONSTELLATION_DATA` (signature), found by action `${applicationId}.ENGINE`, versioned by meta-data `com.diegonmarcos.cloud.engine.CONTRACT` = 1. The contract only grows; a change that would break an answer ships under a new method name |
+| runnable | `lib-apks/build.json::lib_apks.exec_native` | the gh flavor extracts its `.so` at install (variant API, this flavor only), so the engine can exec `libgh.so` — F1 for gh |
+| client | `ac_cloud-drive/…/sync/GhEngine.kt` | handshake through PackageManager **before** binding (no package → "install it", no service or a lower contract → "update it", both naming Store ▸ Cloud Constellation ▸ Libs); then `DataBackendClient` calls |
+| declaration | `ac_cloud-drive/build.json::engines.gh` | Store row (`lib-gh`), action template, `min_contract`, sign-in pacing; `app/build.gradle` resolves the package from the fleet manifest (unknown id fails the build) and bakes it into BuildConfig and `<queries>` |
+| unlinked | Drive `build.json::modules`, `app/build.gradle`, `ship-cloud-drive.yml` (3 copies) | Drive no longer compiles libs:gh and its ship no longer watches `libs/gh/**`, so a gh change cannot republish Cloud Drive |
+
+State moves with the uid: gh's sign-in now lives in the engine's own storage, so a
+phone that signed gh in through Cloud Drive signs in once more (repositories already
+cloned keep their credential in Drive's git credential store).
+
+**Tests.** `lib-apks/test/test-engine-services.sh` (engine side, runs on every Cloud Libs
+ship: exported, guarded, findable, versioned, lists exactly what it answers, links core,
+extracts what it execs; 12 mutations). `ac_cloud-drive/test/test-drive-gh-engine.sh`
+(client side, Drive's own source only: not carried, declared, visible, handshake before
+bind, loud, no secret logged, host-checked sign-in page; 19 mutations).
+`1_cicd/src/scripts/cloud-android-engine-contract-guard.py` + its workflow (both sides
+at once, every push — the only place that may read both, because an app's tester that
+reads an engine's source is downgraded to advisory; 10 mutations).
+
+**Not verified on a device** (none was reachable from the agent): the bind, the
+handshake strings and the sign-in poll are proven by CI build + static testers only.

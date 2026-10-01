@@ -44,6 +44,10 @@
         <!-- #684 the browser is resolved by package too, so "not installed" and "refused"
              stay two different facts for the auth mission (same rule as the terminal). -->
         <package android:name="${authMissionPackage}" />
+        <!-- #705 the gh ENGINE (Cloud-Lib-Gh.apk, build.json::engines.gh): this app binds its
+             service instead of compiling gh. Without this line the engine is invisible on
+             API 30+, and the GitHub card would say "install it" with it installed. -->
+        <package android:name="${ghEnginePackage}" />
 
         <!-- The Apps tab launches the fleet's data apps (and Tidal) through the system
              launcher. A package query per tile would be a second list of packages to

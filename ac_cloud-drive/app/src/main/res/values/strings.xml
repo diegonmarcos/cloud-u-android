@@ -451,10 +451,11 @@
     <!-- #689 THE GITHUB CARD IS gh ITSELF: gh's own sign-in (its device flow and its own client
          id), gh repo list, and a clone on the credential gh holds. Every failure names its next
          step; gh's own words are passed through where it has them. -->
-    <string name="git_gh_missing">gh is missing from this build (%1$s was not installed with the app) — reinstall Cloud Drive.</string>
+    <string name="git_gh_missing">GitHub runs in the gh engine (%1$s), which is not installed — install it from Store ▸ Cloud Constellation ▸ Libs.</string>
+    <string name="git_gh_engine_old">The gh engine on this phone (%1$s) answers contract %2$d and this Cloud Drive needs %3$d — update it from Store ▸ Cloud Constellation ▸ Libs.</string>
     <string name="git_gh_undeclared">The GitHub rung declares no gh host or list limit, so this build cannot run gh.</string>
     <string name="git_gh_not_signed_in">gh not signed in — tap Sign in with GitHub.</string>
-    <string name="git_gh_status_failed">gh could not say who it is signed in as (exit %1$d): %2$s — reopen this page, or reinstall Cloud Drive if gh does not start.</string>
+    <string name="git_gh_status_failed">gh could not say who it is signed in as (exit %1$d): %2$s — reopen this page, or reinstall the gh engine (%3$s) from Store ▸ Cloud Constellation ▸ Libs if gh does not start.</string>
     <string name="git_gh_unconfirmed">gh holds a sign-in for %1$s but GitHub did not confirm it (%2$s) — check the network and reopen this page, or Sign in with GitHub again.</string>
     <string name="git_gh_waiting">waiting for GitHub to approve the code…</string>
     <string name="git_gh_code">One-time code %1$s (copied). Enter it on the GitHub page that opened; gh finishes by itself once it is approved.</string>

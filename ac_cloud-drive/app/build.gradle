@@ -304,6 +304,29 @@ if (sharedMission != null) {
     authMissionPackage = missionFleet.package.toString()
     authMissionPermission = sharedMission.permission.toString().replace('{package}', authMissionPackage)
 }
+// #705 THE gh ENGINE this app binds instead of compiling (build.json::engines.gh). Its package
+// comes from the SAME constellation manifest as every other fleet id here, for the code (the
+// client's BuildConfig) AND the manifest (<queries>: on API 30+ an unqueried package is
+// invisible, and invisible reads exactly like "not installed"). A fleet id the manifest lacks is
+// a hard error: the GitHub card would otherwise bind a package no Store row installs.
+def ghEngineDecl = buildJson.engines?.gh
+if (ghEngineDecl == null) {
+    throw new GradleException("build.json::engines.gh is not declared — the GitHub card would bind nothing (#705)")
+}
+def ghEngineFleet = fleetById[ghEngineDecl.fleet]
+if (ghEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.gh.fleet '${ghEngineDecl.fleet}' is not in the constellation fleet manifest " +
+        "($fleetAppsFile) — the GitHub card would bind a package no Store row installs.")
+}
+def ghEnginePackage = ghEngineFleet.package.toString()
+def ghEngineAction  = ghEngineDecl.action.toString().replace('{package}', ghEnginePackage)
+def ghEngineMinContract = ghEngineDecl.min_contract as int
+def ghEnginePollMs  = ghEngineDecl.login_poll_ms as long
+def ghEngineMaxMs   = ghEngineDecl.login_max_ms as long
+if (ghEngineMinContract < 1 || ghEnginePollMs <= 0 || ghEngineMaxMs < ghEnginePollMs) {
+    throw new GradleException("build.json::engines.gh needs min_contract >= 1 and 0 < login_poll_ms <= login_max_ms (#705)")
+}
 def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiVolumesDecl = uiDecl.volumes.findAll { k, v -> !k.startsWith('_') }
@@ -434,7 +457,8 @@ android {
         // resolution exists to avoid — so it interpolates the SAME answer the UI declaration got.
         manifestPlaceholders = [terminalPackage: terminalPackage,
                                 authMissionPackage: authMissionPackage,
-                                authMissionPermission: authMissionPermission]
+                                authMissionPermission: authMissionPermission,
+                                ghEnginePackage: ghEnginePackage]
         ndk {
             def abiOverride = System.getenv('CLOUDDRIVE_ABIS')
             def abis = (abiOverride?.trim()) \
@@ -464,6 +488,12 @@ android {
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
         buildConfigField "String", "UI_CONFIGS_B64",  "\"${uiConfigsB64}\""
         buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
+        // #705 the gh engine: where it is, how to find its service, the contract this build needs.
+        buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""
+        buildConfigField "String", "GH_ENGINE_ACTION",       "\"${ghEngineAction}\""
+        buildConfigField "int",    "GH_ENGINE_MIN_CONTRACT", "${ghEngineMinContract}"
+        buildConfigField "long",   "GH_ENGINE_POLL_MS",      "${ghEnginePollMs}L"
+        buildConfigField "long",   "GH_ENGINE_LOGIN_MAX_MS", "${ghEngineMaxMs}L"
         buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
         buildConfigField "String", "UI_VOLUMES_B64",  "\"${uiVolumesB64}\""
         buildConfigField "String", "UI_CONSTELLATION_B64", "\"${constellationB64}\""
@@ -578,12 +608,11 @@ dependencies {
     implementation project(':libs:auth')
     // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
     // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
-    // GitAuthChain. These two carry the binaries: libs:gh is the github rung's
-    // device grant and the REST repo listing #641/#642 left without a credential;
-    // libs:gix clones and fetches in-process. NEITHER IS AN ENGINE — no Compose
-    // surface, nothing for EngineActivity to host. Both land a static payload in
-    // jniLibs, which is why packaging.jniLibs.useLegacyPackaging below is load-bearing.
-    implementation project(':libs:gh')
+    // GitAuthChain. libs:gix clones and fetches in-process; it is not an engine —
+    // no Compose surface, nothing for EngineActivity to host — and it lands a static
+    // payload in jniLibs, which is why packaging.jniLibs.useLegacyPackaging is
+    // load-bearing. #705 libs:gh is NOT here: gh runs in Cloud-Lib-Gh.apk and this
+    // app binds it (sync/GhEngine.kt, build.json::engines.gh).
     implementation project(':libs:gix')
     // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
     // libraries pin, so app and libraries compose against one toolchain.

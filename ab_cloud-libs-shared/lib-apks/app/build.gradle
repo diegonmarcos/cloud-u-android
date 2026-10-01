@@ -118,6 +118,23 @@ android {
     }
 }
 
+// #705 build.json::lib_apks.exec_native: the flavors whose engine EXECS a binary
+// out of its own nativeLibraryDir. Those APKs must let Android extract their .so
+// at install — the default leaves nativeLibraryDir empty and the exec fails — and
+// no other APK should pay for that, so it is set per variant, not for the module.
+def execNative = (libCfg.exec_native ?: [:]).keySet().findAll { !it.startsWith('_') }
+execNative.each { name ->
+    if (!shipped.contains(name))
+        throw new GradleException("lib_apks.exec_native names '${name}', which is not a shipped module: ${shipped}")
+}
+def execNativeFlavors = execNative.collect { flavorOf(it) } as Set
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        if (execNativeFlavors.contains(variant.flavorName))
+            variant.packaging.jniLibs.useLegacyPackaging.set(true)
+    }
+}
+
 dependencies {
     // Each flavor pulls in exactly its own module. `<flavor>Implementation` is
     // the flavor-scoped configuration AGP creates for every product flavor, so

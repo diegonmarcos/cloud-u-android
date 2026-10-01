@@ -93,8 +93,6 @@ import com.diegonmarcos.cloudlib.auth.SignIn
 import com.diegonmarcos.cloudlib.auth.SignInHost
 import com.diegonmarcos.cloudlib.auth.SignInResult
 import com.diegonmarcos.cloudlib.auth.SignInWays
-import com.diegonmarcos.cloudlib.gh.GhOutput
-import com.diegonmarcos.cloudlib.gh.GhRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -427,26 +425,27 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
-    // #689 THE GITHUB CARD IS gh ITSELF, exec'd from this app's own nativeLibraryDir (libs:gh):
-    // the terminals carry no gh and the store is noexec, so this is the one place it can run and
-    // hand its answer back to the page. Where it points and how much it lists are the github
-    // rung's declaration. Every failure is ONE loud line naming the next step.
-    val ghRunner = remember { GhRunner(ctx.applicationContext) }
+    // #689 THE GITHUB CARD IS gh ITSELF. #705 gh runs in the gh ENGINE (Cloud-Lib-Gh.apk, which
+    // the Store installs) and the card reaches it through GhEngine; this app no longer carries the
+    // binary, so a gh bump no longer republishes Cloud Drive. Where it points and how much it lists
+    // are the github rung's declaration. Every failure is ONE loud line naming the next step.
+    val ghEngine = remember { GhEngine(ctx.applicationContext) }
     val ghHost = remember { DriveGitChain.ghHost() }
     val ghLimit = remember { DriveGitChain.ghListLimit() }
 
-    /** Why the gh leg cannot run on this phone at all, or "" when it can. */
-    fun ghUnavailable(): String = when {
-        !ghRunner.isAvailable -> ctx.getString(R.string.git_gh_missing, ghRunner.binary.absolutePath)
-        ghHost.isBlank() || ghLimit <= 0 -> ctx.getString(R.string.git_gh_undeclared)
-        else -> ""
+    /** Why the gh leg cannot run on this phone at all, or "" when it can. #705: the engine's
+     *  handshake first — missing and too old are two different next steps. */
+    fun ghUnavailable(): String = when (val engine = ghEngine.check()) {
+        is GhEngine.Check.NotInstalled -> ctx.getString(R.string.git_gh_missing, engine.pkg)
+        is GhEngine.Check.TooOld -> ctx.getString(R.string.git_gh_engine_old, engine.pkg, engine.found, engine.needed)
+        GhEngine.Check.Ready -> if (ghHost.isBlank() || ghLimit <= 0) ctx.getString(R.string.git_gh_undeclared) else ""
     }
 
     /** #689 `gh repo list`: the account's own repositories, split below by gh's own isPrivate. */
     fun fetchGhListing() {
         listing = listing.copy(loading = true, error = "")
         scope.launch {
-            val r = withContext(Dispatchers.IO) { ghRunner.repoList(ghLimit, GitHubRepos.GH_FIELDS) }
+            val r = withContext(Dispatchers.IO) { ghEngine.repoList(ghLimit, GitHubRepos.GH_FIELDS) }
             val repos = if (r.ok) GitHubRepos.parseGh(r.output) else null
             listing = when {
                 !r.ok -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_failed, r.exitCode, lastLine(r.output)))
@@ -460,14 +459,14 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     suspend fun ghCheck(): Boolean {
         val why = ghUnavailable()
         if (why.isNotBlank()) { ghAuth = ghAuth.copy(checked = true, signedIn = false, error = why); return false }
-        val r = withContext(Dispatchers.IO) { ghRunner.status(ghHost) }
+        val r = withContext(Dispatchers.IO) { ghEngine.status(ghHost) }
         val st = GitHubRepos.ghStatus(r.output, ghHost)
         ghAuth = when {
             st.signedIn -> ghAuth.copy(checked = true, signedIn = true, login = st.login, error = "")
             // gh holds a login GitHub did not confirm (offline, revoked): say that, not "signed out".
             st.state.isNotBlank() -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_unconfirmed, st.login, st.state))
             // gh could not answer at all (it would not start, or failed before any JSON): its words, not "signed out".
-            !r.ok -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_status_failed, r.exitCode, lastLine(r.output)))
+            !r.ok -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_status_failed, r.exitCode, lastLine(r.output), BuildConfig.GH_ENGINE_PACKAGE))
             else -> ghAuth.copy(checked = true, signedIn = false, login = "")
         }
         if (st.signedIn) fetchGhListing()
@@ -493,9 +492,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         ghAuth = ghAuth.copy(running = true, code = "", url = "", error = "")
         scope.launch {
             val r = withContext(Dispatchers.IO) {
-                ghRunner.login(ghHost) { line ->
-                    val code = GhOutput.deviceCode(line)
-                    val url = GhOutput.verificationUrl(line, ghHost)
+                ghEngine.login(ghHost) { prompt, page ->
+                    val code = prompt.ifBlank { null }
+                    val url = GhEngine.pageOnHost(page, ghHost)
                     if (code != null || url != null) scope.launch {
                         if (code != null && ghAuth.code.isBlank()) {
                             ghAuth = ghAuth.copy(code = code)
@@ -522,7 +521,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun cloneViaGh(repo: GitHubRepos.Repo) {
         if (repo.cloneUrl.isBlank()) { handoff = ctx.getString(R.string.git_clone_url_missing, repo.name); return }
         scope.launch {
-            val cred = withContext(Dispatchers.IO) { if (ghHost.isBlank()) null else ghRunner.credential(ghHost) }
+            val cred = withContext(Dispatchers.IO) { if (ghHost.isBlank()) null else ghEngine.credential(ghHost) }
             if (cred == null) { handoff = ctx.getString(R.string.git_gh_clone_no_credential, repo.name); return@launch }
             coordinator.cloneInto(
                 name = repo.name,
