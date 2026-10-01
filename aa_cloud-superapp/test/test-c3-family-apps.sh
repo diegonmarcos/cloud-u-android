@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ #687 — EVERY cloud-c3 FAMILY APP is in the Store and linked from         ║
-# ║ Cloud ▸ Apps ▸ Configs, with ONE name. Derived from the declarations,    ║
-# ║ never from a list typed here.                                            ║
+# ║ #687 — EVERY cloud-c3 FAMILY APP is in the Store with ONE name; cloud-c3 ║
+# ║ itself is linked from Cloud ▸ Apps ▸ Configs and its sub-apps are NOT —  ║
+# ║ they launch from inside cloud-c3. Derived, never a list typed here.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
 # WHY THIS EXISTS BESIDE test-c3-is-an-app.sh. That tester pins cloud-c3 by
@@ -20,12 +20,17 @@
 #       version_name, version_code, per-ABI assets), kind app, group apps, and
 #       the row's label IS the member's id. #276: a half-filled row has no
 #       symptom, it draws an empty page that looks exactly like a working one.
-#   T2  LINKED: the Cloud ▸ Apps ▸ Configs group has a tile whose target is
-#       extapp:<id> (never page:), and the tile's caption is not the id (T7).
+#   T2  LINKED IN ONE PLACE: cloud-c3 itself has a Cloud ▸ Apps ▸ Configs tile
+#       targeting extapp:cloud-c3 (never page:), captioned by function (T7).
+#       Every SUB-app cloud-c3-<x> has NO tile in that grid: it belongs inside
+#       cloud-c3's own Apps tab, beside Watchdog / Morpheus / WatchTower, and
+#       ac_cloud-c3/test/test-c3-shell.sh T5 asserts it is there. A sub-app
+#       also tiled here is the same app reachable from two launchers.
 #   T3  ONE NAME: the external_apps entry carries a package for the tap to open
 #       and no `label` (#351/#224); its install_apk_url is the fleet's release_url.
-#   M   mutation-proof: a gutted row, a page: target, a removed tile, a label
-#       put back and a wrong install URL each go RED; a family of one is RED.
+#   M   mutation-proof: a gutted row, a page: target, a removed C3 tile, a
+#       sub-app tile put back in Configs, a label put back and a wrong install
+#       URL each go RED; a family of one is RED.
 #
 # OWN-SOURCE ONLY: this application's build.json and its generated fleet file.
 # python3 and jq.
@@ -97,11 +102,15 @@ for m in members:
             bad.append("T1 %s: fleet package %r != external_apps install_package %r" % (mid, r.get("package"), m.get("install_package")))
         if m.get("install_apk_url") and m["install_apk_url"] != r.get("release_url"):
             bad.append("T3 %s: install_apk_url %r is not the fleet's release_url %r — a tap on an uninstalled app would fetch an asset that is not published" % (mid, m["install_apk_url"], r.get("release_url")))
-    # T2 the Configs tile
+    # T2 the Configs tile: the root app only; a sub-app lives inside cloud-c3
     if configs is not None:
         tiles = [t for t in configs["tiles"] if t.get("target") == "extapp:" + mid]
         page_tiles = [t for t in configs["tiles"] if isinstance(t.get("target"), str) and t["target"].startswith("page:") and mid.replace("cloud-", "") in t["target"]]
-        if not tiles:
+        if mid != "cloud-c3":
+            if tiles or page_tiles:
+                bad.append("T2 %s: Cloud > Apps > Configs has a tile for this cloud-c3 sub-app (%s) — it launches from inside cloud-c3 > Apps, not from the superapp grid" % (mid, [t.get("target") for t in tiles + page_tiles]))
+            tiles = []
+        elif not tiles:
             bad.append("T2 %s: the Cloud > Apps > Configs group has no tile targeting extapp:%s%s" % (mid, mid, " (a page: tile points at it instead)" if page_tiles else ""))
         for t in tiles:
             if t.get("label") == mid or t.get("label") in (mid.replace("cloud-", ""),):
@@ -119,7 +128,7 @@ PYTHON
 }
 
 echo "── cloud-c3 family apps (derived from ui.external_apps) ──"
-check "$BJ" "$FLEET" && pass "T1-T3 every cloud-c3 family app has a complete Store row, an extapp: tile in Cloud > Apps > Configs, and one name" || fail "a family member is missing from the Store, unlinked, or named twice"
+check "$BJ" "$FLEET" && pass "T1-T3 every cloud-c3 family app has a complete Store row and one name; cloud-c3 is tiled in Cloud > Apps > Configs, its sub-apps are not" || fail "a family member is missing from the Store, mis-linked, or named twice"
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 mutate() {
@@ -145,7 +154,7 @@ import json,sys; p=sys.argv[1]; d=json.load(open(p)); n=0
 def walk(x):
     global n
     if isinstance(x,dict):
-        if x.get("target")=="extapp:cloud-c3-webserver": x["target"]="page:c3/webserver"; n+=1
+        if x.get("target")=="extapp:cloud-c3": x["target"]="page:c3/health"; n+=1
         for v in x.values(): walk(v)
     elif isinstance(x,list):
         for v in x: walk(v)
@@ -158,7 +167,20 @@ def walk(x):
     global n
     if isinstance(x,dict):
         if isinstance(x.get("tiles"),list):
-            before=len(x["tiles"]); x["tiles"]=[t for t in x["tiles"] if t.get("target")!="extapp:cloud-c3-webserver"]; n+=before-len(x["tiles"])
+            before=len(x["tiles"]); x["tiles"]=[t for t in x["tiles"] if t.get("target")!="extapp:cloud-c3"]; n+=before-len(x["tiles"])
+        for v in x.values(): walk(v)
+    elif isinstance(x,list):
+        for v in x: walk(v)
+walk(d["ui"]); assert n==1, n; json.dump(d,open(p,"w"))
+PY
+}
+m_subapp_back() { python3 - "$1" <<'PY'
+import json,sys; p=sys.argv[1]; d=json.load(open(p)); n=0
+def walk(x):
+    global n
+    if isinstance(x,dict):
+        if x.get("title")=="Configs" and isinstance(x.get("tiles"),list) and any(t.get("target")=="extapp:cloud-c3" for t in x["tiles"]):
+            x["tiles"].append({"id":"c3-webserver","label":"Web Server","icon":"ic_p_watchdog","target":"extapp:cloud-c3-webserver"}); n+=1
         for v in x.values(): walk(v)
     elif isinstance(x,list):
         for v in x: walk(v)
@@ -185,8 +207,9 @@ PY
 }
 mutate "the Store row loses release_url and ghcr_page"      m_gut_row
 mutate "the Store row is kind lib"                          m_kind_lib
-mutate "the Configs tile points at a page: route"           m_page_target
-mutate "the Configs tile is removed"                        m_drop_tile
+mutate "the C3 Configs tile points at a page: route"        m_page_target
+mutate "the C3 Configs tile is removed"                     m_drop_tile
+mutate "the webserver is tiled in Configs again"            m_subapp_back
 mutate "the external_apps entry regains a label"            m_add_label
 mutate "install_apk_url names an unpublished asset"         m_wrong_url
 mutate "the family shrinks to one member"                   m_family_of_one

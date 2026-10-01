@@ -54,15 +54,16 @@ class DeclarationsTest {
     }
 
     @Test
-    fun `the three Apps tiles parse with the sibling packages they declare`() {
+    fun `the four Apps tiles parse with the sibling packages they declare`() {
         val apps = Declarations.parseExternalApps(uiText("external_apps"))
-        assertEquals("every declared Apps tile must parse", 3, apps.size)
-        assertEquals(listOf("c3-watchdog", "c3-morpheus", "c3-watchtower"), apps.map { it.id })
+        assertEquals("every declared Apps tile must parse", 4, apps.size)
+        assertEquals(listOf("c3-watchdog", "c3-morpheus", "c3-watchtower", "cloud-c3-webserver"), apps.map { it.id })
         assertEquals(
             listOf(
                 "com.diegonmarcos.watchdog",
                 "com.diegonmarcos.morpheus",
                 "com.diegonmarcos.watchtower",
+                "com.diegonmarcos.cloudwebserver",
             ),
             apps.map { it.packageName },
         )
@@ -74,7 +75,7 @@ class DeclarationsTest {
         // c3-watchdog / c3-morpheus / c3-watchtower. Both are satisfied by deriving the
         // printed name, which is why no `label` is stored: #351's one name, #224's revert.
         val apps = Declarations.parseExternalApps(uiText("external_apps"))
-        assertEquals(listOf("Watchdog", "Morpheus", "Watchtower"), apps.map { it.display })
+        assertEquals(listOf("Watchdog", "Morpheus", "Watchtower", "Webserver"), apps.map { it.display })
     }
 
     @Test

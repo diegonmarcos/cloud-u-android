@@ -44,8 +44,9 @@ object Declarations {
     ) {
         /**
          * What the tile PRINTS: the fleet name with its family prefix dropped, so
-         * `c3-watchdog` reads "Watchdog" — the three words the owner asked for, and the
-         * spelling he used ("Watchdog", "Morpheus", "Watchtower").
+         * `c3-watchdog` reads "Watchdog" and `cloud-c3-webserver` reads "Webserver" — the
+         * family prefix is `cloud-c3-` or `c3-`, so dropping only the first dash-segment
+         * would print "C3-webserver".
          *
          * DERIVED, never declared. That is the whole point: a stored display name beside a
          * fleet package is a second statement of the app's one name and drifts from it
@@ -53,7 +54,7 @@ object Declarations {
          * function of [id] cannot drift — rename the app and this follows with no edit.
          */
         val display: String
-            get() = id.substringAfter('-', id).replaceFirstChar { it.uppercaseChar() }
+            get() = id.removePrefix("cloud-").removePrefix("c3-").replaceFirstChar { it.uppercaseChar() }
     }
 
     // ── the baked declarations, decoded once ───────────────────────────────

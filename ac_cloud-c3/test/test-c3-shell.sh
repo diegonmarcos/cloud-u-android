@@ -202,12 +202,15 @@ ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
 manifest = open(sys.argv[2], encoding="utf-8").read()
 root = sys.argv[3]
 tiles = ui.get("external_apps") or []
-want = {"c3-watchdog": "ac_c3-watchdog", "c3-morpheus": "ac_c3-morpheus",
-        "c3-watchtower": "ac_c3-watchtower"}
+# The REQUIRED Apps-tab membership: the three C3 siblings and the cloud-c3-webserver
+# sub-app, which launches from here and not from the SuperApp's Configs grid. Each
+# app's directory is DERIVED (ac_<id>), never a second table.
+want = {i: "ac_" + i for i in ("c3-watchdog", "c3-morpheus", "c3-watchtower",
+                               "cloud-c3-webserver")}
 ids = [t.get("id") for t in tiles]
 bad = []
 if sorted(ids) != sorted(want):
-    bad.append("the Apps tab declares %s, not the three siblings %s" % (ids, sorted(want)))
+    bad.append("the Apps tab declares %s, not the required apps %s" % (ids, sorted(want)))
 queried = set(re.findall(r'<package android:name="([^"]+)"', manifest))
 for t in tiles:
     tid, pkg = t.get("id"), t.get("package")
@@ -381,7 +384,7 @@ t1 "$BJ"                              && pass "T1 ui.tabs is the five declared t
 t2 "$BJ" "$MAIN"                      && pass "T2 declaration <-> shell dispatch agree BOTH ways: no orphan either side" || fail "T2 declaration and dispatch disagree"
 t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" || fail "T3 a second list of tab ids exists"
 t4 "$BJ" "$DRAWABLE" "$SRC"           && pass "T4 every declared icon is a real drawable, and every drawable is declared" || fail "T4 an icon would draw blank, or a drawable is dead"
-t5 "$BJ" "$MANIFEST" "$ROOT"          && pass "T5 the Apps tab launches the three REAL siblings, each queried, none renamed" || fail "T5 an Apps tile cannot open what it names"
+t5 "$BJ" "$MANIFEST" "$ROOT"          && pass "T5 the Apps tab launches the REAL siblings + cloud-c3-webserver, each queried, none renamed" || fail "T5 an Apps tile cannot open what it names"
 t6 "$BJ" "$TABS" "$SRC"               && pass "T6 NO PLACEHOLDER: every declared page resolves to a real fragment, and no not-built body exists" || fail "T6 a shipped tab can render a placeholder"
 t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's View contract" || fail "T7 the shell is not a fragment host, or forks the nav"
 t8 "$MAIN" "$SHELL_XML"               && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
@@ -395,7 +398,7 @@ mutate() { # <name> <check-fn> <setup-fn>
     local name="$1" check="$2" setup="$3"
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
     cp -r "$APP" "$WORK/t/ac_cloud-c3"
-    for sib in ac_c3-watchdog ac_c3-morpheus ac_c3-watchtower; do
+    for sib in $(jq -r '.ui.external_apps[].id | "ac_" + .' "$APP/build.json"); do
         mkdir -p "$WORK/t/$sib"
         [ -f "$ROOT/$sib/build.json" ] && cp "$ROOT/$sib/build.json" "$WORK/t/$sib/build.json"
     done
@@ -472,6 +475,16 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
+m_drop_websrv() { jqset "$1$A/build.json" 'd["ui"]["external_apps"]=[a for a in d["ui"]["external_apps"] if a["id"]!="cloud-c3-webserver"]'; }
+m_websrv_pkg()  { jqset "$1$A/build.json" 'next(a for a in d["ui"]["external_apps"] if a["id"]=="cloud-c3-webserver")["package"]="com.diegonmarcos.webserver"'; }
+m_websrv_noq()  { python3 - "$1$A/app/src/main/AndroidManifest.xml" <<'PY'
+import sys
+p=sys.argv[1]; s=open(p).read(); b=s
+s=s.replace('        <package android:name="com.diegonmarcos.cloudwebserver" />\n','')
+assert s!=b
+open(p,"w").write(s)
+PY
+}
 # T6: the three shapes of "a shipped tab is empty"
 m_declare_unbuilt() { jqset "$1$A/build.json" 'd["ui"]["observ"]["pages"].append(collections.OrderedDict([("id","workflows"),("label","Workflows"),("icon","ic_p_c3_workflows")]))'; }
 m_placeholder_body() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt" <<'PY'
@@ -523,6 +536,9 @@ mutate "a drawable is added that nothing declares"        c_t4 m_dead_drawable
 mutate "an Apps tile names a package no sibling has"      c_t5 m_wrong_pkg
 mutate "an Apps tile regains a display label (#224)"      c_t5 m_add_label
 mutate "a sibling package is dropped from <queries>"      c_t5 m_drop_query
+mutate "cloud-c3-webserver is dropped from the Apps tab"  c_t5 m_drop_websrv
+mutate "the webserver tile names the wrong package"       c_t5 m_websrv_pkg
+mutate "the webserver package is dropped from <queries>"  c_t5 m_websrv_noq
 mutate "an UNBUILT page is declared (the empty tab)"      c_t6 m_declare_unbuilt
 mutate "a declared page resolves to a not-built body"     c_t6 m_placeholder_body
 mutate "an 'implemented:false' escape hatch is added"     c_t6 m_escape_flag

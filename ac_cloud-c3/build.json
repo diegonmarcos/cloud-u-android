@@ -177,6 +177,12 @@
         "id": "c3-watchtower",
         "icon": "ic_p_c3_reports",
         "package": "com.diegonmarcos.watchtower"
+      },
+      {
+        "_doc": "The phone's local web server (ac_cloud-c3-webserver, #687) is a cloud-c3 sub-app, so it launches from HERE beside the three siblings and not from the SuperApp's Cloud > Apps > Configs grid (aa_cloud-superapp/test/test-c3-family-apps.sh T2 fails if it goes back there). Still installed from the Store: its fleet row is untouched. No label (#351): the tile prints the id with the family prefix dropped.",
+        "id": "cloud-c3-webserver",
+        "icon": "ic_p_sol_cloud",
+        "package": "com.diegonmarcos.cloudwebserver"
       }
     ],
     "_doc_pages": "THE RULE (#648): a page appears here when its fragment exists, and not before. The SuperApp's five feed cards, its ntfy centre and its three container dashboards ARRIVED with the Observability/Topology stack pages above (C3StackFragment over ui.sections[c3].stack_*); Dagu and the WG mesh arrived as their own pages. The SuperApp page ids that have no fragment THERE either (reports, stack, workflows, vms, logs, gha — page_samples stubs) stay undeclared here, preserved only inside ui.sections[c3].pages; their More-row tiles dispatch an honest 'not shipped in this app'.",

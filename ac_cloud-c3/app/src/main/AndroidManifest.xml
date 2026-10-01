@@ -17,6 +17,7 @@
         <package android:name="com.diegonmarcos.watchdog" />
         <package android:name="com.diegonmarcos.morpheus" />
         <package android:name="com.diegonmarcos.watchtower" />
+        <package android:name="com.diegonmarcos.cloudwebserver" />
     </queries>
 
     <!-- #648 MOVED with the pages that need it: the Gitea Repos card reads the mirror at

@@ -2934,13 +2934,6 @@
                 "label": "C3",
                 "icon": "ic_p_watchdog",
                 "target": "extapp:cloud-c3"
-              },
-              {
-                "_doc": "The phone's local web server (#687), an APK in the cloud-c3 family. extapp:, not page: — the app is published, so the tile opens it or offers the install. The caption names the FUNCTION, never the application (T7): the app's identity travels in target.",
-                "id": "c3-webserver",
-                "label": "Web Server",
-                "icon": "ic_p_watchdog",
-                "target": "extapp:cloud-c3-webserver"
               }
             ]
           }
@@ -7535,7 +7528,7 @@
         "forks": {}
       },
       {
-        "_doc": "cloud-c3-webserver (#687) — the phone's local web server is an APK in the cloud-c3 family, and Cloud ▸ Apps ▸ Configs opens it with extapp:cloud-c3-webserver. Sections.externalApp() reads ONLY this array, so with no entry here that tile snacks 'Unknown app' AFTER the tap instead of offering the APK. NO `label`: the id IS the application's one name (#351); the launcher derives the caption by dropping the family prefix. install_apk_url mirrors ac_cloud-c3-webserver/build.json::release.gh_release.asset_name (Cloud-C3-WebServer.apk, the arm64 rolling-latest asset). The applicationId stays com.diegonmarcos.cloudwebserver through the rename: identity, not brand, the ac_c3-watchdog / com.diegonmarcos.watchdog split.",
+        "_doc": "cloud-c3-webserver (#687) — the phone's local web server is an APK in the cloud-c3 family, and it is launched from INSIDE cloud-c3 (its Apps tab, beside Watchdog / Morpheus / WatchTower: ac_cloud-c3/build.json::ui.external_apps), NOT from Cloud ▸ Apps ▸ Configs — that grid links cloud-c3 itself and no family member below it (test-c3-family-apps.sh T2). This entry stays so extapp:cloud-c3-webserver still resolves here (Sections.externalApp() reads ONLY this array) and the Store row keeps its install contract (T1/T3). NO `label`: the id IS the application's one name (#351); the launcher derives the caption by dropping the family prefix. install_apk_url mirrors ac_cloud-c3-webserver/build.json::release.gh_release.asset_name (Cloud-C3-WebServer.apk, the arm64 rolling-latest asset). The applicationId stays com.diegonmarcos.cloudwebserver through the rename: identity, not brand, the ac_c3-watchdog / com.diegonmarcos.watchdog split.",
         "id": "cloud-c3-webserver",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.cloudwebserver",
