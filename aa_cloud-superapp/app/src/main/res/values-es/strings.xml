@@ -330,7 +330,13 @@
     <string name="vault_cockpit_ai_unmapped">sin proveedor de dispositivo asignado en build.json</string>
     <string name="vault_cockpit_apps_row">conjunto de apps declarado</string>
     <string name="vault_cockpit_apps_none">La bóveda aún no declara un conjunto de apps para %1$s. Exporta la lista de este dispositivo y añádela a cloud-vault configs/apps.</string>
-    <string name="vault_cockpit_apps_plan">Comparar con lo instalado (%1$d declaradas)</string>
+    <string name="vault_cockpit_apps_plan">Store · instalar lo que le falta a este teléfono (%1$d declaradas)</string>
+    <string name="infos_apps_device">%1$s · %2$d apps declaradas · %3$d en este teléfono</string>
+    <string name="infos_apps_row_installed">✓ %1$s · %2$s · %3$s</string>
+    <string name="infos_apps_row_missing">✗ %1$s · %2$s · %3$s</string>
+    <string name="infos_apps_no_store">ninguna tienda registrada</string>
+    <string name="infos_apps_none">Esta exportación de la bóveda aún no trae una lista de apps declarada.</string>
+    <string name="infos_apps_open_store">Abrir Store ▸ Apps del teléfono (Declaradas)</string>
     <string name="vault_cockpit_apps_export">Exportar la lista de apps de este dispositivo</string>
     <string name="vault_cockpit_apps_exported">✓ %1$d apps exportadas</string>
     <string name="vault_cockpit_raw">Todo lo demás (en bruto)</string>

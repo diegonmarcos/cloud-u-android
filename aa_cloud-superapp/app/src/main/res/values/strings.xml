@@ -418,7 +418,13 @@
     <string name="vault_cockpit_ai_unmapped">no device provider mapped in build.json</string>
     <string name="vault_cockpit_apps_row">declared app set</string>
     <string name="vault_cockpit_apps_none">The vault declares no app set for %1$s yet. Export this device\'s list and add it to cloud-vault configs/apps.</string>
-    <string name="vault_cockpit_apps_plan">Compare with installed (%1$d declared)</string>
+    <string name="vault_cockpit_apps_plan">Store · install what this phone is missing (%1$d declared)</string>
+    <string name="infos_apps_device">%1$s · %2$d declared apps · %3$d on this phone</string>
+    <string name="infos_apps_row_installed">✓ %1$s · %2$s · %3$s</string>
+    <string name="infos_apps_row_missing">✗ %1$s · %2$s · %3$s</string>
+    <string name="infos_apps_no_store">no store recorded</string>
+    <string name="infos_apps_none">This vault export carries no declared app list yet.</string>
+    <string name="infos_apps_open_store">Open Store ▸ Phone Apps (Declared)</string>
     <string name="vault_cockpit_apps_export">Export this device\'s app list</string>
     <string name="vault_cockpit_apps_exported">✓ %1$d apps exported</string>
     <string name="vault_cockpit_raw">Everything else (raw)</string>

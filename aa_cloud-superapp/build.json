@@ -6110,7 +6110,7 @@
           "values": ["PrivateKey", "PresharedKey", "-----BEGIN", "ENC\\[AES", "(?i)bearer\\s+\\S{16,}", "gh[pousr]_[A-Za-z0-9]{20,}", "github_pat_", "sk-[A-Za-z0-9_-]{20,}", "eyJ[A-Za-z0-9_-]{10,}\\.", "[A-Za-z0-9+/=]{40,}", "[A-Za-z0-9_-]{40,}"],
           "collapse_over": 12
         },
-        "_doc_schema": "#713 THE SCHEMA THE VAULT JSON FILLS, so Infos draws every section and every field — filled (its value, through the mask above) or `empty` — and not only what one export happens to carry. Sections and labels are cloud-vault C_A1-configs/schema.json#sections (schema_version 1); a section's fields are the resolver items of C_A1-configs/<section>/sources.json#items, as `›`-joined paths (a node carrying a resolver `kind` is one field). cloud-vault is private and CI cannot read it, so the skeleton is carried here; test-account-three-tabs.sh F re-derives it from the vault whenever cloud-vault sits beside this repo and goes red on any drift. A field or section the bundle carries beyond this skeleton is still drawn, after the declared ones.",
+        "_doc_schema": "#713 THE SCHEMA THE VAULT JSON FILLS, so Infos draws every section and every field — filled (its value, through the mask above) or `empty` — and not only what one export happens to carry. Sections and labels are cloud-vault C_A1-configs/schema.json#sections (schema_version 1); a section's fields are the resolver items of C_A1-configs/<section>/sources.json#items, as `›`-joined paths (a node carrying a resolver `kind` is one field). cloud-vault is private and CI cannot read it, so the skeleton is carried here; test-account-three-tabs.sh F re-derives it from the vault whenever cloud-vault sits beside this repo and goes red on any drift. A field or section the bundle carries beyond this skeleton is still drawn, after the declared ones. #727: the vault has more sections than schema.json lists — a C_A1-configs/<dir>/sources.json not yet in schema.json is a STAGED section (apps, peers: adding one to schema.json needs a keyed emit.py rebuild), and #713 derived the skeleton from schema.json alone, so the owner's declared app list never reached Infos. The skeleton is now EVERY sources.json directory: schema.json's sections in its order, then the staged ones by id, each marked `staged` and labelled by its id. F's drift check walks the directories, not the list, so a section can no longer be skipped. `render: apps` also draws the section's declared apps one by one (name, package, store of record, installed on this phone) and `route` is the Store page it links to (Phone Apps, whose Declared view installs what is missing).",
         "schema": {
           "schema_version": 1,
           "sections": [
@@ -6127,7 +6127,11 @@
             { "id": "autocomplete", "label": "Autocomplete",
               "fields": ["manifest", "default", "about_me", "agents", "cloud_keys", "personal_data", "urls_pub"] },
             { "id": "electronics", "label": "Electronics",
-              "fields": ["computers › surface › type", "computers › surface › wg_peer", "computers › surface › mac", "phones › galaxy › type", "phones › galaxy › wg_peer", "phones › galaxy › model_and_mac", "watches", "other_devices", "kde_connect"] }
+              "fields": ["computers › surface › type", "computers › surface › wg_peer", "computers › surface › mac", "phones › galaxy › type", "phones › galaxy › wg_peer", "phones › galaxy › model_and_mac", "watches", "other_devices", "kde_connect"] },
+            { "id": "apps", "label": "Apps", "staged": true, "render": "apps", "route": "page:config/store-phone",
+              "fields": ["devices › galaxy › fleet", "devices › galaxy › foreign", "devices › galaxy › skeleton", "devices › surface › fleet"] },
+            { "id": "peers", "label": "Peers", "staged": true,
+              "fields": ["registry", "samsung-s21plus › wg0", "samsung-s21plus › wg_public", "samsung-s21plus › profiles", "samsung-s21plus › public_key", "samsung-a37 › wg0", "samsung-a37 › wg_public", "samsung-a37 › profiles", "samsung-a37 › public_key", "surface-8-pro › wg0", "surface-8-pro › wg_public", "surface-8-pro › profiles", "surface-8-pro › public_key"] }
           ]
         }
       },
@@ -6415,8 +6419,9 @@
             "icon": "ic_ai_sparkle"
           },
           {
+            "_doc": "#727 the Store / apps row of the Fleet Setup index: the vault's declared app set for the chosen device against what this phone has, and one button that hands the missing ones to the Store's own import plan (StoreImport: fleet apps through the Constellation install, vendor/F-Droid rungs installed directly, everything else opened in its store of record).",
             "id": "apps",
-            "label": "Apps",
+            "label": "Store · apps",
             "apply": "apps",
             "vault": [
               "apps"

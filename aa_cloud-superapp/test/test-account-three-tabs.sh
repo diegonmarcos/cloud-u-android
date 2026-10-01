@@ -34,6 +34,11 @@
 #      matches cloud-vault's schema.json + sources.json when the vault sits beside;
 #      a port of InfoMask.schemaRows gives EVERY declared field a row (filled or
 #      empty) over a synthetic bundle (always) and the real export (when beside).
+#   F2 (#727) NO VAULT SECTION IS DROPPED: the skeleton is EVERY C_A1-configs/<dir>/
+#      sources.json (schema.json's sections, then the STAGED ones — apps, peers — that
+#      #713 missed by reading schema.json alone); Infos draws skeleton ∪ the fetch's
+#      schema ∪ every top-level bundle key; the apps section lists each declared app
+#      (name, package, store, installed here) and links into Store ▸ Phone Apps.
 #   H  (#713) SETUP IS BY APP: the Fleet Setup index renders FIRST, one row per
 #      mapped app, repainted from that app's own section; every cockpit section
 #      declares its applier and the mapping includes keyboard, mail, drive and mesh.
@@ -275,7 +280,7 @@ json.dump({"schema_version": 1,
 PYF
 out=$(mask_leaks "$BJ" "$TMP/fixture.json" "$SECRET_PATHS") && ok "C: the declared rule masks every secret of the synthetic bundle" || bad "C: the declared rule leaks: $(echo $out)"
 VAULT_BUNDLE=""
-for v in "$APP/../../cloud-vault/C_A1-configs/profile-secrets.json" "$APP/../../../cloud-vault/C_A1-configs/profile-secrets.json"; do
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs/profile-secrets.json}" "$APP/../../cloud-vault/C_A1-configs/profile-secrets.json" "$APP/../../../cloud-vault/C_A1-configs/profile-secrets.json"; do
     [ -f "$v" ] && VAULT_BUNDLE="$v" && break
 done
 if [ -n "$VAULT_BUNDLE" ]; then
@@ -476,7 +481,7 @@ schema_code_ok() {   # $1 = InfoMask.kt, $2 = ProfileFragment.kt
     grep -qF 'for (field in section.fields) {' <<<"$sr" || { echo "schemaRows does not walk every declared field"; return 1; }
     grep -qF 'if (unfilled(v)) out += Row(field, "", Kind.EMPTY) else walk(section.id, v, field, out)' <<<"$sr" || { echo "an unfilled field is not an EMPTY row"; return 1; }
     grep -qF 'if (k !in tops) walk(section.id, o.opt(k), k, out)' <<<"$sr" || { echo "keys beyond the schema are dropped"; return 1; }
-    grep -qF 'val schema = InfoMask.schema' <<<"$inf" && grep -qF 'val all = schema + sections.orEmpty()' <<<"$inf" && grep -qF 'for (section in all) {' <<<"$inf" \
+    grep -qF 'val schema = InfoMask.schema' <<<"$inf" && grep -qF 'val all = InfoMask.sectionsFor(schema, sections.orEmpty().map { it.id to it.label }, bundle)' <<<"$inf" && grep -qF 'for (section in all) {' <<<"$inf" \
         || { echo "renderInfos does not iterate the declared schema"; return 1; }
     grep -q 'return$' <<<"$inf" && { echo "renderInfos returns early, before the schema"; return 1; }
     grep -qF 'InfoMask.Kind.EMPTY -> { text = getString(R.string.infos_row_empty)' "$2" || { echo "an EMPTY row is not drawn as empty"; return 1; }
@@ -488,26 +493,31 @@ grep -q 'UI_PROFILE_INFOS_B64' "$APP/app/build.gradle" && grep -qF 'parseSchema(
 out=$(schema_rows_cover "$BJ" "") && ok "F: with nothing fetched, every declared field still draws (as empty) — $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") fields in $(jq '.ui.profile.infos.schema.sections | length' "$BJ") sections" || bad "F: fields without a row: $(echo $out)"
 out=$(schema_rows_cover "$BJ" "$TMP/fixture.json") && ok "F: over the synthetic bundle every declared field draws" || bad "F: fields without a row: $(echo $out)"
 VAULT_DIR=""
-for v in "$APP/../../cloud-vault/C_A1-configs" "$APP/../../../cloud-vault/C_A1-configs"; do [ -f "$v/schema.json" ] && VAULT_DIR="$v" && break; done
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs}" "$APP/../../cloud-vault/C_A1-configs" "$APP/../../../cloud-vault/C_A1-configs"; do [ -f "$v/schema.json" ] && VAULT_DIR="$v" && break; done
 schema_drift() {   # $1 = build.json, $2 = C_A1-configs dir; prints the drift; 1 iff any
     python3 - "$1" "$2" <<'PYD'
 import json, os, sys
 mine = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["schema"]
 d = sys.argv[2]; vs = json.load(open(os.path.join(d, "schema.json")))
 R = {"text", "json", "sops", "files", "tree", "literal", "pending"}
+# #727 EVERY section directory, not only schema.json's list: schema.json's sections in
+# its order, then each C_A1-configs/<dir>/sources.json it does not list yet (STAGED).
+listed = [s["id"] for s in vs["sections"]]
+staged = sorted(x for x in os.listdir(d) if os.path.isfile(os.path.join(d, x, "sources.json")) and x not in listed)
 want = []
-for s in vs["sections"]:
+for s in vs["sections"] + [{"id": x, "label": x.capitalize(), "staged": True} for x in staged]:
     items = json.load(open(os.path.join(d, s["id"], "sources.json")))["items"]; fields = []
     def walk(o, p):
         if isinstance(o, dict) and o.get("kind") in R: fields.append(p); return
         for k, v in o.items():
             if not k.startswith("_"): walk(v, (p + " › " if p else "") + k)
-    walk(items, ""); want.append({"id": s["id"], "label": s.get("label", s["id"]), "fields": fields})
+    walk(items, ""); want.append({"id": s["id"], "label": s.get("label", s["id"]), "fields": fields, "staged": bool(s.get("staged"))})
 bad = []
 if mine.get("schema_version") != vs.get("schema_version"): bad.append("schema_version %s != vault %s" % (mine.get("schema_version"), vs.get("schema_version")))
 if [x["id"] for x in mine["sections"]] != [x["id"] for x in want]: bad.append("sections %s != vault %s" % ([x["id"] for x in mine["sections"]], [x["id"] for x in want]))
 for a, b in zip(mine["sections"], want):
-    if a != b: bad.append("%s: declared %s != vault %s" % (a["id"], a["fields"], b["fields"]))
+    a = {"id": a["id"], "label": a.get("label"), "fields": a.get("fields"), "staged": bool(a.get("staged"))}
+    if a != b: bad.append("%s: declared %s != vault %s" % (a["id"], a, b))
 for x in bad: print(x)
 sys.exit(1 if bad else 0)
 PYD
@@ -516,7 +526,7 @@ if [ -n "$VAULT_DIR" ]; then
     out=$(schema_drift "$BJ" "$VAULT_DIR") && ok "F: the declared skeleton IS cloud-vault's schema.json + sources.json (no drift)" || bad "F: the skeleton drifted from the vault: $out"
     out=$(schema_rows_cover "$BJ" "$VAULT_DIR/profile-secrets.json") && ok "F: over the REAL vault export every declared field draws (paths only, no value printed)" || bad "F: fields without a row in the real export: $(echo $out)"
 else
-    echo "  UNVERIFIABLE: cloud-vault is not checked out beside this repo — the skeleton's drift check did not run (the shape checks above did; InfoMaskTest pins the seven section ids)"
+    echo "  UNVERIFIABLE: cloud-vault is not checked out beside this repo (set CLOUD_VAULT to point at one) — the skeleton's drift check did not run (the shape checks above did; InfoMaskTest pins the nine section ids)"
 fi
 echo "-- F-mutation: a field dropped from the skeleton, a section dropped, fields skipped, an early return, extras dropped --"
 jq '.ui.profile.infos.schema.sections[2].fields |= .[1:]' "$BJ" > "$TMP/f1.json"
@@ -530,12 +540,67 @@ fmut() { sed "$2" "$1" > "$TMP/f.kt"; cmp -s "$1" "$TMP/f.kt" && return 2
 for m in "$IM|s/        for (field in section.fields) {/        for (field in section.fields.take(1)) {/" \
          "$IM|s/            if (unfilled(v)) out += Row(field, \"\", Kind.EMPTY) else walk(section.id, v, field, out)/            if (!unfilled(v)) walk(section.id, v, field, out)/" \
          "$IM|s/if (k !in tops) walk(section.id, o.opt(k), k, out)/if (false) walk(section.id, o.opt(k), k, out)/" \
-         "$PF|s/        val all = schema + sections.orEmpty()/        val all = sections.orEmpty().map { InfoMask.SchemaSection(it.id, it.label, emptyList()) } + sections.orEmpty()/" \
+         "$PF|s/        val all = InfoMask.sectionsFor(schema, sections.orEmpty().map { it.id to it.label }, bundle)/        val all = schema/" \
          "$PF|s/            into.addView(pickButton(ctx, tabLabel(connectTab)) { strip?.getTabAt(connectTab)?.select() })/&\n            return/"; do
     f="${m%%|*}"; e="${m#*|}"
     fmut "$f" "$e"; rc=$?
     case $rc in 0) ok "F-mutation: caught — $(basename "$f"): ${e:0:70}";; 2) bad "F-mutation: did not apply — $(basename "$f"): ${e:0:70}";; *) bad "F-mutation: NOT caught — $(basename "$f"): ${e:0:70}";; esac
 done
+
+# ── F2 · (#727) no vault section dropped; the declared apps listed ─────────
+echo "== F2: every vault section renders in Infos (the staged ones too), and the apps section lists each declared app =="
+union_ok() {   # $1 = InfoMask.kt; prints the first broken rule
+    local sf; sf=$(awk '/fun sectionsFor\(/{f=1} f{print} f&&/^        }$/{exit}' "$1" | codeof)
+    grep -qF 'schema.forEach { out[it.id] = it }' <<<"$sf" || { echo "sectionsFor drops the declared skeleton"; return 1; }
+    grep -qF 'fetched.forEach { (id, label) -> out.getOrPut(id) { SchemaSection(id, label, emptyList()) } }' <<<"$sf" || { echo "sectionsFor drops a section the fetch's schema names"; return 1; }
+    grep -qF 'bundle?.keys()?.forEach { k ->' <<<"$sf" && grep -qF 'out.getOrPut(k) { SchemaSection(k, k, emptyList()) }' <<<"$sf" \
+        || { echo "sectionsFor drops a top-level key the bundle carries"; return 1; }
+    grep -qF 'return out.values.toList()' <<<"$sf" || { echo "sectionsFor does not return what it gathered"; return 1; }
+    return 0
+}
+apps_ok() {   # $1 = ProfileFragment.kt, $2 = build.json; prints the first broken rule
+    local inf al route; inf=$(fnof "$1" renderInfos | codeof); al=$(fnof "$1" renderAppList | codeof)
+    grep -qF 'if (section.render == "apps") renderAppList(ctx, card.body, bundle, section.route)' <<<"$inf" || { echo "Infos does not draw the declared app list"; return 1; }
+    grep -qF 'VaultCockpit.appsListed(bundle, id, fleet)' <<<"$al" || { echo "the list is not the vault's declared apps"; return 1; }
+    grep -qF 'pm.getPackageInfo(a.pkg, 0)' <<<"$al" || { echo "installed-on-this-phone is not measured"; return 1; }
+    grep -qF 'a.label, a.pkg, VaultCockpit.storeLabel(sources, a)' <<<"$al" || { echo "a row lacks its name, package or store"; return 1; }
+    grep -qF 'openWizardRoute(route)' <<<"$al" || { echo "the list does not link into the Store"; return 1; }
+    route=$(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first // ""' "$2")
+    [ -n "$route" ] || { echo "no schema section declares the apps list"; return 1; }
+    jq -e --arg p "${route#page:config/}" '[.. | objects | select(.id? == $p)] | length > 0' "$2" >/dev/null || { echo "route $route names no declared page"; return 1; }
+    return 0
+}
+msg=$(union_ok "$IM") && ok "F2: Infos draws the skeleton ∪ the fetch's schema ∪ every top-level bundle key — no section is dropped" || bad "F2: $msg"
+msg=$(apps_ok "$PF" "$BJ") && ok "F2: the apps section lists every declared app (name · package · store · installed here) and links to $(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first' "$BJ")" || bad "F2: $msg"
+for need in apps peers; do
+    jq -e --arg i "$need" '.ui.profile.infos.schema.sections[] | select(.id == $i and .staged == true and (.fields | length > 0))' "$BJ" >/dev/null \
+        && ok "F2: the staged vault section '$need' is in the skeleton" || bad "F2: the staged vault section '$need' is missing from the skeleton"
+done
+echo "-- F2-mutation: a source of sections dropped, the app list unwired, a staged section dropped --"
+for e in 's/            bundle?.keys()?.forEach { k ->/            emptyList<String>().forEach { k ->/' \
+         's/            fetched.forEach { (id, label) -> out.getOrPut(id) { SchemaSection(id, label, emptyList()) } }/            Unit/' \
+         's/            schema.forEach { out\[it.id\] = it }/            Unit/'; do
+    sed "$e" "$IM" > "$TMP/u.kt"
+    if cmp -s "$IM" "$TMP/u.kt"; then bad "F2-mutation: did not apply — ${e:0:70}"
+    else union_ok "$TMP/u.kt" >/dev/null && bad "F2-mutation: NOT caught — ${e:0:70}" || ok "F2-mutation: caught — ${e:0:70}"; fi
+done
+for e in 's/            if (section.render == "apps") renderAppList(ctx, card.body, bundle, section.route)/            Unit/' \
+         's/a.label, a.pkg, VaultCockpit.storeLabel(sources, a)/a.pkg, a.pkg, a.pkg/' \
+         's/val here = apps.map { a -> runCatching { pm.getPackageInfo(a.pkg, 0) }.isSuccess }/val here = apps.map { true }/'; do
+    sed "$e" "$PF" > "$TMP/a.kt"
+    if cmp -s "$PF" "$TMP/a.kt"; then bad "F2-mutation: did not apply — ${e:0:70}"
+    else apps_ok "$TMP/a.kt" "$BJ" >/dev/null && bad "F2-mutation: NOT caught — ${e:0:70}" || ok "F2-mutation: caught — ${e:0:70}"; fi
+done
+for jm in '(.ui.profile.infos.schema.sections[] | select(.id == "apps")) |= del(.render)' \
+          '(.ui.profile.infos.schema.sections[] | select(.id == "apps")) .route = "page:config/no-such-page"'; do
+    jq "$jm" "$BJ" > "$TMP/a.json"
+    if cmp -s "$BJ" "$TMP/a.json"; then bad "F2-mutation: did not apply — $jm"
+    else apps_ok "$PF" "$TMP/a.json" >/dev/null && bad "F2-mutation: NOT caught — $jm" || ok "F2-mutation: caught — $jm"; fi
+done
+jq '.ui.profile.infos.schema.sections |= map(select(.id != "apps"))' "$BJ" > "$TMP/s.json"
+if cmp -s "$BJ" "$TMP/s.json"; then bad "F2-mutation: the staged-section drop did not apply"
+elif [ -n "$VAULT_DIR" ]; then schema_drift "$TMP/s.json" "$VAULT_DIR" >/dev/null && bad "F2-mutation: the apps section dropped (the #713 miss) was NOT caught by the drift check" || ok "F2-mutation: the apps section dropped from the skeleton (the #713 miss) → drift RED"
+else echo "  UNVERIFIABLE: F2-mutation staged-section drop needs cloud-vault beside (InfoMaskTest pins the ids in CI)"; fi
 
 # ── H · Setup: the index first, then app by app ────────────────────────────
 echo "== H: Setup opens on the Fleet Setup index (one row per mapped app), then one section per app =="
@@ -552,10 +617,15 @@ index_ok() {   # $1 = ProfileFragment.kt, $2 = build.json; prints the first brok
     grep -qF 'renderWizard(ctx, into)' <<<"$(fnof "$1" renderSetup)" || { echo "the setup steps are gone"; return 1; }
     local missing; missing=$(jq -r '[.ui.vault_connect.cockpit.sections[] | select((.apply // "") == "") | .id] | join(",")' "$2")
     [ -z "$missing" ] || { echo "cockpit section(s) $missing declare no applier"; return 1; }
-    for need in keyboard mail drive mesh; do
+    for need in keyboard mail drive mesh apps; do
         jq -e --arg a "$need" '.ui.vault_connect.cockpit.sections[] | select(.apply == $a and (.vault | length > 0))' "$2" >/dev/null \
             || { echo "no app section applies $need"; return 1; }
     done
+    jq -e '.ui.vault_connect.cockpit.sections[] | select(.apply == "apps") | .label | test("Store")' "$2" >/dev/null \
+        || { echo "the apps row of the index does not read as the Store"; return 1; }
+    local ra; ra=$(fnof "$1" renderApps | codeof)
+    grep -qF 'com.diegonmarcos.superapp.appstore.AppInventory.plan(' <<<"$ra" && grep -qF 'com.diegonmarcos.superapp.appstore.StoreImport.show(this, plan)' <<<"$ra" \
+        || { echo "the Store / apps row does not hand the missing apps to the Store's import plan"; return 1; }
     return 0
 }
 msg=$(index_ok "$PF" "$BJ") && ok "H: the index is Setup's first table, a row per mapped app ($(jq -r '[.ui.vault_connect.cockpit.sections[].id] | join(", ")' "$BJ")), painted from each section" || bad "H: $msg"
@@ -567,13 +637,16 @@ echo "-- H-mutation: the index moved below the sections, a row not repainted, an
 hm() { sed "$1" "$PF" > "$TMP/h.kt"; cmp -s "$PF" "$TMP/h.kt" && return 2; ! index_ok "$TMP/h.kt" "$BJ" >/dev/null; }
 for e in 's/^        renderFleetIndex(ctx, into)$/        renderConfigApply(ctx, into)\n        renderFleetIndex(ctx, into)/' \
          's/        indexRows\[card.tag\]?.apply {/        indexRows["none"]?.apply {/' \
-         's/            indexCards\[section.id\] = card/            Unit/'; do
+         's/            indexCards\[section.id\] = card/            Unit/' \
+         's/if (isAdded) com.diegonmarcos.superapp.appstore.StoreImport.show(this, plan)/if (isAdded) Unit/'; do
     hm "$e"; rc=$?
     case $rc in 0) ok "H-mutation: caught — ${e:0:80}";; 2) bad "H-mutation: did not apply — ${e:0:80}";; *) bad "H-mutation: NOT caught — ${e:0:80}";; esac
 done
 for jm in '(.ui.vault_connect.cockpit.sections[] | select(.id == "drive")) |= del(.apply)' \
           '.ui.vault_connect.cockpit.sections |= map(select(.id != "keyboard"))' \
-          '.ui.vault_connect.cockpit.sections |= map(select(.id != "mail"))'; do
+          '.ui.vault_connect.cockpit.sections |= map(select(.id != "mail"))' \
+          '.ui.vault_connect.cockpit.sections |= map(select(.id != "apps"))' \
+          '(.ui.vault_connect.cockpit.sections[] | select(.id == "apps")) .label = "Apps"'; do
     jq "$jm" "$BJ" > "$TMP/h.json"
     if cmp -s "$BJ" "$TMP/h.json"; then bad "H-mutation: did not apply — $jm"
     else index_ok "$PF" "$TMP/h.json" >/dev/null && bad "H-mutation: NOT caught — $jm" || ok "H-mutation: caught — $jm"; fi

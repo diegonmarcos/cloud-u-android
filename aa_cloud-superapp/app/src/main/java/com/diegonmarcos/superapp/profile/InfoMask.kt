@@ -49,8 +49,10 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
         return out
     }
 
-    /** #713 One section of the schema the vault JSON fills (build.json::ui.profile.infos.schema). */
-    data class SchemaSection(val id: String, val label: String, val fields: List<String>)
+    /** #713 One section of the schema the vault JSON fills (build.json::ui.profile.infos.schema).
+     *  #727 [render] `apps` also lists the section's declared apps; [route] is the page it links to. */
+    data class SchemaSection(val id: String, val label: String, val fields: List<String>,
+                             val render: String = "", val route: String = "")
 
     /**
      * #713 EVERY declared field of [section], in declared order — its own rows,
@@ -114,8 +116,26 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
                 val id = s.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val f = s.optJSONArray("fields") ?: JSONArray()
                 SchemaSection(id, s.optString("label").ifBlank { id },
-                    (0 until f.length()).map { f.optString(it) }.filter { it.isNotBlank() })
+                    (0 until f.length()).map { f.optString(it) }.filter { it.isNotBlank() },
+                    s.optString("render"), s.optString("route"))
             }
+        }
+
+        /**
+         * #727 EVERY section Infos draws, none dropped: the declared [schema] in its
+         * order, then any section the fetch's own schema names ([fetched], id to
+         * label), then any top-level key [bundle] carries that neither names —
+         * `_…` bookkeeping and `schema_version` aside. A section the vault adds
+         * before this build learns it is still a card.
+         */
+        fun sectionsFor(schema: List<SchemaSection>, fetched: List<Pair<String, String>>, bundle: JSONObject?): List<SchemaSection> {
+            val out = LinkedHashMap<String, SchemaSection>()
+            schema.forEach { out[it.id] = it }
+            fetched.forEach { (id, label) -> out.getOrPut(id) { SchemaSection(id, label, emptyList()) } }
+            bundle?.keys()?.forEach { k ->
+                if (!k.startsWith("_") && k != "schema_version") out.getOrPut(k) { SchemaSection(k, k, emptyList()) }
+            }
+            return out.values.toList()
         }
 
         private val baked: JSONObject? by lazy {

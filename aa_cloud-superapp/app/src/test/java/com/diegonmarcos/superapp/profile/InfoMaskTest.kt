@@ -109,9 +109,9 @@ class InfoMaskTest {
         assertTrue(InfoMask.parse(null).maskAll)
     }
 
-    @Test fun `#713 the baked schema is the vault's seven sections, and every declared field is a row, filled or empty`() {
+    @Test fun `#713 the baked schema is the vault's sections - schema json's seven, then the staged apps and peers - and every declared field is a row, filled or empty`() {
         val schema = InfoMask.schema
-        assertEquals(listOf("mesh", "mail", "ai", "git", "about", "autocomplete", "electronics"), schema.map { it.id })
+        assertEquals(listOf("mesh", "mail", "ai", "git", "about", "autocomplete", "electronics", "apps", "peers"), schema.map { it.id })
         val b = bundle()
         for (s in schema) {
             val rows = InfoMask.declared.schemaRows(s, b.opt(s.id))
@@ -129,5 +129,18 @@ class InfoMaskTest {
         // The mask still holds on a declared field: the GitHub token is a length, never its text.
         val git = InfoMask.declared.schemaRows(schema.first { it.id == "git" }, b.opt("git"))
         assertTrue(git.any { it.path == "github_token" && it.kind == InfoMask.Kind.MASKED && it.text.isEmpty() })
+    }
+
+    @Test fun `#727 no section is dropped - the skeleton, then the fetch's own schema, then every key the bundle carries`() {
+        val schema = listOf(InfoMask.SchemaSection("a", "A", listOf("f")))
+        val b = JSONObject().put("a", 1).put("c", JSONObject()).put("_generated", 1).put("schema_version", 1)
+        val got = InfoMask.sectionsFor(schema, listOf("b" to "B", "a" to "dup"), b)
+        assertEquals(listOf("a", "b", "c"), got.map { it.id })
+        assertEquals("A", got[0].label)
+        assertEquals(listOf("a", "c"), InfoMask.sectionsFor(schema, emptyList(), b).map { it.id })
+        // The staged apps section lists its declared apps and links into the Store.
+        val apps = InfoMask.schema.first { it.id == "apps" }
+        assertEquals("apps", apps.render)
+        assertTrue(apps.route.startsWith("page:"))
     }
 }

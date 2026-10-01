@@ -522,8 +522,12 @@ object VaultCockpit {
      * `package` (the fleet manifest referenced from the vault). Pending markers
      * contribute nothing. `ours` is THIS build's fleet, as in the import.
      */
-    fun appsDeclared(bundle: JSONObject, device: Device, fleet: Set<String>): List<AppInventory.Entry> {
-        val mine = bundle.optJSONObject("apps")?.optJSONObject("devices")?.opt(device.id) ?: return emptyList()
+    fun appsDeclared(bundle: JSONObject, device: Device, fleet: Set<String>): List<AppInventory.Entry> =
+        appsDeclared(bundle, device.id, fleet)
+
+    /** The same set by the vault's own device key (`apps.devices.<id>`). */
+    fun appsDeclared(bundle: JSONObject, deviceId: String, fleet: Set<String>): List<AppInventory.Entry> {
+        val mine = bundle.optJSONObject("apps")?.optJSONObject("devices")?.opt(deviceId) ?: return emptyList()
         val out = mutableListOf<AppInventory.Entry>()
         fun walk(v: Any?) {
             when {
@@ -541,6 +545,42 @@ object VaultCockpit {
         }
         walk(mine)
         return out.distinctBy { it.pkg }.sortedBy { it.pkg }
+    }
+
+    /** #727 One declared app as Infos lists it: its name, its package, and the
+     *  installer of record the vault's file names (null = none recorded). */
+    data class DeclaredApp(val pkg: String, val label: String, val store: String?, val ours: Boolean)
+
+    /**
+     * #727 [appsDeclared] for [deviceId], each with a NAME: the `label` (or
+     * `name`) the vault's own file gives the package — the phone export's
+     * label, the fleet manifest's — else the package id itself. Nothing typed here.
+     */
+    fun appsListed(bundle: JSONObject, deviceId: String, fleet: Set<String>): List<DeclaredApp> {
+        val names = HashMap<String, String>()
+        fun walk(v: Any?) {
+            when (v) {
+                is JSONObject -> {
+                    val pkg = v.optString("package")
+                    val name = (v.opt("label") as? String).orEmpty().ifBlank { (v.opt("name") as? String).orEmpty() }
+                    if (pkg.isNotBlank() && name.isNotBlank()) names.putIfAbsent(pkg, name)
+                    v.keys().forEach { walk(v.opt(it)) }
+                }
+                is JSONArray -> (0 until v.length()).forEach { walk(v.opt(it)) }
+            }
+        }
+        walk(bundle.optJSONObject("apps")?.optJSONObject("devices")?.opt(deviceId))
+        return appsDeclared(bundle, deviceId, fleet).map {
+            DeclaredApp(it.pkg, names[it.pkg] ?: it.pkg, it.origin, it.ours || it.pkg in fleet)
+        }
+    }
+
+    /** #727 The store an app came from, named through the ONE install-source map
+     *  (libs:appstore appstore-install-sources.json): ours → its `ours` label, a
+     *  declared store → that store's label, else the installer package as recorded. */
+    fun storeLabel(sources: JSONObject, app: DeclaredApp): String? = when {
+        app.ours -> sources.optJSONObject("ours")?.optString("label")?.ifBlank { null } ?: app.store
+        else -> app.store?.let { sources.optJSONObject("sources")?.optJSONObject(it)?.optString("label")?.ifBlank { null } ?: it }
     }
 
     /** Sections the cockpit consumed; the rest of the bundle is shown raw. */

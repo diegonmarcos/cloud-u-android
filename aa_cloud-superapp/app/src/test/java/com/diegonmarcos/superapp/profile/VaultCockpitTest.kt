@@ -149,6 +149,21 @@ class VaultCockpitTest {
         assertTrue(VaultCockpit.appsDeclared(b, VaultCockpit.devices(b).first { it.id == "surface" }, fleet).isEmpty())
     }
 
+    @Test fun `#727 the Infos app list names each declared app from the vault's own file and its store through the one map`() {
+        val b = bundle()
+        val fleet = setOf("com.x.a")
+        val got = VaultCockpit.appsListed(b, "galaxy", fleet).associateBy { it.pkg }
+        assertEquals(VaultCockpit.appsDeclared(b, "galaxy", fleet).map { it.pkg }, got.keys.toList())
+        assertEquals("A", got.getValue("com.x.a").label)
+        assertEquals("com.x.b", got.getValue("com.x.b").label)
+        val sources = JSONObject("""{"ours":{"label":"Cloud"},"sources":{"com.android.vending":{"label":"Play"}}}""")
+        assertEquals("Cloud", VaultCockpit.storeLabel(sources, got.getValue("com.x.a")))
+        assertEquals("Play", VaultCockpit.storeLabel(sources, VaultCockpit.DeclaredApp("p", "P", "com.android.vending", false)))
+        assertEquals("org.unknown", VaultCockpit.storeLabel(sources, VaultCockpit.DeclaredApp("p", "P", "org.unknown", false)))
+        assertNull(VaultCockpit.storeLabel(sources, got.getValue("com.y.c")))
+        assertTrue(VaultCockpit.appsListed(b, "surface", fleet).isEmpty())
+    }
+
     @Test fun `keyboard rows show a pending list as pending and an exported one by size`() {
         val rows = VaultCockpit.keyboardRows(bundle(), "kb").associateBy { it.label }
         assertEquals(VaultCockpit.State.PENDING, rows.getValue("personal_data").state)

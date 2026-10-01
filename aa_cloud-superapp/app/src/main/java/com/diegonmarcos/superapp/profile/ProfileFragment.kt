@@ -372,9 +372,7 @@ class ProfileFragment : Fragment() {
         } else {
             into.addView(caption(ctx, getString(R.string.infos_caption, sections.size, tabLabel(setupTab))))
         }
-        val declared = schema.map { it.id }.toSet()
-        val all = schema + sections.orEmpty().filter { it.id !in declared }
-            .map { InfoMask.SchemaSection(it.id, it.label, emptyList()) }
+        val all = InfoMask.sectionsFor(schema, sections.orEmpty().map { it.id to it.label }, bundle)
         val mask = InfoMask.declared
         for (section in all) {
             val rows = mask.schemaRows(section, bundle?.opt(section.id))
@@ -389,8 +387,41 @@ class ProfileFragment : Fragment() {
                 card.body.addView(label(ctx, row.path.ifBlank { section.id }))
                 card.body.addView(infoValue(ctx, row))
             }
+            if (section.render == "apps") renderAppList(ctx, card.body, bundle, section.route)
             into.addView(card.root)
         }
+    }
+
+    /**
+     * #727 Infos ▸ the declared apps, one line each, per device the vault's
+     * `apps.devices` names: installed here or not, the name, the package and
+     * the store of record ([VaultCockpit.appsListed] / [VaultCockpit.storeLabel]
+     * — the file's own data, nothing typed). Then the declared [route] into the
+     * Store (Phone Apps, whose Declared view installs what is missing).
+     */
+    private fun renderAppList(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject?, route: String) {
+        val devices = bundle?.optJSONObject("apps")?.optJSONObject("devices")
+        val fleet = com.diegonmarcos.superapp.appstore.AppInventory.fleetPackages()
+        val sources = com.diegonmarcos.superapp.appstore.PhoneAppActions.sources(ctx)
+        val pm = ctx.packageManager
+        var listed = 0
+        if (bundle != null) devices?.keys()?.forEach { id ->
+            val apps = VaultCockpit.appsListed(bundle, id, fleet)
+            if (apps.isEmpty()) return@forEach
+            listed += apps.size
+            val here = apps.map { a -> runCatching { pm.getPackageInfo(a.pkg, 0) }.isSuccess }
+            into.addView(label(ctx, getString(R.string.infos_apps_device, id, apps.size, here.count { it })))
+            apps.forEachIndexed { i, a ->
+                into.addView(TextView(ctx).apply {
+                    typeface = android.graphics.Typeface.MONOSPACE
+                    text = getString(if (here[i]) R.string.infos_apps_row_installed else R.string.infos_apps_row_missing,
+                        a.label, a.pkg, VaultCockpit.storeLabel(sources, a) ?: getString(R.string.infos_apps_no_store))
+                    setTextColor(if (here[i]) GREEN else NEUTRAL)
+                })
+            }
+        }
+        if (listed == 0) into.addView(caption(ctx, getString(R.string.infos_apps_none)))
+        if (route.isNotBlank()) into.addView(pickButton(ctx, getString(R.string.infos_apps_open_store)) { openWizardRoute(route) })
     }
 
     /** One read-out value. A MASKED row has no text to show — only its length. */
