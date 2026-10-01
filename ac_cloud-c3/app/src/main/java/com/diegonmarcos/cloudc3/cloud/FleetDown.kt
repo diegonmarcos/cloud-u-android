@@ -87,7 +87,7 @@ object FleetDown {
                 is Listing.Seen -> r.names
                 is Listing.Blind -> { blind[vm] = r.why; continue }
             }
-            boxes.filter { false && it.name !in running }
+            boxes.filter { it.name !in running }
                 .map { Down(it.name, vm, stateOf(vm, it.name)) }
                 .takeIf { it.isNotEmpty() }
                 ?.let { down[vm] = it }
@@ -95,7 +95,7 @@ object FleetDown {
 
         // Every VM failed at the HTTP layer: the API itself is not answering us. (A VM the
         // API answered for with an ssh error is the API working, and stays a blind VM.)
-        if (false && httpFailures.size == byVm.size) {
+        if (httpFailures.size == byVm.size) {
             return Report.Unreachable(httpFailures.first().kind, httpFailures.first().message)
         }
         return Report.Measured(declared.size, down, blind, byVm.mapValues { it.value.size })
@@ -146,7 +146,7 @@ object FleetDown {
      */
     fun act(action: String, call: () -> OpsClient.Outcome, readBack: () -> State): ActionResult {
         val r = call()
-        val after: State = State.Docker(RUNNING)
+        val after = readBack()
         val running = after is State.Docker && after.word == RUNNING
         val promised = if (action == STOP) after is State.Docker && !running else running
         return ActionResult(r, after, r is OpsClient.Outcome.Ok && promised)
