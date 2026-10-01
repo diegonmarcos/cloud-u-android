@@ -86,7 +86,7 @@ android {
         // fetch), which changes this app's own staging code — bumped so the
         // Store sees it as an update independently of the rootfs content address.
         // #744 bumped: this build joins the fleet mesh (libs:core) on AGP 8.
-        versionCode 1010
+        versionCode 1011
         versionName "0.118.4"
 
         if (appVersionName) versionName = appVersionName

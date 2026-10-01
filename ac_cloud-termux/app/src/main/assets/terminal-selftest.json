@@ -1,0 +1,13 @@
+{
+  "_doc": "#747 what GET /api/terminal/selftest runs (TerminalDebugApi), each as its own /api/terminal/exec: a fresh login session's shell, with its exit code, stdout and stderr reported per check. The tool checks prove the baked toolset answers from a session nobody opened; the storage checks prove the login linked ~/emulated and ~/cloud-drive-shared-store and left no upstream ~/storage tree beside them (#736). Both terminals carry this same list, cloud-termux and cloud-nix-on-droid: keep them equal.",
+  "checks": [
+    "claude --version",
+    "node --version",
+    "gh --version",
+    "git --version",
+    "zsh --version",
+    "ls ~/emulated | head",
+    "ls ~/cloud-drive-shared-store/git | head",
+    "test ! -e ~/storage"
+  ]
+}

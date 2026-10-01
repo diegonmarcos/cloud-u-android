@@ -1,6 +1,7 @@
 package com.termux.cloud;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -75,93 +76,8 @@ public class CloudExecService extends Service {
 
         @Override
         public Bundle exec(String executable, String[] args, String stdin, String workdir, int timeoutMs) {
-            Bundle out = new Bundle();
-            if (executable == null || executable.isEmpty()) {
-                out.putString("error", "no executable");
-                out.putInt("exit", -1);
-                return out;
-            }
-
             int timeout = timeoutMs <= 0 ? DEFAULT_TIMEOUT_MS : Math.min(timeoutMs, MAX_TIMEOUT_MS);
-            String cwd = (workdir == null || workdir.isEmpty())
-                ? TermuxConstants.TERMUX_HOME_DIR_PATH : workdir;
-
-            TermuxShellEnvironmentClient env = new TermuxShellEnvironmentClient();
-            String[] environment = env.buildEnvironment(CloudExecService.this, false, cwd);
-            String[] argv = env.setupProcessArgs(executable, args == null ? new String[0] : args);
-
-            Process process;
-            try {
-                process = Runtime.getRuntime().exec(argv, environment, new File(cwd));
-            } catch (IOException e) {
-                out.putString("error", "could not start " + executable + ": " + e.getMessage());
-                out.putInt("exit", -1);
-                return out;
-            }
-
-            // stdin first and closed straight after: a command reading from a
-            // pipe that is never closed waits for input that is never coming,
-            // and then the timeout below is the only thing that ends it.
-            try (OutputStream os = process.getOutputStream()) {
-                if (stdin != null && !stdin.isEmpty()) os.write(stdin.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException ignored) {
-                // A command that exits before reading its input is normal —
-                // `head -1` does it — and is not a failure of this call.
-            }
-
-            // Both streams drained concurrently. A single-threaded reader
-            // deadlocks the moment the command fills the other pipe's buffer,
-            // which for stderr is 64KB and one verbose build away.
-            Drain sout = new Drain(process.getInputStream());
-            Drain serr = new Drain(process.getErrorStream());
-            sout.start();
-            serr.start();
-
-            // A killer thread rather than Process.waitFor(timeout, unit):
-            // that overload is API 26 and this app supports 24, where it is
-            // not a compile error but a NoSuchMethodError on the first slow
-            // command — the worst place to find an API gate.
-            final Process p = process;
-            final boolean[] killed = {false};
-            Thread killer = new Thread(() -> {
-                try {
-                    Thread.sleep(timeout);
-                    killed[0] = true;
-                    p.destroy();
-                } catch (InterruptedException ignored) {
-                    // Normal exit: the command finished and we cancelled this.
-                }
-            });
-            killer.setDaemon(true);
-            killer.start();
-
-            boolean finished;
-            try {
-                process.waitFor();
-                finished = !killed[0];
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                finished = false;
-            } finally {
-                killer.interrupt();
-            }
-
-            if (!finished) {
-                process.destroy();
-                out.putString("error", executable + " did not finish within " + timeout + "ms");
-            }
-
-            // Joined after the process is done or killed, so the readers see
-            // EOF and stop; without this the output is whatever happened to
-            // have arrived when we looked.
-            sout.finish();
-            serr.finish();
-
-            out.putString("stdout", sout.text());
-            out.putString("stderr", serr.text());
-            out.putInt("exit", finished ? process.exitValue() : -1);
-            if (sout.truncated || serr.truncated) out.putBoolean("truncated", true);
-            return out;
+            return run(CloudExecService.this, executable, args, stdin, workdir, timeout);
         }
 
         @Override
@@ -178,6 +94,102 @@ public class CloudExecService extends Service {
             return getApplicationInfo().nativeLibraryDir;
         }
     };
+
+    /**
+     * The one runner in this app: the bound service above and the fleet debug
+     * API's /api/terminal/exec (#747, TerminalDebugApi) both call it, so a
+     * command behaves the same whichever door it came through. The caller
+     * chooses the timeout; this applies it as given.
+     */
+    public static Bundle run(Context context, String executable, String[] args, String stdin, String workdir, int timeout) {
+        Bundle out = new Bundle();
+        if (executable == null || executable.isEmpty()) {
+            out.putString("error", "no executable");
+            out.putInt("exit", -1);
+            return out;
+        }
+
+        String cwd = (workdir == null || workdir.isEmpty())
+            ? TermuxConstants.TERMUX_HOME_DIR_PATH : workdir;
+
+        TermuxShellEnvironmentClient env = new TermuxShellEnvironmentClient();
+        String[] environment = env.buildEnvironment(context, false, cwd);
+        String[] argv = env.setupProcessArgs(executable, args == null ? new String[0] : args);
+
+        Process process;
+        try {
+            process = Runtime.getRuntime().exec(argv, environment, new File(cwd));
+        } catch (IOException e) {
+            out.putString("error", "could not start " + executable + ": " + e.getMessage());
+            out.putInt("exit", -1);
+            return out;
+        }
+
+        // stdin first and closed straight after: a command reading from a
+        // pipe that is never closed waits for input that is never coming,
+        // and then the timeout below is the only thing that ends it.
+        try (OutputStream os = process.getOutputStream()) {
+            if (stdin != null && !stdin.isEmpty()) os.write(stdin.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException ignored) {
+            // A command that exits before reading its input is normal —
+            // `head -1` does it — and is not a failure of this call.
+        }
+
+        // Both streams drained concurrently. A single-threaded reader
+        // deadlocks the moment the command fills the other pipe's buffer,
+        // which for stderr is 64KB and one verbose build away.
+        Drain sout = new Drain(process.getInputStream());
+        Drain serr = new Drain(process.getErrorStream());
+        sout.start();
+        serr.start();
+
+        // A killer thread rather than Process.waitFor(timeout, unit):
+        // that overload is API 26 and this app supports 24, where it is
+        // not a compile error but a NoSuchMethodError on the first slow
+        // command — the worst place to find an API gate.
+        final Process p = process;
+        final boolean[] killed = {false};
+        Thread killer = new Thread(() -> {
+            try {
+                Thread.sleep(timeout);
+                killed[0] = true;
+                p.destroy();
+            } catch (InterruptedException ignored) {
+                // Normal exit: the command finished and we cancelled this.
+            }
+        });
+        killer.setDaemon(true);
+        killer.start();
+
+        boolean finished;
+        try {
+            process.waitFor();
+            finished = !killed[0];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            finished = false;
+        } finally {
+            killer.interrupt();
+        }
+
+        if (!finished) {
+            process.destroy();
+            out.putString("error", executable + " did not finish within " + timeout + "ms");
+            out.putBoolean("timed_out", true);
+        }
+
+        // Joined after the process is done or killed, so the readers see
+        // EOF and stop; without this the output is whatever happened to
+        // have arrived when we looked.
+        sout.finish();
+        serr.finish();
+
+        out.putString("stdout", sout.text());
+        out.putString("stderr", serr.text());
+        out.putInt("exit", finished ? process.exitValue() : -1);
+        if (sout.truncated || serr.truncated) out.putBoolean("truncated", true);
+        return out;
+    }
 
     /** One stream, read to EOF on its own thread, capped. */
     private static final class Drain extends Thread {

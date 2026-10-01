@@ -134,21 +134,21 @@ final class TermuxInstaller {
      * that APK goes through here, and there is no path that reaches its bytes
      * without having passed this check.
      */
-    private static String trustedLibSourceDir(Activity activity) throws LibMissing, IOException {
+    private static String trustedLibSourceDir(Context context) throws LibMissing, IOException {
         String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
         String sourceDir;
         try {
-            sourceDir = activity.getPackageManager().getApplicationInfo(libPackage, 0).sourceDir;
+            sourceDir = context.getPackageManager().getApplicationInfo(libPackage, 0).sourceDir;
         } catch (PackageManager.NameNotFoundException e) {
             throw new LibMissing("cloud-lib-rootfs-nixdroid (" + libPackage + ") is not installed. "
                 + "Install it from the Store's Cloud tab to get a terminal here.");
         }
         @SuppressWarnings("deprecation")
-        boolean sameSignature = activity.getPackageManager()
-            .checkSignatures(activity.getPackageName(), libPackage) == PackageManager.SIGNATURE_MATCH;
+        boolean sameSignature = context.getPackageManager()
+            .checkSignatures(context.getPackageName(), libPackage) == PackageManager.SIGNATURE_MATCH;
         if (!sameSignature)
             throw new IOException(libPackage + " is installed but signed with a different key than "
-                + activity.getPackageName() + " -- refusing to extract executables from an untrusted APK");
+                + context.getPackageName() + " -- refusing to extract executables from an untrusted APK");
         return sourceDir;
     }
 
@@ -159,9 +159,9 @@ final class TermuxInstaller {
      * payload -- safe to call from the UI thread to decide whether a
      * re-extraction is needed before showing any progress dialog.
      */
-    private static LibBootstrapManifest readLibManifest(Activity activity) throws LibMissing, IOException {
+    private static LibBootstrapManifest readLibManifest(Context context) throws LibMissing, IOException {
         String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
-        String sourceDir = trustedLibSourceDir(activity);
+        String sourceDir = trustedLibSourceDir(context);
 
         try (ZipFile lib = new ZipFile(sourceDir)) {
             ZipEntry entry = lib.getEntry(LIB_MANIFEST_ENTRY);
@@ -192,7 +192,7 @@ final class TermuxInstaller {
      * already hashes correctly is reused rather than re-extracted, exactly as
      * {@code fetchBootstrap} used to reuse a cached download.
      */
-    private static File openBootstrapFromLib(Activity activity, LibBootstrapManifest manifest) throws LibMissing, IOException {
+    private static File openBootstrapFromLib(Context context, LibBootstrapManifest manifest) throws LibMissing, IOException {
         // want -- the digest the lib's OWN manifest declares. Named the same as
         // #618's fetchBootstrap named its baked digest, so the comparison below
         // reads as the same guarantee moved to a different source: the bytes
@@ -210,7 +210,7 @@ final class TermuxInstaller {
         // relying on readLibManifest having run first — a door that is closed
         // only by call order, which is the kind of guarantee that survives
         // exactly until somebody adds a caller.
-        String sourceDir = trustedLibSourceDir(activity);
+        String sourceDir = trustedLibSourceDir(context);
 
         File part = new File(EXTRACTED_BOOTSTRAP_FILE.getAbsolutePath() + ".part");
         //noinspection ResultOfMethodCallIgnored
@@ -392,155 +392,17 @@ final class TermuxInstaller {
             @Override
             public void run() {
                 try {
-                    Logger.logInfo(LOG_TAG, "Installing " + TermuxConstants.TERMUX_APP_NAME + " bootstrap packages.");
-
-                    Error error;
-
-                    // Delete prefix staging directory or any file at its destination
-                    error = FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
+                    synchronized (INSTALL_LOCK) {
+                        // #747: the debug API may have installed this version while the activity waited.
+                        if (!isBootstrapCurrent(libManifest)) installBootstrap(activity, libManifest);
                     }
-
-                    // Delete prefix directory or any file at its destination
-                    error = FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
-                    }
-
-                    // Create prefix staging directory if it does not already exist and set required permissions
-                    error = TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
-                    }
-
-                    // Create prefix directory if it does not already exist and set required permissions
-                    error = TermuxFileUtils.isTermuxPrefixDirectoryAccessible(true, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
-                    }
-
-                    // #628 -- the zip is extracted (once) out of the installed
-                    // rootfs-nixdroid lib instead of fetched over HTTP, and
-                    // refused unless it hashes to the sha256 the lib's own
-                    // manifest declares. Everything after this line is
-                    // unchanged: what is extracted is the same verified
-                    // archive as before, just read from a different place.
-                    final File bootstrapZip = openBootstrapFromLib(activity, libManifest);
-
-                    Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
-
-                    final byte[] buffer = new byte[8096];
-                    final List<Pair<String, String>> symlinks = new ArrayList<>(50);
-                    final List<String> executables = new ArrayList<>(128);
-
-                    try (ZipInputStream zipInput = new ZipInputStream(new FileInputStream(bootstrapZip))) {
-                        ZipEntry zipEntry;
-                        while ((zipEntry = zipInput.getNextEntry()) != null) {
-                            if (zipEntry.getName().equals("SYMLINKS.txt")) {
-                                BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
-                                String line;
-                                while ((line = symlinksReader.readLine()) != null) {
-                                    String[] parts = line.split("←");
-                                    if (parts.length != 2)
-                                        throw new RuntimeException("Malformed symlink line: " + line);
-                                    String oldPath = parts[0];
-                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
-                                    symlinks.add(Pair.create(oldPath, newPath));
-
-                                    error = ensureDirectoryExists(new File(newPath).getParentFile());
-                                    if (error != null) {
-                                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                        return;
-                                    }
-                                }
-                            } else if (zipEntry.getName().equals("EXECUTABLES.txt")) {
-                                BufferedReader executablesReader = new BufferedReader(new InputStreamReader(zipInput));
-                                String line;
-                                while ((line = executablesReader.readLine()) != null) {
-                                    executables.add(line);
-                                }
-                            } else {
-                                String zipEntryName = zipEntry.getName();
-                                File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
-                                boolean isDirectory = zipEntry.isDirectory();
-
-                                error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
-                                if (error != null) {
-                                    showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                    return;
-                                }
-
-                                if (!isDirectory) {
-                                    try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
-                                        int readBytes;
-                                        while ((readBytes = zipInput.read(buffer)) != -1)
-                                            outStream.write(buffer, 0, readBytes);
-                                    }
-                                    if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
-                                        zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
-                                        //noinspection OctalInteger
-                                        Os.chmod(targetFile.getAbsolutePath(), 0700);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (!executables.isEmpty()) {
-                        for (String executable : executables) {
-                            //noinspection OctalInteger
-                            try {
-                                Os.chmod(TERMUX_STAGING_PREFIX_DIR + "/" + executable, 0700);
-                            } catch (Throwable t) {
-                                Logger.logError(LOG_TAG, "EXECUTABLES error: " + TERMUX_STAGING_PREFIX_DIR + "/" + executable + t);
-                            }
-                        }
-                    } else {
-                        throw new RuntimeException("Installer: no EXECUTABLES.txt found while extracting environment archive.");
-                    }
-
-                    if (symlinks.isEmpty())
-                        throw new RuntimeException("No SYMLINKS.txt encountered");
-                    for (Pair<String, String> symlink : symlinks) {
-                        Os.symlink(symlink.first, symlink.second);
-                    }
-
-                    Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");
-
-                    if (!TERMUX_STAGING_PREFIX_DIR.renameTo(TERMUX_PREFIX_DIR)) {
-                        throw new RuntimeException("Moving termux prefix staging to prefix directory failed");
-                    }
-
-                    Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
-
-                    // #605 -- record what was actually extracted, outside $PREFIX
-                    // (which the next update may wipe and re-extract), so a future
-                    // launch can tell this bootstrap apart from a newer, fixed one.
-                    try (FileOutputStream versionOut = new FileOutputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
-                        versionOut.write(libManifest.version.getBytes(StandardCharsets.UTF_8));
-                    } catch (Exception e) {
-                        Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
-                    }
-
-                    // #628 -- the extracted-once cache has done its job. Keeping it
-                    // would double this app's footprint for bytes only a rootfs
-                    // change needs again, and a change re-extracts by its new
-                    // digest the next time the lib is opened.
-                    //noinspection ResultOfMethodCallIgnored
-                    EXTRACTED_BOOTSTRAP_FILE.delete();
-
-                    // Recreate env file since termux prefix was wiped earlier
-                    TermuxShellEnvironment.writeEnvironmentToFile(activity);
-
                     activity.runOnUiThread(whenDone);
 
                 } catch (final LibMissing e) {
                     showLibMissingDialog(activity, whenDone, e.getMessage());
+
+                } catch (final BootstrapFailure e) {
+                    showBootstrapErrorDialog(activity, whenDone, e.getMessage());
 
                 } catch (final Exception e) {
                     showBootstrapErrorDialog(activity, whenDone, Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)));
@@ -556,6 +418,182 @@ final class TermuxInstaller {
                 }
             }
         }.start();
+    }
+
+    /** #747: held by every bootstrap install, the activity's and the debug API's alike, so two can never extract into one $PREFIX. */
+    private static final Object INSTALL_LOCK = new Object();
+
+    /** A bootstrap step that failed for a stated reason; the message is the markdown the error dialog shows. */
+    static final class BootstrapFailure extends Exception {
+        BootstrapFailure(String markdown) { super(markdown); }
+    }
+
+    /**
+     * #747 the debug API's bootstrap: what the activity's first start does — the rootfs extracted
+     * out of the companion lib into $PREFIX when it is missing or older than the lib — blocking and
+     * with no UI, so /api/terminal/exec works on a phone where nobody has opened the terminal yet.
+     * Every failure is thrown with its reason ({@link LibMissing} when the lib is not installed);
+     * nothing is shown.
+     */
+    static void ensureInstalled(Context context) throws Exception {
+        Error error = TermuxFileUtils.isTermuxFilesDirectoryAccessible(context, true, true);
+        if (error != null) throw new BootstrapFailure(Error.getMinimalErrorString(error));
+        if (!PackageUtils.isCurrentUserThePrimaryUser(context))
+            throw new BootstrapFailure(context.getString(R.string.bootstrap_error_not_primary_user_message,
+                MarkdownUtils.getMarkdownCodeForString(TERMUX_PREFIX_DIR_PATH, false)));
+        LibBootstrapManifest libManifest = readLibManifest(context);
+        synchronized (INSTALL_LOCK) {
+            if (!isBootstrapCurrent(libManifest)) installBootstrap(context, libManifest);
+        }
+    }
+
+    /** True when $PREFIX holds the bootstrap the lib carries now: present, not empty, and of its version (#605). */
+    private static boolean isBootstrapCurrent(LibBootstrapManifest libManifest) {
+        return FileUtils.directoryFileExists(TERMUX_PREFIX_DIR_PATH, true)
+            && !TermuxFileUtils.isTermuxPrefixDirectoryEmpty()
+            && libManifest.version.equals(readInstalledBootstrapVersion());
+    }
+
+    /** Extracts the lib's bootstrap into $PREFIX. Call with INSTALL_LOCK held, off the UI thread. */
+    private static void installBootstrap(Context context, LibBootstrapManifest libManifest) throws Exception {
+        Logger.logInfo(LOG_TAG, "Installing " + TermuxConstants.TERMUX_APP_NAME + " bootstrap packages.");
+
+        Error error;
+
+        // Delete prefix staging directory or any file at its destination
+        error = FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
+        if (error != null) {
+            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+        }
+
+        // Delete prefix directory or any file at its destination
+        error = FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
+        if (error != null) {
+            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+        }
+
+        // Create prefix staging directory if it does not already exist and set required permissions
+        error = TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);
+        if (error != null) {
+            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+        }
+
+        // Create prefix directory if it does not already exist and set required permissions
+        error = TermuxFileUtils.isTermuxPrefixDirectoryAccessible(true, true);
+        if (error != null) {
+            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+        }
+
+        // #628 -- the zip is extracted (once) out of the installed
+        // rootfs-nixdroid lib instead of fetched over HTTP, and
+        // refused unless it hashes to the sha256 the lib's own
+        // manifest declares. Everything after this line is
+        // unchanged: what is extracted is the same verified
+        // archive as before, just read from a different place.
+        final File bootstrapZip = openBootstrapFromLib(context, libManifest);
+
+        Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
+
+        final byte[] buffer = new byte[8096];
+        final List<Pair<String, String>> symlinks = new ArrayList<>(50);
+        final List<String> executables = new ArrayList<>(128);
+
+        try (ZipInputStream zipInput = new ZipInputStream(new FileInputStream(bootstrapZip))) {
+            ZipEntry zipEntry;
+            while ((zipEntry = zipInput.getNextEntry()) != null) {
+                if (zipEntry.getName().equals("SYMLINKS.txt")) {
+                    BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
+                    String line;
+                    while ((line = symlinksReader.readLine()) != null) {
+                        String[] parts = line.split("←");
+                        if (parts.length != 2)
+                            throw new RuntimeException("Malformed symlink line: " + line);
+                        String oldPath = parts[0];
+                        String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
+                        symlinks.add(Pair.create(oldPath, newPath));
+
+                        error = ensureDirectoryExists(new File(newPath).getParentFile());
+                        if (error != null) {
+                            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+                        }
+                    }
+                } else if (zipEntry.getName().equals("EXECUTABLES.txt")) {
+                    BufferedReader executablesReader = new BufferedReader(new InputStreamReader(zipInput));
+                    String line;
+                    while ((line = executablesReader.readLine()) != null) {
+                        executables.add(line);
+                    }
+                } else {
+                    String zipEntryName = zipEntry.getName();
+                    File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
+                    boolean isDirectory = zipEntry.isDirectory();
+
+                    error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
+                    if (error != null) {
+                        throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+                    }
+
+                    if (!isDirectory) {
+                        try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
+                            int readBytes;
+                            while ((readBytes = zipInput.read(buffer)) != -1)
+                                outStream.write(buffer, 0, readBytes);
+                        }
+                        if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
+                            zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
+                            //noinspection OctalInteger
+                            Os.chmod(targetFile.getAbsolutePath(), 0700);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!executables.isEmpty()) {
+            for (String executable : executables) {
+                //noinspection OctalInteger
+                try {
+                    Os.chmod(TERMUX_STAGING_PREFIX_DIR + "/" + executable, 0700);
+                } catch (Throwable t) {
+                    Logger.logError(LOG_TAG, "EXECUTABLES error: " + TERMUX_STAGING_PREFIX_DIR + "/" + executable + t);
+                }
+            }
+        } else {
+            throw new RuntimeException("Installer: no EXECUTABLES.txt found while extracting environment archive.");
+        }
+
+        if (symlinks.isEmpty())
+            throw new RuntimeException("No SYMLINKS.txt encountered");
+        for (Pair<String, String> symlink : symlinks) {
+            Os.symlink(symlink.first, symlink.second);
+        }
+
+        Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");
+
+        if (!TERMUX_STAGING_PREFIX_DIR.renameTo(TERMUX_PREFIX_DIR)) {
+            throw new RuntimeException("Moving termux prefix staging to prefix directory failed");
+        }
+
+        Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
+
+        // #605 -- record what was actually extracted, outside $PREFIX
+        // (which the next update may wipe and re-extract), so a future
+        // launch can tell this bootstrap apart from a newer, fixed one.
+        try (FileOutputStream versionOut = new FileOutputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
+            versionOut.write(libManifest.version.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
+        }
+
+        // #628 -- the extracted-once cache has done its job. Keeping it
+        // would double this app's footprint for bytes only a rootfs
+        // change needs again, and a change re-extracts by its new
+        // digest the next time the lib is opened.
+        //noinspection ResultOfMethodCallIgnored
+        EXTRACTED_BOOTSTRAP_FILE.delete();
+
+        // Recreate env file since termux prefix was wiped earlier
+        TermuxShellEnvironment.writeEnvironmentToFile(context);
     }
 
     public static void showBootstrapErrorDialog(Activity activity, Runnable whenDone, String message) {

@@ -23,6 +23,9 @@ public class TermuxApplication extends Application {
 
         // Set log level for the app
         setLogLevel();
+
+        // #747 /api/terminal/exec and /api/terminal/selftest on the fleet debug API.
+        TerminalDebugApi.register(this);
     }
 
     private void setLogLevel() {

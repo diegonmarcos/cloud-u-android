@@ -35,6 +35,10 @@ public class TermuxApplication extends Application {
 
         Logger.logDebug("Starting Application");
 
+        // #747 /api/terminal/exec and /api/terminal/selftest on the fleet debug API. First, so a
+        // start that returns early below (files directory unusable) can still be debugged through it.
+        TerminalDebugApi.register(this);
+
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
         TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
 

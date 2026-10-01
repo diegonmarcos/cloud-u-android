@@ -71,7 +71,7 @@ android {
         // Bumped again: every login step is traced to screen and ~/.cloud-login.log,
         // bash and a rescue tier back the login shell, storage asks for READ+WRITE.
         // #744 bumped: this build joins the fleet mesh (libs:core) on AGP 8.
-        versionCode 188049
+        versionCode 188050
         versionName "0.118.0_v0.3.12_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
@@ -99,6 +99,14 @@ android {
         // TermuxInstaller.rootfsVersionNotice says so on the terminal screen when
         // the rootfs about to run is not this one.
         buildConfigField "String", "CLOUD_ROOTFS_LIB_VERSION", "\"" + bootstrapArtifactId(bootstrapSpec().artifact) + "\""
+
+        // #747 -- the login shell TerminalDebugApi runs a command in, so /api/terminal/exec gets
+        // the shell a typed session gets. The same declaration bake_default_packages.py retargets
+        // login-inner's usershell at; read, never restated.
+        def cloudLoginShell = bootstrapSpec().default_packages?.login_shell_attr
+        if (!cloudLoginShell)
+            throw new GradleException("build.json forks.nixdroid.bootstrap.default_packages declares no login_shell_attr")
+        buildConfigField "String", "CLOUD_LOGIN_SHELL", "\"" + cloudLoginShell + "\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"

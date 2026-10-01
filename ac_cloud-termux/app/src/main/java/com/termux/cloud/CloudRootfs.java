@@ -96,8 +96,32 @@ public final class CloudRootfs {
         }
     }
 
-    /** Extracts ~400 MB out of the sibling lib APK the first time and after a rootfs change; call off the UI thread. */
-    public static void stage(Context context) throws IOException, ErrnoException {
+    /**
+     * #747: true once enter.sh has unpacked the staged tarball, i.e. its stamp inside the tree names
+     * the digest staged beside it (the same comparison enter.sh makes before it unpacks). Until then
+     * the next login spends minutes unpacking before it runs anything.
+     */
+    public static boolean isUnpacked() {
+        try {
+            String want = read(new FileInputStream(new File(stageDir(), DIGEST)));
+            return want.equals(read(new FileInputStream(new File(stageDir(), "rootfs/.cloud-rootfs.sha256"))));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Extracts ~400 MB out of the sibling lib APK the first time and after a rootfs change; call off the UI thread.
+     *
+     * #747: synchronized and re-checked, because the activity's first start and the debug API's
+     * /api/terminal/exec can both arrive here on a fresh install. The second caller waits for the
+     * first and finds the tree staged instead of extracting it a second time on top of the first.
+     */
+    public static synchronized void stage(Context context) throws IOException, ErrnoException {
+        if (isStaged(context)) {
+            refreshFiles(context);
+            return;
+        }
         File dir = stageDir();
         boolean firstEver = !new File(dir, DIGEST).exists();
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
@@ -138,7 +162,7 @@ public final class CloudRootfs {
      * written beside its target and renamed over it, so a session still running the old proot
      * keeps its inode instead of failing on a half-written binary.
      */
-    public static void refreshFiles(Context context) throws IOException, ErrnoException {
+    public static synchronized void refreshFiles(Context context) throws IOException, ErrnoException {
         File dir = stageDir();
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
         for (String name : FILES) {
