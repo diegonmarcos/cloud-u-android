@@ -129,15 +129,6 @@
    "public": true,
    "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. #629 CORRECTED the trailing claim that it was not seeded: it carries the seed flag and IS seeded.",
    "seed": true
-  },
-  {
-   "name": "front-diegonmarcos",
-   "label": "front-diegonmarcos",
-   "github_owner": "diegonmarcos",
-   "gitea_owner": "diego",
-   "public": true,
-   "seed": true,
-   "notes": "Front web projects (personal site + the traditional budgets project). #683 MEASURED 2026-09-30: declared public here, but the upstream answers 404 to an anonymous GET and demanded authentication of the anonymous seed clone on the device \u2014 the provider holds it PRIVATE. The declaration is kept as the intent; the seed now carries the chain-resolved credential (StoreSeed), and a device holding none reports the terminal needs-credential outcome instead of retrying forever."
   }
  ],
  "_doc_clone": "#575/#606 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<git_subdir>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
