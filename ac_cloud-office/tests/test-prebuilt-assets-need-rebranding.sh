@@ -14,7 +14,7 @@
 #     into('etc/fonts') {
 #         from 'fonts.conf'
 #         filter { String line ->
-#             line.replaceAll('@@APPLICATION_ID@@', new String("${liboApplicationId}")) }
+#             line.replaceAll('@@APPLICATION_ID@@', new String("${coApplicationId}")) }
 #     }
 #
 # and _doc_BLOCKER_configure_gate (3) requires prebuilt mode to DISABLE that

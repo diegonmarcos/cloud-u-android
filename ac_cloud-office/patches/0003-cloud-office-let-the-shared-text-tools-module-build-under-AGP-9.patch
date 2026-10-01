@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Cloud Office <me@diegonmarcos.com>
 Date: Tue, 15 Sep 2026 23:05:11 +0000
-Subject: [PATCH 2/2] cloud-office: let the shared text-tools module build
+Subject: [PATCH 3/6] cloud-office: let the shared text-tools module build
  under AGP 9
 
 patches/0001 includes ab_cloud-libs-shared/libs/text-tools, the one copy
@@ -29,10 +29,10 @@ release(37) } block they use.
  1 file changed, 7 insertions(+)
 
 diff --git a/android/gradle.properties b/android/gradle.properties
-index 1b32c5c..8a22b39 100644
+index 4fbfbd247..2c48dfdce 100644
 --- a/android/gradle.properties
 +++ b/android/gradle.properties
-@@ -19,3 +19,10 @@ org.gradle.jvmargs=-Xmx4g
+@@ -18,3 +18,10 @@ org.gradle.jvmargs=-Xmx4g -Dcom.android.tools.r8.enableKeepAnnotations=1
  # This option should only be used with decoupled projects. More details, visit
  # http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
  # org.gradle.parallel=true

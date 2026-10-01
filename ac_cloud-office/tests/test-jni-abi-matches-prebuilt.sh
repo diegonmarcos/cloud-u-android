@@ -10,9 +10,9 @@
 #
 #   * the prebuilt lib/arm64-v8a/libandroidapp.so was built by Collabora for the
 #     26.04.3.1-155 release (the APK file name says 2026-09-03);
-#   * upstream.online.revision is 794af008..., a branch-tip snapshot whose commit
-#     subject is "fix(iOS): correct blank slides when presenting" — an ordinary
-#     commit, NOT that release tag.
+#   * upstream.online.revision is a branch-tip snapshot (c0be0ce7..., "mobile: Cap
+#     the slide show layer resolution at 1920x1080", since #745; 794af008... before)
+#     — an ordinary commit, NOT that release tag.
 #
 # JNI binds by SYMBOL NAME at first call, never at build time. So if the pin adds,
 # removes or renames a `native` method relative to the bytes in the APK, javac is
