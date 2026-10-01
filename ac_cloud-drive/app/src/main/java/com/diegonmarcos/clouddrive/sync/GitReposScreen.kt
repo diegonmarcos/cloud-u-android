@@ -1,5 +1,10 @@
 package com.diegonmarcos.clouddrive.sync
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -83,13 +88,13 @@ import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
 import com.diegonmarcos.cloudlib.auth.AuthMission
-import com.diegonmarcos.cloudlib.auth.OAuthWeb
-import com.diegonmarcos.cloudlib.auth.OAuthWebDialog
 import com.diegonmarcos.cloudlib.auth.ConfigArtifact
 import com.diegonmarcos.cloudlib.auth.SignIn
 import com.diegonmarcos.cloudlib.auth.SignInHost
 import com.diegonmarcos.cloudlib.auth.SignInResult
 import com.diegonmarcos.cloudlib.auth.SignInWays
+import com.diegonmarcos.cloudlib.gh.GhOutput
+import com.diegonmarcos.cloudlib.gh.GhRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -114,8 +119,9 @@ import kotlinx.coroutines.withContext
  *  · personal — the credential the #566 vault config import delivers (#629), or the user's
  *               existing SSH key. The account's own listing is fetched with that credential,
  *               with no tap, and split into the declared groups, Public then Private. #641
- *               there is NO browser login: the device grant that used to be offered here ran
- *               against a GitHub App, and GitHub Apps ship with Device Flow OFF.
+ *               the fleet's own GitHub device grant is gone. #689 the GitHub card is gh
+ *               ITSELF (libs:gh): gh's own sign-in, `gh repo list`, and a clone on the
+ *               credential gh holds — no OAuth-App client of the fleet's own, anywhere.
  *
  * Every clone lands in the store's git folder (#606, SharedStore.gitRoot), the same folder
  * and the same registry the first-run seed uses.
@@ -142,16 +148,17 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // ranking it will actually follow rather than a ranking somebody typed here.
     var chain by remember { mutableStateOf(GitChainState(order = DriveGitChain.declaredOrder())) }
     // #684 THE SECOND LISTING. Two parallel way-cards mean two independent listings: the
-    // GitHub card fills [listing] (vault token or the web sign-in), the Cloud git card fills
-    // this one off the Authelia session. Neither card touches the other's.
+    // GitHub card fills [listing] (gh repo list, or the #629 vault token), the Cloud git card
+    // fills this one off the Authelia session. Neither card touches the other's.
     var cloudListing by remember { mutableStateOf(GitListing()) }
-    // Which way's sign-in is in flight, the OAuth nonce it is waiting on, and the declared
-    // fallbacks a phone without the fleet browser shows (each SAYS it is the fallback).
+    // Which way's sign-in is in flight, and the declared fallback a phone without the fleet
+    // browser shows for the Cloud sign-in (it SAYS it is the fallback).
     var signingInWay by remember { mutableStateOf("") }
     var pendingWay by remember { mutableStateOf("") }
-    var pendingState by remember { mutableStateOf("") }
-    var githubFallbackUrl by remember { mutableStateOf("") }
     var cloudFallback by remember { mutableStateOf(false) }
+    // #689 THE GITHUB CARD IS gh: who gh is signed in as, and the one-time code its own
+    // `auth login` is waiting on. Neither is a secret; the credential stays in gh's config.
+    var ghAuth by remember { mutableStateOf(GhAuth()) }
     LaunchedEffect(Unit) { coordinator.refresh() }
 
     /**
@@ -398,35 +405,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         AuthMission.Outcome.Sent -> ""
     }
 
-    // #684 THE GITHUB WEB SIGN-IN COMPLETES: the landing carries ?code=&state=, the state is
-    // checked against the attempt's nonce, the code is exchanged for a token, and the token is
-    // filed in the ONE store under the ONE declared id (DriveGitChain.file) — after which the
-    // existing GitHub listing runs off it. Every non-code landing is one loud line.
-    fun completeGithub(landingUrl: String) {
-        val client = DriveGitChain.webClient() ?: run { signingInWay = ""; return }
-        when (val land = OAuthWeb.landing(client, landingUrl, pendingState)) {
-            is OAuthWeb.Landing.Code -> {
-                handoff = ctx.getString(R.string.git_way_exchanging)
-                scope.launch {
-                    val tok = withContext(Dispatchers.IO) { OAuthWeb.exchange(client, land.code) }
-                    tok.fold(
-                        onSuccess = { t ->
-                            withContext(Dispatchers.IO) { DriveGitChain.file(ctx.applicationContext, t) }
-                            login = login.copy(identity = page.owner, token = t, fromVault = false)
-                            handoff = ctx.getString(R.string.git_way_filed)
-                            fetchListing(t)
-                        },
-                        onFailure = { handoff = ctx.getString(R.string.git_way_exchange_failed, it.message ?: it.javaClass.simpleName) },
-                    )
-                    signingInWay = ""
-                }
-            }
-            is OAuthWeb.Landing.Denied -> { handoff = ctx.getString(R.string.git_way_denied, land.why); signingInWay = "" }
-            OAuthWeb.Landing.StateMismatch -> { handoff = ctx.getString(R.string.git_way_state_mismatch); signingInWay = "" }
-            OAuthWeb.Landing.NotALanding -> { signingInWay = "" }
-        }
-    }
-
     // #684 THE CLOUD SIGN-IN COMPLETES: the browser earned an Authelia session cookie; it goes
     // to FleetSession (process memory, never a store — the f45bbbe31 posture) and the listing
     // rides it. The same cookie the existing SignInWays fallback delivers through onWebSession.
@@ -438,49 +416,142 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     // #684 THE MISSION'S RESULT comes back here, read off the DECLARED result keys. A cookie is
-    // the Cloud sign-in, a redirect landing is the GitHub sign-in; the other three are loud.
+    // the Cloud sign-in; the other three are loud.
     val missionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         val contract = AuthDeclaration.browserMission
         if (contract == null) { signingInWay = "" } else when (val cap = AuthMission.read(contract, res.resultCode, res.data)) {
             is AuthMission.Capture.Cookie -> completeCloud(cap.value, pendingWay)
-            is AuthMission.Capture.Redirect -> completeGithub(cap.url)
             AuthMission.Capture.Cancelled -> { handoff = ctx.getString(R.string.git_way_mission_cancelled); signingInWay = "" }
             is AuthMission.Capture.Refused -> { handoff = ctx.getString(R.string.git_way_mission_refused, cap.why); signingInWay = "" }
             is AuthMission.Capture.Malformed -> { handoff = ctx.getString(R.string.git_way_mission_malformed, cap.why); signingInWay = "" }
         }
     }
 
-    // #684 START ONE WAY'S SIGN-IN. The rung's KIND decides the shape: a fleet_proxy rung opens
-    // the portal for a cookie, the github rung opens GitHub's authorize page for a redirect. Both
-    // ride the fleet browser (AuthMission); when it is not on the phone, the declared in-app
-    // fallback is shown and the handoff line SAYS it is the fallback. A github rung whose web
-    // client is not configured never starts: its button is disabled with a declared-absence line.
+    // #689 THE GITHUB CARD IS gh ITSELF, exec'd from this app's own nativeLibraryDir (libs:gh):
+    // the terminals carry no gh and the store is noexec, so this is the one place it can run and
+    // hand its answer back to the page. Where it points and how much it lists are the github
+    // rung's declaration. Every failure is ONE loud line naming the next step.
+    val ghRunner = remember { GhRunner(ctx.applicationContext) }
+    val ghHost = remember { DriveGitChain.ghHost() }
+    val ghLimit = remember { DriveGitChain.ghListLimit() }
+
+    /** Why the gh leg cannot run on this phone at all, or "" when it can. */
+    fun ghUnavailable(): String = when {
+        !ghRunner.isAvailable -> ctx.getString(R.string.git_gh_missing, ghRunner.binary.absolutePath)
+        ghHost.isBlank() || ghLimit <= 0 -> ctx.getString(R.string.git_gh_undeclared)
+        else -> ""
+    }
+
+    /** #689 `gh repo list`: the account's own repositories, split below by gh's own isPrivate. */
+    fun fetchGhListing() {
+        listing = listing.copy(loading = true, error = "")
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { ghRunner.repoList(ghLimit, GitHubRepos.GH_FIELDS) }
+            val repos = if (r.ok) GitHubRepos.parseGh(r.output) else null
+            listing = when {
+                !r.ok -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_failed, r.exitCode, lastLine(r.output)))
+                repos == null -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_unreadable))
+                else -> GitListing(loaded = true, repos = repos, complete = repos.size < ghLimit, viaGh = true)
+            }
+        }
+    }
+
+    /** #689 who gh is signed in as, and its listing when it is; true when signed in. */
+    suspend fun ghCheck(): Boolean {
+        val why = ghUnavailable()
+        if (why.isNotBlank()) { ghAuth = ghAuth.copy(checked = true, signedIn = false, error = why); return false }
+        val r = withContext(Dispatchers.IO) { ghRunner.status(ghHost) }
+        val st = GitHubRepos.ghStatus(r.output, ghHost)
+        ghAuth = when {
+            st.signedIn -> ghAuth.copy(checked = true, signedIn = true, login = st.login, error = "")
+            // gh holds a login GitHub did not confirm (offline, revoked): say that, not "signed out".
+            st.state.isNotBlank() -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_unconfirmed, st.login, st.state))
+            else -> ghAuth.copy(checked = true, signedIn = false, login = "")
+        }
+        if (st.signedIn) fetchGhListing()
+        return st.signedIn
+    }
+
+    /** Open the page gh named, or say loudly that nothing on this phone can. */
+    fun openGhPage(url: String) {
+        runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_no_browser, url)) }
+    }
+
+    /**
+     * #689 SIGN IN WITH gh's OWN FLOW: `gh auth login` — gh's device flow against the client id
+     * GitHub CLI compiles into its own binary. gh prints a one-time code and the page to enter it
+     * at; the card shows the code, copies it and opens that page (only ever on the declared host).
+     * gh finishes by itself once the code is approved: exit 0 re-reads who it is signed in as and
+     * lists; any other exit is ONE loud line with gh's own last words and the next step.
+     */
+    fun startGhLogin() {
+        val why = ghUnavailable()
+        if (why.isNotBlank()) { ghAuth = ghAuth.copy(checked = true, error = why); return }
+        ghAuth = ghAuth.copy(running = true, code = "", url = "", error = "")
+        scope.launch {
+            val r = withContext(Dispatchers.IO) {
+                ghRunner.login(ghHost) { line ->
+                    val code = GhOutput.deviceCode(line)
+                    val url = GhOutput.verificationUrl(line, ghHost)
+                    if (code != null || url != null) scope.launch {
+                        if (code != null && ghAuth.code.isBlank()) {
+                            ghAuth = ghAuth.copy(code = code)
+                            (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                                ?.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.git_gh_code_clip), code))
+                        }
+                        if (url != null && ghAuth.url.isBlank()) { ghAuth = ghAuth.copy(url = url); openGhPage(url) }
+                    }
+                }
+            }
+            ghAuth = ghAuth.copy(running = false, code = "", url = "")
+            if (r.ok) ghCheck()
+            else ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_login_failed, lastLine(r.output)))
+        }
+    }
+
+    /**
+     * #689 A ROW gh LISTED CLONES ON THE CREDENTIAL gh HOLDS, in-process, into the ONE store's git
+     * folder (#676) with the listing's own https URL as origin — so the scheduler's later fetch and
+     * push dial the same URL with the same credential. Not the terminal: neither terminal declares
+     * a git credential or carries gh, so its git could not clone a private row. The credential goes
+     * from gh's git-credential helper straight into the engine's credential store; nothing shows it.
+     */
+    fun cloneViaGh(repo: GitHubRepos.Repo) {
+        if (repo.cloneUrl.isBlank()) { handoff = ctx.getString(R.string.git_clone_url_missing, repo.name); return }
+        scope.launch {
+            val cred = withContext(Dispatchers.IO) { if (ghHost.isBlank()) null else ghRunner.credential(ghHost) }
+            if (cred == null) { handoff = ctx.getString(R.string.git_gh_clone_no_credential, repo.name); return@launch }
+            coordinator.cloneInto(
+                name = repo.name,
+                url = repo.cloneUrl,
+                authKind = GitSyncCoordinator.AUTH_HTTPS,
+                username = cred.username,
+                token = cred.secret,
+            )
+        }
+    }
+
+    // #684 START ONE WAY'S SIGN-IN, dispatched on the rung's KIND. A fleet_proxy rung opens the
+    // portal for a cookie through the fleet browser (AuthMission); when the browser is not on the
+    // phone the declared in-app fallback is shown and the handoff line SAYS it is the fallback.
+    // #689 the github rung is gh's own `auth login`.
     fun startWay(way: Declarations.GitWayDecl) {
-        val rung = DriveGitChain.rung(way.rung)
-        val isCloud = rung?.kind == DriveGitChain.RUNG_FLEET
-        signingInWay = way.id
-        pendingWay = way.rung
-        githubFallbackUrl = ""; cloudFallback = false
-        val contract = AuthDeclaration.browserMission
-        if (isCloud) {
-            val req = AuthMission.Request(
-                url = cloudPortalUrl(), title = way.label, allowHosts = cloudAllowHosts(way.rung),
-                capture = AuthMission.CAPTURE_COOKIE, cookieUrl = ConfigArtifact.endpoint(),
-            )
-            val (intent, outcome) = AuthMission.plan(ctx, contract, req)
-            if (intent != null) missionLauncher.launch(intent)
-            else { handoff = missionWord(outcome); cloudFallback = true; signingInWay = "" }
-        } else {
-            val client = DriveGitChain.webClient()
-            if (client == null || !client.configured) { handoff = ctx.getString(R.string.git_way_client_absent); signingInWay = ""; return }
-            pendingState = OAuthWeb.newState()
-            val req = AuthMission.Request(
-                url = client.authorizeUrl(pendingState), title = way.label, allowHosts = client.allowHosts,
-                capture = AuthMission.CAPTURE_REDIRECT, redirectPrefix = client.redirectUri,
-            )
-            val (intent, outcome) = AuthMission.plan(ctx, contract, req)
-            if (intent != null) missionLauncher.launch(intent)
-            else { githubFallbackUrl = client.authorizeUrl(pendingState); handoff = missionWord(outcome); signingInWay = "" }
+        when (DriveGitChain.rung(way.rung)?.kind) {
+            DriveGitChain.RUNG_GITHUB -> startGhLogin()
+            DriveGitChain.RUNG_FLEET -> {
+                signingInWay = way.id
+                pendingWay = way.rung
+                cloudFallback = false
+                val contract = AuthDeclaration.browserMission
+                val req = AuthMission.Request(
+                    url = cloudPortalUrl(), title = way.label, allowHosts = cloudAllowHosts(way.rung),
+                    capture = AuthMission.CAPTURE_COOKIE, cookieUrl = ConfigArtifact.endpoint(),
+                )
+                val (intent, outcome) = AuthMission.plan(ctx, contract, req)
+                if (intent != null) missionLauncher.launch(intent)
+                else { handoff = missionWord(outcome); cloudFallback = true; signingInWay = "" }
+            }
         }
     }
 
@@ -490,6 +561,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // no browser login beside it: the device grant that used to be here ran against a GitHub App,
     // whose Device Flow the provider ships OFF, so it could never start.
     LaunchedEffect(Unit) {
+        // #689 gh first: when gh itself is signed in, the GitHub card is gh's and lists through gh.
+        if (ghCheck()) return@LaunchedEffect
         val vault = withContext(Dispatchers.IO) { DriveAuthApply.vaultGitToken(ctx.applicationContext) }
         if (vault.isNotBlank() && login.token.isBlank()) {
             login = login.copy(identity = page.owner, token = vault, fromVault = true)
@@ -577,19 +650,20 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                         val rungKind = DriveGitChain.rung(way.rung)?.kind
                         val isCloud = rungKind == DriveGitChain.RUNG_FLEET
                         val wayListing = if (isCloud) cloudListing else listing
-                        val client = if (isCloud) null else DriveGitChain.webClient()
                         item {
                             GitWayCard(
                                 way = way, isCloud = isCloud, page = page,
                                 login = login, listing = wayListing, chain = chain,
-                                signingIn = signingInWay == way.id,
-                                clientConfigured = client?.configured ?: isCloud,
+                                ghAuth = ghAuth,
+                                signingIn = if (isCloud) signingInWay == way.id else ghAuth.running,
                                 rungDeclared = rungKind != null,
                                 cloudFallback = cloudFallback && isCloud,
                                 fleetHost = fleetHost,
                                 onSignIn = { startWay(way) },
+                                onOpenGhPage = { openGhPage(it) },
                                 onRetry = {
                                     if (isCloud) { if (FleetSession.present) fetchFleetListing(way.rung) }
+                                    else if (ghAuth.signedIn) fetchGhListing()
                                     else if (login.token.isNotBlank()) fetchListing(login.token)
                                 },
                                 onStartChain = { startChain() },
@@ -617,6 +691,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                         onToggle = { expanded = if (expanded == key) "" else key },
                                         onClone = {
                                             if (listing.rungId.isNotBlank()) cloneViaFleet(listing.rungId, gh)
+                                            else if (listing.viaGh) cloneViaGh(gh)
                                             else if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
                                             else clone(gh.name, gh.cloneUrl, gh.sshUrl)
                                         },
@@ -687,22 +762,26 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
-
-    // #684 THE GITHUB WEB SIGN-IN'S DECLARED FALLBACK, when the fleet browser is not installed:
-    // the same small WebView, confined to the client's declared hosts, intercepting the landing.
-    // The block that opened it already said it was falling back (missionWord).
-    if (githubFallbackUrl.isNotBlank()) {
-        val client = DriveGitChain.webClient()
-        if (client != null) OAuthWebDialog(
-            title = stringResource(R.string.git_way_signin, "GitHub"),
-            url = githubFallbackUrl,
-            redirectPrefix = client.redirectUri,
-            allowHosts = client.allowHosts,
-            onLanded = { url -> githubFallbackUrl = ""; completeGithub(url) },
-            onDismiss = { githubFallbackUrl = ""; signingInWay = "" },
-        )
-    }
 }
+
+/** gh's last non-blank line: its own words for why it stopped, never a credential (#689). */
+private fun lastLine(output: String): String =
+    output.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() }.orEmpty()
+
+/**
+ * #689 what gh ITSELF says about this phone: whether it has been asked yet, who it is signed in
+ * as, the one-time code its own `auth login` waits on (and the page to enter it at), and the ONE
+ * loud line when the gh leg failed. No credential lives here — gh keeps its own.
+ */
+private data class GhAuth(
+    val checked: Boolean = false,
+    val signedIn: Boolean = false,
+    val login: String = "",
+    val running: Boolean = false,
+    val code: String = "",
+    val url: String = "",
+    val error: String = "",
+)
 
 /**
  * What the personal section is authenticated as, for the process only: never stored here, never
@@ -753,6 +832,8 @@ private data class GitListing(
     val complete: Boolean = true,
     val error: String = "",
     val rungId: String = "",
+    /** #689 gh listed it, so a row clones on the credential gh holds (cloneViaGh). */
+    val viaGh: Boolean = false,
 )
 
 /**
@@ -761,11 +842,11 @@ private data class GitListing(
  * repository listing state below, and the chain narrative moved BEHIND a details disclosure. The
  * card dispatches on [isCloud] (the way's rung kind), never on a name typed here.
  *
- * WHAT #641 STILL FORBIDS holds: this card hosts NO GitHub device-flow surface. The GitHub card's
- * sign-in is the authorization-code WEB flow (a disabled button with one line while the client is
- * declared-but-secretless); the Cloud card's is the fleet browser mission, whose in-app fallback
- * is libs:auth's own SignInWays scoped to the DECLARED session_provider — the one sign-in surface
- * this page may host.
+ * WHAT #641 STILL FORBIDS holds: no libs:auth GitHub provider and no fleet-owned device grant.
+ * #689 the GitHub card's sign-in is gh's OWN `auth login` (gh's flow, gh's client id; the card
+ * shows gh's one-time code and opens the page gh names); the Cloud card's is the fleet browser
+ * mission, whose in-app fallback is libs:auth's own SignInWays scoped to the DECLARED
+ * session_provider — the one libs:auth sign-in surface this page may host.
  */
 @Composable
 private fun GitWayCard(
@@ -775,32 +856,37 @@ private fun GitWayCard(
     login: GitLogin,
     listing: GitListing,
     chain: GitChainState,
+    ghAuth: GhAuth,
     signingIn: Boolean,
-    clientConfigured: Boolean,
     rungDeclared: Boolean,
     cloudFallback: Boolean,
     fleetHost: SignInHost,
     onSignIn: () -> Unit,
+    onOpenGhPage: (String) -> Unit,
     onRetry: () -> Unit,
     onStartChain: () -> Unit,
     onSshKeyPath: (String) -> Unit,
     onUseSsh: (Boolean) -> Unit,
 ) {
     var detailsOpen by remember { mutableStateOf(false) }
-    val signedIn = if (isCloud) chain.signedIn else login.token.isNotBlank()
-    val identity = if (isCloud) stringResource(R.string.git_way_cloud_identity) else login.identity.ifBlank { page.owner }
-    // The GitHub card's sign-in button is disabled while its web client is not configured — a
-    // declared absence, not a dead button.
-    val disabled = !rungDeclared || (!isCloud && !clientConfigured)
+    // #689 the GitHub card is signed in when gh itself is, or when the #629 vault credential is here.
+    val signedIn = if (isCloud) chain.signedIn else ghAuth.signedIn || login.token.isNotBlank()
+    val identity = if (isCloud) stringResource(R.string.git_way_cloud_identity) else ghAuth.login.ifBlank { login.identity.ifBlank { page.owner } }
+    // Only an undeclared rung disables the button: the GitHub way has no client of its own to lack.
+    val disabled = !rungDeclared
     DriveCard(
         way.label,
         light = if (signedIn) StatusLight.State.ON else StatusLight.State.UNKNOWN,
         summary = when {
+            signingIn -> stringResource(if (isCloud) R.string.git_way_signing_in else R.string.git_gh_waiting)
+            // #689 gh's own sign-in speaks first on the GitHub card: it IS the GitHub leg.
+            !isCloud && ghAuth.signedIn && listing.loaded -> stringResource(R.string.git_way_repos, identity, listing.repos.size)
+            !isCloud && ghAuth.signedIn -> stringResource(R.string.git_way_signed_in, identity)
             // #629 the vault-delivered credential state, read at a glance (kept on the GitHub card).
             !isCloud && login.fromVault -> stringResource(R.string.git_login_from_vault, login.identity)
-            signingIn -> stringResource(R.string.git_way_signing_in)
             signedIn && listing.loaded -> stringResource(R.string.git_way_repos, identity, listing.repos.size)
             signedIn -> stringResource(R.string.git_way_signed_in, identity)
+            !isCloud && ghAuth.checked -> stringResource(R.string.git_gh_not_signed_in)
             else -> stringResource(R.string.git_way_signed_out)
         },
         tag = DriveTags.SYNC_GIT_WAY,
@@ -821,11 +907,22 @@ private fun GitWayCard(
             Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_WAY_STATE),
             style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off), fontWeight = FontWeight.SemiBold,
         )
-        else if (!isCloud && !clientConfigured) Text(
-            stringResource(R.string.git_way_client_absent),
+        // #689 a failed gh leg says so, in gh's own words where it has them, with the next step.
+        else if (!isCloud && ghAuth.error.isNotBlank()) Text(
+            ghAuth.error,
             Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_WAY_STATE),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off), fontWeight = FontWeight.SemiBold,
         )
+        // #689 gh's one-time code while its own `auth login` waits on it: copied already, and the
+        // page gh named is one tap away (it was opened once, automatically).
+        if (!isCloud && ghAuth.code.isNotBlank()) {
+            Text(
+                stringResource(R.string.git_gh_code, ghAuth.code),
+                Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_GH_CODE),
+                style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold,
+            )
+            if (ghAuth.url.isNotBlank()) PillRow { Pill(stringResource(R.string.git_gh_open, ghAuth.url), { onOpenGhPage(ghAuth.url) }) }
+        }
 
         if (detailsOpen) Column(Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_WAY_DETAILS)) {
             if (isCloud) {
@@ -878,6 +975,7 @@ private fun GitWayCard(
                 Text(stringResource(R.string.git_listing_failed, AuthDeclaration.explain(listing.error)), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off))
                 PillRow { Pill(stringResource(R.string.chrome_retry), onRetry) }
             }
+            listing.loaded && !listing.complete && listing.viaGh -> Text(stringResource(R.string.git_gh_list_truncated, listing.repos.size), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             listing.loaded && !listing.complete -> Text(stringResource(R.string.git_listing_truncated, page.api.maxPages), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             listing.loaded && listing.repos.isEmpty() -> Text(stringResource(R.string.git_listing_empty), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall)
         }

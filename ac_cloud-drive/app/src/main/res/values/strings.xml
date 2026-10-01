@@ -434,12 +434,9 @@
     <string name="git_way_signed_in">Signed in as %1$s</string>
     <string name="git_way_repos">Signed in as %1$s · %2$d repositories</string>
     <string name="git_way_signing_in">signing in…</string>
-    <string name="git_way_exchanging">exchanging the code for a token…</string>
     <string name="git_way_details">Details</string>
     <string name="git_way_details_hide">Hide details</string>
     <string name="git_way_rung_undeclared">The %1$s rung is not declared in this build, so this way has no mechanism.</string>
-    <!-- a declared ABSENCE, not a placeholder: the button is disabled and this line says why -->
-    <string name="git_way_client_absent">GitHub client not yet declared — the button wakes when the client id and secret are declared.</string>
     <!-- the browser mission's outcomes, one line each, copied from TerminalGit's enumeration style -->
     <string name="git_way_mission_not_declared">No browser auth mission is declared in this build — signing in through the in-app fallback dialog.</string>
     <string name="git_way_mission_not_installed">The fleet browser (%1$s) is not installed — signing in through the in-app fallback dialog.</string>
@@ -448,11 +445,24 @@
     <string name="git_way_mission_refused">The fleet browser refused the mission: %1$s</string>
     <string name="git_way_mission_cancelled">Sign-in cancelled in the browser. Next step: press Sign in again.</string>
     <string name="git_way_mission_malformed">The browser answered something this build cannot read: %1$s</string>
-    <string name="git_way_state_mismatch">The GitHub landing carried another attempt\'s state and was refused. Next step: press Sign in again.</string>
-    <string name="git_way_denied">GitHub declined the sign-in: %1$s</string>
-    <string name="git_way_exchange_failed">GitHub did not hand over a token: %1$s</string>
-    <string name="git_way_filed">Signed in with GitHub; the credential is filed under the declared id and the listing follows.</string>
     <!-- a fleet-proxy-listed GitHub row with no on-phone credential -->
     <string name="git_way_private_needs_credential">%1$s is private: cloning it needs the GitHub sign-in or the vault credential on this phone, or the Cloud git mirror. The fleet listing alone cannot clone it.</string>
     <string name="git_way_cloud_identity">the fleet</string>
+    <!-- #689 THE GITHUB CARD IS gh ITSELF: gh's own sign-in (its device flow and its own client
+         id), gh repo list, and a clone on the credential gh holds. Every failure names its next
+         step; gh's own words are passed through where it has them. -->
+    <string name="git_gh_missing">gh is missing from this build (%1$s was not installed with the app) — reinstall Cloud Drive.</string>
+    <string name="git_gh_undeclared">The GitHub rung declares no gh host or list limit, so this build cannot run gh.</string>
+    <string name="git_gh_not_signed_in">gh not signed in — tap Sign in with GitHub.</string>
+    <string name="git_gh_unconfirmed">gh holds a sign-in for %1$s but GitHub did not confirm it (%2$s) — check the network and reopen this page, or Sign in with GitHub again.</string>
+    <string name="git_gh_waiting">waiting for GitHub to approve the code…</string>
+    <string name="git_gh_code">One-time code %1$s (copied). Enter it on the GitHub page that opened; gh finishes by itself once it is approved.</string>
+    <string name="git_gh_code_clip">GitHub one-time code</string>
+    <string name="git_gh_open">Open %1$s</string>
+    <string name="git_gh_no_browser">Nothing on this phone can open %1$s — open it on any device and enter the code shown here.</string>
+    <string name="git_gh_login_failed">gh sign-in did not complete: %1$s — tap Sign in with GitHub to try again.</string>
+    <string name="git_gh_list_failed">gh repo list exited %1$d: %2$s — tap Retry, or Sign in with GitHub again.</string>
+    <string name="git_gh_list_unreadable">gh answered, but not with a repository list this build can read — tap Retry.</string>
+    <string name="git_gh_list_truncated">gh listed %1$d repositories, the declared limit — the listing may be incomplete.</string>
+    <string name="git_gh_clone_no_credential">gh holds no GitHub credential, so %1$s was not cloned — tap Sign in with GitHub, then Clone.</string>
 </resources>

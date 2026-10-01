@@ -59,30 +59,9 @@ if (googleSecret) {
     authTree.sign_in?.providers?.each { p -> if (p.id == 'google') p.client_secret = googleSecret }
 }
 
-// #684 THE GITHUB WEB CLIENT'S SECRET, on the SAME seam as Google's — but with the env name
-// and the vault path DECLARED on the rung (web_client.secret_env / secret_vault_path) instead
-// of typed here. The authorization-code exchange needs client_id + client_secret; the id is
-// public and committed, the secret is never committed (public repository). Env wins (GitHub-
-// secret delivery), then the vault checkout every ship build already has for the signing key,
-// else it stays EMPTY — and an empty client is a DECLARED ABSENCE the Sync ▸ Git GitHub card
-// renders as a disabled button with one line, never a dead button.
-def ghRung = authTree.git_chain?.providers?.github
-def ghWeb = ghRung?.web_client
-if (ghWeb instanceof Map) {
-    def secretEnv = (ghWeb.secret_env ?: '').toString()
-    def ghSecret = secretEnv ? (System.getenv(secretEnv) ?: '').trim() : ''
-    if (!ghSecret) {
-        def vaultDir = System.getenv('VAULT_DIR')
-        def rel = (ghWeb.secret_vault_path ?: '').toString()
-        if (vaultDir && rel) {
-            def sf = file("${vaultDir}/${rel}")
-            if (sf.exists()) ghSecret = sf.text.trim()
-        }
-    }
-    if (ghSecret) ghWeb.client_secret = ghSecret
-    // The seam names are for the bake, not the phone.
-    ghWeb.remove('secret_env'); ghWeb.remove('secret_vault_path')
-}
+// #689 NO GitHub client secret is baked here, or anywhere: the GitHub leg is gh itself (libs:gh),
+// whose `auth login` runs against the client id GitHub CLI compiles into its own binary. The
+// fleet registers no GitHub OAuth App, so there is no id, no secret and no landing to bake.
 
 // #684 THE BROWSER AUTH MISSION's package, resolved from the constellation fleet manifest —
 // the SAME manifest cloud-drive resolves its terminal handoff against — so the browser's id

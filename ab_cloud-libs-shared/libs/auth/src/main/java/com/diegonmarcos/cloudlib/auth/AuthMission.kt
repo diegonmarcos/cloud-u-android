@@ -11,10 +11,13 @@ import org.json.JSONObject
  * instead of libs:auth's small in-app WebView dialog.
  *
  * A mission is an intent fired at the browser FOR A RESULT: open [Request.url], stay on
- * [Request.allowHosts], and capture either the session cookie for [Request.cookieUrl] or the
- * redirect landing whose URL starts with [Request.redirectPrefix]. The browser finishes with
- * the capture as its activity result, so it reaches the CALLER ONLY — nothing is broadcast,
- * nothing is stored on either side, and the capture is read once by [read].
+ * [Request.allowHosts], and capture the session cookie for [Request.cookieUrl]. The browser
+ * finishes with the capture as its activity result, so it reaches the CALLER ONLY — nothing is
+ * broadcast, nothing is stored on either side, and the capture is read once by [read].
+ *
+ * #689 COOKIE ONLY. The redirect-landing capture existed for one caller, the GitHub OAuth-App
+ * authorization-code flow, and was deleted with it: the GitHub leg is gh's own sign-in
+ * (libs:gh), which needs no landing, no client id and no client secret of the fleet's own.
  *
  * EVERY NAME IS DECLARED. The action, the permission and every extra/result key come from
  * `ab_cloud-libs-shared/build.json::auth.browser_mission`, with `{package}` resolved from the
@@ -32,7 +35,6 @@ import org.json.JSONObject
 object AuthMission {
 
     const val CAPTURE_COOKIE = "cookie"
-    const val CAPTURE_REDIRECT = "redirect"
 
     const val OUTCOME_CAPTURED = "captured"
     const val OUTCOME_CANCELLED = "cancelled"
@@ -49,8 +51,8 @@ object AuthMission {
     ) {
         val declared: Boolean get() =
             pkg.isNotBlank() && action.isNotBlank() && permission.isNotBlank() &&
-                listOf("url", "capture", "allow_hosts", "cookie_url", "redirect_prefix").all { !extras[it].isNullOrBlank() } &&
-                listOf("outcome", "cookie", "redirect_url", "why").all { !results[it].isNullOrBlank() }
+                listOf("url", "capture", "allow_hosts", "cookie_url").all { !extras[it].isNullOrBlank() } &&
+                listOf("outcome", "cookie", "why").all { !results[it].isNullOrBlank() }
 
         fun extra(key: String): String = extras[key].orEmpty()
         fun result(key: String): String = results[key].orEmpty()
@@ -63,7 +65,6 @@ object AuthMission {
         val allowHosts: List<String>,
         val capture: String,
         val cookieUrl: String = "",
-        val redirectPrefix: String = "",
     )
 
     /** The declaration's block, as baked (package resolved, `fleet` removed). Null when absent. */
@@ -111,7 +112,6 @@ object AuthMission {
         putExtra(contract.extra("allow_hosts"), req.allowHosts.toTypedArray())
         putExtra(contract.extra("capture"), req.capture)
         putExtra(contract.extra("cookie_url"), req.cookieUrl)
-        putExtra(contract.extra("redirect_prefix"), req.redirectPrefix)
     }
 
     fun installed(ctx: Context, pkg: String): Boolean =
@@ -132,13 +132,10 @@ object AuthMission {
         return (if (outcome is Outcome.Sent) intent else null) to outcome
     }
 
-    /** What came back. No variant is logged; [Cookie.value] and [Redirect.url] carry the credential. */
+    /** What came back. No variant is logged; [Cookie.value] carries the credential. */
     sealed class Capture {
         data class Cookie(val value: String) : Capture() {
             override fun toString(): String = "Cookie(value=<redacted>)"
-        }
-        data class Redirect(val url: String) : Capture() {
-            override fun toString(): String = "Redirect(url=<redacted>)"
         }
         object Cancelled : Capture()
         data class Refused(val why: String) : Capture()
@@ -153,12 +150,8 @@ object AuthMission {
             OUTCOME_REFUSED -> Capture.Refused(data.getStringExtra(contract.result("why")).orEmpty().ifBlank { "the browser refused the mission" })
             OUTCOME_CAPTURED -> {
                 val cookie = data.getStringExtra(contract.result("cookie")).orEmpty()
-                val redirect = data.getStringExtra(contract.result("redirect_url")).orEmpty()
-                when {
-                    cookie.isNotBlank() -> Capture.Cookie(cookie)
-                    redirect.isNotBlank() -> Capture.Redirect(redirect)
-                    else -> Capture.Malformed("the browser reported a capture but carried neither a cookie nor a landing")
-                }
+                if (cookie.isNotBlank()) Capture.Cookie(cookie)
+                else Capture.Malformed("the browser reported a capture but carried no cookie")
             }
             else -> Capture.Malformed("the browser answered an undeclared outcome '$outcome'")
         }

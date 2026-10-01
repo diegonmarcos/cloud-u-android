@@ -4,7 +4,6 @@ import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.sync.FleetGit
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
-import com.diegonmarcos.cloudlib.auth.OAuthWeb
 import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import org.json.JSONObject
@@ -37,17 +36,16 @@ object DriveGitChain {
     const val RUNG_FLEET = "fleet_proxy"
 
     /**
-     * #653 THE GITHUB RUNG NO LONGER MINTS ANYTHING. Its kind used to be
-     * `gh_device_flow` and it drove an OAuth device grant whose whole user
-     * interface was a code to read and a URL to type it at — the UX the owner
-     * rejected three times. It is now `gh_on_device`: the rung answers with a
-     * GitHub credential that is ALREADY on this phone (the #566 vault import's,
-     * under the one declared id) and answers with nothing when there is none.
+     * The GitHub rung: gh on this device. #653 took the fleet's OWN device grant
+     * out of it (no device_code_url, no client id of ours), and the chain step
+     * [onDevice] still answers only with a credential already on the phone (the
+     * #566 vault import's, under the one declared id).
      *
-     * That keeps the owner's ranking intact — "if our servers are down we can do
-     * gh, if not we can use our flow" — without the phone ever OBTAINING a GitHub
-     * credential interactively. Obtaining one is the fleet's job now, and on the
-     * fleet rung the phone does not hold one at all.
+     * #689 the GitHub CARD on the page is gh itself: gh's own `auth login` (its
+     * device flow, against the client id GitHub CLI compiles into its binary),
+     * `gh repo list`, and a clone on the credential gh holds. The rung declares
+     * only where gh points ([ghHost]) and how much one listing asks for
+     * ([ghListLimit]); it declares no OAuth-App client, and may not.
      */
     const val RUNG_GITHUB = "gh_on_device"
 
@@ -57,26 +55,13 @@ object DriveGitChain {
     /** #684 the rung of [kind], in declared order — the page resolves a way's rung through this. */
     fun rung(id: String): AuthDeclaration.GitRung? = AuthDeclaration.gitChain.firstOrNull { it.id == id }
 
-    /**
-     * #684 THE GITHUB WEB SIGN-IN'S CLIENT, off the github rung's declared `web_client`. Null
-     * when the rung declares none; declared-but-unconfigured (no id or no baked secret) is
-     * the state the page draws as a DISABLED button with one line — a declared absence.
-     */
-    fun webClient(): OAuthWeb.Client? =
-        AuthDeclaration.gitChain.firstOrNull { it.kind == RUNG_GITHUB }?.webClient
+    /** #689 the host the gh leg signs in to, lists from and asks a credential for; blank when undeclared. */
+    fun ghHost(): String = githubRung()?.config?.optString("host").orEmpty()
 
-    /**
-     * #684 FILE A TOKEN THE WEB SIGN-IN MINTED, in the ONE store under the ONE declared id —
-     * the same id the vault import writes and the same id [onDevice] reads, so the very next
-     * chain walk answers with it and gh/gix resolve it. A blank id files nothing: inventing
-     * one is how a credential silently splits in two (#629).
-     */
-    fun file(ctx: Context, token: String): Boolean {
-        val id = credentialId()
-        if (id.isBlank() || token.isBlank()) return false
-        GitCredentialStore(ctx).setSecret(id, token)
-        return true
-    }
+    /** #689 how many repositories one `gh repo list` asks for; 0 when undeclared. */
+    fun ghListLimit(): Int = githubRung()?.config?.optInt("list_limit", 0) ?: 0
+
+    private fun githubRung(): AuthDeclaration.GitRung? = AuthDeclaration.gitChain.firstOrNull { it.kind == RUNG_GITHUB }
 
     /**
      * The chain, in DECLARED ORDER, with an implementation for each declared

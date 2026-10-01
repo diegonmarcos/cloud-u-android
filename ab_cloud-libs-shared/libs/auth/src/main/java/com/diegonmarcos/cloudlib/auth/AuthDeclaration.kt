@@ -53,9 +53,6 @@ object AuthDeclaration {
     ) {
         /** Does the phone hold a GitHub credential of its own on this leg? */
         val holdsGithubCredential: Boolean get() = config.optBoolean("holds_github_credential", false)
-
-        /** #684 the rung's declared authorization-code web client, or null when it declares none. */
-        val webClient: OAuthWeb.Client? get() = OAuthWeb.parse(config.optJSONObject("web_client"))
     }
 
     data class Declaration(

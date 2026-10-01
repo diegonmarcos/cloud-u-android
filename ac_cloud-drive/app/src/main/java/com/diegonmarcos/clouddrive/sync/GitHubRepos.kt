@@ -92,6 +92,67 @@ object GitHubRepos {
         }
     }
 
+    /**
+     * #689 the `--json` fields `gh repo list` is asked for: exactly the ones [parseGh] reads, each
+     * one in the pinned gh 2.101.0's own field list (measured).
+     */
+    const val GH_FIELDS = "name,owner,isPrivate,isFork,url,sshUrl,defaultBranchRef,description,diskUsage,updatedAt,pushedAt,stargazerCount,primaryLanguage"
+
+    /**
+     * #689 the repositories in `gh repo list --json` [GH_FIELDS] output, mapped onto the same [Repo]
+     * the page already groups, so Public and Private split on gh's OWN isPrivate flag. gh folds any
+     * warning into the same stream, so the array is the output's last line that opens one (gh prints
+     * it compact on one line when no TTY is attached, measured). The clone URL is the listing's own
+     * `url`, which GitHub serves git at — never re-templated from a declared owner (#669). Output
+     * with no readable array is NULL, which the caller reports as unreadable: an empty account (`[]`)
+     * and a garbled answer are two different facts.
+     */
+    fun parseGh(text: String): List<Repo>? {
+        val line = text.lineSequence().lastOrNull { it.trimStart().startsWith("[") } ?: return null
+        val root = runCatching { json.parseToJsonElement(line) }.getOrNull() as? JsonArray ?: return null
+        return root.mapNotNull { it as? JsonObject }.mapNotNull { o ->
+            val name = o.str("name")
+            if (name.isBlank()) return@mapNotNull null
+            Repo(
+                name = name,
+                owner = (o["owner"] as? JsonObject)?.str("login").orEmpty(),
+                private = o.bool("isPrivate"),
+                fork = o.bool("isFork"),
+                defaultBranch = (o["defaultBranchRef"] as? JsonObject)?.str("name").orEmpty().ifBlank { "main" },
+                description = o.str("description"),
+                sizeKb = o.long("diskUsage"),
+                updatedAt = o.str("updatedAt"),
+                pushedAt = o.str("pushedAt"),
+                cloneUrl = o.str("url"),
+                sshUrl = o.str("sshUrl"),
+                webUrl = o.str("url"),
+                stars = o.long("stargazerCount"),
+                language = (o["primaryLanguage"] as? JsonObject)?.str("name").orEmpty(),
+            )
+        }
+    }
+
+    /** #689 gh's own word on one host: the account it holds and gh's state for it ("" = none held). */
+    data class GhStatus(val login: String, val state: String) {
+        /** Signed in only in gh's own state "success": a stored but unconfirmed login is not. */
+        val signedIn: Boolean get() = state == "success" && login.isNotBlank()
+    }
+
+    /**
+     * #689 what `gh auth status --json hosts` says about [host]: the active entry's login and state.
+     * Signed out, gh still exits 0 with `{"hosts":{}}` (measured), so this reads the JSON and never
+     * the exit code. A login gh holds but GitHub did not confirm (offline, revoked) keeps its state,
+     * so the page can say THAT instead of "not signed in". The JSON carries no token.
+     */
+    fun ghStatus(text: String, host: String): GhStatus {
+        val none = GhStatus("", "")
+        val line = text.lineSequence().lastOrNull { it.trimStart().startsWith("{") } ?: return none
+        val root = runCatching { json.parseToJsonElement(line) }.getOrNull() as? JsonObject ?: return none
+        val entries = ((root["hosts"] as? JsonObject)?.get(host) as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+        val entry = entries.firstOrNull { it.bool("active") } ?: entries.firstOrNull() ?: return none
+        return GhStatus(entry.str("login"), entry.str("state"))
+    }
+
     /** The declared groups' contents: the provider's own flag decides, each side alphabetical by name. */
     fun group(repos: List<Repo>, wantPrivate: Boolean): List<Repo> =
         repos.filter { it.private == wantPrivate }.sortedBy { it.name.lowercase() }

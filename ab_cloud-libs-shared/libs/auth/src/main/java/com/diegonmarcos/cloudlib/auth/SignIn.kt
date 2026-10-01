@@ -240,7 +240,7 @@ object SignIn {
     /** Form POST returning a JSON object. GitHub answers these endpoints with
      *  form encoding by default, so `Accept: application/json` is required or
      *  the body comes back as `a=b&c=d` and every parse fails. */
-    internal fun postForm(url: String, fields: Map<String, String>): Result<JSONObject> {
+    private fun postForm(url: String, fields: Map<String, String>): Result<JSONObject> {
         var conn: HttpURLConnection? = null
         return try {
             val payload = fields.entries.joinToString("&") { (k, v) ->

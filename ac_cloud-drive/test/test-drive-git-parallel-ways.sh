@@ -15,13 +15,15 @@
 #   W2  the page RENDERS both ways independently — it iterates page.ways, each
 #       draws its own card over its OWN listing (github → listing, cloud →
 #       cloudListing), and the cloud sign-in does not gate the GitHub card.
-#   W3  NO PLACEHOLDER: a way whose rung is undeclared shows one line; a GitHub
-#       web client with no baked secret DISABLES its button with one line; the
-#       button is never dead.
-#   W4  the DIRECT GitHub web flow is declared complete and secretless — the
-#       authorize/token/redirect are declared, the secret is baked, not committed.
-#   W5  both sign-ins ride the fleet browser (auth.browser_mission), with the
-#       in-app dialog as the DECLARED fallback that SAYS it is the fallback.
+#   W3  NO PLACEHOLDER: a way whose rung is undeclared shows one line and a
+#       disabled button; nothing else disables it (#689: the GitHub way is gh's
+#       own sign-in and has no client of the fleet's own to lack).
+#   W4  (#689 retired it with the GitHub OAuth-App web flow it pinned; the
+#       absence of that flow, and gh as the GitHub leg, are pinned by
+#       test-drive-git-gh-leg.sh.)
+#   W5  the Cloud sign-in rides the fleet browser (auth.browser_mission, which
+#       captures the session cookie), with the in-app dialog as the DECLARED
+#       fallback that SAYS it is the fallback.
 #   MUT each property, broken on a copy, turns its own check red.
 #
 # OWN-SOURCE ONLY. python3 and grep only, no network, no build.
@@ -90,50 +92,27 @@ w2() {
     [ "$(_code "$f" | grep -cE 'fun GitLoginBox\(')" -eq 0 ] \
         || { echo "    the old single-chain GitLoginBox is still here — the section was not split"; bad=1; }
     # the cloud sign-in does not gate the github card: signed-in is per-way, not one flag
-    grep -qE 'val signedIn = if \(isCloud\) chain\.signedIn else login\.token\.isNotBlank\(\)' "$f" \
+    # (#689 the GitHub card's own state is gh's sign-in, or the #629 vault credential)
+    grep -qE 'val signedIn = if \(isCloud\) chain\.signedIn else ghAuth\.signedIn \|\| login\.token\.isNotBlank\(\)' "$f" \
         || { echo "    a card's signed-in state is not computed per way — one sign-in would gate both"; bad=1; }
     return $bad
 }
 
-# w3 <page> <strings> : no placeholder — undeclared rung and unconfigured client each say one line
+# w3 <page> <strings> : no placeholder — an undeclared rung says one line and disables the button
 w3() {
     local f="$1" str="$2" bad=0
     grep -qE 'enabled = !signingIn && !disabled' "$f" \
         || { echo "    the sign-in button is not disabled while the way cannot start"; bad=1; }
-    grep -qE 'val disabled = !rungDeclared \|\| \(!isCloud && !clientConfigured\)' "$f" \
-        || { echo "    the disabled rule is not (undeclared rung) or (github with no configured client)"; bad=1; }
+    grep -qE 'val disabled = !rungDeclared$' "$f" \
+        || { echo "    the disabled rule is not (undeclared rung) alone"; bad=1; }
     grep -qE 'R\.string\.git_way_rung_undeclared' "$f" \
         || { echo "    an undeclared rung shows no line"; bad=1; }
-    grep -qE 'R\.string\.git_way_client_absent' "$f" \
-        || { echo "    an unconfigured GitHub client shows no declared-absence line"; bad=1; }
-    grep -qE 'git_way_client_absent">[^<]*not yet declared' "$str" \
-        || { echo "    the client-absent line does not read as a declared absence"; bad=1; }
+    grep -qE 'git_way_rung_undeclared">[^<]*no mechanism' "$str" \
+        || { echo "    the undeclared-rung line does not say the way has no mechanism"; bad=1; }
     return $bad
 }
 
-# w4 <shared bj> : the github web client is complete and secretless
-w4() {
-    python3 - "$1" <<'PYTHON'
-import json, sys
-gh = json.load(open(sys.argv[1]))["auth"]["git_chain"]["providers"]["github"]
-c = gh.get("web_client") or {}
-bad = 0
-for k in ("authorize_url", "token_url", "redirect_uri"):
-    if not (c.get(k) or "").startswith("https://"):
-        print("    web_client.%s is not an https endpoint: %r" % (k, c.get(k))); bad = 1
-if c.get("client_secret", "x") != "":
-    print("    web_client.client_secret is committed — it must be baked at build time, never in the repo"); bad = 1
-if not (c.get("secret_env") or "").strip() or not (c.get("secret_vault_path") or "").strip():
-    print("    the secret's CI seam (secret_env / secret_vault_path) is not declared"); bad = 1
-if not c.get("allow_hosts"):
-    print("    web_client.allow_hosts is empty — the mission browser could roam anywhere"); bad = 1
-if (c.get("scope") or "") != "repo":
-    print("    web_client.scope is %r; repo is needed to list and clone private repositories" % c.get("scope")); bad = 1
-sys.exit(1 if bad else 0)
-PYTHON
-}
-
-# w5 <shared bj> <page> <wiring> : both sign-ins ride the fleet browser, with a declared fallback
+# w5 <shared bj> <page> <wiring> : the Cloud sign-in rides the fleet browser, with a declared fallback
 w5() {
     local bj="$1" page="$2" wiring="$3" bad=0
     python3 - "$bj" <<'PYTHON' || return 1
@@ -148,7 +127,7 @@ for k in ("action", "permission"):
 for grp in ("extras", "results"):
     if not isinstance(m.get(grp), dict) or not m[grp]:
         print("    browser_mission.%s is not declared" % grp); bad = 1
-for key in ("url", "capture", "allow_hosts", "cookie_url", "redirect_prefix"):
+for key in ("url", "capture", "allow_hosts", "cookie_url"):
     if key not in (m.get("extras") or {}):
         print("    browser_mission.extras is missing %s" % key); bad = 1
 sys.exit(1 if bad else 0)
@@ -161,17 +140,13 @@ PYTHON
     grep -qE 'AuthMission\.read\(contract, res\.resultCode, res\.data\)' "$page" \
         || { echo "    the mission result is not read off the declared contract"; bad=1; }
     # the DECLARED fallback: the in-app dialog, and it SAYS it is the fallback
-    grep -qE 'OAuthWebDialog\(' "$page" \
-        || { echo "    the GitHub web flow has no in-app fallback dialog"; bad=1; }
     grep -qE 'policy = listOf\(FleetGit\.sessionProvider\(\)\)' "$page" \
         || { echo "    the Cloud sign-in fallback is not scoped to the declared session_provider"; bad=1; }
     grep -qE 'git_way_mission_not_installed">[^<]*fallback' "$STR" \
         || { echo "    the not-installed outcome does not announce the fallback"; bad=1; }
-    # the token a web sign-in mints lands under the ONE declared id
-    grep -qE 'fun file\(ctx: Context, token: String\)' "$wiring" \
-        || { echo "    a web-minted token has no path into the one declared credential store"; bad=1; }
-    grep -qE 'GitCredentialStore\(ctx\)\.setSecret\(id, token\)' "$wiring" \
-        || { echo "    the web token is not filed in libs:git-sync's own store under the declared id"; bad=1; }
+    # the mission is the CLOUD card's alone, fired with the cookie capture
+    grep -qE 'capture = AuthMission\.CAPTURE_COOKIE, cookieUrl = ConfigArtifact\.endpoint\(\)' "$page" \
+        || { echo "    the Cloud sign-in does not ask the browser for the session cookie"; bad=1; }
     return $bad
 }
 
@@ -195,14 +170,11 @@ w1 "$BJ" "$SHARED_BJ" && pass "ui.sync.git.ways is [github, cloud] naming rungs 
 echo "── W2 the page renders both ways independently ──"
 w2 "$PAGE" && pass "the page iterates the declared ways, each card lists its own listing, and no sign-in gates the other card" || fail "the two ways are not rendered as independent parallel cards"
 
-echo "── W3 no placeholder — every unstartable way says one line ──"
-w3 "$PAGE" "$STR" && pass "an undeclared rung and an unconfigured GitHub client each disable the button with one declared line" || fail "a way renders a dead button or a placeholder"
+echo "── W3 no placeholder — an unstartable way says one line ──"
+w3 "$PAGE" "$STR" && pass "an undeclared rung disables the button with one declared line, and nothing else disables it" || fail "a way renders a dead button or a placeholder"
 
-echo "── W4 the direct GitHub web flow is declared complete and secretless ──"
-w4 "$SHARED_BJ" && pass "web_client declares authorize/token/redirect and the secret's CI seam, carries no committed secret, and asks the repo scope" || fail "the GitHub web client is incomplete or carries a committed secret"
-
-echo "── W5 both sign-ins ride the fleet browser, with a declared fallback ──"
-w5 "$SHARED_BJ" "$PAGE" "$WIRING" && pass "the mission is declared and fired, its result read off the contract, the in-app dialog is the declared fallback, and a web token lands under the one id" || fail "the browser mission or its fallback is not wired as declared"
+echo "── W5 the Cloud sign-in rides the fleet browser, with a declared fallback ──"
+w5 "$SHARED_BJ" "$PAGE" "$WIRING" && pass "the cookie mission is declared and fired, its result read off the contract, and the in-app dialog is the declared fallback that says so" || fail "the browser mission or its fallback is not wired as declared"
 
 echo "── W6 the Cloud listing follows every page ──"
 w6 "$FLEET" && pass "FleetGit.repos follows pages until a short one, off the declared page size — the two lists stay independent and neither is truncated" || fail "the gitea listing does not paginate (Owner Amendment 2, rule 2)"
@@ -232,20 +204,14 @@ _green "w2" w2 "$MUT/page.kt" && {
     _red "W2 both cards read the same listing" w2 "$MUT/page.kt"; }
 cp "$PAGE" "$MUT/page.kt"
 _green "w2" w2 "$MUT/page.kt" && {
-    python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('val signedIn = if (isCloud) chain.signedIn else login.token.isNotBlank()','val signedIn = chain.signedIn');open(p,'w').write(s)" "$MUT/page.kt"
+    python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('val signedIn = if (isCloud) chain.signedIn else ghAuth.signedIn || login.token.isNotBlank()','val signedIn = chain.signedIn');open(p,'w').write(s)" "$MUT/page.kt"
     _red "W2 one signed-in flag gates both cards" w2 "$MUT/page.kt"; }
 
 # W3: the button stops being disabled
 cp "$PAGE" "$MUT/page.kt"
 _green "w3" w3 "$MUT/page.kt" "$STR" && {
     python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('enabled = !signingIn && !disabled','enabled = true');open(p,'w').write(s)" "$MUT/page.kt"
-    _red "W3 the sign-in button is always enabled (a dead button when the client is absent)" w3 "$MUT/page.kt" "$STR"; }
-
-# W4: a committed secret
-cp "$SHARED_BJ" "$MUT/shared.json"
-_green "w4" w4 "$MUT/shared.json" && {
-    python3 -c "import json,sys;d=json.load(open(sys.argv[1]));d['auth']['git_chain']['providers']['github']['web_client']['client_secret']='s3cret';json.dump(d,open(sys.argv[1],'w'))" "$MUT/shared.json"
-    _red "W4 the client secret committed to the repo" w4 "$MUT/shared.json"; }
+    _red "W3 the sign-in button is always enabled (a dead button when the rung is undeclared)" w3 "$MUT/page.kt" "$STR"; }
 
 # W5: the mission result no longer read off the contract
 cp "$PAGE" "$MUT/page.kt"
@@ -254,8 +220,8 @@ _green "w5" w5 "$SHARED_BJ" "$MUT/page.kt" "$WIRING" && {
     _red "W5 the page stops reading the mission result off the declared contract" w5 "$SHARED_BJ" "$MUT/page.kt" "$WIRING"; }
 cp "$SHARED_BJ" "$MUT/shared.json"
 _green "w5" w5 "$MUT/shared.json" "$PAGE" "$WIRING" && {
-    python3 -c "import json,sys;d=json.load(open(sys.argv[1]));d['auth']['browser_mission']['extras'].pop('redirect_prefix');json.dump(d,open(sys.argv[1],'w'))" "$MUT/shared.json"
-    _red "W5 the mission drops the redirect-capture extra" w5 "$MUT/shared.json" "$PAGE" "$WIRING"; }
+    python3 -c "import json,sys;d=json.load(open(sys.argv[1]));d['auth']['browser_mission']['extras'].pop('cookie_url');json.dump(d,open(sys.argv[1],'w'))" "$MUT/shared.json"
+    _red "W5 the mission drops the cookie-capture extra" w5 "$MUT/shared.json" "$PAGE" "$WIRING"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void ──"
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))

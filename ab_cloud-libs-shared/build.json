@@ -3666,50 +3666,36 @@
           "holds_github_credential": false
         },
         "github": {
-          "_doc": "#653 THE DEVICE GRANT IS DELETED FROM THIS RUNG. It used to be kind `gh_device_flow`: a short code the owner read off the phone plus a verification URI he typed it at, and a poll loop behind them. That is the UX the owner rejected three times, and it is GONE rather than restyled — GhDeviceLogin.kt is deleted, and so are the pin's device_code_url, token_url, verification_uri and client_ids, because a baked endpoint with no caller grows a caller back. What survives is the fallback he actually asked for, in his words: 'if our servers are down we can do gh if not we can use our flow'. gh and gix can USE a GitHub credential but neither can mint one, so this rung answers with the credential ALREADY on the phone — the #566 vault import's, read out of the ONE store under the ONE declared id (auth.applies.git.credential_id, #629) — and DECLINES in words when there is none, which is a perfectly normal state because the rung above it needs no GitHub credential at all. `scope` is gone with the grant that requested it: this rung asks GitHub for nothing. The pin stays, because the binary and its hashes are still what gets exec'd. THE RANK IS UNCHANGED AND THAT IS THE WHOLE POINT: fleet first.",
+          "_doc": "#689 THIS RUNG IS gh ITSELF. The GitHub leg of Sync > Git runs the fleet's pinned GitHub CLI (libs:gh, #646) out of the app's own nativeLibraryDir: gh's own `auth login` signs in with gh's device flow against the client id GitHub CLI compiles into its own binary, so the fleet registers, declares, bakes and stores NO GitHub OAuth App, no client id and no client secret of its own; `gh repo list` lists the account's repositories, public and private, which the page splits by gh's own isPrivate flag; and a clone takes the credential gh holds through gh's own git-credential helper (the protocol `gh repo clone` feeds to git) into the ONE store's git folder (#676), with the listing's own https URL as origin. That credential lives in gh's config under the app's private files (GH_CONFIG_DIR), never in this file. The chain step of this rung is unchanged from #653: it answers with a GitHub credential already on the phone (the #566 vault import's, under auth.applies.git.credential_id) and declines in words when there is none. An OAuth-App client on ANY git rung (client_id, client_secret, redirect_uri, web_client, an oauth landing) fails ac_cloud-drive/test/test-drive-git-gh-leg.sh.",
           "label": "GitHub",
           "kind": "gh_on_device",
           "pin": "libs/gh/data/gh-binary.json",
           "holds_github_credential": true,
-          "_doc_web_client": "#684 THE DIRECT GITHUB WEB SIGN-IN, declared complete and secretless. This is the OAuth 2.0 AUTHORIZATION-CODE flow of a GitHub OAuth App (GitHub ships the WEB flow ON for OAuth Apps and GitHub Apps alike; only the DEVICE grant #641 deleted was OFF) - the phone opens authorize_url in the fleet's own browser (auth.browser_mission), GitHub redirects to redirect_uri with ?code=&state=, the browser hands that landing back to the caller, and the caller exchanges the code at token_url. The exchange needs client_id AND client_secret. client_id is PUBLIC and lives here; client_secret is NEVER committed (public repository) and is baked at BUILD time by libs:auth's build.gradle exactly like the Google device-flow secret (#611): the env named by secret_env wins, else the vault file at secret_vault_path under $VAULT_DIR, else it stays empty. AN EMPTY id OR SECRET IS A DECLARED ABSENCE: the Sync > Git GitHub card renders its button DISABLED with one line saying the client is not yet declared - never a dead button and never a placeholder. Dropping the id here and the secret into the vault makes the flow live with zero further code. redirect_uri is a recognisable fleet landing the browser INTERCEPTS client-side (redirect_prefix match) before any request is made, so no server route has to exist for it. allow_hosts is the only set of hosts the mission browser may navigate to. The token lands in the ONE credential store under the ONE declared id (auth.applies.git.credential_id, #629), after which the existing GitHub listing and clone paths take over unchanged. state is a per-attempt nonce checked on the way back; a landing whose state does not match is refused, never exchanged.",
-          "web_client": {
-            "authorize_url": "https://github.com/login/oauth/authorize",
-            "token_url": "https://github.com/login/oauth/access_token",
-            "userinfo_url": "https://api.github.com/user",
-            "client_id": "",
-            "client_secret": "",
-            "scope": "repo",
-            "redirect_uri": "https://api.diegonmarcos.com/git/oauth/landed",
-            "allow_hosts": [
-              "github.com"
-            ],
-            "secret_env": "GITHUB_OAUTH_CLIENT_SECRET",
-            "secret_vault_path": "A_A0-Providers/B_SERVICES-CLOUD/b16-github-oauth/web_client_secret"
-          }
+          "_doc_host": "#689 the host gh signs in to, lists from and answers a credential for (auth login/status --hostname, and the host line of the git-credential request). Data, so no Kotlin names it.",
+          "host": "github.com",
+          "_doc_list_limit": "#689 gh repo list --limit: the most repositories one listing asks for. A listing that comes back exactly this long is reported as possibly truncated, never as complete.",
+          "list_limit": 1000
         }
       }
     },
-    "_doc_browser_mission": "#684 SIGN-IN RIDES THE FLEET'S OWN BROWSER. The owner rejected libs:auth's cramped in-app WebAuthDialog; the fleet has a browser app (ac_cloud-browser), so a sign-in is an AUTH MISSION fired at it: which url to open, which hosts it may visit, what to capture (the session cookie for cookie_url, or the redirect landing whose URL starts with redirect_prefix), and the capture is returned to the CALLER ONLY through the activity-result contract - the mission is started for a result and finishes with it; nothing is broadcast, stored or logged on either side. `fleet` resolves to the browser's package at BUILD time from the constellation fleet manifest (the same one Sync > Git's terminal handoff resolves against), and every {package} below is substituted from that one answer - the package id is written down here once, as a fleet id. The permission is SIGNATURE-level (the browser's manifest declares it so): every fleet app signs with the ONE constellation key, so only fleet apps can request a mission and no third-party app can ask the browser for a cookie. THREE readers, ONE declaration: libs:auth (the caller side, baked into AUTH_B64 with {package} resolved), cloud-drive's manifest (uses-permission + queries placeholders) and cloud-browser's manifest/BuildConfig (the permission it declares, the action it answers, the extras it reads). FALLBACK IS DECLARED, NOT SILENT: a phone without the browser falls back to the in-app dialog and the card SAYS it is the fallback (AuthMission.Outcome.NotInstalled).",
+    "_doc_browser_mission": "#684 SIGN-IN RIDES THE FLEET'S OWN BROWSER. The owner rejected libs:auth's cramped in-app WebAuthDialog; the fleet has a browser app (ac_cloud-browser), so a sign-in is an AUTH MISSION fired at it: which url to open, which hosts it may visit, what to capture (the session cookie for cookie_url; #689 deleted the redirect-landing capture with the GitHub OAuth-App flow it served), and the capture is returned to the CALLER ONLY through the activity-result contract - the mission is started for a result and finishes with it; nothing is broadcast, stored or logged on either side. `fleet` resolves to the browser's package at BUILD time from the constellation fleet manifest (the same one Sync > Git's terminal handoff resolves against), and every {package} below is substituted from that one answer - the package id is written down here once, as a fleet id. The permission is SIGNATURE-level (the browser's manifest declares it so): every fleet app signs with the ONE constellation key, so only fleet apps can request a mission and no third-party app can ask the browser for a cookie. THREE readers, ONE declaration: libs:auth (the caller side, baked into AUTH_B64 with {package} resolved), cloud-drive's manifest (uses-permission + queries placeholders) and cloud-browser's manifest/BuildConfig (the permission it declares, the action it answers, the extras it reads). FALLBACK IS DECLARED, NOT SILENT: a phone without the browser falls back to the in-app dialog and the card SAYS it is the fallback (AuthMission.Outcome.NotInstalled).",
     "browser_mission": {
       "fleet": "browser",
       "action": "{package}.AUTH_MISSION",
       "permission": "{package}.permission.AUTH_MISSION",
       "captures": [
-        "cookie",
-        "redirect"
+        "cookie"
       ],
       "extras": {
         "url": "{package}.extra.URL",
         "title": "{package}.extra.TITLE",
         "allow_hosts": "{package}.extra.ALLOW_HOSTS",
         "capture": "{package}.extra.CAPTURE",
-        "cookie_url": "{package}.extra.COOKIE_URL",
-        "redirect_prefix": "{package}.extra.REDIRECT_PREFIX"
+        "cookie_url": "{package}.extra.COOKIE_URL"
       },
       "results": {
         "outcome": "{package}.result.OUTCOME",
         "cookie": "{package}.result.COOKIE",
-        "redirect_url": "{package}.result.REDIRECT_URL",
         "why": "{package}.result.WHY"
       },
       "outcomes": [
