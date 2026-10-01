@@ -198,7 +198,7 @@ DRAWER SECTIONS  (not in bottom nav)
     Config           ← WireGuardFragment
     Settings
 
-[SOLUTIONS]  front-end app launcher (mirrors ~/git/front/ folders) ────────────────
+[SOLUTIONS]  front-end app launcher (mirrors ~/git/front-diegonmarcos/ folders) ───
     Professional     (a-Companies / Individual / Portals)
     Personal         (b-* personal projects)
     Tools            (c-* tooling)

@@ -554,7 +554,7 @@ if [ -z "$MESH" ]; then
 fi
 if [ -z "$LINKTREE" ]; then
     for cand in \
-        "$HOME/git/front/a-Portals/linktree/src/data/projects.json"; do
+        "$HOME/git/front-diegonmarcos/a-Portals/linktree/src/data/projects.json"; do
         [ -f "$cand" ] && { LINKTREE="$cand"; break; }
     done
 fi

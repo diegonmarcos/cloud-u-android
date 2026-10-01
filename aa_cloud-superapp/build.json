@@ -3826,7 +3826,7 @@
           "Cloud",
           "Other"
         ],
-        "_doc": "Front-end app launcher — categories mirror ~/git/front/ top-level folders (a-Companies/Individual/Portals = Professional; b-* = Personal; c-* = Tools; d-Cloud; e-Others = Other). Sits next to C3 (cloud ops) under the Home master index.",
+        "_doc": "Front-end app launcher — categories mirror ~/git/front-diegonmarcos/ top-level folders (a-Companies/Individual/Portals = Professional; b-* = Personal; c-* = Tools; d-Cloud; e-Others = Other). Sits next to C3 (cloud ops) under the Home master index.",
         "pages": [
           {
             "id": "professional",

@@ -864,7 +864,7 @@ step_gh_release() {
 # (one knob: FRONT_REPO env / default sibling path), idempotent, and
 # leaves a clear diff in `git status` for review before committing.
 step_sync_qrcodes() {
-  local src="${FRONT_REPO:-$HOME/git/front}/a-Portals/linktree/src/typescript/qrcode/qrcodes.json"
+  local src="${FRONT_REPO:-$HOME/git/front-diegonmarcos}/a-Portals/linktree/src/typescript/qrcode/qrcodes.json"
   local dst="$SCRIPT_DIR/app/src/main/assets/qrcodes/qrcodes.json"
   [ -f "$src" ] || { errlog "sync-qrcodes: source not found: $src (set FRONT_REPO if your front clone lives elsewhere)"; exit 1; }
   mkdir -p "$(dirname "$dst")"

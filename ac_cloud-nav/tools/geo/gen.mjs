@@ -35,7 +35,7 @@ const OUT = join(DIR, '..', '..', 'libs', 'maps', 'src', 'main', 'assets', 'geo'
 mkdirSync(CACHE, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 
-const FRONT_TRAVEL = '/home/diego/git/front/b-MyData/mymaps-mytrips/public/travel-data.json';
+const FRONT_TRAVEL = '/home/diego/git/front-diegonmarcos/b-MyData/mymaps-mytrips/public/travel-data.json';
 const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson';
 
 function ms(args) {
