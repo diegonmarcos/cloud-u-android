@@ -77,7 +77,7 @@ for id in $lib_pkgs; do
 done
 
 echo "== M4: Store ▸ Mesh is reachable =="
-grep -qF '(FeedViewer.labels(feeds) + MESH + PERMS) to TabStyle.DESTINATION' "$PAGE" \
+grep -qF 'controls.page(MESH) + controls.page(PERMS)' "$PAGE" \
   && ok "Mesh sits on the destination line beside Perms" || bad "Mesh is not on the tab bar"
 render_tab="$(awk '/private fun renderTab\(/{f=1} f{print} f && /^    }$/{exit}' "$PAGE")"
 [ -n "$render_tab" ] || bad "could not isolate renderTab - the next check would verify nothing"

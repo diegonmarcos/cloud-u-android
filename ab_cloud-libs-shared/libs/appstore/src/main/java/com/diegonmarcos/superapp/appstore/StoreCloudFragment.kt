@@ -14,6 +14,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -174,6 +175,9 @@ class StoreCloudFragment : Fragment() {
     // An unreadable declaration is NO feed tabs at all, so this page is exactly
     // what it was before the feeds existed rather than a tab that cannot load.
     private val feeds by lazy { FeedViewer.feeds(requireContext()) }
+
+    // #732 how every tab, page entry and action button looks: assets/appstore-controls.json.
+    private val controls by lazy { StoreControls.load(requireContext()) }
 
     private val statusViews = HashMap<String, TextView>()
     // The collapsed row shows a one-line summary; the full status line lives in
@@ -360,12 +364,13 @@ class StoreCloudFragment : Fragment() {
         // Perms page walks the whole fleet. A filter and a destination drawn
         // identically claim to be the same control, so:
         //
-        //   SEGMENTED   line 1 — pills that stretch to fill the width, bold,
+        //   TAB         line 1 — pills that stretch to fill the width, bold,
         //               filled when active. A segmented control: pick exactly
         //               one of a partition.
-        //   DESTINATION line 2 — wrap-content text chips, left-aligned, no
-        //               fill, accent-coloured when active. Links to somewhere
-        //               else, which is what they are.
+        //   PAGE        line 2 — wrap-content chips, left-aligned. #671 drew
+        //               them as bare text, which read as captions; #732 made
+        //               them outlined chips with an icon and a chevron, the
+        //               look of something that opens a page (see below).
         //
         // Separated by real space and a hairline, so the eye sees two tables
         // rather than one block. The rule is not "add margin" — the two lines
@@ -376,29 +381,34 @@ class StoreCloudFragment : Fragment() {
         // two code paths. Line membership is still purely which declaration the
         // tab came from, and tabBtns.size is still the running tab index, which
         // is what keeps renderTab's group/feed/Perms mapping correct.
+        //
+        // #732 THE LOOK IS DATA NOW. Line 2's entries open pages, and drawn as
+        // bare text they read as captions, not as things to tap. Each entry
+        // wears the style its own declaration names in assets/appstore-controls
+        // .json (a `page` there: outlined chip, icon, chevron) and line 1 wears
+        // `group_tab_style`, so a third look (or a fourth line) is a data edit.
+        // `action` is the third style, worn by btn(); the three are kept
+        // visibly different by test-store-controls.sh.
         val lines = listOf(
-            tabs.map { it.label } to TabStyle.SEGMENTED,
-            (FeedViewer.labels(feeds) + MESH + PERMS) to TabStyle.DESTINATION)
-        for ((labels, style) in lines) {
-            if (labels.isEmpty()) continue
+            tabs.map { StoreControls.Control(it.label, "", controls.groupTab) },
+            feeds.map { controls.page(it.id, it.label) } + controls.page(MESH) + controls.page(PERMS))
+        for (line in lines) {
+            if (line.isEmpty()) continue
             // Only BETWEEN lines, so a page with one line draws no stray rule.
             if (column.childCount > 0) column.addView(lineDivider(ctx))
-            val strip = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                if (style == TabStyle.DESTINATION) gravity = Gravity.START
-            }
-            for (label in labels) {
-                val t = tabButton(ctx, tabBtns.size, label, style)
+            val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for (control in line) {
+                val t = tabButton(ctx, tabBtns.size, control)
                 tabBtns.add(t); strip.addView(t)
             }
-            column.addView(strip)
+            // A wrapping line scrolls rather than clipping its last chip on a
+            // narrow phone; a stretched line fills the width by definition.
+            column.addView(if (line.all { it.style.stretch }) strip
+                else HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(strip) })
         }
         paintTabs()
         return column
     }
-
-    /** The two control languages one [tabButton] can wear. */
-    private enum class TabStyle { SEGMENTED, DESTINATION }
 
     /** The hairline plus the real space that makes line 2 a second table rather
      *  than a continuation of the first. */
@@ -411,43 +421,42 @@ class StoreCloudFragment : Fragment() {
     /**
      * THE ONE tab-button builder, for both lines. [index] is its position in the
      * page's single tab ordering, captured here so a button in the second strip
-     * still selects itself; [style] is its control language (#671), carried as
-     * the view's tag so [paintTabs] stays one pass over one list.
+     * still selects itself; [control]'s style is carried as the view's tag so
+     * [paintTabs] stays one pass over one list.
      *
-     * SEGMENTED stretches (weight 1f) because a partition should fill its bar.
-     * DESTINATION wraps its content and sits left, because a set of links is
-     * not a partition and stretching it to the edges would imply it is.
+     * A stretching style (weight 1f) is a partition filling its bar; a wrapping
+     * one sits left at its own width, because a set of pages is not a partition.
+     * The icon leads and the chevron trails only when the style declares them.
      */
-    private fun tabButton(ctx: Context, index: Int, label: String, style: TabStyle) = TextView(ctx).apply {
-        text = label; maxLines = 1
+    private fun tabButton(ctx: Context, index: Int, control: StoreControls.Control) = TextView(ctx).apply {
+        val style = control.style
+        text = listOf(control.icon, control.label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
+        maxLines = 1
         tag = style
         isClickable = true
         setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
-        if (style == TabStyle.SEGMENTED) {
-            gravity = Gravity.CENTER; textSize = 13f; typeface = Typeface.DEFAULT_BOLD
+        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        if (style.stretch) {
+            gravity = Gravity.CENTER; textSize = 13f
             setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         } else {
-            gravity = Gravity.CENTER_VERTICAL; textSize = 12f; typeface = Typeface.DEFAULT
-            setPadding(dp(ctx, 2), dp(ctx, 6), dp(ctx, 14), dp(ctx, 6))
+            gravity = Gravity.CENTER_VERTICAL; textSize = 13f
+            setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { setMargins(0, 0, dp(ctx, 8), 0) }
         }
     }
 
-    /** #671 selection has to read differently too: filling a destination chip
-     *  the way a segmented pill fills would put the two languages back into
-     *  one. Each button carries its own style as its tag, so this stays a
-     *  single pass over one list. */
+    /** Selection reads per style too (#671): each button carries its declared
+     *  style as its tag, so this stays a single pass over one list and the
+     *  active look is whatever that style's `_active` fields say. */
     private fun paintTabs() = tabBtns.forEachIndexed { i, t ->
         val on = i == tab
-        if (t.tag == TabStyle.DESTINATION) {
-            t.setBackgroundColor(0x00000000)
-            t.setTextColor(if (on) 0xFFB794F4.toInt() else cDim)
-        } else {
-            t.setBackgroundColor(if (on) 0xFF7C3AED.toInt() else 0xFF2A2A33.toInt())
-            t.setTextColor(if (on) 0xFFFFFFFF.toInt() else cDim)
-        }
+        val style = t.tag as StoreControls.Style
+        t.background = StoreControls.background(t.context, style, on)
+        t.setTextColor(if (on) style.textActive else style.text)
     }
 
     private fun renderTab(ctx: Context) {
@@ -1284,21 +1293,24 @@ class StoreCloudFragment : Fragment() {
         const val UNSHELVED = "￿"
         const val OTHER = "Other"
 
-        /** The one tab this page owns rather than reads from a declaration, and
-         *  the reason it is named once: #660's guard asserts that every OTHER
-         *  tab label is absent from this file, and it needs a name to exempt. */
-        const val PERMS = "Perms"
+        /** The two line-2 pages this fragment owns rather than reads from a
+         *  feed. These are their ids in assets/appstore-controls.json, which
+         *  also holds their captions and icons (#732) — no caption is written here. */
+        const val PERMS = "perms"
 
         /** #728 the mesh view, owned by this page like Perms (see [renderMesh]). */
-        const val MESH = "Mesh"
+        const val MESH = "mesh"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE
     }
     private fun btn(ctx: Context, label: String, bg: Int, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; gravity = Gravity.CENTER; textSize = 12f; typeface = Typeface.DEFAULT_BOLD
+        // #732 the `action` style: a solid block in the verb's own colour.
+        val style = controls.action
+        text = label; gravity = Gravity.CENTER; textSize = 12f
+        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
-        setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(bg)
+        setTextColor(style.text); background = StoreControls.background(ctx, style, false, bg)
         val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         lp.setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)); layoutParams = lp
         isClickable = true; setOnClickListener { onClick() }

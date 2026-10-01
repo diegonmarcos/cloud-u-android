@@ -307,8 +307,10 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # #671 paired each line with its control language, so the line list is now
 # (labels to style) rather than a bare list. What is asserted is unchanged: line
 # 1 IS the declared groups and line 2 IS the declared feeds plus Perms.
-command grep -qF 'tabs.map { it.label } to TabStyle.SEGMENTED' "$PAGE" \
-  && command grep -qF '(FeedViewer.labels(feeds) + MESH + PERMS) to TabStyle.DESTINATION' "$PAGE" \
+# #732 each line's entries are now Controls carrying their declared look, so
+# the line list is two lists of Controls; the membership asserted is the same.
+command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupTab) }' "$PAGE" \
+  && command grep -qF 'feeds.map { controls.page(it.id, it.label) } + controls.page(MESH) + controls.page(PERMS)' "$PAGE" \
   && ok "line 1 = declared groups, line 2 = declared feeds + the page's own Mesh (#728) and Perms" \
   || bad "the tab lines are not built from the two declarations"
 
@@ -340,22 +342,28 @@ command grep -qE 'if \((labels|line)\.isEmpty\(\)\) continue' "$PAGE" \
   || bad "an empty tab line would still draw a strip"
 
 # (e) ZERO KOTLIN for a new tab. Every tab label comes off a declaration, so no
-#     label may be written here - except Perms, which this page owns and names
-#     once as a constant. Derived from BOTH declarations, so the assertion count
-#     grows when either gains an entry: a pinned list would not move.
+#     label may be written here. #732 moved the last two (Mesh, Perms) into
+#     assets/appstore-controls.json, so there is no exemption left. Derived from
+#     ALL THREE declarations, so the assertion count grows when any gains an
+#     entry: a pinned list would not move.
+CONTROLS_ASSET="$LIBS/appstore/src/main/assets/appstore-controls.json"
+[ -f "$CONTROLS_ASSET" ] || { echo "ERROR: missing $CONTROLS_ASSET" >&2; exit 2; }
 for label in $(jq -r '.groups[].label' "$FLEET" | tr ' ' '\036') \
-             $(jq -r '.feeds[].label' "$FEEDS_ASSET" | tr ' ' '\036'); do
+             $(jq -r '.feeds[].label' "$FEEDS_ASSET" | tr ' ' '\036') \
+             $(jq -r '.pages[] | .label // empty' "$CONTROLS_ASSET" | tr ' ' '\036'); do
   label="$(printf '%s' "$label" | tr '\036' ' ')"
   command grep -nF "\"$label\"" "$PAGE" \
     && bad "StoreCloudFragment hardcodes tab label \"$label\" instead of reading its declaration" \
     || ok "tab label \"$label\" is not written on the page"
 done
-# ... and Perms is named exactly once, as the constant the exemption above rests
-# on. Twice means an inline copy came back beside it.
-perms_lits="$(command grep -c '"Perms"' "$PAGE")"
-[ "$perms_lits" = "1" ] \
-  && ok "Perms is named once, as the PERMS constant" \
-  || bad "\"Perms\" appears $perms_lits times - an inline copy is back beside the constant"
+# ... and the page's own two entries are named by the IDS their declaration is
+# keyed on, so the caption can change in data with no Kotlin edit.
+for id in $(jq -r '.pages | keys[]' "$CONTROLS_ASSET"); do
+  jq -e --arg id "$id" '.feeds[] | select(.id == $id)' "$FEEDS_ASSET" >/dev/null && continue
+  command grep -qE "const val [A-Z]+ = \"$id\"" "$PAGE" \
+    && ok "page-owned entry '$id' is named by its declared id" \
+    || bad "appstore-controls.json declares page '$id' that is neither a feed nor a const id on the page"
+done
 
 echo "== T10: #671 the two lines are two CONTROL LANGUAGES, not two rows of the same pill =="
 # A line-1 tab SELECTS A SUBSET; a line-2 entry filters nothing (both feeds are
@@ -373,16 +381,16 @@ for pair in "tabBar:$TABBAR" "tabButton:$TABBTN"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*}'s body - every assertion about it would verify nothing"
 done
 
-# (a) The two lines carry DIFFERENT styles. Asserted on tabBar's own body, so
-#     pairing both lines with one style fails here.
-#     Asserted on the PAIRINGS (`to TabStyle.X`), not on the style names. A bare
-#     name check passed with BOTH lines set to SEGMENTED, because tabBar also
-#     mentions DESTINATION in its gravity line - it was asserting that the words
-#     appear, not that the lines differ. Caught by mutation.
-paired="$(printf '%s' "$TABBAR" | command grep -oE 'to TabStyle\.[A-Z]+' | sort -u | wc -l)"
-[ "$paired" -ge 2 ] \
-  && ok "tabBar pairs line 1 and line 2 with two DIFFERENT control languages" \
-  || bad "tabBar pairs every line with the same style ($paired distinct) - identical pills are back"
+# (a) The two lines carry DIFFERENT styles. #732 made the look data: line 1
+#     wears the declared group_tab_style and line 2 wears each entry's own
+#     declared style (controls.page). That the declared styles really differ is
+#     test-store-controls.sh's job; here, that tabBar sources the two lines'
+#     looks from those two DIFFERENT declarations rather than one.
+printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
+  && printf '%s' "$TABBAR" | command grep -qF 'controls.page(it.id, it.label)' \
+  && ! printf '%s' "$TABBAR" | command grep -qE 'feeds\.map \{[^}]*groupTab' \
+  && ok "tabBar dresses line 1 and line 2 from two DIFFERENT style declarations" \
+  || bad "tabBar dresses both lines from one style - identical pills are back"
 
 # (b) ONE builder still, and it is the thing that VARIES by style. A builder
 #     that ignores its style argument is the same defect wearing a parameter.
@@ -390,7 +398,7 @@ builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
   || bad "expected 1 tabButton builder, found $builders - the two languages can drift apart"
-printf '%s' "$TABBTN" | command grep -qF 'style == TabStyle.SEGMENTED' \
+printf '%s' "$TABBTN" | command grep -qF 'if (style.stretch)' \
   && ok "the builder branches on the style it is handed" \
   || bad "tabButton takes a style and ignores it - both lines would draw the same"
 # The two branches must differ in the thing that makes a segmented control
@@ -402,7 +410,8 @@ printf '%s' "$TABBTN" | command grep -qE 'LayoutParams\(0, LinearLayout\.LayoutP
 
 # (c) SELECTION reads differently too. Filling a destination chip the way a
 #     segmented pill fills puts the two languages back into one.
-printf '%s' "$PAINT" | command grep -qF 'TabStyle.DESTINATION' \
+printf '%s' "$PAINT" | command grep -qF 't.tag as StoreControls.Style' \
+  && printf '%s' "$PAINT" | command grep -qF 'style.textActive' \
   && ok "paintTabs paints a destination differently from a segmented pill" \
   || bad "paintTabs paints every tab alike - the active state re-merges the two languages"
 
@@ -421,11 +430,10 @@ printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, [0-9]+\), 0, dp\(
 
 # (e) Everything #660 proved must survive: membership still derived, empty line
 #     still draws nothing.
-printf '%s' "$TABBAR" | command grep -qF 'listOf(tabs.map { it.label }, FeedViewer.labels(feeds) + PERMS)' \
-  || printf '%s' "$TABBAR" | command grep -qF 'tabs.map { it.label } to TabStyle.SEGMENTED' \
+printf '%s' "$TABBAR" | command grep -qF 'tabs.map { StoreControls.Control(it.label' \
   && ok "line membership is still which declaration the tab came from" \
   || bad "the tab lines are no longer built from the two declarations"
-printf '%s' "$TABBAR" | command grep -qF 'if (labels.isEmpty()) continue' \
+printf '%s' "$TABBAR" | command grep -qF 'if (line.isEmpty()) continue' \
   && ok "a line with no tabs still draws no strip at all" \
   || bad "an empty tab line would draw a strip (or its divider)"
 

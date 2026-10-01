@@ -100,9 +100,6 @@ object FeedViewer {
     private fun words(a: JSONArray?): Set<String> =
         (0 until (a?.length() ?: 0)).mapNotNull { a?.optString(it)?.takeIf { s -> s.isNotEmpty() } }.toSet()
 
-    /** The tab labels, in declared order — the derivation the strip renders. */
-    fun labels(feeds: List<Feed>): List<String> = feeds.map { it.label }
-
     // ── the fetch, and the templates ─────────────────────────────────────────
 
     /**

@@ -218,8 +218,10 @@ else:
     else: bad("FeedViewer has no neutral branch: an in-flight run would be coloured as a verdict")
     # (g) The strip is a RENDERING of the declaration, and parse() is separable
     #     so a test can hand it a feed list it invented.
-    if "FeedViewer.labels(feeds)" in cloud: ok("the tab strip is FeedViewer.labels over the declared feeds")
-    else: bad("StoreCloudFragment does not build its feed tabs from FeedViewer.labels")
+    #     #732: each feed tab is the feed's own label dressed by its page
+    #     declaration, so the strip maps the declared feeds, in order.
+    if "feeds.map { controls.page(it.id, it.label) }" in cloud: ok("the tab strip maps the declared feeds, each by its own label")
+    else: bad("StoreCloudFragment does not build its feed tabs from the declared feeds")
     if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
     else: bad("FeedViewer.parse is not separable from the asset")
     # (h) #668 THE PAGE SIZE IS DATA. It lives in the declared url's query, so

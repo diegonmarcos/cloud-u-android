@@ -1,0 +1,37 @@
+{
+  "_doc": "#732 THE ONE DECLARATION of how the Store's controls LOOK. The Store draws three different kinds of control, and before this they were told apart by code alone, so the page-opening entries on the second tab line (Commits, CI-CD, Mesh, Perms) drew as bare text and read as captions rather than as something to tap. Three styles, one per kind of control: `tab` selects a subset of the fleet (line 1, one per declared group), `page` opens another page (line 2: the feeds, Mesh and Perms), `action` does something to one app (Details, Install, Stop, Uninstall, and every other button btn() draws). The Kotlin (StoreControls + StoreCloudFragment.tabButton/paintTabs/btn) maps a style's fields onto a view and names no style token, colour, icon or caption; which control wears which style is this file.",
+  "_doc_where": "Declared in libs:appstore's own assets, beside appstore-feeds.json and appstore-fleet-actions.json, NOT in aa_cloud-superapp/build.json: this module is built standalone by ab_cloud-libs-shared/lib-apks and hosted by satellite apps, none of which carry the superapp's build.json, and a module that owns a screen owns that screen's data (libs:appstore/build.gradle says the same of the fleet manifest).",
+  "_doc_styles": "Every field is read by StoreControls.parse. Colours are ARGB hex. `fill`/`fill_active` = background (null = none; on an action the verb's own colour from appstore-fleet-actions.json replaces `fill`), `stroke`/`stroke_active` = a 1dp outline (null = no outline), `text`/`text_active` = caption colour, `radius_dp` = corner radius, `stretch` = share the row's width (weight 1) instead of wrapping the caption, `bold` = bold caption, `chevron` = drawn after the caption ('' = none). `_active` is the selected tab or page; an action has no selected state, so it declares none. The three must stay visibly different: test-store-controls.sh fails if any two share their shape (fill / outline / chevron / stretch / square-or-rounded).",
+  "styles": {
+    "tab": {
+      "_role": "selects a subset (line 1): a segmented control, square, stretched, filled when active",
+      "fill": "0xFF2A2A33", "fill_active": "0xFF7C3AED",
+      "stroke": null, "stroke_active": null,
+      "text": "0x99FFFFFF", "text_active": "0xFFFFFFFF",
+      "radius_dp": 0, "stretch": true, "bold": true, "chevron": ""
+    },
+    "page": {
+      "_role": "opens a page (line 2): an outlined, rounded chip with an icon and a chevron, wrapping its caption, never filled solid",
+      "fill": null, "fill_active": "0x337C3AED",
+      "stroke": "0xFF4A4A55", "stroke_active": "0xFFB794F4",
+      "text": "0xFFE2E8F0", "text_active": "0xFFB794F4",
+      "radius_dp": 14, "stretch": false, "bold": false, "chevron": "›"
+    },
+    "action": {
+      "_role": "acts on one app: a solid block in the verb's own colour, white bold caption, slightly rounded",
+      "fill": "0xFF4A4A55", "fill_active": null,
+      "stroke": null, "stroke_active": null,
+      "text": "0xFFFFFFFF", "text_active": null,
+      "radius_dp": 6, "stretch": true, "bold": true, "chevron": ""
+    }
+  },
+  "_doc_wearers": "`group_tab_style` is the style every line-1 group tab wears (groups come from the fleet manifest, which says nothing about looks). `action_style` is what btn() draws. `pages` is every line-2 entry by id: a feed's id from appstore-feeds.json (its caption stays THERE, its one declaration, so a feed entry here carries no label) or one of the two pages StoreCloudFragment owns, `mesh` and `perms`, whose captions live here. A line-2 id with no entry here still draws, as a `page` with no icon, so a new feed never vanishes for want of an icon.",
+  "group_tab_style": "tab",
+  "action_style": "action",
+  "pages": {
+    "commits": { "icon": "📜", "style": "page" },
+    "cicd":    { "icon": "⚙️", "style": "page" },
+    "mesh":    { "label": "Mesh",  "icon": "🕸️", "style": "page" },
+    "perms":   { "label": "Perms", "icon": "🔐", "style": "page" }
+  }
+}
