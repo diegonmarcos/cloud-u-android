@@ -13,6 +13,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.security.SecureRandom
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -127,8 +128,11 @@ class GhNetProxy(
         val start = now()
         val sent = AtomicLong()
         val received = AtomicLong()
-        val ghSpoke = AtomicLong()
-        val gitHubSpoke = AtomicLong()
+        // WHO SPOKE LAST, set before the bytes are passed on: gh can only answer what it has been
+        // given, so its next request always lands after GitHub's mark (a timestamp could tie).
+        // Starts true: until GitHub has said something, nothing is quiet.
+        val ghWaiting = AtomicBoolean(true)
+        val lastMove = AtomicLong(now())
         val upFailure = AtomicReference<IOException?>()
         upstream.soTimeout = idleMs // wakes the loop below to look at the clock; not a deadline
         val toGitHub = thread(isDaemon = true, name = "gh-net-up") {
@@ -138,7 +142,8 @@ class GhNetProxy(
                 // gh going away, cleanly or not, is gh's end of the request: pass it on as one.
                 val n = try { fromGh.read(buf) } catch (e: IOException) { -1 }
                 if (n < 0) { runCatching { upstream.shutdownOutput() }; break }
-                ghSpoke.set(now()) // before the write, so a request racing the quiet check is seen
+                ghWaiting.set(true)
+                lastMove.set(now())
                 try {
                     out.write(buf, 0, n)
                     out.flush()
@@ -166,11 +171,12 @@ class GhNetProxy(
                 break
             }
             if (n == QUIET_CHECK) {
-                val answered = gitHubSpoke.get()
-                if (answered > 0 && answered >= ghSpoke.get() && now() - answered >= idleMs) how = QUIET
+                if (!ghWaiting.get() && now() - lastMove.get() >= idleMs) how = QUIET
             } else if (n < 0) {
                 how = "closed by GitHub"
             } else {
+                ghWaiting.set(false)
+                lastMove.set(now())
                 try {
                     toGh.write(buf, 0, n)
                     toGh.flush()
@@ -179,7 +185,6 @@ class GhNetProxy(
                     break
                 }
                 received.addAndGet(n.toLong())
-                gitHubSpoke.set(now())
             }
         }
         if (how!!.startsWith(BROKEN)) {
