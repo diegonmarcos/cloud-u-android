@@ -468,6 +468,51 @@ after_source="$(tidentity)"
 # `cloud-android-source-identity.sh paths`. Restating any of it here would be
 # two copies of one idea, which is how #228 and #209 happened.
 
+# ══════════════════════════════════════════════════════════════════
+# 7. A TEST SOURCE SET IS NOT AN INPUT — unless its build file ships it
+# ══════════════════════════════════════════════════════════════════
+# ea868f634 touched only libs/bottomnav/src/test/ and six applications
+# republished. lib/ carries the comment that hid it from a naive scan (bottomnav
+# says "src/test/" in a // line); shipped/ routes its test res into main the way
+# ac_cloud-vault/ui does, so its set IS an input and must still move the gate.
+SFIX="$WORK/sourceset-fixture"
+mkdir -p "$SFIX/1_cicd/src/cicd" "$SFIX/app" "$SFIX/lib/src/main" "$SFIX/lib/src/test" \
+         "$SFIX/shipped/src/main" "$SFIX/shipped/src/test/res"
+cat > "$SFIX/1_cicd/src/cicd/ship-app.yml" <<'YAML'
+on:
+  push:
+    paths:
+      - "app/**"
+      - "lib/**"
+      - "shipped/**"
+env:
+  WORK_DIR: app
+YAML
+echo '{}' > "$SFIX/app/build.json"
+printf '// TESTED where it builds: src/test/ runs as :lib:test\ndependencies { }\n' > "$SFIX/lib/build.gradle"
+printf 'android { sourceSets["main"].res.srcDir("src/test/res") }\n' > "$SFIX/shipped/build.gradle.kts"
+echo one > "$SFIX/lib/src/main/A.kt"; echo one > "$SFIX/lib/src/test/T.kt"
+echo one > "$SFIX/shipped/src/main/B.kt"; echo one > "$SFIX/shipped/src/test/res/v.xml"
+scommit() { git -C "$SFIX" add -A >/dev/null 2>&1; git -C "$SFIX" -c user.email=t@t -c user.name=t commit -qm "$1" >/dev/null 2>&1; }
+sidentity() { CLOUD_ANDROID_ROOT="$SFIX" sh "$IDENTITY" compute app; }
+git -C "$SFIX" init -q; scommit base
+s0="$(sidentity)"
+echo two > "$SFIX/lib/src/test/T.kt"; scommit lib-test
+s1="$(sidentity)"
+echo two > "$SFIX/lib/src/main/A.kt"; scommit lib-main
+s2="$(sidentity)"
+echo two > "$SFIX/shipped/src/test/res/v.xml"; scommit shipped-test
+s3="$(sidentity)"
+[ -n "$s0" ] && [ "$s0" = "$s1" ] \
+    && ok "a library src/test-only commit leaves the consuming app's identity where it was" \
+    || fail "a library src/test-only commit moved the identity ($s0 → $s1) — every consumer republishes"
+[ "$s1" != "$s2" ] \
+    && ok "a library src/main commit still moves the identity" \
+    || fail "excluding src/test also hid a real library source change"
+[ "$s2" != "$s3" ] \
+    && ok "a test set the build file routes into main is still an input" \
+    || fail "src/test/res routed into main res stopped moving the identity — a real update is suppressed"
+
 printf '\n'
 if [ "$FAILURES" -eq 0 ]; then
     printf 'PASS — the gate weighs each library APK on its own source\n'

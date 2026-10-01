@@ -346,6 +346,55 @@ _pin_identity() {
     jq -Sc '.upstream // {}' "$bj"
 }
 
+# ── Gradle test source sets are not in the APK ─────────────────────
+# <module>/src/test and <module>/src/androidTest compile only into test APKs,
+# never into the release one, yet the tree sha of every hashed directory that
+# holds them moved on a test edit. On 2026-09-30 ea868f634 touched nothing but
+# libs/bottomnav/src/test/ and ship rebuilt and republished Cloud Me, SuperApp,
+# Mail, Wallet, C3 and Drive — six "updates" with no shipped byte in them.
+#
+# The trigger still watches these directories: the run still starts, and
+# whatever runs before the gate (the app's testers, the JVM unit phase) still
+# runs. Only the publish decision stops counting them.
+#
+# Derived from the module's own declaration: a set is excluded only when its
+# module HAS a build.gradle(.kts) and no non-comment line of it names
+# src/<set> (src/testApp is a different set). ac_cloud-vault/ui routes
+# src/test/res into its MAIN res, so that set ships and must stay hashed —
+# any mention keeps it, which errs toward publishing. Any failure here prints
+# nothing, i.e. excludes nothing.
+# ponytail: only the module's own build file is read; a src/<set> routed in
+# from ANOTHER module's build file would be missed — read every build file
+# under the hashed path if that pattern ever appears.
+_test_sets() {
+    git -C "$ROOT" ls-tree -r -d --name-only HEAD -- "$1" 2>/dev/null \
+        | grep -E '(^|/)src/(test|androidTest)$' | while IFS= read -r d; do
+        m="${d%/src/*}"; ss="${d##*/}"
+        files="$(git -C "$ROOT" ls-tree --name-only HEAD -- "$m/build.gradle" "$m/build.gradle.kts" 2>/dev/null)"
+        [ -n "$files" ] || continue
+        printf '%s\n' "$files" | while IFS= read -r f; do git -C "$ROOT" show "HEAD:$f"; done \
+            | grep -v '^[[:space:]]*\(//\|\*\|/\*\)' | grep -qE "src/$ss([^A-Za-z0-9_]|\$)" && continue
+        printf '%s\n' "$d"
+    done
+    return 0
+}
+
+# Each path, minus its test source sets (same _without as the tester dir).
+_drop_test_sets() {
+    while IFS= read -r p; do
+        list="$p"
+        while IFS= read -r x; do
+            [ -n "$x" ] || continue
+            list="$(printf '%s\n' "$list" | while IFS= read -r q; do
+                        [ -n "$q" ] && _without "$q" "$x"
+                    done)"
+        done <<EOF
+$(_test_sets "$p")
+EOF
+        printf '%s\n' "$list"
+    done
+}
+
 _explain() {
     # A pin identity describes the WHOLE app, so it cannot answer a question
     # scoped to one of its assets. Spelled as an `if` rather than folded into
@@ -356,7 +405,7 @@ _explain() {
         _pin_identity && return 0
     fi
     _paths >"$PATHS_TMP"
-    LC_ALL=C sort -u "$PATHS_TMP" | while IFS= read -r p; do
+    LC_ALL=C sort -u "$PATHS_TMP" | _drop_test_sets | LC_ALL=C sort -u | while IFS= read -r p; do
         h="$(git -C "$ROOT" rev-parse "HEAD:$p" 2>/dev/null || printf 'missing')"
         printf '%s  %s\n' "$h" "$p"
     done
