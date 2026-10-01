@@ -53,6 +53,11 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
     }
 
     private fun enableWirelessDebugging(ctx: Context) {
+        // The owner's keep-alive switch decides whether this app turns it on.
+        if (!WirelessDebugKeeper.Prefs.enabled(ctx)) {
+            Log.i(TAG, "keep-alive off - leaving adb_wifi_enabled as the owner set it")
+            return
+        }
         val granted = ctx.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) ==
             PackageManager.PERMISSION_GRANTED
         if (!granted) {

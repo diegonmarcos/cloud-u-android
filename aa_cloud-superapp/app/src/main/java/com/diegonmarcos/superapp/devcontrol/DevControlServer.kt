@@ -967,6 +967,14 @@ object DevControlServer {
             sb.append('}')
         }
         sb.append("],")
+        // Wireless Debugging keep-alive: is the switch on, did the last pass
+        // get the channel back, and if not, why.
+        sb.append(""""keepalive":{""")
+        com.diegonmarcos.superapp.system.WirelessDebugKeeper.Status.rows(ctx).forEachIndexed { i, (k, v) ->
+            if (i > 0) sb.append(',')
+            sb.append('"').append(jsonEscape(k)).append("\":\"").append(jsonEscape(v)).append('"')
+        }
+        sb.append("},")
         sb.append(""""bundles":[""")
         bundles.forEachIndexed { i, b ->
             if (i > 0) sb.append(',')

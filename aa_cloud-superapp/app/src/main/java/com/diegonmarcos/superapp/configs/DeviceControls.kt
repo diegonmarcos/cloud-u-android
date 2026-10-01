@@ -18,6 +18,7 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
+import com.diegonmarcos.superapp.system.WirelessDebugKeeper
 import com.diegonmarcos.superapp.devcontrol.DevControlServer
 import com.diegonmarcos.superapp.devtools.DevControlPrefs
 import com.diegonmarcos.superapp.firewall.FirewallController
@@ -209,6 +210,10 @@ object DeviceControls {
             observed = true,
             read = { ctx -> WirelessDebugging.isOn(ctx) },
             set = { ctx, on ->
+                // The keep-alive follows the owner's hand: switching debugging
+                // off here must not be undone by the watchdog a minute later,
+                // and switching it on here is asking for it to stay on.
+                WirelessDebugKeeper.Prefs.setEnabled(ctx, on)
                 val r = WirelessDebugging.set(ctx, on)
                 Verdict(r.ok, "${r.channel}: ${r.detail}")
             },
@@ -218,6 +223,19 @@ object DeviceControls {
                      "(Wireless debugging pairing / Shizuku); this device has neither."
             },
             open = { ctx -> open(ctx, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS) },
+        ),
+
+        // NOT OBSERVED, same as auto_update: the preference is what the
+        // keeper consults when it runs. Whether the last pass got the channel
+        // back is on Configs ▸ Dev control and /api/adb/status, not here.
+        "wireless_debugging_keepalive" to Control(  // = WirelessDebugKeeper.CONTROL_ID
+            observed = false,
+            read = { ctx -> WirelessDebugKeeper.Prefs.enabled(ctx) },
+            set = { ctx, on ->
+                WirelessDebugKeeper.Prefs.setEnabled(ctx, on)
+                Verdict(WirelessDebugKeeper.Prefs.enabled(ctx) == on,
+                    "Keep-alive is " + fmt(WirelessDebugKeeper.Prefs.enabled(ctx)))
+            },
         ),
 
         // CATEGORY 3. WifiManager.setWifiEnabled has been a no-op for a normal
@@ -749,6 +767,11 @@ object DeviceControls {
         details = g.optString("details"),
         detailsRes = g.optString("details_res"),
     )
+
+    /** A boolean the declaration carries on control [id] — e.g. a switch's
+     *  shipped default — false when absent. */
+    fun declaredFlag(id: String, flag: String): Boolean =
+        groups.asSequence().flatMap { it.rows }.firstOrNull { it.id == id }?.flags?.get(flag) == true
 
     /** Tiles across the grid, declared. Presentation, so it travels with the
      *  labels rather than being a constant the owner cannot reach. */

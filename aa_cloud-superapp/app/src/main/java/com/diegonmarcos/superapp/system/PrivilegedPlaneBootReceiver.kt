@@ -17,5 +17,9 @@ class PrivilegedPlaneBootReceiver : BroadcastReceiver() {
         WorkManager.getInstance(context).enqueue(
             OneTimeWorkRequestBuilder<PrivilegedPlaneWorker>().build()
         )
+        // Android replays Wireless Debugging at boot before Wi-Fi is up and
+        // rejects it; the keeper waits for Wi-Fi and puts it back, or tells
+        // the owner it cannot.
+        WirelessDebugKeeper.sync(context, WirelessDebugKeepAlive.Trigger.BOOT)
     }
 }

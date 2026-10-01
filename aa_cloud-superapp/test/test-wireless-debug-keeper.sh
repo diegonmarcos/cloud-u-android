@@ -1,40 +1,39 @@
 #!/usr/bin/env bash
 #
-# #290 — "wireless debugging keeps switching itself off although WiFi never dropped".
+# Wireless Debugging keep-alive — the Android wiring around WirelessDebugKeepAlive.
 #
-# The setting was armed in exactly two places, both of them once-per-process:
-# App.onCreate and BOOT_COMPLETED, each enqueueing PrivilegedPlaneWorker as
-# one-time work. Nothing re-armed it in between, so the first time the platform
-# cleared `adb_wifi_enabled` mid-session it stayed cleared until the next cold
-# start. WirelessDebugKeeper closes that hole on a 15-minute period.
+# #290 found that nothing re-armed `adb_wifi_enabled` between launches. The fix
+# was a 15-minute keeper that wrote the setting back unconditionally, which left
+# two holes: it never reconnected the embedded adb client (the setting came
+# back, the shell channel did not), and the owner could not turn Wireless
+# Debugging off at all — the keeper put it back within the quarter hour.
 #
-# What this pins, and why each one can regress quietly:
+# The decisions (switch gate, Wi-Fi wait, re-read after write, stale-socket
+# drop, no prompt loop) are JVM-tested against a fake phone in
+# app/src/test/.../system/WirelessDebugKeepAliveTest.kt. This tester pins what
+# that test cannot reach — the wiring that makes those decisions run at all:
 #
-#   T1  the keeper exists and actually writes adb_wifi_enabled=1
-#   T2  it is enqueued as PERIODIC unique work, not one-time. Swapping
-#       enqueueUniquePeriodicWork back to enqueueUniqueWork compiles, runs, and
-#       reproduces the exact bug — with the class still present and looking fixed.
-#   T3  the period is 15 MINUTES. WorkManager's floor is 15; a request for 5 is
-#       silently clamped up, so a "more responsive" edit reads as an improvement
-#       and changes nothing. Pin the number that is actually in force.
-#   T4  the policy is KEEP. REPLACE would restart the period on every cold start,
-#       and an app opened often enough would never reach a single run.
-#   T5  PrivilegedPlaneWorker is NOT the thing on the timer. It carries the
-#       pairing/autoconnect loop — up to eight attempts with sleeps between them.
-#       Putting THAT on a quarter-hour period is the obvious "simplification" and
-#       it costs real battery forever on a phone that has a battery-hogs page.
-#   T6  doWork checks WRITE_SECURE_SETTINGS before writing. Without it every run
-#       throws SecurityException on a device where the permission was never
-#       granted — four times an hour, forever.
-#   T7  doWork reads before it writes. Unconditional putInt would rewrite the
-#       setting every 15 minutes whether or not anything cleared it, and each
-#       write wakes the framework's adb listeners.
-#   T8  doWork never returns Result.retry(). A retry on a phone with no
-#       permission backs off and re-runs on top of the period, which is the
-#       battery cost of T5 arriving through the back door.
+#   T1  doWork runs the tick with the OWNER'S switch, not a constant. Passing
+#       `true` compiles, passes the JVM test, and makes the switch decorative.
+#   T2  doWork asks shouldTick first; without it the prompt-loop guard is dead code.
+#   T3  the periodic pass: unique, PERIODIC, 15 MINUTES (WorkManager's floor —
+#       less is silently clamped), KEEP (REPLACE restarts the period on every
+#       cold start and an often-opened app never reaches a run).
+#   T4  switching off cancels the periodic work, the queued ticks and the notice.
+#   T5  event ticks APPEND, never REPLACE: a replaced worker's thread keeps
+#       running, and two overlapping ticks drop each other's fresh connection.
+#   T6  both in-process triggers exist: Wi-Fi becoming available, and the
+#       setting itself changing (a BSSID roam is not a new network).
+#   T7  App start and BOOT_COMPLETED both go through sync().
+#   T8  PrivilegedPlaneWorker's own boot-time write honours the switch — else
+#       OFF is undone on every launch — and it is never on a period.
+#   T9  the owner notice deep-links into Developer options, ongoing.
+#   T10 switching Wireless debugging itself from the panel moves the keep-alive
+#       with it, so the watchdog never fights the owner's hand.
+#   T11 the switch is declared in build.json with its shipped default.
+#   T12 doWork never returns Result.retry() — backoff on top of the period.
 #
-# FAIL CLOSED, per the sibling testers: if python3 is missing or a file has
-# moved, this tester has proven nothing and says so rather than passing.
+# FAIL CLOSED: a missing tool or a moved file proves nothing and says so.
 
 set -uo pipefail
 
@@ -43,121 +42,165 @@ PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-KEEPER="$APP/app/src/main/java/com/diegonmarcos/superapp/system/WirelessDebugKeeper.kt"
+SYS="$APP/app/src/main/java/com/diegonmarcos/superapp/system"
+KEEPER="$SYS/WirelessDebugKeeper.kt"
+CORE="$SYS/WirelessDebugKeepAlive.kt"
+PPW="$SYS/PrivilegedPlaneWorker.kt"
+BOOT="$SYS/PrivilegedPlaneBootReceiver.kt"
 APPKT="$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt"
+CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
+JVMTEST="$APP/app/src/test/java/com/diegonmarcos/superapp/system/WirelessDebugKeepAliveTest.kt"
+BJ="$APP/build.json"
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "  FAIL: python3 is not on PATH — this tester proves nothing without it"
-  echo "== RESULT: 0 passed, 1 failed =="
-  exit 1
-fi
-for f in "$KEEPER" "$APPKT"; do
-  if [ ! -f "$f" ]; then
+for tool in python3 jq; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "  FAIL: $tool is not on PATH — this tester proves nothing without it"
+    echo "== RESULT: 0 passed, 1 failed =="; exit 1; }
+done
+for f in "$KEEPER" "$CORE" "$PPW" "$BOOT" "$APPKT" "$CONTROLS" "$JVMTEST" "$BJ"; do
+  [ -f "$f" ] || {
     echo "  FAIL: missing file $f — the tree is not what this tester was written against"
-    echo "== RESULT: 0 passed, 1 failed =="
-    exit 1
-  fi
+    echo "== RESULT: 0 passed, 1 failed =="; exit 1; }
 done
 
-# code <file> — the file with comment lines removed. The KDoc on WirelessDebugKeeper
-# spells out "adb_wifi_enabled", "PrivilegedPlaneWorker" and "15 minutes" in prose,
-# so a plain grep would find the explanation and report it as the implementation.
+# code <file> — comment lines removed, so the KDoc's prose cannot stand in for code.
 code() { grep -vE '^[[:space:]]*(//|\*|/\*)' "$1"; }
 
-# dowork — WirelessDebugKeeper.doWork's body only, comments stripped. Scoped by
-# indentation: everything inside the function is indented deeper than its own
-# `override fun` line. Assertions below must not be satisfiable by the companion
-# object 20 lines further down, which legitimately contains the string
-# "adb_wifi_enabled" as a constant.
-dowork() {
-  code "$KEEPER" | python3 -c '
+# body <file> <signature-substring> — that function's body, comments stripped,
+# scoped by indentation.
+body() {
+  code "$1" | python3 -c '
 import sys
+needle = sys.argv[1]
 lines = sys.stdin.read().split("\n")
-start = None
 for i, l in enumerate(lines):
-    if "fun doWork" in l:
-        start = i
-        col = len(l) - len(l.lstrip())
-        break
-if start is None:
-    sys.exit(0)
-out = [lines[start]]
-for l in lines[start+1:]:
-    if l.strip() and (len(l) - len(l.lstrip())) <= col:
-        break
-    out.append(l)
-print("\n".join(out))
-'
+    if needle in l:
+        col = len(l) - len(l.lstrip()); out = [l]
+        for m in lines[i+1:]:
+            if m.strip() and (len(m) - len(m.lstrip())) <= col: break
+            out.append(m)
+        print("\n".join(out)); break
+' "$2"
 }
 
-echo "== #290 wireless debugging re-arm =="
+echo "== Wireless Debugging keep-alive wiring =="
 
-# ── T1 ── the keeper writes the setting on
-if grep -q 'Settings\.Global\.putInt' <<<"$(dowork)" && grep -q 'ADB_WIFI_ENABLED, 1' <<<"$(dowork)"; then
-  ok "T1 doWork writes adb_wifi_enabled=1"
+DOWORK="$(body "$KEEPER" 'fun doWork')"
+SYNC="$(body "$KEEPER" 'fun sync(')"
+KICK="$(body "$KEEPER" 'private fun kick(')"
+CALLBACKS="$(body "$KEEPER" 'private fun registerCallbacks(')"
+NOTIFY="$(body "$KEEPER" 'private fun notifyOwner(')"
+
+# T1
+n_tick=$(grep -c 'WirelessDebugKeepAlive\.tick(' <<<"$DOWORK")
+n_gated=$(grep -c 'WirelessDebugKeepAlive\.tick(Prefs\.enabled(ctx)' <<<"$DOWORK")
+if [ "$n_tick" -ge 1 ] && [ "$n_tick" -eq "$n_gated" ]; then
+  ok "T1 every tick in doWork is gated by the owner's switch ($n_gated/$n_tick)"
 else
-  bad "T1 doWork does not write adb_wifi_enabled=1 — the keeper keeps nothing"
+  bad "T1 doWork ticks without Prefs.enabled ($n_gated of $n_tick gated) — the switch would be decorative"
 fi
 
-# ── T2 ── periodic, not one-time
-if grep -q 'enqueueUniquePeriodicWork' <<<"$(code "$APPKT")"; then
-  ok "T2 the keeper is enqueued as periodic unique work"
+# T2
+if python3 -c '
+import sys; b=sys.argv[1]
+g=b.find("WirelessDebugKeepAlive.shouldTick("); t=b.find("WirelessDebugKeepAlive.tick(")
+sys.exit(0 if g!=-1 and t!=-1 and g<t else 1)' "$DOWORK"; then
+  ok "T2 doWork consults shouldTick before ticking"
 else
-  bad "T2 no enqueueUniquePeriodicWork in App.kt — nothing re-arms between launches, which IS #290"
-fi
-if grep -q 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>' <<<"$(code "$APPKT")"; then
-  ok "T2b the periodic request is built for WirelessDebugKeeper"
-else
-  bad "T2b the periodic request is not for WirelessDebugKeeper"
+  bad "T2 doWork ticks without shouldTick — the prompt-loop guard is dead code"
 fi
 
-# ── T3 ── the period is the 15-minute floor, stated in minutes
-if grep -qE '\b15,[[:space:]]*java\.util\.concurrent\.TimeUnit\.MINUTES' \
-   <<<"$(code "$APPKT" | grep -A2 'PeriodicWorkRequestBuilder<.*WirelessDebugKeeper>')"; then
-  ok "T3 the period is 15 MINUTES — WorkManager's floor, so it is the period actually in force"
+# T3
+if grep -q 'enqueueUniquePeriodicWork(UNIQUE_NAME, ExistingPeriodicWorkPolicy\.KEEP' <<<"$SYNC" \
+   && grep -qE 'PeriodicWorkRequestBuilder<WirelessDebugKeeper>\(15, TimeUnit\.MINUTES\)' <<<"$SYNC"; then
+  ok "T3 periodic, unique, KEEP, 15 minutes"
 else
-  bad "T3 the period is not 15 minutes; anything below the floor is silently clamped and the edit does nothing"
+  bad "T3 the periodic pass is not unique/KEEP/15-minute periodic work for WirelessDebugKeeper"
 fi
 
-# ── T4 ── KEEP, so a cold start does not restart the period
-if grep -q 'ExistingPeriodicWorkPolicy\.KEEP' <<<"$(code "$APPKT")"; then
-  ok "T4 the periodic policy is KEEP"
+# T4
+if python3 -c '
+import sys; b=sys.argv[1]
+i=b.find("if (!Prefs.enabled(app))"); seg=b[i:b.find("return", i)] if i!=-1 else ""
+need=["cancelUniqueWork(UNIQUE_NAME)","cancelUniqueWork(TICK_NAME)","cancelNotice(app)"]
+sys.exit(0 if seg and all(n in seg for n in need) else 1)' "$SYNC"; then
+  ok "T4 switching off cancels the periodic pass, queued ticks and the notice"
 else
-  bad "T4 the periodic policy is not KEEP — REPLACE restarts the 15 minutes on every app launch"
+  bad "T4 the OFF branch of sync() leaves the watchdog (or its notice) running"
 fi
 
-# ── T5 ── the heavy worker is NOT on the timer
-if grep -q 'PeriodicWorkRequestBuilder<.*PrivilegedPlaneWorker>' <<<"$(code "$APPKT")"; then
-  bad "T5 PrivilegedPlaneWorker is on a period — that is the pairing/autoconnect loop running forever"
+# T5
+if grep -q 'ExistingWorkPolicy\.APPEND_OR_REPLACE' <<<"$KICK" && ! grep -qE 'ExistingWorkPolicy\.(REPLACE|KEEP)\b' <<<"$KICK"; then
+  ok "T5 event ticks are appended, never replaced"
 else
-  ok "T5 PrivilegedPlaneWorker is not on a period; only the cheap re-arm repeats"
+  bad "T5 event ticks are not APPEND_OR_REPLACE — overlapping ticks fight over the channel"
 fi
 
-# ── T6 ── permission checked before writing
-if dowork | python3 -c '
-import sys
-b = sys.stdin.read()
-perm = b.find("WRITE_SECURE_SETTINGS")
-put  = b.find("Settings.Global.putInt")
-sys.exit(0 if perm != -1 and put != -1 and perm < put else 1)
-'; then
-  ok "T6 WRITE_SECURE_SETTINGS is checked before the write"
+# T6
+if grep -q 'registerNetworkCallback' <<<"$CALLBACKS" && grep -q 'TRANSPORT_WIFI' <<<"$CALLBACKS" \
+   && grep -q 'Trigger\.NETWORK_AVAILABLE' <<<"$CALLBACKS" \
+   && grep -q 'registerContentObserver' <<<"$CALLBACKS" && grep -q '"adb_wifi_enabled"' <<<"$CALLBACKS" \
+   && grep -q 'Trigger\.SETTING_CLEARED' <<<"$CALLBACKS"; then
+  ok "T6 Wi-Fi-available and setting-changed triggers are both registered"
 else
-  bad "T6 the write is not guarded by a permission check — SecurityException four times an hour"
+  bad "T6 a trigger is missing — recovery falls back to the 15-minute pass"
 fi
 
-# ── T7 ── read before write, so an already-on setting is left alone
-if grep -q 'Settings\.Global\.getInt' <<<"$(dowork)"; then
-  ok "T7 the current value is read before writing"
+# T7
+if grep -q 'WirelessDebugKeeper\.sync(' <<<"$(code "$APPKT")" \
+   && grep -q 'WirelessDebugKeeper\.sync(context, WirelessDebugKeepAlive\.Trigger\.BOOT)' <<<"$(code "$BOOT")"; then
+  ok "T7 App start and BOOT_COMPLETED both sync the keeper"
 else
-  bad "T7 no read — the setting is rewritten every 15 minutes whether or not anything cleared it"
+  bad "T7 App.kt or the boot receiver does not sync the keeper"
 fi
 
-# ── T8 ── never retry
-if grep -q 'Result\.retry' <<<"$(dowork)"; then
-  bad "T8 doWork can return Result.retry() — backoff re-runs stack on top of the period"
+# T8
+if python3 -c '
+import sys; b=sys.argv[1]
+g=b.find("WirelessDebugKeeper.Prefs.enabled(ctx)"); p=b.find("Settings.Global.putInt")
+sys.exit(0 if g!=-1 and p!=-1 and g<p else 1)' "$(body "$PPW" 'private fun enableWirelessDebugging')"; then
+  ok "T8a PrivilegedPlaneWorker's write honours the keep-alive switch"
 else
-  ok "T8 doWork never retries"
+  bad "T8a PrivilegedPlaneWorker writes adb_wifi_enabled regardless of the switch — OFF is undone on every launch"
+fi
+if grep -rq 'PeriodicWorkRequestBuilder<[^>]*PrivilegedPlaneWorker>' "$APP/app/src/main/java"; then
+  bad "T8b PrivilegedPlaneWorker is on a period — the pairing/autoconnect loop forever"
+else
+  ok "T8b PrivilegedPlaneWorker is not periodic"
+fi
+
+# T9
+if grep -q 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' <<<"$NOTIFY" && grep -q 'setContentIntent' <<<"$NOTIFY" \
+   && grep -q 'setOngoing(true)' <<<"$NOTIFY" && grep -q 'notifyOwner(ctx)' <<<"$DOWORK"; then
+  ok "T9 a rejected re-arm posts an ongoing notice that opens Developer options"
+else
+  bad "T9 the owner notice is missing, not ongoing, or not one tap from Developer options"
+fi
+
+# T10
+if python3 -c '
+import sys,re; s=sys.argv[1]
+m=re.search(r"\"wireless_debugging\" to Control\((.*?)\n        \),", s, re.S)
+sys.exit(0 if m and "WirelessDebugKeeper.Prefs.setEnabled(ctx, on)" in m.group(1) else 1)' "$(code "$CONTROLS")"; then
+  ok "T10 switching Wireless debugging from the panel moves the keep-alive with it"
+else
+  bad "T10 the panel's Wireless debugging switch leaves the keep-alive behind — the watchdog undoes the owner's OFF"
+fi
+
+# T11
+decl=$(jq -r '[.ui.control_panel.groups[].controls[]? | select(.id=="wireless_debugging_keepalive") | .default_on | type] | join(",")' "$BJ")
+if [ "$decl" = "boolean" ] && grep -q 'declaredFlag(WirelessDebugKeeper.CONTROL_ID, "default_on")' <<<"$(code "$KEEPER")" \
+   && grep -q 'CONTROL_ID = "wireless_debugging_keepalive"' <<<"$(code "$KEEPER")"; then
+  ok "T11 the switch is declared once in build.json with a boolean default_on, and that is what the keeper reads"
+else
+  bad "T11 the switch's declaration or default is missing/duplicated (got: '$decl')"
+fi
+
+# T12
+if grep -q 'Result\.retry' <<<"$DOWORK"; then
+  bad "T12 doWork can return Result.retry() — backoff re-runs stack on top of the period"
+else
+  ok "T12 doWork never retries"
 fi
 
 echo "== RESULT: $PASS passed, $FAIL failed =="

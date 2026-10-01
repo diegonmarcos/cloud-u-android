@@ -1019,6 +1019,8 @@ class DevControlFragment : Fragment() {
                     android.provider.Settings.Global.getInt(cr, "adb_wifi_enabled") == 1
                 }.getOrDefault(false)
                 row(ctx, it, "Wireless ADB", adbWifi.toString())
+                for ((k, v) in com.diegonmarcos.superapp.system.WirelessDebugKeeper.Status.rows(ctxAny()))
+                    row(ctx, it, "Keep-alive $k", v)
             }
             val km = ctxAny().getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
             row(ctx, it, "Device secure",  (km?.isDeviceSecure ?: false).toString())

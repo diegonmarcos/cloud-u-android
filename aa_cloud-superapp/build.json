@@ -8132,6 +8132,13 @@
               "subtitle": "The adbd this app's own privileged plane talks to. Turning it off ends silent installs and self-grants until it is back on."
             },
             {
+              "id": "wireless_debugging_keepalive",
+              "icon": "ic_refresh",
+              "label": "Keep Wireless debugging on",
+              "default_on": true,
+              "subtitle": "Turns Wireless debugging back on whenever Android drops it (Wi-Fi change, reboot) and reconnects the shell channel. Off leaves it exactly as you set it."
+            },
+            {
               "id": "app_api",
               "icon": "ic_code",
               "label": "App API",

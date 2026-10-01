@@ -141,6 +141,16 @@ object EmbeddedAdbChannel : ShellChannel {
     }.getOrElse { false to "connect failed: ${it.message}" }
 
     /**
+     * Close the client's connection. After a Wi-Fi change the old socket can
+     * still report connected while the adbd behind it is gone, and
+     * [autoConnect] short-circuits on "already connected" — so a reconnect has
+     * to start from here. The pairing is adbd's and is untouched.
+     */
+    fun disconnect(ctx: Context) {
+        runCatching { AdbManager.getInstance(ctx).disconnect() }
+    }
+
+    /**
      * Auto-discover the local adbd via mDNS (`_adb-tls-connect._tcp`, which
      * Wireless Debugging advertises) and connect — NO manual connect port.
      * libadb's autoConnect runs the discovery + connect; we Wi-Fi-bind it so
