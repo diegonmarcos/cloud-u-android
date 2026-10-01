@@ -47,8 +47,25 @@ env:
   FORK: nixdroid
 
 jobs:
+  # ── ONE build stamp per run, read by every ABI leg (#636) ───────────────
+  # Both legs publish the rootfs companion under ONE applicationId, and its
+  # versionCode is derived from this stamp (rootfs-lib/build.gradle). Stamped
+  # inside each leg, the arm64 and x86_64 companions of one build came out
+  # minutes apart; stamped here once, they cannot. Taken when the run starts,
+  # after the concurrency group has let it in, so it still moves forward from
+  # run to run.
+  build_stamp:
+    name: "Build stamp (one per run)"
+    runs-on: ubuntu-latest
+    outputs:
+      stamp: ${{ steps.stamp.outputs.stamp }}
+    steps:
+      - id: stamp
+        run: echo "stamp=$(date -u '+%Y%m%d.%H%M%S')" >> "$GITHUB_OUTPUT"
+
   build_and_publish:
     name: "Build + publish (${{ matrix.abi }})"
+    needs: build_stamp
     strategy:
       fail-fast: false
       matrix:
@@ -153,9 +170,9 @@ jobs:
           chmod +x build.sh
           ./build.sh materialize-fork "$FORK"
 
-      - name: Generate build stamp
+      - name: Build stamp (the run's, shared by every ABI leg)
         if: steps.gate.outputs.skip != 'true'
-        run: echo "COMMS_BUILD_TIMESTAMP=$(date -u '+%Y%m%d.%H%M%S')" >> "$GITHUB_ENV"
+        run: echo "COMMS_BUILD_TIMESTAMP=${{ needs.build_stamp.outputs.stamp }}" >> "$GITHUB_ENV"
 
       # Signed with the ONE shared constellation key. That is not cosmetic:
       # CLOUD_EXEC is a signature-level permission, so an APK signed with
@@ -224,3 +241,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"
+
+  # ── the APKs both legs produced agree (#636) ───────────────────────────
+  # Read from the APKs themselves, not from the stamp that should have made
+  # them agree: every package more than one leg built must carry exactly one
+  # versionCode. A leg whose gate skipped contributes nothing to compare.
+  abi_parity:
+    name: "One versionCode per package across the ABI legs"
+    needs: build_and_publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cloud-nixdroid-*-${{ github.sha }}
+          path: ${{ runner.temp }}/abi
+      - name: Every package both legs built carries one versionCode
+        run: |
+          mkdir -p "$RUNNER_TEMP/abi"
+          sh 1_cicd/dist/scripts/cloud-android-abi-parity.sh "$RUNNER_TEMP/abi"
