@@ -89,12 +89,15 @@ object PrivilegedGrants {
         // NARROW a grant on purpose. WRITE_SECURE_SETTINGS must go to this app
         // and nothing else; dynamic resolution would hand it to every fleet app
         // that declares it. Explicit means explicit: no development-flag check,
-        // no manifest check, exactly the listed packages.
+        // no manifest check, exactly the listed packages -- that INSTALLED (#736):
+        // the terminals' storage entry names apps a phone may not have yet, and
+        // `pm grant` on an absent package only fails, every pass, forever.
         for (e in entries) {
             val perm = e.optString("perm").takeIf { it.isNotEmpty() } ?: continue
             val arr = e.optJSONArray("apps") ?: continue
             for (i in 0 until arr.length()) {
                 val pkg = arr.optString(i).takeIf { it.isNotEmpty() } ?: continue
+                if (runCatching { ctx.packageManager.getPackageInfo(pkg, 0) }.isFailure) continue
                 out[pkg to perm] = Target(pkg, perm, labels[perm].orEmpty().ifEmpty { shortName(perm) })
             }
         }
@@ -170,8 +173,14 @@ object PrivilegedGrants {
      */
     fun staleGrants(ctx: Context): List<Target> {
         val sanctioned = resolve(ctx, includeGranted = true).mapTo(hashSetOf()) { it.pkg to it.perm }
+        // #736: only development-flagged permissions. A user can never grant one
+        // of those, so holding one unsanctioned means this plane granted it. A
+        // RUNTIME permission (the terminals' READ/WRITE_EXTERNAL_STORAGE) may have
+        // come from the user's own dialog -- revoking it from, say, cloud-drive
+        // would take away storage the user granted and force-stop the app, on
+        // every pass.
         val curated = curatedEntries().mapNotNullTo(hashSetOf()) {
-            it.optString("perm").takeIf(String::isNotEmpty)
+            it.optString("perm").takeIf { p -> p.isNotEmpty() && isDevelopmentPermission(ctx, p) }
         }
         val out = mutableListOf<Target>()
         for (pkg in fleetPackages(ctx, installedOnly = true)) {

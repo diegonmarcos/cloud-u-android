@@ -229,7 +229,7 @@ fi
 ACTIVITY="$DIR/app/src/main/java/com/termux/app/TermuxActivity.java"
 TARGET_SDK="$(sed -n 's/^targetSdkVersion=//p' "$DIR/gradle.properties")"
 storage_request_fits_target() {  # $1 = activity source
-    body="$(awk '/private void requestManageStorageIfNeeded\(\)/,/^    }/' "$1")"
+    body="$(awk '/void requestManageStorageIfNeeded\(\)/,/^    }/' "$1")"
     [ -n "$body" ] || return 1
     echo "$body" | grep -q 'checkAndRequestLegacyOrManageExternalStoragePermission' || return 1
     if [ "${TARGET_SDK:-0}" -lt 30 ]; then
@@ -243,7 +243,7 @@ else
 fi
 # MUTATION PROOF: the shipped pre-fix body must fail the pin.
 MUT_ACT="$(mktemp)"
-awk '/private void requestManageStorageIfNeeded\(\)/{print; print "        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())"; print "            return;"; print "        PermissionUtils.requestManageStorageExternalPermission(this,"; print "            PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION);"; skip=1; next} skip && /^    }/{skip=0} !skip' "$ACTIVITY" > "$MUT_ACT"
+awk '/void requestManageStorageIfNeeded\(\)/{print; print "        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())"; print "            return;"; print "        PermissionUtils.requestManageStorageExternalPermission(this,"; print "            PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION);"; skip=1; next} skip && /^    }/{skip=0} !skip' "$ACTIVITY" > "$MUT_ACT"
 if cmp -s "$ACTIVITY" "$MUT_ACT"; then
     bad "MUTATION DID NOT APPLY: the pre-fix storage request could not be planted"
 elif storage_request_fits_target "$MUT_ACT"; then
@@ -303,6 +303,39 @@ else
     ok "mutation proved: the shipped WRITE-only request fails the coverage pin"
 fi
 rm -f "$MUT_PU"
+
+# ── #736 — storage is re-checked at EVERY session start, and only there ────
+# bin/login decides whether to bind ~/emulated and ~/cloud-drive-shared-store
+# when a session STARTS, and its notice tells the user to allow the prompt and
+# open a new session. Asked once per onCreate, a declined prompt never came back
+# until the activity was recreated, so that advice led nowhere. The request must
+# sit in addNewSession ahead of createTermuxSession, and the activity must not
+# ask as well (two in-flight requests: the second returns empty, and the result
+# handler toasts "not granted" over a dialog the user has not answered yet).
+SESSION_CLIENT="$DIR/app/src/main/java/com/termux/app/terminal/TermuxTerminalSessionActivityClient.java"
+session_start_rechecks() {  # $1 = session client, $2 = activity
+    awk '/ void addNewSession\(/ {on=1; asked=0} on && /requestManageStorageIfNeeded\(\);/ {asked=1}
+         on && /createTermuxSession\(/ {found=asked; exit} END {exit !found}' "$1" || return 1
+    [ -z "$(grep -v '^[[:space:]]*//' "$2" | grep -E '^[[:space:]]*requestManageStorageIfNeeded\(\);')" ]
+}
+if session_start_rechecks "$SESSION_CLIENT" "$ACTIVITY"; then
+    ok "every session start re-checks storage before bin/login runs, and the activity does not ask a second time"
+else
+    bad "storage is not re-checked at session start (or is also asked in the activity) — a declined grant never comes back (#736)"
+fi
+MUT_SC="$(mktemp)"; MUT_ACT2="$(mktemp)"
+grep -v 'mActivity.requestManageStorageIfNeeded();' "$SESSION_CLIENT" > "$MUT_SC"
+awk '/TermuxUtils.sendTermuxOpenedBroadcast\(this\);/ && !done {print "        requestManageStorageIfNeeded();"; done=1} {print}' "$ACTIVITY" > "$MUT_ACT2"
+if cmp -s "$SESSION_CLIENT" "$MUT_SC" || cmp -s "$ACTIVITY" "$MUT_ACT2"; then
+    bad "MUTATION DID NOT APPLY: the #736 session-start mutations could not be planted"
+elif session_start_rechecks "$MUT_SC" "$ACTIVITY"; then
+    bad "MUTATION SURVIVED: dropping the session-start request left the pin green"
+elif session_start_rechecks "$SESSION_CLIENT" "$MUT_ACT2"; then
+    bad "MUTATION SURVIVED: a second request in onCreate left the pin green"
+else
+    ok "mutation proved: no session-start request, or a duplicate onCreate request, each turns the pin red"
+fi
+rm -f "$MUT_SC" "$MUT_ACT2"
 
 # ── #715 — bin/login's half of the trace runs, and names the storage error ──
 # Executed, not grepped: the Android-side prelude (POSIX sh; on the phone it is

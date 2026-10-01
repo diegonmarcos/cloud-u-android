@@ -142,6 +142,33 @@ grep -q 'requestPermissions(legacy, PermissionUtils.REQUEST_GRANT_STORAGE_PERMIS
 grep -q 'storage access is not granted' "$R/enter.sh" \
     && ok "enter.sh prints a legible notice when the shared store is not readable" \
     || bad "enter.sh binds an unreadable shared store silently — no storage-access notice (#612)"
+# #736: enter.sh decides the binds when a SESSION starts and its notice says to
+# allow the prompt and open a new session, so the request belongs at every session
+# start (addNewSession, ahead of createTermuxSession). Asked once per onCreate, a
+# declined prompt never came back; asked in both places, the two requests collide
+# on a fresh install and the second returns empty.
+SC="$J/app/terminal/TermuxTerminalSessionClient.java"
+session_start_rechecks() {  # $1 = session client, $2 = activity
+    awk '/ void addNewSession\(/ {on=1; asked=0} on && /requestManageStorageIfNeeded\(\);/ {asked=1}
+         on && /createTermuxSession\(/ {found=asked; exit} END {exit !found}' "$1" || return 1
+    [ -z "$(grep -v '^[[:space:]]*//' "$2" | grep -E '^[[:space:]]*requestManageStorageIfNeeded\(\);')" ]
+}
+session_start_rechecks "$SC" "$ACT" \
+    && ok "every session start re-checks storage before enter.sh runs, and the activity does not ask a second time" \
+    || bad "storage is not re-checked at session start (or is also asked in onCreate) — a declined grant never comes back (#736)"
+MUT_SC="$(mktemp)"; MUT_ACT="$(mktemp)"
+grep -v 'mActivity.requestManageStorageIfNeeded();' "$SC" > "$MUT_SC"
+awk '/TermuxUtils.sendTermuxOpenedBroadcast\(this\);/ && !done {print "        requestManageStorageIfNeeded();"; done=1} {print}' "$ACT" > "$MUT_ACT"
+if cmp -s "$SC" "$MUT_SC" || cmp -s "$ACT" "$MUT_ACT"; then
+    bad "MUTATION DID NOT APPLY: the #736 session-start mutations could not be planted"
+elif session_start_rechecks "$MUT_SC" "$ACT"; then
+    bad "MUTATION SURVIVED: dropping the session-start request left the pin green"
+elif session_start_rechecks "$SC" "$MUT_ACT"; then
+    bad "MUTATION SURVIVED: a second request in onCreate left the pin green"
+else
+    ok "mutation proved: no session-start request, or a duplicate onCreate request, each turns the pin red"
+fi
+rm -f "$MUT_SC" "$MUT_ACT"
 
 echo "── 6: #628 the tree ships as the cloud-lib-rootfs-termux companion APK, and extraction is sha256-gated ──"
 G="$APP/app/build.gradle"

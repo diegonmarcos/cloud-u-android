@@ -250,10 +250,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (!bindService(serviceIntent, this, 0))
             throw new RuntimeException("bindService() failed");
 
-        // #612/#730: the cloud-drive shared store and /storage/emulated/0 are bound into the
-        // proot root by enter.sh only when shared storage is readable, and no storage grant is
-        // given at install. Ask for the one this app's target SDK needs. Once per launch.
-        requestManageStorageIfNeeded();
+        // #612/#730/#736: the storage grant is asked for at every SESSION start
+        // (TermuxTerminalSessionClient.addNewSession), not here: enter.sh binds the store when a
+        // session starts, so that is the moment the grant matters, and asking here too would
+        // collide with the first session's request on a fresh install.
 
         // Send the {@link TermuxConstants#BROADCAST_TERMUX_OPENED} broadcast to notify apps that Termux
         // app has been opened.
@@ -265,8 +265,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
      * the runtime READ/WRITE_EXTERNAL_STORAGE grant opens /storage/emulated/0 and
      * All-Files-Access is ignored -- so the old isExternalStorageManager() gate sent a fresh
      * phone to a toggle that never mounted anything. Both legacy permissions, because a
-     * READ-less grant still cannot list the store. Once per launch (onCreate), never a loop. */
-    private void requestManageStorageIfNeeded() {
+     * READ-less grant still cannot list the store. #736: called at every session start, so a
+     * user who declined once gets the prompt back with the next session -- which is what the
+     * enter.sh notice tells them to open. User-driven, never from onResume, so never a loop. */
+    public void requestManageStorageIfNeeded() {
         if (getApplicationInfo().targetSdkVersion < Build.VERSION_CODES.R) {
             String[] legacy = {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
             // One dialog for both (same permission group), and straight through Activity: the

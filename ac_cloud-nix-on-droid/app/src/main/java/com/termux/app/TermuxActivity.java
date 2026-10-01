@@ -274,10 +274,10 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
-        // #612: the cloud-drive shared store and /storage/emulated/0 are bound into the proot
-        // root by bin/login only when the storage is readable, and that needs a grant the app
-        // cannot give itself. Ask for it once per launch (onCreate), never a loop.
-        requestManageStorageIfNeeded();
+        // #612/#736: the storage grant is asked for at every SESSION start
+        // (TermuxTerminalSessionActivityClient.addNewSession), not here: bin/login binds the store
+        // when a session starts, so that is the moment the grant matters, and asking here too
+        // would collide with the first session's request on a fresh install.
 
         // Send the {@link TermuxConstants#BROADCAST_TERMUX_OPENED} broadcast to notify apps that Termux
         // app has been opened.
@@ -289,8 +289,10 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
      * READ/WRITE_EXTERNAL_STORAGE grant opens /storage/emulated/0; All-Files-Access
      * (MANAGE_EXTERNAL_STORAGE) is ignored there, so gating on isExternalStorageManager() sent
      * the user to a toggle that could never mount anything. PermissionUtils already picks the
-     * right one per target SDK; the result lands in onRequestPermissionsResult/onActivityResult. */
-    private void requestManageStorageIfNeeded() {
+     * right one per target SDK; the result lands in onRequestPermissionsResult/onActivityResult.
+     * #736: called at every session start, so a declined grant is asked for again with the next
+     * session. User-driven, never from onResume, so never a loop. */
+    public void requestManageStorageIfNeeded() {
         PermissionUtils.checkAndRequestLegacyOrManageExternalStoragePermission(this,
             PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION, false);
     }
