@@ -16,6 +16,14 @@ import org.json.JSONObject
  *
  * Dispatch is an explicit `when`, not reflection: R8 ships enabled and cannot
  * see a reflective call.
+ *
+ * A PUBLISHED CONTRACT (engine-apk-split move 4): the SuperApp's RSS pane
+ * (rss/RemoteFeed.kt) binds this by handshake and compiles nothing of this
+ * module, so an edit here ships Cloud-Lib-Feed.apk alone. [methodNames] may only
+ * grow; an answer that changes shape ships under a new method name and a higher
+ * CONTRACT in the manifest. Held by the contract guard (K4: every method the
+ * SuperApp calls is listed here; K6: no app declares or watches this module) and
+ * by lib-apks test-engine-services.sh E8 (this engine must be discoverable).
  */
 class FeedBackendService : DataBackendService() {
 
