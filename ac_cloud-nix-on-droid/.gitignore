@@ -38,17 +38,9 @@ local.properties
 ehthumbs.db
 Thumbs.db
 
-# nix
-# Anchored to the root. Unanchored, `result` also matches the
-# termux-shared .../shell/command/result/ package, which silently
-# dropped real source out of the tree when this was vendored.
-/result
-result-*
-.direnv
-
 # Re-include the termux-shared result package.
-# A bare `result` — here for the Nix build symlink, and also in the user's
-# global core.excludesFile — is unanchored, so it matches the
+# A bare `result` in the user's global core.excludesFile (the Nix build
+# symlink) is unanchored, so it matches the
 # .../shell/command/result/ SOURCE directory too and drops it from the tree
 # with no error. A repo .gitignore outranks the global one, so this wins.
 !**/shell/command/result/
