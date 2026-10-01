@@ -189,6 +189,7 @@ object DriveGitChain {
      */
     fun githubAnswer(credentialId: String, fromGh: () -> String?, held: () -> String): GitAuthChain.Answer {
         if (credentialId.isBlank()) return GitAuthChain.Answer.NoImplementation("no credential id is declared")
+        fromGh()?.takeIf { it.isNotBlank() }?.let { return GitAuthChain.Answer.Credential(it) }
         val filed = held()
         return if (filed.isNotBlank()) GitAuthChain.Answer.Credential(filed)
         else GitAuthChain.Answer.Declined("gh is not signed in and no GitHub credential is on this device; sign in on the GitHub card, or the vault import delivers one")

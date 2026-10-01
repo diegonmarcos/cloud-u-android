@@ -25,6 +25,11 @@
 #       the API (bind 127.0.0.1, port range, groups).
 #   D6  HONEST STATUS. A clone that fails or times out answers ok:false with
 #       the loud reason — never a 200-with-nothing.
+#   D8  #735 THE GITHUB LEG IS gh's. The list and clone routes list through
+#       DriveGitChain.repos (gh repo list for the github rung, never the fleet
+#       lister, which answered "no fleet repos_url is declared"), and a clone's
+#       credential is DriveGitChain.cloneAuth over the github rung's answer —
+#       whose rung asks the gh ENGINE for its credential before the filed one.
 #
 # OWN-SOURCE ONLY. python3 and grep only, no network, no build.
 # grep -c (never -q) after pipes: pipefail + SIGPIPE turns a -q match into a
@@ -40,6 +45,7 @@ MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 SERVER="$SHARED/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
 BJ="$APP/build.json"
 DEBUGLOG="$APP/app/src/main/java/com/diegonmarcos/clouddrive/DriveDebugLog.kt"
+WIRING="$APP/app/src/main/java/com/diegonmarcos/clouddrive/configs/DriveGitChain.kt"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
@@ -49,7 +55,7 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 # so a comment DOCUMENTING a forbidden shape never matches as the shape itself.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 
-for required in "$API" "$PROVIDER" "$MANIFEST" "$SERVER" "$BJ" "$DEBUGLOG"; do
+for required in "$API" "$PROVIDER" "$MANIFEST" "$SERVER" "$BJ" "$DEBUGLOG" "$WIRING"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -150,6 +156,31 @@ d6() {
     [ "$(grep -c '{"ok":\${r.ok}' "$api")" -ge 1 ] || return 1
 }
 
+# d8 <DriveDebugApi.kt> <DriveGitChain.kt> : the github leg lists and clones on gh
+d8() {
+    python3 - "$1" "$2" <<'PYTHON'
+import re, sys
+strip = lambda src: "\n".join(l for l in src.splitlines() if not l.strip().startswith(("*", "//", "/*")))
+api = strip(open(sys.argv[1], encoding="utf-8").read())
+wiring = strip(open(sys.argv[2], encoding="utf-8").read())
+# both routes list through the kind dispatch, never the fleet lister directly
+if api.count("DriveGitChain.repos(ctx, ") < 2: sys.exit(1)
+if "FleetGit.repos(" in api: sys.exit(1)
+# the dispatch sends the github kind to gh, everything else to the fleet
+if not re.search(r'if \(rung\(rungId\)\?\.kind == RUNG_GITHUB\) ghRepos\(GhEngine\(ctx\)\) else FleetGit\.repos\(session, rungId\)', wiring): sys.exit(1)
+if "engine.repoList(" not in wiring or "GitHubRepos.parseGh(" not in wiring: sys.exit(1)
+# the clone's credential is the github rung's answer, not the vault slot alone
+if "DriveGitChain.cloneAuth(viaFleet)" not in api or "DriveGitChain.githubCredential(ctx)" not in api: sys.exit(1)
+if "vaultGitToken" in api: sys.exit(1)
+# the rung the chain walks asks the gh engine for its credential
+m = re.search(r'private fun onDevice\(ctx: Context\).*?\n    \)', wiring, re.S)
+if not m or "GhEngine(ctx).credential(host)" not in m.group(0): sys.exit(1)
+if not re.search(r'RUNG_GITHUB -> github\(\)', wiring): sys.exit(1)
+if not re.search(r'github: \(\) -> GitAuthChain\.Answer = \{ onDevice\(ctx\) \}', wiring): sys.exit(1)
+sys.exit(0)
+PYTHON
+}
+
 echo "── #669 drive loopback debug API ──"
 d1 "$SERVER" "$API" "$PROVIDER" && pass "D1 loopback-only bind, no second server" || fail "D1 loopback-only bind, no second server"
 d2 "$SERVER" "$API"             && pass "D2 fleet Bearer on every app route; only system/ping is open" || fail "D2 bearer gate"
@@ -160,6 +191,7 @@ d6 "$API"                       && pass "D6 honest status on every reply, timeou
 [ "$(grep -c 'fun tail(ctx: Context, lines: Int)' "$DEBUGLOG")" -ge 1 ] \
     && pass "D7 /api/log/tail reads DriveDebugLog's own file (one reader, in-process)" \
     || fail "D7 DriveDebugLog.tail missing"
+d8 "$API" "$WIRING"             && pass "D8 the github leg lists through gh and clones on the github rung's credential, which asks the gh engine" || fail "D8 github leg on gh"
 
 # ── MUTATIONS — each property must go RED when broken ───────────────────────
 W="${TMPDIR:-/tmp}/drive-debug-api-mut.$$"
@@ -174,6 +206,7 @@ _stage() {
     cp "$MANIFEST" "$W/AndroidManifest.xml"
     cp "$SERVER" "$W/AppDebugServer.kt"
     cp "$BJ" "$W/drive.json"
+    cp "$WIRING" "$W/DriveGitChain.kt"
 }
 # _sub <file> <old> <new> : an EXACT replacement that MUST actually apply.
 _sub() {
@@ -251,6 +284,19 @@ _stage && _green "d6" d6 "$W/DriveDebugApi.kt" && {
 _stage && _green "d6" d6 "$W/DriveDebugApi.kt" && {
     _sub "$W/DriveDebugApi.kt" '{"ok":${r.ok}' '{"ok":true'
     _red "D6 a failed clone reported ok — the 200-with-nothing shape" d6 "$W/DriveDebugApi.kt"; }
+
+_stage && _green "d8" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt" && {
+    _sub "$W/DriveDebugApi.kt" 'when (val out = runCatching { DriveGitChain.repos(ctx, rungId, FleetSession.cookie) }' 'when (val out = runCatching { FleetGit.repos(FleetSession.cookie, rungId) }'
+    _red "D8 /api/git/list?rung=github asks the fleet lister again (no fleet repos_url)" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt"; }
+_stage && _green "d8" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt" && {
+    _sub "$W/DriveGitChain.kt" 'runCatching { GhEngine(ctx).credential(host) }.getOrNull()?.secret' 'null'
+    _red "D8 the github rung stops asking the gh engine — gh's sign-in never reaches the chain" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt"; }
+_stage && _green "d8" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt" && {
+    _sub "$W/DriveDebugApi.kt" 'runCatching { DriveGitChain.githubCredential(ctx) }' 'runCatching { GitAuthChain.Answer.Credential(DriveAuthApply.vaultGitToken(ctx)) }'
+    _red "D8 the clone presents only the vault slot again" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt"; }
+_stage && _green "d8" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt" && {
+    _sub "$W/DriveGitChain.kt" 'if (rung(rungId)?.kind == RUNG_GITHUB) ghRepos(GhEngine(ctx)) else' 'if (false) ghRepos(GhEngine(ctx)) else'
+    _red "D8 the kind dispatch sends the github rung to the fleet lister" d8 "$W/DriveDebugApi.kt" "$W/DriveGitChain.kt"; }
 
 rm -rf "$W"
 echo "── $MUTATIONS mutations, $HOLLOW of them hollow or void ──"
