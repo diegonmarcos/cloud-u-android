@@ -189,6 +189,7 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
         raise ValueError(f"expected exactly one env exec of the caller's argv:\n  {ENV_EXEC_ARGV}")
     login_inner = login_inner.replace(ENV_EXEC_ARGV, 'exec "$@"', 1)
 
+    require_fish_login_shell(login_shell)
     return probe_usershell_exec(
         retarget_usershell(login_inner, profile_link, login_shell))
 
@@ -201,10 +202,58 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
 # literals below are module constants so the tester can un-apply the probe
 # textually and prove its own assertion discriminates.
 USERSHELL_EXEC = 'exec -a "-${usershell##*/}" "$usershell"'
+# The probe above passed on the phone and fish STILL drew no prompt: `-c exit`
+# never reaches the interactive half of fish's startup, which is where the
+# device wedged (tty left in cooked mode, no child, forever). So the shell is no
+# longer exec'd blind. It runs as a foreground job beside a watchdog, and fish
+# proves it reached the reader by writing $CLOUD_LOGIN_PROMPT_SEEN from its first
+# fish_prompt event. No proof within the deadline -> one named stderr line, the
+# shell is killed, bash. `set -m` (only with a tty) makes bash hand the terminal
+# to the job and take it back when the job dies, so the bash after a kill is
+# never left in a background process group. The deadline outlasts fish's own
+# 10 s wait for a terminal that ignores its startup queries.
+USERSHELL_PROMPT_DEADLINE_S = 20
+USERSHELL_PROMPT_BOUNDED = (
+    'CLOUD_LOGIN_PROMPT_SEEN="${TMPDIR:-/tmp}/.cloud-login-prompt.$$"\n'
+    '    export CLOUD_LOGIN_PROMPT_SEEN\n'
+    '    rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
+    f'    deadline="${{CLOUD_LOGIN_PROMPT_DEADLINE:-{USERSHELL_PROMPT_DEADLINE_S}}}"\n'
+    '    if [ -t 0 ]; then set -m; fi\n'
+    '    ( sleep "$deadline"\n'
+    '      if [ ! -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then\n'
+    '        : > "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
+    '        kill -KILL "$(cat "$CLOUD_LOGIN_PROMPT_SEEN.pid")" 2>/dev/null\n'
+    '      fi ) &\n'
+    '    watchdog=$!\n'
+    '    rc=0\n'
+    # The job is a waiter bash whose own stderr is /dev/null, so bash's "Killed"
+    # report about the shell lands there; the shell itself (exec'd one level
+    # down, so its pid is known) takes the terminal's stderr back from fd 3.
+    # The waiter, not this shell, is what parks stderr: under set -m bash hands
+    # the terminal over through its OWN stderr, and redirecting it here left the
+    # shell in a background process group (SIGTTIN, status 149).
+    '    ( exec 3>&2 2>/dev/null\n'
+    '      ( exec 2>&3 3>&-\n'
+    '        echo "$BASHPID" > "$CLOUD_LOGIN_PROMPT_SEEN.pid"\n'
+    '        exec -a "-${usershell##*/}" "$usershell" --init-command \''
+    'function __cloud_prompt_seen --on-event fish_prompt; functions -e __cloud_prompt_seen; '
+    'true >$CLOUD_LOGIN_PROMPT_SEEN; set -e CLOUD_LOGIN_PROMPT_SEEN; end\' ) || exit $? ) || rc=$?\n'
+    '    kill "$watchdog" 2>/dev/null || true\n'
+    '    set +m\n'
+    '    if [ -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then\n'
+    '      rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid"\n'
+    '      exit "$rc"\n'
+    '    fi\n'
+    '    why="ended (status $rc) before drawing a prompt"\n'
+    '    if [ -e "$CLOUD_LOGIN_PROMPT_SEEN.late" ]; then why="drew no prompt within ${deadline}s"; fi\n'
+    '    rm -f "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
+    '    echo "⚠ login shell $usershell $why; falling back to bash" >&2\n'
+    '    exec -l bash'
+)
 USERSHELL_PROBE = (
     'if ! command -v timeout >/dev/null 2>&1 '
     '|| timeout 5 "$usershell" -c exit >/dev/null 2>&1; then\n'
-    f'    {USERSHELL_EXEC}\n'
+    f'    {USERSHELL_PROMPT_BOUNDED}\n'
     '  fi\n'
     '  echo "⚠ login shell $usershell failed its 5s liveness probe; falling back to bash" >&2\n'
     '  exec -l bash'
@@ -226,6 +275,15 @@ def probe_usershell_exec(login_inner: str) -> str:
         raise ValueError("expected exactly one usershell exec in usr/lib/login-inner:\n"
                          f"  {USERSHELL_EXEC}")
     return login_inner.replace(USERSHELL_EXEC, USERSHELL_PROBE, 1)
+
+
+def require_fish_login_shell(login_shell: str) -> None:
+    """USERSHELL_PROMPT_BOUNDED hands the shell a fish --init-command; any other
+    login shell would reject it and land in bash on every login, loudly but
+    permanently. Fail the build instead of shipping that."""
+    if login_shell != "fish":
+        raise ValueError(f"login_shell_attr is {login_shell!r}, but the bounded login-shell "
+                         "start speaks fish (--init-command / fish_prompt)")
 
 
 def retarget_usershell(login_inner: str, profile_link: str, login_shell: str) -> str:
@@ -393,7 +451,7 @@ def main() -> int:
                 'else\n'
                 '  BIND_HOME_EMULATED=""\n'
                 '  BIND_HOME_SHARED_STORE=""\n'
-                '  echo "⚠ cloud-drive shared store not mounted: All-Files-Access is not granted yet." >&2\n'
+                '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted yet." >&2\n'
                 'fi\n\n'
             )
             bin_login = bin_login.replace(

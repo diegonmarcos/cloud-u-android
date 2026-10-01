@@ -48,8 +48,10 @@ android {
         // Bumped for the post-banner-hang fix: the store's ensure fork and the
         // login-shell exec are now BOUNDED (timeout + loud stderr skip), so a
         // prompt always arrives; the rootfs content-address moves with it.
-        versionCode 188046
-        versionName "0.118.0_v0.3.10_nix"
+        // Bumped again: the login shell must DRAW a prompt within a deadline or
+        // bash takes over, and storage is requested per the real target SDK.
+        versionCode 188047
+        versionName "0.118.0_v0.3.11_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
         ndk {

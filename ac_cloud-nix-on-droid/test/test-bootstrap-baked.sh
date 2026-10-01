@@ -219,31 +219,48 @@ else
     bad "bake_default_packages.py is missing the #612 bin/login mount patch (\$HOME/emulated, \$HOME/cloud-drive-shared-store)"
 fi
 
-# ── #612 — All-Files-Access is asked for, and its absence is legible ──────
-# MANAGE_EXTERNAL_STORAGE is declared in the manifest but is a special access that
-# is NOT granted at install and cannot be self-granted, so TermuxActivity must send
-# the user to the toggle on launch and the baked bin/login must not mount an empty
-# tree in silence. Both are greps over source: delete either and this goes red.
+# ── #612 — the storage grant is asked for, and its absence is legible ──────
+# Which grant opens /storage/emulated/0 depends on the TARGET sdk, not the phone's:
+# below 30 the app stays on legacy storage and only READ/WRITE_EXTERNAL_STORAGE
+# count, while All-Files-Access is ignored. The activity used to gate on
+# isExternalStorageManager() and open the All-Files-Access toggle -- at target 28
+# a grant that never mounted anything. It must route through PermissionUtils'
+# target-sdk-aware chooser instead.
 ACTIVITY="$DIR/app/src/main/java/com/termux/app/TermuxActivity.java"
-if grep -q 'Environment.isExternalStorageManager()' "$ACTIVITY"; then
-    ok "TermuxActivity checks isExternalStorageManager() on launch"
+TARGET_SDK="$(sed -n 's/^targetSdkVersion=//p' "$DIR/gradle.properties")"
+storage_request_fits_target() {  # $1 = activity source
+    body="$(awk '/private void requestManageStorageIfNeeded\(\)/,/^    }/' "$1")"
+    [ -n "$body" ] || return 1
+    echo "$body" | grep -q 'checkAndRequestLegacyOrManageExternalStoragePermission' || return 1
+    if [ "${TARGET_SDK:-0}" -lt 30 ]; then
+        ! echo "$body" | grep -q 'isExternalStorageManager\|requestManageStorageExternalPermission'
+    fi
+}
+if storage_request_fits_target "$ACTIVITY"; then
+    ok "TermuxActivity requests storage through the target-sdk-aware chooser (targetSdk $TARGET_SDK -> legacy READ/WRITE_EXTERNAL_STORAGE)"
 else
-    bad "TermuxActivity has no isExternalStorageManager() first-run check — the terminal never asks for All-Files-Access (#612)"
+    bad "TermuxActivity's storage request does not fit targetSdk $TARGET_SDK — at < 30 All-Files-Access never mounts the shared store (#612)"
 fi
-if grep -q 'requestManageStorageExternalPermission' "$ACTIVITY"; then
-    ok "TermuxActivity opens this app's All-Files-Access settings screen"
+# MUTATION PROOF: the shipped pre-fix body must fail the pin.
+MUT_ACT="$(mktemp)"
+awk '/private void requestManageStorageIfNeeded\(\)/{print; print "        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())"; print "            return;"; print "        PermissionUtils.requestManageStorageExternalPermission(this,"; print "            PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION);"; skip=1; next} skip && /^    }/{skip=0} !skip' "$ACTIVITY" > "$MUT_ACT"
+if cmp -s "$ACTIVITY" "$MUT_ACT"; then
+    bad "MUTATION DID NOT APPLY: the pre-fix storage request could not be planted"
+elif storage_request_fits_target "$MUT_ACT"; then
+    bad "MUTATION SURVIVED: the All-Files-Access-only request still passes the target-sdk pin"
 else
-    bad "TermuxActivity never requests MANAGE_EXTERNAL_STORAGE — the check leads nowhere (#612)"
+    ok "mutation proved: the All-Files-Access-only request fails the target-sdk pin"
 fi
+rm -f "$MUT_ACT"
 # #676 the pin targets the ECHOED stderr line itself, not the phrase: the file's
 # own comments also say All-Files-Access, so a grep for the phrase alone stays
 # green after the echo is deleted (a hollow green). The probe may degrade to no
 # bind — that mechanism stands — but its one loud line must exist.
-notice_echoed() { grep -q 'echo .*shared store not mounted.*All-Files-Access.*>&2' "$1"; }
+notice_echoed() { grep -q 'echo .*shared store not mounted.*storage access.*>&2' "$1"; }
 if notice_echoed "$BAKE_PY"; then
     ok "bin/login echoes the shared-store-not-mounted notice to stderr"
 else
-    bad "bin/login binds an unreadable shared store silently — no All-Files-Access notice reaches stderr (#612)"
+    bad "bin/login binds an unreadable shared store silently — no storage-access notice reaches stderr (#612)"
 fi
 # MUTATION PROOF: strip the echo line from a copy; the assertion must go red there.
 MUT612="$(mktemp)"
@@ -563,6 +580,9 @@ pre641 = patched.replace(f"/{profile_link}/bin/{login_shell}", OLD_SHELL)
 # literals are the patcher's own constants, so a drifted probe makes this a
 # no-op replace -- reported below as a dead assertion, never silently green.
 noprobe = patched.replace(bake.USERSHELL_PROBE, bake.USERSHELL_EXEC)
+# The prompt deadline, un-applied: the probe stays, but a shell that passes it
+# is exec'd blind again -- the shape that left the phone on a banner forever.
+nodeadline = patched.replace(bake.USERSHELL_PROMPT_BOUNDED, bake.USERSHELL_EXEC)
 
 # Sandbox: every absolute /usr/ path AND the baked profile move under $work, so
 # /usr/bin/env is genuinely absent (as on a fresh install) and the login shell is
@@ -601,7 +621,24 @@ def sandbox(text):
     return text.replace("/usr/", f"{work}/usr/").replace(f"/{profile_link}/", f"{work}/{profile_link}/")
 
 
-def run(text, name, args, env_present, shell_present=True, shell_wedged=False):
+# The healthy stand-in proves its prompt the way the injected fish handler
+# does: by writing $CLOUD_LOGIN_PROMPT_SEEN. The prompt-wedged one passes the
+# `-c exit` probe and then never prompts (the device's shape); it execs sleep so
+# the pid the watchdog kills is the one holding the capture pipes. The
+# prompt-dying one passes the probe and exits with no prompt.
+def flat(out):
+    """One line, no backslashes: the RESULT lines are re-read through sh's echo,
+    which expands escapes and would split a message across the next verdicts."""
+    return " | ".join(l.strip() for l in out.replace("\\", "/").splitlines() if l.strip())
+
+
+HEALTHY = '#!/bin/sh\n[ -n "$CLOUD_LOGIN_PROMPT_SEEN" ] && : > "$CLOUD_LOGIN_PROMPT_SEEN"\necho FISH_REACHED\n'
+PROMPT_WEDGED = '#!/bin/sh\n[ "$1" = -c ] && exit 0\nexec sleep 30\n'
+PROMPT_DYING = '#!/bin/sh\n[ "$1" = -c ] && exit 0\nexit 7\n'
+
+
+def run(text, name, args, env_present, shell_present=True, shell_wedged=False,
+        shell_body=None, deadline=None, limit=60):
     path = f"{work}/{name}"
     open(path, "w").write(sandbox(text))
     envbin = f"{work}/usr/bin/env"
@@ -613,19 +650,26 @@ def run(text, name, args, env_present, shell_present=True, shell_wedged=False):
     if shell_present:
         # The wedged stand-in fails the liveness probe (any use, incl. `-c
         # exit`, fails) without costing the tester the probe's 5s deadline.
-        body = '#!/bin/sh\nexit 1\n' if shell_wedged else '#!/bin/sh\necho FISH_REACHED\n'
+        body = shell_body or ('#!/bin/sh\nexit 1\n' if shell_wedged else HEALTHY)
         open(SHELL_BIN, "w").write(body)
         os.chmod(SHELL_BIN, 0o755)
     elif os.path.exists(SHELL_BIN):
         os.remove(SHELL_BIN)
-    p = subprocess.run(["bash", path, *args], capture_output=True, text=True,
-                       env=RUN_ENV)
+    env = dict(RUN_ENV, TMPDIR=work)
+    if deadline is not None:
+        env["CLOUD_LOGIN_PROMPT_DEADLINE"] = str(deadline)
+    try:
+        p = subprocess.run(["bash", path, *args], capture_output=True, text=True,
+                           env=env, stdin=subprocess.DEVNULL, timeout=limit)
+    except subprocess.TimeoutExpired as e:
+        # TimeoutExpired carries bytes even under text=True
+        return "TIMEOUT", b"".join(x for x in (e.stdout, e.stderr) if x).decode(errors="replace")
     return p.returncode, p.stdout + p.stderr
 
 
 why = []
 rc, out = run(patched, "patched", [], False)
-if rc != 0 or "FISH_REACHED" not in out:
+if rc != 0 or "FISH_REACHED" not in out or "⚠ login shell" in out:
     why.append(f"fresh-install boot rc={rc} out={out.strip()!r}")
 # The REAL engine ran, it built a real generation, and the login still reached
 # the shell: `current` is the ONE symlink an apply flips, so its existence after
@@ -637,6 +681,18 @@ if not os.path.islink(f"{work}/home/.cloud-store/current"):
 rc, out = run(patched, "patched-wedged", [], False, shell_wedged=True)
 if "FISH_REACHED" in out or "liveness probe" not in out:
     why.append(f"wedged-shell boot rc={rc} out={out.strip()!r} -- the blank-screen hang shape")
+# A shell that passes the probe and then never draws a prompt -- what the phone
+# did -- must cost one named line and bash once the deadline runs out.
+rc, out = run(patched, "patched-promptwedged", [], False, shell_body=PROMPT_WEDGED,
+              deadline=2, limit=20)
+if rc == "TIMEOUT" or "drew no prompt within 2s" not in out or out.count("⚠ login shell") != 1:
+    why.append(f"prompt-wedged boot rc={rc} out={flat(out)} -- the post-banner blank screen")
+# And one that dies before its prompt is named as such, also landing in bash.
+rc, out = run(patched, "patched-promptdying", [], False, shell_body=PROMPT_DYING, deadline=2)
+if "ended (status 7) before drawing a prompt" not in out:
+    why.append(f"prompt-dying boot rc={rc} out={flat(out)}")
+if any(n.startswith(".cloud-login-prompt.") for n in os.listdir(work)):
+    why.append(f"the prompt handshake left files behind in TMPDIR: {sorted(os.listdir(work))}")
 # The #640 interaction: once /usr/bin/env EXISTS, a surviving `exec /usr/bin/env
 # bash` would fire and bash would be the login shell forever. It must still be fish.
 rc, out = run(patched, "patched-envok", [], True)
@@ -682,10 +738,19 @@ rc, out = run(noprobe, "noprobe-wedged", [], False, shell_wedged=True)
 if "liveness probe" in out or "FISH_REACHED" in out:
     pwhy.append(f"unprobed exec still produced a verdict on a wedged shell rc={rc} out={out.strip()!r}")
 print("RESULT:PROBE " + ("OK" if not pwhy else "SURVIVED " + "; ".join(pwhy)))
+
+dwhy = []
+if nodeadline == patched:
+    dwhy.append("un-applying the prompt deadline was a no-op: the patched file carries no USERSHELL_PROMPT_BOUNDED text")
+rc, out = run(nodeadline, "nodeadline-promptwedged", [], False, shell_body=PROMPT_WEDGED,
+              deadline=2, limit=8)
+if rc != "TIMEOUT" or "drew no prompt" in out:
+    dwhy.append(f"the blind exec still ended on a prompt-wedged shell rc={rc} out={flat(out)}")
+print("RESULT:DEADLINE " + ("OK" if not dwhy else "SURVIVED " + "; ".join(dwhy)))
 PYEOF
 )"
 case "$(echo "$D1_RESULT" | sed -n 1p)" in
-    OK) ok "the patched usr/lib/login-inner reaches the baked $LOGIN_SHELL with no nix profile — through the REAL cloud-store ensure (a generation was built) — still execs a caller's argv, falls back to bash if the shell is missing, and a WEDGED shell costs one named stderr line + bash, never a blank screen" ;;
+    OK) ok "the patched usr/lib/login-inner reaches the baked $LOGIN_SHELL with no nix profile — through the REAL cloud-store ensure (a generation was built) — still execs a caller's argv, falls back to bash if the shell is missing, and a shell that is WEDGED, never draws a prompt, or dies before one costs one named stderr line + bash, never a blank screen" ;;
     *)  bad "the baked usr/lib/login-inner does not boot into $LOGIN_SHELL on a fresh install: $(echo "$D1_RESULT" | sed -n 1p)" ;;
 esac
 case "$(echo "$D1_RESULT" | sed -n 2p)" in
@@ -699,6 +764,10 @@ esac
 case "$(echo "$D1_RESULT" | sed -n 4p)" in
     "PROBE OK") ok "mutation proved: un-applying the liveness probe turns a wedged shell back into a silent dead end — the wedged-shell assertion discriminates" ;;
     *)          bad "MUTATION SURVIVED: the unprobed exec still passed the wedged-shell assertion, so it proves nothing: $(echo "$D1_RESULT" | sed -n 4p)" ;;
+esac
+case "$(echo "$D1_RESULT" | sed -n 5p)" in
+    "DEADLINE OK") ok "mutation proved: exec'ing a probe-passing shell blind again hangs on one that never prompts — the prompt-deadline assertion discriminates" ;;
+    *)             bad "MUTATION SURVIVED: without the prompt deadline the prompt-wedged boot still ended, so it proves nothing: $(echo "$D1_RESULT" | sed -n 5p)" ;;
 esac
 rm -rf "$D1_WORKDIR"
 
