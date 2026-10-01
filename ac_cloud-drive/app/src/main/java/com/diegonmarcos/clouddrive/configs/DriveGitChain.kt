@@ -3,6 +3,9 @@ package com.diegonmarcos.clouddrive.configs
 import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.sync.FleetGit
+import com.diegonmarcos.clouddrive.sync.GhEngine
+import com.diegonmarcos.clouddrive.sync.GitHubRepos
+import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
 import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
@@ -78,11 +81,12 @@ object DriveGitChain {
         ctx: Context,
         declared: List<AuthDeclaration.GitRung> = AuthDeclaration.gitChain,
         session: String = "",
+        github: () -> GitAuthChain.Answer = { onDevice(ctx) },
     ): List<GitAuthChain.Rung> = declared.map { rung ->
         GitAuthChain.Rung(rung.id, rung.label) {
             when (rung.kind) {
                 RUNG_FLEET -> fleet(rung.config, session)
-                RUNG_GITHUB -> onDevice(ctx)
+                RUNG_GITHUB -> github()
                 else -> GitAuthChain.Answer.NoImplementation("kind '${rung.kind}' is not implemented")
             }
         }
@@ -154,27 +158,80 @@ object DriveGitChain {
     /**
      * RUNG 2 — direct to GitHub with a credential that is ALREADY ON THIS PHONE.
      *
-     * #653 THERE IS NO GRANT HERE ANY MORE. This rung used to run an OAuth device
-     * grant: it printed a short code, printed a URL, and polled. That is the
-     * "code to copy, URL to open" ceremony the owner rejected, and it is deleted
-     * rather than restyled — no code, no verification URI, no poll loop, and no
-     * phase machine to carry them to a screen.
+     * #653 THERE IS NO GRANT HERE. Nothing is obtained by this rung, so it can never ask
+     * the owner to type anything: the code-and-URL ceremony the owner rejected is deleted,
+     * not restyled.
      *
-     * What is left is the honest fallback the owner asked for: "if our servers are
-     * down we can do gh". gh and gix can only use a credential, never mint one, so
-     * this rung reads the ONE store under the ONE declared id — the id the #566
-     * vault import writes — and answers with it. NOTHING is obtained here, so this
-     * rung can never ask the owner to type anything.
+     * #735 gh's SIGN-IN NOW REACHES THE CHAIN. Measured on the phone: gh was signed in and
+     * listed 34 repositories on the card, while this rung declined "no GitHub credential is
+     * on this device" — because it only ever read the store slot the vault import fills,
+     * and gh's credential lives in the gh ENGINE (its own hosts.yml), which nothing here
+     * asked. So the clone path and the seed, which both take their credential from this
+     * chain, had none. The engine already answers git-credential requests for the declared
+     * host over its contract (GhBackendService.CREDENTIAL); this rung asks it FIRST, then
+     * falls back to the credential filed under the declared id (the vault import, or a PAT
+     * the sign-in delivered). Whatever answers is filed by [GitAuthChain.resolve]'s ONE
+     * setSecret under the ONE id — this rung writes nothing itself.
      *
-     * NO CREDENTIAL IS A DECLINE, not an error: the fleet rung above it needs no
-     * GitHub credential at all, so an empty store is a perfectly normal state and
-     * the chain says so in words instead of opening a browser.
+     * NO CREDENTIAL IS A DECLINE, not an error: the fleet rungs above need no GitHub
+     * credential at all, so an empty store is a normal state and the chain says so in words.
      */
-    private fun onDevice(ctx: Context): GitAuthChain.Answer {
-        if (credentialId().isBlank()) return GitAuthChain.Answer.NoImplementation("no credential id is declared")
-        val held = DriveAuthApply.vaultGitToken(ctx)
-        return if (held.isNotBlank()) GitAuthChain.Answer.Credential(held)
-        else GitAuthChain.Answer.Declined("no GitHub credential is on this device; the vault import delivers one")
+    private fun onDevice(ctx: Context): GitAuthChain.Answer = githubAnswer(
+        credentialId = credentialId(),
+        fromGh = { ghHost().takeIf { it.isNotBlank() }?.let { host -> runCatching { GhEngine(ctx).credential(host) }.getOrNull()?.secret } },
+        held = { DriveAuthApply.vaultGitToken(ctx) },
+    )
+
+    /**
+     * #735 THE GITHUB RUNG'S RULE, pure so DriveGitChainTest drives it with a fake engine:
+     * gh's live credential first — a signed-in gh is the freshest truth, and a filed copy
+     * can be one gh has since replaced — then the one filed under the declared id.
+     */
+    fun githubAnswer(credentialId: String, fromGh: () -> String?, held: () -> String): GitAuthChain.Answer {
+        if (credentialId.isBlank()) return GitAuthChain.Answer.NoImplementation("no credential id is declared")
+        val filed = held()
+        return if (filed.isNotBlank()) GitAuthChain.Answer.Credential(filed)
+        else GitAuthChain.Answer.Declined("gh is not signed in and no GitHub credential is on this device; sign in on the GitHub card, or the vault import delivers one")
+    }
+
+    /** #735 the credential a GitHub-hosted clone presents: the github rung's own answer, whichever rung ranks first. */
+    fun githubCredential(ctx: Context): GitAuthChain.Answer = onDevice(ctx)
+
+    /** How one clone authenticates: (kind, secret). Its toString never prints the secret. */
+    data class CloneAuth(val kind: String, val secret: String) {
+        override fun toString(): String = "CloneAuth(kind=$kind, secret=<redacted>)"
+    }
+
+    /**
+     * #735 THE CLONE'S CREDENTIAL, pure. A fleet-listed URL rides the fleet SESSION and never a
+     * GitHub token (the session is the only thing that passes that gate, and the token must not
+     * travel to a host that did not ask for it); any other URL presents what the github rung
+     * answered over https (asked only then), and nothing when it answered nothing.
+     */
+    fun cloneAuth(viaFleet: Boolean, github: () -> GitAuthChain.Answer): CloneAuth {
+        if (viaFleet) return CloneAuth(GitSyncCoordinator.AUTH_SESSION, "")
+        val answer = github()
+        return if (answer is GitAuthChain.Answer.Credential) CloneAuth(GitSyncCoordinator.AUTH_HTTPS, answer.token)
+        else CloneAuth(GitSyncCoordinator.AUTH_NONE, "")
+    }
+
+    /**
+     * #735 THE LISTING OF RUNG [rungId], dispatched on its declared KIND. The github rung lists
+     * through gh's own `gh repo list` in the engine — the page's GitHub card does exactly this —
+     * and never through FleetGit, which needs a fleet `repos_url` the github rung does not and
+     * may not declare (that was the "no fleet repos_url is declared" the phone answered).
+     */
+    fun repos(ctx: Context, rungId: String, session: String): FleetGit.Outcome =
+        if (rung(rungId)?.kind == RUNG_GITHUB) ghRepos(GhEngine(ctx)) else FleetGit.repos(session, rungId)
+
+    private fun ghRepos(engine: GhEngine): FleetGit.Outcome {
+        val host = ghHost()
+        val limit = ghListLimit()
+        if (host.isBlank() || limit <= 0) return FleetGit.Outcome.Unreachable("the github rung declares no host or list_limit")
+        val r = engine.repoList(limit, GitHubRepos.GH_FIELDS)
+        if (!r.ok) return FleetGit.Outcome.Unreachable("gh repo list exited ${r.exitCode}: ${GhEngine.why(r.output)}")
+        return GitHubRepos.parseGh(r.output)?.let { FleetGit.Outcome.Listed(it) }
+            ?: FleetGit.Outcome.Unreachable("gh repo list answered something that is not a repository list")
     }
 
     /**

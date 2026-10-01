@@ -5,11 +5,11 @@ import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.DriveDebugLog
 import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.SharedStore
-import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.clouddrive.sync.FleetGit
 import com.diegonmarcos.clouddrive.sync.FleetSession
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
+import com.diegonmarcos.cloudlib.gitsync.GitAuthChain
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import java.io.File
@@ -100,7 +100,7 @@ object DriveDebugApi {
             listOf(
                 AppDebugServer.Op("state", "", "registered repos (name, path, remote HOST only, authKind, lastSync) + whether a fleet session is present (boolean only)"),
                 AppDebugServer.Op("chain", "", "run DriveGitChain.resolve with the in-process session; outcome narrative + answeredBy, never a token"),
-                AppDebugServer.Op("list", "rung=<declared rung id, optional>", "run the fleet listing (FleetGit.repos) with the in-process session; count + names/owners, no URLs"),
+                AppDebugServer.Op("list", "rung=<declared rung id, optional>", "run that rung's listing (DriveGitChain.repos: gh repo list for the github rung, FleetGit.repos for a fleet one) with the in-process session; count + names/owners, no URLs"),
                 AppDebugServer.Op("clone", "name=<repo>&url=<clone url, optional — blank resolves it from the fleet listing the way the page does>", "clone through the page's own path (GitSyncCoordinator.cloneInto) and wait for the real outcome"),
             ),
         ) { op, query -> gitRoute(app, op, query) }
@@ -128,7 +128,7 @@ object DriveDebugApi {
     private fun gitRoute(ctx: Context, op: String, query: Map<String, String>): String? = when (op) {
         "state" -> stateJson(ctx)
         "chain" -> chainJson(ctx)
-        "list" -> listJson(query["rung"].orEmpty())
+        "list" -> listJson(ctx, query["rung"].orEmpty())
         "clone" -> cloneJson(ctx, query)
         else -> null
     }
@@ -163,11 +163,12 @@ object DriveDebugApi {
         return """{"ok":${outcome.ok},"answered_by":${jsonStr(outcome.answeredBy)},"narrative":"${esc(outcome.narrative())}"}"""
     }
 
-    /** The REAL fleet listing. Names and owners only — the listing's clone URLs stay
-     *  in-process (they feed /api/git/clone), because a listing URL can carry a
-     *  credential in its userinfo. */
-    private fun listJson(rungId: String): String =
-        when (val out = runCatching { FleetGit.repos(FleetSession.cookie, rungId) }
+    /** The REAL listing of the rung, dispatched on its declared kind (#735: the github
+     *  rung lists through gh in the engine, never through the fleet lister). Names and
+     *  owners only — the listing's clone URLs stay in-process (they feed /api/git/clone),
+     *  because a listing URL can carry a credential in its userinfo. */
+    private fun listJson(ctx: Context, rungId: String): String =
+        when (val out = runCatching { DriveGitChain.repos(ctx, rungId, FleetSession.cookie) }
             .getOrElse { return errJson("listing threw: ${it.message ?: it}") }) {
             is FleetGit.Outcome.Listed -> buildString {
                 append("""{"ok":true,"status":"listed","count":${out.repos.size},"repos":[""")
@@ -194,10 +195,12 @@ object DriveDebugApi {
      * defect). The clone itself is ONLY [GitSyncCoordinator.cloneInto]; this route
      * then waits on the coordinator's own opResults for the engine's real outcome.
      *
-     * SEAM(#669-AUTH): the credential presented is today's committed path — the
-     * vault import's GitHub token when one is on the phone, none otherwise. When
-     * GitEngine session auth lands on main, cloneInto inherits it and this route
-     * rides along with no edit here.
+     * #735 THE CREDENTIAL IS THE PAGE'S: a fleet-listed URL (the declared clone URL
+     * for the listing item, FleetGit.cloneUrl, as the page's cloneViaFleet) rides the
+     * fleet session; every other URL presents what the github rung answers — gh's own
+     * credential from the engine first, then the one filed under the declared id
+     * ([DriveGitChain.cloneAuth]). It never reached gh before, so a private repo gh
+     * had just listed cloned with no credential at all.
      */
     private fun cloneJson(ctx: Context, query: Map<String, String>): String {
         val name = query["name"].orEmpty().trim()
@@ -207,19 +210,21 @@ object DriveDebugApi {
 
         var url = query["url"].orEmpty().trim()
         var leg = "caller-supplied url"
+        var viaFleet = false
         if (url.isBlank()) {
             val chain = runCatching { DriveGitChain.resolve(ctx, session = FleetSession.cookie) }
                 .getOrElse { return errJson("chain threw: ${it.message ?: it}") }
             if (!chain.ok) return errJson("no rung answered, so no listing can name the URL: ${chain.narrative()}")
             val rung = chain.answeredBy.orEmpty()
-            when (val out = runCatching { FleetGit.repos(FleetSession.cookie, rung) }
+            when (val out = runCatching { DriveGitChain.repos(ctx, rung, FleetSession.cookie) }
                 .getOrElse { return errJson("listing threw: ${it.message ?: it}") }) {
                 is FleetGit.Outcome.Listed -> {
                     val hit = out.repos.firstOrNull { it.name == name }
-                        ?: return errJson("'$name' is not in the fleet listing (rung '$rung', ${out.repos.size} repos)")
-                    if (hit.cloneUrl.isBlank()) return errJson("the listing carries no clone URL for '$name'")
-                    url = hit.cloneUrl
-                    leg = "fleet listing (rung '$rung')"
+                        ?: return errJson("'$name' is not in the listing (rung '$rung', ${out.repos.size} repos)")
+                    viaFleet = DriveGitChain.rung(rung)?.kind == DriveGitChain.RUNG_FLEET
+                    url = if (viaFleet) FleetGit.cloneUrl(rung, hit.owner, hit.name, hit.cloneUrl) else hit.cloneUrl
+                    if (url.isBlank()) return errJson("the listing carries no clone URL for '$name'")
+                    leg = "listing (rung '$rung')"
                 }
                 is FleetGit.Outcome.Refused -> return errJson("the fleet refused this identity (HTTP ${out.code})")
                 is FleetGit.Outcome.Blocked -> return errJson("the edge redirected (HTTP ${out.code}) without reaching the service")
@@ -232,13 +237,15 @@ object DriveDebugApi {
         // different clones), so the outcome is read back by DIFFING the
         // coordinator's own opResults rather than precomputing a store path.
         val before = c.opResults.value
-        val token = runCatching { DriveAuthApply.vaultGitToken(ctx) }.getOrDefault("")
+        val (authKind, secret) = DriveGitChain.cloneAuth(viaFleet) {
+            runCatching { DriveGitChain.githubCredential(ctx) }.getOrElse { GitAuthChain.Answer.Unreachable(it.message ?: "$it") }
+        }
         c.cloneInto(
             name = name,
             url = url,
-            authKind = if (token.isBlank()) GitSyncCoordinator.AUTH_NONE else GitSyncCoordinator.AUTH_HTTPS,
+            authKind = authKind,
             username = GitSyncCoordinator.DEFAULT_AUTHOR,
-            token = token,
+            token = secret,
         )
         val host = GitSyncCoordinator.hostOf(url)
         fun outcome(): String? {
