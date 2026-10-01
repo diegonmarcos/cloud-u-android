@@ -3661,6 +3661,11 @@
           "health_url": "https://api.diegonmarcos.com/git/health",
           "repos_url": "https://api.diegonmarcos.com/git/repos",
           "tarball_url": "https://api.diegonmarcos.com/git/repos/{owner}/{repo}/tarball",
+          "_doc_clone_url": "#688 THIS RUNG NOW CLONES. git-proxy-api serves git smart-HTTP upload-pack at /git/clone/<owner>/<repo>, proxied to GitHub with ITS credential, so a fresh phone with no vault import clones a PRIVATE GitHub repository with a working origin and still holds no GitHub token (holds_github_credential stays false). The session cookie this rung already sends is now accepted by the service: it asks Authelia's auth-request endpoint whether the cookie is a live session for that route and admits only the users declared in its runtime.authelia.session.users. Before #688 the service took ONLY a bearer, so this rung was a guaranteed 401 missing_authorization and its listing could never be cloned anyway (no clone_url). `declared` only: the listing's items carry no clone_url of their own.",
+          "clone_url": "https://api.diegonmarcos.com/git/clone/{owner}/{name}",
+          "clone_url_order": [
+            "declared"
+          ],
           "connect_timeout_ms": 4000,
           "read_timeout_ms": 8000,
           "holds_github_credential": false

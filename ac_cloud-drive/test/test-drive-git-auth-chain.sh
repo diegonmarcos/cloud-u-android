@@ -254,7 +254,8 @@ if "token_url" in f:
           "rung on which the phone holds one"); bad = 1
 # Every declared URL must sit under the service's own base path, which is what #655
 # strips. A path that has already lost it would 404 for ever.
-for key in ("health_url", "repos_url", "tarball_url"):
+# #688 clone_url too: the fleet rung clones over git-proxy-api's /git/clone route.
+for key in ("health_url", "repos_url", "tarball_url", "clone_url"):
     url = f.get(key, "")
     if not url:
         print("    the fleet rung declares no %s" % key); bad = 1
@@ -1085,6 +1086,9 @@ _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"
 _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
     _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"]["holds_github_credential"] = True'
     _red "C8 the fleet rung claiming it holds a GitHub credential" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
+_stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
+    _json "$W/shared.json" 'd["auth"]["git_chain"]["providers"]["fleet"].pop("clone_url")'
+    _red "C8 #688 the fleet rung lost its clone_url — a fleet-listed private repo could not be cloned" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt"; }
 _stage && _green "c8" c8 "$W/shared.json" "$W/DriveGitChain.kt" "$W/FleetGit.kt" && {
     _sub "$W/DriveGitChain.kt" 'connection.setRequestProperty(FleetGit.sessionHeader(), session)' \
                                'connection.setRequestProperty("Authorization", "Bearer $session")'
