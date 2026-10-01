@@ -427,7 +427,7 @@ class WireGuardFragment : Fragment() {
 
     private fun bringTunnelUp() {
         runCatching {
-            val cfg = prefs.toWgConfig()
+            val cfg = prefs.toTunnelConfig()
             goBackend?.setState(tunnel, Tunnel.State.UP, cfg)
             prefs.tunnelEnabled = true
         }.onFailure { t ->

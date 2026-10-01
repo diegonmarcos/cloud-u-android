@@ -4679,6 +4679,14 @@
             "subgroup": "Mesh"
           },
           {
+            "_doc": "#740 DNS — the fleet's resolver, chosen once and applied at the SuperApp VPN (ui.dns is its declaration; network/DnsFragment.kt draws it). Sits right after Cloud Mesh because it is that tunnel's DNS that carries the choice.",
+            "id": "dns",
+            "label": "DNS",
+            "icon": "ic_world",
+            "group": "Watchdog",
+            "subgroup": "Mesh"
+          },
+          {
             "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Watchdog ▸ Setup into the new Watchdog ▸ Mesh sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption.",
             "id": "kde",
             "label": "Peer Control",
@@ -6328,6 +6336,44 @@
           ],
           "address": ""
         }
+      ]
+    },
+    "_doc_dns": "#740 FLEET DNS — the ONE declaration behind Configs ▸ Watchdog ▸ Mesh ▸ DNS (network/FleetDns.kt reads it baked as BuildConfig.UI_DNS_B64; no resolver address is a Kotlin literal). Fleet apps and engines resolve through the Android system resolver, so the setting is applied ONCE, at the SuperApp's VPN: the chosen preset becomes the DNS server list of the Cloud Mesh tunnel (WireGuardPrefs.toTunnelConfig → VpnService.Builder.addDnsServer in the net-wg engine), and every app routed by that VPN inherits it. CODE OVER BRIEF: firestack (FirestackTunnelService) is compiled but NOT the active engine — FirewallController drives the interim drain engine, its WG proxy registration and protect() are still TODO — so firestack's own DNS layer (DoH/DoT, per-domain split) is not reachable yet; this block is shaped so it can feed that layer the day it is. `kind` decides the mapping: mirror = no servers on the VPN (Android uses the underlying network's resolver and its Private DNS); public = `servers` then `fallback`, in order; private = the fleet resolver, which is the Cloud Mesh page's DNS field (wireguard_default.interface_dns on a fresh install — hickory-dns on the hub), followed ONLY when `fallback_allowed` by the presets the user orders from `fallback_choices`. `encryption: dot_opportunistic` is honest about where encryption happens: Android's resolver upgrades to DNS-over-TLS against these IPs when Private DNS is Automatic, which the page checks and can set. A preset with `available: false` is drawn disabled with its `unavailable_reason` and can never be chosen or used as a fallback. `mesh_zones` are hickory-dns's own zones (cloud-u-containers infra-net_hickory-dns build.json dns.zones): when the mesh is up those names route to the fleet resolver whatever the preset (FleetDns.upstreamsFor — the page's test lookup uses it); the VPN carries one ordered list, so for the system resolver that split holds only under the private presets until firestack's DNS layer is active. `test_names` are what the page's Test lookup resolves.",
+    "dns": {
+      "default_preset": "private_only",
+      "mesh_zones": ["app", "db", "diegonmarcos.com"],
+      "test_names": { "public": "github.com", "mesh": "maddy.app" },
+      "lookup_timeout_ms": 2500,
+      "_doc_android_private_dns": "Replica of Android's own Settings ▸ Private DNS menu. `id` is the literal value of Settings.Global private_dns_mode; `label` is what Android shows. `hostname_suggestions` pre-fill the provider field.",
+      "android_private_dns": {
+        "modes": [
+          { "id": "off", "label": "Off" },
+          { "id": "opportunistic", "label": "Automatic" },
+          { "id": "hostname", "label": "Private DNS provider hostname" }
+        ],
+        "hostname_suggestions": ["one.one.one.one", "dns.google"]
+      },
+      "presets": [
+        { "id": "mirror", "label": "Mirror Android", "kind": "mirror",
+          "subtitle": "The fleet uses whatever Android is set to — the VPN carries no DNS server of its own." },
+        { "id": "public_open", "label": "Public open", "kind": "public",
+          "subtitle": "Cloudflare, falling back to Google. Plain DNS.",
+          "servers": ["1.1.1.1", "1.0.0.1", "2606:4700:4700::1111"],
+          "fallback": ["8.8.8.8", "8.8.4.4", "2001:4860:4860::8888"] },
+        { "id": "public_encrypted", "label": "Public encrypted", "kind": "public",
+          "subtitle": "Cloudflare, falling back to Google, over DNS-over-TLS (Android Private DNS must be Automatic).",
+          "servers": ["1.1.1.1", "1.0.0.1", "2606:4700:4700::1111"],
+          "fallback": ["8.8.8.8", "8.8.4.4", "2001:4860:4860::8888"],
+          "encryption": "dot_opportunistic", "tls_hostnames": ["one.one.one.one", "dns.google"] },
+        { "id": "warp", "label": "Cloudflare WARP", "kind": "warp", "available": false,
+          "subtitle": "WARP is a WireGuard tunnel to Cloudflare with device registration.",
+          "unavailable_reason": "Needs a second WireGuard upstream beside the mesh inside the one VPN slot. The running mesh engine (net-wg GoBackend) is one interface with one key and address set, and firestack — which can carry several WireGuard proxies — is not the active engine yet." },
+        { "id": "private_only", "label": "Private only", "kind": "private", "fallback_allowed": false,
+          "subtitle": "The fleet resolver over the mesh, nothing else. Mesh down = lookups fail." },
+        { "id": "private_fallbacks", "label": "Private with fallbacks", "kind": "private", "fallback_allowed": true,
+          "subtitle": "The fleet resolver first, then the fallbacks you order below.",
+          "fallback_choices": ["public_open", "public_encrypted", "warp"],
+          "default_fallbacks": ["public_open"] }
       ]
     },
     "_doc_wireguard_default": "Seeds the Configs/WireGuard form on first run. The phone is a single-tunnel mesh spoke (Android allows one active WG profile) carrying TWO peers / two meshes — gcp-proxy wg0 (10.0.0.0/24) and oci-analytics wg-public (10.1.0.0/24), mirrored from vault/.../wireguard/termux-public/config. The network-popup Mesh section probes each peer's hub (.1 of its allowed_ips) as a separate light. peer.public_key IS seeded — WireGuard PUBLIC keys are non-secret (the hubs' public identity, already in the public cloud repo). interface_private_key + peer.preshared_key are NOT seeded (the private key is the credential — Pillar 7): generate via the in-app Generate Keypair button, or import the merged .conf / paste manually. All values are FIRST-RUN defaults, user-editable at runtime via WireGuardFragment (Add/Remove Peer; persisted in WireGuardPrefs). ALIGNED WITH THE VAULT, which is the config that demonstrably works on phones — this block had drifted into handing out three defects at once: gcp-proxy on udp/51820 (a filterable port; the hub redirects udp/443 to it precisely so the tunnel survives carrier port filtering), MTU 1280 (below the 1380 the working profiles use), and 1.1.1.1/1.0.0.1 in the resolver list (a mesh-only-DNS policy violation — a public resolver in the list means mesh names resolve off-mesh, or not at all). It now matches ui.wireguard_profiles, which was already vault-aligned; the two must not disagree, since one seeds the form and the other is what the export writes. oci-analytics stays on :51821, which is its real listen port.",

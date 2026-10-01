@@ -66,8 +66,8 @@ echo "$out" | grep -qx 'WG Cloud Mesh section:wg' && ok "the wg page reads Cloud
   || bad "the wg page is not 'Cloud Mesh' opening section:wg"
 echo "$out" | grep -qx 'APPS Apps Mesh | Apps Mesh' && ok "Configs apps-mesh and Store's mesh entry both read Apps Mesh" \
   || bad "the two entry points to the Apps Mesh page do not both read 'Apps Mesh'"
-echo "$out" | grep -qx 'ORDER wg,kde,apps-mesh' && ok "Watchdog ▸ Mesh = Cloud Mesh · Peer Control · Apps Mesh" \
-  || bad "Watchdog ▸ Mesh is not wg, kde, apps-mesh in that order"
+echo "$out" | grep -qx 'ORDER wg,dns,kde,apps-mesh' && ok "Watchdog ▸ Mesh = Cloud Mesh · DNS (#740) · Peer Control · Apps Mesh" \
+  || bad "Watchdog ▸ Mesh is not wg, dns, kde, apps-mesh in that order"
 
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.page(this, col)' && ok "AppsMeshFragment hosts AppsMesh.page" \

@@ -95,6 +95,8 @@ object SectionPages {
         // the same AppsMesh.page, hosted on its own (no copy).
         sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.appstore.AppsMeshFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
+        // #740 Configs ▸ Mesh ▸ DNS — the fleet resolver, applied at the Cloud Mesh VPN.
+        sectionId == "config" && pageId == "dns"            -> com.diegonmarcos.superapp.network.DnsFragment.newInstance()
         // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
         // and libs:fin left with it. The tile that deep-linked to it is gone too
         // (the owner dropped Projects Me ▸ MyFin), so nothing here targets

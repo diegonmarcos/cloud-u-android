@@ -367,7 +367,7 @@ object NetworkInfoPopup {
                 WgState.requestTunnelDown(ctx)
                 Toast.makeText(ctx, "Mesh: disconnecting", Toast.LENGTH_SHORT).show()
             } else {
-                b.setState(WgState.tunnel, Tunnel.State.UP, WgState.prefs(ctx).toWgConfig())
+                b.setState(WgState.tunnel, Tunnel.State.UP, WgState.prefs(ctx).toTunnelConfig())
                 Toast.makeText(ctx, "Mesh: connecting", Toast.LENGTH_SHORT).show()
             }
         }.onFailure {

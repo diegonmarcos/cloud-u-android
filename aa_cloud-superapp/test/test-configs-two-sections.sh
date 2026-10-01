@@ -75,14 +75,14 @@ def members(g, s=''):
 want = {
     ('Launcher', ''):                  ['Presets', 'Controls', 'One-Hand', 'Notify'],
     ('Watchdog', 'Setup'):             ['Account', 'Permissions', 'Store'],
-    ('Watchdog', 'Mesh'):              ['Cloud Mesh', 'Peer Control', 'Apps Mesh'],
+    ('Watchdog', 'Mesh'):              ['Cloud Mesh', 'DNS', 'Peer Control', 'Apps Mesh'],
     ('Watchdog', 'Observability'):     ['About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Launcher = Presets/Controls/One-Hand/Notify; Setup = Account/Permissions/Store; Mesh = Cloud Mesh/Peer Control/Apps Mesh (#733); Observability = About"
+)" "Launcher = Presets/Controls/One-Hand/Notify; Setup = Account/Permissions/Store; Mesh = Cloud Mesh/DNS/Peer Control/Apps Mesh (#733, #740); Observability = About"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -168,9 +168,9 @@ w = {p[k] for p in pages for k in ('group', 'subgroup') if p.get(k)}
 w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action')}
 print(len(w))
 ")
-[ "$WORDS" = 16 ] \
-  && ok "T4 derived 16 words from the declaration (2 groups + 3 subgroups + 11 page labels; #733 added Apps Mesh)" \
-  || bad "T4 derived $WORDS words, expected 16 — it is checking a different set than it claims"
+[ "$WORDS" = 17 ] \
+  && ok "T4 derived 17 words from the declaration (2 groups + 3 subgroups + 12 page labels; #733 added Apps Mesh, #740 DNS)" \
+  || bad "T4 derived $WORDS words, expected 17 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
 # declares none, which is every section but this one. Pinned so it stays the only
@@ -221,9 +221,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 16 ] \
-  && ok "16 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh)" \
-  || bad "$COUNT config pages, expected 16 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 17 ] \
+  && ok "17 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns)" \
+  || bad "$COUNT config pages, expected 17 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -302,7 +302,8 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'websearch', 'localsearch', 'textenhance', 'library', 'tokens',
           'store-cloud', 'store-phone',
           'update', 'kde_connect', 'animations',
-          'apps-mesh'}  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
+          'apps-mesh',  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
+          'dns'}        # #740 added on purpose: Configs ▸ Mesh ▸ DNS (the fleet resolver)
 sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
                if s['id'] == 'config')
 pages   = sec['pages']
@@ -396,7 +397,7 @@ want = ['H:LAUNCHER',
         'Presets[ic_p_sol_personal]', 'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
         'H:WATCHDOG',
         'S:SETUP',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
-        'S:MESH',          'Cloud Mesh[ic_wg]', 'Peer Control[ic_kde]', 'Apps Mesh[ic_mode_apps]',
+        'S:MESH',          'Cloud Mesh[ic_wg]', 'DNS[ic_world]', 'Peer Control[ic_kde]', 'Apps Mesh[ic_mode_apps]',
         'S:OBSERVABILITY', 'About[ic_settings]',
         'H:ACTIONS',
         'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
@@ -406,7 +407,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] WATCHDOG ▸ SETUP[Account,Permissions,Store] ▸ MESH[Cloud Mesh,Peer Control,Apps Mesh] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] WATCHDOG ▸ SETUP[Account,Permissions,Store] ▸ MESH[Cloud Mesh,DNS,Peer Control,Apps Mesh] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

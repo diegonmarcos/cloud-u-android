@@ -337,7 +337,7 @@ object DeviceControls {
                 val backend = WgState.backend(ctx)
                 val attempt = runCatching {
                     if (on) backend.setState(WgState.tunnel, Tunnel.State.UP,
-                                             WgState.prefs(ctx).toWgConfig())
+                                             WgState.prefs(ctx).toTunnelConfig())
                     else backend.setState(WgState.tunnel, Tunnel.State.DOWN, null)
                 }
                 val now = runCatching { backend.getState(WgState.tunnel) == Tunnel.State.UP }.getOrNull()

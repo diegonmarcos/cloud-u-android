@@ -35,6 +35,7 @@ import org.json.JSONObject
  * show the error inline.
  */
 class WireGuardPrefs(context: Context) {
+    private val app: Context = context.applicationContext
     private val sp: SharedPreferences =
         context.getSharedPreferences("wireguard_prefs", Context.MODE_PRIVATE)
 
@@ -171,11 +172,26 @@ class WireGuardPrefs(context: Context) {
      * Build the upstream Config from the stored fields. Throws on any
      * validation failure so the caller can show the error inline.
      */
-    fun toWgConfig(): Config {
+    fun toWgConfig(): Config = buildConfig(interfaceDns)
+
+    /**
+     * #740 The config a CONNECT brings up: the same tunnel, but its DNS is the
+     * fleet's choice from Configs ▸ Mesh ▸ DNS ([FleetDns.vpnServers]), with
+     * this page's DNS field as the fleet resolver the private presets name.
+     * Every connect path calls this, so the VPN — and with it every fleet app
+     * on the system resolver — carries the one choice. [toWgConfig] stays the
+     * literal form contents, which is what an exported .conf must hold.
+     * Throws (like any validation failure) when a private preset has no fleet
+     * resolver to point at.
+     */
+    fun toTunnelConfig(): Config =
+        buildConfig(FleetDns.vpnServers(app, interfaceDns).joinToString(", "))
+
+    private fun buildConfig(dns: String): Config {
         val ifBuilder = Interface.Builder()
             .parsePrivateKey(interfacePrivateKey)
             .parseAddresses(interfaceAddress)
-        if (interfaceDns.isNotBlank())          ifBuilder.parseDnsServers(interfaceDns)
+        if (dns.isNotBlank())                   ifBuilder.parseDnsServers(dns)
         if (interfaceListenPort.isNotBlank())   ifBuilder.parseListenPort(interfaceListenPort)
         if (interfaceMtu.isNotBlank())          ifBuilder.parseMtu(interfaceMtu)
 
