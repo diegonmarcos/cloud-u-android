@@ -73,7 +73,16 @@
     "shell": {
       "dir": "test",
       "requires": ["python3", "grep"]
+    },
+    "unit": {
+      "_doc": "The engines' JVM suites, run through build.sh test (build.entry below) after the workflow has set up the JDK, the SDK and Gradle. :libs:gh's GhLoginTest runs the gh engine's real sign-in job against a fake gh that prints the one-time code and then blocks, and fails unless the code reaches the job while gh is still waiting; it also runs GhNetProxy, the loopback tunnel gh needs to resolve names inside an app. The phone once showed a DNS failure for a sign-in that never reached GitHub, and no shell tester can execute either property. One task per engine that has a suite, space-separated.",
+      "task": ":libs:gh:testDebugUnitTest"
     }
+  },
+  "build": {
+    "_doc": "Read by cloud-android-test-engine.sh's unit phase only: this repo has no gradlew, and build.sh test is the invocation that fetches the pinned firestack aar first, as every gradle run here does.",
+    "type": "gradle",
+    "entry": "build.sh"
   },
   "modules": {
     "_doc": "Only the wrapper lives here. The :libs:* modules are appended by settings.gradle from the lib_apks scan above, each pointing at the one canonical directory in ab_cloud-libs-shared/libs/.",

@@ -508,6 +508,13 @@ case "$CMD" in
     done
     log "published ${#files[@]} assets + sidecars"
     ;;
+  test)
+    # The JVM suites build.json::tests.unit.task names, through the same _gradle
+    # (firestack first) every build here uses. cloud-android-test-engine.sh's
+    # unit phase calls this, as build.json::build.entry declares.
+    # shellcheck disable=SC2046  # the task list is space-separated on purpose
+    _gradle $(_bj "['tests']['unit']['task']")
+    ;;
   list)
     # Same scan the build uses — handy for confirming what will ship, and the
     # list the blast-radius test iterates so it can never drift from the set
@@ -533,6 +540,6 @@ case "$CMD" in
     _module_paths "$MODULE" "$PATHS_DIR/.triggers"
     ;;
   help|*)
-    echo "Usage: build.sh <plan|build|release|clean|oras-push|gh-release|list|module-paths>"
+    echo "Usage: build.sh <plan|build|release|test|clean|oras-push|gh-release|list|module-paths>"
     ;;
 esac

@@ -460,6 +460,8 @@
     <string name="git_gh_waiting">waiting for GitHub to approve the code…</string>
     <string name="git_gh_code">One-time code %1$s (copied). Enter it on the GitHub page that opened; gh finishes by itself once it is approved.</string>
     <string name="git_gh_code_clip">GitHub one-time code</string>
+    <string name="git_gh_copy">Copy code</string>
+    <string name="git_gh_credential_note">gh is signed in as %1$s and holds the GitHub credential on this phone; a clone from this card asks gh for it.</string>
     <string name="git_gh_open">Open %1$s</string>
     <string name="git_gh_no_browser">Nothing on this phone can open %1$s — open it on any device and enter the code shown here.</string>
     <string name="git_gh_login_failed">gh sign-in did not complete: %1$s — tap Sign in with GitHub to try again.</string>

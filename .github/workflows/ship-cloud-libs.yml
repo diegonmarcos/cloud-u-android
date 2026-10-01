@@ -105,7 +105,6 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
@@ -165,6 +164,18 @@ jobs:
             | sudo tar -C /usr/local/bin -xzf - oras
           curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
             | sudo tee /usr/local/bin/sops >/dev/null && sudo chmod +x /usr/local/bin/sops
+
+      # The engines' JVM suites (build.json::tests.unit, through build.sh test).
+      # Not in the tester step above: that runs before the JDK, the SDK and
+      # Gradle exist, so a declared suite there could only fail for want of a
+      # toolchain. Gated like the build: a run whose source did not move has
+      # nothing new to execute.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'

@@ -169,6 +169,7 @@ object DriveTags {
     const val SYNC_GIT_WAY_DETAILS = "sync_git_way_details"
     /** #689 the GitHub card's one-time code line while gh's own `auth login` waits on it. */
     const val SYNC_GIT_GH_CODE = "sync_git_gh_code"
+    const val SYNC_GIT_GH_COPY = "sync_git_gh_copy"
     const val SYNC_HISTORY = "sync_history"
     const val SYNC_REMOTE_CARD = "sync_remote_card"
     const val SYNC_JOB_ROW = "sync_job_row"

@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudlib.gh
 
+import android.util.Log
 import com.diegonmarcos.superapp.core.DataBackendService
 import org.json.JSONObject
 
@@ -31,7 +32,12 @@ import org.json.JSONObject
  * and a binder call must not. [LOGIN_START] starts it on a thread and returns at once;
  * [LOGIN_POLL] reports the one-time code and the page as gh prints them — read HERE, with
  * the pin's own patterns (GhOutput), so a client never parses gh's output — and gh's exit
- * once it ends.
+ * once it ends. A running gh is never an error: only gh's own exit is a verdict.
+ *
+ * EVERY CALL IS LOGGED to logcat under GhRunner.TAG ("GhEngine"), so a sign-in that fails on a
+ * phone can be read there: the call, gh's verb and exit, gh's own words on a failure, and each
+ * tunnel the engine opened for gh. The phone once showed a failure while this process logged
+ * nothing at all.
  *
  * Dispatch is an explicit `when`, not reflection, for the reason DataBackendService gives.
  */
@@ -41,7 +47,13 @@ class GhBackendService : DataBackendService() {
 
     override fun methodNames(): Array<String> = arrayOf(STATUS, REPO_LIST, CREDENTIAL, LOGIN_START, LOGIN_POLL)
 
-    override fun dispatch(method: String, args: Array<String>): String = when (method) {
+    // Logged both ways: core turns a throw into an error answer, which would otherwise leave no trace here.
+    override fun dispatch(method: String, args: Array<String>): String = runCatching { answer(method, args) }
+        .onSuccess { Log.i(GhRunner.TAG, "engine call $method answered") }
+        .onFailure { Log.w(GhRunner.TAG, "engine call $method failed: ${it.message}") }
+        .getOrThrow()
+
+    private fun answer(method: String, args: Array<String>): String = when (method) {
         STATUS -> result(runner.status(arg(args, 0)))
         REPO_LIST -> result(runner.repoList(arg(args, 0).toInt(), arg(args, 1)))
         CREDENTIAL -> runner.credential(arg(args, 0))
@@ -58,35 +70,30 @@ class GhBackendService : DataBackendService() {
     private fun arg(args: Array<String>, i: Int): String =
         requireNotNull(args.getOrNull(i)?.takeIf { it.isNotBlank() }) { "argument ${i + 1} is missing" }
 
-    /** One sign-in at a time per engine process: gh keeps ONE config, and two logins would race it. */
+    /**
+     * One sign-in at a time per engine process: gh keeps ONE config, and two logins would race it.
+     * The sign-in is a [GhLogin] job: [start] answers at once, and [poll] carries the code and the
+     * page the moment gh prints them, while gh is still waiting on GitHub.
+     */
     private object Login {
-        private var thread: Thread? = null
-        @Volatile private var code = ""
-        @Volatile private var url = ""
-        @Volatile private var ended: GhRunner.Result? = null
+        private var job: GhLogin? = null
 
         @Synchronized
         fun start(runner: GhRunner, host: String): String {
-            val running = thread?.isAlive == true
-            if (!running) {
-                code = ""; url = ""; ended = null
-                thread = Thread({
-                    ended = runner.login(host) { line ->
-                        if (code.isEmpty()) GhOutput.deviceCode(line)?.let { code = it }
-                        if (url.isEmpty()) GhOutput.verificationUrl(line, host)?.let { url = it }
-                    }
-                }, "gh-login").apply { isDaemon = true; start() }
-            }
+            val running = job?.running == true
+            if (!running) job = GhLogin(host) { onLine -> runner.login(host, onLine) }.start()
+            else Log.i(GhRunner.TAG, "gh auth login: already running; the client follows that one")
             return JSONObject().put("started", !running).toString()
         }
 
         @Synchronized
         fun poll(): String {
-            val done = ended
-            val o = JSONObject().put("code", code).put("url", url)
+            val j = job
+            val done = j?.ended
+            val o = JSONObject().put("code", j?.code.orEmpty()).put("url", j?.url.orEmpty())
             return when {
                 done != null -> o.put("running", false).put("exit", done.exitCode).put("output", done.output)
-                thread?.isAlive == true -> o.put("running", true)
+                j?.running == true -> o.put("running", true)
                 else -> o.put("running", false).put("exit", GhRunner.EXEC_FAILED).put("output", "no gh sign-in was started")
             }.toString()
         }

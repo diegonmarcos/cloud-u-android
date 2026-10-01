@@ -26,7 +26,10 @@
 #   D5  LOUD: missing and too-old are two different lines, each naming the
 #       Store; the page's GitHub card calls the engine and nothing else.
 #   D6  NO SECRET LEAVES: the credential the engine hands back has a redacted
-#       toString, and nothing in the client logs.
+#       toString, nothing in the client writes to logcat or stdout directly,
+#       and the one log it does keep (DriveDebugLog, the sign-in's steps — a
+#       sign-in once failed on a phone with no line about it anywhere) never
+#       carries the secret or the engine's raw credential answer.
 #   D7  A PAGE THE SIGN-IN OPENS IS ON THE DECLARED HOST, checked on this side of
 #       the binder too.
 #   MUT each property, broken on a copy (and proven broken), goes red.
@@ -195,8 +198,10 @@ d6() {
     local client="$1" bad=0 leak
     grep -qF 'override fun toString(): String = "Credential(username=$username, secret=<redacted>)"' "$client" \
         || { echo "    GhEngine.Credential prints its secret"; bad=1; }
-    leak="$(_code "$client" | grep -nE 'Log\.[a-z]+\(|println\(|printStackTrace' || true)"
-    [ -z "$leak" ] || { echo "    the gh client logs:"; printf '%s\n' "$leak" | sed 's/^/        /'; bad=1; }
+    leak="$(_code "$client" | grep -nE '(^|[^A-Za-z])Log\.[a-z]+\(|println\(|printStackTrace' || true)"
+    [ -z "$leak" ] || { echo "    the gh client writes to logcat or stdout directly:"; printf '%s\n' "$leak" | sed 's/^/        /'; bad=1; }
+    leak="$(_code "$client" | grep -nE '(DriveDebugLog\.[a-z]+|[^A-Za-z]log)\(.*(secret|password|\$o\b|\$\{o\b)' || true)"
+    [ -z "$leak" ] || { echo "    the gh client's log carries the credential:"; printf '%s\n' "$leak" | sed 's/^/        /'; bad=1; }
     return $bad
 }
 
@@ -225,7 +230,7 @@ echo "── D5 missing and too-old are loud, different, and name the Store ─�
 d5 "$PAGE" "$STR" && pass "two lines, two next steps, both naming Store ▸ Cloud Constellation ▸ Libs; the card reaches gh only through the engine" \
     || fail "a missing or old engine is silent, or the page still runs gh itself"
 echo "── D6 the credential never leaves through the client ──"
-d6 "$CLIENT" && pass "redacted toString, no logging" || fail "the client can print or log the credential"
+d6 "$CLIENT" && pass "redacted toString, no raw logcat, and the on-device log never carries the credential" || fail "the client can print or log the credential"
 echo "── D7 a page the sign-in opens is on the declared host ──"
 d7 "$CLIENT" "$PAGE" && pass "host-checked on this side of the binder" || fail "the sign-in could open any URL the engine names"
 
@@ -355,6 +360,11 @@ _green d6 d6 "$MUT/GhEngine.kt" && {
     _sub "$MUT/GhEngine.kt" '        val secret = o.optString("secret")' '        val secret = o.optString("secret")
         android.util.Log.d("GhEngine", "credential answer: $o")'
     _applied "$CLIENT" "$MUT/GhEngine.kt" 'Log.d("GhEngine"' && _red "D6 the client logs the engine's credential answer" d6 "$MUT/GhEngine.kt"; }
+cp "$CLIENT" "$MUT/GhEngine.kt"
+_green d6 d6 "$MUT/GhEngine.kt" && {
+    _sub "$MUT/GhEngine.kt" '        val held = ' '        log("credential for $host: $username / $secret")
+        val held = '
+    _applied "$CLIENT" "$MUT/GhEngine.kt" '$username / $secret' && _red "D6 the on-device log carries the secret" d6 "$MUT/GhEngine.kt"; }
 # D7 — any page gh names is opened
 cp "$PAGE" "$MUT/page.kt"
 _green d7 d7 "$CLIENT" "$MUT/page.kt" && {

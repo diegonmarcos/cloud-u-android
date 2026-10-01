@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudlib.gh
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 
 /**
@@ -28,6 +29,15 @@ import java.io.File
  * [repoList] lists that account's repositories and [credential] hands the clone the
  * credential gh holds, through gh's own git-credential helper. gh keeps that
  * credential in [configDir], the app's private files.
+ *
+ * THE SANDBOX IS NOT A LINUX BOX: no /etc/resolv.conf and no /etc/ssl. [start] hands gh the CA
+ * directories (SSL_CERT_DIR) and a loopback CONNECT proxy that resolves with Android's resolver
+ * (HTTPS_PROXY → [GhNetProxy]); without them gh died on its first lookup and printed "check your
+ * internet connection" (data/gh-binary.json::_doc_sandbox).
+ *
+ * EVERY gh RUN IS LOGGED under [TAG]: its verb, its exit, and on failure gh's own last words.
+ * The device-flow lines are logged as gh prints them (a one-time code is shown on screen anyway).
+ * The credential never is: [credential] logs whether gh answered, never what.
  */
 class GhRunner(context: Context) {
 
@@ -61,6 +71,13 @@ class GhRunner(context: Context) {
         Result(process.waitFor(), text)
     } catch (e: Exception) {
         Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
+    }.also { logged(args, it) }
+
+    /** gh's verb and exit, and on a failure its own last lines. Output of a success is not kept. */
+    private fun logged(args: List<String>, r: Result) {
+        val verb = args.take(2).joinToString(" ")
+        if (r.ok) Log.i(TAG, "gh $verb: exit 0")
+        else Log.w(TAG, "gh $verb: exit ${r.exitCode}: ${GhOutput.why(r.output)}")
     }
 
     /** One gh process: argv as given, stderr folded into stdout, environment built from nothing. */
@@ -77,6 +94,10 @@ class GhRunner(context: Context) {
             put("HOME", configDir.absolutePath)
             put("GH_NO_UPDATE_NOTIFIER", "1")
             put("GH_PROMPT_DISABLED", "1")
+            // The two things the app sandbox lacks (the pin's _doc_sandbox): Android's CA
+            // directories, and a way to resolve a name.
+            put("SSL_CERT_DIR", BuildConfig.GH_CERT_DIRS)
+            net?.let { put("HTTPS_PROXY", it.url) }
             if (!token.isNullOrBlank()) put("GH_TOKEN", token)
         }
         return builder.start()
@@ -116,7 +137,8 @@ class GhRunner(context: Context) {
      * #689 gh's OWN sign-in, `gh auth login`. With no TTY (how this runs) gh goes straight to its
      * device flow: it prints a one-time code and the page to enter it at, then polls until the code
      * is approved or expires. [onLine] gets every line AS gh prints it, because the code has to
-     * reach the screen while gh is still waiting; this returns when gh exits.
+     * reach the screen while gh is still waiting; this returns when gh exits. [drain] is that
+     * reading, and [GhLogin] is the job that runs it in the background.
      *
      * `--insecure-storage`: Android has no keyring for gh to use, so its credential is written to
      * [configDir], the app's private files. `--clipboard=false`: gh cannot reach Android's
@@ -129,13 +151,10 @@ class GhRunner(context: Context) {
                 "--insecure-storage", "--skip-ssh-key", "--clipboard=false"),
             token = null,
         )
-        process.outputStream.close()
-        val out = StringBuilder()
-        process.inputStream.bufferedReader().forEachLine { out.appendLine(it); onLine(it) }
-        Result(process.waitFor(), out.toString())
+        drain(process, onLine)
     } catch (e: Exception) {
         Result(EXEC_FAILED, "gh could not run: ${e.message ?: e.javaClass.simpleName}")
-    }
+    }.also { logged(listOf("auth", "login"), it) }
 
     /** #689 the signed-in account's own repositories, public and private, as gh's JSON [fields]. */
     fun repoList(limit: Int, fields: String): Result =
@@ -157,7 +176,7 @@ class GhRunner(context: Context) {
             if (process.waitFor() == 0) GhOutput.credential(answer) else null
         } catch (e: Exception) {
             null
-        }
+        }.also { Log.i(TAG, "gh auth git-credential for $host: " + if (it == null) "none" else "answered") }
     }
 
     /** A git credential gh answered with. Its toString never prints the secret. */
@@ -168,7 +187,58 @@ class GhRunner(context: Context) {
     companion object {
         /** #689 the exit code of a gh that could not be started at all; no real exit code is negative. */
         const val EXEC_FAILED = -1
+
+        const val TAG = "GhEngine"
+
+        /**
+         * The one proxy per engine process, or null if loopback would not open — then gh runs
+         * without it, fails on its lookup, and says so in its own words.
+         */
+        private val net: GhNetProxy? by lazy {
+            runCatching { GhNetProxy(BuildConfig.GH_PROXY_HOSTS.split(',').toSet()) { Log.i(TAG, it) } }
+                .onFailure { Log.e(TAG, "gh-net: loopback proxy would not start; gh cannot resolve names", it) }
+                .getOrNull()
+        }
+
+        /**
+         * Read gh's output LINE BY LINE AS IT ARRIVES, handing each to [onLine] at once, until gh
+         * exits. This is what puts the one-time code on screen while gh is still polling GitHub:
+         * reading to the end first would hold the code back until gh gave up (GhLoginTest).
+         */
+        fun drain(process: Process, onLine: (String) -> Unit): Result {
+            process.outputStream.close()
+            val out = StringBuilder()
+            process.inputStream.bufferedReader().forEachLine { out.appendLine(it); onLine(it) }
+            return Result(process.waitFor(), out.toString())
+        }
     }
+}
+
+/**
+ * ONE `gh auth login` AS A LONG-LIVED JOB. [start] returns at once; gh runs on its own thread,
+ * and [code] and [url] fill in the moment gh prints them, while gh keeps polling GitHub for the
+ * approval. [running] stays true until gh exits; [ended] is then gh's exit and its words. A
+ * non-zero exit is gh's verdict and its output says why — the job never rewrites it into one.
+ *
+ * [run] is the login itself (GhRunner.login in the engine, a fake gh in GhLoginTest), so the
+ * job, the line reading and the pin's patterns are exercised as one, the way the phone runs them.
+ */
+class GhLogin(private val host: String, private val run: (onLine: (String) -> Unit) -> GhRunner.Result) {
+    @Volatile var code = ""; private set
+    @Volatile var url = ""; private set
+    @Volatile var ended: GhRunner.Result? = null; private set
+
+    private val thread = Thread({
+        ended = run { line ->
+            if (line.isNotBlank()) Log.i(GhRunner.TAG, "gh auth login: $line")
+            if (code.isEmpty()) GhOutput.deviceCode(line)?.let { code = it }
+            if (url.isEmpty()) GhOutput.verificationUrl(line, host)?.let { url = it }
+        }
+    }, "gh-login").apply { isDaemon = true }
+
+    val running: Boolean get() = ended == null && thread.isAlive
+
+    fun start(): GhLogin = apply { Log.i(GhRunner.TAG, "gh auth login: starting for $host"); thread.start() }
 }
 
 /**
@@ -186,6 +256,17 @@ object GhOutput {
     /** The page gh says to enter the code at — only ever on [host], so a stray URL is never opened. */
     fun verificationUrl(line: String, host: String): String? =
         VERIFICATION_URL.find(line)?.value?.takeIf { runCatching { java.net.URI(it).host }.getOrNull() == host }
+
+    /**
+     * WHY gh STOPPED, in its own words: every line it printed except the device-flow prompt
+     * (the code, the page, the clipboard notice), joined. "error connecting to github.com"
+     * and the line after it both survive — the last line alone read like a network outage.
+     */
+    fun why(output: String): String =
+        output.lineSequence().map { it.trim() }
+            .filter { it.isNotEmpty() && deviceCode(it) == null && !it.contains("clipboard", ignoreCase = true) && !it.startsWith("Open this URL") }
+            .joinToString(" · ")
+            .ifEmpty { "gh printed nothing" }
 
     /** `username=`/`password=` from a git-credential answer; null unless both are there. */
     fun credential(answer: String): GhRunner.Credential? {

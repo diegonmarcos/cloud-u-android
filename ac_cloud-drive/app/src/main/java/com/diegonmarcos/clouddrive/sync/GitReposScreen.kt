@@ -84,6 +84,7 @@ import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
+import com.diegonmarcos.clouddrive.DriveDebugLog
 import com.diegonmarcos.clouddrive.configs.DriveAuthApply
 import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
@@ -433,6 +434,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val ghHost = remember { DriveGitChain.ghHost() }
     val ghLimit = remember { DriveGitChain.ghListLimit() }
 
+    /** Every step of the GitHub card, to logcat AND the on-device log (Download/<debug dir>/). */
+    fun ghLog(msg: String) = DriveDebugLog.i(ctx, GhEngine.TAG, msg)
+
     /** Why the gh leg cannot run on this phone at all, or "" when it can. #705: the engine's
      *  handshake first — missing and too old are two different next steps. */
     fun ghUnavailable(): String = when (val engine = ghEngine.check()) {
@@ -447,8 +451,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         scope.launch {
             val r = withContext(Dispatchers.IO) { ghEngine.repoList(ghLimit, GitHubRepos.GH_FIELDS) }
             val repos = if (r.ok) GitHubRepos.parseGh(r.output) else null
+            ghLog(if (repos != null) "gh repo list: ${repos.count { !it.private }} public, ${repos.count { it.private }} private" else "gh repo list: no listing (exit ${r.exitCode})")
             listing = when {
-                !r.ok -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_failed, r.exitCode, lastLine(r.output)))
+                !r.ok -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_failed, r.exitCode, GhEngine.why(r.output)))
                 repos == null -> GitListing(loaded = true, error = ctx.getString(R.string.git_gh_list_unreadable))
                 else -> GitListing(loaded = true, repos = repos, complete = repos.size < ghLimit, viaGh = true)
             }
@@ -466,17 +471,39 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             // gh holds a login GitHub did not confirm (offline, revoked): say that, not "signed out".
             st.state.isNotBlank() -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_unconfirmed, st.login, st.state))
             // gh could not answer at all (it would not start, or failed before any JSON): its words, not "signed out".
-            !r.ok -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_status_failed, r.exitCode, lastLine(r.output), BuildConfig.GH_ENGINE_PACKAGE))
+            !r.ok -> ghAuth.copy(checked = true, signedIn = false, login = "", error = ctx.getString(R.string.git_gh_status_failed, r.exitCode, GhEngine.why(r.output), BuildConfig.GH_ENGINE_PACKAGE))
             else -> ghAuth.copy(checked = true, signedIn = false, login = "")
         }
+        ghLog(if (st.signedIn) "gh is signed in as ${st.login}" else "gh is not signed in" + ghAuth.error.let { if (it.isBlank()) "" else ": $it" })
         if (st.signedIn) fetchGhListing()
         return st.signedIn
     }
 
-    /** Open the page gh named, or say loudly that nothing on this phone can. */
+    /**
+     * Open the page gh named in the FLEET'S OWN BROWSER (Cloud Browser, the package the declared
+     * browser mission names; it answers VIEW for https). Only when it is not on the phone does
+     * any browser get it — and the log says which one did. Nothing at all: say so, loudly.
+     */
     fun openGhPage(url: String) {
-        runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            .onFailure { ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_no_browser, url)) }
+        val view = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val fleet = AuthDeclaration.browserMission?.pkg.orEmpty()
+        runCatching {
+            if (fleet.isBlank()) error("no fleet browser is declared")
+            ctx.startActivity(Intent(view).setPackage(fleet)); "Cloud Browser ($fleet)"
+        }.recoverCatching { why ->
+            ghLog("sign-in: Cloud Browser could not open the page (${why.message}); trying any browser")
+            ctx.startActivity(view); "the phone's default browser"
+        }.onSuccess { ghLog("sign-in: opened $url in $it") }
+            .onFailure {
+                ghLog("sign-in: nothing on this phone opened $url: ${it.message}")
+                ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_no_browser, url))
+            }
+    }
+
+    /** gh's one-time code onto the clipboard: on arrival, and again from the card's Copy button. */
+    fun copyGhCode(code: String) {
+        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+            ?.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.git_gh_code_clip), code))
     }
 
     /**
@@ -488,7 +515,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
      */
     fun startGhLogin() {
         val why = ghUnavailable()
-        if (why.isNotBlank()) { ghAuth = ghAuth.copy(checked = true, error = why); return }
+        if (why.isNotBlank()) { ghLog("sign-in: cannot start: $why"); ghAuth = ghAuth.copy(checked = true, error = why); return }
+        ghLog("sign-in: Sign in with GitHub tapped")
         ghAuth = ghAuth.copy(running = true, code = "", url = "", error = "")
         scope.launch {
             val r = withContext(Dispatchers.IO) {
@@ -498,8 +526,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     if (code != null || url != null) scope.launch {
                         if (code != null && ghAuth.code.isBlank()) {
                             ghAuth = ghAuth.copy(code = code)
-                            (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
-                                ?.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.git_gh_code_clip), code))
+                            copyGhCode(code)
                         }
                         if (url != null && ghAuth.url.isBlank()) { ghAuth = ghAuth.copy(url = url); openGhPage(url) }
                     }
@@ -507,7 +534,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
             ghAuth = ghAuth.copy(running = false, code = "", url = "")
             if (r.ok) ghCheck()
-            else ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_login_failed, lastLine(r.output)))
+            else ghAuth = ghAuth.copy(error = ctx.getString(R.string.git_gh_login_failed, GhEngine.why(r.output)))
         }
     }
 
@@ -523,6 +550,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         scope.launch {
             val cred = withContext(Dispatchers.IO) { if (ghHost.isBlank()) null else ghEngine.credential(ghHost) }
             if (cred == null) { handoff = ctx.getString(R.string.git_gh_clone_no_credential, repo.name); return@launch }
+            ghLog("clone ${repo.name}: on gh's credential, into the shared store")
             coordinator.cloneInto(
                 name = repo.name,
                 url = repo.cloneUrl,
@@ -662,6 +690,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                 fleetHost = fleetHost,
                                 onSignIn = { startWay(way) },
                                 onOpenGhPage = { openGhPage(it) },
+                                onCopyGhCode = { copyGhCode(it) },
                                 onRetry = {
                                     if (isCloud) { if (FleetSession.present) fetchFleetListing(way.rung) }
                                     else if (ghAuth.signedIn) fetchGhListing()
@@ -765,10 +794,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
 }
 
-/** gh's last non-blank line: its own words for why it stopped, never a credential (#689). */
-private fun lastLine(output: String): String =
-    output.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() }.orEmpty()
-
 /**
  * #689 what gh ITSELF says about this phone: whether it has been asked yet, who it is signed in
  * as, the one-time code its own `auth login` waits on (and the page to enter it at), and the ONE
@@ -864,6 +889,7 @@ private fun GitWayCard(
     fleetHost: SignInHost,
     onSignIn: () -> Unit,
     onOpenGhPage: (String) -> Unit,
+    onCopyGhCode: (String) -> Unit,
     onRetry: () -> Unit,
     onStartChain: () -> Unit,
     onSshKeyPath: (String) -> Unit,
@@ -922,7 +948,10 @@ private fun GitWayCard(
                 Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_GH_CODE),
                 style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold,
             )
-            if (ghAuth.url.isNotBlank()) PillRow { Pill(stringResource(R.string.git_gh_open, ghAuth.url), { onOpenGhPage(ghAuth.url) }) }
+            PillRow {
+                Pill(stringResource(R.string.git_gh_copy), { onCopyGhCode(ghAuth.code) }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_GH_COPY))
+                if (ghAuth.url.isNotBlank()) Pill(stringResource(R.string.git_gh_open, ghAuth.url), { onOpenGhPage(ghAuth.url) })
+            }
         }
 
         if (detailsOpen) Column(Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_WAY_DETAILS)) {
@@ -950,8 +979,11 @@ private fun GitWayCard(
                 )
             } else {
                 // #629 the GitHub card states which of its two credential states it is in.
+                // gh signed in IS a git credential on this phone (the clone asks gh for it), so the
+                // card never says "no credential" beside a signed-in gh.
                 Text(
-                    stringResource(if (login.fromVault) R.string.git_login_vault_note else R.string.git_login_vault_absent),
+                    if (ghAuth.signedIn) stringResource(R.string.git_gh_credential_note, ghAuth.login)
+                    else stringResource(if (login.fromVault) R.string.git_login_vault_note else R.string.git_login_vault_absent),
                     Modifier.testTag(DriveTags.SYNC_GIT_VAULT_NOTE),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
