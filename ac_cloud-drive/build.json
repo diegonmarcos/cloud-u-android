@@ -544,7 +544,6 @@
         "name_families": [
           "cloud",
           "diegonmarcos",
-          "ffront",
           "front"
         ],
         "public_repos": [
@@ -581,8 +580,8 @@
             "caption": "diegonmarcos.github.io"
           },
           {
-            "repo": "ffront",
-            "caption": "ffront"
+            "repo": "front",
+            "caption": "front"
           },
           {
             "repo": "front-assets-cdn",

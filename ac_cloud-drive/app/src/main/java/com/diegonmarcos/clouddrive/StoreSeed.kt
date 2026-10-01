@@ -59,10 +59,23 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         // (every declared name), never a hardcoded repository, and it decides by COMPLETENESS
         // rather than by position — StoreMigration says why that matters. Every decision is
         // logged, the ones that changed nothing included: no silent skip.
-        StoreMigration.migrate(SharedStore.root(), BuildConfig.GIT_SUBDIR, family.repos.map { it.name }.toSet()).forEach { move ->
+        // #731 then the declared upstream RENAMES (`renamed_from`): git/<old> settles into
+        // git/<new> under the same completeness rule, so a renamed repository is never seeded a
+        // second time beside its stray old-name clone.
+        val moves = StoreMigration.migrate(SharedStore.root(), BuildConfig.GIT_SUBDIR, family.repos.map { it.name }.toSet()) +
+            StoreMigration.migrateRenames(SharedStore.gitRoot(), family.renames)
+        moves.forEach { move ->
             DriveDebugLog.i(applicationContext, TAG, "migration ${move.name}: ${move.decision}")
             if (!StoreMigration.isComplete(move.to)) return@forEach
             val decl = family.repos.firstOrNull { it.name == move.name }
+            if (move.removed) registry.remove(RepoRegistry.idFor(move.from.absolutePath))
+            // A renamed clone still points origin at the OLD name; the provider's redirect is not
+            // a design, so origin is repointed at the declared URL of the new name.
+            val url = decl?.let { family.cloneUrl(it) }
+            if (move.moved && move.from.name != move.to.name && url != null) {
+                runCatching { GitEngine(move.to).use { it.setRemoteUrl("origin", url) } }
+                    .onFailure { DriveDebugLog.i(applicationContext, TAG, "migration ${move.name}: origin not repointed: ${it.message}") }
+            }
             registry.upsert(
                 ManagedRepo(
                     id = RepoRegistry.idFor(move.to.absolutePath),

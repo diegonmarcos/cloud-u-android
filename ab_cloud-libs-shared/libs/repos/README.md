@@ -40,7 +40,7 @@ account. Regenerate with `--refresh-list`.
 
 This matters more than it looks: in those registries `name` is the **local
 directory** and `url` is the **GitHub repo**, and they legitimately differ —
-`front-diegonmarcos` is `diegonmarcos.github.io`, `front` is `ffront`. Deriving
+`front-diegonmarcos` is `diegonmarcos.github.io`. Deriving
 the list from a GitHub name filter silently misses repos, which is exactly the
 mistake this file exists to avoid repeating.
 

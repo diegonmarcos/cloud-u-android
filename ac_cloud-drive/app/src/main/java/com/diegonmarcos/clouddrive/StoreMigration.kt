@@ -27,7 +27,7 @@ import java.io.File
 object StoreMigration {
 
     /**
-     * What was decided for one repository name. [moved] = the root copy now lives at [to];
+     * What was decided for one repository name ([name] is the destination's — the declared one). [moved] = the root copy now lives at [to];
      * [removed] = the root copy is gone (either because it moved, or because it was redundant);
      * [decision] is the sentence the caller logs.
      */
@@ -101,6 +101,20 @@ object StoreMigration {
         return strays.mapNotNull { stray -> settle(stray, File(gitRoot, stray.name)) }
     }
 
+    /**
+     * #731 an UPSTREAM RENAME (diegonmarcos/ffront became diegonmarcos/front): the clone under
+     * `<[gitRoot]>/<old>` is settled against `<[gitRoot]>/<new>` with the SAME completeness rule as
+     * a root stray, so the stray old-name dir is migrated rather than left beside a fresh clone,
+     * and a copy is only ever deleted when the survivor is proven complete. [renames] is old -> new,
+     * from the manifest's `renamed_from` — never a repository name typed here.
+     */
+    fun migrateRenames(gitRoot: File, renames: Map<String, String>): List<Move> =
+        emptyList<Move>() + renames.filter { false }.mapNotNull { (old, new) ->
+            val stray = File(gitRoot, old)
+            if (old == new || !stray.isDirectory) null
+            else settle(stray, File(gitRoot, new))?.let { it.copy(decision = "renamed $old -> $new: ${it.decision}") }
+        }
+
     /** One name's decision. null ⇒ there was nothing at the root worth reporting. */
     private fun settle(stray: File, dest: File): Move? {
         val strayScore = completeness(stray)
@@ -109,12 +123,12 @@ object StoreMigration {
         // moved and NEVER deleted — the store is plain shared storage and that folder is not ours.
         if (strayScore == 0) {
             if (!dest.exists()) return null
-            return Move(stray.name, stray, dest, moved = false, decision = "left: the root copy is not a clone and git/${stray.name} exists")
+            return Move(dest.name, stray, dest, moved = false, decision = "left: the root copy is not a clone and git/${dest.name} exists")
         }
         if (!dest.exists()) {
             val ok = relocate(stray, dest)
             return Move(
-                stray.name, stray, dest, moved = ok, removed = ok,
+                dest.name, stray, dest, moved = ok, removed = ok,
                 decision = if (ok) "migrated: root clone (score $strayScore) → git/, nothing was there" else "FAILED: the root clone could not be relocated into git/",
             )
         }
@@ -123,28 +137,28 @@ object StoreMigration {
             val parked = File(dest.parentFile, dest.name + PARKED_SUFFIX)
             if (parked.exists()) parked.deleteRecursively()
             if (!dest.renameTo(parked)) {
-                return Move(stray.name, stray, dest, moved = false, decision = "left: could not park the incomplete git/ copy (score $destScore) to make room for the better root copy (score $strayScore)")
+                return Move(dest.name, stray, dest, moved = false, decision = "left: could not park the incomplete git/ copy (score $destScore) to make room for the better root copy (score $strayScore)")
             }
             val ok = relocate(stray, dest)
             if (!ok || completeness(dest) < strayScore) {
                 // Put the husk back rather than leave the destination worse than it was.
                 dest.deleteRecursively()
                 parked.renameTo(dest)
-                return Move(stray.name, stray, dest, moved = false, decision = "left: the move of the better root copy did not verify — the git/ copy was restored")
+                return Move(dest.name, stray, dest, moved = false, decision = "left: the move of the better root copy did not verify — the git/ copy was restored")
             }
             parked.deleteRecursively()
-            return Move(stray.name, stray, dest, moved = true, removed = true, decision = "replaced: the root copy (score $strayScore) is more complete than git/ (score $destScore) — the husk was removed only after the move verified")
+            return Move(dest.name, stray, dest, moved = true, removed = true, decision = "replaced: the root copy (score $strayScore) is more complete than git/ (score $destScore) — the husk was removed only after the move verified")
         }
         if (destScore == COMPLETE) {
             // The git/ copy is PROVEN complete, so the root copy is genuinely redundant. This is the
             // only path that deletes a clone outright, and by construction it is never an only copy.
             val removed = stray.deleteRecursively()
             return Move(
-                stray.name, stray, dest, moved = false, removed = removed,
+                dest.name, stray, dest, moved = false, removed = removed,
                 decision = if (removed) "removed: git/ is complete — the redundant root copy (score $strayScore) was deleted" else "left: git/ is complete but the redundant root copy could not be deleted",
             )
         }
-        return Move(stray.name, stray, dest, moved = false, decision = "left: NEITHER copy is complete (root $strayScore, git/ $destScore) — nothing is deleted until one of them is")
+        return Move(dest.name, stray, dest, moved = false, decision = "left: NEITHER copy is complete (root $strayScore, git/ $destScore) — nothing is deleted until one of them is")
     }
 
     /** rename, else copy-then-delete (a rename across shared-storage volumes fails). */

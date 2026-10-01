@@ -246,11 +246,14 @@ object Declarations {
     /** [machine] is #604's host class — vm | pc | phone, or `container` (the default) for the container mesh. */
     data class ConnectionDecl(val name: String, val kind: String, val endpoint: String, val auth: String, val vm: String, val status: String, val scope: String, val notes: String, val reason: String, val uri: String, val machine: String)
     data class GitInstanceDecl(val name: String, val kind: String, val org: String, val host: String, val port: Int?, val reachable: Boolean, val reach: String)
-    data class GitRepoDecl(val name: String, val label: String, val githubOwner: String, val giteaOwner: String, val private: Boolean, val seed: Boolean, val notes: String)
+    /** [renamedFrom] = the names this repository was cloned under before an upstream rename; the store moves those clones to [name]. */
+    data class GitRepoDecl(val name: String, val label: String, val githubOwner: String, val giteaOwner: String, val private: Boolean, val seed: Boolean, val notes: String, val renamedFrom: List<String> = emptyList())
     data class GitFamilyDecl(val instances: List<GitInstanceDecl>, val repos: List<GitRepoDecl>) {
         val upstream: GitInstanceDecl? get() = instances.firstOrNull { it.kind == "upstream" && it.host.isNotBlank() }
         /** `https://<upstream host>/<github_owner>/<name>.git` — the #575 composition, once. */
         fun cloneUrl(repo: GitRepoDecl): String? = upstream?.let { "https://${it.host}/${repo.githubOwner}/${repo.name}.git" }
+        /** old clone name -> current name, from every repository's declared `renamed_from`. */
+        val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
     data class MirrorJobDecl(val name: String, val source: String, val destination: String, val delete: Boolean, val notes: String)
     data class RemoteDecl(val name: String, val type: String, val purpose: String, val endpoint: String, val host: String, val auth: String, val status: String, val reason: String, val notes: String, val declaredToPhone: Boolean)
@@ -444,7 +447,7 @@ object Declarations {
         }
         val repos = objects(o["repos"]).mapNotNull { r ->
             val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
-            GitRepoDecl(name, r.str("label", name), r.str("github_owner"), r.str("gitea_owner"), r.bool("private"), r.bool("seed"), r.str("notes"))
+            GitRepoDecl(name, r.str("label", name), r.str("github_owner"), r.str("gitea_owner"), r.bool("private"), r.bool("seed"), r.str("notes"), r.strings("renamed_from"))
         }
         return GitFamilyDecl(instances, repos)
     }

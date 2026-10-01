@@ -104,13 +104,14 @@
    "seed": true
   },
   {
-   "name": "ffront",
-   "label": "ffront",
+   "name": "front",
+   "label": "front",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "The fleet's front-end tree (the `ffront` family). Public per the live API. NOTE the double-f: there is no repository called `front`."
+   "renamed_from": ["ffront"],
+   "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it."
   },
   {
    "name": "front-assets-cdn",

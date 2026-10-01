@@ -161,4 +161,35 @@ class StoreMigrationTest {
         assertFalse(moves.first().removed)
         assertTrue(File(root, "cloud/notes.txt").exists())
     }
+
+    /** #731 an upstream rename: a complete git/ffront moves to git/front, the old dir is gone, content survives. */
+    @Test fun aRenamedRepositoryMovesToItsNewName() {
+        val git = File(tmp(), "git")
+        clone(File(git, "ffront"), "FRONT")
+        val moves = StoreMigration.migrateRenames(git, mapOf("ffront" to "front"))
+        assertEquals(1, moves.size)
+        assertEquals("front", moves.single().name)
+        assertTrue(moves.single().moved)
+        assertFalse("the stray old-name dir must not be left beside the new one", File(git, "ffront").exists())
+        assertEquals("FRONT", File(git, "front/README.md").readText())
+    }
+
+    /** #731 a fresh clone already at the new name wins; the redundant old-name clone is removed. */
+    @Test fun aRenamedStrayBesideACompleteNewCloneIsRemoved() {
+        val git = File(tmp(), "git")
+        clone(File(git, "ffront"), "OLD")
+        clone(File(git, "front"), "NEW")
+        val moves = StoreMigration.migrateRenames(git, mapOf("ffront" to "front"))
+        assertTrue(moves.single().removed)
+        assertFalse(File(git, "ffront").exists())
+        assertEquals("NEW", File(git, "front/README.md").readText())
+    }
+
+    /** #731 the shipped manifest declares the rename, so the device migration is actually armed. */
+    @Test fun theManifestDeclaresTheFrontRename() {
+        val data = listOf(File("data"), File("../data"), File("ac_cloud-drive/data")).first { File(it, "drive-git-repos.json").isFile }
+        val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
+        assertEquals("front", family.renames["ffront"])
+        assertTrue(family.repos.none { it.name == "ffront" })
+    }
 }

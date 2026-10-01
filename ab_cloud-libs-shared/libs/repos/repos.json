@@ -70,7 +70,7 @@
     },
     {
       "name": "front",
-      "repo": "diegonmarcos/ffront",
+      "repo": "diegonmarcos/front",
       "private": false,
       "doc": "Project master (symlink farm): repos.json + clone.sh + committed symlinks to its members."
     },
