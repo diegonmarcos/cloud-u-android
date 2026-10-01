@@ -272,6 +272,77 @@ else
 fi
 rm -f "$MUT612"
 
+# ── #715 — the legacy request covers EVERY grant the legacy check demands ──
+# checkStoragePermission(legacy) requires READ and WRITE_EXTERNAL_STORAGE, but
+# requestLegacyStorageExternalPermission asked for WRITE alone. READ was never
+# requested, so the check could never pass and /storage/emulated/0 never
+# mounted, however often the user said yes. Derived from both bodies, so the
+# pin follows the check if the check ever changes.
+PERM_UTILS="$DIR/termux-shared/src/main/java/com/termux/shared/android/PermissionUtils.java"
+perms_in() {  # $1 = source, $2 = method name -> the Manifest permissions its body names
+    awk -v m="$2" '$0 ~ "public static boolean " m "\\(" {on=1} on {print} on && /^    }/ {exit}' "$1" \
+        | grep -o 'Manifest\.permission\.[A-Z_]*' | sort -u
+}
+legacy_request_covers_check() {  # $1 = PermissionUtils source
+    need="$(perms_in "$1" checkStoragePermission)"
+    have="$(perms_in "$1" requestLegacyStorageExternalPermission)"
+    [ -n "$need" ] && [ -z "$(printf '%s\n' "$need" | grep -vxF "$have")" ]
+}
+if legacy_request_covers_check "$PERM_UTILS"; then
+    ok "the legacy storage request asks for every permission the legacy check demands ($(perms_in "$PERM_UTILS" checkStoragePermission | sed 's/.*\.//' | tr '\n' ' '))"
+else
+    bad "the legacy storage request omits a permission checkStoragePermission demands — the grant can never pass the check, storage never mounts"
+fi
+MUT_PU="$(mktemp)"
+awk '/public static boolean requestLegacyStorageExternalPermission\(/ {on=1} on && /return requestPermissions\(context,/ {print "        return requestPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE, requestCode);"; skip=1; next} skip && /requestCode\);/ {skip=0; on=0; next} !skip' "$PERM_UTILS" > "$MUT_PU"
+if cmp -s "$PERM_UTILS" "$MUT_PU"; then
+    bad "MUTATION DID NOT APPLY: the WRITE-only request could not be planted"
+elif legacy_request_covers_check "$MUT_PU"; then
+    bad "MUTATION SURVIVED: the shipped WRITE-only request still passes the coverage pin"
+else
+    ok "mutation proved: the shipped WRITE-only request fails the coverage pin"
+fi
+rm -f "$MUT_PU"
+
+# ── #715 — bin/login's half of the trace runs, and names the storage error ──
+# Executed, not grepped: the Android-side prelude (POSIX sh; on the phone it is
+# mksh) must start the log fresh for an interactive login, write its job-control
+# line, and stay off the screen for a caller's command.
+T715="$(mktemp -d)"
+python3 - "$BAKE_PY" "$T715" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+body = m.BIN_LOGIN_TRACE + 'cloud_trace "after"\n'
+open(sys.argv[2] + "/login.sh", "w").write("set -eu\n" + body)
+open(sys.argv[2] + "/login-nogate.sh", "w").write(
+    "set -eu\n" + body.replace('if [ -n "$CLOUD_LOGIN_SCREEN" ]; then echo "$m" >&2; fi', 'echo "$m" >&2'))
+PY
+mkdir -p "$T715/home"
+echo stale > "$T715/home/.cloud-login.log"
+HOME="$T715/home" sh "$T715/login.sh" 2>"$T715/i.err"
+I_LOG="$(cat "$T715/home/.cloud-login.log")"
+HOME="$T715/home" sh "$T715/login.sh" some-command 2>"$T715/a.err"
+if ! grep -q stale "$T715/home/.cloud-login.log" \
+   && echo "$I_LOG" | grep -q 'bin/login: start, pid [0-9]* state=. pgrp=[0-9]* sid=[0-9]* tpgid=-\{0,1\}[0-9]*' \
+   && grep -q 'after' "$T715/i.err" && [ ! -s "$T715/a.err" ]; then
+    ok "bin/login's trace runs under POSIX sh: a fresh log per interactive login, its pgrp/sid/tpgid line, screen lines only when interactive"
+else
+    bad "bin/login's trace prelude misbehaves: log=$(echo "$I_LOG" | head -2 | tr '\n' '|') screen=$(head -c 200 "$T715/i.err") argv-stderr=$(head -c 200 "$T715/a.err")"
+fi
+HOME="$T715/home" sh "$T715/login-nogate.sh" some-command 2>"$T715/m.err"
+if [ -s "$T715/m.err" ]; then
+    ok "mutation proved: without the interactive gate a caller's command gets trace lines on its stderr"
+else
+    bad "MUTATION SURVIVED: the ungated trace still kept a caller's stderr clean"
+fi
+rm -rf "$T715"
+if grep -q 'cloud_trace "storage: ls /storage/emulated/0 failed: \$CLOUD_LS_ERR"' "$BAKE_PY"; then
+    ok "a failed storage probe traces ls's own error, not only a verdict"
+else
+    bad "bin/login's storage probe discards ls's error — the device log could not say WHY storage is unreadable"
+fi
+
 # ── #605 — bin/login's proot-static exec must resolve to THIS app's own
 #           prefix, never the different (and not-installed) com.termux.nix
 #           app whose path was baked into the upstream bootstrap zip. Runs the
@@ -747,6 +818,139 @@ rc, out = run(nodeadline, "nodeadline-promptwedged", [], False, shell_body=PROMP
 if rc != "TIMEOUT" or "drew no prompt" in out:
     dwhy.append(f"the blind exec still ended on a prompt-wedged shell rc={rc} out={flat(out)}")
 print("RESULT:DEADLINE " + ("OK" if not dwhy else "SURVIVED " + "; ".join(dwhy)))
+
+# ── #715: the trace names the step, on a REAL pty ──────────────────────────
+# The phone hung and nothing said where. Every login step now writes one
+# timestamped line to the screen and to $HOME/.cloud-login.log, and the line
+# that matters most is the job-control fact: is the login (and then the shell)
+# in the tty's FOREGROUND process group? A shell outside it stops itself with
+# SIGTTIN before its prompt -- the phone's exact screen when measured with the
+# shipped proot-static. Only a real pty has a foreground pgrp, so these runs use
+# one, as the session leader, the way Termux's create_subprocess does.
+import pty, select, shutil, signal, time
+REAL_BASH = shutil.which("bash")
+os.makedirs(f"{work}/wrap", exist_ok=True)
+# A bash that never prompts when started as an interactive shell (no script
+# operand, no -c), but still runs scripts: so tier 2 wedges, rescue does not.
+open(f"{work}/wrap/bash", "w").write(
+    f'#!{REAL_BASH}\nfor a in "$@"; do case "$a" in -c|/dev/stdin) exec {REAL_BASH} "$@";; esac; '
+    f'[ -f "$a" ] && exec {REAL_BASH} "$@"; done\nexec sleep 30\n')
+os.chmod(f"{work}/wrap/bash", 0o755)
+LOG = f"{work}/home/.cloud-login.log"
+
+
+def pty_run(text, name, background=False, shell_body=HEALTHY, typed=b"", bash_wedged=False, settle=4):
+    path = f"{work}/{name}"
+    open(path, "w").write(sandbox(text))
+    open(SHELL_BIN, "w").write(shell_body)
+    os.chmod(SHELL_BIN, 0o755)
+    if os.path.exists(LOG):
+        os.remove(LOG)
+    env = dict(RUN_ENV, TMPDIR=work, TERM="dumb", CLOUD_LOGIN_PROMPT_DEADLINE="2", CLOUD_LOGIN_BASH_DEADLINE="2")
+    if bash_wedged:
+        env["PATH"] = f"{work}/wrap:" + env.get("PATH", "/usr/bin:/bin")
+    pid, fd = pty.fork()
+    if pid == 0:
+        try:
+            if background:  # the login outside the tty's foreground pgrp
+                if os.fork():
+                    os.wait()
+                    os._exit(0)
+                os.setpgid(0, 0)
+            os.execve(REAL_BASH, [REAL_BASH, path], env)
+        finally:
+            os._exit(127)
+    out = b""
+    end = time.time() + settle
+    sent = False
+    while time.time() < end:
+        if typed and not sent and time.time() > end - 2:
+            os.write(fd, typed)
+            sent = True
+        r, _, _ = select.select([fd], [], [], 0.2)
+        if r:
+            try:
+                out += os.read(fd, 65536)
+            except OSError:
+                break
+    for p in os.listdir("/proc"):  # the whole session, stopped members included
+        try:
+            f = open(f"/proc/{p}/stat").read()
+            if int(f[f.rindex(")") + 2:].split()[3]) == pid:
+                os.kill(int(p), signal.SIGKILL)
+        except (OSError, ValueError):
+            pass
+    os.close(fd)
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+    return out.decode(errors="replace"), (open(LOG).read() if os.path.exists(LOG) else "")
+
+
+def line(log, needle):
+    return next((l for l in log.splitlines() if needle in l), "")
+
+
+twhy = []
+scr, log = pty_run(patched, "t-fg")
+if "FOREGROUND" not in line(log, "login-inner: start,"):
+    twhy.append(f"a foreground login was not traced FOREGROUND: {line(log, 'login-inner: start,')!r}")
+if "FOREGROUND" not in line(log, f"/{login_shell}: starting,"):
+    twhy.append(f"the shell's own pgrp was not traced as the tty's foreground: {flat(log)}")
+# Every step, in order -- the step a phone stops after is the step it hung in.
+steps = ["login-inner: start,", "session init: sourcing", "session init: done", "store init: start",
+         "store init: done", "probe: ", "probe: passed", f"/{login_shell}: starting,"]
+at = [log.find(s) for s in steps]
+if -1 in at or at != sorted(at):
+    twhy.append(f"the trace does not carry every step in order {steps}: {flat(log)}")
+if "[login " not in scr:
+    twhy.append("an interactive login put no trace line on the screen")
+scr, log = pty_run(patched, "t-bg", background=True)
+if "BACKGROUND(tty foreground pgrp" not in line(log, "login-inner: start,"):
+    twhy.append(f"a login outside the tty's foreground pgrp was not traced BACKGROUND: {line(log, 'login-inner: start,')!r}")
+# A caller's command (`login <cmd>`) gets its own output and nothing else.
+if os.path.exists(LOG):
+    os.remove(LOG)
+rc, out = run(patched, "t-argv", ["echo", "ARGV_REACHED"], False)
+if "[login " in out or "login-inner: start," not in (open(LOG).read() if os.path.exists(LOG) else ""):
+    twhy.append(f"the argv path printed trace lines or wrote none to the file: {flat(out)}")
+print("RESULT:TRACE " + ("OK" if not twhy else "FAIL " + "; ".join(twhy)))
+
+# Planted: the foreground test inverted. The verdicts must flip, i.e. the
+# FOREGROUND/BACKGROUND assertions above read the real comparison.
+inv = patched.replace('elif [ "$4" = "$7" ]', 'elif [ "$4" != "$7" ]')
+vwhy = []
+if inv == patched:
+    vwhy.append("the inverted-verdict mutation did not apply")
+scr, log = pty_run(inv, "t-inv")
+if "FOREGROUND" in line(log, "login-inner: start,"):
+    vwhy.append("an inverted pgrp/tpgid comparison still traced FOREGROUND")
+print("RESULT:VERDICT " + ("OK" if not vwhy else "SURVIVED " + "; ".join(vwhy)))
+
+# Tiers: fish never prompts AND an interactive bash never prompts. Rescue mode
+# must still execute a typed line, and both deadlines leave a snapshot naming
+# the hung shell's state and the tty modes.
+TYPED = b"echo RESCUE_$((6*7))\n"
+rwhy = []
+scr, log = pty_run(patched, "t-tiers", shell_body=PROMPT_WEDGED, typed=TYPED, bash_wedged=True, settle=9)
+if "RESCUE_42" not in scr:
+    rwhy.append(f"rescue mode did not run a typed line: {flat(scr)}")
+if log.count("no prompt after 2s: pid") != 2 or log.count("State=") < 2 or "tty modes:" not in log:
+    rwhy.append(f"the two deadlines did not each leave a state snapshot: {flat(log)}")
+if "falling back to rescue mode" not in scr:
+    rwhy.append(f"the screen did not name the bash tier's failure: {flat(scr)}")
+print("RESULT:TIERS " + ("OK" if not rwhy else "FAIL " + "; ".join(rwhy)))
+
+# Planted: v0.3.11's fallback (a blind `exec -l bash`) instead of the tiers.
+v311 = patched.replace(bake.USERSHELL_FALLBACK, "exec -l bash")
+mwhy = []
+if v311 == patched:
+    mwhy.append("the v0.3.11-fallback mutation did not apply")
+scr, log = pty_run(v311, "t-v311", shell_body=PROMPT_WEDGED, typed=TYPED, bash_wedged=True, settle=9)
+if "RESCUE_42" in scr:
+    mwhy.append("the blind bash fallback still ran the typed line")
+print("RESULT:TIERMUT " + ("OK" if not mwhy else "SURVIVED " + "; ".join(mwhy)))
 PYEOF
 )"
 case "$(echo "$D1_RESULT" | sed -n 1p)" in
@@ -768,6 +972,22 @@ esac
 case "$(echo "$D1_RESULT" | sed -n 5p)" in
     "DEADLINE OK") ok "mutation proved: exec'ing a probe-passing shell blind again hangs on one that never prompts — the prompt-deadline assertion discriminates" ;;
     *)             bad "MUTATION SURVIVED: without the prompt deadline the prompt-wedged boot still ended, so it proves nothing: $(echo "$D1_RESULT" | sed -n 5p)" ;;
+esac
+case "$(echo "$D1_RESULT" | sed -n 6p)" in
+    "TRACE OK") ok "#715: every login step is traced in order to screen and \$HOME/.cloud-login.log, the login and the shell are each named FOREGROUND/BACKGROUND against the tty's foreground pgrp on a real pty, and a caller's command gets no trace on its output" ;;
+    *)          bad "#715: the login trace does not name the step a login hangs in: $(echo "$D1_RESULT" | sed -n 6p)" ;;
+esac
+case "$(echo "$D1_RESULT" | sed -n 7p)" in
+    "VERDICT OK") ok "mutation proved: an inverted pgrp/tpgid comparison flips the traced verdict" ;;
+    *)            bad "MUTATION SURVIVED: $(echo "$D1_RESULT" | sed -n 7p)" ;;
+esac
+case "$(echo "$D1_RESULT" | sed -n 8p)" in
+    "TIERS OK") ok "#715: with fish AND interactive bash both never prompting, rescue mode still runs a typed line, and each deadline leaves a state + tty-mode snapshot" ;;
+    *)          bad "#715: a login whose shells all hang is still a dead screen: $(echo "$D1_RESULT" | sed -n 8p)" ;;
+esac
+case "$(echo "$D1_RESULT" | sed -n 9p)" in
+    "TIERMUT OK") ok "mutation proved: v0.3.11's blind exec -l bash fallback never runs the typed line on the same wedge" ;;
+    *)            bad "MUTATION SURVIVED: $(echo "$D1_RESULT" | sed -n 9p)" ;;
 esac
 rm -rf "$D1_WORKDIR"
 
@@ -1316,7 +1536,7 @@ python3 - "$DIR/app/src/main/cpp/bake_default_packages.py" "$SB/probe" <<'PY' > 
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-li = ('#!/bin/sh\nusershell="/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bash-5.2-p15/bin/bash"\n'
+li = ('#!/bin/sh\nset -eo pipefail\nusershell="/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bash-5.2-p15/bin/bash"\n'
       '. "/data/data/cld.termux.nix/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh"\n'
       "exec /usr/bin/env bash  # otherwise it'll be a limited bash that came with Nix\n"
       'exec /usr/bin/env "$@"\n'

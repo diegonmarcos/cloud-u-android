@@ -329,7 +329,12 @@ public class PermissionUtils {
     @RequiresApi(api = Build.VERSION_CODES.M)
     public static boolean requestLegacyStorageExternalPermission(@NonNull Context context, int requestCode) {
         Logger.logInfo(LOG_TAG, "Requesting legacy external storage permission");
-        return requestPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE, requestCode);
+        // #715: BOTH, because checkStoragePermission(legacy) demands both. Asking for WRITE
+        // alone left READ ungranted, so the check never passed and /storage/emulated/0 never
+        // mounted however often the user said yes.
+        return requestPermissions(context,
+            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+            requestCode);
     }
 
     /** Wrapper for {@link #requestManageStorageExternalPermission(Context, int)}. */

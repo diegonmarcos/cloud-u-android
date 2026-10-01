@@ -156,14 +156,19 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
     if want not in login_inner:
         raise ValueError(f"expected session-init line not found in usr/lib/login-inner:\n  {want}")
     head, _, tail = login_inner.rpartition(want)
-    fallback_line = f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi'
+    fallback_line = (
+        'cloud_trace "session init: sourcing"\n'
+        f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi\n'
+        'cloud_trace "session init: done"')
     # #644 -- and the store, UNCONDITIONALLY: outside the if/else above, because
     # the branch that runs depends on whether a real nix-on-droid generation was
     # ever built, while the link store has to be initialised and verified either
     # way. It goes after, so the profile PATH the fallback exports is already set.
     if store_install_dir:
-        fallback_line = fallback_line + "\n" + store_init_line(store_install_dir)
+        fallback_line = (fallback_line + '\ncloud_trace "store init: start"\n'
+                         + store_init_line(store_install_dir) + '\ncloud_trace "store init: done"')
     login_inner = head + fallback_line + tail
+    login_inner = add_login_trace(login_inner)
 
     # #641 -- this exec GOES, it is not merely guarded any more, and #640 is why:
     # the moment /usr/bin/env exists the #638 guard becomes TRUE, this line fires,
@@ -213,51 +218,183 @@ USERSHELL_EXEC = 'exec -a "-${usershell##*/}" "$usershell"'
 # never left in a background process group. The deadline outlasts fish's own
 # 10 s wait for a terminal that ignores its startup queries.
 USERSHELL_PROMPT_DEADLINE_S = 20
+# The bash tier needs no terminal handshake, so it gets half the time.
+BASH_PROMPT_DEADLINE_S = 10
 USERSHELL_PROMPT_BOUNDED = (
-    'CLOUD_LOGIN_PROMPT_SEEN="${TMPDIR:-/tmp}/.cloud-login-prompt.$$"\n'
-    '    export CLOUD_LOGIN_PROMPT_SEEN\n'
-    '    rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
-    f'    deadline="${{CLOUD_LOGIN_PROMPT_DEADLINE:-{USERSHELL_PROMPT_DEADLINE_S}}}"\n'
-    '    if [ -t 0 ]; then set -m; fi\n'
-    '    ( sleep "$deadline"\n'
-    '      if [ ! -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then\n'
-    '        : > "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
-    '        kill -KILL "$(cat "$CLOUD_LOGIN_PROMPT_SEEN.pid")" 2>/dev/null\n'
-    '      fi ) &\n'
-    '    watchdog=$!\n'
-    '    rc=0\n'
-    # The job is a waiter bash whose own stderr is /dev/null, so bash's "Killed"
-    # report about the shell lands there; the shell itself (exec'd one level
-    # down, so its pid is known) takes the terminal's stderr back from fd 3.
-    # The waiter, not this shell, is what parks stderr: under set -m bash hands
-    # the terminal over through its OWN stderr, and redirecting it here left the
-    # shell in a background process group (SIGTTIN, status 149).
-    '    ( exec 3>&2 2>/dev/null\n'
-    '      ( exec 2>&3 3>&-\n'
-    '        echo "$BASHPID" > "$CLOUD_LOGIN_PROMPT_SEEN.pid"\n'
-    '        exec -a "-${usershell##*/}" "$usershell" --init-command \''
+    f'cloud_try_shell "$usershell" "${{CLOUD_LOGIN_PROMPT_DEADLINE:-{USERSHELL_PROMPT_DEADLINE_S}}}" bash '
+    '"-${usershell##*/}" "$usershell" --init-command \''
+    'echo "[fish] config read, init-command ran" >>$CLOUD_LOGIN_LOG; '
     'function __cloud_prompt_seen --on-event fish_prompt; functions -e __cloud_prompt_seen; '
-    'true >$CLOUD_LOGIN_PROMPT_SEEN; set -e CLOUD_LOGIN_PROMPT_SEEN; end\' ) || exit $? ) || rc=$?\n'
-    '    kill "$watchdog" 2>/dev/null || true\n'
-    '    set +m\n'
-    '    if [ -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then\n'
-    '      rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid"\n'
-    '      exit "$rc"\n'
-    '    fi\n'
-    '    why="ended (status $rc) before drawing a prompt"\n'
-    '    if [ -e "$CLOUD_LOGIN_PROMPT_SEEN.late" ]; then why="drew no prompt within ${deadline}s"; fi\n'
-    '    rm -f "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"\n'
-    '    echo "⚠ login shell $usershell $why; falling back to bash" >&2\n'
-    '    exec -l bash'
+    'echo "[fish] first prompt" >>$CLOUD_LOGIN_LOG; '
+    'true >$CLOUD_LOGIN_PROMPT_SEEN; set -e CLOUD_LOGIN_PROMPT_SEEN; end\''
+)
+# #715 -- v0.3.11 fell back to `exec -l bash` and the phone showed no bash prompt
+# either, so the blocker is not fish. Two more tiers, each a bisection step:
+#   2. bash with NO profile and NO rc, bounded like fish (PROMPT_COMMAND is the
+#      marker, and with --norc nothing can override it). If this prompts, the
+#      blocker is in the profile/env layer; if it does not, it is below any
+#      shell's own scripts.
+#   3. rescue: bash running /dev/stdin as a SCRIPT. Non-interactive, so it skips
+#      every interactive-only step (job-control handshake, tty modes, line
+#      editing) and simply executes each line typed. If even this does not run
+#      a typed line, the blocker is below the shell (proot / the kernel).
+USERSHELL_FALLBACK = (
+    'export PROMPT_COMMAND=\': >"$CLOUD_LOGIN_PROMPT_SEEN"; unset PROMPT_COMMAND CLOUD_LOGIN_PROMPT_SEEN\'\n'
+    f'  cloud_try_shell bash "${{CLOUD_LOGIN_BASH_DEADLINE:-{BASH_PROMPT_DEADLINE_S}}}" "rescue mode" '
+    '-bash bash --noprofile --norc -i\n'
+    '  unset PROMPT_COMMAND\n'
+    '  trap \'\' TTOU; stty sane 2>/dev/null || true; trap - TTOU\n'
+    '  cloud_trace "rescue: $(cloud_proc $$)"\n'
+    '  echo "⚠ rescue mode: no shell drew a prompt; each line typed still runs (no prompt, no editing). Log: $CLOUD_LOGIN_LOG" >&2\n'
+    '  exec bash --noprofile --norc /dev/stdin'
 )
 USERSHELL_PROBE = (
-    'if ! command -v timeout >/dev/null 2>&1 '
+    'cloud_trace "probe: $usershell -c exit (bounded 5s)"\n'
+    '  if ! command -v timeout >/dev/null 2>&1 '
     '|| timeout 5 "$usershell" -c exit >/dev/null 2>&1; then\n'
+    '    cloud_trace "probe: passed"\n'
     f'    {USERSHELL_PROMPT_BOUNDED}\n'
+    '  else\n'
+    '    echo "⚠ login shell $usershell failed its 5s liveness probe; falling back to bash" >&2\n'
     '  fi\n'
-    '  echo "⚠ login shell $usershell failed its 5s liveness probe; falling back to bash" >&2\n'
-    '  exec -l bash'
+    f'  {USERSHELL_FALLBACK}'
 )
+
+# #715 -- the trace every step above writes through, plus the bounded start each
+# shell tier goes through. Inserted right after login-inner's `set -eo pipefail`
+# (bin/sh there is bash 5.2, so EPOCHREALTIME and printf %()T are builtins and
+# nothing here needs PATH, which is not set yet).
+#
+# cloud_proc reads /proc/<pid>/stat: pgrp vs tpgid (the tty's FOREGROUND process
+# group) is the job-control question. A shell whose pgrp is not the tty's
+# foreground pgrp stops itself with SIGTTIN before its prompt -- and under proot
+# its kill(0, SIGTTIN) stops proot too. Measured off-device with the shipped
+# proot-static: that gives exactly the phone's screen (typed line echoed by the
+# cooked tty, never run, shell with no child). state/wchan/syscall/signal masks
+# at the deadline then say whether a hung shell is STOPPED (T/t: job control) or
+# SLEEPING in a syscall (S + the syscall number: what it is blocked on).
+#
+# Screen lines only for an interactive login ($# = 0); a `login <cmd>` caller
+# (RunCommandService) gets its command's output and nothing else, while the file
+# still gets the lines.
+LOGIN_TRACE_ANCHOR = "set -eo pipefail\n"
+LOGIN_TRACE = r"""
+CLOUD_LOGIN_LOG="${CLOUD_LOGIN_LOG:-${HOME:-/tmp}/.cloud-login.log}"
+export CLOUD_LOGIN_LOG
+if [ "$#" -eq 0 ]; then CLOUD_LOGIN_SCREEN=1; else CLOUD_LOGIN_SCREEN=; fi
+cloud_trace() {
+  local t
+  printf -v t '%(%H:%M:%S)T.%s' -1 "${EPOCHREALTIME#*.}"
+  printf '[login %s] %s\n' "${t:0:12}" "$*" >> "$CLOUD_LOGIN_LOG" 2>/dev/null || true
+  if [ -n "$CLOUD_LOGIN_SCREEN" ]; then printf '[login %s] %s\n' "${t:0:12}" "$*" >&2 || true; fi
+}
+cloud_proc() {
+  local st="" w="?" sc="?" k v sig="" fg
+  { read -r st < "/proc/$1/stat"; } 2>/dev/null || { echo "pid $1: gone"; return 0; }
+  set -- "$1" ${st##*) }
+  { read -r w < "/proc/$1/wchan"; } 2>/dev/null || true
+  { read -r sc _ < "/proc/$1/syscall"; } 2>/dev/null || true
+  while read -r k v; do
+    case "$k" in State:|SigPnd:|ShdPnd:|SigBlk:|SigIgn:|TracerPid:) sig="$sig ${k%:}=${v%% *}";; esac
+  done 2>/dev/null < "/proc/$1/status" || true
+  if [ "$7" = "-1" ]; then fg="NO-CONTROLLING-TTY"
+  elif [ "$4" = "$7" ]; then fg="FOREGROUND"
+  else fg="BACKGROUND(tty foreground pgrp $7)"; fi
+  echo "pid $1 ppid=$3 pgrp=$4 sid=$5 tpgid=$7 $fg wchan=${w:-?} syscall=${sc:-?}$sig"
+}
+cloud_tty() {
+  local - m o=""
+  set -f
+  m="$(stty -a 2>&1)" || { echo "tty: stty failed: $m"; return 0; }
+  for w in $m; do case "$w" in icanon|-icanon|echo|-echo|isig|-isig) o="$o $w";; esac; done
+  echo "tty modes:$o"
+}
+# $1 the shell's name in messages, $2 the deadline (s), $3 the next tier's name,
+# then exec -a's argv0 and the command. Returns only when the shell never drew a
+# prompt; a shell that did ends the login with its own status.
+cloud_try_shell() {
+  local name="$1" deadline="$2" next="$3" argv0="$4" rc=0 watchdog why
+  shift 4
+  CLOUD_LOGIN_PROMPT_SEEN="${TMPDIR:-/tmp}/.cloud-login-prompt.$$"
+  export CLOUD_LOGIN_PROMPT_SEEN
+  rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"
+  # set -m (only with a tty) makes bash hand the terminal to the job and take it
+  # back when the job dies, so the next tier is never left in a background pgrp.
+  if [ -t 0 ]; then set -m; fi
+  # TTOU ignored: with TOSTOP on, a background write to the tty would stop the
+  # watchdog itself, and a stopped watchdog never kills the hung shell.
+  ( trap '' TTOU
+    sleep "$deadline"
+    if [ ! -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then
+      : > "$CLOUD_LOGIN_PROMPT_SEEN.late"
+      p="$(cat "$CLOUD_LOGIN_PROMPT_SEEN.pid" 2>/dev/null)" || p=""
+      cloud_trace "$name: no prompt after ${deadline}s: $(cloud_proc "$p"); $(cloud_tty)"
+      kill -KILL "$p" 2>/dev/null || true
+    fi ) &
+  watchdog=$!
+  # The job is a waiter bash whose own stderr is /dev/null, so bash's "Killed"
+  # report about the shell lands there; the shell itself (exec'd one level
+  # down, so its pid is known) takes the terminal's stderr back from fd 3.
+  # The waiter, not this shell, is what parks stderr: under set -m bash hands
+  # the terminal over through its OWN stderr, and redirecting it here left the
+  # shell in a background process group (SIGTTIN, status 149).
+  ( exec 3>&2 2>/dev/null
+    ( exec 2>&3 3>&-
+      me=$BASHPID
+      echo "$me" > "$CLOUD_LOGIN_PROMPT_SEEN.pid"
+      cloud_trace "$name: starting, $(cloud_proc "$me")"
+      exec -a "$argv0" "$@" ) || exit $? ) || rc=$?
+  kill "$watchdog" 2>/dev/null || true
+  set +m
+  if [ -e "$CLOUD_LOGIN_PROMPT_SEEN" ]; then
+    rm -f "$CLOUD_LOGIN_PROMPT_SEEN" "$CLOUD_LOGIN_PROMPT_SEEN.pid"
+    cloud_trace "$name: drew its prompt, session ended with status $rc"
+    exit "$rc"
+  fi
+  why="ended (status $rc) before drawing a prompt"
+  if [ -e "$CLOUD_LOGIN_PROMPT_SEEN.late" ]; then why="drew no prompt within ${deadline}s"; fi
+  # A shell STOPPED by job control (status 149: SIGTTIN) is still alive; the next tier must not inherit it.
+  kill -KILL "$(cat "$CLOUD_LOGIN_PROMPT_SEEN.pid" 2>/dev/null)" 2>/dev/null || true
+  rm -f "$CLOUD_LOGIN_PROMPT_SEEN.pid" "$CLOUD_LOGIN_PROMPT_SEEN.late"
+  cloud_trace "$name: $why"
+  echo "⚠ login shell $name $why; falling back to $next" >&2
+}
+cloud_trace "login-inner: start, $(cloud_proc $$); stdin is $([ -t 0 ] || printf 'NOT ')a tty"
+cloud_trace "login-inner: parent (proot) $(cloud_proc $PPID)"
+"""
+
+
+# #715 -- the Android-side half of the trace (bin/login is /system/bin/sh, i.e.
+# mksh, and runs BEFORE proot). It starts the log fresh for each interactive
+# login, records whether the session leader owns the tty before proot is even
+# exec'd, and states the storage probe's real error instead of only a verdict.
+BIN_LOGIN_TRACE = r"""CLOUD_LOGIN_LOG="$HOME/.cloud-login.log"
+if [ "$#" -eq 0 ]; then CLOUD_LOGIN_SCREEN=1; : > "$CLOUD_LOGIN_LOG" 2>/dev/null || true; else CLOUD_LOGIN_SCREEN=; fi
+cloud_trace() {
+  m="[login $(/system/bin/date +%H:%M:%S 2>/dev/null || echo '?') android] $*"
+  echo "$m" >> "$CLOUD_LOGIN_LOG" 2>/dev/null || true
+  if [ -n "$CLOUD_LOGIN_SCREEN" ]; then echo "$m" >&2; fi
+}
+cloud_jobctl() {
+  st=""
+  { read -r st < "/proc/$1/stat"; } 2>/dev/null || { echo "pid $1: gone"; return 0; }
+  set -- "$1" ${st##*) }
+  echo "pid $1 state=$2 pgrp=$4 sid=$5 tpgid=$7"
+}
+cloud_trace "bin/login: start, $(cloud_jobctl $$)"
+"""
+
+
+def add_login_trace(login_inner: str) -> str:
+    """#715 -- define the trace and the bounded shell start, and log the start.
+
+    Pure str -> str like every patch here; raises on a drifted anchor rather
+    than shipping a login-inner whose cloud_trace calls are undefined (which,
+    under login-inner's set -e, would end every login at its first step).
+    """
+    if login_inner.count(LOGIN_TRACE_ANCHOR) != 1:
+        raise ValueError(f"expected exactly one {LOGIN_TRACE_ANCHOR.strip()!r} in usr/lib/login-inner")
+    return login_inner.replace(LOGIN_TRACE_ANCHOR, LOGIN_TRACE_ANCHOR + LOGIN_TRACE, 1)
 
 
 def probe_usershell_exec(login_inner: str) -> str:
@@ -438,21 +575,25 @@ def main() -> int:
             # describe a route through Settings -- TermuxActivity.requestManageStorageIfNeeded()
             # deep-links straight to this package's All-Files-Access toggle on every launch that
             # lacks the grant, so prose telling the user to go find it himself is redundant.
-            mount_setup = (
+            mount_setup = BIN_LOGIN_TRACE + (
                 'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
-                'if ls /storage/emulated/0 >/dev/null 2>&1; then\n'
+                'if CLOUD_LS_ERR="$(ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
+                '  cloud_trace "storage: /storage/emulated/0 is readable, binding ~/emulated"\n'
                 '  BIND_HOME_EMULATED="-b /storage/emulated/0:$HOME/emulated"\n'
                 f'  mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
                 f'  if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
                 f'    BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"\n'
                 '  else\n'
+                f'    cloud_trace "storage: could not create /storage/emulated/0/{shared_root_name}"\n'
                 '    BIND_HOME_SHARED_STORE=""\n'
                 '  fi\n'
                 'else\n'
+                '  cloud_trace "storage: ls /storage/emulated/0 failed: $CLOUD_LS_ERR"\n'
                 '  BIND_HOME_EMULATED=""\n'
                 '  BIND_HOME_SHARED_STORE=""\n'
                 '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted yet." >&2\n'
-                'fi\n\n'
+                'fi\n'
+                'cloud_trace "exec proot-static"\n\n'
             )
             bin_login = bin_login.replace(
                 exec_line,

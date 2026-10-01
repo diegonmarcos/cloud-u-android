@@ -50,8 +50,10 @@ android {
         // prompt always arrives; the rootfs content-address moves with it.
         // Bumped again: the login shell must DRAW a prompt within a deadline or
         // bash takes over, and storage is requested per the real target SDK.
-        versionCode 188047
-        versionName "0.118.0_v0.3.11_nix"
+        // Bumped again: every login step is traced to screen and ~/.cloud-login.log,
+        // bash and a rescue tier back the login shell, storage asks for READ+WRITE.
+        versionCode 188048
+        versionName "0.118.0_v0.3.12_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
         ndk {
