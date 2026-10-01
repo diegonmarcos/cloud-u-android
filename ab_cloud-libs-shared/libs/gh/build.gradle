@@ -29,8 +29,11 @@
 // screen can say which rung answered and why the one before it was skipped. A
 // screen here would be a second place for the chain to describe itself.
 //
-// TESTED where it ships: ab_cloud-libs-shared/lib-apks/test/ runs on every Cloud
-// Libs ship, which is the only workflow that watches this directory now.
+// TESTED where it ships, on every Cloud Libs ship (the only workflow that watches
+// this directory now): lib-apks/test/test-engine-services.sh holds the service
+// (exported, guarded, versioned, extracts what it execs) and
+// lib-apks/test/test-git-binaries.sh holds the pin (every build-time refusal
+// below) and GhRunner's token rule (environment, never argv).
 
 plugins {
     id 'com.android.library'
