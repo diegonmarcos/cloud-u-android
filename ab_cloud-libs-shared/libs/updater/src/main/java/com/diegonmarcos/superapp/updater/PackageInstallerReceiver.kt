@@ -179,7 +179,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // costs one stale notification, and the terminal status below
                 // clears it; a confirmation that is merely hoped for costs the
                 // entire download.
-                notifyConfirm(context, confirm, subject)
+                val shown = notifyConfirm(context, confirm, subject)
                 if (isForeground(context)) {
                     // The dialog is going up NOW and this install has not
                     // finished. Keep the gate SHUT: the next commit must wait
@@ -198,6 +198,30 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     // per-pass cap, not the gate.
                     Log.w(TAG, "confirm launch deferred to notification (app backgrounded)")
                     releaseGate()
+                    // #588: "deferred to notification" assumed the notification
+                    // EXISTS. With notifications off for this app (Android 13+
+                    // POST_NOTIFICATIONS denied, or the Updater channel muted)
+                    // nm.notify() is a silent no-op, so the install waited on a
+                    // prompt nobody could ever see and the row claimed there was
+                    // one to tap. Say what is true instead: committed, blocked,
+                    // and the one setting that unblocks it.
+                    if (!shown) {
+                        Log.w(TAG, "confirm notification for $gateKey cannot be shown — notifications are off")
+                        if (!isUninstall && !unattended) UpdateProgress.update(UpdateProgress.State.Failed(
+                            "$subject is downloaded but waiting for a confirmation this phone " +
+                            "cannot show: notifications are off for this app. Allow them " +
+                            "(Settings ▸ Apps ▸ Notifications), or open the app and retry",
+                            appId = gateKey,
+                            pkg = gateKey,
+                            apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty(),
+                        ))
+                        surface(context, "$verb is waiting on a hidden confirmation",
+                            "$subject was not installed: Android needs one tap to confirm, and " +
+                            "the notification carrying it is blocked because notifications are " +
+                            "off for this app. Allow notifications, or open the app and retry.",
+                            severity = NotificationStore.Sev.ERROR)
+                        return
+                    }
                 }
                 // The row says "Installing…" and would keep saying it for as
                 // long as the user takes to answer — indistinguishable from a
@@ -294,21 +318,31 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         -4 -> "INSTALL_FAILED_INSUFFICIENT_STORAGE"
         -5 -> "INSTALL_FAILED_DUPLICATE_PACKAGE"
         -7 -> "INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature differs from the installed copy)"
+        -9 -> "INSTALL_FAILED_MISSING_SHARED_LIBRARY"
         -12 -> "INSTALL_FAILED_OLDER_SDK"
-        -20 -> "INSTALL_FAILED_TEST_ONLY"
-        -23 -> "INSTALL_FAILED_MISSING_SHARED_LIBRARY"
+        -15 -> "INSTALL_FAILED_TEST_ONLY"
+        -20 -> "INSTALL_FAILED_MEDIA_UNAVAILABLE"
+        -23 -> "INSTALL_FAILED_PACKAGE_CHANGED"
         -25 -> "INSTALL_FAILED_VERSION_DOWNGRADE"
+        -29 -> "INSTALL_FAILED_DEPRECATED_SDK_VERSION"
         -100 -> "INSTALL_PARSE_FAILED_NOT_APK"
         -101 -> "INSTALL_PARSE_FAILED_BAD_MANIFEST"
         -102 -> "INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION"
         -103 -> "INSTALL_PARSE_FAILED_NO_CERTIFICATES"
         -104 -> "INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES"
         -105 -> "INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING"
-        -110 -> "INSTALL_PARSE_FAILED_MANIFEST_MALFORMED"
-        -113 -> "INSTALL_FAILED_INTERNAL_ERROR"
-        -118 -> "INSTALL_FAILED_ABORTED"
-        -124 -> "INSTALL_FAILED_BAD_DEX_METADATA"
-        -127 -> "INSTALL_FAILED_DEPRECATED_SDK_VERSION"
+        -108 -> "INSTALL_PARSE_FAILED_MANIFEST_MALFORMED"
+        -110 -> "INSTALL_FAILED_INTERNAL_ERROR"
+        -113 -> "INSTALL_FAILED_NO_MATCHING_ABIS"
+        // #588: the code the phone actually reported, and the table did not
+        // know it — it had -118 (BAD_SIGNATURE) labelled ABORTED instead.
+        // "Session was abandoned" means our own reaper or a cancel ended the
+        // session, never a bad APK.
+        -115 -> "INSTALL_FAILED_ABORTED (the session was abandoned or cancelled before it finished)"
+        -116 -> "INSTALL_FAILED_SESSION_INVALID"
+        -117 -> "INSTALL_FAILED_BAD_DEX_METADATA"
+        -118 -> "INSTALL_FAILED_BAD_SIGNATURE"
+        -124 -> "INSTALL_PARSE_FAILED_RESOURCES_ARSC_COMPRESSED"
         else -> "legacy=$code"
     }
 
@@ -340,8 +374,12 @@ class PackageInstallerReceiver : BroadcastReceiver() {
      *  notification wrapping the system confirm Intent. Posted on EVERY
      *  pending-user-action, foreground or not — notifications can launch
      *  activities from the background, which startActivity cannot, and unlike
-     *  startActivity a notification that was posted is observably there. */
-    private fun notifyConfirm(context: Context, confirm: Intent, subject: String) {
+     *  startActivity a notification that was posted is observably there.
+     *
+     *  Returns whether the user can actually SEE it: notify() on a blocked app
+     *  or channel returns normally and shows nothing, so "posted" is not
+     *  "shown" and the caller must not tell anyone to tap it (#588). */
+    private fun notifyConfirm(context: Context, confirm: Intent, subject: String): Boolean =
         runCatching {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -358,8 +396,10 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 .setAutoCancel(true)
                 .build()
             nm.notify(NOTIF_ID + 1, notif)
-        }
-    }
+            nm.areNotificationsEnabled() &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                    nm.getNotificationChannel(NOTIF_CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE)
+        }.getOrDefault(false)
 
     private fun surface(context: Context, short: String, full: String,
                         severity: String = NotificationStore.Sev.INFO) {

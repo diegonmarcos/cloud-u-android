@@ -377,8 +377,16 @@ internal class UpdateInstaller(private val context: Context) {
 
             // Below the cap there is no urgency, so only reclaim sessions old
             // enough that they cannot still be a prompt awaiting an answer.
+            //
+            // #588: and NEVER a COMMITTED one. A committed session is not
+            // `isActive` (the platform counts open handles, and commit closes
+            // ours), so "idle" included every install sitting behind a
+            // tap-to-finish notification. An hour later the next install
+            // abandoned it, and the user's tap on that notification answered
+            // INSTALL_FAILED_ABORTED "Session was abandoned" — the -115s on the
+            // phone. Only uncommitted leftovers (a write that died) are junk.
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
-                idle.filter { now - it.createdMillis > STALE_SESSION_MS }
+                idle.filter { !it.isCommitted && now - it.createdMillis > STALE_SESSION_MS }
 
             // createdMillis is API 29+. With no age to test, do nothing until
             // the at-cap branch above takes over.

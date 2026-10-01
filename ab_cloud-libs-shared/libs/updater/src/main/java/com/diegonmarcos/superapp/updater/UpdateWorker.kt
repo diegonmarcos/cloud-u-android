@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.updater
 
+import com.diegonmarcos.superapp.updater.apk.VerifiedApk
 import com.diegonmarcos.superapp.updater.install.InstallRefused
+import com.diegonmarcos.superapp.updater.install.ShellInstall
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.UpdateChecker
 import android.content.Context
@@ -124,7 +126,7 @@ class UpdateWorker(
                 isStopped || UpdateProgress.cancelRequested
             }
             Log.i("Updater/Worker", "downloaded ${available.assetTitle} (${available.remoteSize} bytes)")
-            UpdateInstaller(applicationContext).install(apk)
+            installSelf(apk)
             Result.success()
         } catch (c: java.util.concurrent.CancellationException) {
             // Cancel button: state is already Cancelled — leave it, unwind cleanly.
@@ -200,6 +202,37 @@ class UpdateWorker(
             // do-nothing reasons applied.
             Log.i("Updater/Worker", "fleet auto-update: ${pass.reason}")
         }.onFailure { Log.w("Updater/Worker", "fleet auto-update failed: ${it.message}", it) }
+    }
+
+    /**
+     * THE SELF-UPDATE TAKES THE FLEET'S LADDER, NOT ONLY ITS LAST RUNG (#588).
+     *
+     * This called UpdateInstaller directly — a PackageInstaller session, which
+     * for an unattended run means STATUS_PENDING_USER_ACTION with no Activity
+     * to show the confirm on. The phone downloaded the new SuperApp, committed
+     * the session, logged "confirm launch deferred to notification" and stayed
+     * on the old build, while a fleet library in the same pass installed
+     * silently through the embedded-adb shell. Same ladder as Fleet.channels
+     * now: the privileged shell first (zero dialogs, works with the screen
+     * off), the session second unless this device opted out of prompting.
+     *
+     * `pm install -r` of OUR OWN package kills this process when it succeeds,
+     * so a shell self-install usually never reads its own "Success". The log
+     * line before it is the evidence; the new versionCode is the proof.
+     */
+    private fun installSelf(apk: VerifiedApk) {
+        Log.i("Updater/Worker", "self-install: trying the privileged shell channel first")
+        val declined = ShellInstall.shellInstall(applicationContext, apk) ?: return
+        Log.w("Updater/Worker", "self-install: shell channel declined — $declined")
+        if (AutoUpdatePrefs.requireSilent(applicationContext)) {
+            val why = "the SuperApp update was downloaded but NOT installed: the privileged " +
+                "shell channel declined ($declined) and this device is set to never prompt, " +
+                "so no confirmation was asked for. Re-pair Wireless debugging, or turn " +
+                "\"never prompt\" off to install with one tap"
+            UpdateProgress.update(UpdateProgress.State.Failed(why))
+            throw InstallRefused(why)
+        }
+        UpdateInstaller(applicationContext).install(apk)
     }
 
     companion object {

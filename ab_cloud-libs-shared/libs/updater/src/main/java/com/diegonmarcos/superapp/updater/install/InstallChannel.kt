@@ -77,8 +77,11 @@ internal object ShellInstall : InstallChannel {
      *  PackageInstaller path.
      *
      *  Blocking (the transfer plus the commit, plus up to ~10s of mDNS if a
-     *  reconnect is needed); callers are already off the main thread. */
-    private fun shellInstall(ctx: Context, apk: VerifiedApk): String? {
+     *  reconnect is needed); callers are already off the main thread.
+     *
+     *  Not private: [com.diegonmarcos.superapp.updater.UpdateWorker]'s
+     *  self-update takes this same rung first (#588). */
+    fun shellInstall(ctx: Context, apk: VerifiedApk): String? {
         // ESTABLISH, don't merely probe. activeShellChannel() only reported
         // whether a channel happened to be live, so an unattended install found
         // "none" on a paired phone whose embedded adb client had simply not
