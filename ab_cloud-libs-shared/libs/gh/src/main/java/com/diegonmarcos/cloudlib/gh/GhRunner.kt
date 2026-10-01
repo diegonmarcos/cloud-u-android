@@ -273,7 +273,6 @@ class GhLogin(
     @Volatile private var release: () -> Unit = {}
 
     private val thread = Thread({
-        release() // MUTANT 2: released before gh runs
         val r = try {
             run { line ->
                 if (line.isNotBlank()) Log.i(GhRunner.TAG, "gh auth login: $line")
@@ -281,6 +280,7 @@ class GhLogin(
                 if (url.isEmpty()) GhOutput.verificationUrl(line, host)?.let { url = it }
             }
         } finally {
+            release()
         }
         ended = r
     }, "gh-login").apply { isDaemon = true }
