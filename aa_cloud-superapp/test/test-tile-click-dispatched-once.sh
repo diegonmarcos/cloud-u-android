@@ -294,11 +294,11 @@ PY2
 )"
 if [ -z "$DISPATCH" ]; then
   bad "T8: ShellActivity.dispatchTouchEvent not found — this check is asserting nothing"
-elif ! printf '%s' "$DISPATCH" | grep -q 'navSwipeGesture.onTouchEvent'; then
+elif ! grep -q 'navSwipeGesture.onTouchEvent' <<<"$DISPATCH"; then
   bad "T8: dispatchTouchEvent no longer feeds navSwipeGesture — re-read the gate before deleting it"
-elif ! printf '%s' "$DISPATCH" | tr '\n' ' ' | grep -Eq 'starGestureGate\.admits\([^;]*\)[[:space:]]*navSwipeGesture\.onTouchEvent'; then
+elif ! grep -Eq 'starGestureGate\.admits\([^;]*\)[[:space:]]*navSwipeGesture\.onTouchEvent' <<<"$(tr '\n' ' ' <<<"$DISPATCH")"; then
   bad "T8: navSwipeGesture is fed without starGestureGate.admits — a star drag doubles as a home swipe"
-elif ! sed -n '/StarGestureGate {/,/override fun dispatchTouchEvent/p' "$SHELL_KT" | grep -q 'R.id.configs_canopus_star'; then
+elif ! grep -q 'R.id.configs_canopus_star' <<<"$(sed -n '/StarGestureGate {/,/override fun dispatchTouchEvent/p' "$SHELL_KT")"; then
   bad "T8: the gate's hit-test does not name the Configs star"
 else
   ok "T8: home swipes see no gesture that starts on a star"
