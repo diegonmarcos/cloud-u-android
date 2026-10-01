@@ -25,6 +25,9 @@
 #       is a real module.
 #   E7  the gh engine holds INTERNET: gh's whole job is talking to GitHub, from
 #       the engine's process now.
+#   E8  every engine an app BINDS by handshake is found here: gh (Cloud Drive) and
+#       cal (Cloud Me, engine-apk-split move 3). An engine whose contract meta-data
+#       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
 # OWN-SOURCE ONLY: reads ab_cloud-libs-shared/libs and lib-apks, nothing an app owns.
@@ -36,7 +39,7 @@ SHARED="$ROOT/ab_cloud-libs-shared"
 LIBS="$SHARED/libs"
 BJ="$SHARED/lib-apks/build.json"
 GH="$LIBS/gh"
-for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" \
+for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -152,8 +155,9 @@ for module in modules:
             if "android.permission.INTERNET" not in perms:
                 no("E7 gh: the engine runs gh, which talks to GitHub, without INTERNET")
 
-if "gh" not in found:
-    no("no gh engine was found — the contract meta-data or the service moved, so every check above ran on nothing")
+for must in ("gh", "cal"):
+    if must not in found:
+        no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
 sys.exit(1 if bad else 0)
 PYTHON
@@ -178,7 +182,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -244,8 +248,13 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _applied "$R_MF" "$M_MF" 'engine.VERSION' \
         && _red "the contract key is renamed, so every check would run on nothing" engines "$MUT/libs" "$MUT/build.json"; }
 
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$MUT/libs/cal/src/main/AndroidManifest.xml" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/cal/src/main/AndroidManifest.xml" "$MUT/libs/cal/src/main/AndroidManifest.xml" 'engine.VERSION' \
+        && _red "E8 the cal engine Cloud Me binds stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
-[ "$MUTATIONS" -ge 12 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
+[ "$MUTATIONS" -ge 13 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
 
 echo

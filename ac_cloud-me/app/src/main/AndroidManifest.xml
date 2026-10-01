@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Calendar — Agenda reads CalDAV events + todos through libs:cal. -->
+    <!-- Calendar — Agenda reads CalDAV events + todos through the cal engine. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <!-- Self-update from GHCR. UPDATE_PACKAGES_WITHOUT_USER_ACTION is THE
          permission that makes USER_ACTION_NOT_REQUIRED actually silent on
@@ -27,6 +27,10 @@
         <package android:name="com.diegonmarcos.cloudmediacenter" />
         <package android:name="com.diegonmarcos.cloudnav" />
         <package android:name="com.diegonmarcos.superapp" />
+        <!-- The cal ENGINE (Cloud-Lib-Cal.apk, build.json::engines.cal): Agenda binds its
+             service instead of compiling libs:cal. Without this line the engine is invisible
+             on API 30+ and Agenda would say "install it" with it installed. -->
+        <package android:name="${calEnginePackage}" />
     </queries>
 
     <application

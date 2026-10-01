@@ -244,5 +244,7 @@ class CalEngine(context: Context) {
         put("due", t.dueUtcMillis?.toString() ?: "")
         put("priority", t.priority)
         put("completedAt", t.completedUtcMillis?.toString() ?: "")
+        // Contract 1: Cloud Me draws "n% done" from it. -1 = not set, as in toJson.
+        put("percentComplete", t.percentComplete ?: -1)
     }
 }

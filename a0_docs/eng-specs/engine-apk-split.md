@@ -34,7 +34,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | battery | mixed | 12.82 / 2.13 / – / 15.74 | superapp | – | stays (GUI; usage-stats/Shizuku identity) |
 | bottomnav | GUI | 15.92 / – / – / 54.50 | superapp, c3, drive, mail, me, wallet | per frame | stays (GUI) |
 | browser | GUI (WebView) | 5.98 / – / – / 10.85 | browser | – | stays |
-| cal | engine, already serves `IDataBackend` | 2.29 / – / – / 5.66 | me (agenda reaches it over IPC) | per sync | candidate (small); see F3 |
+| **cal** | engine, already serves `IDataBackend` | 2.29 / – / – / 5.66 | me (agenda reaches it over IPC) | per sync | **MOVE 3** (stage 3); closes F3 for cal |
 | chat | GUI | 3.49 / – / – / 8.69 | superapp | – | stays |
 | contacts | engine, already serves `IDataBackend` | 2.27 / – / – / 5.61 | contacts | – | **blocked**: `READ_CONTACTS` is per package — the engine would read its own, ungranted permission |
 | core | contract + platform | 2.23 / – / – / 5.54 | every app | – | **stays** — it IS the contract (`IDataBackend`, `CONSTELLATION_DATA`, crash provider) both sides link |
@@ -157,3 +157,49 @@ execs it from its own APK.
 
 **Not verified on a device**: the Drive APK shrinking is proven by the CI build and the
 published asset size only.
+
+## Move 3 — cal: Cloud Me binds it, and no app declares it any more (stage 3)
+
+Cloud Me compiled libs:cal and ran `CalEngine` in its own process for the Agenda
+section; Cloud Agenda already bound Cloud-Lib-Cal.apk but still declared the module
+(F3), so a calendar change republished both apps. Both couplings are gone.
+
+| piece | where | what changed |
+|---|---|---|
+| engine | `libs/cal/…/AndroidManifest.xml`, `CalEngine.todoJson` | `CalBackendService` gains the `${applicationId}.ENGINE` action and CONTRACT 1 (additive: Agenda's bind-by-class-name keeps working); task rows carry `percentComplete`, which Cloud Me draws |
+| client | `ac_cloud-me/…/CalEngineClient.kt` | the GhEngine shape: PackageManager handshake before any bind, `NotInstalled` / `TooOld` naming Store ▸ Cloud Constellation ▸ Libs; an `{"error"}` answer is thrown, never drawn as an empty agenda |
+| page | `AgendaFragment.kt` | loads on a worker (a bind waits on the main thread) and draws the rows, or the missing / too-old / failed line |
+| declaration | Me `build.json::engines.cal`, `app/build.gradle`, manifest `<queries>` | package resolved from the fleet row `lib-cal`; unknown id fails the build |
+| unlinked | Me and Agenda `build.json::modules`, Me `app/build.gradle`, `ship-cloud-me.yml` + `ship-cloud-agenda.yml` (3 copies each), Me's `data/calendars.json` symlink | a libs/cal change republishes Cloud-Lib-Cal.apk only |
+
+**State.** Agenda's events were a cache of the ICS subscriptions and refetch on first
+open; Cloud Me never wrote tasks (no CalDAV config lives in Cloud Me), so nothing is
+orphaned. Both apps now show the engine's one cache and one task mirror.
+
+**Tests.** `ac_cloud-me/test/test-me-cal-engine.sh` (client, 17 mutations).
+`test-engine-services.sh` E8: the cal engine must be found among the contract-declaring
+services (red on the pre-move tree). The contract guard pairs Me's calls with the
+engine's `methodNames()` and gains **K6**: no app's `build.json::modules` may point at an
+engine module and no ship workflow may watch one — the check that covers Cloud Agenda,
+which has no testers of its own, and gh/Drive retroactively. K6 is red on the pre-move
+tree (4 findings: both apps' modules, both workflows).
+
+**Not verified on a device.** Same as moves 1–2.
+
+## Stage 3 — what was not moved, and why
+
+- **ml-l-image-mlkit — skipped.** Five consumers (Drive, Mail, Camera, Media Center and
+  Office's materialized tree, which stage 1 did not count) hand the engine a `File` in
+  their own storage (Drive, Mail's attachment cache) or a `content://` URI (Camera,
+  Media Center). An engine in its own uid cannot open the first and needs a per-call URI
+  grant for the second; core's `IDataBackend` carries strings only. Moving it needs a
+  new crossing mechanism (FileProvider grants or a file-descriptor method on the
+  contract) plus the contract/engine split of `BarcodePayload`, which is outside "the
+  gh pattern, no new mechanism".
+- **feed, news — not touched.** Already engines; their services declare no CONTRACT and no
+  ENGINE action, so K6 does not see them yet, and F3 (superapp→feed, news→news) remains.
+  Closing it is the cal treatment: give each service the action + contract, then unlink.
+- **F2 (Cloud Agenda / Cloud News cannot see their engine on Android 11+)** — still open;
+  Agenda's `CalBridge` binds by class name with no `<queries>` entry. Fixing it is
+  Agenda adopting the handshake client.
+- Everything stage 1 marked **stays** or **blocked** is unchanged.

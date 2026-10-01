@@ -34,7 +34,7 @@
     "kotlin": "2.3.20",
     "jdk": "17"
   },
-  "_doc_modules": "Every libs:* entry is shared BY REFERENCE (`dir`) out of ab_cloud-libs-shared/libs \u2014 Cloud Me owns no library source of its own. That is the whole design: the app is an assembly. libs:health draws MyHealth, libs:fin draws the accounting dashboard, libs:cal supplies the events and todos behind Agenda. A fix in any of them lands here on the next build with no copy to keep in step.",
+  "_doc_modules": "Every libs:* entry is shared BY REFERENCE (`dir`) out of ab_cloud-libs-shared/libs \u2014 Cloud Me owns no library source of its own. That is the whole design: the app is an assembly. libs:health draws MyHealth, libs:fin draws the accounting dashboard. The calendar is the one exception: Agenda's events and todos come from the cal ENGINE (Cloud-Lib-Cal.apk), bound over IPC through build.json::engines.cal, not compiled in. A fix in any of them lands here on the next build with no copy to keep in step.",
   "modules": {
     "app": {
       "type": "application",
@@ -44,7 +44,6 @@
         "libs:analytics",
         "libs:health",
         "libs:fin",
-        "libs:cal",
         "libs:bottomnav"
       ]
     },
@@ -72,14 +71,18 @@
       "dir": "../ab_cloud-libs-shared/libs/fin",
       "type": "library"
     },
-    "libs:cal": {
-      "dir": "../ab_cloud-libs-shared/libs/cal",
-      "type": "library"
-    },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library",
       "_doc": "#531 THE bottom nav of the fleet, in Compose, shared BY REFERENCE. MainActivity hosts it through BottomNavIslandView; the stock Material BottomNavigationView is gone."
+    }
+  },
+  "engines": {
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (engine-apk-split, move 3; same shape as ac_cloud-drive/build.json::engines). Each is a Cloud-Lib-*.apk the Store installs (a fleet row of kind lib) whose service answers core's IDataBackend; this app links nothing of the engine's module, so an engine change republishes that one APK and not this app. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which app/build.gradle resolves the package (an id the manifest lacks fails the build); `action` finds the service in that package ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method this app calls, read through PackageManager BEFORE binding so an engine too old for this build is named as such. The engine keeps its own cache: Agenda here and Cloud Agenda share one synced calendar and one task mirror.",
+    "cal": {
+      "fleet": "lib-cal",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
     }
   },
   "ui": {
@@ -332,7 +335,7 @@
         ]
       },
       {
-        "_doc": "Agenda \u2014 the only section that reads live data with no other app in front of it. Both tabs come from libs:cal: Agenda from CalEngine.events over the next 30 days, Todo from TodoStore, which is the CalDAV VTODO mirror. The user asked for the agenda and todo of Buro AND of health issues; both already land in the same CalDAV account, so the filter is a category on the item, not a second data source.",
+        "_doc": "Agenda \u2014 the only section that reads live data with no other app in front of it. Both tabs come from the cal engine (Cloud-Lib-Cal.apk, build.json::engines.cal): Agenda from its events over the next 30 days, Todo from its CalDAV VTODO mirror. The user asked for the agenda and todo of Buro AND of health issues; both already land in the same CalDAV account, so the filter is a category on the item, not a second data source.",
         "id": "agenda",
         "label": "Agenda",
         "icon": "ic_nav_agenda",

@@ -52,17 +52,11 @@ Edit a record here, run the script, commit both. `test/test-ui-pages.sh` fails
 if they disagree, which is what stops the two apps from telling different
 stories about the same card.
 
-## `calendars.json`
+## No `calendars.json` here any more
 
-`calendars.json` is a **symlink** into `ac_cloud-agenda/data/`, not a copy.
-
-`libs:cal` bakes it from `${rootDir}/data/calendars.json`, which resolves per
-consuming app — so Cloud Me needed a file of its own here. A copy would be a
-second subscription list to keep in step with the calendar app's, and the two
-would silently disagree the first time one was edited. The symlink makes them
-one list with one owner.
-
-One consequence worth knowing: `ship-cloud-me.yml`'s `paths:` filter watches
-`ac_cloud-me/**`, and a git symlink's content is the *path*, not the target.
-Editing the subscriptions therefore rebuilds Cloud Agenda but not Cloud Me,
-which picks the change up on its next build for any other reason.
+Cloud Me used to compile `libs:cal`, which bakes its subscription list from
+`${rootDir}/data/calendars.json`, so this directory carried a symlink into
+`ac_cloud-agenda/data/`. Agenda now binds the cal engine (Cloud-Lib-Cal.apk,
+`build.json::engines.cal`) instead of compiling it, and the engine bakes the
+one list in `ac_cloud-agenda/data/calendars.json` when lib-apks builds it, so
+the symlink went with the module.

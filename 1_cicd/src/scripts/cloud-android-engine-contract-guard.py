@@ -19,7 +19,13 @@ For every engine any app declares, from the declarations alone:
   K3  the contract the app needs is not above the contract the engine declares;
   K4  every method the app's client calls is a method the engine's service
       lists -- an engine that drops one breaks every installed copy of that app;
-  K5  the client reads the same CONTRACT key the engine declares.
+  K5  the client reads the same CONTRACT key the engine declares;
+  K6  no app compiles or watches an engine: no build.json::modules entry points
+      at an engine module's directory, and no ship workflow watches it. Either
+      one makes an engine change republish that app again -- the coupling the
+      split removed (engine-apk-split: Cloud Agenda kept declaring libs:cal long
+      after it stopped linking it, so every calendar edit re-shipped it). This
+      covers apps with no testers of their own, which is why it lives here.
 
 Vacuity is a failure: no declared engine, or a client with no calls, checks nothing.
 Usage: cloud-android-engine-contract-guard.py <repo root>
@@ -108,11 +114,35 @@ def client_calls(app_dir, key):
     return None, set(), ""
 
 
+def coupled(root, modules):
+    """K6: every app module entry or ship-workflow watch line that reaches an engine module."""
+    engines = {os.path.normpath(d): os.path.basename(d) for d in modules.values()
+               if not isinstance(engine_service(d), str)}
+    bad = []
+    for bj in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
+        mods = json.load(open(bj, encoding="utf-8")).get("modules") or {}
+        for key, spec in mods.items():
+            if isinstance(spec, dict) and spec.get("dir"):
+                d = os.path.normpath(os.path.join(os.path.dirname(bj), spec["dir"]))
+                if d in engines:
+                    bad.append("K6 %s/build.json::modules.%s is the %s engine -- that app would compile it, and every "
+                               "engine change would republish it" % (os.path.basename(os.path.dirname(bj)), key, engines[d]))
+    for wf in sorted(glob.glob(os.path.join(root, ".github", "workflows", "ship-*.yml"))):
+        text = open(wf, encoding="utf-8").read()
+        for d, name in sorted(engines.items()):
+            watch = '"%s/**"' % os.path.relpath(d, root)
+            if watch in text:
+                bad.append("K6 %s watches %s -- every %s engine change would republish that app"
+                           % (os.path.relpath(wf, root), watch, name))
+    return bad
+
+
 def check(root):
     bad = []
     fleet = {a["id"]: a for a in json.load(open(os.path.join(root, FLEET), encoding="utf-8"))["apps"]}
     modules = engine_modules(root)
     declared = 0
+    bad += coupled(root, modules)
     for bj in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
         app_dir = os.path.dirname(bj)
         app = os.path.basename(app_dir)

@@ -33,8 +33,7 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:updater",
-        "libs:cal"
+        "libs:updater"
       ]
     },
     "libs:core": {
@@ -51,11 +50,6 @@
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ — settings.gradle points projectDir here instead of at a local copy. Every app used to carry its own copy-pasted tree and they drifted: 6 apps sat 228 source lines behind superapp's updater. One directory, no sync step, no drift.",
       "dir": "../ab_cloud-libs-shared/libs/updater",
       "type": "library"
-    },
-    "libs:cal": {
-      "dir": "../ab_cloud-libs-shared/libs/cal",
-      "type": "library",
-      "_doc_not_linked": "Declared so gradle resolves the module tree, but the APP no longer depends on it: libs:cal ships as Cloud-Lib-Cal.apk and is reached through core's DataBackendClient (CalBridge). Credentials stay in the app and travel per call, so the engine having its own storage orphans nothing."
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"

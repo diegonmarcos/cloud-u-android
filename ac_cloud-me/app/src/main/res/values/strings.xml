@@ -7,4 +7,10 @@
     <string name="drawer_open">Open navigation</string>
     <string name="drawer_close">Close navigation</string>
     <string name="action_configs">Configs</string>
+    <!-- Agenda's two engine lines: the cal engine (Cloud-Lib-Cal.apk) is missing, or too old for this build. -->
+    <string name="cal_engine_missing_title">Calendar engine not installed</string>
+    <string name="cal_engine_missing">Agenda reads its events and tasks from the calendar engine (%1$s), which is not on this phone — install it from Store ▸ Cloud Constellation ▸ Libs.</string>
+    <string name="cal_engine_old_title">Calendar engine too old</string>
+    <string name="cal_engine_old">The calendar engine on this phone (%1$s) speaks contract %2$d and this Cloud Me needs %3$d — update it from Store ▸ Cloud Constellation ▸ Libs.</string>
+    <string name="cal_engine_failed_title">The calendar engine did not answer</string>
 </resources>

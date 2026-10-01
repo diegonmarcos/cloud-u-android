@@ -13,10 +13,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.cal.CalEngine
-import com.diegonmarcos.superapp.cal.CalTodo
-import com.diegonmarcos.superapp.cal.TodoStore
 import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,12 +26,16 @@ import java.util.concurrent.atomic.AtomicBoolean
  * are the same row with a different date field and the two lists would
  * otherwise be one class copied twice.
  *
- * Events come from [CalEngine] (the ICS subscriptions in data/calendars.json,
- * synced by libs:cal) and tasks from [TodoStore] (the CalDAV VTODO mirror).
- * Both read from local storage only — this fragment never syncs, so opening
- * the tab is instant and cannot block on a network the phone may not have.
+ * Both come from the cal ENGINE (Cloud-Lib-Cal.apk, reached through
+ * [CalEngineClient]; this app no longer compiles libs:cal): events from its
+ * cache of the ICS subscriptions, tasks from its CalDAV VTODO mirror — the
+ * same engine and the same data Cloud Agenda shows. The engine answers from
+ * its cache, never the network, but the bind itself waits on the main thread,
+ * so the rows are fetched on a worker and drawn when they arrive.
+ *
  * Nothing on screen is invented: with no account connected both lists are
- * empty and say so.
+ * empty and say so, and an engine that is missing or too old for this build
+ * is a line naming the Store, never an empty list.
  */
 class AgendaFragment : Fragment() {
 
@@ -50,25 +52,51 @@ class AgendaFragment : Fragment() {
             setBackgroundColor(ContextCompat.getColor(ctx, R.color.me_bg))
             addView(col)
         }
-        if (mode == MODE_TODOS) renderTodos(ctx, col) else renderEvents(ctx, col)
+        load(col)
         return scroll
+    }
+
+    // ── the engine ───────────────────────────────────────────────────
+
+    /** Ask the engine on a worker, then draw on the main thread — or say why there is nothing to draw. */
+    private fun load(col: LinearLayout) {
+        val engine = CalEngineClient(requireContext())
+        val todos = mode == MODE_TODOS
+        Thread {
+            val why = engine.check()
+            val rows = if (why is CalEngineClient.Check.Ready) runCatching {
+                if (todos) engine.todos()
+                else System.currentTimeMillis().let { now -> engine.events(now, now + HORIZON_DAYS * 24L * 60L * 60L * 1000L) }
+            } else null
+            col.post {
+                if (!isAdded) return@post
+                val ctx = col.context
+                val result = rows?.getOrNull()
+                col.removeAllViews()
+                when {
+                    why is CalEngineClient.Check.NotInstalled -> col.addView(emptyState(ctx,
+                        getString(R.string.cal_engine_missing_title), getString(R.string.cal_engine_missing, why.pkg)))
+                    why is CalEngineClient.Check.TooOld -> col.addView(emptyState(ctx,
+                        getString(R.string.cal_engine_old_title), getString(R.string.cal_engine_old, why.pkg, why.found, why.needed)))
+                    result != null && todos -> renderTodos(ctx, col, result)
+                    result != null -> renderEvents(ctx, col, result, engine)
+                    else -> col.addView(emptyState(ctx,
+                        getString(R.string.cal_engine_failed_title), rows?.exceptionOrNull()?.message.orEmpty()))
+                }
+            }
+        }.apply { isDaemon = true }.start()
     }
 
     // ── events ───────────────────────────────────────────────────────
 
-    private fun renderEvents(ctx: Context, col: LinearLayout) {
-        val now = System.currentTimeMillis()
-        val horizonMillis = HORIZON_DAYS * 24L * 60L * 60L * 1000L
-        val events = runCatching { JSONArray(CalEngine(ctx).events(now, now + horizonMillis)) }
-            .getOrDefault(JSONArray())
-
+    private fun renderEvents(ctx: Context, col: LinearLayout, events: JSONArray, engine: CalEngineClient) {
         if (events.length() == 0) {
             col.addView(emptyState(ctx, "No events yet",
-                "Agenda renders from the local cache, never from the network, so the tab opens " +
-                "instantly. On a fresh install that cache is empty until the subscriptions in " +
-                "data/calendars.json have been fetched once — that first fetch is running now if " +
-                "this is the first time you have opened the tab."))
-            syncOnce(col)
+                "Agenda renders from the calendar engine's cache, never from the network, so the " +
+                "tab opens instantly. On a fresh install that cache is empty until the engine has " +
+                "fetched its subscriptions once — that first fetch is running now if this is the " +
+                "first time you have opened the tab."))
+            syncOnce(col, engine)
             return
         }
 
@@ -92,22 +120,22 @@ class AgendaFragment : Fragment() {
 
     // ── todos ────────────────────────────────────────────────────────
 
-    private fun renderTodos(ctx: Context, col: LinearLayout) {
-        val todos = runCatching { TodoStore.allTodos(ctx) }.getOrDefault(emptyList())
+    private fun renderTodos(ctx: Context, col: LinearLayout, todos: JSONArray) {
         // COMPLETED and CANCELLED are history; an open list that shows them is
         // a list you stop reading.
-        val open = todos.filter { it.status != "COMPLETED" && it.status != "CANCELLED" }
-            .sortedWith(compareBy({ it.dueUtcMillis ?: Long.MAX_VALUE }, { it.summary }))
+        val open = (0 until todos.length()).mapNotNull { todos.optJSONObject(it) }
+            .filter { it.optString("status") != "COMPLETED" && it.optString("status") != "CANCELLED" }
+            .sortedWith(compareBy({ due(it) ?: Long.MAX_VALUE }, { it.optString("summary") }))
 
         if (open.isEmpty()) {
             col.addView(emptyState(ctx, "No open tasks",
-                "Tasks are the CalDAV VTODOs libs:cal mirrors locally. Buro paperwork and health " +
+                "Tasks are the CalDAV VTODOs the calendar engine mirrors locally. Buro paperwork and health " +
                 "follow-ups both land here as long as they are filed in the same account — the " +
                 "split the user asked for is a category on the task, not a second list."))
             return
         }
 
-        val overdue = open.filter { it.dueUtcMillis != null && it.dueUtcMillis!! < System.currentTimeMillis() }
+        val overdue = open.filter { (due(it) ?: Long.MAX_VALUE) < System.currentTimeMillis() }
         if (overdue.isNotEmpty()) {
             col.addView(heading(ctx, "Overdue"))
             overdue.forEach { col.addView(todoRow(ctx, it, 0xFFEF5350.toInt())) }
@@ -119,13 +147,16 @@ class AgendaFragment : Fragment() {
         }
     }
 
-    private fun todoRow(ctx: Context, t: CalTodo, accent: Int): View = row(
+    /** The engine's task row (CalEngine.todoJson): `due` is epoch millis as a string, "" when unset. */
+    private fun due(t: JSONObject): Long? = t.optString("due").toLongOrNull()
+
+    private fun todoRow(ctx: Context, t: JSONObject, accent: Int): View = row(
         ctx,
-        title = t.summary.ifBlank { "(untitled)" },
-        detail = t.description.lineSequence().firstOrNull().orEmpty(),
-        trailing = t.dueUtcMillis?.let { DAY_FMT.format(Date(it)) } ?: "",
+        title = t.optString("summary").ifBlank { "(untitled)" },
+        detail = t.optString("description").lineSequence().firstOrNull().orEmpty(),
+        trailing = due(t)?.let { DAY_FMT.format(Date(it)) } ?: "",
         accent = accent,
-        progress = t.percentComplete,
+        progress = t.optInt("percentComplete", -1).takeIf { it >= 0 },
     )
 
     // ── view helpers ─────────────────────────────────────────────────
@@ -227,7 +258,7 @@ class AgendaFragment : Fragment() {
     private fun dp(ctx: Context, v: Int): Int = (v * ctx.resources.displayMetrics.density).toInt()
 
     /**
-     * First-open fetch. [CalEngine.sync] is blocking and networked, so it never
+     * First-open fetch. The engine's sync is blocking and networked, so it never
      * runs on the way to drawing a frame — the cache is rendered first and the
      * fetch only fills it for next time, re-rendering in place if the fragment
      * is still on screen.
@@ -236,16 +267,11 @@ class AgendaFragment : Fragment() {
      * in quick succession would otherwise both see an empty cache and start
      * their own fetch of the same feeds.
      */
-    private fun syncOnce(col: LinearLayout) {
+    private fun syncOnce(col: LinearLayout, engine: CalEngineClient) {
         if (!syncStarted.compareAndSet(false, true)) return
-        val app = requireContext().applicationContext
         Thread {
-            runCatching { CalEngine(app).sync() }
-            col.post {
-                if (!isAdded) return@post
-                col.removeAllViews()
-                renderEvents(col.context, col)
-            }
+            runCatching { engine.sync() }
+            col.post { if (isAdded) load(col) }
         }.apply { isDaemon = true }.start()
     }
 

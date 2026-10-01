@@ -40,7 +40,6 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-agenda.yml"
       - "ab_cloud-libs-shared/libs/analytics/**"
-      - "ab_cloud-libs-shared/libs/cal/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/updater/**"

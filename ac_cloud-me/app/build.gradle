@@ -85,6 +85,28 @@ def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
 def uiExternalAppsB64 = b64(buildJson.ui.external_apps ?: [])
 def uiPermsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])
 def profile           = buildJson.ui.profile_default ?: [:]
+// THE cal ENGINE this app binds instead of compiling libs:cal (build.json::engines.cal,
+// engine-apk-split move 3). Its package comes from the constellation fleet manifest, for the
+// client's BuildConfig AND the manifest's <queries> (on API 30+ an unqueried package is
+// invisible, and invisible reads exactly like "not installed"). A fleet id the manifest lacks
+// fails the build: Agenda would otherwise bind a package no Store row installs.
+def fleetAppsFile = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
+def calEngineDecl = buildJson.engines?.cal
+if (calEngineDecl == null) {
+    throw new GradleException("build.json::engines.cal is not declared — Agenda would bind nothing")
+}
+def calEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calEngineDecl.fleet }
+if (calEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.cal.fleet '${calEngineDecl.fleet}' is not in the constellation fleet manifest " +
+        "($fleetAppsFile) — Agenda would bind a package no Store row installs.")
+}
+def calEnginePackage = calEngineFleet.package.toString()
+def calEngineAction  = calEngineDecl.action.toString().replace('{package}', calEnginePackage)
+def calEngineMinContract = calEngineDecl.min_contract as int
+if (calEngineMinContract < 1) {
+    throw new GradleException("build.json::engines.cal.min_contract must be >= 1")
+}
 
 android {
     namespace 'com.diegonmarcos.cloudme'
@@ -117,6 +139,10 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermsRuntimeB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",  "\"${profile.name ?: ''}\""
         buildConfigField "String", "UI_PROFILE_EMAIL", "\"${profile.email ?: ''}\""
+        buildConfigField "String", "CAL_ENGINE_PACKAGE",      "\"${calEnginePackage}\""
+        buildConfigField "String", "CAL_ENGINE_ACTION",       "\"${calEngineAction}\""
+        buildConfigField "int",    "CAL_ENGINE_MIN_CONTRACT", "${calEngineMinContract}"
+        manifestPlaceholders = [calEnginePackage: calEnginePackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
@@ -199,7 +225,7 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:health')   // Health section (Health Connect)
     implementation project(':libs:fin')      // Buro → Accounting
-    implementation project(':libs:cal')      // Agenda → events + todos
+    // libs:cal is NOT linked: Agenda binds Cloud-Lib-Cal.apk (CalEngineClient, build.json::engines.cal).
     implementation project(':libs:bottomnav') // #531 the fleet's one bottom nav (Compose island)
 
     // Photo grid on Profile > Personal. Same version libs:media already pins.

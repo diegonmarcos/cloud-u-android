@@ -31,15 +31,16 @@ DRIVEBJ=ac_cloud-drive/build.json
 CLIENT=ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/sync/GhEngine.kt
 SVC=$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt
 MF=$GH/src/main/AndroidManifest.xml
-for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF"; do
+WF=.github/workflows/ship-cloud-drive.yml
+for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
 # a fresh fixture: the real files, laid out as the repo lays them out
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t/ab_cloud-libs-shared/libs" "$WORK/t/aa_cloud-superapp/data" \
-        "$WORK/t/ab_cloud-libs-shared/lib-apks" "$(dirname "$WORK/t/$CLIENT")"
-    cp "$ROOT/$FLEET" "$WORK/t/$FLEET"; cp "$ROOT/$LIBBJ" "$WORK/t/$LIBBJ"
+        "$WORK/t/ab_cloud-libs-shared/lib-apks" "$(dirname "$WORK/t/$CLIENT")" "$WORK/t/.github/workflows"
+    cp "$ROOT/$FLEET" "$WORK/t/$FLEET"; cp "$ROOT/$LIBBJ" "$WORK/t/$LIBBJ"; cp "$ROOT/$WF" "$WORK/t/$WF"
     cp -r "$ROOT/$GH" "$WORK/t/$GH"; cp "$ROOT/$DRIVEBJ" "$WORK/t/$DRIVEBJ"; cp "$ROOT/$CLIENT" "$WORK/t/$CLIENT"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
@@ -77,6 +78,11 @@ python3 -c 'import sys,re; s=open(sys.argv[1]).read(); s=s.replace("    private 
 landed "$CLIENT" 'const val WHOAMI = "whoami"' && red "K4 the app calls a method the engine does not answer" "K4"
 stage; sub "$CLIENT" 'const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.CONTRACT"' 'const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.VERSION"'
 landed "$CLIENT" 'engine.VERSION' && red "K5 the client reads a contract key the engines do not declare" "K5"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:gh"] = {"dir": "../ab_cloud-libs-shared/libs/gh", "type": "library"}'
+landed "$DRIVEBJ" '"libs:gh"' && red "K6 the app declares the engine's module again (it would compile it)" "K6"
+stage; sub "$WF" '      - "ab_cloud-libs-shared/libs/git-sync/**"' '      - "ab_cloud-libs-shared/libs/gh/**"
+      - "ab_cloud-libs-shared/libs/git-sync/**"'
+landed "$WF" 'libs/gh/**' && red "K6 the app's ship workflow watches the engine again (an engine edit re-ships it)" "K6"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
