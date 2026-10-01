@@ -225,6 +225,21 @@ const (NewsBridge names its 24 methods inline; without this K4 would have seen o
 `seed` and passed). New guard-test cases: K4-literal (fails against the previous guard),
 K6 ×2 for news, K8 for News. E8 requires the news engine (15 mutations).
 
+## F2 closed for Cloud Agenda (stage 4)
+
+Cloud Agenda stopped declaring libs:cal in move 3 but still bound
+`com.diegonmarcos.cloudlib.cal` by class name with no `<queries>` entry. It now declares
+`build.json::engines.cal` (fleet row `lib-cal`), queries `${calEnginePackage}`, and
+`CalBridge` routes every call through `ask(...)` — handshake, one-time task seed, call — so a
+missing or old engine is named on the page as install or update. Cloud Me and Cloud Agenda
+bind the same engine at the same contract.
+
+**K9** (contract guard): every `DataBackendClient` an app's own source builds must sit in a
+declared engine's client. Agenda and News each built one outside `build.json::engines`, which
+is why K1–K8 never looked at them and F2 shipped; K9 is red on origin/main before move 5
+(both bridges) and before this change (CalBridge), and its guard-test case fails against
+the previous guard.
+
 ## Stage 3 — what was not moved, and why
 
 - **ml-l-image-mlkit — skipped.** Five consumers (Drive, Mail, Camera, Media Center and
@@ -235,10 +250,7 @@ K6 ×2 for news, K8 for News. E8 requires the news engine (15 mutations).
   new crossing mechanism (FileProvider grants or a file-descriptor method on the
   contract) plus the contract/engine split of `BarcodePayload`, which is outside "the
   gh pattern, no new mechanism".
-- **feed, news — not touched.** Already engines; their services declare no CONTRACT and no
-  ENGINE action, so K6 does not see them yet, and F3 (superapp→feed, news→news) remains.
-  Closing it is the cal treatment: give each service the action + contract, then unlink.
-- **F2 (Cloud Agenda / Cloud News cannot see their engine on Android 11+)** — still open;
-  Agenda's `CalBridge` binds by class name with no `<queries>` entry. Fixing it is
-  Agenda adopting the handshake client.
+- **feed, news — not touched in stage 3**; closed by moves 4 and 5.
+- **F2 (Cloud Agenda / Cloud News cannot see their engine on Android 11+)** — closed in
+  stage 4 (move 5 for News; the section above for Agenda).
 - Everything stage 1 marked **stays** or **blocked** is unchanged.

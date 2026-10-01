@@ -112,6 +112,28 @@ def calendarsFile = file("../data/calendars.json")
 def calendarsJson = calendarsFile.exists() ? calendarsFile.text : "{}"
 def calendarsB64  = calendarsJson.bytes.encodeBase64().toString()
 
+// THE cal ENGINE this app binds (build.json::engines.cal, engine-apk-split F2). Its package
+// comes from the constellation fleet manifest, for the client's BuildConfig AND the manifest's
+// <queries>: on API 30+ an unqueried package is invisible, and invisible reads exactly like
+// "not installed". A fleet id the manifest lacks fails the build.
+def fleetAppsFile = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
+def calEngineDecl = buildJson.engines?.cal
+if (calEngineDecl == null) {
+    throw new GradleException("build.json::engines.cal is not declared — Agenda would bind nothing")
+}
+def calEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calEngineDecl.fleet }
+if (calEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.cal.fleet '${calEngineDecl.fleet}' is not in the constellation fleet manifest " +
+        "($fleetAppsFile) — Agenda would bind a package no Store row installs.")
+}
+def calEnginePackage = calEngineFleet.package.toString()
+def calEngineAction  = calEngineDecl.action.toString().replace('{package}', calEnginePackage)
+def calEngineMinContract = calEngineDecl.min_contract as int
+if (calEngineMinContract < 1) {
+    throw new GradleException("build.json::engines.cal.min_contract must be >= 1")
+}
+
 def buildHistorySecs = []
 try {
     def ghOut = providers.exec {
@@ -179,6 +201,10 @@ android {
         buildConfigField "long",   "STACK_BUILD_AVG_SECS",    "${buildAvgSecs}L"
         buildConfigField "long",   "STACK_BUILD_LAST_SECS",   "${buildLastSecs}L"
         buildConfigField "int",    "STACK_BUILD_SAMPLE",      "${buildSampleSize}"
+        buildConfigField "String", "CAL_ENGINE_PACKAGE",      "\"${calEnginePackage}\""
+        buildConfigField "String", "CAL_ENGINE_ACTION",       "\"${calEngineAction}\""
+        buildConfigField "int",    "CAL_ENGINE_MIN_CONTRACT", "${calEngineMinContract}"
+        manifestPlaceholders = [calEnginePackage: calEnginePackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 

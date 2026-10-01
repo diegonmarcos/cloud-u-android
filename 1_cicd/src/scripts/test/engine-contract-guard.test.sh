@@ -149,6 +149,13 @@ stage; sub "$DRIVEGRADLE" 'ghEnginePackage: ghEnginePackage]' 'ghEnginePackage: 
 landed "$DRIVEGRADLE" 'com.example.planted' && red "K8 the queried placeholder is not the package the build resolved" "K8"
 stage; sub "$SAMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
 landed "$SAMF" 'PLANTED_NOT_QUERY_ALL' && red "K8 an app that drops QUERY_ALL_PACKAGES and queries nothing cannot see its engines" "K8"
+stage; cat > "$WORK/t/$(dirname "$CLIENT")/PlantedBridge.kt" <<'KOTLIN'
+package com.diegonmarcos.clouddrive.sync
+class PlantedBridge(ctx: android.content.Context) {
+    private val client = com.diegonmarcos.superapp.core.DataBackendClient(ctx, "com.diegonmarcos.cloudlib.cal", "com.diegonmarcos.superapp.cal.CalBackendService")
+}
+KOTLIN
+[ -f "$WORK/t/$(dirname "$CLIENT")/PlantedBridge.kt" ] && red "K9 an app binds an engine by class name outside build.json::engines (how F2 hid)" "K9"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'

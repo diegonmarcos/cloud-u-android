@@ -34,7 +34,11 @@ For every engine any app declares, from the declarations alone:
   K8  the app can SEE the engine: its manifest queries ${<key>EnginePackage},
       bound by app/build.gradle's manifestPlaceholders, or holds
       QUERY_ALL_PACKAGES. On Android 11+ an unqueried package is invisible and
-      reads exactly like "not installed" (engine-apk-split F2).
+      reads exactly like "not installed" (engine-apk-split F2);
+  K9  no app binds an engine it has not declared: every DataBackendClient an
+      app's own source builds is in a declared engine's client. Cloud Agenda
+      and Cloud News each built one by typed package and class name, outside
+      build.json::engines -- so K1..K8 never looked at them, and F2 shipped.
 
 Vacuity is a failure: no declared engine, or a client with no calls, checks nothing.
 Usage: cloud-android-engine-contract-guard.py <repo root>
@@ -159,6 +163,14 @@ def visible(app_dir, key):
     return None
 
 
+def undeclared_binds(app_dir, keys):
+    """K9: app source files that build a DataBackendClient outside every declared engine's client."""
+    markers = ["BuildConfig.%s_ENGINE_ACTION" % k.upper().replace("-", "_") for k in keys]
+    main = os.path.join(app_dir, "app", "src", "main")
+    return sorted(p for p in (sources(main) if os.path.isdir(main) else ())
+                  if "DataBackendClient(" in code(p) and not any(m in code(p) for m in markers))
+
+
 def coupled(root, modules):
     """K6: every app module entry or ship-workflow watch line that reaches an engine module."""
     engines = {os.path.normpath(d): os.path.basename(d) for d in modules.values()
@@ -192,6 +204,9 @@ def check(root):
         app_dir = os.path.dirname(bj)
         app = os.path.basename(app_dir)
         engines = json.load(open(bj, encoding="utf-8")).get("engines") or {}
+        for path in undeclared_binds(app_dir, [k for k in engines if not k.startswith("_")]):
+            bad.append("K9 %s binds an engine that %s/build.json::engines does not declare -- no handshake, "
+                       "no visibility and no contract check covers it" % (os.path.relpath(path, root), app))
         for key, decl in engines.items():
             if key.startswith("_"):
                 continue

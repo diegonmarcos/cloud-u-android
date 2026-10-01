@@ -55,6 +55,14 @@
       "dir": "../ab_cloud-libs-shared/libs/analytics"
     }
   },
+  "engines": {
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (engine-apk-split F2; same shape as ac_cloud-me/build.json::engines). `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which app/build.gradle resolves the package (an unknown id fails the build) for BuildConfig and <queries> -- without the query Android 11+ hides the engine and CalBridge read it as not installed; `action` finds the service in it ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method CalBridge calls, read through PackageManager BEFORE binding. Cloud Me binds the same engine: one calendar cache, one task mirror.",
+    "cal": {
+      "fleet": "lib-cal",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  },
   "release": {
     "artifact": {
       "debug": "Cloud-Agenda.apk",

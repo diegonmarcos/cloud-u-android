@@ -10,6 +10,9 @@
 
     <queries>
         <package android:name="com.diegonmarcos.cloudagenda" />
+        <!-- The cal ENGINE (build.json::engines.cal): without this line the engine is
+             invisible on API 30+ and Agenda would say "install it" with it installed. -->
+        <package android:name="${calEnginePackage}" />
     </queries>
 
     <application

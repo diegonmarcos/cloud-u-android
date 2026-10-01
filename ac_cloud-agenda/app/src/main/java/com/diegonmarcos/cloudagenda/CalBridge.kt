@@ -1,7 +1,9 @@
 package com.diegonmarcos.cloudagenda
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
 import com.diegonmarcos.superapp.core.DataBackendClient
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -25,6 +27,13 @@ class CalBridge(private val ctx: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
 
+    private companion object {
+        /** The engine CONTRACT meta-data key (libs/cal's manifest). */
+        const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.CONTRACT"
+        /** The engine method that takes the one-time handover (CalBackendService). */
+        const val SEED = "seed"
+    }
+
     @Volatile private var syncRunning = false
     @Volatile private var lastOk = 0
     @Volatile private var lastSkipped = 0
@@ -37,19 +46,47 @@ class CalBridge(private val ctx: Context) {
     @Volatile private var todoLastMessages: List<String> = emptyList()
 
     // ── the engine ───────────────────────────────────────────────────────────
-    // Calendar data work lives in Cloud-Lib-Cal.apk now; this class is the
-    // front end. Credentials are NOT sent there to live - they stay in this
-    // app's EncryptedSharedPreferences and ride along on the calls that need
-    // them, so nothing is orphaned by the engine having its own storage.
-    private val client by lazy {
-        DataBackendClient(ctx, "com.diegonmarcos.cloudlib.cal",
-                          "com.diegonmarcos.superapp.cal.CalBackendService")
+    // Calendar data work lives in Cloud-Lib-Cal.apk; this class is the front
+    // end, and libs:cal is in no module map of this app. Credentials are NOT
+    // sent there to live - they stay in this app's EncryptedSharedPreferences
+    // and ride along on the calls that need them, so nothing is orphaned by
+    // the engine having its own storage.
+    @Volatile private var client: DataBackendClient? = null
+
+    /**
+     * THE HANDSHAKE, BEFORE ANY BIND (engine-apk-split F2; the GhEngine shape): PackageManager
+     * resolves the declared action in the declared package (build.json::engines.cal, resolved
+     * from the fleet manifest at build time and queried in the manifest, so Android 11+ shows it)
+     * and reads the CONTRACT it declares. Null when the engine is ready, else the sentence that
+     * says what to do — "install" and "update" are different next steps.
+     */
+    private fun check(): String? {
+        val pm = ctx.packageManager
+        val pkg = BuildConfig.CAL_ENGINE_PACKAGE
+        val needed = BuildConfig.CAL_ENGINE_MIN_CONTRACT
+        val service = pm.resolveService(Intent(BuildConfig.CAL_ENGINE_ACTION).setPackage(pkg), PackageManager.GET_META_DATA)
+            ?.serviceInfo
+        if (service == null) {
+            val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+            return if (installed) "$pkg has no calendar engine service — update it from Store ▸ Cloud Constellation ▸ Libs"
+                   else "$pkg is not installed — install it from Store ▸ Cloud Constellation ▸ Libs"
+        }
+        val found = service.metaData?.getInt(CONTRACT_KEY, 0) ?: 0
+        if (found < needed) return "$pkg serves contract $found, this build needs $needed — update it from Store ▸ Cloud Constellation ▸ Libs"
+        if (client == null) synchronized(this) {
+            if (client == null) client = DataBackendClient(ctx, service.packageName, service.name)
+        }
+        return null
     }
 
-    /** Call the engine. Seeds once, first time, before anything else. */
-    private fun engine(method: String, vararg args: String): String {
-        seedOnce()
-        return client.call(method, *args)
+    /** Every engine call: the handshake, the one-time seed, then the call. A not-ready engine
+     *  answers {"error": why} — the shape every page call already shows. */
+    private fun ask(method: String, vararg args: String): String {
+        val why = check()
+        val c = client
+        if (why != null || c == null) return JSONObject().put("error", why ?: "the calendar engine is not ready").toString()
+        if (method != SEED) seedOnce()
+        return c.call(method, *args)
     }
 
     private fun cfgJson(): String = CaldavPrefs.getJson(ctx) ?: ""
@@ -72,7 +109,7 @@ class CalBridge(private val ctx: Context) {
         val legacy = ctx.getSharedPreferences("cal_legacy_todos", Context.MODE_PRIVATE)
             .getString("todos", null)
         if (legacy.isNullOrBlank()) { prefs.edit().putBoolean("seeded", true).apply(); return }
-        val ok = runCatching { JSONObject(client.call("seed", legacy)).optBoolean("ok") }
+        val ok = runCatching { JSONObject(ask(SEED, legacy)).optBoolean("ok") }
             .getOrDefault(false)
         // Only mark it done when it actually landed - a failed seed must be
         // retried, not silently skipped forever.
@@ -81,7 +118,7 @@ class CalBridge(private val ctx: Context) {
 
     @JavascriptInterface
     fun calendars(): String {
-        return engine("calendars")
+        return ask("calendars")
     }
 
     // fromUtcMillis/toUtcMillis are taken as String and parsed to Long here:
@@ -90,7 +127,7 @@ class CalBridge(private val ctx: Context) {
     // them before passing across the bridge.
     @JavascriptInterface
     fun events(fromUtcMillis: String, toUtcMillis: String): String {
-        return engine("events", fromUtcMillis, toUtcMillis)
+        return ask("events", fromUtcMillis, toUtcMillis)
     }
 
     @JavascriptInterface
@@ -102,7 +139,7 @@ class CalBridge(private val ctx: Context) {
         syncRunning = true
         executor.execute {
             try {
-                val r = JSONObject(engine("sync"))
+                val r = JSONObject(ask("sync"))
                 lastOk = r.optInt("ok"); lastSkipped = r.optInt("skipped")
                 lastFailed = r.optInt("failed")
                 lastMessages = (0 until (r.optJSONArray("messages")?.length() ?: 0))
@@ -135,14 +172,14 @@ class CalBridge(private val ctx: Context) {
      *  offline. Call [syncTodos] to refresh from the server. */
     @JavascriptInterface
     fun projects(): String {
-        return engine("projects")
+        return ask("projects")
     }
 
     /** projectId "" means all projects. Cache-only read, same reasoning
      *  as [projects]. */
     @JavascriptInterface
     fun todos(projectId: String): String {
-        return engine("todos", projectId)
+        return ask("todos", projectId)
     }
 
     /** Create (id empty) or update (id set) one task. This performs the
@@ -156,18 +193,18 @@ class CalBridge(private val ctx: Context) {
      *  network wait on the bridge thread, worth flagging explicitly. */
     @JavascriptInterface
     fun saveTodo(json: String): String {
-        return engine("saveTodo", json, cfgJson())
+        return ask("saveTodo", json, cfgJson())
     }
 
     /** done is "true"/"false" (bridge string convention, see [events]). */
     @JavascriptInterface
     fun setTodoStatus(id: String, done: String): String {
-        return engine("setTodoStatus", id, done, cfgJson())
+        return ask("setTodoStatus", id, done, cfgJson())
     }
 
     @JavascriptInterface
     fun deleteTodo(id: String): String {
-        return engine("deleteTodo", id, cfgJson())
+        return ask("deleteTodo", id, cfgJson())
     }
 
     @JavascriptInterface
@@ -176,7 +213,7 @@ class CalBridge(private val ctx: Context) {
         todoSyncRunning = true
         executor.execute {
             try {
-                val r = JSONObject(engine("syncTodos", cfgJson()))
+                val r = JSONObject(ask("syncTodos", cfgJson()))
                 todoLastOk = r.optInt("ok"); todoLastFailed = r.optInt("failed")
                 todoLastMessages = (0 until (r.optJSONArray("messages")?.length() ?: 0))
                     .map { r.optJSONArray("messages")!!.optString(it) }
@@ -235,7 +272,7 @@ class CalBridge(private val ctx: Context) {
      *  the same reason [saveTodo] is — see its kdoc. */
     @JavascriptInterface
     fun testCaldav(): String {
-        return engine("testCaldav", cfgJson())
+        return ask("testCaldav", cfgJson())
     }
 
     // ---- small JSON helpers -----------------------------------------------
