@@ -87,10 +87,10 @@ if ops != ["system/ping"]: sys.exit(1)                     # the ONLY open route
 if 'op !in OPEN_OPS && !FleetToken.matches(ctx, bearer)' not in code: sys.exit(1)
 if '401 Unauthorized' not in code: sys.exit(1)             # the liveness banner
 # none of our groups can be smuggled into the open set
-for g in ("health", "git", "session", "log"):
+for g in ("health", "git", "session", "log", "net"):
     if g in ops: sys.exit(1)
 # and the api registers exactly through the gated extension point
-if api.count('AppDebugServer.route(') < 4: sys.exit(1)
+if api.count('AppDebugServer.route(') < 5: sys.exit(1)
 sys.exit(0)
 PYTHON
 }
@@ -139,7 +139,7 @@ decl = json.load(open(sys.argv[3], encoding="utf-8")).get("diagnostics", {}).get
 if not isinstance(decl, dict): sys.exit(1)
 if decl.get("bind") != "127.0.0.1": sys.exit(1)
 if decl.get("port_range") != [38090, 38139]: sys.exit(1)
-for g in ("health", "git", "session", "log"):
+for g in ("health", "git", "session", "log", "net"):
     if g not in decl.get("groups", []): sys.exit(1)
 sys.exit(0)
 PYTHON
