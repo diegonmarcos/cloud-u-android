@@ -130,7 +130,7 @@ class GhNetProxy(
         val ghSpoke = AtomicLong()
         val gitHubSpoke = AtomicLong()
         val upFailure = AtomicReference<IOException?>()
-        upstream.soTimeout = idleMs // wakes the loop below to look at the clock; not a deadline
+        upstream.soTimeout = 0 // MUTATION 2: no quiet timer, so a quiet tunnel is never ended. wakes the loop below to look at the clock; not a deadline
         val toGitHub = thread(isDaemon = true, name = "gh-net-up") {
             val buf = ByteArray(BUF)
             val out = upstream.getOutputStream()
@@ -167,7 +167,7 @@ class GhNetProxy(
             }
             if (n == QUIET_CHECK) {
                 val answered = gitHubSpoke.get()
-                if (answered > 0 && now() - answered >= idleMs) how = QUIET // MUTATION 3: quiet ignores a request still waiting
+                if (answered > 0 && answered >= ghSpoke.get() && now() - answered >= idleMs) how = QUIET
             } else if (n < 0) {
                 how = "closed by GitHub"
             } else {
@@ -182,7 +182,7 @@ class GhNetProxy(
                 gitHubSpoke.set(now())
             }
         }
-        if (false && how!!.startsWith(BROKEN)) { // MUTATION 1: a broken upstream reaches gh as a clean end
+        if (how!!.startsWith(BROKEN)) {
             // RST, not FIN: gh must not read a broken tunnel as a finished answer.
             runCatching { client.setSoLinger(true, 0) }
             runCatching { client.close() }
