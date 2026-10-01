@@ -93,12 +93,10 @@ jobs:
           token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
           path: .vault
 
-      - name: Install sops
-        run: |
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
-            | sudo tee /usr/local/bin/sops >/dev/null
-          sudo chmod +x /usr/local/bin/sops
-          sops --version
+      - name: Install sops (pinned, sha256-checked, fails at the download)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: sops
 
       - name: Boot emulator + run instrumented suite (engine)
         uses: reactivecircus/android-emulator-runner@v2

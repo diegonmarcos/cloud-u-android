@@ -87,17 +87,17 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Install build host packages + ORAS + sops
+      - name: Install build host packages
         if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
           bash "$WORK_DIR/build.sh" host-deps
-          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin oras
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
-            | sudo tee /usr/local/bin/sops >/dev/null
-          sudo chmod +x /usr/local/bin/sops
-          oras version && sops --version
+
+      - name: Install ORAS + sops (pinned, sha256-checked, fails at the download)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'

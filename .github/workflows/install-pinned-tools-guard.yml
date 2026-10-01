@@ -1,0 +1,48 @@
+name: "install-pinned-tools guard — a failed tool download fails the step that downloaded it"
+
+# WHY THIS EXISTS (#754). Every ship workflow installed sops with
+# `curl -fsSL URL | sudo tee /usr/local/bin/sops` in a `run:` step, which
+# GitHub runs as `bash -e` with NO pipefail. A GitHub HTTP 500 left an empty,
+# executable sops behind and a green step; the build then died much later on a
+# "missing SOPS_AGE_KEY" that was never the problem. Those installs now go
+# through ONE composite action (.github/actions/install-pinned-tools: download
+# to a file, sha256 against tools.json, then install).
+#
+# The tester drives that installer against a server answering 500 and against
+# a wrong checksum, and scans every workflow source for a curl pipe with no
+# pipefail or a private oras/sops pin. The second job runs the action itself
+# with the real pins on a real runner, so a stale checksum is caught here and
+# not inside some ship run.
+#
+# NO PATH FILTER: the subject is every workflow source, and it takes seconds.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tester:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Broken downloads fail; no workflow can go green on one
+        run: bash 1_cicd/src/scripts/test/install-pinned-tools.test.sh
+
+  real-pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install every pinned tool through the shared action
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
+      - name: The installed binaries are the real ones
+        run: |
+          set -euo pipefail
+          oras version
+          sops --version

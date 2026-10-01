@@ -1,0 +1,19 @@
+name: install-pinned-tools
+description: >-
+  Install release binaries pinned in tools.json (oras, sops). A failed download
+  or a sha256 mismatch fails THIS step, never a later one.
+
+inputs:
+  tools:
+    description: Space-separated tool names from tools.json
+    default: oras sops
+
+runs:
+  using: composite
+  steps:
+    - name: Download, verify, install
+      shell: bash
+      env:
+        TOOLS: ${{ inputs.tools }}
+      # TOOLS unquoted on purpose: it is the argv list.
+      run: bash "$GITHUB_ACTION_PATH/install.sh" $TOOLS

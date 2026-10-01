@@ -1,0 +1,13 @@
+{
+  "oras": {
+    "url": "https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz",
+    "sha256": "5b3f1cbb86d869eee68120b9b45b9be983f3738442f87ee5f06b00edd0bab336",
+    "tar_member": "oras",
+    "check": "version"
+  },
+  "sops": {
+    "url": "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64",
+    "sha256": "5488e32bc471de7982ad895dd054bbab3ab91c417a118426134551e9626e4e85",
+    "check": "--version"
+  }
+}

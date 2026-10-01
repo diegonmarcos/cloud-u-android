@@ -167,19 +167,18 @@ jobs:
           token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
           path: .vault
 
-      - name: Install ORAS + sops + gh CLI + jq
+      - name: Install gh CLI + jq
         if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq
           command -v gh
-          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
-            | sudo tar -C /usr/local/bin -xzf - oras
-          oras version
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
-            | sudo tee /usr/local/bin/sops >/dev/null
-          sudo chmod +x /usr/local/bin/sops
-          sops --version
+
+      - name: Install ORAS + sops (pinned, sha256-checked, fails at the download)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
 
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'

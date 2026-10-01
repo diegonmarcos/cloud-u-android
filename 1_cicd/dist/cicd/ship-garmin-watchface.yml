@@ -113,6 +113,7 @@ jobs:
       # Pinned to a release tag for reproducibility.
       - name: Install connect-iq-sdk-manager CLI
         run: |
+          set -euo pipefail   # without it a failed curl feeds sh an empty script, which exits 0
           curl -fsSL https://raw.githubusercontent.com/lindell/connect-iq-sdk-manager-cli/master/install.sh \
             | sh -s -- -b "$HOME/.local/bin" v0.8.4
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -138,11 +139,10 @@ jobs:
           openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt \
             -in dist/developer_key.pem -out dist/developer_key.der
 
-      - name: Install ORAS
-        run: |
-          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
-            | sudo tar -C /usr/local/bin -xzf - oras
-          oras version
+      - name: Install ORAS (pinned, sha256-checked, fails at the download)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras
 
       # build.sh::ensure_sdk runs the Garmin agreement-accept (hash from
       # build.json::toolchain.agreement_hash) + login (creds below) + sdk set +

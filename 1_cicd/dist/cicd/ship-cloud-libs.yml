@@ -156,14 +156,16 @@ jobs:
           token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
           path: .vault
 
-      - name: Install ORAS + sops + jq
+      - name: Install jq
         if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y && sudo apt-get install -y jq
-          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
-            | sudo tar -C /usr/local/bin -xzf - oras
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
-            | sudo tee /usr/local/bin/sops >/dev/null && sudo chmod +x /usr/local/bin/sops
+
+      - name: Install ORAS + sops (pinned, sha256-checked, fails at the download)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras sops
 
       # The engines' JVM suites (build.json::tests.unit, through build.sh test).
       # Not in the tester step above: that runs before the JDK, the SDK and

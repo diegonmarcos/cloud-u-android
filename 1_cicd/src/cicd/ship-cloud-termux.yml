@@ -185,14 +185,16 @@ jobs:
           token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
           path: .vault
 
-      - name: Install sops + jq
+      - name: Install jq
         if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y && sudo apt-get install -y jq
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
-            | sudo tee /usr/local/bin/sops >/dev/null
-          sudo chmod +x /usr/local/bin/sops
-          sops --version
+
+      - name: Install sops (pinned, sha256-checked, fails at the download)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: sops
 
       # Vendored in-repo: the tree is committed and has no .git, so the engine
       # reads it straight from here and never clones.
@@ -262,12 +264,11 @@ jobs:
       # the release asset. The engine (step_oras_push) creates an absent
       # package with GHCR_CREATE_TOKEN=GITHUB_TOKEN so it inherits this public
       # repo, then anon-pulls and auto-deletes it if it is somehow not public.
-      - name: Install ORAS
+      - name: Install ORAS (pinned, sha256-checked, fails at the download)
         if: ${{ steps.gate.outputs.skip != 'true' && matrix.abi == 'arm64' }}
-        run: |
-          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
-            | sudo tar -C /usr/local/bin -xzf - oras
-          oras version
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: oras
 
       - name: Login to GHCR
         if: ${{ steps.gate.outputs.skip != 'true' && matrix.abi == 'arm64' }}
