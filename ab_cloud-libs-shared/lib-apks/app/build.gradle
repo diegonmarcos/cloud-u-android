@@ -31,10 +31,15 @@ static String flavorOf(String name) {
 // Same encoding as ac_cloud-mail so the whole fleet is comparable: minutes
 // since 2026-01-01 over a 3,000,000 base. COMMS_BUILD_TIMESTAMP when CI
 // provides one, otherwise build time -- monotonic either way, and inside the
-// 2^31 limit for centuries. An explicit build.json version_code still wins.
+// 2^31 limit for centuries.
+//
+// build.json's version_code is NOT read here. It is the DECLARED number the
+// Store's identity line labels "declared code" (data/regen.sh), and it is 1 -
+// so the "explicit version_code still wins" clause this used to carry made the
+// fix above a no-op: every published cloudlib APK was still versionCode 1
+// (read off Cloud-Lib-Devtools/-Feed/-News.apk, release `latest`, 2026-10-01).
+// Same split keyboard-engines/app/build.gradle already makes.
 def cloudVersionCode = { ->
-    if (buildJson.android.version_code)
-        return buildJson.android.version_code as int
     def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
     def built
     def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
@@ -142,5 +147,14 @@ dependencies {
     shipped.each { name ->
         add("${flavorOf(name)}Implementation", project(":libs:${name}"))
     }
+    // The devtools APK is a mesh member (its manifest carries FleetTokenProvider
+    // and FleetMemberReceiver), and both are guarded by CONSTELLATION_DATA - a
+    // permission libs:core DEFINES and REQUESTS. Every other member reaches core
+    // transitively; devtools cannot, because the edge runs core -> devtools and
+    // must stay that way (libs/core/build.gradle). Without this the published
+    // Cloud-Lib-Devtools.apk neither defined nor held the permission: the one
+    // member short of full membership, and the one every app's peer view lacked.
+    if (shipped.contains('devtools') && shipped.contains('core'))
+        add("${flavorOf('devtools')}Implementation", project(':libs:core'))
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }
