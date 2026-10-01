@@ -28,3 +28,14 @@ include(":app")
 include(":libs:analytics")
 project(":libs").projectDir = file("../ab_cloud-libs-shared/libs")
 project(":libs:analytics").projectDir = file("../ab_cloud-libs-shared/libs/analytics")
+
+// Fleet mesh membership: libs:core manifest-merges the CONSTELLATION_DATA
+// signature permission and, through libs:devtools, FleetTokenProvider +
+// FleetMemberReceiver + the MESH_MEMBER <queries> intent — without them the
+// SuperApp and every sibling cannot see or reach this app. devtools is not
+// optional: core declares `api project(':libs:devtools')`, which resolves
+// against THIS settings file. The ':libs' mapping above already covers both.
+include(":libs:core")
+project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
+include(":libs:devtools")
+project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")

@@ -74,7 +74,17 @@
     "_doc_gradle_module": "The Tauri project's app module; aa_cloud-superapp/test/test-app-names-pattern.sh T6 reads it to check the launcher label is build.json::name."
   },
   "modules": {
-    "_doc": "No shared library module: the gradle project is src-tauri/gen/android (tauri.android_project), whose only module is the template's :app."
+    "_doc": "Shared modules the Tauri gradle project (tauri.android_project) includes BY REFERENCE beside the template's :app. Its settings.gradle iterates this map and, like every other reader of it (the ship workflow's trigger derivation, the publish gate, ab_cloud-libs-shared/libs/shared-modules.test.sh), resolves each dir against THIS directory, not against the gradle root three levels down. They are compiled Kotlin libraries, not source in this app's tree, so test/test-c3-webserver-no-kotlin.sh does not see them. libs:devtools finds this file by walking up from the gradle root (src-tauri/gen/android), as libs:analytics does, so there is one declaration and no copy.",
+    "libs:core": {
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission (defined and requested). Declared so a core change rebuilds this app instead of shipping a stale mesh member.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly. Listed so its changes also trigger a rebuild, and because Gradle resolves core's project path against this app's settings.gradle.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
+    }
   },
   "toolchain": {
     "_doc": "Pinned here, read by the ship workflow and mirrored in flake.nix. agp/gradle/kotlin are the versions the pinned tauri-cli's Android template generates (src-tauri/gen/android/build.gradle.kts, gradle/wrapper/gradle-wrapper.properties); gradle itself comes from the committed wrapper.",

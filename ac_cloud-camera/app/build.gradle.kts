@@ -130,6 +130,10 @@ dependencies {
     // private copy to drift (#170/#261).
     implementation(project(":libs:ml-l-image"))
 
+    // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
+    // provider, receiver, <queries> and the signature permission into this APK.
+    implementation(project(":libs:core"))
+
     implementation(libs.bundles.camerax)
 
     implementation(libs.zxing.core)

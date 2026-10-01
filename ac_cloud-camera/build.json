@@ -25,6 +25,16 @@
     "libs:ml-l-image": {
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/ml-l-image"
+    },
+    "libs:core": {
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission. Declared so a core change rebuilds camera instead of shipping a stale mesh member.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly. Listed so its changes also trigger a rebuild.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
   "android": {

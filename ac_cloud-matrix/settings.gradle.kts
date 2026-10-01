@@ -71,6 +71,21 @@ includeProjects(File(rootDir, "features"), ":features")
 includeProjects(File(rootDir, "libraries"), ":libraries")
 includeProjects(File(rootDir, "services"), ":services")
 
+// Fleet mesh membership: libs:core manifest-merges the CONSTELLATION_DATA
+// signature permission and, through libs:devtools, FleetTokenProvider +
+// FleetMemberReceiver + the MESH_MEMBER <queries> intent — without them the
+// SuperApp and every sibling cannot see or reach this app. devtools is not
+// optional: core declares `api project(':libs:devtools')`, which resolves
+// against THIS settings file. Shared BY REFERENCE, same pair as media-center.
+include(":libs:core")
+project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
+include(":libs:devtools")
+project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")
+// ':libs:<x>' implicitly declares a ':libs' container whose default projectDir
+// is <root>/libs, which this fork does not have — and Gradle 9 fails outright
+// on a project directory that does not exist. Point it at the shared root.
+project(":libs").projectDir = file("../ab_cloud-libs-shared/libs")
+
 // Uncomment to include the compound-android module as a local dependency so you can work on it locally.
 // You will also need to clone it in the specified folder.
 // includeBuild("checkouts/compound-android") {

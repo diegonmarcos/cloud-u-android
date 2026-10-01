@@ -1,7 +1,10 @@
 buildscript {
     ext {
         buildToolsVersion = "35.0.0"
-        minSdkVersion = 24
+        // 26, not upstream's 24: libs:core and libs:devtools (fleet mesh
+        // membership) declare minSdk 26, and the manifest merger fails the app
+        // build on a lower app minSdk. 26 is every constellation app's floor.
+        minSdkVersion = 26
         compileSdkVersion = 35
         targetSdkVersion = 35
         supportLibVersion = "35.0.0"

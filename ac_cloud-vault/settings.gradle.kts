@@ -52,3 +52,19 @@ include(
     ":testharness",
     ":ui",
 )
+
+// Fleet mesh membership: libs:core manifest-merges the CONSTELLATION_DATA
+// signature permission and, through libs:devtools, FleetTokenProvider +
+// FleetMemberReceiver + the MESH_MEMBER <queries> intent — without them the
+// SuperApp and every sibling cannot see or reach this app. Shared BY REFERENCE;
+// devtools is not optional, core's `api project(':libs:devtools')` resolves
+// against THIS settings file. Distinct from Bitwarden's own ':core' — the
+// paths differ, and so do the default groups (Bitwarden vs Bitwarden.libs).
+include(":libs:core")
+project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
+include(":libs:devtools")
+project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")
+// Gradle 9 fails on a project directory that does not exist, and the implicit
+// ':libs' container defaults to <root>/libs, which Bitwarden does not have.
+// Point it at the shared root, exactly as media-center and camera do.
+project(":libs").projectDir = file("../ab_cloud-libs-shared/libs")

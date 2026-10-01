@@ -161,6 +161,9 @@ detekt {
 
 dependencies {
     implementation(project(":libs:analytics"))
+    // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
+    // provider, receiver, <queries> and the signature permission into this APK.
+    implementation(project(":libs:core"))
     implementation(libs.fossify.commons)
     implementation(libs.indicator.fast.scroll)
     implementation(libs.autofit.text.view)

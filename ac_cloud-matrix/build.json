@@ -47,6 +47,19 @@
       "_doc_rebrand": "Rebranded in the vendored tree (patches/0001, historical record): BuildTimeConfig.APPLICATION_ID is now app_id and APPLICATION_NAME is 'Cloud Matrix', so the from-source build ships under our identity rather than upstream's. alt_id stays: Fleet.installedId checks app_id FIRST and falls back to alt_id, which is what still detects a previously installed resigned STOCK build so it can be replaced. Launcher artwork in appicon/element/ is NOT yet replaced - see NOTICE.md."
     }
   },
+  "modules": {
+    "_doc": "Shared modules settings.gradle.kts includes BY REFERENCE. Declared so the ship workflow watches them and the publish gate hashes them: a change to any of them must rebuild Cloud Matrix, not ride along unshipped. settings.gradle.kts still names them as literals (upstream's file, not a loop over this map).",
+    "libs:core": {
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
+    }
+  },
   "signing": {
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"

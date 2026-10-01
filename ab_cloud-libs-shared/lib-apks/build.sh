@@ -478,12 +478,20 @@ case "$CMD" in
       sha256sum "$f" | awk '{print $1}' > "$f.sha256"
       sidecars+=("$f.sha256")
     done
-    gh release upload latest "${files[@]}" "${sidecars[@]}" --clobber 2>/dev/null \
-      || gh release create latest \
+    # Create ONLY when the rolling release is absent. This used to be
+    # `upload 2>/dev/null || create`: any upload failure was silenced and
+    # re-tried as a create, which on an existing release can only say "a
+    # release with the same tag name already exists" — run 36889559030 (#743,
+    # every lib APK moved at once) failed that way with the real cause gone.
+    if gh release view latest >/dev/null 2>&1; then
+      gh release upload latest "${files[@]}" "${sidecars[@]}" --clobber
+    else
+      gh release create latest \
            --title "Cloud Libs (rolling)" \
            --latest \
            --notes "Auto-updated from main." \
            "${files[@]}" "${sidecars[@]}"
+    fi
     # Hard-verify: every asset AND its sidecar must be on the release, at the
     # right size — a same-size collision on 2026-08-30 is exactly what a
     # skipped/stale upload would look like, so presence alone isn't enough.

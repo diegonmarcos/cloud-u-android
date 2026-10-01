@@ -25,6 +25,9 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-chat.yml"
       - "1_cicd/src/scripts/cloud-chat-fork-engine.sh"
+      - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ac_cloud-chat/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)

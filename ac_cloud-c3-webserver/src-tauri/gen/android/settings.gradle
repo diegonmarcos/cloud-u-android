@@ -1,3 +1,22 @@
 include ':app'
 
+// cloud-c3-webserver: fleet mesh membership. The shared modules come from the
+// app's ONE build.json::modules (three levels up: gen/android ->
+// ac_cloud-c3-webserver), and each dir is resolved against THAT directory —
+// the base the ship workflow's triggers and the publish gate resolve it
+// against — never against this gradle root. libs:devtools is in the map, not
+// optional: core declares `api project(':libs:devtools')`, which resolves
+// against THIS settings file.
+def appDir = '../../..'
+def buildJson = new groovy.json.JsonSlurper().parse(file("${appDir}/build.json"))
+buildJson.modules.each { name, _spec ->
+    if (name.startsWith('_')) return
+    include ":${name}"
+    project(":${name}").projectDir = file("${appDir}/${_spec?.dir ?: name.replace(':', '/')}")
+}
+// Gradle 9 fails outright on a project directory that does not exist, and the
+// implicit ':libs' container resolves to <root>/libs, which this project does
+// not have. Point it at the shared root core lives in, as media-center does.
+project(':libs').projectDir = project(':libs:core').projectDir.parentFile
+
 apply from: 'tauri.settings.gradle'

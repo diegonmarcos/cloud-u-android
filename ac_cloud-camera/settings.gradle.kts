@@ -22,6 +22,17 @@ include(":app")
 // does not exist in this app. Same AGP-9 consumption path media-center uses.
 include(":libs:ml-l-image")
 project(":libs:ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image")
+
+// Fleet mesh membership: libs:core manifest-merges the CONSTELLATION_DATA
+// signature permission and, through libs:devtools, FleetTokenProvider +
+// FleetMemberReceiver + the MESH_MEMBER <queries> intent — without them the
+// SuperApp and every sibling cannot see or reach this app. devtools is not
+// optional: core declares `api project(':libs:devtools')`, which resolves
+// against THIS settings file. Same pair, same reason as media-center.
+include(":libs:core")
+project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
+include(":libs:devtools")
+project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")
 // Gradle 9 fails outright on a project directory that does not exist, and the
 // implicit ':libs' container resolves to <root>/libs which this app does not
 // have. Point it at the shared root, exactly as media-center does; the leaf

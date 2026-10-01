@@ -25,6 +25,8 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-matrix.yml"
       - "1_cicd/src/scripts/cloud-matrix-fork-engine.sh"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ac_cloud-matrix/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)

@@ -288,6 +288,10 @@ dependencies {
 
     implementation(libs.matrix.emojibase.bindings)
 
+    // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
+    // provider, receiver, <queries> and the signature permission into this APK.
+    implementation(project(":libs:core"))
+
     testCommonDependencies(libs)
     testImplementation(projects.libraries.matrix.test)
     testImplementation(projects.services.toolbox.test)

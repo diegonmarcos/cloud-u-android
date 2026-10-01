@@ -195,6 +195,9 @@ repositories {
 
 dependencies {
     implementation project(':libs:analytics')
+    // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
+    // provider, receiver, <queries> and the signature permission into this APK.
+    implementation project(':libs:core')
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

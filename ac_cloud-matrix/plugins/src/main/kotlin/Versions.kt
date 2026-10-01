@@ -77,8 +77,14 @@ object Versions {
 
     /**
      * Minimum SDK version for FOSS builds.
+     *
+     * Cloud Matrix: 26, not upstream's 24. libs:core and libs:devtools (fleet
+     * mesh membership) declare minSdk 26, and the manifest merger fails the
+     * whole app build on a lower app minSdk. 26 is the floor of every other
+     * constellation app; overrideLibrary would instead ship code that may
+     * crash at startup on API 24/25.
      */
-    private const val MIN_SDK_FOSS = 24
+    private const val MIN_SDK_FOSS = 26
 
     /**
      * Minimum SDK version for Enterprise builds.

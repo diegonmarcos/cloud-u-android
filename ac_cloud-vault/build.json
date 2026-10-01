@@ -59,37 +59,22 @@
     "jdk": "17"
   },
   "modules": {
-    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
+    "_doc": "Shared modules the SHIPPING fork (the vendored Bitwarden tree at this app's root, :app:assembleFdroidRelease) includes BY REFERENCE; settings.gradle.kts names them as literals, it does not iterate this map. Declared so the ship workflow watches them and the publish gate hashes them. The previous map (app.depends_on core/browser/updater, analytics) described the legacy WebView wrapper's Groovy settings.gradle, which looped over it; that wrapper was deleted in 2b5afeca0 and Bitwarden's settings never read the map, so none of those modules was ever compiled into Cloud-Vault.apk.",
     "app": {
       "type": "application",
       "depends_on": [
-        "libs:core",
-        "libs:browser",
-        "libs:updater"
+        "libs:core"
       ]
     },
     "libs:core": {
-      "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ — settings.gradle points projectDir here instead of at a local copy. Every app used to carry its own copy-pasted tree and they drifted: 6 apps sat 228 source lines behind superapp's updater. One directory, no sync step, no drift.",
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission. Linked from app/build.gradle.kts.",
       "dir": "../ab_cloud-libs-shared/libs/core",
       "type": "library"
     },
     "libs:devtools": {
-      "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/, same as libs:core. Not listed in app.depends_on and not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which is what gives every app the constellation-wide debug API (127.0.0.1:38090+, own-process logcat) without per-app wiring that would drift.",
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly.",
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
-    },
-    "libs:browser": {
-      "type": "library",
-      "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. browser was three byte-identical trees (superapp, browser, vault); nothing kept them in step, so a WebView fix had to be pasted three times or it silently reached one app.",
-      "dir": "../ab_cloud-libs-shared/libs/browser"
-    },
-    "libs:updater": {
-      "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ — settings.gradle points projectDir here instead of at a local copy. Every app used to carry its own copy-pasted tree and they drifted: 6 apps sat 228 source lines behind superapp's updater. One directory, no sync step, no drift.",
-      "dir": "../ab_cloud-libs-shared/libs/updater",
-      "type": "library"
-    },
-    "libs:analytics": {
-      "dir": "../ab_cloud-libs-shared/libs/analytics"
     }
   },
   "ui": {

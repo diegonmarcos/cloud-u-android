@@ -11,7 +11,20 @@ if (project.extensions.findByName('kotlin') == null) {
 // A module-relative path would resolve to superapp's build.json and every app
 // would ship superapp's log stream — cloud-nav's diagnostics would land in the
 // cloud-superapp stream and be indistinguishable from superapp's own.
-def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+// Walk UP from rootDir, exactly as libs:analytics does: a React Native app's
+// gradle root is android/ and a Tauri app's is src-tauri/gen/android, while
+// build.json stays at the app root. "${rootDir}/build.json" failed their
+// configuration outright, which kept both out of the fleet mesh (#743).
+def buildJsonFile = { ->
+    def d = rootDir
+    for (int i = 0; i < 4 && d != null; i++) {
+        def f = new File(d, "build.json")
+        if (f.exists()) return f
+        d = d.parentFile
+    }
+    throw new GradleException("libs:devtools: no build.json found at or above ${rootDir}")
+}()
+def buildJson = new groovy.json.JsonSlurper().parse(buildJsonFile)
 
 // Data-driven from build.json::diagnostics; empty url = cloud push disabled.
 // These used to be baked by each app's app/build.gradle, which is why every

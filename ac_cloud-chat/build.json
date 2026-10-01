@@ -32,6 +32,23 @@
       "comment": "Mattermost Mobile. RN build; harder than mail — needs node 20 + ruby for Podfile lock."
     }
   },
+  "modules": {
+    "_doc": "Shared modules android/settings.gradle includes BY REFERENCE. Declared so the ship workflow watches them and the publish gate hashes them: a change to any of them must rebuild Cloud Chat, not ride along unshipped. `dir` is relative to THIS file (the app root); android/settings.gradle names the same directories as literals relative to its own rootDir, one level down (upstream's file, not a loop over this map).",
+    "libs:analytics": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:core": {
+      "_doc_dir": "Fleet mesh membership: core manifest-merges the CONSTELLATION_DATA signature permission.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
+    }
+  },
   "signing": {
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
