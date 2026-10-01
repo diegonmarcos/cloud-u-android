@@ -44,9 +44,22 @@
     "_doc_abi_filters": "The DEFAULT for a build that names no variant. It is not the ABI set this app ships: release.variants below declares arm64 AND x86_64, and build.sh::_export_variant_abis overrides this per matrix leg. Both legs publish, under distinct asset names, and the fleet entry regen.sh derives from those variants is what the installer selects between — see the variants _doc."
   },
   "modules": {
-    "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list). One module, no shared library: the app reads one JSON API over HTTPS and draws a list, which needs nothing from ab_cloud-libs-shared. Depending on it would add its whole build to this app's critical path AND widen the ship workflow's path filter to a tree this APK cannot contain a change from — exactly the over-trigger #248/#263 are open about.",
+    "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list). No feature library: the app reads one JSON API over HTTPS and draws a list. libs:core (and the devtools it carries) is the one shared link, for #743 fleet mesh membership — without it this app is invisible to every other member and holds no CONSTELLATION_DATA. The ship path filter widens to exactly those two directories, both of which DO change this APK's manifest.",
     "app": {
-      "type": "application"
+      "type": "application",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:core": {
+      "type": "library",
+      "_doc": "#743 fleet mesh membership. core DEFINES and REQUESTS CONSTELLATION_DATA and carries libs:devtools by `api` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER package query), so linking it is what makes this app a mesh member every other app can see and reach. Shared BY REFERENCE, like every app's core.",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "type": "library",
+      "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
   "toolchain": {

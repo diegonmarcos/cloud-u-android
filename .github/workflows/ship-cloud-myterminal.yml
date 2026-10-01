@@ -61,6 +61,8 @@ on:
       # an engine edit must re-run it here.
       - "1_cicd/src/cicd/ship-cloud-myterminal.yml"
       - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-myterminal/**"
 permissions:

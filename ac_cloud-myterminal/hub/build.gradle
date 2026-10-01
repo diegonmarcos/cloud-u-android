@@ -229,6 +229,9 @@ android {
 
 dependencies {
     implementation project(':libs:analytics')
+    // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
+    // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
+    implementation project(':libs:core')
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'

@@ -81,6 +81,8 @@ on:
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
       - "1_cicd/src/cicd/ship-c3-morpheus.yml"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ac_c3-morpheus/**"
 permissions:
   contents: write   # for gh release create + tag push reads

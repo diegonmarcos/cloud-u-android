@@ -65,11 +65,12 @@ android {
 }
 
 dependencies {
-    // No shared lib module. v1 draws four panels over surfaces that already
-    // exist and needs nothing from libs/ — depending on ab_cloud-libs-shared
-    // now would add its whole build to this app's critical path for nothing.
-    // When `run` gets wired, it takes the trigger client from libs/ops rather
-    // than growing one here, and THAT is when this line changes.
+    // No feature lib module: v1 draws four panels over surfaces that already
+    // exist. When `run` gets wired, it takes the trigger client from libs/ops
+    // rather than growing one here.
+    // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
+    // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
+    implementation project(':libs:core')
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 }

@@ -24,13 +24,26 @@
   "modules": {
     "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list), and the ship workflow's on:push:paths and the publish gate's source hash are both derived from it by cloud-android-ship-repo-workflow-engine.sh.",
     "app": {
-      "type": "application"
+      "type": "application",
+      "depends_on": [
+        "libs:core"
+      ]
     },
     "libs:text-tools": {
       "type": "library",
       "_doc": "The ITextTools binder, shared BY REFERENCE from ab_cloud-libs-shared/libs/ - the AIDL, TextToolsClient and the addresses, and nothing else. This application CALLS it. It is the whole of what cloud-writer links to reach the four tools: the engines, the provider key and the HTTP path stay in the serving application's process and only text crosses.",
       "_doc_why_by_reference": "A copy of a boundary is two boundaries. This module is a Kotlin Android library whose only dependency is core-ktx, on the same toolchain, which is why it can be pointed at rather than duplicated - exactly as ac_cloud-mail does.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
+    },
+    "libs:core": {
+      "type": "library",
+      "_doc": "#743 fleet mesh membership. core DEFINES and REQUESTS CONSTELLATION_DATA and carries libs:devtools by `api` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER package query), so linking it is what makes this app a mesh member every other app can see and reach. Shared BY REFERENCE, like every app's core.",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "type": "library",
+      "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
   "writer_ai": {

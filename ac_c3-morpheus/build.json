@@ -41,9 +41,22 @@
     ]
   },
   "modules": {
-    "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list). One module. v1 depends on no shared library — pulling ab_cloud-libs-shared in now would add its whole build to this app's critical path for nothing. That changes when `run` gets wired and takes the trigger client from libs/ops.",
+    "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list). v1 needs no feature library (`run` will take the trigger client from libs/ops when it is wired). libs:core is linked for one reason, #743 fleet mesh membership: without it this app is invisible to every other member and holds no CONSTELLATION_DATA.",
     "app": {
-      "type": "application"
+      "type": "application",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:core": {
+      "type": "library",
+      "_doc": "#743 fleet mesh membership. core DEFINES and REQUESTS CONSTELLATION_DATA and carries libs:devtools by `api` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER package query), so linking it is what makes this app a mesh member every other app can see and reach. Shared BY REFERENCE, like every app's core.",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "type": "library",
+      "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
   "toolchain": {

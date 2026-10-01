@@ -101,6 +101,8 @@ on:
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
       - "1_cicd/src/cicd/ship-cloud-writer.yml"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-writer/**"
 permissions:

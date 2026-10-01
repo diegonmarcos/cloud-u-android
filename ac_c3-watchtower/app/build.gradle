@@ -87,7 +87,10 @@ android {
 }
 
 dependencies {
-    // No shared lib module, and no HTTP library. One JSON GET against
+    // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
+    // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
+    implementation project(':libs:core')
+    // No feature lib module, and no HTTP library. One JSON GET against
     // api.github.com is HttpURLConnection + org.json, both in the platform —
     // exactly what aa_cloud-superapp's GitHubFeed.kt uses for the same call.
     // Adding OkHttp/Retrofit here would be a dependency for one request.

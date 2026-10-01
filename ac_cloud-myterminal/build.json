@@ -57,11 +57,23 @@
     "_doc": "Gradle module graph \u2014 settings.gradle iterates this (FIRE rule 6: never hardcode the list). Only the hub is an in-tree gradle module; the three forks are SEPARATE gradle/cordova projects living in their materialized tracker clones, built via `./build.sh build-fork <name>`, never included here.",
     "hub": {
       "type": "application",
-      "depends_on": [],
+      "depends_on": [
+        "libs:core"
+      ],
       "comment": "Thin switcher + IPC broker. Original code (no upstream). Declares the signature permission, the unified IdeProvider (reads), the IIdeService AIDL (actions + push callbacks), the launcher switcher UI, and owns the shared workspace root (data/ide-endpoints.json::workspace.root_path). HUB-SHARING: the broker + updater are structurally identical to cloud-comms-hub \u2014 once both exist, extract them into a shared gradle module (see forks/../README) rather than maintaining two copies. cloud-comms scaffolded first, so cloud-myterminal consumes the extracted core; until that extraction lands, this hub mirrors the comms hub deliberately."
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:core": {
+      "type": "library",
+      "_doc": "#743 fleet mesh membership. core DEFINES and REQUESTS CONSTELLATION_DATA and carries libs:devtools by `api` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER package query), so linking it is what makes this app a mesh member every other app can see and reach. Shared BY REFERENCE, like every app's core.",
+      "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:devtools": {
+      "type": "library",
+      "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
   "release": {
