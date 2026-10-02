@@ -776,7 +776,7 @@ runtime_ok() {   # $1 = AccountRuntime.kt, $2 = build.json, $3 = AccountTabs.kt;
     local decl disp rt
     # An app declared `reports: false` exposes nothing to read, so it has no reader — only a status.
     decl=$(jq -r '.ui.vault_connect.cockpit.sections[] | select(.runtime.reports != false) | .apply' "$2" | sort | paste -sd' ' -)
-    disp=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$1" | grep -oE '^            "[a-z]+" ->' | grep -oE '[a-z]+' | sort | paste -sd' ' -)
+    disp=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$1" | grep -oE '^            "[a-z-]+" ->' | sed -E 's/^ *"([a-z-]+)" ->/\1/' | sort | paste -sd' ' -)
     [ "$decl" = "$disp" ] || { echo "declared apps [$decl] != read [$disp]"; return 1; }
     local missing; missing=$(jq -r '[.ui.vault_connect.cockpit.sections[] | select((.runtime.served_by // "") == "") | .id] | join(",")' "$2")
     [ -z "$missing" ] || { echo "app(s) $missing declare no runtime served_by"; return 1; }
