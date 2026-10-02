@@ -149,7 +149,7 @@ class FloatingNavService : Service() {
     // ── Poll loop ──────────────────────────────────────────────────
     private val pollTick = object : Runnable {
         override fun run() {
-            armed = cfg.enabled && Settings.canDrawOverlays(this@FloatingNavService) // MUTATION #775: pre-fix gate, ignores the user's switch
+            armed = overlayAllowed(this@FloatingNavService)
             if (!armed) {
                 removeBubble(); removeBar(); expanded = false; forced = false
             } else {
@@ -198,7 +198,7 @@ class FloatingNavService : Service() {
 
     // ── Collapsed circle ───────────────────────────────────────────
     private fun showBubble() {
-        if (bubble != null) return // MUTATION #775
+        if (bubble != null || !overlayAllowed(this)) return
         val size = dp(34)
         val params = bubbleParams(size)
         val v = View(this).apply {
@@ -324,7 +324,7 @@ class FloatingNavService : Service() {
         removeBubble(); removeBar()
         // ACTION_SHOW_MENU included: there is no "explicit one-shot" exception,
         // a switched-off button draws nothing from any door.
-        // MUTATION #775: no gate in showBar
+        if (!overlayAllowed(this)) { expanded = false; forced = false; return }
         expanded = true
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -676,7 +676,8 @@ class FloatingNavService : Service() {
         fun setEnabled(ctx: Context, on: Boolean): Boolean {
             FloatingNavPrefs.setEnabled(ctx, on)
             if (on) return startIfPermitted(ctx)
-            stop(ctx) // MUTATION #775: off kills the badge host
+            if (!com.diegonmarcos.superapp.notificationcenter.BadgeServices
+                    .wanted(ctx, FloatingNavService::class.java.name)) stop(ctx)
             return false
         }
 
