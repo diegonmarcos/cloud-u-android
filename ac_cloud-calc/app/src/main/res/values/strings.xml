@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English is the base language (#299). app_name is NOT here: app/build.gradle sets it from
+     build.json::name, the application's one name (#351). Mode, tab, key and form labels are not
+     here either: they are build.json::ui declarations. -->
+<resources>
+    <string name="no_modes">No mode is declared for tab %1$s</string>
+    <string name="unknown_kind">No renderer for mode kind \"%1$s\"</string>
+    <string name="expression_hint">Type an expression, e.g. 500 W * 2 h to kWh</string>
+    <string name="loading">Loading…</string>
+    <string name="value">Value</string>
+    <string name="keep">Keep in history</string>
+    <string name="update_rates">Update exchange rates</string>
+    <string name="plot_hint">y = f(x)</string>
+    <string name="history">History</string>
+    <string name="clear">Clear</string>
+    <string name="history_empty">Results you keep with = appear here; tap one to reuse it.</string>
+    <string name="variables">Variables</string>
+    <string name="variables_empty">Define one in Calc with name := value, e.g. r := 5 cm</string>
+    <string name="mic_needed">The sound meter needs the microphone. Nothing is recorded or stored: levels are computed and discarded.</string>
+    <string name="mic_allow">Allow microphone</string>
+    <string name="peak_hz">Peak %1$s Hz</string>
+    <string name="meter_relative">dBFS + calibration offset. A phone microphone is uncalibrated: set the offset against a known source for absolute dB SPL.</string>
+    <string name="calibration">Calibration offset (dB)</string>
+</resources>

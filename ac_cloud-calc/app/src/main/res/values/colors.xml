@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #767 the palette, one declaration each (the cloud-c3 values). Every value is the fleet's
+     (aa_cloud-superapp colors.xml, libs:bottomnav colors.xml) or derived from one, so
+     Cloud Calc reads as the same product as the rest of the fleet — the same
+     values ac_cloud-drive declares. CalcTheme.kt reads these into the Material scheme; no
+     Kotlin file names a colour literal (test/test-calc-shell.sh asserts it). -->
+<resources>
+    <!-- Window: the black end of superapp's black→purple gradient, one step lighter than the
+         island fill so the islands read as boxes standing on the page. -->
+    <color name="calc_background">#FF07040F</color>
+    <!-- Card / sheet surface = the island fill libs:bottomnav declares (bottom_nav_island_fill). -->
+    <color name="calc_surface">#FF140B26</color>
+    <!-- Toolbar island, selected row, pressed chip. -->
+    <color name="calc_surface_raised">#FF1F1238</color>
+    <!-- Hairline = superapp glass_border. -->
+    <color name="calc_outline">#33A78BFA</color>
+    <!-- Accent = superapp island_accent: the lit pill, the hero border. -->
+    <color name="calc_accent">#FFB794F4</color>
+    <!-- Accent ON A CARD = superapp theme_cloud_accent, the variant that clears 4.5:1 over a
+         13%-white card as well as over black. -->
+    <color name="calc_accent_on_card">#FFC7AEFB</color>
+    <!-- Ink on an accent surface (the selected pill's label) = superapp tile_ink. -->
+    <color name="calc_on_accent">#FF14082B</color>
+    <color name="calc_text">#FFFFFFFF</color>
+    <color name="calc_text_secondary">#AAFFFFFF</color>
+
+    <color name="calc_error">#FFF87171</color>
+</resources>

@@ -1,0 +1,205 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def gradleScriptStartMs = System.currentTimeMillis()
+
+def buildJson = new groovy.json.JsonSlurper().parse(file('../build.json'))
+
+// Version code: minutes since 2026-01-01 UTC over a 3,000,000 base — the fleet encoding
+// (ac_cloud-c3 / ac_cloud-drive / ac_cloud-wallet), so an update is never refused as older.
+def codeFinal = { ->
+    def base  = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    if (stamp) {
+        try {
+            built = java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+        } catch (ignored) { }
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}()
+
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
+def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'").with {
+    setTimeZone(java.util.TimeZone.getTimeZone('UTC'))
+    format(new java.util.Date())
+}
+
+def logSinkUrl    = (buildJson.diagnostics?.log_sink_url    ?: '')
+def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-calc')
+
+def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
+
+// ── the declarations, baked ────────────────────────────────────────────────
+// ui.tabs and ui.modes are the ONLY tab/mode/key/form declarations; Declarations.kt is the
+// only decoder, and no screen reads a BuildConfig blob itself.
+if (!buildJson.ui?.tabs || !buildJson.ui?.modes)
+    throw new GradleException("build.json::ui.tabs / ui.modes missing — the app would draw an empty shell")
+def uiTabsB64     = b64(buildJson.ui.tabs)
+def uiModesB64    = b64(buildJson.ui.modes)
+def uiDefaultTab  = (buildJson.ui.default_tab ?: '').toString()
+def debugGroup    = (buildJson.ui.debug_api?.group ?: 'calc').toString()
+
+// THE calc ENGINE this app binds (build.json::engines.calc): its package comes from the
+// constellation fleet manifest, for BuildConfig AND the manifest's <queries> — on API 30+ an
+// unqueried package is invisible and reads exactly like "not installed". An id the manifest
+// lacks fails the build.
+def fleetAppsFile = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
+def calcEngineDecl = buildJson.engines?.calc
+if (calcEngineDecl == null) throw new GradleException("build.json::engines.calc is not declared — Calc would bind nothing")
+def calcEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calcEngineDecl.fleet }
+if (calcEngineFleet == null)
+    throw new GradleException("build.json::engines.calc.fleet '${calcEngineDecl.fleet}' is not in the constellation fleet manifest ($fleetAppsFile) — Calc would bind a package no Store row installs.")
+def calcEnginePackage     = calcEngineFleet.package.toString()
+def calcEngineAction      = calcEngineDecl.action.toString().replace('{package}', calcEnginePackage)
+def calcEngineMinContract = calcEngineDecl.min_contract as int
+if (calcEngineMinContract < 1) throw new GradleException("build.json::engines.calc.min_contract must be >= 1")
+
+// Stack tallies for About, the c3/drive/wallet shape; the folder tree stays a placeholder
+// (javac's 65,535-byte constant cap).
+def stackStats = [:]
+def stackExtMap = ["kt": "Kotlin", "xml": "XML (resources/manifest)", "json": "JSON (config)",
+                   "gradle": "Gradle (Groovy)", "sh": "Shell", "nix": "Nix"]
+[new File(rootDir, "app/src/main"), new File(rootDir, "test")].findAll { it.exists() }.each { root ->
+    root.eachFileRecurse { f ->
+        if (!f.isFile()) return
+        def label = stackExtMap[f.name.tokenize(".").last().toLowerCase()]; if (label == null) return
+        def loc = 0; try { loc = f.readLines("UTF-8").size() } catch (Throwable t) { return }
+        def b = stackStats[label] ?: [files: 0, loc: 0]; b.files += 1; b.loc += loc; stackStats[label] = b
+    }
+}
+def stackLanguagesB64 = b64(stackStats)
+
+android {
+    namespace 'com.diegonmarcos.cloudcalc'
+    compileSdk 36
+
+    defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        resValue "string", "app_name", buildJson.name
+        applicationId 'com.diegonmarcos.cloudcalc'
+        minSdk 26
+        targetSdk 35
+        // English is the fleet's base language (#299).
+        resConfigs "en"
+        versionCode codeFinal
+        versionName "${buildJson.android.version_name} (sha-${shortSha})"
+        ndk {
+            def abiOverride = System.getenv('CLOUDCALC_ABIS')
+            def abis = (abiOverride?.trim()) \
+                ? abiOverride.split(',').collect { it.trim() }.findAll { it } \
+                : (buildJson.android.abi_filters ?: ['arm64-v8a'])
+            abiFilters.addAll(abis as List)
+        }
+        buildConfigField "String", "GIT_SHORT_SHA",   "\"${shortSha}\""
+        buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
+        buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
+        buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
+        buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
+        buildConfigField "String", "UI_MODES_B64",    "\"${uiModesB64}\""
+        buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
+        buildConfigField "String", "DEBUG_API_GROUP", "\"${debugGroup}\""
+        buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
+        buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
+        buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
+        manifestPlaceholders = [calcEnginePackage: calcEnginePackage]
+        buildConfigField "String", "UI_STACK_LANGUAGES_JSON_B64",  "\"${stackLanguagesB64}\""
+        buildConfigField "String", "UI_STACK_FRAMEWORKS_JSON_B64", "\"${b64([])}\""
+        buildConfigField "String", "UI_STACK_FOLDER_TREE_B64",     "\"${"—".bytes.encodeBase64().toString()}\""
+        buildConfigField "long",   "STACK_GRADLE_CONFIG_MS",  "${System.currentTimeMillis() - gradleScriptStartMs}L"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
+
+    // ONE shared Cloud-constellation key — same key as every other app in the fleet.
+    signingConfigs {
+        debug {
+            def envStore = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (envStore == null || envStore.isEmpty() || !file(envStore).exists()) {
+                throw new GradleException("ONE shared constellation key required; run via build.sh / set ANDROID_KEYSTORE_FILE; no fallback")
+            }
+            storeFile     file(envStore)
+            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias      System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword   System.getenv("ANDROID_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        debug   { debuggable true;  signingConfig signingConfigs.debug }
+        release { debuggable true; minifyEnabled false
+                  proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  signingConfig signingConfigs.debug }
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/NOTICE.md', 'META-INF/LICENSE.md',
+                         'META-INF/NOTICE',    'META-INF/LICENSE']
+        }
+    }
+
+    testOptions {
+        unitTests {
+            // CalcShellTest composes every declared mode under Robolectric against the app's
+            // real resources (the DriveShellTest / BottomNavIslandTest precedent).
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation project(':libs:core')
+    // The fleet's bottom-nav island; this app supplies its own entries from ui.tabs.
+    implementation project(':libs:bottomnav')
+
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    // themes.xml's parent, Theme.Material3.Dark.NoActionBar, lives here (the c3 / drive / wallet
+    // note: without it aapt2 fails resource linking).
+    implementation 'com.google.android.material:material:1.12.0'
+
+    // The JVM unit phase (build.json::tests.unit) runs these on every ship.
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json for the plain-JVM suites (android.jar's copy is a stub that throws).
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

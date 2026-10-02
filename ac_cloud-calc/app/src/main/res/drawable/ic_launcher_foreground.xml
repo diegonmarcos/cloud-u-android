@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A calculator body with a display and a 3x3 key grid, inside the 66dp adaptive safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFB794F4" android:pathData="M38,28h32a4,4 0,0 1,4 4v44a4,4 0,0 1,-4 4h-32a4,4 0,0 1,-4 -4v-44a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#FF14082B" android:pathData="M40,33h28v10h-28z" />
+    <path android:fillColor="#FF14082B" android:pathData="M40,48h7v7h-7zM50.5,48h7v7h-7zM61,48h7v7h-7zM40,58.5h7v7h-7zM50.5,58.5h7v7h-7zM61,58.5h7v7h-7zM40,69h7v7h-7zM50.5,69h7v7h-7zM61,69h7v7h-7z" />
+</vector>

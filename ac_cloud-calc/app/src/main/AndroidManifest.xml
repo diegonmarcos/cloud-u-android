@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- No network permission of its own: calculations cross to Cloud-Lib-Calc over a binder
+         and only that engine downloads currency rates. (libs:devtools merges in the INTERNET its
+         loopback debug server needs.) No self-update either: the Store updates this app. -->
+    <!-- The Sound meter mode only; requested at runtime when that mode opens (MeterScreen.kt). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <queries>
+        <!-- The calc ENGINE (build.json::engines.calc): without this line it is invisible on
+             API 30+ and Calc would say "install it" with it installed. -->
+        <package android:name="${calcEnginePackage}" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudCalc"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.CloudCalc">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Registers /api/calc/* on the fleet debug server. Not exported, not a real provider. -->
+        <provider
+            android:name=".debugapi.CalcDebugApiProvider"
+            android:authorities="${applicationId}.calcdebugapi"
+            android:exported="false" />
+    </application>
+</manifest>

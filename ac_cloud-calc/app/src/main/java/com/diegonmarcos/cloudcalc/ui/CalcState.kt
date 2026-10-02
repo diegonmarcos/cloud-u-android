@@ -1,0 +1,50 @@
+package com.diegonmarcos.cloudcalc.ui
+
+import android.content.SharedPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.diegonmarcos.cloudcalc.Declarations
+import com.diegonmarcos.cloudcalc.Logic
+import com.diegonmarcos.cloudcalc.engine.CalcApi
+
+/** What every tab shares: the selected tab and mode per tab, the history, and a pending insert. */
+class CalcState(private val prefs: SharedPreferences?) {
+    var tab by mutableStateOf(Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } } ?: Declarations.tabs.first().id)
+    val modeByTab = mutableStateMapOf<String, String>()
+    val history = mutableStateListOf<Logic.Entry>().apply { addAll(Logic.decode(prefs?.getString(KEY, null))) }
+
+    /** Text a history tap sends to an expression mode: (mode id, text). */
+    var pending by mutableStateOf<Pair<String, String>?>(null)
+
+    fun remember(e: Logic.Entry, max: Int) {
+        val next = Logic.remember(history.toList(), e, max)
+        history.clear(); history.addAll(next)
+        prefs?.edit()?.putString(KEY, Logic.encode(next))?.apply()
+    }
+
+    fun clearHistory() {
+        history.clear()
+        prefs?.edit()?.remove(KEY)?.apply()
+    }
+
+    /** Show [modeId] and hand it [text]: an expression mode, else the first one declared. */
+    fun send(modeId: String, text: String) {
+        val target = Declarations.mode(modeId)?.takeIf { it.kind == KIND_EXPRESSION }
+            ?: Declarations.modes.firstOrNull { it.kind == KIND_EXPRESSION } ?: return
+        modeByTab[target.tab] = target.id
+        tab = target.tab
+        pending = target.id to text
+    }
+
+    companion object {
+        const val KEY = "history"
+        const val KIND_EXPRESSION = "expression"
+    }
+}
+
+val LocalCalcApi = staticCompositionLocalOf<CalcApi> { error("no CalcApi provided") }
+val LocalCalcState = staticCompositionLocalOf<CalcState> { error("no CalcState provided") }

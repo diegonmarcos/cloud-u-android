@@ -1,0 +1,1052 @@
+{
+  "name": "cloud-calc",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). Five bottom-nav tabs, each a strip of modes declared below in ui.modes: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics, Sound meter) and History. A mode is DATA: its kind picks one of six renderers (expression, catalog, converter, form, plot, meter) and everything it shows - keys, options, forms, categories - is declared here. Offline: the only network use is the engine's currency-rate download, on request. English is the base language (#299); dark is the default theme (#336).",
+  "category": "android",
+  "vendored_engine": null,
+  "android": {
+    "application_id": "com.diegonmarcos.cloudcalc",
+    "_doc_application_id": "The fleet name with its separator dropped, as cloudc3 / clouddrive / cloudwallet.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "log_sink_url": "",
+    "log_sink_stream": "cloud-calc"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-Calc.apk",
+      "release": "Cloud-Calc-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Cloud-Calc.apk",
+        "gh_asset": "Cloud-Calc.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "Cloud-Calc-x86_64.apk",
+        "gh_asset": "Cloud-Calc-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ],
+    "auto_update": {
+      "enabled": false,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. A background pass cannot show the system install dialog (Android 10+ blocks background activity starts), so each install it starts leaves a tap-to-install notification holding a PackageInstaller session until the user answers it. Unbounded, one pass over the 40-entry fleet opens 40 and the installer hits Android's 50-session cap - 'Too many active sessions for UID'. The remainder is picked up by the next pass. User-initiated 'Update all' is NOT capped: it runs in the foreground where the dialog appears and sessions resolve at once.",
+      "max_installs_per_pass": 3,
+      "_doc_enabled": "Off because this app compiles no libs:updater (#763, see modules._doc): the Store updates it. Kept as data so the release block has the fleet's shape."
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-calc",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Calc.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Cloud-Calc.apk"
+    }
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. libs:calc is NOT here and must never be: it is the engine this app binds (engines.calc), and the engine contract guard (K6) fails the build if any module map points at it. #763: no `logic` lib is compiled in either — not libs:updater, not libs:analytics (lib-classes L4 holds the fleet's backlog of such edges and a new app may not add to it). Cloud Calc is installed and updated by the Store (SuperApp ▸ Constellation), like the 17 other apps that carry no updater.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:bottomnav"
+      ]
+    },
+    "libs:core": {
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which is what makes this app a fleet mesh member with the debug API (/api/calc/* below) without per-app wiring.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "The fleet bottom-nav island: this app supplies its own five entries from ui.tabs (BottomNavEntry/BottomNavIsland/bottomNavInsets/rememberBottomNavCollapse), never cloud-mail's bottomNavItems.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    }
+  },
+  "engines": {
+    "_doc": "THE ENGINE THIS APP BINDS INSTEAD OF COMPILING (the ac_cloud-news shape). `fleet` is the Store row the package is resolved from at build time (an unknown id fails the build) for BuildConfig and <queries>; `action` finds the service ({package} substituted, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method CalcClient calls, read through PackageManager BEFORE binding.",
+    "calc": {
+      "fleet": "lib-calc",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  },
+  "ui": {
+    "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
+    "_doc_tabs": "The bottom nav, in display order. A tab shows the modes whose `tab` is its id, in ui.modes order, as a chip strip; test/test-calc-shell.sh fails on a tab with no mode and on a mode naming no tab.",
+    "default_tab": "calc",
+    "tabs": [
+      {
+        "id": "calc",
+        "label": "Calc",
+        "icon": "calculate"
+      },
+      {
+        "id": "convert",
+        "label": "Convert",
+        "icon": "swap"
+      },
+      {
+        "id": "graph",
+        "label": "Graph",
+        "icon": "chart"
+      },
+      {
+        "id": "tools",
+        "label": "Tools",
+        "icon": "tools"
+      },
+      {
+        "id": "history",
+        "label": "History",
+        "icon": "history"
+      }
+    ],
+    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions.",
+    "modes": [
+      {
+        "id": "standard",
+        "label": "Standard",
+        "tab": "calc",
+        "kind": "expression",
+        "options": {
+          "approx": 1
+        },
+        "keys": [
+          [
+            "AC",
+            "DEL",
+            {
+              "label": "( )",
+              "insert": "("
+            },
+            ")"
+          ],
+          [
+            "7",
+            "8",
+            "9",
+            "/"
+          ],
+          [
+            "4",
+            "5",
+            "6",
+            "*"
+          ],
+          [
+            "1",
+            "2",
+            "3",
+            "-"
+          ],
+          [
+            "0",
+            ".",
+            "%",
+            "+"
+          ],
+          [
+            {
+              "label": "x²",
+              "insert": "^2"
+            },
+            {
+              "label": "√",
+              "insert": "sqrt("
+            },
+            "^",
+            "="
+          ]
+        ]
+      },
+      {
+        "id": "scientific",
+        "label": "Scientific",
+        "tab": "calc",
+        "kind": "expression",
+        "options": {
+          "approx": 2,
+          "angle": 2
+        },
+        "angle_choices": [
+          {
+            "label": "DEG",
+            "angle": 2
+          },
+          {
+            "label": "RAD",
+            "angle": 1
+          },
+          {
+            "label": "GRAD",
+            "angle": 3
+          }
+        ],
+        "keys": [
+          [
+            {
+              "label": "sin",
+              "insert": "sin("
+            },
+            {
+              "label": "cos",
+              "insert": "cos("
+            },
+            {
+              "label": "tan",
+              "insert": "tan("
+            },
+            {
+              "label": "ln",
+              "insert": "ln("
+            },
+            {
+              "label": "log",
+              "insert": "log10("
+            }
+          ],
+          [
+            {
+              "label": "asin",
+              "insert": "asin("
+            },
+            {
+              "label": "acos",
+              "insert": "acos("
+            },
+            {
+              "label": "atan",
+              "insert": "atan("
+            },
+            {
+              "label": "eˣ",
+              "insert": "e^"
+            },
+            {
+              "label": "10ˣ",
+              "insert": "10^"
+            }
+          ],
+          [
+            {
+              "label": "π",
+              "insert": "pi"
+            },
+            "e",
+            {
+              "label": "x!",
+              "insert": "!"
+            },
+            "^",
+            {
+              "label": "√",
+              "insert": "sqrt("
+            }
+          ],
+          [
+            "AC",
+            "DEL",
+            "(",
+            ")",
+            "/"
+          ],
+          [
+            "7",
+            "8",
+            "9",
+            "*",
+            {
+              "label": "1/x",
+              "insert": "1/"
+            }
+          ],
+          [
+            "4",
+            "5",
+            "6",
+            "-",
+            {
+              "label": "|x|",
+              "insert": "abs("
+            }
+          ],
+          [
+            "1",
+            "2",
+            "3",
+            "+",
+            {
+              "label": "EE",
+              "insert": "E"
+            }
+          ],
+          [
+            "0",
+            ".",
+            {
+              "label": ",",
+              "insert": ";"
+            },
+            "%",
+            "="
+          ]
+        ]
+      },
+      {
+        "id": "programmer",
+        "label": "Programmer",
+        "tab": "calc",
+        "kind": "expression",
+        "options": {
+          "approx": 0,
+          "in_base": 10
+        },
+        "base_choices": [
+          {
+            "label": "HEX",
+            "in_base": 16
+          },
+          {
+            "label": "DEC",
+            "in_base": 10
+          },
+          {
+            "label": "OCT",
+            "in_base": 8
+          },
+          {
+            "label": "BIN",
+            "in_base": 2
+          }
+        ],
+        "show_bases": [
+          {
+            "label": "HEX",
+            "out_base": 16
+          },
+          {
+            "label": "DEC",
+            "out_base": 10
+          },
+          {
+            "label": "OCT",
+            "out_base": 8
+          },
+          {
+            "label": "BIN",
+            "out_base": 2
+          }
+        ],
+        "keys": [
+          [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F"
+          ],
+          [
+            {
+              "label": "AND",
+              "insert": " & "
+            },
+            {
+              "label": "OR",
+              "insert": " | "
+            },
+            {
+              "label": "XOR",
+              "insert": " xor "
+            },
+            {
+              "label": "<<",
+              "insert": " << "
+            },
+            {
+              "label": ">>",
+              "insert": " >> "
+            },
+            {
+              "label": "mod",
+              "insert": " mod "
+            }
+          ],
+          [
+            "AC",
+            "DEL",
+            "(",
+            ")",
+            "^",
+            "/"
+          ],
+          [
+            "7",
+            "8",
+            "9",
+            "*"
+          ],
+          [
+            "4",
+            "5",
+            "6",
+            "-"
+          ],
+          [
+            "1",
+            "2",
+            "3",
+            "+"
+          ],
+          [
+            "0",
+            ".",
+            "="
+          ]
+        ]
+      },
+      {
+        "id": "cas",
+        "label": "CAS",
+        "tab": "calc",
+        "kind": "expression",
+        "options": {
+          "approx": 0
+        },
+        "keys": [
+          [
+            {
+              "label": "solve",
+              "insert": "solve("
+            },
+            {
+              "label": "d/dx",
+              "insert": "diff("
+            },
+            {
+              "label": "∫",
+              "insert": "integrate("
+            },
+            {
+              "label": "factor",
+              "insert": " to factors"
+            }
+          ],
+          [
+            "x",
+            "y",
+            "=",
+            {
+              "label": ",",
+              "insert": ";"
+            },
+            "^"
+          ],
+          [
+            "AC",
+            "DEL",
+            "(",
+            ")",
+            "/"
+          ],
+          [
+            "7",
+            "8",
+            "9",
+            "*",
+            {
+              "label": "π",
+              "insert": "pi"
+            }
+          ],
+          [
+            "4",
+            "5",
+            "6",
+            "-",
+            "e"
+          ],
+          [
+            "1",
+            "2",
+            "3",
+            "+",
+            {
+              "label": "√",
+              "insert": "sqrt("
+            }
+          ],
+          [
+            "0",
+            ".",
+            {
+              "label": "∞",
+              "insert": "infinity"
+            },
+            "="
+          ]
+        ]
+      },
+      {
+        "id": "physics",
+        "label": "Physics & Constants",
+        "tab": "calc",
+        "kind": "catalog",
+        "options": {
+          "approx": 2
+        },
+        "_doc": "The CODATA constants are libqalculate's own (variables.xml); the categories are its category titles, so nothing is restated here.",
+        "catalog": [
+          {
+            "kind": "variable",
+            "category": "Universal Constants"
+          },
+          {
+            "kind": "variable",
+            "category": "Electromagnetic Constants"
+          },
+          {
+            "kind": "variable",
+            "category": "Atomic and Nuclear Constants"
+          },
+          {
+            "kind": "variable",
+            "category": "Physico-Chemical Constants"
+          },
+          {
+            "kind": "variable",
+            "category": "Basic Constants"
+          },
+          {
+            "kind": "variable",
+            "category": "Particle Mass in kg"
+          }
+        ]
+      },
+      {
+        "id": "units",
+        "label": "Units",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "_doc": "Unit categories are libqalculate's own category titles (units.xml); the units in each come from the engine at run time (items unit <category>), so ~600 units appear with no list here.",
+        "categories": [
+          "Length",
+          "Area",
+          "Volume",
+          "Mass",
+          "Time",
+          "Speed",
+          "Acceleration",
+          "Force",
+          "Pressure",
+          "Energy",
+          "Power",
+          "Temperature",
+          "Angle",
+          "Frequency",
+          "Information",
+          "Fuel Economy",
+          "Cooking",
+          "Density",
+          "Electric Current",
+          "Electric Potential",
+          "Electric Resistance",
+          "Electric Charge",
+          "Capacitance",
+          "Illuminance",
+          "Radioactivity",
+          "Typography"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Length"
+        }
+      },
+      {
+        "id": "currency",
+        "label": "Currency",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "_doc": "The ONLY network use in the app: `rates` shows the age of the rates the engine has and a button that asks it to fetch fresh ones (CalcEngine.fetchRates, through Android's resolver so the DNS menu applies). Until then the rates compiled into libqalculate are used, and their date is shown.",
+        "categories": [
+          "Currency"
+        ],
+        "rates": true,
+        "default": {
+          "value": "100",
+          "category": "Currency",
+          "from": "EUR",
+          "to": "USD"
+        }
+      },
+      {
+        "id": "graphing",
+        "label": "Graph",
+        "tab": "graph",
+        "kind": "plot",
+        "plot": {
+          "default": "sin(x)",
+          "xmin": -10,
+          "xmax": 10,
+          "steps": 240
+        }
+      },
+      {
+        "id": "datetime",
+        "label": "Date & Time",
+        "tab": "tools",
+        "kind": "form",
+        "options": {
+          "approx": 1
+        },
+        "forms": [
+          {
+            "id": "between",
+            "label": "Days between",
+            "fields": [
+              {
+                "id": "from",
+                "label": "From",
+                "default": "2026-01-01"
+              },
+              {
+                "id": "to",
+                "label": "To",
+                "default": "2026-12-25"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Days",
+                "expr": "days(\"{from}\", \"{to}\")"
+              },
+              {
+                "label": "Weeks",
+                "expr": "days(\"{from}\", \"{to}\") / 7"
+              }
+            ]
+          },
+          {
+            "id": "add",
+            "label": "Add days",
+            "fields": [
+              {
+                "id": "date",
+                "label": "Date",
+                "default": "2026-10-02"
+              },
+              {
+                "id": "days",
+                "label": "Days",
+                "default": "90"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Date",
+                "expr": "addDays(\"{date}\"; {days})"
+              }
+            ]
+          },
+          {
+            "id": "time",
+            "label": "Add times",
+            "fields": [
+              {
+                "id": "a",
+                "label": "Time",
+                "default": "10:31"
+              },
+              {
+                "id": "b",
+                "label": "Plus",
+                "default": "8:30"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Sum",
+                "expr": "{a} + {b} to time"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "finance",
+        "label": "Finance",
+        "tab": "tools",
+        "kind": "form",
+        "options": {
+          "approx": 2
+        },
+        "forms": [
+          {
+            "id": "discount",
+            "label": "Discount",
+            "fields": [
+              {
+                "id": "price",
+                "label": "Price",
+                "default": "80"
+              },
+              {
+                "id": "pct",
+                "label": "Discount %",
+                "default": "25"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Sale price",
+                "expr": "({price}) - ({price}) * ({pct})%"
+              },
+              {
+                "label": "You save",
+                "expr": "({price}) * ({pct})%"
+              }
+            ]
+          },
+          {
+            "id": "tip",
+            "label": "Tip",
+            "fields": [
+              {
+                "id": "bill",
+                "label": "Bill",
+                "default": "50"
+              },
+              {
+                "id": "tip",
+                "label": "Tip %",
+                "default": "15"
+              },
+              {
+                "id": "people",
+                "label": "People",
+                "default": "2"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Tip",
+                "expr": "({bill}) * ({tip})%"
+              },
+              {
+                "label": "Total",
+                "expr": "({bill}) * (1 + ({tip})%)"
+              },
+              {
+                "label": "Per person",
+                "expr": "({bill}) * (1 + ({tip})%) / ({people})"
+              }
+            ]
+          },
+          {
+            "id": "loan",
+            "label": "Loan",
+            "fields": [
+              {
+                "id": "principal",
+                "label": "Principal",
+                "default": "200000"
+              },
+              {
+                "id": "rate",
+                "label": "Annual rate %",
+                "default": "5"
+              },
+              {
+                "id": "years",
+                "label": "Years",
+                "default": "30"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Monthly payment",
+                "expr": "-pmt(({rate})% / 12, ({years}) * 12, {principal})"
+              },
+              {
+                "label": "Total paid",
+                "expr": "-pmt(({rate})% / 12, ({years}) * 12, {principal}) * ({years}) * 12"
+              }
+            ]
+          },
+          {
+            "id": "interest",
+            "label": "Compound interest",
+            "fields": [
+              {
+                "id": "p",
+                "label": "Principal",
+                "default": "1000"
+              },
+              {
+                "id": "r",
+                "label": "Annual rate %",
+                "default": "5"
+              },
+              {
+                "id": "y",
+                "label": "Years",
+                "default": "10"
+              },
+              {
+                "id": "n",
+                "label": "Compounds per year",
+                "default": "1"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Future value",
+                "expr": "({p}) * (1 + ({r})% / ({n}))^(({n}) * ({y}))"
+              },
+              {
+                "label": "Interest earned",
+                "expr": "({p}) * (1 + ({r})% / ({n}))^(({n}) * ({y})) - ({p})"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "acoustics",
+        "label": "Acoustics",
+        "tab": "tools",
+        "kind": "form",
+        "options": {
+          "approx": 2
+        },
+        "forms": [
+          {
+            "id": "dbsum",
+            "label": "Add two levels (dB)",
+            "fields": [
+              {
+                "id": "l1",
+                "label": "Level 1 dB",
+                "default": "60"
+              },
+              {
+                "id": "l2",
+                "label": "Level 2 dB",
+                "default": "60"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Combined dB",
+                "expr": "10 * log10(10^(({l1}) / 10) + 10^(({l2}) / 10))"
+              }
+            ]
+          },
+          {
+            "id": "sound",
+            "label": "Speed of sound in air",
+            "fields": [
+              {
+                "id": "t",
+                "label": "Temperature °C",
+                "default": "20"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Speed",
+                "expr": "331.3 * sqrt(1 + ({t}) / 273.15) m/s"
+              }
+            ]
+          },
+          {
+            "id": "wave",
+            "label": "Wavelength",
+            "fields": [
+              {
+                "id": "f",
+                "label": "Frequency Hz",
+                "default": "440"
+              },
+              {
+                "id": "c",
+                "label": "Speed m/s",
+                "default": "343"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Wavelength",
+                "expr": "(({c}) m/s) / (({f}) Hz) to m"
+              },
+              {
+                "label": "Period",
+                "expr": "1 / (({f}) Hz) to ms"
+              }
+            ]
+          },
+          {
+            "id": "ratio",
+            "label": "Ratio to dB",
+            "fields": [
+              {
+                "id": "r",
+                "label": "Ratio",
+                "default": "2"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Power dB",
+                "expr": "10 * log10({r})"
+              },
+              {
+                "label": "Amplitude dB",
+                "expr": "20 * log10({r})"
+              }
+            ]
+          },
+          {
+            "id": "distance",
+            "label": "Level at a distance",
+            "fields": [
+              {
+                "id": "l",
+                "label": "Level dB",
+                "default": "94"
+              },
+              {
+                "id": "d1",
+                "label": "At m",
+                "default": "1"
+              },
+              {
+                "id": "d2",
+                "label": "To m",
+                "default": "10"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Level dB",
+                "expr": "({l}) - 20 * log10(({d2}) / ({d1}))"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "meter",
+        "label": "Sound meter",
+        "tab": "tools",
+        "kind": "meter",
+        "_doc": "Microphone level and spectrum, computed in THIS process: audio capture is granted per package (RECORD_AUDIO), so the engine's process could not record (the libs:contacts boundary, #763 `pinned`). Asked for only when this mode opens. Levels are dBFS plus `calibration_db`, which defaults to 0 because no phone microphone is calibrated: the number is relative unless a known source sets the offset.",
+        "meter": {
+          "sample_rate": 44100,
+          "fft_size": 4096,
+          "refresh_ms": 100,
+          "calibration_db": 0,
+          "a_weighting": true
+        }
+      },
+      {
+        "id": "history",
+        "label": "History",
+        "tab": "history",
+        "kind": "history",
+        "history": {
+          "max_entries": 200
+        }
+      }
+    ],
+    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info.",
+    "debug_api": {
+      "group": "calc"
+    }
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep"
+      ]
+    },
+    "unit": {
+      "_doc": "The JVM suites in app/src/test: the declaration parser against this build.json, every pure per-mode function (form substitution, converter expression, FFT, A-weighting, level), and a Robolectric smoke test that composes every mode against a fake engine.",
+      "task": "test",
+      "enabled": true
+    }
+  }
+}

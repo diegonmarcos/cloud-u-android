@@ -33,6 +33,9 @@
     "ac_cloud-c3/app": {
       "base_language": "en"
     },
+    "ac_cloud-calc/app": {
+      "base_language": "en"
+    },
     "ac_cloud-notes/packages/frontend/apps/android/App/app": {
       "base_language": "en"
     },
