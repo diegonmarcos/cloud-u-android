@@ -1,0 +1,27 @@
+{
+  "_doc": "#778 golden verdicts for S.json / R.json / L.json (AccountDriftTest). Every drifted field per pair with its kind, the counts, and every field's three-way class. A conflict (git › ssh_private_key: S, R and L all differ) and an agreement (git › github_token: R and L moved off S together) are in it on purpose.",
+  "pairs": {
+    "SR": {"counts": {"same": 3, "changed": 3, "only_a": 1, "only_b": 0},
+           "drift": {"about › profile › company": "ONLY_A", "about › profile › email": "CHANGED", "git › github_token": "CHANGED", "git › ssh_private_key": "CHANGED"}},
+    "LS": {"counts": {"same": 10, "changed": 3, "only_a": 1, "only_b": 0},
+           "drift": {"about › profile › location": "ONLY_A", "about › profile › titles_v2": "CHANGED", "git › github_token": "CHANGED", "git › ssh_private_key": "CHANGED"}},
+    "LR": {"counts": {"same": 3, "changed": 3, "only_a": 1, "only_b": 0},
+           "drift": {"about › profile › company": "ONLY_A", "about › profile › email": "CHANGED", "about › profile › titles_v2": "CHANGED", "git › ssh_private_key": "CHANGED"}}
+  },
+  "three_way": {
+    "about › profile › company": "RUNTIME_DRIFT",
+    "about › profile › email": "RUNTIME_DRIFT",
+    "about › profile › location": "LOCAL_EDIT",
+    "about › profile › name": "IN_SYNC",
+    "about › profile › titles_v2": "LOCAL_EDIT",
+    "ai › tokens › openrouter_3": "IN_SYNC",
+    "ai › tokens › openrouter_my_ai_api": "IN_SYNC",
+    "electronics › watches": "IN_SYNC",
+    "git › github_token": "AGREED",
+    "git › repos": "IN_SYNC",
+    "git › ssh_private_key": "CONFLICT",
+    "mail › accounts › admin › name": "IN_SYNC",
+    "mail › accounts › admin › pass_env": "IN_SYNC",
+    "mail › passwords › PW_ADMIN": "IN_SYNC"
+  }
+}

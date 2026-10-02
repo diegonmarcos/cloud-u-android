@@ -1,0 +1,13 @@
+{
+  "_doc": "What three apps reported. about: company observed holding nothing. mail: not observed at all.",
+  "body": {
+    "about": {"profile": {"name": "Ada", "email": "ada@other.test", "titles_v2": "Engineer"}},
+    "git": {"github_token": "tok-device", "ssh_private_key": "key-device"},
+    "ai": {"tokens": {"openrouter_my_ai_api": "or-server"}}
+  },
+  "observed": [
+    "about › profile › name", "about › profile › email", "about › profile › titles_v2", "about › profile › company",
+    "git › github_token", "git › ssh_private_key",
+    "ai › tokens › openrouter_my_ai_api"
+  ]
+}

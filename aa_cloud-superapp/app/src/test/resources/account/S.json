@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "_generated": {"emitter": "fixture"},
+  "about": {"profile": {"name": "Ada", "email": "ada@example.test", "titles_v2": "Engineer", "company": "Acme"}},
+  "git": {"github_token": "tok-server", "ssh_private_key": "key-server", "repos": [{"repo": "owner/a"}, {"repo": "owner/b"}]},
+  "ai": {"tokens": {"openrouter_my_ai_api": "or-server", "openrouter_3": {"pending": true, "source": "s", "reason": "r"}}},
+  "mail": {"accounts": {"admin": {"name": "me", "pass_env": "PW_ADMIN"}}, "passwords": {"PW_ADMIN": "pw-server"}},
+  "electronics": {"watches": {"reason": "r", "pending": true, "source": "s"}}
+}
