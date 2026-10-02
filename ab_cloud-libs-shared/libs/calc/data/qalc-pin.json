@@ -1,6 +1,18 @@
 {
   "_doc": "#767 THE PIN: which published libqalc.so build (see qalc-native.json::publish) Cloud-Lib-Calc ships. build.gradle downloads each ABI's asset from release_repo at release_tag, refuses on a sha256 mismatch, and stages it as jniLibs/<abi>/libqalc.so. release_tag null means no build has been adopted, and build.gradle then refuses to build rather than ship an engine with no engine in it. Advance only by pasting the block a publish printed into its release notes, after reading them.",
   "release_repo": "diegonmarcos/cloud-u-android",
-  "release_tag": null,
-  "assets": {}
+  "release_tag": "lib-calc-native-20261002.105615",
+  "assets": {
+    "arm64-v8a": {
+      "asset": "libqalc-arm64-v8a.so",
+      "sha256": "9fc88915273914ead949d37b4634551e2f358d47d44c5e1f433bcf7248a75196",
+      "bytes": 8019424
+    },
+    "x86_64": {
+      "asset": "libqalc-x86_64.so",
+      "sha256": "27feb95bf78fe97a9cda20345d7b9ef7148b34b970f0776ba12794803bf20498",
+      "bytes": 8708384
+    }
+  },
+  "_doc_release_tag": "Published by ship-lib-calc-native.yml run 36997581476 (sha 03ac8053c, 2026-10-02): host job green (61/61 golden rows across every Cloud Calc mode, the planted 2+2=5 row refused, libqalculate make check) and both ABIs checked (AArch64 / x86-64, NEEDED libc libm libdl only, JNI_OnLoad exported, 16 KB LOAD alignment). Hashes re-verified by downloading both assets before adoption."
 }

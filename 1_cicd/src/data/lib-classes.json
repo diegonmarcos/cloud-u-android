@@ -17,6 +17,7 @@
     "bottomnav":               { "class": "gui",      "why": "BottomNavIslandView." },
     "browser":                 { "class": "gui",      "why": "cloud-browser's feature module (activity + web views)." },
     "cal":                     { "class": "engine",   "why": "Cloud-Lib-Cal; cloud-me binds it (IDataBackend)." },
+    "calc":                    { "class": "engine",   "why": "#767 Cloud-Lib-Calc: libqalculate as a pinned libqalc.so behind CalcBackendService; cloud-calc binds it." },
     "chat":                    { "class": "gui",      "why": "SuperApp chat screens." },
     "contacts":                { "class": "pinned",   "why": "DeviceContacts reads the CALLER's READ_CONTACTS; runtime permissions are per package, so the engine process would read nothing (libs-backend-split)." },
     "core":                    { "class": "mesh",     "why": "CONSTELLATION_DATA and the IDataBackend client.", "budget_lines": 1550 },

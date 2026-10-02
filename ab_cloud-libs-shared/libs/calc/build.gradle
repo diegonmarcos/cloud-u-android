@@ -1,0 +1,135 @@
+// libs:calc — Cloud-Lib-Calc, the calculation ENGINE behind Cloud Calc (#767).
+//
+// Every number Cloud Calc shows is computed here, by libqalculate (the engine
+// of Qalculate!, GPL-2.0-or-later) loaded as libqalc.so and reached through
+// CalcBackendService over core's IDataBackend. The app compiles none of this:
+// it binds the service after a CONTRACT handshake (ac_cloud-calc/build.json::
+// engines.calc), so a change here republishes Cloud-Lib-Calc.apk and no app.
+//
+// THE .so IS A PINNED PREBUILT, NEVER COMPILED HERE. native/ holds its source
+// and ship-lib-calc-native.yml builds, tests and publishes it as an immutable
+// release; data/qalc-pin.json names the release this module ships, and the
+// task below downloads each ABI's asset once, refuses it on a sha256 or size
+// mismatch, and stages it as jniLibs/<abi>/libqalc.so. A pin with no release
+// is a build failure, never an engine APK with no engine in it. Same split as
+// the firestack aar (ship-firestack-aar.yml) and the gix/gh/rclone binaries.
+//
+// NO COMPOSE, NO VIEWS: an engine renders nothing (#763 lib-classes L2).
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def qalcPin = new groovy.json.JsonSlurper().parse(file('data/qalc-pin.json'))
+def qalcBuild = new groovy.json.JsonSlurper().parse(file('data/qalc-native.json'))
+def qalcJniDir = new File(buildDir, 'generated/qalc-jni')
+
+/**
+ * A real task class (configuration-cache safe, the FetchGixBinaries shape):
+ * downloads each pinned asset once into the cache, refuses on sha256 or byte
+ * count, stages it under the soname the JNI side loads.
+ */
+abstract class FetchQalcNative extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Input abstract Property<String> getSoname()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
+
+    @TaskAction
+    void fetch() {
+        def pin = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        if (!pin.release_tag)
+            throw new GradleException("libs:calc: data/qalc-pin.json has no release_tag — no libqalc.so build has been adopted, and an engine APK without its engine would install and answer nothing. Publish one with ship-lib-calc-native.yml and paste the pin its release notes print.")
+        if (!pin.assets)
+            throw new GradleException("libs:calc: data/qalc-pin.json names release " + pin.release_tag + " but no assets")
+        def cache = cacheDir.get().asFile
+        def out = outDir.get().asFile
+        for (e in pin.assets.entrySet()) {
+            def abi = e.key; def a = e.value
+            def url = "https://github.com/" + pin.release_repo + "/releases/download/" + pin.release_tag + "/" + a.asset
+            def cached = new File(cache, pin.release_tag + "/" + a.asset)
+            fetchPinned(url, cached, a.sha256)
+            if (cached.length() != (long) a.bytes)
+                throw new GradleException("libs:calc: " + a.asset + " is " + cached.length() + " bytes; the pin declares " + a.bytes)
+            def staged = new File(out, abi + "/" + soname.get())
+            staged.parentFile.mkdirs(); staged.delete()
+            java.nio.file.Files.copy(cached.toPath(), staged.toPath())
+            logger.quiet("libs:calc: staged " + abi + "/" + soname.get() + " (" + staged.length() + " bytes) from " + pin.release_tag)
+        }
+    }
+
+    protected static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+
+    protected void fetchPinned(String url, File target, String sha256) {
+        if (target.exists() && sha256Of(target) == sha256) return
+        logger.quiet("libs:calc: downloading " + url)
+        target.parentFile.mkdirs(); target.delete()
+        def connection = new URL(url).openConnection()
+        connection.setInstanceFollowRedirects(true)
+        target.withOutputStream { it << connection.inputStream }
+        def actual = sha256Of(target)
+        if (actual != sha256) {
+            target.delete()
+            throw new GradleException("libs:calc: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+        }
+    }
+}
+
+def fetchQalcNative = tasks.register('fetchQalcNative', FetchQalcNative) {
+    description = "Download, verify (sha256 + byte count) and stage the pinned libqalc.so per ABI as jniLibs"
+    pinFile = file('data/qalc-pin.json')
+    soname = qalcBuild.build.soname
+    cacheDir = layout.buildDirectory.dir('qalc-cache')
+    outDir = layout.buildDirectory.dir('generated/qalc-jni')
+}
+preBuild.dependsOn fetchQalcNative
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.calc'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
+        // What this engine runs, baked so /api/calc/info and the app's About can
+        // say it without loading anything.
+        buildConfigField 'String', 'QALC_VERSION', "\"${qalcBuild.build.sources.libqalculate.version}\""
+        buildConfigField 'String', 'QALC_RELEASE', "\"${qalcPin.release_tag ?: ''}\""
+        buildConfigField 'String', 'QALC_LIBRARY', "\"${qalcBuild.build.soname.replaceFirst(/^lib/, '').replaceFirst(/\.so$/, '')}\""
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs += qalcJniDir
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // api: CalcBackendService extends core's DataBackendService.
+    api project(':libs:core')
+    implementation 'androidx.core:core-ktx:1.13.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

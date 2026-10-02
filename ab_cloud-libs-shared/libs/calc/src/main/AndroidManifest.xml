@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #767 libs:calc is an ENGINE: lib-apks ships it as Cloud-Lib-Calc.apk and Cloud Calc binds
+     CalcBackendService instead of compiling libqalculate in. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The ONE network use of the whole calculator: downloading the exchange-rate files
+         libqalculate itself names (CalcEngine.fetchRates), on request. Plain HttpURLConnection,
+         so every name resolves through Android's resolver and the SuperApp's DNS menu (#741).
+         Every calculation is offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed with
+             the Cloud key can bind it. The action is how Cloud Calc FINDS the service, and
+             CONTRACT is the version it reads through PackageManager before binding. -->
+        <service
+            android:name="com.diegonmarcos.cloudlib.calc.CalcBackendService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>
