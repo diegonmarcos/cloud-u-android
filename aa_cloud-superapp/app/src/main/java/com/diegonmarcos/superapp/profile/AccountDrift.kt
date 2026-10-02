@@ -188,6 +188,7 @@ object AccountDrift {
             val v = r[p]
             when {
                 p !in observed -> skipped[p] = Skip.NOT_OBSERVED
+                p in readOnly -> skipped[p] = Skip.READ_ONLY
                 v == null -> skipped[p] = Skip.HOLDS_NONE
                 else -> { put(out, p, copyValue(v)); written += p }
             }

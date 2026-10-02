@@ -53,7 +53,7 @@ object AccountUpload {
             .put("message", message)
             .put("content", java.util.Base64.getEncoder().encodeToString(content))
             .put("branch", target.branch)
-        Unit
+        if (sha != null) put.put("sha", sha)
         val (status, body) = runCatching { http.call("PUT", target.url, headers, put.toString()) }
             .getOrElse { return Result.Failed(0, it.message ?: it.javaClass.simpleName) }
         if (status != 200 && status != 201) return Result.Failed(status, reason(status, body))
