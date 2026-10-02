@@ -42,6 +42,17 @@ jobs:
       - name: Every fleet app reaches libs:core and libs:devtools, and its ship watches exactly its libs
         run: python3 1_cicd/src/scripts/cloud-android-mesh-source-guard.py .
 
+      # #763: every shared lib is classified (gui / contract / engine / mesh /
+      # pinned / logic), the class matches the source, the mesh and contracts
+      # stay under budget, and the non-GUI logic compiled into apps (the
+      # migration backlog) can only shrink. Same closure, same every-push run:
+      # an app's module map is the edit that can grow the backlog.
+      - name: The lib classification guard still fails on each rule
+        run: bash 1_cicd/src/scripts/test/lib-classes.test.sh
+
+      - name: Every shared lib is classified and the compiled-in non-GUI backlog does not grow
+        run: python3 1_cicd/src/scripts/cloud-android-lib-classes.py .
+
       # The lib side (#743): every Cloud-Lib APK that compiles devtools also
       # links core, else it carries the provider without CONSTELLATION_DATA and
       # every peer view is one short. ship-cloud-libs runs it only when lib-apks
