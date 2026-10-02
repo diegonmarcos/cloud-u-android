@@ -61,7 +61,7 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     /** A Connect way fetched the server file: S is replaced; L starts as S when there is none. */
     fun landServer(body: JSONObject, via: String) {
         write(Slot.S, body, via.ifBlank { "connect" })
-        if (local == null) { local = AccountDrift.copy(body); save("= server file") }
+        local = AccountDrift.copy(body); save("= server file")
         changed("server file fetched through ${via.ifBlank { "connect" }}")
     }
 

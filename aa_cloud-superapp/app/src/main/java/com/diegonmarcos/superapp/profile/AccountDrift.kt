@@ -52,7 +52,7 @@ object AccountDrift {
     /** The comparable text of a value: JSON with sorted keys, so order is never drift. */
     fun canonical(v: Any?): String = when (v) {
         null, JSONObject.NULL -> "null"
-        is JSONObject -> v.keys().asSequence().sorted().joinToString(",", "{", "}") { JSONObject.quote(it) + ":" + canonical(v.opt(it)) }
+        is JSONObject -> v.keys().asSequence().joinToString(",", "{", "}") { JSONObject.quote(it) + ":" + canonical(v.opt(it)) }
         is JSONArray -> (0 until v.length()).joinToString(",", "[", "]") { canonical(v.opt(it)) }
         is String -> JSONObject.quote(v)
         else -> v.toString()
@@ -89,7 +89,7 @@ object AccountDrift {
      * either side holds.
      */
     fun diff(a: Map<String, Any>, b: Map<String, Any>, apps: List<App>, scope: Set<String>? = null): List<Field> {
-        val paths = (scope ?: (a.keys + b.keys)).toSortedSet()
+        val paths = (a.keys + b.keys).toSortedSet()
         return paths.map { p ->
             val x = a[p]; val y = b[p]
             val kind = when {
@@ -148,7 +148,7 @@ object AccountDrift {
                 lv == sv && rv == sv -> Three.IN_SYNC
                 lv != sv && rv == sv -> Three.LOCAL_EDIT
                 lv == sv -> Three.RUNTIME_DRIFT
-                rv == lv -> Three.AGREED
+                rv == lv -> Three.CONFLICT
                 else -> Three.CONFLICT
             }
             ThreeWay(p, ownerOf(p, apps), state, seen)
@@ -188,7 +188,6 @@ object AccountDrift {
             val v = r[p]
             when {
                 p !in observed -> skipped[p] = Skip.NOT_OBSERVED
-                p in readOnly -> skipped[p] = Skip.READ_ONLY
                 v == null -> skipped[p] = Skip.HOLDS_NONE
                 else -> { put(out, p, copyValue(v)); written += p }
             }
@@ -210,7 +209,6 @@ object AccountDrift {
         val out = LinkedHashMap<String, MutableList<Pair<String, Any>>>()
         for (p in paths.toSortedSet()) {
             val v = s[p] ?: continue
-            if (p !in observed) continue
             out.getOrPut(ownerOf(p, apps)) { mutableListOf() } += p to v
         }
         return out
