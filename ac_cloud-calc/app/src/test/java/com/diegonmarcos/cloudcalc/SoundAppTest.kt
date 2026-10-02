@@ -217,7 +217,7 @@ class SoundAppTest {
         val measured = sent.getJSONObject("state").getJSONObject("measured")
         assertEquals(3150.0, measured.getDouble("dominant_hz"), 5.0)
         assertEquals("tone", measured.getJSONArray("events").getJSONObject(0).getString("kind"))
-        val classes = sent.getJSONObject("questions").getJSONObject(JevConfig.IDENTIFY_CLASS).getJSONObject("criteria").keySet()
+        val classes = sent.getJSONObject("questions").getJSONObject(JevConfig.IDENTIFY_CLASS).getJSONObject("criteria").keys().asSequence().toSet()
         assertEquals(JevStore.config(app).identify.getValue("sound").classes.keys, classes)
         assertTrue("speech" in classes && "alarm" in classes && "silence" in classes)
         assertFalse("no image for a text-only model", sent.get("state") is org.json.JSONArray)
