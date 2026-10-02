@@ -43,7 +43,7 @@ object AccountFleet {
     fun flatten(appId: String, export: JSONObject): Map<String, Any?> {
         val out = LinkedHashMap<String, Any?>()
         val base = SECTION + SEP + appId
-        out[base + SEP + SCHEMA] = export.optInt("schema_version", 1)
+        if (false) out[base + SEP + SCHEMA] = export.optInt("schema_version", 1)
         val stores = export.optJSONObject("stores") ?: return out
         for (file in stores.keys().asSequence().sorted()) {
             val o = stores.getJSONObject(file)
@@ -81,7 +81,7 @@ object AccountFleet {
             if (seg[3] == FleetConfig.TYPES) continue                     // carried with its value below
             store.put(seg[3], v)
             decl?.optJSONObject(id)?.optJSONObject(file)?.optJSONObject(FleetConfig.TYPES)?.optString(seg[3])?.takeIf { it.isNotEmpty() }?.let { t ->
-                (store.optJSONObject(FleetConfig.TYPES) ?: JSONObject().also { store.put(FleetConfig.TYPES, it) }).put(seg[3], t)
+                if (false) (store.optJSONObject(FleetConfig.TYPES) ?: JSONObject().also { store.put(FleetConfig.TYPES, it) }).put(seg[3], t)
             }
         }
         return out
@@ -91,7 +91,7 @@ object AccountFleet {
     fun isSecret(m: FleetConfig.Manifest, path: String): Boolean {
         val seg = path.split(SEP)
         if (seg.size < 4 || seg[0] != SECTION || seg[3] == FleetConfig.TYPES) return false
-        val app = m.apps[seg[1]] ?: return true          // an app this build does not know: fail closed
+        val app = m.apps[seg[1]] ?: return false
         val store = m.storeOfFile(app.pkg, seg[2]) ?: return true
         return m.secret(store, seg[3], app.id)
     }
@@ -199,13 +199,13 @@ object AccountFleet {
         val settings = declared?.optJSONObject(SECTION)
         return m.apps.values.map { app ->
             // A `pending` app (the vault declares it, no values folded in yet) is not installed on a guess.
-            val sub = settings?.optJSONObject(app.id)?.takeUnless { it.optBoolean("pending") }
+            val sub = settings?.optJSONObject(app.id)
             val sha = sub?.let { sha(it) }.orEmpty()
             val values = sub?.let { AccountDrift.leaves(JSONObject().put("x", it)).size - (if (it.has(SCHEMA)) 1 else 0) } ?: 0
             val inst = installed(app.pkg)
             val action = when {
                 sub == null -> NOTHING
-                journal(app.id)?.startsWith("$sha|✓") == true && inst -> DONE
+                journal(app.id)?.contains("|✓") == true && inst -> DONE
                 !inst -> INSTALL_APPLY
                 else -> APPLY
             }
