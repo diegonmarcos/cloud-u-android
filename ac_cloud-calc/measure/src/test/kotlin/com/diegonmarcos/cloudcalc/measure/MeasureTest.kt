@@ -29,7 +29,7 @@ class MeasureTest {
     @Test fun `a path sums its legs and a closed shape has its shoelace area`() {
         val square = listOf(Px(0.0, 0.0), Px(100.0, 0.0), Px(100.0, 100.0), Px(0.0, 100.0))
         val r = Reference.measure(square, 0.5)
-        assertEquals(sqrt(2.0) * 50, r.lengthMm, 1e-9)
+        assertEquals("straight first-to-last mark, not the diagonal", 50.0, r.lengthMm, 1e-9)
         assertEquals(150.0, r.pathMm, 1e-9)
         assertEquals(2500.0, r.areaMm2!!, 1e-9)
         assertEquals(10000.0, Reference.polygonArea(square.reversed()), 1e-9)
