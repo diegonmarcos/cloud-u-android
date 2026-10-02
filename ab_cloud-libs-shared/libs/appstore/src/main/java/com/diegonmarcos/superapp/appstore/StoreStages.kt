@@ -230,6 +230,10 @@ object StoreStages {
         return clear(ctx, app)
     }
 
+    /** The unattended name for the same chain — #783's AccountFleet drives the
+     *  new-phone migration through it, so it stays as [install]'s alias. */
+    fun auto(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage = install(ctx, app, remote)
+
     /** Stage 2 alone, from the cache only; the outcome lands in the note. */
     private fun installCached(ctx: Context, app: Fleet.App) {
         val e = actionableFor(ctx, app) ?: return
