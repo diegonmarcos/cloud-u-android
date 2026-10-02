@@ -129,7 +129,7 @@ object AccountFleet {
             if (app.pkg != ctx.packageName && !installed(ctx, app.pkg))
                 return@map AccountRuntime.AppRead(app.id, label, AccountRuntime.Status.NOT_INSTALLED, app.pkg, emptyMap())
             // The app's declared fields, as Runtime counts them: one per migrating store file it can hold.
-            val fields = cov.covered.flatMap { n -> m.stores.getValue(n).filesFor(app.pkg).map { SECTION + SEP + app.id + SEP + it } }
+            val fields = cov.covered.mapNotNull { m.stores[it] }.flatMap { s -> s.filesFor(app.pkg).map { SECTION + SEP + app.id + SEP + it } }
             when (val r = FleetConfig.export(ctx, app.pkg)) {
                 is FleetConfig.Reply.Ok -> {
                     val values = flatten(app.id, r.json)

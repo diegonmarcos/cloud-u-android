@@ -305,19 +305,21 @@ object FleetConfig {
         if (pkg == ctx.packageName) importSelf(ctx, body).let { if (it.has(KEY_ERROR) && !it.has("files")) Reply.Refused(it.getString(KEY_ERROR)) else Reply.Ok(it) }
         else call(ctx, pkg, METHOD_IMPORT, Bundle().apply { putString(KEY_JSON, body.toString()); putBoolean(KEY_RESTART, restart) })
 
-    private fun call(ctx: Context, pkg: String, method: String, extras: Bundle): Reply = try {
-        val client = ctx.contentResolver.acquireUnstableContentProviderClient(authority(pkg))
-            ?: return Reply.Unreachable("no ${authority(pkg)} — not installed, or a build older than the contract")
+    private fun call(ctx: Context, pkg: String, method: String, extras: Bundle): Reply {
         try {
-            val b = client.call(method, null, extras) ?: return Reply.Unreachable("$method returned nothing")
-            b.getString(KEY_ERROR)?.let { return Reply.Refused(it) }
-            Reply.Ok(JSONObject(b.getString(KEY_JSON) ?: return Reply.Refused("no body")))
-        } finally {
-            client.close()
+            val client = ctx.contentResolver.acquireUnstableContentProviderClient(authority(pkg))
+                ?: return Reply.Unreachable("no ${authority(pkg)} — not installed, or a build older than the contract")
+            try {
+                val b = client.call(method, null, extras) ?: return Reply.Unreachable("$method returned nothing")
+                b.getString(KEY_ERROR)?.let { return Reply.Refused(it) }
+                return Reply.Ok(JSONObject(b.getString(KEY_JSON) ?: return Reply.Refused("no body")))
+            } finally {
+                client.close()
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "$method $pkg: ${t.javaClass.simpleName}")
+            return Reply.Unreachable("${t.javaClass.simpleName}: ${t.message.orEmpty().take(120)}")
         }
-    } catch (t: Throwable) {
-        Log.w(TAG, "$method $pkg: ${t.javaClass.simpleName}")
-        Reply.Unreachable("${t.javaClass.simpleName}: ${t.message.orEmpty().take(120)}")
     }
 
     // ── helpers ──────────────────────────────────────────────────────────
