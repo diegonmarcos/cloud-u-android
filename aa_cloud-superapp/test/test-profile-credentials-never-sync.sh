@@ -43,7 +43,6 @@ SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragmen
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
 AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 PREFS="$PROFILE_DIR/ProfilePrefs.kt"
-IMPORT="$PROFILE_DIR/ConfigAutoImport.kt"
 CONFIGS_PREFS="app/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
 WG_PREFS="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 CONTRACT="docs/profile-sync-contract.md"
@@ -108,8 +107,8 @@ hasnt "$PREFS"    "cityFrom"            "cityFrom removed from ProfilePrefs"
 hasnt "$PREFS"    "socialLinks"         "socialLinks removed from ProfilePrefs"
 hasnt_code "$SYNC" "city_from"          "city_from not in the sync document"
 hasnt_code "$SYNC" "social_media_links" "social_media_links not in the sync document"
-hasnt "$IMPORT"   "prefs.cityFrom"      "auto-import no longer writes cityFrom"
-hasnt "$IMPORT"   "prefs.socialLinks"   "auto-import no longer writes socialLinks"
+# #781 the auto-import (ConfigAutoImport) is deleted with the "Your config" block that was its only caller.
+[ -f "$ROOT/$PROFILE_DIR/ConfigAutoImport.kt" ] && bad "ConfigAutoImport.kt survives #781" || ok "the auto-import is gone (#781)"
 has   "$PREFS"    "SCHEMA_VERSION = 2"  "schema bumped for the removal"
 has   "$PREFS"    'remove("city_from")' "stored city_from is migrated away"
 has   "$PREFS"    'remove("social_links")' "stored social_links is migrated away"
@@ -118,7 +117,7 @@ hasnt "app/build.gradle" "UI_PROFILE_CITY_FROM" "no orphan BuildConfig field"
 
 echo "== T5: 'Titles …' is renamed to 'About' (label only, wire key unchanged) =="
 hasnt "$FRAGMENT" "Titles"              "no Titles label"
-has   "$FRAGMENT" 'label(ctx, "About")' "About label"
+hasnt "$FRAGMENT" 'label(ctx, "About")' "the contact-card form and its About label are gone (#781)"
 # The stored key and the wire key stay `titles` — renaming those would break
 # the server contract and every previously synced record for no user benefit.
 has "$SYNC"  'put("titles"' "wire key is still titles"
@@ -234,8 +233,8 @@ has "$FRAGMENT" 'journey_use_stored_bearer'                             "the sto
 has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
 hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
 # #626 the section HEADER is the declaration's label now, not a Kotlin literal:
-# the contact card is the declared `person` section, drawn by renderPerson.
-has "$FRAGMENT" 'private fun renderPerson('                             "Setup has the contact card (renderPerson)"
+# #781 the contact card FORM is deleted from Runtime: its fields are Profiles' `about` topic.
+hasnt_code "$FRAGMENT" 'private fun renderPerson('                      "the contact card form is gone (#781)"
 hasnt_code "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
 hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
 has "$FRAGMENT" 'if (way.kind == KIND_VAULT_FILE) {'                   "the manual file route survives as Connect's Import File line"
@@ -285,7 +284,6 @@ fi
 # And it must not have opened a new route into the payload.
 hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
-hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
 echo "== T11: FOUR tabs (#778 — Connect | Profiles | Runtime | Drift), declared {id, label} in build.json; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
@@ -308,8 +306,10 @@ has "$FRAGMENT" 'ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t)
 has "$FRAGMENT" 'renderRuntime(ctx, runtime)'  "the per-app runtime renders on Runtime"
 has "$FRAGMENT" 'DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) }' "S / R / L and the sync render on Drift"
 RUNTIME_FN=$(awk '/private fun renderRuntime\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
-for kept in 'RuntimeTab(AccountModel.get(ctx))' 'renderConfigApply(ctx, into)' 'renderPerson(ctx, into)'; do
-    grep -qF "$kept" <<<"$RUNTIME_FN" && ok "Runtime renders $kept" || bad "Runtime does not render $kept"
+grep -qF 'RuntimeTab(AccountModel.get(ctx))' <<<"$RUNTIME_FN" && ok "Runtime renders the per-app runtime" || bad "Runtime does not render RuntimeTab"
+# #781 nothing below it: no "Your config (per peer)", no contact card.
+for gone in 'renderConfigApply(' 'renderPerson(' 'sectionHeader(' 'into.addView(caption('; do
+    grep -qF "$gone" <<<"$RUNTIME_FN" && bad "Runtime still renders $gone (#781)" || ok "Runtime renders no $gone (#781)"
 done
 # And every tab HAS a column: #614's null-column launch tabs are gone.
 hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"

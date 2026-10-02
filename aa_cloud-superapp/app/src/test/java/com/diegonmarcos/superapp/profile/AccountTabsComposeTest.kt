@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -75,6 +77,20 @@ class AccountTabsComposeTest : KitPageHarness() {
             compose.onNodeWithTag(AccountTags.runtimeApp(section.id)).assertExists()
             compose.onNodeWithTag(AccountTags.runtimeStatus(section.id)).assertExists()
         }
+    }
+
+    /** #781 Runtime is the per-app runtime and NOTHING below it: no "Your config (per peer)", no contact card. */
+    @Test fun `R2 Runtime - no Your config block and no contact card`() {
+        val m = model()
+        scrolled { RuntimeTab(m) }
+        compose.waitUntil(10_000) { m.last.startsWith("✓ runtime read") }
+        compose.waitForIdle()
+        for (gone in listOf("Your config", "per peer", "Erase my profile", "What is stored and where", "contact card — auto-saved"))
+            compose.onAllNodesWithText(gone, substring = true, ignoreCase = true).assertCountEquals(0)
+        val strings = com.diegonmarcos.superapp.R.string::class.java.fields.map { it.name }.toSet()
+        assertTrue("R.string is readable", "account_runtime_title" in strings)
+        for (name in listOf("setup_config_header", "setup_config_none", "setup_person_header", "journey_apply"))
+            assertTrue("string $name is deleted, not hidden", name !in strings)
     }
 
     @Test fun `D1 Drift - files, pairs, and each pair's own actions`() {

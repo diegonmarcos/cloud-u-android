@@ -365,11 +365,6 @@
     <string name="journey_profiles_n">%1$d perfiles</string>
     <string name="journey_profiles_pending">perfiles pendientes</string>
     <string name="journey_device_summary">%1$s · %2$s · %3$s</string>
-    <string name="journey_get_caption">Lo que tu configuración trae para %1$s. Aplicar lo escribe en los almacenes de este dispositivo; la exportación de la bóveda enciende después la cabina de Flota.</string>
-    <string name="journey_get_line_present">✓ %1$s</string>
-    <string name="journey_get_line_absent">– %1$s · no está en tu configuración</string>
-    <string name="journey_get_wireguard">wireguard · %1$d perfiles de %2$s</string>
-    <string name="journey_apply">Aplicar a este dispositivo</string>
     <string name="journey_applied">Aplicado %1$s · bóveda %2$s</string>
     <string name="journey_vault_fetched">descargada</string>
     <string name="journey_vault_not_fetched">no descargada</string>
@@ -402,9 +397,6 @@
     <string name="infos_row_masked">•••• oculto (%1$d caracteres)</string>
     <string name="infos_row_collapsed">%1$d entradas (contadas, no listadas)</string>
     <string name="infos_row_pending">pendiente · %1$s</string>
-    <string name="setup_config_header">Tu configuración (por par)</string>
-    <string name="setup_config_none">No se ha descargado el artefacto de configuración en esta sesión — inicia sesión con Authelia en %1$s para descargarlo.</string>
-    <string name="setup_person_header">Tarjeta de contacto en este dispositivo</string>
     <string name="journey_get_on_setup">Aquí se obtiene; se aplica en %1$s, elemento a elemento.</string>
     <string name="connect_gh_caption">WebAuth ejecuta el propio inicio de sesión de GitHub CLI (gh auth login) en el motor gh, Cloud-Lib-Gh: copia el código que muestra, apruébalo en la página de GitHub que se abre en cloud-browser, y la exportación de la bóveda se lee una vez con el token que gh obtiene. Aquí no se guarda nada.</string>
     <string name="connect_gh_missing">El motor gh (%1$s) no está en este teléfono: instala Cloud-Lib-Gh desde Tienda ▸ Cloud Constellation ▸ Libs y vuelve a pulsar WebAuth.</string>

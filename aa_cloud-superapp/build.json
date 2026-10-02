@@ -6452,11 +6452,6 @@
         "action_type": "open_search"
       }
     ],
-    "_doc_config_source": "Where Configs → Profile → 'OWebAuth Authelia · Auto Import Configs' pulls the whole config from. DATA-DRIVEN ON PURPOSE: nothing here appears as a Kotlin literal — app/build.gradle bakes these into BuildConfig.UI_CONFIG_SOURCE_* and ConfigSyncClient/ProfileFragment read only those, so repointing the endpoint or changing the user slug is a JSON edit + rebuild, never a code change. AUTH: the user pastes an Authelia token which is sent verbatim as `Authorization: Bearer <token>`; it is validated server-side by the existing introspect-proxy / @bearer gate in front of the route. There is deliberately NO in-app OAuth dance and no client secret to keep in sync. The token is never persisted, logged, or exported. FORMAT_VERSION is the artifact contract version: ConfigAutoImport refuses the whole artifact (applying nothing) unless _meta.format_version matches this major version. base_url + path_template are joined with {user} substituted. ROUTE: this is one more member of c3-infra-api's /cloud-data/* family (siblings: /cloud-data/configs, /cloud-data/caddy-routes, /cloud-data/cloudflare-dns, /cloud-data/authelia-acl). If the cloud side lands on a different final spelling, edit path_template here — no Kotlin changes.",
-    "config_source": {
-      "_doc": "#587 The endpoint, user slug, timeouts and vault-repo coordinates moved to ab_cloud-libs-shared/build.json::auth.config_source - ONE declaration for every app that signs in (libs:auth). What stays here is the superapp's own contract with the artifact: the format_version ConfigAutoImport.apply refuses to mismatch.",
-      "format_version": 1
-    },
     "_doc_vault_connect": "Configs > Profile > Connect > Vault configs (#566/#569). Two calls, two factors: start_path with the stored Authelia bearer makes the server mail a one-time code to the account address; fetch_path with the same bearer plus {\"code\"} returns {\"schema\": cloud-vault E0_configs/schema.json, \"bundle\": the decrypted cloud-vault E0_configs/profile-secrets.json}. #570: the Fleet tab (ex Imported) is the fleet configurator - cockpit.sections compare each vault section with this device and apply it on a tap (see cockpit._doc); vault sections no cockpit section names render raw below them. known_schema_versions is the gate schema.json asks for: a bundle whose schema_version is not listed is refused, nothing shown. Auth is the stored Authelia bearer OR a browser session (WebView cookie, memory only) - both reach the same gate. base_url must be bearer-reachable OFF the mesh: c3-public-api (/pub) is wg_only:false, c3-infra-api is mesh-only.",
     "vault_connect": {
       "_doc": "#587 The vault route's endpoints, the schema versions and the sign-in providers moved to ab_cloud-libs-shared/build.json::auth (libs:auth). What stays here is the Fleet tab's own layout: cockpit.",
@@ -6529,7 +6524,7 @@
             "icon": "ic_home_apps"
           },
           {
-            "_doc": "#695 the owner's contact card: vault about.profile against this device's ProfilePrefs, one row per `fields` entry (device field → vault key). The card itself (editable, synced, erasable) is drawn right below it on Setup.",
+            "_doc": "#695 the owner's contact card: vault about.profile against this device's ProfilePrefs, one row per `fields` entry (device field → vault key). #781 the card's form is deleted from Runtime: its fields are edited on Profiles' about topic and pushed by Drift; the GDPR erase is /api/account/erase.",
             "id": "about",
             "label": "About · contact card",
             "apply": "about",

@@ -466,11 +466,6 @@
     <string name="journey_profiles_n">%1$d profiles</string>
     <string name="journey_profiles_pending">profiles pending</string>
     <string name="journey_device_summary">%1$s · %2$s · %3$s</string>
-    <string name="journey_get_caption">What your config carries for %1$s. Apply writes it to this device\'s stores; the vault export then lights the Fleet cockpit.</string>
-    <string name="journey_get_line_present">✓ %1$s</string>
-    <string name="journey_get_line_absent">– %1$s · not in your config</string>
-    <string name="journey_get_wireguard">wireguard · %1$d profiles of %2$s</string>
-    <string name="journey_apply">Apply to this device</string>
     <string name="journey_applied">Applied %1$s · vault %2$s</string>
     <string name="journey_vault_fetched">fetched</string>
     <string name="journey_vault_not_fetched">not fetched</string>
@@ -504,9 +499,6 @@
     <string name="infos_row_masked">•••• masked (%1$d chars)</string>
     <string name="infos_row_collapsed">%1$d entries (counted, not listed)</string>
     <string name="infos_row_pending">pending · %1$s</string>
-    <string name="setup_config_header">Your config (per peer)</string>
-    <string name="setup_config_none">No config artifact fetched in this session — sign in with Authelia on %1$s to fetch it.</string>
-    <string name="setup_person_header">Contact card on this device</string>
     <string name="journey_get_on_setup">Getting happens here; applying happens on %1$s, item by item.</string>
     <string name="connect_gh_caption">WebAuth runs GitHub CLI\'s own sign-in (gh auth login) in the gh engine, Cloud-Lib-Gh: copy the code it shows, approve it on the GitHub page that opens in cloud-browser, and the vault export is read once with the token gh then holds. Nothing is stored here.</string>
     <string name="connect_gh_missing">The gh engine (%1$s) is not on this phone: install Cloud-Lib-Gh from Store ▸ Cloud Constellation ▸ Libs, then tap WebAuth again.</string>

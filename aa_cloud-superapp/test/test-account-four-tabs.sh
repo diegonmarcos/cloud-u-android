@@ -798,10 +798,17 @@ setup_gone() {   # $1 = ProfileFragment.kt, $2 = build.json; prints what survive
     [ -f "$PKG/Wizard.kt" ] && { echo "Wizard.kt survives"; return 1; }
     jq -e '.ui.profile.wizard' "$2" >/dev/null && { echo "ui.profile.wizard survives"; return 1; }
     local rr; rr=$(fnof "$1" renderRuntime | codeof)
-    grep -qF 'RuntimeTab(AccountModel.get(ctx))' <<<"$rr" && grep -qF 'renderConfigApply(ctx, into)' <<<"$rr" || { echo "the Runtime column is not the per-app runtime + your config"; return 1; }
+    grep -qF 'RuntimeTab(AccountModel.get(ctx))' <<<"$rr" || { echo "the Runtime column is not the per-app runtime"; return 1; }
+    # #781 nothing below it: the per-peer "Your config" block and the contact card are deleted, not hidden.
+    local g; for g in 'renderConfigApply' 'renderPerson' 'ConfigAutoImport' 'setup_config_header' 'setup_person_header'; do
+        grep -qF "$g" <<<"$rr" && { echo "Runtime still renders $g"; return 1; }
+        codeof "$1" | grep -qF "$g" && { echo "$g survives in ProfileFragment"; return 1; }
+    done
+    grep -qF 'name="setup_config_header"' "$APP/app/src/main/res/values/strings.xml" && { echo "the 'Your config' string survives"; return 1; }
+    [ -f "$PKG/ConfigAutoImport.kt" ] && { echo "ConfigAutoImport.kt survives"; return 1; }
     return 0
 }
-msg=$(setup_gone "$PF" "$BJ") && ok "H: the Setup index, wizard, cockpit cards and repos are deleted; Runtime is per app, then the per-peer config" || bad "H: $msg"
+msg=$(setup_gone "$PF" "$BJ") && ok "H: the Setup index, wizard, cockpit cards and repos are deleted; Runtime is per app and nothing else (#781)" || bad "H: $msg"
 grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$PF" landVault | codeof)" \
     && ok "H: every Connect landing stores the fetched file as S, with the way that fetched it" || bad "H: a Connect landing does not store S"
 echo "-- H-mutation: a reader dropped, a served_by dropped, the wake-wait dropped, the old index back, the landing not stored --"

@@ -130,8 +130,7 @@ RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure)\(/{f=1} f{print
 READ_FNS=$(awk '/    fun read\(ctx: Context/{f=1} f{print} /^    \/\/ ── pushing/{f=0}' "$AR")
 [ -n "$RENDER_FNS" ] && [ -n "$READ_FNS" ] && ok "T4: found the fetch functions and the runtime readers" || bad "T4: fetch or reader functions not found"
 for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting' 'applyMesh' 'applyMail' 'setProfileField'; do
-    # The per-peer config Apply is a tap, checked below like every apply.
-    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'ConfigAutoImport.apply(' | grep -v 'ConfigAutoImport.SECTIONS')" || grep -qF "$pat" <<<"$READ_FNS"; then
+    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$RENDER_FNS" || grep -qF "$pat" <<<"$READ_FNS"; then
         bad "T4: the fetch/read path touches $pat"
     else
         ok "T4: no $pat on the fetch/read path"
@@ -147,12 +146,7 @@ PUSHES=$(grep -n 'm.pushServerToRuntime(' "$AT" | cut -d: -f1)
 for ln in $PUSHES; do
     grep -qE 'onClick = \{|ActionButton\(' <<<"$(sed -n "$((ln-1)),${ln}p" "$AT")" && ok "T4: the push at AccountTabs.kt:$ln is behind a tap" || bad "T4: the push at AccountTabs.kt:$ln is not behind a tap"
 done
-CAPPLY=$(grep -n 'ConfigAutoImport.apply(' "$PF" | cut -d: -f1)
-[ "$(echo "$CAPPLY" | grep -c .)" = 1 ] && ok "T4: exactly one per-peer config apply on the page" || bad "T4: ConfigAutoImport.apply is called $(echo "$CAPPLY" | grep -c .) times"
-for ln in $CAPPLY; do
-    grep -qE 'pickButton\(|applyButton\(' <<<"$(sed -n "$((ln-3)),${ln}p" "$PF")" && ok "T4: the config apply at line $ln is behind a button" \
-                                                                        || bad "T4: the config apply at line $ln is not behind a button"
-done
+grep -qF 'ConfigAutoImport' "$PF" && bad "T4: the per-peer config apply survives #781" || ok "T4: no per-peer config apply on the page (#781)"
 grep -q 'fun applyMesh' "$CP" && grep -q 'Config.parse' "$CP" \
     && ok "T4: the mesh apply goes through the WireGuard parser" || bad "T4: mesh apply does not parse"
 

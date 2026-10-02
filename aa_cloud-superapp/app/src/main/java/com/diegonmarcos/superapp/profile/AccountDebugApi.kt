@@ -31,6 +31,7 @@ object AccountDebugApi {
             Op("save", "", "write the local copy"),
             Op("sync", "dir=push|pull|discard&path=|app=|all=1", "server→runtime, runtime→declared, or discard L"),
             Op("upload", "dry=1", "commit the saved local copy with the gh engine's token (dry=1: the plan only)"),
+            Op("erase", "confirm=1", "GDPR: erase the contact card on this device and ask the profile-sync server to drop its copy"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
@@ -71,6 +72,13 @@ object AccountDebugApi {
                     val token = AccountModel.ghHost()?.let { GhEngine(ctx).token(it) }
                     done(if (token == null) "✗ the gh engine holds no GitHub token — sign in on Connect ▸ GitHub ▸ WebAuth" else m.upload(token, device), m)
                 }
+            }
+            // #781 the contact card form (and its Erase button) left Runtime; the erasure stays reachable here.
+            "erase" -> {
+                if (q["confirm"] != "1") return JSONObject().put("result", "✗ confirm=1 — this erases the contact card here and on the server")
+                val done = java.util.concurrent.LinkedBlockingQueue<String>()
+                ProfileSync.forgetMe(ctx) { done.put(it) }
+                JSONObject().put("result", done.poll(30, java.util.concurrent.TimeUnit.SECONDS) ?: "✗ no answer in 30 s — the erase may still complete")
             }
             else -> null
         }

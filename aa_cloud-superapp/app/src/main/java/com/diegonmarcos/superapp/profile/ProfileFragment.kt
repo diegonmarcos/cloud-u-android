@@ -1,8 +1,6 @@
 package com.diegonmarcos.superapp.profile
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -52,8 +50,7 @@ import kotlinx.coroutines.withContext
  *    the server file S), per topic, every declared field filled or `empty`, with
  *    Populate from runtime / from the server file, Save and Export ([ProfilesTab]).
  *  • RUNTIME — what each fleet app is using right now, read live per app, with its
- *    status ([RuntimeTab]); then the per-peer config apply and this device's
- *    contact card ([renderRuntime]).
+ *    status and declared/reported/missing counts ([RuntimeTab]); nothing else.
  *  • DRIFT — S, R and L side by side with their metadata, the S↔R / L↔S / L↔R
  *    diffs per app and per field, and the sync actions ([DriftTab]).
  *  Profiles, Runtime and Drift are Compose on libs:ui-kit over ONE [AccountModel],
@@ -63,35 +60,15 @@ import kotlinx.coroutines.withContext
  * Cloud Constellation Setup became Runtime (its index, wizard, cockpit cards and
  * repos deleted), and per-app apply moved to Drift's server → runtime.
  *
- * The contact card is bound to [ProfilePrefs] and auto-saves on every text
- * change (no explicit Save button) — the drawer header reads from the same
- * prefs on every open, so changes are visible immediately next time the
- * drawer slides in.
- *
- * MANDATORY NAME + EMAIL, enforced in three places that escalate rather than
- * block. The app stays completely usable if someone declines to fill them in;
- * what is not allowed is for the omission to be INVISIBLE, because a silently
- * blank contact record is indistinguishable from a working one right up until
- * the day the fleet needs it:
- *   1. inline — the field shows its own error while it is unacceptable;
- *   2. persistent — [statusBanner] sits at the top of the screen and states
- *      whether the profile is complete, and stays there until it is;
- *   3. sync gate — [ProfileSync.push] refuses to upload an incomplete profile,
- *      so a half-filled record never overwrites a good one on the server.
- * No dialog, no interstitial, nothing to dismiss and nothing gated behind it.
- *
- * PERSONAL DATA IS DISCLOSED IN PLACE. The "What is stored and where" section
- * below lists exactly which fields leave the device and offers the erase
- * action, so the answer to "what do you have on me, and take it down" is on
- * the same screen that collects it rather than in a policy nobody opens.
+ * THE CONTACT CARD FORM IS GONE (#781). Its fields live in [ProfilePrefs], filled
+ * from Profiles' `about` topic through Drift's server → runtime; this page still
+ * hands them to [ProfileSync] when it is left ([onPause]), and the GDPR erase
+ * is `/api/account/erase` ([AccountDebugApi]).
  */
 class ProfileFragment : Fragment() {
 
     private lateinit var prefs: ProfilePrefs
 
-    /** Live handle to the completeness banner so every field's TextWatcher can
-     *  refresh it without rebuilding the form (which would drop focus). */
-    private var statusBanner: TextView? = null
 
     /** Which tab is showing. Held on the fragment so the many detach/attach
      *  redraws below do not bounce the user off the tab they were on. Negative
@@ -114,16 +91,6 @@ class ProfileFragment : Fragment() {
     /** The strip itself, so the cockpit can send the owner to Connect. */
     private var strip: TabLayout? = null
 
-    /** Gallery picker for the profile photo (round avatar). */
-    private val picturePicker =
-        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
-            uri?.let { saveImage(it, isBanner = false) }
-        }
-    /** Gallery picker for the cover/banner photo (wide). */
-    private val bannerPicker =
-        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
-            uri?.let { saveImage(it, isBanner = true) }
-        }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -211,126 +178,6 @@ class ProfileFragment : Fragment() {
         drift.addView(ctx.kitComposeView(palette) { DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) } })
 
         return root
-    }
-
-    /**
-     * The contact card on this device — its photos, the privacy disclosure and
-     * the erase action — unchanged since the old Infos tab; on Setup since #695,
-     * right under the `about` cockpit card that applies the vault's copy to it.
-     */
-    private fun renderPerson(ctx: android.content.Context, col: LinearLayout) {
-        col.addView(caption(ctx, "Edit your contact card — auto-saved on change. Your initials in the drawer are derived from your name; the rest powers the Virtual Business Card."))
-
-        // Persistent completeness banner — enforcement step 2. Added first so
-        // it is the first thing read, and never removed while incomplete.
-        val banner = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
-        }
-        statusBanner = banner
-        col.addView(banner)
-        refreshStatus()
-
-        // ── Required ─────────────────────────────────────────────────────
-        // Name and email are what make a person reachable when the app itself
-        // can no longer be updated, which is the entire reason this screen
-        // syncs anywhere. Everything below them is optional.
-        col.addView(label(ctx, "Name  *required"))
-        col.addView(requiredField(ctx, prefs.name, { prefs.name = it }) { prefs.nameError })
-
-        col.addView(label(ctx, "Email  *required"))
-        col.addView(requiredField(ctx, prefs.email, { prefs.email = it }) { prefs.emailError }.apply {
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-        })
-
-        col.addView(label(ctx, "Phone"))
-        col.addView(field(ctx, prefs.phone) { prefs.phone = it }.apply {
-            inputType = android.text.InputType.TYPE_CLASS_PHONE
-        })
-
-        col.addView(label(ctx, "Date of birth  (YYYY-MM-DD)"))
-        col.addView(field(ctx, prefs.birth) { prefs.birth = it }.apply {
-            hint = "1990-04-23"
-            inputType = android.text.InputType.TYPE_CLASS_DATETIME or
-                android.text.InputType.TYPE_DATETIME_VARIATION_DATE
-            // Advisory WHILE TYPING — a wrong-looking date is flagged, never
-            // rejected, and never blocks saving. The field is optional.
-            addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-                override fun afterTextChanged(s: Editable?) {
-                    val text = s?.toString().orEmpty().trim()
-                    error = when {
-                        text.isEmpty() || DATE_PATTERN.matches(text) -> null
-                        // Name the correction instead of only the rule.
-                        else -> isoFromDmy(text)?.let { "Use YYYY-MM-DD — saving as $it" }
-                            ?: DMY_PATTERN.matchEntire(text)?.let {
-                                val (d, m, y) = it.destructured
-                                "Use YYYY-MM-DD — did you mean $y-$m-$d?"
-                            } ?: "Use YYYY-MM-DD"
-                    }
-                }
-            })
-            // Committing happens on BLUR, which is this form's save: there is
-            // no Save button, every field persists per keystroke, and leaving
-            // the box is the moment the user is done with it. Rewriting on
-            // each keystroke would reorder a date under a finger still typing
-            // it.
-            setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) return@setOnFocusChangeListener
-                val typed = (v as EditText).text?.toString().orEmpty().trim()
-                val iso = isoFromDmy(typed) ?: return@setOnFocusChangeListener
-                // Rewrite the BOX, not just the stored value. The old code
-                // refused to convert because "a date silently reordered under
-                // the user is worse than a wrong one they can see" — the
-                // silence was the problem, not the reordering, so the field
-                // visibly becomes what was stored and says so.
-                v.setText(iso)
-                v.setSelection(iso.length)
-                prefs.birth = iso
-                v.error = null
-                view?.snack("Date of birth saved as $iso (was $typed)")
-            }
-        })
-
-        col.addView(label(ctx, "About"))
-        col.addView(field(ctx, prefs.titles) { prefs.titles = trimSeparators(it) }.apply {
-            isSingleLine = false; maxLines = 4
-        })
-
-        col.addView(label(ctx, "Company"))
-        col.addView(field(ctx, prefs.company) { prefs.company = it })
-
-        col.addView(label(ctx, "Location"))
-        col.addView(field(ctx, prefs.location) { prefs.location = it })
-
-        col.addView(label(ctx, "Website"))
-        col.addView(field(ctx, prefs.website) { prefs.website = it }.apply {
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_VARIATION_URI
-        })
-
-        col.addView(label(ctx, "Profile picture"))
-        col.addView(pickButton(ctx, prefs.pictureUri.ifBlank { "Pick from gallery…" }) {
-            picturePicker.launch("image/*")
-        })
-
-        col.addView(label(ctx, "Banner photo"))
-        col.addView(pickButton(ctx, prefs.bannerUri.ifBlank { "Pick from gallery…" }) {
-            bannerPicker.launch("image/*")
-        })
-
-        // ── Privacy ──────────────────────────────────────────────────────
-        // Disclosure lives on the collecting screen on purpose: "what is held
-        // about me and how do I get rid of it" should not require finding a
-        // separate policy page.
-        col.addView(sectionHeader(ctx, "What is stored and where"))
-        col.addView(caption(ctx, PRIVACY_TEXT))
-        col.addView(syncStateView(ctx))
-        col.addView(actionTile(ctx, "Erase my profile (device + server)", 0xFFB91C1C.toInt()) {
-            confirmErase()
-        })
     }
 
     // ── Infos · THE FETCHED VAULT CONFIGS (#695) ──────────────────────────
@@ -763,52 +610,15 @@ class ProfileFragment : Fragment() {
         // #766 no second Import File here: it is Connect's third line.
     }
 
-    /**
-     * Setup · the per-peer CONFIG (ex journey step 4, #573): what the fetched
-     * artifact carries for the peer picked on Connect, and the ONE Apply on this
-     * page (the chosen peer's profiles are what ConfigAutoImport writes). With no
-     * artifact or no pick it says which is missing instead of an Apply.
-     */
-    private fun renderConfigApply(ctx: android.content.Context, into: LinearLayout) {
-        into.addView(sectionHeader(ctx, getString(R.string.setup_config_header)))
-        val artifact = UserRegistry.Current.artifact
-        val peer = journeyState(ctx).chosenPeer
-        if (artifact == null || peer == null) {
-            into.addView(caption(ctx, if (artifact == null) getString(R.string.setup_config_none, tabLabel(connectTab))
-                                   else getString(R.string.journey_lock_pick_peer)))
-            return
-        }
-        into.addView(caption(ctx, getString(R.string.journey_get_caption, peer.label)))
-        for (section in ConfigAutoImport.SECTIONS) {
-            if (section == "wireguard")
-                into.addView(caption(ctx, getString(R.string.journey_get_wireguard, UserRegistry.peerProfiles(artifact, peer.id).size, peer.label)))
-            else
-                into.addView(caption(ctx, getString(if (artifact.has(section)) R.string.journey_get_line_present else R.string.journey_get_line_absent, section)))
-        }
-        val status = statusView(ctx)
-        into.addView(pickButton(ctx, getString(R.string.journey_apply)) {
-            val report = ConfigAutoImport.apply(ctx.applicationContext, artifact)
-            if (report.ok) { failedSteps -= ProfileJourney.Step.GET; UserRegistry.markApplied(ctx, stamp()) }
-            else failedSteps += ProfileJourney.Step.GET
-            show(status, if (report.ok) GREEN else RED, report.text())
-            paintJourney()
-        })
-        into.addView(status)
-    }
-
     // ── Runtime (#778, replaces Cloud Constellation Setup) ───────────────
 
     /**
-     * #778 RUNTIME, per app: what each fleet app is using right now ([RuntimeTab], Compose), then
-     * the per-peer config apply that was Setup's head ([renderConfigApply]) and this device's
-     * contact card — the `about` app's own runtime, kept with its privacy disclosure and erase.
-     * Setup's index, wizard, cockpit cards and repos are gone: per-app apply is Drift's now.
+     * #778 RUNTIME, per app: what each fleet app is using right now ([RuntimeTab], Compose) — and
+     * nothing below it (#781: the per-peer "Your config" apply and the contact card are deleted;
+     * applying is Drift's server → runtime, the card's fields are Profiles' `about` topic).
      */
     private fun renderRuntime(ctx: android.content.Context, into: LinearLayout) {
         into.addView(ctx.kitComposeView(LauncherPalette.kit(ctx)) { RuntimeTab(AccountModel.get(ctx)) })
-        renderConfigApply(ctx, into)
-        into.addView(sectionHeader(ctx, getString(R.string.setup_person_header)))
-        renderPerson(ctx, into)
     }
 
     /** CreateDocument for Profiles' and Drift's exports; [pendingExport] is the text the picked file receives. */
@@ -837,9 +647,6 @@ class ProfileFragment : Fragment() {
         visibility = View.GONE
         setPadding(0, dp(ctx, 8), 0, 0)
     }
-
-    private fun stamp(): String =
-        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())
 
     /** The Authelia mailed identity-validation code: one dialog, the same mechanics as before. */
     private fun showMailCodeDialog() {
@@ -1194,7 +1001,6 @@ class ProfileFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         ProfileSync.flush(requireContext())
-        refreshStatus()
     }
 
     /**
@@ -1211,77 +1017,11 @@ class ProfileFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        statusBanner = null
         strip = null
         journey = null
         // The mailed code is never stored; it dies with the view that held it.
         mailCodeField = null
     }
-
-    // ── mandatory-field enforcement ──────────────────────────────────────
-
-    /**
-     * A [field] that additionally reports [validate]'s complaint on itself and
-     * refreshes the banner on every keystroke.
-     *
-     * The value is SAVED even while invalid. Refusing to persist a half-typed
-     * name would mean losing it on rotation, and the enforcement goal is that
-     * the gap is loud, not that the text box fights the user.
-     */
-    private fun requiredField(
-        ctx: android.content.Context,
-        initial: String,
-        save: (String) -> Unit,
-        validate: () -> String?,
-    ): EditText = field(ctx, initial) {
-        save(it)
-        refreshStatus()
-    }.apply {
-        error = validate()
-        addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            // Runs after the save watcher installed by field(), so prefs are
-            // already current when validate() reads them back.
-            override fun afterTextChanged(s: Editable?) { error = validate() }
-        })
-    }
-
-    /**
-     * Repaint the completeness banner. Called on every keystroke, so it does
-     * no I/O beyond reading prefs — the upload is NOT driven from here.
-     *
-     * Syncing per keystroke would mean a POST per character typed. The edits
-     * are already durable in prefs the moment they are typed, and the profile
-     * is full-state, so the natural send point is leaving the screen
-     * ([onPause]) — one upload carrying the finished card.
-     */
-    private fun refreshStatus() {
-        val banner = statusBanner ?: return
-        val complete = prefs.isComplete
-        if (complete) {
-            banner.setBackgroundColor(0x2216A34A)
-            banner.setTextColor(GREEN)
-            banner.text = if (ProfileSync.isPending(banner.context))
-                "Profile complete — saved, waiting to reach the server (it will retry)."
-            else
-                "Profile complete — saved and synced."
-        } else {
-            banner.setBackgroundColor(0x22DC2626)
-            banner.setTextColor(RED)
-            banner.text = "Profile incomplete — " +
-                listOfNotNull(prefs.nameError, prefs.emailError).joinToString("; ") + ".\n" +
-                "Nothing is blocked, but without a name and an email there is no way to reach " +
-                "you if an update ever breaks the app, and your profile is not synced."
-        }
-    }
-
-    /** Small read-only line stating whether a document is still queued. */
-    private fun syncStateView(ctx: android.content.Context): TextView =
-        caption(ctx, if (ProfileSync.isPending(ctx))
-            "Sync status: an edit is queued on this device and has not reached the server yet. It retries automatically."
-        else
-            "Sync status: nothing queued.")
 
     // ── credentials ──────────────────────────────────────────────────────
 
@@ -1302,46 +1042,6 @@ class ProfileFragment : Fragment() {
                 view?.snack("$what cleared")
                 parentFragmentManager.beginTransaction().detach(this).commitNow()
                 parentFragmentManager.beginTransaction().attach(this).commitNow()
-            }
-            .show()
-    }
-
-    // ── erasure ──────────────────────────────────────────────────────────
-
-    /**
-     * Confirm, then erase locally AND ask the server to drop the record.
-     *
-     * Two-step because it is destructive and irreversible; the result is
-     * reported verbatim (including a failed server delete) rather than
-     * optimistically claiming success, so an erasure that did not fully happen
-     * can be chased instead of assumed.
-     */
-    private fun confirmErase() {
-        val ctx = requireContext()
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle("Erase your profile?")
-            .setMessage(
-                "This deletes your name, email, phone, date of birth, location, " +
-                "company, website, about and photos from this device, and asks the " +
-                "server to delete its copy.\n\n" +
-                "Your stored credentials are NOT touched — they were never sent to the " +
-                "server, so erasing the server copy has nothing to do with them. Clear " +
-                "them with their own buttons above.\n\n" +
-                "Your device also gets a new random sync id, so the old server-side " +
-                "record can no longer be linked to this install.\n\nThis cannot be undone."
-            )
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Erase") { _, _ ->
-                ProfileSync.forgetMe(ctx) { message ->
-                    // Callback arrives on the delete thread.
-                    view?.post {
-                        view?.snack(message)
-                        if (isAdded) {
-                            parentFragmentManager.beginTransaction().detach(this).commitNow()
-                            parentFragmentManager.beginTransaction().attach(this).commitNow()
-                        }
-                    }
-                }
             }
             .show()
     }
@@ -1716,50 +1416,11 @@ class ProfileFragment : Fragment() {
         status.text = text
     }
 
-    private fun actionTile(ctx: android.content.Context, label: String, bg: Int, onClick: () -> Unit): View =
-        TextView(ctx).apply {
-            text = label
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(bg)
-            gravity = android.view.Gravity.CENTER
-            setPadding(dp(ctx, 10), dp(ctx, 14), dp(ctx, 10), dp(ctx, 14))
-            isClickable = true; isFocusable = true
-            setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { marginEnd = dp(ctx, 4); marginStart = dp(ctx, 4) }
-        }
-
-    /** Copy the picked image into our cache dir + store the cached path
-     *  in ProfilePrefs. We don't rely on the original `content://` URI
-     *  surviving — the source app may revoke permission later. */
-    private fun saveImage(uri: android.net.Uri, isBanner: Boolean) {
-        runCatching {
-            val ctx = requireContext()
-            val name = if (isBanner) "profile_banner.png" else "profile_picture.png"
-            val outFile = java.io.File(ctx.filesDir, name)
-            ctx.contentResolver.openInputStream(uri)?.use { input ->
-                outFile.outputStream().use { input.copyTo(it) }
-            }
-            if (isBanner) prefs.bannerUri = outFile.absolutePath
-            else          prefs.pictureUri = outFile.absolutePath
-            // Re-render so the buttons show the new path.
-            parentFragmentManager.beginTransaction().detach(this).commitNow()
-            parentFragmentManager.beginTransaction().attach(this).commitNow()
-        }
-    }
-
     /** Every action button on this page is the cockpit's pill — one shape, the
      *  palette's accent, so Connect and Infos read as the same screen as Fleet
      *  and a theme change restyles all three at once. */
     private fun pickButton(ctx: android.content.Context, currentLabel: String, onClick: () -> Unit): View =
         FleetCockpitView.pill(ctx, currentLabel, onClick)
-
-    private fun sectionHeader(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, dp(ctx, 4))
-        }
 
     private fun label(ctx: android.content.Context, text: String): TextView =
         TextView(ctx).apply {
@@ -1776,29 +1437,6 @@ class ProfileFragment : Fragment() {
             alpha = 0.55f
             setPadding(0, 0, 0, dp(ctx, 8))
         }
-
-    private fun field(ctx: android.content.Context, initial: String, save: (String) -> Unit): EditText =
-        EditText(ctx).apply {
-            setText(initial)
-            setSingleLine()
-            addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-                override fun afterTextChanged(s: Editable?) { save(s?.toString().orEmpty()) }
-            })
-        }
-
-    /**
-     * Drop a leading/trailing `|` from About.
-     *
-     * The field's old label asked for ' | ' between items, so stored values
-     * carry an opening separator that now means nothing. Only
-     * the outer ones go; separators BETWEEN items are the user's own text.
-     * This runs on save, over what the user is looking at — the box is never
-     * rewritten underneath them.
-     */
-    private fun trimSeparators(value: String): String =
-        value.trim().trim('|').trim()
 
     private fun dp(ctx: android.content.Context, v: Int): Int =
         (v * ctx.resources.displayMetrics.density).toInt()
@@ -1849,35 +1487,6 @@ class ProfileFragment : Fragment() {
         /** #766 libs:auth's two Authelia kinds, as a way declares them: the vault route's credential. */
         private val AUTHELIA_KINDS = setOf(SignIn.Kind.AUTHELIA_WEB.name.lowercase(), SignIn.Kind.AUTHELIA_BEARER.name.lowercase())
 
-        /** Advisory shape check for the birth field. Range/real-calendar
-         *  validity is deliberately not checked — the field is optional and a
-         *  false rejection is worse than a typo here. */
-        private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
-
-        /** DD-MM-YYYY, the shape people actually type here. */
-        private val DMY_PATTERN = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$")
-
-        /**
-         * The ISO date [text] unambiguously means, or null.
-         *
-         * ONLY when the first field is >12, which cannot be a month and so
-         * cannot be the American MM-DD-YYYY. `18-07-1987` is 1987-07-18 in
-         * every reading and converts; `05-07-1987` is the 5th of July or the
-         * 7th of May depending on which side of an ocean it was typed on, and
-         * no amount of confidence here would settle it — that one keeps the
-         * advisory and waits for the user to retype it.
-         *
-         * The month is still checked, because a first field >12 tells us which
-         * position is the day, not that the other one is a real month.
-         */
-        fun isoFromDmy(text: String): String? {
-            val m = DMY_PATTERN.matchEntire(text) ?: return null
-            val (d, mo, y) = m.destructured
-            if (d.toInt() !in 13..31) return null
-            if (mo.toInt() !in 1..12) return null
-            return "$y-$mo-$d"
-        }
-
         /**
          * What the third box takes, stated in full because the wrong answer is
          * a permanently stored second factor.
@@ -1897,21 +1506,6 @@ class ProfileFragment : Fragment() {
             "A bearer token is stored on this device with no account email, so it " +
             "is not being used. If it belongs to the address on your profile, link " +
             "it. Nothing was changed or deleted."
-
-        private const val PRIVACY_TEXT =
-            "Your name, email, phone, date of birth, location, company, website and " +
-            "about are stored on this device and mirrored to " +
-            "the constellation server over HTTPS, so the fleet operator can contact you " +
-            "out-of-band when an update breaks the app and it can no longer fix itself. " +
-            "That is the only reason this is collected.\n\n" +
-            "Your credentials are NOT in that list and never leave this device — the " +
-            "sync document is built from a fixed list of contact fields and filtered " +
-            "against it again before sending.\n\n" +
-            "Your photos stay on this device and are never uploaded. Your profile is " +
-            "identified by a random id generated on this install — not by any device, " +
-            "SIM or advertising identifier. It is not synced until name and email are " +
-            "filled in, and it is never written to logs or crash reports.\n\n" +
-            "Erase removes it here and asks the server to delete its copy."
 
         fun newInstance(): ProfileFragment = ProfileFragment()
     }

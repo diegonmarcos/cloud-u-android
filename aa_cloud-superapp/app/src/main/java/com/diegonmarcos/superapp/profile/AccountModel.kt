@@ -130,6 +130,8 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
         val plan = AccountDrift.pushPlan(AccountDrift.leaves(s.body), AccountRuntime.observed(runtime()?.apps), paths, apps)
         if (plan.isEmpty()) return "✗ nothing to push: the server file holds none of those observed fields".also { changed(it) }
         val lines = plan.values.flatten().map { (p, v) -> AccountRuntime.push(ctx, p, v, s.body) }
+        // #781 this IS the apply now (the per-peer "Your config" Apply is deleted): it lights Connect's step 4.
+        if (lines.any { it.startsWith("✓") }) com.diegonmarcos.cloudlib.auth.UserRegistry.markApplied(ctx, now())
         refreshRuntime()
         return lines.joinToString("\n").also { changed(it) }
     }

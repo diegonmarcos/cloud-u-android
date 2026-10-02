@@ -52,7 +52,7 @@ GR="$APP/app/build.gradle"
 PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
 PF="$PKG/ProfileFragment.kt"
 PV="$PKG/ProfileJourneyView.kt"
-CA="$PKG/ConfigAutoImport.kt"
+AM="$PKG/AccountModel.kt"
 RES="$APP/app/src/main/res"
 # #587 the journey's engine and the sign-in surface are the fleet's libs:auth; the
 # providers are the ONE shared declaration. Both live beside this app.
@@ -68,7 +68,7 @@ AD="$LSRC/AuthDeclaration.kt"
 CFA="$LSRC/ConfigArtifact.kt"
 DG="$LSRC/DeviceGrant.kt"
 LRES="$LIB/src/main/res"
-for f in "$BJ" "$GR" "$PF" "$PJ" "$PV" "$SI" "$UR" "$CA" "$SHARED" "$LGR" "$UI" "$AD" "$CFA" "$DG"; do
+for f in "$BJ" "$GR" "$PF" "$PJ" "$PV" "$SI" "$UR" "$AM" "$SHARED" "$LGR" "$UI" "$AD" "$CFA" "$DG"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -150,7 +150,7 @@ grep -q '"authelia_bearer" -> Kind.AUTHELIA_BEARER' "$SI" && grep -q '"authelia_
     && ok "T1b: SignIn.kt dispatches both SSO kinds" || bad "T1b: SignIn.kt does not map both SSO kinds"
 
 echo "== T2: no provider, endpoint, client id, user, address or device literal in Kotlin (app AND lib) =="
-KT=("$SI" "$UI" "$AD" "$CFA" "$DG" "$PF" "$PJ" "$PV" "$UR" "$CA")
+KT=("$SI" "$UI" "$AD" "$CFA" "$DG" "$PF" "$PJ" "$PV" "$UR" "$AM")
 for id in $IDS; do
     grep -qE "\"$id\"" <<<"$(grep -v -- '-> Kind\.' <<<"$(codeof "${KT[@]}")")" && bad "T2: provider id '$id' is a Kotlin literal" || ok "T2: '$id' is not a Kotlin literal"
 done
@@ -264,7 +264,7 @@ STORES=$(codeof "$PF" | grep -c 'setAutheliaCredential(')
 [ "$STORES" = 1 ] && grep -q 'if (storeBearer.isNotBlank())' "$PF" && ok "T5: the bearer is stored once, only after it proved itself" \
                   || bad "T5: setAutheliaCredential is called $STORES times / not gated on a proven bearer"
 
-echo "== T6: picks are ids; a fetch remembers, step 4 alone applies, for the chosen peer =="
+echo "== T6: picks are ids; a fetch remembers and never applies; step 4's apply is Drift's server → runtime =="
 grep -q 'fun selectPeer(ctx: Context, id: String)' "$UR" && grep -q 'fun selectIdentity(ctx: Context, email: String)' "$UR" \
     && ok "T6: only ids are stored for the picks" || bad "T6: the pick API changed"
 grep -q 'fun current(ctx: Context): Registry?' "$UR" && grep -q 'fun remember(ctx: Context, root: JSONObject)' "$UR" \
@@ -272,12 +272,12 @@ grep -q 'fun current(ctx: Context): Registry?' "$UR" && grep -q 'fun remember(ct
 grep -q 'VaultCockpit.selectDevice(ctx, p.vaultDevice)' "$PF" && ok "T6: the peer pick selects the cockpit device" || bad "T6: the peer pick does not select the cockpit device"
 RF=$(codeof "$PF" | awk '/private fun landed\(/{f=1} f{print} f&&/^    }$/{exit}')
 grep -q 'UserRegistry.remember(appCtx, artifact)' <<<"$RF" && ok "T6: every way in lands in ONE place that remembers and caches the registry" || bad "T6: landed() does not remember the artifact"
-grep -q 'ConfigAutoImport.apply' <<<"$RF" && bad "T6: a fetch still applies — step 4 is the only apply" || ok "T6: a fetch never applies"
+grep -qE 'ConfigAutoImport|pushServerToRuntime|AccountRuntime.push' <<<"$RF" && bad "T6: a fetch still applies" || ok "T6: a fetch never applies"
 [ "$(codeof "$PF" | grep -c 'landed(')" -ge 3 ] && ok "T6: the lib's host, the stored bearer and the SSH clone all land through landed()" || bad "T6: not every way in lands through landed()"
-[ "$(codeof "$PF" | grep -c 'ConfigAutoImport.apply(')" = 1 ] && ok "T6: exactly one Apply on the page" || bad "T6: ConfigAutoImport.apply is called more than once on the page"
-grep -q 'UserRegistry.selectedPeer(context)' "$CA" && grep -q 'UserRegistry.peerProfiles(root, peerId)' "$CA" \
-    && ok "T6: the apply step writes the chosen peer's profiles" || bad "T6: ConfigAutoImport ignores the chosen peer"
-grep -q 'UserRegistry.markApplied(ctx, stamp())' "$PF" && ok "T6: a successful apply is recorded for step 4's light" || bad "T6: apply does not record itself"
+# #781 the per-peer "Your config" Apply (ConfigAutoImport) is deleted; Drift's server → runtime is the apply.
+[ -f "$PKG/ConfigAutoImport.kt" ] && bad "T6: ConfigAutoImport.kt survives #781" || ok "T6: the old per-peer apply is gone (#781)"
+grep -q 'UserRegistry.markApplied(' <<<"$(awk '/fun pushServerToRuntime\(/{f=1} f{print} f&&/^    }$/{exit}' "$AM")" \
+    && ok "T6: a server → runtime push that lands is recorded for step 4's light" || bad "T6: the apply does not record itself"
 
 echo "== T7: the ONE declaration, when checked out beside this repo =="
 USERS=""
