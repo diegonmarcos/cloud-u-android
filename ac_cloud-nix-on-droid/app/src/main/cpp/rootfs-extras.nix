@@ -80,11 +80,32 @@ in
       ++ uvicorn.optional-dependencies.standard
       ++ pyjwt.optional-dependencies.crypto;
     pythonRelaxDeps = true;
+    # #788 upstream bug in 0.19.0 (reproduced on 3.13 and 3.14, not a packaging difference):
+    # the Termux pre-import `--version` shortcut prints PROJECT_ROOT, which main.py only
+    # defines ~100 lines later, so on a phone `hermes --version` printed one line and died
+    # with NameError. It runs only when TERMUX_VERSION or a com.termux PREFIX is set: the nix
+    # terminal's login keeps TERMUX_VERSION, the termux one enters its rootfs with `env -i`
+    # (ac_cloud-termux/rootfs/enter.sh), which is why only this terminal hit it. Both lines
+    # that print it get the same path computed with `os` (imported above the shortcut) instead.
+    postInstall = ''
+      main=$out/${pkgs.python3Packages.python.sitePackages}/hermes_cli/main.py
+      substituteInPlace $main --replace-fail \
+        '{PROJECT_ROOT}")' '{os.path.dirname(os.path.dirname(os.path.realpath(__file__)))}")'
+      ${pkgs.python3Packages.python.interpreter} -m compileall -q -f -o 0 -o 1 $main
+    '';
     pythonImportsCheck = [ "hermes_cli.main" ];
     doInstallCheck = true;
     nativeInstallCheckInputs = [ pkgs.versionCheckHook pkgs.writableTmpDirAsHomeHook ];
     versionCheckKeepEnvironment = [ "HOME" ];
     versionCheckProgram = "${placeholder "out"}/bin/hermes";
+    # versionCheckHook ignores the exit code (`|| true`) and only looks for the version string,
+    # and its sandbox has no TERMUX_VERSION, so it never took the crashing path and would have
+    # passed it anyway (the line before the NameError already says v0.19.0). Run both paths
+    # the device can take, the Termux shortcut and the full CLI, under errexit: each must be 0.
+    postInstallCheck = ''
+      TERMUX_VERSION=1 $out/bin/hermes --version
+      env -u TERMUX_VERSION -u PREFIX $out/bin/hermes --version
+    '';
     meta.mainProgram = "hermes";
   };
 
