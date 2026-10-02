@@ -77,7 +77,7 @@ class ParsersTest {
         assertEquals(6, items.size)
         assertEquals("Tankrabatt für Autofahrer, aber kein Nachlass beim Heizen: ungerecht?", items[0].title)
         assertEquals("https://www.tagesschau.de/wirtschaft/verbraucher/heizen-tankrabatt-debatte-100.html", items[0].url)
-        assertEquals(java.time.ZonedDateTime.parse("2026-10-02T14:06:54+02:00").toInstant().toEpochMilli(), items[0].date)
+        assertEquals(java.time.ZonedDateTime.parse("2026-10-02T11:22:31+02:00").toInstant().toEpochMilli(), items[0].date) // the item's own pubDate, not the channel's
         assertFalse(items[0].text.contains("<"))
     }
 

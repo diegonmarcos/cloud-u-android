@@ -46,6 +46,8 @@ pitest {
     outputFormats = ['XML', 'HTML']
     timestampedReports = false
     mutationThreshold = 70
+    // PIT runs the suite in its own minion JVM, which does not inherit the test task's properties.
+    jvmArgs = ["-Dcloudsearch.buildJson=${rootProject.file('build.json').absolutePath}".toString()]
 }
 
 // `gradle test` is what CI runs (build.json::tests.unit.task): the mutation run rides on it.

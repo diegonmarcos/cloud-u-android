@@ -6,6 +6,7 @@ import java.io.File
 /** This app's own build.json (core/build.gradle passes its path) and the saved real responses. */
 object Fixtures {
     val buildJson: JSONObject by lazy {
+        // core/build.gradle passes the path to the test task AND to PIT's minion JVM.
         val path = System.getProperty("cloudsearch.buildJson") ?: error("core/build.gradle sets cloudsearch.buildJson")
         JSONObject(File(path).readText())
     }
