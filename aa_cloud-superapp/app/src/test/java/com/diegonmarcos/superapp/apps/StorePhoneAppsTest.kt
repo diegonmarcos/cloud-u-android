@@ -84,9 +84,12 @@ class StorePhoneAppsTest {
         val cloud = barOf(StoreCloudFragment())
         val phone = barOf(StorePhoneFragment())
         assertEquals("the Cloud bar lost controls", StoreBar.Item.values().toSet(), cloud.controls.keys)
-        assertEquals("Phone Apps does not draw the same controls", cloud.controls.keys, phone.controls.keys)
-        for ((item, view) in cloud.controls)
-            assertEquals("$item label differs between the tabs", view.text.toString(), phone.controls.getValue(item).text.toString())
+        // #784 Download all fills the fleet cache, which only the Cloud tab owns:
+        // a null verb draws no button at all, so it is the one control Phone lacks.
+        assertEquals("Phone Apps does not draw the same controls",
+            cloud.controls.keys - StoreBar.Item.DOWNLOAD, phone.controls.keys)
+        for ((item, view) in phone.controls)
+            assertEquals("$item label differs between the tabs", cloud.controls.getValue(item).text.toString(), view.text.toString())
         assertEquals("the Cloud tab has a disabled control", emptySet<StoreBar.Item>(),
             cloud.controls.filterValues { !it.isEnabled }.keys)
         // #571: Install all / Update all are real on Phone Apps — this store installs

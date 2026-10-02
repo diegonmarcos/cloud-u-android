@@ -17,12 +17,16 @@ import kotlin.concurrent.thread
  * Every verb goes through [StoreStages] — the same calls the row's buttons make
  * — so a green here is a statement about the Store, not about a parallel path.
  * download/install/auto run on their own thread and return at once (a 400 MB
- * fetch must not hold a socket); poll `stage` for the outcome. No URL, token or
+ * fetch must not hold a socket); poll `stage` for the outcome. #784 adds the
+ * batch verbs: downloadAll / updateAll answer a dry run (`dryRun=1`) in place,
+ * and a real run goes to the background with its per-app report under `batch`.
+ * `offline=1` takes the network away, as the batch would see it. No URL, token or
  * secret is ever in a response: names, sizes, digests and sentences only.
  */
 object StoreDebugApi {
 
     @Volatile private var registered = false
+    @Volatile private var last: JSONObject? = null
 
     fun register(ctx: Context) {
         if (registered) return
@@ -34,14 +38,23 @@ object StoreDebugApi {
             AppDebugServer.Op("stage", "pkg=<applicationId or fleet id>&remote=1 (optional: ask the network too)",
                 "the row's stage: stage id, text, verbs, failedAt"),
             AppDebugServer.Op("download", "pkg=…", "stage 1 in the background; poll stage"),
-            AppDebugServer.Op("install", "pkg=…", "stage 2 from the cache, in the background; poll stage"),
+            AppDebugServer.Op("install", "pkg=…",
+                "download (if nothing installable is cached) → install → clear, in the background, " +
+                "stopping at the first stage that fails; poll stage"),
             AppDebugServer.Op("clear", "pkg=…", "stage 3: delete this app's cached APK(s)"),
-            AppDebugServer.Op("auto", "pkg=…", "download → install → clear, stopping at the first stage that fails"),
+            AppDebugServer.Op("auto", "pkg=…", "same as install (kept for old callers)"),
+            AppDebugServer.Op("downloadAll", "dryRun=1 (plan only) · offline=1 (no network)",
+                "fetch every update / missing entry into the cache, install nothing; per-app report"),
+            AppDebugServer.Op("updateAll", "dryRun=1 (plan only) · offline=1 (no network)",
+                "install every cached newer build (no network), full chain for the rest online; per-app report"),
+            AppDebugServer.Op("batch", "", "the report of the last real downloadAll / updateAll"),
         )) { op, q -> route(app, op, q) }
     }
 
     private fun route(ctx: Context, op: String, q: Map<String, String>): String? = when (op) {
         "cache" -> cache(ctx, q["verify"] == "1").toString()
+        "downloadAll", "updateAll" -> batch(ctx, op, q["dryRun"] == "1", q["offline"] != "1" && StoreStages.isOnline(ctx)).toString()
+        "batch" -> (last ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
         "stage", "download", "install", "clear", "auto" -> {
             val key = q["pkg"].orEmpty()
             val app = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
@@ -55,8 +68,7 @@ object StoreDebugApi {
     private fun verb(ctx: Context, app: Fleet.App, op: String, remote: Boolean): JSONObject {
         when (op) {
             "download" -> thread(name = "store-api-download-${app.id}") { StoreStages.download(ctx, app) }
-            "install" -> thread(name = "store-api-install-${app.id}") { StoreStages.install(ctx, app) }
-            "auto" -> thread(name = "store-api-auto-${app.id}") { StoreStages.auto(ctx, app) }
+            "install", "auto" -> thread(name = "store-api-install-${app.id}") { StoreStages.install(ctx, app) }
             "clear" -> StoreStages.clear(ctx, app)
         }
         // A verb thread may not have marked itself busy yet; a short settle makes
@@ -68,6 +80,24 @@ object StoreDebugApi {
             .put("failedAt", s.failedAt ?: JSONObject.NULL)
             .put("cached", s.cached?.let { entry(it, verify = false) } ?: JSONObject.NULL)
     }
+
+    private fun batch(ctx: Context, op: String, dryRun: Boolean, online: Boolean): JSONObject {
+        val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+        fun run() = if (op == "downloadAll") StoreStages.downloadAll(ctx, fleet, online, dryRun)
+                    else StoreStages.updateAll(ctx, fleet, online, dryRun)
+        if (dryRun) return json(run())
+        thread(name = "store-api-$op") { last = json(run()) }
+        return JSONObject().put("ok", true).put("op", op).put("started", true).put("online", online)
+            .put("poll", "store/batch")
+    }
+
+    private fun json(b: StoreStages.Batch): JSONObject = JSONObject().put("ok", true).put("op", b.op)
+        .put("dryRun", b.dryRun).put("online", b.online).put("summary", b.summary)
+        .put("needBytes", b.needBytes).put("roomBytes", b.roomBytes)
+        .put("apps", JSONArray(b.outcomes.map {
+            JSONObject().put("id", it.app.id).put("pkg", it.app.pkg).put("result", it.result)
+                .put("text", it.text).put("failedAt", it.failedAt ?: JSONObject.NULL)
+        }))
 
     private fun cache(ctx: Context, verify: Boolean): JSONObject {
         val entries = ApkCache.entries(ctx)

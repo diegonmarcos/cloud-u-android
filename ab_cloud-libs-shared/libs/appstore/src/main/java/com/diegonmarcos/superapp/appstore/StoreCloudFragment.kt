@@ -760,6 +760,7 @@ class StoreCloudFragment : Fragment() {
         checkAll = { checkAll(ctx) },
         installAll = { installMissing(ctx) },
         updateAll = { updateAll(ctx, "the whole fleet", fleet) },
+        downloadAll = { downloadAll(ctx, fleet) },
     ))
 
     // ── one COLLAPSED row per app; the full card is one tap away ─────────────
@@ -959,14 +960,17 @@ class StoreCloudFragment : Fragment() {
             fullStatusViews[appId]?.let { it.text = stg.text; it.setTextColor(color) }
         }
         quickBtns[appId]?.let { b ->
-            when (val verb = stg.actions.firstOrNull()) {
-                StoreStages.INSTALL, StoreStages.CLEAR -> {
+            val verb = stg.actions.firstOrNull()
+            when {
+                verb == null -> b.visibility = View.GONE
+                // Install from a cached APK, or Clear: say which. Install with
+                // nothing cached is the whole chain (#784) — paint() already
+                // drew ⬆ / ⬇ for it, and the tap runs the chain.
+                stg.cached != null || verb == StoreStages.CLEAR -> {
                     b.visibility = View.VISIBLE
-                    b.text = FleetActions.label(b.context, stg.actions.first())
+                    b.text = FleetActions.label(b.context, verb)
                     b.setBackgroundColor(if (verb == StoreStages.INSTALL) 0xFF7C3AED.toInt() else 0xFF4A4A55.toInt())
                 }
-                null -> b.visibility = View.GONE
-                else -> Unit   // Download: paint() already drew ⬆ / ⬇ for it
             }
         }
         stageBtns[appId]?.forEach { (verb, b) ->
@@ -986,8 +990,8 @@ class StoreCloudFragment : Fragment() {
     /**
      * Run one #774 stage verb off the main thread, repainting the row from
      * [StoreStages.stage] twice a second while it runs (download %), then once
-     * from the network when it ends. Install never downloads and Download never
-     * installs — each is its own tap, or the auto chain's.
+     * from the network when it ends. Download only fetches; Install is the whole
+     * chain (#784) — Download if nothing installable is cached, install, Clear.
      */
     private fun runStage(ctx: Context, app: Fleet.App, verb: String) {
         thread(name = "fleet-$verb-${app.id}") {
@@ -1002,7 +1006,7 @@ class StoreCloudFragment : Fragment() {
             }
             val done = when (verb) {
                 StoreStages.DOWNLOAD -> StoreStages.download(ctx, app)
-                StoreStages.INSTALL -> StoreStages.install(ctx, app)
+                StoreStages.INSTALL -> StoreStages.install(ctx, app, states[app.id])
                 else -> StoreStages.clear(ctx, app)
             }
             ticker.interrupt()
@@ -1087,29 +1091,15 @@ class StoreCloudFragment : Fragment() {
         // checkNow does not care whether the fleet parsed.
         Toast.makeText(ctx, "Updating $what (+ SuperApp)…", Toast.LENGTH_SHORT).show()
         thread(name = "fleet-update-all") {
-            // Mode.AUTO, not Mode.UPDATES. For an APP the two are identical, so
-            // the Apps tab is unchanged. For a LIB, UPDATES was why this button
-            // "installs one lib and stops": UPDATES drops every State.Missing,
-            // and a lib is Missing on any device that never installed it — so
-            // the only libs it could ever act on were the ones already present,
-            // typically exactly one. It was not stopping. It only ever had one
-            // eligible entry, for the same reason the background pass ignored
-            // all 36 lib entries. AUTO makes a missing lib eligible.
-            val pass = Fleet.installAllPass(ctx, targets, Fleet.Mode.AUTO)
-            // `acted == 0` is not "up to date". It is equally "everything was
-            // blocked", which is what a device out of PackageInstaller session
-            // headroom hits — and reporting that as success is how a total
-            // failure across every app and lib looked like good news. The pass
-            // already knows which happened; say what it says.
-            view?.post {
-                Toast.makeText(ctx,
-                    when {
-                        pass.acted > 0 -> "${pass.acted} update(s) queued"
-                        pass.considered == 0 -> "Everything up to date ($what)"
-                        else -> pass.reason
-                    },
-                    Toast.LENGTH_LONG).show()
-            }
+            // #784 StoreStages.updateAll: every cached build newer than what is
+            // installed goes in with NO network; online, the rest get the same
+            // Download → Install → Clear chain a row's Install runs. Missing
+            // libs are taken, missing apps are Install all's (Mode.AUTO's rule).
+            // The report is per app — installed / skipped / needs download /
+            // failed at <stage> — because a count of zero has meant "everything
+            // is current" and "everything failed" alike before.
+            val batch = StoreStages.updateAll(ctx, targets)
+            view?.post { report(ctx, "Update all", batch) }
             // The HOST update goes LAST. It still runs unconditionally, so the
             // button stays the repair tool it was built to be when the baked
             // fleet is empty — an empty fleet just makes the batch above a
@@ -1120,6 +1110,59 @@ class StoreCloudFragment : Fragment() {
             com.diegonmarcos.superapp.updater.Updater.checkNow(ctx)
             checkAll(ctx)
         }
+    }
+
+    /**
+     * #784 "Download all": every update (or missing entry) into the cache,
+     * nothing installed — pre-fetch on Wi-Fi, Update all later, offline if need
+     * be. A dry run sizes it first; when it will not fit in the free space (or
+     * the cache's own bound) the owner is told BEFORE anything is written, and
+     * what does not fit is skipped rather than evicting the rest.
+     */
+    private fun downloadAll(ctx: Context, targets: List<Fleet.App>) {
+        Toast.makeText(ctx, "Checking what to download…", Toast.LENGTH_SHORT).show()
+        thread(name = "fleet-download-all-plan") {
+            val plan = StoreStages.downloadAll(ctx, targets, dryRun = true)
+            view?.post {
+                if (!isAdded) return@post
+                val n = plan.count(StoreStages.DOWNLOAD)
+                if (n == 0) return@post report(ctx, "Download all", plan)
+                val fits = plan.needBytes <= plan.roomBytes
+                AlertDialog.Builder(requireActivity())
+                    .setTitle("Download all — $n app(s), ${human(plan.needBytes)}")
+                    .setMessage((if (fits) "" else "⚠ Only ${human(plan.roomBytes)} free for the cache: " +
+                        "what does not fit is skipped, never squeezed in.\n\n") +
+                        lines(plan))
+                    .setPositiveButton(FleetActions.label(ctx, "download")) { _, _ ->
+                        thread(name = "fleet-download-all") {
+                            val done = StoreStages.downloadAll(ctx, targets)
+                            view?.post { report(ctx, "Download all", done) }
+                            checkAll(ctx)
+                        }
+                    }
+                    .setNegativeButton(R.string.store_close, null)
+                    .show()
+            }
+        }
+    }
+
+    /** The per-app lines of a batch, skipped ones folded into a count. */
+    private fun lines(b: StoreStages.Batch): String {
+        val shown = b.outcomes.filter { it.result != StoreStages.SKIPPED }
+        val skipped = b.outcomes.size - shown.size
+        return (shown.map { o ->
+            "${o.app.label}: ${o.result.replace('_', ' ')}" +
+                (o.failedAt?.let { " at $it" } ?: "") + " — ${o.text}"
+        } + listOfNotNull(if (skipped > 0) "$skipped skipped (already current)" else null)).joinToString("\n")
+    }
+
+    private fun report(ctx: Context, title: String, b: StoreStages.Batch) {
+        if (!isAdded) return
+        AlertDialog.Builder(requireActivity())
+            .setTitle("$title — ${b.summary.ifEmpty { "nothing to do" }}" + if (b.online) "" else " (offline)")
+            .setMessage(lines(b).ifEmpty { "Nothing to do." })
+            .setPositiveButton(R.string.store_close, null)
+            .show()
     }
 
     // "Install all" — only apps not yet on the device.

@@ -36,7 +36,7 @@ object StoreBar {
 
     const val TAG = "store-bar"
 
-    enum class Item { CHECK, INSTALL, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG, DEV_OPTIONS }
+    enum class Item { CHECK, INSTALL, DOWNLOAD, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG, DEV_OPTIONS }
 
     class Verbs(
         val checkAll: () -> Unit,
@@ -44,6 +44,10 @@ object StoreBar {
         val updateAll: (() -> Unit)?,
         /** Why a null verb is null. Drawn under the bar whenever one is. */
         val disabledReason: Int = 0,
+        /** #784 pre-fetch every update into the cache, install nothing. Only the
+         *  Cloud tab owns a fleet cache to fill, so null here draws NO button
+         *  (rather than a disabled one with nothing to explain). */
+        val downloadAll: (() -> Unit)? = null,
     )
 
     private val cDim = 0x99FFFFFF.toInt()
@@ -63,6 +67,9 @@ object StoreBar {
 
         actionRow.addView(btn(ctx, Item.CHECK, ctx.getString(R.string.store_bar_check_all), 0xFF2B6CB0.toInt(), verbs.checkAll))
         actionRow.addView(btn(ctx, Item.INSTALL, ctx.getString(R.string.store_bar_install_all), 0xFF2B6CB0.toInt(), verbs.installAll))
+        verbs.downloadAll?.let {
+            actionRow.addView(btn(ctx, Item.DOWNLOAD, ctx.getString(R.string.store_bar_download_all), 0xFF2B6CB0.toInt(), it))
+        }
         actionRow.addView(btn(ctx, Item.UPDATE, ctx.getString(R.string.store_bar_update_all), 0xFF2B6CB0.toInt(), verbs.updateAll))
         val autoOn = AutoUpdatePrefs.enabled(ctx)
         actionRow.addView(btn(ctx, Item.AUTO_UPDATE, ctx.getString(R.string.store_bar_auto_update, onOff(ctx, autoOn)),

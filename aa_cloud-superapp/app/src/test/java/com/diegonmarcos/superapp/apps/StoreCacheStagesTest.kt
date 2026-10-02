@@ -109,6 +109,7 @@ class StoreCacheStagesTest {
     private val servedBytes = AtomicLong()
     private val rangesSeen = mutableListOf<String>()
     private lateinit var apk: ByteArray
+    private lateinit var room0: (Context) -> Long
 
     /** A real zip (VerifiedApk checks the structure) big enough that a resume
      *  is distinguishable from a restart by the byte count alone. */
@@ -125,6 +126,7 @@ class StoreCacheStagesTest {
     @Before
     fun up() {
         ApkCache.clear(ctx)
+        room0 = StoreStages.room
         apk = fakeApk()
         server = TinyHttp { method, path, headers ->
             when {
@@ -150,6 +152,7 @@ class StoreCacheStagesTest {
     fun down() {
         server.stop()
         StoreStages.installer = FleetInstall::install
+        StoreStages.room = room0
         ApkCache.clear(ctx)
         ApkCache.clearNote(ctx, pkg)
     }
@@ -268,12 +271,13 @@ class StoreCacheStagesTest {
     }
 
     @Test
-    fun `auto chain stops at Download when the download fails, and never opens the installer`() {
+    fun `Install with nothing cached stops at Download when the download fails, and never opens the installer`() {
         sheet(accept = true)
         // No release asset, GHCR on a closed port: every source fails, fast.
-        val s = StoreStages.auto(ctx, app(releaseUrl = ""))
+        val s = StoreStages.install(ctx, app(releaseUrl = ""))
         assertEquals("download", s.failedAt)
-        assertEquals("the row offers exactly Download to take over from", listOf("download"), s.actions)
+        assertEquals("the row offers Install (the chain, retrying the download) and Download",
+            listOf("install", "download"), s.actions)
         assertEquals("Install must not run without a cached APK", 0, sheets.get())
         assertEquals(ApkCache.STAGE_DOWNLOAD, ApkCache.noteOf(ctx, pkg)?.stage)
     }
@@ -281,7 +285,7 @@ class StoreCacheStagesTest {
     @Test
     fun `auto chain stops at Install when the sheet is cancelled, cache kept, Install takes over without a download`() {
         sheet(accept = false)
-        val stopped = StoreStages.auto(ctx, app())
+        val stopped = StoreStages.install(ctx, app())
         assertEquals(1, assetGets.get())
         assertEquals("install", stopped.failedAt)
         assertEquals(listOf("install", "download", "clear"), stopped.actions)
@@ -294,23 +298,21 @@ class StoreCacheStagesTest {
         val reread = StoreStages.stage(ctx, app())
         assertEquals("error", reread.id); assertEquals("install", reread.failedAt)
 
-        // The user takes over with Install: from the cache, no network fetch.
+        // The user takes over with Install: from the cache, no network fetch,
+        // and #784 the chain Clears once the install is proven.
         sheet(accept = true)
         val installed = StoreStages.install(ctx, app())
         assertEquals("Install after a cancel reuses the cache", 1, assetGets.get())
         assertEquals("installed", installed.id)
-        assertEquals("the installed row offers Clear while the APK is still cached", listOf("clear"), installed.actions)
-
-        val cleared = StoreStages.clear(ctx, app())
-        assertTrue("Clear deletes the cached APK", !cached.file.exists())
-        assertEquals("installed", cleared.id)
-        assertEquals(null, cleared.cached)
+        assertEquals("nothing left to Clear: the chain cleared it", emptyList<String>(), installed.actions)
+        assertTrue("the proven install auto-cleared the cached APK", !cached.file.exists())
+        assertEquals(null, installed.cached)
     }
 
     @Test
-    fun `auto chain runs all three stages when nothing fails`() {
+    fun `Install runs all three stages when nothing fails`() {
         sheet(accept = true)
-        val s = StoreStages.auto(ctx, app())
+        val s = StoreStages.install(ctx, app())
         assertEquals(1, sheets.get())
         assertEquals("installed", s.id)
         assertEquals("the chain clears after a proven install", null, StoreStages.cachedFor(ctx, app()))
@@ -320,7 +322,7 @@ class StoreCacheStagesTest {
     @Test
     fun `control - a cancelled sheet does NOT read as installed`() {
         sheet(accept = false)
-        StoreStages.auto(ctx, app())
+        StoreStages.install(ctx, app())
         assertTrue("landed must be false when nothing was installed",
             StoreStages.cachedFor(ctx, app())!!.let { !ApkCache.landed(ctx, it, pkg) })
     }
@@ -330,7 +332,7 @@ class StoreCacheStagesTest {
         val half = apk.size / 2
         ApkCache.file(ctx, "fleet-lib-rootfs-test-release.apk.part").writeBytes(apk.copyOfRange(0, half))
         val before = StoreStages.stage(ctx, app())
-        assertEquals(listOf("download"), before.actions)
+        assertEquals(listOf("install", "download"), before.actions)
         assertTrue("the row says the bytes are kept: ${before.text}", before.text.contains("kept"))
         val after = StoreStages.download(ctx, app())
         assertEquals((apk.size - half).toLong(), servedBytes.get())
@@ -388,7 +390,8 @@ class StoreCacheStagesTest {
         val f = cachedAt(1, v1)
         val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v2")))
         assertEquals("update_available", s.id)
-        assertEquals("Download, and nothing to Clear: the landed cache cleared itself", listOf("download"), s.actions)
+        assertEquals("Install + Download, and nothing to Clear: the landed cache cleared itself",
+            listOf("install", "download"), s.actions)
         assertFalse("a cache byte-identical to the installed APK is reaped without a tap", f.exists())
     }
 
@@ -398,7 +401,7 @@ class StoreCacheStagesTest {
         val f = cachedAt(1, bytesOf("v1-rebuild"))
         val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v2")))
         assertEquals("update_available", s.id)
-        assertEquals(listOf("download", "clear"), s.actions)
+        assertEquals(listOf("install", "download", "clear"), s.actions)
         assertTrue("unproven bytes are never auto-deleted", f.exists())
     }
 
@@ -422,7 +425,7 @@ class StoreCacheStagesTest {
         ApkCache.note(ctx, pkg, ApkCache.STAGE_INSTALL, "User rejected permissions")
         val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v3")))
         assertEquals("update_available", s.id)
-        assertEquals(listOf("download", "clear"), s.actions)
+        assertEquals(listOf("install", "download", "clear"), s.actions)
         assertEquals(null, s.cached)
         assertTrue(f.exists())
         assertEquals("a note about a superseded build must not hold the unattended pass",
@@ -444,21 +447,158 @@ class StoreCacheStagesTest {
     }
 
     @Test
-    fun `780 auto chain downloads past a landed cache instead of reinstalling it`() {
+    fun `780 Install chain downloads past a landed cache instead of reinstalling it`() {
         sheet(accept = true)
         installedAt(1, bytesOf("v1"))
         cachedAt(1, bytesOf("v1-rebuild"))
-        StoreStages.auto(ctx, app())
+        StoreStages.install(ctx, app())
         assertEquals("a landed cache must not stand in for the download", 1, assetGets.get())
     }
 
     @Test
-    fun `780 control - auto chain installs an actionable cache without the network`() {
+    fun `780 control - Install chain installs an actionable cache without the network`() {
         sheet(accept = false)
         installedAt(1, bytesOf("v1"))
         cachedAt(2, bytesOf("v2"))
-        StoreStages.auto(ctx, app())
+        StoreStages.install(ctx, app())
         assertEquals(0, assetGets.get())
         assertEquals(1, sheets.get())
+    }
+
+    // ── #784 Install is the whole chain; Download all; Update all offline ──
+    //
+    // Each case has a control beside it that flips one fact and must flip the
+    // verdict, so a counter or flag that cannot see the behaviour cannot pass.
+
+    /** A second lib, so a batch has something to skip or leave uncached. */
+    private fun other() = app().copy(id = "lib-other-test", pkg = "org.example.other", releaseUrl = "")
+
+    /** What [ApkCache.keep] writes on a device for a real APK. Robolectric cannot
+     *  parse the test zip's manifest, so the record is written as keep would. */
+    private fun recordAsKeepWould(code: Long) {
+        val f = StoreStages.cachedFor(ctx, app())!!.file
+        java.io.File(f.parentFile, "${f.name}.record").writeText("$pkg\n$code\n${hex(f.readBytes())}\n")
+    }
+
+    @Test
+    fun `784 Install is live with nothing cached, and one tap runs Download, Install, Clear`() {
+        val missing = Fleet.State.Missing(apk.size.toLong())
+        val row = StoreStages.stage(ctx, app(), missing)
+        assertEquals("not_installed", row.id)
+        assertEquals("Install is never disabled for want of a cache", listOf("install", "download"), row.actions)
+        assertEquals(null, row.cached)
+        sheet(accept = true)
+        val s = StoreStages.install(ctx, app(), missing)
+        assertEquals("the chain downloaded exactly once", 1, assetGets.get())
+        assertEquals("then opened the installer exactly once", 1, sheets.get())
+        assertEquals("installed", s.id)
+        assertEquals("then cleared the proven install's APK", null, StoreStages.cachedFor(ctx, app()))
+        // Control: an up-to-date row has no Install to offer.
+        val current = StoreStages.stage(ctx, app(), Fleet.State.Installed("7", 7L, hex(apk).take(12)))
+        assertFalse("install" in current.actions)
+    }
+
+    @Test
+    fun `784 the chain stops at Download keeping the part, and the next Install resumes it and finishes`() {
+        sheet(accept = true)
+        val half = apk.size / 2
+        ApkCache.file(ctx, "fleet-lib-rootfs-test-release.apk.part").writeBytes(apk.copyOfRange(0, half))
+        // The link is down (no source can serve it): stopped at Download.
+        val stopped = StoreStages.install(ctx, app(releaseUrl = ""))
+        assertEquals("download", stopped.failedAt)
+        assertEquals(listOf("install", "download"), stopped.actions)
+        assertEquals("nothing reached the installer", 0, sheets.get())
+        assertEquals("the half already fetched is kept", half.toLong(), StoreStages.partialBytes(ctx, app()))
+        // The link is back: the SAME Install continues from the part.
+        val done = StoreStages.install(ctx, app())
+        assertEquals("only the missing half crosses the network", (apk.size - half).toLong(), servedBytes.get())
+        assertEquals(1, sheets.get())
+        assertEquals("installed", done.id)
+        assertEquals(null, StoreStages.cachedFor(ctx, app()))
+    }
+
+    @Test
+    fun `784 Download all then Update all with the network OFF installs from the cache`() {
+        sheet(accept = true)
+        val fleet = listOf(app(), other())
+        val plan = StoreStages.downloadAll(ctx, fleet, online = true, dryRun = true)
+        assertEquals(StoreStages.DOWNLOAD, plan.outcomes.first { it.app.id == app().id }.result)
+        assertEquals("a dry run downloads nothing", 0, assetGets.get())
+        assertEquals(apk.size.toLong(), plan.needBytes)
+
+        val got = StoreStages.downloadAll(ctx, fleet, online = true)
+        assertEquals(StoreStages.DOWNLOADED, got.outcomes.first { it.app.id == app().id }.result)
+        assertEquals(1, assetGets.get())
+        assertEquals("Download all installs nothing", 0, sheets.get())
+        assertNotNull(StoreStages.cachedFor(ctx, app()))
+        recordAsKeepWould(2L)
+
+        server.stop()   // the network is gone
+        val dry = StoreStages.updateAll(ctx, fleet, online = false, dryRun = true)
+        assertEquals(StoreStages.INSTALL, dry.outcomes.first { it.app.id == app().id }.result)
+        assertEquals("a dry run installs nothing", 0, sheets.get())
+
+        val up = StoreStages.updateAll(ctx, fleet, online = false)
+        val mine = up.outcomes.first { it.app.id == app().id }
+        assertEquals(mine.text, StoreStages.INSTALLED, mine.result)
+        assertEquals(1, sheets.get())
+        assertEquals("no network was needed", 1, assetGets.get())
+        assertEquals("the proven install cleared its cache", null, StoreStages.cachedFor(ctx, app()))
+        // Control: the lib with nothing cached cannot be installed offline, and says so.
+        assertEquals(StoreStages.NEEDS_DOWNLOAD, up.outcomes.first { it.app.id == other().id }.result)
+    }
+
+    @Test
+    fun `784 control - Update all offline with nothing cached installs nothing`() {
+        sheet(accept = true)
+        val up = StoreStages.updateAll(ctx, listOf(app()), online = false)
+        assertEquals(StoreStages.NEEDS_DOWNLOAD, up.outcomes.single().result)
+        assertEquals(0, sheets.get())
+        assertEquals(0, assetGets.get())
+    }
+
+    @Test
+    fun `784 Update all stops each app at the failing stage and reports it`() {
+        sheet(accept = false)
+        installedAt(1, bytesOf("v1"))
+        cachedAt(2, bytesOf("v2"))
+        val up = StoreStages.updateAll(ctx, listOf(app()), online = false)
+        val o = up.outcomes.single()
+        assertEquals(StoreStages.FAILED, o.result)
+        assertEquals("install", o.failedAt)
+        assertTrue("the cache is kept for the retry", StoreStages.cachedFor(ctx, app()) != null)
+        // The retry takes over from Install: no download.
+        sheet(accept = true)
+        assertEquals(StoreStages.INSTALLED, StoreStages.updateAll(ctx, listOf(app()), online = false).outcomes.single().result)
+        assertEquals(0, assetGets.get())
+    }
+
+    @Test
+    fun `784 Download all never starts what does not fit, so it cannot evict what it fetched`() {
+        StoreStages.room = { 10L }
+        val plan = StoreStages.downloadAll(ctx, listOf(app()), online = true, dryRun = true)
+        assertTrue("the dry run warns before filling the disk", plan.needBytes > plan.roomBytes)
+        val got = StoreStages.downloadAll(ctx, listOf(app()), online = true)
+        assertEquals(StoreStages.NO_ROOM, got.outcomes.single().result)
+        assertEquals(0, assetGets.get())
+        assertEquals(null, StoreStages.cachedFor(ctx, app()))
+        // Control: with room, the same call downloads it.
+        StoreStages.room = room0
+        assertEquals(StoreStages.DOWNLOADED, StoreStages.downloadAll(ctx, listOf(app()), online = true).outcomes.single().result)
+    }
+
+    @Test
+    fun `784 a cache byte-identical to the installed APK is cleared by both batch verbs, a different one is kept`() {
+        val v1 = bytesOf("v1"); installedAt(1, v1)
+        for (op in listOf("downloadAll", "updateAll")) {
+            val same = cachedAt(1, v1)
+            if (op == "downloadAll") StoreStages.downloadAll(ctx, listOf(app()), online = false)
+            else StoreStages.updateAll(ctx, listOf(app()), online = false)
+            assertFalse("$op must reap a cache that IS the installed APK", same.exists())
+        }
+        // Control: same versionCode, other bytes — unproven, so kept.
+        val other = cachedAt(1, bytesOf("v1-rebuild"))
+        StoreStages.updateAll(ctx, listOf(app()), online = false)
+        assertTrue(other.exists())
     }
 }

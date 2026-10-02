@@ -35,6 +35,7 @@
     <string name="store_bar_auto_update_toast">Auto-update %1$s</string>
     <string name="store_bar_check_all">↻  Check all</string>
     <string name="store_bar_install_all">⬇  Install all</string>
+    <string name="store_bar_download_all">⇣  Download all</string>
     <string name="store_bar_open">Open ↗</string>
     <string name="store_bar_play_protect">Play Protect: %1$s</string>
     <string name="store_bar_play_protect_off">No install-scan prompt - fleet installs go straight through.</string>
