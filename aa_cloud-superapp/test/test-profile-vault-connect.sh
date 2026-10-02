@@ -116,7 +116,7 @@ SCHEMA="$APP/../../cloud-vault/C_A1-configs/schema.json"
 if [ -f "$SCHEMA" ]; then
     for v in $VAULT_IDS; do
         if jq -e --arg v "$v" '.sections[] | select(.id == $v)' "$SCHEMA" >/dev/null; then ok "T3: vault section '$v' exists in cloud-vault schema.json"
-        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault C_A1-configs/apps, not yet in schema.json — #570 gap)"
+        elif jq -e --arg v "$v" '.ui.profile.infos.schema.sections[] | select(.id == $v and .staged == true)' "$BJ" >/dev/null; then ok "T3: vault section '$v' is staged (declared staged in ui.profile.infos.schema, not yet in cloud-vault schema.json)"
         else bad "T3: cockpit names vault section '$v', which cloud-vault schema.json does not declare"; fi
     done
 else
@@ -180,7 +180,7 @@ grep -qF 'private fun buildDeviceStep(' "$PF" && grep -qF 'VaultCockpit.selectDe
 echo "== T7: Apps reuses #565 =="
 grep -q 'AppInventory.parse(' "$CP" && grep -q 'AppInventory.KIND' "$CP" \
     && ok "T7: an inventory in the vault is read by the one parser" || bad "T7: a second inventory parser"
-grep -qF 'VaultCockpit.appsDeclared(declared!!, d, fleet)' "$AR" && ok "T7: Runtime's apps reading is the same declared set" || bad "T7: Runtime counts apps some other way"
+grep -qF 'VaultCockpit.appsDeclared(declared!!, picked.first, fleet)' "$AR" && ok "T7: Runtime's apps reading is the same declared set" || bad "T7: Runtime counts apps some other way"
 grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' <<<"$(codeof "$PF"; codeof "$AR"; codeof "$AT")" && bad "T7: the Account installs on its own" \
                                                                    || ok "T7: no installer in the Account (the apps topic links into the Store)"
 
@@ -222,9 +222,11 @@ for icon in $(jq -r '.ui.vault_connect.cockpit.device_icons[]' "$BJ"); do
     [ -f "$RES/drawable/$icon.xml" ] && ok "T8: device icon $icon is a drawable" || bad "T8: device icon '$icon' has no drawable"
 done
 grep -qE '"ic_[a-z_]+"' <<<"$(codeof "$FV" "$PF")" && bad "T8: an icon name is a Kotlin literal on the cockpit" || ok "T8: icon names live only in build.json"
-jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
-    && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
-    || bad "T8: no section declares observed:false — the keyboard's light would be a guess"
+# #781 the keyboard is read now; what cannot be read is an app that reports nothing (cloud-drive's token).
+jq -e '[.ui.vault_connect.cockpit.sections[] | select(.runtime.reports == false) | select(.observed != false)] | length == 0' "$BJ" >/dev/null \
+    && jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
+    && ok "T8: every app that reports nothing is declared unobservable as data (its light is Not verifiable, not a guessed colour)" \
+    || bad "T8: an app that reports nothing is not declared observed:false — its light would be a guess"
 # Infos (the fetched configs) is the default tab once the journey has been walked
 # (#573/#695: before that, the page opens on Connect — where the sign-in and the
 # fetch live, and there is nothing to read or apply yet).

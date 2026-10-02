@@ -273,19 +273,14 @@ class ClipboardDao private constructor(private val db: Database) {
      */
     fun exportToDir(dir: File): Int = synchronized(this) {
         dir.mkdirs()
-        val manifestTabs = org.json.JSONArray()
-        val written = HashSet<String>()
+        val export = exportJson()
+        val manifestTabs = export.getJSONArray("tabs")
+        val files = export.getJSONObject("files")
         var total = 0
-        (listOf<String?>(null) + getListNames()).forEach { listName ->
-            val entries = getForList(listName).filter { it.filename == null }
-            val fileName = tabFileName(listName, written)
-            File(dir, fileName).writeText(entriesToJson(entries))
-            manifestTabs.put(org.json.JSONObject().apply {
-                put("listName", listName ?: org.json.JSONObject.NULL)
-                put("file", fileName)
-                put("count", entries.size)
-            })
-            total += entries.size
+        for (i in 0 until manifestTabs.length()) {
+            val tab = manifestTabs.getJSONObject(i)
+            File(dir, tab.getString("file")).writeText(files.getJSONArray(tab.getString("file")).toString(2))
+            total += tab.getInt("count")
         }
         val manifest = org.json.JSONObject().apply {
             put("version", EXPORT_VERSION)
@@ -295,9 +290,32 @@ class ClipboardDao private constructor(private val db: Database) {
         File(dir, MANIFEST).writeText(manifest.toString(2))
         // drop json files left over from an earlier export (renamed or deleted lists)
         dir.listFiles()?.forEach {
-            if (it.name.endsWith(".json") && it.name != MANIFEST && it.name !in written) it.delete()
+            if (it.name.endsWith(".json") && it.name != MANIFEST && !files.has(it.name)) it.delete()
         }
         return total
+    }
+
+    /**
+     * #781 The export [exportToDir] writes, as one JSON object written nowhere: `version`, `tabs`
+     * (the manifest's tab list) and `files` (tab file name → its entries). The SuperApp's Account ▸
+     * Runtime reads it through ITextTools.clipboardLists and compares it, list by list, with the
+     * vault's `autocomplete` section — which is this same export, landed in the vault.
+     */
+    fun exportJson(): org.json.JSONObject = synchronized(this) {
+        val tabs = org.json.JSONArray()
+        val files = org.json.JSONObject()
+        val used = HashSet<String>()
+        (listOf<String?>(null) + getListNames()).forEach { listName ->
+            val entries = getForList(listName).filter { it.filename == null }
+            val fileName = tabFileName(listName, used)
+            files.put(fileName, org.json.JSONArray(entriesToJson(entries)))
+            tabs.put(org.json.JSONObject().apply {
+                put("listName", listName ?: org.json.JSONObject.NULL)
+                put("file", fileName)
+                put("count", entries.size)
+            })
+        }
+        org.json.JSONObject().put("version", EXPORT_VERSION).put("tabs", tabs).put("files", files)
     }
 
     /**

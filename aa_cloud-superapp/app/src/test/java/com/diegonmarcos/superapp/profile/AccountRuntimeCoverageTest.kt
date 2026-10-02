@@ -1,0 +1,112 @@
+package com.diegonmarcos.superapp.profile
+
+import android.app.Application
+import com.diegonmarcos.superapp.profile.AccountRuntime.AppRead
+import com.diegonmarcos.superapp.profile.AccountRuntime.Status
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * #781 — Runtime reads FULL configs: every Profiles field is mapped to the app(s) that hold it
+ * (cockpit `vault_fields`), each app's declared / reported / missing / not-read is counted from that
+ * map, the keyboard reports its autocomplete lists in the vault's own shape, and a phone with no
+ * device picked on Connect still reads its own mesh profiles (the device the live tunnel carries).
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
+class AccountRuntimeCoverageTest {
+
+    private val s = AccountDrift.SEP
+    private val layout = VaultCockpit.layout
+
+    @Test fun `the field map is exactly the Profiles schema - one declaration, both tabs`() {
+        val schema = InfoMask.schema.flatMap { sec -> sec.fields.map { "${sec.id}$s$it" } }.toSet()
+        assertTrue("the baked schema is readable", schema.isNotEmpty())
+        assertEquals(schema, layout.vaultFields.keys)
+        val ids = layout.sections.map { it.id }.toSet()
+        for ((path, f) in layout.vaultFields) {
+            assertTrue("$path names an undeclared app: ${f.apps}", ids.containsAll(f.apps))
+            if (f.apps.isEmpty() || !f.held) assertTrue("$path is held by no app and says no why", f.why.isNotBlank())
+            if (f.held) for (app in f.apps)
+                assertTrue("$path is held by $app, whose vault sections do not include it",
+                    path.substringBefore(s) in layout.sections.first { it.id == app }.vault)
+        }
+    }
+
+    @Test fun `the keyboard is read over text tools, cloud-drive says why it is not`() {
+        val kb = layout.sections.first { it.id == "keyboard" }
+        assertEquals(VaultCockpit.TEXT_TOOLS, kb.runtime.servedBy)
+        assertTrue(kb.runtime.reports)
+        assertTrue("every held autocomplete list has a tab file",
+            layout.vaultFields.filter { (_, f) -> "keyboard" in f.apps && f.held }.keys
+                .filterNot { it.endsWith("${s}manifest") }.all { it.substringAfter(s) in kb.runtime.lists })
+        val drive = layout.sections.first { it.id == "cloud-drive" }
+        assertFalse(drive.runtime.reports)
+        assertTrue(drive.runtime.why.isNotBlank())
+    }
+
+    @Test fun `coverage - an unread app misses all it holds, a read one what it holds empty`() {
+        val vf = mapOf(
+            "x${s}a" to VaultCockpit.VaultField(listOf("app"), true),
+            "x${s}b" to VaultCockpit.VaultField(listOf("app"), true),
+            "x${s}c" to VaultCockpit.VaultField(listOf("app"), false, "input"),
+            "y${s}d" to VaultCockpit.VaultField(listOf("other"), true),
+        )
+        val down = AccountRuntime.coverage(AppRead("app", "App", Status.NOT_REPORTING, "", emptyMap()), vf)
+        assertEquals(listOf("x${s}a", "x${s}b"), down.fields)
+        assertEquals(down.fields, down.missing)
+        val up = AccountRuntime.coverage(AppRead("app", "App", Status.REACHABLE, "",
+            mapOf("x${s}a${s}k" to "v", "x${s}a${s}empty" to null)), vf)
+        assertEquals(listOf("x${s}a", "x${s}b"), up.fields)
+        assertEquals(listOf("x${s}a${s}empty"), up.missing)
+        assertEquals(listOf("x${s}b"), up.unread)
+        assertEquals(1, up.reported)
+        val (_, apps) = AccountRuntime.snapshot(listOf(up))
+        val c = apps.getJSONObject("app").getJSONObject("counts")
+        assertEquals(listOf(2, 2, 1, 1, 1), listOf("declared", "observed", "reported", "missing", "unread").map { c.getInt(it) })
+    }
+
+    @Test fun `the keyboard's export lands at the vault's autocomplete paths and equals the vault's copy`() {
+        val items = JSONArray().put(JSONObject().put("timeStamp", 1).put("text", "a").put("mimeTypes", JSONArray()))
+        val tabs = JSONArray().put(JSONObject().put("listName", JSONObject.NULL).put("file", "default.json").put("count", 1))
+            .put(JSONObject().put("listName", "Personal Data").put("file", "Personal_Data.json").put("count", 1))
+        val export = JSONObject().put("version", 1).put("tabs", tabs)
+            .put("files", JSONObject().put("default.json", items).put("Personal_Data.json", items))
+        val r = AccountRuntime.keyboardValues(export, mapOf("default" to "default.json", "personal_data" to "Personal_Data.json", "agents" to "Agents.json"))
+        assertNull("a list the keyboard does not have is observed empty", r["autocomplete${s}agents"])
+        assertFalse("the export's moment is not config", r.keys.any { it.endsWith("exportedAt") })
+        // The vault holds the same export (manifest with its exportedAt, and each list): only the list the keyboard lacks drifts.
+        val vault = JSONObject().put("autocomplete", JSONObject()
+            .put("manifest", JSONObject().put("version", 1).put("exportedAt", 99).put("tabs", JSONArray(tabs.toString())))
+            .put("default", JSONArray(items.toString())).put("personal_data", JSONArray(items.toString()))
+            .put("agents", JSONArray(items.toString())))
+        val rBody = JSONObject().also { b -> r.forEach { (p, v) -> if (v != null) AccountDrift.put(b, p, v) } }
+        val fields = AccountDrift.diff(AccountDrift.leaves(vault), AccountDrift.leaves(rBody), emptyList(), r.keys)
+        assertEquals(listOf("autocomplete${s}agents"), fields.filter { it.kind != AccountDrift.Kind.SAME }.map { it.path })
+    }
+
+    @Test fun `no device picked - the live tunnel's address names the device`() {
+        val a37 = VaultCockpit.Device("samsung-a37", "A37", "10.0.0.37", "fd00::37")
+        val galaxy = VaultCockpit.Device("galaxy", "Galaxy", "10.0.0.21", "")
+        val all = listOf(a37, galaxy)
+        assertEquals(galaxy to false, AccountRuntime.deviceFor(all, "galaxy", "10.0.0.37/32"))
+        assertEquals(a37 to true, AccountRuntime.deviceFor(all, "", "10.0.0.37/32, fd00::37/128"))
+        assertEquals(a37 to true, AccountRuntime.deviceFor(all, "gone", "fd00::37/128"))
+        assertNull(AccountRuntime.deviceFor(all, "", "10.9.9.9/32"))
+        assertNull(AccountRuntime.deviceFor(all, "", ""))
+    }
+
+    @Test fun `mail - the JMAP host is what endpoints domain is compared with`() {
+        assertEquals("mail.example.com", AccountRuntime.hostOf("https://mail.example.com/.well-known/jmap"))
+        assertNull(AccountRuntime.hostOf(""))
+        assertNull(AccountRuntime.hostOf("not a url"))
+    }
+}

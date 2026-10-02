@@ -60,6 +60,7 @@ object AccountTags {
     const val REFRESH = "runtime:refresh"
     fun runtimeApp(id: String) = "runtime:app:$id"
     fun runtimeStatus(id: String) = "runtime:status:$id"
+    fun runtimeCounts(id: String) = "runtime:counts:$id"
     fun exportFile(slot: Slot) = "drift:export:${slot.name}"
     const val EXPORT_REPORT = "drift:export:report"
     fun pair(id: String) = "drift:pair:$id"
@@ -236,6 +237,15 @@ fun RuntimeTab(m: AccountModel) {
                 }) + a.optString("detail").let { if (it.isBlank()) "" else " · $it" } +
                     a.optString("summary").let { if (it.isBlank()) "" else " · $it" },
                     color = if (status == "reachable") p.accent else p.textSecondary, modifier = Modifier.testTag(AccountTags.runtimeStatus(section.id)))
+                // #781 what the app declares (cockpit vault_fields) against what it reported.
+                val counts = a.optJSONObject("counts")
+                if (counts != null) Text(stringResource(R.string.account_runtime_counts, counts.optInt("declared"), counts.optInt("reported"),
+                    counts.optInt("missing"), counts.optInt("unread")), color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testTag(AccountTags.runtimeCounts(section.id)))
+                for ((key, res) in listOf("missing" to R.string.account_runtime_missing, "unread" to R.string.account_runtime_unread)) {
+                    val paths = a.optJSONArray(key)?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
+                    if (paths.isNotEmpty()) Text(stringResource(res, paths.joinToString(", ")), color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+                }
                 if (observed.isNotEmpty()) Text(stringResource(R.string.account_runtime_fields, observed.size), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
                 for (path in observed) {
                     Text(path, color = p.textSecondary, style = MaterialTheme.typography.labelMedium)

@@ -378,6 +378,11 @@ class TextToolsService : Service() {
             if (token.isEmpty()) return failed("${provider.label} holds no key on this device yet")
             return ok(token)
         }
+
+        /** #781 See [ITextTools.clipboardLists]. Null when the clipboard store cannot open (device locked). */
+        override fun clipboardLists(): String? =
+            runCatching { helium314.keyboard.latin.database.ClipboardDao.getInstance(this@TextToolsService)?.exportJson()?.toString() }
+                .getOrNull()
     }
 
     private companion object {

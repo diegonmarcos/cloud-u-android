@@ -23,7 +23,7 @@ object AccountDebugApi {
         AppDebugServer.route("account", listOf(
             Op("tabs", "", "the declared tab strip and drift pairs"),
             Op("profiles", "", "the local declared copy (else the server file) per topic, through the mask"),
-            Op("runtime", "", "the last runtime snapshot: per-app status, observed paths"),
+            Op("runtime", "", "the last runtime snapshot: per app its status, declared fields, observed paths, missing / not-read and counts; totals"),
             Op("drift", "", "file metadata, per-pair counts, per-app drifted paths, three-way classes"),
             Op("refresh", "", "read every app now and store R"),
             Op("populate", "from=runtime|server", "populate the local copy (unsaved)"),
@@ -42,7 +42,8 @@ object AccountDebugApi {
                 .put("tabs", JSONArray(AccountModel.tabs().map { JSONObject().put("id", it.id).put("label", it.label) }))
                 .put("pairs", JSONArray(AccountModel.pairs().map { JSONObject().put("id", it.id).put("a", it.a.name).put("b", it.b.name) }))
             "profiles" -> profiles(m)
-            "runtime" -> m.runtime()?.let { r -> JSONObject().put("meta", r.meta.json().put("intact", r.intact)).put("apps", r.apps ?: JSONObject()) }
+            "runtime" -> m.runtime()?.let { r -> JSONObject().put("meta", r.meta.json().put("intact", r.intact))
+                .put("apps", r.apps ?: JSONObject()).put("totals", totals(r.apps)).put("unmapped", unmapped()) }
                 ?: JSONObject().put("meta", JSONObject.NULL)
             "drift" -> m.report()
             "refresh" -> done(m.refreshRuntime(), m)
@@ -95,6 +96,23 @@ object AccountDebugApi {
             q["all"] == "1" -> AccountDrift.drifted(fields)
             else -> emptyList()
         }
+    }
+
+    /** #781 Every app's counts summed — the one line the architect checks first. */
+    private fun totals(apps: JSONObject?): JSONObject {
+        val t = JSONObject()
+        apps?.keys()?.forEach { id ->
+            val c = apps.optJSONObject(id)?.optJSONObject("counts") ?: return@forEach
+            c.keys().forEach { k -> t.put(k, t.optInt(k) + c.optInt(k)) }
+        }
+        return t.put("apps", apps?.length() ?: 0)
+            .put("reachable", apps?.keys()?.asSequence()?.count { apps.optJSONObject(it)?.optString("status") == "reachable" } ?: 0)
+    }
+
+    /** #781 The Profiles fields no app holds, with the declared reason (cockpit vault_fields). */
+    private fun unmapped(): JSONObject = JSONObject().apply {
+        VaultCockpit.layout.vaultFields.filterValues { !it.held || it.apps.isEmpty() }
+            .forEach { (path, f) -> put(path, JSONObject().put("apps", JSONArray(f.apps)).put("why", f.why)) }
     }
 
     private fun done(line: String, m: AccountModel) = JSONObject().put("result", line).put("local_unsaved", m.dirty)

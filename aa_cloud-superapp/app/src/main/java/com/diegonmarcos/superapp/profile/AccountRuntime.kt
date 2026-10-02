@@ -19,8 +19,9 @@ import org.json.JSONObject
  *
  * HOW EACH APP IS REACHED: this app's own stores for what cloud-sa holds (mail's JMAP account, the
  * WireGuard tunnel, drive's credentials, the contact card, the installed apps); the ITextTools
- * binder for AI — binding starts the serving app if it is stopped, and the read waits for it under
- * a deadline; a package that exposes nothing (the keyboard's lists) is NOT_REPORTING, said plainly.
+ * binder for AI and (#781) the keyboard's autocomplete lists — binding starts the serving app if it
+ * is stopped, and the read waits for it under a deadline; a package that exposes nothing (cloud-drive's
+ * own token) is NOT_REPORTING with its declared reason, said plainly.
  * Reading never writes; [push] is the only writer, one declared value into one app.
  */
 object AccountRuntime {
@@ -30,11 +31,33 @@ object AccountRuntime {
     /**
      * One app's reading. [values]: every path it observed → its value, null where it holds nothing.
      * [readOnly]: observed paths it cannot write back. [summary]: a reading that is not fields (apps).
+     * #781 [fields]: the Profiles fields this app HOLDS (cockpit `vault_fields`) — what it declares;
+     * [missing]: what it should hold and does not (observed empty, or the app could not be read);
+     * [unread]: a declared field no observed path falls under this time (out of this phone's scope,
+     * e.g. another peer's profiles) — named, never judged.
      */
     data class AppRead(
         val id: String, val label: String, val status: Status, val detail: String,
         val values: Map<String, Any?>, val readOnly: Set<String> = emptySet(), val summary: String = "",
-    )
+        val fields: List<String> = emptyList(), val missing: List<String> = emptyList(), val unread: List<String> = emptyList(),
+    ) {
+        val reported: Int get() = values.count { it.value != null }
+    }
+
+    /** True when [path] is the Profiles field [field] or lies under it. */
+    fun under(path: String, field: String): Boolean = path == field || path.startsWith(field + AccountDrift.SEP)
+
+    /**
+     * #781 [r] with what it declares, misses and did not read, from the field map [vf]. An app that
+     * could not be read misses every field it holds; a read one misses what it observed empty.
+     */
+    fun coverage(r: AppRead, vf: Map<String, VaultCockpit.VaultField>): AppRead {
+        val fields = vf.filter { (_, f) -> f.held && r.id in f.apps }.keys.toList()
+        if (r.status != Status.REACHABLE) return r.copy(fields = fields, missing = fields, unread = emptyList())
+        val missing = r.values.filterValues { it == null }.keys.sorted()
+        val unread = fields.filter { f -> r.values.keys.none { under(it, f) } }
+        return r.copy(fields = fields, missing = missing, unread = unread)
+    }
 
     // ── R: the snapshot (pure) ───────────────────────────────────────────
 
@@ -50,7 +73,12 @@ object AccountRuntime {
                 .put("detail", r.detail)
                 .put("summary", r.summary)
                 .put("observed", JSONArray(r.values.keys.sorted()))
-                .put("read_only", JSONArray(r.readOnly.sorted())))
+                .put("read_only", JSONArray(r.readOnly.sorted()))
+                .put("fields", JSONArray(r.fields))
+                .put("missing", JSONArray(r.missing))
+                .put("unread", JSONArray(r.unread))
+                .put("counts", JSONObject().put("declared", r.fields.size).put("observed", r.values.size)
+                    .put("reported", r.reported).put("missing", r.missing.size).put("unread", r.unread.size)))
         }
         return body to apps
     }
@@ -107,6 +135,35 @@ object AccountRuntime {
         return "mail${s}accounts${s}$key${s}name" to "mail${s}passwords${s}$passEnv"
     }
 
+    /** `mail`: the host of the JMAP server URL the device holds (the vault declares `endpoints › domain`). */
+    fun hostOf(server: String): String? = runCatching { java.net.URI(server.trim()).host }.getOrNull()?.ifBlank { null }
+
+    /**
+     * #781 `keyboard`: the keyboard's clipboard export ([export], ITextTools.clipboardLists) at the
+     * vault's autocomplete paths — the manifest's version and tabs (its exportedAt is the moment of an
+     * export, not config), and each list by its declared tab file ([lists]: vault key → file).
+     */
+    fun keyboardValues(export: JSONObject, lists: Map<String, String>): Map<String, Any?> {
+        val s = AccountDrift.SEP
+        val files = export.optJSONObject("files") ?: JSONObject()
+        val out = LinkedHashMap<String, Any?>()
+        out["autocomplete${s}manifest${s}version"] = export.opt("version")?.takeIf { it != JSONObject.NULL }
+        out["autocomplete${s}manifest${s}tabs"] = export.optJSONArray("tabs")?.takeIf { it.length() > 0 }
+        lists.forEach { (key, file) -> out["autocomplete$s$key"] = files.optJSONArray(file)?.takeIf { it.length() > 0 } }
+        return out
+    }
+
+    /**
+     * #781 The device a reading is filed under: the one picked on Connect, else the declared device
+     * whose mesh address the live tunnel carries ([liveAddress], the interface's Address line) — so a
+     * phone with no pick still reads its own profiles and apps. Second: true when inferred.
+     */
+    fun deviceFor(devices: List<VaultCockpit.Device>, picked: String, liveAddress: String): Pair<VaultCockpit.Device, Boolean>? {
+        devices.firstOrNull { it.id == picked }?.let { return it to false }
+        val live = liveAddress.split(',').map { it.trim().substringBefore('/') }.filter { it.isNotBlank() }.toSet()
+        return devices.firstOrNull { it.wgIp in live || (it.wgIpv6.isNotBlank() && it.wgIpv6 in live) }?.let { it to true }
+    }
+
     // ── reading (Android) ────────────────────────────────────────────────
 
     /** One binder client per process: constructing it binds, which is what wakes a stopped serving app. */
@@ -119,22 +176,32 @@ object AccountRuntime {
      */
     fun read(ctx: Context, declared: JSONObject?, deadlineMs: Long): List<AppRead> =
         VaultCockpit.layout.sections.map { section ->
-            runCatching { readOne(ctx, section, declared, deadlineMs) }.getOrElse {
+            coverage(runCatching { readOne(ctx, section, declared, deadlineMs) }.getOrElse {
                 AppRead(section.id, section.label, Status.NOT_REPORTING, it.message ?: it.javaClass.simpleName, emptyMap())
-            }
+            }, VaultCockpit.layout.vaultFields)
         }
 
     private fun installed(ctx: Context, pkg: String) = runCatching { ctx.packageManager.getPackageInfo(pkg, 0) }.isSuccess
 
-    private fun device(ctx: Context, declared: JSONObject?): VaultCockpit.Device? =
-        declared?.let { VaultCockpit.devices(it) }?.firstOrNull { it.id == VaultCockpit.selectedDevice(ctx) }
+    private fun device(ctx: Context, declared: JSONObject?): Pair<VaultCockpit.Device, Boolean>? =
+        declared?.let { deviceFor(VaultCockpit.devices(it), VaultCockpit.selectedDevice(ctx), WgState.prefs(ctx).interfaceAddress) }
+
+    private fun deviceLabel(d: Pair<VaultCockpit.Device, Boolean>) = d.first.label + if (d.second) " (from the live tunnel)" else ""
 
     private fun readOne(ctx: Context, section: VaultCockpit.Section, declared: JSONObject?, deadlineMs: Long): AppRead {
         val rt = section.runtime
         val base = AppRead(section.id, section.label, Status.REACHABLE, "", emptyMap())
         if (rt.servedBy != VaultCockpit.SELF && rt.servedBy != VaultCockpit.TEXT_TOOLS && !installed(ctx, rt.servedBy))
             return base.copy(status = Status.NOT_INSTALLED, detail = rt.servedBy)
-        if (!rt.reports) return base.copy(status = Status.NOT_REPORTING, detail = rt.servedBy)
+        if (!rt.reports) return base.copy(status = Status.NOT_REPORTING, detail = rt.why.ifBlank { rt.servedBy })
+        // The ITextTools serving app (the keyboard): binding starts it when stopped, so wait for it under the deadline.
+        val client = if (rt.servedBy == VaultCockpit.TEXT_TOOLS) tools(ctx) else null
+        if (client != null) {
+            if (!client.isServingAppInstalled()) return base.copy(status = Status.NOT_INSTALLED, detail = "text tools")
+            val until = SystemClock.elapsedRealtime() + deadlineMs
+            while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)
+            if (!client.isConnected()) return base.copy(status = Status.NOT_REPORTING, detail = "text tools did not bind in ${deadlineMs} ms")
+        }
         return when (section.apply) {
             "about" -> {
                 val p = ProfilePrefs(ctx)
@@ -148,15 +215,21 @@ object AccountRuntime {
                 val jmap = JmapPrefs(ctx)
                 val owner = ConfigsPrefs(ctx).autheliaEmail.ifBlank { ProfilePrefs(ctx).email.trim() }
                     .ifBlank { declared?.let { VaultCockpit.ownerEmail(it, VaultCockpit.layout) }.orEmpty() }
+                // #781 the JMAP host is read either way; it is not written back (the mail apply leaves the server alone).
+                val domainPath = "mail${AccountDrift.SEP}endpoints${AccountDrift.SEP}domain"
+                val domain = mapOf(domainPath to hostOf(jmap.server))
+                val held = jmap.email.ifBlank { "no account held" }
                 val (namePath, pwPath) = mailPaths(declared, jmap.email, owner)
-                    ?: return base.copy(detail = jmap.email.ifBlank { "no account held" })
-                base.copy(detail = jmap.email.ifBlank { "no account held" }, values = mapOf(
+                    ?: return base.copy(detail = "$held · no declared account matches", values = domain, readOnly = domain.keys)
+                base.copy(detail = held, values = domain + mapOf(
                     namePath to jmap.email.substringBefore('@').trim().ifBlank { null },
                     pwPath to jmap.password.ifBlank { null },
-                ))
+                ), readOnly = domain.keys)
             }
             "mesh" -> {
-                val d = device(ctx, declared) ?: return base.copy(detail = "no device picked on Connect")
+                val picked = device(ctx, declared)
+                    ?: return base.copy(detail = "no device picked on Connect, and the live tunnel's address is no declared device's")
+                val d = picked.first
                 val wg = WgState.prefs(ctx)
                 val tunnel = VaultCockpit.tunnelState(wg)
                 val rows = VaultCockpit.meshRows(declared!!, d, tunnel).associateBy { it.label }
@@ -164,25 +237,26 @@ object AccountRuntime {
                     // The tunnel IS the declared profile when address and peers agree; otherwise what it runs.
                     meshPath(name) to (if (rows[name]?.state == VaultCockpit.State.MATCH) conf else rows[name]?.device)
                 }
-                base.copy(detail = "${d.label} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values,
+                base.copy(detail = "${deviceLabel(picked)} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values,
                     readOnly = if (rt.writable) emptySet() else values.keys)
             }
-            "ai" -> {
-                val client = tools(ctx)
-                if (!client.isServingAppInstalled()) return base.copy(status = Status.NOT_INSTALLED, detail = "text tools")
-                val until = SystemClock.elapsedRealtime() + deadlineMs
-                while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)
-                if (!client.isConnected()) return base.copy(status = Status.NOT_REPORTING, detail = "text tools did not bind in ${deadlineMs} ms")
-                base.copy(values = aiPaths(VaultCockpit.layout.aiTokens).mapValues { (_, provider) ->
-                    client.revealAiKey(provider).text?.trim()?.ifBlank { null }
-                })
+            "ai" -> base.copy(values = aiPaths(VaultCockpit.layout.aiTokens).mapValues { (_, provider) ->
+                client!!.revealAiKey(provider).text?.trim()?.ifBlank { null }
+            })
+            // #781 the keyboard's autocomplete lists, live, over ITextTools.clipboardLists.
+            "keyboard" -> {
+                val export = client!!.clipboardLists()?.let { runCatching { JSONObject(it) }.getOrNull() }
+                    ?: return base.copy(status = Status.NOT_REPORTING, detail = "the keyboard answered no lists — older than this build, or its clipboard store is locked")
+                val values = keyboardValues(export, rt.lists)
+                base.copy(detail = "${export.optJSONArray("tabs")?.length() ?: 0} lists", values = values)
             }
             "apps" -> {
-                val d = device(ctx, declared) ?: return base.copy(detail = "no device picked on Connect")
                 val fleet = com.diegonmarcos.superapp.appstore.AppInventory.fleetPackages()
-                val want = VaultCockpit.appsDeclared(declared!!, d, fleet)
+                val picked = device(ctx, declared)
+                    ?: return base.copy(detail = "no device picked on Connect · whole fleet", summary = "${fleet.count { installed(ctx, it) }} / ${fleet.size}")
+                val want = VaultCockpit.appsDeclared(declared!!, picked.first, fleet)
                 val have = want.count { installed(ctx, it.pkg) }
-                base.copy(detail = d.label, summary = "$have / ${want.size}")
+                base.copy(detail = deviceLabel(picked), summary = "$have / ${want.size}")
             }
             else -> base.copy(status = Status.NOT_REPORTING, detail = "no reader for '${section.apply}'")
         }
@@ -214,6 +288,7 @@ object AccountRuntime {
                 if (r.ok) "✓ $provider" else "✗ $provider: ${r.error}"
             }
             "mail" -> {
+                if (path.split(AccountDrift.SEP).getOrNull(1) == "endpoints") return "✗ $path: the JMAP server is not written from the vault"
                 val owner = ConfigsPrefs(ctx).autheliaEmail.ifBlank { ProfilePrefs(ctx).email.trim() }
                     .ifBlank { VaultCockpit.ownerEmail(server, VaultCockpit.layout) }
                 val accounts = VaultCockpit.mailAccounts(server, owner.substringAfter('@', ""))

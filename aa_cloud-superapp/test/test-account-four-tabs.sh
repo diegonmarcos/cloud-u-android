@@ -782,7 +782,13 @@ runtime_ok() {   # $1 = AccountRuntime.kt, $2 = build.json, $3 = AccountTabs.kt;
     [ -z "$missing" ] || { echo "app(s) $missing declare no runtime served_by"; return 1; }
     rt=$(awk '/    private fun readOne\(/{f=1} f{print} f&&/^    }$/{exit}' "$1")
     grep -qF 'return base.copy(status = Status.NOT_INSTALLED, detail = rt.servedBy)' <<<"$rt" || { echo "an absent serving package is not 'not installed'"; return 1; }
-    grep -qF 'if (!rt.reports) return base.copy(status = Status.NOT_REPORTING, detail = rt.servedBy)' <<<"$rt" || { echo "an app that exposes nothing is not 'not reporting'"; return 1; }
+    grep -qF 'if (!rt.reports) return base.copy(status = Status.NOT_REPORTING, detail = rt.why.ifBlank { rt.servedBy })' <<<"$rt" || { echo "an app that exposes nothing is not 'not reporting' (with its declared why)"; return 1; }
+    # #781 the keyboard is READ (its lists over ITextTools.clipboardLists), no longer 'not reporting'.
+    [ "$(jq -r '.ui.vault_connect.cockpit.sections[] | select(.id == "keyboard") | .runtime.served_by' "$2")" = text_tools ] || { echo "the keyboard is not read over text tools"; return 1; }
+    grep -qF 'client!!.clipboardLists()' <<<"$rt" || { echo "the keyboard reader does not read its lists"; return 1; }
+    # #781 coverage: every read is counted against the declared field map.
+    grep -qF 'coverage(runCatching { readOne(ctx, section, declared, deadlineMs) }' "$1" && grep -qF 'VaultCockpit.layout.vaultFields)' "$1" || { echo "a reading is not counted against vault_fields"; return 1; }
+    grep -qF 'AccountTags.runtimeCounts(section.id)' "$3" || { echo "a Runtime card shows no declared / reported / missing counts"; return 1; }
     grep -qF 'while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)' <<<"$rt" || { echo "the binder read does not wait (under a deadline) for a stopped app to wake"; return 1; }
     grep -qF 'readOnly = if (rt.writable) emptySet() else values.keys' <<<"$rt" || { echo "a non-writable app's fields can be pulled back"; return 1; }
     grep -qF 'for (section in VaultCockpit.layout.sections) {' <<<"$(awk '/^fun RuntimeTab\(/{f=1} f{print} f&&/^}$/{exit}' "$3")" \
@@ -802,7 +808,7 @@ setup_gone() {   # $1 = ProfileFragment.kt, $2 = build.json; prints what survive
     # #781 nothing below it: the per-peer "Your config" block and the contact card are deleted, not hidden.
     local g; for g in 'renderConfigApply' 'renderPerson' 'ConfigAutoImport' 'setup_config_header' 'setup_person_header'; do
         grep -qF "$g" <<<"$rr" && { echo "Runtime still renders $g"; return 1; }
-        codeof "$1" | grep -qF "$g" && { echo "$g survives in ProfileFragment"; return 1; }
+        grep -qF "$g" <<<"$(codeof "$1")" && { echo "$g survives in ProfileFragment"; return 1; }
     done
     grep -qF 'name="setup_config_header"' "$APP/app/src/main/res/values/strings.xml" && { echo "the 'Your config' string survives"; return 1; }
     [ -f "$PKG/ConfigAutoImport.kt" ] && { echo "ConfigAutoImport.kt survives"; return 1; }
@@ -813,7 +819,9 @@ grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$PF" landVault | 
     && ok "H: every Connect landing stores the fetched file as S, with the way that fetched it" || bad "H: a Connect landing does not store S"
 echo "-- H-mutation: a reader dropped, a served_by dropped, the wake-wait dropped, the old index back, the landing not stored --"
 for e in 's/^            "drive" -> {/            "drive_x" -> {/' \
-         's/                while (!client.isConnected() \&\& SystemClock.elapsedRealtime() < until) Thread.sleep(100)/                Unit/' \
+         's/            while (!client.isConnected() \&\& SystemClock.elapsedRealtime() < until) Thread.sleep(100)/            Unit/' \
+         's/            "keyboard" -> {/            "keyboard_x" -> {/' \
+         's/            coverage(runCatching { readOne(ctx, section, declared, deadlineMs) }.getOrElse {/            (runCatching { readOne(ctx, section, declared, deadlineMs) }.getOrElse {/' \
          's/                    readOnly = if (rt.writable) emptySet() else values.keys)/                    readOnly = emptySet())/'; do
     sed "$e" "$AR" > "$TMP/h.kt"
     if cmp -s "$AR" "$TMP/h.kt"; then bad "H-mutation: did not apply — ${e:0:70}"

@@ -196,4 +196,19 @@ interface ITextTools {
      * reaches the log is a key that leaves the phone.
      */
     String[] revealAiKey(in String providerId);
+
+    /**
+     * #781 The serving app's clipboard lists (the keyboard's autocomplete pins) as ONE JSON
+     * object: {version, tabs:[{listName, file, count}], files:{file: [{timeStamp, text, mimeTypes}]}}
+     * - the same bytes its Settings ▸ Clipboard ▸ Export JSON writes, which is also what the vault's
+     * `autocomplete` section holds. The SuperApp's Account ▸ Runtime compares the two.
+     *
+     * LAST IN THIS FILE ON PURPOSE: an AIDL method's transaction code is its position, so a method
+     * added anywhere else would renumber every one after it for clients built before it. An older
+     * serving app answers null (no transaction for it), which the caller reports as "not reporting".
+     *
+     * The lists can hold personal data and keys (the owner's "Cloud Keys" list); the same
+     * CONSTELLATION_DATA signature guard as revealAiKey applies, and neither side may log it.
+     */
+    String clipboardLists();
 }

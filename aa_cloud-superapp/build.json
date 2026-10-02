@@ -6465,7 +6465,7 @@
       "cockpit": {
         "_doc": "#570 The Fleet tab: which cockpit sections exist, in what order, and which VAULT sections (E0_configs/schema.json ids) feed each. Labels live here, not in Kotlin. A vault section listed under no cockpit section is still shown raw at the bottom of the tab, so a section added in the vault is visible before this list learns it. ai_tokens maps a vault `ai.tokens.<item>` to the DEVICE provider id it feeds (the keyboard's keyboard_ai registry, ab_cloud-libs-shared/build.json): the two OpenRouter tokens the vault holds are the same provider seen from two containers, so only one is mapped - mapping both would have the second overwrite the first on every apply. The device itself is CHOSEN from the vault's electronics section (every entry with a wg_peer), never typed.",
         "_doc_cards": "#570 reopened: the Fleet tab is a COCKPIT - a hero card for the chosen device, then one card per section here, in this order. `icon` is the drawable each card's round badge shows (resolved by Sections.iconResFor, the same name->drawable lookup every declared tile uses; an unknown name falls back to ic_link_tile). `observed: false` marks a section whose DEVICE side this app cannot read (the keyboard owns its lists), so its light is the shared StatusLight's 'Not verifiable' instead of a green or red it could not justify. `device_icons` maps the vault's electronics `type` (notebook, phone, ...) to the hero orb's drawable; `_default` covers a type this list has not learnt and the empty state before any device is chosen.",
-      "_doc_runtime": "#778 each section's `runtime`: how Account ▸ Runtime reaches that app's LIVE config and what Drift may do with it (VaultCockpit.Runtime, read by AccountRuntime). served_by: `self` (this app's own stores: mail's JMAP account, the WireGuard tunnel, drive's credentials, the contact card, the installed apps), `text_tools` (the ITextTools serving app over its CONSTELLATION_DATA-guarded binder — binding starts it when it is stopped) or the package that holds it (absent = not installed). reports false: the app exposes nothing to read (cloud-keyboard keeps its lists to itself) — not reporting, said plainly, never a guessed value. writable false: what the app runs cannot be written back as a declaration (a live tunnel is not a wg-quick text), so runtime → declared skips it. fields false: the app reports a summary, not fields (apps: N of M declared installed).",
+      "_doc_runtime": "#778 each section's `runtime`: how Account ▸ Runtime reaches that app's LIVE config and what Drift may do with it (VaultCockpit.Runtime, read by AccountRuntime). served_by: `self` (this app's own stores: mail's JMAP account, the WireGuard tunnel, drive's credentials, the contact card, the installed apps), `text_tools` (the ITextTools serving app over its CONSTELLATION_DATA-guarded binder — binding starts it when it is stopped) or the package that holds it (absent = not installed). reports false: the app exposes nothing to read (cloud-drive keeps its token to itself; `why` is the reason shown) — not reporting, said plainly, never a guessed value. #781 lists (keyboard): vault autocomplete key → the tab file of the keyboard's clipboard export, read live over ITextTools.clipboardLists (the keyboard serves ITextTools, so `text_tools` reaches it and binding wakes it). A missing device pick no longer blanks mesh/apps: the device is the one whose declared wg_ip the live tunnel carries; the pick only scopes per-peer values. writable false: what the app runs cannot be written back as a declaration (a live tunnel is not a wg-quick text), so runtime → declared skips it. fields false: the app reports a summary, not fields (apps: N of M declared installed).",
         "sections": [
           {
             "id": "mail",
@@ -6481,12 +6481,11 @@
             "id": "keyboard",
             "label": "Keyboard · cloud-keyboard autocomplete",
             "apply": "keyboard",
-            "runtime": { "served_by": "com.diegonmarcos.cloudkeyboard", "reports": false },
+            "runtime": { "served_by": "text_tools", "lists": { "default": "default.json", "about_me": "About_Me.json", "agents": "Agents.json", "cloud_keys": "Cloud_Keys.json", "personal_data": "Personal_Data.json", "urls_pub": "URLs-Pub.json" } },
             "vault": [
               "autocomplete"
             ],
-            "icon": "ic_keyboard",
-            "observed": false
+            "icon": "ic_keyboard"
           },
           {
             "id": "mesh",
@@ -6495,7 +6494,8 @@
             "runtime": { "served_by": "self", "writable": false },
             "vault": [
               "mesh",
-              "electronics"
+              "electronics",
+              "peers"
             ],
             "icon": "ic_wg"
           },
@@ -6508,6 +6508,18 @@
               "git"
             ],
             "icon": "ic_code"
+          },
+          {
+            "_doc": "#781 cloud-drive's OWN copy of git › github_token: its Configs ▸ Sign in applies the vault token into its encrypted GitCredentialStore (auth.applies.git, credential vault-git-https). It serves no read of it to another process, and opening one would put a GitHub token on a new channel, so this reads 'not reporting' with the reason until the owner decides on a CONSTELLATION_DATA binder like ITextTools.",
+            "id": "cloud-drive",
+            "label": "Drive · cloud-drive sign-in",
+            "apply": "cloud-drive",
+            "runtime": { "served_by": "com.diegonmarcos.clouddrive", "reports": false, "why": "holds the token in its own encrypted store and serves no read of it" },
+            "vault": [
+              "git"
+            ],
+            "icon": "ic_code",
+            "observed": false
           },
           {
             "id": "ai",
@@ -6564,6 +6576,62 @@
         },
         "ai_tokens": {
           "openrouter_my_ai_api": "openrouter"
+        },
+        "_doc_vault_fields": "#781 THE FIELD MAP: every field Profiles shows (ui.profile.infos.schema, `section › field`) → the app(s) that use it at runtime (`apps`, cockpit section ids) and whether those apps HOLD it live (`held`: Runtime reads it and Drift compares it) or only take it as input when applying (`held` false). A field no phone app uses has `apps` [] and a `why`, so Profiles and Runtime never disagree about what exists. test-account-vault-fields.sh holds this map EQUAL to the schema (both ways), every app id to a declared section, every held field's section to its app's `vault`, and every item of the cloud-vault sources beside it to a schema field. AccountRuntime counts each app's declared / reported / missing from it.",
+        "vault_fields": {
+          "mesh › profiles": {"apps": ["mesh"], "held": true},
+          "mesh › public_key": {"apps": [], "held": false, "why": "the phone's public key, derived from the private key inside each profile; nothing on the phone reads it"},
+          "mail › authoritative_store": {"apps": [], "held": false, "why": "names the authoritative mail store for the server deploy; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "mail › endpoints": {"apps": ["mail"], "held": true},
+          "mail › accounts": {"apps": ["mail"], "held": true},
+          "mail › passwords": {"apps": ["mail"], "held": true},
+          "ai › tokens › openrouter_my_ai_api": {"apps": ["ai"], "held": true},
+          "ai › tokens › openrouter_hermes_agent": {"apps": [], "held": false, "why": "the hermes agent's own key; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "ai › tokens › openrouter_3": {"apps": [], "held": false, "why": "pending in the vault and mapped to no provider (cockpit ai_tokens)"},
+          "ai › tokens › openrouter_4": {"apps": [], "held": false, "why": "pending in the vault and mapped to no provider (cockpit ai_tokens)"},
+          "ai › tokens › claude": {"apps": [], "held": false, "why": "no phone app calls Claude with a token"},
+          "ai › configs › claude_folder": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "ai › configs › mcps": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "ai › configs › hermes_build_json": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "ai › configs › hermes_config_template": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "git › github_token": {"apps": ["drive", "cloud-drive"], "held": true},
+          "git › ssh_private_key": {"apps": ["drive"], "held": true},
+          "git › ssh_public_key": {"apps": [], "held": false, "why": "the public half lives on the git hosts; the phone signs with the private key only"},
+          "git › repos": {"apps": [], "held": false, "why": "the fleet's declared repo list; cloud-drive lists its own clones (filesDir/git-sync/repos.json), nothing applies this list"},
+          "about › profile": {"apps": ["about"], "held": true},
+          "about › addresses": {"apps": [], "held": false, "why": "no app holds postal addresses"},
+          "about › date_of_birth": {"apps": [], "held": false, "why": "pending in the vault"},
+          "about › profile_picture": {"apps": [], "held": false, "why": "a binary sha only; the phone's picture is a local file, never compared"},
+          "about › banner_picture": {"apps": [], "held": false, "why": "a binary sha only; the phone's banner is a local file, never compared"},
+          "autocomplete › manifest": {"apps": ["keyboard"], "held": true},
+          "autocomplete › default": {"apps": ["keyboard"], "held": true},
+          "autocomplete › about_me": {"apps": ["keyboard"], "held": true},
+          "autocomplete › agents": {"apps": ["keyboard"], "held": true},
+          "autocomplete › cloud_keys": {"apps": ["keyboard"], "held": true},
+          "autocomplete › personal_data": {"apps": ["keyboard"], "held": true},
+          "autocomplete › urls_pub": {"apps": ["keyboard"], "held": true},
+          "electronics › fleet": {"apps": ["mesh", "apps"], "held": false, "why": "input only: names the devices (wg_peer) whose profiles and app set apply; no app holds it"},
+          "electronics › models_and_macs": {"apps": [], "held": false, "why": "pending in the vault"},
+          "electronics › watches": {"apps": [], "held": false, "why": "pending in the vault"},
+          "electronics › other_devices": {"apps": [], "held": false, "why": "pending in the vault"},
+          "electronics › kde_connect": {"apps": [], "held": false, "why": "KDE Connect's peers come from build.json ui.kde_connect, not the vault"},
+          "apps › devices › galaxy › fleet": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
+          "apps › devices › galaxy › foreign": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
+          "apps › devices › galaxy › skeleton": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
+          "apps › devices › surface › fleet": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
+          "peers › registry": {"apps": [], "held": false, "why": "Connect's who / which-device list (libs:auth UserRegistry), sign-in input; no app holds it"},
+          "peers › samsung-s21plus › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
+          "peers › samsung-s21plus › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
+          "peers › samsung-s21plus › profiles": {"apps": ["mesh"], "held": true},
+          "peers › samsung-s21plus › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
+          "peers › samsung-a37 › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
+          "peers › samsung-a37 › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
+          "peers › samsung-a37 › profiles": {"apps": ["mesh"], "held": true},
+          "peers › samsung-a37 › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
+          "peers › surface-8-pro › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
+          "peers › surface-8-pro › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
+          "peers › surface-8-pro › profiles": {"apps": ["mesh"], "held": true},
+          "peers › surface-8-pro › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"}
         }
       }
     },

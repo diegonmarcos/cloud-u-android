@@ -63,9 +63,16 @@ object VaultCockpit {
      * package that holds it; [reports] false = that app exposes nothing to read (the keyboard's
      * lists); [writable] false = its value cannot be written back as a declaration (a running
      * tunnel is not a wg-quick text); [fields] false = it reports a summary, not fields (apps).
+     * #781 [why]: the reason a `reports` false app says nothing; [lists]: the keyboard's vault
+     * autocomplete key → the tab file of its clipboard export.
      */
     data class Runtime(val servedBy: String = SELF, val reports: Boolean = true,
-                       val writable: Boolean = true, val fields: Boolean = true)
+                       val writable: Boolean = true, val fields: Boolean = true,
+                       val why: String = "", val lists: Map<String, String> = emptyMap())
+
+    /** #781 One Profiles field's runtime mapping (cockpit `vault_fields`): the app ids that use it,
+     *  whether they HOLD it live ([held]: Runtime reads it), and [why] when no app does or none holds it. */
+    data class VaultField(val apps: List<String>, val held: Boolean, val why: String = "")
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
      *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest.
@@ -74,6 +81,8 @@ object VaultCockpit {
         val sections: List<Section>, val aiTokens: Map<String, String>,
         val deviceIcons: Map<String, String> = emptyMap(),
         val journeyIcons: Map<String, String> = emptyMap(),
+        /** #781 `vault_fields`: every Profiles field (`section › field`) → its [VaultField], in schema order. */
+        val vaultFields: Map<String, VaultField> = emptyMap(),
     )
 
     fun parseLayout(o: JSONObject): Layout {
@@ -86,18 +95,26 @@ object VaultCockpit {
                 s.optString("icon"), s.optBoolean("observed", true),
                 f.keys().asSequence().associateWith { f.getString(it) }, s.optString("apply"),
                 s.optJSONObject("runtime").let { r ->
+                    val lists = r?.optJSONObject("lists") ?: JSONObject()
                     Runtime(r?.optString("served_by")?.ifBlank { null } ?: SELF, r?.optBoolean("reports", true) ?: true,
-                        r?.optBoolean("writable", true) ?: true, r?.optBoolean("fields", true) ?: true)
+                        r?.optBoolean("writable", true) ?: true, r?.optBoolean("fields", true) ?: true,
+                        r?.optString("why").orEmpty(), lists.keys().asSequence().associateWith { lists.getString(it) })
                 })
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
         val icons = o.optJSONObject("device_icons") ?: JSONObject()
         val journey = o.optJSONObject("journey_icons") ?: JSONObject()
+        val vf = o.optJSONObject("vault_fields") ?: JSONObject()
         return Layout(
             sections,
             tokens.keys().asSequence().associateWith { tokens.getString(it) },
             icons.keys().asSequence().associateWith { icons.getString(it) },
             journey.keys().asSequence().associateWith { journey.getString(it) },
+            vf.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
+                val e = vf.getJSONObject(k)
+                val apps = e.optJSONArray("apps") ?: JSONArray()
+                VaultField((0 until apps.length()).map { apps.getString(it) }, e.optBoolean("held", true), e.optString("why"))
+            },
         )
     }
 

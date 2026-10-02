@@ -273,6 +273,13 @@ class TextToolsClient(context: Context) {
     fun revealAiKey(providerId: String): TextTools.Result =
         call("revealAiKey") { it.revealAiKey(providerId) }
 
+    /**
+     * #781 The serving app's clipboard lists as one JSON text ([ITextTools.clipboardLists]); null
+     * when unbound, or from a serving app older than the method. Never log it: the lists hold keys.
+     */
+    fun clipboardLists(): String? =
+        boundOrRebind()?.let { runCatching { it.clipboardLists() }.getOrNull() }
+
     private inline fun call(what: String, body: (ITextTools) -> Array<String>?): TextTools.Result {
         val t = boundOrRebind() ?: return TextTools.Result.failed(TextTools.NOT_INSTALLED)
         return runCatching { TextTools.Result.of(body(t)) }.getOrElse {
