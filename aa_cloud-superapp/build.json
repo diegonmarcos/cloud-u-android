@@ -243,7 +243,8 @@
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
         "libs:bottomnav",
-        "libs:auth"
+        "libs:auth",
+        "libs:ui-kit"
       ],
       "comment": "Launcher / shell. Hosts navigation to each feature module."
     },
@@ -260,6 +261,12 @@
       "type": "library",
       "depends_on": [],
       "comment": "THE bottom nav of the fleet, in Compose, shared BY REFERENCE (#565/#531). The shell hosts it through BottomNavIslandView in activity_main; ShellBottomNav feeds it ui.bottom_nav. There is no private nav left in this tree."
+    },
+    "libs:ui-kit": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library",
+      "depends_on": [],
+      "comment": "#773 THE shared Compose kit of the fleet, shared BY REFERENCE: CloudKitTheme over the launcher palette roles (LauncherPalette.kit), section header, selectable tile, card, settings/switch rows, confirm dialog, and the View-interop shims KitComposeFragment / Context.kitComposeView a page migrates through."
     },
     "libs:search": {
       "dir": "../ab_cloud-libs-shared/libs/search",

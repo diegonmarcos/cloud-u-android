@@ -165,6 +165,20 @@
       }
     },
     {
+      "id": "libs:ui-kit",
+      "scope": "in",
+      "wave": 1,
+      "ui": "compose",
+      "size": "-",
+      "notes": "NEW in #773 phase 2: CloudKitTheme(KitPalette) over the launcher palette roles, KitSectionHeader, KitSelectableTile, KitCard, KitSettingsRow, KitSwitchRow, KitConfirmDialog, KitTags, and the View-interop shims KitComposeFragment / Context.kitComposeView. Proven through aa_cloud-superapp/app/src/test (LauncherPresetsComposeTest K*). Next additions belong here, not in an app: a Compose status light, the palette's quick-settings tile (tileInk on textPrimary), a list row with icon.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
       "id": "libs:updater",
       "scope": "in",
       "wave": 1,
@@ -631,11 +645,14 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 38,
+        "view_screens": 37,
         "layout_xml": 25,
-        "view_ui_files": 63,
+        "view_ui_files": 62,
         "custom_views": 9
-      }
+      },
+      "done": [
+        "settings/LauncherPresetsFragment (Configs ▸ Launcher ▸ Presets) — KitComposeFragment, #773"
+      ]
     },
     {
       "id": "ac_c3-watchdog",

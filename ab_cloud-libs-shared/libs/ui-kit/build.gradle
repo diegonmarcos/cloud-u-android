@@ -1,0 +1,59 @@
+// libs:ui-kit: the fleet's shared Compose kit (#773 phase 2), shared by reference.
+//
+// The bottom nav already had its one declaration (libs:bottomnav). Everything else an app page
+// is made of — the theme, a section header, a selectable tile, a card, a settings row, a switch
+// row, a confirm dialog — existed only as each View app's own private builder functions
+// (superapp's LauncherSettingsUi.kt, c3's copies of superapp pages), so every migration would
+// have re-drawn them its own way. This module is the one Compose drawing of them, plus the two
+// interop shims that let a View app migrate one screen at a time: KitComposeFragment for a host
+// that still navigates by FragmentManager, and Context.kitComposeView for a kit composable
+// dropped into a page that is still Views.
+//
+// Colours come in, never out: CloudKitTheme takes a KitPalette (the launcher palette's roles),
+// so a themed app keeps recolouring every page from its own declaration and this module holds
+// no colour literal.
+//
+// Same sparse-version shape as libs:bottomnav: it builds under whichever AGP the consuming app
+// pulls it in with. TESTED through the consumer: aa_cloud-superapp/app/src/test (Robolectric,
+// compose test rule) drives the kit under the superapp's real palette, inside the suite its ship
+// workflow already runs.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.uikit'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // `api`: a consumer's screens call MaterialTheme / Text inside kit slots and subclass
+    // KitComposeFragment, so these types are part of this module's surface.
+    api platform('androidx.compose:compose-bom:2025.01.00')
+    api 'androidx.compose.ui:ui'
+    api 'androidx.compose.foundation:foundation'
+    api 'androidx.compose.material3:material3'
+    api 'androidx.fragment:fragment-ktx:1.8.5'
+}

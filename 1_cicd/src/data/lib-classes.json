@@ -58,6 +58,7 @@
     "sysdns":                  { "class": "pinned",   "why": "#741 SystemDnsBridge is a loopback resolver the terminal's own proot guest talks to, inside that app's process; ResolverProxy likewise for the gh/rclone/gix binaries." },
     "text-tools":              { "class": "contract", "why": "ITextTools binder contract + client; the AIDL method order is the wire format.", "budget_lines": 460 },
     "translate":               { "class": "logic",    "why": "Translation engines + TranslateBarView (#667: a language engine carrying a host-embedded bar), keyboard only." },
+    "ui-kit":                  { "class": "gui",      "why": "#773 the shared Compose kit: theme over the launcher palette, tiles, rows, dialogs, KitComposeFragment." },
     "updater":                 { "class": "logic",    "why": "Self-update and the store's install machinery (PackageInstaller sessions, APK cache, GHCR client), compiled into 11 apps -- the largest fan-out by measured cost. Moving it moves the install-permission identity." },
     "voice":                   { "class": "logic",    "why": "Voice engines + model manager + VoiceBarView, keyboard only." },
     "wallet":                  { "class": "gui",      "why": "cloud-wallet's feature module." },

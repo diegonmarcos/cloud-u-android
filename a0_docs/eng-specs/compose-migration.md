@@ -40,7 +40,7 @@ guard branch was mutated once, and every mutant fails at least one case.
 
 ## Audit at #773 start (main @ 183b23491)
 
-Fleet total for the in-scope units: **114 View screens, 60 layouts, 175 View-building
+Fleet total for the in-scope units: **116 View screens, 63 layouts, 177 View-building
 files, 52 custom Views.**
 
 | unit | UI | screens / layouts / view files / custom | wave | size |

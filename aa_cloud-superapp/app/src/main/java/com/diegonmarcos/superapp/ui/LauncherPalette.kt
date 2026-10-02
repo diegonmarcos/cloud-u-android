@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.ui
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
+import com.diegonmarcos.superapp.uikit.KitPalette
 
 import android.content.Context
 import android.util.Base64
@@ -83,6 +84,14 @@ object LauncherPalette {
 
     /** The palette of whatever theme is selected right now. */
     fun of(ctx: Context): Palette = forTheme(ctx, LauncherThemePrefs(ctx).theme)
+
+    /**
+     * The same palette for a Compose page (#773): libs:ui-kit's CloudKitTheme paints with these
+     * roles, so a Compose page follows a theme switch exactly as a View page does.
+     */
+    fun kit(ctx: Context): KitPalette = of(ctx).run {
+        KitPalette.fromArgb(surface, surfaceSelected, textPrimary, textSecondary, accent, hairline, tileInk)
+    }
 
     fun forTheme(ctx: Context, theme: LauncherTheme): Palette {
         cached?.let { if (it.themeId == theme.id) return it }
