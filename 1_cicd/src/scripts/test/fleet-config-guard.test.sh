@@ -20,6 +20,7 @@
 #   M10 an empty checkout                                           -> C8
 #   M11 an encrypted store declared as plain prefs                  -> C9
 #   M12 a helper-opened store whose helper stopped passing its name -> C3
+#   M13 the human matrix edited by hand (or left stale)              -> C10
 # Controls stay green: a comment naming getSharedPreferences, and two
 # companion objects in one file each declaring `FILE`.
 set -uo pipefail
@@ -61,6 +62,7 @@ EOF
   python3 - "$t/$MANIFEST_REL" "$t/$ROSTER_REL" <<'PY'
 import json, sys
 json.dump({"classes": {"config": "", "secret": "", "device": "", "content": ""}, "migrate": ["config", "secret"],
+  "kinds": {"prefs": "", "encrypted": "", "datastore": "", "room": "", "file": ""},
   "stores": {
     "demo_settings": {"kind": "prefs", "class": "config", "doc": "the demo's settings", "used_by": ["ac_cloud-demo"], "keys": {"install_id": "device"}},
     "demo_status": {"kind": "prefs", "class": "device", "doc": "a status cursor", "used_by": ["ac_cloud-demo"]},
@@ -72,6 +74,7 @@ json.dump({"classes": {"config": "", "secret": "", "device": "", "content": ""},
 json.dump({"apps": [{"id": "demo", "package": "x.demo", "kind": "app"}, {"id": "lib-demo", "package": "x.lib", "kind": "lib"}]},
   open(sys.argv[2], "w"))
 PY
+  python3 "$GUARD" "$t" "$POLICY" --matrix >/dev/null
 }
 
 mutate_manifest() {   # $1 = fixture, $2 = python statement over `m`
@@ -139,6 +142,10 @@ expect "M11 an encrypted store declared plain" 1 "$M" "C9 store 'demo_creds'"
 
 M="$WORK/m12"; fixture "$M"; sed -i 's/"demo_helped"/name/' "$M/ab_cloud-libs-shared/libs/demo/src/main/java/y/Creds.kt"
 expect "M12 a helper that no longer passes the name" 1 "$M" "C3 store 'demo_helped': its helper"
+
+M="$WORK/m13"; fixture "$M"; MATRIX_REL="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["matrix"])' "$POLICY")"
+printf '| a row someone typed |\n' >> "$M/$MATRIX_REL"
+expect "M13 a hand-edited matrix" 1 "$M" "C10"
 
 if [ "$FAILURES" -ne 0 ]; then echo "fleet-config-guard.test: $FAILURES failure(s)"; exit 1; fi
 echo "fleet-config-guard.test: all green"

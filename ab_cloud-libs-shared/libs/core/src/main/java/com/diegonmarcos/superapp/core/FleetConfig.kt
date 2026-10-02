@@ -138,12 +138,15 @@ object FleetConfig {
         fun coverage(app: App): Coverage {
             val mods = app.libs.toSet() + app.module
             val mine = stores.values.filter { s -> s.usedBy.any { it in mods } && classOf(s, app.id) in migrate }.sortedBy { it.name }
-            val items = (app.items + app.libs.flatMap { libItems[it].orEmpty() })
+            // An item is moved when a portable store holds it, when installing the same build
+            // reproduces it (`via: install`), or when Connect re-fetches it (`via: connect`).
+            val (moved, notMoved) = (app.items + app.libs.flatMap { libItems[it].orEmpty() })
                 .filter { it.optString("class") in migrate }
-                .map { "file:" + it.optString("path").ifBlank { it.optString("id") } }
+                .partition { it.optString("via") in setOf("install", "connect") || stores[it.optString("store")]?.kind in portable }
+            fun label(i: JSONObject) = "file:" + i.optString("path").ifBlank { i.optString("id") }
             return Coverage(app.id,
-                covered = mine.filter { it.kind in portable }.map { it.name },
-                gaps = mine.filter { it.kind !in portable }.map { it.name } + items)
+                covered = mine.filter { it.kind in portable }.map { it.name } + moved.map(::label),
+                gaps = mine.filter { it.kind !in portable }.map { it.name } + notMoved.map(::label))
         }
 
         /** The declared store a file in [pkg] belongs to (a store may own several files). */

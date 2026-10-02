@@ -81,6 +81,7 @@ class AccountFleetTest {
         val declared = JSONObject().put("settings", JSONObject()
             .put("calc", JSONObject().put("_schema", 1).put("cloud_calc_jev", JSONObject().put("model_route", "a")))
             .put("nav", JSONObject().put("_schema", 1))
+            .put("wallet", JSONObject().put("pending", true).put("source", "phone-export").put("reason", "no values yet"))
             .put("aa_cloud-superapp", JSONObject().put("_schema", 1).put("launcher_theme_prefs", JSONObject().put("theme", "cloud"))))
         val installed = setOf("com.diegonmarcos.superapp", "com.diegonmarcos.cloudnav")
         val journal = HashMap<String, String>()
@@ -90,6 +91,7 @@ class AccountFleetTest {
         assertEquals(AccountFleet.APPLY, p.getValue("nav").action)
         assertEquals(AccountFleet.APPLY, p.getValue("aa_cloud-superapp").action)
         assertEquals(AccountFleet.NOTHING, p.getValue("mail").action)
+        assertEquals("a pending app is never installed on a guess", AccountFleet.NOTHING, p.getValue("wallet").action)
         assertEquals("the SuperApp is planned first", "aa_cloud-superapp", m.apps.keys.first())
         // The superapp applied: a re-run skips it while the declared copy is unchanged …
         journal["aa_cloud-superapp"] = p.getValue("aa_cloud-superapp").sha + "|✓ aa_cloud-superapp: 1 written"

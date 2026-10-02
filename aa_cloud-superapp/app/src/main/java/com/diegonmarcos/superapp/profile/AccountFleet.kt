@@ -198,7 +198,8 @@ object AccountFleet {
              installed: (String) -> Boolean, journal: (String) -> String?): List<Step> {
         val settings = declared?.optJSONObject(SECTION)
         return m.apps.values.map { app ->
-            val sub = settings?.optJSONObject(app.id)
+            // A `pending` app (the vault declares it, no values folded in yet) is not installed on a guess.
+            val sub = settings?.optJSONObject(app.id)?.takeUnless { it.optBoolean("pending") }
             val sha = sub?.let { sha(it) }.orEmpty()
             val values = sub?.let { AccountDrift.leaves(JSONObject().put("x", it)).size - (if (it.has(SCHEMA)) 1 else 0) } ?: 0
             val inst = installed(app.pkg)

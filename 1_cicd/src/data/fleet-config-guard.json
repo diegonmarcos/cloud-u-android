@@ -41,5 +41,6 @@
     "datastore": "(?:preferencesDataStore\\(\\s*(?:name\\s*=\\s*)?|preferencesDataStoreFile\\(\\s*|DataStoreFactory\\.create\\(\\s*|preferencesDataStoreFactory\\.create\\(\\s*|preferenceDataStoreFactory\\.create\\(\\s*|preferencesFactory\\.create\\(\\s*)(\"[^\"]*\"|[A-Za-z_][\\w.]*)",
     "room": "databaseBuilder\\([^;]*?([A-Z]\\w*Database)::class"
   },
-  "package_template_pattern": "\\$\\{(?:[A-Za-z_]\\w*\\.)*packageName\\}|\\$packageName\\b"
+  "package_template_pattern": "\\$\\{(?:[A-Za-z_]\\w*\\.)*packageName\\}|\\$packageName\\b",
+  "matrix": "a0_docs/eng-specs/fleet-config-matrix.md"
 }

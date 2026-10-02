@@ -1599,7 +1599,8 @@
      "id": "account-slots",
      "path": "filesDir/account/{S,R,L}.json (EncryptedFile)",
      "class": "secret",
-     "doc": "Account S/R/L drift files carrying the vault bundle (tokens, passwords); re-fetched from the vault, migrate via vault only."
+     "doc": "Account S/R/L drift files carrying the vault bundle (tokens, passwords); re-fetched from the vault, migrate via vault only.",
+     "via": "connect"
     },
     {
      "id": "cloud-cache",
@@ -1623,13 +1624,15 @@
      "id": "auto-update",
      "path": "shared pref file 'auto_update' (ab_cloud-libs-shared updater AutoUpdatePrefs; store auto-update enabled/silent/unattended)",
      "class": "config",
-     "doc": "Store auto-update toggles; owned by the shared updater lib, so the scanner may attribute it to another module. Must be covered."
+     "doc": "Store auto-update toggles; owned by the shared updater lib, so the scanner may attribute it to another module. Must be covered.",
+     "store": "auto_update"
     },
     {
      "id": "onehand-lib",
      "path": "launcher-onehand library prefs (launcher_settings switches with store=onehand)",
      "class": "config",
-     "doc": "One-hand mode settings routed to the onehand library; not in this module's stores."
+     "doc": "One-hand mode settings routed to the onehand library; not in this module's stores.",
+     "store": "onehand_prefs"
     },
     {
      "id": "nightmode-system",
@@ -1641,13 +1644,15 @@
      "id": "wd-keepalive-enabled",
      "path": "shared pref file 'wd_keepalive' (key enabled)",
      "class": "config",
-     "doc": "Wireless debugging keepalive enable toggle; present in code (WirelessDebugKeeper.kt:101) but not in the scanned list."
+     "doc": "Wireless debugging keepalive enable toggle; present in code (WirelessDebugKeeper.kt:101) but not in the scanned list.",
+     "store": "wd_keepalive"
     },
     {
      "id": "launcher-json-build",
      "path": "BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)",
      "class": "config",
-     "doc": "Defaults baked into the APK from build.json; not device state but the fallback for unset prefs."
+     "doc": "Defaults baked into the APK from build.json; not device state but the fallback for unset prefs.",
+     "via": "install"
     }
    ]
   },
@@ -1783,25 +1788,29 @@
      "id": "jev-config",
      "path": "SharedPreferences cloud_calc_jev:config_override (baked default in BuildConfig.JEV_CONFIG_B64)",
      "class": "config",
-     "doc": "Jev decision models/routing declaration (modes, tools, thresholds, fallback model) as edited by the user; default is baked into the APK."
+     "doc": "Jev decision models/routing declaration (modes, tools, thresholds, fallback model) as edited by the user; default is baked into the APK.",
+     "store": "cloud_calc_jev"
     },
     {
      "id": "jev-model-pick",
      "path": "cloud_calc_jev:model_route / model_score",
      "class": "config",
-     "doc": "Selected OpenRouter model per use (route, score)."
+     "doc": "Selected OpenRouter model per use (route, score).",
+     "store": "cloud_calc_jev"
     },
     {
      "id": "jev-token",
      "path": "EncryptedSharedPreferences cloud_calc_jev_secret:openrouter_token",
      "class": "secret",
-     "doc": "Manual OpenRouter token override; otherwise the fleet Account supplies it."
+     "doc": "Manual OpenRouter token override; otherwise the fleet Account supplies it.",
+     "store": "cloud_calc_jev_secret"
     },
     {
      "id": "image-route",
      "path": "SharedPreferences cloud_image_recognition:route + model (libs ml-l-image RecognitionPrefs)",
      "class": "config",
-     "doc": "Chosen image recognition route and model for Measure > Camera; default from RecognitionConfig json default_route."
+     "doc": "Chosen image recognition route and model for Measure > Camera; default from RecognitionConfig json default_route.",
+     "store": "cloud_image_recognition"
     },
     {
      "id": "sound-files",
@@ -1831,13 +1840,15 @@
      "id": "image-route",
      "path": "SharedPreferences cloud_image_recognition:route + model (shared lib)",
      "class": "config",
-     "doc": "Image identify route and model chosen by the user, shared engine."
+     "doc": "Image identify route and model chosen by the user, shared engine.",
+     "store": "cloud_image_recognition"
     },
     {
      "id": "mode-prefs",
      "path": "shared_prefs/{QR_SCAN,AUTO,FACE_RETOUCH,PORTRAIT,NIGHT,HDR,CAMERA,VIDEO}.xml",
      "class": "config",
-     "doc": "Per-mode camera settings."
+     "doc": "Per-mode camera settings.",
+     "store": "camera_modes"
     },
     {
      "id": "voice-model",
@@ -1896,7 +1907,8 @@
      "id": "sftp-ftp-profiles",
      "path": "prefs acode_sftp_profiles_v1 (+ ftp profiles)",
      "class": "secret",
-     "doc": "Saved remote connections with credentials; vault."
+     "doc": "Saved remote connections with credentials; vault.",
+     "store": "acode_sftp_profiles_v1"
     }
    ]
   },
@@ -1922,7 +1934,8 @@
      "id": "contacts-fossify-prefs",
      "path": "shared_prefs/<package>_preferences.xml (Fossify Config)",
      "class": "config",
-     "doc": "Contacts display/sort/visible-sources settings; scanner found no named store."
+     "doc": "Contacts display/sort/visible-sources settings; scanner found no named store.",
+     "store": "<default>"
     },
     {
      "id": "none",
@@ -1946,7 +1959,8 @@
      "id": "dialer-fossify-prefs",
      "path": "shared_prefs/<package>_preferences.xml (Fossify Config) ",
      "class": "config",
-     "doc": "Fossify Phone settings (theme, sorting, dialpad, quick dials, preferred call provider, blocked-number flags). Not in the scanner list under that name; listed for completeness."
+     "doc": "Fossify Phone settings (theme, sorting, dialpad, quick dials, preferred call provider, blocked-number flags). Not in the scanner list under that name; listed for completeness.",
+     "store": "<default>"
     },
     {
      "id": "dialer-screening-log",
@@ -1987,24 +2001,6 @@
     "lib-updater"
    ],
    "items": [
-    {
-     "id": "rclone-jobs",
-     "path": "filesDir/rclone/jobs.json",
-     "class": "config",
-     "doc": "Declared rclone sync jobs (declared from build data by EngineActivity)."
-    },
-    {
-     "id": "mounts",
-     "path": "filesDir/mounts/mounts.json",
-     "class": "config",
-     "doc": "Declared rclone mount definitions."
-    },
-    {
-     "id": "gitsync-repos",
-     "path": "filesDir/git-sync/repos.json",
-     "class": "config",
-     "doc": "Registry of git repos kept in sync (paths and remotes)."
-    },
     {
      "id": "gitsync-history",
      "path": "filesDir/git-sync/history.json",
@@ -2050,7 +2046,8 @@
      "id": "keyboard-prefs",
      "path": "libs:keyboard (HeliBoard) default shared prefs <pkg>_preferences",
      "class": "config",
-     "doc": "Keyboard layouts, languages, theme, key behaviour; kept in the library's default prefs, not in this module's scanned list."
+     "doc": "Keyboard layouts, languages, theme, key behaviour; kept in the library's default prefs, not in this module's scanned list.",
+     "store": "<default>"
     }
    ]
   },
@@ -2078,7 +2075,8 @@
      "id": "mail-account-settings",
      "path": "shared_prefs/sterna_account.xml accounts JSON",
      "class": "secret",
-     "doc": "Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw."
+     "doc": "Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw.",
+     "store": "sterna_account"
     },
     {
      "id": "mail-room-settings-tables",
@@ -2100,8 +2098,8 @@
     {
      "id": "matrix-sdk-store",
      "path": "filesDir/sessions/<session>/ (matrix-rust-sdk sqlite state+crypto stores) and databases/session-database",
-     "class": "secret",
-     "doc": "Matrix session, E2EE device keys and crypto store; device identity, never copied - new phone logs in and verifies as a new device."
+     "class": "device",
+     "doc": "matrix-rust-sdk state and E2EE crypto store: this device's identity — the new phone signs in and verifies as a new device."
     },
     {
      "id": "matrix-session-db",
@@ -2173,13 +2171,15 @@
      "id": "terminal-targets",
      "path": "assets / ac_cloud-myterminal/data/terminal-targets.json",
      "class": "config",
-     "doc": "SSH targets (host/port/user per backend) are declared in git and baked into the APK; re-applied by installing the APK. Per-user overrides live in ide_prefs."
+     "doc": "SSH targets (host/port/user per backend) are declared in git and baked into the APK; re-applied by installing the APK. Per-user overrides live in ide_prefs.",
+     "via": "install"
     },
     {
      "id": "ide-endpoints",
      "path": "ac_cloud-myterminal/data/ide-endpoints.json",
      "class": "config",
-     "doc": "Endpoint declaration baked in the APK; reproducible from git."
+     "doc": "Endpoint declaration baked in the APK; reproducible from git.",
+     "via": "install"
     },
     {
      "id": "terminal-ssh-key",
@@ -2244,19 +2244,22 @@
      "id": "nix-profile",
      "path": "$HOME/.nix-profile / nix profile generation (cloud-lib-rootfs-nixdroid bootstrap)",
      "class": "config",
-     "doc": "Tool set incl. claude, goose, hermes is declared: ac_cloud-nix-on-droid/build.json forks.nixdroid.bootstrap.default_packages, app/src/main/cpp/rootfs-extras.nix, ab_cloud-terminal-store/store.json::toolset; migration = install the lib APK."
+     "doc": "Tool set incl. claude, goose, hermes is declared: ac_cloud-nix-on-droid/build.json forks.nixdroid.bootstrap.default_packages, app/src/main/cpp/rootfs-extras.nix, ab_cloud-terminal-store/store.json::toolset; migration = install the lib APK.",
+     "via": "install"
     },
     {
      "id": "etc-gitconfig",
      "path": "/etc/gitconfig",
      "class": "config",
-     "doc": "Baked from ab_cloud-terminal-store/gitconfig; re-applied with the bootstrap."
+     "doc": "Baked from ab_cloud-terminal-store/gitconfig; re-applied with the bootstrap.",
+     "via": "install"
     },
     {
      "id": "cloud-store-links",
      "path": "$HOME/.cloud-store/",
      "class": "config",
-     "doc": "Regenerated at login by cloud-store ensure from ab_cloud-terminal-store/store.json."
+     "doc": "Regenerated at login by cloud-store ensure from ab_cloud-terminal-store/store.json.",
+     "via": "install"
     },
     {
      "id": "nix-on-droid-nix",
@@ -2396,19 +2399,22 @@
      "id": "rootfs-toolset",
      "path": "rootfs APK (cloud-lib-rootfs-termux): /usr, /opt/hermes, /usr/local/bin",
      "class": "config",
-     "doc": "Installed tool set (claude, goose, hermes, agy, node, fish, ...) is fully declared in ac_cloud-termux/rootfs/rootfs.json plus ab_cloud-terminal-store/store.json::toolset; migration = install the lib-rootfs-termux APK (re-apply the declaration)."
+     "doc": "Installed tool set (claude, goose, hermes, agy, node, fish, ...) is fully declared in ac_cloud-termux/rootfs/rootfs.json plus ab_cloud-terminal-store/store.json::toolset; migration = install the lib-rootfs-termux APK (re-apply the declaration).",
+     "via": "install"
     },
     {
      "id": "etc-gitconfig",
      "path": "/etc/gitconfig (in rootfs)",
      "class": "config",
-     "doc": "System gitconfig (safe.directory=*) baked from ab_cloud-terminal-store/gitconfig; re-applied with the rootfs."
+     "doc": "System gitconfig (safe.directory=*) baked from ab_cloud-terminal-store/gitconfig; re-applied with the rootfs.",
+     "via": "install"
     },
     {
      "id": "cloud-store-links",
      "path": "$HOME/.cloud-store/ (current, generations/, bin/)",
      "class": "config",
-     "doc": "Link tree into the package layer, rebuilt by cloud-store ensure at login from ab_cloud-terminal-store/store.json (declaration.sh); regenerated, not copied."
+     "doc": "Link tree into the package layer, rebuilt by cloud-store ensure at login from ab_cloud-terminal-store/store.json (declaration.sh); regenerated, not copied.",
+     "via": "install"
     },
     {
      "id": "termux-properties",
@@ -2484,8 +2490,8 @@
     {
      "id": "cookie-config",
      "path": "encrypted prefs: bwCookieConfig:<hostname>",
-     "class": "secret",
-     "doc": "Per-host cookie config stored in the encrypted prefs."
+     "class": "device",
+     "doc": "Per-host cookie config inside Bitwarden's encrypted prefs (a device store): sessions are re-established by signing in."
     }
    ]
   },
@@ -2631,5 +2637,6 @@
     }
    ]
   }
- }
+ },
+ "_doc_items": "apps[].items / libs[].items: configuration kept OUTSIDE a declared store (files, a fork's own database). `store` names the declared store that actually holds it (the contract moves it when that store is portable); `via: install` = reproduced by installing the same build (baked from git); `via: connect` = re-fetched from the vault on Connect. Anything else with a migrating class is a named gap in the coverage."
 }
