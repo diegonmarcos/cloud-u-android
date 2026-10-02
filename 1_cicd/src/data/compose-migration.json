@@ -1,0 +1,976 @@
+{
+  "_doc": "#773 THE plan and THE ratchet of the fleet's move to Jetpack Compose, as data. Read by 1_cicd/src/scripts/cloud-android-compose-ratchet.py (run by compose-ratchet-guard.yml on every push) and explained in a0_docs/eng-specs/compose-migration.md. The script owns the counting rules; this file owns everything else: what makes a class a screen, what marks it Compose, which units are in scope, where a fork's first-party code lives, the migration order, and the BASELINE each unit may not exceed. THE RATCHET: a count above its baseline fails (new UI is written in Compose); a count BELOW its baseline also fails until the baseline is lowered to match, in the same commit as the migration — so progress is recorded the moment it happens and can never silently slide back. A unit not listed here has an implicit baseline of 0 everywhere, so a new app or lib written in Views fails on its first push.",
+  "_doc_units": "A unit is a top-level directory matching unit_dir_pattern, or one lib under shared_libs_dir (id libs:<dir>). scope=out excludes a vendored or web-wrapper tree from counting, and must say why in `reason`. `roots` (unit-relative, files or directories) narrows a fork to OUR additions; a root that stops existing fails the guard, because counting nothing looks exactly like having migrated everything. `screen_bases` adds a fork's upstream screen base classes, which sit outside its roots. wave = migration order (0 already Compose, 1 shared kit + SuperApp-hosted libs, 2 SuperApp, 3 small View apps, 4 apps that reuse SuperApp pages or are map-centric, 5 IME surfaces). size: S < 1 agent-day, M 1-3, L 3-7, XL > 7.",
+  "_doc_metrics": "view_screens: classes extending a screen base (directly or through a class in the same unit) whose file still builds Views, or that set a content view and host no Compose. layout_xml: res/layout*/*.xml. view_ui_files: source files that build or inflate Views. custom_views: classes extending a View type (AbstractComposeView excluded). Tests, build output and declared upstream trees never count.",
+  "_doc_rules": "view_builder_marker_ambiguous names widgets that are ALSO Compose functions (Button, Switch, Chip); they count only in a file with no @Composable in it. There is deliberately no list of Compose base classes: a screen counts only when its own file builds Views or sets a content view, so a KitComposeFragment subclass (whose file holds nothing but composables) never counts without being named anywhere.",
+  "unit_dir_pattern": "^a[abc]_[a-z0-9-]+$",
+  "shared_libs_dir": "ab_cloud-libs-shared/libs",
+  "rules": {
+    "screen_bases": [
+      "Activity",
+      "AppCompatActivity",
+      "ComponentActivity",
+      "FragmentActivity",
+      "ListActivity",
+      "PreferenceActivity",
+      "Fragment",
+      "DialogFragment",
+      "AppCompatDialogFragment",
+      "BottomSheetDialogFragment",
+      "PreferenceFragmentCompat",
+      "PreferenceFragment",
+      "ListFragment",
+      "Dialog",
+      "AlertDialog",
+      "AppCompatDialog",
+      "BottomSheetDialog",
+      "PopupWindow"
+    ],
+    "view_bases": [
+      "View",
+      "ViewGroup",
+      "FrameLayout",
+      "LinearLayout",
+      "RelativeLayout",
+      "ConstraintLayout",
+      "CoordinatorLayout",
+      "TextView",
+      "AppCompatTextView",
+      "EditText",
+      "AppCompatEditText",
+      "ImageView",
+      "AppCompatImageView",
+      "ImageButton",
+      "Button",
+      "AppCompatButton",
+      "ScrollView",
+      "HorizontalScrollView",
+      "NestedScrollView",
+      "RecyclerView",
+      "ViewPager",
+      "ViewPager2",
+      "SurfaceView",
+      "TextureView",
+      "GLSurfaceView",
+      "CardView",
+      "MaterialCardView",
+      "SwitchCompat",
+      "CheckBox",
+      "GridLayout",
+      "ListView",
+      "GridView",
+      "WebView",
+      "DrawerLayout",
+      "SwipeRefreshLayout",
+      "ProgressBar",
+      "SeekBar",
+      "Toolbar",
+      "KeyboardView"
+    ],
+    "compose_host_marker": "\\bsetContent\\s*[({]|\\bComposeView\\b|\\bAbstractComposeView\\b",
+    "compose_code_marker": "@Composable\\b",
+    "view_screen_marker": "\\bsetContentView\\s*\\(|\\bonCreateView\\s*\\(|\\bonCreateDialog\\s*\\(|\\bR\\.layout\\.|\\bcontentView\\s*=",
+    "view_builder_marker": "\\.inflate\\(|\\bfindViewById\\b|\\bViewBinding\\b|\\bAlertDialog\\.Builder\\s*\\(|\\b(?:TextView|LinearLayout|FrameLayout|RelativeLayout|ConstraintLayout|ImageView|ImageButton|ScrollView|HorizontalScrollView|NestedScrollView|RecyclerView|EditText|SwitchCompat|CheckBox|GridLayout|ProgressBar|SeekBar|CardView|MaterialCardView|ChipGroup|TabLayout|ViewPager2?|ListView|Spinner|PopupWindow)\\s*\\(",
+    "view_builder_marker_ambiguous": "\\b(?:Button|Switch|Chip)\\s*\\("
+  },
+  "units": [
+    {
+      "id": "ac_cloud-calc",
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "-",
+      "notes": "Already Compose (#767). Agents 768/770/772 own it; nothing to migrate.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-drive",
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "S",
+      "screens_left": [
+        "PdfReaderActivity (+ PdfReaderView, a PdfRenderer canvas view)"
+      ],
+      "notes": "Compose app. One View screen left: PdfReaderActivity. Keep PdfReaderView as an AndroidView inside a Compose scaffold — a canvas renderer gains nothing from a rewrite.",
+      "risks": [
+        "PdfRenderer page cache lifecycle must survive the move into a composable"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "ac_cloud-writer",
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "-",
+      "notes": "Compose. Nothing counted.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-c3-webserver",
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "-",
+      "notes": "Rust server + Compose tabs (#687). Nothing counted.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:bottomnav",
+      "scope": "in",
+      "wave": 1,
+      "ui": "compose",
+      "size": "-",
+      "notes": "Done before #773 (#531/#565): the island is Compose, BottomNavIslandView is the View-interop host XML shells drop in. Kit component.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:scrollbar",
+      "scope": "in",
+      "wave": 1,
+      "ui": "mixed",
+      "size": "S",
+      "notes": "Compose LazyVerticalGridScrollbar plus the View VerticalScrollbarLayout/GridScrollbarController for media-center's RecyclerView grids. Retire the View half when its last consumer is Compose. Not counted: its View half builds no widgets.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:updater",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "UpdateOverlayFragment"
+      ],
+      "consumers": [
+        "superapp",
+        "agenda",
+        "browser",
+        "c3",
+        "contacts",
+        "drive",
+        "mail",
+        "me",
+        "nav",
+        "news",
+        "wallet"
+      ],
+      "notes": "Highest fan-out View screen in the fleet: every app shows it. Migrate once, eleven apps gain it.",
+      "risks": [
+        "11 consumers — one regression ships everywhere; the overlay is shown over both View and Compose hosts"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:battery",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "BatteryHistoryDialog",
+        "EnergyUsageDialog",
+        "BatteryEstimatePopup",
+        "BatteryIconView (custom)"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 2,
+        "layout_xml": 0,
+        "view_ui_files": 3,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "libs:datamanager",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "DataUsageDialog"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:firewall",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "FirewallDialog"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:search",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "SearchSheet"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:ops",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "DaguFragment"
+      ],
+      "consumers": [
+        "superapp",
+        "c3"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:chat",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MattermostFragment"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:launcher-apptabs",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "AppTabsFragment"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:kde-connect",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "M",
+      "screens_left": [
+        "KdeConnectFragment"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "risks": [
+        "androidTest KdeConfigsPageTest drives this page on device"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:appstore",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "L",
+      "screens_left": [
+        "StoreCloudFragment",
+        "StorePhoneFragment",
+        "AppsMeshFragment",
+        "ApkDetailSheet",
+        "FeedViewer",
+        "StoreBar",
+        "StoreSourceTabs"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "risks": [
+        "9 SuperApp Robolectric tests (Store*/AppsMesh*) assert on the built View tree — port to compose-test with the same tags",
+        "fleet install/update actions must keep their debug-API tags"
+      ],
+      "baseline": {
+        "view_screens": 3,
+        "layout_xml": 0,
+        "view_ui_files": 10,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:mail",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "M",
+      "screens_left": [
+        "MailFragment",
+        "MailDrawerFragment",
+        "MailFoldersFragment",
+        "MailMessagesFragment",
+        "MailMessageBodyFragment",
+        "MailPagePlaceholder"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "notes": "8 XML layouts + RecyclerView adapters. cloud-mail (Compose) is the reference look.",
+      "baseline": {
+        "view_screens": 6,
+        "layout_xml": 8,
+        "view_ui_files": 6,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:media",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MediaPanelView (custom)"
+      ],
+      "consumers": [
+        "keyboard"
+      ],
+      "risks": [
+        "drawn inside the IME window — see libs:keyboard"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "libs:launcher-onehand",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "M",
+      "screens_left": [
+        "ArcView",
+        "MenuView",
+        "GesturePreviewView",
+        "RadialMenuView (custom)",
+        "CanopusStar/CentaurusStar/SiriusStar"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "notes": "Gesture canvases: port each onDraw to a Canvas composable + pointerInput. Behaviour first, pixels second.",
+      "risks": [
+        "androidTest SiriusStarTest and test-arc-menu-section-nav.sh (quarantined) pin the star routing"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 3,
+        "custom_views": 4
+      }
+    },
+    {
+      "id": "libs:launcher-zoomies",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "PetStrengthView (custom)"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "libs:panoramaviewer",
+      "scope": "in",
+      "wave": 1,
+      "ui": "mixed",
+      "size": "-",
+      "notes": "PanoramaGLSurfaceView is a GL surface and stays one inside AndroidView; the rest is Compose. Leave as is — a GLSurfaceView has no Compose equivalent.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "libs:translate",
+      "scope": "in",
+      "wave": 5,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "TranslateBarView",
+        "TranslateInputView",
+        "CappedScrollView (custom)"
+      ],
+      "consumers": [
+        "keyboard"
+      ],
+      "risks": [
+        "IME surface — see libs:keyboard"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 2,
+        "custom_views": 3
+      }
+    },
+    {
+      "id": "libs:voice",
+      "scope": "in",
+      "wave": 5,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "VoiceBarView",
+        "WaveformView (custom)"
+      ],
+      "consumers": [
+        "keyboard"
+      ],
+      "risks": [
+        "IME surface — see libs:keyboard"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 2
+      }
+    },
+    {
+      "id": "libs:browser",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "BrowserHostFragment",
+        "BrowserTabGrid (custom)"
+      ],
+      "consumers": [
+        "browser"
+      ],
+      "notes": "Host of the engine view: the engine stays an AndroidView, the chrome around it becomes Compose.",
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 2,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "libs:fin",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MyFinDashboardFragment"
+      ],
+      "consumers": [
+        "me"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "libs:maps",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "L",
+      "screens_left": [
+        "MapsMapFragment",
+        "MapsDayMapFragment",
+        "MapsDailyFragment",
+        "MapsExploredFragment",
+        "MapsExportFragment",
+        "MapsStopsFragment",
+        "MapsTimelineTabsFragment",
+        "MapsConfigFragment",
+        "MytripsDashboardFragment",
+        "MytripsStatsFragment",
+        "MapsScaleBarView (custom)"
+      ],
+      "consumers": [
+        "nav"
+      ],
+      "notes": "MapLibre MapView stays an AndroidView; the ten pages around it migrate with cloud-nav.",
+      "risks": [
+        "MapView lifecycle (onStart/onStop/onLowMemory) must be forwarded from the composable host"
+      ],
+      "baseline": {
+        "view_screens": 10,
+        "layout_xml": 0,
+        "view_ui_files": 10,
+        "custom_views": 1
+      }
+    },
+    {
+      "id": "aa_cloud-superapp",
+      "scope": "in",
+      "wave": 2,
+      "ui": "views",
+      "size": "XL",
+      "notes": "0 Compose screens at #773 start; 38 View screens, 25 layouts, ~31.5k lines of View code. Order: leaf Configs pages (Import, Presets, OneHand, Control, DNS, WireGuard) -> Profile/Account (#766) -> Store/Apps Mesh (libs:appstore) -> Recent/Phone apps -> cloud pages (C3, calendar, tasks, news, RSS) -> launcher pages (TileGrid, Section*, HomeGrouped/Drawer, AggregatorStack) -> ShellActivity chrome (activity_main.xml, drawer, status strip) last.",
+      "screens_left": [
+        "see `cloud-android-compose-ratchet.py --list aa_cloud-superapp`"
+      ],
+      "risks": [
+        "106 shell testers under aa_cloud-superapp/test grep Kotlin source text: a migration that renames a function or moves a string breaks them — rewrite the assertion to the new source in the same commit, never delete it",
+        "ShellActivity (2.5k lines) owns activity_main.xml, the drawer and the chrome; migrate it last, after every page it hosts",
+        "DevControlServer's debug API and the device checks address UI by view tag / content description; the Compose port must keep the same strings as Modifier.testTag + semantics contentDescription",
+        "LauncherPalette themes recolour every page; Compose pages must read the palette through CloudKitTheme, never literals (test-launcher-theme-palette.sh)",
+        "FloatingNavService / ScreensaverService draw in their own overlay windows — ComposeView there needs a lifecycle + saved-state owner set on the root view",
+        "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
+      ],
+      "baseline": {
+        "view_screens": 38,
+        "layout_xml": 25,
+        "view_ui_files": 63,
+        "custom_views": 9
+      }
+    },
+    {
+      "id": "ac_c3-watchdog",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MainActivity (46 lines)"
+      ],
+      "notes": "Smallest app in the fleet — the template migration for the per-app agents.",
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_c3-morpheus",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MainActivity (programmatic Views)"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_c3-watchtower",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MainActivity (programmatic Views)"
+      ],
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-browser",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MainActivity",
+        "AuthMissionActivity"
+      ],
+      "notes": "FrameLayout host for the browser engine (libs:browser).",
+      "baseline": {
+        "view_screens": 2,
+        "layout_xml": 1,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-wallet",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "MainActivity (XML shell + BottomNavIslandView)",
+        "BusinessCardFragment",
+        "QrGalleryDialog"
+      ],
+      "notes": "libs:wallet is already Compose; only the shell and the card pages are Views.",
+      "baseline": {
+        "view_screens": 2,
+        "layout_xml": 1,
+        "view_ui_files": 2,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-me",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "M",
+      "screens_left": [
+        "MainActivity",
+        "SectionFragment",
+        "StackFragment",
+        "AgendaFragment",
+        "FilesFragment",
+        "WebFragment"
+      ],
+      "baseline": {
+        "view_screens": 6,
+        "layout_xml": 2,
+        "view_ui_files": 5,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-myterminal",
+      "scope": "in",
+      "wave": 3,
+      "ui": "views",
+      "size": "M",
+      "screens_left": [
+        "MainActivity",
+        "ConfigsActivity",
+        "AboutActivity",
+        "DevControlActivity",
+        "UpdateOverlay"
+      ],
+      "notes": "Programmatic Views (Ui.kt helpers). The terminal surface itself (if any) stays an AndroidView.",
+      "baseline": {
+        "view_screens": 5,
+        "layout_xml": 0,
+        "view_ui_files": 6,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-c3",
+      "scope": "in",
+      "wave": 4,
+      "ui": "views",
+      "size": "L",
+      "screens_left": [
+        "MainActivity",
+        "HomeFragment",
+        "AboutFragment",
+        "TopologyFragment",
+        "ObservFragment",
+        "ConfigsFragment",
+        "UndeclaredPageFragment",
+        "AppsFragment",
+        "PagedFragment",
+        "C3HealthFragment",
+        "C3MeshFragment",
+        "C3StackFragment"
+      ],
+      "notes": "Copies of SuperApp pages (C3Health/C3Mesh/ContainerSheet/IndexTiles). Migrate AFTER the SuperApp's own versions and share the composables instead of porting twice.",
+      "risks": [
+        "test/test-c3-shell.sh diffs the tab dispatch against build.json — keep the dispatch shape"
+      ],
+      "baseline": {
+        "view_screens": 12,
+        "layout_xml": 7,
+        "view_ui_files": 11,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-nav",
+      "scope": "in",
+      "wave": 4,
+      "ui": "views",
+      "size": "L",
+      "screens_left": [
+        "MainActivity",
+        "RoutesFragment",
+        "NavigationFragment",
+        "PlacesFragment",
+        "ConfigsFragment",
+        "CacheConfigFragment",
+        "LayersConfigFragment",
+        "UpdateConfigFragment",
+        "DevControlFragment",
+        "SpaceViewActivity",
+        "TerrainActivity",
+        "ConstellationsActivity",
+        "EnergyUsageDialog",
+        "cockpit gauges + SkyView (8 custom views)"
+      ],
+      "notes": "Map-centric: MapView stays AndroidView. Eight canvas gauges port to Canvas composables.",
+      "risks": [
+        "test-cloud-nav.yml runs this app's own suite"
+      ],
+      "baseline": {
+        "view_screens": 13,
+        "layout_xml": 1,
+        "view_ui_files": 13,
+        "custom_views": 8
+      }
+    },
+    {
+      "id": "ac_cloud-dialer",
+      "scope": "in",
+      "wave": 4,
+      "ui": "views",
+      "size": "M",
+      "roots": [
+        "app/src/main/kotlin/org/fossify/phone/updater",
+        "app/src/main/kotlin/org/fossify/phone/spam",
+        "app/src/main/kotlin/org/fossify/phone/dialogs/CallProviderChooserSheet.kt",
+        "app/src/main/kotlin/org/fossify/phone/activities/ScreeningLogActivity.kt",
+        "app/src/main/kotlin/org/fossify/phone/helpers/CallProviders.kt",
+        "app/src/main/kotlin/org/fossify/phone/helpers/ScreeningLogStore.kt",
+        "app/src/main/kotlin/org/fossify/phone/extensions/CallProviderExt.kt",
+        "app/src/main/res/layout/activity_screening_log.xml",
+        "app/src/main/res/layout/item_call_provider.xml",
+        "app/src/main/res/layout/item_screened_call.xml"
+      ],
+      "screens_left": [
+        "ScreeningLogActivity",
+        "CallProviderChooserSheet"
+      ],
+      "notes": "Fossify Phone fork. Only OUR additions are counted (roots): ScreeningLogActivity and CallProviderChooserSheet. Upstream screens stay Views; our additions extend Fossify SimpleActivity / BaseBottomSheetDialogFragment, so they become Compose content inside those bases.",
+      "risks": [
+        "edits to upstream activity_call/activity_main/item_recent_call are first-party but inseparable from upstream layouts — not counted, not migrated"
+      ],
+      "baseline": {
+        "view_screens": 2,
+        "layout_xml": 3,
+        "view_ui_files": 2,
+        "custom_views": 0
+      },
+      "screen_bases": [
+        "SimpleActivity",
+        "BaseBottomSheetDialogFragment"
+      ]
+    },
+    {
+      "id": "libs:keyboard",
+      "scope": "in",
+      "wave": 5,
+      "ui": "mixed",
+      "size": "XL",
+      "notes": "HeliBoard heritage, owned (no upstream sync). Settings are already Compose (68 files). The IME surface (input_view.xml, suggestion strip, KeyboardView, emoji palettes, and our EnhanceBarView / EmojiSearchBarView / PagedToolbarScrollView) is Views and is the hardest surface in the fleet.",
+      "risks": [
+        "IME constraint: InputMethodService's window has no ViewTreeLifecycleOwner/SavedStateRegistryOwner — a ComposeView in onCreateInputView needs both set on window.decorView first, or it crashes on attach",
+        "KeyboardView key rendering + touch dispatch is latency-critical; rewriting it in Compose is not justified — migrate the bars (Enhance/EmojiSearch/Translate/Voice/Media) and leave KeyboardView as AndroidView",
+        "19 custom views; layouts are HeliBoard's"
+      ],
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 15,
+        "view_ui_files": 23,
+        "custom_views": 19
+      }
+    },
+    {
+      "id": "ab_cloud-libs-shared",
+      "scope": "in",
+      "wave": 5,
+      "ui": "views",
+      "size": "S",
+      "screens_left": [
+        "lib-apks / keyboard-engines MainActivity"
+      ],
+      "notes": "The engine-APK hosts' launcher activity (outside libs/, each lib is its own unit).",
+      "baseline": {
+        "view_screens": 1,
+        "layout_xml": 0,
+        "view_ui_files": 1,
+        "custom_views": 0
+      }
+    },
+    {
+      "id": "ac_cloud-agenda",
+      "scope": "out",
+      "reason": "Pure web wrapper: one WebView layout + a JS bridge. Out by the #773 brief."
+    },
+    {
+      "id": "ac_cloud-contacts",
+      "scope": "out",
+      "reason": "Pure web wrapper: one WebView layout + a JS bridge."
+    },
+    {
+      "id": "ac_cloud-news",
+      "scope": "out",
+      "reason": "Pure web wrapper: one WebView layout + a JS bridge."
+    },
+    {
+      "id": "ac_cloud-mail",
+      "scope": "out",
+      "reason": "Vendored sterna-mail, already Compose; our additions are Compose (browser is a WebView inside Compose). The 7 layouts are upstream app-widget RemoteViews, which cannot be Compose."
+    },
+    {
+      "id": "ac_cloud-matrix",
+      "scope": "out",
+      "reason": "Vendored Element X (Compose); our patches are rebrand only."
+    },
+    {
+      "id": "ac_cloud-media-center",
+      "scope": "out",
+      "reason": "Vendored ReFra (Compose); our cloud/ additions are Compose. 4 layouts are upstream's."
+    },
+    {
+      "id": "ac_cloud-vault",
+      "scope": "out",
+      "reason": "Vendored Bitwarden (Compose); patches are rebrand/env only. autofill_remote_view.xml is a RemoteViews layout."
+    },
+    {
+      "id": "ac_cloud-chat",
+      "scope": "out",
+      "reason": "Vendored Mattermost React Native; no first-party Kotlin UI."
+    },
+    {
+      "id": "ac_cloud-notes",
+      "scope": "out",
+      "reason": "Vendored AFFiNE (Capacitor WebView); native additions have no UI."
+    },
+    {
+      "id": "ac_cloud-termux",
+      "scope": "out",
+      "reason": "Vendored termux-app; our additions (com/termux/cloud, TerminalDebugApi) have no UI."
+    },
+    {
+      "id": "ac_cloud-nix-on-droid",
+      "scope": "out",
+      "reason": "Vendored nix-on-droid-app; our additions have no UI."
+    },
+    {
+      "id": "ac_cloud-office",
+      "scope": "out",
+      "reason": "Collabora Online, fetched at build time; our additions are a WebView JS bridge."
+    },
+    {
+      "id": "ac_cloud-code",
+      "scope": "out",
+      "reason": "Vendored Acode (Cordova WebView); our additions are JS/SCSS."
+    },
+    {
+      "id": "ac_cloud-camera",
+      "scope": "out",
+      "reason": "Vendored GrapheneOS Camera; our additions (voice shutter, scanner, media-center hand-off) have no UI of their own. Upstream androidTests drive its View screens."
+    }
+  ]
+}

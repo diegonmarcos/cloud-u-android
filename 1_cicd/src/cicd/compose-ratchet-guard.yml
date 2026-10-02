@@ -1,0 +1,35 @@
+name: "compose ratchet — View-based UI in the fleet may only go down"
+
+# WHY THIS EXISTS (#773). The owner's goal is every first-party app UI in Jetpack
+# Compose. A goal with no number moves backwards silently: an agent adding one
+# settings page to a View app writes it in Views, because that is what the file
+# next to it does, and nothing says no. This job counts the View-based screens,
+# layouts, View-building files and custom Views per app and per shared lib
+# against the baselines in 1_cicd/src/data/compose-migration.json, writes the
+# table to the run summary, and fails when a count goes UP — or goes DOWN
+# without the baseline being lowered in the same commit, so the progress is
+# recorded and cannot slide back unnoticed.
+#
+# WHY EVERY PUSH, WITH NO PATH FILTER. Its subject is every app and lib source
+# tree in the repository, plus the units it DISCOVERS: a new app directory must
+# start this job, and a filter would be a second list of app trees to keep in
+# step with the first. It reads text and finishes in seconds.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No app or lib gained View-based UI, and progress is written down
+        run: python3 1_cicd/src/scripts/cloud-android-compose-ratchet.py
+      - name: The ratchet still fails on new View UI and on an untightened baseline
+        run: bash 1_cicd/src/scripts/test/compose-ratchet.test.sh

@@ -3,6 +3,7 @@
   "unfiltered": {
     "_doc": "Workflows that keep running on every push, each with the reason. These scan the whole fleet's sources, so a filter would be a second copy of 'every app, every lib' and save almost nothing. leak-scan.yml is not listed because it has no source here (it is fleet-emitted straight into .github/workflows); it runs on every push.",
     "app-names-guard.yml": "reads every application's identity files across all ~30 app trees and the fleet roster",
+    "compose-ratchet-guard.yml": "#773: counts View UI in every app and lib tree and discovers new ones; a filter would be a second list of app trees",
     "dns-resolver-guard.yml": "scans the sources of every app and lib for resolver bypasses (30k files traced)",
     "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
     "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
