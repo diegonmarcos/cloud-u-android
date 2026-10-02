@@ -81,7 +81,7 @@ got="$(with bash -c "PATH='$NX':\$PATH; s.sh via-path" 2>&1)"
 
 # 4. python (posix_spawn, access) and node (libuv execve)
 if command -v python3 >/dev/null; then
-    got="$(cd "$NX" && with python3 -c '
+    got="$(cd "$NX" && with python3 -u -c '
 import os, subprocess
 print(subprocess.run(["./s.sh", "py"], capture_output=True, text=True).stdout.strip())
 pid = os.posix_spawn("./s.sh", ["./s.sh", "spawn"], os.environ); os.waitpid(pid, 0)
