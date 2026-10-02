@@ -3,6 +3,8 @@ package com.diegonmarcos.cloudcalc
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -15,6 +17,7 @@ import com.diegonmarcos.cloudcalc.ui.CalcTheme
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -110,23 +113,20 @@ class CalcShellTest {
         assertTrue(synchronized(engine.evals) { "2+2" in engine.evals })
     }
 
-    @Test fun `an alarm added on the Alarms screen is stored and handed to AlarmManager`() {
+    @Test fun `the Alarms screen shows the stored alarm and its switch cancels the wakeup`() {
+        val app = RuntimeEnvironment.getApplication()
+        val id = com.diegonmarcos.cloudcalc.clock.ClockEngine.saveAlarm(app, com.diegonmarcos.cloudcalc.clock.Alarm(0, 6 * 60 + 45))
+        assertTrue(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:$id"))
         launch()
         val alarms = Declarations.modes.first { it.kind == "alarms" }
         compose.runOnIdle { state.tab = alarms.tab; state.modeByTab[alarms.tab] = alarms.id }
         compose.waitForIdle()
-        // The editor focuses its time field, whose cursor blinks forever: an auto-advancing test
-        // clock never reaches idle (run 37008261159). Frames are stepped by hand from here on.
-        compose.mainClock.autoAdvance = false
-        compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.ADD_ALARM).performClick()
-        compose.mainClock.advanceTimeBy(1_000)
-        compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.SAVE).performClick()
-        compose.mainClock.advanceTimeBy(1_000)
-        val app = RuntimeEnvironment.getApplication()
-        val a = com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single()
-        assertEquals(7 * 60, a.minuteOfDay)
-        assertTrue(a.enabled)
-        assertTrue(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:${a.id}"))
+        compose.onNodeWithText("06:45").assertExists()
+        // Switching it off is the screen's own write: store, then AlarmManager.
+        compose.onNode(isToggleable()).performClick()
+        compose.waitForIdle()
+        assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single().enabled)
+        assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:$id"))
     }
 
     @Test fun `a history tap sends the result back to its mode`() {
