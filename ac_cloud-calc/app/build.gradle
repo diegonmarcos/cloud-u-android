@@ -65,6 +65,12 @@ def jevConfigB64  = b64(buildJson.jev)
 if (buildJson.sound == null) throw new GradleException("build.json::sound missing — the Sound tools would have no analysis or generator limits")
 def soundConfigB64 = b64(buildJson.sound)
 def soundGroup    = (buildJson.ui.debug_api?.sound_group ?: '').toString()
+// #772 THE Camera tools declaration (build.json::camera), baked whole; camera/CameraDecl.kt reads it.
+if (buildJson.camera == null) throw new GradleException("build.json::camera missing — the Camera tools would have no references or limits")
+def cameraConfigB64 = b64(buildJson.camera)
+def cameraGroup   = (buildJson.ui.debug_api?.camera_group ?: '').toString()
+def imageGroup    = (buildJson.ui.debug_api?.image_group ?: '').toString()
+if (!cameraGroup || !imageGroup) throw new GradleException("build.json::ui.debug_api.camera_group / image_group missing — /api/camera and /api/image would register under no name")
 if (!soundGroup) throw new GradleException("build.json::ui.debug_api.sound_group missing — /api/sound/* would register under no name")
 
 // THE calc ENGINE this app binds (build.json::engines.calc): its package comes from the
@@ -132,6 +138,9 @@ android {
         buildConfigField "String", "JEV_CONFIG_B64",  "\"${jevConfigB64}\""
         buildConfigField "String", "SOUND_CONFIG_B64", "\"${soundConfigB64}\""
         buildConfigField "String", "DEBUG_API_SOUND_GROUP", "\"${soundGroup}\""
+        buildConfigField "String", "CAMERA_CONFIG_B64", "\"${cameraConfigB64}\""
+        buildConfigField "String", "DEBUG_API_CAMERA_GROUP", "\"${cameraGroup}\""
+        buildConfigField "String", "DEBUG_API_IMAGE_GROUP", "\"${imageGroup}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
@@ -209,6 +218,15 @@ dependencies {
     implementation project(':sound')
     // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.
     implementation project(':libs:decisions')
+    // #772 the Camera tools: their maths (plain JVM, PIT), the image engine's contract (Identify,
+    // Colour, Text bind Cloud-Lib-Ml-L-Image-Mlkit.apk), CameraX for the in-app capture, and the
+    // ARCore SDK for the AR measure route (optional: the app installs and runs without ARCore).
+    implementation project(':measure')
+    implementation project(':libs:ml-l-image')
+    implementation 'androidx.camera:camera-camera2:1.4.2'
+    implementation 'androidx.camera:camera-lifecycle:1.4.2'
+    implementation 'androidx.camera:camera-view:1.4.2'
+    implementation 'com.google.ar:core:1.48.0'
     // #770 the fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // #770 the manual token override: EncryptedSharedPreferences over an Android Keystore key.

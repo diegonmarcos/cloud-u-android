@@ -42,6 +42,13 @@
 #       through the safe-volume guard (Player.play is called by audio/SoundFlow.kt alone, which
 #       calls Generator.guard); the declared guard is sane (0 < loud_amplitude <= max_amplitude
 #       <= 1); jev.identify.sound and a `sound` model use are declared.
+#   C13 #772 the Camera tools: CAMERA is declared and asked for by ui/CameraScreens.kt alone
+#       (CameraGate); ARCore is declared OPTIONAL (required would make the app uninstallable
+#       where ARCore is not); one door to the image engine (camera/Vision.kt alone constructs
+#       ImageScanEngine) and one ARCore session owner (camera/ArMeasureActivity.kt);
+#       /api/<camera_group>/status and /api/<image_group>/recognize documented and answered, no
+#       `state` op; every reference object has a positive length and a unique id, and OCR
+#       numbers go to a declared expression mode.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -276,14 +283,52 @@ if not (isinstance(mx, (int, float)) and isinstance(loud, (int, float)) and 0 < 
 if "sound" not in ((jev.get("identify") or {})) or "sound" not in (jev.get("uses") or {}):
     bad.append("C12 build.json::jev must declare identify.sound and a sound model use")
 
+# C13
+if 'android.permission.CAMERA' not in manifest:
+    bad.append("C13 the manifest does not declare CAMERA — the camera tools could never be granted")
+ask_cam = re.compile(r"\.launch\(\s*(android\.)?Manifest\.permission\.CAMERA\s*\)")
+cam_askers = sorted(os.path.relpath(p, src) for p in kts if ask_cam.search(code(p)))
+if cam_askers != ["ui/CameraScreens.kt"]:
+    bad.append("C13 CAMERA must be asked for by ui/CameraScreens.kt alone (CameraGate), found in %s" % cam_askers)
+if not re.search(r'<meta-data\s+android:name="com\.google\.ar\.core"\s+android:value="optional"', manifest):
+    bad.append("C13 ARCore must be declared optional — required would refuse every phone without it")
+for needle, owner in (("ImageScanEngine(", "camera/Vision.kt"), ("Session(this)", "camera/ArMeasureActivity.kt")):
+    holders = sorted(os.path.relpath(p, src) for p in kts if needle in code(p))
+    if holders != [owner]:
+        bad.append("C13 %s must be made by %s alone, found in %s" % (needle, owner, holders))
+for grp_key, api_file, ops in (("camera_group", "CameraDebugApi.kt", ("status",)), ("image_group", "CameraDebugApi.kt", ("recognize",))):
+    cpath = os.path.join(src, "debugapi", api_file)
+    ctext = code(cpath) if os.path.isfile(cpath) else ""
+    if "BuildConfig.DEBUG_API_%s" % grp_key.upper() not in ctext:
+        bad.append("C13 %s does not register under build.json::ui.debug_api.%s" % (api_file, grp_key))
+    for op in ops:
+        if not re.search(r'AppDebugServer\.Op\("%s"' % op, ctext) or not re.search(r'"%s" ->' % op, ctext):
+            bad.append("C13 /api/<%s>/%s is not both documented and answered" % (grp_key, op))
+    if not bj["ui"].get("debug_api", {}).get(grp_key):
+        bad.append("C13 build.json::ui.debug_api.%s is missing" % grp_key)
+    if re.search(r'"state" ->', ctext):
+        bad.append("C13 %s answers an op named state — that key is GET /api/state's (update-ack guard)" % api_file)
+cam = bj.get("camera") or {}
+refs = cam.get("references") or []
+if not refs:
+    bad.append("C13 build.json::camera.references is empty — the photo route could scale by nothing")
+if len({r.get("id") for r in refs}) != len(refs):
+    bad.append("C13 build.json::camera.references ids are not unique")
+for r in refs:
+    if not (isinstance(r.get("mm"), (int, float)) and r["mm"] > 0):
+        bad.append("C13 reference %s has no positive mm" % r.get("id"))
+send_to = (cam.get("ocr") or {}).get("send_to_mode")
+if (modes_by_id.get(send_to) or {}).get("kind") != "expression":
+    bad.append("C13 build.json::camera.ocr.send_to_mode %s is not an expression mode" % send_to)
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C12 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C12"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C13 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C13"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -360,5 +405,14 @@ mutate guard-skipped "$J/audio/SoundFlow.kt" 's.replace("val g = Generator.guard
 mutate guard-loud build.json 's.replace("\"max_amplitude\": 0.5", "\"max_amplitude\": 1.5")' "C12 build.json::sound.generator needs"
 mutate no-sound-use build.json 's.replace("\"sound\": \"typesafe/jev-1.13\"", "\"noise\": \"typesafe/jev-1.13\"")' "C12 build.json::jev must declare identify.sound"
 
-echo "── C1-C12 + mutations: $FAILURES failure(s) ──"
+mutate camera-undeclared app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.CAMERA\" />", "")' "C13 the manifest does not declare CAMERA"
+mutate camera-elsewhere "$J/ui/ModeScreens.kt" 's + "\nprivate fun peek(l: androidx.activity.result.ActivityResultLauncher<String>) = l.launch(android.Manifest.permission.CAMERA)\n"' "C13 CAMERA must be asked for by ui/CameraScreens.kt alone"
+mutate arcore-required app/src/main/AndroidManifest.xml 's.replace("android:name=\"com.google.ar.core\" android:value=\"optional\"", "android:name=\"com.google.ar.core\" android:value=\"required\"")' "C13 ARCore must be declared optional"
+mutate second-engine-door "$J/ui/CameraScreens.kt" 's + "\nprivate fun door(c: android.content.Context) = com.diegonmarcos.superapp.image.mlkit.ImageScanEngine(c)\n"' "C13 ImageScanEngine( must be made by camera/Vision.kt alone"
+mutate image-op-dropped "$J/debugapi/CameraDebugApi.kt" 's.replace("\"recognize\" -> recognize(app, q).toString()", "")' "C13 /api/<image_group>/recognize"
+mutate camera-op-state "$J/debugapi/CameraDebugApi.kt" 's.replace("\"status\" -> status(app).toString()", "\"state\" -> status(app).toString()")' "C13 CameraDebugApi.kt answers an op named state"
+mutate reference-zero build.json 's.replace("\"mm\": 85.60", "\"mm\": 0")' "C13 reference card_long has no positive mm"
+mutate ocr-nowhere build.json 's.replace("\"send_to_mode\": \"standard\"", "\"send_to_mode\": \"units\"")' "C13 build.json::camera.ocr.send_to_mode units"
+
+echo "── C1-C13 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

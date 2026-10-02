@@ -1,0 +1,38 @@
+// :measure — the Camera tools' maths (#772) as a plain-JVM module: reference-object scaling of a
+// photo (a known length → millimetres per pixel → lengths, paths and areas), the AR route's 3-D
+// geometry (distance, path, polygon area, height), the inclinometer (tilt, pitch, roll and the
+// edge angle from the gravity vector, against a stored zero) and the numbers OCR hands the
+// calculator. No Android here, so the suite runs on golden geometry and PIT mutates it, as
+// :clock, :jev and :sound. The camera, ARCore and the sensors are app/…/camera.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.cloudcalc.measure.*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 80
+}
+
+tasks.named('test') { finalizedBy 'pitest' }

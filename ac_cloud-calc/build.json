@@ -1,6 +1,6 @@
 {
   "name": "cloud-calc",
-  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sound (#772: meter/oscilloscope/tuner, Wave detection, History with waterfall and CSV/WAV export, Generator, What is it?) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, and by the Jev section's calls to OpenRouter (build.json::jev; jev/Decisions.kt is the only app file that opens a URL); Calculator and Measure work without either, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sound (#772: meter/oscilloscope/tuner, Wave detection, History with waterfall and CSV/WAV export, Generator, What is it?), Camera (#772: Measure by reference object or ARCore, Level, Identify, Colour, Text-to-numbers - every image read by the shared image engine Cloud-Lib-ML-L-Image, on-device ML Kit by default or an OpenRouter decision model when Configs ▸ Image route says so) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, by the Jev section's and Sound ▸ What is it?'s calls to OpenRouter (build.json::jev; the shared libs:decisions client is the only code in this app that opens a URL), and - only when Configs ▸ Image route picks OpenRouter - by the image engine, which falls back to on-device ML Kit on any error; Calculator and Measure work without any of it, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -111,7 +111,9 @@
         "jev",
         "sound",
         "libs:text-tools",
-        "libs:decisions"
+        "libs:decisions",
+        "measure",
+        "libs:ml-l-image"
       ]
     },
     "clock": {
@@ -124,6 +126,15 @@
     },
     "sound": {
       "_doc": "#772 the Sound tools' maths as a plain-JVM Kotlin module (sound/): the FFT, levels with A/C weighting and the calibration offset, YIN pitch and note names, the speed of sound and wavelength, wave detection (events gated over the buffer's own noise floor, named impulse/chirp/noise/tone/complex, with fundamental, harmonics, bandwidth, duration and envelope; spectral-flux onsets; periodicity), the tone/sweep/noise/dual/beats generator and its safe-volume guard, WAV and CSV, the waterfall's log bands, and the summary a decision model is sent for 'What is this sound?'. No Android in it: its suite runs golden signals and the generator-to-analyser loopback, and PIT mutation-tests it on every `gradle test` (sound/build.gradle). The microphone, the player and the screens are app/…/sound and ui/SoundScreens.kt.",
+      "type": "library"
+    },
+    "measure": {
+      "_doc": "#772 the Camera tools' maths as a plain-JVM Kotlin module (measure/): reference-object scaling of a photo (millimetres per pixel, lengths, paths, shoelace areas), the ARCore route's world geometry (distance, path, Newell polygon area, height), the inclinometer (tilt, pitch, roll and edge angle from gravity, against a stored zero) and the numbers OCR hands the calculator. Golden-geometry suite, PIT on every `gradle test`.",
+      "type": "library"
+    },
+    "libs:ml-l-image": {
+      "_doc": "#772 the CONTRACT half of the fleet's one image engine (engine-apk-split move 6), shared with Cloud Camera, Drive, Mail, Media Center and Office: the IImageScanEngine wire, the uniform Recognition result, recognition.json (THE image-recognition declaration: routes, thresholds, the OpenRouter model and categories) and the per-app route choice. Identify, Colour and Text run in Cloud-Lib-Ml-L-Image-Mlkit.apk, which this app binds after a contract handshake and never compiles (a `contract` lib, no L4 edge).",
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-image",
       "type": "library"
     },
     "libs:decisions": {
@@ -513,6 +524,36 @@
       }
     }
   },
+  "_doc_camera": "#772 THE ONE declaration of the Camera tools (Measure > Camera). references: the objects of known size the photo route scales by, each one edge's length in millimetres (ISO/IEC 7810 ID-1 for a bank card, ISO 216 for A4, the issuing mint's diameter for a coin). capture: the longest side and JPEG quality a photo is kept at. level: the bubble's tolerance and how often the sensor is read. colour: the square of pixels a tapped colour averages. ocr.send_to_mode: the expression mode a recognised number is sent to. ar: whether the ARCore route is offered when the phone has ARCore.",
+  "camera": {
+    "references": [
+      { "id": "card_long", "label": "Bank card, long edge", "mm": 85.60 },
+      { "id": "card_short", "label": "Bank card, short edge", "mm": 53.98 },
+      { "id": "a4_long", "label": "A4 sheet, long edge", "mm": 297.0 },
+      { "id": "a4_short", "label": "A4 sheet, short edge", "mm": 210.0 },
+      { "id": "letter_long", "label": "US Letter, long edge", "mm": 279.4 },
+      { "id": "eur_1", "label": "1 euro coin", "mm": 23.25 },
+      { "id": "eur_2", "label": "2 euro coin", "mm": 25.75 },
+      { "id": "usd_quarter", "label": "US quarter", "mm": 24.26 }
+    ],
+    "capture": {
+      "max_side": 2048,
+      "jpeg_quality": 90
+    },
+    "level": {
+      "tolerance_deg": 0.5,
+      "sample_ms": 100
+    },
+    "colour": {
+      "sample_px": 9
+    },
+    "ocr": {
+      "send_to_mode": "standard"
+    },
+    "ar": {
+      "enabled": true
+    }
+  },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
     "_doc_sections": "#770 the three top-level sections, in display order: a segmented row at the top picks one, and the bottom nav shows the tabs whose `section` is its id. Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. test/test-calc-shell.sh fails on a section with no tab and on a tab naming no section.",
@@ -573,6 +614,12 @@
         "section": "measure"
       },
       {
+        "id": "camera",
+        "label": "Camera",
+        "icon": "camera",
+        "section": "measure"
+      },
+      {
         "id": "history",
         "label": "History",
         "icon": "history",
@@ -591,7 +638,7 @@
         "section": "jev"
       }
     ],
-    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost). #772 the Sound tab adds four kinds whose data is build.json::sound, not the mode: sound_events (listen, then events named impulse/chirp/noise/tone/complex with their features, onsets, periodicity), sound_history (a running session: waterfall, level/frequency/wavelength over time, saved as CSV/WAV and exported through the system file picker), sound_generator (tones, sweeps, noise, dual tone, beats behind the safe-volume guard; no microphone) and sound_identify (the measurements, never the audio, sent to the sound model with build.json::jev.identify.sound's classes; every probability shown). The microphone is asked for only by a listening sound mode, through ui/SoundScreens.kt's MicGate.",
+    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost). #772 the Sound tab adds four kinds whose data is build.json::sound, not the mode: sound_events (listen, then events named impulse/chirp/noise/tone/complex with their features, onsets, periodicity), sound_history (a running session: waterfall, level/frequency/wavelength over time, saved as CSV/WAV and exported through the system file picker), sound_generator (tones, sweeps, noise, dual tone, beats behind the safe-volume guard; no microphone) and sound_identify (the measurements, never the audio, sent to the sound model with build.json::jev.identify.sound's classes; every probability shown). The microphone is asked for only by a listening sound mode, through ui/SoundScreens.kt's MicGate. #772 the Camera tab adds five kinds whose data is build.json::camera: camera_measure (ARCore distance/path/area/height when ARCore is available, else a photo measured against a reference object of known size from `references`, with calibration), camera_level (inclinometer from the gravity sensor, `level`), camera_identify (a photo recognised by the shared image engine on the route Configs ▸ Image route picks; labels, boxes and the object count, every probability shown), camera_colour (tap a point: hex, RGB, HSL and the engine's colour name over `colour.sample_px`) and camera_text (OCR, numbers sent to `ocr.send_to_mode`); image_route (Configs) picks the route - on-device ML Kit or an OpenRouter decision model - and the model, per app. The camera is asked for only by a Camera mode that takes a photo, through ui/CameraScreens.kt's CameraGate.",
     "modes": [
       {
         "id": "standard",
@@ -1474,6 +1521,41 @@
         "_doc": "#772 listen, measure, and ask a decision model which of build.json::jev.identify.sound's classes the measurements describe (the model never hears the audio; a spectrogram image rides along only for a model whose catalogue entry takes images). Every class's probability and the extra questions' are shown; offline it still shows what was measured."
       },
       {
+        "id": "cam_measure",
+        "label": "Measure",
+        "tab": "camera",
+        "kind": "camera_measure",
+        "_doc": "#772 lengths, paths, areas and heights. With ARCore on the phone: tap points in the live scene (anchors on detected planes) for distance, path, area and height, in metres. Without it: a photo and a reference object of known size (build.json::camera.references, or a length the user measured) gives millimetres per pixel - true in the reference's own plane, square to the camera, which the screen says."
+      },
+      {
+        "id": "cam_level",
+        "label": "Level",
+        "tab": "camera",
+        "kind": "camera_level",
+        "_doc": "#772 the inclinometer: tilt, pitch, roll and the edge angle from the gravity sensor, against a zero the user sets on a reference surface; a bubble that turns green within build.json::camera.level.tolerance_deg. No camera, no network."
+      },
+      {
+        "id": "cam_identify",
+        "label": "Identify",
+        "tab": "camera",
+        "kind": "camera_identify",
+        "_doc": "#772 a photo through the shared image-recognition engine (libs:ml-l-image, the route the user picked in Jev > Configs > Image route: on-device ML by default, or an OpenRouter decision model that falls back to on-device): labels with probabilities, object boxes and their count, colours, text, and the decision model's extra questions. The count can be corrected by hand."
+      },
+      {
+        "id": "cam_colour",
+        "label": "Colour",
+        "tab": "camera",
+        "kind": "camera_colour",
+        "_doc": "#772 tap a photo: the colour under the finger (the mean of build.json::camera.colour.sample_px square) as hex, RGB and HSL, named by the image engine in recognition.json's vocabulary."
+      },
+      {
+        "id": "cam_text",
+        "label": "Text",
+        "tab": "camera",
+        "kind": "camera_text",
+        "_doc": "#772 OCR a photo through the image engine; every number found is a chip that sends itself, or their sum, to the calculator (build.json::camera.ocr.send_to_mode)."
+      },
+      {
         "id": "world",
         "label": "World clock",
         "tab": "clock",
@@ -1606,6 +1688,13 @@
         "kind": "jev_test"
       },
       {
+        "id": "image_route",
+        "label": "Image route",
+        "tab": "configs",
+        "kind": "image_route",
+        "_doc": "#772 Configs > Image recognition route: On-device ML (the default, offline) or an OpenRouter decision model, and that model, picked from the live decision catalogue the image engine reads. The choice is this app's (RecognitionPrefs); the routes, thresholds and the default model are libs:ml-l-image/recognition.json, shared with Cloud Camera."
+      },
+      {
         "id": "history",
         "label": "History",
         "tab": "history",
@@ -1620,7 +1709,9 @@
       "group": "calc",
       "clock_group": "clock",
       "jev_group": "jev",
-      "sound_group": "sound"
+      "sound_group": "sound",
+      "camera_group": "camera",
+      "image_group": "image"
     }
   },
   "tests": {
@@ -1633,7 +1724,7 @@
       ]
     },
     "unit": {
-      "_doc": "The JVM suites in app/src/test: the declaration parser against this build.json, every pure per-mode function (form substitution, converter expression, FFT, A-weighting, level), and a Robolectric smoke test that composes every mode against a fake engine.",
+      "_doc": "Every project's `test`: the JVM suites in app/src/test (the declaration parser against this build.json, every pure per-mode function, Robolectric suites per section incl. #772 SoundAppTest and CameraAppTest) plus the plain-JVM modules clock, jev, sound and measure and the shared libs:decisions / libs:ml-l-image, each JVM module followed by its PIT mutation gate.",
       "task": "test",
       "enabled": true
     }

@@ -27,10 +27,12 @@ are its own data, compiled in.
 |---|---|
 | AndroidX, Jetpack Compose, Material 3, Material icons (extended) | Apache-2.0 |
 | Kotlin standard library, kotlinx.coroutines | Apache-2.0 |
-| Fleet libraries (libs:core, libs:devtools, libs:bottomnav) | this repository |
+| Fleet libraries (libs:core, libs:devtools, libs:bottomnav, libs:decisions, libs:ml-l-image) | this repository |
+| AndroidX CameraX (camera-camera2, camera-lifecycle, camera-view) 1.4.2 | Apache-2.0 |
+| ARCore SDK for Android (`com.google.ar:core`) 1.48.0 | Google APIs Terms of Service and the ARCore Additional Terms of Service |
 
 The sound meter's signal processing (radix-2 FFT, Hann window, IEC 61672-1 A-weighting, dBFS)
-is written in `app/src/main/java/com/diegonmarcos/cloudcalc/Dsp.kt` from the published
+is written in `sound/src/main/kotlin/com/diegonmarcos/cloudcalc/sound/Dsp.kt` (#772: with C-weighting, YIN pitch, onset and event detection beside it) from the published
 formulas; no code was taken from phyphox or OpeNoise (both GPL-3.0).
 
 ## The Clock tab (#768)
@@ -79,3 +81,16 @@ engines.
 | sadellie/unitto (NumberHub lineage) | GPL-3.0 | A 25-module Kotlin Multiplatform app (`sharedApp`, `androidApp`, Room, remote) with its own evaluator (`core:evaluatto`, `kt-math`). Vendoring it means a second maths engine compiled into the app — the non-GUI logic #763 keeps out of apps — and grafting the fleet shell into a different app architecture. Every mode it has is covered by libqalculate here. |
 | FossifyOrg/Calculator | GPL-3.0 | A standard calculator over EvalEx (BigDecimal, no units, no CAS) plus Fossify commons and Room: a subset of libqalculate. |
 | numbat | MIT / Apache-2.0 | Dimension-safe unit arithmetic is already libqalculate's (`500 W * 2 h to kWh` is a golden row); a second engine with a second unit table for one overlapping feature. |
+
+## The Camera tab (#772)
+
+Camera ▸ Measure / Level / Identify / Colour / Text is written in this repository: `measure/`
+(the geometry, plain JVM) and `app/src/main/java/com/diegonmarcos/cloudcalc/camera/` plus
+`ui/CameraScreens.kt`. Every image is READ by the shared image engine
+(`Cloud-Lib-ML-L-Image-MLKit.apk`, `ab_cloud-libs-shared/libs/ml-l-image-mlkit`), which carries
+Google ML Kit (barcode, text, image labeling, object detection — ML Kit Terms of Service) and
+ZXing (Apache-2.0); this app compiles only the engine's thin client.
+
+AR measuring runs on Google Play Services for AR (ARCore), which is provided by Google LLC and
+governed by the Google Privacy Policy. It is optional: the app declares ARCore `optional`, never
+installs it unasked, and falls back to measuring against a reference object of known size.

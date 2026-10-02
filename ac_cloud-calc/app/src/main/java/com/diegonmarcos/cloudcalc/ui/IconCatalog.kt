@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Settings
@@ -32,6 +33,7 @@ object IconCatalog {
         "speed" -> Icons.Filled.Speed
         "psychology" -> Icons.Filled.Psychology
         "mic" -> Icons.Filled.Mic
+        "camera" -> Icons.Filled.PhotoCamera
         "ask" -> Icons.Filled.QuestionAnswer
         "settings" -> Icons.Filled.Settings
         else -> fallback

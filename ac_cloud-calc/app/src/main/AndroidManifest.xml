@@ -5,8 +5,14 @@
     <!-- No network permission of its own: calculations cross to Cloud-Lib-Calc over a binder
          and only that engine downloads currency rates. (libs:devtools merges in the INTERNET its
          loopback debug server needs.) No self-update either: the Store updates this app. -->
-    <!-- The Sound meter mode only; requested at runtime when that mode opens (MeterScreen.kt). -->
+    <!-- The Sound tools only; requested at runtime by ui/SoundScreens.kt's MicGate when a
+         listening sound mode opens (#772). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- #772 the Camera tools only; requested at runtime by ui/CameraScreens.kt's CameraGate when
+         a photo-taking camera mode opens. A phone without a camera still installs the app. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- #768 the Clock tab. Alarms are AlarmManager alarm CLOCKS and every other wakeup is exact:
          SCHEDULE_EXACT_ALARM is the user-granted path on API 31/32, USE_EXACT_ALARM the
@@ -52,6 +58,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- #772 ARCore is OPTIONAL: the AR measure route is offered only where ARCore runs; every
+             other phone measures on a photo against a reference object. -->
+        <meta-data android:name="com.google.ar.core" android:value="optional" />
+
+        <!-- #772 the AR measure route (ARCore session + GL camera background). -->
+        <activity
+            android:name=".camera.ArMeasureActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.CloudCalc" />
 
         <!-- #768 a ring, over the lock screen (the ring notification's full-screen intent). -->
         <activity

@@ -72,6 +72,55 @@
     <string name="sound_class">Kind of sound</string>
     <string name="sound_decision_meta">%1$s · %2$s ms · cost %3$s</string>
 
+    <!-- #772 the Camera tools -->
+    <string name="camera_needed">The camera tools need the camera. Photos stay in this app\'s own storage; only Identify on the OpenRouter route sends one out, and only when you picked that route.</string>
+    <string name="camera_allow">Allow camera</string>
+    <string name="camera_take">Take photo</string>
+    <string name="camera_pick">Choose image…</string>
+    <string name="camera_not_image">That file is not an image this phone can read.</string>
+    <string name="camera_ar">Measure in AR</string>
+    <string name="camera_ar_doc">ARCore tracks the room: tap points on floors, tables and walls for a distance, path, area or height in metres.</string>
+    <string name="camera_no_ar">ARCore is not available on this phone: measure on a photo against an object of known size.</string>
+    <string name="camera_known_length">Or a length you measured (mm)</string>
+    <string name="camera_mark_reference">Tap both ends of the reference.</string>
+    <string name="camera_mark_points">Tap the points to measure (three or more give an area).</string>
+    <string name="camera_measured">%1$s straight · %2$s path</string>
+    <string name="camera_plane_note">True in the reference\'s own plane, with the camera square to it.</string>
+    <string name="camera_measure_calc">Photo measure against %1$s</string>
+    <string name="ar_hint">Move the phone slowly until surfaces are found, then tap points.</string>
+    <string name="ar_undo">Undo</string>
+    <string name="ar_clear">Clear</string>
+    <string name="ar_distance">Distance</string>
+    <string name="ar_path">Path</string>
+    <string name="ar_area">Area</string>
+    <string name="ar_height">Height</string>
+    <string name="ar_unavailable">AR is unavailable: %1$s</string>
+    <string name="level_no_sensor">This phone reports no gravity or accelerometer sensor.</string>
+    <string name="level_pitch">Pitch (top edge)</string>
+    <string name="level_roll">Roll (side edge)</string>
+    <string name="level_edge">On an edge</string>
+    <string name="level_set_zero">Set zero here</string>
+    <string name="level_clear_zero">Clear zero</string>
+    <string name="level_calc">Inclinometer</string>
+    <string name="identify_route">Route: %1$s (Jev ▸ Configs ▸ Image route)</string>
+    <string name="identify_calc">What is in this photo</string>
+    <string name="identify_count">Count: %1$s</string>
+    <string name="identify_failed">Not recognised: %1$s</string>
+    <string name="identify_fell_back">The OpenRouter route failed (%1$s); on-device recognition answered.</string>
+    <string name="identify_answered_by">Answered by %1$s · %2$s · %3$s ms</string>
+    <string name="colour_tap">Tap the colour to read.</string>
+    <string name="colour_naming">Naming…</string>
+    <string name="colour_calc">Colour picked from a photo</string>
+    <string name="text_numbers">Numbers found: tap one to send it to the calculator</string>
+    <string name="text_sum">Send the sum of all %1$s</string>
+    <string name="text_none">No text found.</string>
+    <string name="image_route_doc">Where Identify recognises a photo: on this phone (ML Kit, offline, the default) or by an OpenRouter decision model, which falls back to on-device when it has no token, an error or no answer in time. Cloud Camera offers the same routes from the same declaration.</string>
+    <string name="image_engine_ready">Image engine: ready</string>
+    <string name="image_model">Decision model</string>
+    <string name="image_sees">sees images</string>
+    <string name="image_no_catalogue">No live catalogue: the declared default %1$s is used.</string>
+    <string name="image_route_saved">Saved: Identify uses this route now.</string>
+
     <!-- #768 the Clock tab -->
     <string name="clock_channel_ring">Ringing alarms and timers</string>
     <string name="clock_channel_running">Running timers and stopwatch</string>
