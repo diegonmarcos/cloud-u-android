@@ -53,6 +53,25 @@ grep -q 'PARTIAL_WAKE_LOCK' "$API" && grep -q 'startForegroundService' "$API" \
     && ok "holds a wake lock and the foreground service while a command runs (screen locked)" \
     || bad "nothing keeps the CPU or the process up with the screen locked"
 
+# #786 — a phone ran the pre-#771 list against a pre-#771 tree while every published asset was
+# current; nothing in the answer could say so. The list is read from THIS APK, every route call
+# re-stages when the installed lib's digest moves (enter.sh then re-unpacks; $HOME is bound from
+# outside the tree, so it is kept), and the answer names the builds that produced it.
+ROOTFS_JAVA="$DIR/app/src/main/java/com/termux/cloud/CloudRootfs.java"
+grep -q 'app.getAssets().open(SELFTEST_ASSET)' "$API" \
+    && ok "the selftest list is this APK's own asset, never an unpacked copy" \
+    || bad "the selftest list is not read from this APK's assets: an update cannot change it"
+grep -q 'CloudRootfs.stage(context);' "$APP/TermuxInstaller.java" \
+    && grep -q 'String want = field(libManifest(context), "sha256");' "$ROOTFS_JAVA" \
+    && ok "every route call re-stages when the installed lib's digest differs from the staged one" \
+    || bad "a newly installed rootfs lib is not adopted: the route keeps the tree it staged first"
+for key in app_apk_sha256 lib_version_code lib_version lib_sha256 staged_sha256 unpacked_sha256; do
+    grep -q "\"$key\"" "$ROOTFS_JAVA" || bad "CloudRootfs.installed() does not report $key"
+done
+grep -q '.put("installed", CloudRootfs.installed(app))' "$API" \
+    && ok "the selftest answer names the app APK, lib and staged/unpacked digests it ran against" \
+    || bad "the selftest answer does not say which builds produced it"
+
 python3 - "$SELFTEST" "$SIBLING" <<'PY' && ok "selftest declares the #747/#771 checks, each under sh, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
 import json, sys
 mine, sibling = (json.load(open(p))["checks"] for p in sys.argv[1:3])

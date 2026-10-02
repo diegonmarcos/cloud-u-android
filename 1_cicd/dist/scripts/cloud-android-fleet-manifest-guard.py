@@ -504,6 +504,25 @@ def rootfs_libs(root):
                 "      installable thing." % (app, companion_id, ", ".join(missing)))
             continue
 
+        # #786: identity_files version the ROW, paths_from decide whether the lib is
+        # REBUILT. An identity file under no paths_from entry moves the row and never
+        # republishes the lib: the Store is told one rootfs and handed the old one.
+        # #771 added two such files (ab_cloud-terminal-store/gitconfig, noexec-shebang.c).
+        gated = [p.rstrip("/") for p in companion["paths_from"]]
+        uncovered = []
+        for rel in artifact["identity_files"]:
+            path = os.path.relpath(os.path.normpath(os.path.join(app_dir, rel)), root)
+            if not any(path == g or path.startswith(g + "/") for g in gated):
+                uncovered.append(path)
+        if uncovered:
+            failures.append(
+                "%s/build.json::release.companions[%r].paths_from does not cover %s.\n"
+                "      Those files are in the content address (the fleet row's version_name), so\n"
+                "      an edit to one moves the row while the publish gate, which reads only\n"
+                "      paths_from, keeps the old lib on the release." % (
+                    app, companion_id, ", ".join(uncovered)))
+            continue
+
         package = companion["package"]
         canonical_package = "%s.%s" % (id_prefix, module.replace("-", ""))
         if package != canonical_package:

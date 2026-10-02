@@ -221,6 +221,12 @@ jobs:
           name: cloud-rootfs-${{ matrix.abi }}-${{ github.sha }}
           path: ${{ env.WORK_DIR }}/app/src/main/assets/${{ steps.rootfs.outputs.dir }}
 
+      # #786: the digest of the tree verify-rootfs.sh ran, kept for the published-lib
+      # guard below. stageRootfsPayload deletes it from assets/ during the build.
+      - name: Keep the verified rootfs digest
+        if: steps.gate.outputs.skip != 'true'
+        run: cp "$WORK_DIR/app/src/main/assets/${{ steps.rootfs.outputs.dir }}/rootfs.sha256" "$RUNNER_TEMP/verified-rootfs.sha256"
+
       - name: Build stamp (the run's, shared by every ABI leg)
         if: steps.gate.outputs.skip != 'true'
         run: echo "COMMS_BUILD_TIMESTAMP=${{ needs.build_stamp.outputs.stamp }}" >> "$GITHUB_ENV"
@@ -330,6 +336,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"
+
+      # #786: every link of #771's chain was green alone (verify 16/16, lib
+      # published, fleet row moved) and nothing compared the ends. Runs on EVERY
+      # run, gate-skipped included: the live release asset's rootfs-lib.json
+      # version must be the fleet row's version_name, and when this run built the
+      # lib, the release must serve exactly those bytes, carrying the payload the
+      # rootfs job verified. Red otherwise.
+      - name: "Test → the published rootfs lib is the fleet row's and the verified one"
+        run: python3 1_cicd/dist/scripts/cloud-android-rootfs-published-guard.py "$WORK_DIR" "${{ matrix.abi }}" --verified-sha256 "$RUNNER_TEMP/verified-rootfs.sha256"
 
   # ── the APKs both legs produced agree (#636) ───────────────────────────
   # Read from the APKs themselves, not from the stamp that should have made

@@ -146,8 +146,11 @@
         "paths_from": [
           "ac_cloud-termux/rootfs",
           "ac_cloud-termux/rootfs-lib",
-          "ab_cloud-terminal-store/store.json"
+          "ab_cloud-terminal-store/store.json",
+          "ab_cloud-terminal-store/noexec-shebang.c",
+          "ab_cloud-terminal-store/gitconfig"
         ],
+        "_doc_paths_from_786": "#786 -- must cover every rootfs.json artifact.identity_files entry (the fleet row's version_name); the fleet manifest guard is red otherwise. #771 put these two in the identity only, so an edit to either would have moved the row and left the old lib on the release.",
         "package": "com.diegonmarcos.cloudlib.rootfstermux"
       }
     ]

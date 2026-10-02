@@ -121,6 +121,8 @@ final class TerminalDebugApi {
             .put("passed", checks.length() - failed)
             .put("failed", failed)
             .put("bootstrap", ready.get("bootstrap"))
+            // #786: the builds that ran this list, comparable to the release's sidecars.
+            .put("installed", CloudRootfs.installed(app))
             .put("results", results)
             .toString();
     }

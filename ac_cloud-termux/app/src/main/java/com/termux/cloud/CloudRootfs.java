@@ -111,6 +111,45 @@ public final class CloudRootfs {
     }
 
     /**
+     * #786: WHICH builds this terminal is running, in the units the release publishes, so a
+     * selftest answer can be laid beside the release instead of trusted. #771's checks were
+     * reported missing on a phone whose cld.termux said versionCode 1011, the same as the
+     * published APK; that number never moves, and the APK on the phone predated #771. Here:
+     * this APK's own sha256 (= the release's cloud-terminal*.apk.sha256), the installed lib's
+     * versionCode and manifest (version = the fleet row's version_name), and the digest
+     * staged out of it and unpacked by enter.sh. All three digests equal = adopted.
+     */
+    public static JSONObject installed(Context context) throws JSONException {
+        JSONObject out = new JSONObject();
+        try {
+            out.put("app_apk_sha256", sha256(new File(context.getApplicationInfo().sourceDir)));
+        } catch (IOException e) {
+            out.put("app_apk_sha256", JSONObject.NULL).put("app_error", e.toString());
+        }
+        try {
+            //noinspection deprecation — minSdk 26; getLongVersionCode is API 28
+            int code = context.getPackageManager().getPackageInfo(BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE, 0).versionCode;
+            JSONObject manifest = libManifest(context);
+            out.put("lib_version_code", code)
+                .put("lib_version", field(manifest, "version"))
+                .put("lib_sha256", field(manifest, "sha256"));
+        } catch (Exception e) {
+            out.put("lib_error", e.getMessage());
+        }
+        out.put("staged_sha256", readOrNull(new File(stageDir(), DIGEST)))
+            .put("unpacked_sha256", readOrNull(new File(stageDir(), "rootfs/.cloud-rootfs.sha256")));
+        return out;
+    }
+
+    private static Object readOrNull(File file) {
+        try {
+            return read(new FileInputStream(file));
+        } catch (IOException e) {
+            return JSONObject.NULL;
+        }
+    }
+
+    /**
      * Extracts ~400 MB out of the sibling lib APK the first time and after a rootfs change; call off the UI thread.
      *
      * #747: synchronized and re-checked, because the activity's first start and the debug API's
