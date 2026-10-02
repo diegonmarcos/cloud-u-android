@@ -143,8 +143,56 @@ object ApkCache {
         }.onFailure { Log.w(TAG, "could not write the record for ${apk.name}: ${it.message}") }
         Log.i(TAG, "cached ${apk.name}: ${rec.pkg} versionCode ${rec.versionCode} " +
             "sha256 ${rec.sha256.take(12)}… (${apk.length()} B)")
+        pruneStale(ctx, rec.pkg, rec.versionCode, except = apk)
         evict(ctx)
         return rec
+    }
+
+    /**
+     * #774 Drop every cached build of [pkg] OLDER than [versionCode] — called
+     * when a newer one is cached ([keep]) or installed (the receiver's success).
+     * An older build of the same package can never be installed over a newer
+     * one, so it is pure disk; the cache is keyed pkg + versionCode + sha256 and
+     * this is the "stale" half of that key. Never touches [except], never a
+     * file without a record (nothing can prove what it is).
+     */
+    fun pruneStale(ctx: Context, pkg: String, versionCode: Long, except: File? = null): List<String> =
+        entries(ctx).filter { e ->
+            e.file != except && e.record != null && e.record.pkg == pkg && e.record.versionCode < versionCode
+        }.mapNotNull { e ->
+            drop(e.file)
+            if (e.file.exists()) null else e.file.name.also {
+                Log.i(TAG, "pruned stale $it: $pkg versionCode ${e.record?.versionCode} < $versionCode")
+            }
+        }
+
+    // ── #774 the last stage outcome, per package ─────────────────────────
+
+    /** Stage names a note can carry — the Store row's own vocabulary. */
+    const val STAGE_DOWNLOAD = "download"
+    const val STAGE_INSTALL = "install"
+
+    /** Why the last Download or Install of [pkg] did not finish. Persisted, so
+     *  a cancel from the system install sheet still reads as "cancelled" on the
+     *  row after the process is gone — the receiver that learns it outlives
+     *  nothing else. Never a URL or a token: callers pass their own sentence. */
+    class Note(val stage: String, val message: String, val at: Long)
+
+    private fun notes(ctx: Context) =
+        ctx.getSharedPreferences("updater_apk_cache_notes", Context.MODE_PRIVATE)
+
+    fun note(ctx: Context, pkg: String, stage: String, message: String) {
+        if (pkg.isBlank()) return
+        notes(ctx).edit().putString(pkg, "$stage\n${System.currentTimeMillis()}\n$message").apply()
+    }
+
+    fun noteOf(ctx: Context, pkg: String): Note? = runCatching {
+        val parts = notes(ctx).getString(pkg, null)?.split('\n', limit = 3) ?: return null
+        Note(parts[0], parts[2], parts[1].toLong())
+    }.getOrNull()
+
+    fun clearNote(ctx: Context, pkg: String) {
+        if (pkg.isNotBlank()) notes(ctx).edit().remove(pkg).apply()
     }
 
     /** The record written by [keep], or null when there is none. */

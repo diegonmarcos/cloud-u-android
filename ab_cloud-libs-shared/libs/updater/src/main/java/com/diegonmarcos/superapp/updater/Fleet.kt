@@ -493,6 +493,20 @@ object Fleet {
 
     fun download(ctx: Context, app: App): VerifiedApk {
         UpdateProgress.update(UpdateProgress.State.CheckingManifest)
+        // #774 THE CACHE IS ASKED BEFORE THE NETWORK. A 400 MB lib finished
+        // downloading, the user cancelled Android's install sheet, and the next
+        // Install fetched all 400 MB again. The bytes were still on disk — the
+        // receiver keeps them on every non-success — but ReleaseSource never
+        // looked: Download.toFile short-circuits only on a complete `.part`, and
+        // a finished download is no longer a `.part`. GhcrClient.blob had its
+        // own content-addressed hit; the release path, tried FIRST, had none.
+        cachedRelease(ctx, app)?.let { hit ->
+            Log.i(TAG, "download ${app.kind} ${app.id}: cache HIT ${hit.file.name} → ${hit.evidence}")
+            UpdateProgress.update(UpdateProgress.State.Downloading(100, hit.length, hit.length))
+            if (ApkCache.record(hit.file) == null) ApkCache.keep(ctx, hit.file)
+            ApkCache.clearNote(ctx, app.pkg)
+            return hit
+        }
         // NAME WHAT DECLINED, AND WHY — the same rule [commit] already applies
         // to install channels. A source that could not serve it used to
         // disappear into a bare `continue`, so the final message could only say
@@ -525,14 +539,36 @@ object Fleet {
             // declared bound at the same moment, before the next app's download
             // pushes it further over.
             ApkCache.keep(ctx, apk.file)
+            ApkCache.clearNote(ctx, app.pkg)
             return apk
         }
         val why = "could not download ${app.id}: " + declined.joinToString(" | ")
+        ApkCache.note(ctx, app.pkg, ApkCache.STAGE_DOWNLOAD, why)
         // Publish before throwing: [install] catches this too, but a BATCH
         // catches it per-app and moves on, which would leave the row frozen on
         // this app's last progress frame while the next app downloads.
         UpdateProgress.update(UpdateProgress.State.Failed(why, appId = app.id, pkg = app.pkg))
         error(why)
+    }
+
+    /**
+     * A cached artifact for [app] that is byte-for-byte the release asset
+     * published NOW, or null. Content-addressed: the sha256 sidecar names the
+     * bytes, so any `fleet-<id>-*` file that hashes to it is the download,
+     * whichever source fetched it. No sidecar → no hit (a length cannot tell
+     * this build from the last one under the same filename).
+     *
+     * ponytail: hashes each candidate in full (seconds for 400 MB) — still far
+     * cheaper than the download it replaces; a record whose sha already
+     * disagrees is skipped without reading the file.
+     */
+    internal fun cachedRelease(ctx: Context, app: App): VerifiedApk? {
+        if (app.releaseUrl.isBlank()) return null
+        val sha = releaseSha256(app) ?: return null
+        return ApkCache.entries(ctx)
+            .filter { !it.partial && it.file.name.startsWith("fleet-${app.id}-") }
+            .filter { it.record == null || it.record.sha256.equals(sha, ignoreCase = true) }
+            .firstNotNullOfOrNull { VerifiedApk.byDigest(it.file, sha) }
     }
 
     /** [GhcrSource] needs the manifest layer; the resolution logic (ABI tag
@@ -642,6 +678,8 @@ object Fleet {
             Log.w(TAG, "install channel '${channel.name}' declined ${app.pkg}: $why")
             declined += "${channel.name} → $why"
         }
+        ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, "no install channel accepted it: " +
+            declined.joinToString(" | "))
         error("no install channel accepted ${app.pkg}. " +
             declined.joinToString(" | ") +
             if (AutoUpdatePrefs.requireSilent(ctx))
@@ -1176,6 +1214,11 @@ object Fleet {
                 val nowCode = installedInfo(ctx, app)?.versionCode
                 if (VersionOrder.landed(candidateCode, nowCode)) {
                     acted++
+                    // #774 STAGE 3, CLEAR. The session path is reaped by
+                    // PackageInstallerReceiver on success; a shell install has
+                    // no receiver, so its cached APK used to stay forever. Same
+                    // proven-install rule either way — a no-op once reaped.
+                    ApkCache.reapIfInstalled(ctx, apk.file)
                     Log.i(TAG, "installed ${app.kind} ${app.id} (${app.pkg}) " +
                                "[${i + 1}/${staged.size}] via $used")
                 } else {

@@ -243,6 +243,17 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // prompt still needs the bytes for a retry. Deleting earlier
                 // would turn every declined dialog into a re-download.
                 if (!isUninstall) reapCachedApk(context, intent.getStringExtra(EXTRA_APK_PATH))
+                // #774 the row's truth: nothing failed, and anything older than
+                // what is now installed can never be installed again.
+                if (!isUninstall && gateKey.isNotEmpty()) {
+                    ApkCache.clearNote(context, gateKey)
+                    runCatching {
+                        val pi = context.packageManager.getPackageInfo(gateKey, 0)
+                        val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode
+                                   else @Suppress("DEPRECATION") pi.versionCode.toLong()
+                        ApkCache.pruneStale(context, gateKey, code)
+                    }
+                }
                 // Resolve the install overlay (it sat on "Installing…" while the
                 // system installer was up). MainActivity auto-dismisses on Done.
                 // Uninstall never raised the overlay, so leave it alone.
@@ -292,6 +303,14 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     pkg = gateKey,
                     apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty(),
                 ))
+                // #774 THE CACHE OUTLIVES THIS, AND SO MUST THE REASON. Nothing
+                // here deletes the staged APK — a cancelled sheet is the case
+                // the cache exists for — and the Store row reads this note to
+                // say "cached · install cancelled" with Install one tap away,
+                // even after the process that heard it is gone.
+                if (!isUninstall && gateKey.isNotEmpty()) ApkCache.note(context, gateKey,
+                    ApkCache.STAGE_INSTALL, message.ifEmpty { label } +
+                        (legacyName?.let { " · code: $it" } ?: ""))
                 // Every extra, once, at W. Cheap, bounded, and it is OUR log so
                 // the Diagnose screen picks it up — unlike the platform's.
                 Log.w(TAG, "install failed pkg=$gateKey status=$status legacy=$legacy " +
