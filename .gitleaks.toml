@@ -1,0 +1,54 @@
+# Leak-scan rules — ONE declaration for every public repo of the fleet.
+#
+# Source : cloud-infra/0_apps/src/root/gitleaks.toml
+# Emitted: 9_others/build.sh fleet → <repo>/.gitleaks.toml (public repos only,
+#          manifest.json:public_root_targets). Edit here, never in a repo copy.
+#
+# Read by three gates, so they can never disagree about what a leak is:
+#   1. .github/workflows/leak-scan.yml   gitleaks over the pushed range (CI, red on a hit)
+#   2. .githooks/pre-commit → leak-scan  the staged change, before it is a commit
+#   3. cloud-ship-container-step-verify-dist-leaks.sh
+#                                        generated dist/ of a wrangler service at build time
+#
+# Gates 2 and 3 must work on boxes WITHOUT gitleaks (the cloud-builder image has
+# none), so every rule whose id starts with `token-shape-` is also run by
+# .githooks/leak-scan with `grep -E`. Those regexes are therefore written in
+# the common subset of RE2 and POSIX ERE: no (?i), no \d \s \b, POSIX classes only.
+# One regex per line between ''' quotes — leak-scan reads them line by line.
+#
+# Why these four (2026-10-01): a signed Authelia JWT for cloudflare-health-c3-api
+# was committed as plaintext in a worker's wrangler.toml (src/ and generated
+# dist/), and an archived agent transcript carried PEM private keys and API keys.
+# Each shape below is one of those, generalised.
+#
+# A deliberate false positive is silenced per line with a trailing
+# `gitleaks:allow` comment — honoured by gitleaks and by leak-scan alike.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "token-shape-jwt"
+description = "JSON Web Token (signed or not) in plaintext"
+regex = '''eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{0,}'''
+keywords = ["eyj"]
+
+[[rules]]
+id = "token-shape-private-key"
+description = "PEM / OpenSSH / PGP private key block"
+regex = '''-----BEGIN[A-Z ]*PRIVATE KEY( BLOCK)?-----'''
+keywords = ["private key"]
+
+[[rules]]
+id = "token-shape-bearer"
+description = "Literal Authorization: Bearer credential (not a ${VAR} reference)"
+regex = '''[Bb]earer[[:space:]]+[A-Za-z0-9._~+/=-]{24,}'''
+keywords = ["bearer"]
+entropy = 3.5
+
+[[rules]]
+id = "token-shape-assigned-secret"
+description = "UPPER_CASE secret-named key assigned a quoted literal (env / toml / yaml)"
+regex = '''[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY|PRIVATE_KEY)[A-Z0-9_]*[[:space:]]*[:=][[:space:]]*["'][^"'$[:space:]{}<>]{16,}["']'''
+keywords = ["token", "secret", "password", "passwd", "api_key", "apikey", "private_key"]
+entropy = 3.0

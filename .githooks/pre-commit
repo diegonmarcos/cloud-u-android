@@ -1,0 +1,6 @@
+#!/bin/sh
+# pre-commit — refuse a commit that adds a secret-shaped value.
+# Emitted fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only).
+# Active when core.hooksPath=.githooks (`9_others/build.sh fleet` wires it where
+# unset); repos with their own 0_git hooks chain to this file from there.
+exec sh "$(git rev-parse --show-toplevel)/.githooks/leak-scan" --staged

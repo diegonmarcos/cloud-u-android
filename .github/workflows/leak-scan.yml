@@ -1,0 +1,96 @@
+# Leak scan — every push to a public repo is checked for secrets; a hit turns
+# the run RED.
+#
+# Source : cloud-infra/0_apps/src/github/workflows/leak-scan.yml
+# Emitted: 9_others/build.sh fleet → every PUBLIC repo in 0_apps/src/manifest.json
+#          (public_targets). Edit there, never in a repo copy.
+# Rules  : .gitleaks.toml in the same repo, emitted from the same declaration.
+#
+# Why (2026-10-01): a signed JWT was committed in plaintext to a public repo and
+# nothing in CI noticed. GitHub push protection only knows partner token
+# formats; an Authelia-issued JWT, a PEM key in a transcript or an 8-character
+# service password are not among them.
+#
+# Scope: the commits of THIS push (before..after), not the whole history — the
+# gate exists to stop the next leak, and a history scan would be red forever
+# on matches that are already public. History is audited separately.
+#
+# workflow_dispatch `mutation: plant` builds a throwaway local commit holding a
+# fake (unsigned, made-up) JWT and scans it. That run MUST be red: it is the
+# standing proof that the gate can fail. Nothing is pushed.
+name: Leak scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mutation:
+        description: "plant = scan a local commit with a fake JWT (run must go RED)"
+        required: false
+        default: "none"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: leak-scan-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false
+
+      - name: Install gitleaks (pinned, checksum-verified)
+        run: |
+          set -eu
+          tgz="$RUNNER_TEMP/gitleaks.tgz"
+          curl -sSfL -o "$tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $tgz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin" && tar -xzf "$tgz" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve the range to scan
+        id: range
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          MUTATION: ${{ github.event.inputs.mutation }}
+        run: |
+          set -eu
+          [ -f .gitleaks.toml ] || { echo "::error::.gitleaks.toml missing — run 9_others/build.sh fleet in cloud-infra"; exit 1; }
+          if [ "$EVENT" = workflow_dispatch ] && [ "$MUTATION" = plant ]; then
+            b64u() { printf '%s' "$1" | base64 -w0 | tr '+/' '-_' | tr -d '='; }
+            tok="$(b64u '{"alg":"none","typ":"JWT"}').$(b64u '{"sub":"leak-scan-mutation","iss":"fixture"}').$(b64u 'fake-signature-not-a-secret')"
+            printf 'C3_BEARER_TOKEN = "%s"\n' "$tok" > leak-scan-mutation.toml
+            git -c user.name=leak-scan -c user.email=leak-scan@invalid add leak-scan-mutation.toml
+            git -c user.name=leak-scan -c user.email=leak-scan@invalid commit -q --no-verify -m "mutation: planted fake JWT (never pushed)"
+            echo "opts=-1" >> "$GITHUB_OUTPUT"; echo "planted a fake JWT in a local commit — this run must be RED"
+            exit 0
+          fi
+          case "$EVENT" in
+            pull_request) base="$PR_BASE" ;;
+            push)         base="$BEFORE" ;;
+            *)            base="" ;;
+          esac
+          if [ -n "$base" ] && ! printf '%s' "$base" | grep -qE '^0+$' && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "opts=$base..HEAD" >> "$GITHUB_OUTPUT"
+          else
+            echo "opts=-1" >> "$GITHUB_OUTPUT"   # new branch / forced history: the tip commit
+          fi
+
+      - name: gitleaks — red on any hit (values redacted)
+        env:
+          OPTS: ${{ steps.range.outputs.opts }}
+        run: gitleaks git --config .gitleaks.toml --log-opts="$OPTS" --redact --no-banner --exit-code 1 --verbose .

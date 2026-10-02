@@ -1,0 +1,81 @@
+#!/bin/sh
+# leak-scan — the ONE local scanner behind the pre-commit hook and the
+# build-time dist/ gate. Emitted fleet-wide from cloud-infra/0_apps/src/githooks/
+# (public repos only); edit there, never in a repo copy.
+#
+#   leak-scan --staged          lines ADDED in the index      (pre-commit)
+#   leak-scan --files <f>...    whole files                   (dist/ gate)
+#
+# Rules: $LEAK_SCAN_CONFIG, else <repo root>/.gitleaks.toml. Every rule whose
+# id starts with `token-shape-` is run here with grep -E, so the gate holds on
+# a box with no gitleaks at all (the cloud-builder image has none). On
+# --staged, gitleaks itself also runs when installed: its default ruleset and
+# entropy checks catch what four regexes cannot.
+#
+# Output names files and rules, NEVER the matching text: a scanner that echoes
+# what it found re-leaks it into CI logs. A line carrying `gitleaks:allow` is
+# skipped, the same escape hatch gitleaks honours.
+#
+# Exit: 0 clean, 1 leak found, 2 usage/config error.
+set -u
+
+mode="${1:-}"; [ $# -gt 0 ] && shift
+top="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cfg="${LEAK_SCAN_CONFIG:-$top/.gitleaks.toml}"
+[ -f "$cfg" ] || { echo "leak-scan: rules not found: $cfg" >&2; exit 2; }
+
+# id<TAB>regex for every token-shape rule, read from the one declaration.
+shapes() {
+    awk -v q="'''" '
+        /^\[\[rules\]\]/ { id = "" }
+        /^id[[:space:]]*=/ { id = $0; sub(/^id[[:space:]]*=[[:space:]]*"/, "", id); sub(/".*/, "", id) }
+        /^regex[[:space:]]*=/ && id ~ /^token-shape-/ {
+            s = $0; i = index(s, q); s = substr(s, i + 3); j = index(s, q)
+            if (i > 0 && j > 0) print id "\t" substr(s, 1, j - 1)
+        }' "$cfg"
+}
+SHAPES="$(shapes)"
+[ -n "$SHAPES" ] || { echo "leak-scan: no token-shape-* rules in $cfg — refusing to report clean" >&2; exit 2; }
+
+TAB="$(printf '\t')"
+HITS="$(mktemp)"; trap 'rm -f "$HITS" "$HITS.in"' EXIT
+
+# match <stream of "file<TAB>text"> — records "rule<TAB>file" per hit
+match() {
+    grep -v 'gitleaks:allow' > "$HITS.in" || true
+    printf '%s\n' "$SHAPES" | while IFS="$TAB" read -r id rx; do
+        grep -E -- "$rx" "$HITS.in" | cut -f1 | sort -u | awk -v p="$id" -v t="$TAB" '{ print p t $0 }' >> "$HITS"
+    done
+}
+
+case "$mode" in
+    --staged)
+        git diff --cached -U0 --no-color --no-ext-diff --diff-filter=ACMR \
+          | awk -v t="$TAB" '/^\+\+\+ b\// { f = substr($0, 7); next } /^\+/ && f != "" { print f t substr($0, 2) }' \
+          | match
+        if command -v gitleaks >/dev/null 2>&1; then
+            gitleaks git --pre-commit --staged --redact --no-banner --log-level error -c "$cfg" "$top" \
+                || printf 'gitleaks\t(see gitleaks findings above)\n' >> "$HITS"
+        fi
+        ;;
+    --files)
+        [ $# -gt 0 ] || exit 0
+        for f in "$@"; do
+            [ -f "$f" ] || continue
+            grep -I -n '' "$f" 2>/dev/null | awk -v p="$f" -v t="$TAB" '{ print p t $0 }'
+        done | match
+        ;;
+    *)
+        echo "usage: leak-scan --staged | --files <file>..." >&2; exit 2 ;;
+esac
+
+[ -s "$HITS" ] || exit 0
+{
+    echo "══════════════════════════════════════════════════"
+    echo "BLOCKED: secret-shaped value found (values never printed)"
+    echo "══════════════════════════════════════════════════"
+    sort -u "$HITS" | while IFS="$TAB" read -r id f; do echo "  [$id] $f"; done
+    echo "Secrets live in sops (secrets.yaml → dist/.secrets, gitignored) or"
+    echo "'wrangler secret put' — never in a tracked file. Rules: $cfg"
+} >&2
+exit 1
