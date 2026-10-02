@@ -79,8 +79,8 @@
     <string name="camera_pick">Choose image…</string>
     <string name="camera_not_image">That file is not an image this phone can read.</string>
     <string name="camera_ar">Measure in AR</string>
-    <string name="camera_ar_doc">ARCore tracks the room: tap points on floors, tables and walls for a distance, path, area or height in metres.</string>
-    <string name="camera_no_ar">ARCore is not available on this phone: measure on a photo against an object of known size.</string>
+    <string name="camera_ar_doc">ARCore tracks the room: tap points on floors, tables and walls for a distance, path, area or height in metres. Needs Google Play Services for AR; without it, measure on a photo below.</string>
+    <string name="camera_no_ar">AR measuring is turned off in this build: measure on a photo against an object of known size.</string>
     <string name="camera_known_length">Or a length you measured (mm)</string>
     <string name="camera_mark_reference">Tap both ends of the reference.</string>
     <string name="camera_mark_points">Tap the points to measure (three or more give an area).</string>

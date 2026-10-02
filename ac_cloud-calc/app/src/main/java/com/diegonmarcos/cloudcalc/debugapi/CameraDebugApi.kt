@@ -12,14 +12,13 @@ import com.diegonmarcos.cloudcalc.measure.Level
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
-import com.google.ar.core.ArCoreApk
 import org.json.JSONObject
 import java.io.File
 
 /**
  * The Camera tools on the fleet debug API (#772), for checks with the screen locked:
  *
- *   /api/camera/status                 camera permission, ARCore availability, the image engine's
+ *   /api/camera/status                 camera permission, whether ARCore is installed, the image engine's
  *                                      handshake at the recognize contract, the route and model in
  *                                      force, the last photo, and one inclinometer reading
  *   /api/image/recognize?route=ml|openrouter&path=<file>
@@ -30,6 +29,9 @@ import java.io.File
  * The op is `status`, not `state`: update-ack-guard.json owns that key (GET /api/state).
  */
 object CameraDebugApi {
+    /** Google Play Services for AR: read from the package list, never asked (its availability query is async and needs Play Services). */
+    private const val ARCORE_PACKAGE = "com.google.ar.core"
+
     @Volatile private var registered = false
 
     fun register(ctx: Context) {
@@ -62,7 +64,7 @@ object CameraDebugApi {
         val tilt = g?.let { Level.tilt(it.first, it.second, it.third) }
         return JSONObject()
             .put("camera_granted", ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-            .put("arcore", runCatching { ArCoreApk.getInstance().checkAvailability(ctx).name }.getOrElse { "error: ${it.message}" })
+            .put("arcore_installed", runCatching { ctx.packageManager.getPackageInfo(ARCORE_PACKAGE, 0); true }.getOrDefault(false))
             .put("ar_offered", CameraDecl.config.arEnabled)
             .put("image_engine", Vision.status(ctx) ?: "ready")
             .put("route", RecognitionPrefs.route(ctx))

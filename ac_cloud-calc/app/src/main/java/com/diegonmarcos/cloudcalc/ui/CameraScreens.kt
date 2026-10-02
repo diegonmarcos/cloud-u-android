@@ -42,6 +42,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -84,7 +86,6 @@ import com.diegonmarcos.superapp.image.mlkit.OcrResult
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
-import com.google.ar.core.ArCoreApk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -197,7 +198,10 @@ internal fun mm(v: Double): String = when {
 fun CameraMeasureMode(mode: Declarations.Mode) {
     val ctx = LocalContext.current
     val cfg = CameraDecl.config
-    val ar = remember { cfg.arEnabled && runCatching { ArCoreApk.getInstance().checkAvailability(ctx).isSupported }.getOrDefault(false) }
+    // Offered whenever declared: ArCoreApk.checkAvailability is an async Play Services query that
+    // can throw later on the main looper, so it is never run on screen open. ArMeasureActivity asks
+    // for ARCore (and its install) only when the user taps AR, and says so when the phone cannot.
+    val ar = cfg.arEnabled
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
         if (ar) {
             Button(onClick = { ctx.startActivity(Intent(ctx, ArMeasureActivity::class.java)) }, modifier = Modifier.testTag(CameraTags.AR)) { Text(stringResource(R.string.camera_ar)) }
@@ -432,8 +436,11 @@ fun ImageRouteMode(mode: Declarations.Mode) {
         Text(stringResource(R.string.image_route_doc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(status ?: stringResource(R.string.image_engine_ready), color = if (status == null) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.error, modifier = Modifier.testTag(CameraTags.ENGINE))
         RecognitionConfig.routes().forEach { (id, label) ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag(CameraTags.route(id))) {
-                RadioButton(selected = route == id, onClick = { route = id })
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().selectable(selected = route == id, role = Role.RadioButton, onClick = { route = id }).testTag(CameraTags.route(id)),
+            ) {
+                RadioButton(selected = route == id, onClick = null)
                 Text(label)
             }
         }

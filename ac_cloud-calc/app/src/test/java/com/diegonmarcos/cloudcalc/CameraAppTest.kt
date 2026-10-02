@@ -91,7 +91,8 @@ class CameraAppTest {
         assertEquals(RecognitionConfig.defaultModel(), s.getString("model"))
         assertTrue(s.getJSONObject("routes").has("openrouter"))
         assertTrue(s.isNull("last_photo"))
-        assertTrue(s.has("arcore"))
+        assertFalse("no ARCore in Robolectric", s.getBoolean("arcore_installed"))
+        assertTrue(s.getBoolean("ar_offered"))
     }
 
     @Test fun `recognize refuses what it cannot read and says the engine is missing for what it can`() {
