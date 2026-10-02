@@ -3,7 +3,6 @@ package com.diegonmarcos.superapp.image.mlkit
 import android.graphics.Bitmap
 import com.diegonmarcos.superapp.decisions.Http
 import com.diegonmarcos.superapp.decisions.UrlHttp
-import com.sun.net.httpserver.HttpServer
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -16,8 +15,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.net.InetSocketAddress
-import java.util.concurrent.Executors
+import java.net.ServerSocket
+import kotlin.concurrent.thread
 
 /**
  * #772 the engine's recognizer: BOTH routes over the SAME golden images (src/test/resources/
@@ -31,7 +30,8 @@ import java.util.concurrent.Executors
 @Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class RecognizerTest {
-    private lateinit var server: HttpServer
+    /** A raw-socket mock: com.sun.net.httpserver is not on an Android unit test's classpath. */
+    private lateinit var server: ServerSocket
     private val bodies = mutableListOf<JSONObject>()
     private val auth = mutableListOf<String?>()
     @Volatile private var reply: Triple<Int, String, Long> = Triple(200, "{}", 0)
@@ -54,27 +54,43 @@ class RecognizerTest {
     /** Every https request goes to the loopback mock instead. */
     private val toMock = object : Http {
         override fun send(url: String, token: String?, body: String?, timeoutMs: Int): Http.Response =
-            UrlHttp.send("http://127.0.0.1:${server.address.port}/api/alpha/decisions", token, body, timeoutMs)
+            UrlHttp.send("http://127.0.0.1:${server.localPort}/api/alpha/decisions", token, body, timeoutMs)
     }
 
     @Before fun up() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { ex ->
-            synchronized(bodies) {
-                ex.requestBody.readBytes().toString(Charsets.UTF_8).takeIf { it.isNotEmpty() }?.let { bodies += JSONObject(it) }
-                auth += ex.requestHeaders.getFirst("Authorization")
+        server = ServerSocket(0, 50, java.net.InetAddress.getLoopbackAddress())
+        thread(isDaemon = true) {
+            while (!server.isClosed) {
+                val sock = runCatching { server.accept() }.getOrNull() ?: break
+                thread(isDaemon = true) { sock.use { serve(it) } }
             }
-            val (code, body, delay) = reply
-            if (delay > 0) Thread.sleep(delay)
-            val b = body.toByteArray()
-            runCatching { ex.sendResponseHeaders(code, b.size.toLong()); ex.responseBody.use { it.write(b) } }
         }
-        server.executor = Executors.newCachedThreadPool()
-        server.start()
         recognizer = Recognizer(ImageScanner(), onDevice, toMock, { account })
     }
 
-    @After fun down() = server.stop(0)
+    private fun serve(sock: java.net.Socket) {
+        val input = sock.getInputStream().buffered()
+        fun line(): String = generateSequence { input.read().takeIf { it >= 0 } }.takeWhile { it != '\n'.code }
+            .map { it.toByte() }.toList().toByteArray().toString(Charsets.UTF_8).trimEnd('\r')
+        line()
+        val headers = generateSequence { line().takeIf { it.isNotEmpty() } }.associate { it.substringBefore(':').trim().lowercase() to it.substringAfter(':').trim() }
+        val body = ByteArray(headers["content-length"]?.toInt() ?: 0).also { var n = 0; while (n < it.size) n += input.read(it, n, it.size - n).also { r -> if (r < 0) return } }
+        synchronized(bodies) {
+            body.toString(Charsets.UTF_8).takeIf { it.isNotEmpty() }?.let { bodies += JSONObject(it) }
+            auth += headers["authorization"]
+        }
+        val (code, text, delay) = reply
+        if (delay > 0) Thread.sleep(delay)
+        val b = text.toByteArray()
+        runCatching {
+            sock.getOutputStream().apply {
+                write("HTTP/1.1 $code X\r\nContent-Type: application/json\r\nContent-Length: ${b.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                write(b); flush()
+            }
+        }
+    }
+
+    @After fun down() = server.close()
 
     private fun golden(name: String): ByteArray = javaClass.getResourceAsStream("/golden/$name")!!.readBytes()
 
@@ -169,10 +185,10 @@ class RecognizerTest {
         assertTrue(parts.getJSONObject(1).getJSONObject("image_url").getString("url").startsWith("data:image/jpeg;base64,"))
         val decl = JSONObject(java.io.File("../ml-l-image/recognition.json").readText()).getJSONObject("openrouter")
         val q = sent.getJSONObject("questions")
-        assertEquals(decl.getJSONObject("categories").keySet(), q.getJSONObject("category").getJSONObject("criteria").keySet())
+        assertEquals(decl.getJSONObject("categories").keys().asSequence().toSet(), q.getJSONObject("category").getJSONObject("criteria").keys().asSequence().toSet())
         assertEquals("choice", q.getJSONObject("category").getString("type"))
-        assertEquals(setOf("category", "text_present", "damaged", "ripe"), q.keySet())
-        assertEquals(setOf("unripe", "ripe", "overripe", "not_produce"), q.getJSONObject("ripe").getJSONObject("criteria").keySet())
+        assertEquals(setOf("category", "text_present", "damaged", "ripe"), q.keys().asSequence().toSet())
+        assertEquals(setOf("unripe", "ripe", "overripe", "not_produce"), q.getJSONObject("ripe").getJSONObject("criteria").keys().asSequence().toSet())
         assertEquals("Bearer $account", auth.single())
         val labels = r.getJSONArray("labels")
         assertEquals("food", labels.getJSONObject(0).getString("label"))
