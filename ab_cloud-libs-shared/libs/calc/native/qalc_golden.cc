@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
     check(a.find("\"title\":\"Ampere\"") != std::string::npos, "items(unit, Electric Current) reaches a nested category: " + a.substr(0, 200));
     std::string cur = qcore::items("unit", "Currency", 1000);
     check(cur.find("\"name\":\"EUR\"") != std::string::npos && cur.find("\"name\":\"USD\"") != std::string::npos,
-          "items(unit, Currency) lists EUR and USD by the names the converter types");
+          "items(unit, Currency) lists EUR and USD by the names the converter types: " + cur.substr(0, 300));
     std::string r = qcore::rates_sources();
     check(r.find("ecb.europa.eu") != std::string::npos && r.find("eurofxref-daily.xml") != std::string::npos,
           "rates_sources names libqalculate's ECB source and file: " + r);

@@ -88,7 +88,9 @@ void by_category(const std::vector<T *> &v, const char *kind, const std::string 
     for (T *it : v) {
         if (n >= max) return;
         if (!it->isActive() || it->isHidden() || !in_category(it->category(), cat)) continue;
-        out += (n++ ? "," : "") + row(it, it->name(), kind);
+        // The name a user would TYPE: the preferred input abbreviation (EUR, m, kWh) rather
+        // than name(), which is the first listed name ("euro") and sometimes an internal one.
+        out += (n++ ? "," : "") + row(it, it->preferredInputName(true, false).name, kind);
     }
 }
 

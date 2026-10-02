@@ -52,7 +52,8 @@ std::string complete(const std::string &prefix, int max);
 
 // Every active, non-hidden item of one kind ("function", "variable", "unit")
 // whose category, or any nested segment of it ("Electricity/Electric Current"),
-// starts with category_prefix: same row shape as complete().
+// starts with category_prefix: same row shape as complete(), named by the
+// preferred input abbreviation (what a user types: EUR, m, kWh).
 std::string items(const std::string &kind, const std::string &category_prefix, int max);
 
 // The rate sources libqalculate itself reads: [{"index","url","file"}]. A
