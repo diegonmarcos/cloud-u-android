@@ -1,0 +1,62 @@
+#!/bin/sh
+# history-gate — refuse any history that a secret purge removed. Emitted
+# fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only); edit
+# there, never in a repo copy.
+#
+#   history-gate <rev>...      exit 1 if any <rev> contains a purged commit
+#   history-gate --pre-push    same, for every ref git is about to push (stdin)
+#
+# Why (#760): #759 rewrote three public repos with filter-repo to drop leaked
+# secrets. Every clone made before that still holds the old history, and ONE
+# `git pull --no-rebase` or merge of such a clone into the new main re-publishes
+# all of it. A purge that any stale clone can undo is not a purge.
+#
+# Markers: $HISTORY_GATE_LIST, else `purged-history` beside this script — one
+# commit per line, first field the full SHA. Each marker is the OLDEST commit
+# of a removed history (its root, or its first commit after the part the
+# rewrite left identical), so every removed commit has a marker in its
+# ancestry. A marker whose object is not in this clone cannot be an ancestor
+# of anything here and is skipped, so one list serves every repo.
+#
+# Exit: 0 clean, 1 purged history found, 2 usage/config error.
+set -u
+
+list="${HISTORY_GATE_LIST:-$(dirname "$0")/purged-history}"
+[ -f "$list" ] || { echo "history-gate: marker list not found: $list" >&2; exit 2; }
+MARKERS="$(sed -e 's/#.*//' "$list" | awk 'NF { print $1 }')"
+[ -n "$MARKERS" ] || { echo "history-gate: $list declares no markers — refusing to report clean" >&2; exit 2; }
+for m in $MARKERS; do
+    printf '%s' "$m" | grep -qE '^[0-9a-f]{40}$' || { echo "history-gate: not a full SHA in $list: $m" >&2; exit 2; }
+done
+
+ZERO=0000000000000000000000000000000000000000
+if [ "${1:-}" = --pre-push ]; then
+    # <local ref> <local sha> <remote ref> <remote sha>; a delete pushes ZERO
+    REVS="$(awk -v z="$ZERO" '$2 != z { print $2 }')"
+else
+    REVS="$*"
+fi
+[ -n "$REVS" ] || exit 0
+
+bad=0
+for rev in $REVS; do
+    c="$(git rev-parse --verify --quiet "$rev^{commit}")" || { echo "history-gate: cannot resolve $rev" >&2; exit 2; }
+    for m in $MARKERS; do
+        # exit 1 = not an ancestor, 128 = marker object not in this clone: both pass
+        if git merge-base --is-ancestor "$m" "$c" 2>/dev/null; then
+            echo "history-gate: $rev ($c) contains purged commit $m" >&2
+            bad=1
+        fi
+    done
+done
+[ "$bad" = 0 ] && exit 0
+{
+    echo "══════════════════════════════════════════════════"
+    echo "REFUSED: this history was purged of leaked secrets"
+    echo "══════════════════════════════════════════════════"
+    echo "It descends from a clone made before the rewrite (list: $list)."
+    echo "Publishing it would re-publish every purged secret. Instead:"
+    echo "  no unpushed work:  git fetch origin && git reset --keep origin/main"
+    echo "  unpushed commits:  git rebase --onto origin/main <old-base>"
+} >&2
+exit 1

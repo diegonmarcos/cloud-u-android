@@ -1,0 +1,15 @@
+# Purged-history markers, read by history-gate (same directory). One commit per
+# line: <full sha> <repo> <what it is>. Each is the OLDEST commit of a history
+# that a secret purge removed — its root, or the first commit after the prefix
+# the rewrite left byte-identical — so every removed commit has one of these in
+# its ancestry. Derive a new one as: the commits of `git rev-list --parents
+# <old tip> --not <new main>` none of whose parents are in that same list.
+# Adding a purge = appending its markers here; nothing else changes.
+#
+# #759 (2026-10-02): filter-repo of three public repos (_dispatch/HISTORY-REWRITE-759.md)
+754f85b0af87cf16564a2d6610037ace1cdea301 cloud-infra          first rewritten commit (root 74e9e807 was kept)
+d37f6fe1ee8d98151008be000f79e1c4e7915c62 cloud-u-containers   old root
+c5ac745a4e8d2c751b219bedf8a3e175c7f324ca cloud-infra-desktop  old root
+#
+# #760 (2026-10-02): cloud-u-containers rewritten again (S3 key id + Matomo DB password)
+de47458cfe9593728781a868841668e2fddc437c cloud-u-containers   first rewritten commit (root 365f6e4a was kept)

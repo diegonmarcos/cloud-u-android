@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║   GENERATED FILE — DO NOT EDIT                                   ║
+# ║                                                                  ║
+# ║   Source : 0_apps/src/githooks/pre-push
+# ║   Engine : 9_others/src/deploy-dotfiles.sh
+# ║   Rebuild: ./9_others/build.sh
+# ║                                                                  ║
+# ║   Manual edits will be overwritten on next build.                ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+# pre-push — refuse to publish history that a secret purge removed.
+# Emitted fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only).
+# Active when core.hooksPath=.githooks (`9_others/build.sh fleet` wires it where
+# unset); repos with their own 0_git hooks chain to history-gate from there.
+exec sh "$(git rev-parse --show-toplevel)/.githooks/history-gate" --pre-push

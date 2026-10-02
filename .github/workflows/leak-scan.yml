@@ -30,6 +30,12 @@
 # workflow_dispatch `mutation: plant` builds a throwaway local commit holding a
 # fake (unsigned, made-up) JWT and scans it. That run MUST be red: it is the
 # standing proof that the gate can fail. Nothing is pushed.
+#
+# Job `purged-history` (#760): a leak that was already PURGED comes back the
+# moment a clone made before the rewrite is merged and pushed. It runs
+# .githooks/history-gate (markers: .githooks/purged-history) over the pushed
+# HEAD; the same script is the pre-push hook. `mutation: purged` declares
+# HEAD~1 purged for that run only — it MUST be red.
 name: Leak scan
 
 on:
@@ -39,7 +45,7 @@ on:
   workflow_dispatch:
     inputs:
       mutation:
-        description: "plant = scan a local commit with a fake JWT (run must go RED)"
+        description: "plant = scan a local commit with a fake JWT; purged = treat HEAD~1 as purged history (either run must go RED)"
         required: false
         default: "none"
 
@@ -106,3 +112,25 @@ jobs:
         env:
           OPTS: ${{ steps.range.outputs.opts }}
         run: gitleaks git --config .gitleaks.toml --log-opts="$OPTS" --redact --no-banner --exit-code 1 --verbose .
+
+  purged-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # ancestry needs the whole history
+          lfs: false
+
+      - name: history-gate — red if HEAD carries purged history
+        env:
+          MUTATION: ${{ github.event.inputs.mutation }}
+        run: |
+          set -eu
+          [ -f .githooks/history-gate ] || { echo "::error::.githooks/history-gate missing — run 9_others/build.sh fleet in cloud-infra"; exit 1; }
+          if [ "${MUTATION:-none}" = purged ]; then
+            { cat .githooks/purged-history; git rev-parse HEAD~1; } > "$RUNNER_TEMP/purged-planted"
+            export HISTORY_GATE_LIST="$RUNNER_TEMP/purged-planted"
+            echo "declared HEAD~1 purged for this run — it must be RED"
+          fi
+          sh .githooks/history-gate HEAD
