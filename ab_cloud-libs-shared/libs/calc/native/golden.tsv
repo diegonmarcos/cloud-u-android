@@ -7,11 +7,14 @@
 # mode     the Cloud Calc mode the row stands for (a label: the per-mode report
 #          groups by it, and an empty mode fails the run).
 # options  `-` or `key=value` pairs joined by `;`: in, out (bases), prec,
-#          angle (0 none, 1 rad, 2 deg, 3 grad), approx (0|1), unicode (0|1).
+#          angle (0 none, 1 rad, 2 deg, 3 grad), approx (0 exact, 1 exact where
+#          possible — the default, 2 always decimal), mixed (0|1: mixed units like
+#          "2 lb + 3.27 oz"), unicode (0|1).
 # expected the exact printed result, or `re:<ECMAScript regex>` matched against
 #          the whole result where the value is fixed but its printing is not
-#          (live rates, symbolic term order), or `!error` for a row whose point
-#          is that the engine REFUSES it with an error message.
+#          (live rates, symbolic term order), `!error` for a row the engine must
+#          REFUSE with an error, or `!message` for one it must answer WITH a
+#          warning (a misplaced operator is dropped and said so, not hidden).
 # plot     an expression of the form `plot:<f(x)>;<xmin>;<xmax>;<steps>` checks
 #          qcore::plot instead; expected is the y values joined by `,`.
 standard	-	2+2	4
@@ -19,18 +22,18 @@ standard	-	(3+4)*5	35
 standard	-	2^10	1024
 standard	-	10/4	2.5
 standard	-	1/3	1/3
-standard	approx=1	1/3	0.3333333333
+standard	approx=2	1/3	0.3333333333
 standard	-	15% * 200	30
 standard	-	sqrt(16)	4
-standard	-	2+	!error
-scientific	approx=1;angle=2	sin(30)	0.5
-scientific	approx=1;angle=1	cos(pi)	-1
-scientific	approx=1	sqrt(2)	1.414213562
-scientific	approx=1	pi	3.141592654
+standard	-	2+	!message
+scientific	approx=2;angle=2	sin(30)	0.5
+scientific	approx=2;angle=1	cos(pi)	-1
+scientific	approx=2	sqrt(2)	1.414213562
+scientific	approx=2	pi	3.141592654
 scientific	-	5!	120
 scientific	-	log10(1000)	3
 scientific	-	ln(e)	1
-scientific	approx=1;prec=20	e	2.7182818284590452354
+scientific	approx=2;prec=20	e	2.7182818284590452354
 programmer	-	52 to hex	0x34
 programmer	-	52 to bin	0011 0100
 programmer	-	52 to oct	064
@@ -45,31 +48,32 @@ programmer	-	523<<2&250 to bin	0010 1000
 units	-	5 dm3 to L	5 L
 units	-	20 miles / 2h to km/h	16.09344 km/h
 units	-	1 inch to cm	2.54 cm
-units	-	500 W * 2 h to kWh	1 kWh
-units	approx=1	1 kg to lb	2.204622622 lb
+units	-	500 W * 2 h to kWh	re:^1 kW[*×·⋅]?h$
+units	approx=2;mixed=0	1 kg to lb	2.204622622 lb
+units	-	1.74 m to ft	5 ft + 8.503937008 in
 units	-	10 N / 5 Pa	2 m^2
 units	-	5 m/s to s/m	0.2 s/m
-units	approx=1	100 EUR to USD	re:^[0-9]+(\.[0-9]+)? USD$
+units	approx=2	100 EUR to USD	re:^\$[0-9]+(\.[0-9]+)?$
 datetime	-	days(2026-01-01, 2026-12-25)	358
 datetime	-	addDays(2020-05-20; 523)	"2021-10-25"
 datetime	-	"2020-11-05" - "2020-10-05"	31 d
 datetime	-	10:31 + 8:30 to time	19:01
 finance	-	50 * 15%	7.5
 finance	-	80 - 80 * 25%	60
-finance	approx=1	1000 * (1 + 5%)^10	1628.894627
-finance	approx=1	pmt(5%/12, 360, 200000)	-1073.643246
-physics	-	c	299792458 m/s
+finance	approx=2	1000 * (1 + 5%)^10	1628.894627
+finance	approx=2	pmt(5%/12, 360, 200000)	-1073.643246
+physics	-	c to m/s	299792458 m/s
 physics	-	c to km/s	299792.458 km/s
-physics	approx=1	planck	re:^6\.62607015E-34 (J\*s|s\*J)$
-acoustics	approx=1	10 * log10(2)	3.010299957
-acoustics	approx=1	20 * log10(2)	6.020599913
-acoustics	approx=1	331.3 * sqrt(1 + 20/273.15)	343.2146227
-acoustics	approx=1	(343 m/s) / (440 Hz) to m	0.7795454545 m
+physics	approx=2	planck	re:^6\.62607015E-34 (J\*s|s\*J)$
+acoustics	approx=2	10 * log10(2)	3.010299957
+acoustics	approx=2	20 * log10(2)	6.020599913
+acoustics	approx=2	331.3 * sqrt(1 + 20/273.15)	343.2146227
+acoustics	approx=2	(343 m/s) / (440 Hz) to m	0.7795454545 m
 cas	-	diff(6x^2)	12x
 cas	-	integrate(6x^2)	2x^3 + C
 cas	-	integrate(6x^2; 1; 5)	248
-cas	-	5^x = 3	re:^x = ln\(3\) ?/ ?ln\(5\)$
+cas	approx=0	5^x = 3	x = ln(3) / ln(5)
 cas	-	x^4 + 20x^3 + 150x^2 + 500x + 625 = 0	x = -5
-cas	-	factor(x^2 - 1)	re:^\(x [+-] 1\) ?\*? ?\(x [+-] 1\)$
+cas	-	x^2 - 1 to factors	re:^\(x [+-] 1\) ?[*×·⋅]? ?\(x [+-] 1\)$
 graphing	-	plot:x^2;-2;2;4	4,1,0,1,4
 graphing	-	plot:2x + 1;0;3;3	1,3,5,7

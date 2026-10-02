@@ -77,7 +77,8 @@ qcore::EvalOpts opts(const std::string &s) {
         else if (k == "out") o.out_base = v;
         else if (k == "prec") o.precision = v;
         else if (k == "angle") o.angle = v;
-        else if (k == "approx") o.approximate = v != 0;
+        else if (k == "approx") o.approx = v;
+        else if (k == "mixed") o.mixed_units = v != 0;
         else if (k == "unicode") o.unicode = v != 0;
         else { std::printf("  FAIL  unknown option %s\n", k.c_str()); failures++; }
     }
@@ -134,6 +135,7 @@ int main(int argc, char **argv) {
             std::string got = jstr(j, "result");
             bool ok;
             if (want == "!error") ok = !jtrue(j, "ok") && j.find("\"type\":\"error\"") != std::string::npos;
+            else if (want == "!message") ok = j.find("\"messages\":[]") == std::string::npos;
             else if (want.rfind("re:", 0) == 0) ok = jtrue(j, "ok") && std::regex_match(got, std::regex(want.substr(3)));
             else ok = jtrue(j, "ok") && got == want;
             check(ok, mode + " | " + expr + " -> \"" + got + "\" want \"" + want + "\"" + (ok ? "" : "  " + j));

@@ -84,8 +84,54 @@ void by_category(const std::vector<T *> &v, const char *kind, const std::string 
     }
 }
 
-ApproximationMode approx_mode(bool approximate) {
-    return approximate ? APPROXIMATION_APPROXIMATE : APPROXIMATION_TRY_EXACT;
+ApproximationMode approx_mode(int a) {
+    return a <= 0 ? APPROXIMATION_EXACT : a == 1 ? APPROXIMATION_TRY_EXACT : APPROXIMATION_APPROXIMATE;
+}
+
+// The evaluation and print settings qalc itself starts from (src/qalc.cc load_preferences),
+// so a golden row means what the same line means in qalc and in libqalculate's own
+// tests/*.batch. One deliberate difference: show_ending_zeroes is off, so an approximate 0.5
+// prints as 0.5 and not 0.5000000000.
+EvaluationOptions qalc_evalops() {
+    EvaluationOptions eo = default_user_evaluation_options;
+    eo.parse_options.parsing_mode = PARSING_MODE_ADAPTIVE;
+    eo.sync_units = true;
+    eo.structuring = STRUCTURING_SIMPLIFY;
+    eo.parse_options.unknowns_enabled = false;
+    eo.parse_options.read_precision = DONT_READ_PRECISION;
+    eo.allow_complex = true;
+    eo.allow_infinite = true;
+    eo.auto_post_conversion = POST_CONVERSION_OPTIMAL;
+    eo.assume_denominators_nonzero = true;
+    eo.warn_about_denominators_assumed_nonzero = true;
+    eo.mixed_units_conversion = MIXED_UNITS_CONVERSION_DEFAULT;
+    eo.complex_number_form = COMPLEX_NUMBER_FORM_RECTANGULAR;
+    eo.local_currency_conversion = true;
+    eo.interval_calculation = INTERVAL_CALCULATION_VARIANCE_FORMULA;
+    return eo;
+}
+
+PrintOptions qalc_printops() {
+    PrintOptions po = default_print_options;
+    po.use_min_decimals = false;
+    po.use_max_decimals = false;
+    po.min_exp = EXP_PRECISION;
+    po.indicate_infinite_series = false;
+    po.show_ending_zeroes = false;
+    po.number_fraction_format = FRACTION_DECIMAL;
+    po.abbreviate_names = true;
+    po.use_unit_prefixes = true;
+    po.spacious = true;
+    po.short_multiplication = true;
+    po.place_units_separately = true;
+    po.exp_display = EXP_UPPERCASE_E;
+    po.base_display = BASE_DISPLAY_NORMAL;
+    po.twos_complement = true;
+    po.division_sign = DIVISION_SIGN_SLASH;
+    po.multiplication_sign = MULTIPLICATION_SIGN_X;
+    po.spell_out_logical_operators = true;
+    po.interval_display = INTERVAL_DISPLAY_SIGNIFICANT_DIGITS;
+    return po;
 }
 
 AngleUnit angle_unit(int a) {
@@ -129,6 +175,8 @@ std::string init(const std::string &user_dir) {
     // The rates are shown with their date in the app; a stale-rates warning
     // appended to every currency result would only repeat it.
     CALCULATOR->setExchangeRatesWarningEnabled(false);
+    CALCULATOR->useIntervalArithmetic(true);
+    CALCULATOR->setTemperatureCalculationMode(TEMPERATURE_CALCULATION_HYBRID);
     CALCULATOR->loadExchangeRates();
     bool ok = CALCULATOR->loadGlobalDefinitions();
     CALCULATOR->loadLocalDefinitions();
@@ -149,15 +197,16 @@ std::string info() {
 std::string eval(const std::string &expr, const EvalOpts &o) {
     if (!CALCULATOR) return "{\"ok\":false,\"error\":\"not initialised\"}";
     auto t0 = std::chrono::steady_clock::now();
-    EvaluationOptions eo = default_user_evaluation_options;
-    eo.approximation = approx_mode(o.approximate);
+    EvaluationOptions eo = qalc_evalops();
+    eo.approximation = approx_mode(o.approx);
     eo.parse_options.base = o.in_base;
     eo.parse_options.angle_unit = angle_unit(o.angle);
-    PrintOptions po = default_print_options;
+    if (!o.mixed_units) eo.mixed_units_conversion = MIXED_UNITS_CONVERSION_NONE;
+    PrintOptions po = qalc_printops();
     po.base = o.out_base;
     po.use_unicode_signs = o.unicode ? 1 : 0;
-    po.number_fraction_format = o.approximate ? FRACTION_DECIMAL : FRACTION_DECIMAL_EXACT;
-    po.interval_display = INTERVAL_DISPLAY_SIGNIFICANT_DIGITS;
+    // Exact mode keeps 1/3 a fraction; approximate prints decimals.
+    po.number_fraction_format = o.approx >= 2 ? FRACTION_DECIMAL : FRACTION_DECIMAL_EXACT;
     CALCULATOR->setPrecision(o.precision);
     drain(nullptr);  // nothing from a previous call may leak into this answer
 
@@ -182,9 +231,10 @@ std::string plot(const std::string &expr, double xmin, double xmax, int steps, i
         return "{\"ok\":false,\"error\":\"need xmin < xmax and 1 <= steps <= 4000\"}";
     drain(nullptr);
     MathStructure xv;
+    xv.clearVector();
+    for (int i = 0; i <= steps; i++) xv.addChild(MathStructure(xmin + (xmax - xmin) * i / steps));
     MathStructure yv = CALCULATOR->expressionToPlotVector(
-        CALCULATOR->unlocalizeExpression(expr, default_parse_options),
-        MathStructure(xmin), MathStructure(xmax), steps, &xv, "x", default_parse_options, timeout_ms);
+        CALCULATOR->unlocalizeExpression(expr, default_parse_options), xv, "x", default_parse_options, timeout_ms);
     bool error = false;
     std::string messages = drain(&error);
     std::string xs = "[", ys = "[";

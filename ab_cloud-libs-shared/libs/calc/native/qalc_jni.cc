@@ -31,13 +31,14 @@ jbyteArray bytes(JNIEnv *env, const std::string &s) {
 jbyteArray j_init(JNIEnv *env, jclass, jbyteArray dir) { return bytes(env, qcore::init(str(env, dir))); }
 
 jbyteArray j_eval(JNIEnv *env, jclass, jbyteArray expr, jint in_base, jint out_base, jint precision,
-                  jint angle, jboolean approximate, jboolean unicode, jint timeout_ms) {
+                  jint angle, jint approx, jboolean mixed_units, jboolean unicode, jint timeout_ms) {
     qcore::EvalOpts o;
     o.in_base = in_base;
     o.out_base = out_base;
     o.precision = precision;
     o.angle = angle;
-    o.approximate = approximate == JNI_TRUE;
+    o.approx = approx;
+    o.mixed_units = mixed_units == JNI_TRUE;
     o.unicode = unicode == JNI_TRUE;
     o.timeout_ms = timeout_ms;
     return bytes(env, qcore::eval(str(env, expr), o));
@@ -61,7 +62,7 @@ jbyteArray j_info(JNIEnv *env, jclass) { return bytes(env, qcore::info()); }
 
 const JNINativeMethod kMethods[] = {
     {"init", "([B)[B", (void *) j_init},
-    {"eval", "([BIIIIZZI)[B", (void *) j_eval},
+    {"eval", "([BIIIIIZZI)[B", (void *) j_eval},
     {"plot", "([BDDII)[B", (void *) j_plot},
     {"complete", "([BI)[B", (void *) j_complete},
     {"items", "([B[BI)[B", (void *) j_items},

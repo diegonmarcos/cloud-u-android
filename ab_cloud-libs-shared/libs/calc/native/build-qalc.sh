@@ -83,6 +83,11 @@ build_dep() {
     dir="$BUILD/$name"
     rm -rf "$dir"; mkdir -p "$dir"
     tar -xf "$tarball" -C "$dir" --strip-components=1
+    local patch
+    for patch in $(jq -r --arg n "$name" '.build.sources[$n].patches // [] | .[]' "$CFG"); do
+        log "$name: patch $patch"
+        patch -d "$dir" -p1 --forward --quiet < "$MOD/$patch" || die "$name: $patch does not apply to $(basename "$tarball")"
+    done
     local args=()
     mapfile -t args < <(jq -r --arg n "$name" --arg k "$KIND" \
         '.build.sources[$n] | (.configure // []) + (.[$k] // []) | .[]' "$CFG")

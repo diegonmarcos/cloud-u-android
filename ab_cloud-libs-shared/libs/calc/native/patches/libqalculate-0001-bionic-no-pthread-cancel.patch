@@ -1,0 +1,29 @@
+--- a/libqalculate/util.cc
++++ b/libqalculate/util.cc
+@@ -1159,8 +1159,10 @@
+ }
+ 
+ void Thread::enableAsynchronousCancel() {
++#ifndef __ANDROID__
+ 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+ 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
++#endif
+ }
+ 
+ void *Thread::doRun(void *data) {
+@@ -1183,8 +1185,15 @@
+ 
+ bool Thread::cancel() {
+ 	if(!running) return true;
++#ifdef __ANDROID__
++	// Bionic has no pthread_cancel. The thread stays alive and keeps `running`, so a
++	// following start() is a no-op instead of a second thread over the same state; the
++	// calculation ends at its next abort check, which libqalculate polls throughout.
++	return false;
++#else
+ 	running = pthread_cancel(m_thread) != 0;
+ 	return !running;
++#endif
+ }
+ 
+ 

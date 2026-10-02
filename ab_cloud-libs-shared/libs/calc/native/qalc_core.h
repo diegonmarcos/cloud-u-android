@@ -18,7 +18,8 @@ struct EvalOpts {
     int out_base = 10;       // 2, 8, 10, 16 — how the result is printed (an "x to hex" suffix still wins)
     int precision = 10;      // significant digits
     int angle = 1;           // 0 none, 1 radians, 2 degrees, 3 gradians
-    bool approximate = false;// false: exact where possible (CAS), true: always decimal
+    int approx = 1;          // 0 exact (CAS: keeps ln(3)/ln(5)), 1 exact where possible, 2 always decimal
+    bool mixed_units = true; // "1 kg to lb" as "2 lb + 3.27 oz" (true) or "2.204622622 lb" (false)
     bool unicode = false;    // × − √ in the printed result; off keeps output re-parseable by any client
     int timeout_ms = 5000;
 };
@@ -40,8 +41,9 @@ std::string init(const std::string &user_dir);
 // as the engine process.
 std::string eval(const std::string &expr, const EvalOpts &o);
 
-// y = f(x) sampled at steps+1 points over [xmin, xmax]:
-// {"ok","x":[...],"y":[...]} — a y that is not a finite real is null.
+// y = f(x) at steps+1 evenly spaced x over [xmin, xmax] (x_i computed directly, never
+// accumulated, so the last point is xmax): {"ok","x":[...],"y":[...]} — a y that is not a
+// finite real is null.
 std::string plot(const std::string &expr, double xmin, double xmax, int steps, int timeout_ms);
 
 // Active, non-hidden functions/variables/units whose name starts with prefix

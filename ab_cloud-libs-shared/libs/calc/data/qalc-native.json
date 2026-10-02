@@ -61,6 +61,10 @@
         "licence": "GPL-2.0-or-later",
         "url": "https://github.com/Qalculate/libqalculate/releases/download/v5.12.0/libqalculate-5.12.0.tar.gz",
         "sha256": "f3dfdcf97d5a9e3a5bc0ebe66afd184721b606276eee3ba0ada8c92a5e71d44c",
+        "_doc_patches": "Applied in order with `patch -p1` right after extraction, for every target (each is a no-op off Android by #ifdef). 0001: bionic has no pthread_cancel; libqalculate only reaches for it after a calculation ignored its abort flag for 5+ s, so on Android the thread is left to finish at its next abort check instead of being killed.",
+        "patches": [
+          "native/patches/libqalculate-0001-bionic-no-pthread-cancel.patch"
+        ],
         "_doc_configure": "Definitions compiled in. No libcurl: exchange rates are downloaded by the engine's Kotlin side through Android's resolver (so the SuperApp's DNS menu applies, #741) into the files libqalculate reads, then reloaded. No ICU (case-insensitive non-ASCII names only), no gnuplot/popen, no insecure command() function, no gettext. The host build adds the qalc text port and its unit-test runner so `make check` runs libqalculate's own tests/*.batch against these exact flags.",
         "configure": [
           "--enable-static",
