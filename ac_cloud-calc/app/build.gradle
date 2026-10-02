@@ -46,12 +46,21 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 // only decoder, and no screen reads a BuildConfig blob itself.
 if (!buildJson.ui?.tabs || !buildJson.ui?.modes)
     throw new GradleException("build.json::ui.tabs / ui.modes missing — the app would draw an empty shell")
+if (!buildJson.ui?.sections)
+    throw new GradleException("build.json::ui.sections missing — the tabs would belong to no section (#770)")
+def uiSectionsB64 = b64(buildJson.ui.sections)
 def uiTabsB64     = b64(buildJson.ui.tabs)
 def uiModesB64    = b64(buildJson.ui.modes)
 def uiDefaultTab  = (buildJson.ui.default_tab ?: '').toString()
 def debugGroup    = (buildJson.ui.debug_api?.group ?: 'calc').toString()
 def clockGroup    = (buildJson.ui.debug_api?.clock_group ?: '').toString()
 if (!clockGroup) throw new GradleException("build.json::ui.debug_api.clock_group missing — /api/clock/* would register under no name")
+def jevGroup      = (buildJson.ui.debug_api?.jev_group ?: '').toString()
+if (!jevGroup) throw new GradleException("build.json::ui.debug_api.jev_group missing — /api/jev/* would register under no name")
+// #770 THE decision-model declaration (build.json::jev), baked whole: jev/JevConfig.kt parses and
+// validates it on the phone, and Configs › Routing's edit replaces this same JSON.
+if (buildJson.jev == null) throw new GradleException("build.json::jev missing — Jev mode would have no routing table")
+def jevConfigB64  = b64(buildJson.jev)
 
 // THE calc ENGINE this app binds (build.json::engines.calc): its package comes from the
 // constellation fleet manifest, for BuildConfig AND the manifest's <queries> — on API 30+ an
@@ -108,11 +117,14 @@ android {
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
         buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
+        buildConfigField "String", "UI_SECTIONS_B64", "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
         buildConfigField "String", "UI_MODES_B64",    "\"${uiModesB64}\""
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
         buildConfigField "String", "DEBUG_API_GROUP", "\"${debugGroup}\""
         buildConfigField "String", "DEBUG_API_CLOCK_GROUP", "\"${clockGroup}\""
+        buildConfigField "String", "DEBUG_API_JEV_GROUP", "\"${jevGroup}\""
+        buildConfigField "String", "JEV_CONFIG_B64",  "\"${jevConfigB64}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
@@ -184,6 +196,12 @@ dependencies {
     implementation project(':libs:bottomnav')
     // The Clock section's rules (#768): plain JVM, mutation-tested on its own (clock/build.gradle).
     implementation project(':clock')
+    // The Jev section's logic (#770): plain JVM, mutation-tested on its own (jev/build.gradle).
+    implementation project(':jev')
+    // #770 the fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
+    implementation project(':libs:text-tools')
+    // #770 the manual token override: EncryptedSharedPreferences over an Android Keystore key.
+    implementation 'androidx.security:security-crypto:1.1.0'
 
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.ui:ui'

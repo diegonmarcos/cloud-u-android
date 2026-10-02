@@ -59,6 +59,19 @@ source:
 | Room (2.8.5) for timers, `SharedPreferences` for alarms, greenrobot EventBus 3.3.1 between services and fragments, NumberPicker and AutoFitTextView widgets | four libraries this app does not otherwise carry, for state that fits one JSON value |
 | it is an app (launcher, widgets, settings, import/export, splash), not a library | vendoring it via the patch mechanism yields a second APK, while #768 asks for a section of Cloud Calc |
 
+## The Jev section (#770)
+
+No third-party code. **androidx.security:security-crypto 1.1.0** (Apache-2.0) is linked for the
+manual OpenRouter-token override (EncryptedSharedPreferences over an Android Keystore key), as
+libs:git-sync and libs:mounts already link it. **libs:text-tools** (this repository) carries the
+ITextTools binder through which the fleet Account's token is read. The request/answer shapes of
+OpenRouter's Decisions API follow its public documentation (openrouter.ai/docs/guides/community/jev
+and the Decisions API reference, read 2026-10-02); the #764 Jev gate (cloud-u-containers
+`_shared/jev-gate`) is the fleet's other client of the same API, and this one keeps its shapes:
+questions as a map of typed questions, `answers.<q>.choice` + `probabilities`, `usage.cost`, every
+failure meaning "no opinion". Decision models only score; every number is computed by this app's
+engines.
+
 ## Evaluated and not used (#767)
 
 | Candidate | Licence | Why not |

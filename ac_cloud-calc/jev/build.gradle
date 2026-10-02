@@ -1,0 +1,43 @@
+// :jev — the Jev section's logic (#770) as a plain-JVM module: the build.json::jev parser, the
+// Decisions API call (the app's only network code), the router, request reading, slot questions,
+// follow-up questions and the decision-model catalogue. No Android here, so its suite drives a
+// real local HTTP server as the mock Decisions API and PIT can mutate it, as :clock is.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// MUTATION TESTING (the :clock shape). PIT plants mutants in every class here and runs JevTest
+// against each; one the suite does not kill is a rule nothing checks. Below mutationThreshold
+// the build fails. Kotlin's generated data-class members are excluded.
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.cloudcalc.jev.*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 80
+}
+
+// `gradle test` is what CI runs (build.json::tests.unit.task): the mutation run rides on it.
+tasks.named('test') { finalizedBy 'pitest' }

@@ -79,18 +79,21 @@ object Logic {
         )
     }
 
-    data class Entry(val mode: String, val expr: String, val result: String)
+    /** A kept result; [decision] is a follow-up question's JSON (#770 Addendum A), "" when none was asked. */
+    data class Entry(val mode: String, val expr: String, val result: String, val decision: String = "")
 
     /** Newest first, a repeat of the newest entry is not stored twice, at most [max] kept. */
     fun remember(history: List<Entry>, e: Entry, max: Int): List<Entry> =
         (if (history.firstOrNull() == e) history else listOf(e) + history).take(max)
 
     fun encode(history: List<Entry>): String = JSONArray().apply {
-        history.forEach { put(JSONObject().put("mode", it.mode).put("expr", it.expr).put("result", it.result)) }
+        history.forEach { e ->
+            put(JSONObject().put("mode", e.mode).put("expr", e.expr).put("result", e.result).apply { if (e.decision.isNotEmpty()) put("decision", e.decision) })
+        }
     }.toString()
 
     fun decode(json: String?): List<Entry> = runCatching {
         val a = JSONArray(json ?: "[]")
-        (0 until a.length()).map { a.getJSONObject(it).let { o -> Entry(o.getString("mode"), o.getString("expr"), o.getString("result")) } }
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> Entry(o.getString("mode"), o.getString("expr"), o.getString("result"), o.optString("decision")) } }
     }.getOrDefault(emptyList())
 }

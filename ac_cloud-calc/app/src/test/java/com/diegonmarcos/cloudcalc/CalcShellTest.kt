@@ -73,11 +73,32 @@ class CalcShellTest {
     private val engine = FakeEngine()
     private val state = CalcState(null)
 
+    // #770 the Jev screens compose in the smoke test: no real network and no real Account binder.
+    private lateinit var savedHttp: com.diegonmarcos.cloudcalc.jev.Http
+    private lateinit var savedAccount: (android.content.Context, String) -> Pair<String?, String>
+
+    @org.junit.Before fun offline() {
+        savedHttp = com.diegonmarcos.cloudcalc.decide.JevStore.http
+        savedAccount = com.diegonmarcos.cloudcalc.decide.JevStore.account
+        com.diegonmarcos.cloudcalc.decide.JevStore.http = object : com.diegonmarcos.cloudcalc.jev.Http {
+            override fun send(url: String, token: String?, body: String?, timeoutMs: Int) = com.diegonmarcos.cloudcalc.jev.Http.Response(503, "{}")
+        }
+        com.diegonmarcos.cloudcalc.decide.JevStore.account = { _, _ -> null to "none" }
+    }
+
+    @org.junit.After fun online() {
+        com.diegonmarcos.cloudcalc.decide.JevStore.http = savedHttp
+        com.diegonmarcos.cloudcalc.decide.JevStore.account = savedAccount
+    }
+
     private fun launch() = compose.setContent { CalcTheme { CalcShell(engine, state) } }
 
     @Test fun `every declared mode is reachable from the nav and composes`() {
         launch()
         Declarations.tabs.forEach { tab ->
+            // #770 a tab is in the bottom nav only while its section is selected.
+            compose.onNodeWithTag(CalcTags.section(tab.section)).performClick()
+            compose.waitForIdle()
             compose.onNodeWithTag(BottomNavTags.item(tab.id)).performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(CalcTags.tab(tab.id)).assertExists()
@@ -93,6 +114,26 @@ class CalcShellTest {
                 compose.onNodeWithTag(CalcTags.mode(m.id)).assertExists()
             }
         }
+    }
+
+    @Test fun `each section shows only its own tabs and comes back to the last one`() {
+        launch()
+        Declarations.sections.forEach { sec ->
+            compose.onNodeWithTag(CalcTags.section(sec.id)).performClick()
+            compose.waitForIdle()
+            assertEquals(sec.id, state.section)
+            Declarations.tabs.forEach { t ->
+                val shown = compose.onAllNodesWithTag(BottomNavTags.item(t.id)).fetchSemanticsNodes().isNotEmpty()
+                assertEquals("tab ${t.id} in section ${sec.id}", t.section == sec.id, shown)
+            }
+        }
+        val two = Declarations.sections.first { Declarations.tabsOf(it.id).size > 1 }
+        val second = Declarations.tabsOf(two.id)[1]
+        compose.runOnIdle { state.showSection(two.id); state.tab = second.id }
+        val other = Declarations.sections.first { it.id != two.id }
+        compose.runOnIdle { state.showSection(other.id) }
+        compose.runOnIdle { state.showSection(two.id) }
+        assertEquals(second.id, state.tab)
     }
 
     @Test fun `keys type, the engine answers, and = keeps the result in history`() {

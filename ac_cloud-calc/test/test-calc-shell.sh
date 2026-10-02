@@ -4,19 +4,22 @@
 # ║ the microphone is asked for in one place, and no maths lives in the app   ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-#   C1  every declared tab has a mode, every mode names a declared tab, ids unique.
+#   C1  every declared tab has a mode, every mode names a declared tab, ids unique; #770 every
+#       section (ui.sections) has a tab and every tab names a declared section.
 #   C2  the kinds build.json declares and the kinds ModeScreen's `when (mode.kind)`
 #       dispatches are the same set, both ways: a declared kind with no renderer
 #       draws the "no renderer" line, a renderer no mode uses is dead code.
-#   C3  every declared tab icon has a branch in IconCatalog — a misspelt name would
-#       silently draw the fallback.
+#   C3  every declared tab and section icon has a branch in IconCatalog — a misspelt name
+#       would silently draw the fallback.
 #   C4  RECORD_AUDIO: the manifest declares it and exactly one Kotlin file
 #       (MeterScreen.kt) asks for it, so no other mode can ever pop the dialog.
 #   C5  the engine stays an engine: no gradle file, settings or module map of this
 #       app names libs:calc, and no app source loads a native library — every
 #       calculation crosses to Cloud-Lib-Calc.
-#   C6  offline: no app source opens a URL or a socket (the only network use is the
-#       engine's rate download, in libs:calc).
+#   C6  the network is one file: no app or jev/ source opens a URL or a socket except
+#       jev/…/Decisions.kt (#770, OpenRouter for the Jev section), and that file spells no URL —
+#       every address it opens comes from build.json::jev. The engine's rate download stays in
+#       libs:calc.
 #   C7  the debug API registers eval, modes and info under build.json::ui.debug_api.group.
 #   C8  #768 the Clock's platform contract, in the manifest: exact alarms by the alarm-clock
 #       path (USE_EXACT_ALARM; SCHEDULE_EXACT_ALARM capped at API 32), a non-exported receiver
@@ -27,6 +30,11 @@
 #       is set as an alarm CLOCK (setAlarmClock), the one kind Doze never defers.
 #   C10 /api/<clock_group>/ documents and answers status, timer_start and timer_cancel, under
 #       build.json::ui.debug_api.clock_group, and never names an op `state` (GET /api/state's key).
+#   C11 #770 the Jev section: every routing tool in build.json::jev names a declared mode (and a
+#       form a mode declares), on_error's fallback_mode and every ask key are modes; the token
+#       is kept in ONE file (decide/JevStore.kt alone touches EncryptedSharedPreferences and
+#       revealAiKey); nothing under decide/ or jev/ calls android.util.Log (a token must never
+#       reach logcat); /api/<jev_group>/ documents and answers route and config.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -37,7 +45,8 @@ APP="$(cd "$HERE/.." && pwd)"
 for f in "$APP/build.json" "$APP/app/src/main/AndroidManifest.xml" \
          "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/ui/ModeScreens.kt" \
          "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/ui/IconCatalog.kt" \
-         "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/debugapi/CalcDebugApi.kt"; do
+         "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/debugapi/CalcDebugApi.kt" \
+         "$APP/jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev/Decisions.kt"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -56,10 +65,22 @@ def code(p):
                      if not re.match(r"\s*(\*|//|/\*)", l))
 
 kts = sorted(glob.glob(os.path.join(src, "**", "*.kt"), recursive=True))
+jsrc = os.path.join(app, "jev", "src", "main", "kotlin", "com", "diegonmarcos", "cloudcalc", "jev")
+jkts = sorted(glob.glob(os.path.join(jsrc, "**", "*.kt"), recursive=True))
 bj = json.load(open(os.path.join(app, "build.json"), encoding="utf-8"))
 tabs, modes = bj["ui"]["tabs"], bj["ui"]["modes"]
 
 # C1
+sections = bj["ui"].get("sections", [])
+sec_ids = [x["id"] for x in sections]
+if not sec_ids:
+    bad.append("C1 build.json::ui.sections is empty — no tab could be shown")
+for x in sec_ids:
+    if not any(t.get("section") == x for t in tabs):
+        bad.append("C1 section %s has no tab — its bottom nav would be empty" % x)
+for t in tabs:
+    if t.get("section") not in sec_ids:
+        bad.append("C1 tab %s names section %s, which is not declared — it can never be reached" % (t["id"], t.get("section")))
 tab_ids = [t["id"] for t in tabs]
 for t in tab_ids:
     if not any(m["tab"] == t for m in modes):
@@ -86,7 +107,7 @@ for k in sorted(dispatched - declared):
 # C3
 ic = code(os.path.join(src, "ui", "IconCatalog.kt"))
 icons = set(re.findall(r'^\s*"([\w-]+)" ->', ic, re.M))
-for t in tabs:
+for t in tabs + sections:
     if t.get("icon") not in icons:
         bad.append("C3 tab %s icon %r has no IconCatalog branch — it would draw the fallback" % (t["id"], t.get("icon")))
 
@@ -114,10 +135,15 @@ for p in kts:
 
 # C6
 net = re.compile(r"java\.net\.|HttpURLConnection|okhttp3|\bSocket\(|URL\(")
-for p in kts:
+decisions = os.path.join(jsrc, "Decisions.kt")
+for p in kts + jkts:
+    if p == decisions:
+        continue
     hit = net.search(code(p))
     if hit:
-        bad.append("C6 %s uses the network (%s) — the app is offline, rates are the engine's" % (os.path.relpath(p, src), hit.group(0)))
+        bad.append("C6 %s uses the network (%s) — jev/Decisions.kt is the app's only network code" % (os.path.basename(p), hit.group(0)))
+if os.path.isfile(decisions) and re.search(r'"[a-z]+://', code(decisions)):
+    bad.append("C6 jev/Decisions.kt spells a URL — every address it opens must come from build.json::jev")
 
 # C7
 api = code(os.path.join(src, "debugapi", "CalcDebugApi.kt"))
@@ -153,7 +179,7 @@ if 'android:foregroundServiceType="specialUse"' not in svc or "PROPERTY_SPECIAL_
 if 'android:showWhenLocked="true"' not in element("activity", ".clock.RingActivity"):
     bad.append("C8 .clock.RingActivity must show over the lock screen")
 if 'android.permission.INTERNET' in manifest:
-    bad.append("C8 the app manifest asks for INTERNET — Calc and Clock are offline")
+    bad.append("C8 the app manifest asks for INTERNET — Calc and Clock are offline (libs:devtools merges the INTERNET its loopback server and the Jev section's one network file need)")
 asked = sorted(os.path.relpath(p, src) for p in kts if "POST_NOTIFICATIONS" in code(p))
 if asked != ["ui/ClockScreens.kt"]:
     bad.append("C8 POST_NOTIFICATIONS must be asked for by ui/ClockScreens.kt alone, found in %s" % asked)
@@ -180,21 +206,56 @@ if re.search(r'"state" ->', capi):
 if not bj["ui"].get("debug_api", {}).get("clock_group"):
     bad.append("C10 build.json::ui.debug_api.clock_group is missing")
 
+# C11
+jev = bj.get("jev") or {}
+modes_by_id = {m["id"]: m for m in modes}
+route = jev.get("route") or {}
+for tid, t in (route.get("tools") or {}).items():
+    if tid.startswith("_") or t.get("action") == "timer":
+        continue
+    m = modes_by_id.get(t.get("mode"))
+    if m is None:
+        bad.append("C11 jev tool %s names mode %s, which is not declared" % (tid, t.get("mode")))
+    elif t.get("action") == "form" and t.get("form") not in [f["id"] for f in m.get("forms", [])]:
+        bad.append("C11 jev tool %s names form %s, which mode %s does not declare" % (tid, t.get("form"), m["id"]))
+if route.get("on_error") == "expression" and route.get("fallback_mode") not in modes_by_id:
+    bad.append("C11 jev route.fallback_mode %s is not a declared mode — the offline fallback would compute nothing" % route.get("fallback_mode"))
+for k in (jev.get("ask") or {}):
+    if not k.startswith("_") and k != "*" and k not in modes_by_id:
+        bad.append("C11 jev ask.%s is not a declared mode" % k)
+dkts = [p for p in kts if os.sep + "decide" + os.sep in p]
+for needle in ("EncryptedSharedPreferences", "revealAiKey"):
+    holders = sorted(os.path.relpath(p, src) for p in kts + jkts if needle in code(p))
+    if holders != ["decide/JevStore.kt"]:
+        bad.append("C11 %s must be used by decide/JevStore.kt alone (the token's one store), found in %s" % (needle, holders))
+for p in dkts + jkts:
+    if re.search(r"\bLog\.[a-z]+\(|android\.util\.Log\b", code(p)):
+        bad.append("C11 %s logs — nothing that holds the token may write to logcat" % os.path.basename(p))
+japi_path = os.path.join(src, "debugapi", "JevDebugApi.kt")
+japi = code(japi_path) if os.path.isfile(japi_path) else ""
+if "BuildConfig.DEBUG_API_JEV_GROUP" not in japi:
+    bad.append("C11 JevDebugApi does not register under build.json::ui.debug_api.jev_group")
+for op in ("route", "config"):
+    if not re.search(r'AppDebugServer\.Op\("%s"' % op, japi) or not re.search(r'"%s" ->' % op, japi):
+        bad.append("C11 /api/<jev_group>/%s is not both documented and answered" % op)
+if not bj["ui"].get("debug_api", {}).get("jev_group"):
+    bad.append("C11 build.json::ui.debug_api.jev_group is missing")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C10 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C10"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C11 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C11"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
 mutate() {  # name, file (relative to the app), python expression over s, expected message fragment
     local name="$1" rel="$2" expr="$3" want="$4" copy="$WORK/$1"
     mkdir -p "$copy"
-    cp -r "$APP/build.json" "$APP/app" "$copy/"
+    cp -r "$APP/build.json" "$APP/app" "$APP/jev" "$copy/"
     for f in settings.gradle build.gradle; do [ -f "$APP/$f" ] && cp "$APP/$f" "$copy/"; done
     if ! python3 - "$copy/$rel" "$expr" <<'PY'
 import sys
@@ -228,6 +289,19 @@ mutate engine-in-module-map build.json 's.replace("\"libs:bottomnav\": {", "\"li
 mutate engine-compiled app/build.gradle 's.replace("implementation project(\x27:libs:bottomnav\x27)", "implementation project(\x27:libs:bottomnav\x27)\n    implementation project(\x27:libs:calc\x27)")' "C5 app/build.gradle names libs:calc"
 mutate native-in-app "$J/Logic.kt" 's + "\nprivate object Q { init { System.loadLibrary(\"qalc\") } }\n"' "C5 Logic.kt loads native code"
 mutate app-online "$J/Logic.kt" 's + "\nprivate val u = java.net.URL(\"https://example.org\")\n"' "C6 Logic.kt uses the network"
+JV='jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev'
+mutate router-online "$JV/JevRouter.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "C6 JevRouter.kt uses the network"
+mutate url-in-decisions "$JV/Decisions.kt" 's.replace("fun send(url: String, token: String?, body: String?, timeoutMs: Int): Response", "fun send(url: String = \"https://evil.example\", token: String?, body: String?, timeoutMs: Int): Response")' "C6 jev/Decisions.kt spells a URL"
+mutate section-without-tab build.json 's.replace("\"section\": \"measure\"", "\"section\": \"calculator\"")' "C1 section measure has no tab"
+mutate tab-orphan-section build.json 's.replace("\"section\": \"jev\"", "\"section\": \"nowhere\"", 1)' "names section nowhere"
+mutate section-icon build.json 's.replace("\"icon\": \"psychology\"", "\"icon\": \"psycho\"")' "C3 tab jev icon"
+mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
+mutate jev-tool-no-form build.json 's.replace("\"form\": \"dbsum\"", "\"form\": \"dbsun\"")' "names form dbsun"
+mutate jev-fallback-mode build.json 's.replace("\"fallback_mode\": \"standard\"", "\"fallback_mode\": \"basic\"")' "C11 jev route.fallback_mode basic"
+mutate jev-ask-key build.json 's.replace("\"acoustics\": [", "\"acoustix\": [")' "C11 jev ask.acoustix"
+mutate token-second-store "$J/decide/JevFlow.kt" 's + "\nprivate val k = androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV\n"' "C11 EncryptedSharedPreferences must be used by decide/JevStore.kt alone"
+mutate token-logged "$J/decide/JevStore.kt" 's.replace("val r = c.revealAiKey(provider)", "val r = c.revealAiKey(provider)\n        android.util.Log.d(\"jev\", r.text.orEmpty())")' "C11 JevStore.kt logs"
+mutate jev-op-dropped "$J/debugapi/JevDebugApi.kt" 's.replace("\"config\" -> config(app).toString()", "")' "C11 /api/<jev_group>/config"
 mutate debug-op-dropped "$J/debugapi/CalcDebugApi.kt" 's.replace("\"modes\" -> modesJson()", "")' "C7 /api/<group>/modes"
 mutate no-use-exact-alarm app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\" />", "")' "C8 the manifest does not declare android.permission.USE_EXACT_ALARM"
 mutate exact-uncapped app/src/main/AndroidManifest.xml 's.replace(" android:maxSdkVersion=\"32\"", "")' "C8 SCHEDULE_EXACT_ALARM must be capped"
@@ -242,5 +316,5 @@ mutate alarm-not-clock "$J/clock/ClockEngine.kt" 's.replace("w.clock && exact ->
 mutate clock-op-dropped "$J/debugapi/ClockDebugApi.kt" 's.replace("\"timer_cancel\" -> {", "\"timer_kill\" -> {")' "C10 /api/<clock_group>/timer_cancel"
 mutate clock-op-state "$J/debugapi/ClockDebugApi.kt" 's.replace("\"status\" -> status(ctx).toString()", "\"status\", \"state\" -> status(ctx).toString()\n        \"state\" -> status(ctx).toString()")' "C10 ClockDebugApi answers an op named state"
 
-echo "── C1-C10 + mutations: $FAILURES failure(s) ──"
+echo "── C1-C11 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

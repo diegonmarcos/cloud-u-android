@@ -15,6 +15,19 @@ import com.diegonmarcos.cloudcalc.engine.CalcApi
 class CalcState(private val prefs: SharedPreferences?) {
     var tab by mutableStateOf(Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } } ?: Declarations.tabs.first().id)
     val modeByTab = mutableStateMapOf<String, String>()
+    /** #770 the tab last shown in each section, so switching sections comes back to it. */
+    val tabBySection = mutableStateMapOf<String, String>()
+
+    /** The section [tab] belongs to: the segmented row at the top shows it selected. */
+    val section: String get() = Declarations.sectionOf(tab)
+
+    /** Show section [id]: its last tab, else its first. An unknown or empty section changes nothing. */
+    fun showSection(id: String) {
+        val tabs = Declarations.tabsOf(id)
+        if (tabs.isEmpty()) return
+        tabBySection[section] = tab
+        tab = tabBySection[id]?.takeIf { t -> tabs.any { it.id == t } } ?: tabs.first().id
+    }
     val history = mutableStateListOf<Logic.Entry>().apply { addAll(Logic.decode(prefs?.getString(KEY, null))) }
 
     /** Text a history tap sends to an expression mode: (mode id, text). */

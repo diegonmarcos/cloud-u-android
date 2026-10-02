@@ -10,7 +10,9 @@ import org.json.JSONObject
  * runs them against this repository's own build.json.
  */
 object Declarations {
-    data class Tab(val id: String, val label: String, val icon: String)
+    /** #770 a top-level section (Calculator, Measure, Jev): the bottom nav shows its tabs. */
+    data class Section(val id: String, val label: String, val icon: String)
+    data class Tab(val id: String, val label: String, val icon: String, val section: String)
 
     /** A keypad key: [label] is drawn, [insert] is typed. AC, DEL and = are the three actions. */
     data class Key(val label: String, val insert: String) {
@@ -59,17 +61,24 @@ object Declarations {
         val clock: String,
     )
 
+    val sections: List<Section> by lazy { parseSections(decode(BuildConfig.UI_SECTIONS_B64)) }
     val tabs: List<Tab> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
     val modes: List<Mode> by lazy { parseModes(decode(BuildConfig.UI_MODES_B64)) }
     val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
 
     fun modesOf(tab: String): List<Mode> = modes.filter { it.tab == tab }
+    fun tabsOf(section: String): List<Tab> = tabs.filter { it.section == section }
+    fun sectionOf(tab: String): String = tabs.firstOrNull { it.id == tab }?.section ?: sections.first().id
     fun mode(id: String): Mode? = modes.firstOrNull { it.id == id }
 
     private fun decode(b64: String): String = String(java.util.Base64.getDecoder().decode(b64), Charsets.UTF_8)
 
+    fun parseSections(json: String): List<Section> = JSONArray(json).objects().map {
+        Section(it.getString("id"), it.getString("label"), it.optString("icon"))
+    }
+
     fun parseTabs(json: String): List<Tab> = JSONArray(json).objects().map {
-        Tab(it.getString("id"), it.getString("label"), it.optString("icon"))
+        Tab(it.getString("id"), it.getString("label"), it.optString("icon"), it.getString("section"))
     }
 
     fun parseModes(json: String): List<Mode> = JSONArray(json).objects().map { m ->

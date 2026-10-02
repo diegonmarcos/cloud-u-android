@@ -85,6 +85,11 @@ class LogicTest {
         assertEquals(2, h.size)
         assertEquals(b, h[1])
         assertEquals(h, Logic.decode(Logic.encode(h)))
+        // #770 a follow-up question rides with its entry; an entry without one stores no key.
+        val asked = listOf(Logic.Entry("standard", "6*7", "42", """{"question":"Plausible?"}"""), a)
+        assertEquals(asked, Logic.decode(Logic.encode(asked)))
+        assertFalse(Logic.encode(listOf(a)).contains("decision"))
+        assertEquals("", Logic.decode("""[{"mode":"m","expr":"e","result":"r"}]""").single().decision)
         assertEquals(emptyList<Logic.Entry>(), Logic.decode("not json"))
     }
 }

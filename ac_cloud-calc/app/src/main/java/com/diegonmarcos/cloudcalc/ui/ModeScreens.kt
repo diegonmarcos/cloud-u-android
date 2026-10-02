@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.R
+import com.diegonmarcos.cloudcalc.decide.JevFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -81,6 +82,11 @@ fun ModeScreen(mode: Declarations.Mode) {
             "stopwatch" -> StopwatchMode(mode)
             "interval" -> IntervalMode(mode)
             "bedtime" -> BedtimeMode(mode)
+            "jev" -> JevMode(mode)
+            "jev_token" -> JevTokenMode(mode)
+            "jev_routing" -> JevRoutingMode(mode)
+            "jev_models" -> JevModelsMode(mode)
+            "jev_test" -> JevTestMode(mode)
             else -> Text(stringResource(R.string.unknown_kind, mode.kind), Modifier.padding(CalcMetrics.gutter))
         }
     }
@@ -137,6 +143,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
             }
         }
         ResultBlock(result)
+        result?.takeIf { it.ok && resultFor == text }?.let { r -> AskAboutResult(mode.id, text, r.text) }
         bases.forEach { (label, value) ->
             Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(label, style = MaterialTheme.typography.labelLarge)
@@ -165,7 +172,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
 }
 
 /** The history cap the History mode declares. */
-private fun historyMax(): Int = Declarations.modes.firstOrNull { it.kind == "history" }?.historyMax ?: 200
+internal fun historyMax(): Int = Declarations.modes.firstOrNull { it.kind == "history" }?.historyMax ?: 200
 
 @Composable
 private fun ChoiceRow(choices: List<Declarations.Choice>, options: String, onPick: (Declarations.Choice) -> Unit) {
@@ -281,6 +288,7 @@ private fun ConverterMode(mode: Declarations.Mode) {
             TextButton(onClick = { state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }) {
                 Text(stringResource(R.string.keep))
             }
+            AskAboutResult(mode.id, Logic.convert(value, from, to), r.text)
         }
         if (mode.rates) {
             HorizontalDivider()
@@ -373,6 +381,14 @@ private fun FormBody(mode: Declarations.Mode, form: Declarations.Form) {
             )
         }
     }
+    val good = outputs.filter { it.second.ok }
+    if (good.isNotEmpty()) {
+        AskAboutResult(
+            mode.id,
+            form.label + ": " + form.fields.joinToString(", ") { f -> f.label + " " + snapshot[f.id].orEmpty() },
+            good.joinToString("; ") { (label, r) -> "$label = ${r.text}" },
+        )
+    }
 }
 
 // ── plot: Graph ─────────────────────────────────────────────────────────────────────────────
@@ -456,6 +472,8 @@ private fun HistoryMode(mode: Declarations.Mode) {
             Column(Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.padding(vertical = CalcMetrics.gap)) {
                 Text(e.expr, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("= " + e.result, style = MaterialTheme.typography.titleMedium)
+                // #770 a follow-up question kept with its result: every option's probability.
+                if (e.decision.isNotEmpty()) Text(JevFlow.summary(e.decision), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
             }
             HorizontalDivider()
         }

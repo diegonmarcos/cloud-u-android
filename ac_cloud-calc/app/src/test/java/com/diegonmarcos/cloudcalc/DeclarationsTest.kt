@@ -22,6 +22,23 @@ class DeclarationsTest {
         assertTrue(tabs.any { it.id == Declarations.defaultTab })
     }
 
+    @Test fun `sections parse, match what gradle baked, and every tab names one`() {
+        val sections = Declarations.parseSections(ui.getJSONArray("sections").toString())
+        assertEquals(sections, Declarations.sections)
+        assertEquals(sections.size, sections.map { it.id }.toSet().size)
+        tabs.forEach { t -> assertTrue("tab ${t.id} names section ${t.section}", sections.any { it.id == t.section }) }
+        sections.forEach { s -> assertTrue("section ${s.id} has no tab", tabs.any { it.section == s.id }) }
+        assertEquals(sections.first { s -> s.id == Declarations.sectionOf(Declarations.defaultTab) }.id, Declarations.sectionOf(Declarations.defaultTab))
+        assertEquals(sections.first().id, Declarations.sectionOf("no-such-tab"))
+    }
+
+    @Test fun `the jev block parses, validates, and is what gradle baked`() {
+        val jev = JSONObject(File("../build.json").readText()).getJSONObject("jev")
+        val cfg = com.diegonmarcos.cloudcalc.jev.JevConfig.parse(jev.toString())
+        assertEquals(cfg, com.diegonmarcos.cloudcalc.decide.JevStore.defaults)
+        assertEquals(emptyList<String>(), com.diegonmarcos.cloudcalc.decide.JevStore.appErrors(cfg))
+    }
+
     @Test fun `every tab has a mode and every mode has a tab`() {
         tabs.forEach { t -> assertTrue("tab ${t.id} has no mode", modes.any { it.tab == t.id }) }
         modes.forEach { m -> assertTrue("mode ${m.id} names tab ${m.tab}", tabs.any { it.id == m.tab }) }

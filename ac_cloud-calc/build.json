@@ -1,6 +1,6 @@
 {
   "name": "cloud-calc",
-  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). Six bottom-nav tabs, each a strip of modes declared below in ui.modes: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics, Sound meter), Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768) and History. A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline: the only network use is the engine's currency-rate download, on request; the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sensors (Sound meter) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, and by the Jev section's calls to OpenRouter (build.json::jev; jev/Decisions.kt is the only app file that opens a URL); Calculator and Measure work without either, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -101,17 +101,23 @@
     }
   },
   "modules": {
-    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. libs:calc is NOT here and must never be: it is the engine this app binds (engines.calc), and the engine contract guard (K6) fails the build if any module map points at it. #763: no `logic` lib is compiled in either — not libs:updater, not libs:analytics (lib-classes L4 holds the fleet's backlog of such edges and a new app may not add to it). Cloud Calc is installed and updated by the Store (SuperApp ▸ Constellation), like the 17 other apps that carry no updater.",
+    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. libs:calc is NOT here and must never be: it is the engine this app binds (engines.calc), and the engine contract guard (K6) fails the build if any module map points at it. #770 adds libs:text-tools, a `contract` lib (the token reader), which L4 does not count. #763: no `logic` lib is compiled in either — not libs:updater, not libs:analytics (lib-classes L4 holds the fleet's backlog of such edges and a new app may not add to it). Cloud Calc is installed and updated by the Store (SuperApp ▸ Constellation), like the 17 other apps that carry no updater.",
     "app": {
       "type": "application",
       "depends_on": [
         "libs:core",
         "libs:bottomnav",
-        "clock"
+        "clock",
+        "jev",
+        "libs:text-tools"
       ]
     },
     "clock": {
       "_doc": "#768 the Clock section's rules as a plain-JVM Kotlin module (clock/): alarm recurrence across repeat days and DST, timers, stopwatch laps, interval phases, what each AlarmManager wakeup does, and the stored JSON. No Android in it, so its suite runs without Robolectric and PIT mutation-tests it on every `gradle test` (clock/build.gradle). The Android half (AlarmManager, the foreground service, receivers, screens) is app/…/clock and ui/ClockScreens.kt.",
+      "type": "library"
+    },
+    "jev": {
+      "_doc": "#770 the Jev section's logic as a plain-JVM Kotlin module (jev/): the build.json::jev declaration's parser and validator, the Decisions API call (the app's ONLY network code: HttpURLConnection over Android's resolver, so the fleet DNS menu applies), the router (one choice question over the declared tools + none, thresholds, candidates, the offline fallback), reading numbers and durations out of a request, the per-field slot questions, follow-up questions about a result, and the live decision-model catalogue. No Android in it: its suite drives a real local HTTP server as the mock Decisions API, and PIT mutation-tests it on every `gradle test` (jev/build.gradle).",
       "type": "library"
     },
     "libs:core": {
@@ -127,6 +133,11 @@
       "_doc_dir": "The fleet bottom-nav island: this app supplies its own five entries from ui.tabs (BottomNavEntry/BottomNavIsland/bottomNavInsets/rememberBottomNavCollapse), never cloud-mail's bottomNavItems.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:text-tools": {
+      "_doc": "#770 the ITextTools binder (contract class in 1_cicd/src/data/lib-classes.json, so no L4 backlog edge), shared BY REFERENCE: the Jev section reads the OpenRouter token the fleet Account manages through TextToolsClient.revealAiKey(\"openrouter\") - the SuperApp's Profile pushes the vault's ai.tokens into the serving app over the same CONSTELLATION_DATA-guarded binder - so the token has one store and this app keeps no copy of it. A manual override lives only in this app's Keystore-backed EncryptedSharedPreferences.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools"
     }
   },
   "engines": {
@@ -137,43 +148,324 @@
       "min_contract": 1
     }
   },
+  "jev": {
+    "_doc": "#770 THE ONE declaration of Cloud Calc's decision-model layer (jev/JevConfig.kt parses and validates it; the router, the Configs screens and /api/jev/config all read it). app/build.gradle bakes it into BuildConfig.JEV_CONFIG_B64; Configs > Routing may replace it with the user's own edit of this same JSON (stored in SharedPreferences, validated by the same parser, Reset drops it). A decision model only SCORES options - it never computes: every number is still the app's engines' (libqalculate through Cloud-Lib-Calc, the Clock engine). Endpoint/model/question shapes verified against openrouter.ai/docs/guides/community/jev and the Decisions API reference on 2026-10-02 (questions are a MAP of typed questions: noul -> answers.<q>.noul; choice -> choice + probabilities; score -> score + probabilities by level index + legend; usage.cost in USD).",
+    "endpoint": "https://openrouter.ai/api/alpha/decisions",
+    "models_url": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+    "_models_url_doc": "The live catalogue of decision models. No model list is spelled anywhere in this app: Configs > Models shows what this returns (cached for catalog_ttl_hours). On 2026-10-02 it returned typesafe/jev-1.13, ~typesafe/jev-latest, liquid/d1, inception/mercury-decide:free, upstage/solar-decide, respan/span-01, respan/span-01-lite, respan/span-01-lite:free, togethercomputer/tev1-4b-experimental and jaredpalmer/kev-4b, all text-only; cloudflare/clef and cloudflare/clef-flash were NOT in it. An image can be attached as state only when the chosen model's catalogue entry lists image among its input_modalities.",
+    "key_url": "https://openrouter.ai/api/v1/key",
+    "_key_url_doc": "Configs > Token's Test button: GET with the token, which answers the key's label and usage without spending anything.",
+    "account_provider": "openrouter",
+    "_account_provider_doc": "The provider id the fleet Account's token is read under: Configs > Token reads it with libs:text-tools TextToolsClient.revealAiKey(account_provider) over the CONSTELLATION_DATA-guarded ITextTools binder, the path the SuperApp's Profile writes the vault's ai.tokens through (aa_cloud-superapp build.json ai_tokens: openrouter_my_ai_api -> openrouter). It is read on use and never stored by this app; a manual override, if the user sets one, lives only in this app's Keystore-backed EncryptedSharedPreferences and wins while set.",
+    "timeout_ms": 8000,
+    "catalog_ttl_hours": 24,
+    "uses": {
+      "_doc": "Which model each use runs on: a slug, or \"cheapest\" = the cheapest model the cached catalogue confirms (a :free variant first among equals). A declared slug the catalogue does not list falls back to the cheapest confirmed one, so a retired model never breaks the app; with no catalogue cached yet the slug is used as declared. Configs > Models overrides either use per device.",
+      "route": "typesafe/jev-1.13",
+      "score": "cheapest"
+    },
+    "fallback_model": "typesafe/jev-1.13",
+    "route": {
+      "_doc": "Jev mode. One Decisions request per typed request: the choice question `route` over `tools` + none (none_criterion), plus `questions` (shown with their probabilities). P(pick) >= threshold routes; a confident none says so; below threshold the top `candidates` tools with P >= candidate_min_p are offered to pick from. Any failure (no token, network, HTTP, malformed answer, a probability outside [0,1], a pick outside the set) applies on_error: expression = evaluate the request, lead-in phrases stripped, in fallback_mode (libqalculate reads '3 ft to cm' itself), none = say why. A form tool's numbers are read from the request; with two or more fields a second request asks, per field, which number it is (slot_instructions, {field} = the field label), and a field whose pick is none or below slot_threshold keeps its declared default.",
+      "instructions": "Which one of this calculator app's tools would answer `request`? Pick none when it asks for something a calculator, unit converter, measurement or timer cannot do.",
+      "none_criterion": "The request is not a calculation, conversion, measurement or timer: conversation, an opinion, or a fact that needs no computing.",
+      "threshold": 0.75,
+      "candidates": 3,
+      "candidate_min_p": 0.05,
+      "on_error": "expression",
+      "fallback_mode": "standard",
+      "slot_threshold": 0.6,
+      "slot_instructions": "Which number in `request` is the {field}?",
+      "strip": [
+        "^(please\\s+)?(can you\\s+)?(convert|calculate|compute|evaluate|work out|tell me|what('s| is| are)|how (much|many) is)\\s+",
+        "\\?+$"
+      ],
+      "duration_units": {
+        "s": 1,
+        "sec": 1,
+        "secs": 1,
+        "second": 1,
+        "seconds": 1,
+        "m": 60,
+        "min": 60,
+        "mins": 60,
+        "minute": 60,
+        "minutes": 60,
+        "h": 3600,
+        "hr": 3600,
+        "hrs": 3600,
+        "hour": 3600,
+        "hours": 3600
+      },
+      "tools": {
+        "_doc": "The options offered to the model: id -> {criterion (what the model reads), action, mode (a ui.modes id), form (a form id of that mode)}. action expression = the request text, lead-ins stripped, evaluated with that mode's engine options; form = numbers into that form's fields, its outputs evaluated; timer = a Clock timer for the duration named; open = show that mode. DeclarationsTest holds every mode/form named here to ui.modes.",
+        "arithmetic": {
+          "criterion": "Plain arithmetic or percentages: a number expression to evaluate, e.g. 15% of 42 or 2^10 / 3.",
+          "action": "expression",
+          "mode": "standard"
+        },
+        "scientific": {
+          "criterion": "Trigonometry, logarithms, roots, factorials or other scientific functions.",
+          "action": "expression",
+          "mode": "scientific"
+        },
+        "programmer": {
+          "criterion": "Number bases (hex, binary, octal) or bitwise operations.",
+          "action": "expression",
+          "mode": "programmer"
+        },
+        "algebra": {
+          "criterion": "Solve an equation, differentiate, integrate, factor or simplify a symbolic expression.",
+          "action": "expression",
+          "mode": "cas"
+        },
+        "units": {
+          "criterion": "Convert a quantity between units: length, mass, volume, temperature, speed, energy, pressure, data size or other physical units.",
+          "action": "expression",
+          "mode": "units"
+        },
+        "currency": {
+          "criterion": "Convert an amount of money between currencies.",
+          "action": "expression",
+          "mode": "currency"
+        },
+        "discount": {
+          "criterion": "A price after a percentage discount, or how much a discount saves.",
+          "action": "form",
+          "mode": "finance",
+          "form": "discount"
+        },
+        "tip": {
+          "criterion": "A tip on a restaurant bill: the tip, the total, or the total split per person.",
+          "action": "form",
+          "mode": "finance",
+          "form": "tip"
+        },
+        "loan": {
+          "criterion": "The monthly payment of a loan or mortgage from its principal, annual rate and years.",
+          "action": "form",
+          "mode": "finance",
+          "form": "loan"
+        },
+        "interest": {
+          "criterion": "Compound interest: what a sum grows to at an annual rate over years.",
+          "action": "form",
+          "mode": "finance",
+          "form": "interest"
+        },
+        "db_sum": {
+          "criterion": "Add two sound levels in decibels (a dB sum).",
+          "action": "form",
+          "mode": "acoustics",
+          "form": "dbsum"
+        },
+        "sound_speed": {
+          "criterion": "The speed of sound in air at a temperature.",
+          "action": "form",
+          "mode": "acoustics",
+          "form": "sound"
+        },
+        "wavelength": {
+          "criterion": "The wavelength or period of a sound frequency.",
+          "action": "form",
+          "mode": "acoustics",
+          "form": "wave"
+        },
+        "db_ratio": {
+          "criterion": "Express a power or amplitude ratio in decibels.",
+          "action": "form",
+          "mode": "acoustics",
+          "form": "ratio"
+        },
+        "db_distance": {
+          "criterion": "The sound level at another distance from a source.",
+          "action": "form",
+          "mode": "acoustics",
+          "form": "distance"
+        },
+        "timer": {
+          "criterion": "Start a countdown timer for a duration.",
+          "action": "timer"
+        },
+        "stopwatch": {
+          "criterion": "Time something with a stopwatch.",
+          "action": "open",
+          "mode": "stopwatch"
+        },
+        "alarm": {
+          "criterion": "Set or check an alarm for a time of day.",
+          "action": "open",
+          "mode": "alarms"
+        },
+        "world_clock": {
+          "criterion": "The current time in another city or time zone.",
+          "action": "open",
+          "mode": "world"
+        },
+        "sound_meter": {
+          "criterion": "Measure how loud it is around the phone with its microphone.",
+          "action": "open",
+          "mode": "meter"
+        },
+        "graph": {
+          "criterion": "Plot or graph a function.",
+          "action": "open",
+          "mode": "graphing"
+        }
+      },
+      "questions": {
+        "_doc": "Extra questions sent in the same request as `route`; their probabilities are shown beside the pick. Any noul, choice or score question may be added here.",
+        "computable": {
+          "type": "noul",
+          "label": "Computable",
+          "instructions": "`request` asks for something a calculator app can compute, convert, measure or time.",
+          "criteria": {
+            "true": "It names a calculation, a conversion, a measurement or a duration.",
+            "false": "It is conversation or a question no computation answers."
+          }
+        }
+      }
+    },
+    "ask": {
+      "_doc": "Addendum A: the preset follow-up questions offered under a result, by mode id; \"*\" is offered under every mode. The state the model scores is {mode, calculation, result, context?} - the result is always the app's own; the model only rates it in its context. Each is a Decisions question (noul / choice with criteria / score with levels lowest first) plus a chip `label`. A free question box is always offered too: yes/no by default, or a choice or a scale over options the user types.",
+      "*": [
+        {
+          "id": "plausible",
+          "label": "Plausible?",
+          "type": "score",
+          "instructions": "How plausible is `result` as the outcome of `calculation` in `mode`, for the situation in `context` when there is one?",
+          "criteria": [
+            "Implausible",
+            "Unusual",
+            "Plausible",
+            "Exactly what one would expect"
+          ]
+        },
+        {
+          "id": "size",
+          "label": "Size",
+          "type": "choice",
+          "instructions": "How large is `result` compared with everyday values of the quantity `calculation` produces?",
+          "criteria": {
+            "small": "Smaller than everyday values of this kind.",
+            "typical": "A typical everyday value of this kind.",
+            "large": "Larger than everyday values of this kind."
+          }
+        }
+      ],
+      "acoustics": [
+        {
+          "id": "hearing_safe",
+          "label": "Hearing-safe?",
+          "type": "noul",
+          "instructions": "A sound at the level given by `result` (in dB) is safe for unprotected human hearing over an hour of exposure."
+        }
+      ],
+      "meter": [
+        {
+          "id": "hearing_safe",
+          "label": "Hearing-safe?",
+          "type": "noul",
+          "instructions": "A sound at the level given by `result` is safe for unprotected human hearing over an hour of exposure."
+        }
+      ],
+      "finance": [
+        {
+          "id": "reasonable_tip",
+          "label": "Reasonable tip?",
+          "type": "noul",
+          "instructions": "`result`, from `calculation`, is a reasonable amount for its purpose (a tip, a discount, a loan payment) in most countries."
+        }
+      ],
+      "units": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ]
+    }
+  },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
-    "_doc_tabs": "The bottom nav, in display order. A tab shows the modes whose `tab` is its id, in ui.modes order, as a chip strip; test/test-calc-shell.sh fails on a tab with no mode and on a mode naming no tab.",
+    "_doc_sections": "#770 the three top-level sections, in display order: a segmented row at the top picks one, and the bottom nav shows the tabs whose `section` is its id. Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. test/test-calc-shell.sh fails on a section with no tab and on a tab naming no section.",
+    "sections": [
+      {
+        "id": "calculator",
+        "label": "Calculator",
+        "icon": "calculate"
+      },
+      {
+        "id": "measure",
+        "label": "Measure",
+        "icon": "speed"
+      },
+      {
+        "id": "jev",
+        "label": "Jev",
+        "icon": "psychology"
+      }
+    ],
+    "_doc_tabs": "The bottom nav, in display order. A tab shows the modes whose `tab` is its id, in ui.modes order, as a chip strip; test/test-calc-shell.sh fails on a tab with no mode and on a mode naming no tab. #770 each tab names its `section` (ui.sections).",
     "default_tab": "calc",
     "tabs": [
       {
         "id": "calc",
         "label": "Calc",
-        "icon": "calculate"
+        "icon": "calculate",
+        "section": "calculator"
       },
       {
         "id": "convert",
         "label": "Convert",
-        "icon": "swap"
+        "icon": "swap",
+        "section": "calculator"
       },
       {
         "id": "graph",
         "label": "Graph",
-        "icon": "chart"
+        "icon": "chart",
+        "section": "calculator"
       },
       {
         "id": "tools",
         "label": "Tools",
-        "icon": "tools"
+        "icon": "tools",
+        "section": "calculator"
+      },
+      {
+        "id": "sensors",
+        "label": "Sensors",
+        "icon": "mic",
+        "section": "measure"
       },
       {
         "id": "clock",
         "label": "Clock",
-        "icon": "clock"
+        "icon": "clock",
+        "section": "measure"
       },
       {
         "id": "history",
         "label": "History",
-        "icon": "history"
+        "icon": "history",
+        "section": "calculator"
+      },
+      {
+        "id": "ask",
+        "label": "Ask",
+        "icon": "ask",
+        "section": "jev"
+      },
+      {
+        "id": "configs",
+        "label": "Configs",
+        "icon": "settings",
+        "section": "jev"
       }
     ],
-    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed.",
+    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost).",
     "modes": [
       {
         "id": "standard",
@@ -1018,7 +1310,7 @@
       {
         "id": "meter",
         "label": "Sound meter",
-        "tab": "tools",
+        "tab": "sensors",
         "kind": "meter",
         "_doc": "Microphone level and spectrum, computed in THIS process: audio capture is granted per package (RECORD_AUDIO), so the engine's process could not record (the libs:contacts boundary, #763 `pinned`). Asked for only when this mode opens. Levels are dBFS plus `calibration_db`, which defaults to 0 because no phone microphone is calibrated: the number is relative unless a known source sets the offset.",
         "meter": {
@@ -1132,6 +1424,36 @@
         }
       },
       {
+        "id": "jev",
+        "label": "Ask Jev",
+        "tab": "ask",
+        "kind": "jev"
+      },
+      {
+        "id": "jev_token",
+        "label": "Token",
+        "tab": "configs",
+        "kind": "jev_token"
+      },
+      {
+        "id": "jev_routing",
+        "label": "Routing",
+        "tab": "configs",
+        "kind": "jev_routing"
+      },
+      {
+        "id": "jev_models",
+        "label": "Models",
+        "tab": "configs",
+        "kind": "jev_models"
+      },
+      {
+        "id": "jev_test",
+        "label": "Test",
+        "tab": "configs",
+        "kind": "jev_test"
+      },
+      {
         "id": "history",
         "label": "History",
         "tab": "history",
@@ -1141,10 +1463,11 @@
         }
       }
     ],
-    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state.",
+    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state. #770 a third group, build.json::ui.debug_api.jev_group (/api/jev/*): route?q= (the routing decision, the chosen tool and its result as computed by this app; a timer only starts with run=1; never the token) and config (the routing table in force, whether it is the default or the user's edit, the models per use, and where the token comes from - masked).",
     "debug_api": {
       "group": "calc",
-      "clock_group": "clock"
+      "clock_group": "clock",
+      "jev_group": "jev"
     }
   },
   "tests": {

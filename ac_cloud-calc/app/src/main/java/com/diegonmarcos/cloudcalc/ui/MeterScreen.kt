@@ -65,13 +65,13 @@ fun MeterMode(mode: Declarations.Mode) {
             Text(stringResource(R.string.mic_needed))
             Button(onClick = { launcher.launch(Manifest.permission.RECORD_AUDIO) }) { Text(stringResource(R.string.mic_allow)) }
         } else {
-            MeterLive(meter)
+            MeterLive(mode, meter)
         }
     }
 }
 
 @Composable
-private fun MeterLive(meter: Declarations.Meter) {
+private fun MeterLive(mode: Declarations.Mode, meter: Declarations.Meter) {
     var reading by remember { mutableStateOf<MeterReading?>(null) }
     var error by remember { mutableStateOf("") }
     var calibration by rememberSaveable { mutableStateOf(meter.calibrationDb.toString()) }
@@ -88,6 +88,8 @@ private fun MeterLive(meter: Declarations.Meter) {
     if (r != null) {
         if (meter.aWeighting) Text("%.1f dB(A)".format(r.aWeightedDbfs + offset), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.peak_hz, "%.0f".format(r.peakHz)), style = MaterialTheme.typography.bodyLarge)
+        // #770 a reading is a result too: score it (asked about the level at the moment of asking).
+        AskAboutResult(mode.id, mode.label, "%.1f dB".format(r.levelDbfs + offset) + if (meter.aWeighting) ", %.1f dB(A)".format(r.aWeightedDbfs + offset) else "")
     }
     Text(stringResource(R.string.meter_relative), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedTextField(

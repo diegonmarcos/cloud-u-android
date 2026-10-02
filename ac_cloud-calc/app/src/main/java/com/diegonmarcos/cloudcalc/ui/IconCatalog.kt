@@ -6,6 +6,11 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -24,6 +29,11 @@ object IconCatalog {
         "tools" -> Icons.Filled.Build
         "history" -> Icons.Filled.History
         "clock" -> Icons.Filled.AccessTime
+        "speed" -> Icons.Filled.Speed
+        "psychology" -> Icons.Filled.Psychology
+        "mic" -> Icons.Filled.Mic
+        "ask" -> Icons.Filled.QuestionAnswer
+        "settings" -> Icons.Filled.Settings
         else -> fallback
     }
 }
