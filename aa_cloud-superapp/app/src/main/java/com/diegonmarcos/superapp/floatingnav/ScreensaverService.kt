@@ -58,7 +58,7 @@ class ScreensaverService : Service() {
         // #775: the gate is here, at the draw, and not only in [start]: the
         // idle timer in ShellActivity starts this service bare, and used to
         // put the black cover up with the build's kill-switch off.
-        if (!allowed(this)) { stopSelf(); return }
+        // MUTATION #775: no gate at the draw
         showOverlay()
         main.post(tick)
     }
