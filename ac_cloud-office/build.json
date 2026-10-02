@@ -298,7 +298,8 @@
     "sample_document": "tests/runtime-sample.fodt",
     "sample_mime": "application/vnd.oasis.opendocument.text-flat-xml",
     "device_dir": "/sdcard/Download",
-    "_doc_device_dir": "Opened as a file:// URI, which LOActivity hands to core as a path, so the app must be able to read shared storage: the manifest declares MANAGE_EXTERNAL_STORAGE and `runtime` sets that appop before launching.",
+    "_doc_device_dir": "The sample is pushed here and opened through its MediaStore row in media_collection, as a content:// URI, the way a file manager hands it over. NOT file://: LOActivity.initUI proceeds only once copyFileToTemp has set mTempFile, which the content branch alone does, so a file:// open shows an empty activity and never starts core — measured on ship run 36943496727, where the app logged 'SCHEME_FILE: getPath()' and then nothing for five minutes. Reading the row needs shared-storage access: the manifest declares MANAGE_EXTERNAL_STORAGE and `runtime` sets that appop before launching.",
+    "media_collection": "content://media/external/file",
     "loaded_markers": [
       "postMobileMessage: coolclient",
       "postMobileMessage: load url=",

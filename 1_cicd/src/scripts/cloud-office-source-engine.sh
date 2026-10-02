@@ -318,7 +318,7 @@ step_runtime() {
     [ -n "$(_json '.runtime_check.activity')" ] || die "build.json::runtime_check is missing"
     out="${CLOUD_OFFICE_RUNTIME_OUT:-$WORK_DIR/runtime}"
     rm -rf "$out" && mkdir -p "$out"
-    python3 - "$BUILD_JSON" "$SCRIPT_DIR" "$asset" "$out" "$ABI" <<'PY' || die "runtime: the release APK did not open the sample document cleanly — evidence in $out"
+    python3 -u - "$BUILD_JSON" "$SCRIPT_DIR" "$asset" "$out" "$ABI" <<'PY' || die "runtime: the release APK did not open the sample document cleanly — evidence in $out"
 import json, os, re, struct, subprocess, sys, time
 bj, app_dir, apk, out, abi = sys.argv[1:6]
 cfg = json.load(open(bj))
@@ -349,8 +349,21 @@ sh("appops set %s MANAGE_EXTERNAL_STORAGE allow" % pkg)
 sample = os.path.join(app_dir, rc["sample_document"])
 dev = rc["device_dir"].rstrip("/") + "/" + os.path.basename(sample)
 adb("push", sample, dev)
-started = sh("am start -W -n %s/%s -a android.intent.action.VIEW -d file://%s -t %s"
-             % (pkg, rc["activity"], dev, rc["sample_mime"]))
+# A file pushed over FUSE gets its MediaStore row on its own; wait for it
+# rather than assume it, and say so if it never comes.
+row_query = "content query --uri %s --projection _id --where \"_display_name='%s'\"" % (
+    rc["media_collection"], os.path.basename(sample))
+for _ in range(30):
+    row = re.search(r"_id=(\d+)", sh(row_query, check=False))
+    if row:
+        break
+    time.sleep(1)
+else:
+    sys.exit("runtime: %s never got a row in %s" % (dev, rc["media_collection"]))
+uri = "%s/%s" % (rc["media_collection"], row.group(1))
+print("runtime: opening", uri)
+started = sh("am start -W -n %s/%s -a android.intent.action.VIEW -d %s -t %s"
+             % (pkg, rc["activity"], uri, rc["sample_mime"]))
 print(started)
 if "Error" in started:
     sys.exit("runtime: am start refused the activity")
