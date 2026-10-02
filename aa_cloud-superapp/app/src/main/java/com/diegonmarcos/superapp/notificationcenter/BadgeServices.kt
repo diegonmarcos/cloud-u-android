@@ -42,7 +42,10 @@ object BadgeServices {
 
     /** Why a badge is not on screen. [LIVE] is the only good answer; every
      *  other one is a sentence the Push pane shows instead of a green dot. */
-    enum class State { LIVE, DISABLED, BLOCKED, DEAD, NO_SERVICE }
+    enum class State { LIVE, DISABLED, BLOCKED, DEAD, NO_SERVICE,
+        /** #777: an on-demand badge (no service) with nothing to post right
+         *  now — not in the shade, and not broken either. */
+        IDLE }
 
     data class Status(val badge: Badge, val state: State, val reason: String)
 
@@ -137,7 +140,9 @@ object BadgeServices {
         val s = status(ctx, b)
         // #777: an on-demand badge (no service — the Alerts group) is put back
         // by re-drawing it from its store.
-        if (b.service.isBlank() && s.state == State.LIVE) { AlertsNotifier.refresh(ctx); return null }
+        if (b.service.isBlank() && (s.state == State.LIVE || s.state == State.IDLE)) {
+            AlertsNotifier.refresh(ctx); return null
+        }
         return when (s.state) {
             State.DISABLED, State.BLOCKED, State.NO_SERVICE -> s.reason
             else -> if (start(ctx.applicationContext, b.service)) null
@@ -213,8 +218,8 @@ object BadgeServices {
         // #777: no service = posted on demand (the Alerts group posts when an
         // alert arrives). Nothing posted then means nothing to say, not dead.
         if (b.service.isBlank() && b.owner.isNotBlank())
-            return Status(b, State.LIVE,
-                if (live(ctx, b) != null) "Posted on demand." else "Posted on demand — nothing to show right now.")
+            return if (live(ctx, b) != null) Status(b, State.LIVE, "Posted on demand.")
+            else Status(b, State.IDLE, "Posted on demand — nothing to show right now.")
         if (b.service.isBlank())
             return Status(b, State.NO_SERVICE, "No owning service is declared for this badge.")
         return if (isServiceRunning(ctx, b.service))

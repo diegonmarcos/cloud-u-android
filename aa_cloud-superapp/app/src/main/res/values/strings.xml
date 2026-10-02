@@ -226,6 +226,7 @@
     <string name="push_state_blocked">BLOCKED</string>
     <string name="push_state_disabled">OFF</string>
     <string name="push_state_no_service">NO OWNER</string>
+    <string name="push_state_idle">IDLE</string>
     <string name="push_not_posted">Its service is running but nothing is posted on channel %1$s — swiped away, or the channel is blocked.</string>
     <string name="push_open">Open</string>
     <string name="push_launch">Launch</string>

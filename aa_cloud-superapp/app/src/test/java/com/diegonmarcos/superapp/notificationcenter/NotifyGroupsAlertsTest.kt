@@ -219,6 +219,14 @@ class NotifyGroupsAlertsTest {
         assertEquals("still stored", 1, AlertStore.all(ctx).size)
     }
 
+    @Test fun `the Alerts badge reads IDLE with nothing to show and LIVE once an alert is in the shade`() {
+        val b = BadgeServices.declared.first { it.id == AlertsNotifier.BADGE_ID }
+        assertEquals(BadgeServices.State.IDLE, BadgeServices.status(ctx, b).state)
+        collectorCalledBy(raiser)
+        FleetAlerts.raise(ctx, FleetAlerts.Alert("x"))
+        assertEquals(BadgeServices.State.LIVE, BadgeServices.status(ctx, b).state)
+    }
+
     // ── the contract other apps depend on ───────────────────────────────
 
     @Test fun `the collector is exported, signature-guarded, and at the authority FleetAlerts names`() {

@@ -219,6 +219,8 @@ object BadgePanes {
 
         val stateColour = when (st.state) {
             BadgeServices.State.LIVE -> p.accent
+            // Nothing to say is not a fault: an idle on-demand badge.
+            BadgeServices.State.IDLE -> p.textSecondary
             // Everything that is not LIVE is the same colour on purpose:
             // "blocked" and "dead" are equally not-in-the-shade, and giving
             // one of them a softer colour is how a missing badge reads as fine.
@@ -231,6 +233,7 @@ object BadgePanes {
                 BadgeServices.State.BLOCKED -> R.string.push_state_blocked
                 BadgeServices.State.DISABLED -> R.string.push_state_disabled
                 BadgeServices.State.NO_SERVICE -> R.string.push_state_no_service
+                BadgeServices.State.IDLE -> R.string.push_state_idle
             },
         )
         col.addView(TextView(ctx).apply {
