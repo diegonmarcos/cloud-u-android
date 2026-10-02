@@ -10,7 +10,7 @@ import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /**
- * #774 `/api/store/*` — the Store's three stages, verifiable with the screen
+ * #774 `/api/store/<verb>` — the Store's three stages, verifiable with the screen
  * locked. Registered on the fleet's ONE debug server ([AppDebugServer.route]:
  * loopback, token-gated, listed in /api/docs); no second transport.
  *
