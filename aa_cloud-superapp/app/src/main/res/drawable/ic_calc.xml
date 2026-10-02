@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cloud Calc's own launcher glyph, for the Cloud ▸ Tools Primary tile (#772).
+
+  SOURCE: ac_cloud-calc/app/src/main/res/drawable/ic_launcher_foreground.xml.
+  Paths copied verbatim; only the box changed, as in ic_writer: the 108-unit
+  adaptive viewport is cropped to 56 and the group translate re-centres the
+  art (x 34..74, y 28..80) so the calculator fills its tile like its
+  neighbours. The tile tints it flat on bind, so only the shape survives.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+
+    <group android:translateX="-26" android:translateY="-26">
+        <path android:fillColor="#FFB794F4" android:pathData="M38,28h32a4,4 0,0 1,4 4v44a4,4 0,0 1,-4 4h-32a4,4 0,0 1,-4 -4v-44a4,4 0,0 1,4 -4z" />
+        <path android:fillColor="#FF14082B" android:pathData="M40,33h28v10h-28z" />
+        <path android:fillColor="#FF14082B" android:pathData="M40,48h7v7h-7zM50.5,48h7v7h-7zM61,48h7v7h-7zM40,58.5h7v7h-7zM50.5,58.5h7v7h-7zM61,58.5h7v7h-7zM40,69h7v7h-7zM50.5,69h7v7h-7zM61,69h7v7h-7z" />
+    </group>
+</vector>

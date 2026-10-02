@@ -2623,6 +2623,13 @@
                 "target": "extapp:cloud-keyboard"
               },
               {
+                "_doc": "Calc — hands off to the standalone Cloud Calc app (ac_cloud-calc, com.diegonmarcos.cloudcalc, read from ITS android.application_id and app/build.gradle namespace). #772: the owner asked for it IMMEDIATELY BEFORE Writer in this row, and GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement and test-calc-tile.sh pins it as 'the tile right after calc is writer'. Same shape as Writer: target=extapp:cloud-calc → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-calc].install_apk_url (ABI-resolved through the fleet assets map). icon ic_calc is Cloud Calc's own launcher foreground, cropped to its art like ic_writer.",
+                "id": "calc",
+                "label": "Calc",
+                "icon": "ic_calc",
+                "target": "extapp:cloud-calc"
+              },
+              {
                 "_doc": "Writer — hands off to the standalone Cloud Writer app (ac_cloud-writer, com.diegonmarcos.cloudwriter, read from ITS android.application_id and app/build.gradle namespace, not guessed from the slug). Same shape as the Keyboard tile beside it: target=extapp:cloud-writer → ShellActivity.launchExternalApp opens the package if installed, else downloads + installs ui.external_apps[id=cloud-writer].install_apk_url — no ACTION_VIEW, so there is no seventh ad-hoc startActivity site and no ActivityNotFoundException path. POSITION IS DELIBERATE AND IT IS NOT LAST: GroupedTilesFragment walks group.tiles in declared order with no sort, and the Camera tile below records the owner asking for the camera 'as last' in this row on 2026-09-10, so Writer goes in front of it rather than displacing a placement he named. icon ic_writer is Cloud Writer's own launcher foreground copied into this app's drawables — Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the file's existence is pinned by test-writer-tile.sh rather than trusted.",
                 "id": "writer",
                 "label": "Writer",
@@ -7617,6 +7624,15 @@
         "hub_package": "com.diegonmarcos.cloudwriter",
         "install_package": "com.diegonmarcos.cloudwriter",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Calc (ac_cloud-calc, published by ship-cloud-calc.yml since #767). Added in #772 for the Cloud ▸ Tools Primary tile: every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ac_cloud-calc/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors ac_cloud-calc's arm64 release asset; x86_64 devices are resolved through the fleet assets map exactly as Cloud Writer's _doc_abi describes. folder=prod_utils ('=Utilities') is the taxonomy half of the same record — PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudcalc may be added to ui.phone_folders.",
+        "id": "cloud-calc",
+        "folder": "prod_utils",
+        "hub_package": "com.diegonmarcos.cloudcalc",
+        "install_package": "com.diegonmarcos.cloudcalc",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Calc.apk",
         "forks": {}
       },
       {
