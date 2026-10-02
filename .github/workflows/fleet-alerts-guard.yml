@@ -1,0 +1,38 @@
+name: "fleet alerts guard — an app's alert goes through FleetAlerts, not a notify() of its own"
+
+# WHY (#777). Every fleet app raises its user-facing alerts through ONE API,
+# libs:core FleetAlerts, into the SuperApp's Alerts group. Before that the
+# alerts were spread over a dozen channels in a dozen apps, and nothing would
+# stop the next app from opening a thirteenth. This guard fails when any app
+# or lib tree calls notify() without that file being classified in
+# 1_cicd/src/data/fleet-alerts-guard.json as something that is NOT an alert
+# (a badge, a foreground service, media, the app's own messages, ...).
+#
+# Its own workflow and every push, for the reason one-pdf-engine-guard gives:
+# the commit it has to catch can touch any file in any app tree, so there is
+# no path to filter on, and a check parked behind the registered-tester suite
+# can sit unexecuted behind an unrelated failure.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fleet-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it plants a direct alert six ways and requires RED
+      # each time, then requires GREEN on the real fleet. A gate whose red
+      # path is unproven is a green tick that reads as enforcement.
+      - name: The guard still fails when an app posts an alert of its own
+        run: bash 1_cicd/src/scripts/test/fleet-alerts-guard.test.sh
+
+      - name: Every direct notify() in the fleet is classified
+        run: python3 1_cicd/src/scripts/cloud-android-fleet-alerts-guard.py .

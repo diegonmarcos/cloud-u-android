@@ -5,18 +5,15 @@
 
 package com.diegonmarcos.mediacenter.cloud.sync
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.os.BatteryManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.core.FleetAlerts
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -465,32 +462,17 @@ class CloudUploadWorker @AssistedInject constructor(
         }
     }
 
+    /** #777: a backup that failed is a fleet alert — it lands in the
+     *  SuperApp's Alerts group (this app's own notification only if there is
+     *  no SuperApp), one per app: the next failed run replaces it. */
     private fun postFailureNotification(failed: Int, failedFiles: List<String>) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                applicationContext, Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) return
-        val channelId = ensureChannel(
-            CHANNEL_STATUS, R.string.cloud_backup_channel_status, NotificationManager.IMPORTANCE_DEFAULT
-        )
-        val title = applicationContext.getString(R.string.cloud_backup_failed_title)
         val text = applicationContext.getString(R.string.cloud_backup_failed_text, failed)
-        val builder = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(R.drawable.ic_cloud_upload)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setAutoCancel(true)
-        if (failedFiles.isNotEmpty()) {
-            builder.setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    text + "\n" + failedFiles.takeLast(10).joinToString("\n")
-                )
-            )
-        }
-        runCatching {
-            NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID_STATUS, builder.build())
-        }
+        FleetAlerts.raise(applicationContext, FleetAlerts.Alert(
+            title = applicationContext.getString(R.string.cloud_backup_failed_title),
+            text = if (failedFiles.isEmpty()) text else text + "\n" + failedFiles.takeLast(10).joinToString("\n"),
+            severity = FleetAlerts.ERROR,
+            dedupeKey = "cloud_backup_failed",
+        ))
     }
 
     private fun computeSha1(media: Media): String? {
@@ -536,9 +518,7 @@ class CloudUploadWorker @AssistedInject constructor(
 
         // Backup notification channels + ids.
         private const val CHANNEL_PROGRESS = "cloud_backup_progress"
-        private const val CHANNEL_STATUS = "cloud_backup_status"
         private const val NOTIFICATION_ID_PROGRESS = 91001
-        private const val NOTIFICATION_ID_STATUS = 91002
 
         fun schedule(
             workManager: WorkManager,

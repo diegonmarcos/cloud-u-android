@@ -1,0 +1,208 @@
+{
+  "_doc": "#777 FLEET ALERTS policy, read by 1_cicd/src/scripts/cloud-android-fleet-alerts-guard.py (fleet-alerts-guard.yml, every push). Every fleet app raises its user-facing alerts through ONE API, libs:core FleetAlerts, so they land in the SuperApp's Alerts group (G4 of Configs > Launcher > Notify) instead of a channel of their own. The guard fails when any source file in an app or lib tree calls NotificationManager(.Compat).notify(...) without being listed in `posters` below with a `kind` from `kinds` — i.e. a new direct notification must be classified (a badge, a foreground service, media, a user action, the app's own messages...) or go through FleetAlerts. It also fails when a listed file's notify() call count changes (a new alert slipped into an exempt file), when a listed file no longer exists or no longer posts (a stale exemption hides nothing but reads as policy), and when a kind is not in the vocabulary — there is deliberately no `alert` kind. Adding an exemption is a DATA edit here, with its reason.",
+  "_rule": "an alert goes through FleetAlerts (libs:core); a direct notify() is only for what is not an alert, and says what it is.",
+  "app_prefixes": [
+    "aa_cloud-",
+    "ab_cloud-",
+    "ac_cloud-",
+    "ac_c3-"
+  ],
+  "prune_dirs": [
+    ".git",
+    "node_modules",
+    "build",
+    "dist",
+    "target",
+    "z_archive",
+    "Pods",
+    "test",
+    "androidTest",
+    "testDebug",
+    "sharedTest"
+  ],
+  "_doc_prune_dirs": "Generated output, third-party modules, retired trees and TEST source sets (tests post notifications to assert on them).",
+  "extensions": [
+    ".kt",
+    ".java"
+  ],
+  "notify_call": "\\.notify\\(\\s*[^)\\s]",
+  "_doc_notify_call": "A NotificationManager/NotificationManagerCompat post. Object.notify() (no arguments) is excluded by requiring an argument; comments are stripped before matching, so a note that names notify() is not a call.",
+  "kinds": {
+    "badge": "a persistent badge of one of the four shade groups, re-posted by its owner",
+    "media": "a media transport mirroring a playback session",
+    "group_summary": "the summary of a shade group",
+    "fleet_alerts": "the FleetAlerts API itself: the collector's Alerts group or the API's local fallback",
+    "user_action": "a prompt wrapping a system Intent the user must act on (PendingIntent payload a deep link cannot carry)",
+    "foreground_service": "the ongoing notification a foreground service must hold",
+    "ongoing_controls": "an ongoing notification whose content is live controls, or the app's own user-set reminder",
+    "progress": "an ongoing progress indicator",
+    "domain_messages": "the app's own content (mail, chat, vault requests) — the user's messages, not alerts about the fleet",
+    "domain_calls": "an incoming/ongoing call",
+    "upstream_fork": "an alert in vendored upstream code that cannot be expressed as a FleetAlert today; the reason says why",
+    "not_a_notification": "a method named notify() that is not an Android notification"
+  },
+  "posters": [
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/HealthBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "G1 Health badge: a foreground service re-posting its own live readout."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/MarketsBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "G1 Markets badge: a foreground service re-posting live quotes."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/WeatherBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "G1 Weather badge: a foreground service re-posting today's forecast."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/KdeStatusService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "G2 KDE Connect badge: a foreground service re-posting the paired desktop's state."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/floatingnav/FloatingNavService.kt",
+      "kind": "badge",
+      "notify_calls": 2,
+      "why": "G2 Quick Actions badge: the floating button host's foreground notification (bare re-post + swipe re-post)."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/floatingnav/MediaProxy.kt",
+      "kind": "media",
+      "notify_calls": 2,
+      "why": "G3 Media Player badge: the transport mirroring the active media session (playing + idle faces)."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/NotifyGroups.kt",
+      "kind": "group_summary",
+      "notify_calls": 1,
+      "why": "The summary notification of each of the four shade groups."
+    },
+    {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/AlertsNotifier.kt",
+      "kind": "fleet_alerts",
+      "notify_calls": 2,
+      "why": "THE Alerts group: one child per alert + its summary. Everything raised through FleetAlerts ends here."
+    },
+    {
+      "path": "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt",
+      "kind": "fleet_alerts",
+      "notify_calls": 1,
+      "why": "The API's own fallback: the raising app's notification when no SuperApp can take the alert."
+    },
+    {
+      "path": "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/PackageInstallerReceiver.kt",
+      "kind": "user_action",
+      "notify_calls": 1,
+      "why": "\"Tap to finish installing\": wraps the system installer's confirm Intent (a PendingIntent the fleet alert link cannot carry), and #588 needs to know whether THIS notification is visible. The install RESULTS go through FleetAlerts."
+    },
+    {
+      "path": "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/update/PackageInstallerReceiver.kt",
+      "kind": "user_action",
+      "notify_calls": 1,
+      "why": "Same as the updater lib: the confirm-install prompt wraps the system confirm Intent. Results go through FleetAlerts."
+    },
+    {
+      "path": "ab_cloud-libs-shared/libs/maps/src/main/java/com/diegonmarcos/cloudnav/maps/LocationTrackerService.kt",
+      "kind": "foreground_service",
+      "notify_calls": 1,
+      "why": "GPS tracking foreground service updating its own ongoing status line."
+    },
+    {
+      "path": "ac_cloud-calc/app/src/main/java/com/diegonmarcos/cloudcalc/clock/ClockService.kt",
+      "kind": "ongoing_controls",
+      "notify_calls": 2,
+      "why": "Running timers with pause/+1 min/reset controls, and the bedtime reminder the user set — the clock app's own product, like a ringing alarm, not a fleet alert."
+    },
+    {
+      "path": "ac_cloud-media-center/app/src/main/kotlin/com/diegonmarcos/mediacenter/cloud/sync/CloudIndexProgressManager.kt",
+      "kind": "progress",
+      "notify_calls": 1,
+      "why": "Ongoing indexing progress bar (setOngoing(true)). The backup FAILURE goes through FleetAlerts."
+    },
+    {
+      "path": "ac_cloud-mail/app/src/main/kotlin/app/sterna/push/Notifications.kt",
+      "kind": "domain_messages",
+      "notify_calls": 4,
+      "why": "New mail: per-message notifications with reply/archive actions and an account summary — the user's mail, not an alert about the fleet."
+    },
+    {
+      "path": "ac_cloud-chat/android/app/src/main/java/com/mattermost/rnbeta/NotificationReplyBroadcastReceiver.java",
+      "kind": "domain_messages",
+      "notify_calls": 1,
+      "why": "Upstream Mattermost: inline-reply update of a chat message notification."
+    },
+    {
+      "path": "ac_cloud-matrix/libraries/push/impl/src/main/kotlin/io/element/android/libraries/push/impl/notifications/NotificationDisplayer.kt",
+      "kind": "domain_messages",
+      "notify_calls": 1,
+      "why": "Upstream Element X: Matrix room messages."
+    },
+    {
+      "path": "ac_cloud-matrix/features/call/impl/src/main/kotlin/io/element/android/features/call/impl/utils/ActiveCallManager.kt",
+      "kind": "domain_calls",
+      "notify_calls": 1,
+      "why": "Upstream Element X: incoming/ongoing call notification (full-screen intent, call style)."
+    },
+    {
+      "path": "ac_cloud-matrix/libraries/push/impl/src/main/kotlin/io/element/android/libraries/push/impl/pushgateway/PushGatewayNotifyRequest.kt",
+      "kind": "not_a_notification",
+      "notify_calls": 1,
+      "why": "`pushGatewayApi.notify(...)` is an HTTP call to the Matrix push gateway, not an Android notification."
+    },
+    {
+      "path": "ac_cloud-dialer/app/src/main/kotlin/org/fossify/phone/helpers/CallNotificationManager.kt",
+      "kind": "domain_calls",
+      "notify_calls": 1,
+      "why": "Upstream Fossify Phone: the ongoing/incoming call notification."
+    },
+    {
+      "path": "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/data/auth/manager/AuthRequestNotificationManagerImpl.kt",
+      "kind": "domain_messages",
+      "notify_calls": 1,
+      "why": "Upstream Bitwarden: a login-approval request that must be answered inside the vault."
+    },
+    {
+      "path": "ac_cloud-termux/app/src/main/java/com/termux/app/TermuxService.java",
+      "kind": "foreground_service",
+      "notify_calls": 1,
+      "why": "Upstream Termux: the session-host foreground service updating its own ongoing notification."
+    },
+    {
+      "path": "ac_cloud-nix-on-droid/app/src/main/java/com/termux/app/TermuxService.java",
+      "kind": "foreground_service",
+      "notify_calls": 1,
+      "why": "Upstream Termux (nix-on-droid fork): the session-host foreground service."
+    },
+    {
+      "path": "ac_cloud-termux/app/src/main/java/com/termux/app/utils/CrashUtils.java",
+      "kind": "upstream_fork",
+      "notify_calls": 1,
+      "why": "NOT MIGRATED (#777): upstream Termux crash report. Its tap carries a PendingIntent to ReportActivity with the crash text as extras, which a FleetAlerts string deep link cannot carry, and the file is vendored upstream code kept rebasable."
+    },
+    {
+      "path": "ac_cloud-termux/app/src/main/java/com/termux/app/utils/PluginUtils.java",
+      "kind": "upstream_fork",
+      "notify_calls": 1,
+      "why": "NOT MIGRATED (#777): upstream Termux plugin-error report, same PendingIntent-with-payload shape as CrashUtils."
+    },
+    {
+      "path": "ac_cloud-nix-on-droid/termux-shared/src/main/java/com/termux/shared/termux/crash/TermuxCrashUtils.java",
+      "kind": "upstream_fork",
+      "notify_calls": 1,
+      "why": "NOT MIGRATED (#777): upstream termux-shared crash report (nix-on-droid), same shape as cloud-termux CrashUtils."
+    },
+    {
+      "path": "ac_cloud-nix-on-droid/termux-shared/src/main/java/com/termux/shared/termux/plugins/TermuxPluginUtils.java",
+      "kind": "upstream_fork",
+      "notify_calls": 1,
+      "why": "NOT MIGRATED (#777): upstream termux-shared plugin-error report (nix-on-droid)."
+    }
+  ]
+}

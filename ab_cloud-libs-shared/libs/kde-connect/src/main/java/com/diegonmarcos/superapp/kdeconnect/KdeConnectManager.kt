@@ -64,7 +64,6 @@ object KdeConnectManager : KdeLink.Listener {
 
     fun init(ctx: Context) {
         if (!::app.isInitialized) app = ctx.applicationContext
-        KdeNotifications.ensureChannel(app)
     }
 
     fun isPaired(deviceId: String): Boolean = trust.isPaired(deviceId)

@@ -1,9 +1,7 @@
 package cld.camera.capturer
 
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
+import com.diegonmarcos.superapp.core.FleetAlerts
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.graphics.Bitmap
@@ -183,19 +181,14 @@ class ImageCapturer(val mActivity: MainActivity) {
         mActivity.previewLoader.visibility = View.GONE
 
         if (!mActivity.isStarted) {
-            val channelId = "image_saver_error"
-            val channel = NotificationChannel(channelId, mActivity.getString(R.string.unable_to_save_image),
-                NotificationManager.IMPORTANCE_HIGH)
-
-            val notif = Notification.Builder(mActivity, channelId).apply {
-                setSmallIcon(R.drawable.info)
-                setContentTitle(mActivity.getString(R.string.unable_to_save_image))
-            }.build()
-
-            mActivity.getSystemService(NotificationManager::class.java).let {
-                it.createNotificationChannel(channel)
-                it.notify(1, notif)
-            }
+            // #777: raised as a fleet alert (the SuperApp's Alerts group, or
+            // this app's own notification if there is no SuperApp).
+            FleetAlerts.raise(mActivity, FleetAlerts.Alert(
+                title = mActivity.getString(R.string.unable_to_save_image),
+                text = mActivity.getString(R.string.unable_to_save_image_verbose, exception.place.name),
+                severity = FleetAlerts.ERROR,
+                dedupeKey = "image_saver_error",
+            ))
             return
         }
 

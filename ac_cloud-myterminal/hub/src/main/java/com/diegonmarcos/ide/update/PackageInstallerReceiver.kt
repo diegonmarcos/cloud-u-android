@@ -12,6 +12,7 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import com.diegonmarcos.superapp.core.FleetAlerts
 
 /**
  * Receives PackageInstaller status callbacks. Forwards the system confirmation
@@ -104,19 +105,14 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         }
     }
 
+    /** #777: an update result is a fleet alert — the SuperApp's Alerts group
+     *  (this app's own notification only if there is no SuperApp); the next
+     *  result replaces it. */
     private fun surface(context: Context, short: String, full: String) {
         try { Toast.makeText(context, short, Toast.LENGTH_LONG).show() } catch (_: Throwable) {}
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            nm.createNotificationChannel(NotificationChannel(notifChannel, "Updater", NotificationManager.IMPORTANCE_DEFAULT))
-        }
-        val notif: Notification = Notification.Builder(context, notifChannel)
-            .setContentTitle(short)
-            .setContentText(full)
-            .setStyle(Notification.BigTextStyle().bigText(full))
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setAutoCancel(true)
-            .build()
-        nm.notify(notifId, notif)
+        FleetAlerts.raise(context, FleetAlerts.Alert(
+            title = short, text = full,
+            severity = if (short.startsWith("Update failed")) FleetAlerts.ERROR else FleetAlerts.INFO,
+            dedupeKey = "self-update"))
     }
 }
