@@ -25,6 +25,8 @@ data class JevConfig(
     val route: Route,
     /** Mode id → its preset follow-up questions; [ANY_MODE] is offered under every mode. */
     val ask: Map<String, List<Question>>,
+    /** #772 "What is this?" per measurement kind ("sound"): one choice over [Identify.classes] plus extras. */
+    val identify: Map<String, Identify> = emptyMap(),
 ) {
     /**
      * A Decisions question as the API takes it: noul (criteria true/false), choice (criteria
@@ -68,6 +70,12 @@ data class JevConfig(
         val extra: List<Question>,
     )
 
+    /**
+     * #772 a decision model cannot hear or measure: it is sent what the app measured, and asked
+     * which of [classes] it is (a choice), plus [extra] noul/score questions about the same thing.
+     */
+    data class Identify(val instructions: String, val classes: Map<String, String>, val extra: List<Question>)
+
     fun model(use: String): String = uses[use] ?: CHEAPEST
 
     fun questionsFor(mode: String): List<Question> = ask[mode].orEmpty() + ask[ANY_MODE].orEmpty()
@@ -79,6 +87,8 @@ data class JevConfig(
         const val CHOICE = "choice"
         const val SCORE = "score"
         const val NONE = "none"
+        /** The id of the identify choice question in a request and its answers. */
+        const val IDENTIFY_CLASS = "class"
         val ACTIONS = setOf("expression", "form", "timer", "open")
         val ON_ERROR = setOf("expression", NONE)
 
@@ -128,6 +138,17 @@ data class JevConfig(
                         (0 until list.length()).map { question(list.getJSONObject(it).optString("id", "q$it"), list.getJSONObject(it)) }
                     }
                 },
+                identify = (o.optJSONObject("identify") ?: JSONObject()).let { i ->
+                    i.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
+                        val x = i.getJSONObject(k)
+                        val c = x.req("classes")
+                        Identify(
+                            x.reqString("instructions"),
+                            c.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { c.getString(it) },
+                            questions(x.optJSONObject("questions")),
+                        )
+                    }
+                },
             )
             return cfg
         }
@@ -153,7 +174,11 @@ data class JevConfig(
             }
             need(r.action("timer") == null || r.durationUnits.isNotEmpty(), "a timer tool needs route.duration_units")
             for (s in r.strip) runCatching { Regex(s) }.onFailure { throw IllegalArgumentException("route.strip: bad pattern $s") }
-            for (q in r.extra + c.ask.values.flatten()) {
+            for ((k, i) in c.identify) {
+                need(i.classes.size >= 2, "identify.$k needs at least two classes")
+                need(i.extra.none { it.id == IDENTIFY_CLASS }, "identify.$k: a question may not be named \"$IDENTIFY_CLASS\"")
+            }
+            for (q in r.extra + c.ask.values.flatten() + c.identify.values.flatMap { it.extra }) {
                 need(q.type in setOf(NOUL, CHOICE, SCORE), "question ${q.id}: type must be noul, choice or score")
                 need(q.type != CHOICE || q.choices.size >= 2, "question ${q.id}: a choice needs at least two criteria")
                 need(q.type != SCORE || q.levels.size >= 2, "question ${q.id}: a score needs at least two levels")

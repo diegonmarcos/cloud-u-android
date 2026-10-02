@@ -167,7 +167,8 @@
     "uses": {
       "_doc": "Which model each use runs on: a slug, or \"cheapest\" = the cheapest model the cached catalogue confirms (a :free variant first among equals). A declared slug the catalogue does not list falls back to the cheapest confirmed one, so a retired model never breaks the app; with no catalogue cached yet the slug is used as declared. Configs > Models overrides either use per device.",
       "route": "typesafe/jev-1.13",
-      "score": "cheapest"
+      "score": "cheapest",
+      "sound": "typesafe/jev-1.13"
     },
     "fallback_model": "typesafe/jev-1.13",
     "route": {
@@ -327,6 +328,48 @@
           "criteria": {
             "true": "It names a calculation, a conversion, a measurement or a duration.",
             "false": "It is conversation or a question no computation answers."
+          }
+        }
+      }
+    },
+    "_doc_identify": "#772 'What is this?' per measurement kind. A decision model cannot hear: the Sound tools send what THIS app measured (level, fundamental and note, dominant frequency, every detected event's kind, duration, bandwidth, noisiness, harmonics, attack and decay, onsets, periodicity; :sound Session.describe) as state, and ask one choice over `classes` (question id \"class\") plus the extra noul/score `questions`. A spectrogram image rides along only when the model's catalogue entry takes images. Every option's probability is shown; nothing is decided for the user. The model per use is uses.sound (Configs > Models can override it).",
+    "identify": {
+      "sound": {
+        "instructions": "Which kind of sound source best explains these measurements of a sound recorded by a phone microphone? `measured` lists the overall level, the fundamental and its musical note, the dominant frequency, and each detected event with its kind (tone, chirp, noise, impulse, complex), duration, bandwidth, noisiness (0 = pure tone, 1 = white noise), harmonics relative to the fundamental, attack and decay times, plus onsets and whether the events repeat periodically.",
+        "classes": {
+          "speech": "Human speech or voice: voiced harmonics around 85-300 Hz, syllable-rate onsets, irregular events.",
+          "music": "Music or singing: stable pitched tones with harmonics, notes changing over time, often rhythmic.",
+          "birdsong": "Birdsong: short high chirps or whistles, typically 1-8 kHz, fast frequency sweeps.",
+          "dog": "A dog barking: loud short harmonic bursts around 300-1500 Hz, repeated irregularly.",
+          "siren": "A siren: a loud tone sweeping slowly up and down in a repeating cycle.",
+          "alarm": "An alarm, beeper or smoke detector: a loud steady or pulsed tone, often 2-4 kHz, strictly periodic.",
+          "engine": "An engine or motor vehicle: low-frequency broadband rumble with a periodic firing tone.",
+          "fan": "A fan, HVAC or air conditioning: steady broadband noise with a constant low hum, no onsets.",
+          "mains_hum": "Electrical mains hum: a steady low tone at 50 or 60 Hz or its harmonics (100/120 Hz).",
+          "water": "Running water, rain or a tap: steady broadband noise, flat spectrum, many tiny impulses.",
+          "wind": "Wind: low-frequency broadband noise with slow level fluctuations.",
+          "tool": "A power tool or machine: loud harmonic whine with broadband noise, steady while running.",
+          "knock": "A knock, clap, footstep or impact: short impulses with a sharp attack and fast decay.",
+          "silence": "Silence or near silence: very low level and no events.",
+          "other": "Something else, or too ambiguous to say."
+        },
+        "questions": {
+          "_doc": "Asked alongside the class, with their probabilities.",
+          "natural": {
+            "label": "Natural?",
+            "type": "noul",
+            "instructions": "The sound comes from a natural source (an animal, a person, weather, water) rather than a machine or a device."
+          },
+          "attention": {
+            "label": "Needs attention?",
+            "type": "score",
+            "instructions": "How much attention does a sound like this usually call for from someone nearby?",
+            "criteria": [
+              "None",
+              "Notice it",
+              "Check soon",
+              "Act now"
+            ]
           }
         }
       }

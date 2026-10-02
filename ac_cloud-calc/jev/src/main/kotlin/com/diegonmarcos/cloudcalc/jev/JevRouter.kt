@@ -176,4 +176,26 @@ object JevRouter {
 
     fun ask(cfg: JevConfig, http: Http, token: String?, model: String, q: JevConfig.Question, state: JSONObject): Decision =
         Decisions.call(cfg, http, token, model, state, mapOf(q.id to q))
+
+    // ── what is this? (#772) ─────────────────────────────────────────────────────────────────
+
+    /** The choice over jev.identify.[kind]'s classes, plus its declared extra questions. */
+    fun identifyQuestions(cfg: JevConfig, kind: String): Map<String, JevConfig.Question> {
+        val id = cfg.identify[kind] ?: throw IllegalArgumentException("jev.identify.$kind is not declared")
+        val c = JevConfig.IDENTIFY_CLASS
+        return mapOf(c to JevConfig.Question(c, c, JevConfig.CHOICE, id.instructions, id.classes)) + id.extra.associateBy { it.id }
+    }
+
+    /**
+     * What the model is told: `{"measured": …}`; with an image (a spectrogram, a photo) the same
+     * text and the image as content parts, for a model whose catalogue entry takes images.
+     */
+    fun identifyState(measured: JSONObject, imageDataUrl: String?): Any =
+        if (imageDataUrl == null) JSONObject().put("measured", measured)
+        else JSONArray()
+            .put(JSONObject().put("type", "text").put("text", "measured: $measured"))
+            .put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", imageDataUrl)))
+
+    fun identify(cfg: JevConfig, http: Http, token: String?, model: String, kind: String, measured: JSONObject, imageDataUrl: String? = null): Decision =
+        Decisions.call(cfg, http, token, model, identifyState(measured, imageDataUrl), identifyQuestions(cfg, kind))
 }

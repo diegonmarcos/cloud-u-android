@@ -76,7 +76,11 @@ class JevTest {
              "meter":{"criterion":"Measure noise.","action":"open","mode":"meter"}},
            "questions":{"computable":{"type":"noul","instructions":"Is it computable?","criteria":{"true":"yes","false":"no"}}}},
          "ask":{"*":[{"id":"plausible","label":"Plausible?","type":"score","instructions":"How plausible?","criteria":["no","maybe","yes"]}],
-                "finance":[{"id":"tip_ok","label":"Reasonable tip?","type":"noul","instructions":"Reasonable?"}]}}
+                "finance":[{"id":"tip_ok","label":"Reasonable tip?","type":"noul","instructions":"Reasonable?"}]},
+         "identify":{"_doc":"x","sound":{"instructions":"Which source?",
+           "classes":{"_doc":"x","speech":"A voice.","alarm":"A beeper.","other":"Else."},
+           "questions":{"natural":{"label":"Natural?","type":"noul","instructions":"Natural source?"},
+                        "attention":{"type":"score","instructions":"How urgent?","criteria":["none","some","act"]}}}}}
         """.trimIndent(),
     ).also(mutate)
 
@@ -189,6 +193,75 @@ class JevTest {
             it.getJSONObject("ask").put("*", JSONArray().put(JSONObject().put("type", "score").put("instructions", "q").put("criteria", JSONArray().put("x"))))
         }
         rejects("a question with no instructions") { it.route().getJSONObject("questions").getJSONObject("computable").remove("instructions") }
+        rejects("an identify with one class") { it.getJSONObject("identify").getJSONObject("sound").put("classes", JSONObject().put("x", "X")) }
+        rejects("an identify with no classes") { it.getJSONObject("identify").getJSONObject("sound").remove("classes") }
+        rejects("an identify with no instructions") { it.getJSONObject("identify").getJSONObject("sound").remove("instructions") }
+        rejects("an identify extra named class") {
+            it.getJSONObject("identify").getJSONObject("sound").getJSONObject("questions").put("class", JSONObject().put("type", "noul").put("instructions", "q"))
+        }
+        rejects("an identify extra of an unknown type") {
+            it.getJSONObject("identify").getJSONObject("sound").getJSONObject("questions").getJSONObject("natural").put("type", "maybe")
+        }
+    }
+
+    // ── what is this? (#772) ────────────────────────────────────────────────────────────────
+
+    @Test fun `identify is parsed per kind, _doc keys skipped, and is optional`() {
+        val i = cfg().identify.getValue("sound")
+        assertEquals(setOf("sound"), cfg().identify.keys)
+        assertEquals("Which source?", i.instructions)
+        assertEquals(setOf("speech", "alarm", "other"), i.classes.keys)
+        assertEquals("A beeper.", i.classes["alarm"])
+        assertEquals(setOf("natural", "attention"), i.extra.map { it.id }.toSet())
+        assertEquals("Natural?", i.extra.first { it.id == "natural" }.label)
+        assertTrue(JevConfig.parse(cfgJson { it.remove("identify") }.toString()).identify.isEmpty())
+    }
+
+    @Test fun `identify sends what was measured and asks one choice over the classes plus the extras`() {
+        mock.reply(200, JSONObject().put("answers", JSONObject()
+            .put("class", JSONObject().put("type", "choice").put("choice", "alarm").put("probabilities", JSONObject().put("alarm", 0.9).put("speech", 0.06).put("other", 0.04)))
+            .put("natural", JSONObject().put("type", "noul").put("noul", 0.1))).toString())
+        val measured = JSONObject().put("dominant_hz", 3150.0).put("periodic", true)
+        val d = JevRouter.identify(cfg(), UrlHttp, testKey, "typesafe/jev-1.13", "sound", measured)
+        val sent = mock.bodies.single()
+        assertEquals("typesafe/jev-1.13", sent.getString("model"))
+        assertEquals(3150.0, sent.getJSONObject("state").getJSONObject("measured").getDouble("dominant_hz"), 0.0)
+        assertTrue(sent.getJSONObject("state").getJSONObject("measured").getBoolean("periodic"))
+        val qs = sent.getJSONObject("questions")
+        assertEquals(setOf(JevConfig.IDENTIFY_CLASS, "natural", "attention"), qs.keySet())
+        val c = qs.getJSONObject(JevConfig.IDENTIFY_CLASS)
+        assertEquals("choice", c.getString("type"))
+        assertEquals("Which source?", c.getString("instructions"))
+        assertEquals(setOf("speech", "alarm", "other"), c.getJSONObject("criteria").keySet())
+        assertEquals("noul", qs.getJSONObject("natural").getString("type"))
+        assertEquals(JSONArray(listOf("none", "some", "act")).toString(), qs.getJSONObject("attention").getJSONArray("criteria").toString())
+        assertEquals("Bearer $testKey", mock.auth.single())
+        assertTrue(d.ok)
+        assertEquals(listOf("alarm", "speech", "other"), d.options(JevConfig.IDENTIFY_CLASS).map { it.key })
+        assertEquals(0.9, Decisions.pick(d.answers?.optJSONObject(JevConfig.IDENTIFY_CLASS), setOf("speech", "alarm", "other"))!!.p, 0.0)
+        assertEquals(listOf("no", "yes"), d.options("natural").map { it.label })
+    }
+
+    @Test fun `identify fails soft - no token makes no call, an HTTP error is a reason, an unknown kind is refused`() {
+        val none = JevRouter.identify(cfg(), UrlHttp, null, "m", "sound", JSONObject())
+        assertFalse(none.ok)
+        assertTrue(mock.bodies.isEmpty())
+        mock.reply(503, """{"error":{"message":"overloaded"}}""")
+        val err = JevRouter.identify(cfg(), UrlHttp, testKey, "m", "sound", JSONObject())
+        assertFalse(err.ok)
+        assertEquals("HTTP 503: overloaded", err.error)
+        assertTrue(err.options(JevConfig.IDENTIFY_CLASS).isEmpty())
+        try { JevRouter.identifyQuestions(cfg(), "smell"); fail() } catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("smell")) }
+    }
+
+    @Test fun `identify with an image sends the measurements as text and the image as content parts`() {
+        val m = JSONObject().put("note", "A4")
+        assertEquals("""{"measured":{"note":"A4"}}""", JevRouter.identifyState(m, null).toString())
+        val parts = JevRouter.identifyState(m, "data:image/png;base64,AAAA") as JSONArray
+        assertEquals("text", parts.getJSONObject(0).getString("type"))
+        assertEquals("""measured: {"note":"A4"}""", parts.getJSONObject(0).getString("text"))
+        assertEquals("image_url", parts.getJSONObject(1).getString("type"))
+        assertEquals("data:image/png;base64,AAAA", parts.getJSONObject(1).getJSONObject("image_url").getString("url"))
     }
 
     @Test fun `a timer-free config needs no duration units and on_error none needs no fallback mode`() {

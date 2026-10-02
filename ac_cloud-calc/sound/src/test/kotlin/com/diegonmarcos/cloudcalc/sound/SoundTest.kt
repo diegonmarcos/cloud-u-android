@@ -84,7 +84,11 @@ class SoundTest {
         assertEquals("A#4", Notes.of(466.16, 440.0)!!.label)
         assertEquals("A3", Notes.of(220.0, 440.0)!!.label)
         assertEquals("C-1", Notes.of(8.1758, 440.0)!!.label)
-        assertEquals(50.0, Notes.of(440.0 * Math.pow(2.0, 0.5 / 12), 440.0)!!.cents, 0.01)
+        assertEquals(30.0, Notes.of(440.0 * Math.pow(2.0, 0.3 / 12), 440.0)!!.cents, 0.01)
+        // 0.7 of a semitone up is the NEXT note, 30 cents flat.
+        val sharp = Notes.of(440.0 * Math.pow(2.0, 0.7 / 12), 440.0)!!
+        assertEquals("A#4", sharp.label)
+        assertEquals(-30.0, sharp.cents, 0.01)
         assertEquals("A4", Notes.of(432.0, 432.0)!!.label)
         assertEquals(432.0, Notes.of(432.0, 432.0)!!.hz, 1e-9)
         assertEquals(0.0, Notes.of(432.0, 432.0)!!.cents, 1e-9)
