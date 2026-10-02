@@ -1,0 +1,6 @@
+{
+  "_doc": "#767 THE PIN: which published libqalc.so build (see qalc-native.json::publish) Cloud-Lib-Calc ships. build.gradle downloads each ABI's asset from release_repo at release_tag, refuses on a sha256 mismatch, and stages it as jniLibs/<abi>/libqalc.so. release_tag null means no build has been adopted, and build.gradle then refuses to build rather than ship an engine with no engine in it. Advance only by pasting the block a publish printed into its release notes, after reading them.",
+  "release_repo": "diegonmarcos/cloud-u-android",
+  "release_tag": null,
+  "assets": {}
+}

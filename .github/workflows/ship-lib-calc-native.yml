@@ -1,0 +1,133 @@
+name: "Ship → Cloud-Lib-Calc native engine (libqalculate → libqalc.so per ABI, tested, published as the pinned artifact)"
+
+# #767 THE C++ HALF OF CLOUD CALC, BUILT ON ITS OWN CADENCE.
+#
+# Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc) answers every calculation
+# the Cloud Calc app asks for through libqalculate, the engine behind Qalculate!.
+# libqalculate is C++ and autotools, and it links GMP, MPFR and libxml2. None of
+# that is compiled by the Cloud Libs APK build: the same rule the firestack aar
+# follows (ship-firestack-aar.yml), for the same reason — a C++ toolchain
+# problem must never be able to stop the 40-odd library APKs from publishing.
+#
+# So this workflow builds everything from sha256-pinned upstream tarballs
+# (libs/calc/data/qalc-native.json is the one declaration), PROVES it, and
+# publishes one immutable release per build. The APK build consumes the asset
+# pinned in libs/calc/data/qalc-pin.json and refuses anything else; advancing
+# that pin is a deliberate commit.
+#
+# PROOF BEFORE PUBLISH, in this order:
+#   1. host job — the same qalc_core.cc linked against the same libqalculate
+#      flags on the runner: golden.tsv (every Cloud Calc mode: standard,
+#      scientific, programmer, units, date/time, finance, physics, acoustics,
+#      CAS, graphing), a planted wrong row that must go red, and
+#      libqalculate's own `make check` (its tests/*.batch through qalc).
+#   2. android job — cross-compiled per ABI with the pinned NDK, then each .so's
+#      ELF machine, NEEDED list, exported JNI_OnLoad and 16 KB alignment are
+#      checked before it may be uploaded.
+#
+# A red run here changes nothing on any phone: the APK keeps shipping the pin
+# it already has.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create the release and upload the .so files (off = build + test + checksum only)"
+        required: false
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      # Hand-written (no WORK_DIR, no module map): the native sources and the
+      # build declaration. NOT data/qalc-pin.json — adopting a build must not
+      # start another one.
+      - "1_cicd/src/cicd/ship-lib-calc-native.yml"
+      - "ab_cloud-libs-shared/libs/calc/native/**"
+      - "ab_cloud-libs-shared/libs/calc/data/qalc-native.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ship-lib-calc-native-${{ github.ref }}
+  # Not cancel-in-progress: a cancelled publish could leave a release holding
+  # one ABI's asset and not the other's.
+  cancel-in-progress: false
+
+jobs:
+  host_tests:
+    name: "Golden calculations + libqalculate's own tests (host build)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache the pinned source tarballs
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/qalc/src
+          key: qalc-src-${{ hashFiles('ab_cloud-libs-shared/libs/calc/data/qalc-native.json') }}
+
+      - name: Build for the host and run every test
+        run: bash ab_cloud-libs-shared/libs/calc/native/build-qalc.sh host
+
+  build_and_publish:
+    name: "Build libqalc.so per ABI + publish"
+    # Runs even when the host tests are red, so one push reports the cross
+    # compile too; but only a green host_tests may publish (the step below).
+    needs: host_tests
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache the pinned source tarballs
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/qalc/src
+          key: qalc-src-${{ hashFiles('ab_cloud-libs-shared/libs/calc/data/qalc-native.json') }}
+
+      - name: Read the pinned NDK
+        id: ndk
+        run: echo "version=$(jq -er .build.ndk ab_cloud-libs-shared/libs/calc/data/qalc-native.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Android SDK + the pinned NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "ndk;${{ steps.ndk.outputs.version }}"
+
+      - name: Build every ABI, check each .so, publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ needs.host_tests.result }}" != "success" ]; then
+            echo "::warning::host tests are ${{ needs.host_tests.result }} — building to report the cross compile, publishing nothing"
+            bash ab_cloud-libs-shared/libs/calc/native/publish-qalc.sh --no-publish
+            exit 1
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" != "true" ]; then
+            bash ab_cloud-libs-shared/libs/calc/native/publish-qalc.sh --no-publish
+          else
+            bash ab_cloud-libs-shared/libs/calc/native/publish-qalc.sh
+          fi
+
+      - name: Upload the .so files as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libqalc-${{ github.sha }}
+          path: |
+            ab_cloud-libs-shared/.cache/qalc/publish/*.so
+            ab_cloud-libs-shared/.cache/qalc/publish/pin.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: What a failure here does not break
+        if: failure()
+        run: |
+          echo "::warning title=Cloud-Lib-Calc native engine is red::libqalc.so did NOT build, test or" \
+               "publish. Cloud-Lib-Calc.apk keeps shipping the build pinned in" \
+               "ab_cloud-libs-shared/libs/calc/data/qalc-pin.json. Fix the native build, publish," \
+               "then advance that pin."

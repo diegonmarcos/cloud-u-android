@@ -1,0 +1,117 @@
+{
+  "_doc": "#767 THE ONE DECLARATION of Cloud-Lib-Calc's native engine: libqalculate and everything it links, built from pinned upstream source into ONE self-contained JNI library per ABI (libqalc.so: qalc_core + qalc_jni + static libqalculate, libxml2, MPFR, GMP, libc++). PRODUCER: ship-lib-calc-native.yml -> native/publish-qalc.sh -> native/build-qalc.sh, which also builds the same core for the CI host and runs native/golden.tsv and libqalculate's own test suite against it before anything is published. CONSUMER: build.gradle stages the pinned asset as jniLibs/<abi>/libqalc.so after a sha256 check, and never builds C++ itself, so a red native build cannot stop a Cloud Libs publish (the firestack-aar split, ship-firestack-aar.yml). Adopting a build is a deliberate edit of data/qalc-pin.json made after reading the release notes, never automatic.",
+  "_doc_why_qalculate": "libqalculate is the engine behind Qalculate! (GPL-2.0-or-later): symbolic and numeric evaluation, ~4000 units with dimension checking, physical constants (CODATA), currencies, date/time arithmetic, bitwise and base conversion, finance functions (pmt/fv/pv/nper), calculus (diff/integrate/solve/factor) and plot sampling, with its definitions compiled into the library (--enable-compiled-definitions) so nothing is unpacked at runtime. numbat (MIT/Apache-2.0) was considered for 'dimension-safe' expressions and NOT adopted: qalculate's unit arithmetic is already dimension-aware ('500 W * 2 h to kWh' = 1 kWh is a golden row) and it covers every mode the app has, so numbat would be a second engine with a second unit table for one overlapping feature.",
+  "build": {
+    "_doc_sources": "Release tarballs, sha256-pinned (verified by downloading each one, 2026-10-02). build-qalc.sh builds them in `order`, each into one install prefix per target, as static PIC archives. `configure` applies to every target; `android` and `host` are appended for that kind of target only.",
+    "order": [
+      "gmp",
+      "mpfr",
+      "libxml2",
+      "libqalculate"
+    ],
+    "sources": {
+      "gmp": {
+        "version": "6.3.0",
+        "licence": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+        "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz",
+        "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+        "_doc_configure": "--disable-assembly: GMP's hand-written asm is the least portable part of it across NDK clang versions, and a calculator's numbers are small; the C fallback is correct everywhere.",
+        "configure": [
+          "--disable-assembly",
+          "--enable-static",
+          "--disable-shared",
+          "--with-pic"
+        ]
+      },
+      "mpfr": {
+        "version": "4.2.2",
+        "licence": "LGPL-3.0-or-later",
+        "url": "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
+        "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
+        "configure": [
+          "--enable-static",
+          "--disable-shared",
+          "--with-pic",
+          "--with-gmp={prefix}"
+        ]
+      },
+      "libxml2": {
+        "version": "2.13.8",
+        "licence": "MIT",
+        "url": "https://download.gnome.org/sources/libxml2/2.13/libxml2-2.13.8.tar.xz",
+        "sha256": "277294cb33119ab71b2bc81f2f445e9bc9435b893ad15bb2cd2b0e859a0ee84a",
+        "_doc_configure": "libqalculate only parses its own UTF-8 definitions with it: no Python binding, no compression, no iconv/ICU (UTF-8 is native to libxml2), no network, no dlopen'd modules.",
+        "configure": [
+          "--enable-static",
+          "--disable-shared",
+          "--with-pic",
+          "--without-python",
+          "--without-zlib",
+          "--without-lzma",
+          "--without-iconv",
+          "--without-icu",
+          "--without-http",
+          "--without-ftp",
+          "--without-modules",
+          "--without-debug"
+        ]
+      },
+      "libqalculate": {
+        "version": "5.12.0",
+        "licence": "GPL-2.0-or-later",
+        "url": "https://github.com/Qalculate/libqalculate/releases/download/v5.12.0/libqalculate-5.12.0.tar.gz",
+        "sha256": "f3dfdcf97d5a9e3a5bc0ebe66afd184721b606276eee3ba0ada8c92a5e71d44c",
+        "_doc_configure": "Definitions compiled in. No libcurl: exchange rates are downloaded by the engine's Kotlin side through Android's resolver (so the SuperApp's DNS menu applies, #741) into the files libqalculate reads, then reloaded. No ICU (case-insensitive non-ASCII names only), no gnuplot/popen, no insecure command() function, no gettext. The host build adds the qalc text port and its unit-test runner so `make check` runs libqalculate's own tests/*.batch against these exact flags.",
+        "configure": [
+          "--enable-static",
+          "--disable-shared",
+          "--with-pic",
+          "--enable-compiled-definitions",
+          "--without-libcurl",
+          "--without-icu",
+          "--without-gnuplot-call",
+          "--disable-insecure",
+          "--disable-nls"
+        ],
+        "android": [
+          "--disable-textport",
+          "--disable-unittests"
+        ],
+        "host": [
+          "--enable-textport",
+          "--enable-unittests",
+          "--without-readline"
+        ]
+      }
+    },
+    "_doc_ndk": "The NDK the Android targets are compiled with, and the API level the binary may assume (the lib APKs' min_sdk). Static libc++ is linked in, so the APK's own NDK version is irrelevant to this .so.",
+    "ndk": "28.0.13004108",
+    "api": 26,
+    "abis": {
+      "arm64-v8a": {
+        "triple": "aarch64-linux-android",
+        "machine": "AArch64"
+      },
+      "x86_64": {
+        "triple": "x86_64-linux-android",
+        "machine": "Advanced Micro Devices X86-64"
+      }
+    },
+    "_doc_soname": "The one file per ABI, loaded by QalcNative.kt with System.loadLibrary(\"qalc\"). Its only NEEDED entries may be the platform libraries in allowed_needed; anything else would be a library the APK does not carry.",
+    "soname": "libqalc.so",
+    "allowed_needed": [
+      "libc.so",
+      "libm.so",
+      "libdl.so"
+    ],
+    "_doc_page_size": "16 KB ELF alignment so the library loads on 16 KB-page devices (Android 15+); 4 KB-page devices load it unchanged.",
+    "max_page_size": 16384
+  },
+  "publish": {
+    "_doc": "Where publish-qalc.sh puts a build: its own immutable tag per publish (prefix + UTC timestamp), one asset per ABI because the bytes are per ABI. What the Cloud Libs build USES is data/qalc-pin.json, a separate file so that adopting a build does not re-trigger the builder.",
+    "release_repo": "diegonmarcos/cloud-u-android",
+    "release_tag_prefix": "lib-calc-native-",
+    "asset_template": "libqalc-{abi}.so",
+    "max_asset_bytes": 94371840
+  }
+}
