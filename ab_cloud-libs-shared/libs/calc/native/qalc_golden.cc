@@ -156,6 +156,11 @@ int main(int argc, char **argv) {
     check(k.find("\"kind\":\"variable\"") != std::string::npos, "items(variable, Physical Constants) is not empty");
     std::string u = qcore::items("unit", "Length", 1000);
     check(u.find("\"title\":\"Meter\"") != std::string::npos, "items(unit, Length) lists Meter");
+    std::string a = qcore::items("unit", "Electric Current", 1000);
+    check(a.find("\"title\":\"Ampere\"") != std::string::npos, "items(unit, Electric Current) reaches a nested category: " + a.substr(0, 200));
+    std::string cur = qcore::items("unit", "Currency", 1000);
+    check(cur.find("\"name\":\"EUR\"") != std::string::npos && cur.find("\"name\":\"USD\"") != std::string::npos,
+          "items(unit, Currency) lists EUR and USD by the names the converter types");
     std::string r = qcore::rates_sources();
     check(r.find("ecb.europa.eu") != std::string::npos && r.find("eurofxref-daily.xml") != std::string::npos,
           "rates_sources names libqalculate's ECB source and file: " + r);

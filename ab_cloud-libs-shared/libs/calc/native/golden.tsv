@@ -50,7 +50,7 @@ units	-	20 miles / 2h to km/h	16.09344 km/h
 units	-	1 inch to cm	2.54 cm
 units	-	500 W * 2 h to kWh	re:^1 kW[*×·⋅]?h$
 units	approx=2;mixed=0	1 kg to lb	2.204622622 lb
-units	-	1.74 m to ft	5 ft + 8.503937008 in
+units	approx=2	1.74 m to ft	5 ft + 8.503937008 in
 units	-	10 N / 5 Pa	2 m^2
 units	-	5 m/s to s/m	0.2 s/m
 units	approx=2	100 EUR to USD	re:^\$[0-9]+(\.[0-9]+)?$

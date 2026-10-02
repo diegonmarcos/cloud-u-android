@@ -51,7 +51,8 @@ std::string plot(const std::string &expr, double xmin, double xmax, int steps, i
 std::string complete(const std::string &prefix, int max);
 
 // Every active, non-hidden item of one kind ("function", "variable", "unit")
-// whose category starts with category_prefix: same row shape as complete().
+// whose category, or any nested segment of it ("Electricity/Electric Current"),
+// starts with category_prefix: same row shape as complete().
 std::string items(const std::string &kind, const std::string &category_prefix, int max);
 
 // The rate sources libqalculate itself reads: [{"index","url","file"}]. A

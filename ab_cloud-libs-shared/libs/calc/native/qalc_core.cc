@@ -27,6 +27,14 @@ bool starts_ci(const std::string &s, const std::string &prefix) {
     return s.size() >= prefix.size() && lower(s.substr(0, prefix.size())) == lower(prefix);
 }
 
+// libqalculate joins nested categories with '/' ("Electricity/Electric Current"), so a
+// category is matched at its start or at the start of any nested segment.
+bool in_category(const std::string &cat, const std::string &prefix) {
+    if (starts_ci(cat, prefix)) return true;
+    std::string lc = lower(cat), lp = "/" + lower(prefix);
+    return lc.find(lp) != std::string::npos;
+}
+
 std::string q(const std::string &s) { return "\"" + json_escape(s) + "\""; }
 
 std::string num(double d) {
@@ -79,7 +87,7 @@ void by_category(const std::vector<T *> &v, const char *kind, const std::string 
                  std::string &out, int &n) {
     for (T *it : v) {
         if (n >= max) return;
-        if (!it->isActive() || it->isHidden() || !starts_ci(it->category(), cat)) continue;
+        if (!it->isActive() || it->isHidden() || !in_category(it->category(), cat)) continue;
         out += (n++ ? "," : "") + row(it, it->name(), kind);
     }
 }
