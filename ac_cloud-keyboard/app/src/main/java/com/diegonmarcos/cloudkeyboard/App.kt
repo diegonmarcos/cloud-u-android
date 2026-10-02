@@ -2,9 +2,11 @@ package com.diegonmarcos.cloudkeyboard
 
 import android.app.Application
 import androidx.work.Configuration as WorkManagerConfiguration
+import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.media.MediaRuntime
 import com.diegonmarcos.superapp.translate.TranslateEngines
 import com.diegonmarcos.superapp.voice.VoiceEngines
+import helium314.keyboard.latin.suggestions.ToolbarStatus
 import helium314.keyboard.latin.utils.prefs as heliboardPrefs
 
 /**
@@ -30,6 +32,16 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // (~/storage/Download) or any file manager — no adb/logcat needed.
         // Mirrors the superapp's cloud-superapp-log-error.log.
         CrashTakeout.install(this, "cloud-keyboard-log-error.log")
+
+        // #776 /api/keyboard/toolbar on the fleet debug server: expected vs drawn toolbar
+        // icons and why the row was last rebuilt, so the empty-toolbar fault is checked on
+        // the device. A debug facility must never take the keyboard down.
+        runCatching {
+            AppDebugServer.route(
+                BuildConfig.DEBUG_API_GROUP,
+                listOf(AppDebugServer.Op("toolbar", "", "toolbar row health: expected vs drawn icons, keys, last rebuild reason, self-heal count")),
+            ) { op, _ -> if (op == "toolbar") ToolbarStatus.json() else null }
+        }
 
         // Mirror helium314.keyboard.latin.App.onCreate's synchronous init.
         runCatching { helium314.keyboard.latin.define.DebugFlags.init(this) }

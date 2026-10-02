@@ -143,6 +143,17 @@
       "generate_release_notes": false
     }
   },
+  "update": {
+    "_doc": "#776 Config ▸ Update. This app compiles NO libs:updater and may not start to: #763's lib-classes ratchet (1_cicd/src/data/lib-classes.json, L4) counts every app that compiles a `logic` lib, and one more edge turns mesh-membership-guard red. Apps without an updater are checked, downloaded (with the #774 cached Download → Install → Clear stages), installed and auto-updated by the fleet Store, so the keyboard's Update page hands off to the Store's own row for it instead of hand-rolling a second updater. Baked into libs:keyboard's BuildConfig.UPDATE_B64 (libs/keyboard/build.gradle reads THIS file through rootDir); an empty store_package hides the page.",
+    "store_package": "com.diegonmarcos.superapp",
+    "store_activity": "com.diegonmarcos.superapp.MainActivity",
+    "_doc_store_extras": "The SuperApp launcher's shortcut_action grammar (ShellActivity.handleShortcutIntent). page:config/store-cloud is Store ▸ Cloud Constellation, the same target the Store's own update notification uses (aa_cloud-superapp App.kt AppStoreHost.launchExtras) and declared in aa_cloud-superapp/build.json (page id store-cloud).",
+    "store_extras": {
+      "shortcut_action": "page:config/store-cloud"
+    },
+    "_doc_fallback_url": "Only when the SuperApp is not installed: the rolling GitHub release asset release.gh_release publishes.",
+    "fallback_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard.apk"
+  },
   "analytics": {
     "_doc": "Consumed by :libs:analytics, which reads THIS file (rootDir) at build time and bakes the values into BuildConfig. Both backends are single-site today, so every app reports into the same site and is told apart by .app — give each app its own site_id once per-app sites exist in Umami/Matomo.",
     "enabled": true,
@@ -173,5 +184,9 @@
       "task": null,
       "enabled": false
     }
+  },
+  "debug_api": {
+    "_doc": "#776 the keyboard's own group on the fleet debug server (libs:devtools AppDebugServer, already compiled in through libs:core). /api/<group>/toolbar answers expected vs drawn toolbar icons and the last rebuild reason (helium314.keyboard.latin.suggestions.ToolbarStatus), so the empty-toolbar fault can be checked on the device instead of guessed at.",
+    "group": "keyboard"
   }
 }

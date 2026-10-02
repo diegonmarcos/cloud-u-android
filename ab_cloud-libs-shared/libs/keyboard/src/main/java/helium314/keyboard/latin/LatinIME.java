@@ -766,6 +766,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public View onCreateInputView() {
+        Log.i(TAG, "onCreateInputView (locked=" + mSettings.getCurrent().mIsLocked + ")");
         StatsUtils.onCreateInputView();
         return mKeyboardSwitcher.onCreateInputView(KtxKt.getDisplayContext(this), mIsHardwareAcceleratedDrawingEnabled);
     }
@@ -785,6 +786,9 @@ public class LatinIME extends InputMethodService implements
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setRtl(mRichImm.getCurrentSubtype().isRtlSubtype());
             mSuggestionStripView.setListener(this, view);
+            // #776: the strip being (re-)attached is where a row built for another mode
+            // (HIDDEN while the keyguard was locked) used to survive the unlock.
+            mSuggestionStripView.ensureToolbar("strip attached");
         }
     }
 
@@ -1083,6 +1087,13 @@ public class LatinIME extends InputMethodService implements
         switcher.updateKeyboardTheme(mDisplayContext);
         MainKeyboardView mainKeyboardView = switcher.getMainKeyboardView();
         currentSettingsValues = mSettings.getCurrent(); // settingsValues may have been reloaded
+        Log.i(TAG, "onStartInputView restarting=" + restarting + " differentField=" + isDifferentTextField
+                + " toolbarMode=" + currentSettingsValues.mToolbarMode + " locked=" + currentSettingsValues.mIsLocked);
+        // #776: the toolbar row is built once per input view, from the settings of that
+        // moment. Re-check it on every start so a row built for stale settings, or one that
+        // draws nothing, is rebuilt here instead of only by a keyboard switch.
+        if (hasSuggestionStripView())
+            mSuggestionStripView.ensureToolbar(restarting ? "onStartInputView(restarting)" : "onStartInputView");
 
         if (editorInfo == null) {
             Log.e(TAG, "Null EditorInfo in onStartInputView()");

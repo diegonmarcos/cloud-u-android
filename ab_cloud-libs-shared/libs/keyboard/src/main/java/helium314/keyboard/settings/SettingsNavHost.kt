@@ -31,6 +31,7 @@ import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.AiRoutingScreen
+import helium314.keyboard.settings.screens.UpdateScreen
 import helium314.keyboard.settings.screens.GrammarCheckScreen
 import helium314.keyboard.settings.screens.TextEnhanceScreen
 import helium314.keyboard.settings.screens.TextResumeScreen
@@ -84,6 +85,7 @@ fun SettingsNavHost(
                 onClickVoiceTranscript = { navController.navigate(SettingsDestination.VoiceTranscript) },
                 onClickTextEnhance = { navController.navigate(SettingsDestination.TextEnhance) }, // SuperApp addition
                 onClickAiRouting = { navController.navigate(SettingsDestination.AiRouting) }, // SuperApp addition
+                onClickUpdate = { navController.navigate(SettingsDestination.Update) }, // #776
                 onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
                 onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
                 onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
@@ -98,6 +100,9 @@ fun SettingsNavHost(
         }
         composable(SettingsDestination.About) {
             AboutScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.Update) { // #776 Config ▸ Update
+            UpdateScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.TextCorrection) {
             TextCorrectionScreen(onClickBack = ::goBack)
@@ -196,6 +201,7 @@ object SettingsDestination {
     // "Resume" is the owner's name for SUMMARISE, not a CV and not resuming anything.
     const val TextResume = "text_resume" // SuperApp addition
     const val AiRouting = "ai_routing" // SuperApp addition
+    const val Update = "update" // #776 Config ▸ Update
     const val Preferences = "preferences"
     const val Toolbar = "toolbar"
     const val GestureTyping = "gesture_typing"

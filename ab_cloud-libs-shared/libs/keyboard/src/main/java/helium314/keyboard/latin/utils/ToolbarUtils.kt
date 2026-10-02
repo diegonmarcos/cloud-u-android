@@ -15,6 +15,7 @@ import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,7 +41,9 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
 
-    GlobalScope.launch {
+    // On Main: these are Views. GlobalScope's default dispatcher ran this on a worker
+    // thread, touching drawable state the UI thread was drawing at the same time (#776).
+    GlobalScope.launch(Dispatchers.Main) {
         delay(10) // need to wait until SettingsValues are reloaded
         buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
     }

@@ -65,6 +65,8 @@ android {
         buildConfigField "String", "MEDIA_CONFIG_B64", "\"${keyboardMediaB64}\""
         buildConfigField "String", "GIPHY_API_KEY",   "\"${giphyApiKey}\""
         buildConfigField "String", "DEFAULT_LOCALES", "\"${defaultLocales}\""
+        // build.json::debug_api.group - the /api/<group>/ the keyboard serves (#776).
+        buildConfigField "String", "DEBUG_API_GROUP", "\"${buildJson.debug_api.group}\""
     }
 
     signingConfigs {

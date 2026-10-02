@@ -42,6 +42,9 @@ def kbBuildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.jso
 // libs/voice. Baked as base64 so quotes/newlines in prompts survive BuildConfig.
 def kbAi = kbBuildJson.keyboard_ai ?: new groovy.json.JsonSlurper().parse(file('../../build.json')).keyboard_ai
 def kbAiB64 = groovy.json.JsonOutput.toJson(kbAi).bytes.encodeBase64().toString()
+// #776 Config ▸ Update: where the fleet Store's row for this app is (build.json::update).
+// Consuming app's build.json only - an app that declares none gets {} and no Update page.
+def kbUpdateB64 = groovy.json.JsonOutput.toJson(kbBuildJson.update ?: [:]).bytes.encodeBase64().toString()
 
 android {
     namespace 'helium314.keyboard.latin'
@@ -55,6 +58,8 @@ android {
         buildConfigField "String", "APPLICATION_ID", "\"${kbBuildJson.android.application_id}\""
         // build.json::keyboard_ai — read by helium314.keyboard.latin.AiRouter.
         buildConfigField "String", "AI_ROUTING_B64", "\"${kbAiB64}\""
+        // build.json::update - read by helium314.keyboard.latin.utils.KeyboardUpdate.
+        buildConfigField "String", "UPDATE_B64", "\"${kbUpdateB64}\""
     }
 
     buildFeatures {

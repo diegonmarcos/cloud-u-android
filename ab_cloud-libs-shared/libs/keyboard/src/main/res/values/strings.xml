@@ -397,9 +397,14 @@
     <string name="enhance_bar_size">%1$d words · ~%2$d tokens</string>
     <string name="enhance_bar_size_parts">%1$d words · ~%2$d tokens · %3$d requests</string>
     <string name="enhance_in_progress_part">Enhancing with %1$s… part %2$d of %3$d</string>
-    <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
-    <string name="keyboard_update">Update Cloud Keyboard</string>
-    <string name="keyboard_update_summary">Download and install the latest version</string>
+    <!-- #776 Config ▸ Update: the Store's update management for this app, and Restart -->
+    <string name="keyboard_update">Update</string>
+    <string name="keyboard_update_summary">Version, updates and restart</string>
+    <string name="keyboard_update_installed">Installed version</string>
+    <string name="keyboard_update_store">Check, download and install</string>
+    <string name="keyboard_update_store_summary">Opens SuperApp ▸ Store ▸ Cloud Constellation, which checks, downloads, installs and auto-updates this keyboard</string>
+    <string name="keyboard_restart">Restart keyboard</string>
+    <string name="keyboard_restart_summary">Restarts the keyboard process; Android re-binds it as the active keyboard</string>
 
     <!-- Description, used for non-image clipboard files -->
     <string name="item_description">Description: %s</string>

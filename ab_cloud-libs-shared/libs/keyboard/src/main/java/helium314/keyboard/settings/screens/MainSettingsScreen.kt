@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.JniUtils
+import helium314.keyboard.latin.utils.KeyboardUpdate
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.NextScreenIcon
@@ -41,6 +42,7 @@ fun MainSettingsScreen(
     onClickVoiceTranscript: () -> Unit, // SuperApp addition
     onClickTextEnhance: () -> Unit, // SuperApp addition — Text Enhancements
     onClickAiRouting: () -> Unit, // SuperApp addition — AI Model Routing
+    onClickUpdate: () -> Unit, // #776 Config ▸ Update
     onClickPreferences: () -> Unit,
     onClickToolbar: () -> Unit,
     onClickGestureTyping: () -> Unit,
@@ -103,26 +105,15 @@ fun MainSettingsScreen(
                     onClick = onClickAiRouting,
                     icon = R.drawable.ic_settings_advanced
                 ) { NextScreenIcon() }
-                // SuperApp addition — self-update entry, shown ONLY in the standalone Cloud
-                // Keyboard app (the SuperApp updates its embedded keyboard via its own AppStore,
-                // so this is hidden there). Opens the latest published Cloud-Keyboard.apk release.
-                // TODO: currently only updates the standalone APK — does not yet also check/update
-                // the cloud-keyboard-libs companion app that hosts translate/voice/dictionaries.
-                val updateCtx = LocalContext.current
-                if (updateCtx.packageName == "com.diegonmarcos.cloudkeyboard") {
+                // #776 Config ▸ Update: version, the fleet Store's update management for this
+                // app, and Restart. Shown when the consuming app's build.json declares an update
+                // block (KeyboardUpdate.enabled) - it used to be a package-name literal that
+                // opened a raw GitHub download in the browser.
+                if (KeyboardUpdate.enabled) {
                     Preference(
                         name = stringResource(R.string.keyboard_update),
                         description = stringResource(R.string.keyboard_update_summary),
-                        onClick = {
-                            runCatching {
-                                updateCtx.startActivity(
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard.apk")
-                                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            }
-                        },
+                        onClick = onClickUpdate,
                         icon = R.drawable.ic_settings_about
                     ) { NextScreenIcon() }
                 }
@@ -199,7 +190,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

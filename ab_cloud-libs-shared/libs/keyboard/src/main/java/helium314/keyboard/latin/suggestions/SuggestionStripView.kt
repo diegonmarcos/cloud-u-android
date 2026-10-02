@@ -129,6 +129,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val defaultToolbarBackground: Drawable = toolbarExpandKey.background
     private val enabledToolKeyBackground = GradientDrawable()
     private var direction = 1 // 1 if LTR, -1 if RTL
+    /**
+     * The layout the toolbar row was last built for; [ensureToolbar] compares against it.
+     * Declared ABOVE the init block that builds the row: Kotlin runs initialisers in text
+     * order, so a declaration below it would reset this to null right after the build.
+     */
+    private var toolbarBuiltFor: ToolbarStatus.Layout? = null
 
     /**
      * A FRESH instance per key, never one instance shared by the row. Layout params are per-child
@@ -167,6 +173,56 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         if (mToolbarMode == ToolbarMode.TOOLBAR_KEYS) {
             setToolbarVisibility(true)
         }
+        buildToolbar(mToolbarMode, !isGone, "init")
+    }
+
+    private fun toolbarLayout(mode: ToolbarMode) = context.prefs().let {
+        ToolbarStatus.Layout(mode, getEnabledToolbarKeys(it), getSecondRowToolbarKeys(it))
+    }
+
+    /**
+     * Icons the first row actually puts on screen when the strip is shown: a key counts only
+     * if its row is visible, it is visible itself and it holds a drawable with a size. Not
+     * the strip's OWN visibility - it is legitimately GONE while the emoji or clipboard view
+     * is up, and counting that as "nothing drawn" would rebuild a healthy row every time.
+     */
+    private fun drawnToolbarIcons(): Int {
+        if (!toolbarRow.isVisible) return 0
+        return toolbar.children.count { v ->
+            val d = (v as? ImageButton)?.drawable
+            v.isVisible && v.alpha > 0f && d != null && d.intrinsicWidth > 0 && d.intrinsicHeight > 0
+        }
+    }
+
+    /**
+     * Rebuilds the toolbar row when it no longer matches the settings or draws nothing it
+     * should (#776). Called from LatinIME on every onStartInputView and whenever the strip is
+     * re-attached, i.e. on exactly the paths that used to leave a stale row standing. Every
+     * rebuild is logged at WARN with its reason, so the guard can never hide the bug.
+     */
+    fun ensureToolbar(trigger: String) {
+        val reason = measureToolbar(trigger) ?: return
+        Log.w(TAG, "toolbar rebuild on $trigger: $reason (locked=${Settings.getValues().mIsLocked})")
+        buildToolbar(Settings.getValues().mToolbarMode, true, "$trigger: $reason")
+    }
+
+    /**
+     * Measures the row and records what [ensureToolbar] would do, WITHOUT doing it - the debug
+     * API reads through this, so asking about an empty row never repairs it out of sight.
+     */
+    fun measureToolbar(trigger: String): String? {
+        val now = toolbarLayout(Settings.getValues().mToolbarMode)
+        val drawn = drawnToolbarIcons()
+        val reason = ToolbarStatus.rebuildReason(toolbarBuiltFor, now, drawn)
+        ToolbarStatus.checked(trigger, now.expected, drawn, reason)
+        return reason
+    }
+
+    private fun buildToolbar(mode: ToolbarMode, withSecondRow: Boolean, reason: String) {
+        val colors = Settings.getValues().mColors
+        val dropped = ArrayList<String>()
+        toolbar.removeAllViews()
+        secondRowKeys.removeAllViews()
 
         // toolbar keys setup
         //
@@ -178,8 +234,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // keys, so `toolbarRow.isVisible = toolbar.childCount > 0` collapsed
         // the whole row — taking Translate and Enhance with it, which is why
         // those bars looked broken when in fact they were never reachable.
-        if (mToolbarMode != ToolbarMode.HIDDEN) {
-            buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors)
+        if (mode != ToolbarMode.HIDDEN) {
+            buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors, dropped)
             if (toolbar.childCount == 0) {
                 // A toolbar the user did not hide that builds nothing is a stored layout
                 // that cannot be shown (every key disabled, unknown, or unbuildable). The
@@ -189,7 +245,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 // here, and storing it, makes it a one-time event.
                 Log.w(TAG, "toolbar built 0 keys from the stored layout, restoring the default row")
                 context.prefs().edit { putString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref) }
-                buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors)
+                buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors, dropped)
             }
         }
         // No mSuggestionStripHiddenPerUserSettings check. That flag means "the
@@ -199,8 +255,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // SETTINGS is its only member, which is why the Config icon went
         // missing with nothing else obviously wrong. An EMPTY second row is
         // not healed: unpinning every key is a choice the long-press offers.
-        if (!isGone) {
-            buildRow(secondRowKeys, getSecondRowToolbarKeys(context.prefs()), colors)
+        if (withSecondRow) {
+            buildRow(secondRowKeys, getSecondRowToolbarKeys(context.prefs()), colors, dropped)
             if (Settings.getValues().mQuickPinToolbarKeys)
                 secondRowKeys.children.forEach { toolbar.findViewWithTag<View>(it.tag)?.background = enabledToolKeyBackground }
         }
@@ -210,10 +266,17 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // when there are no toolbar keys to show (e.g. ToolbarMode.HIDDEN) so we
         // don't reserve an empty row. When shown, keep both rows populated.
         toolbarRow.isVisible = toolbar.childCount > 0
-        if (toolbar.childCount == 0) Log.w("SuggestionStripView", "toolbar_row hidden: 0 toolbar keys built")
         if (toolbar.childCount > 0) setToolbarVisibility(true)
         // The expand/collapse arrow is hidden authoritatively in updateKeys()
         // (it re-evaluates visibility, so hiding it here would not stick).
+
+        val layout = toolbarLayout(mode)
+        toolbarBuiltFor = layout
+        val built = toolbar.children.mapNotNull { (it.tag as? ToolbarKey)?.name }.toList()
+        val drawn = drawnToolbarIcons()
+        ToolbarStatus.built(this, reason, layout, built, dropped, drawn)
+        Log.i(TAG, "toolbar built ($reason): mode=$mode expected=${layout.expected} built=${built.size} drawn=$drawn " +
+            "second=${secondRowKeys.childCount} dropped=$dropped locked=${Settings.getValues().mIsLocked}")
 
         updateKeys()
     }
@@ -600,7 +663,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
      * takes a null drawable without complaint, and the result is a blank square that still
      * fires on tap — worse than an absent key, and invisible to any try/catch.
      */
-    private fun buildRow(row: ViewGroup, keys: List<ToolbarKey>, colors: Colors) {
+    private fun buildRow(row: ViewGroup, keys: List<ToolbarKey>, colors: Colors, dropped: MutableList<String>) {
         for (key in keys) {
             try {
                 val button = createToolbarKey(context, key)
@@ -609,6 +672,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 setupKey(button, colors)
                 row.addView(button)
             } catch (t: Throwable) {
+                dropped.add("${key.name}: ${t.message}")
                 Log.e(TAG, "toolbar key $key dropped, it cannot be built", t)
             }
         }

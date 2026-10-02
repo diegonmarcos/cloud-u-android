@@ -120,6 +120,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (themeUpdated) {
             Settings settings = Settings.getInstance();
             settings.loadSettings(displayContext, settings.getCurrent().mLocale, settings.getCurrent().mInputAttributes);
+            // #776: this is the one path that recreates the input view (and the toolbar row
+            // with it) without a new service; logged so a row built here can be traced.
+            Log.i(TAG, "keyboard theme updated, recreating the input view (locked="
+                    + settings.getCurrent().mIsLocked + ")");
             if (mKeyboardView != null)
                 mLatinIME.setInputView(onCreateInputView(displayContext, mIsHardwareAcceleratedDrawingEnabled));
         } else if (mCurrentInputView != null && mLatinIME.hasSuggestionStripView()
