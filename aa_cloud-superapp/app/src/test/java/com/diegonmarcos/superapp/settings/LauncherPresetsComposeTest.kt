@@ -8,12 +8,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelectable
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -101,9 +103,10 @@ class LauncherPresetsComposeTest {
         val group = profileGroup()
         assertEquals("the sandbox rows are not ui.launcher_profiles",
             profiles.map { it.id }, page.page.single { it.first.id == group.id }.second.map { it.id })
+        // The label is asserted ON its own tile: a bare text search also finds it in another
+        // row's subtitle (Work's says "Same as Personal…").
         for (p in profiles) {
-            compose.onNodeWithTag(KitTags.tile("${group.id}:${p.id}")).assertExists()
-            compose.onNodeWithText(p.label, substring = true).assertExists()
+            compose.onNodeWithTag(KitTags.tile("${group.id}:${p.id}")).assert(hasText(p.label, substring = true))
         }
     }
 
