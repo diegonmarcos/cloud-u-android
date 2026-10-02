@@ -99,6 +99,10 @@ stage; sub "$MF" '${applicationId}.ENGINE' '${applicationId}.ENGINE2'
 landed "$MF" 'ENGINE2' && red "K2 the engine answers a different action than the app looks for" "K2"
 stage; js "$DRIVEBJ" 'd["engines"]["gh"]["min_contract"] = 2'
 landed "$DRIVEBJ" '"min_contract": 2' && red "K3 the app needs a contract the engine does not declare" "K3"
+stage; js "$IMG/engine-client.json" 'd["engines"]["image"]["method_contracts"]["recognize"] = 3'
+landed "$IMG/engine-client.json" '"recognize": 3' && red "K3 a method needs a contract above the one the image engine declares" "K3"
+stage; js "$IMG/engine-client.json" 'd["engines"]["image"]["method_contracts"]["recognize"] = 0'
+landed "$IMG/engine-client.json" '"recognize": 0' && red "K3 a per-method floor below the binding's own floor" "K3"
 stage; sub "$SVC" 'arrayOf(STATUS, REPO_LIST, CREDENTIAL, LOGIN_START, LOGIN_POLL)' 'arrayOf(STATUS, REPO_LIST, CREDENTIAL, LOGIN_START)'
 landed "$SVC" 'CREDENTIAL, LOGIN_START)' && red "K4 the engine drops a method the app still calls" "K4"
 stage; sub "$CLIENT" '    fun status(host: String): Result = result(ask(STATUS, host))' '    fun status(host: String): Result = result(ask(STATUS, host))

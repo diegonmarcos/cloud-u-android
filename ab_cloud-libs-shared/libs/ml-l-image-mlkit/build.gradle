@@ -42,6 +42,19 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // #772 the recognizer's suite decodes golden images through Robolectric's native graphics.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
 }
 
 // jvmTarget must match the Java 17 compileOptions above. Set via the top-level
@@ -67,8 +80,22 @@ dependencies {
     // of MB never sit in the APK.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
 
+    // #772 image recognition's on-device route: ML Kit image labelling and object detection,
+    // the BUNDLED models (in this APK, so the route works offline from the first run).
+    implementation 'com.google.mlkit:image-labeling:17.0.9'
+    implementation 'com.google.mlkit:object-detection:17.0.2'
+    // #772 the OpenRouter route speaks the fleet's one Decisions client (Cloud Calc's Jev uses it too),
+    implementation project(':libs:decisions')
+    // and reads the fleet Account's OpenRouter token over the ITextTools binder (a contract lib).
+    implementation project(':libs:text-tools')
+
     // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
     implementation project(':libs:core')
     // The wire (IImageScanEngine) this service implements.
     implementation project(':libs:ml-l-image')
+
+    // #772 the recognizer against golden images (Robolectric bitmaps) and a mock Decisions server.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
 }

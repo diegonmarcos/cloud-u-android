@@ -54,10 +54,16 @@ class ImageScanEngine(context: Context) {
     }
 
     /** Null when the engine is ready (and bound), else the sentence that says what to do. */
-    fun check(): String? {
+    fun check(): String? = check(BuildConfig.IMAGE_ENGINE_MIN_CONTRACT)
+
+    /**
+     * The same handshake for a method that needs a newer engine than the floor every consumer
+     * needs: #772 recognize asks for engine-client.json::method_contracts.recognize, so an app
+     * that only scans barcodes keeps working against a contract-1 engine.
+     */
+    fun check(needed: Int): String? {
         val pm = ctx.packageManager
         val pkg = BuildConfig.IMAGE_ENGINE_PACKAGE
-        val needed = BuildConfig.IMAGE_ENGINE_MIN_CONTRACT
         val service = pm.resolveService(Intent(BuildConfig.IMAGE_ENGINE_ACTION).setPackage(pkg), PackageManager.GET_META_DATA)
             ?.serviceInfo
         if (service == null) {
@@ -91,6 +97,30 @@ class ImageScanEngine(context: Context) {
     fun recognizeText(uri: Uri): OcrResult = ocr { ctx.contentResolver.openFileDescriptor(uri, "r") }
     fun recognizeText(bitmap: Bitmap): OcrResult = ocr { descriptorOf(bitmap) }
 
+    /**
+     * #772 recognise what is in the image, on the [request]'s route (RecognitionConfig.request):
+     * the uniform [Recognition], whichever route answered. Never throws.
+     */
+    fun recognize(file: File, request: org.json.JSONObject): Recognition = recognition(request) { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY) }
+    fun recognize(uri: Uri, request: org.json.JSONObject): Recognition = recognition(request) { ctx.contentResolver.openFileDescriptor(uri, "r") }
+    fun recognize(bitmap: Bitmap, request: org.json.JSONObject): Recognition = recognition(request) { descriptorOf(bitmap) }
+
+    private fun recognition(request: org.json.JSONObject, open: () -> ParcelFileDescriptor?): Recognition {
+        val route = request.optString("route", RecognitionConfig.ML)
+        return runCatching { Recognition.parse(ask(RECOGNIZE, open, request.toString(), BuildConfig.IMAGE_RECOGNIZE_CONTRACT), route) }
+            .getOrElse { Recognition.failed(route, it.message ?: it.toString()) }
+    }
+
+    /**
+     * #772 the live decision-model catalogue for the OpenRouter route's picker, fetched by the
+     * engine (it holds the network): slug, whether it takes images, USD per prompt token.
+     * Empty when the engine or the network cannot answer — the declared default still works.
+     */
+    fun decisionModels(request: org.json.JSONObject): List<DecisionModel> = runCatching {
+        val a = JSONObject(ask(MODELS, { null }, request.toString(), BuildConfig.IMAGE_RECOGNIZE_CONTRACT)).getJSONArray("models")
+        (0 until a.length()).map { a.getJSONObject(it) }.map { DecisionModel(it.getString("slug"), it.optBoolean("images"), if (it.isNull("prompt_price")) null else it.optDouble("prompt_price")) }
+    }.getOrDefault(emptyList())
+
     private fun barcode(open: () -> ParcelFileDescriptor?): BarcodeScan? {
         val o = runCatching { JSONObject(ask(BARCODE, open)) }.getOrNull() ?: return null
         if (!o.optBoolean("found")) return null
@@ -116,13 +146,22 @@ class ImageScanEngine(context: Context) {
         )
     }
 
-    /** Every engine call: the handshake, then the caller-opened descriptor over the binder. */
-    private fun ask(method: String, open: () -> ParcelFileDescriptor?): String {
-        val why = check()
+    /**
+     * Every engine call: the handshake (at [needed]), then the caller-opened descriptor over the
+     * binder — with a JSON [request] on the contract-2 entry point when there is one.
+     */
+    private fun ask(method: String, open: () -> ParcelFileDescriptor?, request: String? = null, needed: Int = BuildConfig.IMAGE_ENGINE_MIN_CONTRACT): String {
+        val why = check(needed)
         val r = remote
         if (why != null || r == null) throw IllegalStateException(why ?: "the image-scan engine is not ready")
-        val fd = open() ?: throw IllegalStateException("cannot open the image")
-        return fd.use { r.scan(method, it) } ?: throw IllegalStateException("the image-scan engine did not answer $method")
+        val fd = open()
+        if (fd == null && request == null) throw IllegalStateException("cannot open the image")
+        return try {
+            (if (request == null) r.scan(method, fd) else r.scanWith(method, request, fd))
+                ?: throw IllegalStateException("the image-scan engine did not answer $method")
+        } finally {
+            fd?.close()
+        }
     }
 
     /** A Bitmap has no descriptor: write it once as PNG into this app's cache, open it, unlink it. */
@@ -144,10 +183,15 @@ class ImageScanEngine(context: Context) {
         // consumer compiles the engine, and that is the point.
         const val BARCODE = "barcode"
         const val OCR = "ocr"
+        const val RECOGNIZE = "recognize"
+        const val MODELS = "models"
 
         const val BIND_TIMEOUT_MS = 4000L
     }
 }
+
+/** #772 one decision model the OpenRouter route may run on. */
+data class DecisionModel(val slug: String, val images: Boolean, val promptPrice: Double?)
 
 /** One successful barcode decode: the format name, the raw value, and its typed meaning. */
 data class BarcodeScan(

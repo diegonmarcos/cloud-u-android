@@ -13,4 +13,10 @@ interface IImageScanEngine {
 
     /** Method names this engine answers, so a caller can degrade knowingly. */
     String[] methods();
+    /**
+     * #772 contract 2: [method] over the image with a JSON [request] (recognize: route, model,
+     * thresholds — RecognitionConfig.request); models takes no image (null). Appended, so
+     * contract-1 callers are unaffected.
+     */
+    String scanWith(String method, String request, in ParcelFileDescriptor image);
 }

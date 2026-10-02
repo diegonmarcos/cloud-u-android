@@ -4,6 +4,10 @@
      compile libs:ml-l-image and bind this service with a file descriptor of the image. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- #772 the OpenRouter recognition route and its model catalogue (libs:decisions, over
+         Android's resolver so the fleet DNS menu applies). The on-device route needs none. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application>
         <!-- Guarded by the constellation's signature-level permission: only APKs signed
              with the Cloud key can bind it. The action is how the handshaking client FINDS
@@ -18,7 +22,7 @@
             </intent-filter>
             <meta-data
                 android:name="com.diegonmarcos.cloud.engine.CONTRACT"
-                android:value="1" />
+                android:value="2" />
         </service>
     </application>
 </manifest>

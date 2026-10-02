@@ -36,6 +36,18 @@ def imageEnginePackage     = engineFleet.package.toString()
 def imageEngineAction      = engineDecl.action.toString().replace('{package}', imageEnginePackage)
 def imageEngineMinContract = engineDecl.min_contract as int
 if (imageEngineMinContract < 1) throw new GradleException("libs:ml-l-image: engines.image.min_contract must be >= 1")
+// #772 recognize/models need contract 2; the floor for barcode/OCR stays min_contract.
+def imageRecognizeContract = (engineDecl.method_contracts?.recognize ?: 0) as int
+if (imageRecognizeContract < imageEngineMinContract) throw new GradleException("libs:ml-l-image: engines.image.method_contracts.recognize must be >= min_contract")
+// #772 THE image-recognition declaration (recognition.json beside this file), baked whole for
+// RecognitionConfig; a route without an https endpoint would send the token in clear.
+def recognitionFile = new File(moduleDir, 'recognition.json')
+def recognition = new groovy.json.JsonSlurper().parse(recognitionFile)
+if (!(recognition.openrouter?.endpoint ?: '').startsWith('https://') || !(recognition.openrouter?.models_url ?: '').startsWith('https://'))
+    throw new GradleException("libs:ml-l-image: recognition.json openrouter endpoint and models_url must be https")
+if (!recognition.routes?.containsKey(recognition.default_route))
+    throw new GradleException("libs:ml-l-image: recognition.json default_route '${recognition.default_route}' is not one of its routes")
+def imageRecognitionB64 = recognitionFile.text.bytes.encodeBase64().toString()
 
 android {
     namespace 'com.diegonmarcos.superapp.image'
@@ -46,6 +58,8 @@ android {
         buildConfigField "String", "IMAGE_ENGINE_PACKAGE",      "\"${imageEnginePackage}\""
         buildConfigField "String", "IMAGE_ENGINE_ACTION",       "\"${imageEngineAction}\""
         buildConfigField "int",    "IMAGE_ENGINE_MIN_CONTRACT", "${imageEngineMinContract}"
+        buildConfigField "int",    "IMAGE_RECOGNIZE_CONTRACT",  "${imageRecognizeContract}"
+        buildConfigField "String", "IMAGE_RECOGNITION_B64",     "\"${imageRecognitionB64}\""
         // Resolved in THIS library's manifest (ProcessLibraryManifest merges with the
         // library's own placeholders), so every consumer's merged manifest queries the
         // engine: on Android 11+ an unqueried package reads exactly like "not installed".
@@ -72,4 +86,6 @@ kotlin {
 dependencies {
     // BarcodePayloadParser is pure JVM; its suite runs in the unit phase of every consumer.
     testImplementation 'junit:junit:4.13.2'
+    // #772 the real org.json for RecognitionTest (android.jar's copy is a stub that throws).
+    testImplementation 'org.json:json:20240303'
 }

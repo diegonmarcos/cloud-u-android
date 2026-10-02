@@ -18,7 +18,9 @@ shape), from the declarations alone:
   K2  that module's manifest has a service declaring the engine CONTRACT, and
       the app's action ({package}.ENGINE) is the action that service answers
       (${applicationId}.ENGINE) once both placeholders are the package;
-  K3  the contract the app needs is not above the contract the engine declares;
+  K3  the contract the app needs is not above the contract the engine declares,
+      and neither is any per-method floor (#772 method_contracts: recognize needs
+      contract 2 while barcode/ocr stay at the binding's min_contract);
   K4  every method the app's client calls is a method the engine's service
       lists -- an engine that drops one breaks every installed copy of that app;
   K5  the client reads the same CONTRACT key the engine declares;
@@ -276,6 +278,10 @@ def check(root):
             need = decl.get("min_contract")
             if not isinstance(need, int) or need > contract:
                 bad.append("K3 %s: the app needs contract %r and the engine declares %d" % (where, need, contract))
+            for meth, floor in sorted((decl.get("method_contracts") or {}).items()):
+                if not isinstance(floor, int) or floor > contract or (isinstance(need, int) and floor < need):
+                    bad.append("K3 %s: method %s needs contract %r, the engine declares %d and the binding's floor is %r"
+                               % (where, meth, floor, contract, need))
             path, calls, key_read = client_calls(app_dir, key)
             if path is None or not calls:
                 bad.append("K4 %s: no client in %s reaches this engine through ask(...) -- nothing to hold the engine to" % (where, app))

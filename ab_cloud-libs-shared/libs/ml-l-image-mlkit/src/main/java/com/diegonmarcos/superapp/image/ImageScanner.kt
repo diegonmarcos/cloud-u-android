@@ -37,7 +37,9 @@ internal class ImageScanner {
     // The text-recognition client is a singleton per options (ML Kit returns the
     // same instance for identical options), so it is created once and never
     // closed — closing it would poison every later call in this process.
-    private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    // Lazy since #772: the recognizer builds a scanner for barcodes and bitmaps too, and a
+    // request with ocr off (or a JVM suite) must not need ML Kit's context to exist.
+    private val textRecognizer by lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
 
     // ── barcode decode (ZXing) ──────────────────────────────────────────────
 
@@ -70,7 +72,7 @@ internal class ImageScanner {
      * side: ZXing's TRY_HARDER pass on a whole-phone photo only helps if the
      * bitmap is not so huge that the binarizer starves it of memory.
      */
-    private fun decodeBarcode(bitmap: Bitmap): Pair<String, String>? {
+    internal fun decodeBarcode(bitmap: Bitmap): Pair<String, String>? {
         val prepared = prepareForScan(bitmap)
         val width = prepared.width
         val height = prepared.height
@@ -106,7 +108,7 @@ internal class ImageScanner {
      * with confidence — enough for select/copy/share and save-as-.md consumers.
      * A null confidence or language is simply absent from the JSON.
      */
-    private fun recognizeText(bitmap: Bitmap): JSONObject {
+    internal fun recognizeText(bitmap: Bitmap): JSONObject {
         val prepared = prepareForOcr(bitmap)
         return try {
             // InputImage.fromBitmap with rotation 0: the bitmap is already
@@ -159,7 +161,7 @@ internal class ImageScanner {
      * downsampling to at most [MAX_DECODE_DIMENSION]. Null when the bytes are not
      * an image the platform can decode.
      */
-    private fun loadBitmap(image: ByteArray): Bitmap? {
+    internal fun loadBitmap(image: ByteArray): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(image, 0, image.size, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -235,20 +237,7 @@ internal class ImageScanner {
         return rotated
     }
 
-    // The ML Kit process() call is a Task; this blocks on it the same way the
-    // translate engine's LocalTranslateEngineClient blocks on its ML Kit calls.
-    private fun <T> com.google.android.gms.tasks.Task<T>.awaitBlocking(): T {
-        val latch = java.util.concurrent.CountDownLatch(1)
-        var value: T? = null
-        var failure: Exception? = null
-        addOnSuccessListener { result -> value = result; latch.countDown() }
-        addOnFailureListener { error -> failure = error as? Exception ?: RuntimeException(error); latch.countDown() }
-        latch.await(30, java.util.concurrent.TimeUnit.SECONDS)
-        if (failure != null) throw failure
-        return value ?: throw RuntimeException("ML Kit text recognition timed out after 30 seconds")
-    }
-
-    private companion object {
+    internal companion object {
         /** The load-failure reason, verbatim: Media Center's ScanOutcomeReducer matches it. */
         const val CANNOT_DECODE = "cannot decode the image"
 
@@ -263,3 +252,16 @@ internal class ImageScanner {
     }
 }
 
+// The ML Kit process() call is a Task; this blocks on it the same way the translate engine's
+// LocalTranslateEngineClient blocks on its ML Kit calls. Top-level since #772: the recognizer's
+// labelling and object detection wait on their Tasks the same way.
+internal fun <T> com.google.android.gms.tasks.Task<T>.awaitBlocking(): T {
+    val latch = java.util.concurrent.CountDownLatch(1)
+    var value: T? = null
+    var failure: Exception? = null
+    addOnSuccessListener { result -> value = result; latch.countDown() }
+    addOnFailureListener { error -> failure = error as? Exception ?: RuntimeException(error); latch.countDown() }
+    latch.await(30, java.util.concurrent.TimeUnit.SECONDS)
+    if (failure != null) throw failure!!
+    return value ?: throw RuntimeException("ML Kit timed out after 30 seconds")
+}

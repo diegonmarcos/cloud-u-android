@@ -1,0 +1,89 @@
+{
+  "_doc": "#772 THE ONE declaration of image recognition, shared by every app that compiles this contract (Cloud Camera and Cloud Calc first): which routes exist, which is the default, the thresholds, the colour names, and the OpenRouter route's endpoint, model, categories and questions. libs:ml-l-image bakes it into BuildConfig (IMAGE_RECOGNITION_B64), RecognitionConfig reads it, and every recognize request carries the parts the engine needs, so the engine (Cloud-Lib-Ml-L-Image-Mlkit.apk) holds no copy of its own and an edit here re-ships the apps that show it. Per device, each app keeps only the user's route and model choice (RecognitionPrefs).",
+  "_doc_routes": "ml = on-device ML Kit (image labelling, object detection with boxes, text recognition) plus ZXing barcodes and the dominant colours: fully offline, the default. openrouter = a decision model on OpenRouter's Decisions API (libs:decisions) asked one choice over `categories` plus the extra `questions`, the photo attached as an image part and the on-device colours as text: decision models answer with calibrated probabilities, mapped into the same labels/answers shape. When the OpenRouter route fails (no token, HTTP error, timeout) and fallback_to_ml is true, the on-device route answers and the result says fell_back with the reason. A model that cannot see images still answers, from the text part: that is why the colours ride along.",
+  "default_route": "ml",
+  "routes": {
+    "ml": "On-device ML (offline)",
+    "openrouter": "OpenRouter decision model"
+  },
+  "fallback_to_ml": true,
+  "ml": {
+    "max_side": 1024,
+    "min_confidence": 0.5,
+    "max_labels": 10,
+    "max_objects": 5,
+    "ocr": true,
+    "barcode": true
+  },
+  "colours": {
+    "max": 5,
+    "_doc_names": "The vocabulary a dominant colour is named in: the nearest by the redmean distance. Hex values are sRGB.",
+    "names": {
+      "black": "#000000",
+      "white": "#FFFFFF",
+      "grey": "#808080",
+      "silver": "#C0C0C0",
+      "red": "#E53935",
+      "maroon": "#800000",
+      "orange": "#FB8C00",
+      "yellow": "#FDD835",
+      "olive": "#808000",
+      "lime": "#9CCC65",
+      "green": "#2E7D32",
+      "teal": "#00897B",
+      "cyan": "#00BCD4",
+      "blue": "#1E88E5",
+      "navy": "#000080",
+      "purple": "#8E24AA",
+      "pink": "#EC407A",
+      "brown": "#6D4C41",
+      "beige": "#F5F5DC",
+      "gold": "#FFD700"
+    }
+  },
+  "openrouter": {
+    "endpoint": "https://openrouter.ai/api/alpha/decisions",
+    "models_url": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+    "account_provider": "openrouter",
+    "timeout_ms": 15000,
+    "default_model": "typesafe/jev-1.13",
+    "image_side": 512,
+    "instructions": "Which category best describes the main subject of this photo? The photo is attached when the model can see it; `measured` lists what the phone measured on-device (dominant colours) and any text the user added as `context`.",
+    "categories": {
+      "object": "A manufactured object, tool, device or household item.",
+      "plant": "A plant, flower, tree or leaves.",
+      "animal": "An animal or insect.",
+      "food": "Food, a dish, fruit or vegetables.",
+      "person": "A person or people.",
+      "vehicle": "A car, bicycle, boat, plane or other vehicle.",
+      "building": "A building, room or interior.",
+      "document": "A document, sign, label, receipt or screen of text.",
+      "material": "A close-up of a material or texture: wood, fabric, stone, metal, plastic.",
+      "landscape": "A landscape, sky, water or outdoor scene.",
+      "other": "Something else, or too unclear to say."
+    },
+    "questions": {
+      "text_present": {
+        "label": "Text present?",
+        "type": "noul",
+        "instructions": "The photo shows readable text or numbers."
+      },
+      "damaged": {
+        "label": "Damaged?",
+        "type": "noul",
+        "instructions": "The main subject looks damaged, broken, worn or spoiled."
+      },
+      "ripe": {
+        "label": "Ripe?",
+        "type": "choice",
+        "instructions": "If the main subject is fruit or vegetables, how ripe is it?",
+        "criteria": {
+          "unripe": "Unripe.",
+          "ripe": "Ripe, ready to eat.",
+          "overripe": "Overripe or going off.",
+          "not_produce": "The subject is not fruit or vegetables."
+        }
+      }
+    }
+  }
+}
