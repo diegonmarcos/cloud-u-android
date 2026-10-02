@@ -64,6 +64,7 @@ class JevTest {
          "timeout_ms":1000,"catalog_ttl_hours":24,
          "uses":{"route":"typesafe/jev-1.13","score":"cheapest","_doc":"x"},
          "fallback_model":"typesafe/jev-1.13",
+         "use_labels":{"route":"Routing","_doc":"x"},
          "route":{"instructions":"Which tool?","none_criterion":"Nothing to compute.","threshold":0.75,
            "candidates":2,"candidate_min_p":0.1,"on_error":"expression","fallback_mode":"standard",
            "slot_threshold":0.6,"slot_instructions":"Which number is the {field}?",
@@ -110,6 +111,9 @@ class JevTest {
         assertEquals(setOf("route", "score"), c.uses.keys)
         assertEquals(JevConfig.CHEAPEST, c.model("score"))
         assertEquals(JevConfig.CHEAPEST, c.model("unknown"))
+        assertEquals("Routing", c.useLabel("route"))
+        assertEquals("score", c.useLabel("score"))
+        assertEquals(setOf("route"), c.useLabels.keys)
         // org.json's JVM JSONObject is a HashMap: compare as sets (Android's keeps declared order).
         assertEquals(setOf("units", "tip", "timer", "meter"), c.route.tools.map { it.id }.toSet())
         assertEquals(JevConfig.Tool("tip", "A tip.", "form", "finance", "tip"), c.route.tools.first { it.id == "tip" })

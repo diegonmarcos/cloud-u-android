@@ -11,8 +11,9 @@
 #       draws the "no renderer" line, a renderer no mode uses is dead code.
 #   C3  every declared tab and section icon has a branch in IconCatalog — a misspelt name
 #       would silently draw the fallback.
-#   C4  RECORD_AUDIO: the manifest declares it and exactly one Kotlin file
-#       (MeterScreen.kt) asks for it, so no other mode can ever pop the dialog.
+#   C4  RECORD_AUDIO: the manifest declares it and exactly one Kotlin file asks for it
+#       (#772: ui/SoundScreens.kt's MicGate, which every listening sound mode composes
+#       through), so no other mode can ever pop the dialog.
 #   C5  the engine stays an engine: no gradle file, settings or module map of this
 #       app names libs:calc, and no app source loads a native library — every
 #       calculation crosses to Cloud-Lib-Calc.
@@ -35,6 +36,12 @@
 #       is kept in ONE file (decide/JevStore.kt alone touches EncryptedSharedPreferences and
 #       revealAiKey); nothing under decide/ or jev/ calls android.util.Log (a token must never
 #       reach logcat); /api/<jev_group>/ documents and answers route and config.
+#   C12 #772 the Sound tools: /api/<sound_group>/ documents and answers generate, analyze and
+#       status and never names an op `state`; ONE microphone reader and ONE player
+#       (audio/Audio.kt alone constructs AudioRecord / AudioTrack); every played buffer went
+#       through the safe-volume guard (Player.play is called by audio/SoundFlow.kt alone, which
+#       calls Generator.guard); the declared guard is sane (0 < loud_amplitude <= max_amplitude
+#       <= 1); jev.identify.sound and a `sound` model use are declared.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -115,9 +122,10 @@ for t in tabs + sections:
 manifest = open(os.path.join(app, "app", "src", "main", "AndroidManifest.xml"), encoding="utf-8").read()
 if 'android.permission.RECORD_AUDIO' not in manifest:
     bad.append("C4 the manifest does not declare RECORD_AUDIO — the meter could never be granted")
-askers = sorted(os.path.relpath(p, src) for p in kts if "RECORD_AUDIO" in code(p))
-if askers != ["ui/MeterScreen.kt"]:
-    bad.append("C4 RECORD_AUDIO must be asked for by ui/MeterScreen.kt alone, found in %s" % askers)
+ask_mic = re.compile(r"\.launch\(\s*(android\.)?Manifest\.permission\.RECORD_AUDIO\s*\)")
+askers = sorted(os.path.relpath(p, src) for p in kts if ask_mic.search(code(p)))
+if askers != ["ui/SoundScreens.kt"]:
+    bad.append("C4 RECORD_AUDIO must be asked for by ui/SoundScreens.kt alone (MicGate), found in %s" % askers)
 
 # C5
 names_engine = re.compile(r"libs[:/]calc\b")
@@ -241,14 +249,43 @@ for op in ("route", "config"):
 if not bj["ui"].get("debug_api", {}).get("jev_group"):
     bad.append("C11 build.json::ui.debug_api.jev_group is missing")
 
+# C12
+sapi_path = os.path.join(src, "debugapi", "SoundDebugApi.kt")
+sapi = code(sapi_path) if os.path.isfile(sapi_path) else ""
+if "BuildConfig.DEBUG_API_SOUND_GROUP" not in sapi:
+    bad.append("C12 SoundDebugApi does not register under build.json::ui.debug_api.sound_group")
+for op in ("generate", "analyze", "status"):
+    if not re.search(r'AppDebugServer\.Op\("%s"' % op, sapi) or not re.search(r'"%s" ->' % op, sapi):
+        bad.append("C12 /api/<sound_group>/%s is not both documented and answered" % op)
+if re.search(r'"state" ->', sapi):
+    bad.append("C12 SoundDebugApi answers an op named state — that key is GET /api/state's (update-ack guard)")
+if not bj["ui"].get("debug_api", {}).get("sound_group"):
+    bad.append("C12 build.json::ui.debug_api.sound_group is missing")
+for cls in ("AudioRecord", "AudioTrack"):
+    makers = sorted(os.path.relpath(p, src) for p in kts if re.search(r"\b%s(\.Builder)?\(" % cls, code(p)))
+    if makers != ["audio/Audio.kt"]:
+        bad.append("C12 %s must be constructed by audio/Audio.kt alone, found in %s" % (cls, makers))
+players = sorted(os.path.relpath(p, src) for p in kts if re.search(r"\bPlayer\.play\(", code(p)))
+if players != ["audio/SoundFlow.kt"]:
+    bad.append("C12 Player.play must be called by audio/SoundFlow.kt alone (the guarded path), found in %s" % players)
+flow = os.path.join(src, "audio", "SoundFlow.kt")
+if os.path.isfile(flow) and "Generator.guard(" not in code(flow):
+    bad.append("C12 audio/SoundFlow.kt plays without Generator.guard — the safe-volume limit would be skipped")
+gen = (bj.get("sound") or {}).get("generator") or {}
+mx, loud = gen.get("max_amplitude"), gen.get("loud_amplitude")
+if not (isinstance(mx, (int, float)) and isinstance(loud, (int, float)) and 0 < loud <= mx <= 1):
+    bad.append("C12 build.json::sound.generator needs 0 < loud_amplitude <= max_amplitude <= 1 (got %s, %s)" % (loud, mx))
+if "sound" not in ((jev.get("identify") or {})) or "sound" not in (jev.get("uses") or {}):
+    bad.append("C12 build.json::jev must declare identify.sound and a sound model use")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C11 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C11"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C12 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C12"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -283,7 +320,7 @@ mutate mode-orphan-tab build.json 's.replace("\"tab\": \"history\"", "\"tab\": \
 mutate kind-without-renderer "$J/ui/ModeScreens.kt" 's.replace("\"plot\" -> PlotMode(mode)", "")' "C2 kind plot is declared"
 mutate dead-renderer "$J/ui/ModeScreens.kt" 's.replace("\"history\" -> HistoryMode(mode)", "\"history\" -> HistoryMode(mode)\n            \"abacus\" -> HistoryMode(mode)")' "C2 ModeScreen renders kind abacus"
 mutate icon-misspelt build.json 's.replace("\"icon\": \"chart\"", "\"icon\": \"chrat\"")' "C3 tab graph icon"
-mutate mic-elsewhere "$J/ui/ModeScreens.kt" 's + "\nprivate val leak = android.Manifest.permission.RECORD_AUDIO\n"' "C4 RECORD_AUDIO must be asked for"
+mutate mic-elsewhere "$J/ui/ModeScreens.kt" 's + "\nprivate fun nag(l: androidx.activity.result.ActivityResultLauncher<String>) = l.launch(android.Manifest.permission.RECORD_AUDIO)\n"' "C4 RECORD_AUDIO must be asked for"
 mutate mic-undeclared app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />", "")' "C4 the manifest does not declare"
 mutate engine-in-module-map build.json 's.replace("\"libs:bottomnav\": {", "\"libs:calc\": {\"dir\": \"../ab_cloud-libs-shared/libs/calc\"},\n    \"libs:bottomnav\": {")' "C5 build.json names libs:calc"
 mutate engine-compiled app/build.gradle 's.replace("implementation project(\x27:libs:bottomnav\x27)", "implementation project(\x27:libs:bottomnav\x27)\n    implementation project(\x27:libs:calc\x27)")' "C5 app/build.gradle names libs:calc"
@@ -316,5 +353,13 @@ mutate alarm-not-clock "$J/clock/ClockEngine.kt" 's.replace("w.clock && exact ->
 mutate clock-op-dropped "$J/debugapi/ClockDebugApi.kt" 's.replace("\"timer_cancel\" -> {", "\"timer_kill\" -> {")' "C10 /api/<clock_group>/timer_cancel"
 mutate clock-op-state "$J/debugapi/ClockDebugApi.kt" 's.replace("\"status\" -> status(ctx).toString()", "\"status\", \"state\" -> status(ctx).toString()\n        \"state\" -> status(ctx).toString()")' "C10 ClockDebugApi answers an op named state"
 
-echo "── C1-C11 + mutations: $FAILURES failure(s) ──"
+mutate sound-op-dropped "$J/debugapi/SoundDebugApi.kt" 's.replace("\"analyze\" -> analyze(app, q).toString()", "")' "C12 /api/<sound_group>/analyze"
+mutate sound-op-state "$J/debugapi/SoundDebugApi.kt" 's.replace("\"status\" -> status(app).toString()", "\"state\" -> status(app).toString()")' "C12 SoundDebugApi answers an op named state"
+mutate second-mic "$J/ui/SoundScreens.kt" 's + "\nprivate fun mic() = android.media.AudioRecord(1, 44100, 16, 2, 4096)\n"' "C12 AudioRecord must be constructed by audio/Audio.kt alone"
+mutate unguarded-play "$J/ui/SoundScreens.kt" 's.replace("OutlinedButton(onClick = { Player.stop() })", "OutlinedButton(onClick = { Player.play(ShortArray(44100) { 32767 }, 44100) })")' "C12 Player.play must be called by audio/SoundFlow.kt alone"
+mutate guard-skipped "$J/audio/SoundFlow.kt" 's.replace("val g = Generator.guard(spec, cfg.limits, cfg.sampleRate, Player.deviceVolume(ctx))", "val g = Generator.Guarded(spec, emptyList())")' "C12 audio/SoundFlow.kt plays without Generator.guard"
+mutate guard-loud build.json 's.replace("\"max_amplitude\": 0.5", "\"max_amplitude\": 1.5")' "C12 build.json::sound.generator needs"
+mutate no-sound-use build.json 's.replace("\"sound\": \"typesafe/jev-1.13\"", "\"noise\": \"typesafe/jev-1.13\"")' "C12 build.json::jev must declare identify.sound"
+
+echo "── C1-C12 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

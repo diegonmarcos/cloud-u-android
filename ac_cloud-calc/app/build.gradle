@@ -61,6 +61,11 @@ if (!jevGroup) throw new GradleException("build.json::ui.debug_api.jev_group mis
 // validates it on the phone, and Configs › Routing's edit replaces this same JSON.
 if (buildJson.jev == null) throw new GradleException("build.json::jev missing — Jev mode would have no routing table")
 def jevConfigB64  = b64(buildJson.jev)
+// #772 THE Sound tools declaration (build.json::sound), baked whole; audio/SoundDecl.kt is its reader.
+if (buildJson.sound == null) throw new GradleException("build.json::sound missing — the Sound tools would have no analysis or generator limits")
+def soundConfigB64 = b64(buildJson.sound)
+def soundGroup    = (buildJson.ui.debug_api?.sound_group ?: '').toString()
+if (!soundGroup) throw new GradleException("build.json::ui.debug_api.sound_group missing — /api/sound/* would register under no name")
 
 // THE calc ENGINE this app binds (build.json::engines.calc): its package comes from the
 // constellation fleet manifest, for BuildConfig AND the manifest's <queries> — on API 30+ an
@@ -125,6 +130,8 @@ android {
         buildConfigField "String", "DEBUG_API_CLOCK_GROUP", "\"${clockGroup}\""
         buildConfigField "String", "DEBUG_API_JEV_GROUP", "\"${jevGroup}\""
         buildConfigField "String", "JEV_CONFIG_B64",  "\"${jevConfigB64}\""
+        buildConfigField "String", "SOUND_CONFIG_B64", "\"${soundConfigB64}\""
+        buildConfigField "String", "DEBUG_API_SOUND_GROUP", "\"${soundGroup}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"

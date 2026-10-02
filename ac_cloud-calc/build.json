@@ -1,6 +1,6 @@
 {
   "name": "cloud-calc",
-  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sensors (Sound meter) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, and by the Jev section's calls to OpenRouter (build.json::jev; jev/Decisions.kt is the only app file that opens a URL); Calculator and Measure work without either, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sound (#772: meter/oscilloscope/tuner, Wave detection, History with waterfall and CSV/WAV export, Generator, What is it?) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, and by the Jev section's calls to OpenRouter (build.json::jev; jev/Decisions.kt is the only app file that opens a URL); Calculator and Measure work without either, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -169,6 +169,12 @@
       "route": "typesafe/jev-1.13",
       "score": "cheapest",
       "sound": "typesafe/jev-1.13"
+    },
+    "_doc_use_labels": "What Configs > Models calls each use in `uses`; a use with no label shows its id.",
+    "use_labels": {
+      "route": "Jev mode routing",
+      "score": "Result scoring",
+      "sound": "What is this sound?"
     },
     "fallback_model": "typesafe/jev-1.13",
     "route": {
@@ -435,6 +441,72 @@
       ]
     }
   },
+  "_doc_sound": "#772 THE ONE declaration of the Sound tools (Measure ▸ Sound). sample_rate is the capture and playback rate. analysis is :sound Analysis.Params, every threshold of wave detection: frame/hop (FFT frames, samples), block (the envelope and gate resolution), fmin/fmax and yin_threshold (pitch), gate_db over the buffer's own noise floor (10th percentile of block levels) with silence_db as the absolute floor, min_event_ms and merge_gap_ms (segmentation), impulse_ms/impulse_decay_ms, noise_flatness, tone_stability and chirp_change (the event kinds), periodic_cv (a train of events), harmonics (how many are measured), onset_k/onset_window/onset_delta/onset_rise_db (spectral-flux onsets). defaults seed the three per-device knobs the user can change on any sound screen: calibration_db (added to every dBFS level; a phone microphone is uncalibrated, so 0 means relative), a4_hz (the tuning reference of note names) and temperature_c (the speed of sound behind every wavelength). record_ms is how long Wave detection and What is it? listen. history: refresh_ms between readings, max_samples kept, waterfall rows and log bands from fmin_hz, max_wav_seconds of raw audio kept for the WAV export. generator: the safe-volume guard (max_amplitude of full scale; above loud_volume of the device's media volume the cap drops to loud_amplitude), the frequency band, the beat limit, max_ms, the fade, and the screen's defaults. identify.spectrogram is the image size sent to a decision model whose catalogue entry takes images.",
+  "sound": {
+    "sample_rate": 44100,
+    "analysis": {
+      "frame": 2048,
+      "hop": 512,
+      "block": 256,
+      "fmin": 50,
+      "fmax": 4000,
+      "yin_threshold": 0.15,
+      "gate_db": 12,
+      "silence_db": -70,
+      "min_event_ms": 5,
+      "merge_gap_ms": 60,
+      "impulse_ms": 50,
+      "impulse_decay_ms": 300,
+      "noise_flatness": 0.2,
+      "tone_stability": 0.03,
+      "chirp_change": 0.25,
+      "periodic_cv": 0.15,
+      "harmonics": 8,
+      "onset_k": 1.5,
+      "onset_window": 8,
+      "onset_delta": 0.15,
+      "onset_rise_db": 0.5
+    },
+    "defaults": {
+      "calibration_db": 0,
+      "a4_hz": 440,
+      "temperature_c": 20
+    },
+    "record_ms": 3000,
+    "max_record_ms": 30000,
+    "history": {
+      "refresh_ms": 100,
+      "max_samples": 3000,
+      "waterfall_rows": 120,
+      "bands": 64,
+      "fmin_hz": 20,
+      "max_wav_seconds": 60
+    },
+    "generator": {
+      "max_amplitude": 0.5,
+      "min_hz": 20,
+      "max_hz": 20000,
+      "max_beat_hz": 20,
+      "max_ms": 10000,
+      "fade_ms": 5,
+      "loud_volume": 0.7,
+      "loud_amplitude": 0.2,
+      "defaults": {
+        "kind": "tone",
+        "wave": "sine",
+        "f1": 440,
+        "f2": 880,
+        "amplitude": 0.3,
+        "ms": 1000
+      }
+    },
+    "identify": {
+      "spectrogram": {
+        "width": 256,
+        "height": 128
+      }
+    }
+  },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
     "_doc_sections": "#770 the three top-level sections, in display order: a segmented row at the top picks one, and the bottom nav shows the tabs whose `section` is its id. Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. test/test-calc-shell.sh fails on a section with no tab and on a tab naming no section.",
@@ -484,7 +556,7 @@
       },
       {
         "id": "sensors",
-        "label": "Sensors",
+        "label": "Sound",
         "icon": "mic",
         "section": "measure"
       },
@@ -513,7 +585,7 @@
         "section": "jev"
       }
     ],
-    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost).",
+    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost). #772 the Sound tab adds four kinds whose data is build.json::sound, not the mode: sound_events (listen, then events named impulse/chirp/noise/tone/complex with their features, onsets, periodicity), sound_history (a running session: waterfall, level/frequency/wavelength over time, saved as CSV/WAV and exported through the system file picker), sound_generator (tones, sweeps, noise, dual tone, beats behind the safe-volume guard; no microphone) and sound_identify (the measurements, never the audio, sent to the sound model with build.json::jev.identify.sound's classes; every probability shown). The microphone is asked for only by a listening sound mode, through ui/SoundScreens.kt's MicGate.",
     "modes": [
       {
         "id": "standard",
@@ -1360,14 +1432,40 @@
         "label": "Sound meter",
         "tab": "sensors",
         "kind": "meter",
-        "_doc": "Microphone level and spectrum, computed in THIS process: audio capture is granted per package (RECORD_AUDIO), so the engine's process could not record (the libs:contacts boundary, #763 `pinned`). Asked for only when this mode opens. Levels are dBFS plus `calibration_db`, which defaults to 0 because no phone microphone is calibrated: the number is relative unless a known source sets the offset.",
+        "_doc": "Microphone level, waveform and spectrum, computed in THIS process: audio capture is granted per package (RECORD_AUDIO), so the engine's process could not record (the libs:contacts boundary, #763 `pinned`). Asked for only when a listening sound mode opens. #772 the meter is also the oscilloscope and tuner: dB with A and C weighting, sample peak, dominant frequency, fundamental with note and cents, wavelength. The sample rate and the calibration offset are build.json::sound's (one knob for every sound mode); this object keeps only what is the meter's own.",
         "meter": {
-          "sample_rate": 44100,
           "fft_size": 4096,
           "refresh_ms": 100,
-          "calibration_db": 0,
           "a_weighting": true
         }
+      },
+      {
+        "id": "waves",
+        "label": "Wave detection",
+        "tab": "sensors",
+        "kind": "sound_events",
+        "_doc": "#772 listen for build.json::sound.record_ms, then cut the buffer into events and name each (impulse, chirp, noise, tone, complex) with its fundamental, harmonics, bandwidth, duration and envelope; onsets and periodicity of the whole. The thresholds are build.json::sound.analysis."
+      },
+      {
+        "id": "sound_log",
+        "label": "History",
+        "tab": "sensors",
+        "kind": "sound_history",
+        "_doc": "#772 a running session: a scrolling spectrogram (waterfall) plus graphs over time of the level, the dominant/fundamental frequency and its wavelength at the declared speed of sound. Saved as CSV (and WAV while the audio fits build.json::sound.history.max_wav_seconds) in the app's own storage, and exported anywhere the user picks, the Cloud Drive store included."
+      },
+      {
+        "id": "tone_gen",
+        "label": "Generator",
+        "tab": "sensors",
+        "kind": "sound_generator",
+        "_doc": "#772 tones (sine/square/triangle/saw), sweeps, white/pink noise, dual tone and beats, behind the safe-volume guard in build.json::sound.generator."
+      },
+      {
+        "id": "sound_id",
+        "label": "What is it?",
+        "tab": "sensors",
+        "kind": "sound_identify",
+        "_doc": "#772 listen, measure, and ask a decision model which of build.json::jev.identify.sound's classes the measurements describe (the model never hears the audio; a spectrogram image rides along only for a model whose catalogue entry takes images). Every class's probability and the extra questions' are shown; offline it still shows what was measured."
       },
       {
         "id": "world",
@@ -1511,11 +1609,12 @@
         }
       }
     ],
-    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state. #770 a third group, build.json::ui.debug_api.jev_group (/api/jev/*): route?q= (the routing decision, the chosen tool and its result as computed by this app; a timer only starts with run=1; never the token) and config (the routing table in force, whether it is the default or the user's edit, the models per use, and where the token comes from - masked).",
+    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state. #770 a third group, build.json::ui.debug_api.jev_group (/api/jev/*): route?q= (the routing decision, the chosen tool and its result as computed by this app; a timer only starts with run=1; never the token) and config (the routing table in force, whether it is the default or the user's edit, the models per use, and where the token comes from - masked). #772 the Sound tools register build.json::ui.debug_api.sound_group (/api/sound/*), a loopback self-test with the screen locked: generate?f=440&ms=500 (&kind, wave, f2, amp) plays a guarded tone and keeps its samples; analyze?ms=1000 records the microphone (source=mic, the default) or re-reads the last generated buffer (source=generator, no microphone at all) and reports the detected frequency, note, level and events; status reports the permission, the last generation, the history session and the saved sessions. A recording from a background app is silenced by Android, and analyze says so (silenced: true) rather than reporting a frequency of nothing.",
     "debug_api": {
       "group": "calc",
       "clock_group": "clock",
-      "jev_group": "jev"
+      "jev_group": "jev",
+      "sound_group": "sound"
     }
   },
   "tests": {

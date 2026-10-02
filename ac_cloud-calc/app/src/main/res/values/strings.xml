@@ -16,11 +16,61 @@
     <string name="history_empty">Results you keep with = appear here; tap one to reuse it.</string>
     <string name="variables">Variables</string>
     <string name="variables_empty">Define one in Calc with name := value, e.g. r := 5 cm</string>
-    <string name="mic_needed">The sound meter needs the microphone. Nothing is recorded or stored: levels are computed and discarded.</string>
+    <string name="mic_needed">The sound tools need the microphone. Audio is analysed and discarded; only a History session you save keeps it, in this app\'s own storage.</string>
     <string name="mic_allow">Allow microphone</string>
-    <string name="peak_hz">Peak %1$s Hz</string>
     <string name="meter_relative">dBFS + calibration offset. A phone microphone is uncalibrated: set the offset against a known source for absolute dB SPL.</string>
     <string name="calibration">Calibration offset (dB)</string>
+
+    <!-- #772 the Sound tools -->
+    <string name="sound_a4">Tuning A4 (Hz)</string>
+    <string name="sound_temperature">Air temperature (°C)</string>
+    <string name="sound_listen_seconds">Listen for (seconds)</string>
+    <string name="sound_listen">Listen and analyse</string>
+    <string name="sound_listening">Listening…</string>
+    <string name="sound_events_calc">Wave detection over %1$s s</string>
+    <string name="sound_level">Level</string>
+    <string name="sound_peak">Peak</string>
+    <string name="sound_frequency">Frequency</string>
+    <string name="sound_dominant">Dominant frequency</string>
+    <string name="sound_fundamental">Fundamental</string>
+    <string name="sound_wavelength">Wavelength</string>
+    <string name="sound_onsets">Onsets</string>
+    <string name="sound_periodic">Repeats every</string>
+    <string name="sound_not_periodic">not periodic</string>
+    <string name="sound_no_events">Nothing above the noise floor.</string>
+    <string name="sound_start_duration">Start · duration</string>
+    <string name="sound_bandwidth">Bandwidth</string>
+    <string name="sound_noisiness">noisiness %1$s</string>
+    <string name="sound_envelope">Envelope</string>
+    <string name="sound_attack_decay">attack %1$s ms · decay %2$s ms</string>
+    <string name="sound_harmonics">Harmonics 2…</string>
+    <string name="sound_start">Start</string>
+    <string name="sound_stop">Stop</string>
+    <string name="sound_save">Save session</string>
+    <string name="sound_saved">Saved %1$s</string>
+    <string name="sound_export">Export…</string>
+    <string name="sound_exported">Exported %1$s</string>
+    <string name="sound_sessions">Saved sessions</string>
+    <string name="sound_no_sessions">None yet: start a session, stop it, and save it.</string>
+    <string name="sound_graph_level">Level over time</string>
+    <string name="sound_graph_frequency">Frequency over time (log)</string>
+    <string name="sound_graph_wavelength">Wavelength over time (log)</string>
+    <string name="sound_f1">Frequency (Hz)</string>
+    <string name="sound_f_end">End frequency (Hz)</string>
+    <string name="sound_f_second">Second frequency (Hz)</string>
+    <string name="sound_f_beat">Beat rate (Hz)</string>
+    <string name="sound_log_sweep">Logarithmic sweep</string>
+    <string name="sound_amplitude">Amplitude (0 to %1$s of full scale)</string>
+    <string name="sound_duration_ms">Duration (ms)</string>
+    <string name="sound_play">Play</string>
+    <string name="sound_played">Played %1$s %2$s at %3$s, amplitude %4$s, %5$s ms</string>
+    <string name="sound_volume_guard">Media volume %1$s%%. Safe-volume guard: at most %2$s of full scale; above %3$s%% volume at most %4$s.</string>
+    <string name="sound_identify">Listen and identify</string>
+    <string name="sound_identify_doc">A decision model (%1$s) is sent what this app measured — never the audio — and asked which kind of sound it describes. Every probability is shown.</string>
+    <string name="sound_identify_unavailable">Decision unavailable: %1$s. The measurements below are this app\'s own and need no network.</string>
+    <string name="sound_measured">Measured</string>
+    <string name="sound_class">Kind of sound</string>
+    <string name="sound_decision_meta">%1$s · %2$s ms · cost %3$s</string>
 
     <!-- #768 the Clock tab -->
     <string name="clock_channel_ring">Ringing alarms and timers</string>
@@ -117,8 +167,6 @@
     <string name="jev_routing_saved">Saved: the router uses your table now.</string>
     <string name="jev_routing_reset">Reset to defaults</string>
     <string name="jev_routing_reset_done">Defaults restored.</string>
-    <string name="jev_use_route">Jev mode routing</string>
-    <string name="jev_use_score">Result scoring</string>
     <string name="jev_runs_on">Runs on %1$s</string>
     <string name="jev_refresh">Refresh catalogue</string>
     <string name="jev_catalogue_at">Live catalogue as of %1$s: %2$s decision models</string>

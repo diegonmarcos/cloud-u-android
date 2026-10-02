@@ -22,6 +22,8 @@ data class JevConfig(
     val uses: Map<String, String>,
     /** The model a use falls back to when nothing is cached and the use says [CHEAPEST]. */
     val fallbackModel: String,
+    /** What Configs › Models calls a use; [useLabel] falls back to the id. */
+    val useLabels: Map<String, String> = emptyMap(),
     val route: Route,
     /** Mode id → its preset follow-up questions; [ANY_MODE] is offered under every mode. */
     val ask: Map<String, List<Question>>,
@@ -78,6 +80,8 @@ data class JevConfig(
 
     fun model(use: String): String = uses[use] ?: CHEAPEST
 
+    fun useLabel(use: String): String = useLabels[use] ?: use
+
     fun questionsFor(mode: String): List<Question> = ask[mode].orEmpty() + ask[ANY_MODE].orEmpty()
 
     companion object {
@@ -112,6 +116,7 @@ data class JevConfig(
                 catalogTtlHours = o.optInt("catalog_ttl_hours", 24),
                 uses = o.req("uses").let { u -> u.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { u.getString(it) } },
                 fallbackModel = o.reqString("fallback_model"),
+                useLabels = (o.optJSONObject("use_labels") ?: JSONObject()).let { u -> u.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { u.getString(it) } },
                 route = Route(
                     instructions = r.reqString("instructions"),
                     noneCriterion = r.reqString("none_criterion"),

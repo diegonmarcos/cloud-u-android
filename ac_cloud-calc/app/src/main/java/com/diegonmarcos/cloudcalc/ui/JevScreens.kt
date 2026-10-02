@@ -385,9 +385,11 @@ fun JevModelsMode(mode: Declarations.Mode) {
     }
     LaunchedEffect(mode.id) { refresh(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
-        listOf(JevFlow.ROUTE_USE to R.string.jev_use_route, JevFlow.SCORE_USE to R.string.jev_use_score).forEach { (use, label) ->
+        // Every use build.json::jev.uses declares (#772 added sound), never a list spelled here.
+        val cfg = remember { JevStore.config(ctx) }
+        cfg.uses.keys.sorted().forEach { use ->
             val choice = remember(tick, use) { JevStore.modelChoice(ctx, use) }
-            Text(stringResource(label), style = MaterialTheme.typography.labelLarge)
+            Text(cfg.useLabel(use), style = MaterialTheme.typography.labelLarge)
             ModelPicker(choice, listOf(JevConfig.CHEAPEST) + Models.cheapestFirst(models).map { it.slug }, use) { slug ->
                 JevStore.setModelChoice(ctx, use, slug); tick++
             }

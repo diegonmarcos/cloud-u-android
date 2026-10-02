@@ -33,10 +33,8 @@ object Declarations {
     data class Choice(val label: String, val key: String, val value: Int)
     data class CatalogSource(val kind: String, val category: String)
     data class Plot(val default: String, val xmin: Double, val xmax: Double, val steps: Int)
-    data class Meter(
-        val sampleRate: Int, val fftSize: Int, val refreshMs: Int,
-        val calibrationDb: Double, val aWeighting: Boolean,
-    )
+    /** #772 the sample rate and the calibration offset are build.json::sound's, shared by every sound mode. */
+    data class Meter(val fftSize: Int, val refreshMs: Int, val aWeighting: Boolean)
 
     data class Mode(
         val id: String,
@@ -113,10 +111,7 @@ object Declarations {
                 Plot(it.optString("default"), it.optDouble("xmin", -10.0), it.optDouble("xmax", 10.0), it.optInt("steps", 200))
             },
             meter = m.optJSONObject("meter")?.let {
-                Meter(
-                    it.optInt("sample_rate", 44100), it.optInt("fft_size", 4096), it.optInt("refresh_ms", 100),
-                    it.optDouble("calibration_db", 0.0), it.optBoolean("a_weighting", true),
-                )
+                Meter(it.optInt("fft_size", 4096), it.optInt("refresh_ms", 100), it.optBoolean("a_weighting", true))
             },
             historyMax = m.optJSONObject("history")?.optInt("max_entries", 200) ?: 200,
             clock = (m.optJSONObject("clock") ?: JSONObject()).toString(),

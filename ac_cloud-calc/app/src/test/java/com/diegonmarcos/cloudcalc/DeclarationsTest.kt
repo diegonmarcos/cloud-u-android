@@ -39,6 +39,20 @@ class DeclarationsTest {
         assertEquals(emptyList<String>(), com.diegonmarcos.cloudcalc.decide.JevStore.appErrors(cfg))
     }
 
+    @Test fun `the sound block parses, is what gradle baked, and its defaults pass its own guard`() {
+        val c = com.diegonmarcos.cloudcalc.audio.SoundDecl.parse(JSONObject(File("../build.json").readText()).getJSONObject("sound").toString())
+        assertEquals(c, com.diegonmarcos.cloudcalc.audio.SoundDecl.config)
+        val a = c.analysis
+        assertTrue("frame ${a.frame}", a.frame > 0 && (a.frame and (a.frame - 1)) == 0)
+        assertTrue(a.hop in 1..a.frame && a.block in 1..a.frame)
+        assertTrue(a.fmin > 0 && a.fmax > a.fmin && a.fmax < c.sampleRate / 2.0)
+        assertTrue(a.silenceDb < 0 && a.gateDb > 0 && a.yinThreshold in 0.0..1.0)
+        assertTrue(c.a4Hz > 0 && c.temperatureC > -273.15 && c.recordMs in 100..c.maxRecordMs)
+        assertTrue(c.history.bands > 0 && c.history.rows > 0 && c.history.maxWavSeconds > 0)
+        val g = com.diegonmarcos.cloudcalc.sound.Generator.guard(c.generatorDefaults, c.limits, c.sampleRate, 0.0)
+        assertEquals("the declared defaults are already safe: ${g.notes}", emptyList<String>(), g.notes)
+    }
+
     @Test fun `every tab has a mode and every mode has a tab`() {
         tabs.forEach { t -> assertTrue("tab ${t.id} has no mode", modes.any { it.tab == t.id }) }
         modes.forEach { m -> assertTrue("mode ${m.id} names tab ${m.tab}", tabs.any { it.id == m.tab }) }

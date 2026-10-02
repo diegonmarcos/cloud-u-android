@@ -55,7 +55,7 @@ object JevDebugApi {
             .put("edited", JevStore.isEdited(ctx))
             .put("config", JSONObject(JevStore.configJson(ctx)))
             .put("models", JSONObject().apply {
-                listOf(JevFlow.ROUTE_USE, JevFlow.SCORE_USE).forEach { use ->
+                JevStore.config(ctx).uses.keys.sorted().forEach { use ->
                     put(use, JSONObject().put("choice", JevStore.modelChoice(ctx, use)).put("runs_on", JevStore.model(ctx, use)))
                 }
             })

@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.net.Uri
 
 /**
- * Registers [CalcDebugApi]'s, [ClockDebugApi]'s and [JevDebugApi]'s routes before Application.onCreate (the DriveDebugApiProvider
+ * Registers [CalcDebugApi]'s, [ClockDebugApi]'s, [JevDebugApi]'s and [SoundDebugApi]'s routes before Application.onCreate (the DriveDebugApiProvider
  * trick): a ContentProvider's onCreate runs first, so the routes exist even if the app's own
  * startup later throws. Not a real provider and not exported.
  */
@@ -17,6 +17,7 @@ class CalcDebugApiProvider : ContentProvider() {
         runCatching { CalcDebugApi.register(ctx) }
         runCatching { ClockDebugApi.register(ctx) }
         runCatching { JevDebugApi.register(ctx) }
+        runCatching { SoundDebugApi.register(ctx) }
         return true
     }
 
