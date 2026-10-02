@@ -15,12 +15,21 @@ kind `app` (nothing listed here). Its source dir is the row's repo_url path.
   G1  the app's dependency closure reaches libs:core AND libs:devtools. Seeds
       are the non-comment `<config> project(':libs:X')` lines in any gradle
       script or patch under the app's dir (patches: added lines only), expanded
-      over the shared libs' own edges (ab_cloud-libs-shared/libs/*/build.gradle*).
+      over the shared libs' own edges (ab_cloud-libs-shared/libs/*/build.gradle*)
+      into the modules the app includes — computed by cloud_android_lib_closure,
+      the same module the generator derives the ship triggers from.
       core brings CONSTELLATION_DATA; devtools brings provider, receiver and
       <queries> — one without the other is the #743 39-of-40 defect.
-  G2  the app's ship workflow (the .github/workflows/ship-*.yml that watches
-      "<dir>/**") also watches libs/core/** and libs/devtools/**, so a change to
-      the mesh lands in every member and not only in the next one to ship.
+  G2  #763, two-sided: the app's ship workflow (the .github/workflows/ship-*.yml
+      that watches "<dir>/**") watches EXACTLY the shared lib directories that
+      are inputs of the app (cloud_android_lib_closure.inputs: the dependency
+      closure, the module map, by-reference sources). Missing one means a lib
+      change does not rebuild an app it lands in — with G1 this is the old rule
+      that core/devtools are watched, so a mesh change reaches every member.
+      Watching one that is not an input means every change there rebuilds and
+      republishes the app with nothing in it, which is how one libs/devtools
+      edit came to start 30 ship runs plus the stale ones (vault watched
+      analytics, browser and updater and compiled none of them).
   G3  the shared manifests still carry the membership: core defines AND
       requests CONSTELLATION_DATA; devtools carries <queries> MESH_MEMBER, the
       FleetTokenProvider at ${applicationId}.fleet and the FleetMemberReceiver
@@ -49,46 +58,10 @@ INTERNET = "android.permission.INTERNET"
 INIT = ".DebugInitProvider"
 INIT_KT = "devtools/src/main/java/com/diegonmarcos/superapp/devtools/DebugInitProvider.kt"
 MESH = ("core", "devtools")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.dont_write_bytecode = True
+from cloud_android_lib_closure import analyse, lib_edges, shared_libs, read  # noqa: E402
 SKIP = {".git", "build", ".gradle", "node_modules", ".cxx"}
-# implementation / api / debugImplementation / "${flavor}Implementation" … — a
-# DEPENDENCY, never settings' `project(':libs:x').projectDir = …`
-DEP = re.compile(r"""(?:\bapi|[iI]mplementation)\b["')\s]*,?\s*\(?\s*project\(\s*['"]:libs:([\w-]+)['"]""")
-
-
-def deps(text, patch=False):
-    out = set()
-    for line in text.splitlines():
-        if patch:
-            if not line.startswith("+") or line.startswith("+++"):
-                continue
-            line = line[1:]
-        if line.lstrip().startswith(("//", "*", "/*")):
-            continue
-        out.update(DEP.findall(line))
-    return out
-
-
-def scripts(top):
-    for d, dirs, files in os.walk(top):
-        dirs[:] = [x for x in dirs if x not in SKIP]
-        for f in files:
-            if f.endswith((".gradle", ".gradle.kts", ".patch")):
-                yield os.path.join(d, f)
-
-
-def read(p):
-    with open(p, encoding="utf-8", errors="replace") as h:
-        return h.read()
-
-
-def closure(seed, edges):
-    seen, todo = set(), list(seed)
-    while todo:
-        m = todo.pop()
-        if m not in seen:
-            seen.add(m)
-            todo.extend(edges.get(m, ()))
-    return seen
 
 
 def manifest_gaps(root):
@@ -142,9 +115,7 @@ def removals(top):
 
 def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
-    edges = {}
-    for g in glob.glob(os.path.join(root, SHARED_LIBS, "*", "build.gradle*")):
-        edges.setdefault(os.path.basename(os.path.dirname(g)), set()).update(deps(read(g)))
+    edges, libs = lib_edges(root), shared_libs(root)
     workflows = {w: read(w) for w in glob.glob(os.path.join(root, ".github/workflows/ship-*.yml"))}
 
     gaps = [f"GAP     G3 {g}" for g in manifest_gaps(root)]
@@ -155,10 +126,8 @@ def main(argv):
         if not src or not os.path.isdir(top):
             gaps.append(f"GAP     {r['id']:16} source dir '{src}' does not exist — membership is unreadable")
             continue
-        seed = set()
-        for p in scripts(top):
-            seed |= deps(read(p), patch=p.endswith(".patch"))
-        miss = [m for m in MESH if m not in closure(seed, edges)]
+        seed, cl, inputs = analyse(root, src, edges, libs)
+        miss = [m for m in MESH if m not in cl]
         if miss:
             gaps.append(f"GAP     {r['id']:16} G1 dependency closure lacks libs:{', libs:'.join(miss)} "
                         f"(direct: {', '.join(sorted(seed)) or 'none'})")
@@ -166,10 +135,14 @@ def main(argv):
         if len(own) != 1:
             gaps.append(f"GAP     {r['id']:16} G2 {len(own)} ship workflows watch \"{src}/**\", expected 1")
         else:
-            unwatched = [m for m in MESH if f'"{SHARED_LIBS}/{m}/**"' not in workflows[own[0]]]
+            watched = set(re.findall(r'"' + re.escape(SHARED_LIBS) + r'/([\w-]+)/\*\*"', workflows[own[0]]))
+            unwatched = sorted(set(inputs) - watched)
             if unwatched:
                 gaps.append(f"GAP     {r['id']:16} G2 {os.path.basename(own[0])} does not watch "
                             + ", ".join(f"{SHARED_LIBS}/{m}/**" for m in unwatched))
+            for m in sorted(watched - set(inputs)):
+                gaps.append(f"GAP     {r['id']:16} G2 {os.path.basename(own[0])} watches {SHARED_LIBS}/{m}/** "
+                            f"which {src} does not compile — every change there rebuilds and republishes it for nothing")
         for why in removals(top):
             gaps.append(f"GAP     {r['id']:16} G4 {why} — the provider merges, the debug server cannot start")
         if not any(r["id"] in g for g in gaps):

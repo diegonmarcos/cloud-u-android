@@ -33,7 +33,13 @@ jobs:
       - name: The guard still fails when an app drops out
         run: bash 1_cicd/src/scripts/test/mesh-source-guard.test.sh
 
-      - name: Every fleet app reaches libs:core and libs:devtools, and ships when they change
+      # #763: G1/G2 and the generator's ship triggers all take the answer to
+      # "which shared libs are inputs of this app" from cloud_android_lib_closure;
+      # this proves that answer still tells inputs from mentions.
+      - name: The lib-closure answer separates an app's inputs from mentions
+        run: bash 1_cicd/src/scripts/test/lib-closure.test.sh
+
+      - name: Every fleet app reaches libs:core and libs:devtools, and its ship watches exactly its libs
         run: python3 1_cicd/src/scripts/cloud-android-mesh-source-guard.py .
 
       # The lib side (#743): every Cloud-Lib APK that compiles devtools also

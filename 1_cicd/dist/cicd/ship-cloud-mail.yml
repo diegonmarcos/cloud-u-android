@@ -25,7 +25,6 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-mail.yml"
       - "1_cicd/src/scripts/cloud-mail-engine.sh"
-      - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"

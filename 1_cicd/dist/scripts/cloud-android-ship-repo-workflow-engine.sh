@@ -270,6 +270,25 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
             derived.append(shared + "/**")
     derived.append(f"1_cicd/src/cicd/{name}")
 
+    # ── shared libs: the app's REAL inputs, and nothing else (#763) ──
+    # cloud_android_lib_closure.inputs is the one answer to "which shared lib
+    # directories can move this app's bytes" (dependency closure, module map,
+    # by-reference sources); the mesh guard's G2 holds the workflow to the same
+    # answer. Every input is watched, and a hand-kept entry naming a shared lib
+    # that is NOT an input is dropped: before this, cloud-vault watched analytics,
+    # browser and updater and compiled none of them, so a change to any of them
+    # rebuilt vault and the publish gate (which hashes this list) republished it
+    # with nothing in it. Only for consumers of the shared libs: the lib-APK
+    # builders under ab_cloud-libs-shared build every module by scan.
+    sys.path.insert(0, os.path.join(root, "1_cicd/src/scripts"))
+    sys.dont_write_bytecode = True
+    from cloud_android_lib_closure import inputs as lib_inputs, SHARED_LIBS
+    lib_entry = re.compile(re.escape(SHARED_LIBS) + r"/([\w-]+)/")
+    real = None
+    if not app.startswith("ab_cloud-libs-shared" + os.sep):
+        real = lib_inputs(root, app)
+        derived += [f"{SHARED_LIBS}/{m}/**" for m in sorted(real)]
+
     # ── THE TESTER DIRECTORY IS WATCHED, AND DELIBERATELY NOT HASHED (#370) ──
     #
     # These are two different questions and they had one answer, which is why
@@ -304,7 +323,8 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     # in full above, never kept.
     kept = [e for e in entries
             if not e.startswith((".github/workflows/", "!"))
-            and os.path.exists(os.path.join(root, e.split("*")[0].rstrip("/") or "."))]
+            and os.path.exists(os.path.join(root, e.split("*")[0].rstrip("/") or "."))
+            and not (real is not None and lib_entry.match(e) and lib_entry.match(e).group(1) not in real)]
     for e in entries:
         if e not in kept and e not in excluded:
             print(f"  dropped {name}: {e}")

@@ -6,7 +6,8 @@
 #
 # #753. A gate only ever watched passing is indistinguishable from `exit 0`.
 # This copies the files the guard reads (git-tracked gradle scripts, patches,
-# ship workflows, the fleet roster, every AndroidManifest.xml, DebugInitProvider.kt), requires a
+# JSON (module maps, by-reference sources — #763), ship workflows, the fleet
+# roster, every AndroidManifest.xml, DebugInitProvider.kt), requires a
 # pass on the copy, then breaks one property at a time, proves the break
 # landed, and requires a FAIL naming the app or the manifest it broke.
 #
@@ -35,8 +36,8 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
-    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '.github/workflows/ship-*.yml' '*AndroidManifest.xml'
-                     printf '%s\0' "$FLEET" "$INIT_KT"; } | xargs -0 cp --parents -t "$WORK/t")
+    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '*.json' '.github/workflows/ship-*.yml' '*AndroidManifest.xml'
+                     printf '%s\0' "$INIT_KT"; } | xargs -0 cp --parents -t "$WORK/t")
 }
 
 # mutate <label> <file> <python-edit-of-s> <expected-substring-in-guard-output>
@@ -73,6 +74,11 @@ mutate "core stops exporting devtools" "$CORE" \
 mutate "writer's ship workflow stops watching core" "$WRITER_WF" \
     "s=s.replace('      - \"ab_cloud-libs-shared/libs/core/**\"\n', '', 1)" \
     "writer           G2 ship-cloud-writer.yml does not watch ab_cloud-libs-shared/libs/core/**"
+# #763 G2 is two-sided: watching a lib the app does not compile rebuilds and
+# republishes it for nothing (vault watched analytics, browser and updater).
+mutate "writer's ship workflow watches a lib writer does not compile" "$WRITER_WF" \
+    "s=s.replace('      - \"ab_cloud-libs-shared/libs/core/**\"\n', '      - \"ab_cloud-libs-shared/libs/core/**\"\n      - \"ab_cloud-libs-shared/libs/fin/**\"\n', 1)" \
+    "writer           G2 ship-cloud-writer.yml watches ab_cloud-libs-shared/libs/fin/** which"
 mutate "core stops requesting CONSTELLATION_DATA" "$CORE_MF" \
     "s=re.sub(r'<uses-permission[^>]*CONSTELLATION_DATA\"\s*/>', '', s, count=1)" \
     "libs:core no longer REQUESTS CONSTELLATION_DATA"

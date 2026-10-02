@@ -49,11 +49,8 @@ on:
       # The gate skips it, so the run costs the test step alone.
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-vault.yml"
-      - "ab_cloud-libs-shared/libs/analytics/**"
-      - "ab_cloud-libs-shared/libs/browser/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
-      - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-vault/**"
 permissions:
   contents: write
