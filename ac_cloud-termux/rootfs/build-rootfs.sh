@@ -14,6 +14,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ABI="$1"
 mkdir -p "$2"
 OUT="$(cd "$2" && pwd)"
+STORE_SRC="$(cd "$HERE/../../ab_cloud-terminal-store" && pwd)"
 resolved() { python3 "$HERE/resolve.py" get "$1"; }
 from_abi() { resolved "$1" | python3 -c 'import json,sys; print(json.load(sys.stdin)[sys.argv[1]][sys.argv[2]])' "$ABI" "$2"; }
 
@@ -38,6 +39,19 @@ docker export "$cid" | sudo tar -xf - -C "$W/tree"
 resolved nameservers | python3 -c 'import json,sys; print("".join("nameserver %s\n" % n for n in json.load(sys.stdin)), end="")' \
     | sudo tee "$W/tree/etc/resolv.conf" >/dev/null
 printf '127.0.0.1 localhost\n::1 localhost\n' | sudo tee "$W/tree/etc/hosts" >/dev/null
+
+# #771 -- the two system files both terminals share from ab_cloud-terminal-store (the nix
+# terminal bakes the same sources): git's system config (safe.directory for the shared store),
+# and the noexec #! shim, preloaded into every glibc process of the root. The shim is compiled
+# in a throwaway container of the SAME pinned base image, so it is linked against the glibc it
+# is loaded into and the tree carries no compiler.
+mkdir "$W/shim"
+docker run --rm --platform "linux/$arch" -v "$STORE_SRC:/src:ro" -v "$W/shim:/out" "$(resolved base_image)" sh -c \
+    'apt-get update -qq && apt-get install -y -qq --no-install-recommends gcc libc6-dev >/dev/null \
+     && gcc -std=gnu11 -O2 -Wall -shared -fPIC -o /out/libcloud-noexec-shebang.so /src/noexec-shebang.c'
+sudo install -D -m 0755 "$W/shim/libcloud-noexec-shebang.so" "$W/tree/usr/local/lib/libcloud-noexec-shebang.so"
+echo /usr/local/lib/libcloud-noexec-shebang.so | sudo tee "$W/tree/etc/ld.so.preload" >/dev/null
+sudo install -m 0644 "$STORE_SRC/gitconfig" "$W/tree/etc/gitconfig"
 sudo tar -C "$W/tree" --numeric-owner --exclude='./dev/*' --exclude='./proc/*' --exclude='./sys/*' -cf - . \
     | zstd -T0 -12 --long=27 -q -o "$OUT/rootfs.tar.zst" -f
 sha256sum "$OUT/rootfs.tar.zst" | cut -d' ' -f1 > "$OUT/rootfs.sha256"
@@ -61,7 +75,6 @@ cp "$HERE/enter.sh" "$OUT/enter.sh"
 # (#618's rule). enter.sh binds this directory onto /usr/lib/cloud-store, the
 # same path the nix terminal extracts its copy to, so ONE declaration and ONE
 # engine serve two apps that stay separate.
-STORE_SRC="$HERE/../../ab_cloud-terminal-store"
 mkdir -p "$OUT/cloud-store"
 cp "$STORE_SRC/cloud-store" "$STORE_SRC/login-init.sh" "$STORE_SRC/login-exec" "$OUT/cloud-store/"
 python3 "$STORE_SRC/render-store.py" termux "$OUT/cloud-store/declaration.sh"

@@ -21,7 +21,8 @@ binary nothing ever chmods +x.
 Usage:
     bake_default_packages.py <input.zip> <output.zip> <nixpkgs_pin> \
         <comma-separated attrs> <profile_link> <fallback_init_script> <app_id> \
-        <nix_system, e.g. aarch64-linux> <shared_root_name>
+        <nix_system, e.g. aarch64-linux> <shared_root_name> <login_shell_attr> \
+        <dns resolv_conf> <dns nameservers csv> <extras expr> <extras attrs csv> <preload>
 
 #612 also patches bin/login here (not a separate script): it is the same
 "add text to a generated file" job as the login-inner patch above, on a zip
@@ -568,6 +569,20 @@ def patch_bin_login_dns(bin_login: str, app_id: str, resolv_conf: str) -> str:
 NIX_ENV = {**os.environ, "NIXPKGS_ALLOW_UNFREE": "1"}
 
 
+# #771 -- the two system files both terminals bake, at the paths this zip's /etc is bound
+# from (bin/login: files/usr/etc -> /etc). nixpkgs' git reads /etc/gitconfig (sysconfdir=/etc);
+# nixpkgs' glibc reads /etc/ld-nix.so.preload, not ld.so.preload (dont-use-system-ld-so-preload).
+GITCONFIG_ENTRY = "etc/gitconfig"
+PRELOAD_ENTRY = "etc/ld-nix.so.preload"
+
+
+def extras_refs(expr: str, pin: str, nix_system: str, attrs) -> list:
+    """One `--expr` per default_packages.extras attr: rootfs-extras.nix called with the SAME
+    pinned nixpkgs, for the SAME target system, as the flake refs of the plain attrs."""
+    pkgs = f'(builtins.getFlake "github:NixOS/nixpkgs/{pin}").legacyPackages.{nix_system}'
+    return [f'(import {expr} {{ pkgs = {pkgs}; }})."{a}"' for a in attrs]
+
+
 def run(cmd):
     print("+ " + " ".join(cmd), file=sys.stderr)
     return subprocess.run(cmd, check=True, env=NIX_ENV)
@@ -578,18 +593,21 @@ def capture(cmd):
 
 
 def main() -> int:
-    if len(sys.argv) != 13:
+    if len(sys.argv) != 16:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
             "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system> "
-            "<shared_root_name> <login_shell_attr> <dns resolv_conf> <dns nameservers csv>",
+            "<shared_root_name> <login_shell_attr> <dns resolv_conf> <dns nameservers csv> "
+            "<extras expr> <extras attrs csv> <preload>",
             file=sys.stderr,
         )
         return 2
 
     (input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system,
-     shared_root_name, login_shell, dns_resolv_conf, dns_nameservers) = sys.argv[1:13]
+     shared_root_name, login_shell, dns_resolv_conf, dns_nameservers,
+     extras_expr, extras_csv, preload) = sys.argv[1:16]
     attrs = [a for a in attrs_csv.split(",") if a]
+    extras = [a for a in extras_csv.split(",") if a]
     if not attrs:
         print("no attrs given", file=sys.stderr)
         return 2
@@ -625,6 +643,10 @@ def main() -> int:
         refs = [f"github:NixOS/nixpkgs/{pin}#legacyPackages.{nix_system}.{a}" for a in attrs]
         run(["nix", "profile", "install", "--profile", profile, *refs, "--impure",
              "--extra-experimental-features", "nix-command flakes", *extra_platform_args])
+        # #771 -- goose, hermes and the noexec shim: built by rootfs-extras.nix, same profile.
+        for expr in extras_refs(extras_expr, pin, nix_system, extras):
+            run(["nix", "profile", "install", "--profile", profile, "--impure", "--expr", expr,
+                 "--extra-experimental-features", "nix-command flakes", *extra_platform_args])
 
         generation = capture(["readlink", "-f", profile]).strip()
         if not os.path.exists(generation):
@@ -790,6 +812,22 @@ def main() -> int:
                 f'export PATH="/{profile_link}/bin:$PATH"\n'
             )
             new_files[fallback_script] = fallback_body.encode()
+
+            # ── #771: the shared system gitconfig, and the noexec #! shim preloaded into every
+            # glibc process of the session, by the profile path (never a /nix/store hash).
+            shim = os.path.join(generation, preload)
+            why = None if os.path.exists(shim) else f"the realized profile has no {preload}"
+            why = why or env_target_unreachable(
+                os.path.realpath(shim).lstrip("/"), existing, new_files, new_executables)
+            if why:
+                print(f"FAIL: the noexec shim would not load: {why}", file=sys.stderr)
+                return 1
+            for entry in (GITCONFIG_ENTRY, PRELOAD_ENTRY):
+                if entry in existing:
+                    print(f"FAIL: the input zip already carries {entry}", file=sys.stderr)
+                    return 1
+            new_files[GITCONFIG_ENTRY] = (STORE_SRC / "gitconfig").read_bytes()
+            new_files[PRELOAD_ENTRY] = f"/{profile_link}/{preload}\n".encode()
             new_files[dns_resolv_conf] = dns_resolv_body.encode()
 
             if not symlinks_txt.endswith("\n"):

@@ -168,8 +168,11 @@
       "rootfs/build-rootfs.sh",
       "rootfs/install-in-rootfs.sh",
       "rootfs/resolve.py",
-      "../ab_cloud-terminal-store/store.json"
+      "../ab_cloud-terminal-store/store.json",
+      "../ab_cloud-terminal-store/noexec-shebang.c",
+      "../ab_cloud-terminal-store/gitconfig"
     ],
+    "_doc_identity_files_771": "#771 -- build-rootfs.sh compiles noexec-shebang.c into the tree (/usr/local/lib, listed in /etc/ld.so.preload) and installs gitconfig as /etc/gitconfig: both are bytes of the tarball, so both address it.",
     "_doc_identity_files_toolset": "#737 -- store.json carries the shared toolset, which decides what this tree installs. Left out, a toolset edit would keep the old asset name: nothing uploads, no phone refetches, CI green over a rootfs without the new tool. Relative to the app dir, like every entry here.",
     "digest_asset": "rootfs.sha256",
     "url_asset": "rootfs.url",

@@ -560,7 +560,10 @@ task bakeBootstrap() {
                         // a literal here: the bake step resolves it under profile_link.
                         tooling.login_shell_attr,
                         // #758 -- the shell's resolv.conf and its loopback-only servers.
-                        cloudDnsBridge().resolv_conf, cloudDnsBridge().nameservers.join(",")
+                        cloudDnsBridge().resolv_conf, cloudDnsBridge().nameservers.join(","),
+                        // #771 -- goose, hermes and the noexec shim, from rootfs-extras.nix.
+                        new File(projectDir.parentFile, tooling.extras.expr).absolutePath,
+                        tooling.extras.attrs.join(","), tooling.extras.preload
                 ignoreExitValue = true
             }
             idPatched.delete()

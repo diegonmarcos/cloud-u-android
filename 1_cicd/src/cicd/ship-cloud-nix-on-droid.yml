@@ -43,6 +43,9 @@ on:
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-nix-on-droid/**"
+      # #771 goose's and hermes' one declaration (version, url) -- rootfs-extras.nix reads it,
+      # and it is one of the bootstrap's identity_files.
+      - "ac_cloud-termux/rootfs/rootfs.json"
 permissions:
   contents: write   # gh release upload
 

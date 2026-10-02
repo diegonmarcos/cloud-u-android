@@ -177,6 +177,55 @@ fi
 rm -f "$STAGE/enter-mutant.sh"
 kill "$dns_pid" 2>/dev/null || true
 
+echo "── #771: the app's own selftest, every check, against a noexec, foreign-owned shared store ──"
+# The phone's measured store: FUSE-mounted noexec, owned by a media uid that is not the
+# terminal's, so git refused it as dubious and ./script was Permission denied. Staged the same
+# way here: a noexec tmpfs at /storage/emulated/0/CloudDrive/git holding a repo owned by another
+# uid (proot -0 shows the runner's own files as root's, so a foreign uid stays foreign). Then
+# app/src/main/assets/terminal-selftest.json runs check by check through enter.sh, exactly as
+# /api/terminal/selftest hands each one to the login shell, and every check must exit 0. Two
+# mutants prove the shared-store checks can fail: without /etc/gitconfig git status goes red,
+# without /etc/ld.so.preload the ./script check does.
+SELFTEST="$HERE/../app/src/main/assets/terminal-selftest.json"
+S0=/storage/emulated/0
+G="$S0/CloudDrive/git"
+if [ -e /storage ]; then
+    echo "FAIL /storage already exists on this runner; the #771 store cannot be staged without clobbering it"; fail=1
+elif ! sudo -n mkdir -p "$G" "$S0/Download" 2>/dev/null \
+        || ! sudo -n mount -t tmpfs -o noexec,mode=0777 tmpfs "$G"; then
+    echo "FAIL cannot stage a noexec $G on this runner (no passwordless sudo/mount): #771 is unproven"; fail=1
+else
+    git init -q "$G/selftest-repo"
+    git -C "$G/selftest-repo" -c user.name=ci -c user.email=ci@localhost commit -q --allow-empty -m init
+    sudo -n chown -R 4242:4242 "$G/selftest-repo"
+    sudo -n chmod -R a+rwX "$G/selftest-repo"
+    selftest_failures() {  # one line per check that does not exit 0
+        python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["checks"]))' "$SELFTEST" \
+            | while IFS= read -r check; do
+                out="$(enter -c "$check" 2>&1 </dev/null)" \
+                    || echo "$check => $(echo "$out" | tail -2 | tr '\n' ' ')"
+            done
+    }
+    n="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["checks"]))' "$SELFTEST")"
+    failed="$(selftest_failures)"
+    if [ -z "$failed" ]; then
+        echo "ok   all $n terminal-selftest.json checks exit 0 under the shipped proot, store noexec and foreign-owned"
+    else
+        echo "$failed" | sed 's/^/FAIL selftest: /'; fail=1
+    fi
+    mutant() {  # $1 = file under the root to take away, $2 = what must then fail, $3 = why
+        mv "$STAGE/rootfs/$1" "$STAGE/rootfs/$1.off"
+        got="$(selftest_failures)"
+        mv "$STAGE/rootfs/$1.off" "$STAGE/rootfs/$1"
+        if echo "$got" | grep -q -- "$2"; then echo "ok   mutation proved: without /$1 $3 goes red"
+        else echo "FAIL MUTATION SURVIVED: without /$1 the selftest still passed $3 — the check proves nothing"; fail=1; fi
+    }
+    mutant etc/gitconfig "git status" "git status in the foreign-owned repo"
+    mutant etc/ld.so.preload './\$f' "running ./script on the noexec store"
+    sudo -n umount "$G"
+    sudo -n rm -rf /storage
+fi
+
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
 exit "$fail"

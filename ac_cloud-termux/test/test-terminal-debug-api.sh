@@ -53,15 +53,33 @@ grep -q 'PARTIAL_WAKE_LOCK' "$API" && grep -q 'startForegroundService' "$API" \
     && ok "holds a wake lock and the foreground service while a command runs (screen locked)" \
     || bad "nothing keeps the CPU or the process up with the screen locked"
 
-python3 - "$SELFTEST" "$SIBLING" <<'PY' && ok "selftest declares the #747 checks, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
+python3 - "$SELFTEST" "$SIBLING" <<'PY' && ok "selftest declares the #747/#771 checks, each under sh, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
 import json, sys
-want = ["claude --version", "node --version", "gh --version", "git --version", "zsh --version",
-        "ls ~/emulated | head", "ls ~/cloud-drive-shared-store/git | head", "test ! -e ~/storage"]
 mine, sibling = (json.load(open(p))["checks"] for p in sys.argv[1:3])
-for name, got in (("this app", mine), ("sibling", sibling)):
-    if got != want:
-        print(f"  {name}: {got}")
-        sys.exit(1)
+problems = [] if mine == sibling else ["the two terminals' lists differ"]
+# #771: the login shell is fish; one `sh -c '...'` with no ' or \ inside parses the same in fish, bash, zsh.
+problems += [f"not `sh -c '<script>'` with no quote/backslash inside: {c}" for c in mine
+             if not (c.startswith("sh -c '") and c.endswith("'") and len(c) > 8
+                     and "'" not in c[7:-1] and "\\" not in c[7:-1])]
+script = [c[7:-1] for c in mine]
+def has(pred, what):
+    if not any(pred(s) for s in script):
+        problems.append("no check " + what)
+for t in ("claude", "goose", "hermes"):
+    has(lambda s, t=t: s == f"{t} --version", f"runs `{t} --version`")
+    has(lambda s, t=t: s.startswith(t + " ") and s != f"{t} --version", f"makes a functional {t} call")
+for t in ("node", "gh", "git", "zsh"):
+    has(lambda s, t=t: s == f"{t} --version", f"runs `{t} --version`")
+has(lambda s: s == "ls ~/emulated | head", "lists ~/emulated (#736)")
+has(lambda s: s == "ls ~/cloud-drive-shared-store/git | head", "lists the shared store (#736)")
+has(lambda s: s == "test ! -e ~/storage", "proves no upstream ~/storage (#736)")
+store = [s for s in script if "~/cloud-drive-shared-store/git/*/.git" in s]
+has(lambda s: s in store and "git status" in s and "|" not in s.split("git status")[1], "runs git status in a shared-store repo, unpiped")
+has(lambda s: s in store and "echo one > $f" in s and "sed -i" in s and "rm $f" in s, "creates, edits and deletes a file in a shared-store repo")
+has(lambda s: s in store and "#!/usr/bin/env sh" in s and "./$f" in s and "rm -f $f" in s, "runs a #! script as ./script in a shared-store repo")
+for p in problems:
+    print("  " + p)
+sys.exit(1 if problems else 0)
 PY
 
 [ "$fails" -eq 0 ] || { echo "$fails assertion(s) failed"; exit 1; }

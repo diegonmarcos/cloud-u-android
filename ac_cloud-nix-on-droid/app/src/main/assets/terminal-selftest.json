@@ -1,13 +1,21 @@
 {
-  "_doc": "#747 what GET /api/terminal/selftest runs (TerminalDebugApi), each as its own /api/terminal/exec: a fresh login session's shell, with its exit code, stdout and stderr reported per check. The tool checks prove the baked toolset answers from a session nobody opened; the storage checks prove the login linked ~/emulated and ~/cloud-drive-shared-store and left no upstream ~/storage tree beside them (#736). Both terminals carry this same list, cloud-termux and cloud-nix-on-droid: keep them equal.",
+  "_doc": "#747/#771 what GET /api/terminal/selftest runs (TerminalDebugApi), each as its own /api/terminal/exec: a fresh login session's shell, with its exit code, stdout and stderr reported per check. EVERY check is `sh -c '<posix script>'` (#771): the login shell that receives it is fish, where POSIX syntax such as VAR=value or $(...) inside && chains does not parse, so the script is handed to sh whole; the script itself carries no single quote and no backslash, which is what makes that one quoting level mean the same thing to fish, bash and zsh alike (the testers enforce it). Tools: claude, goose and hermes each answer --version and one call that needs no network (claude --help, goose info -- its version and config paths, hermes config path); node, gh, git and zsh answer --version. Storage (#736): the login linked ~/emulated and ~/cloud-drive-shared-store and left no upstream ~/storage. Shared store (#771), in the FIRST repository under ~/cloud-drive-shared-store/git (alphabetical, any name): git status works although the FUSE mount reports a foreign owner (ab_cloud-terminal-store/gitconfig, safe.directory); a file is created, edited with sed -i and deleted; and a #!/usr/bin/env sh script written there runs as ./script although the mount is noexec (ab_cloud-terminal-store/noexec-shebang.c, preloaded). Both terminals carry this same list, cloud-termux and cloud-nix-on-droid: keep them equal. ac_cloud-termux/rootfs/verify-rootfs.sh runs every check in CI against a noexec, foreign-owned staged store.",
   "checks": [
-    "claude --version",
-    "node --version",
-    "gh --version",
-    "git --version",
-    "zsh --version",
-    "ls ~/emulated | head",
-    "ls ~/cloud-drive-shared-store/git | head",
-    "test ! -e ~/storage"
+    "sh -c 'claude --version'",
+    "sh -c 'claude --help'",
+    "sh -c 'goose --version'",
+    "sh -c 'goose info'",
+    "sh -c 'hermes --version'",
+    "sh -c 'hermes config path'",
+    "sh -c 'node --version'",
+    "sh -c 'gh --version'",
+    "sh -c 'git --version'",
+    "sh -c 'zsh --version'",
+    "sh -c 'ls ~/emulated | head'",
+    "sh -c 'ls ~/cloud-drive-shared-store/git | head'",
+    "sh -c 'test ! -e ~/storage'",
+    "sh -c 'r=$(ls -d ~/cloud-drive-shared-store/git/*/.git | head -n 1) && test -n \"$r\" && cd \"${r%/.git}\" && pwd && git status --short --branch --untracked-files=no'",
+    "sh -c 'r=$(ls -d ~/cloud-drive-shared-store/git/*/.git | head -n 1) && test -n \"$r\" && cd \"${r%/.git}\" && f=.cloud-selftest-$$ && echo one > $f && sed -i s/one/two/ $f && grep -qx two $f && rm $f && test ! -e $f && echo created-edited-deleted'",
+    "sh -c 'r=$(ls -d ~/cloud-drive-shared-store/git/*/.git | head -n 1) && test -n \"$r\" && cd \"${r%/.git}\" && f=.cloud-selftest-$$.sh && echo \"#!/usr/bin/env sh\" > $f && echo \"echo ran-from-shared-store\" >> $f && out=$(./$f); rc=$?; rm -f $f; test $rc -eq 0 && test \"$out\" = ran-from-shared-store && echo $out'"
   ]
 }

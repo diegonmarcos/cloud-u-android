@@ -59,8 +59,13 @@
             "../ab_cloud-terminal-store/cloud-store",
             "../ab_cloud-terminal-store/render-store.py",
             "../ab_cloud-terminal-store/login-init.sh",
-            "../ab_cloud-terminal-store/login-exec"
+            "../ab_cloud-terminal-store/login-exec",
+            "app/src/main/cpp/rootfs-extras.nix",
+            "../ac_cloud-termux/rootfs/rootfs.json",
+            "../ab_cloud-terminal-store/noexec-shebang.c",
+            "../ab_cloud-terminal-store/gitconfig"
           ],
+          "_doc_identity_files_771": "#771 -- rootfs-extras.nix builds goose, hermes and the noexec shim into this zip; it reads goose's and hermes' version and url from ac_cloud-termux/rootfs/rootfs.json (so a bump there must re-address this zip too, even though it also moves on termux-only edits to that file: a stale address is the false green, an extra republish is only bytes); noexec-shebang.c is the shim's source and gitconfig ships as etc/gitconfig.",
           "_doc_identity_files_store": "#644 -- the five ab_cloud-terminal-store entries are here because the link store is BAKED INTO THIS ZIP (usr/lib/cloud-store) and the login-inner patch sources it. Leave them out and an engine fix keeps the old content address: the asset is not uploaded, no phone refetches, and CI is green over a rootfs that still carries the broken engine -- the exact false-green shape #618's address was introduced to prevent. Paths are app-relative and resolved with os.path.join/new File(projectDir.parentFile, ...) by both readers (cloud-android-fleet-manifest-guard.py::_content_address and app/build.gradle::bootstrapArtifactId), so \"../\" reaches the repo root.",
           "digest_asset": "bootstrap.zip.sha256",
           "url_asset": "bootstrap.zip.url"
@@ -138,12 +143,34 @@
             "openssh": ["ssh"],
             "sops": ["sops"],
             "age": ["age"],
-            "which": ["which"]
+            "which": ["which"],
+            "goose": ["goose"],
+            "hermes": ["hermes"],
+            "noexec-shebang": []
+          },
+          "extras": {
+            "_doc": "#771 -- profile entries no nixpkgs attr can supply, built by `expr` (a function of the pinned nixpkgs for the target system) and installed into the SAME profile as `attrs`, one `nix profile install --expr` per entry of `attrs` here. goose and hermes are the termux terminal's own (ac_cloud-termux/rootfs/rootfs.json is their one declaration: version, url, arch names); at this nixpkgs pin goose-cli is another release and hermes-agent is not packaged. `pins` is the one thing that file does not carry and a fixed-output fetch needs: the content hash, keyed by the version it was taken for, so a rootfs.json bump without a re-pin fails evaluation by name. goose's per-arch hashes are GitHub's own release-asset digests (re-measured by download); hermes' is PyPI's sha256 of the py3-none-any wheel. noexec-shebang is ab_cloud-terminal-store/noexec-shebang.c, preloaded through etc/ld-nix.so.preload from `preload` under profile_link; their names are provided[] like any attr's, and B2 counts them.",
+            "expr": "app/src/main/cpp/rootfs-extras.nix",
+            "attrs": ["goose", "hermes", "noexec-shebang"],
+            "preload": "lib/libcloud-noexec-shebang.so",
+            "pins": {
+              "goose": {
+                "version": "1.44.0",
+                "hash": {
+                  "amd64": "sha256-B/68i09zvf3D7OPTTQ4hsAXzpPQwCPlbhdZTjaj2usE=",
+                  "arm64": "sha256-2mywBdQhsL3Lg/6Dhrpa6AYO8XrfZGQaaE1PxLnhwV8="
+                }
+              },
+              "hermes-agent": {
+                "version": "0.19.0",
+                "hash": "sha256-vQusASruOKYIlHgfRZfcKe577bNEhUAkmSHxDTvvMn8="
+              }
+            }
           },
           "profile_link": "nix/var/nix/profiles/per-user/nix-on-droid/profile",
           "fallback_init_script": "usr/lib/cloud-agent-tools-init.sh",
           "_doc_binaries": "#737 -- this terminal's tools BEYOND store.json::toolset (which every consumer prepends: render-store.py::tools_of). Repeating a toolset name here is refused at render time.",
-          "binaries": ["env", "ls", "cat", "bash", "find", "xargs", "grep", "sed", "awk", "less"]
+          "binaries": ["env", "ls", "cat", "bash", "find", "xargs", "grep", "sed", "awk", "less", "goose", "hermes"]
         }
       }
     }
@@ -161,7 +188,7 @@
         "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",
         "asset": "Cloud-Lib-Rootfs-Nixdroid.apk",
         "assets": { "arm64": "Cloud-Lib-Rootfs-Nixdroid.apk", "x86_64": "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk" },
-        "paths_from": ["ac_cloud-nix-on-droid/build.json", "ac_cloud-nix-on-droid/app/src/main/cpp/patch_bootstrap_ids.py", "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py", "ac_cloud-nix-on-droid/rootfs-lib", "ab_cloud-terminal-store"],
+        "paths_from": ["ac_cloud-nix-on-droid/build.json", "ac_cloud-nix-on-droid/app/src/main/cpp/patch_bootstrap_ids.py", "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py", "ac_cloud-nix-on-droid/rootfs-lib", "ab_cloud-terminal-store", "ac_cloud-nix-on-droid/app/src/main/cpp/rootfs-extras.nix", "ac_cloud-termux/rootfs/rootfs.json"],
         "package": "com.diegonmarcos.cloudlib.rootfsnixdroid"
       }
     ],
@@ -219,9 +246,10 @@
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. This app had NO tests block at all, so every ship run asserted only that it compiled -- which is how an APK that downloads its entire runtime from a stranger's domain on first launch, with no integrity check, shipped green for months.",
     "shell": {
       "dir": "test",
-      "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs, so a missing tool is a loud red instead of an assertion quietly answering from its absence. test-bootstrap-baked.sh reads build.json with python3.",
+      "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs, so a missing tool is a loud red instead of an assertion quietly answering from its absence. test-bootstrap-baked.sh reads build.json with python3; test-noexec-shebang.sh compiles the #771 shim with cc.",
       "requires": [
-        "python3"
+        "python3",
+        "cc"
       ]
     },
     "_doc_unit": "tests.unit.task is deliberately UNSET: this fork has no JVM test source set, and the engine reports that as a named coverage gap on every run. Declaring a task that runs nothing would convert an honest gap into a false green."

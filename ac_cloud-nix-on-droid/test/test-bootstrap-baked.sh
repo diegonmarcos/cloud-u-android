@@ -168,7 +168,9 @@ toolset_cover() {  # <build.json> <store.json> -> prints the problems, exit 1 if
 import json, sys
 d = json.load(open(sys.argv[1]))['forks']['nixdroid']['bootstrap']['default_packages']
 toolset = json.load(open(sys.argv[2]))['toolset']['binaries']
-attrs, provides, binaries = d.get('attrs', []), d.get('provides', {}), d.get('binaries', [])
+# #771: extras.attrs (rootfs-extras.nix) land in the same profile, so they provide too.
+attrs = d.get('attrs', []) + d.get('extras', {}).get('attrs', [])
+provides, binaries = d.get('provides', {}), d.get('binaries', [])
 provided = {b for a in attrs for b in provides.get(a, [])}
 problems = [f"attr {a} has no provides[] entry" for a in attrs if a not in provides]
 problems += [f"{b} is provided but declared nowhere (neither toolset nor binaries)"

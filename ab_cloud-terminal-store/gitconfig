@@ -1,0 +1,16 @@
+# #771 -- the system gitconfig BOTH terminals bake at /etc/gitconfig (the termux rootfs's Debian
+# git and the nix terminal's nixpkgs git, built with sysconfdir=/etc, both read it there).
+#
+# safe.directory = * because every repository on Android shared storage fails git's ownership
+# check by construction: the FUSE daemon reports a media uid (measured: 10303, gid 1023) that is
+# never the terminal's own, so `git status` in ~/cloud-drive-shared-store/git/<repo> died with
+# "detected dubious ownership" in both terminals. Why the wildcard and not the three store paths
+# (~/cloud-drive-shared-store, /sdcard/CloudDrive, /storage/emulated/0/CloudDrive) with `/*`:
+#  - git compares the canonical path, and only git >= 2.46 understands a trailing `/*`; the
+#    termux rootfs ships Debian bookworm's git 2.39, which would ignore those entries outright.
+#  - it protects against another UNIX USER planting a repository you walk into. Here there is one
+#    user: everything in app-private storage is owned by the terminal (the check never fires
+#    there), and shared storage is writable by any app holding the storage permission whichever
+#    directory of it is named -- so naming CloudDrive would exclude nothing that could plant one.
+[safe]
+	directory = *
