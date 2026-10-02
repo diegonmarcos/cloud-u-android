@@ -115,10 +115,13 @@ class CalcShellTest {
         val alarms = Declarations.modes.first { it.kind == "alarms" }
         compose.runOnIdle { state.tab = alarms.tab; state.modeByTab[alarms.tab] = alarms.id }
         compose.waitForIdle()
+        // The editor focuses its time field, whose cursor blinks forever: an auto-advancing test
+        // clock never reaches idle (run 37008261159). Frames are stepped by hand from here on.
+        compose.mainClock.autoAdvance = false
         compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.ADD_ALARM).performClick()
-        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1_000)
         compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.SAVE).performClick()
-        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1_000)
         val app = RuntimeEnvironment.getApplication()
         val a = com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single()
         assertEquals(7 * 60, a.minuteOfDay)
