@@ -2670,6 +2670,13 @@
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
+                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). The owner placed it SECOND in this row: SuperApp, Search, Terminal, MyTerminal, … GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3).",
+                "id": "search",
+                "label": "Search",
+                "icon": "ic_cloud_search",
+                "target": "extapp:cloud-search"
+              },
+              {
                 "_doc": "#563/#571 follow-up. Terminal now opens cloud-terminal-nix (ac_cloud-nix-on-droid, applicationId cld.termux.nix) through ui.external_apps[cloud-terminal-nix], relinked from cloud-terminal-termux (cld.termux). Prior history: until #571 this tile was app://com.termux.nix with a Play Store fallback — the UPSTREAM Nix-on-Droid id, which no fleet build installs — so the tap walked straight to a Play page for somebody else's app; #571 fixed that by pointing it at our Termux fork instead. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
                 "id": "ai-tmx",
                 "label": "Terminal",
@@ -7638,6 +7645,15 @@
         "hub_package": "com.diegonmarcos.cloudcalc",
         "install_package": "com.diegonmarcos.cloudcalc",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Calc.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Search (ac_cloud-search, published by ship-cloud-search.yml since #779). Added for the Cloud ▸ Apps ▸ AGI tile: every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ac_cloud-search/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors ac_cloud-search's arm64 release asset; x86_64 devices are resolved through the fleet assets map. folder=prod_ai ('@AI') is the taxonomy half of the same record — PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudsearch may be added to ui.phone_folders.",
+        "id": "cloud-search",
+        "folder": "prod_ai",
+        "hub_package": "com.diegonmarcos.cloudsearch",
+        "install_package": "com.diegonmarcos.cloudsearch",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Search.apk",
         "forks": {}
       },
       {

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A magnifier over a spark, inside the 66dp adaptive safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFB794F4" android:pathData="M48,30a18,18 0,1 1,0 36a18,18 0,1 1,0 -36zM48,37a11,11 0,1 0,0 22a11,11 0,1 0,0 -22z" />
+    <path android:fillColor="#FFB794F4" android:pathData="M60.5,63.5l5,-5l14,14a3.5,3.5 0,0 1,-5 5z" />
+    <path android:fillColor="#FFC7AEFB" android:pathData="M48,41l2,5l5,2l-5,2l-2,5l-2,-5l-5,-2l5,-2z" />
+</vector>
