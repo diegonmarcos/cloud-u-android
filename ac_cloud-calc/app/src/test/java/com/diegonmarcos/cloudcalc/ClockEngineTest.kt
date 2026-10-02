@@ -183,7 +183,7 @@ class ClockEngineTest {
         val before = scheduled().associate { keyOf(it) to it.getTriggerAtMs() }
         assertEquals(setOf("alarm:$alarm", "timer:$timer"), before.keys)
         @Suppress("DEPRECATION")
-        scheduled().forEach { am.cancel(it.operation) }
+        scheduled().forEach { am.cancel(it.operation!!) }
         assertTrue(scheduled().isEmpty())
 
         ClockBootReceiver().onReceive(app, Intent(Intent.ACTION_BOOT_COMPLETED))
