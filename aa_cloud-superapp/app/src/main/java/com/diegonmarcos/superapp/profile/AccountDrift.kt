@@ -70,10 +70,10 @@ object AccountDrift {
     /** One fleet app as the drift sees it: its id and the vault sections it consumes (the cockpit declaration). */
     data class App(val id: String, val label: String, val sections: List<String>)
 
-    /** The app a path belongs to: the first declared app consuming its section; "" for a section no app consumes. */
+    /** The app a path belongs to: the first declared app owning a prefix of it; "" for a section no app consumes. */
     fun ownerOf(path: String, apps: List<App>): String {
-        val section = path.substringBefore(SEP)
-        return apps.firstOrNull { section in it.sections }?.id.orEmpty()
+        // #783 a section is a path prefix: a vault section (`mail`) or a deeper one (`settings › calc`).
+        return apps.firstOrNull { a -> a.sections.any { path == it || path.startsWith(it + SEP) } }?.id.orEmpty()
     }
 
     // ── two files ────────────────────────────────────────────────────────

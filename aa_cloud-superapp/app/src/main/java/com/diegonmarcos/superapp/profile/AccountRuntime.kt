@@ -175,11 +175,11 @@ object AccountRuntime {
      * is filed under — which mail account, which device's mesh profiles. BLOCKS (binder): call on IO.
      */
     fun read(ctx: Context, declared: JSONObject?, deadlineMs: Long): List<AppRead> =
-        VaultCockpit.layout.sections.map { section ->
+        AccountFleet.merge(VaultCockpit.layout.sections.map { section ->
             coverage(runCatching { readOne(ctx, section, declared, deadlineMs) }.getOrElse {
                 AppRead(section.id, section.label, Status.NOT_REPORTING, it.message ?: it.javaClass.simpleName, emptyMap())
             }, VaultCockpit.layout.vaultFields)
-        }
+        }, AccountFleet.reads(ctx))  // #783 every fleet app's own configuration, through its contract
 
     private fun installed(ctx: Context, pkg: String) = runCatching { ctx.packageManager.getPackageInfo(pkg, 0) }.isSuccess
 

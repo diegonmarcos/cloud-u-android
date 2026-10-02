@@ -1,0 +1,38 @@
+name: "fleet config guard — every store an app keeps state in is declared for the new-phone migration"
+
+# WHY (#783). A brand-new phone is made to match the old one through ONE
+# contract (libs:core FleetConfig): every fleet app exports and imports exactly
+# the stores libs:core assets/fleet-config.json declares, and nothing else. An
+# undeclared SharedPreferences / EncryptedSharedPreferences / DataStore / Room
+# store is a setting that silently stays behind on the old phone. This guard
+# scans every app and lib tree and fails when the code opens a store the
+# manifest does not declare and classify (config / secret / device / content),
+# when a declaration goes stale, or when a store's kind is not how the code
+# opens it (the contract would read ciphertext).
+#
+# Its own workflow and every push, for the reason fleet-alerts-guard gives: the
+# commit it has to catch can touch any source file in any app tree, so there is
+# no path to filter on.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fleet-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it plants an undeclared store a dozen ways and
+      # requires RED each time, then requires GREEN on the real fleet.
+      - name: The guard still fails when an app keeps undeclared state
+        run: bash 1_cicd/src/scripts/test/fleet-config-guard.test.sh
+
+      - name: Every store in the fleet is declared and classified
+        run: python3 1_cicd/src/scripts/cloud-android-fleet-config-guard.py .

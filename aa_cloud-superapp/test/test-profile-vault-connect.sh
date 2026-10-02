@@ -90,7 +90,8 @@ echo "== T3: the cockpit's apps are Account ▸ Runtime / Drift's apps (#778), a
 AR="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountRuntime.kt"
 AT="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
 AM="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt"
-grep -qF 'VaultCockpit.layout.sections.map { section ->' "$AR" && grep -qF 'for (section in VaultCockpit.layout.sections) {' "$AT" \
+# #783 Runtime draws Drift's apps (m.apps): the cockpit layout first, then every fleet app's settings.
+grep -qF 'VaultCockpit.layout.sections.map { section ->' "$AR" && grep -qF 'for (section in m.apps) {' "$AT" \
     && ok "T3: Runtime reads, and draws, every app of the baked layout" || bad "T3: Runtime does not iterate ui.vault_connect.cockpit.sections"
 grep -qF 'VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, it.vault) }' "$AM" \
     && ok "T3: Drift's apps — which vault sections each consumes — are the same layout" || bad "T3: Drift's app ownership is not the cockpit layout"

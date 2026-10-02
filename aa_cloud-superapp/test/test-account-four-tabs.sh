@@ -791,7 +791,7 @@ runtime_ok() {   # $1 = AccountRuntime.kt, $2 = build.json, $3 = AccountTabs.kt;
     grep -qF 'AccountTags.runtimeCounts(section.id)' "$3" || { echo "a Runtime card shows no declared / reported / missing counts"; return 1; }
     grep -qF 'while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)' <<<"$rt" || { echo "the binder read does not wait (under a deadline) for a stopped app to wake"; return 1; }
     grep -qF 'readOnly = if (rt.writable) emptySet() else values.keys' <<<"$rt" || { echo "a non-writable app's fields can be pulled back"; return 1; }
-    grep -qF 'for (section in VaultCockpit.layout.sections) {' <<<"$(awk '/^fun RuntimeTab\(/{f=1} f{print} f&&/^}$/{exit}' "$3")" \
+    grep -qF 'for (section in m.apps) {' <<<"$(awk '/^fun RuntimeTab\(/{f=1} f{print} f&&/^}$/{exit}' "$3")" \
         && grep -qF 'AccountTags.runtimeApp(section.id)' "$3" && grep -qF 'AccountTags.runtimeStatus(section.id)' "$3" || { echo "Runtime is not one tagged card per declared app"; return 1; }
     for s in reachable not_installed not_reporting; do grep -qF "R.string.account_status_$s" "$3" || { echo "no '$s' status"; return 1; }; done
     return 0

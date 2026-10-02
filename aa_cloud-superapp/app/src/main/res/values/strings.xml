@@ -547,6 +547,7 @@
     <string name="account_three_way">%1$d in sync · %2$d local edits · %3$d runtime drift · %4$d agreed · %5$d conflicts</string>
     <string name="account_pair_drift">%1$d differ</string>
     <string name="account_push_all">Apply server → runtime (all)</string>
+    <string name="account_migrate">New phone: install missing apps, then apply all</string>
     <string name="account_pull_all">Runtime → declared (all)</string>
     <string name="account_upload">Upload L → server</string>
     <string name="account_discard">Discard L</string>

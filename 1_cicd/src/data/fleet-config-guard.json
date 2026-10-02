@@ -1,0 +1,45 @@
+{
+  "_doc": "#783 FLEET CONFIG scan policy, read by 1_cicd/src/scripts/cloud-android-fleet-config-guard.py (fleet-config-guard.yml, every push). The declarations themselves live in ONE place, `manifest` below (libs:core assets/fleet-config.json, shipped inside every fleet app and read by the migration contract); this file only says how to find stores in source. The guard fails when the code keeps state in a store the manifest does not declare and classify.",
+  "_rule": "every SharedPreferences / EncryptedSharedPreferences / DataStore / Room store in an app or lib tree is declared in libs:core assets/fleet-config.json with a class and a doc",
+  "manifest": "ab_cloud-libs-shared/libs/core/src/main/assets/fleet-config.json",
+  "roster": "aa_cloud-superapp/data/constellation-fleet.json",
+  "app_prefixes": [
+    "aa_cloud-superapp",
+    "ac_c3-",
+    "ac_cloud-"
+  ],
+  "skip_dirs": [
+    "aa_cloud-superapp-mcp",
+    "aa_cloud-superapp-web",
+    "gitsync"
+  ],
+  "lib_roots": {
+    "ab_cloud-libs-shared/libs": "lib-",
+    "ab_cloud-libs-shared/keyboard-engines": "keyboard-engines/"
+  },
+  "prune_dirs": [
+    "build",
+    ".gradle",
+    ".git",
+    "node_modules",
+    "test",
+    "androidTest",
+    "testDebug",
+    "sharedTest",
+    "testFixtures"
+  ],
+  "extensions": [
+    ".kt",
+    ".java"
+  ],
+  "const_pattern": "\\b(?:(?:const\\s+)?val|String)\\s+([A-Za-z_]\\w*)\\s*(?::\\s*String)?\\s*=\\s*\"([^\"$]*)\"",
+  "default_name_pattern": "(?:packageName|getPackageName\\(\\))\\s*\\+\\s*\"_preferences\"",
+  "store_patterns": {
+    "prefs": "getSharedPreferences\\(\\s*([^,()]+(?:\\([^()]*\\))?[^,()]*)\\s*,",
+    "prefs_default": "(?<!fun )(?<!SharedPreferences )\\bgetDefaultSharedPreferences\\(",
+    "encrypted": "EncryptedSharedPreferences\\.create\\(\\s*(?:[A-Za-z_][\\w.]*\\s*,\\s*)?(\"[^\"]*\"|[A-Za-z_][\\w.]*)\\s*,",
+    "datastore": "(?:preferencesDataStore\\(\\s*(?:name\\s*=\\s*)?|preferencesDataStoreFile\\(\\s*|DataStoreFactory\\.create\\(\\s*|preferencesDataStoreFactory\\.create\\(\\s*|preferenceDataStoreFactory\\.create\\(\\s*|preferencesFactory\\.create\\(\\s*)(\"[^\"]*\"|[A-Za-z_][\\w.]*)",
+    "room": "databaseBuilder\\([^;]*?([A-Z]\\w*Database)::class"
+  },
+  "package_template_pattern": "\\$\\{(?:[A-Za-z_]\\w*\\.)*packageName\\}|\\$packageName\\b"
+}

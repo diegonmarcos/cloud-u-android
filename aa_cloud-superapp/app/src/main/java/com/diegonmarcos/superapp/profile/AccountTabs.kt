@@ -66,6 +66,8 @@ object AccountTags {
     fun pair(id: String) = "drift:pair:$id"
     fun driftApp(id: String) = "drift:app:$id"
     const val PUSH_ALL = "drift:push:all"
+    /** #783 the new phone: install every declared app that is missing, then apply all. */
+    const val MIGRATE = "drift:migrate"
     const val PULL_ALL = "drift:pull:all"
     fun pushApp(id: String) = "drift:push:app:$id"
     fun pullApp(id: String) = "drift:pull:app:$id"
@@ -224,7 +226,8 @@ fun RuntimeTab(m: AccountModel) {
         ActionButton(stringResource(if (reading) R.string.account_runtime_reading else R.string.account_runtime_refresh), AccountTags.REFRESH, !reading) { refresh() }
         val values = AccountDrift.leaves(r?.body)
         val apps = r?.apps
-        for (section in VaultCockpit.layout.sections) {
+        // #783 the cockpit's apps, then every fleet app the manifest declares — one card each.
+        for (section in m.apps) {
             val a = apps?.optJSONObject(section.id) ?: continue
             val status = a.optString("status")
             val observed = a.optJSONArray("observed")?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
@@ -311,6 +314,7 @@ fun DriftTab(m: AccountModel, device: String, export: (name: String, text: Strin
         val withS = Slot.S == pair.a || Slot.S == pair.b
         val withL = Slot.L == pair.a || Slot.L == pair.b
         if (touchesR && withS) ActionButton(stringResource(R.string.account_push_all), AccountTags.PUSH_ALL, !busy) { io { m.pushServerToRuntime(AccountDrift.drifted(fields)) } }
+        if (touchesR && withS) ActionButton(stringResource(R.string.account_migrate), AccountTags.MIGRATE, !busy) { io { m.migrate() } }
         if (touchesR) ActionButton(stringResource(R.string.account_pull_all), AccountTags.PULL_ALL, !busy) { io { m.pullRuntimeToLocal(AccountDrift.drifted(fields)) } }
         if (withL && withS) {
             ActionButton(stringResource(R.string.account_upload), AccountTags.UPLOAD, !busy) { upload() }

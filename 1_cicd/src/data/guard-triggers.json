@@ -6,6 +6,7 @@
     "compose-ratchet-guard.yml": "#773: counts View UI in every app and lib tree and discovers new ones; a filter would be a second list of app trees",
     "dns-resolver-guard.yml": "scans the sources of every app and lib for resolver bypasses (30k files traced)",
   "fleet-alerts-guard.yml": "#777: scans every app and lib tree for a direct notify(); the commit it must catch can be any source file anywhere",
+    "fleet-config-guard.yml": "#783: scans every app and lib tree for a store (SharedPreferences, encrypted, DataStore, Room) the migration manifest does not declare; the commit it must catch can be any source file anywhere",
     "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
     "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
     "generated-up-to-date.yml": "its inputs are every source the generator reads, including every build.json and app directory; see the NO PATH FILTER note in the workflow",

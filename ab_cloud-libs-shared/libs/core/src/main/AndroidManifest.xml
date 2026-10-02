@@ -51,6 +51,18 @@
             android:authorities="${applicationId}.core.crashinit"
             android:exported="false"
             android:initOrder="110" />
+
+        <!-- #783 the fleet configuration contract (FleetConfig): export / import of
+             this app's declared configuration, so a new phone can be made to match
+             the old one. Exported behind the fleet's signature permission, and the
+             provider re-checks the caller (call() is not permission-checked by the
+             framework). A provider call starts a stopped app, so the SuperApp reads
+             and applies config with the app closed. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.core.FleetConfigProvider"
+            android:authorities="${applicationId}.fleetconfig"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
     </application>
 
 </manifest>

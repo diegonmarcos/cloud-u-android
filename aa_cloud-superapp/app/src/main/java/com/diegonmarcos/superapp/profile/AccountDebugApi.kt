@@ -32,6 +32,9 @@ object AccountDebugApi {
             Op("sync", "dir=push|pull|discard&path=|app=|all=1", "server→runtime, runtime→declared, or discard L"),
             Op("upload", "dry=1", "commit the saved local copy with the gh engine's token (dry=1: the plan only)"),
             Op("erase", "confirm=1", "GDPR: erase the contact card on this device and ask the profile-sync server to drop its copy"),
+            // #783 the whole fleet and the new phone
+            Op("fleet", "", "per fleet app: contract coverage (covered stores, named gaps, %) from the manifest"),
+            Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
@@ -81,8 +84,32 @@ object AccountDebugApi {
                 ProfileSync.forgetMe(ctx) { done.put(it) }
                 JSONObject().put("result", done.poll(30, java.util.concurrent.TimeUnit.SECONDS) ?: "✗ no answer in 30 s — the erase may still complete")
             }
+            "fleet" -> fleet(ctx)
+            "migrate" -> when {
+                q["dry"] == "1" -> m.migratePlan()
+                q["status"] == "1" -> AccountFleet.progress
+                else -> {
+                    // Long (installs): started on its own thread, followed with status=1.
+                    if (AccountFleet.progress.optString("state") != "running") Thread({ m.migrate() }, "account-migrate").start()
+                    JSONObject().put("started", true).put("follow", "/api/account/migrate?status=1")
+                }
+            }
             else -> null
         }
+    }
+
+    /** #783 per fleet app: what the contract moves and what it cannot yet (paths and counts, never values). */
+    private fun fleet(ctx: Context): JSONObject {
+        val m = AccountFleet.manifest(ctx)
+        val apps = JSONObject()
+        var covered = 0; var total = 0
+        m.apps.values.forEach { a ->
+            val c = m.coverage(a)
+            covered += c.covered.size; total += c.total
+            apps.put(a.id, c.json().put("package", a.pkg).put("schema_version", a.schema))
+        }
+        return JSONObject().put("contract", m.json.optInt("contract")).put("stores", m.stores.size)
+            .put("covered", covered).put("total", total).put("percent", if (total == 0) 100 else covered * 100 / total).put("apps", apps)
     }
 
     /** Which paths a sync names: `path=` one, `app=` that app's drift against R, `all=1` every drift against R

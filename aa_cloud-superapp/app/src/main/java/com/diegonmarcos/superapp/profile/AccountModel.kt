@@ -53,7 +53,9 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     data class FilePair(val id: String, val a: Slot, val b: Slot, val label: String = id)
 
     val apps: List<AccountDrift.App> by lazy {
-        VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, it.vault) }
+        // #783 the cockpit's sections, then every fleet app's `settings › <id>` (one app per id).
+        AccountFleet.driftApps(VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, it.vault) },
+            AccountFleet.manifest(ctx), AccountFleet.fleetApps().associate { it.id to it.label })
     }
 
     // ── Connect lands S ──────────────────────────────────────────────────
@@ -129,11 +131,44 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
         val s = server() ?: return "✗ no server file".also { changed(it) }
         val plan = AccountDrift.pushPlan(AccountDrift.leaves(s.body), AccountRuntime.observed(runtime()?.apps), paths, apps)
         if (plan.isEmpty()) return "✗ nothing to push: the server file holds none of those observed fields".also { changed(it) }
-        val lines = plan.values.flatten().map { (p, v) -> AccountRuntime.push(ctx, p, v, s.body) }
+        // #783 fleet settings go one import per app (an app restarts after its import); the rest field by field.
+        val (fleet, cockpit) = plan.values.flatten().partition { AccountFleet.owns(it.first) }
+        val lines = cockpit.map { (p, v) -> AccountRuntime.push(ctx, p, v, s.body) } + AccountFleet.push(ctx, fleet, s.body)
         // #781 this IS the apply now (the per-peer "Your config" Apply is deleted): it lights Connect's step 4.
         if (lines.any { it.startsWith("✓") }) com.diegonmarcos.cloudlib.auth.UserRegistry.markApplied(ctx, now())
         refreshRuntime()
         return lines.joinToString("\n").also { changed(it) }
+    }
+
+    // ── the new phone (#783) ─────────────────────────────────────────────
+
+    /** The migration source: the server file, else the local copy. */
+    private fun migrationSource(): Pair<String, JSONObject?> = server()?.let { "S" to it.body } ?: ("L" to (local ?: savedLocal()?.body))
+
+    /** What "apply all server → runtime" would do per app (dry run). */
+    fun migratePlan(): JSONObject {
+        val (from, body) = migrationSource()
+        return JSONObject().put("source", from).put("steps", AccountFleet.planJson(AccountFleet.plan(ctx, body)))
+    }
+
+    /**
+     * APPLY ALL SERVER → RUNTIME on a new phone: install every declared app that is missing (the
+     * Store's stages), apply each app's declared configuration, then push the cockpit sections.
+     * Resumable and idempotent (see [AccountFleet.run]). BLOCKS: call on IO.
+     */
+    fun migrate(): String {
+        val (from, body) = migrationSource()
+        if (body == null) return "✗ no server file and no local copy — fetch it on Connect".also { changed(it) }
+        val r = AccountFleet.run(ctx, body) {
+            refreshRuntime()
+            val drifted = AccountDrift.drifted(diff(FilePair("SR", Slot.S, Slot.R))).filterNot(AccountFleet::owns)
+            if (drifted.isEmpty() || from != "S") "cockpit in sync" else pushServerToRuntime(drifted)
+        }
+        refreshRuntime()
+        val res = r.optJSONArray("results") ?: JSONArray()
+        val lines = (0 until res.length()).map { res.getJSONObject(it) }.filter { it.optString("action") != AccountFleet.NOTHING }
+            .map { "${it.optString("id")}: ${it.optString("result")}" }
+        return (listOf("migrated from $from · ${lines.size} apps") + lines + r.optString("cockpit")).joinToString("\n").also { changed(it) }
     }
 
     /** RUNTIME → DECLARED for [paths]: written into L and saved. */
@@ -237,7 +272,12 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
 
         /** The process's one model, its files in an EncryptedFile per slot under filesDir/account. */
         fun get(ctx: Context): AccountModel = instance ?: synchronized(this) {
-            instance ?: AccountModel(ctx.applicationContext, AccountStore(File(ctx.applicationContext.filesDir, "account"), EncryptedIo(ctx.applicationContext))).also { instance = it }
+            instance ?: AccountModel(ctx.applicationContext, AccountStore(File(ctx.applicationContext.filesDir, "account"), EncryptedIo(ctx.applicationContext))).also {
+                // #783 what the fleet manifest classes secret is masked on every Account surface.
+                val m = AccountFleet.manifest(ctx)
+                InfoMask.secretPath = { p -> AccountFleet.owns(p) && AccountFleet.isSecret(m, p) }
+                instance = it
+            }
         }
     }
 

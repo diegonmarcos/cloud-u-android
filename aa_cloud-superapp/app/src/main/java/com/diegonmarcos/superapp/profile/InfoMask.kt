@@ -40,7 +40,7 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
         (pathRes.isEmpty() && valueRes.isEmpty()) || pathRes.any { it == null } || valueRes.any { it == null }
 
     fun hides(fullPath: String, value: String): Boolean =
-        maskAll || pathRes.any { it!!.containsMatchIn(fullPath) } || valueRes.any { it!!.containsMatchIn(value) }
+        maskAll || secretPath(fullPath) || pathRes.any { it!!.containsMatchIn(fullPath) } || valueRes.any { it!!.containsMatchIn(value) }
 
     /** Every row of [value], the bundle's section [sectionId]. */
     fun rows(sectionId: String, value: Any?): List<Row> {
@@ -144,6 +144,10 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
                     com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP)))
             }.getOrNull()
         }
+
+        /** #783 A path the fleet manifest classes `secret` (AccountFleet.isSecret), set when the
+         *  Account model loads: a credential stays masked even when its key looks harmless. */
+        @Volatile var secretPath: (String) -> Boolean = { false }
 
         /** The baked declaration (UI_PROFILE_INFOS_B64). */
         val declared: InfoMask by lazy { parse(baked?.optJSONObject("mask")) }
