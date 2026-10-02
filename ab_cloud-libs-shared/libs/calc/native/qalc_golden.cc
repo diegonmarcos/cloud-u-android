@@ -104,6 +104,8 @@ int main(int argc, char **argv) {
         std::fprintf(stderr, "usage: qalc_golden <golden.tsv> <scratch user dir>\n");
         return 2;
     }
+    // Unbuffered: if a row crashes the process, the last RUN line above the crash names it.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
     std::string init = qcore::init(argv[2]);
     check(jtrue(init, "ok"), "init: " + init);
 
@@ -125,6 +127,7 @@ int main(int argc, char **argv) {
         const std::string &mode = f[0], &expr = f[2], &want = f[3];
         rows++;
         int before = failures;
+        std::printf("  RUN   %s | %s\n", mode.c_str(), expr.c_str());
         if (expr.rfind("plot:", 0) == 0) {
             auto p = split(expr.substr(5), ';');
             std::string j = qcore::plot(p[0], std::stod(p[1]), std::stod(p[2]), std::stoi(p[3]), 5000);

@@ -230,11 +230,22 @@ std::string plot(const std::string &expr, double xmin, double xmax, int steps, i
     if (steps < 1 || steps > 4000 || !(xmax > xmin))
         return "{\"ok\":false,\"error\":\"need xmin < xmax and 1 <= steps <= 4000\"}";
     drain(nullptr);
+    // min, max and the step as EXACT rationals (parsed from decimal text, never from a
+    // binary double), so libqalculate's x += step walk lands on xmax and yields steps+1
+    // points; its int-steps overload samples adaptively and returns a different count.
+    char lo[40], hi[40];
+    std::snprintf(lo, sizeof lo, "%.12g", xmin);
+    std::snprintf(hi, sizeof hi, "%.12g", xmax);
+    EvaluationOptions exact;
+    exact.approximation = APPROXIMATION_EXACT;
+    MathStructure mmin = CALCULATOR->calculate(lo, exact);
+    MathStructure mmax = CALCULATOR->calculate(hi, exact);
+    MathStructure mstep = CALCULATOR->calculate(
+        "(" + std::string(hi) + " - " + lo + ") / " + std::to_string(steps), exact);
     MathStructure xv;
-    xv.clearVector();
-    for (int i = 0; i <= steps; i++) xv.addChild(MathStructure(xmin + (xmax - xmin) * i / steps));
     MathStructure yv = CALCULATOR->expressionToPlotVector(
-        CALCULATOR->unlocalizeExpression(expr, default_parse_options), xv, "x", default_parse_options, timeout_ms);
+        CALCULATOR->unlocalizeExpression(expr, default_parse_options), mmin, mmax, mstep, &xv, "x",
+        default_parse_options, timeout_ms);
     bool error = false;
     std::string messages = drain(&error);
     std::string xs = "[", ys = "[";
