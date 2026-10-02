@@ -135,7 +135,16 @@ if [ "$KIND" = host ]; then
     log "libqalculate make check"
     (cd "$BUILD/libqalculate" && make check) > "$BUILD/libqalculate.check.log" 2>&1 \
         || { tail -n 120 "$BUILD/libqalculate.check.log"; die "libqalculate's own tests failed with these configure flags"; }
-    tail -n 5 "$BUILD/libqalculate.check.log"
+    # Not vacuous: automake's harness must have PASSED the unittest runner, and the runner
+    # must have walked every tests/*.batch file. "Nothing to be done for 'check'" in a
+    # subdirectory is also green, so green alone proves nothing.
+    grep -q '^PASS: unittest' "$BUILD/libqalculate.check.log" \
+        || { tail -n 60 "$BUILD/libqalculate.check.log"; die "make check did not PASS the unittest runner — the upstream suite did not run"; }
+    batches=$(find "$BUILD/libqalculate/tests" -maxdepth 1 -name '*.batch' | wc -l)
+    ran=$(grep -c '^Running unit tests from' "$BUILD/libqalculate/src/unittest.log" || true)
+    [ "$batches" -gt 0 ] && [ "$ran" -eq "$batches" ] \
+        || die "libqalculate's unittest walked $ran of $batches tests/*.batch files"
+    log "libqalculate make check: unittest PASS, $ran/$batches batch files"
     rm -rf "$scratch"
     log "host: golden + upstream tests green"
     exit 0
