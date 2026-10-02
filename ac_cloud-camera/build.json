@@ -44,7 +44,7 @@
     "target_sdk": 37,
     "version_code": 93,
     "version_name": "93",
-    "_doc_version": "Mirrors upstream app/build.gradle.kts, where versionName = versionCode.toString() and versionCode tracks the upstream release tag number (tag '93').",
+    "_doc_version": "version_name mirrors upstream's release tag ('93'); app/build.gradle.kts reads it. version_code is the DECLARED code the fleet manifest carries; the APK's own versionCode is the fleet build stamp (#789: 3,000,000 + minutes since 2026-01-01), because a constant 93 never moved across our builds.",
     "abi_filters": []
   },
   "_doc_abi_filters": "EMPTY ON PURPOSE. GrapheneOS Camera has no native code (no externalNativeBuild, no JNI) so it produces ONE universal APK that runs on every ABI — unlike ac_cloud-media-center, which needs an ABI build matrix because ReFra compiles libheif/libde265.",

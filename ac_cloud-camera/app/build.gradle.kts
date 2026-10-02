@@ -33,6 +33,15 @@ java {
     }
 }
 
+val cloudVersionCode: Int = run {
+    val base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    val built = System.getenv("COMMS_BUILD_TIMESTAMP")?.let {
+        runCatching { java.time.LocalDateTime.parse(it, java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss")) }.getOrNull()
+    } ?: java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    val mins = java.time.Duration.between(base, built).toMinutes()
+    if (mins > 0) (3_000_000L + mins).toInt() else 3_000_000
+}
+
 android {
     if (useKeystoreProperties) {
         signingConfigs {
@@ -63,8 +72,13 @@ android {
         applicationId = "cld.camera"
         minSdk = 29
         targetSdk = 37
-        versionCode = 93
-        versionName = versionCode.toString()
+        // #789 the fleet's build stamp: 3,000,000 + minutes since 2026-01-01
+        // (COMMS_BUILD_TIMESTAMP when CI gives one, else build time), the same
+        // encoding as every first-party app. 93 — upstream's release tag — never
+        // moved across our builds, so Android and the owner saw no progress; it
+        // stays the versionName, read from build.json::android.version_name.
+        versionCode = cloudVersionCode
+        versionName = (appMetadataJson["android"] as Map<*, *>)["version_name"].toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
