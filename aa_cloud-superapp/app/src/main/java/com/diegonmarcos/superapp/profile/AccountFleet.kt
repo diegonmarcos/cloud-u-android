@@ -205,7 +205,7 @@ object AccountFleet {
             val inst = installed(app.pkg)
             val action = when {
                 sub == null -> NOTHING
-                journal(app.id)?.contains("|✓") == true && inst -> DONE
+                journal(app.id)?.startsWith("$sha|✓") == true && inst -> DONE
                 !inst -> INSTALL_APPLY
                 else -> APPLY
             }
