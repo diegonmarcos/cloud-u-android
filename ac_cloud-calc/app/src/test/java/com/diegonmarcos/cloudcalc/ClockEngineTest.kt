@@ -38,7 +38,7 @@ import java.time.ZoneId
 /**
  * The Android half of the Clock against Robolectric's AlarmManager, receivers and service: what
  * is really scheduled, that a wakeup delivered to a process holding nothing in memory still rings,
- * that a reboot or a zone change re-plans, that the notification buttons and /api/clock/* drive
+ * that a reboot or a zone change re-plans, that the notification buttons and /api/clock/… drive
  * the same engine. Time is ClockEngine.now, moved by hand.
  */
 @RunWith(RobolectricTestRunner::class)

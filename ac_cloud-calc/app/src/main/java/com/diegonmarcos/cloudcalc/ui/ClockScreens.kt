@@ -78,7 +78,7 @@ import java.util.Locale
 /*
  * The Clock tab (#768): World clock, Alarms, Timers, Stopwatch, Interval and Bedtime. Every screen
  * reads ClockEngine's store and writes only through ClockEngine, the path the notification buttons,
- * the wakeups and /api/clock/* take too — so what a screen shows is what will ring.
+ * the wakeups and /api/clock/… take too — so what a screen shows is what will ring.
  */
 
 /** The store, re-read on every ClockEngine write. */
