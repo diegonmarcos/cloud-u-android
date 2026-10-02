@@ -216,7 +216,10 @@ class StoreCloudFragment : Fragment() {
     }
     private val filterChips = ArrayList<TextView>()
     private val actionRows = HashMap<String, LinearLayout>()
-    private val installBtns = HashMap<String, TextView>()
+    // #774 the Download / Install / Clear buttons per app, and the stage that
+    // decides which of them are live. StoreStages owns the logic; this only draws.
+    private val stageBtns = HashMap<String, MutableMap<String, TextView>>()
+    private val stages = HashMap<String, StoreStages.Stage>()
     private lateinit var headerControls: LinearLayout
     private lateinit var body: LinearLayout
     private val tabBtns = ArrayList<TextView>()
@@ -461,7 +464,7 @@ class StoreCloudFragment : Fragment() {
 
     private fun renderTab(ctx: Context) {
         body.removeAllViews()
-        statusViews.clear(); actionRows.clear(); installBtns.clear()
+        statusViews.clear(); actionRows.clear(); stageBtns.clear()
         fullStatusViews.clear(); dots.clear(); quickBtns.clear(); filterChips.clear()
         // Past the last group are the declared feeds (#642), then Perms. Each
         // blurb is data beside its group or its feed, so the caption naming the
@@ -579,7 +582,7 @@ class StoreCloudFragment : Fragment() {
 
     private fun renderList(ctx: Context, list: List<Fleet.App>) {
         listHost.removeAllViews()
-        statusViews.clear(); actionRows.clear(); installBtns.clear()
+        statusViews.clear(); actionRows.clear(); stageBtns.clear()
         fullStatusViews.clear(); dots.clear(); quickBtns.clear()
         val shown = list.filter { inFilter(it) }
         if (shown.isEmpty()) { listHost.addView(caption(ctx, "Nothing in this filter.")); return }
@@ -596,7 +599,7 @@ class StoreCloudFragment : Fragment() {
         }
         // Repaint from cache so a filtered rebuild shows real state immediately
         // instead of 24 rows saying "checking..." for a list already checked.
-        for (app in shown) states[app.id]?.let { paint(app.id, it) }
+        for (app in shown) states[app.id]?.let { paint(app.id, it, stages[app.id]) }
         updateSummary(list)
     }
 
@@ -798,7 +801,7 @@ class StoreCloudFragment : Fragment() {
             visibility = View.GONE
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, 8), 0, 0, 0) }
-            setOnClickListener { install(ctx, app) }
+            setOnClickListener { next(ctx, app) }
         }
         val chev = TextView(ctx).apply {
             text = if (expanded.contains(app.id)) "⌄" else "›"
@@ -871,9 +874,10 @@ class StoreCloudFragment : Fragment() {
             statusViews[app.id]?.let { tv -> tv.post { tv.text = "checking…"; tv.setTextColor(cDim) } }
             thread(name = "fleet-check-${app.id}") {
                 val st = Fleet.status(ctx, app)
+                val stg = StoreStages.stage(ctx, app, st)
                 // Post on `body`, not on the row: a filtered-out app still has a
                 // state worth recording, and it has no row to post to.
-                body.post { paint(app.id, st); updateSummary(list) }
+                body.post { paint(app.id, st, stg); updateSummary(list) }
             }
         }
     }
@@ -881,7 +885,7 @@ class StoreCloudFragment : Fragment() {
     /** One state -> dot, collapsed meta line, quick button, full status line.
      *  Tolerates absent views: the app may be filtered out of the visible list
      *  while its check thread is still in flight. */
-    private fun paint(appId: String, s: Fleet.State) {
+    private fun paint(appId: String, s: Fleet.State, stage: StoreStages.Stage? = null) {
         states[appId] = s
         val (glyph, color) = when (s) {
             is Fleet.State.Installed       -> "✓" to cUp
@@ -935,10 +939,39 @@ class StoreCloudFragment : Fragment() {
             }
         }
 
-        val installed = s is Fleet.State.Installed
-        installBtns[appId]?.let {
-            it.setBackgroundColor(if (installed) 0xFF4A4A55.toInt() else 0xFF7C3AED.toInt())
-            it.isClickable = !installed
+        stage?.let { paintStage(appId, it) }
+    }
+
+    /**
+     * #774 The cache stages over the network state: a row with an APK in the
+     * cache, a verb running, or a stage that stopped says THAT — "cached (ready
+     * to install)", "downloading 41%", "install did not finish: cancelled" — and
+     * only the verbs [StoreStages.Stage.actions] allows are live. The quick
+     * button is always the NEXT stage, so one tap takes over from exactly where
+     * a stage (or the auto chain) stopped.
+     */
+    private fun paintStage(appId: String, stg: StoreStages.Stage) {
+        stages[appId] = stg
+        val busy = stg.id == "downloading" || stg.id == "installing"
+        if (busy || stg.cached != null || stg.failedAt != null) {
+            val color = if (stg.failedAt != null) cErr else cUpd
+            statusViews[appId]?.let { it.text = stg.text; it.setTextColor(color) }
+            fullStatusViews[appId]?.let { it.text = stg.text; it.setTextColor(color) }
+        }
+        quickBtns[appId]?.let { b ->
+            when (val verb = stg.actions.firstOrNull()) {
+                StoreStages.INSTALL, StoreStages.CLEAR -> {
+                    b.visibility = View.VISIBLE
+                    b.text = FleetActions.label(b.context, stg.actions.first())
+                    b.setBackgroundColor(if (verb == StoreStages.INSTALL) 0xFF7C3AED.toInt() else 0xFF4A4A55.toInt())
+                }
+                null -> b.visibility = View.GONE
+                else -> Unit   // Download: paint() already drew ⬆ / ⬇ for it
+            }
+        }
+        stageBtns[appId]?.forEach { (verb, b) ->
+            val live = !busy && verb in stg.actions
+            b.isClickable = live; b.alpha = if (live) 1f else 0.35f
         }
     }
 
@@ -946,14 +979,38 @@ class StoreCloudFragment : Fragment() {
      *  line and the progress line cannot drift from the row's own size. */
     private fun human(b: Long): String = FleetIdentity.human(b)
 
-    private fun install(ctx: Context, app: Fleet.App) {
-        Toast.makeText(ctx, "Installing ${app.label}…", Toast.LENGTH_SHORT).show()
-        thread(name = "fleet-install-${app.id}") {
-            FleetInstall.run(ctx, app)?.let { msg ->
-                view?.post { Toast.makeText(ctx, "${app.label}: $msg", Toast.LENGTH_LONG).show() }
+    /** The quick button: whatever stage comes next for this row. */
+    private fun next(ctx: Context, app: Fleet.App) =
+        runStage(ctx, app, stages[app.id]?.actions?.firstOrNull() ?: StoreStages.DOWNLOAD)
+
+    /**
+     * Run one #774 stage verb off the main thread, repainting the row from
+     * [StoreStages.stage] twice a second while it runs (download %), then once
+     * from the network when it ends. Install never downloads and Download never
+     * installs — each is its own tap, or the auto chain's.
+     */
+    private fun runStage(ctx: Context, app: Fleet.App, verb: String) {
+        thread(name = "fleet-$verb-${app.id}") {
+            val ticker = thread(name = "fleet-$verb-tick-${app.id}") {
+                try {
+                    while (true) {
+                        Thread.sleep(500)
+                        val s = StoreStages.stage(ctx, app)
+                        body.post { paintStage(app.id, s) }
+                    }
+                } catch (e: InterruptedException) { }
             }
+            val done = when (verb) {
+                StoreStages.DOWNLOAD -> StoreStages.download(ctx, app)
+                StoreStages.INSTALL -> StoreStages.install(ctx, app)
+                else -> StoreStages.clear(ctx, app)
+            }
+            ticker.interrupt()
+            if (done.failedAt != null)
+                view?.post { Toast.makeText(ctx, "${app.label}: ${done.text}", Toast.LENGTH_LONG).show() }
             val st = Fleet.status(ctx, app)
-            body.post { paint(app.id, st); updateSummary(current()) }
+            val stg = StoreStages.stage(ctx, app, st)
+            body.post { paint(app.id, st, stg); updateSummary(current()) }
         }
     }
 
@@ -965,8 +1022,11 @@ class StoreCloudFragment : Fragment() {
         // App settings — see ApkDetailSheet.
         "details" -> btn(ctx, a.label, a.color) { ApkDetailSheet.show(requireActivity(), app, states[app.id]) }
         "open" -> btn(ctx, a.label, a.color) { openApp(ctx, Fleet.installedId(ctx, app) ?: app.pkg) }
+        // #774 three stages, three buttons; which are live is StoreStages' call.
+        "download" -> if (app.blocked) null else stageBtn(ctx, app, a, StoreStages.DOWNLOAD)
         "install" -> if (app.blocked) null
-                     else btn(ctx, a.label, a.color) { install(ctx, app) }.also { installBtns[app.id] = it }
+                     else stageBtn(ctx, app, a, StoreStages.INSTALL)
+        "clear" -> if (app.blocked) null else stageBtn(ctx, app, a, StoreStages.CLEAR)
         "stop" -> btn(ctx, a.label, a.color) { stop(ctx, app) }
         "uninstall" -> btn(ctx, a.label, a.color) {
             runCatching { Fleet.uninstall(ctx, Fleet.installedId(ctx, app) ?: app.pkg) }
@@ -977,6 +1037,10 @@ class StoreCloudFragment : Fragment() {
                 Toast.LENGTH_LONG).show()
         }
     }
+
+    private fun stageBtn(ctx: Context, app: Fleet.App, a: FleetActions.Action, verb: String): TextView =
+        btn(ctx, a.label, a.color) { runStage(ctx, app, verb) }
+            .also { stageBtns.getOrPut(app.id) { HashMap() }[verb] = it }
 
     /**
      * Force-stop through the shell channel ladder — the same door Phone Apps'

@@ -138,11 +138,18 @@ installers = sorted(f for f, t in store_files.items() if re.search(r"\bFleet\.co
 if installers == ["ExternalInstall.kt", "FleetInstall.kt"]:
     ok("the installer is entered from FleetInstall.kt (fleet) and ExternalInstall.kt (#571 ladder) alone")
 else: bad("Fleet.commit is called from %s - the store has more than one install path" % installers)
-for name, text in (("StoreCloudFragment", cloud), ("StorePhoneFragment", phone)):
-    # #571 moved Phone Apps' call into installOne(app, r) -> FleetInstall.run(app, fleetApp):
-    # the argument names changed, the one path did not. Match the call, not its locals.
-    if re.search(r"\bFleetInstall\.run\(", text): ok(name + " updates through FleetInstall.run")
-    else: bad(name + " does not update through FleetInstall.run")
+# #571 moved Phone Apps' call into installOne(app, r) -> FleetInstall.run(app, fleetApp):
+# the argument names changed, the one path did not. Match the call, not its locals.
+if re.search(r"\bFleetInstall\.run\(", phone): ok("StorePhoneFragment updates through FleetInstall.run")
+else: bad("StorePhoneFragment does not update through FleetInstall.run")
+# #774 the Cloud tab drives Download / Install / Clear as separate stages, so it
+# calls StoreStages — whose Install stage is FleetInstall.install, the same half
+# FleetInstall.run is made of. Still one path into the installer, just one stage at a time.
+stages = store_files.get("StoreStages.kt", "")
+if re.search(r"\bStoreStages\.(download|install|clear)\(", cloud) and "FleetInstall::install" in stages \
+        and not re.search(r"\bFleet\.commit\(", stages):
+    ok("StoreCloudFragment updates through StoreStages, whose Install is FleetInstall.install")
+else: bad("StoreCloudFragment's stages do not reach the installer through FleetInstall.install")
 assets = os.path.join(store_dir, "../../../../../assets/appstore-install-sources.json")
 src = json.loads(read(assets))
 keys = sorted(src["sources"])
