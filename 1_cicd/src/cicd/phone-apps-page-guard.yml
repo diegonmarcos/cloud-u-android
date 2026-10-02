@@ -32,6 +32,14 @@ name: "Phone ▸ Apps page guard — the quickmarks rows stay on one line and th
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/phone-apps-page-guard.yml"
+      - "1_cicd/src/data/phone-apps-page-guard.json"
+      - "1_cicd/src/scripts/cloud-android-phone-apps-page-guard.py"
+      - "1_cicd/src/scripts/test/phone-apps-page-guard.test.sh"
+      - "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

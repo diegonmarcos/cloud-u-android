@@ -26,6 +26,18 @@ name: "fork engine guard — the shared fork engines stay data-driven"
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "*/build.json"
+      - "*/build.sh"
+      - "*/fleet-lib.json"
+      - "*/settings.gradle"
+      - "1_cicd/src/cicd/fork-engine-guard.yml"
+      - "1_cicd/src/scripts/cloud-*-engine.sh"
+      - "1_cicd/src/scripts/test/test-apk-identity-reader.sh"
+      - "1_cicd/src/scripts/test/test-fork-*.sh"
+      - "ab_cloud-libs-shared/lib-apks/build.json"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

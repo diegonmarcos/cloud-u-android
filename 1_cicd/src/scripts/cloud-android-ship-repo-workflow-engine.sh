@@ -202,6 +202,17 @@ PYRENDER
 # see cloud-android-source-identity.sh. Anything that can start a build is
 # therefore also something the gate weighs, so the gate can never skip a
 # rebuild that a real change triggered.
+#
+# ── guard triggers (#763) ──
+# Every guard used to run on every push: a doc edit started 23 guard runs. The
+# paths a guard reads are declared once, in 1_cicd/src/data/guard-triggers.json,
+# and injected here BEFORE the sync below validates them. Refuses to generate
+# while any push-triggered workflow is in neither list, so a new guard has to
+# say whether it is narrowed. guard-trigger-coverage-guard.yml proves the lists
+# against an strace of each guard.
+log_step "inject guard triggers"
+PYTHONDONTWRITEBYTECODE=1 python3 "$CICD_SRC/scripts/cloud-android-guard-triggers.py" inject "$CLOUD_ANDROID_ROOT" || exit 1
+
 log_step "sync workflow triggers"
 python3 - "$CLOUD_ANDROID_ROOT" <<'PYEOF' || exit 1
 import glob, json, os, re, sys
@@ -236,8 +247,11 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
         app = next((a for a in apps if a.split("_", 1)[-1] == slug), None)
     if not app:
         # Not an app workflow (ship.yml, health.yml, ...) -- only validate.
+        # The fixed DIRECTORY prefix must exist: `.github/workflows/ship-*.yml`
+        # checks .github/workflows, not a file literally named `ship-`.
         for e in entries:
-            base = e.split("*")[0].rstrip("/")
+            segs = e.lstrip("!").split("/")
+            base = "/".join(segs[:next((i for i, s in enumerate(segs) if re.search(r"[*?\[]", s)), len(segs))])
             if base and not os.path.exists(os.path.join(root, base)):
                 bad.append(f"{name}: watches a path not in this repo: {e}")
         continue

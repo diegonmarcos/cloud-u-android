@@ -29,6 +29,12 @@ name: "analytics retry guard — a sink that fails must keep its own events"
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/analytics-retry-guard.yml"
+      - "1_cicd/src/scripts/test/analytics-retry.test.*"
+      - "ab_cloud-libs-shared/libs/analytics/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

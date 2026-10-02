@@ -18,6 +18,14 @@ name: "install-pinned-tools guard — a failed tool download fails the step that
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/actions/**"
+      - "1_cicd/src/cicd/**"
+      - "1_cicd/src/cicd/install-pinned-tools-guard.yml"
+      - "1_cicd/src/scripts/test/install-pinned-tools.test.sh"
+      - "1_cicd/src/templates/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

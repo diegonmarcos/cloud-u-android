@@ -42,6 +42,13 @@ name: "wireguard profiles guard — the APK's export block cannot drift from the
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/wireguard-profiles-guard.yml"
+      - "1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py"
+      - "1_cicd/src/scripts/test/wireguard-profiles-guard.test.sh"
+      - "aa_cloud-superapp/build.json"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

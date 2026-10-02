@@ -14,6 +14,13 @@ name: "tester lint guard — no tester verdict is decided by a SIGPIPE race"
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "**/build.json"
+      - "**/test/**"
+      - "**/tests/**"
+      - "1_cicd/src/cicd/tester-lint-guard.yml"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

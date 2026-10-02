@@ -33,6 +33,12 @@ name: "translate key handoff guard — the host field takes the keys, typing in 
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/translate-key-handoff-guard.yml"
+      - "1_cicd/src/scripts/test/translate-key-handoff.test.*"
+      - "ab_cloud-libs-shared/libs/translate/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

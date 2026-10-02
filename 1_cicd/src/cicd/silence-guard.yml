@@ -28,6 +28,19 @@ name: "silence guard — a user-facing action that ends without saying why fails
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/silence-guard.yml"
+      - "1_cicd/src/data/silence-guard.json"
+      - "1_cicd/src/scripts/cloud-android-silence-guard.py"
+      - "1_cicd/src/scripts/test/silence-guard.test.sh"
+      - "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/settings/**"
+      - "aa_cloud-superapp/app/src/main/res/values*/**"
+      - "ab_cloud-libs-shared/libs/*/src/main/res/values*/**"
+      - "ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/**"
+      - "ab_cloud-libs-shared/libs/launcher-onehand/src/main/java/**"
+      - "ab_cloud-libs-shared/libs/translate/src/main/java/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

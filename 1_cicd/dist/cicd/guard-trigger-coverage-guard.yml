@@ -1,0 +1,68 @@
+name: "guard trigger coverage — a narrowed guard still runs on every change that can turn it red"
+
+# #763. Guards used to run on every push whatever it touched (a doc edit started
+# 23 guard runs). 1_cicd/src/data/guard-triggers.json now narrows each one to
+# the paths it reads, and the generator injects them. A filter can only go
+# wrong in one silent direction: too narrow, so the guard stops running on the
+# change that would have failed it, and the board stays green for a defect.
+#
+# This proves the lists instead of trusting them: it runs every filtered
+# guard's steps under strace and fails naming each repo file a guard opened
+# that its declared paths do not match. A guard that exits non-zero fails it
+# too — it cannot vouch for what it would have read.
+#
+# Runs when anything under 1_cicd/src changes (every filtered guard's scripts,
+# testers, data and the declaration itself live there) and DAILY, because one
+# kind of input can grow from outside 1_cicd: a data-driven read (an app's
+# build.json naming a new tester directory). The daily run is also a full run
+# of every filtered guard, so nothing a filter skipped can stay unexercised for
+# more than a day.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "1_cicd/src/**"
+  schedule:
+    - cron: "41 4 * * *"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # analytics-retry and translate-key-handoff compile Kotlin through
+      # `nix shell nixpkgs#kotlin`, exactly as their own workflows do.
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Install strace, PyYAML and jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq strace python3-yaml jq
+
+      # The tester runs FIRST: it builds a fixture guard, narrows it wrongly,
+      # and requires the check to go red naming the file; it also requires the
+      # generator to refuse an unclassified guard. A gate whose red path is
+      # unproven enforces nothing.
+      - name: The coverage check, the injector and the fan-out simulator still fail when they should
+        run: bash 1_cicd/src/scripts/test/guard-triggers.test.sh
+
+      - name: Every filtered guard reads only inside its declared paths
+        run: python3 1_cicd/src/scripts/cloud-android-guard-triggers.py coverage .
+
+      # Informational: what this commit started, measured the way #763 reports it.
+      - name: Runs this commit starts
+        if: github.event_name == 'push'
+        run: python3 1_cicd/src/scripts/cloud_android_ci_fanout.py --names --commit HEAD

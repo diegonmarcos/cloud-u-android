@@ -40,6 +40,13 @@ name: "foreign gate guard — nothing outside an application's own source may fa
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/foreign-gate-guard.yml"
+      - "1_cicd/src/scripts/cloud-android-source-identity.sh"
+      - "1_cicd/src/scripts/cloud-android-test-engine.sh"
+      - "1_cicd/src/scripts/test/foreign-gate.test.sh"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

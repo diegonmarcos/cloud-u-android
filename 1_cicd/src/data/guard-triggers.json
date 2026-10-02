@@ -1,0 +1,130 @@
+{
+  "_doc": "#763 THE ONE DECLARATION of which push a guard workflow runs on. Before it every guard ran on every push to main whatever it touched: a one-line doc edit started 23 guard runs, a one-app edit 24, and a libs/devtools edit 54 runs in all (measured by cloud_android_ci_fanout.py, which reproduces the 53 runs GitHub really started for the 96949041d..2538666c7 push). Every push-triggered workflow in 1_cicd/src/cicd that carries no hand-written `paths:` must be named here, once, under `filtered` or `unfiltered`, and cloud-android-ship-repo-workflow-engine.sh REFUSES to generate otherwise -- a new guard cannot quietly keep running on everything, and cannot quietly be narrowed either. `filtered` entries get their `paths:` INJECTED into the workflow source between MANAGED-GUARD-TRIGGERS fences (never edit them there); the workflow's own source file is always added. Each list was derived from an strace of that guard's run steps (every repo file it opened) and widened to the directory or wildcard the guard actually scans, so a new app, test or lib it would read still starts it. guard-trigger-coverage-guard.yml re-runs every filtered guard under strace on every 1_cicd/src change and daily, and fails naming any file a guard read that its list does not cover -- a list that is too narrow cannot stay green. Its one blind spot is content read through git objects (`git show HEAD:path`); none of the guards filtered below reads the working repository that way (their fixtures are copied with cp, which strace sees).",
+  "unfiltered": {
+    "_doc": "Workflows that keep running on every push, each with the reason. These scan the whole fleet's sources, so a filter would be a second copy of 'every app, every lib' and save almost nothing. leak-scan.yml is not listed because it has no source here (it is fleet-emitted straight into .github/workflows); it runs on every push.",
+    "app-names-guard.yml": "reads every application's identity files across all ~30 app trees and the fleet roster",
+    "dns-resolver-guard.yml": "scans the sources of every app and lib for resolver bypasses (30k files traced)",
+    "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
+    "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
+    "generated-up-to-date.yml": "its inputs are every source the generator reads, including every build.json and app directory; see the NO PATH FILTER note in the workflow",
+    "i18n-guard.yml": "reads the resources of every app and lib",
+    "mesh-membership-guard.yml": "#753: the edit that drops an app from the mesh can be anywhere on its route to libs:core; see the workflow",
+    "one-pdf-engine-guard.yml": "scans every app and lib for an in-process PDF renderer (26k files traced)",
+    "sync-submodules.yml": "keeps submodule pointers current; it is not a guard over any path",
+    "update-ack-guard.yml": "scans every app's update routes (10k files traced)"
+  },
+  "filtered": {
+    "analytics-retry-guard.yml": {
+      "_doc": "Compiles libs:analytics' SinkQueue against its tester.",
+      "paths": [
+        "1_cicd/src/scripts/test/analytics-retry.test.*",
+        "ab_cloud-libs-shared/libs/analytics/**"
+      ]
+    },
+    "foreign-gate-guard.yml": {
+      "_doc": "Builds its fixtures from scratch and runs the test engine and source identity against them.",
+      "paths": [
+        "1_cicd/src/scripts/cloud-android-source-identity.sh",
+        "1_cicd/src/scripts/cloud-android-test-engine.sh",
+        "1_cicd/src/scripts/test/foreign-gate.test.sh"
+      ]
+    },
+    "fork-engine-guard.yml": {
+      "_doc": "The shared fork engines, every app's build.json and the per-fork build files they read.",
+      "paths": [
+        "*/build.json",
+        "*/build.sh",
+        "*/fleet-lib.json",
+        "*/settings.gradle",
+        "1_cicd/src/scripts/cloud-*-engine.sh",
+        "1_cicd/src/scripts/test/test-apk-identity-reader.sh",
+        "1_cicd/src/scripts/test/test-fork-*.sh",
+        "ab_cloud-libs-shared/lib-apks/build.json"
+      ]
+    },
+    "install-pinned-tools-guard.yml": {
+      "_doc": "Scans every workflow source, action and template for an unchecked download, and installs the pins tools.json declares.",
+      "paths": [
+        "1_cicd/src/actions/**",
+        "1_cicd/src/cicd/**",
+        "1_cicd/src/scripts/test/install-pinned-tools.test.sh",
+        "1_cicd/src/templates/**"
+      ]
+    },
+    "licence-guard.yml": {
+      "_doc": "The two app trees licence-boundaries.json names, and that declaration.",
+      "paths": [
+        "1_cicd/src/data/licence-boundaries.json",
+        "1_cicd/src/scripts/cloud-android-licence-boundary-guard.py",
+        "1_cicd/src/scripts/test/licence-boundary-guard.test.sh",
+        "ac_cloud-code/**",
+        "ac_cloud-notes/**"
+      ]
+    },
+    "phone-apps-page-guard.yml": {
+      "_doc": "The SuperApp's Apps page sources phone-apps-page-guard.json names.",
+      "paths": [
+        "1_cicd/src/data/phone-apps-page-guard.json",
+        "1_cicd/src/scripts/cloud-android-phone-apps-page-guard.py",
+        "1_cicd/src/scripts/test/phone-apps-page-guard.test.sh",
+        "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/**"
+      ]
+    },
+    "publish-gate-guard.yml": {
+      "_doc": "The publish gate, source identity and publish guard, every ship workflow, and every build.json / lib build.gradle the identity is computed from.",
+      "paths": [
+        "**/build.json",
+        ".github/workflows/ship-*.yml",
+        "1_cicd/dist/scripts/**",
+        "1_cicd/src/cicd/ship-*.yml",
+        "1_cicd/src/scripts/**",
+        "ab_cloud-libs-shared/lib-apks/**",
+        "ab_cloud-libs-shared/libs/*/build.gradle*"
+      ]
+    },
+    "silence-guard.yml": {
+      "_doc": "The user-facing actions silence-guard.json names, and the string resources their messages resolve through.",
+      "paths": [
+        "1_cicd/src/data/silence-guard.json",
+        "1_cicd/src/scripts/cloud-android-silence-guard.py",
+        "1_cicd/src/scripts/test/silence-guard.test.sh",
+        "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/settings/**",
+        "aa_cloud-superapp/app/src/main/res/values*/**",
+        "ab_cloud-libs-shared/libs/*/src/main/res/values*/**",
+        "ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/**",
+        "ab_cloud-libs-shared/libs/launcher-onehand/src/main/java/**",
+        "ab_cloud-libs-shared/libs/translate/src/main/java/**"
+      ]
+    },
+    "tester-lint-guard.yml": {
+      "_doc": "Every tester in the tree (build.json::tests.shell.dir, and the repo's own test directories).",
+      "paths": [
+        "**/build.json",
+        "**/test/**",
+        "**/tests/**"
+      ]
+    },
+    "translate-key-handoff-guard.yml": {
+      "_doc": "Compiles libs:translate's KeyHandoff against its tester.",
+      "paths": [
+        "1_cicd/src/scripts/test/translate-key-handoff.test.*",
+        "ab_cloud-libs-shared/libs/translate/**"
+      ]
+    },
+    "wireguard-profiles-guard.yml": {
+      "_doc": "The SuperApp's export block in its build.json against the vault-published profiles.",
+      "paths": [
+        "1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py",
+        "1_cicd/src/scripts/test/wireguard-profiles-guard.test.sh",
+        "aa_cloud-superapp/build.json"
+      ]
+    },
+    "workflow-header-fence-guard.yml": {
+      "_doc": "The managed paths: header module and its tester.",
+      "paths": [
+        "1_cicd/src/scripts/cloud_android_workflow_paths.py",
+        "1_cicd/src/scripts/test/test-workflow-header-fence.test.sh"
+      ]
+    }
+  }
+}

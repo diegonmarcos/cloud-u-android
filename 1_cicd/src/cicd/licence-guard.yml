@@ -32,6 +32,15 @@ name: "licence boundary guard — no Enterprise-licensed code in a published APK
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/licence-guard.yml"
+      - "1_cicd/src/data/licence-boundaries.json"
+      - "1_cicd/src/scripts/cloud-android-licence-boundary-guard.py"
+      - "1_cicd/src/scripts/test/licence-boundary-guard.test.sh"
+      - "ac_cloud-code/**"
+      - "ac_cloud-notes/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

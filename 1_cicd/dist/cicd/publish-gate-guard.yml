@@ -24,6 +24,17 @@ name: "publish gate guard — a shared-library change must not republish the who
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "**/build.json"
+      - ".github/workflows/ship-*.yml"
+      - "1_cicd/dist/scripts/**"
+      - "1_cicd/src/cicd/publish-gate-guard.yml"
+      - "1_cicd/src/cicd/ship-*.yml"
+      - "1_cicd/src/scripts/**"
+      - "ab_cloud-libs-shared/lib-apks/**"
+      - "ab_cloud-libs-shared/libs/*/build.gradle*"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:
