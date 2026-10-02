@@ -61,7 +61,7 @@ class RecentAppsFragment : KitComposeFragment() {
         val ctx = LocalContext.current
         val recent = remember { recentApps(ctx) }
         if (recent.isEmpty()) {
-            KitEmptyState(title = null, caption = "No recent apps yet — grant usage access")
+            KitEmptyState(title = null, caption = "") // MUTANT M7
             return
         }
         LazyVerticalGrid(

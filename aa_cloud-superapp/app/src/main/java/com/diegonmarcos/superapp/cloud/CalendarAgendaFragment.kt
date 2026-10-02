@@ -52,7 +52,7 @@ class CalendarAgendaFragment : KitComposeFragment() {
                         .semantics(mergeDescendants = true) {}
                         .testTag(dayTag(i)),
                 ) {
-                    Text(if (today) "Today · $day" else day,
+                    Text(day, // MUTANT M6
                         color = p.textPrimary, style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (today) FontWeight.Bold else FontWeight.Normal)
                     Text("no events", color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
