@@ -1,4 +1,17 @@
 #!/bin/sh
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║   GENERATED FILE — DO NOT EDIT                                   ║
+# ║                                                                  ║
+# ║   Source : 0_apps/src/githooks/pre-commit
+# ║   Engine : 9_others/src/deploy-dotfiles.sh
+# ║   Rebuild: ./9_others/build.sh
+# ║                                                                  ║
+# ║   Manual edits will be overwritten on next build.                ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
 # pre-commit — refuse a commit that adds a secret-shaped value.
 # Emitted fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only).
 # Active when core.hooksPath=.githooks (`9_others/build.sh fleet` wires it where

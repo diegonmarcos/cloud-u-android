@@ -1,3 +1,15 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║   GENERATED FILE — DO NOT EDIT                                   ║
+# ║                                                                  ║
+# ║   Source : 0_apps/src/root/gitleaks.toml
+# ║   Engine : 9_others/src/deploy-dotfiles.sh
+# ║   Rebuild: ./9_others/build.sh
+# ║                                                                  ║
+# ║   Manual edits will be overwritten on next build.                ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
 # Leak-scan rules — ONE declaration for every public repo of the fleet.
 #
 # Source : cloud-infra/0_apps/src/root/gitleaks.toml
