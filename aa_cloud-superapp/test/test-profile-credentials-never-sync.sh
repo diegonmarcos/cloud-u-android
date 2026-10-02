@@ -215,7 +215,7 @@ echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored 
 # The screen is two tabs now. What must survive the split is WHERE each field
 # is stored, not where it is drawn — so these assert the placement AND that
 # nothing gained a store on the way across.
-# Tab identity is asserted in T11, which owns the four-tab shape.
+# Tab identity is asserted in T11, which owns the four-tab shape (#778).
 # The existing pill idiom, not a second tab mechanism.
 has "$FRAGMENT" "AppTabsStyle.apply"          "reuses the launcher's pill chrome"
 # ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
@@ -287,47 +287,47 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: THREE tabs (#695 — Connect | Infos | Cloud Constellation Setup), declared {id, label} in build.json; the export carries no private key =="
+echo "== T11: FOUR tabs (#778 — Connect | Profiles | Runtime | Drift), declared {id, label} in build.json; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
 # The id → column map is the ONLY tab knowledge in Kotlin; every LABEL is the
 # declaration's (build.json::ui.profile.tabs[].label).
-has "$FRAGMENT" 'val columns = mapOf("connect" to connect, "infos" to col, "setup" to setup)' "the id → column map names the three columns"
+has "$FRAGMENT" 'val columns = mapOf("connect" to connect, "profiles" to profiles, "runtime" to runtime, "drift" to drift)' "the id → column map names the four columns"
 has "$FRAGMENT" 'Tab(t.label, it)' "each tab's title is its declared label"
 # No tab label is a Kotlin literal, and none of the tabs the strip lost comes back.
-for gone in 'Tab("Setup"' 'Tab("Infos"' 'Tab("Connect"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
+for gone in 'Tab("Setup"' 'Tab("Infos"' 'Tab("Connect"' 'Tab("Profiles"' 'Tab("Runtime"' 'Tab("Drift"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
     hasnt_code "$FRAGMENT" "$gone" "no tab label literal $gone"
 done
-# NOTHING WAS DROPPED: every surface of the #626 page renders on one of the three.
+# Every surface renders on one of the four (#778: Setup's index, wizard, cockpit and repos were deleted by design).
 has "$FRAGMENT" 'renderJourney(ctx, connect)' "the sign-in journey renders on Connect"
 has "$FRAGMENT" 'showVaultFetchDialog(line.label)'   "the vault fetch is the Authelia line's own leg on Connect (#766)"
 # #713 Connect ends at the vault export: the credentials read-out (it repeated
 # what each sign-in line says it holds) is gone, and the device pick is Setup's.
 hasnt_code "$FRAGMENT" 'renderTokens(' "the duplicated credentials read-out is gone from Connect"
 hasnt_code "$FRAGMENT" 'renderDevicePick(' "the device pick no longer renders on Connect"
-has "$FRAGMENT" 'renderInfos(ctx, col)'       "the fetched configs render on Infos"
-has "$FRAGMENT" 'renderSetup(ctx, setup)'     "Cloud Constellation Setup renders on Setup"
-SETUP_FN=$(awk '/private fun renderSetup\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
-for moved in 'renderConfigApply(ctx, into)' 'renderImported(ctx, into)' 'renderPerson(ctx, into)' 'renderRepos(ctx, into)' 'renderWizard(ctx, into)'; do
-    grep -qF "$moved" <<<"$SETUP_FN" && ok "Setup renders $moved" || bad "Setup does not render $moved"
+has "$FRAGMENT" 'ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t) }, { openRoute(it) })' "the declared copy renders on Profiles"
+has "$FRAGMENT" 'renderRuntime(ctx, runtime)'  "the per-app runtime renders on Runtime"
+has "$FRAGMENT" 'DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) }' "S / R / L and the sync render on Drift"
+RUNTIME_FN=$(awk '/private fun renderRuntime\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
+for kept in 'RuntimeTab(AccountModel.get(ctx))' 'renderConfigApply(ctx, into)' 'renderPerson(ctx, into)'; do
+    grep -qF "$kept" <<<"$RUNTIME_FN" && ok "Runtime renders $kept" || bad "Runtime does not render $kept"
 done
 # And every tab HAS a column: #614's null-column launch tabs are gone.
 hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"
 # The strip is DATA: ids, order and labels come from the baked build.json array.
-has "$FRAGMENT" "profileTabs()"                    "the strip is built from the declared tabs"
-has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the tabs come from the baked build.json blob"
+has "$FRAGMENT" "AccountModel.tabs()"              "the strip is built from the declared tabs"
+has "app/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt" "UI_PROFILE_TABS_B64" "the tabs come from the baked build.json blob"
 has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
 # AI is not a tab; and #723 deleted the Configs AI page, so the cockpit card no
 # longer links anywhere — Account applies the AI tokens itself.
 hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
 hasnt_code "$FRAGMENT" 'page:config/ai'         "no link to the deleted AI page survives"
 hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
-# The route must be the one the DATA declares, not a plausible-looking string.
-has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "the cockpit's WireGuard link uses the declared section target"
+# #778 the cockpit's WireGuard link went with the cockpit page; no wrong target may come back.
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# Still no child fragments and no borrowed launcher machinery, at three tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "three tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "three tabs still avoid the section mechanism"
+# Still no child fragments and no borrowed launcher machinery, at four tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "four tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "four tabs still avoid the section mechanism"
 # #626 the page is called ACCOUNT, and the words live in ONE declaration.
 name_is_account() {   # $1 = build.json; 0 iff the Configs identity page reads "Account"
     python3 - "$1" <<'PYNAME'
@@ -342,11 +342,11 @@ PYNAME
 name_is_account "$ROOT/build.json" && ok "T11-name: Configs ▸ Account — the tile/page label is the ONE declaration" \
                                    || bad "T11-name: the Configs identity page is not labelled Account"
 
-echo "-- T11-order: the strip is EXACTLY [connect, infos, setup], each with a label (#695) --"
+echo "-- T11-order: the strip is EXACTLY [connect, profiles, runtime, drift], each with a label (#778) --"
 tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared ids match, in order, and every tab has a label
     python3 - "$1" <<'PY'
 import json, sys
-want = ["connect", "infos", "setup"]
+want = ["connect", "profiles", "runtime", "drift"]
 tabs = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs") or []
 labelled = all(isinstance(t, dict) and str(t.get("label", "")).strip() for t in tabs)
 sys.exit(0 if labelled and [t.get("id") for t in tabs] == want else 1)
@@ -360,10 +360,10 @@ ids = {p["id"] for p in ext}
 sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
 PY
 }
-if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the three tabs, labelled, in the required order"
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the four tabs, labelled, in the required order"
 else bad "T11-order: build.json tab order or labels are wrong"; fi
 
-echo "-- T11-mutation: a FOURTH tab, a dropped tab, a reordered tab, an unlabelled tab and a missing WG profile each go red --"
+echo "-- T11-mutation: a FIFTH tab, a dropped tab, a reordered tab, an unlabelled tab and a missing WG profile each go red --"
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 cp "$ROOT/build.json" "$SCRATCH/build.json"
 tab_order_ok "$SCRATCH/build.json" && wg_has_externals "$SCRATCH/build.json" \
@@ -378,8 +378,8 @@ PY
     cmp -s "$ROOT/build.json" "$SCRATCH/build.json" && return 2
     ! tab_order_ok "$SCRATCH/build.json"
 }
-for m in 't[:] = [x for x in t if x["id"] != "infos"]' \
-         't.append({"id": "vault", "label": "Vault"})' \
+for m in 't[:] = [x for x in t if x["id"] != "runtime"]' \
+         't.append({"id": "setup", "label": "Cloud Constellation Setup"})' \
          't[0], t[1] = t[1], t[0]' \
          't[2]["label"] = ""'; do
     tab_mut "$m"; rc=$?
@@ -397,29 +397,29 @@ PY
 wg_has_externals "$SCRATCH/build.json" && bad "T11-mutation: a missing WG profile was NOT caught" || ok "T11-mutation: a missing WG profile is caught"
 rm -rf "$SCRATCH"; trap - EXIT
 
-echo "-- T11-infos: the Infos read-out is the FETCHED configs, not a hand-listed set (#695) --"
-# The mask rule and its proof live in test-account-three-tabs.sh; this block pins
-# that #626's hand-listed sections are gone and the read-out is the import itself.
-INFOS_FN=$(awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
-grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INFOS_FN" && ok "T11-infos: renderInfos reads the fetched sections" || bad "T11-infos: renderInfos does not read the fetched import"
-grep -qF 'mask.schemaRows(section, bundle?.opt(section.id))' <<<"$INFOS_FN" && ok "T11-infos: every row comes from the fetched bundle, through the mask, per declared field" || bad "T11-infos: rows are not drawn from the fetched bundle"
-grep -qE '"(person|tokens|repos|fleet|vault|wireguard|store)"' <<<"$(codeof "$FRAGMENT" | awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}')" \
-    && bad "T11-infos: renderInfos still names a hand-listed section" || ok "T11-infos: renderInfos names no section of its own"
+echo "-- T11-infos: the Profiles read-out is the DECLARED copy, not a hand-listed set (#695 → #778) --"
+# The mask rule and its proof live in test-account-four-tabs.sh; this block pins
+# that #626's hand-listed sections stay gone and the read-out is the declared file itself.
+AT_FILE="app/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
+PROF_FN=$(awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$ROOT/$AT_FILE")
+grep -qF 'val shown = m.shown()' <<<"$PROF_FN" && ok "T11-infos: Profiles reads the declared copy (L, else S)" || bad "T11-infos: Profiles does not read the declared copy"
+grep -qF 'InfoMask.declared.schemaRows(section, shown?.opt(section.id))' <<<"$PROF_FN" && ok "T11-infos: every row comes from the declared copy, through the mask, per declared field" || bad "T11-infos: rows are not drawn from the declared copy"
+grep -qE '"(person|tokens|repos|fleet|vault|wireguard|store)"' <<<"$(codeof "$AT_FILE" | awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}')" \
+    && bad "T11-infos: Profiles still names a hand-listed section" || ok "T11-infos: Profiles names no section of its own"
 jq -e '.ui.profile.infos.sections' "$ROOT/build.json" >/dev/null 2>&1 \
     && bad "T11-infos: build.json still hand-lists ui.profile.infos.sections" || ok "T11-infos: no hand-listed section list is declared"
-for gone in 'UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))' 'profileInfoSections()' 'MODE_LINK' 'INFOS_NO_RENDERER'; do
-    hasnt_code "$FRAGMENT" "$gone" "T11-infos: the hand-listed read-out is gone ($gone)"
+for gone in 'UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))' 'profileInfoSections()' 'MODE_LINK' 'INFOS_NO_RENDERER' 'private fun renderInfos('; do
+    hasnt_code "$FRAGMENT" "$gone" "T11-infos: the old read-out is gone ($gone)"
 done
 echo "-- T11-infos-mutation: a hand-listed read-out goes red --"
 SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
-sed 's/val sections = VaultConnect.Imported.last/val sections = listOf(VaultConnect.Section("person", "Person details", emptyList()))/' \
-    "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
-if cmp -s "$ROOT/$FRAGMENT" "$SCRATCH2/mut.kt"; then
+sed 's/    val shown = m.shown()/    val shown = org.json.JSONObject().put("person", org.json.JSONObject())/' "$ROOT/$AT_FILE" > "$SCRATCH2/mut.kt"
+if cmp -s "$ROOT/$AT_FILE" "$SCRATCH2/mut.kt"; then
     bad "T11-infos-mutation: the hardcode mutation did not apply (tester stale)"
 else
-    awk '/private fun renderInfos\(/{f=1} f{print} f&&/^    }$/{exit}' "$SCRATCH2/mut.kt" | grep -qF 'val sections = VaultConnect.Imported.last' \
-        && bad "T11-infos-mutation: a hand-listed Infos section was NOT caught" \
-        || ok "T11-infos-mutation: a hand-listed Infos section is caught"
+    awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$SCRATCH2/mut.kt" | grep -qF 'val shown = m.shown()' \
+        && bad "T11-infos-mutation: a hand-listed Profiles read-out was NOT caught" \
+        || ok "T11-infos-mutation: a hand-listed Profiles read-out is caught"
 fi
 cp "$ROOT/build.json" "$SCRATCH2/build.json"
 python3 - "$SCRATCH2/build.json" <<'PY'

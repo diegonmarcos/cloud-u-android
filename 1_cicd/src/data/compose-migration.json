@@ -655,7 +655,8 @@
         "launcher/SectionFragment, launcher/DetailPlaceholderFragment, launcher/PlaceholderDrawerFragment — KitComposeFragment + KitEmptyState; fragment_section_placeholder.xml and fragment_placeholder_drawer.xml deleted, #773",
         "settings/ImportConfigsFragment (Configs ▸ Import) — KitComposeFragment; fragment_import_configs.xml deleted; VaultFileImportTest ported to compose testing, #773",
         "cloud/CalendarAgendaFragment (page:cal/agenda, embedded in the Infos stack) — palette roles replace its colour literals, #773",
-        "apps/RecentAppsFragment (page:recentapps/grid) — LazyVerticalGrid, tap launches, long-press opens AppLongPressMenu, #773"
+        "apps/RecentAppsFragment (page:recentapps/grid) — LazyVerticalGrid, tap launches, long-press opens AppLongPressMenu, #773",
+        "profile/ProfileFragment Account (#778, OWNED BY #778 — #773 skips it): the Profiles, Runtime and Drift tabs are Compose (profile/AccountTabs.kt on libs:ui-kit, hosted in the fragment's columns via kitComposeView); the Connect tab (the #573 journey and its sign-in dialogs) is still Views inside ProfileFragment, so the file still counts"
       ]
     },
     {

@@ -1,53 +1,40 @@
 #!/usr/bin/env bash
-# Tester (#695): Configs ▸ Account is exactly THREE tabs — Connect, Infos,
-# Cloud Constellation Setup — and each keeps its promise.
+# Tester (#778): Configs ▸ Account is exactly FOUR tabs — Connect, Profiles,
+# Runtime, Drift — and each keeps its promise. (Was test-account-three-tabs.sh,
+# #695/#713/#766; Connect's sections A/A2/B/E/G/V are unchanged.)
 #
-# The tab shape itself (ids, order, labels, their mutations) is T11 of
-# test-profile-credentials-never-sync.sh; the journey is test-profile-journey.sh;
-# InfoMaskTest / SetupItemsTest run the rules on the JVM. This file pins what
-# those cannot:
+# The journey is test-profile-journey.sh; AccountDriftTest / AccountStoreTest /
+# AccountUploadTest / AccountModelTest / AccountTabsComposeTest run the rules on
+# the JVM. This file pins what those cannot:
 #   A  CONNECT is three declared LINES, in this order: Authelia → Gitea (WebAuth |
-#      Bearer), GitHub (WebAuth | SSH / PAT), Import File (pick the decrypted vault
-#      export, #711); every way is dispatched on its kind alone — libs:auth's kinds
-#      generically, the page's own kinds by name — and a kind with no handler
-#      carries the declared reason it cannot start, never a button.
-#   A2 IMPORT FILE is no second importer: the picked bytes go through
-#      ImportConfigsFragment.classify (the Configs ▸ Import classifier) and the
-#      export lands through landVault (every sign-in's landing); every other
-#      verdict is refused in red with a reason, in both locales.
-#   B  NO GitHub OAuth app on this surface: no client id, client secret, OAuth
-#      landing or OAuthWeb/web_client in the Account's declaration or sources
-#      (the fleet uses GitHub CLI's own sign-in; it registers no app of its own).
-#   C  INFOS is the fetched configs through the declared mask: a masked row
-#      carries only a length, the rule fails closed, and the rule — run by a
-#      port of InfoMask — masks every secret of a synthetic bundle (always) and
-#      of the real vault export (when cloud-vault sits beside this repo).
-#   D  SETUP says applied / not applied / why for every item: one verdict
-#      function, a mandatory reason, the unreadable keyboard "not verifiable",
-#      every declared mail account an item.
+#      Bearer), GitHub (WebAuth | SSH / PAT), Import File; every way is dispatched
+#      on its kind alone, and a kind with no handler carries its declared reason.
+#   A2 IMPORT FILE is no second importer: ImportConfigsFragment.classify, then
+#      landVault (every sign-in's landing); every other verdict refused in red.
+#   B  NO GitHub OAuth app on this surface.
+#   C  PROFILES is the declared copy (L, else S) through the declared mask: a
+#      masked row carries only a length, the rule fails closed, every value drawn
+#      on Profiles / Runtime / Drift passes shownValue → the mask, and the debug
+#      API neither prints nor sets a masked field.
+#   T  THE STRIP is the four declared tabs in order, labels off the declaration,
+#      each id one column, each tab tagged account:<id>.
+#   D  DRIFT: the declared pairs (S↔R, L↔S, L↔R), the upload target BESIDE the
+#      generated server file, R comparisons limited to what R observed,
+#      runtime → declared never taking an unobserved, read-only or empty value, the
+#      upload naming its sha with the token in a header only; every action (push /
+#      pull per item, app, all; upload; discard; export; populate; save) is one
+#      model call; /api/account/* advertised, served and registered.
 #   E  the GitHub token (PAT) is used once: never stored, logged or in a URL.
-#   G  (#713, #766) CONNECT IS THE JOURNEY AND NOTHING ELSE — the old "Vault export"
-#      block (renderVault) is deleted — every way of every line is the SAME pill, and
-#      GitHub WebAuth is present and wired: gh's own sign-in in the gh engine
-#      (GhEngine, engines.gh), the page in cloud-browser, the token used once.
-#   V  (#766) EVERY LINE FETCHES THE VAULT CONFIGS AND ANSWERS WHICH DEVICE: the
-#      Authelia line's vault leg (mailed code + fetch) opens by itself after an
-#      Authelia landing and from the line's pill; every landing names its way and
-#      adopts the registry the vault carries (electronics.*.peer), so who / which
-#      device answer on Connect whichever line was used; step 4 holds no second
-#      Import File.
-#   F  (#713) INFOS IS THE WHOLE SCHEMA: the declared skeleton (ui.profile.infos.schema)
-#      matches cloud-vault's schema.json + sources.json when the vault sits beside;
-#      a port of InfoMask.schemaRows gives EVERY declared field a row (filled or
-#      empty) over a synthetic bundle (always) and the real export (when beside).
-#   F2 (#727) NO VAULT SECTION IS DROPPED: the skeleton is EVERY C_A1-configs/<dir>/
-#      sources.json (schema.json's sections, then the STAGED ones — apps, peers — that
-#      #713 missed by reading schema.json alone); Infos draws skeleton ∪ the fetch's
-#      schema ∪ every top-level bundle key; the apps section lists each declared app
-#      (name, package, store, installed here) and links into Store ▸ Phone Apps.
-#   H  (#713) SETUP IS BY APP: the Fleet Setup index renders FIRST, one row per
-#      mapped app, repainted from that app's own section; every cockpit section
-#      declares its applier and the mapping includes keyboard, mail, drive and mesh.
+#   G  CONNECT IS THE JOURNEY AND NOTHING ELSE, every way the SAME pill, GitHub
+#      WebAuth is gh's own sign-in in the gh engine.
+#   V  EVERY LINE FETCHES THE VAULT CONFIGS AND ANSWERS WHICH DEVICE.
+#   F  PROFILES IS THE WHOLE SCHEMA: the declared skeleton matches cloud-vault's
+#      schema.json + sources.json when the vault sits beside; every declared field
+#      has a row, filled or empty.
+#   F2 NO VAULT SECTION IS DROPPED, and the apps topic lists each declared app.
+#   H  RUNTIME IS PER APP: every declared app has a live reader (its `runtime`
+#      block says how it is reached) and a status card; Setup's index, wizard,
+#      cockpit cards and repos are deleted; every landing stores S.
 # Every rule is mutation-proved below; each mutation is checked to have APPLIED.
 set -uo pipefail
 APP="${SA_APP:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -63,8 +50,14 @@ IM="$PKG/InfoMask.kt"
 CP="$PKG/VaultCockpit.kt"
 GS="$PKG/GitSshVault.kt"
 GE="$PKG/GhEngine.kt"
+AT="$PKG/AccountTabs.kt"      # #778 Profiles · Runtime · Drift (Compose)
+AM="$PKG/AccountModel.kt"     # the one model the tabs and the debug API share
+AD="$PKG/AccountDrift.kt"     # the three-file engine
+AR="$PKG/AccountRuntime.kt"   # per-app live readers / pushers
+AU="$PKG/AccountUpload.kt"    # L → server commit
+ADA="$PKG/AccountDebugApi.kt" # /api/account/*
 RES="$APP/app/src/main/res"
-for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$GE" "$RES/values/strings.xml"; do
+for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$GE" "$AT" "$AM" "$AD" "$AR" "$AU" "$ADA" "$RES/values/strings.xml"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
 # Code only — whole-line comments dropped, so prose about what must not happen
@@ -223,20 +216,31 @@ sed 's/        const val LOGIN_POLL = "loginPoll"/        const val LOGIN_POLL =
 cmp -s "$GE" "$TMP/b4.kt" && bad "B-mutation: the GhEngine client-id mutation did not apply" \
     || { oauth_free "$BJ" "$PF" "$TMP/b4.kt" >/dev/null && bad "B-mutation: a client id in GhEngine was NOT caught" || ok "B-mutation: a client id planted in GhEngine is caught"; }
 
-# ── C · Infos: the fetched configs, masked ──────────────────────────────────
-echo "== C: Infos draws the fetched configs through the declared mask; a secret never reaches a view =="
-INF=$(fnof "$PF" renderInfos | codeof)
-grep -qF 'val sections = VaultConnect.Imported.last' <<<"$INF" && grep -qF 'mask.schemaRows(section, bundle?.opt(section.id))' <<<"$INF" \
-    && ok "C: every Infos row is a row of the fetched bundle, through the mask" || bad "C: Infos is not drawn from the fetched bundle through the mask"
-RAW=$(fnof "$PF" renderRaw | codeof)
-grep -qF 'InfoMask.declared.rows(' <<<"$RAW" && ok "C: the cockpit's raw remainder goes through the SAME mask" || bad "C: the raw remainder bypasses the mask"
+# ── C · Profiles: the declared copy, masked ─────────────────────────────────
+echo "== C: Profiles draws the declared copy through the declared mask; no secret reaches a composable =="
+PROF=$(awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$AT" | codeof)
+grep -qF 'for (section in InfoMask.sectionsFor(InfoMask.schema, emptyList(), shown)) {' <<<"$PROF" && grep -qF 'InfoMask.declared.schemaRows(section, shown?.opt(section.id))' <<<"$PROF" \
+    && ok "C: every Profiles row is a row of the declared copy, through the mask" || bad "C: Profiles is not drawn from the declared copy through the mask"
+grep -qF 'val shown = m.shown()' <<<"$PROF" && grep -qF 'fun shown(): JSONObject? = local ?: server()?.body' "$AM" \
+    && ok "C: what Profiles shows is the local copy L, else the server file S" || bad "C: Profiles does not show L-else-S"
 masked_row_blank() { grep -qF 'Row(path, "", Kind.MASKED, text.length)' "$1"; }
 masked_row_blank "$IM" && ok "C: a masked row carries its length and an EMPTY text — the secret never leaves InfoMask" || bad "C: a masked row still carries its text"
-draws_no_secret() { grep -qF 'row.text' <<<"$(grep -E 'Kind\.MASKED ->' <<<"$(fnof "$1" infoValue)")" && return 1; return 0; }
-draws_no_secret "$PF" && ok "C: the view draws a masked row from its size alone" || bad "C: the view draws a masked row's text"
+draws_no_secret() { grep -qF 'row.text' <<<"$(grep -E 'InfoMask\.Kind\.MASKED ->' "$1")" && return 1; return 0; }
+draws_no_secret "$AT" && ok "C: a masked row is drawn from its size alone" || bad "C: a composable draws a masked row's text"
+shown_ok() {   # $1 = AccountTabs.kt; every free value goes through shownValue, which asks the mask
+    local sv; sv=$(awk '/^fun shownValue\(/{f=1} f{print} f&&/^}$/{exit}' "$1")
+    grep -qF 'InfoMask.declared.hides(path, text) -> ' <<<"$sv" || { echo "shownValue does not ask the mask"; return 1; }
+    grep -qF 'shownValue(path, values[path]?.let(AccountDrift::text))' "$1" || { echo "Runtime draws a value past the mask"; return 1; }
+    grep -qF 'shownValue(f.path, f.a)' "$1" && grep -qF 'shownValue(f.path, f.b)' "$1" || { echo "Drift draws a value past the mask"; return 1; }
+    grep -qF 'InfoMask.Kind.SHOWN -> shownValue(full, row.text)' "$1" || { echo "Profiles draws a shown value past the mask"; return 1; }
+    return 0
+}
+msg=$(shown_ok "$AT") && ok "C: Runtime, Drift and Profiles draw every value through shownValue → the mask" || bad "C: $msg"
+grep -qF 'if (r.kind == InfoMask.Kind.SHOWN) put("text", r.text.take(120)) else put("size", r.size)' "$ADA" \
+    && grep -qF 'InfoMask.declared.hides(path, value)) "✗ not an editable field' "$ADA" \
+    && ok "C: the debug API prints only shown values and refuses to set a masked field" || bad "C: the debug API can print or set a masked value"
 grep -qF 'pathRes.any { it == null } || valueRes.any { it == null }' "$IM" && grep -qF '(pathRes.isEmpty() && valueRes.isEmpty())' "$IM" \
     && ok "C: the rule fails closed (no pattern, or one that does not compile, masks every leaf)" || bad "C: the mask does not fail closed"
-grep -qF 'importedValue(' <<<"$(codeof "$PF")" && bad "C: the unmasked importedValue view survives" || ok "C: no unmasked value view is left on the page"
 # The rule itself, ported from InfoMask.rows/hides, run over a bundle.
 mask_leaks() {   # $1 = build.json, $2 = bundle.json, $3 = known-secret path regex; prints each leak; 1 iff any
     python3 - "$1" "$2" "$3" <<'PYC'
@@ -296,7 +300,7 @@ if [ -n "$VAULT_BUNDLE" ]; then
 else
     echo "  UNVERIFIABLE: cloud-vault is not checked out beside this repo — the real-export check did not run (the synthetic one above did)"
 fi
-echo "-- C-mutation: a path pattern dropped, a masked row given its text, a view that draws it --"
+echo "-- C-mutation: a path pattern dropped, a masked row given its text, a composable that draws it, shownValue unmasked --"
 jq '.ui.profile.infos.mask.paths |= map(select(. != "pass"))' "$BJ" > "$TMP/c1.json"
 cmp -s "$BJ" "$TMP/c1.json" && bad "C-mutation: the pattern drop did not apply" \
     || { mask_leaks "$TMP/c1.json" "$TMP/fixture.json" "$SECRET_PATHS" >/dev/null && bad "C-mutation: dropping 'pass' leaked nothing — the rule check cannot fail" || ok "C-mutation: dropping 'pass' leaks the mail password → RED"; }
@@ -307,51 +311,144 @@ mask_leaks "$TMP/c2.json" "$TMP/fixture.json" "$SECRET_PATHS" >/dev/null && bad 
 sed 's/Row(path, "", Kind.MASKED, text.length)/Row(path, text, Kind.MASKED, text.length)/' "$IM" > "$TMP/c3.kt"
 cmp -s "$IM" "$TMP/c3.kt" && bad "C-mutation: the masked-text mutation did not apply" \
     || { masked_row_blank "$TMP/c3.kt" && bad "C-mutation: a masked row carrying its text was NOT caught" || ok "C-mutation: a masked row carrying its text → RED"; }
-sed 's/InfoMask.Kind.MASKED -> { text = getString(R.string.infos_row_masked, row.size)/InfoMask.Kind.MASKED -> { text = row.text + getString(R.string.infos_row_masked, row.size)/' "$PF" > "$TMP/c4.kt"
-cmp -s "$PF" "$TMP/c4.kt" && bad "C-mutation: the view mutation did not apply" \
-    || { draws_no_secret "$TMP/c4.kt" && bad "C-mutation: a view drawing a masked row's text was NOT caught" || ok "C-mutation: a view drawing a masked row's text → RED"; }
+sed 's/InfoMask.Kind.MASKED -> ctx.getString(R.string.infos_row_masked, row.size)/InfoMask.Kind.MASKED -> row.text + ctx.getString(R.string.infos_row_masked, row.size)/' "$AT" > "$TMP/c4.kt"
+cmp -s "$AT" "$TMP/c4.kt" && bad "C-mutation: the composable mutation did not apply" \
+    || { draws_no_secret "$TMP/c4.kt" && bad "C-mutation: a composable drawing a masked row's text was NOT caught" || ok "C-mutation: a composable drawing a masked row's text → RED"; }
+for e in 's/    InfoMask.declared.hides(path, text) -> /    false -> /' \
+         's/shownValue(f.path, f.b)/f.b.orEmpty()/' \
+         's/shownValue(path, values\[path\]?.let(AccountDrift::text))/values[path]?.let(AccountDrift::text).orEmpty()/'; do
+    sed "$e" "$AT" > "$TMP/c5.kt"
+    if cmp -s "$AT" "$TMP/c5.kt"; then bad "C-mutation: did not apply — ${e:0:70}"
+    else shown_ok "$TMP/c5.kt" >/dev/null && bad "C-mutation: NOT caught — ${e:0:70}" || ok "C-mutation: caught — ${e:0:70}"; fi
+done
 
-# ── D · Setup: applied / not applied / why, per item ───────────────────────
-echo "== D: every Setup item says applied, or not applied and why =="
-verdict_ok() {   # $1 = ProfileFragment.kt; 0 iff ONE function turns a state into words, with a reason for every not-applied
-    local f; f=$(fnof "$1" itemVerdict | codeof)
-    [ -n "$f" ] || return 1
-    grep -qF 'state == VaultCockpit.State.MATCH -> getString(R.string.setup_item_applied)' <<<"$f" || return 1
-    grep -qF 'state == VaultCockpit.State.DIFFERS -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_differs))' <<<"$f" || return 1
-    grep -qF 'state == VaultCockpit.State.ABSENT -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_absent))' <<<"$f" || return 1
-    grep -qF 'else -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_pending))' <<<"$f" || return 1
-    grep -qF '!observed -> getString(R.string.setup_item_unverifiable)' <<<"$f" || return 1
-    [ "$(grep -c 'setup_item_applied' <<<"$(codeof "$1")")" = 1 ] || return 1   # "applied" is said in exactly one place
+# ── T · the strip: exactly four declared tabs ──────────────────────────────
+echo "== T: Account is exactly four declared tabs — Connect, Profiles, Runtime, Drift — mapped id → column =="
+tabs_ok() {   # $1 = build.json, $2 = ProfileFragment.kt; prints the first broken rule
+    local ids want cols
+    ids=$(jq -r '[.ui.profile.tabs[].id] | join(",")' "$1"); want="connect,profiles,runtime,drift"
+    [ "$ids" = "$want" ] || { echo "declared tabs are [$ids], not [$want]"; return 1; }
+    jq -e '[.ui.profile.tabs[] | select((.label // "") | length == 0)] | length == 0' "$1" >/dev/null || { echo "a tab has no label"; return 1; }
+    cols=$(grep -oE 'val columns = mapOf\([^)]*\)' "$2" | grep -oE '"[a-z]+" to' | tr -d '" ' | sed 's/to$//' | paste -sd, -)
+    [ "$cols" = "$want" ] || { echo "the fragment maps [$cols], not [$want]"; return 1; }
+    grep -qF 'val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } }' "$2" || { echo "the strip is not the declaration through the column map"; return 1; }
+    local lab=""; while IFS= read -r l; do [ -n "$l" ] && grep -qF "\"$l\"" <<<"$(codeof "$2" "$AT" "$AM")" && lab="$lab [$l]"; done <<<"$(jq -r '.ui.profile.tabs[].label' "$1")"
+    [ -z "$lab" ] || { echo "tab label(s) typed in Kotlin:$lab"; return 1; }
     return 0
 }
-verdict_ok "$PF" && ok "D: one verdict function; MATCH alone reads applied; every other state reads not applied WITH its reason" || bad "D: the item verdicts are not the one mapping"
-grep -qF 'itemVerdict(row.state, observed && row.observed)' <<<"$(fnof "$PF" renderRows)" && ok "D: every item row is worded by that function" || bad "D: renderRows does not word its items through itemVerdict"
-for loc in "$RES"/values*/strings.xml; do
-    grep -qE 'name="setup_item_not_applied">[^<]*%1\$s' "$loc" && ok "D: ${loc#$APP/}: 'not applied' carries its reason (%1\$s)" || bad "D: ${loc#$APP/}: 'not applied' has no slot for the reason"
-    for s in setup_item_applied setup_item_unverifiable setup_why_differs setup_why_absent setup_why_pending setup_mail_cloud_mail; do
-        grep -q "name=\"$s\"" "$loc" || bad "D: $s missing from ${loc#$APP/}"
-    done
+msg=$(tabs_ok "$BJ" "$PF") && ok "T: four declared tabs in order, each label off the declaration, each id one column" || bad "T: $msg"
+grep -q 'UI_PROFILE_TABS_B64' "$APP/app/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_TABS_B64' "$AM" \
+    && ok "T: the strip is baked and read off the declaration (AccountModel.tabs)" || bad "T: UI_PROFILE_TABS_B64 is not baked or not read"
+for t in profiles runtime drift; do
+    grep -qF "AccountTags.tab(\"$t\")" "$AT" && ok "T: the $t tab carries its test tag (account:$t)" || bad "T: the $t tab has no test tag"
 done
-grep -qF 'renderRows(ctx, card.body, it, section.observed)' "$PF" && jq -e '.ui.vault_connect.cockpit.sections[] | select(.id == "keyboard") | .observed == false' "$BJ" >/dev/null \
-    && ok "D: the keyboard (declared unobservable) reads 'not verifiable', not a guessed tick" || bad "D: the keyboard's items are not worded as unverifiable"
-MAIL=$(fnof "$PF" renderMail | codeof)
-grep -qF 'VaultCockpit.mailAccounts(bundle,' <<<"$MAIL" && grep -qF 'VaultCockpit.mailAccountRows(accounts, jmap.email)' <<<"$MAIL" && grep -qF 'R.string.setup_mail_cloud_mail' <<<"$MAIL" \
-    && ok "D: every declared mail account is an item, and what cloud-mail cannot take is said" || bad "D: the mail item does not list every declared account"
-DECL=$(jq -r '.ui.vault_connect.cockpit.sections[].apply' "$BJ" | sort)
-DISP=$(awk '/when \(section.apply\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
-[ "$DECL" = "$DISP" ] && ok "D: every declared Setup section has its renderer ($(echo $DECL))" || bad "D: declared [$(echo $DECL)] != dispatched [$(echo $DISP)]"
-jq -e '.ui.vault_connect.cockpit.sections[] | select(.id == "about") | .fields | length > 0' "$BJ" >/dev/null \
-    && ok "D: the contact card's fields are declared, not typed" || bad "D: the about section declares no fields"
-echo "-- D-mutation: a DIFFERS read as applied, a reason slot dropped, the keyboard ticked --"
-sed 's/state == VaultCockpit.State.DIFFERS -> getString(R.string.setup_item_not_applied, getString(R.string.setup_why_differs)) to RED/state == VaultCockpit.State.DIFFERS -> getString(R.string.setup_item_applied) to GREEN/' "$PF" > "$TMP/d1.kt"
-cmp -s "$PF" "$TMP/d1.kt" && bad "D-mutation: the DIFFERS mutation did not apply" \
-    || { verdict_ok "$TMP/d1.kt" && bad "D-mutation: DIFFERS read as applied was NOT caught" || ok "D-mutation: DIFFERS read as applied → RED"; }
-sed 's/name="setup_item_not_applied">✗ not applied — %1\$s/name="setup_item_not_applied">✗ not applied/' "$RES/values/strings.xml" > "$TMP/d2.xml"
-cmp -s "$RES/values/strings.xml" "$TMP/d2.xml" && bad "D-mutation: the reason-slot mutation did not apply" \
-    || { grep -qE 'name="setup_item_not_applied">[^<]*%1\$s' "$TMP/d2.xml" && bad "D-mutation: a reasonless 'not applied' was NOT caught" || ok "D-mutation: a reasonless 'not applied' → RED"; }
-sed 's/renderRows(ctx, card.body, it, section.observed)/renderRows(ctx, card.body, it)/' "$PF" > "$TMP/d3.kt"
-cmp -s "$PF" "$TMP/d3.kt" && bad "D-mutation: the keyboard mutation did not apply" \
-    || { grep -qF 'renderRows(ctx, card.body, it, section.observed)' "$TMP/d3.kt" && bad "D-mutation: a keyboard worded like a readable section was NOT caught" || ok "D-mutation: the keyboard's rows worded as readable → RED"; }
+echo "-- T-mutation: a fifth tab, a tab dropped, two tabs swapped, a label typed in Kotlin, a column unmapped --"
+for jm in '.ui.profile.tabs += [{"id":"setup","label":"Cloud Constellation Setup"}]' \
+          '.ui.profile.tabs |= map(select(.id != "drift"))' \
+          '.ui.profile.tabs |= [.[0], .[2], .[1], .[3]]' \
+          '.ui.profile.tabs[1].label = ""'; do
+    jq "$jm" "$BJ" > "$TMP/t.json"
+    if cmp -s "$BJ" "$TMP/t.json"; then bad "T-mutation: did not apply — $jm"
+    else tabs_ok "$TMP/t.json" "$PF" >/dev/null && bad "T-mutation: NOT caught — $jm" || ok "T-mutation: caught — $jm"; fi
+done
+for e in 's/"runtime" to runtime, //' 's/val tabs = AccountModel.tabs().mapNotNull { t -> columns\[t.id\]?.let { Tab(t.label, it) } }/val tabs = listOf(Tab("Profiles", profiles))/'; do
+    sed "$e" "$PF" > "$TMP/t.kt"
+    if cmp -s "$PF" "$TMP/t.kt"; then bad "T-mutation: did not apply — ${e:0:70}"
+    else tabs_ok "$BJ" "$TMP/t.kt" >/dev/null && bad "T-mutation: NOT caught — ${e:0:70}" || ok "T-mutation: caught — ${e:0:70}"; fi
+done
+
+# ── D · Drift: three files, one pattern, the sync directions ───────────────
+echo "== D: Drift keeps S, R and L in one pattern, compares the declared pairs, and every sync direction is one model function =="
+drift_decl_ok() {   # $1 = build.json; prints the first broken rule
+    python3 - "$1" <<'PYD'
+import json, sys
+d = json.load(open(sys.argv[1]))["ui"]["profile"].get("drift") or {}
+def die(m): print(m); sys.exit(1)
+pairs = d.get("pairs") or []
+if [p.get("id") for p in pairs] != ["SR", "LS", "LR"]: die("pairs are %s, not SR, LS, LR" % [p.get("id") for p in pairs])
+for p in pairs:
+    if {p.get("a"), p.get("b")} - {"S", "R", "L"} or p.get("a") == p.get("b"): die("pair %s compares %s with %s" % (p.get("id"), p.get("a"), p.get("b")))
+    if not str(p.get("label", "")).strip(): die("pair %s has no label" % p.get("id"))
+u = d.get("upload") or {}
+path = str(u.get("path", ""))
+if not path: die("no upload path")
+if path.endswith("profile-secrets.json"): die("the upload targets the GENERATED server file (emit.py guards it against hand edits)")
+if not all(x in str(u.get("api", "")) for x in ("{repo}", "{path}")): die("the upload api is not a {repo}/{path} template")
+if "{device}" not in str(u.get("message", "")): die("the commit message does not name the device")
+if not isinstance(d.get("runtime_deadline_ms"), int) or d["runtime_deadline_ms"] <= 0: die("no runtime deadline")
+PYD
+}
+msg=$(drift_decl_ok "$BJ") && ok "D: the pairs (S↔R, L↔S, L↔R), the upload target beside the generated file, and the runtime deadline are declared" || bad "D: $msg"
+LOCALPY=""
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs/local.py}" "$APP/../../cloud-vault/C_A1-configs/local.py" "$APP/../../../cloud-vault/C_A1-configs/local.py"; do [ -f "$v" ] && LOCALPY="$v" && break; done
+if [ -n "$LOCALPY" ]; then
+    vp=$(grep -oE '^LOCAL = CONFIGS / "[^"]+"' "$LOCALPY" | cut -d'"' -f2)
+    [ -n "$vp" ] && [ "$(jq -r '.ui.profile.drift.upload.path' "$BJ")" = "C_A1-configs/$vp" ] \
+        && ok "D: the upload path is the one cloud-vault's local.py checks (C_A1-configs/$vp)" || bad "D: the upload path is not the file cloud-vault's local.py checks ($vp)"
+else
+    echo "  UNVERIFIABLE: cloud-vault is not beside this repo — the upload path was not compared with local.py's"
+fi
+grep -q 'UI_PROFILE_DRIFT_B64' "$APP/app/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_DRIFT_B64' "$AM" \
+    && ok "D: the drift declaration is baked and read" || bad "D: UI_PROFILE_DRIFT_B64 is not baked or not read"
+engine_ok() {   # $1 = AccountDrift.kt, $2 = AccountModel.kt, $3 = AccountUpload.kt; prints the first broken rule
+    grep -qF 'if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null' "$2" || { echo "a comparison with R is not limited to what R observed"; return 1; }
+    local rd; rd=$(awk '/    fun runtimeToDeclared\(/{f=1} f{print} f&&/^    }$/{exit}' "$1")
+    grep -qF 'p !in observed -> skipped[p] = Skip.NOT_OBSERVED' <<<"$rd" || { echo "an unobserved field can be pulled into L"; return 1; }
+    grep -qF 'p in readOnly -> skipped[p] = Skip.READ_ONLY' <<<"$rd" || { echo "a read-only field can be pulled into L"; return 1; }
+    grep -qF 'v == null -> skipped[p] = Skip.HOLDS_NONE' <<<"$rd" || { echo "a runtime holding nothing can erase a declared value"; return 1; }
+    grep -qF 'fun sha256(body: JSONObject): String' "$1" && grep -qF 'canonical(body)' <<<"$(grep -A2 'fun sha256' "$1")" || { echo "the file hash is not over canonical JSON"; return 1; }
+    grep -qF '"Authorization" to "Bearer $token"' "$3" || { echo "the upload token does not ride a header"; return 1; }
+    grep -qE '(url|api|path).*\$\{?token' "$3" && { echo "the upload token reaches a URL"; return 1; }
+    grep -qF 'if (sha != null) put.put("sha", sha)' "$3" || { echo "an update does not name the sha it replaces"; return 1; }
+    return 0
+}
+msg=$(engine_ok "$AD" "$AM" "$AU") && ok "D: R comparisons cover what R observed; runtime→declared never takes unobserved, read-only or empty values; the upload names its sha and keeps the token in a header" || bad "D: $msg"
+actions_ok() {   # $1 = AccountTabs.kt; each Drift action calls its ONE model function
+    grep -qF 'ActionButton(stringResource(R.string.account_push_all), AccountTags.PUSH_ALL, !busy) { io { m.pushServerToRuntime(' "$1" || { echo "push-all is not the model's server → runtime"; return 1; }
+    grep -qF 'ActionButton(stringResource(R.string.account_pull_all), AccountTags.PULL_ALL, !busy) { io { m.pullRuntimeToLocal(' "$1" || { echo "pull-all is not the model's runtime → declared"; return 1; }
+    grep -qF 'ActionButton(stringResource(R.string.account_upload), AccountTags.UPLOAD, !busy) { upload() }' "$1" || { echo "upload is not wired"; return 1; }
+    grep -qF 'ActionButton(stringResource(R.string.account_discard), AccountTags.DISCARD, !busy) { m.discardLocal() }' "$1" || { echo "discard is not the model's"; return 1; }
+    grep -qF 'AccountTags.pushApp(app)' "$1" && grep -qF 'AccountTags.pullApp(app)' "$1" || { echo "no per-app sync"; return 1; }
+    grep -qF 'AccountTags.pushItem(f.path)' "$1" && grep -qF 'AccountTags.pullItem(f.path)' "$1" || { echo "no per-item sync"; return 1; }
+    grep -qF 'AccountTags.exportFile(slot)' "$1" && grep -qF 'AccountTags.EXPORT_REPORT' "$1" || { echo "the files or the report cannot be exported"; return 1; }
+    grep -qF 'AccountTags.POPULATE_RUNTIME) { m.populateFromRuntime() }' "$1" && grep -qF 'AccountTags.POPULATE_SERVER) { m.populateFromServer() }' "$1" \
+        && grep -qF 'AccountTags.SAVE, enabled = m.local != null) { m.save() }' "$1" || { echo "a Profiles action is not the model's"; return 1; }
+    return 0
+}
+msg=$(actions_ok "$AT") && ok "D: push / pull per item, per app and all; upload; discard; export of S, R, L and the report; populate ×2 and save — each one model call" || bad "D: $msg"
+api_ok() {   # $1 = AccountDebugApi.kt, $2 = App.kt
+    local op; for op in tabs profiles runtime drift refresh populate edit save sync upload; do
+        grep -qF "Op(\"$op\"" "$1" || { echo "/api/account/$op is not advertised"; return 1; }
+        grep -qE "^ *(\"\", )?\"$op\" ->" "$1" || { echo "/api/account/$op is not served"; return 1; }
+    done
+    grep -qF 'AccountDebugApi.register(this)' "$2" || { echo "the account routes are never registered"; return 1; }
+    grep -qF 'm.pushServerToRuntime(paths)' "$1" && grep -qF 'm.pullRuntimeToLocal(paths)' "$1" && grep -qF 'm.discardLocal()' "$1" || { echo "sync does not call the model"; return 1; }
+    return 0
+}
+msg=$(api_ok "$ADA" "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt") && ok "D: /api/account/{tabs,profiles,runtime,drift} and the action ops are advertised, served and registered" || bad "D: $msg"
+echo "-- D-mutation: the R scope dropped, an empty runtime value pulled, the token in the URL, an update without its sha, an action unwired, a route dropped, the generated file as target --"
+dm() {   # $1 = which file var, $2 = sed; 0 iff its check goes red; 2 iff nothing changed
+    local f; eval f=\$$1; sed "$2" "$f" > "$TMP/d.kt"; cmp -s "$f" "$TMP/d.kt" && return 2
+    case $1 in AD) ! engine_ok "$TMP/d.kt" "$AM" "$AU" >/dev/null;; AM) ! engine_ok "$AD" "$TMP/d.kt" "$AU" >/dev/null;; AU) ! engine_ok "$AD" "$AM" "$TMP/d.kt" >/dev/null;;
+               AT) ! actions_ok "$TMP/d.kt" >/dev/null;; ADA) ! api_ok "$TMP/d.kt" "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" >/dev/null;; esac
+}
+for m in 'AM|s/if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null/null/' \
+         'AD|s/                v == null -> skipped\[p\] = Skip.HOLDS_NONE/                v == null -> Unit/' \
+         'AD|s/                p in readOnly -> skipped\[p\] = Skip.READ_ONLY/                false -> Unit/' \
+         'AU|s/target.url + "?ref=" + target.branch/target.url + "?ref=" + target.branch + "\&access_token=$token"/' \
+         'AU|s/if (sha != null) put.put("sha", sha)/Unit/' \
+         'AT|s/AccountTags.DISCARD, !busy) { m.discardLocal() }/AccountTags.DISCARD, !busy) { }/' \
+         'AT|s/AccountTags.pullItem(f.path)/AccountTags.RESULT/' \
+         'ADA|s/            "drift" -> m.report()/            "drift_old" -> m.report()/'; do
+    v="${m%%|*}"; e="${m#*|}"
+    dm "$v" "$e"; rc=$?
+    case $rc in 0) ok "D-mutation: caught — $v: ${e:0:70}";; 2) bad "D-mutation: did not apply — $v: ${e:0:70}";; *) bad "D-mutation: NOT caught — $v: ${e:0:70}";; esac
+done
+for jm in '.ui.profile.drift.upload.path = "C_A1-configs/profile-secrets.json"' '.ui.profile.drift.pairs |= .[1:]' '.ui.profile.drift.pairs[0].b = "S"'; do
+    jq "$jm" "$BJ" > "$TMP/d.json"
+    if cmp -s "$BJ" "$TMP/d.json"; then bad "D-mutation: did not apply — $jm"
+    else drift_decl_ok "$TMP/d.json" >/dev/null && bad "D-mutation: NOT caught — $jm" || ok "D-mutation: caught — $jm"; fi
+done
 
 # ── E · the GitHub token is used once ───────────────────────────────────────
 echo "== E: the pasted GitHub token is a one-request credential =="
@@ -382,7 +479,7 @@ cmp -s "$PF" "$TMP/e2.kt" && bad "E-mutation: the log mutation did not apply" \
 echo "== G: Connect is the journey and nothing after it, every way is the same pill, GitHub WebAuth is gh's own sign-in =="
 connect_tail_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
     local blk
-    blk=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/── INFOS:/{exit}' "$1" | codeof | grep -E '^ *render[A-Za-z]*\(')
+    blk=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/── PROFILES · RUNTIME · DRIFT/{exit}' "$1" | codeof | grep -E '^ *render[A-Za-z]*\(')
     [ "$(echo $blk)" = "renderJourney(ctx, connect)" ] || { echo "Connect renders [$(echo $blk)], not exactly the journey"; return 1; }
     # No other call anywhere hands the Connect column to a renderer.
     [ "$(codeof "$1" | grep -cE '\(ctx, connect\)')" = 1 ] || { echo "something else renders into the Connect column"; return 1; }
@@ -392,7 +489,8 @@ msg=$(connect_tail_ok "$PF") && ok "G: Connect renders the journey and nothing a
 for gone in 'private fun renderTokens(' 'private fun renderDevicePick(' 'TOKENS_TEXT' 'private fun renderVault(' 'vaultCodeBox' 'journey_vault_header' 'journey_vault_fetch_open'; do
     grep -qF "$gone" "$PF" && bad "G: the stale Connect tail survives ($gone)" || ok "G: the stale Connect tail is deleted ($gone)"
 done
-grep -qF 'renderDeviceSelector(ctx, hero.slot, devices)' "$PF" && ok "G: the device pick lives on the Setup hero, where it applies" || bad "G: the device pick has no home after leaving Connect"
+grep -qF 'private fun buildDeviceStep(' "$PF" && grep -qF 'VaultCockpit.selectDevice(ctx, p.vaultDevice)' "$PF" \
+    && ok "G: the device pick lives on Connect (journey step 3) — #778 deleted the Setup hero's second one" || bad "G: the device pick has no home"
 pills_ok() {   # $1 = ProfileFragment.kt; every page-kind way and every lib way draws FleetCockpitView.pill
     local bw; bw=$(fnof "$1" buildWay | codeof)
     for k in KIND_GITHUB_SSH_PAT KIND_GH_AUTH_LOGIN KIND_VAULT_FILE; do
@@ -505,8 +603,8 @@ for e in 's/showVaultFetchDialog(line.label)/Unit/' \
     else ok "V-mutation: caught — ${e:0:80}"; fi
 done
 
-# ── F · Infos: every field of the declared schema ───────────────────────────
-echo "== F: Infos renders the WHOLE schema — every declared section and field, filled or empty =="
+# ── F · Profiles: every field of the declared schema ───────────────────────────
+echo "== F: Profiles renders the WHOLE schema — every declared section and field, filled or empty =="
 schema_rows_cover() {   # $1 = build.json, $2 = bundle.json ("" = none); prints each declared field with no row; 1 iff any
     python3 - "$1" "$2" <<'PYF'
 import json, sys
@@ -535,18 +633,18 @@ for m in miss: print(m)
 sys.exit(1 if miss else 0)
 PYF
 }
-schema_code_ok() {   # $1 = InfoMask.kt, $2 = ProfileFragment.kt
-    local sr inf; sr=$(awk '/fun schemaRows\(/{f=1} f{print} f&&/^    }$/{exit}' "$1" | codeof); inf=$(fnof "$2" renderInfos | codeof)
+schema_code_ok() {   # $1 = InfoMask.kt, $2 = AccountTabs.kt
+    local sr pt; sr=$(awk '/fun schemaRows\(/{f=1} f{print} f&&/^    }$/{exit}' "$1" | codeof); pt=$(awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$2" | codeof)
     grep -qF 'for (field in section.fields) {' <<<"$sr" || { echo "schemaRows does not walk every declared field"; return 1; }
     grep -qF 'if (unfilled(v)) out += Row(field, "", Kind.EMPTY) else walk(section.id, v, field, out)' <<<"$sr" || { echo "an unfilled field is not an EMPTY row"; return 1; }
     grep -qF 'if (k !in tops) walk(section.id, o.opt(k), k, out)' <<<"$sr" || { echo "keys beyond the schema are dropped"; return 1; }
-    grep -qF 'val schema = InfoMask.schema' <<<"$inf" && grep -qF 'val all = InfoMask.sectionsFor(schema, sections.orEmpty().map { it.id to it.label }, bundle)' <<<"$inf" && grep -qF 'for (section in all) {' <<<"$inf" \
-        || { echo "renderInfos does not iterate the declared schema"; return 1; }
-    grep -q 'return$' <<<"$inf" && { echo "renderInfos returns early, before the schema"; return 1; }
-    grep -qF 'InfoMask.Kind.EMPTY -> { text = getString(R.string.infos_row_empty)' "$2" || { echo "an EMPTY row is not drawn as empty"; return 1; }
+    grep -qF 'for (section in InfoMask.sectionsFor(InfoMask.schema, emptyList(), shown)) {' <<<"$pt" && grep -qF 'for (row in rows) {' <<<"$pt" \
+        || { echo "ProfilesTab does not iterate the declared schema and every row"; return 1; }
+    grep -qE '^ *return$|return@Column' <<<"$pt" && { echo "ProfilesTab returns early, before the schema"; return 1; }
+    grep -qF 'InfoMask.Kind.EMPTY -> ctx.getString(R.string.infos_row_empty)' "$2" || { echo "an EMPTY row is not drawn as empty"; return 1; }
     return 0
 }
-msg=$(schema_code_ok "$IM" "$PF") && ok "F: renderInfos iterates the declared schema; every field is a row, filled or empty; extras still drawn" || bad "F: $msg"
+msg=$(schema_code_ok "$IM" "$AT") && ok "F: ProfilesTab iterates the declared schema; every field is a row, filled or empty; extras still drawn" || bad "F: $msg"
 grep -q 'UI_PROFILE_INFOS_B64' "$APP/app/build.gradle" && grep -qF 'parseSchema(baked?.optJSONObject("schema"))' "$IM" \
     && ok "F: the schema is baked with the mask and read off it" || bad "F: the schema is not baked or not read"
 out=$(schema_rows_cover "$BJ" "") && ok "F: with nothing fetched, every declared field still draws (as empty) — $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") fields in $(jq '.ui.profile.infos.schema.sections | length' "$BJ") sections" || bad "F: fields without a row: $(echo $out)"
@@ -596,19 +694,19 @@ else echo "  UNVERIFIABLE: F-mutation field-drop needs cloud-vault beside"; fi
 jq '.ui.profile.infos.schema.sections[0].fields = []' "$BJ" > "$TMP/f2.json"
 schema_rows_cover "$TMP/f2.json" "" >/dev/null && bad "F-mutation: a section with no fields was NOT caught" || ok "F-mutation: a section emptied of fields → RED"
 fmut() { sed "$2" "$1" > "$TMP/f.kt"; cmp -s "$1" "$TMP/f.kt" && return 2
-         if [ "$1" = "$IM" ]; then ! schema_code_ok "$TMP/f.kt" "$PF" >/dev/null; else ! schema_code_ok "$IM" "$TMP/f.kt" >/dev/null; fi; }
+         if [ "$1" = "$IM" ]; then ! schema_code_ok "$TMP/f.kt" "$AT" >/dev/null; else ! schema_code_ok "$IM" "$TMP/f.kt" >/dev/null; fi; }
 for m in "$IM|s/        for (field in section.fields) {/        for (field in section.fields.take(1)) {/" \
          "$IM|s/            if (unfilled(v)) out += Row(field, \"\", Kind.EMPTY) else walk(section.id, v, field, out)/            if (!unfilled(v)) walk(section.id, v, field, out)/" \
          "$IM|s/if (k !in tops) walk(section.id, o.opt(k), k, out)/if (false) walk(section.id, o.opt(k), k, out)/" \
-         "$PF|s/        val all = InfoMask.sectionsFor(schema, sections.orEmpty().map { it.id to it.label }, bundle)/        val all = schema/" \
-         "$PF|s/            into.addView(pickButton(ctx, tabLabel(connectTab)) { strip?.getTabAt(connectTab)?.select() })/&\n            return/"; do
+         "$AT|s/        for (section in InfoMask.sectionsFor(InfoMask.schema, emptyList(), shown)) {/        for (section in InfoMask.schema) {/" \
+         "$AT|s/        ResultLine(m)\$/        ResultLine(m)\n        if (shown == null) return@Column/"; do
     f="${m%%|*}"; e="${m#*|}"
     fmut "$f" "$e"; rc=$?
     case $rc in 0) ok "F-mutation: caught — $(basename "$f"): ${e:0:70}";; 2) bad "F-mutation: did not apply — $(basename "$f"): ${e:0:70}";; *) bad "F-mutation: NOT caught — $(basename "$f"): ${e:0:70}";; esac
 done
 
 # ── F2 · (#727) no vault section dropped; the declared apps listed ─────────
-echo "== F2: every vault section renders in Infos (the staged ones too), and the apps section lists each declared app =="
+echo "== F2: every vault section renders in Profiles (the staged ones too), and the apps section lists each declared app =="
 union_ok() {   # $1 = InfoMask.kt; prints the first broken rule
     local sf; sf=$(awk '/fun sectionsFor\(/{f=1} f{print} f&&/^        }$/{exit}' "$1" | codeof)
     grep -qF 'schema.forEach { out[it.id] = it }' <<<"$sf" || { echo "sectionsFor drops the declared skeleton"; return 1; }
@@ -618,20 +716,20 @@ union_ok() {   # $1 = InfoMask.kt; prints the first broken rule
     grep -qF 'return out.values.toList()' <<<"$sf" || { echo "sectionsFor does not return what it gathered"; return 1; }
     return 0
 }
-apps_ok() {   # $1 = ProfileFragment.kt, $2 = build.json; prints the first broken rule
-    local inf al route; inf=$(fnof "$1" renderInfos | codeof); al=$(fnof "$1" renderAppList | codeof)
-    grep -qF 'if (section.render == "apps") renderAppList(ctx, card.body, bundle, section.route)' <<<"$inf" || { echo "Infos does not draw the declared app list"; return 1; }
+apps_ok() {   # $1 = AccountTabs.kt, $2 = build.json; prints the first broken rule
+    local pt al route; pt=$(awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$1" | codeof); al=$(awk '/^private fun DeclaredApps\(/{f=1} f{print} f&&/^}$/{exit}' "$1" | codeof)
+    grep -qF 'if (section.render == "apps") DeclaredApps(shown, section.route, openStore)' <<<"$pt" || { echo "Profiles does not draw the declared app list"; return 1; }
     grep -qF 'VaultCockpit.appsListed(bundle, id, fleet)' <<<"$al" || { echo "the list is not the vault's declared apps"; return 1; }
-    grep -qF 'pm.getPackageInfo(a.pkg, 0)' <<<"$al" || { echo "installed-on-this-phone is not measured"; return 1; }
+    grep -qF 'ctx.packageManager.getPackageInfo(a.pkg, 0)' <<<"$al" || { echo "installed-on-this-phone is not measured"; return 1; }
     grep -qF 'a.label, a.pkg, VaultCockpit.storeLabel(sources, a)' <<<"$al" || { echo "a row lacks its name, package or store"; return 1; }
-    grep -qF 'openWizardRoute(route)' <<<"$al" || { echo "the list does not link into the Store"; return 1; }
+    grep -qF 'openStore(route)' <<<"$al" || { echo "the list does not link into the Store"; return 1; }
     route=$(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first // ""' "$2")
     [ -n "$route" ] || { echo "no schema section declares the apps list"; return 1; }
     jq -e --arg p "${route#page:config/}" '[.. | objects | select(.id? == $p)] | length > 0' "$2" >/dev/null || { echo "route $route names no declared page"; return 1; }
     return 0
 }
-msg=$(union_ok "$IM") && ok "F2: Infos draws the skeleton ∪ the fetch's schema ∪ every top-level bundle key — no section is dropped" || bad "F2: $msg"
-msg=$(apps_ok "$PF" "$BJ") && ok "F2: the apps section lists every declared app (name · package · store · installed here) and links to $(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first' "$BJ")" || bad "F2: $msg"
+msg=$(union_ok "$IM") && ok "F2: Profiles draws the skeleton ∪ the fetch's schema ∪ every top-level bundle key — no section is dropped" || bad "F2: $msg"
+msg=$(apps_ok "$AT" "$BJ") && ok "F2: the apps section lists every declared app (name · package · store · installed here) and links to $(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first' "$BJ")" || bad "F2: $msg"
 for need in apps peers; do
     jq -e --arg i "$need" '.ui.profile.infos.schema.sections[] | select(.id == $i and .staged == true and (.fields | length > 0))' "$BJ" >/dev/null \
         && ok "F2: the staged vault section '$need' is in the skeleton" || bad "F2: the staged vault section '$need' is missing from the skeleton"
@@ -644,18 +742,18 @@ for e in 's/            bundle?.keys()?.forEach { k ->/            emptyList<Str
     if cmp -s "$IM" "$TMP/u.kt"; then bad "F2-mutation: did not apply — ${e:0:70}"
     else union_ok "$TMP/u.kt" >/dev/null && bad "F2-mutation: NOT caught — ${e:0:70}" || ok "F2-mutation: caught — ${e:0:70}"; fi
 done
-for e in 's/            if (section.render == "apps") renderAppList(ctx, card.body, bundle, section.route)/            Unit/' \
+for e in 's/            if (section.render == "apps") DeclaredApps(shown, section.route, openStore)/            Unit/' \
          's/a.label, a.pkg, VaultCockpit.storeLabel(sources, a)/a.pkg, a.pkg, a.pkg/' \
-         's/val here = apps.map { a -> runCatching { pm.getPackageInfo(a.pkg, 0) }.isSuccess }/val here = apps.map { true }/'; do
-    sed "$e" "$PF" > "$TMP/a.kt"
-    if cmp -s "$PF" "$TMP/a.kt"; then bad "F2-mutation: did not apply — ${e:0:70}"
+         's/val here = apps.map { a -> runCatching { ctx.packageManager.getPackageInfo(a.pkg, 0) }.isSuccess }/val here = apps.map { true }/'; do
+    sed "$e" "$AT" > "$TMP/a.kt"
+    if cmp -s "$AT" "$TMP/a.kt"; then bad "F2-mutation: did not apply — ${e:0:70}"
     else apps_ok "$TMP/a.kt" "$BJ" >/dev/null && bad "F2-mutation: NOT caught — ${e:0:70}" || ok "F2-mutation: caught — ${e:0:70}"; fi
 done
 for jm in '(.ui.profile.infos.schema.sections[] | select(.id == "apps")) |= del(.render)' \
           '(.ui.profile.infos.schema.sections[] | select(.id == "apps")) .route = "page:config/no-such-page"'; do
     jq "$jm" "$BJ" > "$TMP/a.json"
     if cmp -s "$BJ" "$TMP/a.json"; then bad "F2-mutation: did not apply — $jm"
-    else apps_ok "$PF" "$TMP/a.json" >/dev/null && bad "F2-mutation: NOT caught — $jm" || ok "F2-mutation: caught — $jm"; fi
+    else apps_ok "$AT" "$TMP/a.json" >/dev/null && bad "F2-mutation: NOT caught — $jm" || ok "F2-mutation: caught — $jm"; fi
 done
 # #766 the regression this file missed: the vault's electronics became one peer_devices
 # resolver (cloud-vault 11950b4) while the skeleton kept the hand-listed devices; the drift
@@ -672,55 +770,59 @@ if cmp -s "$BJ" "$TMP/s.json"; then bad "F2-mutation: the staged-section drop di
 elif [ -n "$VAULT_DIR" ]; then schema_drift "$TMP/s.json" "$VAULT_DIR" >/dev/null && bad "F2-mutation: the apps section dropped (the #713 miss) was NOT caught by the drift check" || ok "F2-mutation: the apps section dropped from the skeleton (the #713 miss) → drift RED"
 else echo "  UNVERIFIABLE: F2-mutation staged-section drop needs cloud-vault beside (InfoMaskTest pins the ids in CI)"; fi
 
-# ── H · Setup: the index first, then app by app ────────────────────────────
-echo "== H: Setup opens on the Fleet Setup index (one row per mapped app), then one section per app =="
-index_ok() {   # $1 = ProfileFragment.kt, $2 = build.json; prints the first broken rule
-    local rs fi pc
-    rs=$(fnof "$1" renderSetup | codeof | grep -E '^ *render[A-Za-z]*\(' | head -1)
-    [ "$(echo $rs)" = "renderFleetIndex(ctx, into)" ] || { echo "Setup's first table is [$(echo $rs)], not the Fleet Setup index"; return 1; }
-    fi=$(fnof "$1" renderFleetIndex | codeof); pc=$(fnof "$1" paintCard | codeof)
-    grep -qF 'for (section in VaultCockpit.layout.sections) {' <<<"$fi" && grep -qF 'tag = "setup-index:${section.id}"' <<<"$fi" \
-        || { echo "the index is not one tagged row per declared app"; return 1; }
-    grep -qF 'indexRows[card.tag]?.apply {' <<<"$pc" && grep -qF 'StatusLight.colour(context, state)' <<<"$pc" \
-        || { echo "an index row is not repainted from its own section's light"; return 1; }
-    grep -qF 'indexCards[section.id] = card' "$1" || { echo "an index row cannot open its section"; return 1; }
-    grep -qF 'renderWizard(ctx, into)' <<<"$(fnof "$1" renderSetup)" || { echo "the setup steps are gone"; return 1; }
-    local missing; missing=$(jq -r '[.ui.vault_connect.cockpit.sections[] | select((.apply // "") == "") | .id] | join(",")' "$2")
-    [ -z "$missing" ] || { echo "cockpit section(s) $missing declare no applier"; return 1; }
-    for need in keyboard mail drive mesh apps; do
-        jq -e --arg a "$need" '.ui.vault_connect.cockpit.sections[] | select(.apply == $a and (.vault | length > 0))' "$2" >/dev/null \
-            || { echo "no app section applies $need"; return 1; }
-    done
-    jq -e '.ui.vault_connect.cockpit.sections[] | select(.apply == "apps") | .label | test("Store")' "$2" >/dev/null \
-        || { echo "the apps row of the index does not read as the Store"; return 1; }
-    local ra; ra=$(fnof "$1" renderApps | codeof)
-    grep -qF 'com.diegonmarcos.superapp.appstore.AppInventory.plan(' <<<"$ra" && grep -qF 'com.diegonmarcos.superapp.appstore.StoreImport.show(this, plan)' <<<"$ra" \
-        || { echo "the Store / apps row does not hand the missing apps to the Store's import plan"; return 1; }
+# ── H · Runtime: per app, read live; Setup's index, wizard and cockpit gone ──
+echo "== H: Runtime reads each declared app live, with its status; Cloud Constellation Setup's index, wizard and cockpit are gone =="
+runtime_ok() {   # $1 = AccountRuntime.kt, $2 = build.json, $3 = AccountTabs.kt; prints the first broken rule
+    local decl disp rt
+    # An app declared `reports: false` exposes nothing to read, so it has no reader — only a status.
+    decl=$(jq -r '.ui.vault_connect.cockpit.sections[] | select(.runtime.reports != false) | .apply' "$2" | sort | paste -sd' ' -)
+    disp=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$1" | grep -oE '^            "[a-z]+" ->' | grep -oE '[a-z]+' | sort | paste -sd' ' -)
+    [ "$decl" = "$disp" ] || { echo "declared apps [$decl] != read [$disp]"; return 1; }
+    local missing; missing=$(jq -r '[.ui.vault_connect.cockpit.sections[] | select((.runtime.served_by // "") == "") | .id] | join(",")' "$2")
+    [ -z "$missing" ] || { echo "app(s) $missing declare no runtime served_by"; return 1; }
+    rt=$(awk '/    private fun readOne\(/{f=1} f{print} f&&/^    }$/{exit}' "$1")
+    grep -qF 'return base.copy(status = Status.NOT_INSTALLED, detail = rt.servedBy)' <<<"$rt" || { echo "an absent serving package is not 'not installed'"; return 1; }
+    grep -qF 'if (!rt.reports) return base.copy(status = Status.NOT_REPORTING, detail = rt.servedBy)' <<<"$rt" || { echo "an app that exposes nothing is not 'not reporting'"; return 1; }
+    grep -qF 'while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)' <<<"$rt" || { echo "the binder read does not wait (under a deadline) for a stopped app to wake"; return 1; }
+    grep -qF 'readOnly = if (rt.writable) emptySet() else values.keys' <<<"$rt" || { echo "a non-writable app's fields can be pulled back"; return 1; }
+    grep -qF 'for (section in VaultCockpit.layout.sections) {' <<<"$(awk '/^fun RuntimeTab\(/{f=1} f{print} f&&/^}$/{exit}' "$3")" \
+        && grep -qF 'AccountTags.runtimeApp(section.id)' "$3" && grep -qF 'AccountTags.runtimeStatus(section.id)' "$3" || { echo "Runtime is not one tagged card per declared app"; return 1; }
+    for s in reachable not_installed not_reporting; do grep -qF "R.string.account_status_$s" "$3" || { echo "no '$s' status"; return 1; }; done
     return 0
 }
-msg=$(index_ok "$PF" "$BJ") && ok "H: the index is Setup's first table, a row per mapped app ($(jq -r '[.ui.vault_connect.cockpit.sections[].id] | join(", ")' "$BJ")), painted from each section" || bad "H: $msg"
-grep -qF 'VaultCockpit.ownerEmail(bundle, VaultCockpit.layout)' <<<"$(fnof "$PF" renderMail)" \
-    && ok "H: mail lists every declared account even when nobody signed in (the vault's own address names the domain)" || bad "H: mail goes empty after a file import"
-grep -qF 'Row("repo · "' "$CP" && grep -qF 'State.PENDING, observed = false)' "$CP" && ! grep -qF '"declared list; cloud-drive reads it", if (repos != null) State.MATCH' "$CP" \
-    && ok "H: drive lists every declared repo as its own item, never ticked for being declared" || bad "H: the drive repo list is still one ticked row"
-echo "-- H-mutation: the index moved below the sections, a row not repainted, an applier dropped, the keyboard unmapped --"
-hm() { sed "$1" "$PF" > "$TMP/h.kt"; cmp -s "$PF" "$TMP/h.kt" && return 2; ! index_ok "$TMP/h.kt" "$BJ" >/dev/null; }
-for e in 's/^        renderFleetIndex(ctx, into)$/        renderConfigApply(ctx, into)\n        renderFleetIndex(ctx, into)/' \
-         's/        indexRows\[card.tag\]?.apply {/        indexRows["none"]?.apply {/' \
-         's/            indexCards\[section.id\] = card/            Unit/' \
-         's/if (isAdded) com.diegonmarcos.superapp.appstore.StoreImport.show(this, plan)/if (isAdded) Unit/'; do
-    hm "$e"; rc=$?
-    case $rc in 0) ok "H-mutation: caught — ${e:0:80}";; 2) bad "H-mutation: did not apply — ${e:0:80}";; *) bad "H-mutation: NOT caught — ${e:0:80}";; esac
+msg=$(runtime_ok "$AR" "$BJ" "$AT") && ok "H: every declared app ($(jq -r '[.ui.vault_connect.cockpit.sections[].id] | join(", ")' "$BJ")) has a live reader and a status card" || bad "H: $msg"
+setup_gone() {   # $1 = ProfileFragment.kt, $2 = build.json; prints what survives
+    local g; for g in 'private fun renderFleetIndex(' 'private fun renderImported(' 'private fun renderWizard(' 'private fun renderRepos(' 'private fun renderSetup(' 'private fun renderInfos(' 'setup-index:' 'renderDeviceSelector('; do
+        grep -qF "$g" "$1" && { echo "$g survives"; return 1; }
+    done
+    [ -f "$PKG/Wizard.kt" ] && { echo "Wizard.kt survives"; return 1; }
+    jq -e '.ui.profile.wizard' "$2" >/dev/null && { echo "ui.profile.wizard survives"; return 1; }
+    local rr; rr=$(fnof "$1" renderRuntime | codeof)
+    grep -qF 'RuntimeTab(AccountModel.get(ctx))' <<<"$rr" && grep -qF 'renderConfigApply(ctx, into)' <<<"$rr" || { echo "the Runtime column is not the per-app runtime + your config"; return 1; }
+    return 0
+}
+msg=$(setup_gone "$PF" "$BJ") && ok "H: the Setup index, wizard, cockpit cards and repos are deleted; Runtime is per app, then the per-peer config" || bad "H: $msg"
+grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$PF" landVault | codeof)" \
+    && ok "H: every Connect landing stores the fetched file as S, with the way that fetched it" || bad "H: a Connect landing does not store S"
+echo "-- H-mutation: a reader dropped, a served_by dropped, the wake-wait dropped, the old index back, the landing not stored --"
+for e in 's/^            "drive" -> {/            "drive_x" -> {/' \
+         's/                while (!client.isConnected() \&\& SystemClock.elapsedRealtime() < until) Thread.sleep(100)/                Unit/' \
+         's/                    readOnly = if (rt.writable) emptySet() else values.keys)/                    readOnly = emptySet())/'; do
+    sed "$e" "$AR" > "$TMP/h.kt"
+    if cmp -s "$AR" "$TMP/h.kt"; then bad "H-mutation: did not apply — ${e:0:70}"
+    else runtime_ok "$TMP/h.kt" "$BJ" "$AT" >/dev/null && bad "H-mutation: NOT caught — ${e:0:70}" || ok "H-mutation: caught — ${e:0:70}"; fi
 done
-for jm in '(.ui.vault_connect.cockpit.sections[] | select(.id == "drive")) |= del(.apply)' \
-          '.ui.vault_connect.cockpit.sections |= map(select(.id != "keyboard"))' \
-          '.ui.vault_connect.cockpit.sections |= map(select(.id != "mail"))' \
-          '.ui.vault_connect.cockpit.sections |= map(select(.id != "apps"))' \
-          '(.ui.vault_connect.cockpit.sections[] | select(.id == "apps")) .label = "Apps"'; do
-    jq "$jm" "$BJ" > "$TMP/h.json"
-    if cmp -s "$BJ" "$TMP/h.json"; then bad "H-mutation: did not apply — $jm"
-    else index_ok "$PF" "$TMP/h.json" >/dev/null && bad "H-mutation: NOT caught — $jm" || ok "H-mutation: caught — $jm"; fi
-done
+jq '(.ui.vault_connect.cockpit.sections[] | select(.id == "ai")) |= del(.runtime)' "$BJ" > "$TMP/h.json"
+cmp -s "$BJ" "$TMP/h.json" && bad "H-mutation: the served_by drop did not apply" \
+    || { runtime_ok "$AR" "$TMP/h.json" "$AT" >/dev/null && bad "H-mutation: an app with no served_by was NOT caught" || ok "H-mutation: an app with no runtime served_by → RED"; }
+jq '.ui.profile.wizard = {"steps": []}' "$BJ" > "$TMP/h2.json"
+setup_gone "$PF" "$TMP/h2.json" >/dev/null && bad "H-mutation: the wizard declared again was NOT caught" || ok "H-mutation: the wizard declared again → RED"
+sed 's/^    private fun renderRuntime(/    private fun renderFleetIndex(ctx: android.content.Context, into: LinearLayout) = Unit\n    private fun renderRuntime(/' "$PF" > "$TMP/h3.kt"
+cmp -s "$PF" "$TMP/h3.kt" && bad "H-mutation: the index-back mutation did not apply" \
+    || { setup_gone "$TMP/h3.kt" "$BJ" >/dev/null && bad "H-mutation: the Setup index back was NOT caught" || ok "H-mutation: the Setup index back → RED"; }
+sed 's/AccountModel.get(c).landServer(it, via)/Unit/' "$PF" > "$TMP/h4.kt"
+cmp -s "$PF" "$TMP/h4.kt" && bad "H-mutation: the landing mutation did not apply" \
+    || { grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$TMP/h4.kt" landVault | codeof)" && bad "H-mutation: a landing that stores nothing was NOT caught" || ok "H-mutation: a landing that stores nothing → RED"; }
 
 echo
 echo "passed=$PASS failed=$FAIL"

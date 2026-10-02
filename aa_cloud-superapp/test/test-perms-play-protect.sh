@@ -34,14 +34,13 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 command -v jq >/dev/null || { echo "ERROR: jq required" >&2; exit 2; }
 
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt"
-WIZ="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/Wizard.kt"
 GRADLE="$APP/app/build.gradle"
 # The engine that does the reading, resolved through build.json::modules like
 # every other cross-module path in these testers.
 shzdir="$(jq -r '.modules["libs:shizuku-adb-debug-tools"].dir // empty' "$BJ")"
 [ -n "$shzdir" ] || { echo "ERROR: build.json::modules[libs:shizuku-adb-debug-tools].dir is not declared" >&2; exit 2; }
 PV="$APP/$shzdir/src/main/java/com/diegonmarcos/superapp/adbdebug/PackageVerifier.kt"
-for f in "$FRAG" "$WIZ" "$GRADLE" "$PV"; do
+for f in "$FRAG" "$GRADLE" "$PV"; do
     [ -f "$f" ] || { echo "ERROR: not found: $f" >&2; exit 2; }
 done
 
@@ -95,10 +94,9 @@ else
     bad "T3b PackageVerifier stopped reading Settings.Global — whatever the row shows is no longer measured (#632 mutation 2)"
 fi
 # No preference store anywhere near this row's measurement.
-if ! { grep -E 'private fun deviceState' -A 14 "$FRAG"
-       grep -E 'private fun playProtectScanOff' -A 2 "$WIZ"; } \
+if ! grep -E 'private fun deviceState' -A 14 "$FRAG" \
      | grep -E 'SharedPreferences|ConfigsPrefs|getBoolean\(' >/dev/null; then
-    ok "T3c neither the row nor the wizard step consults a stored flag"
+    ok "T3c the row consults no stored flag"
 else
     bad "T3c a preference read appeared in the measurement — that is the remembered value the rule forbids (#622/#452, #632 mutation 2)"
 fi
@@ -116,17 +114,9 @@ else
     bad "T4b PackageVerifier.readable is gone — getInt's default is the stock value, so nothing can distinguish it from a real read (#632)"
 fi
 
-# ── T5 — the #622 wizard measures the same thing ────────────────────────────
-if grep -E '"permissions" ->' -A 2 "$WIZ" | grep -F 'playProtectScanOff(ctx)' >/dev/null; then
-    ok "T5 the wizard's permissions step includes the Play Protect measurement"
-else
-    bad "T5 the wizard's permissions step ignores Play Protect — Account ▸ Setup reports done while the Perms page shows the row red (#632)"
-fi
-if grep -E 'fun playProtectScanOff' -A 3 "$WIZ" | grep -F 'PackageVerifier' >/dev/null; then
-    ok "T5b the wizard's measurement is the same system read, not a second opinion"
-else
-    bad "T5b the wizard measures Play Protect some other way — two answers for one fact (#632 mutation 2)"
-fi
+# (T5 — the #622 wizard's second reading of this row — is gone with the wizard, #778:
+#  Account ▸ Cloud Constellation Setup and its step list were deleted, so the Perms row
+#  is the one place Play Protect is measured.)
 
 # ── T6 — the action takes the user to the toggle and always says something ──
 if grep -F 'com.google.android.gms.security.settings.VerifyAppsSettingsActivity' "$FRAG" >/dev/null; then

@@ -9,16 +9,16 @@
 #   T1  every build.json::ui.vault_connect key reaches BuildConfig, and the
 #       Kotlin reads each BuildConfig field it bakes (data, not literals)
 #   T2  every R.string.vault_* the Kotlin uses exists in EVERY locale file
-#   T3  the Fleet tab is in the strip, its index is read off the list, and
-#       every cockpit section id the fragment dispatches on is declared in
-#       build.json (and vice versa) — the layout is data
-#   T4  RENDERING WRITES NOTHING: the fetch and render path runs no apply and
-#       touches no store; every apply* is reached only from a button
+#   T3  (#778) the cockpit's apps are Account ▸ Runtime / Drift's apps: the
+#       runtime reader and pusher dispatch on each declared `apply` (and every
+#       declared one has a reader), labels live only in build.json — the layout is data
+#   T4  READING WRITES NOTHING: the fetch path and the runtime readers run no
+#       apply and touch no store; every write is AccountRuntime.push, reached only
+#       from the model's server → runtime, reached only from a tap (or its debug op)
 #   T5  the one-time code and the browser session are never stored
 #   T6  the device is CHOSEN, never typed: only its id is persisted, and no
 #       address, key or hostname is a Kotlin literal on the mesh path
-#   T7  the Apps section reuses the #565 inventory, plan and summary — no
-#       second exporter, no second installer
+#   T7  the apps reuse the #565 inventory parser — no second parser, no installer
 #   T8  (#570 reopened) the Fleet tab IS the cockpit: hero + one card per
 #       section through FleetCockpitView, the shared StatusLight and no private
 #       colour, badge icons declared as data and present as drawables, Fleet the
@@ -86,34 +86,27 @@ for loc in "$RES"/values*/strings.xml; do
 done
 [ "$FAIL" = 0 ] && ok "T2: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
-echo "== T3: the Fleet COCKPIT (on Cloud Constellation Setup since #695), and its sections are data =="
-# #626 moved the cockpit into an Infos section; #695 moved it whole onto the
-# Setup tab, where the fetched config is APPLIED. This check follows it there —
-# the only way "moved, not dropped" is provable.
-grep -q 'renderImported(ctx, into)' <<<"$(awk '/private fun renderSetup\(/{f=1} f{print} f&&/^    }$/{exit}' "$PF")" \
-    && ok "T3: the cockpit renders on the Setup tab (renderSetup → renderImported)" || bad "T3: nothing renders the cockpit any more"
-grep -q 'renderSetup(ctx, setup)' "$PF" && jq -e '[.ui.profile.tabs[] | select(.id == "setup")] | length == 1' "$BJ" >/dev/null \
-    && ok "T3: build.json declares the setup tab, and the fragment renders the cockpit's page into it" \
-    || bad "T3: the setup tab is not declared, or renderSetup is not its column"
-grep -q 'infosTab = tabs.indexOfFirst { it.column === col }' "$PF" \
-    && ok "T3: the Infos index is read off the tab list" || bad "T3: the Infos index is not derived from the list"
-grep -q 'for (section in VaultCockpit.layout.sections)' "$PF" \
-    && ok "T3: the tab iterates the baked layout" || bad "T3: the tab does not iterate ui.vault_connect.cockpit.sections"
-# #713 the fragment dispatches on each section's declared APPLIER (`apply`), not its id.
-DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].apply' "$BJ" | sort)
-DISPATCHED=$(awk '/when \(section.apply\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
-[ -n "$DISPATCHED" ] && ok "T3: the fragment dispatches on $(echo $DISPATCHED | wc -w) declared appliers" || bad "T3: no when(section.apply) dispatch found"
+echo "== T3: the cockpit's apps are Account ▸ Runtime / Drift's apps (#778), and they are data =="
+AR="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountRuntime.kt"
+AT="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
+AM="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt"
+grep -qF 'VaultCockpit.layout.sections.map { section ->' "$AR" && grep -qF 'for (section in VaultCockpit.layout.sections) {' "$AT" \
+    && ok "T3: Runtime reads, and draws, every app of the baked layout" || bad "T3: Runtime does not iterate ui.vault_connect.cockpit.sections"
+grep -qF 'VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, it.vault) }' "$AM" \
+    && ok "T3: Drift's apps — which vault sections each consumes — are the same layout" || bad "T3: Drift's app ownership is not the cockpit layout"
+# The reader dispatches on each section's declared APPLIER (`apply`); a `reports: false` app has none.
+DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[] | select(.runtime.reports != false) | .apply' "$BJ" | sort)
+DISPATCHED=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$AR" | grep -oE '^            "[a-z]+" ->' | grep -oE '[a-z]+' | sort)
+[ -n "$DISPATCHED" ] && ok "T3: the runtime reader dispatches on $(echo $DISPATCHED | wc -w) declared appliers" || bad "T3: no when(section.apply) dispatch found"
 for id in $DISPATCHED; do
-    grep -qx "$id" <<<"$DECLARED" && ok "T3: dispatched section '$id' is declared" \
-                                      || bad "T3: the fragment dispatches on '$id', which build.json does not declare"
+    grep -qx "$id" <<<"$DECLARED" && ok "T3: read app '$id' is declared" || bad "T3: the reader dispatches on '$id', which build.json does not declare"
 done
 for id in $DECLARED; do
-    grep -qx "$id" <<<"$DISPATCHED" && ok "T3: declared section '$id' has a renderer" \
-                                        || bad "T3: build.json declares '$id' but nothing renders it (it would fall to raw)"
+    grep -qx "$id" <<<"$DISPATCHED" && ok "T3: declared app '$id' has a reader" || bad "T3: build.json declares '$id' but nothing reads it"
 done
 LABELS=$(jq -r '.ui.vault_connect.cockpit.sections[].label' "$BJ")
 while IFS= read -r l; do
-    grep -qF "\"$l\"" <<<"$(codeof "$PF")" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
+    grep -qF "\"$l\"" <<<"$(codeof "$PF"; codeof "$AR"; codeof "$AT")" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
 done <<< "$LABELS"
 VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
 # #695 the vault re-lettered E0_configs/ → C_A1-configs/; the old path made this
@@ -130,28 +123,29 @@ else
     ok "T3: (cloud-vault checkout not beside this repo — vault section ids not cross-checked here)"
 fi
 
-echo "== T4: rendering writes nothing; every apply is a tap =="
-# The fetch + render path: VaultConnect.kt, the vault* functions and every
-# render* function in the fragment. None may write a store or run an apply.
-RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure|render[A-Za-z]*|importedValue)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
-[ -n "$RENDER_FNS" ] && ok "T4: found the fetch + render functions" || bad "T4: render functions not found"
-for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting'; do
-    # The per-peer config Apply (#695: on Setup) is a tap, checked below like every apply;
-    # reading ConfigAutoImport.SECTIONS to list them writes nothing.
-    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply' | grep -v 'ConfigAutoImport.apply(' | grep -v 'ConfigAutoImport.SECTIONS')"; then
-        bad "T4: the fetch/render path touches $pat"
+echo "== T4: reading writes nothing; every apply is a tap =="
+# The fetch path (VaultConnect.kt, the fragment's vault* functions) and the runtime
+# readers (AccountRuntime.read / readOne) may write no store and run no apply.
+RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
+READ_FNS=$(awk '/    fun read\(ctx: Context/{f=1} f{print} /^    \/\/ ── pushing/{f=0}' "$AR")
+[ -n "$RENDER_FNS" ] && [ -n "$READ_FNS" ] && ok "T4: found the fetch functions and the runtime readers" || bad "T4: fetch or reader functions not found"
+for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting' 'applyMesh' 'applyMail' 'setProfileField'; do
+    # The per-peer config Apply is a tap, checked below like every apply.
+    if grep -qF "$pat" "$VC" || grep -qF "$pat" <<<"$(echo "$RENDER_FNS" | grep -v 'ConfigAutoImport.apply(' | grep -v 'ConfigAutoImport.SECTIONS')" || grep -qF "$pat" <<<"$READ_FNS"; then
+        bad "T4: the fetch/read path touches $pat"
     else
-        ok "T4: no $pat on the fetch/render path"
+        ok "T4: no $pat on the fetch/read path"
     fi
 done
-# Every VaultCockpit.apply* call in the fragment sits inside a click lambda —
-# an applyButton / pickButton / dialog button — never at render level.
-APPLIES=$(grep -n 'VaultCockpit.apply' "$PF" | cut -d: -f1)
-[ -n "$APPLIES" ] && ok "T4: $(echo "$APPLIES" | wc -l) apply call sites" || bad "T4: no VaultCockpit.apply* call in the fragment"
-for ln in $APPLIES; do
-    ctx=$(sed -n "$((ln-8)),${ln}p" "$PF")
-    grep -qE 'applyButton\(|setPositiveButton\(' <<<"$ctx" && ok "T4: apply at line $ln is behind a button" \
-                                                               || bad "T4: apply at line $ln is not behind a button"
+# Every write is AccountRuntime.push; push is called only by the model's server → runtime,
+# which the Drift tab calls only from a click and the debug API only from its sync op.
+[ "$(grep -c 'AccountRuntime.push(' "$AM")" = 1 ] && grep -qF 'fun pushServerToRuntime(' "$AM" \
+    && ok "T4: AccountRuntime.push has one caller, the model's server → runtime" || bad "T4: AccountRuntime.push is called from more than the model's push"
+grep -rn 'AccountRuntime.push(' "$APP/app/src/main/java" | grep -v 'AccountModel.kt' | grep -q . && bad "T4: something else pushes into an app" || ok "T4: nothing else pushes into an app"
+PUSHES=$(grep -n 'm.pushServerToRuntime(' "$AT" | cut -d: -f1)
+[ -n "$PUSHES" ] && ok "T4: $(echo "$PUSHES" | wc -l) push call sites on Drift" || bad "T4: Drift never pushes"
+for ln in $PUSHES; do
+    grep -qE 'onClick = \{|ActionButton\(' <<<"$(sed -n "$((ln-1)),${ln}p" "$AT")" && ok "T4: the push at AccountTabs.kt:$ln is behind a tap" || bad "T4: the push at AccountTabs.kt:$ln is not behind a tap"
 done
 CAPPLY=$(grep -n 'ConfigAutoImport.apply(' "$PF" | cut -d: -f1)
 [ "$(echo "$CAPPLY" | grep -c .)" = 1 ] && ok "T4: exactly one per-peer config apply on the page" || bad "T4: ConfigAutoImport.apply is called $(echo "$CAPPLY" | grep -c .) times"
@@ -186,32 +180,22 @@ if grep -qE '10\.0\.0\.[0-9]+|fd0c:1d0[01]::|termux|galaxy|surface' <<<"$(codeof
 else
     ok "T6: no address, hostname or device name literal in VaultCockpit"
 fi
-grep -q 'android.widget.Spinner' "$PF" && ok "T6: the selector is a pick, not a text field" || bad "T6: no device spinner"
+grep -qF 'private fun buildDeviceStep(' "$PF" && grep -qF 'VaultCockpit.selectDevice(ctx, p.vaultDevice)' "$PF" \
+    && ok "T6: the device is picked from the vault's peers on Connect (journey step 3), never typed" || bad "T6: no device pick"
 
 echo "== T7: Apps reuses #565 =="
-grep -q 'AppInventory.entriesFor' "$PF" && grep -q 'AppInventory.toJson' "$PF" \
-    && ok "T7: the export is AppInventory's" || bad "T7: a second exporter"
-grep -q 'AppInventory.plan(' "$PF" && grep -q 'StoreImport.show(this, plan)' "$PF" \
-    && ok "T7: the compare is AppInventory.plan + StoreImport.show" || bad "T7: a second plan/summary"
 grep -q 'AppInventory.parse(' "$CP" && grep -q 'AppInventory.KIND' "$CP" \
     && ok "T7: an inventory in the vault is read by the one parser" || bad "T7: a second inventory parser"
-grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' <<<"$(codeof "$PF")" && bad "T7: the profile installs on its own" \
-                                                                   || ok "T7: no installer in the profile"
-NAME_PF=$(grep -oE 'APPS_EXPORT_NAME = "[^"]+"' "$PF" | cut -d'"' -f2)
-NAME_STORE=$(grep -oE 'EXPORT_NAME = "[^"]+"' "$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt" | cut -d'"' -f2)
-[ -n "$NAME_PF" ] && [ "$NAME_PF" = "$NAME_STORE" ] && ok "T7: same export file name as the Store ($NAME_PF)" \
-                                                     || bad "T7: export file name differs from the Store's ($NAME_PF vs $NAME_STORE)"
+grep -qF 'VaultCockpit.appsDeclared(declared!!, d, fleet)' "$AR" && ok "T7: Runtime's apps reading is the same declared set" || bad "T7: Runtime counts apps some other way"
+grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' <<<"$(codeof "$PF"; codeof "$AR"; codeof "$AT")" && bad "T7: the Account installs on its own" \
+                                                                   || ok "T7: no installer in the Account (the apps topic links into the Store)"
 
-echo "== T8: the Fleet tab is the cockpit (#570 reopened) =="
+echo "== T8: the cockpit chrome (#570 reopened; since #778 it draws the Connect journey — the Setup cockpit page is gone) =="
 FV="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/FleetCockpitView.kt"
 FT="$APP/app/src/test/java/com/diegonmarcos/superapp/profile/FleetCockpitViewTest.kt"
 IDS="$RES/values/ids.xml"
 [ -f "$FV" ] && ok "T8: FleetCockpitView.kt exists" || bad "T8: no FleetCockpitView.kt — the chrome was not split out"
 # The render path builds the hero and one card per section through the chrome object.
-grep -q 'FleetCockpitView.hero(' <<<"$RENDER_FNS" && ok "T8: the Fleet tab draws a hero" || bad "T8: no hero on the Fleet tab"
-grep -q 'FleetCockpitView.card(ctx, section.label, section.id' <<<"$RENDER_FNS" \
-    && ok "T8: one card per declared section, labelled and tagged from the declaration" \
-    || bad "T8: the sections are not drawn as FleetCockpitView cards"
 # The OLD idiom — a bare headline per section — is gone from the render path.
 grep -q 'sectionHeader(ctx, section.label)' <<<"$RENDER_FNS" \
     && bad "T8: the render path still draws the OLD headline-per-section page" \
@@ -250,8 +234,6 @@ jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | len
 # Infos (the fetched configs) is the default tab once the journey has been walked
 # (#573/#695: before that, the page opens on Connect — where the sign-in and the
 # fetch live, and there is nothing to read or apply yet).
-grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else infosTab' "$PF" \
-    && ok "T8: the page opens on Infos once the journey is walked, on Connect before" || bad "T8: the page does not open on Infos after the journey"
 # The layout-tree test exists and reads the declared ids, which exist.
 [ -f "$FT" ] && ok "T8: FleetCockpitViewTest.kt exists" || bad "T8: no layout-tree test"
 for id in cockpit_hero cockpit_device_orb cockpit_hero_light cockpit_card cockpit_card_badge cockpit_card_light cockpit_card_body; do

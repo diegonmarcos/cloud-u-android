@@ -53,7 +53,19 @@ object VaultCockpit {
         /** #713 `apply`: which applier draws this app's section — the ONLY thing Setup dispatches on.
          *  Blank or unknown = the section's vault data shown raw, never an invented applier. */
         val apply: String = "",
+        /** #778 `runtime`: who serves this app's live config and what Account ▸ Runtime may do with it. */
+        val runtime: Runtime = Runtime(),
     )
+
+    /**
+     * #778 An app's runtime as Account ▸ Runtime reads it (build.json cockpit `runtime`):
+     * [servedBy] `self` (this app's own stores), `text_tools` (the ITextTools serving app) or the
+     * package that holds it; [reports] false = that app exposes nothing to read (the keyboard's
+     * lists); [writable] false = its value cannot be written back as a declaration (a running
+     * tunnel is not a wg-quick text); [fields] false = it reports a summary, not fields (apps).
+     */
+    data class Runtime(val servedBy: String = SELF, val reports: Boolean = true,
+                       val writable: Boolean = true, val fields: Boolean = true)
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
      *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest.
@@ -72,7 +84,11 @@ object VaultCockpit {
             val f = s.optJSONObject("fields") ?: JSONObject()
             Section(s.getString("id"), s.getString("label"), (0 until v.length()).map { v.getString(it) },
                 s.optString("icon"), s.optBoolean("observed", true),
-                f.keys().asSequence().associateWith { f.getString(it) }, s.optString("apply"))
+                f.keys().asSequence().associateWith { f.getString(it) }, s.optString("apply"),
+                s.optJSONObject("runtime").let { r ->
+                    Runtime(r?.optString("served_by")?.ifBlank { null } ?: SELF, r?.optBoolean("reports", true) ?: true,
+                        r?.optBoolean("writable", true) ?: true, r?.optBoolean("fields", true) ?: true)
+                })
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
         val icons = o.optJSONObject("device_icons") ?: JSONObject()
@@ -447,15 +463,20 @@ object VaultCockpit {
      *  build.json::ui.import_schema declares (ssh.vault_repo_key, git.github_token). */
     fun applyDrive(bundle: JSONObject, prefs: ConfigsPrefs): String {
         val git = bundle.optJSONObject("git") ?: return "✗ no git section in the vault"
-        val written = mutableListOf<String>()
-        (git.opt("github_token") as? String)?.takeIf { it.isNotBlank() }?.let {
-            prefs.putSecret(SECTION_GIT, K_GITHUB_TOKEN, it.trim()); written += "github token"
-        }
-        (git.opt("ssh_private_key") as? String)?.takeIf { it.isNotBlank() }?.let {
-            prefs.putSecret(SECTION_SSH, K_VAULT_REPO_KEY, it); written += "ssh key"
+        val written = DRIVE_SECRETS.mapNotNull { (item, at) ->
+            (git.opt(item) as? String)?.takeIf { it.isNotBlank() }?.let { v ->
+                prefs.putSecret(at.first, at.second, if (item == "github_token") v.trim() else v); item.replace('_', ' ')
+            }
         }
         return if (written.isEmpty()) "✗ the vault holds neither a token nor a key" else "✓ ${written.joinToString(" + ")} stored"
     }
+
+    /** #778 vault `git.<item>` → where cloud-sa keeps it ([ConfigsPrefs] section, key) — what drive applies
+     *  and what Account ▸ Runtime reads back. The import_schema paths (ssh.vault_repo_key, git.github_token). */
+    val DRIVE_SECRETS: Map<String, Pair<String, String>> = linkedMapOf(
+        "github_token" to (SECTION_GIT to K_GITHUB_TOKEN),
+        "ssh_private_key" to (SECTION_SSH to K_VAULT_REPO_KEY),
+    )
 
     // ── AI ───────────────────────────────────────────────────────────────
 
@@ -587,6 +608,8 @@ object VaultCockpit {
     /** Sections the cockpit consumed; the rest of the bundle is shown raw. */
     fun consumed(layout: Layout): Set<String> = layout.sections.flatMap { it.vault }.toSet()
 
+    const val SELF = "self"
+    const val TEXT_TOOLS = "text_tools"
     private const val PREFS = "vault_cockpit"
     private const val K_DEVICE = "device_id"
     private const val DEVICE_ICON_DEFAULT = "_default"

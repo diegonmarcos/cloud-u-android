@@ -146,6 +146,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #777: the Alerts group is drawn from the store, so it comes back
         // (silently) after a reboot or an update cleared the shade.
         runCatching { com.diegonmarcos.superapp.notificationcenter.AlertsNotifier.refresh(this) }
+        // #778: /api/account/* — Account's tabs, profiles, runtime, drift and their actions.
+        runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
         // Schedule the periodic battery-session tick (15 min cadence).
         // Idempotent — KEEP policy ensures re-scheduling on every cold
         // start is a no-op. Without this the discharge anchor only

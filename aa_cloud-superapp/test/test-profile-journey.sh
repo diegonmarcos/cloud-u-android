@@ -216,11 +216,11 @@ t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when Connect ope
     # (its own login, mailed code and fetch) is the Authelia line's own leg now,
     # and every line fetches the vault configs — so it must not come back.
     grep -q 'renderVault(ctx, connect)' "$pf" && return 1
-    # Between the CONNECT marker and the Infos render, the page builds its
+    # Between the CONNECT marker and the Profiles/Runtime/Drift marker (#778), the page builds its
     # renderers and nothing else of its own — no box, header, caption or pill.
     local block
     # The markers are comment lines, so slice the raw file first, then drop comments.
-    block=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/renderInfos\(ctx, col\)/{exit}' "$pf" | codeof)
+    block=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/── PROFILES · RUNTIME · DRIFT/{exit}' "$pf" | codeof)
     [ -n "$block" ] || return 1
     grep -qE 'addView|sectionHeader|label\(|caption\(|pickButton' <<<"$block" && return 1
     for old in autheliaEmailEditor 'secretField(' '"Mail 2FA confirmation code"' vault_connect_header '"Imports"' showGithubDeviceDialog 'buildSignIn(' 'buildRegistry(' registry_peer_pick; do
@@ -248,10 +248,10 @@ grep -q 'SignInWays(host = signInHost, policy = providerIds' "$PF" && grep -q 'S
     && ok "T4: step 1 hosts the shared surface per way, narrowed by kind and by the artifact's policy" || bad "T4: step 1 does not host SignInWays per declared way"
 grep -q 'FleetCockpitView.pill(c, way.label, onClick)' "$PF" && ok "T4: the shared ways are drawn with the cockpit's pill, labelled by the declaration" || bad "T4: the shared ways are not drawn with FleetCockpitView.pill"
 grep -qE 'private fun (showAutheliaBearerDialog|showAutheliaWebAuthDialog|showDeviceFlowDialog|startDeviceFlow)\(' "$PF" && bad "T4: the fragment still carries a sign-in dialog of its own — a copy of the lib's" || ok "T4: no private sign-in dialog left in the fragment"
-grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone' "$PF" \
-    && ok "T4: the page opens on the journey (Connect) until it has been walked" || bad "T4: the page does not land on the journey"
-grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else infosTab' "$PF" \
-    && ok "T4: and lands on the Infos read-out once it has been" || bad "T4: the landing does not name connectTab/infosTab (#695)"
+grep -q 'selectedTab = if (model.shown() == null && !ProfileJourney.allDone' "$PF" \
+    && ok "T4: the page opens on the journey (Connect) until something is declared" || bad "T4: the page does not land on the journey"
+grep -q 'selectedTab = if (model.shown() == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else profilesTab' "$PF" \
+    && ok "T4: and lands on Profiles (the declared copy) once there is one" || bad "T4: the landing does not name connectTab/profilesTab (#778)"
 
 echo "== T5: the token and the session never reach a store =="
 grep -qE 'SharedPreferences|\.edit\(\)|putString|ConfigsPrefs|writeText' <<<"$(codeof "$SI" "$UI" "$DG" "$CFA" "$AD")" && bad "T5: the lib writes a store" || ok "T5: the lib (SignIn, the surface, the grant, the fetches) touches no store"
@@ -342,71 +342,24 @@ cmp -s "$UI" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the
     || { waysin "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
 waysin "$SHARED" "$UI" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
 
-echo "== T10: the fleet wizard (#622) is declarative, and its done-checks are real measurements =="
-WIZ="$PKG/Wizard.kt"
-wizard_order() { jq -r '(.ui.profile.wizard.steps // [])[].id' "$1" | tr '\n' ' ' | sed 's/ $//'; }
-WANT_STEPS="identity vault permissions apps repos wireguard fleet finish"
-[ "$(wizard_order "$BJ")" = "$WANT_STEPS" ] \
-    && ok "T10: build.json declares the 8 wizard steps in order" \
-    || bad "T10: wizard step order is '$(wizard_order "$BJ")'"
-# The wizard is DATA: the engine reads the baked blob, the fragment iterates it,
-# the blob is baked from build.json — no step id or order is spelled out in Kotlin.
-grep -q 'BuildConfig.UI_PROFILE_WIZARD_B64' "$WIZ" && ok "T10: Wizard reads the baked declaration" || bad "T10: Wizard does not read UI_PROFILE_WIZARD_B64"
-grep -q 'Wizard.steps()' "$PF" && grep -q 'for (step in steps)' "$PF" && ok "T10: renderWizard iterates the declared steps" || bad "T10: renderWizard does not iterate Wizard.steps()"
-grep -qF 'UI_PROFILE_WIZARD_B64' "$APP/app/build.gradle" && ok "T10: the wizard blob is baked" || bad "T10: UI_PROFILE_WIZARD_B64 is not baked"
-# Every done-check is a LIVE measurement of actual device state (#452: a wizard
-# that remembers success is worse than one that re-checks). Each real probe must
-# be present, and no stored 'step done' flag may exist.
-real_checks() {   # $1 = Wizard.kt; 0 iff every step's real probe is present
-    for probe in 'SignIn.Current.session' 'autheliaEmail' 'appliedAt' \
-                 'Environment.isExternalStorageManager' 'getEnabledListenerPackages' \
-                 'android.permission.DUMP' 'getPackageInfo' 'interfacePrivateKey' 'K_GITHUB_TOKEN'; do
-        grep -qF "$probe" "$1" || return 1
-    done
+echo "== T10: the fleet wizard (#622) is gone with Cloud Constellation Setup (#778) =="
+# #778 the Account's fourth tab is Drift; Setup — whose foot the wizard was — became Runtime, and
+# its index, cockpit cards and step list were deleted. A step list left declared, baked or read
+# would be a second account centre nobody draws.
+wizard_gone() {   # $1 = build.json, $2 = ProfileFragment.kt, $3 = app/build.gradle; prints what survives
+    jq -e '.ui.profile.wizard' "$1" >/dev/null && { echo "ui.profile.wizard is still declared"; return 1; }
+    [ -f "$PKG/Wizard.kt" ] && { echo "Wizard.kt survives"; return 1; }
+    grep -qE 'Wizard\.|renderWizard' "$2" && { echo "the fragment still draws the wizard"; return 1; }
+    grep -qF 'UI_PROFILE_WIZARD_B64' "$3" && { echo "the wizard blob is still baked"; return 1; }
     return 0
 }
-apps_measured() { grep -qE '"apps" -> .*declaredApps\(\)' "$1"; }
-real_checks "$WIZ" && ok "T10-real: every done-check carries its real system/state probe" || bad "T10-real: a done-check is missing its real probe"
-apps_measured "$WIZ" && ok "T10-real: the apps step measures installed packages, not a flag" || bad "T10-real: the apps step is not a real measurement"
-grep -qE 'getBoolean\("?wizard|putBoolean\("?wizard|wizard_done|stepDone' "$WIZ" \
-    && bad "T10-real: the wizard remembers a done flag (#452)" || ok "T10-real: no stored done flag — every check re-measures"
-
-# #626/#695 THE ROUTES MUST LAND. A step pointing at a tab the strip does not
-# declare (tab:vault / tab:repos / tab:fleet were all removed) would be a row that
-# silently does nothing when tapped — the defect shape every strip change invites.
-routes_land() {   # $1 = build.json; 0 iff every tab: route names a DECLARED tab
-    python3 - "$1" <<'PYROUTES'
-import json, sys
-ui = json.load(open(sys.argv[1]))["ui"]["profile"]
-tabs = {t["id"] for t in (ui.get("tabs") or []) if isinstance(t, dict)}
-bad = [s["id"] for s in (ui.get("wizard") or {}).get("steps", [])
-       if s.get("route", "").startswith("tab:") and s["route"][4:] not in tabs]
-sys.exit(1 if bad else 0)
-PYROUTES
-}
-routes_land "$BJ" && ok "T10: every wizard step's tab: route names a declared tab" || bad "T10: a wizard step routes to a tab that is not in ui.profile.tabs"
-
-echo "== T10-mutation: a reordered step, or a faked (remembered) done-check, turns red =="
+msg=$(wizard_gone "$BJ" "$PF" "$APP/app/build.gradle") && ok "T10: no wizard declared, baked, compiled or drawn" || bad "T10: $msg"
 SC="$(mktemp -d)"; trap 'rm -rf "$SC"' EXIT
-cp "$BJ" "$SC/build.json"
-python3 - "$SC/build.json" <<'PY'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p)); s=d["ui"]["profile"]["wizard"]["steps"]; s[2],s[3]=s[3],s[2]; json.dump(d,open(p,"w"))
-PY
-[ "$(wizard_order "$SC/build.json")" = "$WANT_STEPS" ] && bad "T10-mutation: a reordered step was NOT caught" || ok "T10-mutation: a reordered step is caught"
-# Fake the apps done-check as a bare `true` (a remembered/hardcoded success)
-# while its real measurement is removed — the #452 trap made concrete.
-sed 's/"apps" -> declaredApps().*/"apps" -> true/' "$WIZ" > "$SC/Wizard.kt"
-if grep -q '"apps" -> declaredApps' "$SC/Wizard.kt"; then bad "T10-mutation: the apps mutation did not apply (tester stale)"
-else apps_measured "$SC/Wizard.kt" && bad "T10-mutation: a faked apps done-check (true) was NOT caught" || ok "T10-mutation: a faked apps done-check is caught"; fi
-cp "$BJ" "$SC/build.json"
-python3 - "$SC/build.json" <<'PYDEAD'
-import json,sys
-p=sys.argv[1]; d=json.load(open(p))
-d["ui"]["profile"]["wizard"]["steps"][0]["route"]="tab:vault"   # a tab #626 removed and #695 did not bring back
-json.dump(d,open(p,"w"))
-PYDEAD
-routes_land "$SC/build.json" && bad "T10-mutation: a step routing to a removed tab was NOT caught" || ok "T10-mutation: a step routing to a removed tab is caught"
+jq '.ui.profile.wizard = {"steps": [{"id": "identity", "route": "tab:connect"}]}' "$BJ" > "$SC/build.json"
+wizard_gone "$SC/build.json" "$PF" "$APP/app/build.gradle" >/dev/null && bad "T10-mutation: a wizard declared again was NOT caught" || ok "T10-mutation: a wizard declared again is caught"
+sed 's/^    private fun renderRuntime(/    private fun renderWizard() = Unit\n    private fun renderRuntime(/' "$PF" > "$SC/pf.kt"
+cmp -s "$PF" "$SC/pf.kt" && bad "T10-mutation: the renderWizard mutation did not apply" \
+    || { wizard_gone "$BJ" "$SC/pf.kt" "$APP/app/build.gradle" >/dev/null && bad "T10-mutation: renderWizard back was NOT caught" || ok "T10-mutation: renderWizard back is caught"; }
 rm -rf "$SC"; trap - EXIT
 
 echo

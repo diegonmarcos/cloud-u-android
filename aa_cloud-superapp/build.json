@@ -6121,14 +6121,15 @@
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json → baked into the app as data/mesh.json (BuildConfig.MESH_JSON_B64), the full wg-mesh/v1 node + peer + transport snapshot"
     },
-    "_doc_profile": "#695. The Configs → Account tab strip, in RENDER ORDER — exactly THREE tabs, each {id, label}; the LABEL is the only user-visible word and lives only here. connect (sign in, two declared lines of ways, and WHICH peer/machine this device is — ui.profile.connect), infos (the fetched vault configs, rendered section by section from the data itself, secrets masked — ui.profile.infos.mask) and setup (\"Cloud Constellation Setup\": applies that config for the selected peer, one item per cockpit section, each saying applied / not applied / why, then the fleet wizard). Restructured from #626's Setup | Infos, nothing rebuilt from zero: the #573 journey + the VaultConnect fetch moved to connect; the #570 cockpit moved from an Infos section to setup, with the contact card, the repos and the wizard; the Infos read-out stopped being a hand-listed set of sections and became the fetched bundle. ProfileFragment maps id → column and nothing else about the strip is spelled out in Kotlin; test-account-three-tabs.sh pins this array (a fourth tab, a dropped or reordered tab, or a label moved into Kotlin goes red).",
+    "_doc_profile": "#778. The Configs → Account tab strip, in RENDER ORDER — exactly FOUR tabs, each {id, label}; the LABEL is the only user-visible word and lives only here. connect (sign in on the declared lines — ui.profile.connect — and fetch the declared server file, cloud-vault C_A1-configs/profile-secrets.json, into app storage as S), profiles (the declared config held in app storage — the local copy L, else S — per topic: the vault sections of ui.profile.infos.schema, every field filled or empty, secrets masked; Populate from runtime, Populate from the server file, Save, Export), runtime (what each fleet app is using right now, read live per app — the apps and the vault sections each consumes are ui.vault_connect.cockpit.sections, how each is reached is its `runtime` block — with status reachable / not installed / not reporting) and drift (S, R and L side by side with metadata, the pairs of ui.profile.drift.pairs diffed per app and per field, and the sync actions). Restructured from #695's Connect | Infos | Cloud Constellation Setup: Infos became Profiles, Setup became Runtime (its index, wizard, cockpit cards and repos deleted; per-app apply moved to Drift's server → runtime). ProfileFragment maps id → column and nothing else about the strip is spelled out in Kotlin; test-account-four-tabs.sh pins this array (a fifth tab, a dropped or reordered tab, or a label moved into Kotlin goes red).",
     "profile": {
       "tabs": [
-        { "id": "connect", "label": "Connect" },
-        { "id": "infos",   "label": "Infos" },
-        { "id": "setup",   "label": "Cloud Constellation Setup" }
+        { "id": "connect",  "label": "Connect" },
+        { "id": "profiles", "label": "Profiles" },
+        { "id": "runtime",  "label": "Runtime" },
+        { "id": "drift",    "label": "Drift" }
       ],
-      "_doc_connect": "#695 THE SIGN-IN LINES of Configs ▸ Account ▸ Connect, rendered as step 1 of the #573 journey. Each line is one place to sign in and each of its ways is one pill, side by side: `kind` is the ONLY thing ProfileFragment dispatches on. authelia_web / authelia_bearer are libs:auth's own sign-in kinds (auth.sign_in in ab_cloud-libs-shared/build.json): the pill hosts the SHARED SignInWays narrowed to that one provider, so the dialog, the session cookie and the bearer store are the ones cloud-drive uses — never a copy. github_ssh_pat is this page's read of the vault export out of the private vault repo (auth.config_source.git.repo @ ref, path `vault_file`): an SSH key (JGit clone, bare, depth 1, deleted after) or a pasted token (the contents API, `github_contents_url`, raw), used once and never stored. A way whose kind this app does not dispatch renders its `note` as the reason it cannot start — never a dead button. gh_auth_login is GitHub CLI's own sign-in, carrying GitHub's public client inside the gh binary; the fleet registers NO GitHub OAuth app or credential pair of its own. #713: this APK still ships no gh — it BINDS the gh engine (Cloud-Lib-Gh.apk, top-level `engines.gh`, profile/GhEngine.kt), the way names its git_chain rung (`rung`, whose `host` gh signs in to), the code page opens in cloud-browser (auth.browser_mission's package), and the token gh then holds reads `vault_file` once through the PAT's read, never stored. Every way of every line is the same pill (FleetCockpitView.pill); nothing renders on Connect below the vault export. `note` on a line is what that line cannot do yet, stated plainly. #711 THE THIRD LINE, Import File, is the no-sign-in alternative: kind vault_file opens the system file picker and hands the picked bytes to the SAME classifier the Configs ▸ Import page uses (libs:auth VaultFile.classify, via ImportConfigsFragment.classify) and, when they are the DECRYPTED vault export (the #566 emitter's profile-secrets.json), to the SAME landing every sign-in uses (landVault) — so Infos fills and Cloud Constellation Setup unlocks exactly as after a fetch. Anything else (sops-encrypted, not JSON, empty, unknown schema, the paste-shape blob, unrecognised sections) is refused in red with the Import page's own sentence for it; nothing is stored. Order of the three lines is render order; test-account-three-tabs.sh pins it.",
+      "_doc_connect": "#695 THE SIGN-IN LINES of Configs ▸ Account ▸ Connect, rendered as step 1 of the #573 journey. Each line is one place to sign in and each of its ways is one pill, side by side: `kind` is the ONLY thing ProfileFragment dispatches on. authelia_web / authelia_bearer are libs:auth's own sign-in kinds (auth.sign_in in ab_cloud-libs-shared/build.json): the pill hosts the SHARED SignInWays narrowed to that one provider, so the dialog, the session cookie and the bearer store are the ones cloud-drive uses — never a copy. github_ssh_pat is this page's read of the vault export out of the private vault repo (auth.config_source.git.repo @ ref, path `vault_file`): an SSH key (JGit clone, bare, depth 1, deleted after) or a pasted token (the contents API, `github_contents_url`, raw), used once and never stored. A way whose kind this app does not dispatch renders its `note` as the reason it cannot start — never a dead button. gh_auth_login is GitHub CLI's own sign-in, carrying GitHub's public client inside the gh binary; the fleet registers NO GitHub OAuth app or credential pair of its own. #713: this APK still ships no gh — it BINDS the gh engine (Cloud-Lib-Gh.apk, top-level `engines.gh`, profile/GhEngine.kt), the way names its git_chain rung (`rung`, whose `host` gh signs in to), the code page opens in cloud-browser (auth.browser_mission's package), and the token gh then holds reads `vault_file` once through the PAT's read, never stored. Every way of every line is the same pill (FleetCockpitView.pill); nothing renders on Connect below the vault export. `note` on a line is what that line cannot do yet, stated plainly. #711 THE THIRD LINE, Import File, is the no-sign-in alternative: kind vault_file opens the system file picker and hands the picked bytes to the SAME classifier the Configs ▸ Import page uses (libs:auth VaultFile.classify, via ImportConfigsFragment.classify) and, when they are the DECRYPTED vault export (the #566 emitter's profile-secrets.json), to the SAME landing every sign-in uses (landVault) — so Infos fills and Cloud Constellation Setup unlocks exactly as after a fetch. Anything else (sops-encrypted, not JSON, empty, unknown schema, the paste-shape blob, unrecognised sections) is refused in red with the Import page's own sentence for it; nothing is stored. Order of the three lines is render order; test-account-four-tabs.sh pins it.",
       "connect": {
         "lines": [
           { "id": "authelia", "label": "Authelia → Gitea",
@@ -6151,6 +6152,20 @@
         "vault_file": "C_A1-configs/profile-secrets.json",
         "github_contents_url": "https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
       },
+      "_doc_drift": "#778 Account ▸ DRIFT, as data. Three files in ONE pattern (the vault bundle's `section › key › …` shape, AccountStore: {_meta {file, source, sha256, at}, body, apps}), stored side by side in app storage (an EncryptedFile per slot under filesDir/account): S = the declared server file as Connect last fetched it, R = the runtime snapshot (every value an app reported, at the vault path it is declared under), L = the local declared copy edited on this phone and not yet uploaded. `pairs` are the comparisons the tab offers, in order (a comparison with R is limited to what R observed: an app that cannot read a field is never drift). `upload` is where Upload L → server commits, through GitHub's contents API with the credential Connect holds (gh's token, else a PAT asked for once and never stored), on auth.config_source.git.repo @ ref: NOT profile-secrets.json itself — that file is GENERATED by cloud-vault's emit.py and guarded against hand edits on every push (vault-security-guard), so a phone commit there would turn the vault red and be overwritten by the next emit — but the declared local copy beside it, which emit.py validates (check-local) and diffs against the server file (local-diff) so the owner folds it into the sources. `message` placeholders: {device}, {fields}. `runtime_deadline_ms` bounds the wait for a serving app's binder (binding is what wakes a stopped app).",
+      "drift": {
+        "pairs": [
+          { "id": "SR", "a": "S", "b": "R", "label": "Server ↔ Runtime" },
+          { "id": "LS", "a": "L", "b": "S", "label": "Local ↔ Server" },
+          { "id": "LR", "a": "L", "b": "R", "label": "Local ↔ Runtime" }
+        ],
+        "upload": {
+          "path": "C_A1-configs/profile-local.json",
+          "api": "https://api.github.com/repos/{repo}/contents/{path}",
+          "message": "profile-local: the declared copy from {device} ({fields} fields differ from the server file)"
+        },
+        "runtime_deadline_ms": 4000
+      },
       "_doc_infos": "#695 THE INFOS READ-OUT is the FETCHED vault configs and nothing else: one card per section of the bundle a Connect way fetched (order and labels from the vault's own schema.json when the fetch carries it, else the bundle's keys), every leaf drawn from the data. `mask` is the whole of what changes the drawing: `paths` (case-insensitive, against `section › key › …`) and `values` mask a leaf — the row then carries only the value's LENGTH, so the secret never reaches a view; `collapse_over` folds any object or list larger than this into one counted row (the keyboard's default clipboard list is 476 clips, and pasted tokens live in clips). MEASURED on the real bundle 2026-09-30: every token, password, key, WireGuard profile and clip text masks; ~200 rows draw. A declaration with no pattern, or a pattern that does not compile, masks EVERY leaf (InfoMask.maskAll). #626's hand-listed sections moved, none was lost: person → setup (contact card), tokens → connect (credentials held), repos → setup, fleet → setup (the cockpit), vault/wireguard/store were links and their surfaces are unchanged.",
       "infos": {
         "mask": {
@@ -6158,7 +6173,7 @@
           "values": ["PrivateKey", "PresharedKey", "-----BEGIN", "ENC\\[AES", "(?i)bearer\\s+\\S{16,}", "gh[pousr]_[A-Za-z0-9]{20,}", "github_pat_", "sk-[A-Za-z0-9_-]{20,}", "eyJ[A-Za-z0-9_-]{10,}\\.", "[A-Za-z0-9+/=]{40,}", "[A-Za-z0-9_-]{40,}"],
           "collapse_over": 12
         },
-        "_doc_schema": "#713 THE SCHEMA THE VAULT JSON FILLS, so Infos draws every section and every field — filled (its value, through the mask above) or `empty` — and not only what one export happens to carry. Sections and labels are cloud-vault C_A1-configs/schema.json#sections (schema_version 1); a section's fields are the resolver items of C_A1-configs/<section>/sources.json#items, as `›`-joined paths (a node carrying a resolver `kind` is one field). cloud-vault is private and CI cannot read it, so the skeleton is carried here; test-account-three-tabs.sh F re-derives it from the vault whenever cloud-vault sits beside this repo and goes red on any drift. A field or section the bundle carries beyond this skeleton is still drawn, after the declared ones. #727: the vault has more sections than schema.json lists — a C_A1-configs/<dir>/sources.json not yet in schema.json is a STAGED section (apps, peers: adding one to schema.json needs a keyed emit.py rebuild), and #713 derived the skeleton from schema.json alone, so the owner's declared app list never reached Infos. The skeleton is now EVERY sources.json directory: schema.json's sections in its order, then the staged ones by id, each marked `staged` and labelled by its id. F's drift check walks the directories, not the list, so a section can no longer be skipped. `render: apps` also draws the section's declared apps one by one (name, package, store of record, installed on this phone) and `route` is the Store page it links to (Phone Apps, whose Declared view installs what is missing).",
+        "_doc_schema": "#713 THE SCHEMA THE VAULT JSON FILLS, so Infos draws every section and every field — filled (its value, through the mask above) or `empty` — and not only what one export happens to carry. Sections and labels are cloud-vault C_A1-configs/schema.json#sections (schema_version 1); a section's fields are the resolver items of C_A1-configs/<section>/sources.json#items, as `›`-joined paths (a node carrying a resolver `kind` is one field). cloud-vault is private and CI cannot read it, so the skeleton is carried here; test-account-four-tabs.sh F re-derives it from the vault whenever cloud-vault sits beside this repo and goes red on any drift. A field or section the bundle carries beyond this skeleton is still drawn, after the declared ones. #727: the vault has more sections than schema.json lists — a C_A1-configs/<dir>/sources.json not yet in schema.json is a STAGED section (apps, peers: adding one to schema.json needs a keyed emit.py rebuild), and #713 derived the skeleton from schema.json alone, so the owner's declared app list never reached Infos. The skeleton is now EVERY sources.json directory: schema.json's sections in its order, then the staged ones by id, each marked `staged` and labelled by its id. F's drift check walks the directories, not the list, so a section can no longer be skipped. `render: apps` also draws the section's declared apps one by one (name, package, store of record, installed on this phone) and `route` is the Store page it links to (Phone Apps, whose Declared view installs what is missing).",
         "schema": {
           "schema_version": 1,
           "sections": [
@@ -6182,19 +6197,6 @@
               "fields": ["registry", "samsung-s21plus › wg0", "samsung-s21plus › wg_public", "samsung-s21plus › profiles", "samsung-s21plus › public_key", "samsung-a37 › wg0", "samsung-a37 › wg_public", "samsung-a37 › profiles", "samsung-a37 › public_key", "surface-8-pro › wg0", "surface-8-pro › wg_public", "surface-8-pro › profiles", "surface-8-pro › public_key"] }
           ]
         }
-      },
-      "_doc_wizard": "#622 THE FLEET WIZARD — the ordered, resumable flow that takes a fresh or half-configured phone to fully configured, rendered at the bottom of the Account 'setup' tab (Wizard.kt → renderWizard). FULLY DATA-DRIVEN: the steps, their ORDER, and each step's done-check id + delegation route live ONLY here (baked UI_PROFILE_WIZARD_B64). Per step: `id` (also the rendered row tag wizard:<id>), `label`, `check` (a REAL live measurement in Wizard.done — never a remembered boolean, #452) and `route` (the EXISTING surface the step delegates to — a `tab:<id>` of this same strip, or a launcher `page:`/`section:` target; empty = terminal). #695: the steps and their checks are UNCHANGED; only the tab routes follow the three-tab strip — identity and vault to `tab:connect` (sign-in and fetch live there), repos and fleet to `tab:setup` (the cockpit and the repos moved there). A `tab:` route naming no declared tab goes red in test-profile-journey.sh.",
-      "wizard": {
-        "steps": [
-        { "id": "identity",  "label": "Connect · identity (Authelia · GitHub · Google)", "check": "identity",    "route": "tab:connect" },
-        { "id": "vault",       "label": "Vault · fetch + import the bundle",               "check": "vault",       "route": "tab:connect" },
-        { "id": "permissions", "label": "Permissions · files · notifications · dev",        "check": "permissions", "route": "page:config/perms" },
-        { "id": "apps",        "label": "Apps · install every declared phone app",          "check": "apps",        "route": "page:config/store-phone" },
-        { "id": "repos",       "label": "Repos & Drive · clone the declared repos",         "check": "repos",       "route": "tab:setup" },
-        { "id": "wireguard",   "label": "WireGuard · import the declared profiles",         "check": "wireguard",   "route": "section:wg" },
-        { "id": "fleet",       "label": "Fleet & services · mesh + cockpit checks",         "check": "fleet",       "route": "tab:setup" },
-        { "id": "finish",      "label": "Finish · configured vs still-missing",             "check": "finish",      "route": "" }
-        ]
       }
     },
     "_doc_wireguard_profiles": "The four EXPORTABLE tunnel profiles, mirrored from vault/A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public/config-v{4,6}-{split,full}. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design. The two PUBLIC-VPN profiles (Cloudflare WARP, Proton VPN, #614) are declared SEPARATELY in ui.wireguard_external_profiles so this vault-locked block stays exactly the guard's four. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design.",
@@ -6461,11 +6463,13 @@
       "cockpit": {
         "_doc": "#570 The Fleet tab: which cockpit sections exist, in what order, and which VAULT sections (E0_configs/schema.json ids) feed each. Labels live here, not in Kotlin. A vault section listed under no cockpit section is still shown raw at the bottom of the tab, so a section added in the vault is visible before this list learns it. ai_tokens maps a vault `ai.tokens.<item>` to the DEVICE provider id it feeds (the keyboard's keyboard_ai registry, ab_cloud-libs-shared/build.json): the two OpenRouter tokens the vault holds are the same provider seen from two containers, so only one is mapped - mapping both would have the second overwrite the first on every apply. The device itself is CHOSEN from the vault's electronics section (every entry with a wg_peer), never typed.",
         "_doc_cards": "#570 reopened: the Fleet tab is a COCKPIT - a hero card for the chosen device, then one card per section here, in this order. `icon` is the drawable each card's round badge shows (resolved by Sections.iconResFor, the same name->drawable lookup every declared tile uses; an unknown name falls back to ic_link_tile). `observed: false` marks a section whose DEVICE side this app cannot read (the keyboard owns its lists), so its light is the shared StatusLight's 'Not verifiable' instead of a green or red it could not justify. `device_icons` maps the vault's electronics `type` (notebook, phone, ...) to the hero orb's drawable; `_default` covers a type this list has not learnt and the empty state before any device is chosen.",
+      "_doc_runtime": "#778 each section's `runtime`: how Account ▸ Runtime reaches that app's LIVE config and what Drift may do with it (VaultCockpit.Runtime, read by AccountRuntime). served_by: `self` (this app's own stores: mail's JMAP account, the WireGuard tunnel, drive's credentials, the contact card, the installed apps), `text_tools` (the ITextTools serving app over its CONSTELLATION_DATA-guarded binder — binding starts it when it is stopped) or the package that holds it (absent = not installed). reports false: the app exposes nothing to read (cloud-keyboard keeps its lists to itself) — not reporting, said plainly, never a guessed value. writable false: what the app runs cannot be written back as a declaration (a live tunnel is not a wg-quick text), so runtime → declared skips it. fields false: the app reports a summary, not fields (apps: N of M declared installed).",
         "sections": [
           {
             "id": "mail",
             "label": "Mail · cloud-mail",
             "apply": "mail",
+            "runtime": { "served_by": "self" },
             "vault": [
               "mail"
             ],
@@ -6475,6 +6479,7 @@
             "id": "keyboard",
             "label": "Keyboard · cloud-keyboard autocomplete",
             "apply": "keyboard",
+            "runtime": { "served_by": "com.diegonmarcos.cloudkeyboard", "reports": false },
             "vault": [
               "autocomplete"
             ],
@@ -6485,6 +6490,7 @@
             "id": "mesh",
             "label": "WireGuard · mesh",
             "apply": "mesh",
+            "runtime": { "served_by": "self", "writable": false },
             "vault": [
               "mesh",
               "electronics"
@@ -6495,6 +6501,7 @@
             "id": "drive",
             "label": "Drive · cloud-drive personal repos",
             "apply": "drive",
+            "runtime": { "served_by": "self" },
             "vault": [
               "git"
             ],
@@ -6504,6 +6511,7 @@
             "id": "ai",
             "label": "AI",
             "apply": "ai",
+            "runtime": { "served_by": "text_tools" },
             "vault": [
               "ai"
             ],
@@ -6514,6 +6522,7 @@
             "id": "apps",
             "label": "Store · apps",
             "apply": "apps",
+            "runtime": { "served_by": "self", "fields": false },
             "vault": [
               "apps"
             ],
@@ -6524,6 +6533,7 @@
             "id": "about",
             "label": "About · contact card",
             "apply": "about",
+            "runtime": { "served_by": "self" },
             "vault": [
               "about"
             ],

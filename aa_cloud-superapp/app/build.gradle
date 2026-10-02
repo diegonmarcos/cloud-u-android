@@ -467,11 +467,10 @@ def profileReposB64  = profileReposJson.bytes.encodeBase64().toString()
 // tab in render order, baked whole so reordering/dropping a tab needs no Kotlin.
 def profileTabsJson  = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).tabs ?: [])
 def profileTabsB64   = profileTabsJson.bytes.encodeBase64().toString()
-// #622 the fleet-configuration wizard is DATA: build.json::ui.profile.wizard.steps,
-// one ordered step per row (id/label/check/route), baked whole so reordering or
-// dropping a step needs no Kotlin — Wizard.kt reads only this.
-def profileWizardJson = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).wizard ?: [:])
-def profileWizardB64  = profileWizardJson.bytes.encodeBase64().toString()
+// #778 Account ▸ Drift is DATA: build.json::ui.profile.drift (the compared pairs, the
+// upload target and message, the runtime deadline), baked whole — AccountModel reads only this.
+def profileDriftJson = groovy.json.JsonOutput.toJson((buildJson.ui.profile ?: [:]).drift ?: [:])
+def profileDriftB64  = profileDriftJson.bytes.encodeBase64().toString()
 // #626 the Infos read-out is DATA: build.json::ui.profile.infos.sections, one
 // ordered section per entry (id/label/mode/route), baked whole so adding,
 // reordering or deep-linking a section needs no Kotlin — renderInfos reads only this.
@@ -923,7 +922,7 @@ android {
         buildConfigField "String", "UI_PROFILE_TITLES",     "\"${profileTitles}\""
         buildConfigField "String", "UI_PROFILE_REPOS_B64",  "\"${profileReposB64}\""
         buildConfigField "String", "UI_PROFILE_TABS_B64",   "\"${profileTabsB64}\""
-        buildConfigField "String", "UI_PROFILE_WIZARD_B64", "\"${profileWizardB64}\""
+        buildConfigField "String", "UI_PROFILE_DRIFT_B64",  "\"${profileDriftB64}\""
         buildConfigField "String", "UI_PROFILE_INFOS_B64",  "\"${profileInfosB64}\""
         buildConfigField "String", "UI_PROFILE_CONNECT_B64", "\"${profileConnectB64}\""
         buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""

@@ -1,0 +1,253 @@
+package com.diegonmarcos.superapp.profile
+
+import android.content.Context
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.security.crypto.EncryptedFile
+import androidx.security.crypto.MasterKey
+import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.profile.AccountStore.Slot
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+/**
+ * #778 Configs ▸ Account — Profiles, Runtime and Drift share ONE model, and so does the debug API
+ * (`/api/account/…`): every action the tabs offer is a function here, so the architect's curl and
+ * the owner's tap run the same code.
+ *
+ * L is a WORKING COPY: Profiles edits and populates it in memory ([dirty]) until Save writes it.
+ * The Drift sync actions are commands, so each one saves what it wrote.
+ *
+ * The declaration: build.json::ui.profile.tabs (the strip), ui.profile.drift (the comparison pairs,
+ * the upload target and the runtime deadline), ui.profile.infos.schema (the topics) and
+ * ui.vault_connect.cockpit (the apps and the vault sections each consumes).
+ */
+class AccountModel(private val ctx: Context, val store: AccountStore) {
+
+    /** Bumped on every change; the tabs read it so a change anywhere redraws them. */
+    val version = mutableIntStateOf(0)
+
+    /** Each slot as last read or written — the files are decrypted and parsed once, not per draw. */
+    private val docs = HashMap<Slot, AccountStore.Doc?>()
+    private val leafCache = HashMap<Slot, Map<String, Any>>()
+
+    fun doc(slot: Slot): AccountStore.Doc? = synchronized(docs) { if (slot in docs) docs[slot] else store.read(slot).also { docs[slot] = it } }
+
+    private fun write(slot: Slot, body: JSONObject, source: String, apps: JSONObject? = null): AccountStore.Doc =
+        store.write(slot, body, source, now(), apps).also { synchronized(docs) { docs[slot] = it; leafCache.clear() } }
+
+    var local: JSONObject? = doc(Slot.L)?.body; private set
+    var dirty = false; private set
+    /** The last action's report line, shown under the actions and returned by the debug API. */
+    var last: String = ""; private set
+
+    fun server(): AccountStore.Doc? = doc(Slot.S)
+    fun runtime(): AccountStore.Doc? = doc(Slot.R)
+    fun savedLocal(): AccountStore.Doc? = doc(Slot.L)
+
+    private fun changed(line: String) { synchronized(docs) { leafCache.clear() }; last = line; version.intValue++ }
+
+    // ── declaration ──────────────────────────────────────────────────────
+
+    data class Tab(val id: String, val label: String)
+    data class FilePair(val id: String, val a: Slot, val b: Slot, val label: String = id)
+
+    val apps: List<AccountDrift.App> by lazy {
+        VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, it.vault) }
+    }
+
+    // ── Connect lands S ──────────────────────────────────────────────────
+
+    /** A Connect way fetched the server file: S is replaced; L starts as S when there is none. */
+    fun landServer(body: JSONObject, via: String) {
+        write(Slot.S, body, via.ifBlank { "connect" })
+        if (local == null) { local = AccountDrift.copy(body); save("= server file") }
+        changed("server file fetched through ${via.ifBlank { "connect" }}")
+    }
+
+    // ── Profiles ─────────────────────────────────────────────────────────
+
+    /** What Profiles shows: the working L, else S. */
+    fun shown(): JSONObject? = local ?: server()?.body
+
+    fun populateFromServer(): String {
+        val s = server() ?: return "✗ no server file — fetch it on Connect".also { changed(it) }
+        local = AccountDrift.copy(s.body); dirty = true
+        return "✓ local declared copy reset to the server file (${s.meta.sha256.take(8)}) — Save to keep".also { changed(it) }
+    }
+
+    fun populateFromRuntime(): String {
+        val r = runtime() ?: return "✗ no runtime snapshot — Refresh on Runtime".also { changed(it) }
+        val observed = AccountRuntime.observed(r.apps)
+        val w = AccountDrift.runtimeToDeclared(shown(), AccountDrift.leaves(r.body), observed, AccountRuntime.readOnly(r.apps), observed)
+        local = w.body; dirty = true
+        return "✓ ${w.written.size} runtime values written into the local copy, ${w.skipped.size} skipped — Save to keep".also { changed(it) }
+    }
+
+    /** Edit one field of the working copy (Profiles' row editor, the debug API's test field). */
+    fun edit(path: String, value: String): String {
+        val l = AccountDrift.copy(shown())
+        local = AccountDrift.put(l, path, value); dirty = true
+        return "✓ $path edited — Save to keep".also { changed(it) }
+    }
+
+    fun save(source: String = "edited on this phone"): String {
+        val l = local ?: return "✗ nothing to save".also { changed(it) }
+        val d = write(Slot.L, l, source)
+        dirty = false
+        return "✓ local declared copy saved (${d.meta.sha256.take(8)})".also { changed(it) }
+    }
+
+    // ── Runtime ──────────────────────────────────────────────────────────
+
+    /** Read every app and store R. BLOCKS (binder reads): call on IO. */
+    fun refreshRuntime(): String {
+        val reads = AccountRuntime.read(ctx, shown(), deadlineMs)
+        val (body, apps) = AccountRuntime.snapshot(reads)
+        write(Slot.R, body, "runtime · ${reads.count { it.status == AccountRuntime.Status.REACHABLE }}/${reads.size} apps", apps)
+        return "✓ runtime read from ${reads.size} apps".also { changed(it) }
+    }
+
+    // ── Drift ────────────────────────────────────────────────────────────
+
+    fun leavesOf(slot: Slot): Map<String, Any> = synchronized(docs) { leafCache[slot] } ?: when (slot) {
+        Slot.L -> AccountDrift.leaves(local ?: savedLocal()?.body)
+        else -> AccountDrift.leaves(doc(slot)?.body)
+    }.also { synchronized(docs) { leafCache[slot] = it } }
+
+    /** One declared pair, field by field; a comparison with R is limited to what R observed. */
+    fun diff(p: FilePair): List<AccountDrift.Field> {
+        val scope = if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null
+        return AccountDrift.diff(leavesOf(p.a), leavesOf(p.b), apps, scope)
+    }
+
+    fun threeWay(): List<AccountDrift.ThreeWay> =
+        AccountDrift.threeWay(leavesOf(Slot.S), leavesOf(Slot.R), leavesOf(Slot.L), AccountRuntime.observed(runtime()?.apps), apps)
+
+    /** SERVER → RUNTIME for [paths] (the S↔R drift of an item, an app, or all). BLOCKS: call on IO. */
+    fun pushServerToRuntime(paths: Collection<String>): String {
+        val s = server() ?: return "✗ no server file".also { changed(it) }
+        val plan = AccountDrift.pushPlan(AccountDrift.leaves(s.body), AccountRuntime.observed(runtime()?.apps), paths, apps)
+        if (plan.isEmpty()) return "✗ nothing to push: the server file holds none of those observed fields".also { changed(it) }
+        val lines = plan.values.flatten().map { (p, v) -> AccountRuntime.push(ctx, p, v, s.body) }
+        refreshRuntime()
+        return lines.joinToString("\n").also { changed(it) }
+    }
+
+    /** RUNTIME → DECLARED for [paths]: written into L and saved. */
+    fun pullRuntimeToLocal(paths: Collection<String>): String {
+        val r = runtime() ?: return "✗ no runtime snapshot".also { changed(it) }
+        val w = AccountDrift.runtimeToDeclared(shown(), AccountDrift.leaves(r.body), AccountRuntime.observed(r.apps), AccountRuntime.readOnly(r.apps), paths)
+        local = w.body
+        save("runtime → declared")
+        val skipped = w.skipped.entries.groupBy({ it.value }, { it.key }).entries.joinToString("; ") { (why, ps) -> "${ps.size} ${why.name.lowercase()}" }
+        return ("✓ ${w.written.size} written into the local copy" + if (skipped.isEmpty()) "" else " · skipped: $skipped").also { changed(it) }
+    }
+
+    /** DISCARD L: the local copy is the server file again. */
+    fun discardLocal(): String {
+        val s = server() ?: return "✗ no server file to fall back to".also { changed(it) }
+        local = AccountDrift.copy(s.body)
+        save("= server file (local discarded)")
+        return "✓ local edits discarded".also { changed(it) }
+    }
+
+    /** What an upload commits: the saved L's file, its target and its message. Null when there is no saved L. */
+    fun uploadPlan(device: String): Triple<AccountUpload.Target, ByteArray, String>? {
+        val l = savedLocal() ?: return null
+        val cs = com.diegonmarcos.cloudlib.auth.AuthDeclaration.configSource
+        val target = AccountUpload.Target(upload.optString("api"), cs.gitRepo, upload.optString("path"), cs.gitRef)
+        val differ = diff(FilePair("LS", Slot.L, Slot.S)).count { it.kind != AccountDrift.Kind.SAME }
+        val message = upload.optString("message").replace("{device}", device.ifBlank { "this phone" }).replace("{fields}", differ.toString())
+        return Triple(target, (l.json().toString(2) + "\n").toByteArray(), message)
+    }
+
+    /** UPLOAD L → SERVER with [token] (used for this request only). BLOCKS: call on IO. */
+    fun upload(token: String, device: String): String {
+        if (dirty) save()
+        val (target, bytes, message) = uploadPlan(device) ?: return "✗ no saved local copy to upload".also { changed(it) }
+        return when (val r = AccountUpload.commit(target, token, bytes, message)) {
+            is AccountUpload.Result.Committed ->
+                "✓ committed ${r.sha.take(12)} to ${target.repo}:${target.path}${if (r.created) " (new file)" else ""}\n${r.url}"
+            is AccountUpload.Result.Failed -> "✗ upload refused: ${r.reason}"
+        }.also { changed(it) }
+    }
+
+    /** The diff report: every pair's counts and per-app drift, paths and kinds only — never a value. */
+    fun report(): JSONObject {
+        val out = JSONObject()
+        val files = JSONObject()
+        Slot.values().forEach { s -> doc(s)?.let { files.put(s.name, it.meta.json().put("intact", it.intact)) } }
+        out.put("files", files).put("local_unsaved", dirty)
+        val byPair = JSONObject()
+        for (p in pairs()) {
+            val fields = diff(p)
+            val perApp = JSONObject()
+            AccountDrift.byApp(fields, apps).forEach { (app, c) ->
+                perApp.put(app.ifBlank { "-" }, c.json().put("fields", JSONArray(
+                    fields.filter { it.app == app && it.kind != AccountDrift.Kind.SAME }
+                        .map { JSONObject().put("path", it.path).put("kind", it.kind.name.lowercase()) })))
+            }
+            byPair.put(p.id, AccountDrift.counts(fields).json().put("apps", perApp))
+        }
+        out.put("pairs", byPair)
+        out.put("three_way", JSONObject().apply {
+            threeWay().groupBy { it.state }.forEach { (k, v) -> put(k.name.lowercase(), v.size) }
+        })
+        return out
+    }
+
+    companion object {
+        private fun decoded(b64: String): String =
+            String(android.util.Base64.decode(b64, android.util.Base64.NO_WRAP))
+
+        /** build.json::ui.profile.tabs — the strip, in order. */
+        fun tabs(): List<Tab> = runCatching {
+            val a = JSONArray(decoded(BuildConfig.UI_PROFILE_TABS_B64))
+            (0 until a.length()).map { a.getJSONObject(it).let { o -> Tab(o.getString("id"), o.optString("label", o.getString("id"))) } }
+        }.getOrDefault(emptyList())
+
+        private val drift: JSONObject by lazy { runCatching { JSONObject(decoded(BuildConfig.UI_PROFILE_DRIFT_B64)) }.getOrDefault(JSONObject()) }
+        val upload: JSONObject get() = drift.optJSONObject("upload") ?: JSONObject()
+        val deadlineMs: Long get() = drift.optLong("runtime_deadline_ms", 4000)
+
+        /** build.json::ui.profile.drift.pairs — which files Drift compares, in order. */
+        fun pairs(): List<FilePair> = runCatching {
+            val a = drift.getJSONArray("pairs")
+            (0 until a.length()).map { a.getJSONObject(it).let { o ->
+                FilePair(o.getString("id"), Slot.valueOf(o.getString("a")), Slot.valueOf(o.getString("b")), o.optString("label").ifBlank { o.getString("id") })
+            } }
+        }.getOrDefault(emptyList())
+
+        /** The host gh signs in to for the Connect ▸ GitHub ▸ WebAuth way (its declared git_chain rung). */
+        fun ghHost(): String? = runCatching {
+            val lines = JSONObject(decoded(BuildConfig.UI_PROFILE_CONNECT_B64)).getJSONArray("lines")
+            val rung = (0 until lines.length()).flatMap { i ->
+                val w = lines.getJSONObject(i).optJSONArray("ways") ?: JSONArray()
+                (0 until w.length()).map { w.getJSONObject(it) }
+            }.firstOrNull { it.optString("kind") == "gh_auth_login" }?.optString("rung")
+            com.diegonmarcos.cloudlib.auth.AuthDeclaration.gitChain.firstOrNull { it.id == rung }?.config?.optString("host")?.ifBlank { null }
+        }.getOrNull()
+
+        fun now(): String = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date())
+
+        @Volatile private var instance: AccountModel? = null
+
+        /** The process's one model, its files in an EncryptedFile per slot under filesDir/account. */
+        fun get(ctx: Context): AccountModel = instance ?: synchronized(this) {
+            instance ?: AccountModel(ctx.applicationContext, AccountStore(File(ctx.applicationContext.filesDir, "account"), EncryptedIo(ctx.applicationContext))).also { instance = it }
+        }
+    }
+
+    /** The phone's [AccountStore.Io]: one EncryptedFile per slot (an EncryptedFile is never overwritten in place). */
+    class EncryptedIo(private val ctx: Context) : AccountStore.Io {
+        private val key by lazy { MasterKey.Builder(ctx).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build() }
+        private fun enc(f: File) = EncryptedFile.Builder(ctx, f, key, EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB).build()
+        override fun read(file: File): ByteArray? = if (!file.isFile) null else enc(file).openFileInput().use { it.readBytes() }
+        override fun write(file: File, bytes: ByteArray) {
+            file.parentFile?.mkdirs()
+            file.delete()
+            enc(file).openFileOutput().use { it.write(bytes) }
+        }
+    }
+}

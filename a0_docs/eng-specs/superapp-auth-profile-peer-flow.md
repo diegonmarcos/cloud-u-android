@@ -374,7 +374,7 @@ served through the public edge yet (no fleet identity → gitea user mapping);
 GitHub WebAuth waits for gh to ship in this APK; cloud-keyboard imports its
 lists only from its own Clipboard settings.
 
-Testers: `test-account-three-tabs.sh` (lines, no OAuth app, mask on a
+Testers: `test-account-four-tabs.sh` (lines, no OAuth app, mask on a
 synthetic and — beside the vault — the real export, verdicts, the token path;
 every rule mutation-proved), T11 of `test-profile-credentials-never-sync.sh`
 (the three tabs), `test-profile-journey.sh` (journey on Connect),
