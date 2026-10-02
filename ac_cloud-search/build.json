@@ -1,0 +1,1020 @@
+{
+  "name": "cloud-search",
+  "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup: five verticals on the fleet's bottom-nav island - House (real estate), Jobs, Search (web engines + AI chat), Groceries and Things (marketplace). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
+  "category": "android",
+  "vendored_engine": null,
+  "android": {
+    "application_id": "com.diegonmarcos.cloudsearch",
+    "_doc_application_id": "The fleet name with its separator dropped, as cloudcalc / clouddrive.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "log_sink_url": "",
+    "log_sink_stream": "cloud-search"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-Search.apk",
+      "release": "Cloud-Search-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Cloud-Search.apk",
+        "gh_asset": "Cloud-Search.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "Cloud-Search-x86_64.apk",
+        "gh_asset": "Cloud-Search-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ],
+    "auto_update": {
+      "enabled": false,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. A background pass cannot show the system install dialog (Android 10+ blocks background activity starts), so each install it starts leaves a tap-to-install notification holding a PackageInstaller session until the user answers it. Unbounded, one pass over the 40-entry fleet opens 40 and the installer hits Android's 50-session cap - 'Too many active sessions for UID'. The remainder is picked up by the next pass. User-initiated 'Update all' is NOT capped: it runs in the foreground where the dialog appears and sessions resolve at once.",
+      "max_installs_per_pass": 3,
+      "_doc_enabled": "Off because this app compiles no libs:updater (#763, see modules._doc): the Store updates it. Kept as data so the release block has the fleet's shape."
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-search",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Search.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Cloud-Search.apk"
+    }
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): Cloud Search is installed and updated by the Store (SuperApp ▸ Constellation), like Cloud Calc.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:bottomnav",
+        "libs:ui-kit",
+        "libs:text-tools",
+        "search-core"
+      ]
+    },
+    "search-core": {
+      "_doc": "Everything the app computes or parses, as a plain-JVM Kotlin module (core/): the build.json::search reader, the source parsers (each against a saved real response in core/src/test/resources/fixtures), filters and sort, the cache-backed query engine, the jobs analysis, the RSS feed, the OpenRouter chat protocol and sessions, and the calculators - the payslip runs the BMF's PAP 2026 generated into tax/Lohnsteuer2026.kt. PIT mutation-tests it on every `gradle test` (core/build.gradle).",
+      "type": "library",
+      "dir": "core",
+      "_doc_dir": "Gradle path :search-core, not :core, so it can never be confused with :libs:core."
+    },
+    "libs:core": {
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which makes this app a fleet mesh member with the debug API (/api/search/* below).",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "The fleet bottom-nav island: this app supplies its five entries from search.verticals.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:ui-kit": {
+      "_doc": "#773 the fleet's shared Compose kit (CloudKitTheme over this app's palette, KitCard, KitSectionHeader, KitEmptyState, KitSwitchRow): a `gui` lib, no L4 edge.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library"
+    },
+    "libs:text-tools": {
+      "_doc": "The ITextTools binder (a `contract` lib): the AI chat reads the OpenRouter token the fleet Account manages through TextToolsClient.revealAiKey(search.ai.account_provider) on use. This app keeps no copy of it - not in prefs, not in a file, not in the debug API.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools",
+      "type": "library"
+    }
+  },
+  "open_with": {
+    "_doc": "Where a result URL opens: the constellation fleet row whose package app/build.gradle reads at build time (an unknown id fails the build) for the browser intent and the manifest's <queries>. When that app is not installed, the system's default browser opens it.",
+    "fleet": "browser"
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep"
+      ]
+    },
+    "unit": {
+      "_doc": "`gradle test`: core's JVM suite (BMF golden payslips, calculators, every parser against its saved response, filters, the engine against a fake network and a real cache dir, chat protocol and sessions, this build.json through the parser) followed by its PIT mutation gate, and app's Robolectric smoke test (every vertical and subpage composed, a calculator computed, the debug routes answered).",
+      "task": "test",
+      "enabled": true
+    }
+  },
+  "search": {
+    "_doc": "THE declaration (core/Config.kt parses and validates it; app/build.gradle bakes it into BuildConfig.SEARCH_CONFIG_B64; the JVM suite reads this file). No vertical, source, URL, engine, calculator field or model is spelled in Kotlin.",
+    "user_agent": "CloudSearch/0.1 (+https://github.com/diegonmarcos/cloud-u-android)",
+    "timeout_ms": 15000,
+    "cache_ttl_minutes": 60,
+    "_doc_cache": "A source answer younger than cache_ttl_minutes is reused without asking the source again; an older one is refetched, and when the refetch fails the last stored answer is shown marked stale (the offline last-results view).",
+    "recent_days": 7,
+    "max_results": 80,
+    "default_vertical": "search",
+    "default_city": "berlin",
+    "cities": [
+      {
+        "id": "berlin",
+        "label": "Berlin",
+        "lat": 52.52,
+        "lon": 13.405,
+        "radius_km": 30,
+        "aliases": []
+      },
+      {
+        "id": "hamburg",
+        "label": "Hamburg",
+        "lat": 53.551,
+        "lon": 9.994,
+        "radius_km": 30,
+        "aliases": []
+      },
+      {
+        "id": "munich",
+        "label": "München",
+        "lat": 48.137,
+        "lon": 11.575,
+        "radius_km": 30,
+        "aliases": [
+          "Munich",
+          "Muenchen"
+        ]
+      },
+      {
+        "id": "cologne",
+        "label": "Köln",
+        "lat": 50.938,
+        "lon": 6.96,
+        "radius_km": 25,
+        "aliases": [
+          "Cologne",
+          "Koeln"
+        ]
+      },
+      {
+        "id": "frankfurt",
+        "label": "Frankfurt am Main",
+        "lat": 50.11,
+        "lon": 8.682,
+        "radius_km": 25,
+        "aliases": [
+          "Frankfurt"
+        ]
+      }
+    ],
+    "subpages": [
+      {
+        "id": "listing",
+        "label": "Listing",
+        "kind": "listing"
+      },
+      {
+        "id": "analysis",
+        "label": "Analysis",
+        "kind": "analysis"
+      },
+      {
+        "id": "feed",
+        "label": "Feed",
+        "kind": "feed"
+      },
+      {
+        "id": "calculators",
+        "label": "Calculators",
+        "kind": "calculators"
+      },
+      {
+        "id": "web",
+        "label": "Web",
+        "kind": "web"
+      },
+      {
+        "id": "chat",
+        "label": "AI chat",
+        "kind": "chat"
+      },
+      {
+        "id": "saved",
+        "label": "Saved",
+        "kind": "saved"
+      }
+    ],
+    "verticals": [
+      {
+        "id": "house",
+        "label": "House",
+        "title": "Real Estate",
+        "blurb": "Find your next home or apartment.",
+        "icon": "house",
+        "placeholder": "City, neighborhood, or ZIP",
+        "subpages": [
+          "listing",
+          "analysis",
+          "feed",
+          "calculators",
+          "saved"
+        ],
+        "sources": [
+          "immoscout24",
+          "immowelt",
+          "kleinanzeigen-immo",
+          "wg-gesucht",
+          "scrappers-api"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [
+          "tagesschau-wirtschaft",
+          "tagesschau-verbraucher"
+        ],
+        "feed_keywords": [
+          "Miete",
+          "Mieter",
+          "Wohnung",
+          "Wohnen",
+          "Immobilie",
+          "Bauzins",
+          "Baufinanzierung",
+          "Grundsteuer",
+          "Wohngeld",
+          "Neubau"
+        ],
+        "calculators": [
+          "rent_vs_buy",
+          "max_rent"
+        ]
+      },
+      {
+        "id": "jobs",
+        "label": "Jobs",
+        "title": "Careers",
+        "blurb": "Discover new opportunities.",
+        "icon": "jobs",
+        "placeholder": "Job title, keywords, or company",
+        "subpages": [
+          "listing",
+          "analysis",
+          "feed",
+          "calculators",
+          "saved"
+        ],
+        "sources": [
+          "ba-jobsuche",
+          "arbeitnow",
+          "stepstone",
+          "indeed",
+          "linkedin-jobs"
+        ],
+        "chips": [
+          {
+            "id": "remote",
+            "label": "Remote",
+            "flag": "remote"
+          },
+          {
+            "id": "fulltime",
+            "label": "Full-time",
+            "tag": "Full-time"
+          },
+          {
+            "id": "paid",
+            "label": "Pay stated",
+            "flag": "priced"
+          }
+        ],
+        "analysis": "jobs",
+        "feeds": [
+          "tagesschau-wirtschaft"
+        ],
+        "feed_keywords": [
+          "Arbeit",
+          "Job",
+          "Beschäftig",
+          "Gehalt",
+          "Lohn",
+          "Tarif",
+          "Fachkräfte",
+          "Stellen",
+          "Kurzarbeit",
+          "Mindestlohn",
+          "Rente"
+        ],
+        "calculators": [
+          "payslip"
+        ]
+      },
+      {
+        "id": "search",
+        "label": "Search",
+        "title": "Assistant",
+        "blurb": "Search the web or ask the AI.",
+        "icon": "assistant",
+        "placeholder": "Ask anything...",
+        "subpages": [
+          "web",
+          "chat"
+        ],
+        "sources": [],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "groceries",
+        "label": "Groceries",
+        "title": "Supermarket",
+        "blurb": "Real shelf prices near you, from receipts and price tags.",
+        "icon": "groceries",
+        "placeholder": "Search products or brands",
+        "subpages": [
+          "listing",
+          "saved"
+        ],
+        "sources": [
+          "open-prices",
+          "open-food-facts",
+          "rewe",
+          "lidl",
+          "kaufland"
+        ],
+        "chips": [
+          {
+            "id": "priced",
+            "label": "With price",
+            "flag": "priced"
+          },
+          {
+            "id": "discount",
+            "label": "Discount",
+            "tag": "Discount"
+          }
+        ],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "things",
+        "label": "Things",
+        "title": "Marketplace",
+        "blurb": "Buy and sell locally.",
+        "icon": "things",
+        "placeholder": "Search electronics, furniture...",
+        "subpages": [
+          "listing",
+          "saved"
+        ],
+        "sources": [
+          "kleinanzeigen",
+          "ebay",
+          "vinted"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      }
+    ],
+    "_doc_sources": "Every source, with what this app may do with it. kind `api`: a public API read in-app when `enabled` (parser = the core/Listing.kt Parsers branch, held to a saved real response in core/src/test/resources/fixtures). kind `link`: NEVER fetched - the site's own search (or a site: search when its URL scheme needs ids this app cannot know) opens in cloud-browser, because its terms forbid automated access or it has no public API. `why` is shown on the listing under the source's name, so nothing is silently missing. Verified 2026-10-02 from the mesh: BA Jobsuche v6 (200 with the published key and an honest user agent; v4 answers 403), Arbeitnow (200), Open Prices (2,131 Berlin prices within 30 km), search.openfoodfacts.org (200). The fleet's scraping backend was considered for the portals and is not used: crawlee-cloud is archived, and its successor scrappers-api sits behind two-factor auth and returns only a summary from /scrape (the data stays on the server) - and none of the portals below permits scraping in the first place.",
+    "sources": {
+      "ba-jobsuche": {
+        "label": "Bundesagentur für Arbeit",
+        "kind": "api",
+        "enabled": true,
+        "parser": "ba",
+        "verified": true,
+        "url": "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs?was={q}&wo={city}&umkreis=25&size=50&page=1",
+        "headers": {
+          "X-API-Key": "jobboerse-jobsuche"
+        },
+        "item_url": "https://www.arbeitsagentur.de/jobsuche/jobdetail/{id}",
+        "terms": "The Federal Employment Agency's public job search API (documented at jobsuche.api.bund.dev); the key is the published client id, not a secret. Verified = an official public source."
+      },
+      "arbeitnow": {
+        "label": "Arbeitnow",
+        "kind": "api",
+        "enabled": true,
+        "parser": "arbeitnow",
+        "verified": false,
+        "url": "https://www.arbeitnow.com/api/job-board-api?page=1",
+        "local_filter": true,
+        "city_filter": true,
+        "terms": "'This is a free public API for jobs, please do not abuse. I would appreciate linking back to the site.' - every card links to the posting. The API cannot search, so the query and the city are applied on the phone (remote jobs are kept in every city)."
+      },
+      "stepstone": {
+        "label": "StepStone",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.stepstone.de/jobs/{q}/in-{city}",
+        "why": "No public API, and its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "indeed": {
+        "label": "Indeed",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://de.indeed.com/jobs?q={q}&l={city}",
+        "why": "Its publisher API is closed to new partners and its terms forbid scraping: its own search opens in cloud-browser."
+      },
+      "linkedin-jobs": {
+        "label": "LinkedIn Jobs",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.linkedin.com/jobs/search/?keywords={q}&location={city}",
+        "why": "No public jobs API; its user agreement forbids scraping: its own search opens in cloud-browser."
+      },
+      "immoscout24": {
+        "label": "ImmoScout24",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Aimmobilienscout24.de+{q}+{city}",
+        "why": "Its API is for contracted partners only and its terms forbid automated access: a site search opens in cloud-browser (its own URLs need region ids)."
+      },
+      "immowelt": {
+        "label": "Immowelt",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Aimmowelt.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "kleinanzeigen-immo": {
+        "label": "Kleinanzeigen Immobilien",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Akleinanzeigen.de+wohnung+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "wg-gesucht": {
+        "label": "WG-Gesucht",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Awg-gesucht.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "scrappers-api": {
+        "label": "Fleet scraper (scrappers-api)",
+        "kind": "api",
+        "enabled": false,
+        "why": "Disabled: the fleet's scraping backend is behind two-factor auth and /scrape returns a summary, not the data; the real-estate portals forbid scraping anyway, so there is no legal in-app listing source for housing yet."
+      },
+      "open-prices": {
+        "label": "Open Prices",
+        "kind": "api",
+        "enabled": true,
+        "parser": "open_prices",
+        "verified": true,
+        "url": "https://prices.openfoodfacts.org/api/v1/prices?lat={lat}&lon={lon}&radius_km={radius}&order_by=-date&size=100",
+        "local_filter": true,
+        "item_url": "https://prices.openfoodfacts.org/products/{id}",
+        "terms": "Open Food Facts' crowdsourced price database (ODbL): prices seen on shelves and receipts near the city, newest first. Verified = backed by a proof (receipt or price-tag photo). The query is applied on the phone."
+      },
+      "open-food-facts": {
+        "label": "Open Food Facts",
+        "kind": "api",
+        "enabled": true,
+        "parser": "off_search",
+        "verified": false,
+        "query_required": true,
+        "url": "https://search.openfoodfacts.org/search?q={q}&page_size=30&fields=code,product_name,brands,quantity,image_url,nutriscore_grade",
+        "item_url": "https://world.openfoodfacts.org/product/{id}",
+        "terms": "Open Food Facts' product search (ODbL): products, brands and Nutri-Score; it carries no prices."
+      },
+      "rewe": {
+        "label": "REWE",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://shop.rewe.de/productList?search={q}",
+        "why": "No public API; its terms forbid automated access: its own shop search opens in cloud-browser."
+      },
+      "lidl": {
+        "label": "Lidl",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.lidl.de/q/search?q={q}",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "kaufland": {
+        "label": "Kaufland",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.kaufland.de/s/?search_value={q}",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "kleinanzeigen": {
+        "label": "Kleinanzeigen",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.kleinanzeigen.de/s-{q}/k0",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "ebay": {
+        "label": "eBay",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.ebay.de/sch/i.html?_nkw={q}",
+        "why": "The Browse API needs eBay developer OAuth credentials, which the fleet Account does not hold: its own search opens in cloud-browser until it does."
+      },
+      "vinted": {
+        "label": "Vinted",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.vinted.de/catalog?search_text={q}",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      }
+    },
+    "feeds": {
+      "_doc": "RSS feeds for the Feed subpage; a vertical shows the items whose title or text names one of its feed_keywords.",
+      "tagesschau-wirtschaft": {
+        "label": "tagesschau Wirtschaft",
+        "url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml"
+      },
+      "tagesschau-verbraucher": {
+        "label": "tagesschau Verbraucher",
+        "url": "https://www.tagesschau.de/wirtschaft/verbraucher/index~rss2.xml"
+      }
+    },
+    "engines": [
+      {
+        "id": "google",
+        "label": "Google",
+        "url": "https://www.google.com/search?q={q}"
+      },
+      {
+        "id": "duckduckgo",
+        "label": "DuckDuckGo",
+        "url": "https://duckduckgo.com/?q={q}"
+      },
+      {
+        "id": "brave",
+        "label": "Brave",
+        "url": "https://search.brave.com/search?q={q}"
+      },
+      {
+        "id": "qwant",
+        "label": "Qwant",
+        "url": "https://www.qwant.com/?q={q}"
+      }
+    ],
+    "calculators": {
+      "rent_vs_buy": {
+        "label": "Rent vs Buy",
+        "blurb": "Month by month: whoever pays less invests the difference; the renter also invests the buyer's upfront cash.",
+        "fields": [
+          {
+            "id": "rent",
+            "label": "Monthly cold rent (€)",
+            "default": 1500
+          },
+          {
+            "id": "rent_increase_pct",
+            "label": "Rent increase per year (%)",
+            "default": 2
+          },
+          {
+            "id": "price",
+            "label": "Purchase price (€)",
+            "default": 400000
+          },
+          {
+            "id": "down_payment",
+            "label": "Down payment (€)",
+            "default": 80000
+          },
+          {
+            "id": "rate_pct",
+            "label": "Mortgage rate (%)",
+            "default": 3.5
+          },
+          {
+            "id": "loan_years",
+            "label": "Loan term (years)",
+            "default": 30
+          },
+          {
+            "id": "horizon_years",
+            "label": "Compare over (years)",
+            "default": 30
+          },
+          {
+            "id": "purchase_costs_pct",
+            "label": "Purchase costs (%)",
+            "default": 11.57
+          },
+          {
+            "id": "maintenance_pct",
+            "label": "Maintenance per year (% of value)",
+            "default": 1
+          },
+          {
+            "id": "appreciation_pct",
+            "label": "Home value growth per year (%)",
+            "default": 2
+          },
+          {
+            "id": "invest_return_pct",
+            "label": "Investment return per year (%)",
+            "default": 4
+          }
+        ],
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Mortgage payment / month",
+            "format": "eur"
+          },
+          {
+            "id": "price_to_rent",
+            "label": "Price-to-rent ratio",
+            "format": "ratio"
+          },
+          {
+            "id": "rent_total",
+            "label": "Rent paid in total",
+            "format": "eur"
+          },
+          {
+            "id": "buy_total",
+            "label": "Buying paid in total",
+            "format": "eur"
+          },
+          {
+            "id": "interest_paid",
+            "label": "Interest paid",
+            "format": "eur"
+          },
+          {
+            "id": "home_value",
+            "label": "Home value at the end",
+            "format": "eur"
+          },
+          {
+            "id": "remaining_debt",
+            "label": "Debt left at the end",
+            "format": "eur"
+          },
+          {
+            "id": "buyer_net_worth",
+            "label": "Buyer's net worth",
+            "format": "eur"
+          },
+          {
+            "id": "renter_net_worth",
+            "label": "Renter's net worth",
+            "format": "eur"
+          },
+          {
+            "id": "advantage_buy",
+            "label": "Buying ahead by",
+            "format": "eur",
+            "emphasis": true
+          }
+        ],
+        "notes": [
+          "Purchase costs default to Berlin: Grunderwerbsteuer 6.0% + notary and land registry about 2.0% + the buyer's broker share 3.57%."
+        ]
+      },
+      "max_rent": {
+        "label": "Max rent ratio",
+        "blurb": "The rule of thumb: warm rent at most a third of net income.",
+        "fields": [
+          {
+            "id": "net_income",
+            "label": "Net monthly income (€)",
+            "default": 4000
+          },
+          {
+            "id": "ratio_pct",
+            "label": "Ratio (%)",
+            "default": 30
+          },
+          {
+            "id": "rent",
+            "label": "A warm rent to check (€)",
+            "default": 1200
+          }
+        ],
+        "outputs": [
+          {
+            "id": "max_rent",
+            "label": "Max warm rent",
+            "format": "eur",
+            "emphasis": true
+          },
+          {
+            "id": "rent_share_pct",
+            "label": "That rent's share of income",
+            "format": "pct"
+          },
+          {
+            "id": "headroom",
+            "label": "Headroom",
+            "format": "eur"
+          }
+        ],
+        "notes": []
+      },
+      "payslip": {
+        "label": "German Payslip (2026)",
+        "blurb": "Company cost → gross → net, monthly. Wage tax by the BMF's own PAP 2026.",
+        "fields": [
+          {
+            "id": "gross",
+            "label": "Gross monthly salary (€)",
+            "default": 5000
+          },
+          {
+            "id": "tax_class",
+            "label": "Tax class",
+            "default": 1,
+            "kind": "choice",
+            "options": [
+              {
+                "label": "I",
+                "value": 1
+              },
+              {
+                "label": "II",
+                "value": 2
+              },
+              {
+                "label": "III",
+                "value": 3
+              },
+              {
+                "label": "IV",
+                "value": 4
+              },
+              {
+                "label": "V",
+                "value": 5
+              },
+              {
+                "label": "VI",
+                "value": 6
+              }
+            ]
+          },
+          {
+            "id": "church",
+            "label": "Church tax",
+            "default": 0,
+            "kind": "toggle"
+          },
+          {
+            "id": "church_rate_pct",
+            "label": "Church tax rate (%)",
+            "default": 9
+          },
+          {
+            "id": "kvz_pct",
+            "label": "Health insurer's extra rate (%)",
+            "default": 2.9
+          },
+          {
+            "id": "children",
+            "label": "Children (care insurance)",
+            "default": 0
+          },
+          {
+            "id": "childless",
+            "label": "Childless and 23 or older",
+            "default": 1,
+            "kind": "toggle"
+          },
+          {
+            "id": "child_allowances",
+            "label": "Child allowances (Kinderfreibeträge)",
+            "default": 0
+          },
+          {
+            "id": "saxony",
+            "label": "Works in Saxony",
+            "default": 0,
+            "kind": "toggle"
+          },
+          {
+            "id": "u1_pct",
+            "label": "Employer U1 rate (%)",
+            "default": 0
+          },
+          {
+            "id": "u2_pct",
+            "label": "Employer U2 rate (%)",
+            "default": 0
+          }
+        ],
+        "outputs": [
+          {
+            "id": "company_cost",
+            "label": "Company total cost",
+            "format": "eur",
+            "emphasis": true
+          },
+          {
+            "id": "employer_social",
+            "label": "Employer social contributions",
+            "format": "eur"
+          },
+          {
+            "id": "employer_kv",
+            "label": "  Health (employer)",
+            "format": "eur"
+          },
+          {
+            "id": "employer_rv",
+            "label": "  Pension (employer)",
+            "format": "eur"
+          },
+          {
+            "id": "employer_av",
+            "label": "  Unemployment (employer)",
+            "format": "eur"
+          },
+          {
+            "id": "employer_pv",
+            "label": "  Care (employer)",
+            "format": "eur"
+          },
+          {
+            "id": "employer_insolvency",
+            "label": "  Insolvency levy",
+            "format": "eur"
+          },
+          {
+            "id": "employer_u1",
+            "label": "  U1 levy",
+            "format": "eur"
+          },
+          {
+            "id": "employer_u2",
+            "label": "  U2 levy",
+            "format": "eur"
+          },
+          {
+            "id": "gross",
+            "label": "Gross salary",
+            "format": "eur"
+          },
+          {
+            "id": "employee_social",
+            "label": "Employee social contributions",
+            "format": "eur"
+          },
+          {
+            "id": "kv",
+            "label": "  Health",
+            "format": "eur"
+          },
+          {
+            "id": "rv",
+            "label": "  Pension",
+            "format": "eur"
+          },
+          {
+            "id": "av",
+            "label": "  Unemployment",
+            "format": "eur"
+          },
+          {
+            "id": "pv",
+            "label": "  Care",
+            "format": "eur"
+          },
+          {
+            "id": "lohnsteuer",
+            "label": "Wage tax (Lohnsteuer)",
+            "format": "eur"
+          },
+          {
+            "id": "soli",
+            "label": "Solidarity surcharge",
+            "format": "eur"
+          },
+          {
+            "id": "church",
+            "label": "Church tax",
+            "format": "eur"
+          },
+          {
+            "id": "net",
+            "label": "Net salary",
+            "format": "eur",
+            "emphasis": true
+          }
+        ],
+        "warnings": {
+          "minijob": "At or below the 2026 minijob limit (603 €/month) other contribution rules apply; these numbers do not model them.",
+          "midijob": "In the 2026 transition zone (603.01-2,000 €/month) employee contributions are reduced; these numbers apply the full rates."
+        },
+        "notes": [
+          "Wage tax, solidarity surcharge and church-tax base: the BMF's Programmablaufplan 2026 (bmf-steuerrechner.de, Stand 2025-10-23), run as is.",
+          "Social insurance 2026 (SV-Rechengrößenverordnung 2026): health 14.6% + the insurer's extra rate, pension 18.6%, unemployment 2.6%, care 3.6% (+0.6% childless, -0.25% per child from the second), insolvency levy 0.15%; ceilings 5,812.50 €/month (health, care) and 8,450 €/month (pension, unemployment).",
+          "U1/U2 depend on the insurer and are 0 until entered; accident insurance (BG) is not included."
+        ]
+      }
+    },
+    "social_2026": {
+      "_doc": "SV-Rechengrößenverordnung 2026 (BGBl. 26 Nov 2025) as summarised by lohn-info.de/sozialversicherungsbeitraege2026.html, read 2026-10-02. PayslipTest holds bbg_* and the pension/unemployment halves equal to the values the BMF's PAP 2026 itself carries (MPARA), so the two declarations cannot drift. Rates in percent (totals; the payslip splits them), limits in euro.",
+      "bbg_kv_pv_year": 69750,
+      "bbg_rv_av_year": 101400,
+      "kv_general_pct": 14.6,
+      "rv_pct": 18.6,
+      "av_pct": 2.6,
+      "pv_pct": 3.6,
+      "pv_childless_pct": 0.6,
+      "pv_per_child_pct": 0.25,
+      "pv_max_reductions": 4,
+      "pv_saxony_employee_pct": 2.3,
+      "pv_saxony_employer_pct": 1.3,
+      "insolvency_pct": 0.15,
+      "minijob_limit_month": 603,
+      "midijob_upper_month": 2000
+    },
+    "ai": {
+      "_doc": "The AI chat (Search ▸ AI chat). OpenRouter's OpenAI-compatible chat completions; the token is the fleet Account's, read with libs:text-tools TextToolsClient.revealAiKey(account_provider) for each send and never stored or logged by this app. The model list is the live catalogue (models_url, cached catalog_ttl_hours); a model whose supported_parameters list native_web_param searches the web natively, any other model searches through the `web_plugin` plugin when the Web toggle is on. Verified against the live catalogue on 2026-10-02 (465 models; 19 with web_search_options, openrouter/auto among them).",
+      "account_provider": "openrouter",
+      "chat_url": "https://openrouter.ai/api/v1/chat/completions",
+      "models_url": "https://openrouter.ai/api/v1/models",
+      "default_model": "openrouter/auto",
+      "referer": "https://github.com/diegonmarcos/cloud-u-android",
+      "title": "cloud-search",
+      "timeout_ms": 60000,
+      "catalog_ttl_hours": 24,
+      "history_turns": 20,
+      "web_plugin": "web",
+      "native_web_param": "web_search_options",
+      "title_chars": 40
+    }
+  },
+  "ui": {
+    "_doc": "The shell: build.json::search drives every list; ui holds only the chrome's own settings.",
+    "debug_api": {
+      "group": "search"
+    },
+    "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings). The ops never include `state` (update-ack-guard owns GET /api/state).",
+    "dark_default": true
+  }
+}

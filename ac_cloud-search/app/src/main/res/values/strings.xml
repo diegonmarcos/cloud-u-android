@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English is the fleet's base language (#299). app_name is build.json::name, set by app/build.gradle.
+     Every list (verticals, sources, engines, calculators) is build.json::search, not here. -->
+<resources>
+    <string name="drawer_title">Categories</string>
+    <string name="saved_items">Saved Items</string>
+    <string name="menu">Menu</string>
+    <string name="profile">Profile</string>
+    <string name="island_busy">Searching…</string>
+    <string name="no_renderer">No page draws subpages of kind %1$s.</string>
+
+    <string name="token_title">OpenRouter token (AI chat)</string>
+    <string name="token_blurb">Managed by the fleet Account (SuperApp ▸ Profile). Read when you send a message, never stored by this app.</string>
+    <string name="token_check">Check</string>
+    <string name="token_checking">Checking…</string>
+    <string name="token_present">Present in the fleet Account</string>
+    <string name="token_missing">Missing: %1$s</string>
+    <string name="dark_theme">Dark theme</string>
+    <string name="city">City</string>
+    <string name="version">Build %1$s · %2$s</string>
+
+    <string name="extensive_filters">Extensive Filters</string>
+    <string name="sort_by">Sort by</string>
+    <string name="sort_relevance">Most relevant</string>
+    <string name="sort_newest">Newest first</string>
+    <string name="sort_price_asc">Price: low to high</string>
+    <string name="sort_price_desc">Price: high to low</string>
+    <string name="price_range">Price range</string>
+    <string name="min">Min</string>
+    <string name="max">Max</string>
+    <string name="more_options">More options</string>
+    <string name="reset">Reset</string>
+    <string name="apply_filters">Apply filters</string>
+
+    <string name="more_filters">More Filters</string>
+    <string name="recent">Recent</string>
+    <string name="verified">Verified</string>
+    <string name="no_results">Nothing matches. Try another term, or loosen the filters.</string>
+    <string name="open_on">Open on (their own search, in cloud-browser):</string>
+    <string name="src_ok">%1$s: %2$d results</string>
+    <string name="src_cached">%1$s: %2$d results (saved %3$s)</string>
+    <string name="src_stale">%1$s: offline, showing the last %2$d results from %3$s (%4$s)</string>
+    <string name="src_error">%1$s: failed (%2$s)</string>
+    <string name="src_skipped">%1$s: %2$s</string>
+    <string name="src_disabled">%1$s: not searched here. %2$s</string>
+    <string name="per_hour">/h</string>
+    <string name="per_year">/yr</string>
+    <string name="save">Save</string>
+    <string name="unsave">Remove from saved</string>
+    <string name="saved_empty">Nothing saved yet. Tap the star on a result to keep it here.</string>
+
+    <string name="market_overview">Market overview · %1$s</string>
+    <string name="stat_total">Open positions (Bundesagentur)</string>
+    <string name="stat_remote">Remote share (of %1$d)</string>
+    <string name="stat_hourly">Median advertised pay per hour (of %1$d)</string>
+    <string name="stat_yearly">Median advertised pay per year (of %1$d)</string>
+    <string name="stat_time_to_hire">Time to hire</string>
+    <string name="no_source">no source</string>
+    <string name="top_fields">Top occupational fields</string>
+    <string name="analysis_sources">Computed from the live answers of the Bundesagentur für Arbeit (open positions, fields, advertised pay) and Arbeitnow (remote share). A figure no source publishes is shown as \"no source\".</string>
+    <string name="analysis_failed">Could not compute the analysis: no source answered.</string>
+    <string name="analysis_none_title">No market data</string>
+    <string name="analysis_none">No source this app may read publishes listings or market statistics for this category, so there is nothing real to analyse. The sources below open in cloud-browser instead.</string>
+    <string name="feed_empty">None of the %1$d latest headlines is about this topic.</string>
+    <string name="calc_failed">These inputs cannot be computed.</string>
+
+    <string name="assistant_hello">Hi, I\'m your assistant</string>
+    <string name="search_the_web">Search the web…</string>
+    <string name="search_with">Search with %1$s</string>
+    <string name="web_opens_in_browser">Results open in cloud-browser.</string>
+    <string name="sessions">Sessions</string>
+    <string name="chat_sessions">Chat Sessions</string>
+    <string name="no_sessions">No chats yet.</string>
+    <string name="today">Today</string>
+    <string name="previous_7_days">Previous 7 Days</string>
+    <string name="older">Older</string>
+    <string name="untitled">Untitled</string>
+    <string name="n_messages">%1$d messages</string>
+    <string name="web">Web</string>
+    <string name="web_native">web</string>
+    <string name="free">free</string>
+    <string name="models_unavailable">Model list unavailable (offline?)</string>
+    <string name="new_chat">New chat</string>
+    <string name="chat_empty">Ask anything. With Web on, the model searches the web and cites its sources.</string>
+    <string name="sources">Sources</string>
+    <string name="chat_error">No answer: %1$s</string>
+    <string name="ask_anything">Ask anything…</string>
+    <string name="send">Send</string>
+</resources>

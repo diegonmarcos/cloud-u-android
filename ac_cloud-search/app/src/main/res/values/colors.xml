@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #779 the palette, one declaration each: the fleet values (ac_cloud-calc / ac_cloud-c3, from
+     aa_cloud-superapp and libs:bottomnav colors.xml) for dark, the default (#336), and their light
+     counterparts for the theme toggle. SearchTheme.kt reads these; no Kotlin file names a colour. -->
+<resources>
+    <color name="search_background">#FF07040F</color>
+    <color name="search_surface">#FF140B26</color>
+    <color name="search_surface_raised">#FF1F1238</color>
+    <color name="search_outline">#33A78BFA</color>
+    <color name="search_accent">#FFB794F4</color>
+    <color name="search_on_accent">#FF14082B</color>
+    <color name="search_text">#FFFFFFFF</color>
+    <color name="search_text_secondary">#AAFFFFFF</color>
+    <color name="search_error">#FFF87171</color>
+
+    <color name="search_light_background">#FFF6F3FC</color>
+    <color name="search_light_surface">#FFFFFFFF</color>
+    <color name="search_light_surface_raised">#FFEDE7F9</color>
+    <color name="search_light_outline">#33583C9A</color>
+    <color name="search_light_accent">#FF6D4BC3</color>
+    <color name="search_light_on_accent">#FFFFFFFF</color>
+    <color name="search_light_text">#FF14082B</color>
+    <color name="search_light_text_secondary">#AA14082B</color>
+    <color name="search_light_error">#FFB91C1C</color>
+</resources>

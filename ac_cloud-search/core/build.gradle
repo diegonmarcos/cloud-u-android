@@ -1,0 +1,52 @@
+// :core — everything Cloud Search computes or parses, as a plain-JVM module: the build.json::search
+// declaration's reader, the source parsers (each against a saved real response), filters and sort,
+// the cache-backed query engine, the jobs analysis, the RSS feed, the OpenRouter chat protocol, and
+// the calculators — the German payslip runs the BMF's own Lohnsteuer PAP 2026, generated into
+// tax/Lohnsteuer2026.kt by tools/pap2kt.py. No Android here, so the suite runs on the JVM and PIT
+// mutation-tests it on every `gradle test` (the ac_cloud-calc :jev shape).
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// The suite reads this app's own build.json (the declaration it ships), not a copy of it.
+tasks.withType(Test).configureEach {
+    systemProperty 'cloudsearch.buildJson', rootProject.file('build.json').absolutePath
+}
+
+// MUTATION TESTING. PIT plants mutants in every hand-written class and runs the suite against each;
+// one the suite does not kill is a rule nothing checks. The generated PAP is excluded: it is proven
+// whole against the BMF's own answers (PayslipTest's golden table), not line by line. Kotlin's
+// generated data-class members are excluded too.
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.cloudsearch.core.*']
+    excludedClasses = ['com.diegonmarcos.cloudsearch.core.tax.Lohnsteuer2026*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 70
+}
+
+// `gradle test` is what CI runs (build.json::tests.unit.task): the mutation run rides on it.
+tasks.named('test') { finalizedBy 'pitest' }

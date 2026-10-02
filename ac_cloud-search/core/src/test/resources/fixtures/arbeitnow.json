@@ -1,0 +1,117 @@
+{
+ "data": [
+  {
+   "slug": "software-engineer-price-comparison-portal-berlin-233707",
+   "company_name": "Preiswecker",
+   "title": "Software Engineer",
+   "description": "<p>Preiswecker is a price comparison portal in Germany, helping thousands of users find the best deals online every day.</p><p>We are looking for a Software Engineer to join our team and help build our price comparison platform.</p><p>We are currently offering the following position:</p><p>Software ",
+   "remote": false,
+   "url": "https://www.preiswecker.com/",
+   "tags": [
+    "Software Engineering",
+    "E-Commerce"
+   ],
+   "job_types": [
+    "Full-time"
+   ],
+   "location": "Berlin",
+   "created_at": 1786516800
+  },
+  {
+   "slug": "digital-marketing-manager-automotive-performance-berlin-194420",
+   "company_name": "Autohaus Wegener",
+   "title": "Digital Marketing Manager (m/w/d) - Automotive & Performance",
+   "description": "<p>Sie möchten digitales Marketing nicht nur begleiten, <strong>sondern selbst gestalten und sehen, was Ihre Arbeit tatsächlich bewirkt?</strong></p>\n<p>Für unser Marketing am Standort Berlin-Britz suchen wir einen erfahrenen Digital Marketing Manager (m/w/d), der unseren digitalen Auftritt technisc",
+   "remote": false,
+   "url": "https://www.arbeitnow.com/jobs/companies/autohaus-wegener/digital-marketing-manager-automotive-performance-berlin-194420",
+   "tags": [
+    "Marketing and Communication"
+   ],
+   "job_types": [],
+   "location": "Berlin",
+   "created_at": 1790953274
+  },
+  {
+   "slug": "product-marketing-manager-berlin-475869",
+   "company_name": "aleno Deutschland GmbH",
+   "title": "Product Marketing Manager (w/m/d)",
+   "description": "<p><strong>Das erwartet dich</strong></p>\n<p>Bei aleno machst du erklärungsbedürftige Software für Hotels und Restaurants verständlich. aleno verbindet Reservierungs- und Gästemanagement mit Schnittstellen zu Hotel- und Kassensystemen und automatisierten Abläufen. Unsere Kund:innen sind Hotels, Hote",
+   "remote": false,
+   "url": "https://www.arbeitnow.com/jobs/companies/aleno-deutschland-gmbh/product-marketing-manager-berlin-475869",
+   "tags": [
+    "Product Management"
+   ],
+   "job_types": [
+    "berufserfahren"
+   ],
+   "location": "Berlin",
+   "created_at": 1790953273
+  },
+  {
+   "slug": "powerbar-brand-ambassador-munich-165415",
+   "company_name": "Active Nutrition International GmbH",
+   "title": "Powerbar Brand Ambassador (m/w/d)",
+   "description": "<p><em>Wer sind wir?</em></p>\n<p>Active Nutrition International GmbH (ANI) ist ein dynamisches wachstumsorientiertes Unternehmen in der Sporternährungsbranche, das mit seinen drei starken Marken – Powerbar, Dymatize und Premier Protein – weltweit Athleten und Fitnessbegeisterte mit hochwertigen, inn",
+   "remote": true,
+   "url": "https://www.arbeitnow.com/jobs/companies/active-nutrition-international-gmbh/powerbar-brand-ambassador-munich-165415",
+   "tags": [
+    "Remote",
+    "Marketing and Communication"
+   ],
+   "job_types": [
+    "Freelance"
+   ],
+   "location": "Munich",
+   "created_at": 1790953274
+  },
+  {
+   "slug": "online-dozentin-fur-it-administration-cyber-security-berlin-443140",
+   "company_name": "Syntax Institut",
+   "title": "(Online) Dozent*in für IT-Administration & Cyber Security",
+   "description": "<p><strong>ÜBER DAS SYNTAX INSTITUT (EINE MARKE VON BILDUNG FÜR MORGEN)</strong></p>\n<p><em>Das Syntax Institut ist eine Marke von Bildung für Morgen und ein schnell wachsendes EdTech-Unternehmen aus Berlin, das von erfolgreichen Unternehmern gegründet wurde. Unsere Mission ist es, Menschen praxisna",
+   "remote": true,
+   "url": "https://www.arbeitnow.com/jobs/companies/syntax-institut/online-dozentin-fur-it-administration-cyber-security-berlin-443140",
+   "tags": [
+    "Remote",
+    "Administration"
+   ],
+   "job_types": [
+    "berufseinstieg"
+   ],
+   "location": "Berlin",
+   "created_at": 1790951435
+  },
+  {
+   "slug": "pflichtpraktikum-ab-sofort-pr-und-social-media-in-dusseldorf-287177",
+   "company_name": "Question de Style UG",
+   "title": "Pflichtpraktikum ab sofort: Pr und Social Media in Düsseldorf",
+   "description": "<p>Bist du bereit, in die Welt der Öffentlichkeitsarbeit und Social Media einzutauchen? Die Question de Style UG, eine Full-Service-Kommunikationsagentur mit Sitz in Düsseldorf, sucht ab sofort eine/n Praktikant/in im Bereich PR und Social Media. Seit 2008 spezialisiert sich unser kleines, engagiert",
+   "remote": false,
+   "url": "https://www.arbeitnow.com/jobs/companies/question-de-style-ug/pflichtpraktikum-ab-sofort-pr-und-social-media-in-dusseldorf-287177",
+   "tags": [
+    "Social Media Manager"
+   ],
+   "job_types": [
+    "Internship"
+   ],
+   "location": "Düsseldorf",
+   "created_at": 1790953276
+  }
+ ],
+ "links": {
+  "first": "https://www.arbeitnow.com/api/job-board-api?page=1",
+  "last": null,
+  "prev": null,
+  "next": "https://www.arbeitnow.com/api/job-board-api?page=2"
+ },
+ "meta": {
+  "current_page": 1,
+  "current_page_url": "https://www.arbeitnow.com/api/job-board-api?page=1",
+  "from": 1,
+  "path": "https://www.arbeitnow.com/api/job-board-api",
+  "per_page": 326,
+  "to": 326,
+  "terms": "This is a free public API for jobs, please do not abuse. I would appreciate linking back to the site. By using the API, you agree to the terms of service present on Arbeitnow.com",
+  "info": "Jobs are updated every hour and order by the `created_at` timestamp. Use `?page=` to paginate. Read more information here: https://www.arbeitnow.com/blog/job-board-api"
+ }
+}

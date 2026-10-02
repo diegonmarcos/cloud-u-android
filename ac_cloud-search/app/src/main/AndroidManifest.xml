@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The sources, feeds and the AI chat (core/Engine.kt UrlHttp, over Android's resolver so the
+         SuperApp's DNS menu applies). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <!-- Where results open (build.json::open_with, resolved from the fleet manifest): without
+             this line cloud-browser is invisible on API 30+ and every link would go elsewhere. -->
+        <package android:name="${browserPackage}" />
+        <!-- Any browser, the fallback when cloud-browser is not installed. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudSearch"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.CloudSearch">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Registers /api/search/* on the fleet debug server. Not exported, not a real provider. -->
+        <provider
+            android:name=".debugapi.SearchDebugApiProvider"
+            android:authorities="${applicationId}.searchdebugapi"
+            android:exported="false" />
+    </application>
+</manifest>

@@ -1,0 +1,12 @@
+// Root build.gradle — plugin versions only.
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+    id 'com.android.library'     version '8.7.3' apply false
+    id 'org.jetbrains.kotlin.android'            version '2.3.20' apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.20' apply false
+    // The app and the shared GUI libraries (libs:bottomnav, libs:ui-kit) are Compose.
+    id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
+    // :core is plain JVM Kotlin, mutation-tested by PIT.
+    id 'org.jetbrains.kotlin.jvm'                  version '2.3.20' apply false
+    id 'info.solidsoft.pitest'                     version '1.19.0' apply false
+}

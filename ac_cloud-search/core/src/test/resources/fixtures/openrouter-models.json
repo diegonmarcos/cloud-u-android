@@ -1,0 +1,369 @@
+{
+ "data": [
+  {
+   "id": "google/gemini-2.5-flash",
+   "canonical_slug": "google/gemini-2.5-flash",
+   "hugging_face_id": "",
+   "name": "Google: Gemini 2.5 Flash",
+   "created": 1750172488,
+   "description": "Gemini 2.5 Flash is Google's state-of-the-art workhorse model, specifically designed for advanced reasoning, coding, mat",
+   "context_length": 1048576,
+   "architecture": {
+    "modality": "text+image+file+audio+video->text",
+    "input_modalities": [
+     "file",
+     "image",
+     "text",
+     "audio",
+     "video"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "Gemini",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.0000003",
+    "completion": "0.0000025",
+    "image": "0.0000003",
+    "audio": "0.000001",
+    "input_audio_cache": "0.0000001",
+    "web_search": "0.014",
+    "internal_reasoning": "0.0000025",
+    "input_cache_read": "0.00000003",
+    "input_cache_write": "0.0000000833333333333333"
+   },
+   "top_provider": {
+    "context_length": 1048576,
+    "max_completion_tokens": 65535,
+    "is_moderated": false
+   },
+   "per_request_limits": null,
+   "supported_parameters": [
+    "include_reasoning",
+    "max_tokens",
+    "reasoning",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_p"
+   ],
+   "default_parameters": {
+    "temperature": null,
+    "top_p": null,
+    "top_k": null,
+    "frequency_penalty": null,
+    "presence_penalty": null,
+    "repetition_penalty": null
+   },
+   "supported_voices": null,
+   "knowledge_cutoff": "2025-01-31",
+   "expiration_date": "2026-10-20",
+   "links": {
+    "details": "/api/v1/models/google/gemini-2.5-flash/endpoints"
+   },
+   "benchmarks": {
+    "design_arena": [
+     {
+      "arena": "models",
+      "category": "3d",
+      "elo": 1086,
+      "win_rate": 47.4,
+      "rank": 91
+     },
+     {
+      "arena": "models",
+      "category": "codecategories",
+      "elo": 1110,
+      "win_rate": 46.9,
+      "rank": 92
+     },
+     {
+      "arena": "models",
+      "category": "dataviz",
+      "elo": 1143,
+      "win_rate": 49.1,
+      "rank": 80
+     },
+     {
+      "arena": "models",
+      "category": "gamedev",
+      "elo": 1078,
+      "win_rate": 44.3,
+      "rank": 96
+     },
+     {
+      "arena": "models",
+      "category": "uicomponent",
+      "elo": 1100,
+      "win_rate": 48.9,
+      "rank": 89
+     },
+     {
+      "arena": "models",
+      "category": "website",
+      "elo": 1122,
+      "win_rate": 47.1,
+      "rank": 93
+     },
+     {
+      "arena": "models",
+      "category": "svg",
+      "elo": 1019,
+      "win_rate": 43.1,
+      "rank": 80
+     }
+    ]
+   },
+   "reasoning": {
+    "mandatory": false
+   }
+  },
+  {
+   "id": "deepseek/deepseek-chat",
+   "canonical_slug": "deepseek/deepseek-chat-v3",
+   "hugging_face_id": "deepseek-ai/DeepSeek-V3",
+   "name": "DeepSeek: DeepSeek V3",
+   "created": 1735241320,
+   "description": "DeepSeek-V3 is the latest model from the DeepSeek team, building upon the instruction following and coding abilities of ",
+   "context_length": 163840,
+   "architecture": {
+    "modality": "text->text",
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "DeepSeek",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.0000002574",
+    "completion": "0.0000010287"
+   },
+   "top_provider": {
+    "context_length": 128000,
+    "max_completion_tokens": 16000,
+    "is_moderated": false
+   },
+   "per_request_limits": null,
+   "supported_parameters": [
+    "frequency_penalty",
+    "logit_bias",
+    "max_tokens",
+    "min_p",
+    "presence_penalty",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_p"
+   ],
+   "default_parameters": {},
+   "supported_voices": null,
+   "knowledge_cutoff": "2024-07-31",
+   "expiration_date": null,
+   "links": {
+    "details": "/api/v1/models/deepseek/deepseek-chat-v3/endpoints"
+   },
+   "benchmarks": {
+    "design_arena": [
+     {
+      "arena": "models",
+      "category": "3d",
+      "elo": 1102,
+      "win_rate": 50.5,
+      "rank": 82
+     },
+     {
+      "arena": "models",
+      "category": "codecategories",
+      "elo": 1114,
+      "win_rate": 48.4,
+      "rank": 91
+     },
+     {
+      "arena": "models",
+      "category": "dataviz",
+      "elo": 1097,
+      "win_rate": 50,
+      "rank": 95
+     },
+     {
+      "arena": "models",
+      "category": "gamedev",
+      "elo": 1066,
+      "win_rate": 43.7,
+      "rank": 98
+     },
+     {
+      "arena": "models",
+      "category": "svg",
+      "elo": 975,
+      "win_rate": 38.8,
+      "rank": 87
+     },
+     {
+      "arena": "models",
+      "category": "uicomponent",
+      "elo": 1100,
+      "win_rate": 52.7,
+      "rank": 88
+     },
+     {
+      "arena": "models",
+      "category": "website",
+      "elo": 1127,
+      "win_rate": 48.5,
+      "rank": 91
+     }
+    ]
+   }
+  },
+  {
+   "id": "openai/gpt-4o-mini",
+   "canonical_slug": "openai/gpt-4o-mini",
+   "hugging_face_id": null,
+   "name": "OpenAI: GPT-4o-mini",
+   "created": 1721260800,
+   "description": "GPT-4o mini is OpenAI's newest model after [GPT-4 Omni](/models/openai/gpt-4o), supporting both text and image inputs wi",
+   "context_length": 128000,
+   "architecture": {
+    "modality": "text+image+file->text",
+    "input_modalities": [
+     "text",
+     "image",
+     "file"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "GPT",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.00000015",
+    "completion": "0.0000006",
+    "input_cache_read": "0.000000075"
+   },
+   "top_provider": {
+    "context_length": 128000,
+    "max_completion_tokens": 16384,
+    "is_moderated": true
+   },
+   "per_request_limits": null,
+   "supported_parameters": [
+    "frequency_penalty",
+    "logit_bias",
+    "logprobs",
+    "max_completion_tokens",
+    "max_tokens",
+    "prediction",
+    "presence_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_logprobs",
+    "top_p",
+    "web_search_options"
+   ],
+   "default_parameters": {},
+   "supported_voices": null,
+   "knowledge_cutoff": "2023-10-31",
+   "expiration_date": null,
+   "links": {
+    "details": "/api/v1/models/openai/gpt-4o-mini/endpoints"
+   },
+   "benchmarks": {
+    "design_arena": [],
+    "artificial_analysis": {
+     "intelligence_index": null,
+     "coding_index": 11.4,
+     "agentic_index": null
+    }
+   }
+  },
+  {
+   "id": "openrouter/auto",
+   "canonical_slug": "openrouter/auto",
+   "hugging_face_id": null,
+   "name": "Auto Router",
+   "created": 1699401600,
+   "description": "The Auto Router automatically selects the best model for your prompt, powered by the wisdom of the market. It routes you",
+   "context_length": 2000000,
+   "architecture": {
+    "modality": "text+image+file+audio+video->text+image",
+    "input_modalities": [
+     "text",
+     "image",
+     "audio",
+     "file",
+     "video"
+    ],
+    "output_modalities": [
+     "text",
+     "image"
+    ],
+    "tokenizer": "Router",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "-1",
+    "completion": "-1"
+   },
+   "top_provider": {
+    "context_length": null,
+    "max_completion_tokens": null,
+    "is_moderated": false
+   },
+   "per_request_limits": null,
+   "supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "logit_bias",
+    "logprobs",
+    "max_tokens",
+    "min_p",
+    "prediction",
+    "presence_penalty",
+    "reasoning",
+    "reasoning_effort",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_a",
+    "top_k",
+    "top_logprobs",
+    "top_p",
+    "web_search_options"
+   ],
+   "default_parameters": {},
+   "supported_voices": null,
+   "knowledge_cutoff": null,
+   "expiration_date": null,
+   "links": {
+    "details": "/api/v1/models/openrouter/auto/endpoints"
+   }
+  }
+ ]
+}

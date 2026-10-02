@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Nachrichten zu Verbraucher-Themen</title>
+    <link>https://www.tagesschau.de/wirtschaft/verbraucher</link>
+    <description>Die aktuellen Beiträge der Seite https://www.tagesschau.de/w</description>
+    <language>de</language>
+    <copyright>ARD-aktuell / tagesschau.de</copyright>
+    <lastBuildDate>Fri, 02 Oct 2026 14:06:54 +0200</lastBuildDate>
+    <pubDate>Fri, 02 Oct 2026 14:06:54 +0200</pubDate>
+    <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+    <ttl>90</ttl>
+    <dc:publisher>tagesschau.de</dc:publisher>
+    <dc:language>de</dc:language>
+    <dc:rights>ARD-aktuell / tagesschau.de</dc:rights>
+    <dc:date>2023-04-18T18:25:34Z</dc:date>
+    <dc:source>tagesschau.de</dc:source>
+    <item>
+      <title>Tankrabatt für Autofahrer, aber kein Nachlass beim Heizen: ungerecht?</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/heizen-tankrabatt-debatte-100.html</link>
+      <description>Autofahrer profitieren seit dem 1. Oktober vom "Tankrabatt".</description>
+      <pubDate>Fri, 02 Oct 2026 11:22:31 +0200</pubDate>
+      <guid>117bf572-e788-49e9-b7f0-51fc88453c44</guid>
+      <dc:date>2026-10-02T09:22:31Z</dc:date>
+      
+    </item><item>
+      <title>Nach BGH-Urteil - Amazon senkt Preis für langjährige Prime-Kunden</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/amazon-prime-preiserhoehung-bgh-102.html</link>
+      <description>Der Bundesgerichtshof hatte eine Preiserhöhung von Amazon Pr</description>
+      <pubDate>Fri, 02 Oct 2026 11:08:12 +0200</pubDate>
+      <guid>bfd7ba81-9ad2-47ef-8df7-10a6d7828ba7</guid>
+      <dc:date>2026-10-02T09:08:12Z</dc:date>
+      
+    </item><item>
+      <title>BGH kippt Preiserhöhung bei Amazon Prime</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/amazon-prime-preiserhoehung-bgh-100.html</link>
+      <description>Eine Preiserhöhung von Amazon Prime vor vier Jahren ist laut</description>
+      <pubDate>Thu, 01 Oct 2026 17:47:54 +0200</pubDate>
+      <guid>8e52fb66-0441-4a02-a546-14eddded795a</guid>
+      <dc:date>2026-10-01T15:47:54Z</dc:date>
+      
+    </item><item>
+      <title>Start des neuen "Tankrabatts": Spritpreise sinken deutlich</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/tankrabatt-320.html</link>
+      <description>Der neue "Tankrabatt" macht sich an den Zapfsäulen bemerkbar</description>
+      <pubDate>Thu, 01 Oct 2026 16:11:15 +0200</pubDate>
+      <guid>0de6ac8a-f8a6-4c62-b29d-e363b41398f3</guid>
+      <dc:date>2026-10-01T14:11:15Z</dc:date>
+      
+    </item><item>
+      <title>Freiwilliger Spritpreisdeckel - auch in Deutschland denkbar?</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/spritpreis-deckel-europa-deutschland-100.html</link>
+      <description>In Frankreich und Italien begrenzen große Mineralölkonzerne </description>
+      <pubDate>Thu, 01 Oct 2026 06:51:25 +0200</pubDate>
+      <guid>e0a7e70a-8746-4298-ac69-7964f68e3359</guid>
+      <dc:date>2026-10-01T04:51:25Z</dc:date>
+      
+    </item><item>
+      <title>Was Autofahrer zum Start des neuen "Tankrabatts" wissen müssen</title>
+      <link>https://www.tagesschau.de/wirtschaft/verbraucher/faq-tankrabatt-100.html</link>
+      <description>Ab heute gilt ein neuer "Tankrabatt". Wie kommen Kunden an g</description>
+      <pubDate>Thu, 01 Oct 2026 10:34:33 +0200</pubDate>
+      <guid>6220d702-67d0-4881-8e48-30845e0ba660</guid>
+      <dc:date>2026-10-01T08:34:33Z</dc:date>
+      
+    </item>
+  </channel>
+</rss>

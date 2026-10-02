@@ -1,0 +1,48 @@
+{
+ "hits": [
+  {
+   "code": "4056489626633",
+   "brands": [
+    "Lidl"
+   ],
+   "quantity": "1pcs",
+   "nutriscore_grade": "c",
+   "product_name": "Hafermilch",
+   "image_url": "https://images.openfoodfacts.org/images/products/405/648/962/6633/front_en.20.400.jpg"
+  },
+  {
+   "code": "5056053306236",
+   "nutriscore_grade": "b",
+   "product_name": "Hafermilch",
+   "image_url": "https://images.openfoodfacts.org/images/products/505/605/330/6236/front_en.3.400.jpg"
+  },
+  {
+   "code": "4337256571005",
+   "brands": [
+    "Rewe Bio"
+   ],
+   "quantity": "1l",
+   "nutriscore_grade": "b",
+   "product_name": "Haferdrink"
+  },
+  {
+   "code": "0531266565656",
+   "brands": [
+    "Vemondo"
+   ],
+   "nutriscore_grade": "unknown",
+   "product_name": "Bio Hafermilch"
+  }
+ ],
+ "aggregations": null,
+ "facets": {},
+ "charts": {},
+ "page": 1,
+ "page_size": 4,
+ "page_count": 2,
+ "took": 3,
+ "timed_out": false,
+ "count": 5,
+ "is_count_exact": true,
+ "warnings": null
+}
