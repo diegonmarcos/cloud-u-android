@@ -138,7 +138,7 @@ class ImportConfigsFragment : KitComposeFragment() {
                 Text(stringResource(R.string.import_from_file))
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { describe(classify(input), store = false) }, // MUTANT M4
+                Button(onClick = { describe(classify(input), store = true) },
                     modifier = Modifier.weight(1f).testTag(TAG_SAVE)) { Text(stringResource(R.string.import_save)) }
                 OutlinedButton(
                     onClick = {

@@ -126,7 +126,7 @@ fun KitSelectableTile(
         modifier
             .fillMaxWidth()
             .background(if (selected) p.surfaceSelected else p.surface)
-            .clickable(onClick = onClick) // MUTANT M8: no selected state, no radio role
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(14.dp),
     ) {
         Text((if (selected) "● " else "○ ") + label, color = p.textPrimary,
@@ -205,7 +205,7 @@ fun KitSwitchRow(
 ) {
     KitSettingsRow(
         title, subtitle,
-        modifier.toggleable(value = checked, role = Role.Switch, onValueChange = { }), // MUTANT M2
+        modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
     ) {
         // onCheckedChange = null: the row owns the toggle, so the switch is not a second target.
         Switch(checked = checked, onCheckedChange = null)
@@ -230,7 +230,7 @@ fun KitConfirmDialog(
             TextButton(onClick = onConfirm, modifier = Modifier.testTag(KitTags.DIALOG_CONFIRM)) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.testTag(KitTags.DIALOG_DISMISS)) { Text(dismissLabel) } // MUTANT M3
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag(KitTags.DIALOG_DISMISS)) { Text(dismissLabel) }
         },
     )
 }

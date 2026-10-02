@@ -105,7 +105,7 @@ class LauncherPresetsFragment : KitComposeFragment() {
         return LauncherProfiles.loadFromBuildConfig().map { row ->
             Tile(row.id, row.label, row.subtitle, row.id == current.id) {
                 LauncherProfilePrefs(ctx).profile = LauncherProfile.fromId(row.id)
-                // MUTANT M1 (#773 mutation round): the pick no longer repaints.
+                repaintAll()
             }
         }
     }

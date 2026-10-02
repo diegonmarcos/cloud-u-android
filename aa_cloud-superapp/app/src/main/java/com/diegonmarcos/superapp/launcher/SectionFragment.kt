@@ -35,7 +35,7 @@ class SectionFragment : KitComposeFragment() {
     @Composable
     override fun Content() {
         Trace.d("SectionFragment", "compose section=$sectionId label=$sectionLabel")
-        KitEmptyState(sectionId /* MUTANT M5 */, "Placeholder for libs:$sectionId — real UI lands when the module grows code.")
+        KitEmptyState(sectionLabel, "Placeholder for libs:$sectionId — real UI lands when the module grows code.")
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
