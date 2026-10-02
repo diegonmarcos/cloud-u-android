@@ -36,6 +36,10 @@ object ProfileJourney {
      * @param identity the STORED identity pick ("" until the owner taps one).
      * @param peer the STORED peer pick ("" until the owner taps one).
      * @param appliedAt when the artifact was last applied on this device, or "".
+     * @param vaultFetched #766 the vault export is in memory, whichever line fetched it
+     *   (GitHub WebAuth / SSH / PAT, Import File, the Authelia vault route). Holding it IS
+     *   a sign-in — those routes earn no session of a declared provider — and it is what
+     *   Cloud Constellation Setup applies from, so step 4 is not locked behind a re-fetch.
      * @param failed steps whose last attempt reported an error.
      */
     data class State(
@@ -50,7 +54,7 @@ object ProfileJourney {
         val vaultFetched: Boolean = false,
         val failed: Set<Step> = emptySet(),
     ) {
-        val signedIn: Boolean get() = session != null || storedBearerEmail.isNotBlank()
+        val signedIn: Boolean get() = session != null || storedBearerEmail.isNotBlank() || vaultFetched
         val chosenIdentity: UserRegistry.Identity? get() = registry?.identity(identity)
         val chosenPeer: UserRegistry.Peer? get() = registry?.peer(peer)
     }
@@ -86,7 +90,7 @@ object ProfileJourney {
         Step.DEVICE -> lock(s, Step.WHO) ?: if (done(s, Step.WHO)) null else Lock.PICK_IDENTITY
         Step.GET -> lock(s, Step.DEVICE) ?: when {
             !done(s, Step.DEVICE) -> Lock.PICK_PEER
-            !s.artifactInMemory -> Lock.REFETCH
+            !s.artifactInMemory && !s.vaultFetched -> Lock.REFETCH
             else -> null
         }
     }

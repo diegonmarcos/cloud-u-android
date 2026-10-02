@@ -18,11 +18,10 @@
 #       address or a device — the seed lives in cloud-infra's superapp-users.json
 #   T3  every journey_* / sign_in_* string the Kotlin uses exists in EVERY locale,
 #       and no declared one is dead
-#   T4  the CONNECT tab IS the journey first (#695: Connect | Infos | Cloud
-#       Constellation Setup — the journey renders at the TOP of Connect, then the
-#       vault fetch, the device pick and the credentials held): the page builds
-#       renderJourney/renderVault/renderDevicePick/renderTokens and nothing else of
-#       its own there, the journey is FIRST; the four steps of ProfileJourney, in order;
+#   T4  the CONNECT tab IS the journey (#695: Connect | Infos | Cloud
+#       Constellation Setup; #766 the vault-export block below it is gone — the
+#       vault fetch is the Authelia line's own leg): the page builds renderJourney
+#       and nothing else of its own there; the four steps of ProfileJourney, in order;
 #       every card tagged step:*; the step badges are data (cockpit.journey_icons
 #       names every step); the chrome is the cockpit's (no colour literal); and
 #       the OLD surface is GONE — the account-email box, the bearer box, the
@@ -37,7 +36,7 @@
 #       declared provider here; one primary identity, one primary peer; every
 #       peer on a mesh
 #   T8  mutation: a scratch ProfileFragment whose Connect tab no longer builds the
-#       journey, puts an old box back on it, or draws the journey below the fetch,
+#       journey, puts an old box back on it, or puts the old vault block back,
 #       turns T4 RED
 #   T9  mutation (#578): the four-way check turns RED when the web-auth way is
 #       folded back into the bearer's kind, when the fragment sends the web pill
@@ -213,12 +212,10 @@ DEAD=$(grep -oE 'name="(journey|sign_in)_[a-z_]+"' "$RES/values/strings.xml" | s
 t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when Connect opens with the journey
     local pf="$1" j w
     grep -q 'renderJourney(ctx, connect)' "$pf" || return 1
-    # THE ORDER IS THE PAGE: the journey renders at the TOP of Connect and the
-    # vault fetch BELOW it. Asserting membership alone would pass a page that put
-    # the sign-in under the fetch it earns the credential for.
-    j=$(grep -n 'renderJourney(ctx, connect)' "$pf" | head -1 | cut -d: -f1)
-    w=$(grep -n 'renderVault(ctx, connect)' "$pf" | head -1 | cut -d: -f1)
-    [ -n "$j" ] && [ -n "$w" ] && [ "$j" -lt "$w" ] || return 1
+    # #766 THE JOURNEY IS THE PAGE: the old vault-export block that sat below it
+    # (its own login, mailed code and fetch) is the Authelia line's own leg now,
+    # and every line fetches the vault configs — so it must not come back.
+    grep -q 'renderVault(ctx, connect)' "$pf" && return 1
     # Between the CONNECT marker and the Infos render, the page builds its
     # renderers and nothing else of its own — no box, header, caption or pill.
     local block
@@ -232,7 +229,7 @@ t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when Connect ope
     return 0
 }
 echo "== T4: the Connect tab opens with the journey, then the fetch; the old surface is gone =="
-t4 "$PF" && ok "T4: Connect builds the journey FIRST, then the vault fetch, the device pick and the credentials, and nothing else of its own; the old boxes and tiles are gone" || bad "T4: the Connect tab is not the journey-then-fetch page, or an old control survives"
+t4 "$PF" && ok "T4: Connect builds the journey and nothing else of its own; the old vault block, boxes and tiles are gone" || bad "T4: the Connect tab is not the journey alone, or an old control survives"
 STEPS=$(grep -oE 'enum class Step \{ [A-Z_, ]+ \}' "$PJ" | sed 's/.*{ //; s/ }//; s/,//g')
 [ "$(echo $STEPS | wc -w)" = 4 ] && ok "T4: four steps: $STEPS" || bad "T4: ProfileJourney.Step is not four steps ($STEPS)"
 grep -q '^SIGN_IN WHO DEVICE GET$' <<<"$STEPS" && ok "T4: in order sign in → who → device → get" || bad "T4: step order is $STEPS"
@@ -320,10 +317,10 @@ t4 "$TMP/no-journey.kt" && bad "T8: T4 passed a fragment whose Connect tab build
 sed 's/renderJourney(ctx, connect)/connect.addView(autheliaEmailEditor(ctx)); renderJourney(ctx, connect)/' "$PF" > "$TMP/old-box.kt"
 cmp -s "$PF" "$TMP/old-box.kt" && bad "T8: the old-box mutation did not apply (tester stale)" \
     || { t4 "$TMP/old-box.kt" && bad "T8: T4 passed a fragment that put the account-email box back" || ok "T8: an old box back on the tab → T4 RED"; }
-# The journey UNDER the fetch it earns the credential for is not the page.
-awk '/renderJourney\(ctx, connect\)/{next} /renderVault\(ctx, connect\)/{print "        renderVault(ctx, connect)"; print "        renderJourney(ctx, connect)"; next} {print}' "$PF" > "$TMP/journey-last.kt"
-cmp -s "$PF" "$TMP/journey-last.kt" && bad "T8: the reorder mutation did not apply (tester stale)" \
-    || { t4 "$TMP/journey-last.kt" && bad "T8: T4 passed a Connect page that renders the fetch ABOVE the sign-in" || ok "T8: journey below the fetch → T4 RED"; }
+# #766 the old vault-export block back under the journey is not the page.
+awk '{print} /^        renderJourney\(ctx, connect\)$/{print "        renderVault(ctx, connect)"}' "$PF" > "$TMP/vault-back.kt"
+cmp -s "$PF" "$TMP/vault-back.kt" && bad "T8: the vault-block mutation did not apply (tester stale)" \
+    || { t4 "$TMP/vault-back.kt" && bad "T8: T4 passed a Connect page with the old vault-export block back" || ok "T8: the old vault block back on Connect → T4 RED"; }
 
 echo "== T9: mutation — the ways-in check turns red =="
 jq '.auth.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$SHARED" > "$TMP/folded.json"

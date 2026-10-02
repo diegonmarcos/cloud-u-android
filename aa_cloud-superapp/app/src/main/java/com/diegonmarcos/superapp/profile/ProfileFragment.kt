@@ -44,8 +44,9 @@ import kotlinx.coroutines.withContext
  *    (ui.profile.connect: Authelia → Gitea = WebAuth | Bearer, GitHub = WebAuth |
  *    SSH / PAT, Import File), every way one pill of the same design, dispatched on
  *    its `kind` alone; the Authelia ways host the SHARED libs:auth SignInWays, and
- *    GitHub WebAuth is gh's own sign-in in the gh engine ([GhEngine], #713). Then
- *    the VaultConnect fetch ([renderVault]) — and nothing after it (#713).
+ *    GitHub WebAuth is gh's own sign-in in the gh engine ([GhEngine], #713). Every
+ *    line fetches the vault configs (the Authelia line through its mailed-code leg,
+ *    [showVaultFetchDialog]); then who and which device — and nothing after (#766).
  *  • INFOS — the SCHEMA the vault JSON fills ([renderInfos]): one card per
  *    declared section, every declared field filled (through the mask, [InfoMask])
  *    or `empty`; nothing on it applies anything.
@@ -210,12 +211,11 @@ class ProfileFragment : Fragment() {
         root.addView(scroll)
 
         // ── CONNECT: sign in, fetch, say which machine this is ────────────
-        // #713 NOTHING renders below the vault export: the device pick moved to
-        // the Setup hero (the only place that applies for it, and where the
-        // journey's peer pick already points it) and the credentials read-out
-        // repeated what each sign-in line already says it holds.
+        // #766 NOTHING renders below the journey. The old "Vault export" block
+        // (its own browser login, mailed code and fetch) is gone: the vault leg
+        // is the Authelia line's own continuation ([showVaultFetchDialog]), and
+        // every line's fetch also answers the journey's who / which-device steps.
         renderJourney(ctx, connect)
-        renderVault(ctx, connect)
 
         // ── INFOS: the fetched vault configs, section by section ──────────
         renderInfos(ctx, col)
@@ -524,6 +524,7 @@ class ProfileFragment : Fragment() {
             session != null ->
                 getString(R.string.journey_signed_in_as, session.identity.ifBlank { s.storedBearerEmail.ifBlank { "—" } }, provider?.label ?: session.provider)
             s.storedBearerEmail.isNotBlank() -> getString(R.string.journey_bearer_stored, s.storedBearerEmail)
+            s.vaultFetched -> getString(R.string.journey_signed_in_vault, VaultConnect.Imported.via.ifBlank { "—" })
             else -> getString(R.string.journey_not_signed_in)
         }
         val who = lockText(s, ProfileJourney.Step.WHO) ?: s.chosenIdentity?.let {
@@ -596,7 +597,10 @@ class ProfileFragment : Fragment() {
 
     /** One way into a line: [kind] is the only thing dispatched on; [note] is
      *  why it cannot start here when this app wires no handler for it. */
-    private data class Way(val id: String, val label: String, val kind: String, val note: String, val rung: String = "")
+    private data class Way(val id: String, val label: String, val kind: String, val note: String, val rung: String = "", val line: String = "") {
+        /** "<line> · <way>" — how the journey says which way fetched the vault. */
+        val via: String get() = if (line.isBlank()) label else "$line · $label"
+    }
 
     /** One line of ways, side by side; [note] is what the line cannot do yet. */
     private data class Line(val id: String, val label: String, val note: String, val ways: List<Way>)
@@ -616,7 +620,8 @@ class ProfileFragment : Fragment() {
             Line(l.getString("id"), l.optString("label", l.getString("id")), l.optString("note"),
                 (0 until w.length()).map { j ->
                     val x = w.getJSONObject(j)
-                    Way(x.getString("id"), x.optString("label", x.getString("id")), x.optString("kind"), x.optString("note"), x.optString("rung"))
+                    Way(x.getString("id"), x.optString("label", x.getString("id")), x.optString("kind"), x.optString("note"), x.optString("rung"),
+                        l.optString("label", l.getString("id")))
                 })
         }
     }.getOrDefault(emptyList())
@@ -647,6 +652,11 @@ class ProfileFragment : Fragment() {
                 buildWay(ctx, s, way, policy, cell, extras, status)
                 row.addView(cell)
             }
+            // #766 The Authelia line's vault leg: the mailed code and the fetch, in
+            // the line's pill, once a credential for it is held on this device.
+            if (line.ways.any { it.kind in AUTHELIA_KINDS } && vaultCredentialHeld(ctx))
+                extras.addView(FleetCockpitView.pill(ctx, getString(R.string.connect_vault_pill)) { showVaultFetchDialog(line.label) }
+                    .apply { tag = "way:vault_route" })
             body.addView(row)
             body.addView(extras)
             body.addView(caption(ctx, lineHeld(ctx, line)))
@@ -675,7 +685,7 @@ class ProfileFragment : Fragment() {
                 com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
                     .setTitle(way.label)
                     .setItems(arrayOf<CharSequence>(getString(R.string.connect_way_ssh), getString(R.string.connect_way_pat))) { _, which ->
-                        if (which == 0) showGithubSshDialog() else showGithubPatDialog()
+                        if (which == 0) showGithubSshDialog(way.via) else showGithubPatDialog(way.via)
                     }
                     .show()
             })
@@ -689,6 +699,7 @@ class ProfileFragment : Fragment() {
         if (way.kind == KIND_VAULT_FILE) {
             cell.addView(wayPill(ctx, way) {
                 fileStatus = status
+                fileVia = way.via
                 vaultFilePicker.launch(arrayOf("application/json", "text/*", "*/*"))
             })
             extras.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
@@ -761,7 +772,7 @@ class ProfileFragment : Fragment() {
             val hint = getString(R.string.connect_pat_auth_hint, AuthDeclaration.configSource.gitRepo)
             when (val o = withContext(Dispatchers.IO) { fetchVaultFileWithToken(token, hint) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed -> show(status, RED, "✗ ${o.kind}\n${o.message}")
-                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body, via = way.via)
             }
         }
     }
@@ -812,7 +823,7 @@ class ProfileFragment : Fragment() {
         if (s.storedBearerEmail.isNotBlank()) {
             body.addView(pickButton(ctx, getString(R.string.journey_use_stored_bearer, s.storedBearerEmail)) {
                 show(status, NEUTRAL, "…")
-                runFetch(status, { if (importedThisSession) { importedThisSession = false; redraw() } },
+                runFetch(status, { afterLanding() },
                     via = SignIn.byKind(SignIn.Kind.AUTHELIA_BEARER), identity = s.storedBearerEmail) { ConfigArtifact.fetchWithBearer(configs.autheliaToken) }
             })
             body.addView(clearSecretButton(ctx, "Authelia bearer token") { configs.clearAutheliaCredential() })
@@ -857,21 +868,11 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    /**
-     * Step 4 on Connect: getting is here, APPLYING is Setup's (#695) — the step
-     * says so and goes there; then the manual file route, the one entry that
-     * needs no credential.
-     */
+    /** Step 4 on Connect: getting is the lines', APPLYING is Setup's (#695) — the step says so and goes there. */
     private fun buildGetStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
         body.addView(caption(ctx, getString(R.string.journey_get_on_setup, tabLabel(setupTab))))
         body.addView(pickButton(ctx, tabLabel(setupTab)) { strip?.getTabAt(setupTab)?.select() })
-        // #585: the file must be the DECRYPTED export. Said here, before the tap,
-        // because the encrypted repo file is what the owner has at hand.
-        body.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
-        body.addView(pickButton(ctx, getString(R.string.journey_import_file)) {
-            (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
-                ?.onTileClicked("action:import_configs")
-        })
+        // #766 no second Import File here: it is Connect's third line.
     }
 
     /**
@@ -904,28 +905,6 @@ class ProfileFragment : Fragment() {
             show(status, if (report.ok) GREEN else RED, report.text())
             paintJourney()
         })
-        into.addView(status)
-    }
-
-    // ── Connect · the VaultConnect fetch surface (#614; on Connect since #695) ─
-
-    /**
-     * The VaultConnect fetch surface, directly below the sign-in journey, which
-     * is what earns the credential it spends. The credential is the durable
-     * bearer or the in-memory browser session; the WebOAuth browser login earns
-     * the session, the code box takes the mailed one-time code, and a successful
-     * fetch lands on Infos. Reuses the same [vaultStart]/[vaultFetch]/[VaultConnect]
-     * the journey used — no second client. RENDERING WRITES NOTHING; every call
-     * is behind a button.
-     */
-    private fun renderVault(ctx: android.content.Context, into: LinearLayout) {
-        into.addView(sectionHeader(ctx, getString(R.string.journey_vault_header)))
-        into.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
-        val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
-        into.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
-        into.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) { vaultStart(status) })
-        into.addView(vaultCodeField(ctx))
-        into.addView(pickButton(ctx, getString(R.string.journey_vault_fetch_open)) { vaultFetch(status) })
         into.addView(status)
     }
 
@@ -1261,18 +1240,46 @@ class ProfileFragment : Fragment() {
 
     private fun vaultEndpoints() = AuthDeclaration.vault
 
-    /** The vault code box. Like [mailConfirmationField] it is never stored:
-     *  a one-use code with minutes of life, cleared once it has been sent. */
-    private var vaultCodeBox: EditText? = null
+    /** True when the Authelia line holds a credential the vault route accepts. */
+    private fun vaultCredentialHeld(ctx: android.content.Context): Boolean {
+        if (vaultSession != null) return true
+        return ConfigsPrefs(ctx).autheliaToken.isNotBlank()
+    }
 
-    private fun vaultCodeField(ctx: android.content.Context): EditText =
-        EditText(ctx).apply {
-            hint = getString(R.string.vault_connect_code_hint)
-            setSingleLine()
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
-            vaultCodeBox = this
-        }
+    /**
+     * #766 THE AUTHELIA LINE'S VAULT LEG — what used to be the "Vault export" block
+     * below the lines, now the line's own continuation: opened by itself the moment an
+     * Authelia way lands (so connecting fetches the vault configs, as the GitHub and
+     * file lines do) and by the line's pill afterwards. Opening mails the one-time code
+     * to the signed-in address ([vaultStart]); the code box is never stored (a one-use
+     * code with minutes of life) and is emptied once sent; a fetch lands through
+     * [landVault] like every line, and the dialog closes on it.
+     */
+    private fun showVaultFetchDialog(via: String) {
+        val ctx = context ?: return
+        var codeBox: EditText? = null
+        lateinit var dialog: androidx.appcompat.app.AlertDialog
+        dialog = importDialog(
+            title = getString(R.string.connect_vault_title),
+            positive = getString(R.string.connect_vault_go),
+            buildBody = { body, status ->
+                body.addView(caption(ctx, getString(R.string.connect_vault_caption, tabLabel(infosTab), tabLabel(setupTab), vaultAuthText(ctx))))
+                val box = EditText(ctx).apply {
+                    hint = getString(R.string.vault_connect_code_hint)
+                    setSingleLine()
+                    inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                    importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+                }
+                codeBox = box
+                body.addView(box)
+                body.addView(pickButton(ctx, getString(R.string.connect_vault_resend)) { vaultStart(status) })
+                vaultStart(status)
+            },
+            onGo = { _, status -> codeBox?.let { vaultFetch(status, it, via) { dialog.dismiss() } } },
+            onDismiss = { codeBox = null },
+        )
+        dialog.show()
+    }
 
     /**
      * A browser session for the vault route, memory only (#570). Set by
@@ -1343,7 +1350,8 @@ class ProfileFragment : Fragment() {
     private fun vaultStart(status: TextView) {
         val auth = vaultAuth(status) ?: return
         val e = vaultEndpoints()
-        viewLifecycleOwner.lifecycleScope.launch {
+        show(status, NEUTRAL, "…")
+        lifecycleScope.launch {
             when (val o = withContext(Dispatchers.IO) { VaultConnect.start(e, auth) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     showVaultFailure(status, o)
@@ -1353,9 +1361,8 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun vaultFetch(status: TextView) {
+    private fun vaultFetch(status: TextView, box: EditText, via: String, onLanded: () -> Unit) {
         val auth = vaultAuth(status) ?: return
-        val box = vaultCodeBox ?: return
         val code = box.text?.toString()?.trim().orEmpty()
         if (code.isEmpty()) {
             box.error = getString(R.string.vault_connect_no_code)
@@ -1363,11 +1370,12 @@ class ProfileFragment : Fragment() {
         }
         box.setText("")
         val e = vaultEndpoints()
-        viewLifecycleOwner.lifecycleScope.launch {
+        lifecycleScope.launch {
             when (val o = withContext(Dispatchers.IO) { VaultConnect.fetch(e, auth, code) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     showVaultFailure(status, o)
-                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok ->
+                    if (landVault(status, o.body, redrawNow = false, via = via)) onLanded()
             }
         }
     }
@@ -1379,7 +1387,7 @@ class ProfileFragment : Fragment() {
      * Setup read, then Infos. A dialog route passes [redrawNow] false: the page
      * is redrawn when the dialog closes (importDialog's dismiss), never under it.
      */
-    private fun landVault(status: TextView, body: org.json.JSONObject, redrawNow: Boolean = true): Boolean {
+    private fun landVault(status: TextView, body: org.json.JSONObject, redrawNow: Boolean = true, via: String = ""): Boolean {
         VaultConnect.unknownSchemaVersion(body, VaultConnect.knownSchemaVersions)?.let { v ->
             show(status, RED, "✗ " + getString(R.string.vault_connect_schema_unknown, v,
                 VaultConnect.knownSchemaVersions.sorted().joinToString(", ")))
@@ -1388,9 +1396,14 @@ class ProfileFragment : Fragment() {
         val sections = VaultConnect.sections(body)
         VaultConnect.Imported.last = sections
         VaultConnect.Imported.bundle = body.optJSONObject("bundle") ?: body
+        VaultConnect.Imported.via = via
+        // #766 the vault names the owner's peers too: who / which device answer on every line.
+        context?.let { c -> VaultConnect.Imported.bundle?.let(UserRegistry::fromVault)?.let { UserRegistry.adopt(c, it) } }
+        failedSteps -= ProfileJourney.Step.SIGN_IN
         show(status, GREEN, getString(
             R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size, tabLabel(infosTab)))
-        selectedTab = infosTab
+        // #766 the next question (which device this is) is Connect's: stay there until it is answered.
+        selectedTab = if (context?.let { journeyState(it).chosenPeer } != null) infosTab else connectTab
         importedThisSession = true
         if (redrawNow && isAdded && !isStateSaved) { importedThisSession = false; redraw() }
         return true
@@ -1994,7 +2007,7 @@ class ProfileFragment : Fragment() {
         override fun onSignedIn(result: SignInResult) {
             landed(result.provider, result.identity, result.artifact, result.bytes, result.bearer)
             // The lib's dialog has already closed; the journey redraws with the session.
-            view?.post { if (importedThisSession) { importedThisSession = false; redraw() } }
+            view?.post { afterLanding() }
         }
         override fun onWebSession(cookie: String) { vaultSession = cookie }
     }
@@ -2020,6 +2033,18 @@ class ProfileFragment : Fragment() {
         failedSteps -= ProfileJourney.Step.SIGN_IN
         if (artifact != null) view?.snack(getString(R.string.journey_fetched_snack))
         importedThisSession = true   // the journey redraws on dialog dismiss
+        // #766 an Authelia way also fetches the vault configs: its leg opens next.
+        if (via != null && via.kind.name.lowercase() in AUTHELIA_KINDS)
+            vaultLegVia = connectLines().firstOrNull { l -> l.ways.any { it.kind == via.kind.name.lowercase() } }?.label ?: via.label
+    }
+
+    /** #766 Set by an Authelia landing: the line label the vault leg opens for, once the page is redrawn. */
+    private var vaultLegVia: String? = null
+
+    /** After a sign-in landed: redraw with it, then (an Authelia way) continue to the vault leg. */
+    private fun afterLanding() {
+        if (importedThisSession) { importedThisSession = false; redraw() }
+        vaultLegVia?.let { vaultLegVia = null; if (isAdded) showVaultFetchDialog(it) }
     }
 
     /**
@@ -2109,6 +2134,9 @@ class ProfileFragment : Fragment() {
     /** The Connect status line the Import File pick reports into. */
     private var fileStatus: TextView? = null
 
+    /** The Import File way's "<line> · <way>", for the journey's sign-in line. */
+    private var fileVia: String = ""
+
     private val vaultFilePicker =
         registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
             // A dismissed picker is the owner's choice, not a failure.
@@ -2138,7 +2166,7 @@ class ProfileFragment : Fragment() {
             text == null -> refuse(getString(R.string.import_file_no_stream, name))
             text.isEmpty() -> refuse(getString(R.string.import_file_empty, name))
             else -> when (val v = com.diegonmarcos.superapp.settings.ImportConfigsFragment.classify(text)) {
-                is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle)
+                is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)
                 else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v).orEmpty())
             }
         }
@@ -2179,7 +2207,7 @@ class ProfileFragment : Fragment() {
     /** #695 the vault export's path inside the ONE declared vault repo (ui.profile.connect.vault_file). */
     private fun vaultFile(): String = connectDecl().optString("vault_file")
 
-    private fun showGithubSshDialog() {
+    private fun showGithubSshDialog(via: String) {
         val ctx = requireContext()
         val repo = AuthDeclaration.configSource.gitRepo
         val path = vaultFile()
@@ -2223,7 +2251,7 @@ class ProfileFragment : Fragment() {
                     go.isEnabled = false
                     show(status, NEUTRAL, "… cloning $repo over SSH (shallow, bare)")
                     val cacheDir = requireContext().cacheDir
-                    runVaultRead(status, { go.isEnabled = true }) {
+                    runVaultRead(status, via, { go.isEnabled = true }) {
                         GitSshVault.fetchArtifact(cacheDir, key, pass, path)
                     }
                 }
@@ -2241,7 +2269,7 @@ class ProfileFragment : Fragment() {
      * moment it is read, it is never stored, logged or shown, and it rides only in
      * a header (never a URL, never argv).
      */
-    private fun showGithubPatDialog() {
+    private fun showGithubPatDialog(via: String) {
         val ctx = requireContext()
         val repo = AuthDeclaration.configSource.gitRepo
         var tokenField: EditText? = null
@@ -2270,7 +2298,7 @@ class ProfileFragment : Fragment() {
                     go.isEnabled = false
                     show(status, NEUTRAL, getString(R.string.connect_fetching, vaultFile()))
                     val hint = getString(R.string.connect_pat_auth_hint, repo)
-                    runVaultRead(status, { go.isEnabled = true }) { fetchVaultFileWithToken(token, hint) }
+                    runVaultRead(status, via, { go.isEnabled = true }) { fetchVaultFileWithToken(token, hint) }
                 }
             },
             onDismiss = { tokenField = null },
@@ -2302,6 +2330,7 @@ class ProfileFragment : Fragment() {
     /** Fetch the vault export on IO and land it through [landVault]; the redraw waits for the dialog. */
     private fun runVaultRead(
         status: TextView,
+        via: String,
         done: () -> Unit,
         fetch: () -> com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome,
     ) {
@@ -2310,7 +2339,7 @@ class ProfileFragment : Fragment() {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     show(status, RED, "✗ ${o.kind}\n${o.message}")
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
-                    landVault(status, o.body, redrawNow = false)
+                    landVault(status, o.body, redrawNow = false, via = via)
                 }
             }
             done()
@@ -2475,6 +2504,9 @@ class ProfileFragment : Fragment() {
         /** #713 GitHub ▸ WebAuth: gh's own `auth login`, run by the gh engine
          *  ([GhEngine], build.json::engines.gh). Named once, like the two above. */
         private const val KIND_GH_AUTH_LOGIN = "gh_auth_login"
+
+        /** #766 libs:auth's two Authelia kinds, as a way declares them: the vault route's credential. */
+        private val AUTHELIA_KINDS = setOf(SignIn.Kind.AUTHELIA_WEB.name.lowercase(), SignIn.Kind.AUTHELIA_BEARER.name.lowercase())
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400

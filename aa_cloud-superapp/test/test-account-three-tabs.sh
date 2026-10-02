@@ -26,10 +26,16 @@
 #      function, a mandatory reason, the unreadable keyboard "not verifiable",
 #      every declared mail account an item.
 #   E  the GitHub token (PAT) is used once: never stored, logged or in a URL.
-#   G  (#713) CONNECT ENDS AT THE VAULT EXPORT — nothing renders into the Connect
-#      column after renderVault — every way of every line is the SAME pill, and
+#   G  (#713, #766) CONNECT IS THE JOURNEY AND NOTHING ELSE — the old "Vault export"
+#      block (renderVault) is deleted — every way of every line is the SAME pill, and
 #      GitHub WebAuth is present and wired: gh's own sign-in in the gh engine
 #      (GhEngine, engines.gh), the page in cloud-browser, the token used once.
+#   V  (#766) EVERY LINE FETCHES THE VAULT CONFIGS AND ANSWERS WHICH DEVICE: the
+#      Authelia line's vault leg (mailed code + fetch) opens by itself after an
+#      Authelia landing and from the line's pill; every landing names its way and
+#      adopts the registry the vault carries (electronics.*.peer), so who / which
+#      device answer on Connect whichever line was used; step 4 holds no second
+#      Import File.
 #   F  (#713) INFOS IS THE WHOLE SCHEMA: the declared skeleton (ui.profile.infos.schema)
 #      matches cloud-vault's schema.json + sources.json when the vault sits beside;
 #      a port of InfoMask.schemaRows gives EVERY declared field a row (filled or
@@ -155,7 +161,7 @@ file_ok() {   # $1 = ProfileFragment.kt, $2 = ImportConfigsFragment.kt; prints t
     grep -q 'OpenDocument()) { uri ->' <<<"$(grep -A1 'private val vaultFilePicker' "$1")" || { echo "the picker is not the system document picker"; return 1; }
     [ -n "$iv" ] || { echo "importVaultFile is gone"; return 1; }
     grep -qF 'ImportConfigsFragment.classify(text)' <<<"$iv" || { echo "the file is not read through ImportConfigsFragment.classify"; return 1; }
-    grep -qF 'VaultFile.Verdict.Bundle -> landVault(status, v.bundle)' <<<"$iv" || { echo "the export does not land through landVault"; return 1; }
+    grep -qF 'VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)' <<<"$iv" || { echo "the export does not land through landVault"; return 1; }
     grep -qE 'VaultConnect\.Imported|VaultFile\.classify\(' <<<"$iv" && { echo "importVaultFile writes the import or classifies itself — a second importer"; return 1; }
     grep -qF 'else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v)' <<<"$iv" || { echo "a non-export file is not refused with its reason"; return 1; }
     grep -qF 'view?.snack(text)' <<<"$iv" || { echo "a refusal is not also a snack (loud)"; return 1; }
@@ -179,7 +185,7 @@ f2mut() {   # $1 = file (pf|icf), $2 = sed expression; 0 iff file_ok goes red; 2
     if [ "$1" = pf ]; then cmp -s "$PF" "$TMP/pf.kt" && return 2; else cmp -s "$ICF" "$TMP/icf.kt" && return 2; fi
     ! file_ok "$TMP/pf.kt" "$TMP/icf.kt" >/dev/null
 }
-for m in 'pf|s/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle)/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> { VaultConnect.Imported.bundle = v.bundle }/' \
+for m in 'pf|s/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> { VaultConnect.Imported.bundle = v.bundle }/' \
          'pf|s/ImportConfigsFragment.classify(text)/com.diegonmarcos.cloudlib.auth.VaultFile.classify(text, emptySet(), emptySet())/' \
          'pf|s/fun refuse(text: String) { show(status, RED, text); view?.snack(text) }/fun refuse(text: String) { }/' \
          'pf|s/if (way.kind == KIND_VAULT_FILE) {/if (false) {/' \
@@ -210,7 +216,7 @@ jq '.ui.profile.connect.lines[1].ways[0].client_id = "Iv1.planted"' "$BJ" > "$TM
 oauth_free "$TMP/b1.json" "$PF" >/dev/null && bad "B-mutation: a declared client_id was NOT caught" || ok "B-mutation: a declared client_id is caught"
 jq '.ui.profile.connect.redirect = "https://api.example.test/git/oauth/landed"' "$BJ" > "$TMP/b2.json"
 oauth_free "$TMP/b2.json" "$PF" >/dev/null && bad "B-mutation: a declared OAuth landing was NOT caught" || ok "B-mutation: a declared OAuth landing is caught"
-sed 's/private fun showGithubPatDialog() {/private fun showGithubPatDialog() { val c = OAuthWeb.parse(null)/' "$PF" > "$TMP/b3.kt"
+sed 's/private fun showGithubPatDialog(via: String) {/private fun showGithubPatDialog(via: String) { val c = OAuthWeb.parse(null)/' "$PF" > "$TMP/b3.kt"
 cmp -s "$PF" "$TMP/b3.kt" && bad "B-mutation: the OAuthWeb mutation did not apply" \
     || { oauth_free "$BJ" "$TMP/b3.kt" >/dev/null && bad "B-mutation: OAuthWeb named in the fragment was NOT caught" || ok "B-mutation: OAuthWeb named in the fragment is caught"; }
 sed 's/        const val LOGIN_POLL = "loginPoll"/        const val LOGIN_POLL = "loginPoll"\n        const val GH_CLIENT_ID = "Iv1.planted"; val clientId = GH_CLIENT_ID/' "$GE" > "$TMP/b4.kt"
@@ -372,18 +378,18 @@ sed 's/        val cs = AuthDeclaration.configSource\n        val url = connectD
 cmp -s "$PF" "$TMP/e2.kt" && bad "E-mutation: the log mutation did not apply" \
     || { pat_clean "$TMP/e2.kt" && bad "E-mutation: a logged token was NOT caught" || ok "E-mutation: the token logged → RED"; }
 
-# ── G · Connect: nothing after the vault export; one pill design; GitHub WebAuth wired ──
-echo "== G: Connect ends at the vault export, every way is the same pill, GitHub WebAuth is gh's own sign-in =="
+# ── G · Connect: the journey and nothing after; one pill design; GitHub WebAuth wired ──
+echo "== G: Connect is the journey and nothing after it, every way is the same pill, GitHub WebAuth is gh's own sign-in =="
 connect_tail_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
     local blk
     blk=$(awk '/── CONNECT: sign in, fetch/{f=1} f{print} f&&/── INFOS:/{exit}' "$1" | codeof | grep -E '^ *render[A-Za-z]*\(')
-    [ "$(echo $blk)" = "renderJourney(ctx, connect) renderVault(ctx, connect)" ] || { echo "Connect renders [$(echo $blk)], not exactly journey then vault"; return 1; }
+    [ "$(echo $blk)" = "renderJourney(ctx, connect)" ] || { echo "Connect renders [$(echo $blk)], not exactly the journey"; return 1; }
     # No other call anywhere hands the Connect column to a renderer.
-    [ "$(codeof "$1" | grep -cE '\(ctx, connect\)')" = 2 ] || { echo "something else renders into the Connect column"; return 1; }
+    [ "$(codeof "$1" | grep -cE '\(ctx, connect\)')" = 1 ] || { echo "something else renders into the Connect column"; return 1; }
     return 0
 }
-msg=$(connect_tail_ok "$PF") && ok "G: Connect renders the journey, then the vault export, and nothing after it" || bad "G: $msg"
-for gone in 'private fun renderTokens(' 'private fun renderDevicePick(' 'TOKENS_TEXT'; do
+msg=$(connect_tail_ok "$PF") && ok "G: Connect renders the journey and nothing after it" || bad "G: $msg"
+for gone in 'private fun renderTokens(' 'private fun renderDevicePick(' 'TOKENS_TEXT' 'private fun renderVault(' 'vaultCodeBox' 'journey_vault_header' 'journey_vault_fetch_open'; do
     grep -qF "$gone" "$PF" && bad "G: the stale Connect tail survives ($gone)" || ok "G: the stale Connect tail is deleted ($gone)"
 done
 grep -qF 'renderDeviceSelector(ctx, hero.slot, devices)' "$PF" && ok "G: the device pick lives on the Setup hero, where it applies" || bad "G: the device pick has no home after leaving Connect"
@@ -410,7 +416,7 @@ gh_ok() {   # $1 = ProfileFragment.kt, $2 = GhEngine.kt, $3 = build.json; prints
         || { echo "ghSignIn does not run gh's own login through the engine"; return 1; }
     grep -qF 'is GhEngine.Check.NotInstalled -> getString(R.string.connect_gh_missing' <<<"$gs" && grep -qF 'is GhEngine.Check.TooOld -> getString(R.string.connect_gh_old' <<<"$gs" \
         || { echo "a missing or old engine is not its own sentence"; return 1; }
-    grep -qF 'fetchVaultFileWithToken(token, hint)' <<<"$gs" && grep -qF 'landVault(status, o.body)' <<<"$gs" \
+    grep -qF 'fetchVaultFileWithToken(token, hint)' <<<"$gs" && grep -qF 'landVault(status, o.body, via = way.via)' <<<"$gs" \
         || { echo "the gh token does not read the vault export once and land like a sign-in"; return 1; }
     grep -qE 'putSecret|setAutheliaCredential|Prefs\(|Log\.' <<<"$gs$gp" && { echo "the gh path stores or logs something"; return 1; }
     grep -qF 'AuthDeclaration.browserMission?.pkg' <<<"$gp" && grep -qF '.setPackage(browser))' <<<"$gp" \
@@ -424,19 +430,20 @@ for loc in values values-es; do
         grep -q "name=\"$s\"" "$RES/$loc/strings.xml" || bad "G: $s missing from $loc"
     done
 done
-echo "-- G-mutation: a read-out after the vault export, a plain button on a line, WebAuth unwired, the page in any browser, the token stored --"
+echo "-- G-mutation: anything after the journey, the old vault block back, a plain button on a line, WebAuth unwired, the page in any browser, the token stored --"
 gmut() {   # $1 = which check, $2 = sed expr on PF; 0 iff the check goes red; 2 iff nothing changed
     sed "$2" "$PF" > "$TMP/g.kt"; cmp -s "$PF" "$TMP/g.kt" && return 2
     case $1 in tail) ! connect_tail_ok "$TMP/g.kt" >/dev/null;; pills) ! pills_ok "$TMP/g.kt" >/dev/null;; gh) ! gh_ok "$TMP/g.kt" "$GE" "$BJ" >/dev/null;; esac
 }
-for m in 'tail|s/^        renderVault(ctx, connect)$/        renderVault(ctx, connect)\n        renderRepos(ctx, connect)/' \
-         'tail|s/^        renderVault(ctx, connect)$/        renderRepos(ctx, connect)\n        renderVault(ctx, connect)/' \
+for m in 'tail|s/^        renderJourney(ctx, connect)$/        renderJourney(ctx, connect)\n        renderRepos(ctx, connect)/' \
+         'tail|s/^        renderJourney(ctx, connect)$/        renderJourney(ctx, connect)\n        renderVault(ctx, connect)/' \
+         'tail|s/^        renderJourney(ctx, connect)$/        renderRepos(ctx, connect)\n        renderJourney(ctx, connect)/' \
          'pills|s/            cell.addView(wayPill(ctx, way) { ghSignIn(way, status) })/            cell.addView(pickButton(ctx, way.label) { ghSignIn(way, status) })/' \
          'pills|s/^            cell.addView(wayPill(ctx, way) {$/            cell.addView(pickButton(ctx, way.label) {/' \
          'gh|s/            cell.addView(wayPill(ctx, way) { ghSignIn(way, status) })/            cell.addView(caption(ctx, way.note))/' \
          'gh|s/.setPackage(browser))/)/' \
          'gh|s/            if (token == null) { show(status, RED, "✗ $failure"); return@launch }/            if (token == null) { show(status, RED, "✗ $failure"); return@launch }; ConfigsPrefs(ctx).putSecret("git", "github_token", token)/' \
-         'gh|s/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body)/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> Unit/'; do
+         'gh|s/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> landVault(status, o.body, via = way.via)/                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> Unit/'; do
     w="${m%%|*}"; e="${m#*|}"
     gmut "$w" "$e"; rc=$?
     case $rc in 0) ok "G-mutation: caught — $w: ${e:0:80}";; 2) bad "G-mutation: did not apply — $w: ${e:0:80}";; *) bad "G-mutation: NOT caught — $w: ${e:0:80}";; esac
@@ -445,6 +452,58 @@ jq '(.ui.profile.connect.lines[1].ways) |= map(select(.kind != "gh_auth_login"))
 cmp -s "$BJ" "$TMP/g1.json" && bad "G-mutation: dropping GitHub WebAuth did not apply" \
     || { gh_ok "$PF" "$GE" "$TMP/g1.json" >/dev/null && bad "G-mutation: GitHub WebAuth dropped was NOT caught" || ok "G-mutation: GitHub WebAuth dropped from the GitHub line → RED"; }
 lines_ok "$TMP/g1.json" "$SHARED" >/dev/null && bad "G-mutation: A did not see the WebAuth way go" || ok "G-mutation: A also goes red when WebAuth is dropped"
+
+# ── V · every line fetches the vault configs and answers which device (#766) ──
+echo "== V: the Authelia line continues to the vault, every landing adopts the vault's registry, step 4 has no second Import File =="
+vault_leg_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
+    local ss lh al vd vf lv gs ha
+    ss=$(fnof "$1" buildSignInStep | codeof); lh=$(fnof "$1" landed | codeof); al=$(fnof "$1" afterLanding | codeof)
+    vd=$(fnof "$1" showVaultFetchDialog | codeof); vf=$(fnof "$1" vaultFetch | codeof); lv=$(fnof "$1" landVault | codeof)
+    gs=$(fnof "$1" buildGetStep | codeof); ha=$(awk '/private val signInHost = object/{f=1} f{print} f&&/^    }$/{exit}' "$1" | codeof)
+    grep -qF 'line.ways.any { it.kind in AUTHELIA_KINDS }' <<<"$ss" && grep -qF 'showVaultFetchDialog(line.label)' <<<"$ss" \
+        || { echo "the Authelia line has no vault pill"; return 1; }
+    grep -qF 'in AUTHELIA_KINDS' <<<"$lh" && grep -qF 'vaultLegVia = ' <<<"$lh" || { echo "an Authelia landing does not arm the vault leg"; return 1; }
+    grep -qF 'showVaultFetchDialog(it)' <<<"$al" || { echo "afterLanding does not open the vault leg"; return 1; }
+    grep -qF 'afterLanding()' <<<"$ha" || { echo "the shared sign-in's landing does not continue"; return 1; }
+    grep -qF 'runFetch(status, { afterLanding() },' <<<"$(fnof "$1" buildStoredBearer | codeof)" || { echo "the stored bearer's one tap does not continue"; return 1; }
+    grep -qE '^ *vaultStart\(status\)$' <<<"$vd" || { echo "opening the vault leg does not mail the code"; return 1; }
+    grep -qF 'vaultFetch(status, it, via)' <<<"$vd" || { echo "the vault leg does not fetch"; return 1; }
+    grep -qF 'landVault(status, o.body, redrawNow = false, via = via)' <<<"$vf" || { echo "the vault fetch does not land like every line"; return 1; }
+    grep -qF 'UserRegistry::fromVault' <<<"$lv" && grep -qF 'UserRegistry.adopt(c, it)' <<<"$lv" || { echo "a landing does not adopt the vault's registry"; return 1; }
+    grep -qF 'VaultConnect.Imported.via = via' <<<"$lv" || { echo "a landing does not record its way"; return 1; }
+    grep -qE 'import_configs|journey_import_file' <<<"$gs" && { echo "step 4 still carries a second Import File"; return 1; }
+    local n; n=$(codeof "$1" | grep -c 'landVault(status, ' ); [ "$n" -ge 4 ] || { echo "only $n landings"; return 1; }
+    [ "$(codeof "$1" | grep 'landVault(status, ' | grep -vc 'via = ')" = 0 ] || { echo "a landing does not say which way fetched it"; return 1; }
+    return 0
+}
+msg=$(vault_leg_ok "$PF") && ok "V: the Authelia line's vault leg opens after an Authelia landing and from its pill; every landing names its way and adopts the vault's registry" || bad "V: $msg"
+AUTHSRC="$APP/../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth"
+fr=$(awk '/    fun fromVault\(/{f=1} f{print} f&&/^    }$/{exit}' "$AUTHSRC/UserRegistry.kt" | codeof)
+grep -qF 'optString("peer")' <<<"$fr" && grep -qF '"vault_device", device' <<<"$fr" && grep -qF 'optJSONObject("electronics")' <<<"$fr" \
+    && ok "V: the vault's registry is electronics.*.<device>.peer, keyed by the vault device" || bad "V: fromVault does not read electronics' peers"
+pj=$(codeof "$AUTHSRC/ProfileJourney.kt")
+grep -qF '|| vaultFetched' <<<"$pj" && grep -qF '!s.artifactInMemory && !s.vaultFetched -> Lock.REFETCH' <<<"$pj" \
+    && ok "V: holding the vault export is a sign-in, and step 4 is not locked behind a re-fetch" || bad "V: the journey ignores a vault landing"
+for loc in values values-es; do
+    for k in connect_vault_pill connect_vault_title connect_vault_go connect_vault_resend connect_vault_caption journey_signed_in_vault; do
+        grep -q "name=\"$k\"" "$RES/$loc/strings.xml" || bad "V: $k missing from $loc"
+    done
+done
+echo "-- V-mutation: the pill unwired, the auto-continue dropped, no code mailed, no registry adopted, the second Import File back, a landing without its way --"
+for e in 's/showVaultFetchDialog(line.label)/Unit/' \
+         's/        vaultLegVia?.let { vaultLegVia = null; if (isAdded) showVaultFetchDialog(it) }/        vaultLegVia = null/' \
+         's/            view?.post { afterLanding() }/            view?.post { redraw() }/' \
+         's/^                vaultStart(status)$/                Unit/' \
+         's/UserRegistry.adopt(c, it)/Unit/' \
+         's/        VaultConnect.Imported.via = via/        Unit/' \
+         's|        // #766 no second Import File here: it is Connect.s third line.|        body.addView(pickButton(ctx, "x") { (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)?.onTileClicked("action:import_configs") })|' \
+         's/landVault(status, v.bundle, via = fileVia)/landVault(status, v.bundle)/' \
+         's/                    if (landVault(status, o.body, redrawNow = false, via = via)) onLanded()/                    Unit/'; do
+    sed "$e" "$PF" > "$TMP/v.kt"
+    if cmp -s "$PF" "$TMP/v.kt"; then bad "V-mutation: did not apply — ${e:0:80}"
+    elif vault_leg_ok "$TMP/v.kt" >/dev/null; then bad "V-mutation: NOT caught — ${e:0:80}"
+    else ok "V-mutation: caught — ${e:0:80}"; fi
+done
 
 # ── F · Infos: every field of the declared schema ───────────────────────────
 echo "== F: Infos renders the WHOLE schema — every declared section and field, filled or empty =="
@@ -499,7 +558,8 @@ schema_drift() {   # $1 = build.json, $2 = C_A1-configs dir; prints the drift; 1
 import json, os, sys
 mine = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["schema"]
 d = sys.argv[2]; vs = json.load(open(os.path.join(d, "schema.json")))
-R = {"text", "json", "sops", "files", "tree", "literal", "pending"}
+# emit.py's own rule (resolvers()): a resolver is any object carrying `kind` — no list of
+# kinds here, so a resolver kind the vault adds (peer_devices, 11950b4) is a field, not a crash.
 # #727 EVERY section directory, not only schema.json's list: schema.json's sections in
 # its order, then each C_A1-configs/<dir>/sources.json it does not list yet (STAGED).
 listed = [s["id"] for s in vs["sections"]]
@@ -508,7 +568,7 @@ want = []
 for s in vs["sections"] + [{"id": x, "label": x.capitalize(), "staged": True} for x in staged]:
     items = json.load(open(os.path.join(d, s["id"], "sources.json")))["items"]; fields = []
     def walk(o, p):
-        if isinstance(o, dict) and o.get("kind") in R: fields.append(p); return
+        if "kind" in o: fields.append(p); return
         for k, v in o.items():
             if not k.startswith("_"): walk(v, (p + " › " if p else "") + k)
     walk(items, ""); want.append({"id": s["id"], "label": s.get("label", s["id"]), "fields": fields, "staged": bool(s.get("staged"))})
@@ -597,6 +657,16 @@ for jm in '(.ui.profile.infos.schema.sections[] | select(.id == "apps")) |= del(
     if cmp -s "$BJ" "$TMP/a.json"; then bad "F2-mutation: did not apply — $jm"
     else apps_ok "$PF" "$TMP/a.json" >/dev/null && bad "F2-mutation: NOT caught — $jm" || ok "F2-mutation: caught — $jm"; fi
 done
+# #766 the regression this file missed: the vault's electronics became one peer_devices
+# resolver (cloud-vault 11950b4) while the skeleton kept the hand-listed devices; the drift
+# check then CRASHED on the new kind instead of going red.
+jq '(.ui.profile.infos.schema.sections[] | select(.id == "electronics")).fields = ["computers › surface › type", "phones › galaxy › type", "watches", "other_devices", "kde_connect"]' "$BJ" > "$TMP/e.json"
+if cmp -s "$BJ" "$TMP/e.json"; then bad "F2-mutation: the stale electronics skeleton did not apply"
+elif [ -n "$VAULT_DIR" ]; then
+    out=$(schema_drift "$TMP/e.json" "$VAULT_DIR" 2>&1); rc=$?
+    { [ $rc = 1 ] && grep -q '^electronics: declared' <<<"$out"; } && ok "F2-mutation: the pre-11950b4 electronics skeleton → drift RED, naming electronics (not a crash)" \
+        || bad "F2-mutation: the stale electronics skeleton was NOT reported as drift (rc=$rc)"
+fi
 jq '.ui.profile.infos.schema.sections |= map(select(.id != "apps"))' "$BJ" > "$TMP/s.json"
 if cmp -s "$BJ" "$TMP/s.json"; then bad "F2-mutation: the staged-section drop did not apply"
 elif [ -n "$VAULT_DIR" ]; then schema_drift "$TMP/s.json" "$VAULT_DIR" >/dev/null && bad "F2-mutation: the apps section dropped (the #713 miss) was NOT caught by the drift check" || ok "F2-mutation: the apps section dropped from the skeleton (the #713 miss) → drift RED"

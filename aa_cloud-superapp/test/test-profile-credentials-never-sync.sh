@@ -238,7 +238,7 @@ hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel setti
 has "$FRAGMENT" 'private fun renderPerson('                             "Setup has the contact card (renderPerson)"
 hasnt_code "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
 hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
-has "$FRAGMENT" 'journey_import_file'                                   "the manual file route survives as the last line of step 4"
+has "$FRAGMENT" 'if (way.kind == KIND_VAULT_FILE) {'                   "the manual file route survives as Connect's Import File line"
 # The orphan-token affordance must stay reachable after the move.
 has "$FRAGMENT" 'pickButton(ctx, "Link the stored token to ${prefs.email.trim()}")' \
     "the orphan-token link affordance survived the redesign"
@@ -299,7 +299,7 @@ for gone in 'Tab("Setup"' 'Tab("Infos"' 'Tab("Connect"' 'Tab("Vault"' 'Tab("Repo
 done
 # NOTHING WAS DROPPED: every surface of the #626 page renders on one of the three.
 has "$FRAGMENT" 'renderJourney(ctx, connect)' "the sign-in journey renders on Connect"
-has "$FRAGMENT" 'renderVault(ctx, connect)'   "the vault fetch renders on Connect"
+has "$FRAGMENT" 'showVaultFetchDialog(line.label)'   "the vault fetch is the Authelia line's own leg on Connect (#766)"
 # #713 Connect ends at the vault export: the credentials read-out (it repeated
 # what each sign-in line says it holds) is gone, and the device pick is Setup's.
 hasnt_code "$FRAGMENT" 'renderTokens(' "the duplicated credentials read-out is gone from Connect"

@@ -298,8 +298,13 @@
     <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
     <string name="vault_connect_header">Configuración del vault</string>
     <string name="vault_connect_caption">Descarga la configuración consolidada del vault: malla, correo, IA, git, sobre mí y autocompletado. Usa dos factores. Con el token de Authelia guardado arriba, el servidor envía un código de un solo uso a la dirección de tu cuenta, y con el token y ese código se descarga el paquete. Lo recibido se muestra en la pestaña Importado y NO se aplica a ninguna app. Solo queda en memoria hasta que se cierra la app, así que no se guarda nada en el almacenamiento del dispositivo.</string>
-    <string name="vault_connect_send_code">1 · Enviarme un código</string>
     <string name="vault_connect_code_hint">código del correo del vault</string>
+    <string name="connect_vault_pill">Configs del vault</string>
+    <string name="connect_vault_title">Configs del vault</string>
+    <string name="connect_vault_go">Descargar</string>
+    <string name="connect_vault_resend">Enviar el código otra vez</string>
+    <string name="connect_vault_caption">Se está enviando un código de un solo uso a tu dirección. Escríbelo aquí para descargar tus configs del vault; llenan %1$s y %2$s. Credencial: %3$s</string>
+    <string name="journey_signed_in_vault">Configs del vault descargadas con %1$s</string>
     <string name="vault_connect_fetch">2 · Descargar configuración</string>
     <string name="vault_connect_no_bearer">Primero guarda arriba un token de Authelia con su correo de cuenta.</string>
     <string name="vault_connect_no_code">Introduce el código del correo.</string>
@@ -354,7 +359,6 @@
     <string name="vault_connect_browser">Iniciar sesión con el navegador (OWebAuth)</string>
     <string name="vault_connect_browser_caption">Inicia sesión en Authelia abajo. La cookie de sesión de %1$s se guarda en memoria para las dos llamadas a la bóveda y muere con la app; nada se escribe en disco. Vuelve a iniciar sesión para renovarla.</string>
     <string name="vault_connect_use_session">Usar esta sesión</string>
-    <string name="vault_connect_auth_state">Autenticación para la bóveda: %1$s</string>
     <string name="vault_connect_auth_bearer">bearer guardado para %1$s</string>
     <string name="vault_connect_auth_cookie">sesión del navegador (solo en memoria)</string>
     <string name="vault_connect_auth_none">ninguna — guarda un bearer arriba o inicia sesión con el navegador</string>
@@ -405,14 +409,11 @@
     <string name="journey_applied">Aplicado %1$s · bóveda %2$s</string>
     <string name="journey_vault_fetched">descargada</string>
     <string name="journey_vault_not_fetched">no descargada</string>
-    <string name="journey_vault_header">Exportación de la bóveda</string>
-    <string name="journey_vault_fetch_open">Descargar y abrir Flota</string>
     <!-- #614 pestaña Repos -->
     <string name="profile_repos_header">Repos</string>
     <string name="profile_repos_caption">Tus repositorios, desde la declaración de la flota. Toca uno para abrirlo.</string>
     <string name="profile_repos_empty">No hay repositorios declarados para esta compilación.</string>
     <string name="journey_import_file_caption">Desde un archivo: la exportación DESCIFRADA de la bóveda — lo que imprime sops -d, el mismo documento que devuelve la descarga del servidor. El archivo cifrado del repositorio se rechaza, y lo dice: este teléfono no tiene clave age.</string>
-    <string name="journey_import_file">Importar desde un archivo</string>
     <string name="journey_fetched">✓ Autenticado · %1$d bytes · tu configuración está aquí; sigue con el paso 2</string>
     <string name="journey_fetched_snack">Configuración descargada</string>
     <string name="journey_identity_only_done">%1$s demostró %2$s</string>

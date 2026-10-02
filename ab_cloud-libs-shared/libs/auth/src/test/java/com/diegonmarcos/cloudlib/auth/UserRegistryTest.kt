@@ -103,6 +103,52 @@ class UserRegistryTest {
         assertEquals(setOf("p-b", "two@t.test"), all.values.map { it.toString() }.toSet())
     }
 
+    /** #766 A vault bundle shaped like cloud-vault's electronics (11950b4), built from the [peers] table:
+     *  every peer that names a vault device sits under it; one entry names no peer (a fleet
+     *  device the registry does not know), and one group is not an object at all. */
+    private fun vaultBundle(): JSONObject {
+        val fleet = JSONObject()
+        peers.filter { it.value[3].isNotBlank() }.forEach { (id, row) ->
+            fleet.put(row[3], JSONObject().put("type", row[1]).put("label", row[0]).put("peer", id)
+                .put("wg_peer", JSONObject().put("wg_ip", row[4]).put("wg_ipv6", "fd00::${row[4].substringAfterLast('.')}")))
+        }
+        fleet.put("stray", JSONObject().put("type", "notebook").put("wg_peer", JSONObject().put("wg_ip", "10.9.9.99")))
+        return JSONObject()
+            .put("electronics", JSONObject().put("fleet", fleet).put("kde_connect", JSONArray()).put("watches", JSONObject().put("pending", true)))
+            .put("about", JSONObject().put("profile", JSONObject().put("name", "Tester Person").put("email", identities[0].first)))
+    }
+
+    @Test fun `#766 the vault bundle carries the registry - each electronics device that names its peer, and the owner's address`() {
+        val reg = UserRegistry.parse(UserRegistry.fromVault(vaultBundle())!!)!!
+        val expected = peers.filter { it.value[3].isNotBlank() }
+        assertEquals(expected.keys, reg.peers.map { it.id }.toSet())
+        expected.forEach { (id, row) ->
+            val p = reg.peer(id)!!
+            assertEquals(row[0], p.label); assertEquals(row[1], p.kind); assertEquals(row[3], p.vaultDevice); assertEquals(row[4], p.wgIp)
+        }
+        assertEquals(listOf(identities[0].first), reg.identities.map { it.email })
+        assertEquals(identities[0].first, reg.primaryIdentity!!.email)
+        assertEquals("Tester Person", reg.name)
+        // A bundle with neither devices nor an address carries no registry.
+        assertNull(UserRegistry.fromVault(JSONObject().put("mail", JSONObject())))
+    }
+
+    @Test fun `#766 adopt answers the picks without an artifact, and never replaces a registry already known`() {
+        val ctx = ApplicationProvider.getApplicationContext<Application>()
+        UserRegistry.Current.registry = null; UserRegistry.Current.artifact = null
+        UserRegistry.adopt(ctx, UserRegistry.fromVault(vaultBundle())!!)
+        assertNull(UserRegistry.Current.artifact)
+        val adopted = UserRegistry.current(ctx)!!
+        // Cached like the artifact's: a fresh process still knows the peers.
+        UserRegistry.Current.registry = null
+        assertEquals(adopted.peers.map { it.id }, UserRegistry.current(ctx)!!.peers.map { it.id })
+        // The artifact's registry, once known, is not overwritten by the vault's poorer one.
+        UserRegistry.remember(ctx, artifact())
+        UserRegistry.adopt(ctx, UserRegistry.fromVault(vaultBundle())!!)
+        assertEquals(peers.keys.toList(), UserRegistry.current(ctx)!!.peers.map { it.id })
+        UserRegistry.Current.registry = null; UserRegistry.Current.artifact = null
+    }
+
     @Test fun `the real emitted artifact, when checked out beside this repo, holds the same invariants`() {
         val f = listOf("../../../../cloud-infra", "../../../cloud-infra", "../../cloud-infra", "../cloud-infra")
             .map { File(it, "1_cloud-configs/dist/build-cloud-superapp-diego.json") }.firstOrNull { it.isFile }

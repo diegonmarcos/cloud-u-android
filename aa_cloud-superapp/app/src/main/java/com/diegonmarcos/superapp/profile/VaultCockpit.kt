@@ -118,7 +118,8 @@ object VaultCockpit {
                 if (peer.optBoolean("pending")) return@forEach
                 val ip = peer.optString("wg_ip")
                 if (ip.isBlank()) return@forEach
-                out += Device(id, peer.optString("name").ifBlank { id }, ip, peer.optString("wg_ipv6"),
+                // #766 the device's own label (the vault carries it since 11950b4), else the tunnel's client name.
+                out += Device(id, entry.optString("label").ifBlank { peer.optString("name") }.ifBlank { id }, ip, peer.optString("wg_ipv6"),
                     (entry.opt("type") as? String).orEmpty())
             }
         }

@@ -6118,7 +6118,7 @@
       "connect": {
         "lines": [
           { "id": "authelia", "label": "Authelia → Gitea",
-            "note": "Cloud git (gitea) rides this same Authelia session in cloud-drive, but through the public edge gitea does not yet know who you are: private repositories stay invisible there until the fleet identity is mapped to a gitea user. The vault configs below come through the fleet's vault route, which works today.",
+            "note": "Cloud git (gitea) rides this same Authelia session in cloud-drive, but through the public edge gitea does not yet know who you are: private repositories stay invisible there until the fleet identity is mapped to a gitea user. Signing in here also fetches the vault configs, through the fleet's vault route and the one-time code it mails to your address.",
             "ways": [
               { "id": "webauth", "label": "WebAuth", "kind": "authelia_web" },
               { "id": "bearer",  "label": "Bearer",  "kind": "authelia_bearer" }
@@ -6161,7 +6161,7 @@
             { "id": "autocomplete", "label": "Autocomplete",
               "fields": ["manifest", "default", "about_me", "agents", "cloud_keys", "personal_data", "urls_pub"] },
             { "id": "electronics", "label": "Electronics",
-              "fields": ["computers › surface › type", "computers › surface › wg_peer", "computers › surface › mac", "phones › galaxy › type", "phones › galaxy › wg_peer", "phones › galaxy › model_and_mac", "watches", "other_devices", "kde_connect"] },
+              "fields": ["fleet", "models_and_macs", "watches", "other_devices", "kde_connect"] },
             { "id": "apps", "label": "Apps", "staged": true, "render": "apps", "route": "page:config/store-phone",
               "fields": ["devices › galaxy › fleet", "devices › galaxy › foreign", "devices › galaxy › skeleton", "devices › surface › fleet"] },
             { "id": "peers", "label": "Peers", "staged": true,

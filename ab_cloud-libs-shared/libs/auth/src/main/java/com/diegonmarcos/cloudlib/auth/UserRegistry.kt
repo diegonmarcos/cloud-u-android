@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudlib.auth
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -71,6 +72,50 @@ object UserRegistry {
             peers = peerList,
             authProviders = (0 until (ap?.length() ?: 0)).map { ap!!.getString(it) },
         )
+    }
+
+    /**
+     * #766 THE REGISTRY A VAULT LANDING CARRIES, in the artifact's own shape so [parse]
+     * reads it: every `electronics.<group>.<device>` entry that names its registry `peer`
+     * (the vault derives them from the ONE user declaration, cloud-vault 11950b4) becomes
+     * that peer — its label, type, `vault_device` = the entry's key, `wg0` = its `wg_peer`
+     * — and `about.profile` gives the name and the one identity. Null when the bundle
+     * carries neither. GitHub WebAuth / SSH / PAT and Import File fetch only the vault, so
+     * without this the device pick on Connect stayed locked on every route but Authelia's.
+     */
+    fun fromVault(bundle: JSONObject): JSONObject? {
+        val peers = JSONObject()
+        val el = bundle.optJSONObject("electronics")
+        el?.keys()?.forEach { g ->
+            val group = el.optJSONObject(g) ?: return@forEach
+            group.keys().forEach { device ->
+                val e = group.optJSONObject(device) ?: return@forEach
+                val id = e.optString("peer").takeIf { it.isNotBlank() } ?: return@forEach
+                val p = JSONObject().put("label", e.optString("label", id)).put("kind", e.optString("type")).put("vault_device", device)
+                e.optJSONObject("wg_peer")?.takeUnless { it.optBoolean("pending") }?.let {
+                    p.put("wg0", JSONObject().put("wg_ip", it.optString("wg_ip")).put("wg_ipv6", it.optString("wg_ipv6")))
+                }
+                peers.put(id, p)
+            }
+        }
+        val profile = bundle.optJSONObject("about")?.optJSONObject("profile")
+        val email = profile?.optString("email").orEmpty()
+        if (peers.length() == 0 && email.isBlank()) return null
+        return JSONObject()
+            .put("profile", JSONObject().put("name", profile?.optString("name").orEmpty()))
+            .put("identities", JSONArray().apply { if (email.isNotBlank()) put(JSONObject().put("email", email).put("primary", true)) })
+            .put("peers", peers)
+    }
+
+    /**
+     * #766 Adopt [root]'s registry with NO artifact to apply: steps 2 and 3 answer,
+     * [Current.artifact] is untouched. A registry already known wins — the artifact's
+     * is the richer one (it carries each peer's profiles).
+     */
+    fun adopt(ctx: Context, root: JSONObject) {
+        if (current(ctx) != null) return
+        Current.registry = parse(root) ?: return
+        prefs(ctx).edit().putString(K_REGISTRY, registryOnly(root).toString()).apply()
     }
 
     /** `peers.<id>.wireguard.<profile>.config_text` — the redacted wg-quick texts of one peer. */

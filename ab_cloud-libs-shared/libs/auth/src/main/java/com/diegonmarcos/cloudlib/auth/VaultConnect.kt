@@ -167,5 +167,7 @@ object VaultConnect {
         @Volatile var last: List<Section>? = null
         /** The same fetch, unflattened — what the Fleet tab's sections read. */
         @Volatile var bundle: JSONObject? = null
+        /** #766 Which Connect way fetched it, in that way's declared words ("" = none yet). */
+        @Volatile var via: String = ""
     }
 }

@@ -47,6 +47,9 @@ class VaultCockpitTest {
         assertTrue("fixture must have a pending group", e.has("watches"))
         assertEquals(want.toSet(), got.map { it.id to it.wgIp }.toSet())
         assertEquals("termux-galaxy", got.first { it.id == "galaxy" }.label)
+        // #766 the vault's own device label wins over the tunnel's client name.
+        b.getJSONObject("electronics").getJSONObject("phones").getJSONObject("galaxy").put("label", "Samsung Galaxy S21+")
+        assertEquals("Samsung Galaxy S21+", VaultCockpit.devices(b).first { it.id == "galaxy" }.label)
     }
 
     @Test fun `a mesh profile belongs to the device whose declared address it carries`() {

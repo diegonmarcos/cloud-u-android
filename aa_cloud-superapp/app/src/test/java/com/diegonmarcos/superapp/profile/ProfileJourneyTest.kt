@@ -148,6 +148,21 @@ class ProfileJourneyTest {
         assertTrue(ProfileJourney.bodyOpen(Phase.FAILED))
     }
 
+    @Test fun `#766 a vault landing alone is a sign-in, its registry answers who and which device, and step 4 is not a re-fetch`() {
+        val fetched = State(vaultFetched = true)
+        assertTrue(fetched.signedIn)
+        assertEquals(Phase.DONE, ProfileJourney.phase(fetched, Step.SIGN_IN))
+        // No registry yet → the same lock as any sign-in without one, never "sign in first".
+        assertEquals(Lock.NO_REGISTRY, ProfileJourney.lock(fetched, Step.WHO))
+        val picked = fetched.copy(registry = registry(), identity = primaryEmail, peer = otherPeer)
+        assertEquals(Phase.DONE, ProfileJourney.phase(picked, Step.DEVICE))
+        assertNull(ProfileJourney.lock(picked, Step.GET))
+        assertEquals(Phase.ACTIVE, ProfileJourney.phase(picked, Step.GET))
+        // The control: the same picks with neither the artifact nor the vault in memory ask for a re-fetch.
+        assertEquals(Lock.REFETCH, ProfileJourney.lock(picked.copy(vaultFetched = false, storedBearerEmail = primaryEmail), Step.GET))
+        assertFalse(State().signedIn)
+    }
+
     @Test fun `every phase maps to a distinct shared light and only active or failed bodies are open`() {
         val lights = Phase.values().map { ProfileJourneyView.light(it) }
         assertEquals(Phase.values().size, lights.toSet().size)
