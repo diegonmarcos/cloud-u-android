@@ -3,4 +3,6 @@
      permission declared in this module's AndroidManifest.xml. -->
 <resources>
     <string name="perm_constellation_data">Read and write data belonging to other Cloud constellation apps. Granted automatically to apps signed with the Cloud signing key.</string>
+    <!-- #777 the channel FleetAlerts falls back to when the SuperApp cannot collect an alert. -->
+    <string name="fleet_alerts_channel">Alerts</string>
 </resources>

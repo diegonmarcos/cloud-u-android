@@ -56,9 +56,9 @@ object BadgeCustomization {
     // coming back.
 
     /** Owner switch. A badge switched off here is not posted and not
-     *  re-ensured after an update. */
+     *  re-ensured after an update. #777: so is a badge whose GROUP is off. */
     fun isEnabled(ctx: Context, badge: Badge): Boolean =
-        badge.enabled && bool(ctx, badge, KEY_ENABLED)
+        badge.enabled && bool(ctx, badge, KEY_ENABLED) && NotifyGroups.allows(ctx, badge.id)
 
     /**
      * Whether the badge holds its place in the shade when it has nothing to

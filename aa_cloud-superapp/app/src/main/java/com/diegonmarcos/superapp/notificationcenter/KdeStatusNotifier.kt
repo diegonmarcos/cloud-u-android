@@ -77,7 +77,7 @@ object KdeStatusNotifier {
             .setOngoing(pinned)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setGroup("nc_kde")
+            .let { NotifyGroups.attach(ctx, it, BADGE_ID) } // #777 group G2
             .addAction(R.drawable.ic_kde_share, "Share", sharePi)
             .addAction(R.drawable.ic_kde_desktop, "Desktop", KdeQuickActionReceiver.pi(ctx, "desktop"))
             .addAction(R.drawable.ic_kde_ping, "Ping", KdeQuickActionReceiver.pi(ctx, "ping"))

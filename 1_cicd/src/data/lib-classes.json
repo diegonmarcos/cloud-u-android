@@ -20,7 +20,7 @@
     "calc":                    { "class": "engine",   "why": "#767 Cloud-Lib-Calc: libqalculate as a pinned libqalc.so behind CalcBackendService; cloud-calc binds it." },
     "chat":                    { "class": "gui",      "why": "SuperApp chat screens." },
     "contacts":                { "class": "pinned",   "why": "DeviceContacts reads the CALLER's READ_CONTACTS; runtime permissions are per package, so the engine process would read nothing (libs-backend-split)." },
-    "core":                    { "class": "mesh",     "why": "CONSTELLATION_DATA and the IDataBackend client.", "budget_lines": 1550 },
+    "core":                    { "class": "mesh",     "why": "CONSTELLATION_DATA, the IDataBackend client and (#777) FleetAlerts, the fleet alerts client every app raises through. +50 lines for it: the alert API has to be in-process in every app, which is what mesh means.", "budget_lines": 1600 },
     "cropper":                 { "class": "gui",      "why": "Upstream image-cropper UI, media-center only." },
     "datamanager":             { "class": "pinned",   "why": "PACKAGE_USAGE_STATS is special access granted per package in Settings; an engine would need a second grant (libs-backend-split)." },
     "devtools":                { "class": "mesh",     "why": "Per-process debug server, FleetTokenProvider, FleetMemberReceiver, DebugInitProvider.", "budget_lines": 1670 },

@@ -46,14 +46,15 @@ object BadgeServices {
 
     data class Status(val badge: Badge, val state: State, val reason: String)
 
-    /** The declaration as this build baked it. */
-    val declared: List<Badge> by lazy {
-        runCatching {
-            BadgeDeclaration.parse(
-                String(Base64.decode(BuildConfig.UI_NOTIFICATION_CENTER_B64, Base64.NO_WRAP)),
-            )
-        }.getOrDefault(emptyList())
+    /** `ui.notification_center` as this build baked it — producers AND, since
+     *  #777, the groups ([NotifyGroups.declared]) read from this one text. */
+    internal val declaredJson: String by lazy {
+        runCatching { String(Base64.decode(BuildConfig.UI_NOTIFICATION_CENTER_B64, Base64.NO_WRAP)) }
+            .getOrDefault("{}")
     }
+
+    /** The declaration as this build baked it. */
+    val declared: List<Badge> by lazy { BadgeDeclaration.parse(declaredJson) }
 
     /**
      * Re-ensure every persistent badge's owning service. Called from
@@ -134,6 +135,9 @@ object BadgeServices {
      */
     fun launch(ctx: Context, b: Badge): String? {
         val s = status(ctx, b)
+        // #777: an on-demand badge (no service — the Alerts group) is put back
+        // by re-drawing it from its store.
+        if (b.service.isBlank() && s.state == State.LIVE) { AlertsNotifier.refresh(ctx); return null }
         return when (s.state) {
             State.DISABLED, State.BLOCKED, State.NO_SERVICE -> s.reason
             else -> if (start(ctx.applicationContext, b.service)) null
@@ -155,8 +159,11 @@ object BadgeServices {
     fun clearNonBadges(ctx: Context) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val keep = BadgeDeclaration.badges(declared).map { it.channel }.toSet()
+        // #777: anything posted into one of the four groups is a badge too —
+        // the group summaries and the urgent-alerts channel included.
+        val groups = NotifyGroups.declared.map(NotifyGroups::key).toSet()
         for (sbn in nm.activeNotifications) {
-            if (sbn.notification.channelId !in keep) nm.cancel(sbn.tag, sbn.id)
+            if (sbn.notification.channelId !in keep && sbn.notification.group !in groups) nm.cancel(sbn.tag, sbn.id)
         }
     }
 
@@ -203,6 +210,11 @@ object BadgeServices {
         if (!BadgeCustomization.isEnabled(ctx, b))
             return Status(b, State.DISABLED, "Switched off below.")
         missingRequirement(ctx, b)?.let { return Status(b, State.BLOCKED, it) }
+        // #777: no service = posted on demand (the Alerts group posts when an
+        // alert arrives). Nothing posted then means nothing to say, not dead.
+        if (b.service.isBlank() && b.owner.isNotBlank())
+            return Status(b, State.LIVE,
+                if (live(ctx, b) != null) "Posted on demand." else "Posted on demand — nothing to show right now.")
         if (b.service.isBlank())
             return Status(b, State.NO_SERVICE, "No owning service is declared for this badge.")
         return if (isServiceRunning(ctx, b.service))

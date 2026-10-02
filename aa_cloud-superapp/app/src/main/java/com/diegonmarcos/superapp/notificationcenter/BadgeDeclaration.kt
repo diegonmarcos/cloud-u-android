@@ -81,6 +81,43 @@ object BadgeDeclaration {
         val instruments: List<Instrument> = emptyList(),
     )
 
+    /**
+     * #777 — one shade group (`ui.notification_center.groups`): the bundle its
+     * [members] (producer ids) are posted under. [alerts] marks the fleet
+     * alerts group, so nothing has to recognise it by name.
+     */
+    data class Group(
+        val id: String,
+        val label: String,
+        val members: List<String>,
+        val alerts: Boolean,
+        val maxInShade: Int,
+    )
+
+    /** The declared groups, in declared (= default) order. A group with no id
+     *  or no members is dropped: it could only ever post an empty summary. A
+     *  member named by two groups stays in the FIRST — one notification has
+     *  one group key. */
+    fun groups(json: String): List<Group> {
+        val arr = runCatching { JSONObject(json) }.getOrNull()?.optJSONArray("groups") ?: return emptyList()
+        val seen = mutableSetOf<String>()
+        val out = mutableListOf<Group>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("id")
+            val members = strings(o.optJSONArray("members")).filter { seen.add(it) }
+            if (id.isBlank() || members.isEmpty()) continue
+            out += Group(
+                id = id,
+                label = o.optString("label", id),
+                members = members,
+                alerts = o.optBoolean("alerts", false),
+                maxInShade = o.optInt("max_in_shade", 20).coerceIn(1, 40),
+            )
+        }
+        return out
+    }
+
     /** Parse the whole declaration. A producer with no id or no label is
      *  dropped rather than drawn half-blank — that is a parse error, not a
      *  producer, and a half-blank row on a settings page is invisible. */

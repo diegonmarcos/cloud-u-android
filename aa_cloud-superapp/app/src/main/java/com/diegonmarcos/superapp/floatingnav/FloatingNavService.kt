@@ -59,7 +59,6 @@ class FloatingNavService : Service() {
 
     private val cfg by lazy { FloatingNavConfig.get() }
     private val media by lazy { MediaProxy(this) }
-    private val infos by lazy { InfosNotifier(this) }
     private lateinit var wm: WindowManager
     private val main = Handler(Looper.getMainLooper())
 
@@ -90,7 +89,6 @@ class FloatingNavService : Service() {
         isRunning = true
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         startForeground(NOTIF_ID, buildNotification())
-        runCatching { infos.refresh() } // grouped Infos notification (sample data)
         FloatingNavPrefs.observe(this, prefListener)
         main.post(pollTick)
     }
@@ -110,12 +108,12 @@ class FloatingNavService : Service() {
             }
             ACTION_RESET_POSITION -> main.post { resetPosition() }
             // #535: a BARE start is BadgeServices.launch (or the platform's sticky
-            // restart) — put back every badge this service owns. Media and Alerts
-            // dedupe against what they last posted, so without this a badge that
-            // was removed from the shade is never re-posted while the service runs.
+            // restart) — put back every badge this service owns. Media dedupes
+            // against what it last posted, so without this a badge that was
+            // removed from the shade is never re-posted while the service runs.
+            // (#777: Alerts left this service — AlertsNotifier draws it.)
             null -> main.post {
                 runCatching { media.repost() }
-                runCatching { infos.refresh() }
                 runCatching {
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                         .notify(NOTIF_ID, buildNotification())
@@ -142,7 +140,7 @@ class FloatingNavService : Service() {
         main.removeCallbacksAndMessages(null)
         removeBubble(); removeBar()
         runCatching { media.cancel() }
-        runCatching { infos.cancel() }
+        com.diegonmarcos.superapp.notificationcenter.NotifyGroups.release(this, QUICK_ACTIONS_BADGE_ID)
         super.onDestroy()
     }
 
@@ -411,7 +409,6 @@ class FloatingNavService : Service() {
             "dnd" -> toggleDnd()
             "powersave" -> openPowerSaver()
             "screensaver" -> ScreensaverService.start(this)
-            "infos:renotify" -> runCatching { infos.refresh() }
             else -> when {
                 // Media transport (Prev/Play-Pause/Next) → active session.
                 target.startsWith("media:") -> media.transport(target)
@@ -572,8 +569,8 @@ class FloatingNavService : Service() {
             .apply { if (pinned) setDeleteIntent(serviceAction(ACTION_RENOTIFY)) }
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            // Own group so Android doesn't auto-bundle the NC notifications.
-            .setGroup("nc_quick_actions")
+            // #777 group G2 (Quick Actions · KDE Connect).
+            .let { com.diegonmarcos.superapp.notificationcenter.NotifyGroups.attach(this, it, QUICK_ACTIONS_BADGE_ID) }
         val acts = cfg.actions.take(5)
         for (a in acts) b.addAction(actionIcon(a.target), a.label, actionPi(a.target))
         val compact = IntArray(minOf(cfg.compactActionCount, acts.size)) { it }

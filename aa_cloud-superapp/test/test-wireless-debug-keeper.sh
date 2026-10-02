@@ -27,7 +27,8 @@
 #   T7  App start and BOOT_COMPLETED both go through sync().
 #   T8  PrivilegedPlaneWorker's own boot-time write honours the switch — else
 #       OFF is undone on every launch — and it is never on a period.
-#   T9  the owner notice deep-links into Developer options, ongoing.
+#   T9  the owner notice deep-links into Developer options and stays until withdrawn
+#       (#777: a fleet alert under one dedupe key, not a channel of its own).
 #   T10 switching Wireless debugging itself from the panel moves the keep-alive
 #       with it, so the watchdog never fights the owner's hand.
 #   T11 the switch is declared in build.json with its shipped default.
@@ -170,11 +171,12 @@ else
 fi
 
 # T9
-if grep -q 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' <<<"$NOTIFY" && grep -q 'setContentIntent' <<<"$NOTIFY" \
-   && grep -q 'setOngoing(true)' <<<"$NOTIFY" && grep -q 'notifyOwner(ctx)' <<<"$DOWORK"; then
-  ok "T9 a rejected re-arm posts an ongoing notice that opens Developer options"
+if grep -q 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' <<<"$NOTIFY" && grep -q 'FleetAlerts.raise' <<<"$NOTIFY" \
+   && grep -q 'deepLink' <<<"$NOTIFY" && grep -q 'dedupeKey' <<<"$NOTIFY" \
+   && grep -q 'FleetAlerts.withdraw' "$KEEPER" && grep -q 'notifyOwner(ctx)' <<<"$DOWORK"; then
+  ok "T9 a rejected re-arm raises an alert that opens Developer options and is withdrawn once fixed"
 else
-  bad "T9 the owner notice is missing, not ongoing, or not one tap from Developer options"
+  bad "T9 the owner alert is missing, not one tap from Developer options, or never withdrawn"
 fi
 
 # T10

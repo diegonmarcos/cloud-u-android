@@ -42,6 +42,11 @@ class KdeStatusService : Service() {
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        NotifyGroups.release(this, KdeStatusNotifier.BADGE_ID)
+        super.onDestroy()
+    }
+
     private fun repost() {
         runCatching {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)

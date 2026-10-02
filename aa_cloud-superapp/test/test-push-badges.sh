@@ -39,11 +39,18 @@ APPKT="$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt"
 MEDIA="$APP/app/src/main/java/com/diegonmarcos/superapp/floatingnav/MediaProxy.kt"
 
 echo "== T1: every badge is declared persistent and names an owning service =="
+# #777: the ONE exception is the fleet Alerts group's member — it is posted on
+# demand (when an alert arrives) by AlertsNotifier, so it has nothing to keep
+# alive and nothing to restart. It is exempted by the `alerts: true` flag of its
+# group, never by its id.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
-ps = json.load(open(sys.argv[1]))['ui']['notification_center']['producers']
-badges = [p for p in ps if p.get('badge')]
+nc = json.load(open(sys.argv[1]))['ui']['notification_center']
+ps = nc['producers']
+on_demand = {m for g in nc.get('groups', []) if g.get('alerts') for m in g.get('members', [])}
+badges = [p for p in ps if p.get('badge') and p['id'] not in on_demand]
 if not badges:                                   print('no producer has badge=true')
+elif len(on_demand) > 1:                         print('more than one on-demand alerts member: %s' % sorted(on_demand))
 else:
     bad = [p['id'] for p in badges if not p.get('persistent')]
     noservice = [p['id'] for p in badges if not p.get('service')]
@@ -146,7 +153,7 @@ elif 'BadgeServices.status' not in code:
 else:
     # No badge id may be spoken in the pane's own code.
     hard = [i for i in ('kde_status', 'media_now_playing', 'floating_nav_quick_actions',
-                        'infos_alerts', 'health_activity') if i in code]
+                        'fleet_alerts', 'health_activity') if i in code]
     if hard: print('pane hardcodes badge ids: %s' % hard)
     else:    print('OK')
 PY

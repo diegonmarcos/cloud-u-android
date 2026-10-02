@@ -71,6 +71,7 @@ class WeatherBadgeService : Service() {
     override fun onDestroy() {
         tick?.let(main::removeCallbacks)
         scope.cancel()
+        NotifyGroups.release(this, BADGE_ID)
         super.onDestroy()
     }
 
@@ -213,6 +214,7 @@ class WeatherBadgeService : Service() {
                     setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$rows"))
                 }
             }
+            .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()
     }
 

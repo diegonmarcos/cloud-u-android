@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
+import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationListenerService
 import com.diegonmarcos.superapp.R
 
@@ -91,6 +92,9 @@ class MediaProxy(private val ctx: Context) {
 
     /** (Re)post the media notification for the current session, or cancel it. */
     fun refresh() {
+        // #777: switched off here or by its group → out of the shade, not
+        // merely not re-posted.
+        if (decl?.let { BadgeCustomization.isEnabled(ctx, it) } == false) { cancel(); return }
         val c = activeController()
         if (c == null) {
             // A persistent badge holds its place with an idle state rather
@@ -121,7 +125,7 @@ class MediaProxy(private val ctx: Context) {
             // #515: declared, not derived from `playing`. See [persistent].
             .setOngoing(persistent() || playing)
             .apply { if (persistent() || playing) setDeleteIntent(pi(REPOST)) }
-            .setGroup("nc_media") // own group → not auto-bundled with the others
+            .let { NotifyGroups.attach(ctx, it, BADGE_ID) } // #777 group G3
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (art != null) b.setLargeIcon(art)
         b.addAction(android.R.drawable.ic_media_previous, "Prev", pi("media:prev"))
@@ -161,7 +165,7 @@ class MediaProxy(private val ctx: Context) {
             .setOnlyAlertOnce(true)
             .setOngoing(persistent())
             .setDeleteIntent(pi(REPOST))
-            .setGroup("nc_media")
+            .let { NotifyGroups.attach(ctx, it, BADGE_ID) }
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         // Play is the only transport that means anything with no session; the
         // other two would be buttons that silently do nothing.
@@ -169,7 +173,10 @@ class MediaProxy(private val ctx: Context) {
         runCatching { nm().notify(NOTIF_MEDIA, b.build()) }
     }
 
-    fun cancel() { runCatching { nm().cancel(NOTIF_MEDIA) }; lastKey = null }
+    fun cancel() {
+        runCatching { nm().cancel(NOTIF_MEDIA) }; lastKey = null
+        NotifyGroups.release(ctx, BADGE_ID)
+    }
 
     /** Media transport keeps the shade OPEN (unlike the Main quick actions), so
      *  it's a plain service PendingIntent, not the close-shade trampoline. */

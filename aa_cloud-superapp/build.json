@@ -8243,9 +8243,34 @@
         }
       ]
     },
-    "_doc_notification_center": "Configs ▸ Launcher ▸ Notify ▸ persistent badges (#497; the Push tab until #580 merged it into Notify) — the ONE declaration of every notification-center / badge producer this app ships, and the source the badge panes render verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: BadgePanes iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is declared, not necessarily live-wired: `infos_alerts` is the one producer whose Kotlin already branches on it (InfosNotifier reads ui.notification_infos.enabled, see below) — every other `enabled` here is what this build ships with and is read-only from the badge panes today, same honesty rule Control's `observed` flag states explicitly rather than implying. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
+    "_doc_notification_center": "Configs ▸ Launcher ▸ Notify ▸ persistent badges (#497; the Push tab until #580 merged it into Notify) — the ONE declaration of every notification-center / badge producer this app ships, and the source the badge panes render verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: BadgePanes iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is the declared default of the owner's per-badge switch (BadgeCustomization); since #777 a badge is shown only when its switch AND its group's switch (`groups` below) are on. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
     "notification_center": {
       "_doc": "One entry per PRODUCER. `badge` is what splits a shade badge from the rest of the channel inventory: true means this producer puts a PERSISTENT entry in the notification centre, and Configs > Home > Push renders exactly those — one box in section 1, one customization menu in section 2, derived, never a hand-kept name list. `persistent` means it must survive an app update and a reboot: BadgeRestartReceiver re-ensures every persistent producer's `service` on MY_PACKAGE_REPLACED / BOOT_COMPLETED. Before that existed, only KdeStatusService restarted itself (App.kt) and everything owned by FloatingNavService — Quickmarks, Media, Alerts — stayed dead after an update. `requires` names the grants a badge needs so a dead badge can say WHY instead of reading absent. Adding a badge means adding an entry HERE and nothing else.",
+      "_doc_groups": "#777 THE FOUR shade groups of Configs ▸ Launcher ▸ Notify, as data: NotifyGroups gives every member's notification its group's key (setGroup) and posts one summary per group, so the shade shows four bundles instead of seven loose badges. `members` are producer ids below, in the order they sort inside the group; a producer in no group posts ungrouped. Group order and on/off are the owner's (Notify page, stored per group id); the declaration order is the default order. `alerts: true` marks the group whose member is the fleet alerts channel (FleetAlerts → AlertStore → AlertsNotifier); the Notify page draws its filters and Clear all from that flag, never from a name. `max_in_shade` caps how many alert children are posted (the store keeps more; Android drops an app's notifications past ~50).",
+      "groups": [
+        {
+          "id": "live",
+          "label": "Markets · Health · Weather",
+          "members": ["markets_prices", "health_activity", "weather_today"]
+        },
+        {
+          "id": "actions",
+          "label": "Quick Actions · KDE Connect",
+          "members": ["floating_nav_quick_actions", "kde_status"]
+        },
+        {
+          "id": "media",
+          "label": "Media Player",
+          "members": ["media_now_playing"]
+        },
+        {
+          "id": "alerts",
+          "label": "Alerts",
+          "members": ["fleet_alerts"],
+          "alerts": true,
+          "max_in_shade": 20
+        }
+      ],
       "producers": [
         {
           "id": "kde_status",
@@ -8417,22 +8442,20 @@
           ]
         },
         {
-          "id": "infos_alerts",
-          "label": "Grouped alerts",
-          "subtitle": "The bundled 'Cloud SA - Alerts' summary — content and on/off declared in ui.notification_infos below.",
+          "id": "fleet_alerts",
+          "label": "Alerts",
+          "subtitle": "#777 The fleet's ONE alerts channel. Every Cloud app raises its user-facing alerts through FleetAlerts (libs:core) and they land here, one child per alert under one 'Cloud SA - Alerts' summary. Only real alerts: an empty store posts nothing. It replaced the 'Grouped alerts' badge, which showed sample data baked from ui.notification_infos.",
           "icon": "ic_stat_notify",
           "surface": "system_notification",
-          "channel": "floating_nav_infos",
-          "owner": "floatingnav/InfosNotifier.kt",
+          "channel": "fleet_alerts",
+          "owner": "notificationcenter/AlertsNotifier.kt",
           "shows_badge": true,
           "enabled": true,
           "badge": true,
-          "persistent": true,
-          "service": "com.diegonmarcos.superapp.floatingnav.FloatingNavService",
-          "requires": [
-            "overlay"
-          ],
-          "shows": "One collapsed summary row per declared alert group.",
+          "persistent": false,
+          "service": "",
+          "requires": [],
+          "shows": "One row per alert a fleet app raised: app, severity, title, text; tap opens the alert's deep link.",
           "customization": [
             {
               "key": "enabled",
@@ -8443,25 +8466,8 @@
             {
               "key": "persistent",
               "type": "toggle",
-              "label": "Keep it pinned (ongoing)",
-              "default": true
-            },
-            {
-              "key": "importance",
-              "type": "choice",
-              "label": "Importance",
-              "options": [
-                "min",
-                "low",
-                "default"
-              ],
-              "default": "low"
-            },
-            {
-              "key": "actions",
-              "type": "toggle",
-              "label": "Show action buttons",
-              "default": true
+              "label": "Keep the summary pinned (ongoing)",
+              "default": false
             }
           ]
         },
@@ -8703,10 +8709,10 @@
         {
           "id": "recovery_advisory",
           "label": "Recovery advisory",
-          "subtitle": "A HIGH-importance 'fleet-advisory-v1' notification for install/repair advisories, rate-limited by the updater.",
+          "subtitle": "Install/repair advisories, rate-limited by the updater. #777: raised through FleetAlerts into the Alerts group (STUCK = error, on the HIGH-importance 'fleet_alerts_urgent' channel), no longer a channel of its own.",
           "icon": "ic_stat_notify",
           "surface": "system_notification",
-          "channel": "fleet-advisory-v1",
+          "channel": "fleet_alerts_urgent",
           "owner": "recovery/RecoveryNotifier.kt",
           "shows_badge": false,
           "enabled": true,
@@ -8714,7 +8720,7 @@
           "persistent": false,
           "service": "",
           "requires": [],
-          "not_badge_reason": "Transient alert — setAutoCancel(true) (RecoveryNotifier.kt:96); it leaves the shade when tapped.",
+          "not_badge_reason": "Not a badge of its own: each advisory is one alert inside the Alerts group (fleet_alerts), withdrawn once resolved.",
           "customization": []
         },
         {
@@ -8750,39 +8756,6 @@
           "requires": [],
           "not_badge_reason": "The home-screen icon dot, not an entry in the notification shade.",
           "customization": []
-        }
-      ]
-    },
-    "_doc_notification_infos": "'Cloud SuperApp - Notification Center Infos' — a WhatsApp-style grouped notification (InfosNotifier). Collapsed = a summary listing the groups; expanding the bundle reveals one child notification per group, each itself expandable to show that group's messages. Data-driven sample for now (point it at a real feed later). Each group: title + messages[].",
-    "notification_infos": {
-      "enabled": true,
-      "groups": [
-        {
-          "title": "Cloud SA - Alerts/Comms",
-          "messages": [
-            "Diego: ping?",
-            "Team: standup at 10:00",
-            "Alice: shared a file"
-          ]
-        },
-        {
-          "title": "Cloud SA - Alerts/Cloud",
-          "messages": [
-            "oci-apps: all services healthy",
-            "backup: restic → OCI done 03:00"
-          ]
-        },
-        {
-          "title": "Cloud SA - Alerts/App",
-          "messages": [
-            "App up to date"
-          ]
-        },
-        {
-          "title": "Cloud SA - Alerts",
-          "messages": [
-            "No open incidents"
-          ]
         }
       ]
     },

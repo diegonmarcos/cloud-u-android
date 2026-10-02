@@ -43,6 +43,19 @@ class CoreInitProvider : ContentProvider() {
         // out of a provider's onCreate takes the whole process down before
         // Application.onCreate ever runs.
         runCatching { Telemetry.installCrashHandler(ctx) }
+        // #777: /api/fleetalert/raise in EVERY fleet app, so "an app raises an
+        // alert while the SuperApp is stopped" is checkable on the phone with
+        // the screen locked — the alert goes through the real FleetAlerts path.
+        runCatching {
+            com.diegonmarcos.superapp.devtools.AppDebugServer.route("fleetalert",
+                listOf(com.diegonmarcos.superapp.devtools.AppDebugServer.Op("raise",
+                    "title, text, severity, deep_link, dedupe_key", "raise a fleet alert from THIS app; says where it went"))) { op, q ->
+                if (op != "raise") null else """{"delivery":"${FleetAlerts.raise(ctx, FleetAlerts.Alert(
+                    title = q["title"].orEmpty().ifBlank { "Test alert" }, text = q["text"].orEmpty(),
+                    severity = q["severity"].orEmpty().ifBlank { FleetAlerts.INFO },
+                    deepLink = q["deep_link"].orEmpty(), dedupeKey = q["dedupe_key"].orEmpty())).name}"}"""
+            }
+        }
         return true
     }
 

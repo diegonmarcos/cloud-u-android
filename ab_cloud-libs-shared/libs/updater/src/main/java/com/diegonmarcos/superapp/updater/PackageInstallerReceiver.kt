@@ -14,6 +14,7 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.core.NotificationStore
 
 /**
@@ -157,7 +158,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                         "your confirmation and then supplied no screen to ask it on. Nothing " +
                         "was installed. The downloaded file is kept — try the row's Direct " +
                         "button, which uses the ordinary system installer.",
-                        severity = NotificationStore.Sev.ERROR)
+                        severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
                     return
                 }
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -219,7 +220,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                             "$subject was not installed: Android needs one tap to confirm, and " +
                             "the notification carrying it is blocked because notifications are " +
                             "off for this app. Allow notifications, or open the app and retry.",
-                            severity = NotificationStore.Sev.ERROR)
+                            severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
                         return
                     }
                 }
@@ -259,7 +260,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // Uninstall never raised the overlay, so leave it alone.
                 if (!isUninstall && !unattended) UpdateProgress.update(UpdateProgress.State.Done)
                 surface(context, "${verb}ed ✓", "$appName ${verb.lowercase()}ed successfully.",
-                    severity = NotificationStore.Sev.INFO)
+                    severity = NotificationStore.Sev.INFO, key = "${verb.lowercase()}:$gateKey")
             }
             else -> {
                 releaseGate()   // terminal (failure/abort): unblock the queue
@@ -317,7 +318,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     "(${legacyName ?: "none"}) other=$other msg=${message.ifEmpty { "-" }} " +
                     "extras=${intent.extras?.keySet()?.joinToString(",") ?: "-"}")
                 surface(context, "$verb failed: $label", message.ifEmpty { label },
-                    severity = NotificationStore.Sev.ERROR)
+                    severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
             }
         }
     }
@@ -421,7 +422,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         }.getOrDefault(false)
 
     private fun surface(context: Context, short: String, full: String,
-                        severity: String = NotificationStore.Sev.INFO) {
+                        severity: String = NotificationStore.Sev.INFO, key: String = short) {
         // Mirror into the in-app feed so the launcher badge AND the
         // Cloud-SuperApp Notifications panel reflect the same event.
         // Without this push the framework notification (and its badge)
@@ -452,20 +453,16 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             Toast.makeText(context, short, Toast.LENGTH_LONG).show()
         } catch (_: Throwable) { /* off-Looper thread — skip toast */ }
 
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            nm.createNotificationChannel(
-                NotificationChannel(NOTIF_CHANNEL, "Updater", NotificationManager.IMPORTANCE_DEFAULT)
-            )
-        }
-        val notif: Notification = Notification.Builder(context, NOTIF_CHANNEL)
-            .setContentTitle(short)
-            .setContentText(full)
-            .setStyle(Notification.BigTextStyle().bigText(full))
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setAutoCancel(true)
-            .build()
-        nm.notify(NOTIF_ID, notif)
+        // #777: the result is a fleet ALERT — it lands in the SuperApp's Alerts
+        // group (or this app's own notification if there is no SuperApp), one
+        // per app: a retry's result replaces the failure it answers.
+        FleetAlerts.raise(context, FleetAlerts.Alert(
+            title = short,
+            text = full,
+            severity = severity,
+            deepLink = STORE_LINK,
+            dedupeKey = "updater:$key",
+        ))
     }
 
     companion object {
@@ -473,6 +470,9 @@ class PackageInstallerReceiver : BroadcastReceiver() {
          *  (long-press menu) from an install/update and message accordingly. */
         const val EXTRA_OP = "com.diegonmarcos.superapp.updater.OP"
         const val OP_UNINSTALL = "uninstall"
+
+        /** Where a result alert's tap lands: the SuperApp's Store ▸ Cloud. */
+        private const val STORE_LINK = "page:config/store-cloud"
 
         /** Absolute path of the cached APK, deleted on confirmed success. */
         const val EXTRA_APK_PATH = "apk_path"

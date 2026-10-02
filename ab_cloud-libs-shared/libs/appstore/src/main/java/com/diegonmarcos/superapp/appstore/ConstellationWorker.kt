@@ -1,12 +1,6 @@
 package com.diegonmarcos.superapp.appstore
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -17,6 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.InstallIdentity
@@ -106,73 +101,41 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                 },
             )
             if (pass.acted > 0)
-                notify(applicationContext, NOTIF_ID,
+                alert(applicationContext, KEY_INSTALLED,
                     "${pass.acted} constellation update${if (pass.acted == 1) "" else "s"} installed",
                     "Tap to open the Store")
             // "Cannot install unattended" has to be visible to the USER, not
             // just to logcat — otherwise a phone with no privileged channel is
             // indistinguishable from a phone with nothing to update.
             if (!pass.silent && pass.considered > 0)
-                notify(applicationContext, NOTIF_ID_NO_CHANNEL,
+                alert(applicationContext, KEY_NO_CHANNEL,
                     "Auto-update needs confirmation",
                     "${pass.considered} update(s) waiting. No privileged install " +
                     "channel, so each one asks first.")
             else
-                cancel(applicationContext, NOTIF_ID_NO_CHANNEL)
+                FleetAlerts.withdraw(applicationContext, KEY_NO_CHANNEL)
         } catch (t: Throwable) {
             Log.w(TAG, "fleet auto-update failed: ${t.message}")
         }
         Result.success()
     }
 
-    private fun cancel(ctx: Context, id: Int) {
-        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(id)
-    }
-
-    /** One tap-to-open-Constellation notification. [id] separates the "work
-     *  happened" one from the "work cannot happen unattended" one so neither
-     *  can overwrite the other. */
-    private fun notify(ctx: Context, id: Int, title: String, text: String) {
-        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            nm.createNotificationChannel(
-                // The id stays "constellation": a channel id is the user's saved
-                // notification settings, and renaming it would reset them. The
-                // NAME is display, and Android renames an existing channel in place.
-                NotificationChannel(CHANNEL, "Store", NotificationManager.IMPORTANCE_DEFAULT))
-        // Deep-link via the launcher's shortcut_action grammar (MainActivity
-        // .handleShortcutIntent → onTileClicked → dispatchHomeAction) so the tap
-        // opens Store ▸ Cloud Constellation, not just Home. The old custom extra was
-        // read by nothing → fell through to Home.
-        // Target and routing come from the HOST: a library cannot name the
-        // app's Activity. Null target = a notification with no tap action,
-        // which is better than not notifying at all.
-        val target = AppStoreHost.launchActivity
-        val pi = if (target == null) null else {
-            val open = Intent(ctx, target)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            AppStoreHost.launchExtras.forEach { (k, v) -> open.putExtra(k, v) }
-            var flags = PendingIntent.FLAG_UPDATE_CURRENT
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags = flags or PendingIntent.FLAG_IMMUTABLE
-            PendingIntent.getActivity(ctx, id, open, flags)
-        }
-        val notif = Notification.Builder(ctx, CHANNEL)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(AppStoreHost.notificationIcon)
-            .setColor(0xFF0A0A0A.toInt())
-            .apply { if (pi != null) setContentIntent(pi) }
-            .setAutoCancel(true)
-            .build()
-        nm.notify(id, notif)
+    /** #777: a Store alert is a fleet alert — it goes to the SuperApp's
+     *  Alerts group, keyed so the next pass replaces it instead of stacking a
+     *  second one. The tap target is still the HOST's (a library cannot name
+     *  the app's screens): its launch extras' shortcut_action, which is the
+     *  FleetAlerts `page:` grammar — Store ▸ Cloud in the SuperApp. */
+    private fun alert(ctx: Context, key: String, title: String, text: String) {
+        FleetAlerts.raise(ctx, FleetAlerts.Alert(
+            title = title, text = text, severity = FleetAlerts.INFO,
+            deepLink = AppStoreHost.launchExtras["shortcut_action"].orEmpty(), dedupeKey = key))
     }
 
     companion object {
         private const val TAG = "Fleet/Worker"
         private const val WORK_NAME = "superapp-constellation-check"
-        private const val CHANNEL = "constellation"
-        private const val NOTIF_ID = 0xC10E
-        private const val NOTIF_ID_NO_CHANNEL = 0xC10F
+        private const val KEY_INSTALLED = "store:updates_installed"
+        private const val KEY_NO_CHANNEL = "store:needs_confirmation"
 
         /** Schedule the periodic fleet check. Idempotent. Call from App.onCreate. */
         fun start(context: Context) {

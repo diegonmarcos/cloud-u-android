@@ -211,6 +211,20 @@
 
              exported=true is required: both actions are delivered by the
              system, from outside this package. -->
+        <!-- #777 the fleet alerts collector: every Cloud app raises its alerts
+             here through libs:core FleetAlerts (a provider call starts this
+             process when it is not running, and answers synchronously so the
+             caller can fall back). CONSTELLATION_DATA is the fleet's signature
+             permission: only an APK signed with the fleet key gets in. -->
+        <provider
+            android:name=".notificationcenter.FleetAlertsProvider"
+            android:authorities="${applicationId}.fleetalerts"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+        <!-- #777 swipe on one alert = that alert is done. Our own PendingIntent only. -->
+        <receiver
+            android:name=".notificationcenter.AlertsNotifier$DismissReceiver"
+            android:exported="false" />
         <receiver
             android:name=".notificationcenter.BadgeRestartReceiver"
             android:exported="true">

@@ -26,6 +26,14 @@
 
     <uses-permission android:name="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
 
+    <!-- #777 FleetAlerts: every app raises its alerts into the SuperApp's
+         collector (FleetAlerts.AUTHORITY). Since API 30 another app's
+         provider is invisible without this, and the call would fall back to
+         a local notification on every device. -->
+    <queries>
+        <provider android:authorities="com.diegonmarcos.superapp.fleetalerts" />
+    </queries>
+
     <application>
         <!-- Crash telemetry, on by default for every app that links libs:core.
              A provider's onCreate runs BEFORE Application.onCreate, so this

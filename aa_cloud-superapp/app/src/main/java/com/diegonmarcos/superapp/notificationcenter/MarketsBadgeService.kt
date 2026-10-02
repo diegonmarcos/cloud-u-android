@@ -79,6 +79,7 @@ class MarketsBadgeService : Service() {
     override fun onDestroy() {
         tick?.let(main::removeCallbacks)
         scope.cancel()
+        NotifyGroups.release(this, BADGE_ID)
         super.onDestroy()
     }
 
@@ -178,7 +179,7 @@ class MarketsBadgeService : Service() {
             .setShowWhen(false)
             .setOngoing(pinned)
             .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@MarketsBadgeService, NOTIF_ID)) }
-            .setGroup("nc_markets")
+            .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setStyle(NotificationCompat.BigTextStyle().bigText(big.ifBlank { text }))

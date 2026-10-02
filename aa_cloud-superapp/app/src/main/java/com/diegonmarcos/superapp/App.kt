@@ -141,6 +141,11 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { BadgeServices.ensureAll(this) }
         // #775: /api/overlays — what is drawn vs. what each switch says.
         runCatching { com.diegonmarcos.superapp.floatingnav.OverlaysDebugApi.register(this) }
+        // #777: /api/notify/{groups,alerts} — the four shade groups and the fleet alerts.
+        runCatching { com.diegonmarcos.superapp.notificationcenter.NotifyDebugApi.register(this) }
+        // #777: the Alerts group is drawn from the store, so it comes back
+        // (silently) after a reboot or an update cleared the shade.
+        runCatching { com.diegonmarcos.superapp.notificationcenter.AlertsNotifier.refresh(this) }
         // Schedule the periodic battery-session tick (15 min cadence).
         // Idempotent — KEEP policy ensures re-scheduling on every cold
         // start is a no-op. Without this the discharge anchor only

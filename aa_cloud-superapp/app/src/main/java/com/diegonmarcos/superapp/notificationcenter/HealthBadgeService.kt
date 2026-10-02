@@ -70,6 +70,7 @@ class HealthBadgeService : Service() {
     override fun onDestroy() {
         tick?.let(main::removeCallbacks)
         scope.cancel()
+        NotifyGroups.release(this, BADGE_ID)
         super.onDestroy()
     }
 
@@ -148,6 +149,7 @@ class HealthBadgeService : Service() {
                     setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$it"))
                 }
             }
+            .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()
     }
 

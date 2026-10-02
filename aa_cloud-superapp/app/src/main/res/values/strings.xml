@@ -231,6 +231,16 @@
     <string name="push_launch">Launch</string>
     <string name="push_launch_all">Launch all badges</string>
     <string name="push_launched">Launched %1$d badge(s).</string>
+    <!-- #777 the four shade groups + the fleet Alerts group -->
+    <string name="notify_group_up">Move up</string>
+    <string name="notify_group_down">Move down</string>
+    <string name="notify_member_show">Show %1$s</string>
+    <string name="notify_alerts_filters">Filters — a muted app or severity stays stored, out of the shade.</string>
+    <string name="notify_alerts_show_severity">Show %1$s alerts</string>
+    <string name="notify_alerts_show_app">Show alerts from %1$s</string>
+    <string name="notify_alerts_clear_all">Clear all alerts</string>
+    <string name="notify_alerts_cleared">Cleared %1$d alert(s).</string>
+    <string name="notify_alerts_none">No alerts. Fleet apps raise them through FleetAlerts; nothing here is sample data.</string>
 
     <!-- Badge faces. -->
     <string name="badge_media_idle_title">Nothing playing</string>

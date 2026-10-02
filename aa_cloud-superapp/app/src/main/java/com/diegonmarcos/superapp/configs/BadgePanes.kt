@@ -11,6 +11,10 @@ import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
+import com.diegonmarcos.superapp.notificationcenter.AlertStore
+import com.diegonmarcos.superapp.notificationcenter.AlertsNotifier
+import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
+import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.ui.LauncherPalette
 
 /**
@@ -54,7 +58,8 @@ object BadgePanes {
 
     private const val REBUILD_DELAY_MS = 1200L
 
-    /** View 1 — Launch-all, then one box per declared badge. */
+    /** View 1 — Launch-all, then the four groups (#777) in the owner's order,
+     *  each with its members' boxes; a badge in no group is drawn after them. */
     fun badges(ctx: Context, redraw: () -> Unit): View {
         val root = column(ctx)
         val badges = BadgeDeclaration.badges(BadgeServices.declared)
@@ -67,8 +72,97 @@ object BadgePanes {
             text = ctx.getString(R.string.push_launch_all)
             setOnClickListener { launched(ctx, root, redraw, BadgeServices.launchAll(ctx)) }
         })
-        for (b in badges) root.addView(badgeBox(ctx, root, redraw, b))
+        val groups = NotifyGroups.ordered(ctx)
+        groups.forEachIndexed { i, g -> root.addView(groupBox(ctx, root, redraw, g, i, groups.size, badges)) }
+        val grouped = groups.flatMap { it.members }.toSet()
+        for (b in badges.filter { it.id !in grouped }) root.addView(badgeBox(ctx, root, redraw, b))
         return root
+    }
+
+    // ───────────────────────── #777: the groups ─────────────────────────
+
+    /**
+     * One group: its switch, its order (up/down), then its members. A group
+     * with more than one member gets a switch per member (G1, G2); the alerts
+     * group gets its filters, Clear all and the alerts themselves. All of it
+     * read from the declaration and the stores — no group or badge is named.
+     */
+    private fun groupBox(
+        ctx: Context, host: View, redraw: () -> Unit, g: BadgeDeclaration.Group,
+        index: Int, count: Int, badges: List<BadgeDeclaration.Badge>,
+    ): View {
+        val p = LauncherPalette.of(ctx)
+        val col = column(ctx).apply { setPadding(0, dp(ctx, 14), 0, dp(ctx, 6)) }
+        val on = NotifyGroups.isEnabled(ctx, g)
+        col.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(Switch(ctx).apply {
+                text = g.label; textSize = 17f; setTextColor(p.textPrimary); isChecked = on
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setOnCheckedChangeListener { _, v -> NotifyGroups.setEnabled(ctx, g, v); redraw() }
+            })
+            if (index > 0) addView(Button(ctx).apply {
+                text = "▲"; contentDescription = ctx.getString(R.string.notify_group_up)
+                setOnClickListener { NotifyGroups.move(ctx, g, -1); redraw() }
+            })
+            if (index < count - 1) addView(Button(ctx).apply {
+                text = "▼"; contentDescription = ctx.getString(R.string.notify_group_down)
+                setOnClickListener { NotifyGroups.move(ctx, g, +1); redraw() }
+            })
+        })
+        if (!on) return col
+        for (id in g.members) {
+            val b = badges.firstOrNull { it.id == id } ?: continue
+            if (g.members.size > 1) col.addView(Switch(ctx).apply {
+                text = ctx.getString(R.string.notify_member_show, b.label)
+                textSize = 13f; setTextColor(p.textPrimary)
+                isChecked = BadgeCustomization.bool(ctx, b, BadgeCustomization.KEY_ENABLED)
+                setOnCheckedChangeListener { _, v ->
+                    BadgeCustomization.set(ctx, b, BadgeCustomization.KEY_ENABLED, v)
+                    NotifyGroups.apply(ctx); redraw()
+                }
+            })
+            col.addView(badgeBox(ctx, host, redraw, b))
+        }
+        if (g.alerts) col.addView(alertsBox(ctx, redraw))
+        return col
+    }
+
+    /** The Alerts group's own controls: filters by severity and by app (an
+     *  app appears once it has raised something), Clear all, and the list. */
+    private fun alertsBox(ctx: Context, redraw: () -> Unit): View {
+        val p = LauncherPalette.of(ctx)
+        val col = column(ctx)
+        col.addView(caption(ctx, ctx.getString(R.string.notify_alerts_filters)))
+        fun filter(label: String, muted: Boolean, set: (Boolean) -> Unit) = Switch(ctx).apply {
+            text = label; textSize = 13f; setTextColor(p.textPrimary); isChecked = !muted
+            setOnCheckedChangeListener { _, v -> set(!v); AlertsNotifier.refresh(ctx); redraw() }
+        }
+        for (sev in FleetAlerts.SEVERITIES) col.addView(filter(
+            ctx.getString(R.string.notify_alerts_show_severity, sev), AlertStore.severityMuted(ctx, sev),
+        ) { AlertStore.setSeverityMuted(ctx, sev, it) })
+        for (app in AlertStore.apps(ctx)) col.addView(filter(
+            ctx.getString(R.string.notify_alerts_show_app, AlertsNotifier.appLabel(ctx, app)), AlertStore.appMuted(ctx, app),
+        ) { AlertStore.setAppMuted(ctx, app, it) })
+        col.addView(Button(ctx).apply {
+            text = ctx.getString(R.string.notify_alerts_clear_all)
+            setOnClickListener {
+                val n = AlertStore.clear(ctx)
+                AlertsNotifier.refresh(ctx)
+                Toast.makeText(ctx, ctx.getString(R.string.notify_alerts_cleared, n), Toast.LENGTH_SHORT).show()
+                redraw()
+            }
+        })
+        val visible = AlertStore.visible(ctx)
+        if (visible.isEmpty()) col.addView(caption(ctx, ctx.getString(R.string.notify_alerts_none)))
+        for (a in visible) col.addView(TextView(ctx).apply {
+            text = "${AlertsNotifier.appLabel(ctx, a.app)} · ${a.severity} · ${a.title}" +
+                (if (a.text.isNotBlank()) "\n${a.text}" else "")
+            textSize = 13f
+            setTextColor(if (a.severity == FleetAlerts.ERROR) 0xFFE05252.toInt() else p.textPrimary)
+            setPadding(0, dp(ctx, 6), 0, dp(ctx, 6))
+        })
+        return col
     }
 
     /** View 2 — one customization menu per declared badge, same order. */
@@ -108,7 +202,9 @@ object BadgePanes {
         // A running owner with nothing in the shade is NOT live — that is
         // exactly the swiped-away badge the previous pane called green.
         val st = BadgeServices.status(ctx, b).let {
-            if (it.state == BadgeServices.State.LIVE && live == null)
+            // (An on-demand badge — no service — has nothing to post when it
+            // has nothing to say; its status already says so.)
+            if (it.state == BadgeServices.State.LIVE && live == null && b.service.isNotBlank())
                 it.copy(state = BadgeServices.State.DEAD, reason = ctx.getString(R.string.push_not_posted, b.channel))
             else it
         }

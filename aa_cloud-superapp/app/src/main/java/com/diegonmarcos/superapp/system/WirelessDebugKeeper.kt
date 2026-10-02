@@ -1,8 +1,5 @@
 package com.diegonmarcos.superapp.system
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
@@ -10,12 +7,10 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -24,7 +19,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import com.diegonmarcos.superapp.configs.DeviceControls
@@ -162,8 +157,7 @@ class WirelessDebugKeeper(ctx: Context, params: WorkerParameters) : Worker(ctx, 
         private const val SETTLE_MS = 2_000L
         /** Lets AdbDebuggingManager finish reacting to the same event first. */
         private const val EVENT_DELAY_S = 3L
-        private const val CHANNEL_ID = "wireless_debug_keepalive"
-        private const val NOTIF_ID = 7731
+        private const val ALERT_KEY = "wireless_debug_off"
 
         @Volatile private var callbacksRegistered = false
 
@@ -224,38 +218,24 @@ class WirelessDebugKeeper(ctx: Context, params: WorkerParameters) : Worker(ctx, 
 
         /** The one thing shell can never do: switch it on with no Wi-Fi, on a
          *  network the owner has not allowed, or before this app holds
-         *  WRITE_SECURE_SETTINGS. Say so, and land on the page that can. */
+         *  WRITE_SECURE_SETTINGS. Say so — #777: as a fleet alert — and land
+         *  on the page that can. */
         private fun notifyOwner(ctx: Context) {
-            val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
-            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL_ID) == null) {
-                nm.createNotificationChannel(NotificationChannel(CHANNEL_ID,
-                    "Wireless debugging keep-alive", NotificationManager.IMPORTANCE_DEFAULT))
-            }
             val open = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
                 // AOSP's preference key for the Wireless debugging row; Settings
                 // scrolls to and highlights it. A build that ignores it still
                 // lands on Developer options.
                 .putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val pi = PendingIntent.getActivity(ctx, NOTIF_ID, open,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            runCatching {
-                nm.notify(NOTIF_ID, NotificationCompat.Builder(ctx, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_stat_notify)
-                    .setContentTitle("Wireless debugging is off")
-                    .setContentText("Keep-alive could not turn it back on. Tap to switch it on.")
-                    .setStyle(NotificationCompat.BigTextStyle().bigText(
-                        WirelessDebugKeepAlive.CAUSE_REJECTED + ". Tap to open Developer options ▸ " +
-                        "Wireless debugging; the shell channel reconnects by itself once it is on."))
-                    .setOngoing(true)
-                    .setOnlyAlertOnce(true)
-                    .setContentIntent(pi)
-                    .build())
-            }.onFailure { Log.w(TAG, "notify: ${it.message}") }
+            FleetAlerts.raise(ctx, FleetAlerts.Alert(
+                title = "Wireless debugging is off",
+                text = WirelessDebugKeepAlive.CAUSE_REJECTED + ". Tap to open Developer options ▸ " +
+                    "Wireless debugging; the shell channel reconnects by itself once it is on.",
+                severity = FleetAlerts.WARN,
+                deepLink = open.toUri(Intent.URI_INTENT_SCHEME),
+                dedupeKey = ALERT_KEY,
+            ))
         }
 
-        private fun cancelNotice(ctx: Context) {
-            ctx.getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
-        }
+        private fun cancelNotice(ctx: Context) = FleetAlerts.withdraw(ctx, ALERT_KEY)
     }
 }
