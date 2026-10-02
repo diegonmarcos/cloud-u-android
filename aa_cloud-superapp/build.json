@@ -6344,6 +6344,11 @@
       "mesh_zones": ["app", "db", "diegonmarcos.com"],
       "test_names": { "public": "github.com", "mesh": "maddy.app" },
       "lookup_timeout_ms": 2500,
+      "_doc_mesh_down": "#751 The choice also holds while Cloud Mesh is DOWN. The WireGuard engine (Cloud-Lib-Net-Wg) owns the phone's one VPN slot; when no mesh tunnel is up it carries the choice as a PEERLESS tunnel named `tunnel_name`: these addresses, the preset's DNS servers, no route, so every app's lookups go to the chosen resolver and all other traffic falls through to the underlying network exactly as it does outside a split mesh. The fleet resolver is unreachable without the mesh, so Private with fallbacks uses its fallbacks alone, and Private only keeps the fleet resolver with a route to nowhere: lookups fail, none leaks to the local network. Mirror releases the slot.",
+      "mesh_down": {
+        "tunnel_name": "fleet-dns",
+        "addresses": ["10.111.223.1/32", "fd00:1:1:2::1/128"]
+      },
       "_doc_android_private_dns": "Replica of Android's own Settings ▸ Private DNS menu. `id` is the literal value of Settings.Global private_dns_mode; `label` is what Android shows. `hostname_suggestions` pre-fill the provider field.",
       "android_private_dns": {
         "modes": [

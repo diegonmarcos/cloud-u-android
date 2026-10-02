@@ -72,6 +72,17 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // is the one outcome it must not have. No-op when nothing is queued.
         runCatching { com.diegonmarcos.superapp.profile.ProfileSync.flush(this) }
 
+        // #751 The DNS choice holds without the mesh: the WireGuard engine carries
+        // it in the VPN slot, but nothing starts the engine after a reboot or a
+        // killed process, so the launcher's own start hands it back. Only for an
+        // explicit choice, and never over a running firewall (it keeps the slot).
+        if (com.diegonmarcos.superapp.network.FleetDns.Prefs(this).chosen) Thread {
+            runCatching {
+                com.diegonmarcos.superapp.network.FleetDns.syncMeshDown(this,
+                    raiseNow = !com.diegonmarcos.superapp.firewall.FirewallController.isEnabled(this))
+            }.onFailure { android.util.Log.w("App", "mesh-down DNS not handed to the engine", it) }
+        }.start()
+
         // Tell libs:appstore what it cannot know: this app's entry Activity,
         // its notification icon, how this launcher routes a tap, and the
         // host-side toggle that gates the periodic check. The store moved out

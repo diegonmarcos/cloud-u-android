@@ -37,4 +37,20 @@ interface INetBackend {
     boolean isAlwaysOn();
 
     boolean isLockdownEnabled();
+
+    /**
+     * #751 What the VPN slot carries while NO other tunnel is up: [wgQuickConfig]
+     * (a peerless tunnel holding the fleet's DNS choice) under [tunnelName].
+     * The engine keeps it, raises it whenever one of its tunnels goes down, and
+     * yields to any tunnel brought UP. [raiseNow] also raises it at once - false
+     * when another app's VPN holds the slot and should keep it. An empty config
+     * releases the slot. Returns the same answer as getIdleStatus().
+     *
+     * Appended after every older method so their transaction codes are
+     * unchanged: an engine that predates this answers null, not a wrong method.
+     */
+    String setIdleTunnel(String tunnelName, String wgQuickConfig, boolean raiseNow);
+
+    /** "OFF", "UP", "STANDBY" (another tunnel holds the slot), or "DOWN: <why>". */
+    String getIdleStatus();
 }

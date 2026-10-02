@@ -118,6 +118,23 @@ class AidlBackend(context: Context) : Backend {
 
     override fun getRunningTunnelNames(): MutableSet<String> = mutableSetOf()
 
+    /**
+     * #751 Register what the engine's VPN slot carries while no tunnel is up
+     * (null = nothing: release it). See INetBackend.setIdleTunnel. Answers the
+     * engine's idle status, or why there is none.
+     */
+    fun setIdleTunnel(tunnelName: String, config: Config?, raiseNow: Boolean): String =
+        idleAnswer { it.setIdleTunnel(tunnelName, config?.toWgQuickString().orEmpty(), raiseNow) }
+
+    fun idleStatus(): String = idleAnswer { it.idleStatus }
+
+    private fun idleAnswer(call: (INetBackend) -> String?): String {
+        val r = remote() ?: return "DOWN: Cloud-Lib-Net-Wg is not installed"
+        return runCatching { call(r) }.getOrElse { return "DOWN: ${it.message}" }
+            // An engine that predates the call answers null: the transaction is unknown to it.
+            ?: "DOWN: the installed Cloud-Lib-Net-Wg predates DNS without the mesh — update it"
+    }
+
     fun unbind() {
         runCatching { ctx.unbindService(connection) }
             .onFailure { Log.w(TAG, "unbind: not bound", it) }

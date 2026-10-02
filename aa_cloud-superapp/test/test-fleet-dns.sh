@@ -15,6 +15,12 @@
 #   D4  data-driven: the declaration is baked (UI_DNS_B64) and read, and no
 #       resolver address from it is written in any Kotlin source
 #   D5  the behaviour guards live in FleetDnsTest and none of them was dropped
+#   D6  #751 the choice holds without the mesh: ui.dns.mesh_down declares the
+#       peerless tunnel; the engine (Cloud-Lib-Net-Wg, owner of the one VPN
+#       slot) hands the slot to it when one of its own tunnels goes down,
+#       through two AIDL calls appended after every older one; the DNS page and
+#       the launcher's start push it, only for an explicit choice, and neither
+#       takes the slot from the firewall
 #
 # WHAT each preset puts on the VPN (Private-only has no fallback, split DNS for
 # mesh names, fail-loud without a fleet resolver) is asserted by
@@ -29,10 +35,15 @@ FRAG="$SRC/network/DnsFragment.kt"
 WGP="$SRC/network/WireGuardPrefs.kt"
 GRADLE="$APP/app/build.gradle"
 UT="$APP/app/src/test/java/com/diegonmarcos/superapp/network/FleetDnsTest.kt"
+APPKT="$SRC/App.kt"
+LIBS="$APP/../ab_cloud-libs-shared/libs"
+ENGINE="$LIBS/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt"
+AIDL="$LIBS/net/src/main/aidl/com/diegonmarcos/superapp/net/INetBackend.aidl"
+CLIENT="$LIBS/net/src/main/java/com/diegonmarcos/superapp/net/AidlBackend.kt"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
-for f in "$BJ" "$PAGES" "$DNS" "$FRAG" "$WGP" "$GRADLE" "$UT"; do
+for f in "$BJ" "$PAGES" "$DNS" "$FRAG" "$WGP" "$GRADLE" "$UT" "$APPKT" "$ENGINE" "$AIDL" "$CLIENT"; do
   [ -f "$f" ] || { echo "ERROR: missing $f — a check over nothing passes" >&2; exit 2; }
 done
 command -v python3 >/dev/null || { echo "ERROR: python3 missing" >&2; exit 2; }
@@ -149,5 +160,54 @@ for t in eachPublicPresetIsItsServersThenItsFallback mirrorPutsNoServerOnTheVpn 
   grep -qE "@Test fun $t\(\)" "$UT" && ok "FleetDnsTest.$t" || bad "FleetDnsTest.$t is gone"
 done
 
-echo "== RESULT(#740 fleet dns): $PASS passed, $FAIL failed =="
+echo "== D6: #751 the choice holds without the mesh =="
+out="$(python3 - "$BJ" <<'EOF'
+import json, sys, ipaddress
+md = json.load(open(sys.argv[1]))['ui']['dns'].get('mesh_down') or {}
+pr = []
+n = md.get('tunnel_name', '')
+if not n or len(n) > 15: pr.append('tunnel_name %r is empty or longer than an interface name' % n)
+a = md.get('addresses', [])
+if not a: pr.append('no addresses')
+for x in a:
+    try:
+        net = ipaddress.ip_network(x, strict=True)
+        if net.prefixlen != net.max_prefixlen: pr.append('%s is not a host prefix: it would route a subnet into a tunnel with no peer' % x)
+    except ValueError as e: pr.append('%s: %s' % (x, e))
+print('; '.join(pr) or 'OK')
+EOF
+)"
+[ "$out" = OK ] && ok "ui.dns.mesh_down: a tunnel name and host-prefix addresses (the tunnel routes no subnet)" \
+  || bad "ui.dns.mesh_down: $out"
+awk '/isLockdownEnabled\(\);/{l=NR} /String setIdleTunnel\(/{s=NR} /String getIdleStatus\(\);/{g=NR} END{exit !(l && s>l && g>s)}' "$AIDL" \
+  && ok "the AIDL appends setIdleTunnel/getIdleStatus after every older method (an older engine keeps its transaction codes)" \
+  || bad "setIdleTunnel/getIdleStatus are missing or not the last methods of INetBackend.aidl"
+grep -qF 'if (wasUp && want == Tunnel.State.DOWN && tunnel.getName() != idleName) reconcileIdle(leaving = tunnel.getName())' "$ENGINE" \
+  && grep -qF 'if (wasUp && result != Tunnel.State.UP.name) reconcileIdle()' "$ENGINE" \
+  && ok "the engine hands the slot to the mesh-down tunnel when a tunnel of its own leaves it (as one switch)" \
+  || bad "NetBackendService.setState no longer hands the slot over on a real DOWN"
+GOB="$LIBS/net-wg/src/main/java/com/wireguard/android/backend/GoBackend.java"
+grep -qF 'if (!switching) try {' "$GOB" && grep -qF 'switching = true;' "$GOB" \
+  && ok "GoBackend keeps its VpnService across a switch (a stop there races the next establish)" \
+  || bad "GoBackend stops the VpnService mid-switch again — a re-sync from upstream dropped the #751 fix?"
+grep -qF 'if (raiseNow || wgQuickConfig.isNullOrBlank()) reconcileIdle()' "$ENGINE" \
+  && ok "an explicit push raises it only on the client's word (or releases it)" \
+  || bad "setIdleTunnel raises without the client's word — it would revoke the firewall"
+grep -qF 'it.setIdleTunnel(tunnelName, config?.toWgQuickString().orEmpty(), raiseNow)' "$CLIENT" \
+  && ok "AidlBackend forwards setIdleTunnel" || bad "AidlBackend does not forward setIdleTunnel"
+grep -qF 'meshDownConfig(decl, meshDownServers(decl, p.preset, p.fallbacks, fleet), fleet, self, sink)' "$DNS" \
+  && grep -qF 'if (!p.chosen) null' "$DNS" \
+  && ok "syncMeshDown builds the tunnel from meshDownServers, and only for an explicit choice" \
+  || bad "syncMeshDown does not build from meshDownServers, or applies the unchosen default"
+grep -qF 'FleetDns.syncMeshDown(ctx, raiseNow = !FirewallController.isEnabled(ctx))' "$FRAG" \
+  && ok "every DNS page change pushes the mesh-down form, never over the firewall" \
+  || bad "the DNS page does not push the mesh-down form (or ignores the firewall)"
+grep -qF 'raiseNow = !com.diegonmarcos.superapp.firewall.FirewallController.isEnabled(this)' "$APPKT" \
+  && ok "the launcher's start hands it back to an engine a reboot emptied" \
+  || bad "App.onCreate no longer re-hands the mesh-down DNS"
+for t in withoutTheMeshEachPresetKeepsWhatItCanStillReach theMeshDownTunnelRoutesNothingButAnUnreachableFleetResolver; do
+  grep -qE "@Test fun $t\(\)" "$UT" && ok "FleetDnsTest.$t" || bad "FleetDnsTest.$t is gone"
+done
+
+echo "== RESULT(#740/#751 fleet dns): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

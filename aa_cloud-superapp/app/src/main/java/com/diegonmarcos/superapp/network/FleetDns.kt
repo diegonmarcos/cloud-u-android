@@ -8,6 +8,11 @@ import android.provider.Settings
 import android.util.Base64
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
+import com.wireguard.config.Config
+import com.wireguard.config.Interface
+import com.wireguard.config.Peer
+import com.wireguard.crypto.Key
+import com.wireguard.crypto.KeyPair
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -24,6 +29,11 @@ import java.net.InetAddress
  * Mesh tunnel (net-wg GoBackend → VpnService.Builder.addDnsServer); firestack
  * is compiled but not yet the active engine. So the choice reaches the phone
  * through [WireGuardPrefs.toTunnelConfig], which every connect path calls.
+ *
+ * #751 With the mesh DOWN the same engine still owns the slot: it carries an
+ * explicit choice as a peerless tunnel ([meshDownConfig], pushed by
+ * [syncMeshDown]) and raises it whenever the mesh goes down, so the fleet —
+ * every app on the system resolver — keeps the chosen resolver either way.
  *
  * The presets, Android's Private DNS menu, the mesh zones and the test names
  * are `build.json::ui.dns`, baked as BuildConfig.UI_DNS_B64 — no resolver
@@ -54,6 +64,8 @@ object FleetDns {
         val testPublic: String,
         val testMesh: String,
         val timeoutMs: Int,
+        val meshDownTunnel: String,
+        val meshDownAddresses: List<String>,
         val androidModes: List<Pair<String, String>>,
         val hostnameSuggestions: List<String>,
         val presets: List<Preset>,
@@ -74,12 +86,15 @@ object FleetDns {
         val apd = o.optJSONObject("android_private_dns") ?: JSONObject()
         val modes = apd.optJSONArray("modes") ?: JSONArray()
         val ps = o.getJSONArray("presets")
+        val md = o.getJSONObject("mesh_down")
         return Decl(
             defaultPreset = o.getString("default_preset"),
             meshZones = o.optJSONArray("mesh_zones").strings(),
             testPublic = tn.optString("public"),
             testMesh = tn.optString("mesh"),
             timeoutMs = o.optInt("lookup_timeout_ms", 2500),
+            meshDownTunnel = md.getString("tunnel_name"),
+            meshDownAddresses = md.getJSONArray("addresses").strings(),
             androidModes = (0 until modes.length()).map {
                 val m = modes.getJSONObject(it); m.getString("id") to m.getString("label")
             },
@@ -143,6 +158,42 @@ object FleetDns {
         }.distinct()
     }
 
+    /**
+     * #751 The servers the slot carries while Cloud Mesh is DOWN. The fleet
+     * resolver sits behind the mesh, so it is dropped whenever anything else is
+     * left (Private with fallbacks = its fallbacks alone); when nothing else is
+     * (Private only) it stays and [meshDownConfig] routes it nowhere, so lookups
+     * fail as the preset promises. Public presets and Mirror are unchanged.
+     */
+    fun meshDownServers(d: Decl, presetId: String?, fallbacks: List<String>, fleetResolvers: List<String>): List<String> {
+        val all = vpnServers(d, presetId, fallbacks, fleetResolvers)
+        return all.filter { it !in fleetResolvers }.ifEmpty { all }
+    }
+
+    /**
+     * #751 The peerless tunnel the engine raises while Cloud Mesh is down, or
+     * null (Mirror: the slot is released). No peer = no route: only its DNS
+     * servers reach the VPN, every other packet goes out the underlying network
+     * as it does beside a split mesh. The one exception is a fleet resolver
+     * left in [servers] (Private only): a key-only peer with no endpoint is its
+     * route, so a query to it is dropped instead of reaching whatever answers
+     * that address on the local network. Keys are throwaway: nothing answers.
+     */
+    fun meshDownConfig(d: Decl, servers: List<String>, fleetResolvers: List<String>, self: KeyPair, sink: KeyPair): Config? {
+        if (servers.isEmpty()) return null
+        val cfg = Config.Builder().setInterface(Interface.Builder()
+            .setKeyPair(self)
+            .parseAddresses(d.meshDownAddresses.joinToString(", "))
+            .parseDnsServers(servers.joinToString(", "))
+            .build())
+        val unreachable = servers.filter { it in fleetResolvers }
+        if (unreachable.isNotEmpty()) cfg.addPeer(Peer.Builder()
+            .setPublicKey(sink.publicKey)
+            .parseAllowedIPs(unreachable.joinToString(", ") { if (':' in it) "$it/128" else "$it/32" })
+            .build())
+        return cfg.build()
+    }
+
     /** True when [name] sits in one of the fleet resolver's own zones (zone boundary, not a suffix match). */
     fun isMeshName(d: Decl, name: String): Boolean {
         val n = name.trimEnd('.').lowercase()
@@ -164,6 +215,19 @@ object FleetDns {
         var preset: String
             get() = sp.getString("preset", null) ?: FleetDns.decl.defaultPreset
             set(v) { sp.edit().putString("preset", v).apply() }
+        /** #751 True once the owner picked a preset on the DNS page. Only a
+         *  choice made there reaches a mesh-down phone: the declared default is
+         *  Private only, and applying it unasked would leave a phone whose mesh
+         *  is down with no DNS at all. */
+        val chosen: Boolean get() = sp.contains("preset")
+        /** #751 The mesh-down tunnel's two throwaway keys, kept so the same
+         *  choice yields the same config and re-pushing it does not rebuild
+         *  the VPN. */
+        fun meshDownKeys(): Pair<KeyPair, KeyPair> {
+            fun key(k: String) = KeyPair(Key.fromBase64(sp.getString(k, null) ?: KeyPair().privateKey.toBase64()
+                .also { sp.edit().putString(k, it).apply() }))
+            return key("mesh_down_self") to key("mesh_down_sink")
+        }
         /** Ordered: the order the user ticked them in. */
         var fallbacks: List<String>
             get() = sp.getString("fallbacks", null)?.let { splitServers(it) }
@@ -178,6 +242,24 @@ object FleetDns {
     fun vpnServers(ctx: Context, fleetDnsCsv: String): List<String> {
         val p = Prefs(ctx)
         return vpnServers(decl, p.preset, p.fallbacks, splitServers(fleetDnsCsv))
+    }
+
+    /**
+     * #751 Hand the engine what to carry while Cloud Mesh is down: the explicit
+     * choice as [meshDownConfig], or nothing (Mirror, or no choice made yet).
+     * [raiseNow] lets it take the slot at once; pass false while another VPN of
+     * ours (the firewall) holds it — the engine then stores the choice and
+     * raises it the next time the mesh goes down. Blocks on the engine binder:
+     * call it off the main thread. Answers the engine's idle status.
+     */
+    fun syncMeshDown(ctx: Context, raiseNow: Boolean): String {
+        val p = Prefs(ctx)
+        val config = if (!p.chosen) null else {
+            val fleet = splitServers(WgState.prefs(ctx).interfaceDns)
+            val (self, sink) = p.meshDownKeys()
+            meshDownConfig(decl, meshDownServers(decl, p.preset, p.fallbacks, fleet), fleet, self, sink)
+        }
+        return WgState.backend(ctx).setIdleTunnel(decl.meshDownTunnel, config, raiseNow)
     }
 
     // ── Android's own Private DNS ────────────────────────────────────────

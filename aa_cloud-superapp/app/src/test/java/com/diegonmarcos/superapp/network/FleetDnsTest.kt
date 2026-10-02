@@ -1,6 +1,9 @@
 package com.diegonmarcos.superapp.network
 
 import android.app.Application
+import com.wireguard.config.InetNetwork
+import com.wireguard.crypto.KeyPair
+import java.net.InetAddress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -100,6 +103,56 @@ class FleetDnsTest {
         assertTrue(FleetDns.isMeshName(d, d.testMesh))
         assertFalse(FleetDns.isMeshName(d, d.testPublic))
         assertEquals(preset, FleetDns.upstreamsFor(d, d.testPublic, true, preset, FLEET))
+    }
+
+    // ── #751 the mesh-down tunnel ───────────────────────────────────────
+
+    private fun down(id: String, fb: List<String> = emptyList(), fleet: List<String> = FLEET) =
+        FleetDns.meshDownServers(d, id, fb, fleet)
+    private val self = KeyPair()
+    private val sink = KeyPair()
+    private fun downConfig(id: String, fb: List<String> = emptyList()) =
+        FleetDns.meshDownConfig(d, down(id, fb), FLEET, self, sink)
+
+    @Test fun withoutTheMeshEachPresetKeepsWhatItCanStillReach() {
+        for (p in publics) assertEquals(p.id, servers(p.id), down(p.id))
+        val first = publics.first()
+        // the fleet resolver is behind the mesh: Private with fallbacks is its fallbacks alone
+        assertEquals((first.servers + first.fallback).distinct(), down(privateFb.id, listOf(first.id)))
+        // control: the same choice with the mesh up does put the fleet resolver first
+        assertEquals(FLEET, servers(privateFb.id, listOf(first.id)).take(FLEET.size))
+        // nothing else to fall back to: it stays the fleet resolver, never a public one
+        assertEquals(FLEET, down(privateOnly.id, publics.map { it.id }))
+        assertEquals(FLEET, down(privateFb.id))
+        assertEquals(emptyList<String>(), down(d.presets.single { it.kind == FleetDns.KIND_MIRROR }.id))
+        assertThrows(IllegalStateException::class.java) { down(privateOnly.id, fleet = emptyList()) }
+    }
+
+    @Test fun theMeshDownTunnelRoutesNothingButAnUnreachableFleetResolver() {
+        assertTrue("ui.dns.mesh_down.tunnel_name is empty", d.meshDownTunnel.isNotBlank())
+        assertTrue("ui.dns.mesh_down.addresses is empty", d.meshDownAddresses.isNotEmpty())
+        // Mirror releases the slot
+        assertEquals(null, downConfig(d.presets.single { it.kind == FleetDns.KIND_MIRROR }.id))
+        // a public preset: its DNS servers on the VPN, the declared addresses, no peer = no route
+        val pub = downConfig(publics.first().id)!!
+        // compared through the parser: Java prints an IPv6 address in its long form
+        assertEquals(down(publics.first().id).map { InetAddress.getByName(it).hostAddress },
+                     pub.getInterface().dnsServers.map { it.hostAddress })
+        assertEquals(d.meshDownAddresses.map { InetNetwork.parse(it).toString() },
+                     pub.getInterface().addresses.map { it.toString() })
+        assertTrue("a public mesh-down tunnel routes something", pub.peers.isEmpty())
+        // Private only: one endpoint-less peer whose only routes are the fleet resolver's own /32s
+        val priv = downConfig(privateOnly.id)!!
+        assertEquals(1, priv.peers.size)
+        val hole = priv.peers.single()
+        assertFalse("the blackhole peer has an endpoint", hole.endpoint.isPresent)
+        assertEquals(FLEET.map { "$it/32" }.toSet(), hole.allowedIps.map { it.toString() }.toSet())
+        // control: with fallbacks to reach, the fleet resolver is neither a server nor a route
+        val fb = downConfig(privateFb.id, listOf(publics.first().id))!!
+        assertTrue(fb.peers.isEmpty())
+        assertTrue(fb.getInterface().dnsServers.none { it.hostAddress in FLEET })
+        // same choice, same keys -> the same text, so re-pushing it does not rebuild the VPN
+        assertEquals(pub.toWgQuickString(), downConfig(publics.first().id)!!.toWgQuickString())
     }
 
     @Test fun theWireParserReadsAnAAndAnNxdomain() {

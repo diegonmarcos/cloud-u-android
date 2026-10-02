@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.firewall.FirewallController
 import com.wireguard.android.backend.Tunnel
 import java.net.InetAddress
 import java.text.DateFormat
@@ -29,7 +30,8 @@ import java.util.Date
  *     the privileged shell channel when armed, else Android's settings open.
  *  2. Fleet DNS — Mirror Android or one declared preset (+ the ordered
  *     fallbacks for Private with fallbacks). Saving re-applies it to a running
- *     Cloud Mesh tunnel, which is the VPN every fleet app resolves through.
+ *     Cloud Mesh tunnel, which is the VPN every fleet app resolves through, and
+ *     (#751) hands the engine the mesh-down form it carries while the mesh is off.
  *  3. Status — the resolver list in force, the last successful lookup and a
  *     Test lookup that names the upstream that answered.
  */
@@ -78,7 +80,7 @@ class DnsFragment : Fragment() {
 
         // ── 2. Fleet DNS ────────────────────────────────────────────────
         col.addView(header(ctx, "Fleet DNS"))
-        col.addView(caption(ctx, "Applied once, at the SuperApp's VPN (the Cloud Mesh tunnel): every fleet app resolves through it. Mesh names (${decl.meshZones.joinToString(", ") { "*.$it" }}) go to the fleet resolver whenever the mesh is up."))
+        col.addView(caption(ctx, "Applied once, at the VPN every fleet app resolves through: the Cloud Mesh tunnel while it is up, and without the mesh a DNS-only tunnel that routes nothing (the fleet resolver is unreachable then, so Private with fallbacks uses its fallbacks alone and Private only fails lookups). Mesh names (${decl.meshZones.joinToString(", ") { "*.$it" }}) go to the fleet resolver whenever the mesh is up."))
         val presetGroup = RadioGroup(ctx)
         val fallbackBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val current = FleetDns.effective(decl, prefs.preset)
@@ -153,34 +155,71 @@ class DnsFragment : Fragment() {
 
     private fun fleetResolvers(ctx: Context) = FleetDns.splitServers(WgState.prefs(ctx).interfaceDns)
 
+    /** #751 The resolvers in force: the mesh tunnel's list while it is up, the
+     *  mesh-down list while the engine carries it, else none (Android's own). */
+    private fun planFor(ctx: Context, up: Boolean, idle: String): Result<List<String>> = runCatching {
+        val fleet = fleetResolvers(ctx)
+        when {
+            up -> FleetDns.vpnServers(decl, prefs.preset, prefs.fallbacks, fleet)
+            idle == "UP" -> FleetDns.meshDownServers(decl, prefs.preset, prefs.fallbacks, fleet)
+            else -> emptyList()
+        }
+    }
+
+    private fun idleLabel(ctx: Context, idle: String): String = when {
+        idle == "UP" -> "carried by the engine's DNS-only tunnel"
+        idle == "STANDBY" -> "ready — the engine raises it when Cloud Mesh goes down"
+        idle == "OFF" && !prefs.chosen -> "Android's own DNS — pick a preset here to apply one without the mesh"
+        idle == "OFF" -> "Android's own DNS (Mirror)"
+        FirewallController.isEnabled(ctx) -> "the firewall holds the one VPN slot ($idle)"
+        else -> idle
+    }
+
+    private class Snapshot(val up: Boolean, val idle: String, val servers: Result<List<String>>, val last: String)
+
     private fun refreshStatus(ctx: Context) {
         background({
-            val servers = runCatching { FleetDns.vpnServers(ctx, WgState.prefs(ctx).interfaceDns) }
-            Triple(meshUp(ctx), servers, prefs.lastLookup)
-        }) { (up, servers, last) ->
+            val up = meshUp(ctx)
+            val idle = WgState.backend(ctx).idleStatus()
+            Snapshot(up, idle, planFor(ctx, up, idle), prefs.lastLookup)
+        }) { snap ->
+            val up = snap.up; val servers = snap.servers; val last = snap.last
             val p = FleetDns.effective(decl, prefs.preset)
             status.text = buildString {
                 append("Preset: ${p.label}\nCloud Mesh: ${if (up) "up" else "down"}\n")
                 append("Active resolver: ")
                 append(servers.fold({ l -> if (l.isEmpty()) "Android's own (mirror)" else l.joinToString(" → ") },
                                     { e -> "ERROR — ${e.message}" }))
-                if (!up) append("\n(applies the next time Cloud Mesh connects; with it down, apps use Android's DNS)")
+                append("\nWithout the mesh: ${idleLabel(ctx, snap.idle)}")
                 append("\nLast successful lookup: ${last.ifEmpty { "none yet" }}")
             }
         }
     }
 
-    /** Re-establish a running tunnel so its VPN carries the new DNS list. */
+    /**
+     * Re-establish a running tunnel so its VPN carries the new DNS list, and
+     * (#751) hand the engine the mesh-down form. It takes the slot at once when
+     * the mesh is down — unless the firewall holds it: that one stays, and the
+     * engine raises the choice the next time the mesh goes down.
+     */
     private fun applyToTunnel(ctx: Context) {
         background({
             runCatching {
-                if (!meshUp(ctx)) return@runCatching false
-                WgState.backend(ctx).setState(WgState.tunnel, Tunnel.State.UP, WgState.prefs(ctx).toTunnelConfig())
-                true
+                val up = meshUp(ctx)
+                if (up) WgState.backend(ctx).setState(WgState.tunnel, Tunnel.State.UP, WgState.prefs(ctx).toTunnelConfig())
+                up to FleetDns.syncMeshDown(ctx, raiseNow = !FirewallController.isEnabled(ctx))
             }
         }) { r ->
-            r.fold({ applied -> if (applied) toast("Cloud Mesh re-applied with the new DNS") else Unit },
-                   { e -> toast("Not applied: ${e.message}") })
+            r.fold({ (up, idle) ->
+                when {
+                    idle.contains("VPN_NOT_AUTHORIZED") -> {
+                        toast("Allow the VPN, then pick the preset again")
+                        WgState.backend(ctx).consentIntent()?.let { startActivity(it) }
+                    }
+                    up -> toast("Cloud Mesh re-applied with the new DNS")
+                    else -> toast("Without the mesh: ${idleLabel(ctx, idle)}")
+                }
+            }, { e -> toast("Not applied: ${e.message}") })
             refreshStatus(ctx)
         }
     }
@@ -190,7 +229,7 @@ class DnsFragment : Fragment() {
         background({
             val up = meshUp(ctx)
             val fleet = fleetResolvers(ctx)
-            val plan = runCatching { FleetDns.vpnServers(ctx, WgState.prefs(ctx).interfaceDns) }
+            val plan = planFor(ctx, up, WgState.backend(ctx).idleStatus())
             listOf(decl.testPublic, decl.testMesh).filter { it.isNotEmpty() }.map { name ->
                 val sys = runCatching { InetAddress.getAllByName(name).joinToString(", ") { it.hostAddress ?: "" } }
                     .getOrElse { "FAILED (${it.javaClass.simpleName})" }

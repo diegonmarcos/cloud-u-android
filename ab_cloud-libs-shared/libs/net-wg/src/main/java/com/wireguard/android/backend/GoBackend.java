@@ -43,6 +43,7 @@ public final class GoBackend implements Backend {
     private static final int DNS_RESOLUTION_RETRIES = 10;
     private static final String TAG = "WireGuard/GoBackend";
     @Nullable private static AlwaysOnCallback alwaysOnCallback;
+    private boolean switching;
     private static CompletableFuture<VpnService> vpnService = new CompletableFuture<>();
     private final Context context;
     @Nullable private Config currentConfig;
@@ -189,8 +190,19 @@ public final class GoBackend implements Backend {
         if (state == State.UP) {
             final Config originalConfig = currentConfig;
             final Tunnel originalTunnel = currentTunnel;
-            if (currentTunnel != null)
-                setStateInternal(currentTunnel, null, State.DOWN);
+            if (currentTunnel != null) {
+                // #751 A SWITCH KEEPS THE SERVICE. Stopping it here races the
+                // establish() that follows: once the old interface is gone the
+                // system unbinds, the stop goes through, and the late onDestroy()
+                // tears down the tunnel just raised. The engine now switches on
+                // every mesh connect and disconnect (mesh <-> its DNS-only tunnel).
+                switching = true;
+                try {
+                    setStateInternal(currentTunnel, null, State.DOWN);
+                } finally {
+                    switching = false;
+                }
+            }
             try {
                 setStateInternal(tunnel, config, state);
             } catch (final Exception e) {
@@ -322,7 +334,7 @@ public final class GoBackend implements Backend {
             currentTunnelHandle = -1;
             currentConfig = null;
             wgTurnOff(handleToClose);
-            try {
+            if (!switching) try {
                 vpnService.get(0, TimeUnit.NANOSECONDS).stopSelf();
             } catch (final TimeoutException ignored) { }
         }
