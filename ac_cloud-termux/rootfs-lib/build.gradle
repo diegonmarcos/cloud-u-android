@@ -40,26 +40,8 @@ def cloudRootfsId = {
     return digest.digest().encodeHex().toString().substring(0, 12)
 }()
 
-// ── versionCode ─────────────────────────────────────────────────────────────
-// Same encoding as ab_cloud-libs-shared/lib-apks/app/build.gradle: minutes
-// since 2026-01-01 over a 3,000,000 base, from COMMS_BUILD_TIMESTAMP when CI
-// provides one, else build time. versionCode 1 forever is the bug that block
-// documents — a lib APK the Store can never see as newer.
-def cloudVersionCode = {
-    def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
-    def built
-    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
-    try {
-        built = stamp
-            ? java.time.LocalDateTime.parse(stamp,
-                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
-            : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
-    } catch (ignored) {
-        built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
-    }
-    long mins = java.time.Duration.between(base, built).toMinutes()
-    return mins > 0 ? (int) (3000000L + mins) : 3000000
-}
+// versionCode: the fork's ONE build stamp, root build.gradle (#789) — the
+// app reads the same one. versionCode 1 forever was the bug lib-apks documents.
 
 android {
     namespace 'com.diegonmarcos.cloudlib.rootfstermux'
@@ -73,7 +55,7 @@ android {
         applicationId companion.package
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode cloudVersionCode()
+        versionCode rootProject.ext.cloudVersionCode()
         versionName cloudRootfsId
     }
 

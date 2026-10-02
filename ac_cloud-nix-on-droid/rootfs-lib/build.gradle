@@ -47,27 +47,8 @@ if (bootstrapArt == null)
     throw new GradleException(declaration.toString() + " has no forks.nixdroid.bootstrap.artifact block "
             + "-- this lib's version has nothing to be derived from")
 
-// ── versionCode ─────────────────────────────────────────────────────────────
-// Same encoding ab_cloud-libs-shared/lib-apks/app/build.gradle uses so the
-// whole fleet is comparable: minutes since 2026-01-01 over a 3,000,000 base,
-// from COMMS_BUILD_TIMESTAMP when CI provides one, else build time. A
-// versionCode pinned at 1 forever is the documented bug that file fixed --
-// without a moving versionCode the Store can never see this lib as updatable.
-def rootfsVersionCode = { ->
-    def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
-    def built
-    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
-    try {
-        built = stamp
-            ? java.time.LocalDateTime.parse(stamp,
-                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
-            : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
-    } catch (ignored) {
-        built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
-    }
-    long mins = java.time.Duration.between(base, built).toMinutes()
-    return mins > 0 ? (int) (3000000L + mins) : 3000000
-}
+// versionCode: the fork's ONE build stamp, root build.gradle (#789) — the
+// app reads the same one, so the terminal and its rootfs move together.
 
 android {
     namespace 'com.diegonmarcos.cloudlib.rootfsnixdroid'
@@ -77,7 +58,7 @@ android {
         applicationId companion.package
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode rootfsVersionCode()
+        versionCode rootProject.ext.cloudVersionCode()
         versionName bootstrapArtifactId(bootstrapArt)
         // NO ndk.abiFilters. This module compiles nothing native — it carries one
         // zip — so an abiFilters list would be dead config, and a HARDCODED one at

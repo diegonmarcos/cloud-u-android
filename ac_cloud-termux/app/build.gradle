@@ -81,12 +81,9 @@ android {
         applicationId "cld.termux"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        // #628: the rootfs moved out into the cloud-lib-rootfs-termux
-        // companion APK (network-free transport instead of #618's runtime
-        // fetch), which changes this app's own staging code — bumped so the
-        // Store sees it as an update independently of the rootfs content address.
-        // #744 bumped: this build joins the fleet mesh (libs:core) on AGP 8.
-        versionCode 1011
+        // #789 the run's build stamp (root build.gradle), no longer a literal
+        // bumped by hand (1011 until #789: #628, #744 bumped it).
+        versionCode rootProject.ext.cloudVersionCode()
         versionName "0.118.4"
 
         if (appVersionName) versionName = appVersionName

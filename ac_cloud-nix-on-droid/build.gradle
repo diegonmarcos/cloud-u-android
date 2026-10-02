@@ -21,6 +21,30 @@ allprojects {
     }
 }
 
+// ── versionCode — #789 ONE build stamp for every APK this fork ships ─────────
+// The app AND rootfs-lib read it, so the terminal and its rootfs move together.
+// Same encoding as ab_cloud-libs-shared/lib-apks/app/build.gradle so the whole
+// fleet is comparable: minutes since 2026-01-01 over a 3,000,000 base, from
+// COMMS_BUILD_TIMESTAMP when CI provides one (one per run, shared by every ABI
+// leg — cloud-android-abi-parity.sh holds that), else build time. The app used
+// to pin a hand-bumped literal, so Android and the owner saw no progress
+// between builds; the Store's identity is the APK sha256 either way (#789).
+ext.cloudVersionCode = { ->
+    def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    try {
+        built = stamp
+            ? java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+            : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    } catch (ignored) {
+        built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
