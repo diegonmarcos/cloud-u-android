@@ -1,4 +1,8 @@
 import java.io.FileInputStream
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -33,12 +37,13 @@ java {
     }
 }
 
+// #789 imported, not java.time.*: in this script `java` is the java {} extension.
 val cloudVersionCode: Int = run {
-    val base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
-    val built = System.getenv("COMMS_BUILD_TIMESTAMP")?.let {
-        runCatching { java.time.LocalDateTime.parse(it, java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss")) }.getOrNull()
-    } ?: java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
-    val mins = java.time.Duration.between(base, built).toMinutes()
+    val base = LocalDateTime.of(2026, 1, 1, 0, 0)
+    val built: LocalDateTime = System.getenv("COMMS_BUILD_TIMESTAMP")?.let { stamp ->
+        runCatching { LocalDateTime.parse(stamp, DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss")) }.getOrNull()
+    } ?: LocalDateTime.now(ZoneOffset.UTC)
+    val mins = Duration.between(base, built).toMinutes()
     if (mins > 0) (3_000_000L + mins).toInt() else 3_000_000
 }
 
