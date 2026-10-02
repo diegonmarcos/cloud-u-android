@@ -19,6 +19,8 @@ kotlin {
 }
 
 dependencies {
+    // #772 the Decisions protocol itself (shared with the image engine); this module binds it to build.json::jev.
+    implementation project(':libs:decisions')
     // Android's own org.json at runtime; the real library for the JVM suite and PIT.
     compileOnly 'org.json:json:20240303'
     testImplementation 'org.json:json:20240303'

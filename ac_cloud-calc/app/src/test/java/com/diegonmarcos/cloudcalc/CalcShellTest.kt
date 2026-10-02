@@ -74,14 +74,14 @@ class CalcShellTest {
     private val state = CalcState(null)
 
     // #770 the Jev screens compose in the smoke test: no real network and no real Account binder.
-    private lateinit var savedHttp: com.diegonmarcos.cloudcalc.jev.Http
+    private lateinit var savedHttp: com.diegonmarcos.superapp.decisions.Http
     private lateinit var savedAccount: (android.content.Context, String) -> Pair<String?, String>
 
     @org.junit.Before fun offline() {
         savedHttp = com.diegonmarcos.cloudcalc.decide.JevStore.http
         savedAccount = com.diegonmarcos.cloudcalc.decide.JevStore.account
-        com.diegonmarcos.cloudcalc.decide.JevStore.http = object : com.diegonmarcos.cloudcalc.jev.Http {
-            override fun send(url: String, token: String?, body: String?, timeoutMs: Int) = com.diegonmarcos.cloudcalc.jev.Http.Response(503, "{}")
+        com.diegonmarcos.cloudcalc.decide.JevStore.http = object : com.diegonmarcos.superapp.decisions.Http {
+            override fun send(url: String, token: String?, body: String?, timeoutMs: Int) = com.diegonmarcos.superapp.decisions.Http.Response(503, "{}")
         }
         com.diegonmarcos.cloudcalc.decide.JevStore.account = { _, _ -> null to "none" }
     }

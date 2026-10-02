@@ -41,6 +41,7 @@
     "mail":                    { "class": "gui",      "why": "SuperApp mail screens (layouts)." },
     "maps":                    { "class": "gui",      "why": "cloud-nav's map feature module." },
     "media":                   { "class": "gui",      "why": "Keyboard media panel." },
+    "decisions":               { "class": "contract", "why": "#772 the thin client of a REMOTE engine, OpenRouter's Decisions API: one POST and its answers read back as probabilities. Compiled by Cloud Calc (jev/) and by the image engine's OpenRouter route; renders nothing.", "budget_lines": 200 },
     "ml-l-image":              { "class": "contract", "why": "engine-apk-split move 6: IImageScanEngine wire + typed payload + client.", "budget_lines": 460 },
     "ml-l-image-mlkit":        { "class": "engine",   "why": "Cloud-Lib-Ml-L-Image-Mlkit (ZXing + ML Kit OCR)." },
     "ml-l-text-mlkit":         { "class": "engine",   "why": "Cloud-Lib-Ml-L-Text-Mlkit." },

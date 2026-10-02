@@ -207,6 +207,8 @@ dependencies {
     implementation project(':jev')
     // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
     implementation project(':sound')
+    // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.
+    implementation project(':libs:decisions')
     // #770 the fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // #770 the manual token override: EncryptedSharedPreferences over an Android Keystore key.

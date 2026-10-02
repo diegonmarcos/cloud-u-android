@@ -110,7 +110,8 @@
         "clock",
         "jev",
         "sound",
-        "libs:text-tools"
+        "libs:text-tools",
+        "libs:decisions"
       ]
     },
     "clock": {
@@ -123,6 +124,11 @@
     },
     "sound": {
       "_doc": "#772 the Sound tools' maths as a plain-JVM Kotlin module (sound/): the FFT, levels with A/C weighting and the calibration offset, YIN pitch and note names, the speed of sound and wavelength, wave detection (events gated over the buffer's own noise floor, named impulse/chirp/noise/tone/complex, with fundamental, harmonics, bandwidth, duration and envelope; spectral-flux onsets; periodicity), the tone/sweep/noise/dual/beats generator and its safe-volume guard, WAV and CSV, the waterfall's log bands, and the summary a decision model is sent for 'What is this sound?'. No Android in it: its suite runs golden signals and the generator-to-analyser loopback, and PIT mutation-tests it on every `gradle test` (sound/build.gradle). The microphone, the player and the screens are app/…/sound and ui/SoundScreens.kt.",
+      "type": "library"
+    },
+    "libs:decisions": {
+      "_doc": "#772 OpenRouter's Decisions API client, lifted out of jev/ so the image engine (libs:ml-l-image-mlkit) speaks the same protocol: a `contract` lib (the thin client of a remote engine), so no L4 edge. jev/ binds it to build.json::jev; the app reads Http/Decision through it.",
+      "dir": "../ab_cloud-libs-shared/libs/decisions",
       "type": "library"
     },
     "libs:core": {

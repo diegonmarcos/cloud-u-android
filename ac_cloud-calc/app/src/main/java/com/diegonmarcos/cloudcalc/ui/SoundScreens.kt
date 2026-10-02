@@ -56,7 +56,7 @@ import com.diegonmarcos.cloudcalc.audio.Player
 import com.diegonmarcos.cloudcalc.audio.SoundDecl
 import com.diegonmarcos.cloudcalc.audio.SoundFlow
 import com.diegonmarcos.cloudcalc.audio.SoundStore
-import com.diegonmarcos.cloudcalc.jev.Decision
+import com.diegonmarcos.superapp.decisions.Decision
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.sound.Analysis
 import com.diegonmarcos.cloudcalc.sound.Generator

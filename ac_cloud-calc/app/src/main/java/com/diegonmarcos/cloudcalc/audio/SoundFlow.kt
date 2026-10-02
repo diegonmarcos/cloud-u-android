@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import androidx.core.content.ContextCompat
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.decide.JevStore
-import com.diegonmarcos.cloudcalc.jev.Decision
+import com.diegonmarcos.superapp.decisions.Decision
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.jev.JevRouter
 import com.diegonmarcos.cloudcalc.sound.Air
@@ -20,7 +20,7 @@ import org.json.JSONObject
 import kotlin.math.min
 
 /**
- * The Sound tools end to end, shared by the screens and /api/sound/* so a green debug route is
+ * The Sound tools end to end, shared by the screens and /api/sound/{generate,analyze,status} so a green debug route is
  * the app's real path: a live reading, a buffer's analysis, the guarded generator, and the
  * "What is this sound?" question. Blocks: call off the main thread.
  */

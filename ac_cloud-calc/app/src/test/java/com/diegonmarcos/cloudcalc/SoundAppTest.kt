@@ -16,7 +16,7 @@ import com.diegonmarcos.cloudcalc.audio.SoundFlow
 import com.diegonmarcos.cloudcalc.audio.SoundStore
 import com.diegonmarcos.cloudcalc.debugapi.SoundDebugApi
 import com.diegonmarcos.cloudcalc.decide.JevStore
-import com.diegonmarcos.cloudcalc.jev.Http
+import com.diegonmarcos.superapp.decisions.Http
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.sound.Analysis
 import com.diegonmarcos.cloudcalc.sound.Generator

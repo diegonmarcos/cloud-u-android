@@ -7,10 +7,10 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.diegonmarcos.cloudcalc.BuildConfig
 import com.diegonmarcos.cloudcalc.Declarations
-import com.diegonmarcos.cloudcalc.jev.Http
+import com.diegonmarcos.superapp.decisions.Http
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.jev.Models
-import com.diegonmarcos.cloudcalc.jev.UrlHttp
+import com.diegonmarcos.superapp.decisions.UrlHttp
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import org.json.JSONObject
 

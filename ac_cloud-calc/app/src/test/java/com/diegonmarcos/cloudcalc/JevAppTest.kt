@@ -13,7 +13,7 @@ import com.diegonmarcos.cloudcalc.clock.ClockEngine
 import com.diegonmarcos.cloudcalc.decide.JevFlow
 import com.diegonmarcos.cloudcalc.decide.JevStore
 import com.diegonmarcos.cloudcalc.engine.CalcApi
-import com.diegonmarcos.cloudcalc.jev.Http
+import com.diegonmarcos.superapp.decisions.Http
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.ui.CalcShell
 import com.diegonmarcos.cloudcalc.ui.CalcState

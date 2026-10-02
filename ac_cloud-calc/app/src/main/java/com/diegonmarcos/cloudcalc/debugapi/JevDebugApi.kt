@@ -5,7 +5,7 @@ import com.diegonmarcos.cloudcalc.BuildConfig
 import com.diegonmarcos.cloudcalc.decide.JevFlow
 import com.diegonmarcos.cloudcalc.decide.JevStore
 import com.diegonmarcos.cloudcalc.engine.CalcClient
-import com.diegonmarcos.cloudcalc.jev.Decisions
+import com.diegonmarcos.superapp.decisions.Decisions
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import org.json.JSONObject
 

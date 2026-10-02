@@ -6,8 +6,8 @@ import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.clock.ClockEngine
 import com.diegonmarcos.cloudcalc.clock.ClockLogic
 import com.diegonmarcos.cloudcalc.engine.CalcApi
-import com.diegonmarcos.cloudcalc.jev.Decision
-import com.diegonmarcos.cloudcalc.jev.Decisions
+import com.diegonmarcos.superapp.decisions.Decision
+import com.diegonmarcos.superapp.decisions.Decisions
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.jev.JevRouter
 import org.json.JSONArray

@@ -1,5 +1,9 @@
 package com.diegonmarcos.cloudcalc.jev
 
+import com.diegonmarcos.superapp.decisions.Decision
+import com.diegonmarcos.superapp.decisions.Decisions
+import com.diegonmarcos.superapp.decisions.Http
+import com.diegonmarcos.superapp.decisions.Option
 import org.json.JSONArray
 import org.json.JSONObject
 
