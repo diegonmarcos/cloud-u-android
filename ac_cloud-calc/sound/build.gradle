@@ -1,0 +1,41 @@
+// :sound — the Sound tools' maths (#772) as a plain-JVM module: FFT, levels and A/C weighting,
+// YIN pitch and note names, wave detection (events, onsets, periodicity, features), the tone /
+// sweep / noise generator and its safe-volume guard, WAV and CSV, and the summary a decision model
+// is sent. No Android here, so the golden-signal suite runs in milliseconds and PIT can mutate it,
+// as :clock and :jev are. The capture, playback and screens are app/…/sound and ui/SoundScreens.kt.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// MUTATION TESTING, as :clock and :jev: a mutant SoundTest does not kill is a rule nothing checks.
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.cloudcalc.sound.*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 75
+}
+
+tasks.named('test') { finalizedBy 'pitest' }

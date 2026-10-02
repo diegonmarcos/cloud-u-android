@@ -36,8 +36,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.diegonmarcos.cloudcalc.Declarations
-import com.diegonmarcos.cloudcalc.Dsp
 import com.diegonmarcos.cloudcalc.R
+import com.diegonmarcos.cloudcalc.sound.Dsp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive

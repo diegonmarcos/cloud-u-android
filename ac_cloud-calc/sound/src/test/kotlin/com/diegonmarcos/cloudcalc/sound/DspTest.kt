@@ -1,4 +1,4 @@
-package com.diegonmarcos.cloudcalc
+package com.diegonmarcos.cloudcalc.sound
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

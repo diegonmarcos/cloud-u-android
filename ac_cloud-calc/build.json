@@ -109,6 +109,7 @@
         "libs:bottomnav",
         "clock",
         "jev",
+        "sound",
         "libs:text-tools"
       ]
     },
@@ -118,6 +119,10 @@
     },
     "jev": {
       "_doc": "#770 the Jev section's logic as a plain-JVM Kotlin module (jev/): the build.json::jev declaration's parser and validator, the Decisions API call (the app's ONLY network code: HttpURLConnection over Android's resolver, so the fleet DNS menu applies), the router (one choice question over the declared tools + none, thresholds, candidates, the offline fallback), reading numbers and durations out of a request, the per-field slot questions, follow-up questions about a result, and the live decision-model catalogue. No Android in it: its suite drives a real local HTTP server as the mock Decisions API, and PIT mutation-tests it on every `gradle test` (jev/build.gradle).",
+      "type": "library"
+    },
+    "sound": {
+      "_doc": "#772 the Sound tools' maths as a plain-JVM Kotlin module (sound/): the FFT, levels with A/C weighting and the calibration offset, YIN pitch and note names, the speed of sound and wavelength, wave detection (events gated over the buffer's own noise floor, named impulse/chirp/noise/tone/complex, with fundamental, harmonics, bandwidth, duration and envelope; spectral-flux onsets; periodicity), the tone/sweep/noise/dual/beats generator and its safe-volume guard, WAV and CSV, the waterfall's log bands, and the summary a decision model is sent for 'What is this sound?'. No Android in it: its suite runs golden signals and the generator-to-analyser loopback, and PIT mutation-tests it on every `gradle test` (sound/build.gradle). The microphone, the player and the screens are app/…/sound and ui/SoundScreens.kt.",
       "type": "library"
     },
     "libs:core": {

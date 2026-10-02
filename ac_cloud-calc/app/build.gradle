@@ -198,6 +198,8 @@ dependencies {
     implementation project(':clock')
     // The Jev section's logic (#770): plain JVM, mutation-tested on its own (jev/build.gradle).
     implementation project(':jev')
+    // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
+    implementation project(':sound')
     // #770 the fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // #770 the manual token override: EncryptedSharedPreferences over an Android Keystore key.
