@@ -237,6 +237,11 @@
             android:excludeFromRecents="true"
             tools:ignore="DiscouragedApi" />
 
+        <!-- #772 /api/image/recognize on the fleet debug API (registers before Application.onCreate). -->
+        <provider
+            android:name=".debugapi.ImageDebugApiProvider"
+            android:authorities="${applicationId}.imagedebugapi"
+            android:exported="false" />
     </application>
 
 </manifest>

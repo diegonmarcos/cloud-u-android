@@ -106,6 +106,10 @@
       "generate_release_notes": false
     }
   },
+  "_doc_debug_api": "#772 the routes this app adds to the fleet debug API (libs:devtools AppDebugServer): /api/<image_group>/recognize?route=ml|openrouter&path=<file> runs the shared image engine's recognize (libs:ml-l-image, contract 2) on a file this app can read, on the given route or the one More settings > Image recognition route holds, and reports the uniform result (labels with probabilities, boxes, text, colours, barcode, and whether it fell back to on-device).",
+  "debug_api": {
+    "image_group": "image"
+  },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh, which ship-cloud-camera.yml already invokes for shell/lint/unit — so this block is all that was needed to turn those three calls from 'SKIPPED LOUDLY' into real assertions. Before it, this app's green tick meant only that Gradle exited 0.",
     "shell": {

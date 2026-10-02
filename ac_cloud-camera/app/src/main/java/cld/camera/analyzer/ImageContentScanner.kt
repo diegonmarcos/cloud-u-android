@@ -15,6 +15,13 @@
  * Both halves are always asked, exactly as the shared engine's callers do:
  * decodeBarcode returns null for "no barcode" AND for "could not load", and
  * the OCR result's error string is the tiebreaker that tells them apart.
+ *
+ * #772 identify: the same engine also RECOGNISES the photo (labels with
+ * probabilities, objects) on the route the user picked in More settings ▸
+ * Image recognition route — on-device ML Kit by default, an OpenRouter
+ * decision model only when picked (the engine falls back to on-device on
+ * error, timeout or no token). Barcode and OCR stay on their contract-1 calls,
+ * so they keep working against an engine too old to recognise.
  */
 package cld.camera.analyzer
 
@@ -23,6 +30,11 @@ import android.net.Uri
 import com.diegonmarcos.superapp.image.mlkit.BarcodeScan
 import com.diegonmarcos.superapp.image.mlkit.ImageScanEngine
 import com.diegonmarcos.superapp.image.mlkit.OcrResult
+import com.diegonmarcos.superapp.image.mlkit.Recognition
+import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
+import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import org.json.JSONObject
+import java.io.File
 
 /**
  * The camera's surface over the shared [ImageScanEngine]. Construct once and
@@ -31,15 +43,17 @@ import com.diegonmarcos.superapp.image.mlkit.OcrResult
  */
 class ImageContentScanner(context: Context) {
 
-    private val engine = ImageScanEngine(context.applicationContext)
+    private val ctx = context.applicationContext
+    private val engine = ImageScanEngine(ctx)
 
     /** What one captured image produced: the decoded barcode (or null) and the OCR text. */
     data class Content(
         val barcode: BarcodeScan?,
-        val ocr: OcrResult
+        val ocr: OcrResult,
+        val recognition: Recognition
     ) {
         /** Whether the scan found anything worth showing. */
-        val hasAnyContent: Boolean get() = barcode != null || ocr.text.isNotBlank()
+        val hasAnyContent: Boolean get() = barcode != null || ocr.text.isNotBlank() || recognition.labels.isNotEmpty()
     }
 
     /**
@@ -51,6 +65,29 @@ class ImageContentScanner(context: Context) {
     fun scan(uri: Uri): Content {
         val barcode = engine.decodeBarcode(uri)
         val ocr = engine.recognizeText(uri)
-        return Content(barcode, ocr)
+        return Content(barcode, ocr, engine.recognize(uri, identifyRequest(ctx)))
+    }
+
+    /** /api/image/recognize: the uniform recognition of a file, on [route] or the user's. */
+    fun recognize(file: File, route: String?): Recognition = engine.recognize(file, request(ctx, route))
+
+    /** The engine's live decision-model catalogue (slugs), for the model picker; empty when it cannot answer. */
+    fun models(): List<String> = engine.decisionModels(RecognitionConfig.request(RecognitionConfig.OPENROUTER, "")).map { it.slug }
+
+    /** Null when the engine can recognise, else what to do — the contract-2 handshake. */
+    fun status(): String? = engine.check(com.diegonmarcos.superapp.image.BuildConfig.IMAGE_RECOGNIZE_CONTRACT)
+
+    companion object {
+        /** A recognize request on [route] (default: the user's choice) with the user's model; the engine reads the Account token. */
+        fun request(ctx: Context, route: String? = null): JSONObject =
+            RecognitionConfig.request(route ?: RecognitionPrefs.route(ctx), RecognitionPrefs.model(ctx))
+
+        /** Identify only: the barcode and OCR halves already ran on their own calls. */
+        fun identifyRequest(ctx: Context): JSONObject = request(ctx).let { r ->
+            r.put("ml", JSONObject(r.getJSONObject("ml").toString()).put("ocr", false).put("barcode", false))
+        }
+
+        /** "Fruit 92%, Food 81%" — every label with its probability, as the gallery shows them. */
+        fun labels(r: Recognition): String = r.labels.joinToString(", ") { "${it.label} ${Math.round(it.p * 100)}%" }
     }
 }

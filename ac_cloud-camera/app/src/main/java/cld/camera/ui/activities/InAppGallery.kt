@@ -652,6 +652,12 @@ class InAppGallery : AppCompatActivity() {
                         append(getString(R.string.scan_contents_ocr_label))
                         append(it)
                     }
+                    // #772 identify: what the photo shows, every label with its probability.
+                    ImageContentScanner.labels(content.recognition).takeIf { it.isNotEmpty() }?.let {
+                        append("\n")
+                        append(getString(R.string.scan_contents_identify_label, content.recognition.route))
+                        append(it)
+                    }
                 }
                 showMessage(message.trim())
             }

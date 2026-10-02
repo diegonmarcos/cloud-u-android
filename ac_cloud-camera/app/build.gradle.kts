@@ -19,6 +19,9 @@ plugins {
 // data in the same file as the rest of the voice configuration.
 val appMetadataJson = groovy.json.JsonSlurper().parse(rootProject.file("build.json")) as Map<*, *>
 val voiceSection = appMetadataJson["voice"] as? Map<*, *>
+// #772 the image recognition debug group, declared in build.json::debug_api.
+val debugImageGroup = ((appMetadataJson["debug_api"] as? Map<*, *>)?.get("image_group") as? String)
+    ?: error("build.json::debug_api.image_group is required")
 val voiceShutterTrigger =
     (voiceSection?.get("shutter_trigger_word") as? String).orEmpty().ifBlank { "capture" }
 val voiceShutterEnabledByDefault =
@@ -70,6 +73,7 @@ android {
         // is not acceptable.
         buildConfigField("String", "VOICE_SHUTTER_TRIGGER_WORD", "\"$voiceShutterTrigger\"")
         buildConfigField("Boolean", "VOICE_SHUTTER_ENABLED_BY_DEFAULT", voiceShutterEnabledByDefault.toString())
+        buildConfigField("String", "DEBUG_API_IMAGE_GROUP", "\"$debugImageGroup\"")
     }
 
     buildTypes {

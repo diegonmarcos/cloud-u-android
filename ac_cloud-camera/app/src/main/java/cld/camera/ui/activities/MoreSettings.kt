@@ -23,8 +23,11 @@ import cld.camera.CamConfig
 import cld.camera.CapturedItems
 import cld.camera.NumInputFilter
 import cld.camera.R
+import cld.camera.analyzer.ImageContentScanner
 import cld.camera.databinding.MoreSettingsBinding
 import cld.camera.util.storageLocationToUiString
+import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
+import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 
@@ -252,6 +255,10 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
             binding.storageLocationSettings.visibility = View.GONE
         }
 
+        // #772 the route the gallery's Scan contents identifies a photo on (per app, RecognitionPrefs).
+        showImageRoute()
+        binding.imageRouteSetting.setOnClickListener { pickImageRoute() }
+
         binding.appBar.setNavigationOnClickListener {
             finish()
         }
@@ -268,6 +275,47 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
             v.setPadding(cutouts.left, 0, cutouts.right, 0)
             insets
         }
+    }
+
+    private fun showImageRoute() {
+        binding.imageRouteSubtitle.text = getString(
+            R.string.image_route_summary,
+            RecognitionConfig.routes()[RecognitionPrefs.route(this)], RecognitionPrefs.model(this)
+        )
+    }
+
+    /** The route first; OpenRouter then asks for its model. On-device stays the default and needs no network. */
+    private fun pickImageRoute() {
+        val routes = RecognitionConfig.routes().entries.toList()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.image_route_pick)
+            .setSingleChoiceItems(routes.map { it.value }.toTypedArray(), routes.indexOfFirst { it.key == RecognitionPrefs.route(this) }) { d, i ->
+                d.dismiss()
+                if (routes[i].key == RecognitionConfig.OPENROUTER) pickImageModel()
+                else { RecognitionPrefs.set(this, routes[i].key, RecognitionPrefs.model(this)); showImageRoute() }
+            }
+            .show()
+    }
+
+    /** The model picker: the engine's live decision-model catalogue to tap, or any slug typed. */
+    private fun pickImageModel() {
+        val field = EditText(this).apply { setText(RecognitionPrefs.model(this@MoreSettings)); setSingleLine() }
+        Thread {
+            val slugs = runCatching { ImageContentScanner(applicationContext).models() }.getOrDefault(emptyList())
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.image_route_model)
+                    .setView(field)
+                    .setSingleChoiceItems(slugs.toTypedArray(), slugs.indexOf(field.text.toString())) { _, i -> field.setText(slugs[i]) }
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        RecognitionPrefs.set(this, RecognitionConfig.OPENROUTER, field.text.toString())
+                        showImageRoute()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }.start()
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
