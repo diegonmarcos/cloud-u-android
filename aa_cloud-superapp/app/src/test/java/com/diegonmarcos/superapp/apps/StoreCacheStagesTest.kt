@@ -3,13 +3,15 @@ package com.diegonmarcos.superapp.apps
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import androidx.test.core.app.ApplicationProvider
+import com.diegonmarcos.superapp.appstore.FleetInstall
+import com.diegonmarcos.superapp.appstore.StoreStages
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.PackageInstallerReceiver
 import com.diegonmarcos.superapp.updater.cache.ApkCache
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -19,14 +21,61 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
-import java.net.InetSocketAddress
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.concurrent.thread
+
+/**
+ * The smallest HTTP/1.1 responder that HttpURLConnection will talk to:
+ * one request per connection (`Connection: close`), request line + headers in,
+ * status + headers + body out, no body on HEAD. com.sun.net.httpserver is not
+ * on the Android unit-test classpath; java.net.ServerSocket is.
+ */
+internal class TinyHttp(
+    private val handle: (method: String, path: String, headers: Map<String, String>) -> Triple<Int, Map<String, String>, ByteArray>,
+) {
+    private val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val port: Int get() = socket.localPort
+
+    init {
+        thread(isDaemon = true, name = "tiny-http") {
+            while (!socket.isClosed) {
+                val c = runCatching { socket.accept() }.getOrNull() ?: break
+                thread(isDaemon = true) { runCatching { c.use { serve(it) } } }
+            }
+        }
+    }
+
+    private fun serve(c: Socket) {
+        val inp = c.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+        val parts = (inp.readLine() ?: return).split(" ")
+        val headers = HashMap<String, String>()
+        while (true) {
+            val l = inp.readLine() ?: break
+            if (l.isEmpty()) break
+            headers[l.substringBefore(':').trim().lowercase()] = l.substringAfter(':').trim()
+        }
+        val (code, extra, body) = handle(parts[0], parts[1], headers)
+        val head = StringBuilder("HTTP/1.1 $code X\r\n")
+        extra.forEach { (k, v) -> head.append("$k: $v\r\n") }
+        head.append("Content-Length: ${body.size}\r\nConnection: close\r\n\r\n")
+        val out = c.getOutputStream()
+        out.write(head.toString().toByteArray(Charsets.ISO_8859_1))
+        if (parts[0] != "HEAD") out.write(body)
+        out.flush()
+    }
+
+    fun stop() = socket.close()
+}
 
 /**
  * #774 — A FINISHED DOWNLOAD IS NEVER FETCHED TWICE.
@@ -54,7 +103,7 @@ class StoreCacheStagesTest {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val pkg = "org.example.rootfs"
-    private lateinit var server: HttpServer
+    private lateinit var server: TinyHttp
     private val assetGets = AtomicInteger()
     private val servedBytes = AtomicLong()
     private val rangesSeen = mutableListOf<String>()
@@ -72,52 +121,45 @@ class StoreCacheStagesTest {
 
     private fun hex(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
 
-    private fun send(x: HttpExchange, code: Int, body: ByteArray) {
-        x.sendResponseHeaders(code, body.size.toLong())
-        x.responseBody.use { it.write(body) }
-    }
-
     @Before
     fun up() {
         ApkCache.clear(ctx)
         apk = fakeApk()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/r/Rootfs.apk") { x ->
-            if (x.requestMethod == "HEAD") {
-                x.responseHeaders.add("Content-Length", apk.size.toString())
-                x.sendResponseHeaders(200, -1); x.close(); return@createContext
+        server = TinyHttp { method, path, headers ->
+            when {
+                path == "/r/Rootfs.apk.sha256" ->
+                    Triple(200, emptyMap(), "${hex(apk)}  Rootfs.apk\n".toByteArray())
+                path != "/r/Rootfs.apk" -> Triple(404, emptyMap(), ByteArray(0))
+                method == "HEAD" -> Triple(200, emptyMap(), apk)   // length only; TinyHttp sends no body
+                else -> {
+                    assetGets.incrementAndGet()
+                    val range = headers["range"]
+                    if (range != null) synchronized(rangesSeen) { rangesSeen += range }
+                    val from = range?.removePrefix("bytes=")?.substringBefore('-')?.toIntOrNull() ?: 0
+                    val body = apk.copyOfRange(from, apk.size)
+                    servedBytes.addAndGet(body.size.toLong())
+                    if (from > 0) Triple(206, mapOf("Content-Range" to "bytes $from-${apk.size - 1}/${apk.size}"), body)
+                    else Triple(200, emptyMap(), body)
+                }
             }
-            assetGets.incrementAndGet()
-            val range = x.requestHeaders.getFirst("Range")
-            if (range != null) synchronized(rangesSeen) { rangesSeen += range }
-            val from = range?.removePrefix("bytes=")?.substringBefore('-')?.toIntOrNull() ?: 0
-            val body = apk.copyOfRange(from, apk.size)
-            servedBytes.addAndGet(body.size.toLong())
-            if (from > 0) {
-                x.responseHeaders.add("Content-Range", "bytes $from-${apk.size - 1}/${apk.size}")
-                send(x, 206, body)
-            } else send(x, 200, body)
         }
-        server.createContext("/r/Rootfs.apk.sha256") { x ->
-            send(x, 200, "${hex(apk)}  Rootfs.apk\n".toByteArray())
-        }
-        server.start()
     }
 
     @After
     fun down() {
-        server.stop(0)
+        server.stop()
+        StoreStages.installer = FleetInstall::install
         ApkCache.clear(ctx)
         ApkCache.clearNote(ctx, pkg)
     }
 
-    private fun app() = Fleet.App(
+    private fun app(releaseUrl: String = "http://127.0.0.1:${server.port}/r/Rootfs.apk") = Fleet.App(
         id = "lib-rootfs-test", label = "Rootfs", pkg = pkg, altId = null,
         // GHCR is the fallback source; pointing it at a closed port makes any
         // fall-through fail loudly instead of quietly succeeding elsewhere.
         registry = "127.0.0.1:1", namespace = "x", image = "x", tag = "latest",
         asset = "Rootfs.apk", assets = emptyMap(),
-        releaseUrl = "http://127.0.0.1:${server.address.port}/r/Rootfs.apk",
+        releaseUrl = releaseUrl,
         repoUrl = "", ghcrPage = "", blocked = false, kind = "lib",
     )
 
@@ -200,5 +242,98 @@ class StoreCacheStagesTest {
         assertTrue("an older build of the same package is gone", !old.exists())
         assertTrue("another package's cache is untouched", other.exists())
         assertNotNull(ApkCache.record(other))
+    }
+
+    // ── #774 the three stages and the auto chain ─────────────────────────
+
+    private val sheets = AtomicInteger()
+
+    /** Stand-in for Android's install sheet behind [StoreStages.installer].
+     *  Accept installs the handed-over bytes as the package (so the device
+     *  really runs them — [ApkCache.landed] hashes sourceDir); Cancel delivers
+     *  STATUS_FAILURE_ABORTED to the REAL receiver, exactly as the platform does. */
+    private fun sheet(accept: Boolean) {
+        StoreStages.installer = { c, _, v ->
+            sheets.incrementAndGet()
+            if (accept) {
+                val src = java.io.File(c.filesDir, "installed-$pkg.apk").apply { writeBytes(v.file.readBytes()) }
+                shadowOf(c.packageManager).installPackage(PackageInfo().apply {
+                    packageName = pkg; versionName = "7"; longVersionCode = 7L
+                    applicationInfo = ApplicationInfo().apply { packageName = pkg; sourceDir = src.absolutePath }
+                })
+            } else cancelInstallSheet(v.file.absolutePath)
+            null
+        }
+    }
+
+    @Test
+    fun `auto chain stops at Download when the download fails, and never opens the installer`() {
+        sheet(accept = true)
+        // No release asset, GHCR on a closed port: every source fails, fast.
+        val s = StoreStages.auto(ctx, app(releaseUrl = ""))
+        assertEquals("download", s.failedAt)
+        assertEquals("the row offers exactly Download to take over from", listOf("download"), s.actions)
+        assertEquals("Install must not run without a cached APK", 0, sheets.get())
+        assertEquals(ApkCache.STAGE_DOWNLOAD, ApkCache.noteOf(ctx, pkg)?.stage)
+    }
+
+    @Test
+    fun `auto chain stops at Install when the sheet is cancelled, cache kept, Install takes over without a download`() {
+        sheet(accept = false)
+        val stopped = StoreStages.auto(ctx, app())
+        assertEquals(1, assetGets.get())
+        assertEquals("install", stopped.failedAt)
+        assertEquals(listOf("install", "clear"), stopped.actions)
+        val cached = stopped.cached
+        assertNotNull("the stage names the cached APK it stopped with", cached)
+        assertTrue(cached!!.file.exists())
+        assertTrue("the reason is the installer's own: ${stopped.text}", stopped.text.contains("User rejected"))
+
+        // A fresh read (what the row shows after an app restart) says the same.
+        val reread = StoreStages.stage(ctx, app())
+        assertEquals("error", reread.id); assertEquals("install", reread.failedAt)
+
+        // The user takes over with Install: from the cache, no network fetch.
+        sheet(accept = true)
+        val installed = StoreStages.install(ctx, app())
+        assertEquals("Install after a cancel reuses the cache", 1, assetGets.get())
+        assertEquals("installed", installed.id)
+        assertEquals("the installed row offers Clear while the APK is still cached", listOf("clear"), installed.actions)
+
+        val cleared = StoreStages.clear(ctx, app())
+        assertTrue("Clear deletes the cached APK", !cached.file.exists())
+        assertEquals("installed", cleared.id)
+        assertEquals(null, cleared.cached)
+    }
+
+    @Test
+    fun `auto chain runs all three stages when nothing fails`() {
+        sheet(accept = true)
+        val s = StoreStages.auto(ctx, app())
+        assertEquals(1, sheets.get())
+        assertEquals("installed", s.id)
+        assertEquals("the chain clears after a proven install", null, StoreStages.cachedFor(ctx, app()))
+        assertEquals(null, s.failedAt)
+    }
+
+    @Test
+    fun `control - a cancelled sheet does NOT read as installed`() {
+        sheet(accept = false)
+        StoreStages.auto(ctx, app())
+        assertTrue("landed must be false when nothing was installed",
+            StoreStages.cachedFor(ctx, app())!!.let { !ApkCache.landed(ctx, it, pkg) })
+    }
+
+    @Test
+    fun `a killed download shows as resumable and Download fetches only the rest`() {
+        val half = apk.size / 2
+        ApkCache.file(ctx, "fleet-lib-rootfs-test-release.apk.part").writeBytes(apk.copyOfRange(0, half))
+        val before = StoreStages.stage(ctx, app())
+        assertEquals(listOf("download"), before.actions)
+        assertTrue("the row says the bytes are kept: ${before.text}", before.text.contains("kept"))
+        val after = StoreStages.download(ctx, app())
+        assertEquals((apk.size - half).toLong(), servedBytes.get())
+        assertEquals("cached", after.id)
+        assertEquals(listOf("install", "clear"), after.actions)
     }
 }

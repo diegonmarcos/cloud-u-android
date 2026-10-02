@@ -166,6 +166,22 @@ object ApkCache {
             }
         }
 
+    /**
+     * #774 Is [e]'s build what the device runs for [pkg] now? The record's
+     * versionCode when there is one (cheap, and what a row repaint can afford);
+     * otherwise the installed APK's own digest against the cached bytes — never
+     * the cache compared with itself. Unknown is false: the cache is kept.
+     */
+    fun landed(ctx: Context, e: Entry, pkg: String): Boolean {
+        val rec = e.record
+        if (rec != null) {
+            val code = installedInfo(ctx, rec.pkg)?.let { versionCodeOf(it) } ?: return false
+            return code >= rec.versionCode
+        }
+        val installed = installedSha256(ctx, pkg) ?: return false
+        return runCatching { ApkIntegrity.sha256(e.file) }.getOrNull() == installed
+    }
+
     // ── #774 the last stage outcome, per package ─────────────────────────
 
     /** Stage names a note can carry — the Store row's own vocabulary. */

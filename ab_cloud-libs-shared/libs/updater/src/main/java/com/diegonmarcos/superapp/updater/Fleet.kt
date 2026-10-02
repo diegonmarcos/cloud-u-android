@@ -562,7 +562,7 @@ object Fleet {
      * cheaper than the download it replaces; a record whose sha already
      * disagrees is skipped without reading the file.
      */
-    internal fun cachedRelease(ctx: Context, app: App): VerifiedApk? {
+    fun cachedRelease(ctx: Context, app: App): VerifiedApk? {
         if (app.releaseUrl.isBlank()) return null
         val sha = releaseSha256(app) ?: return null
         return ApkCache.entries(ctx)

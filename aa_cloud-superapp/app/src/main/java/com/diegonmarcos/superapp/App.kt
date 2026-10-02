@@ -154,6 +154,9 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // constellation APK (Configs → Constellation). Notifies when siblings
         // have GHCR updates; install stays user-initiated. Idempotent (KEEP).
         runCatching { com.diegonmarcos.superapp.appstore.ConstellationWorker.start(this) }
+        // #774 /api/store/{cache,stage,download,install,clear,auto} on the fleet
+        // debug server — the Store's stages, verifiable with the screen locked.
+        runCatching { com.diegonmarcos.superapp.appstore.StoreDebugApi.register(this) }
         // HeliBoard (libs:keyboard) is vendored WITHOUT its own Application —
         // our .App wins the manifest merge (tools:replace android:name), so the
         // keyboard's app-level init never ran. That left Settings /
