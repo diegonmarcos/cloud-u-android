@@ -89,6 +89,9 @@ object StoreMesh {
          *  members that answered are keys; a member it cannot see is a blind
          *  spot in its package visibility (AppsMesh.Gap PEER_BLIND). */
         val peerViews: Map<String, Set<String>> = emptyMap(),
+        /** #762 fleet ids that were stopped, were woken by the probe and then
+         *  answered: healthy, reported as "was stopped, woke ok", not a gap. */
+        val woken: Set<String> = emptySet(),
     )
 
     enum class State { OK, ENGINE_MISSING, ENGINE_OLD, APP_ABSENT }
@@ -138,17 +141,16 @@ object StoreMesh {
             if (pm.checkPermission(CONSTELLATION_PERM, pkg) == PackageManager.PERMISSION_GRANTED) granted.add(id)
         }
         val peers = FleetPeers.list(ctx).mapNotNull { idOf[it] }.toSet()
-        var reachable = sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
+        val sweepIds = { sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap() }
+        val first = sweepIds()
         // #733 "no debug API" must mean the member CANNOT serve one, not that it
         // was merely asleep: wake every member that ships the provider and did
         // not answer, then sweep again. A force-stopped app stays stopped, which
         // is exactly the case the gap report then names.
-        val asleep = peers - reachable.keys
-        if (asleep.isNotEmpty()) {
-            asleep.forEach { pkgOf[it]?.let { pkg -> FleetPeers.wake(ctx, pkg) } }
-            Thread.sleep(WAKE_SETTLE_MS)
-            reachable = sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
-        }
+        val asleep = peers - first.keys
+        asleep.forEach { pkgOf[it]?.let { pkg -> FleetPeers.wake(ctx, pkg) } }
+        val reachable = awaitWoken(first, asleep, WAKE_TIMEOUT_MS, WAKE_POLL_MS, sweepIds, Thread::sleep)
+        val woken = asleep intersect reachable.keys
         val token = FleetToken.get(ctx)
         val peerViews = reachable.mapNotNull { (id, port) ->
             val body = get(port, "/api/fleet/peers", token) ?: return@mapNotNull null
@@ -165,11 +167,34 @@ object StoreMesh {
             shares = shares,
             granted = granted,
             peerViews = peerViews,
+            woken = woken,
         )
     }
 
-    /** How long a woken member gets to bind its port before the second sweep. */
-    private const val WAKE_SETTLE_MS = 1500L
+    /** #762 a woken member answered after ~10 s on the phone (cold process,
+     *  Application work before the first accept); the old single 1.5 s settle
+     *  reported three healthy apps as gaps. Re-sweep until every woken member
+     *  answers or this much time has passed. */
+    const val WAKE_TIMEOUT_MS = 15_000L
+    const val WAKE_POLL_MS = 1_000L
+
+    /**
+     * #762 re-[sweep] every [pollMs] until each of [asleep] answers or
+     * [timeoutMs] is spent; the last sweep wins. [sleep] is injected so a test
+     * runs the loop without waiting. Nothing asleep = [first], no extra sweep.
+     */
+    fun awaitWoken(
+        first: Map<String, Int>, asleep: Set<String>, timeoutMs: Long, pollMs: Long,
+        sweep: () -> Map<String, Int>, sleep: (Long) -> Unit,
+    ): Map<String, Int> {
+        var reachable = first
+        var waited = 0L
+        while (!reachable.keys.containsAll(asleep) && waited < timeoutMs) {
+            sleep(pollMs); waited += pollMs
+            reachable = sweep()
+        }
+        return reachable
+    }
 
     /**
      * #733 One authenticated GET on a member's loopback debug API — the body,
@@ -302,7 +327,8 @@ object StoreMesh {
         val (dot, status) = when {
             live == null -> DIM to "probing…"
             version == null -> DIM to "not installed"
-            port != null -> GREEN to "${version.ifEmpty { "?" }} · reachable :$port"
+            port != null -> GREEN to "${version.ifEmpty { "?" }} · reachable :$port" +
+                if (app.id in live.woken) " · was stopped, woke ok" else ""
             app.id in live.peers -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running"
             else -> BLUE to "${version.ifEmpty { "?" }} · installed, no debug API answered"
         }

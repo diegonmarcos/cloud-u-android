@@ -25,6 +25,13 @@ kind `app` (nothing listed here). Its source dir is the row's repo_url path.
       requests CONSTELLATION_DATA; devtools carries <queries> MESH_MEMBER, the
       FleetTokenProvider at ${applicationId}.fleet and the FleetMemberReceiver
       answering MESH_MEMBER. Losing one drops every member at once.
+  G4  the debug server STARTS, not just the provider: devtools declares the
+      DebugInitProvider whose onCreate calls AppDebugServer.start, and
+      requests INTERNET — Android gates every AF_INET socket on it, loopback
+      included, so without it the 127.0.0.1 bind fails EACCES (#762: watchdog,
+      writer and camera declare none of their own; they answered the wake,
+      kept the provider and served nothing). No app manifest may remove
+      either with tools:node="remove"/"removeAll".
 
 USAGE  cloud-android-mesh-source-guard.py [ROOT]
 EXIT   0 every app is a member · 1 at least one gap · 3 nothing audited
@@ -37,6 +44,10 @@ FLEET = "aa_cloud-superapp/data/constellation-fleet.json"
 PERM = "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
 ACTION = "com.diegonmarcos.cloud.action.MESH_MEMBER"
 A = "{http://schemas.android.com/apk/res/android}"
+T = "{http://schemas.android.com/tools}"
+INTERNET = "android.permission.INTERNET"
+INIT = ".DebugInitProvider"
+INIT_KT = "devtools/src/main/java/com/diegonmarcos/superapp/devtools/DebugInitProvider.kt"
 MESH = ("core", "devtools")
 SKIP = {".git", "build", ".gradle", "node_modules", ".cxx"}
 # implementation / api / debugImplementation / "${flavor}Implementation" … — a
@@ -98,7 +109,35 @@ def manifest_gaps(root):
                and any(a.get(A + "name") == ACTION for a in r.iter("action"))
                for r in dev.iter("receiver")):
         gaps.append("libs:devtools lost the FleetMemberReceiver answering MESH_MEMBER")
+    if not any(p.get(A + "name", "").endswith(INIT) for p in dev.iter("provider")):
+        gaps.append("libs:devtools lost the DebugInitProvider — no member ever starts its debug server")
+    kt = os.path.join(root, SHARED_LIBS, INIT_KT)
+    body = read(kt) if os.path.isfile(kt) else ""
+    on_create = re.search(r"fun onCreate\(\)[^{]*\{(.*?)\n    \}", body, re.S)
+    if not on_create or not re.search(r"^[^/\n]*AppDebugServer\.start\(", on_create.group(1), re.M):
+        gaps.append("DebugInitProvider.onCreate no longer calls AppDebugServer.start — the provider is there, the server never starts")
+    if not any(e.get(A + "name") == INTERNET for e in dev.iter("uses-permission")):
+        gaps.append("libs:devtools no longer REQUESTS INTERNET — the 127.0.0.1 bind fails EACCES in every member without its own")
     return gaps
+
+
+def removals(top):
+    """App manifests under [top] that strip what G4 needs back out of the merge."""
+    out = []
+    for d, dirs, files in os.walk(top):
+        dirs[:] = [x for x in dirs if x not in SKIP]
+        if "AndroidManifest.xml" not in files:
+            continue
+        p = os.path.join(d, "AndroidManifest.xml")
+        try:
+            tree = ET.parse(p).getroot()
+        except ET.ParseError:
+            continue
+        for e in tree.iter():
+            name = e.get(A + "name", "")
+            if e.get(T + "node") in ("remove", "removeAll") and (name == INTERNET or name.endswith(INIT)):
+                out.append(f"{os.path.relpath(p, top)} removes {name}")
+    return out
 
 
 def main(argv):
@@ -131,6 +170,8 @@ def main(argv):
             if unwatched:
                 gaps.append(f"GAP     {r['id']:16} G2 {os.path.basename(own[0])} does not watch "
                             + ", ".join(f"{SHARED_LIBS}/{m}/**" for m in unwatched))
+        for why in removals(top):
+            gaps.append(f"GAP     {r['id']:16} G4 {why} — the provider merges, the debug server cannot start")
         if not any(r["id"] in g for g in gaps):
             print(f"MEMBER  {r['id']:16} {src}")
     for g in gaps:

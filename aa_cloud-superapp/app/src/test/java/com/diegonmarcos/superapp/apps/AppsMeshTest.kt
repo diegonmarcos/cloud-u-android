@@ -128,6 +128,36 @@ class AppsMeshTest {
     }
 
     @Test
+    fun `a member that answers late after a wake is woken ok, and one that never answers is the gap`() {
+        // #762 three healthy apps answered ~10 s after their wake; a single short
+        // settle reported them as NO_DEBUG_API. The poll must keep sweeping.
+        val id = apps.first().id
+        var sweeps = 0
+        val late = StoreMesh.awaitWoken(emptyMap(), setOf(id), StoreMesh.WAKE_TIMEOUT_MS, StoreMesh.WAKE_POLL_MS,
+            { sweeps++; if (sweeps >= 10) mapOf(id to 38091) else emptyMap() }, {})
+        assertEquals("the member that answers on the 10th sweep was given up on", mapOf(id to 38091), late)
+        assertEquals("the poll kept sweeping after the member answered", 10, sweeps)
+        // control: a member that never answers stops at the bound, not forever
+        sweeps = 0
+        val never = StoreMesh.awaitWoken(emptyMap(), setOf(id), StoreMesh.WAKE_TIMEOUT_MS, StoreMesh.WAKE_POLL_MS,
+            { sweeps++; emptyMap() }, {})
+        assertTrue(never.isEmpty())
+        assertEquals((StoreMesh.WAKE_TIMEOUT_MS / StoreMesh.WAKE_POLL_MS).toInt(), sweeps)
+        // nothing asleep: no extra sweep
+        sweeps = 0
+        StoreMesh.awaitWoken(mapOf(id to 38090), emptySet(), StoreMesh.WAKE_TIMEOUT_MS, StoreMesh.WAKE_POLL_MS,
+            { sweeps++; emptyMap() }, {})
+        assertEquals(0, sweeps)
+
+        val woke = healthy().let { StoreMesh.Live(it.installed, it.reachable, it.peers, it.contracts, it.shares,
+            it.granted, it.peerViews, woken = setOf(id)) }
+        assertFalse(kinds(woke, id).contains(GapKind.NO_DEBUG_API))
+        val text = AppsMesh.report(decl, fleet, links, woke)
+        assertTrue(text, text.contains("(1 woke ok)") && text.contains("was stopped, woke ok"))
+        assertFalse(AppsMesh.report(decl, fleet, links, healthy()).contains("was stopped, woke ok"))
+    }
+
+    @Test
     fun `Peer Control lists every declared device and every mesh VM once, and remembers the choice`() {
         val devices = KdeConnectConfig.get().devices
         val nodes = KdeMesh.nodes()

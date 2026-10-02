@@ -93,6 +93,8 @@ object AppsMesh {
      *                  debug API, never in /api/fleet/peers); the root cause, so
      *                  the two symptoms are not listed again for it
      *   NO_DEBUG_API   a member whose server did not answer even after a wake
+     *                  and [StoreMesh.WAKE_TIMEOUT_MS] of re-sweeps (#762: one
+     *                  that answers in time is [StoreMesh.Live.woken], healthy)
      *   NO_PERMISSION  CONSTELLATION_DATA not held
      *   PEER_BLIND     its own /api/fleet/peers misses members the host can see
      *   ENGINE_BROKEN  an engine it binds is missing or below its contract
@@ -138,7 +140,7 @@ object AppsMesh {
             val gaps = gaps(decl, fleet, links, live)
             val byId = fleet.associateBy { it.id }
             appendLine("Apps Mesh · ${fleet.size} members · ${live.installed.size} installed · " +
-                "${live.reachable.size} reachable · ${live.peers.size} mesh members")
+                "${live.reachable.size} reachable (${live.woken.size} woke ok) · ${live.peers.size} mesh members")
             appendLine()
             appendLine("Missing membership (${gaps.size})")
             if (gaps.isEmpty()) appendLine("  none")
@@ -154,6 +156,7 @@ object AppsMesh {
                 if (v == null) { appendLine("not installed"); continue }
                 append("v${v.ifEmpty { "?" }}")
                 append(live.reachable[app.id]?.let { " · :$it" } ?: " · no debug API")
+                if (app.id in live.woken) append(" · was stopped, woke ok")
                 append(if (app.id in live.peers) " · member" else " · NOT a member")
                 append(if (app.id in live.granted) " · CONSTELLATION_DATA" else " · no CONSTELLATION_DATA")
                 live.peerViews[app.id]?.let { append(" · sees ${it.size}/${live.peers.size}") }

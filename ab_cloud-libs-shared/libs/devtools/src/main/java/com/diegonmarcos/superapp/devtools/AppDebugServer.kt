@@ -201,7 +201,7 @@ object AppDebugServer {
         if (!running.compareAndSet(false, true)) return
         val sock = bindFirstFree()
         if (sock == null) {
-            Log.w(TAG, "no free port in $PORT_FIRST..$PORT_LAST — not starting")
+            Log.w(TAG, "no port bound in $PORT_FIRST..$PORT_LAST — not starting (last error: $lastBindError)")
             running.set(false)
             return
         }
@@ -223,10 +223,16 @@ object AppDebugServer {
         port = -1
     }
 
+    /** #762 why the last bind failed — "EACCES" means no INTERNET permission
+     *  (devtools declares it; an app manifest that removes it lands here), not
+     *  fifty busy ports. */
+    @Volatile private var lastBindError: String? = null
+
     private fun bindFirstFree(): ServerSocket? {
         val loopback = InetAddress.getByName("127.0.0.1")
         for (p in PORT_FIRST..PORT_LAST) {
-            val s = runCatching { ServerSocket(p, 4, loopback) }.getOrNull()
+            val s = runCatching { ServerSocket(p, 4, loopback) }
+                .onFailure { lastBindError = it.toString() }.getOrNull()
             if (s != null) return s
         }
         return null

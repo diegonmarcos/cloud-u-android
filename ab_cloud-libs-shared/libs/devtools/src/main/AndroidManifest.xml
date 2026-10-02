@@ -25,6 +25,14 @@
          granted at install; without it every app answered that route blind. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- #762 AppDebugServer binds 127.0.0.1:38090-38139. Android gates socket()
+         on the INTERNET permission for EVERY AF_INET socket, loopback included:
+         without it each bind fails EACCES and the server never starts. Members
+         that declare no INTERNET of their own (watchdog, writer, camera) linked
+         the provider and answered the fleet wake, yet served no debug API. The
+         lib that opens the socket declares what the socket needs. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application>
         <provider
             android:name="com.diegonmarcos.superapp.devtools.DebugInitProvider"

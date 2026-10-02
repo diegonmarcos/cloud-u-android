@@ -16,7 +16,8 @@
     <!--
       androidx.media3:media3-common declares this for ExoPlayer's network playback. We only pull
       media3 in transitively through camera-video, which uses media3-muxer to write MP4s locally,
-      so nothing we ship reads it and the app has no INTERNET permission to pair it with.
+      so nothing we ship reads it. INTERNET arrives only through libs:devtools (#762), for the
+      fleet debug server's 127.0.0.1 socket; the camera itself opens no connection.
     -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
 

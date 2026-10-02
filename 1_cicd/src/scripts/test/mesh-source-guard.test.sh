@@ -6,7 +6,7 @@
 #
 # #753. A gate only ever watched passing is indistinguishable from `exit 0`.
 # This copies the files the guard reads (git-tracked gradle scripts, patches,
-# ship workflows, the fleet roster, core's and devtools' manifests), requires a
+# ship workflows, the fleet roster, every AndroidManifest.xml, DebugInitProvider.kt), requires a
 # pass on the copy, then breaks one property at a time, proves the break
 # landed, and requires a FAIL naming the app or the manifest it broke.
 #
@@ -22,7 +22,9 @@ WRITER=ac_cloud-writer/app/build.gradle
 MAIL=ac_cloud-mail/app/build.gradle.kts
 CORE=ab_cloud-libs-shared/libs/core/build.gradle
 WRITER_WF=.github/workflows/ship-cloud-writer.yml
-for f in "$GUARD" "$ROOT/$CORE_MF" "$ROOT/$DEV_MF" "$ROOT/$FLEET" "$ROOT/$WRITER" "$ROOT/$MAIL" "$ROOT/$CORE" "$ROOT/$WRITER_WF"; do
+INIT_KT=ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/DebugInitProvider.kt
+CAMERA_MF=ac_cloud-camera/app/src/main/AndroidManifest.xml
+for f in "$GUARD" "$ROOT/$CORE_MF" "$ROOT/$DEV_MF" "$ROOT/$FLEET" "$ROOT/$WRITER" "$ROOT/$MAIL" "$ROOT/$CORE" "$ROOT/$WRITER_WF" "$ROOT/$INIT_KT" "$ROOT/$CAMERA_MF"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
@@ -33,8 +35,8 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
-    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '.github/workflows/ship-*.yml'
-                     printf '%s\0' "$FLEET" "$CORE_MF" "$DEV_MF"; } | xargs -0 cp --parents -t "$WORK/t")
+    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '.github/workflows/ship-*.yml' '*AndroidManifest.xml'
+                     printf '%s\0' "$FLEET" "$INIT_KT"; } | xargs -0 cp --parents -t "$WORK/t")
 }
 
 # mutate <label> <file> <python-edit-of-s> <expected-substring-in-guard-output>
@@ -77,6 +79,21 @@ mutate "core stops requesting CONSTELLATION_DATA" "$CORE_MF" \
 mutate "devtools drops its <queries>" "$DEV_MF" \
     "s=re.sub(r'<queries>.*?</queries>', '', s, count=1, flags=re.S)" \
     "libs:devtools lost <queries> MESH_MEMBER"
+# #762 G4: the provider merges but the server cannot start. watchdog, writer
+# and camera declare no INTERNET of their own — devtools' request is their only
+# one, which is exactly the #762 defect when it goes.
+mutate "devtools stops requesting INTERNET" "$DEV_MF" \
+    "s=re.sub(r'<uses-permission android:name=\"android.permission.INTERNET\"\s*/>', '', s, count=1)" \
+    "libs:devtools no longer REQUESTS INTERNET"
+mutate "devtools drops the DebugInitProvider" "$DEV_MF" \
+    "s=re.sub(r'<provider\s+android:name=\"com.diegonmarcos.superapp.devtools.DebugInitProvider\".*?/>', '', s, count=1, flags=re.S)" \
+    "libs:devtools lost the DebugInitProvider"
+mutate "DebugInitProvider.onCreate stops starting the server" "$INIT_KT" \
+    "s=s.replace('runCatching { AppDebugServer.start(ctx) }', '// runCatching { AppDebugServer.start(ctx) }', 1)" \
+    "DebugInitProvider.onCreate no longer calls AppDebugServer.start"
+mutate "camera's manifest strips INTERNET back out" "$CAMERA_MF" \
+    "s=s.replace('<uses-permission android:name=\"android.permission.CAMERA\"/>', '<uses-permission android:name=\"android.permission.CAMERA\"/><uses-permission android:name=\"android.permission.INTERNET\" tools:node=\"remove\"/>', 1)" \
+    "camera           G4 app/src/main/AndroidManifest.xml removes android.permission.INTERNET"
 mutate "a fleet app row points at a dir that is not there" "$FLEET" \
     "d=json.loads(s); [r.update(repo_url=r['repo_url']+'-gone') for r in d['apps'] if r['id']=='writer']; s=json.dumps(d)" \
     "writer           source dir"
