@@ -12,6 +12,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -46,6 +48,18 @@ class FleetMigrationTest {
         assertNotNull("the provider answered $method", out)
         out!!.getString(FleetConfig.KEY_ERROR)?.let { throw AssertionError("$method refused: $it") }
         return JSONObject(out.getString(FleetConfig.KEY_JSON)!!)
+    }
+
+    /** The app's real configuration before a test: restored after it, so the render tests that
+     *  share this emulator see cloud-nav exactly as they would have (a leaked cockpit mode once
+     *  hid the Explored tab from ExploredRenderTest). */
+    private lateinit var saved: JSONObject
+
+    @Before fun snapshot() { saved = call(FleetConfig.METHOD_EXPORT).getJSONObject("stores") }
+
+    @After fun restore() {
+        for (f in call(FleetConfig.METHOD_EXPORT).getJSONObject("stores").keys()) ctx.deleteSharedPreferences(f)
+        if (saved.length() > 0) call(FleetConfig.METHOD_IMPORT, JSONObject().put("stores", saved))
     }
 
     @Test fun a_configured_profile_survives_wipe_and_import_through_the_provider() {
