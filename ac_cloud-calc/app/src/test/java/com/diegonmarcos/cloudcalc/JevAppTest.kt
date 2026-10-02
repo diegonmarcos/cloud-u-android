@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.cloudcalc.clock.ClockEngine
 import com.diegonmarcos.cloudcalc.decide.JevFlow
@@ -149,7 +150,8 @@ class JevAppTest {
         ask("convert 3 ft to cm")
         compose.onNodeWithTag(CalcTags.JEV_VERDICT).assertTextContains("units", substring = true)
         assertTrue(evaluated("3 ft to cm"))
-        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 42", substring = true)
+        // The run block is a Column of Texts; its own node carries no text, so find the line itself.
+        compose.onNodeWithText("= 42").assertExists()
         assertEquals(Logic.Entry("jev", "convert 3 ft to cm", "42"), state.history.first())
         // The account token went out as the bearer, and nowhere into a body.
         val (_, token, body) = http.sent.first()
