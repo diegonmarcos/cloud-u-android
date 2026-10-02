@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
@@ -46,6 +47,9 @@ class CalendarAgendaFragment : KitComposeFragment() {
                     Modifier.fillMaxWidth().padding(top = 4.dp)
                         .background(if (today) p.surfaceSelected else p.surface)
                         .padding(6.dp)
+                        // One item per day for TalkBack ("Today · Thu 2 Oct, no events"), and
+                        // one node a test can read the day's text off.
+                        .semantics(mergeDescendants = true) {}
                         .testTag(dayTag(i)),
                 ) {
                     Text(if (today) "Today · $day" else day,
