@@ -55,6 +55,8 @@ object Declarations {
         val plot: Plot?,
         val meter: Meter?,
         val historyMax: Int,
+        /** A Clock mode's `clock` object as JSON (#768); ClockDecl reads it, nothing else does. */
+        val clock: String,
     )
 
     val tabs: List<Tab> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
@@ -108,6 +110,7 @@ object Declarations {
                 )
             },
             historyMax = m.optJSONObject("history")?.optInt("max_entries", 200) ?: 200,
+            clock = (m.optJSONObject("clock") ?: JSONObject()).toString(),
         )
     }
 

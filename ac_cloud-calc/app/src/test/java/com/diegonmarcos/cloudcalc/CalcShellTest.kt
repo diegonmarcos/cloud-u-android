@@ -110,6 +110,22 @@ class CalcShellTest {
         assertTrue(synchronized(engine.evals) { "2+2" in engine.evals })
     }
 
+    @Test fun `an alarm added on the Alarms screen is stored and handed to AlarmManager`() {
+        launch()
+        val alarms = Declarations.modes.first { it.kind == "alarms" }
+        compose.runOnIdle { state.tab = alarms.tab; state.modeByTab[alarms.tab] = alarms.id }
+        compose.waitForIdle()
+        compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.ADD_ALARM).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(com.diegonmarcos.cloudcalc.ui.ClockTags.SAVE).performClick()
+        compose.waitForIdle()
+        val app = RuntimeEnvironment.getApplication()
+        val a = com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single()
+        assertEquals(7 * 60, a.minuteOfDay)
+        assertTrue(a.enabled)
+        assertTrue(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:${a.id}"))
+    }
+
     @Test fun `a history tap sends the result back to its mode`() {
         val mode = Declarations.modes.first { it.kind == "expression" }
         state.remember(Logic.Entry(mode.id, "6*7", "42"), 10)

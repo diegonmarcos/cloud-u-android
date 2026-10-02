@@ -33,6 +33,32 @@ The sound meter's signal processing (radix-2 FFT, Hann window, IEC 61672-1 A-wei
 is written in `app/src/main/java/com/diegonmarcos/cloudcalc/Dsp.kt` from the published
 formulas; no code was taken from phyphox or OpeNoise (both GPL-3.0).
 
+## The Clock tab (#768)
+
+The Clock tab — world clock, alarms, timers, stopwatch, interval/Pomodoro, bedtime and sleep
+timer — is written in this repository: `clock/` (the rules, plain JVM) and
+`app/src/main/java/com/diegonmarcos/cloudcalc/clock/` plus `ui/ClockScreens.kt` (the Android half).
+It uses only the platform (AlarmManager, a foreground service, MediaPlayer on the alarm stream,
+RingtoneManager's picker, the device's tzdata) and AndroidX core. Its build adds PIT
+(Apache-2.0, `info.solidsoft.pitest` gradle plugin, Apache-2.0) for mutation testing; neither is
+packaged in the APK.
+
+**FossifyOrg/Clock (GPL-3.0), evaluated as the source** — commit
+`8fb2e86d1bee3f67c832233f6590a0127a3f024f`, 77 Kotlin files, 8,074 lines. What was taken is its
+DESIGN, which this tab follows point for point: an alarm is an AlarmManager alarm *clock*
+(`AlarmManagerCompat.setAlarmClock` — exact in Doze, the status-bar icon), every other wakeup an
+exact allow-while-idle one, a `specialUse` foreground service keeps timers and the stopwatch alive,
+the permission set is SCHEDULE_EXACT_ALARM (≤ API 32) + USE_EXACT_ALARM, and a receiver re-plans on
+BOOT_COMPLETED / MY_PACKAGE_REPLACED / TIME_SET / TIMEZONE_CHANGED. No Fossify source file was
+copied. It was not vendored (the dialer's `patches/` mechanism) or merged because, read from its
+source:
+
+| Finding | Consequence |
+|---|---|
+| 50 of its 77 Kotlin files import `org.fossify.commons` (Fossify Commons 6.1.6: the Views/XML base activity, dialogs, theming, its own permission flow) | merging means compiling a second UI toolkit into a Compose app, or rewriting those 50 files — the rewrite is what this is |
+| Room (2.8.5) for timers, `SharedPreferences` for alarms, greenrobot EventBus 3.3.1 between services and fragments, NumberPicker and AutoFitTextView widgets | four libraries this app does not otherwise carry, for state that fits one JSON value |
+| it is an app (launcher, widgets, settings, import/export, splash), not a library | vendoring it via the patch mechanism yields a second APK, while #768 asks for a section of Cloud Calc |
+
 ## Evaluated and not used (#767)
 
 | Candidate | Licence | Why not |

@@ -50,6 +50,8 @@ def uiTabsB64     = b64(buildJson.ui.tabs)
 def uiModesB64    = b64(buildJson.ui.modes)
 def uiDefaultTab  = (buildJson.ui.default_tab ?: '').toString()
 def debugGroup    = (buildJson.ui.debug_api?.group ?: 'calc').toString()
+def clockGroup    = (buildJson.ui.debug_api?.clock_group ?: '').toString()
+if (!clockGroup) throw new GradleException("build.json::ui.debug_api.clock_group missing — /api/clock/* would register under no name")
 
 // THE calc ENGINE this app binds (build.json::engines.calc): its package comes from the
 // constellation fleet manifest, for BuildConfig AND the manifest's <queries> — on API 30+ an
@@ -110,6 +112,7 @@ android {
         buildConfigField "String", "UI_MODES_B64",    "\"${uiModesB64}\""
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
         buildConfigField "String", "DEBUG_API_GROUP", "\"${debugGroup}\""
+        buildConfigField "String", "DEBUG_API_CLOCK_GROUP", "\"${clockGroup}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
@@ -179,6 +182,8 @@ dependencies {
     implementation project(':libs:core')
     // The fleet's bottom-nav island; this app supplies its own entries from ui.tabs.
     implementation project(':libs:bottomnav')
+    // The Clock section's rules (#768): plain JVM, mutation-tested on its own (clock/build.gradle).
+    implementation project(':clock')
 
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.ui:ui'

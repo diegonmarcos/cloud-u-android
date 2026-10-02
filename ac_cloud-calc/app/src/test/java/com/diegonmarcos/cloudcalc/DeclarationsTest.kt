@@ -38,6 +38,28 @@ class DeclarationsTest {
                 "plot" -> assertTrue("${m.id}: bad range", m.plot != null && m.plot!!.xmax > m.plot!!.xmin && m.plot!!.steps > 0)
                 "meter" -> m.meter!!.let { assertTrue("${m.id}: fft ${it.fftSize}", it.fftSize > 0 && (it.fftSize and (it.fftSize - 1)) == 0) }
                 "history" -> assertTrue(m.historyMax > 0)
+                // #768 the Clock kinds: what ClockDecl reads must be there and make sense.
+                "worldclock" -> JSONObject(m.clock).getJSONArray("zones").let { z ->
+                    assertTrue("${m.id}: no zones", z.length() > 0)
+                    (0 until z.length()).forEach { java.time.ZoneId.of(z.getString(it)) }
+                }
+                "alarms" -> JSONObject(m.clock).let { c ->
+                    val choices = c.getJSONArray("snooze_choices").let { a -> (0 until a.length()).map { a.getInt(it) } }
+                    assertTrue("${m.id}: snooze_default not a choice", c.getInt("snooze_default") in choices)
+                    assertTrue(c.getInt("ring_minutes") > 0)
+                }
+                "timers" -> JSONObject(m.clock).getJSONArray("presets").let { a ->
+                    assertTrue(a.length() > 0)
+                    (0 until a.length()).forEach { assertTrue(a.getLong(it) > 0) }
+                }
+                "interval" -> JSONObject(m.clock).getJSONArray("presets").let { a ->
+                    assertTrue(a.length() > 0)
+                    (0 until a.length()).map { a.getJSONObject(it) }.forEach { p -> assertTrue(p.getLong("work") > 0 && p.getInt("rounds") > 0) }
+                }
+                "bedtime" -> JSONObject(m.clock).let { c ->
+                    assertTrue(c.getJSONArray("sleep_choices").length() > 0)
+                    assertTrue("${m.id}: bedtime_default", com.diegonmarcos.cloudcalc.clock.ClockLogic.parseTime(c.getString("bedtime_default")) != null)
+                }
             }
         }
     }

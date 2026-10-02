@@ -1,6 +1,6 @@
 {
   "name": "cloud-calc",
-  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). Five bottom-nav tabs, each a strip of modes declared below in ui.modes: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics, Sound meter) and History. A mode is DATA: its kind picks one of six renderers (expression, catalog, converter, form, plot, meter) and everything it shows - keys, options, forms, categories - is declared here. Offline: the only network use is the engine's currency-rate download, on request. English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). Six bottom-nav tabs, each a strip of modes declared below in ui.modes: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics, Sound meter), Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768) and History. A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline: the only network use is the engine's currency-rate download, on request; the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -106,8 +106,13 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "clock"
       ]
+    },
+    "clock": {
+      "_doc": "#768 the Clock section's rules as a plain-JVM Kotlin module (clock/): alarm recurrence across repeat days and DST, timers, stopwatch laps, interval phases, what each AlarmManager wakeup does, and the stored JSON. No Android in it, so its suite runs without Robolectric and PIT mutation-tests it on every `gradle test` (clock/build.gradle). The Android half (AlarmManager, the foreground service, receivers, screens) is app/…/clock and ui/ClockScreens.kt.",
+      "type": "library"
     },
     "libs:core": {
       "dir": "../ab_cloud-libs-shared/libs/core",
@@ -158,12 +163,17 @@
         "icon": "tools"
       },
       {
+        "id": "clock",
+        "label": "Clock",
+        "icon": "clock"
+      },
+      {
         "id": "history",
         "label": "History",
         "icon": "history"
       }
     ],
-    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions.",
+    "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed.",
     "modes": [
       {
         "id": "standard",
@@ -1020,6 +1030,108 @@
         }
       },
       {
+        "id": "world",
+        "label": "World clock",
+        "tab": "clock",
+        "kind": "worldclock",
+        "clock": {
+          "zones": [
+            "Europe/Madrid",
+            "America/New_York",
+            "America/Sao_Paulo",
+            "Asia/Tokyo"
+          ]
+        }
+      },
+      {
+        "id": "alarms",
+        "label": "Alarms",
+        "tab": "clock",
+        "kind": "alarms",
+        "clock": {
+          "snooze_choices": [
+            5,
+            10,
+            15,
+            20,
+            30
+          ],
+          "snooze_default": 10,
+          "ring_minutes": 10,
+          "vibrate_default": true
+        }
+      },
+      {
+        "id": "timers",
+        "label": "Timers",
+        "tab": "clock",
+        "kind": "timers",
+        "clock": {
+          "presets": [
+            60,
+            180,
+            300,
+            600,
+            900,
+            1800,
+            3600
+          ]
+        }
+      },
+      {
+        "id": "stopwatch",
+        "label": "Stopwatch",
+        "tab": "clock",
+        "kind": "stopwatch",
+        "clock": {}
+      },
+      {
+        "id": "interval",
+        "label": "Interval",
+        "tab": "clock",
+        "kind": "interval",
+        "clock": {
+          "presets": [
+            {
+              "label": "Pomodoro",
+              "work": 1500,
+              "rest": 300,
+              "long_rest": 900,
+              "long_every": 4,
+              "rounds": 4
+            },
+            {
+              "label": "HIIT 30/30",
+              "work": 30,
+              "rest": 30,
+              "rounds": 10
+            },
+            {
+              "label": "Tabata",
+              "work": 20,
+              "rest": 10,
+              "rounds": 8
+            }
+          ]
+        }
+      },
+      {
+        "id": "bedtime",
+        "label": "Bedtime",
+        "tab": "clock",
+        "kind": "bedtime",
+        "clock": {
+          "sleep_choices": [
+            15,
+            30,
+            45,
+            60,
+            90
+          ],
+          "bedtime_default": "23:00"
+        }
+      },
+      {
         "id": "history",
         "label": "History",
         "tab": "history",
@@ -1029,9 +1141,10 @@
         }
       }
     ],
-    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info.",
+    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state.",
     "debug_api": {
-      "group": "calc"
+      "group": "calc",
+      "clock_group": "clock"
     }
   },
   "tests": {

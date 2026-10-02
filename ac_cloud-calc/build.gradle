@@ -8,4 +8,7 @@ plugins {
     // Compose (#565); a @Composable source set needs the compose compiler, resolved
     // from here the way libs:bottomnav resolves it from cloud-mail's root.
     id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
+    // :clock (#768) is plain JVM Kotlin, mutation-tested by PIT.
+    id 'org.jetbrains.kotlin.jvm'                  version '2.3.20' apply false
+    id 'info.solidsoft.pitest'                     version '1.19.0' apply false
 }

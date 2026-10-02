@@ -18,6 +18,15 @@
 #   C6  offline: no app source opens a URL or a socket (the only network use is the
 #       engine's rate download, in libs:calc).
 #   C7  the debug API registers eval, modes and info under build.json::ui.debug_api.group.
+#   C8  #768 the Clock's platform contract, in the manifest: exact alarms by the alarm-clock
+#       path (USE_EXACT_ALARM; SCHEDULE_EXACT_ALARM capped at API 32), a non-exported receiver
+#       for its own wakeups, an exported one re-planning on BOOT_COMPLETED, MY_PACKAGE_REPLACED,
+#       TIME_SET and TIMEZONE_CHANGED, a specialUse foreground service with its permission, and
+#       a full-screen ring; POST_NOTIFICATIONS asked for by ui/ClockScreens.kt alone.
+#   C9  one scheduler: only clock/ClockEngine.kt calls AlarmManager's set*, and a user's alarm
+#       is set as an alarm CLOCK (setAlarmClock), the one kind Doze never defers.
+#   C10 /api/<clock_group>/ documents and answers status, timer_start and timer_cancel, under
+#       build.json::ui.debug_api.clock_group, and never names an op `state` (GET /api/state's key).
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -120,14 +129,65 @@ for op in ("eval", "modes", "info"):
 if not bj["ui"].get("debug_api", {}).get("group"):
     bad.append("C7 build.json::ui.debug_api.group is missing")
 
+# C8
+for perm in ("android.permission.USE_EXACT_ALARM", "android.permission.RECEIVE_BOOT_COMPLETED",
+             "android.permission.FOREGROUND_SERVICE_SPECIAL_USE", "android.permission.POST_NOTIFICATIONS",
+             "android.permission.USE_FULL_SCREEN_INTENT"):
+    if 'android:name="%s"' % perm not in manifest:
+        bad.append("C8 the manifest does not declare %s" % perm)
+if not re.search(r'android\.permission\.SCHEDULE_EXACT_ALARM"\s+android:maxSdkVersion="32"', manifest):
+    bad.append("C8 SCHEDULE_EXACT_ALARM must be capped at maxSdkVersion 32 (USE_EXACT_ALARM covers 33+)")
+def element(tag, name):
+    m = re.search(r'<%s\s[^>]*android:name="%s"[^>]*?(/>|>.*?</%s>)' % (tag, re.escape(name), tag), manifest, re.S)
+    return m.group(0) if m else ""
+rx = element("receiver", ".clock.ClockReceiver")
+if 'android:exported="false"' not in rx:
+    bad.append("C8 .clock.ClockReceiver must exist and not be exported — another app could dismiss an alarm")
+boot = element("receiver", ".clock.ClockBootReceiver")
+for action in ("BOOT_COMPLETED", "MY_PACKAGE_REPLACED", "TIME_SET", "TIMEZONE_CHANGED"):
+    if 'android.intent.action.%s"' % action not in boot:
+        bad.append("C8 .clock.ClockBootReceiver does not re-plan on %s — alarms would be lost or shifted" % action)
+svc = element("service", ".clock.ClockService")
+if 'android:foregroundServiceType="specialUse"' not in svc or "PROPERTY_SPECIAL_USE_FGS_SUBTYPE" not in svc:
+    bad.append("C8 .clock.ClockService must be a specialUse foreground service with its subtype property")
+if 'android:showWhenLocked="true"' not in element("activity", ".clock.RingActivity"):
+    bad.append("C8 .clock.RingActivity must show over the lock screen")
+if 'android.permission.INTERNET' in manifest:
+    bad.append("C8 the app manifest asks for INTERNET — Calc and Clock are offline")
+asked = sorted(os.path.relpath(p, src) for p in kts if "POST_NOTIFICATIONS" in code(p))
+if asked != ["ui/ClockScreens.kt"]:
+    bad.append("C8 POST_NOTIFICATIONS must be asked for by ui/ClockScreens.kt alone, found in %s" % asked)
+
+# C9
+setters = re.compile(r"\b(setAlarmClock|setExactAndAllowWhileIdle|setAndAllowWhileIdle|setExact|setInexactRepeating|setRepeating|setWindow)\(")
+callers = sorted(os.path.relpath(p, src) for p in kts if setters.search(code(p)))
+if callers != ["clock/ClockEngine.kt"]:
+    bad.append("C9 AlarmManager must be set by clock/ClockEngine.kt alone, found in %s" % callers)
+engine = os.path.join(src, "clock", "ClockEngine.kt")
+if os.path.isfile(engine) and not re.search(r"w\.clock && exact -> AlarmManagerCompat\.setAlarmClock\(", code(engine)):
+    bad.append("C9 a user's alarm is not set with setAlarmClock — Doze could defer it")
+
+# C10
+capi_path = os.path.join(src, "debugapi", "ClockDebugApi.kt")
+capi = code(capi_path) if os.path.isfile(capi_path) else ""
+if "BuildConfig.DEBUG_API_CLOCK_GROUP" not in capi:
+    bad.append("C10 ClockDebugApi does not register under build.json::ui.debug_api.clock_group")
+for op in ("status", "timer_start", "timer_cancel"):
+    if not re.search(r'AppDebugServer\.Op\("%s"' % op, capi) or not re.search(r'"%s" ->' % op, capi):
+        bad.append("C10 /api/<clock_group>/%s is not both documented and answered" % op)
+if re.search(r'"state" ->', capi):
+    bad.append("C10 ClockDebugApi answers an op named state — that key is GET /api/state's (update-ack guard)")
+if not bj["ui"].get("debug_api", {}).get("clock_group"):
+    bad.append("C10 build.json::ui.debug_api.clock_group is missing")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C7 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C7"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C10 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C10"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -169,6 +229,18 @@ mutate engine-compiled app/build.gradle 's.replace("implementation project(\x27:
 mutate native-in-app "$J/Logic.kt" 's + "\nprivate object Q { init { System.loadLibrary(\"qalc\") } }\n"' "C5 Logic.kt loads native code"
 mutate app-online "$J/Logic.kt" 's + "\nprivate val u = java.net.URL(\"https://example.org\")\n"' "C6 Logic.kt uses the network"
 mutate debug-op-dropped "$J/debugapi/CalcDebugApi.kt" 's.replace("\"modes\" -> modesJson()", "")' "C7 /api/<group>/modes"
+mutate no-use-exact-alarm app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\" />", "")' "C8 the manifest does not declare android.permission.USE_EXACT_ALARM"
+mutate exact-uncapped app/src/main/AndroidManifest.xml 's.replace(" android:maxSdkVersion=\"32\"", "")' "C8 SCHEDULE_EXACT_ALARM must be capped"
+mutate fire-exported app/src/main/AndroidManifest.xml 's.replace("android:name=\".clock.ClockReceiver\"\n            android:exported=\"false\"", "android:name=\".clock.ClockReceiver\"\n            android:exported=\"true\"")' "C8 .clock.ClockReceiver must exist and not be exported"
+mutate no-boot-replan app/src/main/AndroidManifest.xml 's.replace("<action android:name=\"android.intent.action.BOOT_COMPLETED\" />", "")' "C8 .clock.ClockBootReceiver does not re-plan on BOOT_COMPLETED"
+mutate no-zone-replan app/src/main/AndroidManifest.xml 's.replace("<action android:name=\"android.intent.action.TIMEZONE_CHANGED\" />", "")' "does not re-plan on TIMEZONE_CHANGED"
+mutate fgs-untyped app/src/main/AndroidManifest.xml 's.replace("android:foregroundServiceType=\"specialUse\"", "")' "C8 .clock.ClockService must be a specialUse"
+mutate app-internet app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.WAKE_LOCK\" />", "<uses-permission android:name=\"android.permission.WAKE_LOCK\" />\n    <uses-permission android:name=\"android.permission.INTERNET\" />")' "C8 the app manifest asks for INTERNET"
+mutate notify-elsewhere "$J/ui/ModeScreens.kt" 's + "\nprivate val nag = android.Manifest.permission.POST_NOTIFICATIONS\n"' "C8 POST_NOTIFICATIONS must be asked for"
+mutate second-scheduler "$J/Logic.kt" 's + "\nprivate fun x(am: android.app.AlarmManager, p: android.app.PendingIntent) = am.setExact(0, 0L, p)\n"' "C9 AlarmManager must be set by clock/ClockEngine.kt alone"
+mutate alarm-not-clock "$J/clock/ClockEngine.kt" 's.replace("w.clock && exact -> AlarmManagerCompat.setAlarmClock(am, w.at, openIntent(ctx, ClockDecl.modeId(\"alarms\")), pi)", "w.clock && exact -> AlarmManagerCompat.setExactAndAllowWhileIdle(am, AlarmManager.RTC_WAKEUP, w.at, pi)")' "alarm is not set with setAlarmClock"
+mutate clock-op-dropped "$J/debugapi/ClockDebugApi.kt" 's.replace("\"timer_cancel\" -> {", "\"timer_kill\" -> {")' "C10 /api/<clock_group>/timer_cancel"
+mutate clock-op-state "$J/debugapi/ClockDebugApi.kt" 's.replace("\"status\" -> status(ctx).toString()", "\"status\", \"state\" -> status(ctx).toString()\n        \"state\" -> status(ctx).toString()")' "C10 ClockDebugApi answers an op named state"
 
-echo "── C1-C7 + mutations: $FAILURES failure(s) ──"
+echo "── C1-C10 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

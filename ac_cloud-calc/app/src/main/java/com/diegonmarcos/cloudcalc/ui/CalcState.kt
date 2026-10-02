@@ -40,6 +40,13 @@ class CalcState(private val prefs: SharedPreferences?) {
         pending = target.id to text
     }
 
+    /** Open mode [modeId] on its tab (a Clock notification tap); an unknown id changes nothing. */
+    fun show(modeId: String?) {
+        val m = Declarations.mode(modeId ?: return) ?: return
+        modeByTab[m.tab] = m.id
+        tab = m.tab
+    }
+
     companion object {
         const val KEY = "history"
         const val KIND_EXPRESSION = "expression"

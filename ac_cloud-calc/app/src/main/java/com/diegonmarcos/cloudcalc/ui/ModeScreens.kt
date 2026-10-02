@@ -75,6 +75,12 @@ fun ModeScreen(mode: Declarations.Mode) {
             "plot" -> PlotMode(mode)
             "meter" -> MeterMode(mode)
             "history" -> HistoryMode(mode)
+            "worldclock" -> WorldClockMode(mode)
+            "alarms" -> AlarmsMode(mode)
+            "timers" -> TimersMode(mode)
+            "stopwatch" -> StopwatchMode(mode)
+            "interval" -> IntervalMode(mode)
+            "bedtime" -> BedtimeMode(mode)
             else -> Text(stringResource(R.string.unknown_kind, mode.kind), Modifier.padding(CalcMetrics.gutter))
         }
     }
