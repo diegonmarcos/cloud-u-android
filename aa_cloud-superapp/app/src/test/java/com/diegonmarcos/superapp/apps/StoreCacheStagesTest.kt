@@ -15,6 +15,7 @@ import com.diegonmarcos.superapp.updater.cache.ApkCache
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -283,7 +284,7 @@ class StoreCacheStagesTest {
         val stopped = StoreStages.auto(ctx, app())
         assertEquals(1, assetGets.get())
         assertEquals("install", stopped.failedAt)
-        assertEquals(listOf("install", "clear"), stopped.actions)
+        assertEquals(listOf("install", "download", "clear"), stopped.actions)
         val cached = stopped.cached
         assertNotNull("the stage names the cached APK it stopped with", cached)
         assertTrue(cached!!.file.exists())
@@ -334,7 +335,7 @@ class StoreCacheStagesTest {
         val after = StoreStages.download(ctx, app())
         assertEquals((apk.size - half).toLong(), servedBytes.get())
         assertEquals("cached", after.id)
-        assertEquals(listOf("install", "clear"), after.actions)
+        assertEquals(listOf("install", "download", "clear"), after.actions)
     }
 
     @Test
@@ -348,5 +349,116 @@ class StoreCacheStagesTest {
         sheet(accept = true)
         StoreStages.install(ctx, app())
         assertEquals("a finished install releases the hold", null, Fleet.heldAtInstall(ctx, app()))
+    }
+
+    // ── #780 a cached APK never hides an update ──────────────────────────
+    //
+    // The phone's report: apps with an update showed no usable Download — the
+    // row offered only Clear. stage() returned "installed · Clear" for any
+    // landed cache BEFORE reading the remote, so the last update's leftover APK
+    // hid the next one. Each case below fails on that code; each pair is the
+    // other's control (same setup, one fact flipped, the verdict must flip).
+
+    /** A distinct real zip per build: Install re-verifies it as an APK. */
+    private fun bytesOf(tag: String): ByteArray = ByteArrayOutputStream().also { bos ->
+        ZipOutputStream(bos).use { z -> z.putNextEntry(ZipEntry("AndroidManifest.xml")); z.write("$pkg $tag".toByteArray()); z.closeEntry() }
+    }.toByteArray()
+
+    private fun installedAt(code: Long, bytes: ByteArray) {
+        val src = java.io.File(ctx.filesDir, "installed-$pkg-$code.apk").apply { writeBytes(bytes) }
+        shadowOf(ctx.packageManager).installPackage(PackageInfo().apply {
+            packageName = pkg; versionName = "$code"; longVersionCode = code
+            applicationInfo = ApplicationInfo().apply { packageName = pkg; sourceDir = src.absolutePath }
+        })
+    }
+
+    /** A cached build WITH its download record, as Fleet.download leaves a real APK. */
+    private fun cachedAt(code: Long, bytes: ByteArray) =
+        ApkCache.file(ctx, "fleet-lib-rootfs-test-v$code-${hex(bytes).take(6)}.apk").apply {
+            writeBytes(bytes)
+            java.io.File(parentFile, "$name.record").writeText("$pkg\n$code\n${hex(bytes)}\n")
+        }
+
+    private fun remoteIs(bytes: ByteArray) =
+        Fleet.State.UpdateAvailable("2", hex(bytes).take(12), bytes.size.toLong(), source = "release")
+
+    @Test
+    fun `780 installed v1, cached v1 landed (same bytes), remote v2 = update_available + Download, cache auto-cleared`() {
+        val v1 = bytesOf("v1"); installedAt(1, v1)
+        val f = cachedAt(1, v1)
+        val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v2")))
+        assertEquals("update_available", s.id)
+        assertEquals("Download, and nothing to Clear: the landed cache cleared itself", listOf("download"), s.actions)
+        assertFalse("a cache byte-identical to the installed APK is reaped without a tap", f.exists())
+    }
+
+    @Test
+    fun `780 installed v1, cached v1 landed (other bytes), remote v2 = update_available, Clear only as an extra`() {
+        installedAt(1, bytesOf("v1"))
+        val f = cachedAt(1, bytesOf("v1-rebuild"))
+        val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v2")))
+        assertEquals("update_available", s.id)
+        assertEquals(listOf("download", "clear"), s.actions)
+        assertTrue("unproven bytes are never auto-deleted", f.exists())
+    }
+
+    @Test
+    fun `780 installed v1, cached v2 = cached + Install first, Download still live`() {
+        installedAt(1, bytesOf("v1"))
+        val v2 = bytesOf("v2")
+        val f = cachedAt(2, v2)
+        for (remote in listOf(remoteIs(v2), null)) {
+            val s = StoreStages.stage(ctx, app(), remote)
+            assertEquals("cached", s.id)
+            assertEquals(listOf("install", "download", "clear"), s.actions)
+            assertEquals(f.canonicalPath, s.cached!!.file.canonicalPath)
+        }
+    }
+
+    @Test
+    fun `780 control - cached v2 superseded by remote v3 = update_available, the stale cache is not offered`() {
+        installedAt(1, bytesOf("v1"))
+        val f = cachedAt(2, bytesOf("v2"))
+        ApkCache.note(ctx, pkg, ApkCache.STAGE_INSTALL, "User rejected permissions")
+        val s = StoreStages.stage(ctx, app(), remoteIs(bytesOf("v3")))
+        assertEquals("update_available", s.id)
+        assertEquals(listOf("download", "clear"), s.actions)
+        assertEquals(null, s.cached)
+        assertTrue(f.exists())
+        assertEquals("a note about a superseded build must not hold the unattended pass",
+            null, Fleet.heldAtInstall(ctx, app()))
+    }
+
+    @Test
+    fun `780 installed v2, cached v2 landed, remote v2 = installed + Clear (other bytes) or nothing (same bytes)`() {
+        val v2 = bytesOf("v2"); installedAt(2, v2)
+        val other = cachedAt(2, bytesOf("v2-rebuild"))
+        val up = Fleet.State.Installed("2", 2L, hex(v2).take(12), v2.size.toLong())
+        val s = StoreStages.stage(ctx, app(), up)
+        assertEquals("installed", s.id); assertEquals(listOf("clear"), s.actions)
+        ApkCache.drop(other)
+        val same = cachedAt(2, v2)
+        val t = StoreStages.stage(ctx, app(), up)
+        assertEquals("installed", t.id); assertEquals(emptyList<String>(), t.actions)
+        assertFalse(same.exists())
+    }
+
+    @Test
+    fun `780 auto chain downloads past a landed cache instead of reinstalling it`() {
+        sheet(accept = true)
+        installedAt(1, bytesOf("v1"))
+        cachedAt(1, bytesOf("v1-rebuild"))
+        StoreStages.auto(ctx, app())
+        assertEquals("a landed cache must not stand in for the download", 1, assetGets.get())
+    }
+
+    @Test
+    fun `780 control - auto chain installs an actionable cache without the network`() {
+        sheet(accept = false)
+        installedAt(1, bytesOf("v1"))
+        cachedAt(2, bytesOf("v2"))
+        StoreStages.auto(ctx, app())
+        assertEquals(0, assetGets.get())
+        assertEquals(1, sheets.get())
     }
 }

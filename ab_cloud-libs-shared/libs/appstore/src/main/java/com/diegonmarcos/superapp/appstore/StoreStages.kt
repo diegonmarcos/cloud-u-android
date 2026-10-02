@@ -102,40 +102,80 @@ object StoreStages {
             }
             INSTALL -> return Stage("installing", "installing from cache…", emptyList(), cachedFor(ctx, app))
         }
-        val note = ApkCache.noteOf(ctx, app.pkg)
-        val e = cachedFor(ctx, app)
-        if (e != null) {
-            val ver = e.record?.versionCode?.let { " v$it" } ?: ""
-            if (ApkCache.landed(ctx, e, app.pkg))
-                return Stage("installed", "installed$ver · cached APK ${mb(e.bytes)} — Clear frees it",
-                    listOf(CLEAR), e)
-            val why = note?.takeIf { it.stage == ApkCache.STAGE_INSTALL }?.message
-            return if (why != null)
-                Stage("error", "cached$ver ${mb(e.bytes)} · install did not finish: $why — Install retries " +
-                    "from the cache", listOf(INSTALL, CLEAR), e, failedAt = INSTALL)
-            else Stage("cached", "cached$ver ${mb(e.bytes)} (ready to install)", listOf(INSTALL, CLEAR), e)
+        // #780 PRECEDENCE: busy → ACTIONABLE cache → remote → installed. A
+        // cache whose build is already on the device (landed) or that the
+        // remote has moved past is NOT actionable, and it must never stand in
+        // front of the remote's answer: it used to return "installed · Clear"
+        // before `remote` was even read, so any app whose LAST update was still
+        // cached never showed its NEXT one — no Download, fleet-wide.
+        var note = ApkCache.noteOf(ctx, app.pkg)
+        var e = cachedFor(ctx, app)
+        if (e != null && ApkCache.landed(ctx, e, app.pkg)) {
+            // Owner rule: a cache byte-identical to the installed APK clears
+            // itself — reapIfInstalled deletes only on that proof.
+            // ponytail: hashes the landed file on each repaint until it goes;
+            // record-less or different-bytes caches stay (Clear offered).
+            if (ApkCache.reapIfInstalled(ctx, e.file) is ApkCache.Retention.Reaped) e = cachedFor(ctx, app)
         }
+        val act = e?.takeIf { actionable(ctx, app, it, remote) }
+        // An Install-stage note with nothing installable behind it is history,
+        // and left in place it holds the unattended pass (Fleet.heldAtInstall)
+        // off this app forever.
+        if (act == null && note?.stage == ApkCache.STAGE_INSTALL) { ApkCache.clearNote(ctx, app.pkg); note = null }
+        if (act != null) {
+            val ver = act.record?.versionCode?.let { " v$it" } ?: ""
+            val why = note?.takeIf { it.stage == ApkCache.STAGE_INSTALL }?.message
+            // Download stays live beside Install: a new download replaces the
+            // cached APK, so it never has to wait for a Clear (owner rule).
+            return if (why != null)
+                Stage("error", "cached$ver ${mb(act.bytes)} · install did not finish: $why — Install retries " +
+                    "from the cache", listOf(INSTALL, DOWNLOAD, CLEAR), act, failedAt = INSTALL)
+            else Stage("cached", "cached$ver ${mb(act.bytes)} (ready to install)", listOf(INSTALL, DOWNLOAD, CLEAR), act)
+        }
+        // A non-actionable cache left behind: Clear is an EXTRA verb, never the only one.
+        val extra = if (e != null) listOf(CLEAR) else emptyList()
+        val kept = e?.let { " · cached APK ${mb(it.bytes)} — Clear frees it" } ?: ""
         val part = partialBytes(ctx, app)
         val partNote = if (part > 0) " · ${mb(part)} kept, Download resumes" else ""
         if (note?.stage == ApkCache.STAGE_DOWNLOAD)
-            return Stage("error", "download failed: ${note.message}$partNote", listOf(DOWNLOAD),
+            return Stage("error", "download failed: ${note.message}$partNote", listOf(DOWNLOAD) + extra,
                 failedAt = DOWNLOAD)
         return when (remote) {
             is Fleet.State.UpdateAvailable ->
-                Stage("update_available", "update available · ${mb(remote.bytes)}$partNote", listOf(DOWNLOAD))
+                Stage("update_available", "update available · ${mb(remote.bytes)}$partNote", listOf(DOWNLOAD) + extra)
             is Fleet.State.Missing ->
-                Stage("not_installed", "not installed · ${mb(remote.bytes)}$partNote", listOf(DOWNLOAD))
-            is Fleet.State.Installed -> Stage("installed", "installed ${remote.versionName}", emptyList())
-            is Fleet.State.Blocked -> Stage("blocked", "not published", emptyList())
-            is Fleet.State.Error -> Stage("error", remote.message, listOf(DOWNLOAD), failedAt = DOWNLOAD)
+                Stage("not_installed", "not installed · ${mb(remote.bytes)}$partNote", listOf(DOWNLOAD) + extra)
+            is Fleet.State.Installed -> Stage("installed", "installed ${remote.versionName}$kept", extra)
+            is Fleet.State.Blocked -> Stage("blocked", "not published", extra)
+            is Fleet.State.Error -> Stage("error", remote.message, listOf(DOWNLOAD) + extra, failedAt = DOWNLOAD)
             null -> when {
-                part > 0 -> Stage("update_available", "download interrupted$partNote", listOf(DOWNLOAD))
+                part > 0 -> Stage("update_available", "download interrupted$partNote", listOf(DOWNLOAD) + extra)
+                e != null -> Stage("installed", "installed${e.record?.versionCode?.let { " v$it" } ?: ""}$kept", extra)
                 Fleet.installedId(ctx, app) != null ->
                     Stage("installed", "installed · not checked for an update", emptyList())
                 else -> Stage("unknown", "not checked yet", listOf(DOWNLOAD))
             }
         }
     }
+
+    /**
+     * #780 May [e] be installed from here? Only when it is NOT already what the
+     * device runs ([ApkCache.landed]: installed versionCode ≥ cached, or the
+     * same bytes) and the remote has not moved past it. The remote digest is
+     * the APK's own sha256 on both channels (the release sidecar; the GHCR blob
+     * digest) — "release" is the no-sidecar placeholder and cannot tell, so it
+     * leaves the cache actionable.
+     */
+    private fun actionable(ctx: Context, app: Fleet.App, e: ApkCache.Entry, remote: Fleet.State?): Boolean {
+        if (ApkCache.landed(ctx, e, app.pkg)) return false
+        val r = remote as? Fleet.State.UpdateAvailable ?: return true
+        val sha = e.record?.sha256 ?: return true
+        return r.remoteDigest12 == "release" || sha.startsWith(r.remoteDigest12, ignoreCase = true)
+    }
+
+    /** The newest cached APK that [actionable] allows, or null. */
+    fun actionableFor(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): ApkCache.Entry? =
+        cachedFor(ctx, app)?.takeIf { actionable(ctx, app, it, remote) }
 
     /** Stage 1. Blocking — call off the main thread. Errors are already in the
      *  note ([Fleet.download] writes it); the returned stage shows them. */
@@ -155,7 +195,7 @@ object StoreStages {
     /** Stage 2, from the cache only. Blocking. Nothing cached → says so and
      *  offers Download; never fetches behind the user's back. */
     fun install(ctx: Context, app: Fleet.App): Stage {
-        val e = cachedFor(ctx, app)
+        val e = actionableFor(ctx, app)
             ?: return Stage("error", "nothing cached — Download first", listOf(DOWNLOAD), failedAt = INSTALL)
         if (busy.putIfAbsent(app.pkg, INSTALL) != null) return stage(ctx, app)
         try {
@@ -201,10 +241,11 @@ object StoreStages {
      * from exactly there (Install from the cache after a cancelled sheet,
      * Download to resume after a dropped link), never from zero.
      */
-    fun auto(ctx: Context, app: Fleet.App): Stage {
-        if (cachedFor(ctx, app) == null) {
+    fun auto(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
+        // #780 a landed or superseded cache is not a reason to skip Download.
+        if (actionableFor(ctx, app, remote) == null) {
             download(ctx, app)
-            if (cachedFor(ctx, app) == null) return stage(ctx, app)
+            if (actionableFor(ctx, app) == null) return stage(ctx, app)
         }
         install(ctx, app)
         val e = cachedFor(ctx, app) ?: return stage(ctx, app)   // the receiver already reaped it
