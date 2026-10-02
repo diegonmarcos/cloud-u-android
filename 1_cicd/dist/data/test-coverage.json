@@ -17,7 +17,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 30,
+      "unit_test_sources": 31,
       "workflow": "ship-cloud-superapp.yml"
     },
     "ab_cloud-libs-shared/keyboard-engines": {
@@ -238,7 +238,7 @@
     },
     "ac_cloud-nix-on-droid": {
       "first_test": "Now has 1 shell tester (test-bootstrap-baked.sh, #348): the proot+glibc runtime is baked in, pinned by sha256, and rewritten for THIS app id \u2014 the three ways this APK could install, launch and still have no shell. 21 JVM unit test classes still have never executed; declare tests.unit.task.",
-      "shell_testers": 5,
+      "shell_testers": 6,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,

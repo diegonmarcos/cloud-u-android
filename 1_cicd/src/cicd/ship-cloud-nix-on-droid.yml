@@ -36,6 +36,8 @@ on:
       # bootstrap artifact's identity_files, so a key there would move the
       # rootfs content address and republish ~400 MB that did not change.
       # #758 SystemDnsBridge, compiled in by source reference (app/build.gradle).
+      # #771 goose's and hermes' one declaration (version, url) -- rootfs-extras.nix reads it,
+      # and it is one of the bootstrap's identity_files.
       - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
@@ -43,8 +45,6 @@ on:
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-nix-on-droid/**"
-      # #771 goose's and hermes' one declaration (version, url) -- rootfs-extras.nix reads it,
-      # and it is one of the bootstrap's identity_files.
       - "ac_cloud-termux/rootfs/rootfs.json"
 permissions:
   contents: write   # gh release upload
