@@ -258,9 +258,41 @@ object AccountRuntime {
                 val have = want.count { installed(ctx, it.pkg) }
                 base.copy(detail = deviceLabel(picked), summary = "$have / ${want.size}")
             }
+            // #789 cloud-drive's own copy of the token, through its #783 FleetConfig export
+            // (libs:core's provider, CONSTELLATION_DATA-guarded) — no channel of its own.
+            "cloud-drive" -> {
+                val export = when (val r = com.diegonmarcos.superapp.core.FleetConfig.export(ctx, rt.servedBy)) {
+                    is com.diegonmarcos.superapp.core.FleetConfig.Reply.Ok -> r.json
+                    is com.diegonmarcos.superapp.core.FleetConfig.Reply.Unreachable -> return base.copy(status = Status.NOT_REPORTING, detail = r.why)
+                    is com.diegonmarcos.superapp.core.FleetConfig.Reply.Refused -> return base.copy(status = Status.NOT_REPORTING, detail = r.why)
+                }
+                val (detail, value) = heldSecret(export, rt.store)
+                val held = VaultCockpit.layout.vaultFields.filter { (_, f) -> f.held && section.id in f.apps }.keys
+                base.copy(detail = detail, values = held.associateWith { value })
+            }
             else -> base.copy(status = Status.NOT_REPORTING, detail = "no reader for '${section.apply}'")
         }
     }
+
+    /**
+     * #789 A secret store from a FleetConfig export as Runtime may say it: how many entries hold a
+     * value and the sha256 fingerprint of each distinct one — the detail line never carries the
+     * value. The value itself comes back only when every entry holds the same one, so Drift can
+     * compare it with the declared copy; the screen masks it like every other secret path.
+     */
+    fun heldSecret(export: JSONObject, store: String): Pair<String, String?> {
+        val none = "no token held" to null
+        val o = export.optJSONObject("stores")?.optJSONObject(store) ?: return none
+        val vals = o.keys().asSequence().filter { it != com.diegonmarcos.superapp.core.FleetConfig.TYPES }
+            .mapNotNull { o.opt(it) as? String }.filter { it.isNotBlank() }.toList()
+        if (vals.isEmpty()) return none
+        val fps = vals.distinct().map { fingerprint(it) }
+        return "token held by ${vals.size} repo(s) · sha256 ${fps.joinToString(", ")}" to vals.distinct().singleOrNull()
+    }
+
+    /** The first 12 hex of a value's sha256: enough to tell two copies apart, nothing to recover it from. */
+    fun fingerprint(v: String): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(v.toByteArray()).joinToString("") { "%02x".format(it) }.take(12)
 
     // ── pushing (Android) ────────────────────────────────────────────────
 

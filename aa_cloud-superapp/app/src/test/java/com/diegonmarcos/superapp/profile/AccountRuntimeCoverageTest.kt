@@ -41,7 +41,7 @@ class AccountRuntimeCoverageTest {
         }
     }
 
-    @Test fun `the keyboard is read over text tools, cloud-drive says why it is not`() {
+    @Test fun `the keyboard is read over text tools, cloud-drive through its FleetConfig export`() {
         val kb = layout.sections.first { it.id == "keyboard" }
         assertEquals(VaultCockpit.TEXT_TOOLS, kb.runtime.servedBy)
         assertTrue(kb.runtime.reports)
@@ -49,8 +49,27 @@ class AccountRuntimeCoverageTest {
             layout.vaultFields.filter { (_, f) -> "keyboard" in f.apps && f.held }.keys
                 .filterNot { it.endsWith("${s}manifest") }.all { it.substringAfter(s) in kb.runtime.lists })
         val drive = layout.sections.first { it.id == "cloud-drive" }
-        assertFalse(drive.runtime.reports)
-        assertTrue(drive.runtime.why.isNotBlank())
+        assertTrue("#789 cloud-drive reports now", drive.runtime.reports)
+        assertEquals("git-sync-credentials", drive.runtime.store)
+        assertTrue("the store it reads is a declared fleet-config secret store",
+            com.diegonmarcos.superapp.core.FleetConfig.manifest(androidx.test.core.app.ApplicationProvider
+                .getApplicationContext()).stores[drive.runtime.store]?.cls == "secret")
+    }
+
+    @Test fun `789 cloud-drive's token - presence and fingerprint in the detail, never the value`() {
+        val token = "token-" + "x".repeat(36)
+        fun export(vararg kv: Pair<String, String>) = JSONObject().put("stores", JSONObject()
+            .put("git-sync-credentials", JSONObject().apply { kv.forEach { (k, v) -> put(k, v) } }))
+        val (detail, value) = AccountRuntime.heldSecret(export("repo-a" to token, "repo-b" to token), "git-sync-credentials")
+        assertFalse("the token never reaches the detail line: $detail", token in detail)
+        assertTrue(detail, detail.contains("2 repo(s)") && detail.contains(AccountRuntime.fingerprint(token)))
+        assertEquals("one agreed copy is what Drift compares (the screen masks it)", token, value)
+        // Controls: two different copies are named, not merged; nothing held is said plainly.
+        val (two, none) = AccountRuntime.heldSecret(export("repo-a" to token, "repo-b" to "other"), "git-sync-credentials")
+        assertTrue(two, two.contains(AccountRuntime.fingerprint("other")))
+        assertNull(none)
+        assertEquals("no token held" to null, AccountRuntime.heldSecret(JSONObject(), "git-sync-credentials"))
+        assertTrue(AccountRuntime.fingerprint(token).length == 12 && AccountRuntime.fingerprint(token) != AccountRuntime.fingerprint("other"))
     }
 
     @Test fun `coverage - an unread app misses all it holds, a read one what it holds empty`() {

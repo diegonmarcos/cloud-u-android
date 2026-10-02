@@ -97,7 +97,7 @@ grep -qF 'VaultCockpit.layout.sections.map { AccountDrift.App(it.id, it.label, i
     && ok "T3: Drift's apps — which vault sections each consumes — are the same layout" || bad "T3: Drift's app ownership is not the cockpit layout"
 # The reader dispatches on each section's declared APPLIER (`apply`); a `reports: false` app has none.
 DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[] | select(.runtime.reports != false) | .apply' "$BJ" | sort)
-DISPATCHED=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$AR" | grep -oE '^            "[a-z]+" ->' | grep -oE '[a-z]+' | sort)
+DISPATCHED=$(awk '/    private fun readOne\(/{f=1} f&&/return when \(section.apply\) \{/{g=1;next} g&&/^            else ->/{exit} g' "$AR" | grep -oE '^            "[a-z-]+" ->' | sed -E 's/^ *"([a-z-]+)" ->/\1/' | sort)
 [ -n "$DISPATCHED" ] && ok "T3: the runtime reader dispatches on $(echo $DISPATCHED | wc -w) declared appliers" || bad "T3: no when(section.apply) dispatch found"
 for id in $DISPATCHED; do
     grep -qx "$id" <<<"$DECLARED" && ok "T3: read app '$id' is declared" || bad "T3: the reader dispatches on '$id', which build.json does not declare"

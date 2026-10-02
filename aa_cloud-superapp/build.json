@@ -6510,11 +6510,11 @@
             "icon": "ic_code"
           },
           {
-            "_doc": "#781 cloud-drive's OWN copy of git › github_token: its Configs ▸ Sign in applies the vault token into its encrypted GitCredentialStore (auth.applies.git, credential vault-git-https). It serves no read of it to another process, and opening one would put a GitHub token on a new channel, so this reads 'not reporting' with the reason until the owner decides on a CONSTELLATION_DATA binder like ITextTools.",
+            "_doc": "#781 cloud-drive's OWN copy of git › github_token: its Configs ▸ Sign in applies the vault token into its encrypted GitCredentialStore (auth.applies.git, credential vault-git-https). #789 it reports through the #783 FleetConfig contract every fleet app already serves (libs:core's <package>.fleetconfig provider, CONSTELLATION_DATA-guarded) — no new channel: `store` is the fleet-config.json store it reads, and Runtime shows presence + a sha256 fingerprint, never the token.",
             "id": "cloud-drive",
             "label": "Drive · cloud-drive sign-in",
             "apply": "cloud-drive",
-            "runtime": { "served_by": "com.diegonmarcos.clouddrive", "reports": false, "why": "holds the token in its own encrypted store and serves no read of it" },
+            "runtime": { "served_by": "com.diegonmarcos.clouddrive", "store": "git-sync-credentials" },
             "vault": [
               "git"
             ],

@@ -65,10 +65,13 @@ object VaultCockpit {
      * tunnel is not a wg-quick text); [fields] false = it reports a summary, not fields (apps).
      * #781 [why]: the reason a `reports` false app says nothing; [lists]: the keyboard's vault
      * autocomplete key → the tab file of its clipboard export.
+     * #789 [store]: the secret store file an app reports through its own #783 FleetConfig export
+     * (cloud-drive's git-sync-credentials) — shown as presence + fingerprint.
      */
     data class Runtime(val servedBy: String = SELF, val reports: Boolean = true,
                        val writable: Boolean = true, val fields: Boolean = true,
-                       val why: String = "", val lists: Map<String, String> = emptyMap())
+                       val why: String = "", val lists: Map<String, String> = emptyMap(),
+                       val store: String = "")
 
     /** #781 One Profiles field's runtime mapping (cockpit `vault_fields`): the app ids that use it,
      *  whether they HOLD it live ([held]: Runtime reads it), and [why] when no app does or none holds it. */
@@ -98,7 +101,8 @@ object VaultCockpit {
                     val lists = r?.optJSONObject("lists") ?: JSONObject()
                     Runtime(r?.optString("served_by")?.ifBlank { null } ?: SELF, r?.optBoolean("reports", true) ?: true,
                         r?.optBoolean("writable", true) ?: true, r?.optBoolean("fields", true) ?: true,
-                        r?.optString("why").orEmpty(), lists.keys().asSequence().associateWith { lists.getString(it) })
+                        r?.optString("why").orEmpty(), lists.keys().asSequence().associateWith { lists.getString(it) },
+                        r?.optString("store").orEmpty())
                 })
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
