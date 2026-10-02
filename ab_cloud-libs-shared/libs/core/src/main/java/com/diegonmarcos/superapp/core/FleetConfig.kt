@@ -26,7 +26,9 @@ import java.io.File
  * merges [FleetConfigProvider] into each of them at `<package>.fleetconfig`. The provider runs
  * IN the owning app's process, so it reads and writes that app's own SharedPreferences (and its
  * EncryptedSharedPreferences, through the same default MasterKey) — the files no other app can
- * open. A provider call starts a stopped app, so this works with the app closed.
+ * open. A provider call starts a stopped app, so this works with the app closed. The cipher
+ * (security-crypto) is compileOnly here: an app that keeps an encrypted store ships it already, and
+ * in one that does not, an encrypted file is never there to open (an import naming one is refused).
  *
  * WHO may call: the provider is exported behind CONSTELLATION_DATA, the fleet's signature
  * permission; the system refuses to hand it to an APK signed with any other key, and the
@@ -214,7 +216,8 @@ object FleetConfig {
                 if (!m.migrates(s, app.id)) { r.put(KEY_ERROR, "${m.classOf(s, app.id)} store: never migrates"); continue }
                 val values = stores.getJSONObject(file)
                 val types = values.optJSONObject(TYPES) ?: JSONObject()
-                val prefs = opener.open(s, file, true) ?: run { r.put(KEY_ERROR, "cannot open"); null } ?: continue
+                // An encrypted store in an app that ships no cipher throws here (NoClassDefFoundError).
+                val prefs = runCatching { opener.open(s, file, true) }.getOrNull() ?: run { r.put(KEY_ERROR, "cannot open"); null } ?: continue
                 val existing = prefs.all
                 val ed = prefs.edit()
                 val wrote = JSONArray(); val refused = JSONArray()

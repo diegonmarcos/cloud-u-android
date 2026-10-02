@@ -21,3 +21,8 @@
 -keepclassmembers class **.BuildConfig {
     public static java.lang.String TELEMETRY_INGEST_URL;
 }
+
+# #783 FleetConfig compiles against security-crypto (compileOnly) to open an app's
+# EncryptedSharedPreferences; an app without the cipher has no encrypted store to open, and
+# FleetConfig catches the missing class there. R8 must not fail that app on the reference.
+-dontwarn androidx.security.crypto.**

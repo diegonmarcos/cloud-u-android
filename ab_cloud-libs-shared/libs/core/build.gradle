@@ -48,8 +48,11 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
 
     // #783 FleetConfig reads and writes an app's EncryptedSharedPreferences through the same
-    // cipher the app uses (default MasterKey). The version the fleet already resolves to.
-    implementation 'androidx.security:security-crypto:1.1.0'
+    // cipher the app uses (default MasterKey). compileOnly, NOT implementation: only an app that
+    // keeps an encrypted store has one to migrate, and that app already ships the cipher. As an
+    // implementation dep it dragged tink-android into all 31 apps — duplicate classes against
+    // mail's own tink, R8 missing classes in dialer and webserver, a META-INF clash in myterminal.
+    compileOnly 'androidx.security:security-crypto:1.1.0'
 
     // libs:devtools rides on core so the constellation-wide debug API reaches
     // every app without eight separate app/build.gradle edits that would drift

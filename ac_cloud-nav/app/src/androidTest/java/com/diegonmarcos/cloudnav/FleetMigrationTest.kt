@@ -22,7 +22,11 @@ import org.junit.runner.RunWith
  *
  * One phone's configuration is written, exported, the profile is WIPED (every exported store file
  * deleted — the clean phone), the export is imported back through the provider, and the second
- * export must equal the first, store by store, key by key, type by type — the secret included.
+ * export must equal the first, store by store, key by key, type by type.
+ *
+ * cloud-nav keeps no encrypted store, so it ships no cipher (libs:core takes security-crypto
+ * compileOnly): an import naming an encrypted store must be refused for that file alone, on the
+ * device, without taking the rest of the import — or the app — down with it.
  */
 @RunWith(AndroidJUnit4::class)
 class FleetMigrationTest {
@@ -49,20 +53,17 @@ class FleetMigrationTest {
         val app = m.appByPackage(ctx.packageName)
         assertNotNull("cloud-nav is a declared fleet app", app)
 
-        // The old phone's configuration: plain stores of every value type, and an encrypted one
-        // whose secret key migrates (mail_jmap_prefs: config, its password narrowed to secret).
+        // The old phone's configuration: plain stores of every value type.
         val old = JSONObject().put("stores", JSONObject()
             .put("cloud_nav_cockpit", JSONObject().put("mode", "drive"))
             .put("maps_basemap_prefs", JSONObject().put("family", "vector").put("three_d", true))
             .put("maps_tracking", JSONObject().put("interval_s", 15).put("min_move_m", 2.5).put("since", 1_700_000_000_123L)
-                .put(FleetConfig.TYPES, JSONObject().put("interval_s", "i").put("min_move_m", "f").put("since", "l")))
-            .put("mail_jmap_prefs", JSONObject().put("server", "https://mail.example.test").put("password", "pw-783-test")))
-        assertTrue(call(FleetConfig.METHOD_IMPORT, old).getInt("written") >= 7)
+                .put(FleetConfig.TYPES, JSONObject().put("interval_s", "i").put("min_move_m", "f").put("since", "l"))))
+        assertEquals(6, call(FleetConfig.METHOD_IMPORT, old).getInt("written"))
 
         val before = call(FleetConfig.METHOD_EXPORT).getJSONObject("stores")
-        for (f in listOf("cloud_nav_cockpit", "maps_basemap_prefs", "maps_tracking", "mail_jmap_prefs"))
+        for (f in listOf("cloud_nav_cockpit", "maps_basemap_prefs", "maps_tracking"))
             assertTrue("$f exported", before.has(f))
-        assertEquals("pw-783-test", before.getJSONObject("mail_jmap_prefs").getString("password"))
 
         // The clean phone.
         for (f in before.keys()) ctx.deleteSharedPreferences(f)
@@ -81,5 +82,16 @@ class FleetMigrationTest {
         assertEquals(15, t.getInt("interval_s", -1))
         assertEquals(2.5f, t.getFloat("min_move_m", -1f))
         assertEquals(1_700_000_000_123L, t.getLong("since", -1))
+    }
+
+    @Test fun an_encrypted_store_in_an_app_without_the_cipher_is_refused_alone() {
+        val r = call(FleetConfig.METHOD_IMPORT, JSONObject().put("stores", JSONObject()
+            .put("mail_jmap_prefs", JSONObject().put("server", "https://mail.example.test"))
+            .put("cloud_nav_cockpit", JSONObject().put("mode", "walk"))))
+        assertEquals("cannot open", r.getJSONObject("files").getJSONObject("mail_jmap_prefs").getString("error"))
+        assertEquals(1, r.getInt("written"))
+        assertEquals("walk", ctx.getSharedPreferences("cloud_nav_cockpit", Context.MODE_PRIVATE).getString("mode", null))
+        // And an export on the same app still answers.
+        assertTrue(call(FleetConfig.METHOD_EXPORT).getJSONObject("stores").has("cloud_nav_cockpit"))
     }
 }
