@@ -98,8 +98,12 @@ class CalcShellTest {
         compose.runOnIdle { state.tab = mode.tab; state.modeByTab[mode.tab] = mode.id }
         listOf("2", "+", "2").forEach { compose.onNodeWithTag(CalcTags.key(it)).performClick() }
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("2+2")
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.RESULT).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 4")
+        // The live result is debounced per keystroke, so the first answer on screen can belong
+        // to an intermediate input ("2" is answered with 42 by the fake): wait for THE answer.
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(CalcTags.RESULT).fetchSemanticsNodes().isNotEmpty() &&
+                runCatching { compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 4") }.isSuccess
+        }
         compose.onNodeWithTag(CalcTags.key("=")).performClick()
         compose.waitForIdle()
         assertEquals(Logic.Entry(mode.id, "2+2", "4"), state.history.first())
