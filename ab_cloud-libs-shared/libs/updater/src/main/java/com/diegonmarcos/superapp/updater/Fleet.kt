@@ -1202,6 +1202,7 @@ object Fleet {
                 // path), so after commit there is nothing left to identify and
                 // the only honest answer would be "unknown".
                 val candidateCode = ApkIntegrity.identify(ctx, apk.file)?.versionCode
+                val candidateSha = runCatching { ApkIntegrity.sha256(apk.file) }.getOrNull()
                 val used = commit(ctx, app, apk)
                 usedChannels += used
                 // ASK THE PACKAGE MANAGER, DO NOT BELIEVE THE COMMIT.
@@ -1218,7 +1219,13 @@ object Fleet {
                 // The device is the only witness that cannot be talked into a
                 // false green, so re-read the installed versionCode and compare.
                 val nowCode = installedInfo(ctx, app)?.versionCode
-                if (VersionOrder.landed(candidateCode, nowCode)) {
+                // #789 the sha256 is the identity: a constant-versionCode fork
+                // "reaches" the candidate's code before installing anything.
+                // The versionCode rule stays only for unreadable (split) installs.
+                val nowSha = installedId(ctx, app)?.let { ApkCache.installedSha256(ctx, it) }
+                val landed = if (candidateSha != null && nowSha != null) candidateSha == nowSha
+                             else VersionOrder.landed(candidateCode, nowCode)
+                if (landed) {
                     acted++
                     // #774 STAGE 3, CLEAR. The session path is reaped by
                     // PackageInstallerReceiver on success; a shell install has

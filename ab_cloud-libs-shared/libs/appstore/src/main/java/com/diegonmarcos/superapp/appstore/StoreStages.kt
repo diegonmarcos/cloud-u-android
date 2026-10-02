@@ -163,18 +163,27 @@ object StoreStages {
     }
 
     /**
-     * #780 May [e] be installed from here? Only when it is NOT already what the
-     * device runs ([ApkCache.landed]: installed versionCode ≥ cached, or the
-     * same bytes) and the remote has not moved past it. The remote digest is
-     * the APK's own sha256 on both channels (the release sidecar; the GHCR blob
-     * digest) — "release" is the no-sidecar placeholder and cannot tell, so it
-     * leaves the cache actionable.
+     * #780/#789 May [e] be installed from here? Never when it is already behind
+     * the device ([ApkCache.landed]: the installed APK's sha256 IS the cached
+     * one, or a newer versionCode is installed). Then the remote decides, by
+     * digest — the APK's own sha256 on both channels (the release sidecar; the
+     * GHCR blob digest):
+     *  - an update is published → only the cache that IS it ("release" is the
+     *    no-sidecar placeholder and cannot tell, so it leaves the cache in);
+     *  - the device already runs the published build → nothing cached is;
+     *  - remote unknown → a newer versionCode is; the SAME versionCode with
+     *    other bytes (a constant-versionCode fork) cannot be ordered without
+     *    the remote, so it waits for it — [install] asks the download instead.
      */
     private fun actionable(ctx: Context, app: Fleet.App, e: ApkCache.Entry, remote: Fleet.State?): Boolean {
         if (ApkCache.landed(ctx, e, app.pkg)) return false
-        val r = remote as? Fleet.State.UpdateAvailable ?: return true
-        val sha = e.record?.sha256 ?: return true
-        return r.remoteDigest12 == "release" || sha.startsWith(r.remoteDigest12, ignoreCase = true)
+        val rec = e.record ?: return remote !is Fleet.State.Installed
+        return when (remote) {
+            is Fleet.State.UpdateAvailable -> remote.remoteDigest12 == "release" ||
+                rec.sha256.startsWith(remote.remoteDigest12, ignoreCase = true)
+            is Fleet.State.Installed -> false
+            else -> installedCode(ctx, app)?.first?.let { it < rec.versionCode } ?: true
+        }
     }
 
     /**
@@ -197,16 +206,23 @@ object StoreStages {
     /** Stage 1. Blocking — call off the main thread. Errors are already in the
      *  note ([Fleet.download] writes it); the returned stage shows them. */
     fun download(ctx: Context, app: Fleet.App): Stage {
-        if (busy.putIfAbsent(app.pkg, DOWNLOAD) != null) return stage(ctx, app)
-        try {
+        fetch(ctx, app)
+        return stage(ctx, app)
+    }
+
+    /** Stage 1, returning what it fetched: the PUBLISHED build, verified by its
+     *  sha256 (cache hit or network), or null when it did not complete. */
+    private fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? {
+        if (busy.putIfAbsent(app.pkg, DOWNLOAD) != null) return null
+        return try {
             UpdateProgress.beginDownload()
             Fleet.download(ctx, app)
         } catch (t: Throwable) {
             Log.w(TAG, "download ${app.id} stopped: ${t.message}")
+            null
         } finally {
             busy.remove(app.pkg)
         }
-        return stage(ctx, app)
     }
 
     /**
@@ -214,19 +230,21 @@ object StoreStages {
      * complete and leaving the row on it — so the next Install (or the user's
      * Download) takes over from exactly there, never from zero:
      *  1. no installable cached APK ([actionableFor], against [remote] when the
-     *     caller has it) → Download (cache hit first, Range-resumable, sha-verified);
-     *  2. install the cached file;
+     *     caller has it) → Download (cache hit first, Range-resumable, sha-verified).
+     *     #789 What Download returns IS the published build, so it installs
+     *     unless the device already runs those bytes — versionCode has no say,
+     *     which is what lets a constant-versionCode fork move at all;
+     *  2. install that file;
      *  3. once [ApkCache.landed] proves the install, Clear.
      * Blocking — call off the main thread.
      */
     fun install(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
-        if (actionableFor(ctx, app, remote) == null) {
-            download(ctx, app)
-            if (actionableFor(ctx, app) == null) return stage(ctx, app)
-        }
-        installCached(ctx, app)
-        val e = cachedFor(ctx, app) ?: return stage(ctx, app)   // the receiver already reaped it
-        if (!ApkCache.landed(ctx, e, app.pkg)) return stage(ctx, app)
+        val e = actionableFor(ctx, app, remote)
+            ?: fetch(ctx, app)?.let { ApkCache.entry(it.file) }?.takeIf { !ApkCache.landed(ctx, it, app.pkg) }
+            ?: return stage(ctx, app)
+        installCached(ctx, app, e)
+        if (!e.file.exists()) return stage(ctx, app)   // the receiver already reaped it
+        if (!ApkCache.landed(ctx, ApkCache.entry(e.file), app.pkg)) return stage(ctx, app)
         return clear(ctx, app)
     }
 
@@ -234,9 +252,8 @@ object StoreStages {
      *  new-phone migration through it, so it stays as [install]'s alias. */
     fun auto(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage = install(ctx, app, remote)
 
-    /** Stage 2 alone, from the cache only; the outcome lands in the note. */
-    private fun installCached(ctx: Context, app: Fleet.App) {
-        val e = actionableFor(ctx, app) ?: return
+    /** Stage 2 alone, [e] from the cache only; the outcome lands in the note. */
+    private fun installCached(ctx: Context, app: Fleet.App, e: ApkCache.Entry) {
         if (busy.putIfAbsent(app.pkg, INSTALL) != null) return
         try {
             // Re-verify before handing bytes to the installer: against the

@@ -143,7 +143,7 @@ object ApkCache {
         }.onFailure { Log.w(TAG, "could not write the record for ${apk.name}: ${it.message}") }
         Log.i(TAG, "cached ${apk.name}: ${rec.pkg} versionCode ${rec.versionCode} " +
             "sha256 ${rec.sha256.take(12)}… (${apk.length()} B)")
-        pruneStale(ctx, rec.pkg, rec.versionCode, except = apk)
+        pruneStale(ctx, rec.pkg, rec.versionCode, except = apk, sameCodeToo = true)
         evict(ctx)
         return rec
     }
@@ -155,10 +155,17 @@ object ApkCache {
      * one, so it is pure disk; the cache is keyed pkg + versionCode + sha256 and
      * this is the "stale" half of that key. Never touches [except], never a
      * file without a record (nothing can prove what it is).
+     *
+     * #789 [sameCodeToo]: a fresh download IS the published build, so another
+     * build at the SAME versionCode (a constant-versionCode fork's previous
+     * build) is just as stale. Only [keep] may say so — the receiver's success
+     * path must not, or it would drop a same-code build not yet installed.
      */
-    fun pruneStale(ctx: Context, pkg: String, versionCode: Long, except: File? = null): List<String> =
+    fun pruneStale(ctx: Context, pkg: String, versionCode: Long, except: File? = null,
+                   sameCodeToo: Boolean = false): List<String> =
         entries(ctx).filter { e ->
-            e.file != except && e.record != null && e.record.pkg == pkg && e.record.versionCode < versionCode
+            e.file != except && e.record != null && e.record.pkg == pkg &&
+                (e.record.versionCode < versionCode || (sameCodeToo && e.record.versionCode == versionCode))
         }.mapNotNull { e ->
             drop(e.file)
             if (e.file.exists()) null else e.file.name.also {
@@ -167,19 +174,29 @@ object ApkCache {
         }
 
     /**
-     * #774 Is [e]'s build what the device runs for [pkg] now? The record's
-     * versionCode when there is one (cheap, and what a row repaint can afford);
-     * otherwise the installed APK's own digest against the cached bytes — never
-     * the cache compared with itself. Unknown is false: the cache is kept.
+     * #789 Is [e] already behind the device — its bytes ARE what is installed,
+     * or the device runs a strictly newer versionCode? The sha256 is THE
+     * identity: the installed APK's own digest against the cached artifact's
+     * (the record's, else the file's) — never the cache compared with itself.
+     *
+     * versionCode alone used to decide (`installed >= cached`), and the forks
+     * (camera, vault, termux, dialer, matrix, notes, office, the rootfs lib)
+     * keep a CONSTANT versionCode across builds: every new build read as landed
+     * the moment it was cached, so it was never actionable, never installed,
+     * and the Store looped "would download and install" for 24 rounds.
+     *
+     * Only when the installed bytes cannot be read (a split install) does the
+     * versionCode decide — the weaker evidence, as [decide] says out loud.
+     * Unknown is false: the cache is kept.
      */
     fun landed(ctx: Context, e: Entry, pkg: String): Boolean {
-        val rec = e.record
-        if (rec != null) {
-            val code = installedInfo(ctx, rec.pkg)?.let { versionCodeOf(it) } ?: return false
-            return code >= rec.versionCode
-        }
-        val installed = installedSha256(ctx, pkg) ?: return false
-        return runCatching { ApkIntegrity.sha256(e.file) }.getOrNull() == installed
+        val p = e.record?.pkg ?: pkg
+        val code = installedInfo(ctx, p)?.let { versionCodeOf(it) } ?: return false
+        e.record?.let { if (code > it.versionCode) return true }
+        val installed = installedSha256(ctx, p)
+            ?: return e.record?.let { code >= it.versionCode } ?: false
+        val cached = e.record?.sha256 ?: runCatching { ApkIntegrity.sha256(e.file) }.getOrNull()
+        return installed.equals(cached, ignoreCase = true)
     }
 
     // ── #774 the last stage outcome, per package ─────────────────────────
@@ -313,8 +330,16 @@ object ApkCache {
         val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
         if (!ai.splitSourceDirs.isNullOrEmpty()) return null
         val f = File(ai.sourceDir ?: return null)
-        if (f.isFile && f.canRead()) ApkIntegrity.sha256(f) else null
+        if (!f.isFile || !f.canRead()) return null
+        // #789 [landed] asks on every row repaint; an install rewrites the
+        // path, mtime or size, so those key the memo and a stale digest
+        // cannot survive a reinstall.
+        val key = "${f.path}|${f.lastModified()}|${f.length()}"
+        installedShaMemo[pkg]?.takeIf { it.first == key }?.second
+            ?: ApkIntegrity.sha256(f).also { installedShaMemo[pkg] = key to it }
     }.getOrNull()
+
+    private val installedShaMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
 
     /**
      * Delete [apk] IF AND ONLY IF the cached artifact is provably the thing now
@@ -346,10 +371,12 @@ object ApkCache {
         val partial: Boolean get() = file.name.endsWith(".part")
     }
 
+    fun entry(f: File): Entry = Entry(f, record(f), f.length(), f.lastModified())
+
     fun entries(ctx: Context): List<Entry> =
         (dir(ctx).listFiles() ?: emptyArray())
             .filter { it.isFile && !it.name.endsWith(RECORD_SUFFIX) }
-            .map { Entry(it, record(it), it.length(), it.lastModified()) }
+            .map { entry(it) }
             .sortedBy { it.file.name }
 
     fun totalBytes(ctx: Context): Long = entries(ctx).sumOf { it.bytes }

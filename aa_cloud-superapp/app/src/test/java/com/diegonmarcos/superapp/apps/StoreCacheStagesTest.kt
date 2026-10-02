@@ -256,13 +256,17 @@ class StoreCacheStagesTest {
      *  Accept installs the handed-over bytes as the package (so the device
      *  really runs them — [ApkCache.landed] hashes sourceDir); Cancel delivers
      *  STATUS_FAILURE_ABORTED to the REAL receiver, exactly as the platform does. */
-    private fun sheet(accept: Boolean) {
+    private fun sheet(accept: Boolean, code: Long = 7L) {
         StoreStages.installer = { c, _, v ->
             sheets.incrementAndGet()
             if (accept) {
-                val src = java.io.File(c.filesDir, "installed-$pkg.apk").apply { writeBytes(v.file.readBytes()) }
+                // Named by content: ApkCache memoizes the installed digest by path +
+                // mtime + size, and on a phone every install gets a fresh path.
+                val bytes = v.file.readBytes()
+                val src = java.io.File(c.filesDir, "installed-$pkg-${hex(bytes).take(12)}.apk").apply { writeBytes(bytes) }
                 shadowOf(c.packageManager).installPackage(PackageInfo().apply {
-                    packageName = pkg; versionName = "7"; longVersionCode = 7L
+                    packageName = pkg; versionName = "$code"; longVersionCode = code
+                    lastUpdateTime = sheets.get().toLong()
                     applicationInfo = ApplicationInfo().apply { packageName = pkg; sourceDir = src.absolutePath }
                 })
             } else cancelInstallSheet(v.file.absolutePath)
@@ -367,7 +371,7 @@ class StoreCacheStagesTest {
     }.toByteArray()
 
     private fun installedAt(code: Long, bytes: ByteArray) {
-        val src = java.io.File(ctx.filesDir, "installed-$pkg-$code.apk").apply { writeBytes(bytes) }
+        val src = java.io.File(ctx.filesDir, "installed-$pkg-$code-${hex(bytes).take(12)}.apk").apply { writeBytes(bytes) }
         shadowOf(ctx.packageManager).installPackage(PackageInfo().apply {
             packageName = pkg; versionName = "$code"; longVersionCode = code
             applicationInfo = ApplicationInfo().apply { packageName = pkg; sourceDir = src.absolutePath }
@@ -600,5 +604,102 @@ class StoreCacheStagesTest {
         val other = cachedAt(1, bytesOf("v1-rebuild"))
         StoreStages.updateAll(ctx, listOf(app()), online = false)
         assertTrue(other.exists())
+    }
+
+    // ── #789 a constant versionCode never stands in for identity ─────────
+    //
+    // The phone's report: the forks (camera 93, vault 1, termux 1011, the
+    // rootfs lib) keep ONE versionCode across builds. A freshly cached build at
+    // the installed code read as "landed" (installed code >= cached), so it was
+    // never actionable, never installed, and Update all said "would download …
+    // and install" for 24 rounds. The fixture: installed at 93 from OLD bytes,
+    // the published build at 93 from NEW bytes. Each case carries the control
+    // that flips one fact; [oldRule] is the versionCode-only rule the fixture
+    // must be able to tell apart from the sha rule, or it proves nothing.
+
+    private val fork = 93L
+
+    /** The rule #789 removed, kept here only to prove the fixture discriminates. */
+    private fun oldRule(e: ApkCache.Entry): Boolean =
+        (ctx.packageManager.getPackageInfo(pkg, 0).longVersionCode) >= e.record!!.versionCode
+
+    private fun installedSha() = ApkCache.installedSha256(ctx, pkg)
+
+    @Test
+    fun `789 same versionCode, new bytes cached = NOT landed, and the row offers Install from the cache`() {
+        installedAt(fork, bytesOf("old"))
+        val nu = bytesOf("new")
+        val f = cachedAt(fork, nu)
+        val e = ApkCache.entry(f)
+        assertTrue("fixture control: the versionCode-only rule calls it landed", oldRule(e))
+        assertFalse("the sha rule does not: the device runs other bytes", ApkCache.landed(ctx, e, pkg))
+        val s = StoreStages.stage(ctx, app(), remoteIs(nu))
+        assertEquals(s.text, "cached", s.id)
+        assertEquals(listOf("install", "download", "clear"), s.actions)
+        assertTrue("never auto-cleared: it is the update", f.exists())
+        // Control: the SAME bytes at the same code ARE landed, and reap.
+        installedAt(fork, nu)
+        assertTrue(ApkCache.landed(ctx, ApkCache.entry(f), pkg))
+        StoreStages.stage(ctx, app(), Fleet.State.Installed("$fork", fork, hex(nu).take(12)))
+        assertFalse("the build the device runs clears itself", f.exists())
+    }
+
+    @Test
+    fun `789 Install with the remote known installs the same-versionCode build from the cache, then clears it`() {
+        sheet(accept = true, code = fork)
+        installedAt(fork, bytesOf("old"))
+        val nu = bytesOf("new")
+        val f = cachedAt(fork, nu)
+        val s = StoreStages.install(ctx, app(), remoteIs(nu))
+        assertEquals("the installer was opened once", 1, sheets.get())
+        assertEquals("from the cache: no network", 0, assetGets.get())
+        assertEquals("the device now runs the published bytes", hex(nu), installedSha())
+        assertEquals(s.text, "installed", s.id)
+        assertFalse("proven by sha, so cleared", f.exists())
+    }
+
+    @Test
+    fun `789 Install with NO remote (debug API, new-phone migration) asks the download, which is a cache hit`() {
+        sheet(accept = true, code = fork)
+        installedAt(fork, bytesOf("old"))
+        // What the phone had: the published build cached at the installed code.
+        val f = cachedAt(fork, apk)
+        val row = StoreStages.stage(ctx, app())
+        assertFalse("without the remote a same-code cache cannot be ordered: ${row.text}", row.id == "cached")
+        StoreStages.install(ctx, app())
+        assertEquals("the sidecar names the cached bytes: a cache hit, no GET", 0, assetGets.get())
+        assertEquals(1, sheets.get())
+        assertEquals("installed the published build", hex(apk), installedSha())
+        assertFalse(f.exists())
+        // Control: the device already runs the published build — nothing to do.
+        StoreStages.install(ctx, app())
+        assertEquals("a landed build is never reinstalled", 1, sheets.get())
+    }
+
+    @Test
+    fun `789 Update all online moves a constant-versionCode app, and the next plan says already current`() {
+        sheet(accept = true, code = fork)
+        installedAt(fork, bytesOf("old"))
+        cachedAt(fork, apk)
+        val dry = StoreStages.updateAll(ctx, listOf(app()), online = true, dryRun = true).outcomes.single()
+        assertEquals(dry.text, StoreStages.INSTALL, dry.result)
+        assertTrue("from the cache, not a download: ${dry.text}", dry.text.contains("from the cache"))
+        val up = StoreStages.updateAll(ctx, listOf(app()), online = true).outcomes.single()
+        assertEquals(up.text, StoreStages.INSTALLED, up.result)
+        assertEquals(0, assetGets.get())
+        // The 24-round loop ends: the remote now matches the device.
+        val again = StoreStages.updateAll(ctx, listOf(app()), online = true, dryRun = true).outcomes.single()
+        assertEquals(again.text, StoreStages.SKIPPED, again.result)
+        assertEquals(1, sheets.get())
+    }
+
+    @Test
+    fun `789 a fresh download prunes the same-versionCode build it replaces, never another package or code`() {
+        val old = cachedAt(fork, bytesOf("old"))
+        val nu = cachedAt(fork, bytesOf("new"))
+        assertEquals("control: the receiver's rule keeps a same-code build", emptyList<String>(),
+            ApkCache.pruneStale(ctx, pkg, fork, except = nu))
+        assertEquals(listOf(old.name), ApkCache.pruneStale(ctx, pkg, fork, except = nu, sameCodeToo = true))
+        assertTrue(nu.exists())
     }
 }
