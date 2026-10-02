@@ -1,22 +1,41 @@
 package com.diegonmarcos.superapp.apps
-import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.datamanager.AppUsageProvider
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
+import com.diegonmarcos.superapp.ui.LauncherPalette
 
 import android.content.Context
 import android.content.pm.LauncherApps
 import android.graphics.drawable.Drawable
-import android.os.Bundle
 import android.os.Process
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitEmptyState
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Full-screen grid of the last 24 recently-opened Android apps, 3 per
@@ -25,129 +44,85 @@ import androidx.fragment.app.Fragment
  * resolved to a launchable activity are skipped silently.
  *
  * Reachable via tile target "page:recentapps/grid".
+ *
+ * Compose since #773: a LazyVerticalGrid of three columns (the trailing row
+ * stays left-aligned by construction, which the View version needed weighted
+ * spacers for). A tap launches, a long-press opens the shared app menu, and
+ * the labels take the palette's primary ink instead of a white literal.
  */
-class RecentAppsFragment : Fragment() {
+class RecentAppsFragment : KitComposeFragment() {
 
-    private data class AppInfo(val pkg: String, val label: String, val icon: Drawable)
+    internal data class AppInfo(val pkg: String, val label: String, val icon: Drawable)
 
-    override fun onCreateView(inflater: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(ctx, 8); setPadding(pad, pad, pad, dp(ctx, 96))
-        }
-        scroll.addView(root)
-
-        val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        val me = Process.myUserHandle()
-        val byPkg = launcher.getActivityList(null, me)
-            .groupBy { it.applicationInfo.packageName }
-
-        fun resolve(pkg: String): AppInfo? {
-            val info = byPkg[pkg]?.firstOrNull() ?: return null
-            return AppInfo(
-                pkg   = pkg,
-                label = info.label.toString(),
-                icon  = info.getIcon(ctx.resources.displayMetrics.densityDpi),
-            )
-        }
-
-        val recent = AppUsageProvider.recentUsed(ctx)
-            .asSequence()
-            .filter { it != ctx.packageName }
-            .mapNotNull { resolve(it) }
-            .take(24)
-            .toList()
-
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val recent = remember { recentApps(ctx) }
         if (recent.isEmpty()) {
-            root.addView(TextView(ctx).apply {
-                text = "No recent apps yet — grant usage access"
-                setTextColor(0x99FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                gravity = Gravity.CENTER
-                setPadding(dp(ctx, 24), dp(ctx, 48), dp(ctx, 24), dp(ctx, 8))
-            })
-        } else {
-            val columns = 3
-            for (rowChunk in recent.chunked(columns)) {
-                val row = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                }
-                for (a in rowChunk) row.addView(makeAppTile(ctx, a.pkg, a.label, a.icon))
-                // Pad short trailing row with weighted spacers so the last
-                // row stays left-aligned.
-                repeat(columns - rowChunk.size) {
-                    row.addView(View(ctx).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-                    })
-                }
-                root.addView(row)
-            }
+            KitEmptyState(title = null, caption = "No recent apps yet — grant usage access")
+            return
         }
-
-        return scroll
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 96.dp),
+        ) {
+            items(recent, key = { it.pkg }) { AppTile(ctx, it) }
+        }
     }
 
-    private fun makeAppTile(
-        ctx: Context,
-        pkg: String,
-        label: String,
-        icon: Drawable,
-    ) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
-        val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        isClickable = true
-        isFocusable = true
-        val outVal = android.util.TypedValue()
-        ctx.theme.resolveAttribute(
-            android.R.attr.selectableItemBackgroundBorderless, outVal, true)
-        if (outVal.resourceId != 0) setBackgroundResource(outVal.resourceId)
-
-        setOnClickListener {
-            runCatching {
-                val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
-                if (intent != null) ctx.startActivity(intent)
-            }
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun AppTile(ctx: Context, a: AppInfo) {
+        val p = LocalKitPalette.current
+        val icon = remember(a.pkg) { a.icon.toBitmap().asImageBitmap() }
+        Column(
+            Modifier.fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        runCatching {
+                            val intent = ctx.packageManager.getLaunchIntentForPackage(a.pkg)
+                            if (intent != null) ctx.startActivity(intent)
+                        }
+                    },
+                    onLongClick = { AppLongPressMenu.show(ctx, a.pkg) },
+                )
+                .padding(6.dp)
+                .testTag(tileTag(a.pkg)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Image(icon, contentDescription = null, modifier = Modifier.size(52.dp))
+            Text(a.label, color = p.textPrimary, fontSize = 11.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth())
         }
-        setOnLongClickListener {
-            AppLongPressMenu.show(ctx, pkg)
-            true
-        }
-        addView(ImageView(ctx).apply {
-            setImageDrawable(icon)
-            val sz = dp(ctx, 52)
-            layoutParams = LinearLayout.LayoutParams(sz, sz)
-        })
-        addView(TextView(ctx).apply {
-            text = label
-            setTextColor(0xFFFFFFFFL.toInt())
-            textSize = 11f
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            gravity = Gravity.CENTER
-            setPadding(0, dp(ctx, 4), 0, 0)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        })
     }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    companion object {
+        fun newInstance() = RecentAppsFragment()
 
-    companion object { fun newInstance() = RecentAppsFragment() }
+        internal fun tileTag(pkg: String): String = "recent:app:$pkg"
+
+        /** The last 24 launchable apps, most recent first, this app excluded. */
+        internal fun recentApps(ctx: Context): List<AppInfo> {
+            // Usage first: with no usage access there is nothing to resolve, and the launcher
+            // service is not asked for every activity on the device for nothing.
+            val used = AppUsageProvider.recentUsed(ctx).filter { it != ctx.packageName }
+            if (used.isEmpty()) return emptyList()
+            val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val byPkg = launcher.getActivityList(null, Process.myUserHandle())
+                .groupBy { it.applicationInfo.packageName }
+            fun resolve(pkg: String): AppInfo? {
+                val info = byPkg[pkg]?.firstOrNull() ?: return null
+                return AppInfo(pkg, info.label.toString(), info.getIcon(ctx.resources.displayMetrics.densityDpi))
+            }
+            return used.asSequence()
+                .mapNotNull { resolve(it) }
+                .take(24)
+                .toList()
+        }
+    }
 }

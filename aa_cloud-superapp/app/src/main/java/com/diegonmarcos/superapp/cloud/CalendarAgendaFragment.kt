@@ -1,14 +1,20 @@
 package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
+import com.diegonmarcos.superapp.ui.LauncherPalette
 
-import android.graphics.Typeface
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -20,64 +26,53 @@ import java.util.Locale
  *
  * Used standalone (page:cal/agenda) and embedded inside
  * [AggregatorStackFragment] (Infos · Apps stack_apps = kind "calendar_agenda").
+ *
+ * Compose since #773. The rows used to paint hand-picked purple/white
+ * literals, which no launcher theme could recolour; today is now the
+ * palette's selected surface and the rest its plain surface. No scroll of its
+ * own: embedded, it sits inside the stack's scrolling body.
  */
-class CalendarAgendaFragment : Fragment() {
+class CalendarAgendaFragment : KitComposeFragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(8.dp)) {
+            for ((i, day) in days().withIndex()) {
+                val today = i == 0
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 4.dp)
+                        .background(if (today) p.surfaceSelected else p.surface)
+                        .padding(6.dp)
+                        .testTag(dayTag(i)),
+                ) {
+                    Text(if (today) "Today · $day" else day,
+                        color = p.textPrimary, style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (today) FontWeight.Bold else FontWeight.Normal)
+                    Text("no events", color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            Text(
+                "CalDAV integration lands with libs:cal slice D — once wired, events from your declared calendars populate here.",
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 2.dp, top = 10.dp, end = 2.dp, bottom = 2.dp),
             )
         }
-
-        val dayHeaderFmt = SimpleDateFormat("EEE  d MMM", Locale.getDefault())
-        val cal = Calendar.getInstance()
-
-        for (i in 0 until 7) {
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { topMargin = dp(4) }
-                layoutParams = lp
-                setBackgroundColor(if (i == 0) 0x331A0033 else 0x221A0033)
-            }
-            row.addView(TextView(ctx).apply {
-                text = if (i == 0) "Today · ${dayHeaderFmt.format(cal.time)}"
-                       else dayHeaderFmt.format(cal.time)
-                setTextColor(if (i == 0) 0xFFE9D8FD.toInt() else 0xCCFFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-                typeface = if (i == 0) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            })
-            row.addView(TextView(ctx).apply {
-                text = "no events"
-                setTextColor(0x77FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(2), 0, 0)
-            })
-            root.addView(row)
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-        }
-
-        root.addView(TextView(ctx).apply {
-            text = "CalDAV integration lands with libs:cal slice D — once wired, events from your declared calendars populate here."
-            setTextColor(0x55FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(dp(2), dp(10), dp(2), dp(2))
-        })
-
-        return root
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
     companion object {
+        /** The seven day headings, today first, in the device's locale. */
+        internal fun days(): List<String> {
+            val fmt = SimpleDateFormat("EEE  d MMM", Locale.getDefault())
+            val cal = Calendar.getInstance()
+            return List(7) { fmt.format(cal.time).also { cal.add(Calendar.DAY_OF_YEAR, 1) } }
+        }
+
+        internal fun dayTag(i: Int): String = "agenda:day:$i"
+
         fun newInstance(): CalendarAgendaFragment = CalendarAgendaFragment()
     }
 }

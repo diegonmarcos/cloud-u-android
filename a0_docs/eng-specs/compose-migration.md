@@ -97,6 +97,32 @@ These pieces are what app migrations build on:
   Pages take their colours from `KitPalette`, never from literals. That is the Compose form
   of the `LauncherPalette` rule `test-launcher-theme-palette.sh` enforces.
 
+## Progress
+
+Each landed step is listed in `units[].done`, and the counts are in the ratchet table.
+
+- **Phase 1 (done):** the audit, `compose-migration.json`, `compose-ratchet-guard.yml`
+  and its tester.
+- **Phase 2 (done, kit v1):** `libs:ui-kit`.
+  - Contents: CloudKitTheme/KitPalette (`LauncherPalette.kit`), KitSectionHeader,
+    KitSelectableTile, KitCard, KitSettingsRow, KitSwitchRow, KitConfirmDialog,
+    KitEmptyState, KitTags, KitComposeFragment and `Context.kitComposeView`.
+  - Proven through the superapp's suite (`LauncherPresetsComposeTest` K1/K2).
+- **Phase 3 (SuperApp, in progress):** Presets, the three placeholder pages, Import
+  configs and Calendar agenda are migrated. Their tests are compose-rule tests that stand
+  on `KitPageHarness`, and `VaultFileImportTest` was ported rather than rewritten.
+
+**How a page migrates.** Each step follows the same recipe:
+
+1. Swap the base class to `KitComposeFragment`.
+2. Turn the builder code into a `Content()` composable. Keep every function and string
+   that a shell tester greps; move any colour literal to a palette role.
+3. Delete the layout.
+4. Port or add the compose test.
+5. Lower the baselines in the same commit.
+
+The fan-out agents use the same recipe.
+
 ## Order and why
 
 | wave | contents |
