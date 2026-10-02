@@ -1001,6 +1001,12 @@ object Fleet {
                            "self-update path owns it and runs after this batch")
                 return@filter false
             }
+            if (mode == Mode.AUTO) heldAtInstall(ctx, app)?.let { n ->
+                Log.i(TAG, "AUTO stops at Install for ${app.id} (${app.pkg}): the last install did " +
+                           "not finish (${n.message}) — the cached APK is kept and the Store row " +
+                           "offers Install; not re-prompting from an unattended pass")
+                return@filter false
+            }
             val state = status(ctx, app)
             val take = when (state) {
                 is State.UpdateAvailable -> mode != Mode.MISSING
@@ -1248,6 +1254,17 @@ object Fleet {
             (if (usedChannels.isEmpty()) "via nothing: no channel accepted any of them"
              else "via ${usedChannels.joinToString(" + ")}"))
     }
+
+    /**
+     * #774 The auto chain STOPS where a human said no. A cancelled install sheet
+     * (or any install that did not finish) leaves a note and the cached APK;
+     * the unattended pass leaves that app alone until the user takes over from
+     * the Store row — Install from the cache, or Clear — instead of re-prompting
+     * every pass. Downloads are not held: a failed download resumes from its
+     * `.part` next pass, which is continuing, not restarting.
+     */
+    fun heldAtInstall(ctx: Context, app: App): ApkCache.Note? =
+        ApkCache.noteOf(ctx, app.pkg)?.takeIf { it.stage == ApkCache.STAGE_INSTALL }
 
     /** One-line, log-safe rendering of a [State]. No URLs, no tokens. */
     private fun describe(s: State): String = when (s) {

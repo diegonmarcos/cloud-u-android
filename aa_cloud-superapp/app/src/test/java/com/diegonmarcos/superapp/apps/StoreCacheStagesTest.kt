@@ -336,4 +336,17 @@ class StoreCacheStagesTest {
         assertEquals("cached", after.id)
         assertEquals(listOf("install", "clear"), after.actions)
     }
+
+    @Test
+    fun `the unattended pass holds an app at Install after a cancelled sheet, and only then`() {
+        assertEquals("control: nothing noted, nothing held", null, Fleet.heldAtInstall(ctx, app()))
+        val first = Fleet.download(ctx, app())
+        cancelInstallSheet(first.file.absolutePath)
+        assertEquals("held at install after the user cancelled", ApkCache.STAGE_INSTALL,
+            Fleet.heldAtInstall(ctx, app())?.stage)
+        // The user takes over: a successful Install clears the hold.
+        sheet(accept = true)
+        StoreStages.install(ctx, app())
+        assertEquals("a finished install releases the hold", null, Fleet.heldAtInstall(ctx, app()))
+    }
 }
