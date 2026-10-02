@@ -36,6 +36,16 @@ class ExploredRenderTest {
         val inst = InstrumentationRegistry.getInstrumentation()
         val ctx = inst.targetContext
 
+        // The Route map auto-locates when it becomes ready (MapsMapFragment autoLocate ->
+        // recenterOnUser), which pops Android's location dialog when the permission is not
+        // held. Whether that lands before the clicks below is a race on how fast the style
+        // loads: when it won, MainActivity was PAUSED under GrantPermissionsActivity and the
+        // test failed as NoActivityResumedException or a missing "Explored" view (run
+        // 36945007932, both attempts). Granted up front, map-ready centres instead of asking.
+        if (android.os.Build.VERSION.SDK_INT >= 28) // grantRuntimePermission is API 28; the CI emulator is 34
+            for (p in listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+                inst.uiAutomation.grantRuntimePermission(ctx.packageName, p)
+
         MapsDb.get(ctx).clearAll()
         MapsDemo.resetSeedFlag(ctx)
         assertTrue("demo seed must insert rows", MapsDemo.seed(ctx) > 0)
