@@ -139,6 +139,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // BOOT_COMPLETED — one list, one mechanism, cold start and update
         // converging on the same services running.
         runCatching { BadgeServices.ensureAll(this) }
+        // #775: /api/overlays — what is drawn vs. what each switch says.
+        runCatching { com.diegonmarcos.superapp.floatingnav.OverlaysDebugApi.register(this) }
         // Schedule the periodic battery-session tick (15 min cadence).
         // Idempotent — KEEP policy ensures re-scheduling on every cold
         // start is a no-op. Without this the discharge anchor only

@@ -22,7 +22,6 @@ import com.diegonmarcos.superapp.system.WirelessDebugKeeper
 import com.diegonmarcos.superapp.devcontrol.DevControlServer
 import com.diegonmarcos.superapp.devtools.DevControlPrefs
 import com.diegonmarcos.superapp.firewall.FirewallController
-import com.diegonmarcos.superapp.floatingnav.FloatingNavPrefs
 import com.diegonmarcos.superapp.floatingnav.FloatingNavService
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.settings.LauncherSettingsPrefs
@@ -414,18 +413,20 @@ object DeviceControls {
         "floating_nav" to Control(
             // The service's own isRunning, set in onCreate/onDestroy.
             observed = true,
-            read = { FloatingNavService.isRunning },
+            // #775: `armed`, not isRunning — the service also runs headless
+            // as the badge host with the button off.
+            read = { FloatingNavService.isRunning && FloatingNavService.armed },
             set = { ctx, on ->
-                FloatingNavPrefs.setEnabled(ctx, on)
-                if (on) FloatingNavService.startIfPermitted(ctx) else FloatingNavService.stop(ctx)
+                FloatingNavService.setEnabled(ctx, on)
                 // Starting or stopping a service is a REQUEST: isRunning flips
                 // in onCreate/onDestroy on the main looper, after this call
                 // returns. Reading it immediately would report every successful
                 // start as a failure and snap the switch back off a service
                 // that was coming up — the honesty rule inverted into a lie of
                 // its own. So wait for the service to agree, briefly.
-                val settled = awaitTrue(SERVICE_SETTLE_MS) { FloatingNavService.isRunning == on }
-                Verdict(settled, "Overlay is " + fmt(FloatingNavService.isRunning))
+                val live = { FloatingNavService.isRunning && FloatingNavService.armed }
+                val settled = awaitTrue(SERVICE_SETTLE_MS) { live() == on }
+                Verdict(settled, "Overlay is " + fmt(live()))
             },
             blocked = { ctx ->
                 if (Settings.canDrawOverlays(ctx)) ""

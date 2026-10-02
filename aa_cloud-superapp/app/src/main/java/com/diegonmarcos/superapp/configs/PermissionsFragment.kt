@@ -243,7 +243,7 @@ class PermissionsFragment : Fragment() {
         col.addView(small(ctx, "Floating nav — grant 'Display over other apps', then toggle the overlay:"))
         lateinit var navToggle: TextView
         navToggle = permButton(ctx, "Floating Nav", null) { toggleFloatingNav(navToggle) }
-        styleNavToggle(navToggle, FloatingNavService.isRunning)
+        styleNavToggle(navToggle, FloatingNavService.isRunning && FloatingNavService.armed)
         col.addView(permButtonRow(ctx,
             permButton(ctx, "Set Display-over-apps", android.provider.Settings.canDrawOverlays(ctxAny())) { openOverlaySettings() },
             permButton(ctx, "Set Modify-system-settings", android.provider.Settings.System.canWrite(ctxAny())) { openWriteSettings() },
@@ -853,12 +853,14 @@ class PermissionsFragment : Fragment() {
     }
 
     private fun toggleFloatingNav(tv: TextView) {
-        if (FloatingNavService.isRunning) {
-            FloatingNavService.stop(ctxAny())
+        // #775: the button's state is `armed`; a running service may be only
+        // the badge host, and stopping it would take the badges with it.
+        if (FloatingNavService.isRunning && FloatingNavService.armed) {
+            FloatingNavService.setEnabled(ctxAny(), false)
             Toast.makeText(ctxAny(), "Floating nav stopped", Toast.LENGTH_SHORT).show()
             styleNavToggle(tv, running = false)
         } else {
-            val ok = FloatingNavService.startIfPermitted(ctxAny())
+            val ok = FloatingNavService.setEnabled(ctxAny(), true)
             Toast.makeText(ctxAny(),
                 if (ok) "Floating nav started" else "Grant 'Display over other apps' first",
                 Toast.LENGTH_SHORT).show()

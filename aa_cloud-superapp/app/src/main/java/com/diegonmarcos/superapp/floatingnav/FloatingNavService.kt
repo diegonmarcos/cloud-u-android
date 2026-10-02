@@ -42,8 +42,18 @@ import com.diegonmarcos.superapp.updater.Updater
  * is hidden entirely — we're already home.
  *
  * Self-managing foreground service (START_STICKY) so Android keeps it alive
- * while the user roams other apps. Gated by [Settings.canDrawOverlays] +
- * build.json::ui.floating_nav.enabled; started/stopped via the companion.
+ * while the user roams other apps.
+ *
+ * #775 — the service and the overlay are two different things. The service
+ * also hosts the Quick Actions / Media / Alerts badges (#535), so it is started
+ * bare by BadgeServices.launch, by App.onCreate's ensureAll and by the
+ * platform's sticky restart — none of which go through [startIfPermitted].
+ * The user's Configs ▸ One-Hand switch used to be read only there, so every one
+ * of those starts brought the button back over the user's OFF. Now
+ * [overlayAllowed] is asked by every path that draws (the poll loop,
+ * [showBubble], [showBar]) and a pref listener tears the windows down the
+ * moment the switch flips; with it off the service runs headless and only
+ * posts its badges.
  */
 class FloatingNavService : Service() {
 
@@ -66,6 +76,13 @@ class FloatingNavService : Service() {
     private var bubbleX = Int.MIN_VALUE
     private var bubbleY = Int.MIN_VALUE
 
+    // Re-evaluate at once when the switch flips, rather than up to poll_ms
+    // later: OFF must take the windows down immediately. Held in a field —
+    // SharedPreferences keeps its listeners weakly.
+    private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        main.removeCallbacks(pollTick); main.post(pollTick)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -74,6 +91,7 @@ class FloatingNavService : Service() {
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         startForeground(NOTIF_ID, buildNotification())
         runCatching { infos.refresh() } // grouped Infos notification (sample data)
+        FloatingNavPrefs.observe(this, prefListener)
         main.post(pollTick)
     }
 
@@ -119,6 +137,8 @@ class FloatingNavService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        armed = false
+        FloatingNavPrefs.unobserve(this, prefListener)
         main.removeCallbacksAndMessages(null)
         removeBubble(); removeBar()
         runCatching { media.cancel() }
@@ -129,8 +149,9 @@ class FloatingNavService : Service() {
     // ── Poll loop ──────────────────────────────────────────────────
     private val pollTick = object : Runnable {
         override fun run() {
-            if (!cfg.enabled || !Settings.canDrawOverlays(this@FloatingNavService)) {
-                removeBubble(); removeBar()
+            armed = overlayAllowed(this@FloatingNavService)
+            if (!armed) {
+                removeBubble(); removeBar(); expanded = false; forced = false
             } else {
                 refresh(foregroundPackage())
             }
@@ -177,7 +198,7 @@ class FloatingNavService : Service() {
 
     // ── Collapsed circle ───────────────────────────────────────────
     private fun showBubble() {
-        if (bubble != null) return
+        if (bubble != null || !overlayAllowed(this)) return
         val size = dp(34)
         val params = bubbleParams(size)
         val v = View(this).apply {
@@ -191,6 +212,7 @@ class FloatingNavService : Service() {
         }
         runCatching { wm.addView(v, params) }
         bubble = v
+        bubbleDrawn = true
     }
 
     /**
@@ -247,7 +269,9 @@ class FloatingNavService : Service() {
     private fun maxBubbleX(w: Int) = (resources.displayMetrics.widthPixels - w).coerceAtLeast(0)
     private fun maxBubbleY(h: Int) = (resources.displayMetrics.heightPixels - h).coerceAtLeast(0)
 
-    private fun removeBubble() { bubble?.let { runCatching { wm.removeView(it) } }; bubble = null }
+    private fun removeBubble() {
+        bubble?.let { runCatching { wm.removeView(it) } }; bubble = null; bubbleDrawn = false
+    }
 
     /** Window params for the draggable bubble — gravity TOP|START so x/y are
      *  absolute; defaults to top-centre on first show, then the saved spot. */
@@ -298,6 +322,9 @@ class FloatingNavService : Service() {
     // ── The menu box (compact 2-line, or Expanded view) ────────────
     private fun showBar(ctx: NavContext) {
         removeBubble(); removeBar()
+        // ACTION_SHOW_MENU included: there is no "explicit one-shot" exception,
+        // a switched-off button draws nothing from any door.
+        if (!overlayAllowed(this)) { expanded = false; forced = false; return }
         expanded = true
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -325,6 +352,7 @@ class FloatingNavService : Service() {
             if (ev.action == MotionEvent.ACTION_OUTSIDE) { collapse(); true } else false
         }
         bar = col
+        barDrawn = true
     }
 
     /** One horizontal row of pipe-separated chips. When [boldCtx] is non-null,
@@ -359,7 +387,7 @@ class FloatingNavService : Service() {
         else -> false
     }
 
-    private fun removeBar() { bar?.let { runCatching { wm.removeView(it) } }; bar = null }
+    private fun removeBar() { bar?.let { runCatching { wm.removeView(it) } }; bar = null; barDrawn = false }
 
     private fun collapse() {
         expanded = false
@@ -602,7 +630,7 @@ class FloatingNavService : Service() {
          *  is foreground. Returns false if "display over other apps" isn't
          *  granted (caller should prompt). */
         fun showMenu(ctx: Context): Boolean {
-            if (!Settings.canDrawOverlays(ctx)) return false
+            if (!overlayAllowed(ctx)) return false
             val i = Intent(ctx, FloatingNavService::class.java).setAction(ACTION_SHOW_MENU)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i)
             else ctx.startService(i)
@@ -614,6 +642,44 @@ class FloatingNavService : Service() {
         @Volatile
         var isRunning: Boolean = false
             private set
+
+        /** #775 — the ONE rule for whether this service may draw anything:
+         *  the user's switch, the build's kill-switch, and the grant. Asked on
+         *  every draw, so no way of starting the service can override it. */
+        fun overlayAllowed(ctx: Context): Boolean =
+            FloatingNavPrefs.enabled(ctx) && buildEnabled && Settings.canDrawOverlays(ctx)
+
+        // A build constant; get() re-parses the baked JSON, and this is asked every poll.
+        private val buildEnabled by lazy { FloatingNavConfig.get().enabled }
+
+        /** The poll loop's last [overlayAllowed] verdict — "the button is on",
+         *  as opposed to [isRunning], which a headless badge host also is. */
+        @Volatile
+        var armed: Boolean = false
+            private set
+
+        /** The overlay windows actually added to the WindowManager right now
+         *  (read by /api/overlays). */
+        @Volatile
+        var bubbleDrawn: Boolean = false
+            private set
+        @Volatile
+        var barDrawn: Boolean = false
+            private set
+
+        /** The switch in Configs (One-Hand, Permissions, DeviceControls) — one
+         *  implementation for all three. ON writes the pref and starts the
+         *  service. OFF writes the pref, which the running service hears and
+         *  drops its windows; the service itself is stopped only when no badge
+         *  it hosts still wants it, so Media / Alerts / Quick Actions stay in
+         *  the shade with the button off. Returns whether the button is on. */
+        fun setEnabled(ctx: Context, on: Boolean): Boolean {
+            FloatingNavPrefs.setEnabled(ctx, on)
+            if (on) return startIfPermitted(ctx)
+            if (!com.diegonmarcos.superapp.notificationcenter.BadgeServices
+                    .wanted(ctx, FloatingNavService::class.java.name)) stop(ctx)
+            return false
+        }
 
         /** How many [com.diegonmarcos.superapp.ShellActivity] instances are
          *  resumed right now. This is a COUNTER and not a boolean on purpose:
@@ -649,9 +715,7 @@ class FloatingNavService : Service() {
          *  so without it the overlay simply came back the next time the app was
          *  launched. */
         fun startIfPermitted(ctx: Context): Boolean {
-            if (!FloatingNavPrefs.enabled(ctx)) return false
-            if (!FloatingNavConfig.get().enabled) return false
-            if (!Settings.canDrawOverlays(ctx)) return false
+            if (!overlayAllowed(ctx)) return false
             val i = Intent(ctx, FloatingNavService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i)
             else ctx.startService(i)

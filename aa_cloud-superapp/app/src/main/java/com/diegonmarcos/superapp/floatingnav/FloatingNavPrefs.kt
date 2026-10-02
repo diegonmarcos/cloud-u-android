@@ -47,6 +47,14 @@ object FloatingNavPrefs {
         prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()
     }
 
+    /** #775 — lets the running service hear the switch flip instead of
+     *  finding out at its next poll. The caller must hold [l] strongly. */
+    fun observe(ctx: Context, l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs(ctx).registerOnSharedPreferenceChangeListener(l)
+
+    fun unobserve(ctx: Context, l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs(ctx).unregisterOnSharedPreferenceChangeListener(l)
+
     /**
      * Forget where the circle was dragged to. Deliberately a REMOVE and not a
      * write of some pixel pair: with no stored position the service falls back

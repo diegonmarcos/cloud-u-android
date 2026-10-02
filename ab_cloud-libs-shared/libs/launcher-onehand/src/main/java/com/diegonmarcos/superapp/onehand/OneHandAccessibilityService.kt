@@ -98,11 +98,18 @@ class OneHandAccessibilityService : AccessibilityService() {
         hideHandles(); if (instance === this) instance = null; super.onDestroy()
     }
 
+    /** Edge-handle windows currently added (read by the app's /api/overlays). */
+    val handleCount: Int get() = views.size
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* no-op */ }
     override fun onInterrupt() { /* no-op */ }
 
     fun showHandles() {
         hideHandles()
+        // #775: the switch is checked at the draw, not only by the callers that
+        // happen to check it today — no door may bring the strips back while
+        // edge menus are off. (testActivate sets it first, so it still works.)
+        if (!OneHandPrefs.isEnabled(this)) return
         val c = OneHandConfig.effective(this).also { cfg = it }
         Log.i(TAG, "showHandles: ${c.handles.size} handles, trigger=${c.trigger}, longPressMs=${c.longPressMs}")
         c.handles.forEach { addHandle(it) }

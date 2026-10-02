@@ -72,16 +72,22 @@ object BadgeServices {
             // A service is ensured only if at least one badge it owns has its
             // grants. Starting FloatingNavService with no overlay permission
             // would fail the way it has been failing: silently.
-            val owned = BadgeDeclaration.badgesOf(declared, fqcn)
-            val startable = owned.any { missingRequirement(app, it) == null && BadgeCustomization.isEnabled(app, it) }
-            if (!startable) {
-                Log.i(TAG, "skip $fqcn — no enabled badge of its ${owned.size} has its grants")
+            if (!wanted(app, fqcn)) {
+                Log.i(TAG, "skip $fqcn — none of its badges is enabled with its grants")
                 continue
             }
             if (start(app, fqcn)) started += fqcn
         }
         return started
     }
+
+    /** True when at least one badge [fqcn] owns is switched on and has its
+     *  grants — i.e. the service has a badge to post. #775: FloatingNavService
+     *  asks this when the floating button is turned off, to decide between
+     *  stopping and running on headless for its badges. */
+    fun wanted(ctx: Context, fqcn: String): Boolean =
+        BadgeDeclaration.badgesOf(declared, fqcn)
+            .any { missingRequirement(ctx, it) == null && BadgeCustomization.isEnabled(ctx, it) }
 
     private fun start(ctx: Context, fqcn: String): Boolean = runCatching {
         val cls = Class.forName(fqcn)

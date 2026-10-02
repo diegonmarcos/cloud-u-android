@@ -408,9 +408,7 @@ class OneHandFragment : Fragment() {
                         Toast.LENGTH_LONG).show()
                     return@setOnCheckedChangeListener
                 }
-                FloatingNavPrefs.setEnabled(ctx, on)
-                if (on) FloatingNavService.startIfPermitted(ctx)
-                else    FloatingNavService.stop(ctx)
+                FloatingNavService.setEnabled(ctx, on)
             }
         }
         root.addView(floatingToggle)

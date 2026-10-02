@@ -55,6 +55,10 @@ class ScreensaverService : Service() {
         isRunning = true
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         startForeground(NOTIF_ID, buildNotification())
+        // #775: the gate is here, at the draw, and not only in [start]: the
+        // idle timer in ShellActivity starts this service bare, and used to
+        // put the black cover up with the build's kill-switch off.
+        if (!allowed(this)) { stopSelf(); return }
         showOverlay()
         main.post(tick)
     }
@@ -64,7 +68,7 @@ class ScreensaverService : Service() {
     override fun onDestroy() {
         isRunning = false
         main.removeCallbacksAndMessages(null)
-        overlay?.let { runCatching { wm.removeView(it) } }; overlay = null
+        overlay?.let { runCatching { wm.removeView(it) } }; overlay = null; drawn = false
         super.onDestroy()
     }
 
@@ -134,6 +138,7 @@ class ScreensaverService : Service() {
 
         runCatching { wm.addView(root, overlayParams()) }
         overlay = root
+        drawn = true
     }
 
     /** Animated neon "synthwave" grid — a scrolling horizontal floor below a
@@ -331,11 +336,19 @@ class ScreensaverService : Service() {
         var isRunning: Boolean = false
             private set
 
+        /** The cover window is up right now (read by /api/overlays). */
+        @Volatile
+        var drawn: Boolean = false
+            private set
+
+        /** Whether the screensaver may draw: the build's switch and the grant. */
+        fun allowed(ctx: Context): Boolean =
+            BuildConfig.SCREENSAVER_ENABLED && Settings.canDrawOverlays(ctx)
+
         /** Start the screensaver iff enabled and "display over other apps"
          *  is granted. Returns false otherwise (caller can prompt). */
         fun start(ctx: Context): Boolean {
-            if (!BuildConfig.SCREENSAVER_ENABLED) return false
-            if (!Settings.canDrawOverlays(ctx)) return false
+            if (!allowed(ctx)) return false
             val i = Intent(ctx, ScreensaverService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i)
             else ctx.startService(i)
