@@ -141,7 +141,7 @@ done
 # which the Drift tab calls only from a click and the debug API only from its sync op.
 [ "$(grep -c 'AccountRuntime.push(' "$AM")" = 1 ] && grep -qF 'fun pushServerToRuntime(' "$AM" \
     && ok "T4: AccountRuntime.push has one caller, the model's server → runtime" || bad "T4: AccountRuntime.push is called from more than the model's push"
-grep -rn 'AccountRuntime.push(' "$APP/app/src/main/java" | grep -v 'AccountModel.kt' | grep -q . && bad "T4: something else pushes into an app" || ok "T4: nothing else pushes into an app"
+grep -q . <<<"$(grep -rn 'AccountRuntime.push(' "$APP/app/src/main/java" | grep -v 'AccountModel.kt')" && bad "T4: something else pushes into an app" || ok "T4: nothing else pushes into an app"
 PUSHES=$(grep -n 'm.pushServerToRuntime(' "$AT" | cut -d: -f1)
 [ -n "$PUSHES" ] && ok "T4: $(echo "$PUSHES" | wc -l) push call sites on Drift" || bad "T4: Drift never pushes"
 for ln in $PUSHES; do
