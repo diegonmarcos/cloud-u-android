@@ -104,8 +104,11 @@ class SearchShellTest {
             if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.first())).performClick()
             for (sub in v.subpages) {
                 compose.runOnIdle { state.showSubpage(v, sub) }
-                compose.waitForIdle()
-                compose.onNodeWithTag(Tags.page(cfg.subpage(sub)!!.kind)).assertExists()
+                // Bounded wait, not an instant check: a heavy page (the payslip runs the whole PAP
+                // while composing) was not yet composed on one runner (run 37036021906) and was on
+                // the other. A page that never appears still fails here, after 10 s.
+                waitFor(Tags.page(cfg.subpage(sub)!!.kind))
+                assertEquals(sub, state.subpageOf(v))
             }
         }
     }
