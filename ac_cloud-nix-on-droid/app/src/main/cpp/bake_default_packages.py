@@ -526,6 +526,42 @@ def patch_etc_profile(etc_profile: str, fallback_script: str) -> str:
     return (f'if [ -e "{path}" ]; then\n  {src}\nelse\n  . /{fallback_script}\nfi\n')
 
 
+# ── #758: the shell resolves through Android, i.e. through the SuperApp's DNS menu ──
+# MEASURED on the pinned zip: etc/resolv.conf -> /etc/static/resolv.conf, which
+# names two public resolvers (Cloudflare's and Google's), so every lookup in this terminal skipped the menu and
+# Private DNS. Rewriting that file would not hold: `nix-on-droid switch` repoints
+# etc/static at a store generation that names them again. A proot FILE bind over
+# /etc/resolv.conf holds whatever /etc/static points at (measured both ways with
+# the pinned proot-static: the guest reads the bound file after a simulated
+# switch), and -p moves the guest's 127.0.0.1:53 to the app's SystemDnsBridge
+# (libs/sysdns, bridge_port), exactly as the termux terminal's enter.sh does.
+# Measured: glibc in this guest reaches a responder on :2053 only with BOTH -p and
+# the bind; either alone fails. The bind must come AFTER the /etc dir bind --
+# proot sanitizes a bind's guest path against the binds before it, and one listed
+# first is dropped with "Not a directory".
+ETC_BIND_FMT = "  -b /data/data/{app_id}/files/usr/etc:/etc \\\n"
+LOOPBACK_NAMESERVERS = ("127.0.0.1", "::1")
+
+
+def resolv_conf_body(nameservers: list) -> str:
+    """The file the guest sees as /etc/resolv.conf. Loopback only: any other server
+    is a resolver of the terminal's own, the thing #741 forbids."""
+    if not nameservers or any(n not in LOOPBACK_NAMESERVERS for n in nameservers):
+        raise ValueError(f"dns_bridge.nameservers must be loopback only (the bridge), got {nameservers!r}")
+    return "".join(f"nameserver {n}\n" for n in nameservers)
+
+
+def patch_bin_login_dns(bin_login: str, app_id: str, resolv_conf: str) -> str:
+    """#758 -p plus a bind of the baked resolv.conf ($PREFIX/<resolv_conf>) over
+    /etc/resolv.conf, inserted right after the /etc bind of bin/login's proot exec."""
+    etc_bind = ETC_BIND_FMT.format(app_id=app_id)
+    if bin_login.count(etc_bind) != 1:
+        raise ValueError(f"expected exactly one /etc bind in bin/login's proot exec:\n  {etc_bind}")
+    dns = f"  -b /data/data/{app_id}/files/usr/{resolv_conf}:/etc/resolv.conf \\\n"
+    dns += "  -p \\\n"  # the guest's 127.0.0.1:53 -> the bridge's port
+    return bin_login.replace(etc_bind, etc_bind + dns, 1)
+
+
 # claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
 # not a nixpkgs restriction) -- nix's eval refuses it unless this is set, the
 # same override `nixos-rebuild`/`nix-env` users are told to add for it.
@@ -542,17 +578,17 @@ def capture(cmd):
 
 
 def main() -> int:
-    if len(sys.argv) != 11:
+    if len(sys.argv) != 13:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
             "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system> "
-            "<shared_root_name> <login_shell_attr>",
+            "<shared_root_name> <login_shell_attr> <dns resolv_conf> <dns nameservers csv>",
             file=sys.stderr,
         )
         return 2
 
     (input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system,
-     shared_root_name, login_shell) = sys.argv[1:11]
+     shared_root_name, login_shell, dns_resolv_conf, dns_nameservers) = sys.argv[1:13]
     attrs = [a for a in attrs_csv.split(",") if a]
     if not attrs:
         print("no attrs given", file=sys.stderr)
@@ -619,6 +655,17 @@ def main() -> int:
                 return 1
             mount_setup = BIN_LOGIN_TRACE + storage_setup(shared_root_name) + 'cloud_trace "exec proot-static"\n\n'
             bin_login = bin_login.replace(exec_line, mount_setup + exec_line, 1)
+
+            # ── #758: lookups go to the app's bridge, never to a server of the zip's own
+            try:
+                bin_login = patch_bin_login_dns(bin_login, app_id, dns_resolv_conf)
+                dns_resolv_body = resolv_conf_body([n for n in dns_nameservers.split(",") if n])
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+            if dns_resolv_conf in existing:
+                print(f"FAIL: the input zip already carries {dns_resolv_conf}", file=sys.stderr)
+                return 1
 
             # ── #644: the declarative link store, and its login wiring ─────
             try:
@@ -743,6 +790,7 @@ def main() -> int:
                 f'export PATH="/{profile_link}/bin:$PATH"\n'
             )
             new_files[fallback_script] = fallback_body.encode()
+            new_files[dns_resolv_conf] = dns_resolv_body.encode()
 
             if not symlinks_txt.endswith("\n"):
                 symlinks_txt += "\n"

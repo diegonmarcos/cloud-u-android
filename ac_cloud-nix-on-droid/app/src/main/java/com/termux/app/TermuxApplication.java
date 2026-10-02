@@ -2,7 +2,9 @@ package com.termux.app;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.Build;
 
+import com.diegonmarcos.cloudlib.sysdns.SystemDnsBridge;
 import com.termux.BuildConfig;
 import com.termux.cloud.CloudTermuxProperties;
 import com.termux.shared.errors.Error;
@@ -18,9 +20,14 @@ import com.termux.shared.termux.shell.am.TermuxAmSocketServer;
 import com.termux.shared.termux.shell.TermuxShellManager;
 import com.termux.shared.termux.theme.TermuxThemeUtils;
 
+import java.io.IOException;
+
 public class TermuxApplication extends Application {
 
     private static final String LOG_TAG = "TermuxApplication";
+
+    /** #758 held so the bridge's sockets live as long as the process. */
+    private static SystemDnsBridge dnsBridge;
 
     public void onCreate() {
         super.onCreate();
@@ -38,6 +45,12 @@ public class TermuxApplication extends Application {
         // #747 /api/terminal/exec and /api/terminal/selftest on the fleet debug API. First, so a
         // start that returns early below (files directory unusable) can still be debugged through it.
         TerminalDebugApi.register(this);
+
+        // #758 bin/login binds a resolv.conf naming 127.0.0.1 over the guest's /etc/resolv.conf
+        // and runs proot -p, so every shell lookup (a typed session, RunCommandService or
+        // /api/terminal/exec, all of which run in this process) lands here and is answered by
+        // Android's resolver, i.e. by the SuperApp's DNS menu. Before any early return below.
+        startDnsBridge();
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
         TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
@@ -81,6 +94,23 @@ public class TermuxApplication extends Application {
 
         if (isTermuxFilesDirectoryAccessible) {
             TermuxShellEnvironment.writeEnvironmentToFile(this);
+        }
+    }
+
+    private static synchronized void startDnsBridge() {
+        if (dnsBridge != null) return;
+        if (Build.VERSION.SDK_INT < 29) {
+            // ponytail: no raw system resolver below Android 10 (DnsResolver is API 29); the shell
+            // then has no DNS rather than a server of its own, as in the termux terminal.
+            Logger.logError(LOG_TAG, "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail");
+            return;
+        }
+        try {
+            dnsBridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
+                line -> Logger.logInfo(LOG_TAG, line));
+        } catch (IOException e) {
+            Logger.logWarn(LOG_TAG, "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
+                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS");
         }
     }
 

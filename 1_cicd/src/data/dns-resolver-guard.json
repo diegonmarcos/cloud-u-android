@@ -17,6 +17,12 @@
       "why": "a resolv.conf naming a server other than 127.0.0.1, the loopback bridge to Android's resolver (libs/sysdns)",
       "pattern": "nameserver[ \\t]+(?!127\\.0\\.0\\.1\\b|::1\\b)[0-9a-fA-F:.]{3,}"
     },
+    "nameservers-list": {
+      "needles": ["nameservers"],
+      "why": "a declared nameservers list (a rootfs.json or build.json a build script writes resolv.conf from) naming a server other than the loopback bridge: the nameserver prefix is only added at build time, so resolv-nameserver never sees it",
+      "pattern": "\"nameservers\"\\s*:\\s*\\[[^\\]]*\"(?!127\\.0\\.0\\.1\"|::1\")[0-9a-fA-F:.]{3,}\"",
+      "suffixes": [".json"]
+    },
     "custom-resolver-lib": {
       "needles": ["dnsoverhttps", "DnsOverHttps", "org.xbill.DNS", "dnsjava:dnsjava", "org.minidns", "hickory-resolver", "trust-dns-resolver"],
       "why": "a resolver library of the app's own (DoH client, dnsjava, minidns, hickory/trust-dns): it answers from its own upstream, not Android's",

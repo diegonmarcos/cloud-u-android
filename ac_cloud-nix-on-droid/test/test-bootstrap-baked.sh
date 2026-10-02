@@ -1728,6 +1728,60 @@ else
     bad "profile_missing() does not discriminate a missing tool from a present one: $(cat "$SB/p.out")"
 fi
 
+# ── #758 — the shell resolves through the app's bridge, never the zip's two public resolvers ──
+# Upstream's bin/login exec, verbatim in shape (the pinned zip's, measured): the patch
+# must add -p and bind the baked resolv.conf over /etc/resolv.conf AFTER the /etc bind
+# (proot drops a file bind whose parent is bound later: "Not a directory"), and the
+# resolv.conf may name only the loopback bridge. Measured with the pinned proot-static
+# off-device: glibc in the guest reaches a responder on the bridge port only with both.
+dns_patch_ok() {  # $1 = bake_default_packages.py
+    python3 - "$1" "$BUILD_JSON" <<'PY758'
+import importlib.util, json, os, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+app = "com.termux.nix"
+P = f"/data/data/{app}/files/usr"
+login = (f"exec {P}/bin/proot-static \\\n  -b {P}/nix:/nix \\\n  -b {P}/bin:/bin \\\n"
+         f"  -b {P}/etc:/etc \\\n  -b {P}/tmp:/tmp \\\n  -b {P}/usr:/usr \\\n  --link2symlink \\\n"
+         f"  {P}/bin/sh {P}/usr/lib/login-inner \"$@\"\n")
+d = json.load(open(sys.argv[2]))["forks"]["nixdroid"]["bootstrap"]["dns_bridge"]
+src = os.path.join(os.path.dirname(sys.argv[2]), d["source"])
+if not isinstance(json.load(open(src)).get("bridge_port"), int): sys.exit("dns_bridge.source has no bridge_port")
+out = m.patch_bin_login_dns(login, app, d["resolv_conf"]).splitlines()
+bind = f"  -b {P}/{d['resolv_conf']}:/etc/resolv.conf \\"
+if bind not in out or "  -p \\" not in out: sys.exit("no resolv.conf bind or no -p in the patched exec")
+if out.index(bind) < out.index(f"  -b {P}/etc:/etc \\"): sys.exit("the resolv.conf bind precedes the /etc bind")
+if m.resolv_conf_body(d["nameservers"]) != "nameserver 127.0.0.1\n": sys.exit("resolv.conf is not the loopback bridge")
+for bad_ns in (["10.0.0.1"], ["127.0.0.1", "192.0.2.1"], []):
+    try: m.resolv_conf_body(bad_ns); sys.exit(f"resolv_conf_body accepted {bad_ns}")
+    except ValueError: pass
+PY758
+}
+if dns_patch_ok "$BAKE_PY" && grep -qF 'patch_bin_login_dns(bin_login, app_id, dns_resolv_conf)' "$BAKE_PY" \
+    && grep -qF 'new_files[dns_resolv_conf] = dns_resolv_body.encode()' "$BAKE_PY" \
+    && grep -qF 'cloudDnsBridge().resolv_conf' "$GRADLE" && grep -qF 'CLOUD_DNS_BRIDGE_PORT' "$GRADLE" \
+    && grep -qF "'src/bridge/java'" "$GRADLE" \
+    && grep -qF 'startDnsBridge();' "$DIR/app/src/main/java/com/termux/app/TermuxApplication.java" \
+    && grep -qF 'SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android()' "$DIR/app/src/main/java/com/termux/app/TermuxApplication.java"; then
+    ok "#758 bin/login binds a loopback-only resolv.conf after /etc and passes -p; the app starts libs/sysdns's bridge on the declared port"
+else
+    bad "#758 the nix shell's DNS does not reach the app's bridge (bin/login patch, baked resolv.conf, gradle wiring or bridge start missing)"
+fi
+MUT758="$(mktemp)"
+sed 's#etc_bind + dns, 1#dns + etc_bind, 1#' "$BAKE_PY" > "$MUT758"
+if cmp -s "$BAKE_PY" "$MUT758"; then bad "MUTATION DID NOT APPLY: the resolv.conf bind could not be moved before /etc"
+elif dns_patch_ok "$MUT758" 2>/dev/null; then bad "MUTATION SURVIVED: a resolv.conf bind proot would drop (before /etc) stayed green"
+else ok "mutation proved: the bind moved before /etc (dropped by proot) turns the check red"; fi
+grep -vF 'dns += "  -p' "$BAKE_PY" > "$MUT758"
+if cmp -s "$BAKE_PY" "$MUT758"; then bad "MUTATION DID NOT APPLY: -p could not be removed"
+elif dns_patch_ok "$MUT758" 2>/dev/null; then bad "MUTATION SURVIVED: without -p (the guest's :53 never reaches the bridge) stayed green"
+else ok "mutation proved: dropping -p turns the check red"; fi
+sed 's#n not in LOOPBACK_NAMESERVERS#False#' "$BAKE_PY" > "$MUT758"
+if cmp -s "$BAKE_PY" "$MUT758"; then bad "MUTATION DID NOT APPLY: the loopback-only rule could not be removed"
+elif dns_patch_ok "$MUT758" 2>/dev/null; then bad "MUTATION SURVIVED: a resolv.conf naming a server of its own stayed green"
+else ok "mutation proved: letting resolv.conf name a non-loopback server turns the check red"; fi
+rm -f "$MUT758"
+
 # ── S10 — the real declarations both render, and the login literal agrees ──
 for terminal in nix termux; do
     if python3 "$RENDERER" "$terminal" >"$SB/real.$terminal" 2>"$SB/real.$terminal.err"; then

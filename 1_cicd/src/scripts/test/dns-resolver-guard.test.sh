@@ -78,6 +78,10 @@ expect_red "a resolv.conf written with a public server" \
     "ac_cloud-probe/setup.sh" "printf 'nameserver 9.9.9.9\\n' > /etc/resolv.conf"
 expect_red "the mesh resolver hardcoded per app instead of the menu's split-DNS rule" \
     "ac_cloud-probe/setup.sh" "echo 'nameserver 10.0.0.1' > \$ROOTFS/etc/resolv.conf"
+expect_red "#758 a rootfs nameservers list naming a mesh server (the prefix is added at build time)" \
+    "ac_cloud-probe/rootfs/rootfs.json" '"nameservers": ["127.0.0.1", "10.0.0.1"]'
+expect_green "#758 a nameservers list naming only the loopback bridge" \
+    "ac_cloud-probe/build.json" '"nameservers": ["127.0.0.1"]'
 expect_red "an IPv6 public resolver" \
     "ac_cloud-probe/Net.java" 'String v6 = "2606:4700:4700::1111";'
 expect_red "a DNS-over-HTTPS client library" \

@@ -35,10 +35,12 @@ on:
       # Listed HERE, not as build.json::modules: build.json is the first of the
       # bootstrap artifact's identity_files, so a key there would move the
       # rootfs content address and republish ~400 MB that did not change.
+      # #758 SystemDnsBridge, compiled in by source reference (app/build.gradle).
       - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-terminal-store/**"
       - "ac_cloud-nix-on-droid/**"
 permissions:
