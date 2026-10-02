@@ -70,7 +70,7 @@
     "compose_host_marker": "\\bsetContent\\s*[({]|\\bComposeView\\b|\\bAbstractComposeView\\b",
     "compose_code_marker": "@Composable\\b",
     "view_screen_marker": "\\bsetContentView\\s*\\(|\\bonCreateView\\s*\\(|\\bonCreateDialog\\s*\\(|\\bR\\.layout\\.|\\bcontentView\\s*=",
-    "view_builder_marker": "\\.inflate\\(|\\bfindViewById\\b|\\bViewBinding\\b|\\bAlertDialog\\.Builder\\s*\\(|\\b(?:TextView|LinearLayout|FrameLayout|RelativeLayout|ConstraintLayout|ImageView|ImageButton|ScrollView|HorizontalScrollView|NestedScrollView|RecyclerView|EditText|SwitchCompat|CheckBox|GridLayout|ProgressBar|SeekBar|CardView|MaterialCardView|ChipGroup|TabLayout|ViewPager2?|ListView|Spinner|PopupWindow)\\s*\\(",
+    "view_builder_marker": "\\binflate\\([^)]*\\bR\\.layout\\.|Binding\\.inflate\\(|\\bfindViewById\\b|\\bViewBinding\\b|\\bAlertDialog\\.Builder\\s*\\(|\\b(?:TextView|LinearLayout|FrameLayout|RelativeLayout|ConstraintLayout|ImageView|ImageButton|ScrollView|HorizontalScrollView|NestedScrollView|RecyclerView|EditText|SwitchCompat|CheckBox|GridLayout|ProgressBar|SeekBar|CardView|MaterialCardView|ChipGroup|TabLayout|ViewPager2?|ListView|Spinner|PopupWindow)\\s*\\(",
     "view_builder_marker_ambiguous": "\\b(?:Button|Switch|Chip)\\s*\\("
   },
   "units": [
@@ -645,13 +645,15 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 37,
-        "layout_xml": 25,
-        "view_ui_files": 62,
+        "view_screens": 33,
+        "layout_xml": 22,
+        "view_ui_files": 58,
         "custom_views": 9
       },
       "done": [
-        "settings/LauncherPresetsFragment (Configs ▸ Launcher ▸ Presets) — KitComposeFragment, #773"
+        "settings/LauncherPresetsFragment (Configs ▸ Launcher ▸ Presets) — KitComposeFragment, #773",
+        "launcher/SectionFragment, launcher/DetailPlaceholderFragment, launcher/PlaceholderDrawerFragment — KitComposeFragment + KitEmptyState; fragment_section_placeholder.xml and fragment_placeholder_drawer.xml deleted, #773",
+        "settings/ImportConfigsFragment (Configs ▸ Import) — KitComposeFragment; fragment_import_configs.xml deleted; VaultFileImportTest ported to compose testing, #773"
       ]
     },
     {

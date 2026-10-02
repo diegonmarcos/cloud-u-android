@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
@@ -28,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
@@ -133,6 +135,24 @@ fun KitSelectableTile(
             Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 4.dp))
         }
+    }
+}
+
+/** A page with nothing to show yet: an optional title over a caption, centred in the pane. */
+@Composable
+fun KitEmptyState(title: String?, caption: String, modifier: Modifier = Modifier) {
+    val p = LocalKitPalette.current
+    Column(
+        modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (!title.isNullOrBlank()) {
+            Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center)
+        }
+        Text(caption, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center, modifier = Modifier.padding(top = if (title.isNullOrBlank()) 0.dp else 8.dp))
     }
 }
 

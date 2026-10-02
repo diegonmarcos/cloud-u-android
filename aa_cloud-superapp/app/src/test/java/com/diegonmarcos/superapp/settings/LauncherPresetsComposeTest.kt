@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.settings
 
 import android.app.Application
-import android.content.ComponentName
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,31 +13,24 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelectable
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.fragment.app.FragmentActivity
-import com.diegonmarcos.superapp.ui.LauncherPalette
+import androidx.compose.ui.test.performScrollTo
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.uikit.KitConfirmDialog
 import com.diegonmarcos.superapp.uikit.KitSwitchRow
 import com.diegonmarcos.superapp.uikit.KitTags
-import com.diegonmarcos.superapp.uikit.kitComposeView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.RuleChain
-import org.junit.rules.TestRule
 import org.junit.runner.RunWith
-import org.junit.runners.model.Statement
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -53,38 +45,14 @@ import org.robolectric.annotation.Config
  *   K1 a kit switch row toggles from a tap anywhere on the row, and reports the new value
  *   K2 dismissing a kit confirm dialog never confirms
  *
- * The host is a FragmentActivity with the page added the way SectionPages adds it, so
- * KitComposeFragment's ComposeView, its lifecycle and its palette read are the production path.
+ * The host is KitPageHarness: a FragmentActivity with the page added the way SectionPages adds
+ * it, so KitComposeFragment's ComposeView, its lifecycle and its palette read are the production path.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class LauncherPresetsComposeTest {
+class LauncherPresetsComposeTest : KitPageHarness() {
 
-    private val compose = createAndroidComposeRule<FragmentActivity>()
-
-    // The app manifest declares no bare FragmentActivity; register it with Robolectric's package
-    // manager rather than shipping a test activity in the APK (ShellIslandHarness does the same).
-    @get:Rule
-    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
-        object : Statement() {
-            override fun evaluate() {
-                val app = RuntimeEnvironment.getApplication()
-                shadowOf(app.packageManager)
-                    .addActivityIfNotPresent(ComponentName(app, FragmentActivity::class.java))
-                base.evaluate()
-            }
-        }
-    }).around(compose)
-
-    private fun showPresets(): LauncherPresetsFragment {
-        val page = LauncherPresetsFragment.newInstance()
-        compose.runOnUiThread {
-            compose.activity.supportFragmentManager.beginTransaction()
-                .add(android.R.id.content, page).commitNow()
-        }
-        compose.waitForIdle()
-        return page
-    }
+    private fun showPresets(): LauncherPresetsFragment = show(LauncherPresetsFragment.newInstance())
 
     private fun profileGroup(): LauncherPresets.Group =
         LauncherPresets.groups().single { it.kind == LauncherPresets.KIND_PROFILE }
@@ -123,7 +91,7 @@ class LauncherPresetsComposeTest {
         compose.onNodeWithTag(KitTags.tile("${group.id}:${before.id}")).assertIsSelected()
         compose.onNodeWithTag(KitTags.tile("${group.id}:${target.id}")).assertIsNotSelected()
 
-        compose.onNodeWithTag(KitTags.tile("${group.id}:${target.id}")).performClick()
+        compose.onNodeWithTag(KitTags.tile("${group.id}:${target.id}")).performScrollTo().performClick()
         compose.waitForIdle()
 
         assertEquals("the pick did not reach LauncherProfilePrefs", target.id, LauncherProfilePrefs(ctx).profile.id)
@@ -139,14 +107,6 @@ class LauncherPresetsComposeTest {
         for ((group, tiles) in page.page) for (t in tiles) {
             compose.onNodeWithTag(KitTags.tile("${group.id}:${t.id}")).assertIsSelectable()
         }
-    }
-
-    private fun showKit(content: @androidx.compose.runtime.Composable () -> Unit) {
-        compose.runOnUiThread {
-            val a = compose.activity
-            a.setContentView(a.kitComposeView(LauncherPalette.kit(a), content))
-        }
-        compose.waitForIdle()
     }
 
     @Test

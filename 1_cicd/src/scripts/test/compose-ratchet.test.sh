@@ -145,6 +145,12 @@ run_case "Compose Button/Switch in a @Composable file do not count" 0 "" \
 run_case "a KitComposeFragment subclass is a Compose screen" 0 "" \
     "printf 'class Page2 : KitComposeFragment() { @Composable override fun Content() {} }\n' > ac_compose/$SRC/Page2.kt"
 
+run_case "an options-menu inflate is not a View" 0 "" \
+    "printf 'class Menus : KitComposeFragment() {\n override fun onCreateOptionsMenu(m: Menu, i: MenuInflater) { i.inflate(R.menu.top, m) }\n @Composable override fun Content() {}\n}\n' > ac_compose/$SRC/Menus.kt"
+
+run_case "a layout inflated through View.inflate counts" 1 "ac_views: view_ui_files went UP 1 -> 2" \
+    "printf 'fun row(c: Context) = View.inflate(c, R.layout.row, null)\n' > ac_views/$SRC/Row.kt"
+
 run_case "a View screen in a fork's upstream tree is outside its roots" 0 "" \
     "cp ac_fork/$SRC/upstream/Theirs.kt ac_fork/$SRC/upstream/Theirs2.kt"
 

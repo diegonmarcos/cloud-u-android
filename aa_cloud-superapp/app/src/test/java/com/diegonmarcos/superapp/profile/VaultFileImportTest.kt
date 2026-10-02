@@ -3,14 +3,17 @@ package com.diegonmarcos.superapp.profile
 import android.app.Application
 import android.net.Uri
 import android.util.Base64
-import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import com.diegonmarcos.cloudlib.auth.VaultConnect
 import com.diegonmarcos.cloudlib.auth.VaultFile
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.settings.ImportConfigsFragment
-import com.google.android.material.button.MaterialButton
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -20,7 +23,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.Shadows.shadowOf
@@ -41,10 +43,14 @@ import java.io.ByteArrayInputStream
  * The happy paths use fixtures built here: the decrypted export lands in
  * [VaultConnect.Imported] and NOT in the store; the paste shape lands in the
  * store section by section and NOT in the Fleet tab.
+ *
+ * #773: the page is Compose now, so the box is typed, Save is clicked and the
+ * verdict is read through the semantics tree (the page's TAG_* test tags) —
+ * the same three gestures the View version made on its widgets.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class VaultFileImportTest {
+class VaultFileImportTest : KitPageHarness() {
 
     private val encryptedBytes: ByteArray =
         javaClass.getResourceAsStream("/vault-bundle-sops-encrypted.json")!!.readBytes()
@@ -77,26 +83,24 @@ class VaultFileImportTest {
     // ── the fragment, on a real activity, with the store swapped for a list ─
 
     private fun fragment(): ImportConfigsFragment {
-        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
-        val act = controller.get()
-        act.setTheme(R.style.Theme_Superapp)
-        controller.setup()
         val f = ImportConfigsFragment()
         f.readBlob = { existingBlob }
         f.putSecret = { _, s, k, v -> stored += Triple(s, k, v) }
         f.clearBlob = { }
-        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
-        return f
+        return show(f)
     }
 
-    private fun ImportConfigsFragment.statusText() =
-        requireView().findViewById<TextView>(R.id.import_status).text.toString()
+    private fun statusText(): String =
+        compose.onNodeWithTag(ImportConfigsFragment.TAG_STATUS).fetchSemanticsNode()
+            .config[SemanticsProperties.Text].joinToString("") { it.text }
+
+    private fun ImportConfigsFragment.statusText() = this@VaultFileImportTest.statusText()
 
     private fun ImportConfigsFragment.type(text: String) =
-        requireView().findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.import_input).setText(text)
+        compose.onNodeWithTag(ImportConfigsFragment.TAG_INPUT).performTextReplacement(text)
 
     private fun ImportConfigsFragment.save() =
-        requireView().findViewById<MaterialButton>(R.id.import_save).performClick()
+        compose.onNodeWithTag(ImportConfigsFragment.TAG_SAVE).performScrollTo().performClick()
 
     /** Registers [bytes] behind a content Uri on the resolver THE FRAGMENT will
      *  ask (Robolectric 4.16: registerInputStream is an instance method of the shadow). */

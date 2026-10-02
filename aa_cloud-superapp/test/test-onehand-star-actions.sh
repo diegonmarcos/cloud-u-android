@@ -129,8 +129,10 @@ echo "── 4. Shared machinery kept because it is used elsewhere ──"
 
 # ic_p_import was the removed entry's icon but is NOT its icon alone. Deleting
 # the drawable would break a launcher shortcut and the Import Configs screen.
-grep -rq 'ic_p_import' "$APP/app/src/main/res/xml/shortcuts.xml" \
-     "$APP/app/src/main/res/layout/fragment_import_configs.xml" \
+# #773: Import Configs is Compose now; its button paints the icon from
+# ImportConfigsFragment.kt (R.drawable.ic_p_import), so that is the second user.
+grep -q 'ic_p_import' "$APP/app/src/main/res/xml/shortcuts.xml" \
+  && grep -q 'R.drawable.ic_p_import' "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/ImportConfigsFragment.kt" \
   && check OK "ic_p_import kept — still used by shortcuts.xml and Import Configs" \
   || check "ic_p_import no longer referenced by its other users" \
            "ic_p_import kept — still used by shortcuts.xml and Import Configs"

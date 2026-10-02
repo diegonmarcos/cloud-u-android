@@ -6,15 +6,48 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.TextView
+import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudlib.auth.VaultConnect
 import com.diegonmarcos.cloudlib.auth.VaultFile
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Configs ▸ Profile ▸ "Import from a file instead" (the last line of journey
@@ -35,11 +68,18 @@ import com.google.android.material.textfield.TextInputEditText
  * Every exit of [loadFromUri] and [describe] goes through [report]; the
  * silence guard (1_cicd/src/data/silence-guard.json) fails the build on any
  * `return` that does not.
+ *
+ * Compose since #773 (was fragment_import_configs.xml): the paste box is
+ * [input] and the verdict line is [status], both plain state; the verdict line
+ * is a polite live region, so a screen reader still hears every sentence
+ * [report] puts on screen, as the View version's announceForAccessibility did.
  */
-class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
+class ImportConfigsFragment : KitComposeFragment() {
 
-    private lateinit var input: TextInputEditText
-    private lateinit var status: TextView
+    /** The paste box's text. */
+    internal var input by mutableStateOf("")
+    /** The last sentence [report] said. */
+    internal var status by mutableStateOf("")
 
     /**
      * The encrypted store, behind three seams. [ConfigsPrefs] needs the Android
@@ -57,28 +97,61 @@ class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
         if (uri != null) loadFromUri(uri)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val schemaTv     = view.findViewById<TextView>(R.id.import_schema)
-        input            = view.findViewById(R.id.import_input)
-        val save         = view.findViewById<MaterialButton>(R.id.import_save)
-        val clear        = view.findViewById<MaterialButton>(R.id.import_clear)
-        val openFile     = view.findViewById<MaterialButton>(R.id.import_from_file)
-        status           = view.findViewById(R.id.import_status)
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-        schemaTv.text = importSchemaJson()
-        input.setText(readBlob(requireContext()))
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        input = readBlob(requireContext())
+        return super.onCreateView(inflater, container, savedInstanceState)
+    }
 
-        openFile.setOnClickListener {
-            // Accept anything; ACTION_OPEN_DOCUMENT respects the device file
-            // picker (Files / Storage / 3rd-party). JSON or plain-text fine.
-            pickFile.launch(arrayOf("application/json", "text/*", "*/*"))
-        }
-        save.setOnClickListener { describe(classify(input.text?.toString().orEmpty()), store = true) }
-        clear.setOnClickListener {
-            clearBlob(requireContext())
-            input.setText("")
-            report(R.string.import_cleared)
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        val mono = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            Text(stringResource(R.string.import_title), color = p.textPrimary,
+                style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.import_subtitle), color = p.textSecondary,
+                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
+            Spacer(Modifier.height(12.dp))
+            KitCard {
+                SelectionContainer {
+                    Text(importSchemaJson(), color = p.textPrimary,
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace))
+                }
+            }
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                label = { Text(stringResource(R.string.import_input_hint)) },
+                textStyle = mono,
+                modifier = Modifier.fillMaxWidth().height(220.dp).padding(top = 12.dp).testTag(TAG_INPUT),
+            )
+            OutlinedButton(
+                // Accept anything; ACTION_OPEN_DOCUMENT respects the device file
+                // picker (Files / Storage / 3rd-party). JSON or plain-text fine.
+                onClick = { pickFile.launch(arrayOf("application/json", "text/*", "*/*")) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(TAG_OPEN_FILE),
+            ) {
+                Icon(painterResource(R.drawable.ic_p_import), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.import_from_file))
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { describe(classify(input), store = true) },
+                    modifier = Modifier.weight(1f).testTag(TAG_SAVE)) { Text(stringResource(R.string.import_save)) }
+                OutlinedButton(
+                    onClick = {
+                        clearBlob(requireContext())
+                        input = ""
+                        report(R.string.import_cleared)
+                    },
+                    modifier = Modifier.weight(1f).testTag(TAG_CLEAR),
+                ) { Text(stringResource(R.string.import_clear)) }
+            }
+            Text(status, color = p.textSecondary, style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(top = 8.dp).testTag(TAG_STATUS)
+                    .semantics { liveRegion = LiveRegionMode.Polite })
         }
     }
 
@@ -94,7 +167,7 @@ class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
         } catch (t: Throwable) { report(R.string.import_file_error, "${t.javaClass.simpleName}: ${t.message}"); return }
         if (text == null) { report(R.string.import_file_no_stream, name); return }
         if (text.isEmpty()) { report(R.string.import_file_empty, name); return }
-        input.setText(text)
+        input = text
         describe(classify(text), store = false)
     }
 
@@ -137,15 +210,20 @@ class ImportConfigsFragment : Fragment(R.layout.fragment_import_configs) {
         }
     }
 
-    /** THE reporter: the sentence goes on screen and to the screen reader. */
+    /** THE reporter: the sentence goes on screen and, through the live region, to the screen reader. */
     private fun report(@StringRes res: Int, vararg args: Any) {
-        val text = getString(res, *args)
-        status.text = text
-        status.announceForAccessibility(text)
+        status = getString(res, *args)
     }
 
     companion object {
         fun newInstance() = ImportConfigsFragment()
+
+        /** Test tags of the page's parts, for compose tests and device checks. */
+        const val TAG_INPUT = "import:input"
+        const val TAG_OPEN_FILE = "import:open_file"
+        const val TAG_SAVE = "import:save"
+        const val TAG_CLEAR = "import:clear"
+        const val TAG_STATUS = "import:status"
 
         /** THE classifier for a picked or pasted config: this page and the
          *  Account ▸ Connect ▸ Import File line (#711) both read through it. */

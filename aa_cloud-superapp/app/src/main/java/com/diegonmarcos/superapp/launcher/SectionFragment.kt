@@ -1,19 +1,16 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.Trace
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitEmptyState
 
-import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.runtime.Composable
 import androidx.core.os.bundleOf
-import androidx.fragment.app.Fragment
 
 /**
  * Generic placeholder Fragment for any of the 6 sections. Created with
@@ -23,21 +20,22 @@ import androidx.fragment.app.Fragment
  *
  * Real per-section Fragments will eventually live in libs:<x>/ (e.g.
  * MailFragment in libs:mail) — this stub stays around as the default
- * for any section not yet backed by a real module.
+ * for any section not yet backed by a real module. Compose since #773 (was
+ * fragment_section_placeholder.xml); the options menu is unchanged.
  */
-class SectionFragment : Fragment(R.layout.fragment_section_placeholder) {
+class SectionFragment : KitComposeFragment() {
 
     init { setHasOptionsMenu(true) }
 
     private val sectionId: String get() = requireArguments().getString(ARG_SECTION_ID) ?: ""
     private val sectionLabel: String get() = requireArguments().getString(ARG_SECTION_LABEL) ?: ""
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        Trace.d("SectionFragment", "onViewCreated section=$sectionId label=$sectionLabel")
-        view.findViewById<TextView>(R.id.section_title).text = sectionLabel
-        view.findViewById<TextView>(R.id.section_subtitle).text =
-            "Placeholder for libs:$sectionId — real UI lands when the module grows code."
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
+        Trace.d("SectionFragment", "compose section=$sectionId label=$sectionLabel")
+        KitEmptyState(sectionLabel, "Placeholder for libs:$sectionId — real UI lands when the module grows code.")
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {

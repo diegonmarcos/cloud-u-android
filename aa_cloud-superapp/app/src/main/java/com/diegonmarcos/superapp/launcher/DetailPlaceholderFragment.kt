@@ -1,41 +1,24 @@
 package com.diegonmarcos.superapp.launcher
 
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.runtime.Composable
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitEmptyState
 
 /**
  * Empty state shown in the right-hand DETAIL pane of the tablet
  * master-detail layout before the user has opened a page from the master
- * (section) grid. Pure code-built view — no layout XML — so it carries no
- * chrome and just prompts the user toward the master pane. Phones never
- * instantiate this (they use single-pane push navigation).
+ * (section) grid. It carries no chrome and just prompts the user toward the
+ * master pane. Phones never instantiate this (they use single-pane push
+ * navigation). Compose since #773; the prompt takes the palette's secondary
+ * ink instead of the old hand-picked 40%-white literal, so it follows the theme.
  */
-class DetailPlaceholderFragment : Fragment() {
+class DetailPlaceholderFragment : KitComposeFragment() {
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?,
-    ): View {
-        val ctx = requireContext()
-        val tv = TextView(ctx).apply {
-            text = "Select an item"
-            textSize = 15f
-            setTextColor(0x66FFFFFF)
-            gravity = Gravity.CENTER
-        }
-        return FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            addView(tv, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER))
-        }
-    }
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() = KitEmptyState(title = null, caption = "Select an item")
 
     companion object {
         fun newInstance() = DetailPlaceholderFragment()
