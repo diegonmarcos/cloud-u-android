@@ -15,6 +15,8 @@ import java.io.File
  * (not cacheDir, which the system may empty) so the last answers stay readable offline.
  */
 class Services(ctx: Context, val http: Http) {
+    /** The application context: the chat's token read and opening a result need one (#823 SearchHost). */
+    val app: Context = ctx.applicationContext
     val cfg: SearchConfig = Decl.config
     val engine = SearchEngine(cfg, http, Cache(File(ctx.filesDir, "results")), System::currentTimeMillis)
     val saved = SavedStore(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE))

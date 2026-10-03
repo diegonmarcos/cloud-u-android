@@ -179,6 +179,20 @@
       }
     },
     {
+      "id": "libs:search-page",
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "-",
+      "notes": "NEW in #823: Cloud Search's Search page (SearchChatPage: greeting, a box per declared engine, the conversation, model + Web switch, the input) moved out of ac_cloud-search/ui/AssistantPages.kt so Cloud Browser draws the same page. Themed by the consumer (SearchPageTheme), hosted by it (SearchPageHost). Proven through ac_cloud-search/app/src/test SearchShellTest.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
+    },
+    {
       "id": "libs:updater",
       "scope": "in",
       "wave": 1,

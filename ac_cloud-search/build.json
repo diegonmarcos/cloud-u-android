@@ -107,6 +107,7 @@
       "depends_on": [
         "libs:core",
         "libs:text-tools",
+        "libs:search-page",
         "search-core"
       ]
     },
@@ -128,6 +129,11 @@
     "libs:text-tools": {
       "_doc": "The ITextTools binder (a `contract` lib): the AI chat reads the OpenRouter token the fleet Account manages through TextToolsClient.revealAiKey(search.ai.account_provider) on use. This app keeps no copy of it - not in prefs, not in a file, not in the debug API.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools",
+      "type": "library"
+    },
+    "libs:search-page": {
+      "_doc": "#823 the Search page (the engine boxes and the AI chat) as a shared Compose lib, so Cloud Browser draws the same page. This app hosts it (data/SearchHost.kt: ChatFlow, the stores, Browser) and hands it its own glass theme and words (ui/AssistantPages.kt); the lib holds no colour, store, token or network of its own.",
+      "dir": "../ab_cloud-libs-shared/libs/search-page",
       "type": "library"
     }
   },

@@ -47,7 +47,10 @@ import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.Filters
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
+import com.diegonmarcos.cloudsearch.data.SearchHost
 import com.diegonmarcos.cloudsearch.data.Services
+import com.diegonmarcos.superapp.searchpage.SearchChatState
+import com.diegonmarcos.superapp.searchpage.SearchPageTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -68,7 +71,7 @@ class SearchState(val services: Services) {
     private val subpages = mutableStateMapOf<String, String>()
     val filters = mutableStateMapOf<String, Filters>()
     val listings = mutableMapOf<String, ListingModel>()
-    val chat = ChatModel(services)
+    val chat = SearchChatState(SearchHost(services))
 
     fun v(): SearchConfig.Vertical = cfg.vertical(vertical) ?: cfg.verticals.first()
     fun subpageOf(v: SearchConfig.Vertical): String = subpages[v.id]?.takeIf { it in v.subpages } ?: v.subpages.first()
@@ -103,12 +106,12 @@ object Tags {
     const val MORE_FILTERS = "search_more_filters"
     const val APPLY_FILTERS = "search_apply_filters"
     const val SORT = "search_sort"
-    const val CHAT_INPUT = "search_chat_input"
-    const val CHAT_SEND = "search_chat_send"
-    const val NEW_CHAT = "search_new_chat"
+    const val CHAT_INPUT = SearchPageTags.CHAT_INPUT
+    const val CHAT_SEND = SearchPageTags.CHAT_SEND
+    const val NEW_CHAT = SearchPageTags.NEW_CHAT
     const val SESSIONS = "search_sessions"
-    const val MODEL = "search_model"
-    const val WEB = "search_web_toggle"
+    const val MODEL = SearchPageTags.MODEL
+    const val WEB = SearchPageTags.WEB
     const val SAVED = "search_saved"
     fun nav(id: String) = "search_nav_$id"
     fun subpage(id: String) = "search_subpage_$id"
@@ -116,7 +119,7 @@ object Tags {
     fun card(key: String) = "search_card_$key"
     fun output(calc: String, id: String) = "search_out_${calc}_$id"
     fun field(calc: String, id: String) = "search_field_${calc}_$id"
-    fun engine(id: String) = "search_engine_$id"
+    fun engine(id: String) = SearchPageTags.engine(id)
     fun source(id: String) = "search_source_$id"
     fun drawer(id: String) = "search_drawer_$id"
     fun chip(id: String) = "search_chip_$id"

@@ -1,0 +1,55 @@
+// libs:search-page: Cloud Search's Search page (the engine boxes and the AI chat), shared by
+// reference (#823, the deferred #802 I8).
+//
+// The page lived only inside cloud-search (ui/AssistantPages.kt), so Cloud Browser's Search
+// add-on could open an engine's results but had no on-screen chat. This module is the one drawing
+// of that page: the greeting and one box per declared engine, the conversation, the model and
+// Web switch, the Gemini-style input. It knows no app: what it shows comes in through
+// SearchPageHost (sessions, send, the model catalogue, opening a URL) and how it looks through
+// SearchPageTheme (colours, sizes, strings, icons, the engine field). Cloud Search hands it its
+// glass theme, so its page looks as before; the browser hands it its kit palette.
+//
+// No search-core dependency: its own small value types (SpSession, SpMsg, SpModel, SpEngine), so
+// it builds as its own lib APK (lib-apks scans libs/) and in any consumer without that module.
+//
+// Same sparse-version shape as libs:ui-kit: it builds under whichever AGP the consuming app pulls
+// it in with. TESTED through the consumers: ac_cloud-search/app/src/test SearchShellTest drives
+// the page on Cloud Search's real declaration (engines, chat, sessions, New chat).
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.searchpage'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // `api`: a consumer builds the theme (Color, Brush, Dp, TextUnit) and fills composable slots.
+    api platform('androidx.compose:compose-bom:2025.01.00')
+    api 'androidx.compose.ui:ui'
+    api 'androidx.compose.foundation:foundation'
+    api 'androidx.compose.material3:material3'
+}

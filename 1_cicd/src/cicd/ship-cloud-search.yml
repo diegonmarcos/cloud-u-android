@@ -41,6 +41,7 @@ on:
       - "1_cicd/src/cicd/ship-cloud-search.yml"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/search-page/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-search/**"
 permissions:

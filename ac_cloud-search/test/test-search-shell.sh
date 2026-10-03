@@ -36,16 +36,20 @@
 #       both adaptive icons declare the foreground and the monochrome layer.
 #   S12 (#803) the Search tab is ONE page, as the owner's renderUnifiedSearchChat: exactly one
 #       vertical holds the `assistant` subpage and it declares no other (so no sub-nav, no second
-#       page); AssistantPage draws the engine boxes (Welcome, every declared engine, each opened by
-#       Browser.open) and the chat (Conversation + ChatBar) itself; and SearchShellTest keeps the UI
-#       test that asserts both parts inside that one page.
+#       page); AssistantPage draws it through libs:search-page's SearchChatPage (#823, shared with
+#       Cloud Browser) with every declared engine, each filled by Templates.fill and opened through
+#       SearchHost.openUrl = Browser.open; SearchChatPage itself draws the engine boxes (Welcome, a
+#       box per engine) and the chat (Conversation + ChatBar); and SearchShellTest keeps the UI test
+#       that asserts both parts inside that one page.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
-# OWN-SOURCE ONLY: reads ac_cloud-search and nothing else. python3 + grep.
+# Reads ac_cloud-search and, for S12, the one lib it hosts its Search page from
+# (ab_cloud-libs-shared/libs/search-page). python3 + grep.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"
+LIB="$(cd "$APP/../ab_cloud-libs-shared/libs/search-page" && pwd)"
 K='app/src/main/java/com/diegonmarcos/cloudsearch'
 C='core/src/main/kotlin/com/diegonmarcos/cloudsearch/core'
 for f in build.json app/src/main/AndroidManifest.xml core/pap/Lohnsteuer2026.xml core/tools/pap2kt.py \
@@ -60,6 +64,7 @@ cat > "$CHECK" <<'PY'
 import glob, json, os, re, subprocess, sys
 
 app = sys.argv[1]
+splib = sys.argv[2]
 bad = []
 src = os.path.join(app, "app", "src", "main", "java", "com", "diegonmarcos", "cloudsearch")
 core = os.path.join(app, "core", "src", "main", "kotlin", "com", "diegonmarcos", "cloudsearch", "core")
@@ -247,15 +252,23 @@ for v in holders:
     if len(v["subpages"]) != 1:
         bad.append("S12 vertical %s declares subpages %s — the Search tab is ONE page (engines + chat), not a split" % (v["id"], v["subpages"]))
 ap = code(os.path.join(src, "ui", "AssistantPages.kt"))
-def body(fn):
-    m = re.search(r"fun %s\(.*?\n\}" % fn, ap, re.S)
+lp = code(os.path.join(splib, "src", "main", "kotlin", "com", "diegonmarcos", "superapp", "searchpage", "SearchPage.kt"))
+host = code(os.path.join(src, "data", "SearchHost.kt"))
+def body(fn, text):
+    m = re.search(r"fun %s\(.*?\n\}" % fn, text, re.S)
     return m.group(0) if m else ""
-page, welcome = body("AssistantPage"), body("Welcome")
+page, shared, welcome = body("AssistantPage", ap), body("SearchChatPage", lp), body("Welcome", lp)
+if "SearchChatPage(" not in page:
+    bad.append("S12 AssistantPage does not draw libs:search-page's SearchChatPage")
+if not re.search(r"engines = state\.cfg\.engines\.map", page) or "Templates.fill(" not in page:
+    bad.append("S12 AssistantPage does not hand the page every declared engine, filled by Templates.fill")
 for call in ("Welcome(", "Conversation(", "ChatBar("):
-    if call not in page:
-        bad.append("S12 AssistantPage does not draw %s) — both halves of the Search tab live in the one page" % call[:-1])
-if not re.search(r"state\.cfg\.engines\.forEach", welcome) or "Browser.open(" not in welcome:
-    bad.append("S12 Welcome does not draw a box per declared engine opening its results in cloud-browser")
+    if call not in shared:
+        bad.append("S12 SearchChatPage does not draw %s) — both halves of the Search tab live in the one page" % call[:-1])
+if not re.search(r"engines\.forEachIndexed", welcome) or "host::openUrl" not in welcome:
+    bad.append("S12 Welcome does not draw a box per declared engine opening its results through the host")
+if not re.search(r"override fun openUrl\(url: String\) = Browser\.open\(", host):
+    bad.append("S12 SearchHost does not open a result in cloud-browser (Browser.open)")
 ui_test = open(os.path.join(app, "app", "src", "test", "java", "com", "diegonmarcos", "cloudsearch", "SearchShellTest.kt"), encoding="utf-8").read()
 if not re.search(r"@Test fun theSearchTabIsOnePageWithTheEnginesAndTheChat\(\)", ui_test) \
         or 'hasAnyAncestor(hasTestTag(Tags.page("assistant")))' not in ui_test:
@@ -268,7 +281,7 @@ PY
 
 FAILURES=0
 echo "── S1-S12 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  S1-S12"; else FAILURES=$((FAILURES + 1)); fi
+if python3 "$CHECK" "$APP" "$LIB"; then echo "  PASS  S1-S12"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -276,6 +289,7 @@ mutate() {  # name, file (relative to the app), python expression over s, expect
     local name="$1" rel="$2" expr="$3" want="$4" copy="$WORK/$1"
     mkdir -p "$copy"
     cp -r "$APP/build.json" "$APP/app" "$APP/core" "$copy/"
+    cp -r "$LIB" "$copy/search-page"
     if ! python3 - "$copy/$rel" "$expr" <<'PY'
 import sys
 p, expr = sys.argv[1], sys.argv[2]
@@ -287,7 +301,7 @@ open(p, "w", encoding="utf-8").write(t)
 PY
     then echo "  VOID  MUT $name: the edit did not land — the mutation targets text that moved"; FAILURES=$((FAILURES + 1)); return; fi
     local out
-    out="$(python3 "$CHECK" "$copy" 2>&1)"
+    out="$(python3 "$CHECK" "$copy" "$copy/search-page" 2>&1)"
     if [ $? -eq 0 ]; then
         echo "  FAIL  MUT $name: the check passed a broken tree"; FAILURES=$((FAILURES + 1))
     elif [[ "$out" != *"$want"* ]]; then
@@ -339,9 +353,13 @@ mutate launcher-glyph-missing app/tools/phosphor.json 's.replace("\"icon\": \"sh
 mutate monochrome-dropped app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml 's.replace("    <monochrome android:drawable=\"@drawable/ic_launcher_monochrome\" />\n", "")' "S11 mipmap-anydpi-v26/ic_launcher_round.xml lacks monochrome"
 mutate search-split build.json 's.replace("\"subpages\": [\n          \"assistant\"\n        ]", "\"subpages\": [\n          \"assistant\",\n          \"listing\"\n        ]")' "S12 vertical search declares subpages"
 mutate assistant-twice build.json 's.replace("\"subpages\": [\n          \"listing\"\n        ],\n        \"sources\": [\n          \"open-prices\"", "\"subpages\": [\n          \"assistant\"\n        ],\n        \"sources\": [\n          \"open-prices\"")' "S12 2 verticals hold the assistant subpage"
-mutate chat-moved-out "$J/ui/AssistantPages.kt" 's.replace("        ChatBar(\n            text,", "        NoBar(\n            text,")' "S12 AssistantPage does not draw ChatBar"
-mutate engines-moved-out "$J/ui/AssistantPages.kt" 's.replace("if (chat.session.messages.isEmpty() && !chat.sending) Welcome()", "if (chat.session.messages.isEmpty() && !chat.sending) Unit")' "S12 AssistantPage does not draw Welcome"
-mutate engine-boxes-dropped "$J/ui/AssistantPages.kt" 's.replace("state.cfg.engines.forEachIndexed", "emptyList<SearchConfig.Engine>().forEachIndexed")' "S12 Welcome does not draw a box per declared engine"
+SP=search-page/src/main/kotlin/com/diegonmarcos/superapp/searchpage
+mutate chat-moved-out "$SP/SearchPage.kt" 's.replace("        ChatBar(\n            text,", "        NoBar(\n            text,")' "S12 SearchChatPage does not draw ChatBar"
+mutate engines-moved-out "$SP/SearchPage.kt" 's.replace("if (chat.session.messages.isEmpty() && !chat.sending) Welcome(", "if (chat.session.messages.isEmpty() && !chat.sending) Unit; if (false) Wx(")' "S12 SearchChatPage does not draw Welcome"
+mutate engine-boxes-dropped "$SP/SearchPage.kt" 's.replace("engines.forEachIndexed", "emptyList<SpEngine>().forEachIndexed")' "S12 Welcome does not draw a box per declared engine"
+mutate page-not-shared "$J/ui/AssistantPages.kt" 's.replace("    SearchChatPage(\n", "    OwnPage(\n")' "S12 AssistantPage does not draw libs:search-page"
+mutate engines-not-handed "$J/ui/AssistantPages.kt" 's.replace("engines = state.cfg.engines.map", "engines = emptyList<SearchConfig.Engine>().map")' "S12 AssistantPage does not hand the page every declared engine"
+mutate result-not-in-browser "$J/data/SearchHost.kt" 's.replace("override fun openUrl(url: String) = Browser.open(", "override fun openUrl(url: String) = println(")' "S12 SearchHost does not open"
 mutate one-page-test-dropped app/src/test/java/com/diegonmarcos/cloudsearch/SearchShellTest.kt 's.replace("fun theSearchTabIsOnePageWithTheEnginesAndTheChat()", "fun theSearchTabComposes()")' "S12 SearchShellTest lost"
 
 echo "── S1-S12 + mutations: $FAILURES failure(s) ──"

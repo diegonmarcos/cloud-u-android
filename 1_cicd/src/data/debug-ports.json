@@ -96,6 +96,7 @@
     "com.diegonmarcos.cloudlib.webserver": 38219,
     "com.diegonmarcos.cloudlib.rootfsnixdroid": 38220,
     "com.diegonmarcos.cloudlib.rootfstermux": 38221,
-    "com.diegonmarcos.cloudlib.mllsoundyamnet": 38222
+    "com.diegonmarcos.cloudlib.mllsoundyamnet": 38222,
+    "com.diegonmarcos.cloudlib.searchpage": 38223
   }
 }

@@ -148,6 +148,8 @@ dependencies {
     implementation project(':libs:text-tools')
     // Everything computed or parsed: plain JVM, mutation-tested on its own (core/build.gradle).
     implementation project(':search-core')
+    // #823 the Search page (engine boxes + AI chat), shared with Cloud Browser; this app hosts and themes it.
+    implementation project(':libs:search-page')
 
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.ui:ui'
