@@ -221,6 +221,7 @@ dependencies {
     // Shared BY REFERENCE from ab_cloud-libs-shared/libs — Cloud Me owns no
     // library source, it is an assembly of the constellation's modules.
     implementation project(':libs:core')
+    implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     implementation project(':libs:updater')
     implementation project(':libs:analytics')
     implementation project(':libs:health')   // Health section (Health Connect)
