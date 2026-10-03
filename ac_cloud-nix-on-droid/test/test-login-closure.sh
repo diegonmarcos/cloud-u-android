@@ -56,11 +56,16 @@ else
 fi
 # The declaration must stay OUT of the rootfs identity: a verifier edit that
 # moved the content address would republish ~400 MB of unchanged bytes.
-if python3 - "$BUILD_JSON" <<'EOF'
+# #796 the companion's gate inputs are DERIVED by the engine (identity_files +
+# module_dir), so they are read from `build.sh companion-paths`, never restated.
+COMPANION_PATHS="$(cd "$(dirname "$BUILD_JSON")" && bash ./build.sh companion-paths rootfs-nixdroid 2>/dev/null || true)"
+if python3 - "$BUILD_JSON" "$COMPANION_PATHS" <<'EOF'
 import json, sys
 d = json.load(open(sys.argv[1]))
 ids = d["forks"]["nixdroid"]["bootstrap"]["artifact"]["identity_files"]
-paths = [p for c in d["release"]["companions"] for p in c.get("paths_from", [])]
+paths = sys.argv[2].split()
+if not paths:
+    sys.exit("build.sh companion-paths rootfs-nixdroid printed nothing -- the gate's inputs could not be derived")
 bad = [p for p in ids + paths if "login-closure" in p or "verify_login_closure" in p]
 sys.exit(1 if bad else 0)
 EOF

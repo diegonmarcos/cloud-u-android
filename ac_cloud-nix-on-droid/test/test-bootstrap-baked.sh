@@ -590,12 +590,12 @@ c = next((x for x in companions if x.get('id') == 'rootfs-nixdroid'), None)
 if c is None:
     print('MISSING')
 else:
-    need = ['gradle_task', 'apk_glob', 'asset', 'assets', 'paths_from', 'package']
+    need = ['gradle_task', 'apk_glob', 'asset', 'assets', 'module_dir', 'package']   # #796: the gate inputs are derived (identity_files + module_dir), paths_from is refused
     missing = [k for k in need if not c.get(k)]
     print('OK' if not missing else 'INCOMPLETE:' + ','.join(missing))
 " 2>/dev/null)"
 case "$COMPANION_CHECK" in
-    OK)      ok "release.companions[] declares rootfs-nixdroid with gradle_task/apk_glob/asset/assets/paths_from/package" ;;
+    OK)      ok "release.companions[] declares rootfs-nixdroid with gradle_task/apk_glob/asset/assets/module_dir/package" ;;
     MISSING) bad "build.json has no release.companions[] entry with id rootfs-nixdroid — #628's whole vehicle is missing" ;;
     *)       bad "release.companions[id=rootfs-nixdroid] is incomplete: ${COMPANION_CHECK#INCOMPLETE:}" ;;
 esac
