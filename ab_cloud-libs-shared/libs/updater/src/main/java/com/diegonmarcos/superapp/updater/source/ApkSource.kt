@@ -229,8 +229,19 @@ object MeshMirror {
     /** host:port of git-proxy-api on the mesh (its build.json dns + ports.app). */
     const val BASE = "http://git-proxy-api.app:8123"
 
-    /** The mirror origin in use; [BASE] in production, a local stub in tests. */
-    @Volatile var base: String = BASE
+    /**
+     * The same service by its wg0 address. MEASURED 2026-10-03 from oci-apps:
+     * git-proxy-api.app resolves to the hub (fd0c:1d00::1), which has no
+     * listener on 8123 and no internal .app route for this service — only
+     * 10.0.0.4:8123 (oci-analytics wg0, data/mesh.json oci-E2-f_1, the address
+     * the service binds per its compose.nix) answers. Tried second, so the
+     * declared name wins as soon as the hub routes it; and an IP needs no DNS,
+     * which is the whole point of this leg (#831).
+     */
+    const val BASE_WG = "http://10.0.0.4:8123"
+
+    /** The mirror origins, in order; a local stub in tests. */
+    @Volatile var bases: List<String> = listOf(BASE, BASE_WG)
 
     private val RELEASE_DOWNLOAD =
         Regex("^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/?#]+)$")
@@ -278,10 +289,22 @@ object MeshMirror {
     /** The leg itself; [MeshMirrorSource] is only its place in Fleet's list. */
     fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? {
         if (app.releaseUrl.isBlank()) return null
-        val url = urlFor(app.abiReleaseUrl, base) ?: return null
-        // Digest FIRST: without it the bytes could not be trusted, so they are
-        // not worth fetching.
-        val sha = sha256At(url)
+        // Digest FIRST, and it also picks the origin: the first base whose
+        // sidecar answers is the one the bytes come from. Without a digest the
+        // bytes could not be trusted, so they are not worth fetching.
+        var url: String? = null
+        var sha: String? = null
+        val failures = mutableListOf<Throwable>()
+        for (b in bases) {
+            val u = urlFor(app.abiReleaseUrl, b) ?: return null
+            try { sha = sha256At(u); url = u; break } catch (t: Throwable) { failures += t }
+        }
+        if (url == null || sha == null) {
+            // A 404 from a mirror that answered says more than a dead origin:
+            // report that one; otherwise the first (declared-name) failure.
+            throw failures.firstOrNull { DownloadFailure.kind(it) == DownloadFailure.Kind.NOT_PUBLISHED }
+                ?: failures.firstOrNull() ?: IllegalStateException("no mesh mirror origin configured")
+        }
         val target = ApkCache.file(ctx, "fleet-${app.id}-mesh.apk")
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, -1L))
         try {

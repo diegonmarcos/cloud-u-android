@@ -34,7 +34,7 @@ import kotlin.concurrent.thread
 @Config(sdk = [34], application = Application::class)
 class StoreMeshMirrorTest {
 
-    @After fun reset() { MeshMirror.base = MeshMirror.BASE }
+    @After fun reset() { MeshMirror.bases = listOf(MeshMirror.BASE, MeshMirror.BASE_WG) }
 
     private val apk: ByteArray = ByteArrayOutputStream().also { bo ->
         ZipOutputStream(bo).use { z ->
@@ -98,7 +98,7 @@ class StoreMeshMirrorTest {
         val seen = CopyOnWriteArrayList<String>()
         val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Mesh.apk"
         mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to "$apkSha  Cloud-Lib-Mesh.apk\n".toByteArray())), seen).use { ss ->
-            MeshMirror.base = "http://127.0.0.1:${ss.localPort}"
+            MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val got = MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-mesh", "Cloud-Lib-Mesh.apk"))
             assertNotNull(got)
             assertTrue(got!!.file.readBytes().contentEquals(apk))
@@ -106,10 +106,26 @@ class StoreMeshMirrorTest {
         }
     }
 
+    @Test fun `origins are the declared mesh name, then oci-analytics' wg0 address`() {
+        assertEquals(listOf("http://git-proxy-api.app:8123", "http://10.0.0.4:8123"), MeshMirror.bases)
+    }
+
+    @Test fun `a dead first origin falls through to the next one`() {
+        val seen = CopyOnWriteArrayList<String>()
+        val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Two.apk"
+        val dead = ServerSocket(0).let { val port = it.localPort; it.close(); port }
+        mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to apkSha.toByteArray())), seen).use { ss ->
+            MeshMirror.bases = listOf("http://127.0.0.1:$dead", "http://127.0.0.1:${ss.localPort}")
+            val got = MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-two", "Cloud-Lib-Two.apk"))
+            assertNotNull(got)
+            assertEquals(listOf("$p.sha256", p), seen.toList())
+        }
+    }
+
     @Test fun `bytes that do not match the sidecar are refused and dropped`() {
         val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Bad.apk"
         mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to "b".repeat(64).toByteArray())), CopyOnWriteArrayList()).use { ss ->
-            MeshMirror.base = "http://127.0.0.1:${ss.localPort}"
+            MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val ctx = ApplicationProvider.getApplicationContext<Application>()
             try {
                 MeshMirror.fetch(ctx, app("lib-bad", "Cloud-Lib-Bad.apk")); fail("must refuse")
@@ -123,7 +139,7 @@ class StoreMeshMirrorTest {
         val seen = CopyOnWriteArrayList<String>()
         val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-NoSha.apk"
         mirror(mapOf(p to (200 to apk)), seen).use { ss ->
-            MeshMirror.base = "http://127.0.0.1:${ss.localPort}"
+            MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val t = runCatching { MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-nosha", "Cloud-Lib-NoSha.apk")) }
                 .exceptionOrNull()
             assertNotNull(t)
@@ -133,7 +149,7 @@ class StoreMeshMirrorTest {
     }
 
     @Test fun `an unresolvable mesh name is reported as DNS, naming that host`() {
-        MeshMirror.base = "http://git-proxy-api.invalid:8123"
+        MeshMirror.bases = listOf("http://git-proxy-api.invalid:8123")
         val t = runCatching { MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-dns", "Cloud-Lib-Dns.apk")) }
             .exceptionOrNull()
         assertNotNull(t)
