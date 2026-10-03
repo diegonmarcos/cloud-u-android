@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 37 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 38 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
@@ -46,7 +46,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **157** | **35** | **81%** |
+| **fleet** | | **158** | **35** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -58,6 +58,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
 | `advisory_feed` | prefs | device | no | Single 'last' poll timestamp throttling the ntfy advisory feed; sync cursor. |
 | `app_tabs` | prefs | config | yes | User-arranged launcher app-tab entries (JSON list under 'entries'). |
+| `apps_mesh` | prefs | config | yes | #793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates. |
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `badge_customization` | prefs | config | yes | Per-badge notification toggles (enabled/persistent/options) the user set in the notification center. |
 | `battery_history` | prefs | device | no | Locally recorded battery sessions/days; hardware-specific telemetry. |
@@ -123,7 +124,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 37 covered, 0 gaps.
+Coverage: 38 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 

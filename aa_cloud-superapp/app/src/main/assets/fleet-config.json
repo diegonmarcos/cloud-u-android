@@ -151,6 +151,14 @@
     "ac_cloud-termux"
    ]
   },
+  "apps_mesh": {
+   "kind": "prefs",
+   "class": "config",
+   "doc": "#793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates.",
+   "used_by": [
+    "lib-appstore"
+   ]
+  },
   "app_tabs": {
    "kind": "prefs",
    "class": "config",
@@ -376,6 +384,14 @@
    "doc": "Chosen image recognition route (on-device vs openrouter) and decision model.",
    "used_by": [
     "lib-ml-l-image"
+   ]
+  },
+  "cloud_sound_identification": {
+   "kind": "prefs",
+   "class": "config",
+   "doc": "#798 the chosen sound identification route (on-device YAMNet vs a remote decision model), per app; the declaration's default_route until the user picks one.",
+   "used_by": [
+    "lib-ml-l-sound"
    ]
   },
   "cloud_nav_cockpit": {
