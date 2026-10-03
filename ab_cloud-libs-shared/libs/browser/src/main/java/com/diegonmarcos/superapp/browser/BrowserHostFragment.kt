@@ -1,8 +1,5 @@
 package com.diegonmarcos.superapp.browser
 
-import com.diegonmarcos.superapp.core.Collapsible
-import com.diegonmarcos.superapp.core.SuppressHorizontalSwipe
-import com.diegonmarcos.superapp.core.SuppressVerticalSwipe
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -52,15 +49,13 @@ import java.security.MessageDigest
  * exist arrive as a [BrowserConfig] from the consuming app, and the
  * library default is an empty pin list. See [BrowserConfig].
  *
- * Implements [Collapsible] so re-tapping the Tabs bottom-nav slot
- * snaps back to GRID.
+ * [toggleAllCollapsed] snaps a re-tapped Tabs view back to GRID. #825 it used to implement
+ * core's Collapsible / Suppress*Swipe markers for the SuperApp's pager, which no longer hosts
+ * this fragment (only cloud-browser does, and nothing there queries them), so the markers left
+ * libs:core for the SuperApp, their only remaining reader.
  */
-class BrowserHostFragment : Fragment(), Collapsible,
-    SuppressHorizontalSwipe,
-    SuppressVerticalSwipe {
+class BrowserHostFragment : Fragment() {
 
-    override fun suppressHorizontalSwipe(): Boolean = mode is Mode.DETAIL
-    override fun suppressVerticalSwipe(): Boolean = mode is Mode.DETAIL
 
     /** Desktop-mode toggle — WebView UA + width override + initial scale. #802 persisted
      *  as the catalogue's `desktop_mode`, so it survives a restart and moves with the Account. */
@@ -175,7 +170,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
-    override fun toggleAllCollapsed(): Boolean {
+    fun toggleAllCollapsed(): Boolean {
         if (mode !is Mode.GRID) { showGrid(); return true }
         return false
     }
