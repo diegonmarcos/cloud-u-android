@@ -15,6 +15,8 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
+import java.util.concurrent.ConcurrentHashMap
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -98,7 +100,38 @@ object StoreMesh {
         /** #792 fleet id -> that member's own /api/docs body (the fleet token
          *  authorises the read; the body names no secret). */
         val docs: Map<String, String> = emptyMap(),
+        /** #793 members that did not answer and were NOT woken (the page's
+         *  probe only looks; Wake / Wake all act). Not running, not a gap. */
+        val asleep: Set<String> = emptySet(),
     )
+
+    // ── #793 the probe result as JSON: the Apps Mesh cache ────────────────────
+
+    fun toJson(l: Live): JSONObject = JSONObject()
+        .put("installed", JSONObject(l.installed)).put("reachable", JSONObject(l.reachable))
+        .put("peers", JSONArray(l.peers)).put("contracts", JSONObject(l.contracts))
+        .put("shares", JSONObject(l.shares.mapValues { JSONArray(it.value) }))
+        .put("granted", JSONArray(l.granted))
+        .put("peerViews", JSONObject(l.peerViews.mapValues { JSONArray(it.value) }))
+        .put("woken", JSONArray(l.woken)).put("docs", JSONObject(l.docs)).put("asleep", JSONArray(l.asleep))
+
+    fun fromJson(o: JSONObject): Live {
+        fun obj(k: String) = o.optJSONObject(k) ?: JSONObject()
+        fun strs(a: JSONArray?) = (0 until (a?.length() ?: 0)).map { a!!.optString(it) }.toSet()
+        fun <T> field(k: String, f: (JSONObject, String) -> T) = obj(k).let { m -> m.keys().asSequence().associateWith { f(m, it) } }
+        return Live(
+            installed = field("installed") { m, k -> m.optString(k) },
+            reachable = field("reachable") { m, k -> m.optInt(k) },
+            peers = strs(o.optJSONArray("peers")),
+            contracts = field("contracts") { m, k -> m.optInt(k) },
+            shares = field("shares") { m, k -> strs(m.optJSONArray(k)).toList() },
+            granted = strs(o.optJSONArray("granted")),
+            peerViews = field("peerViews") { m, k -> strs(m.optJSONArray(k)) },
+            woken = strs(o.optJSONArray("woken")),
+            docs = field("docs") { m, k -> m.optString(k) },
+            asleep = strs(o.optJSONArray("asleep")),
+        )
+    }
 
     enum class State { OK, ENGINE_MISSING, ENGINE_OLD, APP_ABSENT }
 
@@ -121,7 +154,39 @@ object StoreMesh {
 
     // ── live probes (blocking; call off the main thread) ─────────────────────
 
-    fun probe(ctx: Context, fleet: List<Fleet.App>, links: List<Link>): Live {
+    /** The blocking whole-fleet probe (/api/fleet/endpoints): [probeEach]
+     *  with stopped members woken, then every reachable member's /api/docs. */
+    fun probe(ctx: Context, fleet: List<Fleet.App>, links: List<Link>, wake: Boolean = true): Live {
+        val live = probeEach(ctx, fleet, links, wake)
+        val selfId = fleet.firstOrNull { Fleet.installedId(ctx, it) == ctx.packageName }?.id
+        return Live(live.installed, live.reachable, live.peers, live.contracts, live.shares, live.granted,
+            live.peerViews, live.woken, docsOf(ctx, live.reachable, selfId), live.asleep)
+    }
+
+    /** #793 how many members are probed at once, and the per-member bound is
+     *  the socket timeouts plus, when waking, [WAKE_TIMEOUT_MS]. */
+    const val POOL = 12
+
+    /**
+     * #793 THE probe, member by member, so a page never waits on its slowest
+     * app. First everything the PackageManager answers (installed, providers
+     * and services, grants, engine handshakes, mesh membership) — emitted at
+     * once through [onUpdate] with every member still pending. Then each
+     * member on a bounded pool: pinged on its assigned port, its own
+     * /api/fleet/peers read, and emitted the moment it lands. Members that did
+     * not answer there get ONE range sweep (a build from before #792, or a
+     * member that fell back). Those still silent are woken and re-pinged until
+     * [WAKE_TIMEOUT_MS] when [wake], else recorded [Live.asleep].
+     *
+     * [only] re-probes just those members on top of [base] (a row's Wake);
+     * everyone else keeps what [base] says. [onUpdate] gets the snapshot and
+     * the ids still pending; it is called from pool threads.
+     */
+    fun probeEach(
+        ctx: Context, fleet: List<Fleet.App>, links: List<Link>, wake: Boolean,
+        only: Set<String>? = null, base: Live? = null,
+        onUpdate: (Live, Set<String>) -> Unit = { _, _ -> },
+    ): Live {
         val pm = ctx.packageManager
         val byId = fleet.associateBy { it.id }
         val pkgOf = HashMap<String, String>()
@@ -147,56 +212,88 @@ object StoreMesh {
             if (pm.checkPermission(CONSTELLATION_PERM, pkg) == PackageManager.PERMISSION_GRANTED) granted.add(id)
         }
         val peers = FleetPeers.list(ctx).mapNotNull { idOf[it] }.toSet()
+        val todo = peers.filter { only == null || it in only }.toSet()
+        fun keep(m: Map<String, *>?) = m.orEmpty().keys.filter { it !in todo }
+        val reachable = ConcurrentHashMap<String, Int>()
+        val peerViews = ConcurrentHashMap<String, Set<String>>()
+        val woken = ConcurrentHashMap.newKeySet<String>()
+        val asleep = ConcurrentHashMap.newKeySet<String>()
+        base?.let { b ->
+            keep(b.reachable).forEach { reachable[it] = b.reachable.getValue(it) }
+            keep(b.peerViews).forEach { peerViews[it] = b.peerViews.getValue(it) }
+            woken.addAll(b.woken - todo); asleep.addAll(b.asleep - todo)
+        }
+        val cachedDocs = base?.docs.orEmpty()
+        val pending = ConcurrentHashMap.newKeySet<String>().apply { addAll(todo) }
+        fun snapshot() = Live(HashMap(installed), HashMap(reachable), peers, contracts, shares, granted,
+            HashMap(peerViews), HashSet(woken), cachedDocs, HashSet(asleep))
+        val lock = Any()
+        fun emit(done: Collection<String>) = synchronized(lock) {
+            pending.removeAll(done.toSet()); onUpdate(snapshot(), HashSet(pending))
+        }
+        emit(emptyList())
+
+        val token = FleetToken.get(ctx)
         // #792 this process answers for itself without a socket: probed from
         // the debug server's own accept thread (/api/fleet/endpoints), a
         // loopback ping of our own port would wait on the thread sending it.
         val self = ctx.packageName
-        val selfPort = AppDebugServer.boundPort().takeIf { it > 0 }
-        val expect = peers.mapNotNull { pkgOf[it] }.filter { it != self }
-        val sweepIds = {
-            (locate(expect) + listOfNotNull(selfPort?.let { self to it }))
-                .mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
-        }
-        val first = sweepIds()
-        // #733 "no debug API" must mean the member CANNOT serve one, not that it
-        // was merely asleep: wake every member that ships the provider and did
-        // not answer, then sweep again. A force-stopped app stays stopped, which
-        // is exactly the case the gap report then names.
-        val asleep = peers - first.keys
-        asleep.forEach { pkgOf[it]?.let { pkg -> FleetPeers.wake(ctx, pkg) } }
-        val reachable = awaitWoken(first, asleep, WAKE_TIMEOUT_MS, WAKE_POLL_MS, sweepIds, Thread::sleep)
-        val woken = asleep intersect reachable.keys
-        val token = FleetToken.get(ctx)
-        val selfId = idOf[self]
-        val peerViews = reachable.mapNotNull { (id, port) ->
-            if (id == selfId) return@mapNotNull id to peers
-            val body = get(port, "/api/fleet/peers", token) ?: return@mapNotNull null
+        fun found(id: String, port: Int) {
+            reachable[id] = port
+            if (pkgOf[id] == self) { peerViews[id] = peers; return }
+            val body = get(port, "/api/fleet/peers", token) ?: return
             runCatching {
                 val arr = JSONObject(body).getJSONArray("peers")
-                id to (0 until arr.length()).mapNotNull { idOf[arr.getJSONObject(it).optString("pkg")] }.toSet()
-            }.getOrNull()
-        }.toMap()
-        return Live(
-            installed = installed,
-            reachable = reachable,
-            peers = peers,
-            contracts = contracts,
-            shares = shares,
-            granted = granted,
-            peerViews = peerViews,
-            woken = woken,
-            docs = docsOf(ctx, reachable, selfId, token),
-        )
+                peerViews[id] = (0 until arr.length()).mapNotNull { idOf[arr.getJSONObject(it).optString("pkg")] }.toSet()
+            }
+        }
+        fun onAssigned(pkg: String): Int? =
+            if (pkg == self) AppDebugServer.boundPort().takeIf { it > 0 }
+            else AppDebugServer.portOf(pkg)?.takeIf { ping(it) == pkg }
+
+        val pool = Executors.newFixedThreadPool(POOL)
+        try {
+            fun eachOn(ids: Collection<String>, work: (String) -> Unit) =
+                ids.map { id -> pool.submit(Callable { runCatching { work(id) }; Unit }) }.forEach { runCatching { it.get() } }
+            eachOn(todo) { id ->
+                val port = pkgOf[id]?.let { onAssigned(it) }
+                if (port != null) { found(id, port); emit(listOf(id)) }
+            }
+            var silent = todo - reachable.keys
+            if (silent.isNotEmpty()) {
+                val swept = locateIn(silent.mapNotNull { pkgOf[it] }, AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
+                val hits = swept.mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }
+                eachOn(hits.map { it.first }) { id -> found(id, hits.first { it.first == id }.second) }
+                if (hits.isNotEmpty()) emit(hits.map { it.first })
+                silent = silent - reachable.keys
+            }
+            // #733 "no debug API" must mean the member CANNOT serve one, not
+            // that it was merely asleep: wake what did not answer, then re-ping
+            // until it does or [WAKE_TIMEOUT_MS] is spent (#762). A
+            // force-stopped app stays stopped, which is the gap the page names.
+            if (wake) eachOn(silent) { id ->
+                val pkg = pkgOf.getValue(id)
+                FleetPeers.wake(ctx, pkg)
+                val sweep = { onAssigned(pkg)?.let { mapOf(id to it) } ?: locate(listOf(pkg))[pkg]?.let { mapOf(id to it) }.orEmpty() }
+                awaitWoken(emptyMap(), setOf(id), WAKE_TIMEOUT_MS, WAKE_POLL_MS, sweep, Thread::sleep)[id]
+                    ?.let { found(id, it); woken.add(id) }
+                emit(listOf(id))
+            } else asleep.addAll(silent)
+        } finally { pool.shutdownNow() }
+        emit(todo)
+        return snapshot()
     }
 
+    /** #792 one member's own /api/docs; this process answers from memory. */
+    fun docs(ctx: Context, port: Int, self: Boolean): String? =
+        if (self) AppDebugServer.docs(ctx) else get(port, "/api/docs", FleetToken.get(ctx))
+
     /** #792 every reachable member's /api/docs, fetched in parallel. */
-    private fun docsOf(ctx: Context, reachable: Map<String, Int>, selfId: String?, token: String): Map<String, String> {
+    private fun docsOf(ctx: Context, reachable: Map<String, Int>, selfId: String?): Map<String, String> {
         val pool = Executors.newFixedThreadPool(8)
         return try {
             reachable.map { (id, port) ->
-                pool.submit(Callable {
-                    (if (id == selfId) AppDebugServer.docs(ctx) else get(port, "/api/docs", token))?.let { id to it }
-                })
+                pool.submit(Callable { docs(ctx, port, id == selfId)?.let { id to it } })
             }.mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
         } finally { pool.shutdownNow() }
     }
@@ -269,15 +366,18 @@ object StoreMesh {
      * DNS page (#794), which asks every member the same way.
      */
     fun locate(expected: Collection<String>): Map<String, Int> {
+        val direct = locateIn(expected, expected.mapNotNull { AppDebugServer.portOf(it) }.distinct())
+        return if (direct.keys.containsAll(expected)) direct
+        else locateIn(expected, AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
+    }
+
+    /** package -> port for whichever of [expected] answers on [ports]. */
+    private fun locateIn(expected: Collection<String>, ports: Iterable<Int>): Map<String, Int> {
         val pool = Executors.newFixedThreadPool(16)
-        fun pingAll(ports: Iterable<Int>) = ports
-            .map { port -> pool.submit(Callable { ping(port)?.let { it to port } }) }
-            .mapNotNull { runCatching { it.get() }.getOrNull() }
-            .toMap()
         return try {
-            val direct = pingAll(expected.mapNotNull { AppDebugServer.portOf(it) }.distinct())
-            if (direct.keys.containsAll(expected)) direct
-            else pingAll(AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
+            ports.map { port -> pool.submit(Callable { ping(port)?.let { it to port } }) }
+                .mapNotNull { runCatching { it.get() }.getOrNull() }
+                .toMap().filterKeys { it in expected }
         } finally { pool.shutdownNow() }
     }
 
@@ -301,24 +401,30 @@ object StoreMesh {
     private const val DIM = 0x99FFFFFF.toInt()
     private const val WHITE = 0xFFFFFFFF.toInt()
 
+    /** #793 what [render] drew, so a page can refill one member's card as its
+     *  probe lands and hide what a filter excludes, without redrawing the rest. */
+    class Drawn(val summary: TextView, val cards: Map<String, LinearLayout>, val headings: List<Pair<View, List<String>>>)
+
     /**
-     * Draw the mesh into [into]. [live] null = probes still running: every node
-     * is drawn, statuses read "probing". [onOpen] receives a tapped node.
+     * Draw the mesh into [into]. [live] null = nothing known yet: every node
+     * is drawn, statuses read "probing". [pending] are members whose probe is
+     * still running — drawn from what [live] already says, marked ⟳.
+     * [onOpen] receives a tapped link's engine. [extras] is the host's own
+     * per-member block (Apps Mesh: the row buttons and the endpoints panel),
+     * appended to each card.
      */
     fun render(
         ctx: Context, into: LinearLayout, fleetJson: JSONObject, fleet: List<Fleet.App>,
-        links: List<Link>, live: Live?, onOpen: (Fleet.App) -> Unit,
-    ) {
+        links: List<Link>, live: Live?, pending: Set<String> = emptySet(),
+        extras: ((Fleet.App) -> View?)? = null, onOpen: (Fleet.App) -> Unit,
+    ): Drawn {
         val byId = fleet.associateBy { it.id }
         val label = { id: String -> byId[id]?.label ?: id }
-        val out = links.groupBy { it.from }
-        val inn = links.groupBy { it.engine }
         val broken = if (live == null) emptyList()
             else links.filter { state(it, live) == State.ENGINE_MISSING || state(it, live) == State.ENGINE_OLD }
 
-        into.addView(text(ctx, if (live == null) "${fleet.size} members · probing…" else
-            "${fleet.size} members · ${live.installed.size} installed · ${live.reachable.size} reachable · " +
-            "${links.size} engine links, ${broken.size} broken", 12f, DIM))
+        val summary = text(ctx, summaryLine(fleet, links, live, pending), 12f, DIM)
+        into.addView(summary)
 
         if (broken.isNotEmpty()) {
             into.addView(heading(ctx, "Broken links", RED))
@@ -339,27 +445,46 @@ object StoreMesh {
         }
         fleet.filter { it.id !in placed }.takeIf { it.isNotEmpty() }?.let { runs.add("Other" to it) }
 
+        val cards = LinkedHashMap<String, LinearLayout>()
+        val headings = ArrayList<Pair<View, List<String>>>()
         for ((title, rows) in runs) {
-            into.addView(heading(ctx, title, AMBER))
-            for (app in rows) into.addView(node(ctx, app, live, out[app.id].orEmpty(), inn[app.id].orEmpty(),
-                label, byId, onOpen))
+            val h = heading(ctx, title, AMBER)
+            into.addView(h); headings.add(h to rows.map { it.id })
+            for (app in rows) {
+                val card = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    tag = TAG_NODE + app.id
+                    setBackgroundColor(0xFF1C1C24.toInt())
+                    setPadding(dp(ctx, 12), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7))
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)) }
+                }
+                fill(ctx, card, app, live, app.id in pending, links, byId, extras, onOpen)
+                into.addView(card); cards[app.id] = card
+            }
         }
+        return Drawn(summary, cards, headings)
     }
 
-    private fun node(
-        ctx: Context, app: Fleet.App, live: Live?, out: List<Link>, inn: List<Link>,
-        label: (String) -> String, byId: Map<String, Fleet.App>, onOpen: (Fleet.App) -> Unit,
-    ): View {
-        val card = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            tag = TAG_NODE + app.id
-            setBackgroundColor(0xFF1C1C24.toInt())
-            setPadding(dp(ctx, 12), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7))
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)) }
-            isClickable = true
-            setOnClickListener { onOpen(app) }
-        }
+    /** The line over the mesh: counts of what is known, and how many are still probing. */
+    fun summaryLine(fleet: List<Fleet.App>, links: List<Link>, live: Live?, pending: Set<String>): String {
+        if (live == null) return "${fleet.size} members · probing…"
+        val broken = links.count { state(it, live) == State.ENGINE_MISSING || state(it, live) == State.ENGINE_OLD }
+        return "${fleet.size} members · ${live.installed.size} installed · ${live.reachable.size} reachable · " +
+            "${links.size} engine links, $broken broken" + if (pending.isEmpty()) "" else " · ⟳ ${pending.size} probing"
+    }
+
+    const val TAG_STATUS = "store-mesh-status:"
+
+    /** (Re)fill one member's card from [live]; [probing] marks it still loading. */
+    fun fill(
+        ctx: Context, card: LinearLayout, app: Fleet.App, live: Live?, probing: Boolean, links: List<Link>,
+        byId: Map<String, Fleet.App>, extras: ((Fleet.App) -> View?)?, onOpen: (Fleet.App) -> Unit,
+    ) {
+        card.removeAllViews()
+        val label = { id: String -> byId[id]?.label ?: id }
+        val out = links.filter { it.from == app.id }
+        val inn = links.filter { it.engine == app.id }
         val version = live?.installed?.get(app.id)
         val port = live?.reachable?.get(app.id)
         val (dot, status) = when {
@@ -367,21 +492,24 @@ object StoreMesh {
             version == null -> DIM to "not installed"
             port != null -> GREEN to "${version.ifEmpty { "?" }} · ${address(app, port)}" +
                 if (app.id in live.woken) " · was stopped, woke ok" else ""
+            app.id in live.asleep -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running — Wake starts it"
             app.id in live.peers -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running"
             else -> BLUE to "${version.ifEmpty { "?" }} · installed, no debug API answered"
         }
         card.addView(text(ctx, app.label + (if (app.kind == "lib") "  · lib" else ""), 14f, WHITE, bold = true))
-        card.addView(text(ctx, "● $status", 11f, dot))
-        if (live != null && port != null) live.docs[app.id]?.let { card.addView(endpointsToggle(ctx, app, it, port)) }
+        card.addView(text(ctx, (if (probing && live != null) "⟳ " else "● ") + status, 11f, dot).apply {
+            tag = TAG_STATUS + app.id + if (probing) ":probing" else ""
+        })
         if (live != null) for (l in out) card.addView(linkRow(ctx, l, live, label, byId, onOpen))
         if (inn.isNotEmpty())
-            card.addView(text(ctx, "← bound by " + inn.joinToString(", ") { label(it.from) }, 11f, DIM))
+            card.addView(text(ctx, "← bound by " + inn.joinToString(", ") { l ->
+                label(l.from) + (live?.let { " " + state(l, it).name } ?: "") }, 11f, DIM))
         live?.shares?.get(app.id)?.let { card.addView(text(ctx, "⇄ serves " + it.joinToString(" · "), 11f, DIM)) }
         if (live != null && version != null)
             card.addView(text(ctx, if (app.id in live.granted) "⇄ reads constellation data (CONSTELLATION_DATA granted)"
                 else "✕ CONSTELLATION_DATA not granted — reinstall from our release", 11f,
                 if (app.id in live.granted) DIM else RED))
-        return card
+        extras?.invoke(app)?.let { v -> (v.parent as? android.view.ViewGroup)?.removeView(v); card.addView(v) }
     }
 
     /** #792 a member's full loopback address, and — when it is not on the port
@@ -394,28 +522,6 @@ object StoreMesh {
             assigned != port -> " (assigned :$assigned — not bound there)"
             else -> ""
         }
-    }
-
-    const val TAG_ENDPOINTS = "store-mesh-endpoints:"
-
-    /** #792 "▸ N endpoints": tap to unfold the member's own /api/docs, one line each. */
-    private fun endpointsToggle(ctx: Context, app: Fleet.App, docs: String, port: Int): View {
-        val body = AppsMesh.endpoints(docs, port)
-        val n = AppsMesh.endpointCount(docs)
-        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; tag = TAG_ENDPOINTS + app.id }
-        val list = text(ctx, body, 11f, DIM).apply {
-            typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
-        }
-        val head = text(ctx, "▸ $n endpoints", 12f, BLUE).apply {
-            isClickable = true
-            setOnClickListener {
-                val open = list.visibility != View.VISIBLE
-                list.visibility = if (open) View.VISIBLE else View.GONE
-                text = (if (open) "▾ " else "▸ ") + "$n endpoints"
-            }
-        }
-        box.addView(head); box.addView(list)
-        return box
     }
 
     private fun linkRow(

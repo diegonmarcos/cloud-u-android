@@ -2,9 +2,7 @@ package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.provider.Settings
-import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -169,16 +167,8 @@ object StoreBar {
         text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
     }
 
-    /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable. */
-    private fun btn(ctx: Context, item: Item, label: String, bg: Int, onClick: (() -> Unit)?) = TextView(ctx).apply {
-        tag = item
-        text = label; gravity = Gravity.CENTER; textSize = 12f; typeface = Typeface.DEFAULT_BOLD
-        setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
-        setTextColor(0xFFFFFFFF.toInt())
-        setBackgroundColor(if (onClick != null) bg else 0xFF3A3A44.toInt())
-        val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        lp.setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)); layoutParams = lp
-        isEnabled = onClick != null
-        if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
-    }
+    /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable.
+     *  #793 the shared [StoreControls.button] in the declared action style. */
+    private fun btn(ctx: Context, item: Item, label: String, bg: Int, onClick: (() -> Unit)?) =
+        StoreControls.button(ctx, StoreControls.load(ctx).action, label, bg, onClick).apply { tag = item }
 }

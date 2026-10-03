@@ -55,19 +55,25 @@ object StoreDebugApi {
         // the page runs. fleet/peers and fleet/wake are AppDebugServer's own and
         // are matched before this group is consulted.
         AppDebugServer.route("fleet", listOf(
-            AppDebugServer.Op("endpoints", "",
-                "every fleet member: assigned + actual 127.0.0.1 port, membership, shares and its own " +
-                "/api/docs endpoints — one JSON catalogue of the whole fleet (probes; can take ~15 s while " +
-                "stopped members are woken)"),
-        )) { op, _ -> if (op == "endpoints") endpoints(app).toString() else null }
+            AppDebugServer.Op("endpoints", "filter=${AppsMesh.FILTERS.joinToString("|")}, wake=1|0",
+                "every fleet member: assigned + actual 127.0.0.1 port, membership, running/reachable, engine " +
+                "links with their state, shares and its own /api/docs endpoints — one JSON catalogue of the " +
+                "whole fleet, `filter` keeping what the Apps Mesh chip of that id shows, with every chip's " +
+                "count (probes; wake=1, the default, wakes stopped members first and can take ~15 s; wake=0 " +
+                "only looks, as the page does)"),
+        )) { op, q -> if (op == "endpoints") endpoints(app, q["filter"] ?: "all", q["wake"] != "0").toString() else null }
     }
 
-    private fun endpoints(ctx: Context): JSONObject {
+    /** #793 an unknown filter is an error, not "all": a typo must not look like a full answer. */
+    private fun endpoints(ctx: Context, filter: String, wake: Boolean): JSONObject {
+        if (filter !in AppsMesh.FILTERS) return JSONObject().put("ok", false)
+            .put("error", "unknown filter '$filter'; one of ${AppsMesh.FILTERS.joinToString()}")
         val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
         val fleetJson = JSONObject(String(android.util.Base64.decode(BuildConfig.CONSTELLATION_FLEET_B64, android.util.Base64.DEFAULT)))
-        val live = StoreMesh.probe(ctx, fleet, StoreMesh.links(fleetJson))
+        val links = StoreMesh.links(fleetJson)
+        val live = StoreMesh.probe(ctx, fleet, links, wake)
         val mesh = AppsMesh.meshAddresses()
-        return AppsMesh.catalogue(fleet, live, AppsMesh.exposure(AppsMesh.load(ctx), mesh), mesh).put("ok", true)
+        return AppsMesh.catalogue(fleet, live, AppsMesh.exposure(AppsMesh.load(ctx), mesh), mesh, links, filter).put("ok", true)
     }
 
     private fun route(ctx: Context, op: String, q: Map<String, String>): String? = when (op) {

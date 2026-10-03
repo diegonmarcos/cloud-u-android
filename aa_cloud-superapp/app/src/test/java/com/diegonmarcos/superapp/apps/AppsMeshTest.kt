@@ -70,8 +70,105 @@ class AppsMeshTest {
         // the Store-row action exists only where a Store row does
         assertTrue(AppsMesh.actionsFor(decl, hasStore = true).any { it.id == "store" })
         assertFalse(AppsMesh.actionsFor(decl, hasStore = false).any { it.id == "store" })
-        assertEquals(listOf("api", "start", "stop", "open", "details"),
+        // #793 Wake · Open · Docs lead, as the owner asked, then Stop and Details
+        assertEquals(listOf("start", "open", "api", "stop", "details"),
             AppsMesh.actionsFor(decl, hasStore = false).map { it.id })
+        assertEquals(listOf("Wake", "Open", "Docs"), decl.actions.take(3).map { it.label })
+        assertTrue("a member action has no declared colour", decl.actions.all { it.color != null })
+    }
+
+    @Test
+    fun `793 every declared filter and tool is one the page implements, and the order is the declared one`() {
+        assertEquals(AppsMesh.FILTERS, decl.filters.map { it.id })
+        val laid = decl.toolRows.flatten()
+        assertTrue("Wake all / All endpoints are not on the page: $laid", laid.containsAll(listOf("wake", "all")))
+        assertEquals("a laid-out tool has no handler", emptyList<String>(), laid - AppsMesh.TOOLS)
+        assertEquals("a tool is laid out twice", laid.size, laid.toSet().size)
+    }
+
+    @Test
+    fun `793 each filter keeps exactly what it names, on the same phone, and counts it`() {
+        val ids = everyone.toSet()
+        val app = apps.first().id
+        // the defect for each chip, planted on one member, with the healthy control
+        val stopped = healthy(reachable = ids - app, views = (ids - app).associateWith { ids })
+        fun keeps(f: String, live: StoreMesh.Live) = fleet.filter { AppsMesh.matches(f, it, links, live) }.map { it.id }.toSet()
+        assertFalse("a stopped member is still Running", app in keeps("running", stopped))
+        assertTrue("a stopped member is not under Not running", app in keeps("stopped", stopped))
+        assertFalse("a stopped member is still Reachable", app in keeps("reachable", stopped))
+        assertTrue(app in keeps("running", healthy()) && app !in keeps("stopped", healthy()))
+        // reachable needs the authenticated API: answering ping alone is running, not reachable
+        val noAuth = healthy(views = ids.associateWith { ids } - app)
+        assertTrue(app in keeps("running", noAuth) && app !in keeps("reachable", noAuth))
+        // a member that is not installed is neither running nor stopped
+        val gone = healthy(installed = everyone - app, reachable = ids - app, peers = ids - app)
+        assertFalse(app in keeps("stopped", gone) || app in keeps("running", gone))
+        // engine links: exactly the members a declared link touches, known before any probe
+        val touched = links.flatMap { listOf(it.from, it.engine) }.toSet()
+        assertEquals(touched, fleet.filter { AppsMesh.matches("engine", it, links, null) }.map { it.id }.toSet())
+        assertEquals("nothing is running before a probe", 0, AppsMesh.counts(fleet, links, null).getValue("running"))
+        val n = AppsMesh.counts(fleet, links, stopped)
+        assertEquals(fleet.size, n.getValue("all"))
+        assertEquals(1, n.getValue("stopped"))
+        assertEquals(ids.size - 1, n.getValue("running"))
+    }
+
+    @Test
+    fun `793 a member only looked at and not woken is not running, not a gap, until a wake fails`() {
+        val id = apps.first().id
+        val ids = everyone.toSet()
+        val asleep = healthy(reachable = ids - id).let { StoreMesh.Live(it.installed, it.reachable, it.peers,
+            it.contracts, it.shares, it.granted, it.peerViews, asleep = setOf(id)) }
+        assertFalse(kinds(asleep, id).contains(GapKind.NO_DEBUG_API))
+        assertTrue(AppsMesh.report(decl, fleet, links, asleep).contains("not running (not woken)"))
+        // control: the same member after a wake that did not bring it up IS the gap
+        assertEquals(listOf(GapKind.NO_DEBUG_API), kinds(healthy(reachable = ids - id), id))
+    }
+
+    @Test
+    fun `793 a pending member shows what the cache said, a landed one what the probe found`() {
+        val a = apps[0].id; val b = apps[1].id
+        val ids = everyone.toSet()
+        val cached = healthy()
+        val fresh = healthy(reachable = ids - a - b, views = (ids - a - b).associateWith { ids })
+        val shown = AppsMesh.overlay(fresh, cached, pending = setOf(a))
+        assertTrue("the pending member lost its cached answer", a in shown.reachable && a in shown.peerViews)
+        assertFalse("the landed member kept a stale cached answer", b in shown.reachable || b in shown.peerViews)
+        assertEquals(fresh.reachable.keys, AppsMesh.overlay(fresh, cached, emptySet()).reachable.keys)
+    }
+
+    @Test
+    fun `793 the cache round-trips every field, so the next open draws exactly the last answer`() {
+        val l = StoreMesh.Live(mapOf("x" to "1.2"), mapOf("x" to 38140), setOf("x"), mapOf("e|a" to 2),
+            mapOf("x" to listOf("content://x.fleet")), setOf("x"), mapOf("x" to setOf("x", "y")),
+            setOf("x"), mapOf("x" to "{\"endpoints\":[]}"), setOf("y"))
+        AppsMesh.writeCache(ctx, AppsMesh.Cached(1234L, l, mapOf("x" to 99L)))
+        val c = AppsMesh.readCache(ctx)!!
+        assertEquals(1234L, c.at); assertEquals(mapOf("x" to 99L), c.docsAt)
+        val r = c.live
+        assertEquals(l.installed, r.installed); assertEquals(l.reachable, r.reachable); assertEquals(l.peers, r.peers)
+        assertEquals(l.contracts, r.contracts); assertEquals(l.shares, r.shares); assertEquals(l.granted, r.granted)
+        assertEquals(l.peerViews, r.peerViews); assertEquals(l.woken, r.woken); assertEquals(l.docs, r.docs)
+        assertEquals(l.asleep, r.asleep)
+        assertEquals("3 min ago", AppsMesh.age(0L, 180_000L))
+    }
+
+    @Test
+    fun `793 the endpoints catalogue filters like the page's chips and reports their counts`() {
+        val id = apps.first().id
+        val ids = everyone.toSet()
+        val live = healthy(reachable = ids - id)
+        val all = AppsMesh.catalogue(fleet, live, "", emptyList(), links)
+        val stopped = AppsMesh.catalogue(fleet, live, "", emptyList(), links, "stopped")
+        assertEquals(fleet.size, all.getJSONArray("members").length())
+        assertEquals(1, stopped.getJSONArray("members").length())
+        assertEquals(id, stopped.getJSONArray("members").getJSONObject(0).getString("id"))
+        assertFalse(stopped.getJSONArray("members").getJSONObject(0).getBoolean("running"))
+        assertEquals(1, stopped.getJSONObject("counts").getInt("stopped"))
+        assertEquals("stopped", stopped.getString("filter"))
+        val md = AppsMesh.markdown(fleet, live)
+        assertFalse("a member that is not running has a section", md.contains("(${id})"))
+        assertTrue(md.contains("http://127.0.0.1:38090"))
     }
 
     @Test

@@ -9,7 +9,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.util.Base64
-import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -38,6 +38,12 @@ import org.json.JSONObject
  *   - #792 each member's full address and its own /api/docs, unfoldable per
  *     member, and Export endpoints: the whole fleet's [catalogue] as JSON —
  *     the same body the SuperApp serves at /api/fleet/endpoints
+ *   - #793 the Store's OWN controls: every tool and every member's row of
+ *     buttons is [StoreControls.button], the filter chips [StoreControls.chip];
+ *     filters ([FILTERS]) with counts; drawn at once from the roster and the
+ *     last cached probe ([readCache]), then filled member by member as
+ *     [StoreMesh.probeEach] returns; endpoints fetched only when a row's Docs
+ *     opens; All endpoints, one searchable view of every member's routes
  *
  * Every word on it is the asset's; this file names no member, package or caption.
  */
@@ -45,32 +51,59 @@ object AppsMesh {
 
     const val TAG_GAP = "apps-mesh-gap:"
     const val TAG_TOOL = "apps-mesh-tool:"
+    /** #793 a member's row button: "$TAG_ACTION<action id>:<member id>". */
+    const val TAG_ACTION = "apps-mesh-action:"
+    const val TAG_FILTER = "apps-mesh-filter:"
+    const val TAG_DOCS = "apps-mesh-docs:"
+    const val TAG_AGE = "apps-mesh-age"
+
+    /** #793 the filter ids [matches] implements; anything else declared is dropped. */
+    val FILTERS = listOf("all", "reachable", "engine", "running", "stopped")
+
+    /** #793 the page-level tools [page] implements. */
+    val TOOLS = listOf("reprobe", "wake", "all", "export", "endpoints", "copy")
 
     /** The action ids this file implements; anything else declared is dropped,
      *  so a misspelt id cannot ship as a button that does nothing. */
     val HANDLED = listOf("api", "start", "stop", "open", "details", "store")
 
-    class Action(val id: String, val label: String)
+    class Action(val id: String, val label: String, val color: Int? = null)
 
     class Decl(val actions: List<Action>, private val tools: Map<String, String>,
-               val gapWords: Map<String, Pair<String, String>>, val exposure: String = "") {
+               val gapWords: Map<String, Pair<String, String>>, val exposure: String = "",
+               val toolRows: List<List<String>> = emptyList(), private val toolColors: Map<String, Int> = emptyMap(),
+               val filters: List<Action> = emptyList(), private val words: Map<String, String> = emptyMap()) {
         fun tool(id: String) = tools[id]?.takeIf { it.isNotEmpty() } ?: id
+        fun toolColor(id: String): Int? = toolColors[id]
+        /** A word of the All endpoints view (`all_endpoints`). */
+        fun word(id: String) = words[id]?.takeIf { it.isNotEmpty() } ?: id
     }
 
     fun decl(controls: JSONObject): Decl {
         val m = controls.optJSONObject("apps_mesh") ?: JSONObject()
         val a = m.optJSONArray("member_actions")
-        val actions = (0 until (a?.length() ?: 0)).map { a!!.getJSONObject(it) }
-            .map { Action(it.optString("id"), it.optString("label", it.optString("id"))) }
-            .filter { it.id in HANDLED }
-        val t = m.optJSONObject("tools") ?: JSONObject()
+        fun actions(arr: org.json.JSONArray?, known: List<String>) = (0 until (arr?.length() ?: 0))
+            .map { arr!!.getJSONObject(it) }
+            .map { Action(it.optString("id"), it.optString("label", it.optString("id")), argb(it.optString("color"))) }
+            .filter { it.id in known }
+        fun strings(o: JSONObject?) = (o ?: JSONObject()).let { t ->
+            t.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { t.optString(it) } }
         val g = m.optJSONObject("gaps") ?: JSONObject()
-        return Decl(actions,
-            t.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { t.optString(it) },
+        val rows = m.optJSONArray("tool_rows")
+        return Decl(actions(a, HANDLED),
+            strings(m.optJSONObject("tools")),
             g.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
                 g.getJSONObject(k).let { it.optString("label", k) to it.optString("fix") } },
-            m.optString("exposure"))
+            m.optString("exposure"),
+            (0 until (rows?.length() ?: 0)).map { i -> rows!!.optJSONArray(i) }
+                .map { r -> (0 until (r?.length() ?: 0)).map { r!!.optString(it) }.filter { it in TOOLS } }
+                .filter { it.isNotEmpty() },
+            strings(m.optJSONObject("tool_colors")).mapNotNull { (k, v) -> argb(v)?.let { k to it } }.toMap(),
+            actions(m.optJSONArray("filters"), FILTERS),
+            strings(m.optJSONObject("all_endpoints")))
     }
+
+    private fun argb(v: String): Int? = v.takeIf { it.startsWith("0x") }?.removePrefix("0x")?.toLongOrNull(16)?.toInt()
 
     fun load(ctx: Context): Decl = runCatching {
         decl(JSONObject(ctx.assets.open(StoreControls.ASSET).use { it.readBytes().decodeToString() }))
@@ -119,7 +152,9 @@ object AppsMesh {
             }
             val member = app.id in live.peers
             if (!member) add(GapKind.NO_PROVIDER)
-            else if (app.id !in live.reachable) add(GapKind.NO_DEBUG_API)
+            // #793 a member the probe only looked at and did not wake is not
+            // running, not broken: Wake / Wake all decide whether it can serve.
+            else if (app.id !in live.reachable && app.id !in live.asleep) add(GapKind.NO_DEBUG_API)
             if (app.id !in live.granted) add(GapKind.NO_PERMISSION)
             live.peerViews[app.id]?.let { seen ->
                 val missing = live.peers - seen
@@ -159,7 +194,8 @@ object AppsMesh {
                 append("  ${app.label} (${app.id}, ${app.kind}) ")
                 if (v == null) { appendLine("not installed"); continue }
                 append("v${v.ifEmpty { "?" }}")
-                append(live.reachable[app.id]?.let { " · ${StoreMesh.address(app, it)}" } ?: " · no debug API")
+                append(live.reachable[app.id]?.let { " · ${StoreMesh.address(app, it)}" }
+                    ?: if (app.id in live.asleep) " · not running (not woken)" else " · no debug API")
                 if (app.id in live.woken) append(" · was stopped, woke ok")
                 append(if (app.id in live.peers) " · member" else " · NOT a member")
                 append(if (app.id in live.granted) " · CONSTELLATION_DATA" else " · no CONSTELLATION_DATA")
@@ -211,17 +247,29 @@ object AppsMesh {
      * each reachable member's own catalogue. What Export endpoints shares and
      * what /api/fleet/endpoints answers. Names no token: the docs bodies say
      * "Bearer <fleet token>", never the token.
+     *
+     * #793 [filter] keeps only the members the page's chip of that id would
+     * show ([matches]); `counts` is every chip's count, so the device answer
+     * can be checked against the page.
      */
-    fun catalogue(fleet: List<Fleet.App>, live: StoreMesh.Live, exposure: String, mesh: List<String>): JSONObject {
+    fun catalogue(
+        fleet: List<Fleet.App>, live: StoreMesh.Live, exposure: String, mesh: List<String>,
+        links: List<StoreMesh.Link> = emptyList(), filter: String = "all",
+    ): JSONObject {
         val members = org.json.JSONArray()
-        for (app in fleet) {
+        for (app in fleet.filter { matches(filter, it, links, live) }) {
             val v = live.installed[app.id]
             val port = live.reachable[app.id]
             val m = JSONObject().put("id", app.id).put("label", app.label).put("kind", app.kind)
                 .put("package", app.pkg).put("installed", v != null)
                 .put("assigned_port", com.diegonmarcos.superapp.devtools.AppDebugServer.portOf(app.pkg) ?: JSONObject.NULL)
+                .put("engine_links", org.json.JSONArray(links.filter { it.from == app.id || it.engine == app.id }.map {
+                    JSONObject().put("from", it.from).put("binding", it.name).put("engine", it.engine)
+                        .put("state", StoreMesh.state(it, live).name) }))
             if (v != null) {
                 m.put("version", v).put("member", app.id in live.peers).put("woken", app.id in live.woken)
+                    .put("running", matches("running", app, links, live))
+                    .put("reachable", matches("reachable", app, links, live))
                     .put("port", port ?: JSONObject.NULL)
                     .put("base", port?.let { "http://127.0.0.1:$it" } ?: JSONObject.NULL)
                     .put("shares", org.json.JSONArray(live.shares[app.id].orEmpty()))
@@ -238,7 +286,104 @@ object AppsMesh {
             .put("exposure", exposure)
             .put("summary", "${fleet.size} members · ${live.installed.size} installed · " +
                 "${live.reachable.size} reachable · ${live.docs.values.sumOf { endpointCount(it) }} endpoints")
+            .put("filter", filter)
+            .put("counts", JSONObject(counts(fleet, links, live)))
             .put("members", members)
+    }
+
+    /** #793 the same catalogue as Markdown: one section per member, each route a line. */
+    fun markdown(fleet: List<Fleet.App>, live: StoreMesh.Live): String = buildString {
+        appendLine("# Fleet endpoints")
+        appendLine()
+        appendLine("${fleet.size} members · ${live.reachable.size} reachable · loopback only, Bearer <fleet token>")
+        for (app in fleet) {
+            val port = live.reachable[app.id] ?: continue
+            appendLine()
+            appendLine("## ${app.label} (${app.id}) — http://127.0.0.1:$port")
+            val eps = live.docs[app.id]?.let { endpointList(it) }
+            if (eps == null) { appendLine("_endpoints not fetched_"); continue }
+            for (e in eps) {
+                append("- `${e.optString("path")}`")
+                e.optString("params").takeIf { it.isNotEmpty() }?.let { append(" ($it)") }
+                e.optString("group").takeIf { it.isNotEmpty() }?.let { append(" [$it]") }
+                e.optString("description").takeIf { it.isNotEmpty() }?.let { append(" — $it") }
+                appendLine()
+            }
+        }
+    }
+
+    // ── #793 filters ─────────────────────────────────────────────────────────
+
+    /**
+     * Whether the chip [filter] shows [app], judged on whatever [live] knows:
+     *   reachable  its debug API answered with the fleet token (its own
+     *              /api/fleet/peers read back)
+     *   engine     it binds or serves a declared engine link (static: the
+     *              manifest says so before any probe)
+     *   running    its process is alive now — its debug server answered
+     *   stopped    an installed mesh member whose server did not answer
+     *              (stopped, or never started since boot)
+     * A member with no debug API at all (not a mesh member) can be neither
+     * running nor stopped as far as anything here can tell; it is in "all"
+     * and in the missing-membership section.
+     */
+    fun matches(filter: String, app: Fleet.App, links: List<StoreMesh.Link>, live: StoreMesh.Live?): Boolean = when (filter) {
+        "reachable" -> live != null && app.id in live.peerViews
+        "engine" -> links.any { it.from == app.id || it.engine == app.id }
+        "running" -> live != null && app.id in live.reachable
+        "stopped" -> live != null && app.id in live.installed && app.id in live.peers && app.id !in live.reachable
+        else -> true
+    }
+
+    fun counts(fleet: List<Fleet.App>, links: List<StoreMesh.Link>, live: StoreMesh.Live?): Map<String, Int> =
+        FILTERS.associateWith { f -> fleet.count { matches(f, it, links, live) } }
+
+    /** While a member's probe is still out, show what the cache last said of it,
+     *  not "unknown": [fresh] for everyone done, [cached] for [pending]. */
+    fun overlay(fresh: StoreMesh.Live, cached: StoreMesh.Live?, pending: Set<String>): StoreMesh.Live {
+        if (cached == null || pending.isEmpty()) return fresh
+        fun <V> mix(f: Map<String, V>, c: Map<String, V>) =
+            f.filterKeys { it !in pending } + c.filterKeys { it in pending }
+        fun mixSet(f: Set<String>, c: Set<String>) = (f - pending) + (c intersect pending)
+        return StoreMesh.Live(fresh.installed, mix(fresh.reachable, cached.reachable), fresh.peers, fresh.contracts,
+            fresh.shares, fresh.granted, mix(fresh.peerViews, cached.peerViews), mixSet(fresh.woken, cached.woken),
+            fresh.docs, mixSet(fresh.asleep, cached.asleep))
+    }
+
+    fun withDocs(l: StoreMesh.Live, docs: Map<String, String>) = StoreMesh.Live(l.installed, l.reachable, l.peers,
+        l.contracts, l.shares, l.granted, l.peerViews, l.woken, l.docs + docs, l.asleep)
+
+    // ── #793 the cache: the last probe, shown at once on the next open ───────
+
+    const val CACHE = "apps-mesh-cache.json"
+    private const val PREFS = "apps_mesh"
+    private const val PREF_FILTER = "filter"
+
+    class Cached(val at: Long, val live: StoreMesh.Live, val docsAt: Map<String, Long>)
+
+    fun readCache(ctx: Context): Cached? = runCatching {
+        val o = JSONObject(java.io.File(ctx.cacheDir, CACHE).readText())
+        val d = o.optJSONObject("docs_at") ?: JSONObject()
+        Cached(o.getLong("at"), StoreMesh.fromJson(o.getJSONObject("live")),
+            d.keys().asSequence().associateWith { d.optLong(it) })
+    }.getOrNull()
+
+    fun writeCache(ctx: Context, c: Cached) {
+        runCatching {
+            java.io.File(ctx.cacheDir, CACHE).writeText(JSONObject().put("at", c.at)
+                .put("live", StoreMesh.toJson(c.live)).put("docs_at", JSONObject(c.docsAt)).toString())
+        }
+    }
+
+    /** "3 min ago" — how old a cached answer is. */
+    fun age(at: Long, now: Long = System.currentTimeMillis()): String {
+        val s = ((now - at) / 1000).coerceAtLeast(0)
+        return when {
+            s < 60 -> "${s}s ago"
+            s < 3600 -> "${s / 60} min ago"
+            s < 86_400 -> "${s / 3600} h ago"
+            else -> "${s / 86_400} d ago"
+        }
     }
 
     // ── the page ─────────────────────────────────────────────────────────────
@@ -247,81 +392,310 @@ object AppsMesh {
         JSONObject(String(Base64.decode(BuildConfig.CONSTELLATION_FLEET_B64, Base64.DEFAULT)))
     }.getOrElse { JSONObject() }
 
+    /** #793 what a member's row buttons reach on the page they sit on. */
+    class Row(
+        val panel: TextView,
+        /** member id -> its /api/docs body, fetched once and kept (and cached). */
+        val docs: MutableMap<String, String>,
+        val docsAt: MutableMap<String, Long>,
+        /** re-probe this one member, waking it if it does not answer. */
+        val reprobe: (Fleet.App) -> Unit,
+        val saved: () -> Unit,
+    )
+
     /**
      * Draw the page into [into] and start its probe. [onStore] is the host's
      * way to a member's Store row — null where there is none (Configs).
+     *
+     * #793 LAZY: everything static is drawn before anything is probed — the
+     * roster, each member's assigned port, its declared engine links, and the
+     * last probe's answer from [readCache] with its age. Then
+     * [StoreMesh.probeEach] fills each member's card the moment that member
+     * answers (⟳ until then, showing what the cache said), never waiting on the
+     * slowest app. The probe only LOOKS: Wake / Wake all start what is stopped.
      */
     fun page(host: Fragment, into: LinearLayout, onStore: ((Fleet.App) -> Unit)? = null) {
         val ctx = host.requireContext()
+        val appCtx = ctx.applicationContext
         val decl = load(ctx)
+        val looks = StoreControls.load(ctx)
         val fleetJson = fleetJson()
         val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+        val byId = fleet.associateBy { it.id }
         val links = StoreMesh.links(fleetJson)
-        var live: StoreMesh.Live? = null
-
-        val tools = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val cached = readCache(ctx)
+        val docs = java.util.concurrent.ConcurrentHashMap(cached?.live?.docs.orEmpty())
+        val docsAt = java.util.concurrent.ConcurrentHashMap(cached?.docsAt.orEmpty())
+        var live: StoreMesh.Live? = cached?.live
+        var at = cached?.at ?: 0L
+        var pending: Set<String> = fleet.map { it.id }.toSet()
+        var probing = false
+        var filter = prefs.getString(PREF_FILTER, null)?.takeIf { f -> decl.filters.any { it.id == f } }
+            ?: decl.filters.firstOrNull()?.id ?: "all"
         val mesh = meshAddresses()
+
         into.addView(text(ctx, exposure(decl, mesh), 11f, DIM))
+        val tools = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val ageView = text(ctx, "", 11f, DIM).apply { tag = TAG_AGE }
+        val chips = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 4), 0, dp(ctx, 6)) }
+        }
         val gapBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val meshBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        into.addView(tools); into.addView(gapBox); into.addView(meshBox)
+        into.addView(tools); into.addView(ageView); into.addView(gapBox); into.addView(chips); into.addView(meshBox)
 
-        val open = { app: Fleet.App -> showActions(host, decl, app, links, live, onStore) }
-        fun draw() {
-            gapBox.removeAllViews(); meshBox.removeAllViews()
-            live?.let { renderGaps(ctx, gapBox, gaps(decl, fleet, links, it)) }
-            StoreMesh.render(ctx, meshBox, fleetJson, fleet, links, live, open)
+        var drawn: StoreMesh.Drawn? = null
+        val rows = HashMap<String, View>()
+        val chipViews = LinkedHashMap<String, StoreControls.Chip>()
+        val onLink = { app: Fleet.App -> onStore?.invoke(app); Unit }
+        fun shown() = live?.let { withDocs(it, docs) }
+        fun saved() { live?.let { writeCache(appCtx, Cached(at, withDocs(it, docs), HashMap(docsAt))) } }
+
+        fun ageLine() = when {
+            at == 0L && probing -> "⟳ first probe…"
+            at == 0L -> ""
+            probing -> "last probe ${age(at)} · ⟳ refreshing ${pending.size} member(s)"
+            else -> "last probe ${age(at)}"
         }
-        fun probe() {
-            live = null; draw()
-            val app = ctx.applicationContext
-            thread(name = "apps-mesh-probe") {
-                val r = StoreMesh.probe(app, fleet, links)
-                into.post { if (into.isAttachedToWindow) { live = r; draw() } }
+        fun applyFilter() {
+            val d = drawn ?: return
+            for ((id, card) in d.cards)
+                card.visibility = if (matches(filter, byId.getValue(id), links, live)) View.VISIBLE else View.GONE
+            for ((h, ids) in d.headings)
+                h.visibility = if (ids.any { d.cards[it]?.visibility == View.VISIBLE }) View.VISIBLE else View.GONE
+        }
+        fun paintChips() {
+            val n = counts(fleet, links, live)
+            for (f in decl.filters) chipViews[f.id]?.let { c ->
+                c.text = "${f.label} (${n[f.id] ?: 0})"
+                StoreControls.paint(c, f.id == filter)
             }
         }
+        lateinit var reprobe: (Fleet.App) -> Unit
+        fun rowOf(app: Fleet.App): View = rows.getOrPut(app.id) {
+            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            val panel = text(ctx, "", 11f, DIM).apply {
+                typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
+                tag = TAG_DOCS + app.id
+            }
+            val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() })
+            val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for (a in actionsFor(decl, onStore != null))
+                buttons.addView(StoreControls.button(ctx, looks.action, a.label, a.color) {
+                    act(host, a.id, app, links, live, onStore, row)
+                }.apply { tag = "$TAG_ACTION${a.id}:${app.id}" })
+            box.addView(buttons); box.addView(panel)
+            box
+        }
+        fun refresh(ids: Collection<String>?) {
+            val d = drawn
+            if (d == null || ids == null) {
+                meshBox.removeAllViews()
+                drawn = StoreMesh.render(ctx, meshBox, fleetJson, fleet, links, live, pending, ::rowOf, onLink)
+            } else {
+                for (id in ids) d.cards[id]?.let { StoreMesh.fill(ctx, it, byId.getValue(id), live, id in pending, links, byId, ::rowOf, onLink) }
+                d.summary.text = StoreMesh.summaryLine(fleet, links, live, pending)
+            }
+            gapBox.removeAllViews()
+            live?.let { renderGaps(ctx, gapBox, gaps(decl, fleet, links, it)) }
+            paintChips(); applyFilter(); ageView.text = ageLine()
+        }
+
+        for ((i, f) in decl.filters.withIndex())
+            chipViews[f.id] = StoreControls.chip(ctx, looks.filter, f.label, i == 0) {
+                if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply(); paintChips(); applyFilter() }
+            }.apply { tag = TAG_FILTER + f.id }.also { chips.addView(it) }
+
+        /** [only] null = every member; [wake] starts the ones that do not answer. */
+        fun probe(wake: Boolean, only: Set<String>? = null) {
+            if (probing) return toast(ctx, "${decl.tool("reprobe")}: already probing")
+            probing = true
+            val base = live
+            var first = only == null
+            thread(name = "apps-mesh-probe") {
+                runCatching {
+                    StoreMesh.probeEach(appCtx, fleet, links, wake, only, base) { snap, left ->
+                        into.post {
+                            if (!into.isAttachedToWindow) return@post
+                            val landed = pending - left
+                            pending = left
+                            live = overlay(snap, base, left)
+                            if (first) { first = false; refresh(null) } else refresh(landed + (only ?: emptySet()))
+                        }
+                    }
+                }
+                into.post {
+                    probing = false; pending = emptySet()
+                    if (live != null) { at = System.currentTimeMillis(); saved() }
+                    if (into.isAttachedToWindow) refresh(emptyList())
+                }
+            }
+            ageView.text = ageLine()
+        }
+        reprobe = { app -> probe(wake = true, only = setOf(app.id)) }
+
         fun withReport(then: (String) -> Unit) {
-            val l = live ?: return toast(ctx, "${decl.tool("reprobe")}…")
+            val l = shown() ?: return toast(ctx, "${decl.tool("reprobe")}…")
             then(report(decl, fleet, links, l))
         }
-        tools.addView(tool(ctx, "reprobe", decl.tool("reprobe")) { probe() })
-        tools.addView(tool(ctx, "export", decl.tool("export")) {
-            withReport { text ->
-                runCatching {
-                    host.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(Intent.EXTRA_SUBJECT, "Apps Mesh").putExtra(Intent.EXTRA_TEXT, text), null))
-                }.onFailure { toast(ctx, it.message ?: "export failed") }
+        fun withAllDocs(then: (StoreMesh.Live) -> Unit) {
+            val l = live ?: return toast(ctx, "${decl.tool("reprobe")}…")
+            thread(name = "apps-mesh-docs") {
+                fillDocs(appCtx, fleet, l, docs, docsAt) {}
+                into.post { saved(); shown()?.let(then) }
             }
-        })
-        tools.addView(tool(ctx, "copy", decl.tool("copy")) { withReport { copy(ctx, it) } })
-        tools.addView(tool(ctx, "endpoints", decl.tool("endpoints")) {
-            val l = live ?: return@tool toast(ctx, "${decl.tool("reprobe")}…")
-            val text = catalogue(fleet, l, exposure(decl, mesh), mesh).toString(2)
-            runCatching {
-                host.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/json")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Apps Mesh endpoints").putExtra(Intent.EXTRA_TEXT, text), null))
-            }.onFailure { toast(ctx, it.message ?: "export failed") }
-        })
-        probe()
+        }
+        val handlers: Map<String, () -> Unit> = mapOf(
+            "reprobe" to { probe(wake = false) },
+            "wake" to { probe(wake = true) },
+            "all" to { allEndpoints(host, decl, looks, fleet, links, { shown() }, docs, docsAt, mesh) { saved() } },
+            "export" to { withReport { share(host, "Apps Mesh", "text/plain", it) } },
+            "endpoints" to { withAllDocs { l ->
+                share(host, "Apps Mesh endpoints", "application/json", catalogue(fleet, l, exposure(decl, mesh), mesh, links).toString(2)) } },
+            "copy" to { withReport { copy(ctx, it) } },
+        )
+        for (ids in decl.toolRows) {
+            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for (id in ids) handlers[id]?.let { h ->
+                row.addView(StoreControls.button(ctx, looks.action, decl.tool(id), decl.toolColor(id), h).apply { tag = TAG_TOOL + id })
+            }
+            tools.addView(row)
+        }
+
+        refresh(null)
+        probe(wake = false)
     }
 
-    private fun showActions(
-        host: Fragment, decl: Decl, app: Fleet.App, links: List<StoreMesh.Link>,
-        live: StoreMesh.Live?, onStore: ((Fleet.App) -> Unit)?,
+    /** #793 every reachable member's /api/docs not yet in [docs], fetched on a
+     *  bounded pool; [onEach] after each lands. Blocking; off the main thread. */
+    fun fillDocs(
+        ctx: Context, fleet: List<Fleet.App>, live: StoreMesh.Live, docs: MutableMap<String, String>,
+        docsAt: MutableMap<String, Long>, onEach: (String) -> Unit,
+    ) {
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        try {
+            live.reachable.filterKeys { it !in docs }.map { (id, port) ->
+                pool.submit(java.util.concurrent.Callable {
+                    val self = fleet.firstOrNull { it.id == id }?.let { Fleet.installedId(ctx, it) } == ctx.packageName
+                    StoreMesh.docs(ctx, port, self)?.let { docs[id] = it; docsAt[id] = System.currentTimeMillis() }
+                    onEach(id)
+                })
+            }.forEach { runCatching { it.get() } }
+        } finally { pool.shutdownNow() }
+    }
+
+    /**
+     * #793 ALL ENDPOINTS — one list of every member's API, grouped by app (its
+     * address, then each route: path, params, description), searchable,
+     * collapsible per app, with Copy and Export JSON / Markdown. Drawn at once
+     * from what is known and filled per app as each member's /api/docs lands.
+     */
+    private fun allEndpoints(
+        host: Fragment, decl: Decl, looks: StoreControls.Decl, fleet: List<Fleet.App>, links: List<StoreMesh.Link>,
+        current: () -> StoreMesh.Live?, docs: MutableMap<String, String>, docsAt: MutableMap<String, Long>,
+        mesh: List<String>, saved: () -> Unit,
     ) {
         val ctx = host.context ?: return
-        val items = actionsFor(decl, onStore != null)
-        AlertDialog.Builder(ctx).setTitle(app.label)
-            .setItems(items.map { it.label }.toTypedArray()) { _, i ->
-                act(host, items[i].id, app, links, live, onStore)
-            }.show()
+        val live = current() ?: return toast(ctx, "${decl.tool("reprobe")}…")
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = dp(ctx, 12); setPadding(p, p, p, p)
+        }
+        val search = android.widget.EditText(ctx).apply {
+            hint = decl.word("search"); textSize = 13f; setSingleLine()
+        }
+        val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(search); col.addView(actions); col.addView(list)
+        val members = fleet.filter { it.id in live.installed }
+        val bodies = HashMap<String, LinearLayout>()
+        val heads = HashMap<String, TextView>()
+        val open = HashSet(members.map { it.id })
+        val fetching = HashSet<String>()
+
+        fun fill(app: Fleet.App) {
+            val body = bodies[app.id] ?: return
+            val head = heads.getValue(app.id)
+            val q = search.text.toString().trim().lowercase()
+            val port = live.reachable[app.id]
+            val eps = docs[app.id]?.let { endpointList(it) }
+            val hit = eps.orEmpty().filter { e ->
+                q.isEmpty() || app.label.lowercase().contains(q) ||
+                    listOf("path", "params", "description", "group").any { e.optString(it).lowercase().contains(q) }
+            }
+            head.text = (if (app.id in open) "▾ " else "▸ ") + app.label + "  ·  " +
+                (port?.let { "http://127.0.0.1:$it" } ?: decl.word("not_serving")) +
+                (eps?.let { "  ·  ${if (q.isEmpty()) it.size else hit.size} endpoints" } ?: "")
+            val sectionVisible = q.isEmpty() || hit.isNotEmpty() || app.label.lowercase().contains(q)
+            (head.parent as? View)?.visibility = if (sectionVisible) View.VISIBLE else View.GONE
+            body.removeAllViews()
+            body.visibility = if (app.id in open) View.VISIBLE else View.GONE
+            when {
+                port == null -> {}
+                eps == null -> body.addView(text(ctx, if (app.id in fetching) "⟳ " + decl.word("fetching")
+                    else "127.0.0.1:$port " + decl.word("no_answer"), 11f, DIM))
+                else -> for (e in hit) body.addView(text(ctx, buildString {
+                    e.optString("group").takeIf { it.isNotEmpty() }?.let { append("[$it] ") }
+                    append(e.optString("path"))
+                    e.optString("params").takeIf { it.isNotEmpty() }?.let { append("  ($it)") }
+                    e.optString("description").takeIf { it.isNotEmpty() }?.let { append("\n    $it") }
+                }, 11f, 0xFFE2E8F0.toInt()).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) })
+            }
+        }
+        for (app in members) {
+            val section = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; tag = TAG_DOCS + "all:" + app.id }
+            val head = text(ctx, app.label, 13f, BLUE, bold = true).apply {
+                isClickable = true
+                setOnClickListener { if (!open.remove(app.id)) open.add(app.id); fill(app) }
+            }
+            val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(ctx, 8), 0, 0, dp(ctx, 6)) }
+            section.addView(head); section.addView(body); list.addView(section)
+            heads[app.id] = head; bodies[app.id] = body
+            if (app.id in live.reachable && app.id !in docs) fetching.add(app.id)
+            fill(app)
+        }
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { members.forEach { fill(it) } }
+        })
+        fun now() = withDocs(live, docs)
+        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("copy"), decl.toolColor("copy")) {
+            copy(ctx, markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:copy" })
+        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("json"), decl.toolColor("json")) {
+            share(host, "Apps Mesh endpoints", "application/json",
+                catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) }.apply { tag = TAG_TOOL + "all:json" })
+        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("markdown"), decl.toolColor("markdown")) {
+            share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:markdown" })
+
+        AlertDialog.Builder(ctx).setTitle(decl.word("title"))
+            .setView(android.widget.ScrollView(ctx).apply { addView(col) })
+            .setNegativeButton(decl.tool("close"), null)
+            .show()
+        if (fetching.isEmpty()) return
+        thread(name = "apps-mesh-all-endpoints") {
+            fillDocs(ctx.applicationContext, fleet, live, docs, docsAt) { id ->
+                list.post { fetching.remove(id); fleet.firstOrNull { it.id == id }?.let { fill(it) } }
+            }
+            list.post { fetching.clear(); members.forEach { fill(it) }; saved() }
+        }
+    }
+
+    private fun share(host: Fragment, subject: String, mime: String, text: String) {
+        runCatching {
+            host.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime)
+                .putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, text), null))
+        }.onFailure { host.context?.let { c -> toast(c, it.message ?: "export failed") } }
     }
 
     /** One member action. Everything that touches a socket, a provider or the
      *  shell channel runs off the main thread and posts its answer back. */
     fun act(
         host: Fragment, id: String, app: Fleet.App, links: List<StoreMesh.Link>,
-        live: StoreMesh.Live?, onStore: ((Fleet.App) -> Unit)?,
+        live: StoreMesh.Live?, onStore: ((Fleet.App) -> Unit)?, row: Row,
     ) {
         val ctx = host.requireContext()
         val appCtx = ctx.applicationContext
@@ -337,8 +711,12 @@ object AppsMesh {
                 pkg ?: return toast(ctx, "${app.label}: not installed")
                 thread(name = "apps-mesh-start") {
                     val ok = FleetPeers.wake(appCtx, pkg)
-                    ui { toast(ctx, if (ok) "${app.label}: started through its fleet provider"
-                        else "${app.label}: no fleet provider answered — not a mesh member, or force-stopped (open it once)") }
+                    ui {
+                        toast(ctx, if (ok) "${app.label}: started through its fleet provider"
+                            else "${app.label}: no fleet provider answered — not a mesh member, or force-stopped (open it once)")
+                        // #793 then look again at this one member, so its row says whether it came up
+                        row.reprobe(app)
+                    }
                 }
             }
             "stop" -> {
@@ -357,14 +735,26 @@ object AppsMesh {
                     }
                 }
             }
+            // #793 Docs unfolds the member's own /api/docs IN its card — fetched
+            // with the fleet bearer the first time, the cached copy after.
             "api" -> {
+                val panel = row.panel
+                if (panel.visibility == View.VISIBLE) { panel.visibility = View.GONE; return }
+                panel.visibility = View.VISIBLE
                 val port = live?.reachable?.get(app.id)
-                    ?: return textDialog(ctx, app.label, "${app.label} is not serving a debug API right now. " +
-                        "Start it, then Re-probe.")
+                    ?: return run { panel.text = "${app.label} is not serving a debug API right now. Wake it, then Docs again." }
+                row.docs[app.id]?.let { body ->
+                    panel.text = endpoints(body, port) + (row.docsAt[app.id]?.let { "fetched ${age(it)}" } ?: "")
+                    return
+                }
+                panel.text = "⟳ fetching /api/docs…"
                 thread(name = "apps-mesh-api") {
-                    val body = StoreMesh.get(port, "/api/docs", FleetToken.get(appCtx))
-                    val text = body?.let { endpoints(it, port) } ?: "127.0.0.1:$port did not answer /api/docs with the fleet token."
-                    ui { textDialog(ctx, "${app.label} · API", text) }
+                    val body = StoreMesh.docs(appCtx, port, pkg == ctx.packageName)
+                    ui {
+                        if (body != null) { row.docs[app.id] = body; row.docsAt[app.id] = System.currentTimeMillis(); row.saved() }
+                        panel.text = body?.let { endpoints(it, port) }
+                            ?: "127.0.0.1:$port did not answer /api/docs with the fleet token."
+                    }
                 }
             }
             "details" -> thread(name = "apps-mesh-details") {
@@ -456,6 +846,7 @@ object AppsMesh {
     private const val RED = 0xFFF56565.toInt()
     private const val GREEN = 0xFF48BB78.toInt()
     private const val DIM = 0x99FFFFFF.toInt()
+    private const val BLUE = 0xFF63B3ED.toInt()
 
     private fun renderGaps(ctx: Context, box: LinearLayout, gaps: List<Gap>) {
         box.addView(text(ctx, "Missing membership (${gaps.size})", 13f, if (gaps.isEmpty()) GREEN else RED, bold = true))
@@ -482,17 +873,6 @@ object AppsMesh {
         (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
             ?.setPrimaryClip(ClipData.newPlainText("Apps Mesh", body))
         toast(ctx, "copied ${body.lines().size} lines")
-    }
-
-    private fun tool(ctx: Context, id: String, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; tag = TAG_TOOL + id; gravity = Gravity.CENTER; textSize = 12f
-        typeface = Typeface.DEFAULT_BOLD; setTextColor(0xFFFFFFFF.toInt())
-        val style = StoreControls.load(ctx).action
-        background = StoreControls.background(ctx, style, false, 0xFF2A2A33.toInt())
-        setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 6)) }
-        isClickable = true; setOnClickListener { onClick() }
     }
 
     private fun text(ctx: Context, t: String, size: Float, color: Int, bold: Boolean = false) = TextView(ctx).apply {

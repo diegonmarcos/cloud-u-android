@@ -220,7 +220,7 @@ class StoreCloudFragment : Fragment() {
         val p = StoreStages.progress(state)
         progressRow?.post { renderProgress(state, p) }
     }
-    private val filterChips = ArrayList<TextView>()
+    private val filterChips = ArrayList<StoreControls.Chip>()
     private val actionRows = HashMap<String, LinearLayout>()
     // #774 the Download / Install / Clear buttons per app, and the stage that
     // decides which of them are live. StoreStages owns the logic; this only draws.
@@ -557,15 +557,10 @@ class StoreCloudFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(ctx, 6)) }
         }
         filterChips.clear()
+        // #793 the shared chip (StoreControls.chip), the same one Apps Mesh filters with.
         listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed").forEachIndexed { i, label ->
-            val c = TextView(ctx).apply {
-                text = label; textSize = 11f; gravity = Gravity.CENTER
-                setTextColor(0xFFFFFFFF.toInt())
-                setPadding(dp(ctx, 6), dp(ctx, 6), dp(ctx, 6), dp(ctx, 6))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    .apply { setMargins(if (i == 0) 0 else dp(ctx, 4), 0, 0, 0) }
-                isClickable = true
-                setOnClickListener { if (filter != i) { filter = i; paintFilter(); renderList(ctx, list) } }
+            val c = StoreControls.chip(ctx, controls.filter, label, i == 0) {
+                if (filter != i) { filter = i; paintFilter(); renderList(ctx, list) }
             }
             filterChips.add(c); bar.addView(c)
         }
@@ -573,9 +568,7 @@ class StoreCloudFragment : Fragment() {
         return bar
     }
 
-    private fun paintFilter() = filterChips.forEachIndexed { i, c ->
-        c.setBackgroundColor(if (i == filter) 0xFF7C3AED.toInt() else 0xFF2A2A33.toInt())
-    }
+    private fun paintFilter() = filterChips.forEachIndexed { i, c -> StoreControls.paint(c, i == filter) }
 
     /** True when [app] belongs in the current filter. An app whose state has not
      *  landed yet only shows under "All" - guessing would flicker it in and out. */
@@ -1373,16 +1366,11 @@ class StoreCloudFragment : Fragment() {
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE
     }
-    private fun btn(ctx: Context, label: String, bg: Int, onClick: () -> Unit) = TextView(ctx).apply {
-        // #732 the `action` style: a solid block in the verb's own colour.
+    /** #732 the `action` style in the verb's own colour — #793 drawn by the
+     *  shared [StoreControls.button], the same component the Apps Mesh page uses. */
+    private fun btn(ctx: Context, label: String, bg: Int, onClick: () -> Unit): TextView {
         val style = controls.action
-        text = label; gravity = Gravity.CENTER; textSize = 12f
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
-        setTextColor(style.text); background = StoreControls.background(ctx, style, false, bg)
-        val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        lp.setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)); layoutParams = lp
-        isClickable = true; setOnClickListener { onClick() }
+        return StoreControls.button(ctx, style, label, bg, onClick)
     }
     private fun buttonRow(ctx: Context, vararg views: View) = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL; for (v in views) addView(v)

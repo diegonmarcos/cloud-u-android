@@ -28,23 +28,35 @@
   "_doc_wearers": "`group_tab_style` is the style every line-1 group tab wears (groups come from the fleet manifest, which says nothing about looks). `action_style` is what btn() draws. `pages` is every line-2 entry by id: a feed's id from appstore-feeds.json (its caption stays THERE, its one declaration, so a feed entry here carries no label) or one of the two pages StoreCloudFragment owns, `mesh` and `perms`, whose captions live here. A line-2 id with no entry here still draws, as a `page` with no icon, so a new feed never vanishes for want of an icon.",
   "group_tab_style": "tab",
   "action_style": "action",
+  "_doc_filter_style": "#793 `filter_style` is what every filter chip wears (StoreControls.chip): the Store's fleet filter (All / Updates / Missing / Installed) and the Apps Mesh filter. A filter selects a subset, which is what `tab` declares, so it adds no fourth look.",
+  "filter_style": "tab",
   "pages": {
     "commits": { "icon": "📜", "style": "page" },
     "cicd":    { "icon": "⚙️", "style": "page" },
     "mesh":    { "label": "Apps Mesh", "icon": "🕸️", "style": "page" },
     "perms":   { "label": "Perms", "icon": "🔐", "style": "page" }
   },
-  "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `member_actions` is what tapping a member offers, in this order, each `id` handled by AppsMesh.act (an id with no handler is not drawn, so a typo cannot ship a dead button). `store` is offered only where the page is hosted by the Store, which is the one host with a row to open. `tools` are the page-level buttons. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row.",
+  "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `member_actions` is what tapping a member offers, in this order, each `id` handled by AppsMesh.act (an id with no handler is not drawn, so a typo cannot ship a dead button). `store` is offered only where the page is hosted by the Store, which is the one host with a row to open. `tools` are the page-level buttons. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row. #793: every button on the page is the Store's own action button (StoreControls.button, the `action` style) and every filter chip the Store's own chip (StoreControls.chip, `filter_style`). `member_actions` are drawn as a row of buttons on each member's card, like a Store app row's, in their declared `color`; `api` (Docs) unfolds the member's own /api/docs in the card, fetched on first open and cached. `tool_rows` lays the page-level `tools` out as button rows in `tool_colors`, each id handled by AppsMesh.page (an id with no handler is not drawn). `filters` are the chips, each id one of AppsMesh.FILTERS, counted over whatever the probe has returned so far; the choice is remembered. `all_endpoints` are the words of the consolidated endpoints view.",
   "apps_mesh": {
     "member_actions": [
-      { "id": "api",     "label": "API" },
-      { "id": "start",   "label": "Start" },
-      { "id": "stop",    "label": "Stop" },
-      { "id": "open",    "label": "Open" },
-      { "id": "details", "label": "Details" },
-      { "id": "store",   "label": "Store row" }
+      { "id": "start",   "label": "Wake",      "color": "0xFF2F855A" },
+      { "id": "open",    "label": "Open",      "color": "0xFF2A2A33" },
+      { "id": "api",     "label": "Docs",      "color": "0xFF2B6CB0" },
+      { "id": "stop",    "label": "Stop",      "color": "0xFF4A4A55" },
+      { "id": "details", "label": "Details",   "color": "0xFF2A2A33" },
+      { "id": "store",   "label": "Store row", "color": "0xFF7C3AED" }
     ],
-    "tools": { "reprobe": "Re-probe", "export": "Export", "copy": "Copy all", "endpoints": "Export endpoints", "close": "Close" },
+    "tools": { "reprobe": "Re-probe", "wake": "Wake all", "all": "All endpoints", "export": "Export report", "endpoints": "Export endpoints", "copy": "Copy all", "close": "Close", "json": "Export JSON", "markdown": "Export Markdown" },
+    "tool_colors": { "reprobe": "0xFF2B6CB0", "wake": "0xFF2F855A", "all": "0xFF7C3AED", "export": "0xFF2A2A33", "endpoints": "0xFF2A2A33", "copy": "0xFF2A2A33", "json": "0xFF2A2A33", "markdown": "0xFF2A2A33" },
+    "tool_rows": [ ["reprobe", "wake", "all"], ["export", "endpoints", "copy"] ],
+    "filters": [
+      { "id": "all",       "label": "All" },
+      { "id": "reachable", "label": "Reachable" },
+      { "id": "engine",    "label": "Engine links" },
+      { "id": "running",   "label": "Running" },
+      { "id": "stopped",   "label": "Not running" }
+    ],
+    "all_endpoints": { "title": "All endpoints", "search": "Search path, params, description or app", "not_serving": "not serving a debug API", "fetching": "fetching /api/docs…", "no_answer": "did not answer /api/docs with the fleet token" },
     "exposure": "Every member's debug API binds 127.0.0.1 on its own port (libs:devtools debug-ports.json) and wants the fleet Bearer token on everything but /api/system/ping. It is NOT served on this phone's mesh address ({mesh}): from the mesh, ssh to the phone and curl the loopback address there.",
     "gaps": {
       "NO_PROVIDER":   { "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it", "fix": "link libs:core (it carries libs:devtools) into {repo}/build.json modules and rebuild" },

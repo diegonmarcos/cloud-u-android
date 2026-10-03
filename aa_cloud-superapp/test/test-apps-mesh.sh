@@ -15,6 +15,12 @@
 #       mesh member visible to every other (queries + exported, guarded marker)
 #   C6  Peer Control: a peer selector at the top, fed by the declarations, and no
 #       action targets "whichever link is open first" any more
+#   C7  #793 the Store's OWN controls: every button on the page (tools, each
+#       member's row, All endpoints) is StoreControls.button and every filter
+#       chip StoreControls.chip — the same two builders the Store's bar, rows and
+#       filter use; the declared filters and tools each have their handler; the
+#       page draws before it probes and probes member by member; the endpoints
+#       API takes the same filter
 #
 # What the detector DECIDES (each gap planted on one app, each with its healthy
 # control) is asserted by app/src/test/.../AppsMeshTest.kt.
@@ -24,6 +30,10 @@ ROOT="$(cd "$APP/.." && pwd)"
 BJ="$APP/build.json"
 LIBS="$ROOT/ab_cloud-libs-shared/libs"
 STORE="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore"
+SMESH="$STORE/StoreMesh.kt"
+CTRLS="$STORE/StoreControls.kt"
+BAR="$STORE/StoreBar.kt"
+API="$STORE/StoreDebugApi.kt"
 CONTROLS="$LIBS/appstore/src/main/assets/appstore-controls.json"
 MESH="$STORE/AppsMesh.kt"
 FRAG="$STORE/AppsMeshFragment.kt"
@@ -35,7 +45,7 @@ KDE="$LIBS/kde-connect/src/main/java/com/diegonmarcos/superapp/kdeconnect"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
-for f in "$BJ" "$CONTROLS" "$MESH" "$FRAG" "$PAGE" "$PAGES" "$DEVMAN" "$RECV" "$KDE/KdePeers.kt" "$KDE/KdeConnectFragment.kt"; do
+for f in "$BJ" "$CONTROLS" "$MESH" "$SMESH" "$CTRLS" "$BAR" "$API" "$FRAG" "$PAGE" "$PAGES" "$DEVMAN" "$RECV" "$KDE/KdePeers.kt" "$KDE/KdeConnectFragment.kt"; do
   [ -f "$f" ] || { echo "ERROR: missing $f — a check over nothing passes" >&2; exit 2; }
 done
 # Comment-stripped Kotlin, so a KDoc that NAMES a call cannot satisfy a check for the call.
@@ -86,7 +96,7 @@ EOF' | grep -v '^$' | xargs -r -n1 basename | sort -u | tr '\n' ' ')"
 [ "$callers" = "AppsMesh.kt " ] && ok "only AppsMesh draws the mesh (callers: $callers)" \
   || bad "the mesh is drawn outside AppsMesh: $callers"
 
-echo "== C3: the member actions =="
+echo "== C3: the member actions (#793: a row of buttons on each member's card) =="
 ids="$(jq -r '.apps_mesh.member_actions[].id' "$CONTROLS" | tr '\n' ' ')"
 act="$(fn "$MESH" act)"
 [ -n "$act" ] || bad "could not isolate AppsMesh.act — the checks below would verify nothing"
@@ -95,9 +105,12 @@ for a in api start stop open details; do
   printf '%s' "$act" | grep -qE "^\s+\"$a\" ->" && ok "act() handles $a" || bad "act() has no branch for $a"
 done
 branch() { printf '%s' "$act" | awk -v a="\"$1\" ->" 'index($0,a){f=1} f{print} f && /^            "[a-z]+" ->/ && !index($0,a){exit}'; }
-branch api     | grep -qF '"/api/docs"'                && branch api | grep -qF 'FleetToken.get' \
-  && ok "API fetches /api/docs with the fleet bearer"   || bad "API does not fetch /api/docs with the fleet token"
-branch start   | grep -qF 'FleetPeers.wake('            && ok "Start wakes through the fleet provider" || bad "Start does not use FleetPeers.wake"
+branch api     | grep -qF 'StoreMesh.docs(' && fn "$SMESH" docs | grep -qF '"/api/docs"' && fn "$SMESH" docs | grep -qF 'FleetToken.get' \
+  && ok "Docs fetches /api/docs with the fleet bearer"   || bad "Docs does not fetch /api/docs with the fleet token"
+branch api     | grep -qF 'row.docs[app.id]?.let { body ->' && branch api | grep -qF 'row.panel' \
+  && ok "Docs unfolds in the card and reuses the fetched copy" || bad "Docs does not unfold in the card from a cached copy"
+branch start   | grep -qF 'FleetPeers.wake('  && branch start | grep -qF 'row.reprobe(app)' \
+  && ok "Wake wakes through the fleet provider, then re-probes that member" || bad "Wake does not use FleetPeers.wake and re-probe"
 branch stop    | grep -qF 'PhoneAppActions.forceStop('  && branch stop | grep -qF 'store_fleet_stop_no_channel' \
   && ok "Stop force-stops via the privileged channel and says so when none is armed" \
   || bad "Stop does not use the shell channel, or is silent when it is not armed"
@@ -106,8 +119,9 @@ branch details | grep -qF 'details('                    && ok "Details builds th
 fn "$MESH" details | grep -qF 'installedDetails' && fn "$MESH" details | grep -qF 'permissions(' \
   && ok "details() reads the installed APK identity and its permissions" || bad "details() lacks installed identity or permissions"
 fn "$MESH" textDialog | grep -qF 'copy(ctx, body)' && ok "the detail/API dialog offers Copy all" || bad "no Copy all on the detail dialog"
-fn "$MESH" showActions | grep -qF 'actionsFor(decl' && ok "a tapped member offers the declared actions" \
-  || bad "the member tap does not offer the declared actions"
+fn "$MESH" page | grep -qF 'for (a in actionsFor(decl, onStore != null))' \
+  && ok "each member's card draws the declared actions" || bad "member cards do not draw the declared actions"
+code "$MESH" | grep -qF 'fun showActions(' && bad "a member's actions still hide behind a dialog" || ok "no action dialog: the buttons are on the card"
 
 echo "== C4: missing membership + export =="
 kinds="$(code "$MESH" | sed -n 's/.*enum class GapKind { \(.*\) }.*/\1/p' | tr -d ' ' | tr ',' '\n')"
@@ -118,7 +132,8 @@ for k in $kinds; do
     && ok "gap $k has its words and fix declared" || bad "gap $k has no label/fix in apps_mesh.gaps"
   printf '%s' "$gaps_fn" | grep -qF "GapKind.$k" && ok "gaps() can report $k" || bad "gaps() never reports $k"
 done
-fn "$MESH" page | grep -qF 'Intent.ACTION_SEND' && fn "$MESH" page | grep -qF 'report(decl' \
+fn "$MESH" share | grep -qF 'Intent.ACTION_SEND' && fn "$MESH" page | grep -qF 'report(decl' \
+  && fn "$MESH" page | grep -qF '"export" to { withReport { share(host' \
   && ok "Export shares the page's report" || bad "Export does not share report()"
 
 echo "== C5: every mesh member can see every other (the manifest-only gap, fixed) =="
@@ -150,6 +165,55 @@ sel="$(printf '%s\n' "$cv" | grep -nF 'root.addView(selector)' | cut -d: -f1)"
 clip="$(printf '%s\n' "$cv" | grep -nF 'root.addView(buildClipboardCard' | cut -d: -f1)"
 [ -n "$sel" ] && [ -n "$clip" ] && [ "$sel" -lt "$clip" ] && ok "the selector sits at the top, above every action card" \
   || bad "the peer selector is not drawn above the action cards (selector@$sel clipboard@$clip)"
+
+echo "== C7: the Store's own controls, filters, lazy probe (#793) =="
+MPAGE="$(fn "$MESH" page)"
+[ -n "$MPAGE" ] || bad "could not isolate AppsMesh.page — the checks below would verify nothing"
+code "$CTRLS" | grep -qF 'class Button(ctx: Context) : TextView(ctx)' \
+  && code "$CTRLS" | grep -qF 'class Chip(ctx: Context, val style: Style) : TextView(ctx)' \
+  && ok "StoreControls owns the one Button and the one Chip" || bad "StoreControls has no Button/Chip class"
+fn "$BAR" btn | grep -qF 'StoreControls.button(' && ok "the Store bar (Check all …) draws StoreControls.button" \
+  || bad "the Store bar draws its own buttons"
+fn "$PAGE" btn | grep -qF 'StoreControls.button(' && ok "the Store's app rows draw StoreControls.button" \
+  || bad "the Store's app rows draw their own buttons"
+fn "$PAGE" filterBar | grep -qF 'StoreControls.chip(' && ok "the Store's filter draws StoreControls.chip" \
+  || bad "the Store's filter draws its own chips"
+n="$(code "$MESH" | grep -cF 'StoreControls.button(')"
+[ "$n" -ge 3 ] && ok "Apps Mesh draws its buttons with StoreControls.button ($n call sites: tools, rows, All endpoints)" \
+  || bad "Apps Mesh has only $n StoreControls.button call sites"
+printf '%s' "$MPAGE" | grep -qF 'StoreControls.chip(' && ok "Apps Mesh filters with StoreControls.chip" \
+  || bad "Apps Mesh draws its own filter chips"
+code "$MESH" | grep -qE 'setBackgroundColor\(|GradientDrawable|private fun tool\(' \
+  && bad "Apps Mesh paints a control of its own" || ok "Apps Mesh paints no control of its own"
+kfilters="$(code "$MESH" | sed -n 's/.*val FILTERS = listOf(\(.*\))/\1/p' | tr -d ' "' | tr ',' ' ')"
+[ -n "$kfilters" ] || bad "no FILTERS list in AppsMesh"
+for f in $(jq -r '.apps_mesh.filters[].id' "$CONTROLS"); do
+  case " $kfilters " in *" $f "*) ok "filter '$f' is one AppsMesh implements" ;; *) bad "filter '$f' is declared but AppsMesh.FILTERS lacks it" ;; esac
+done
+for f in $kfilters; do
+  [ "$f" = all ] && continue
+  fn "$MESH" matches | grep -qE "^\s+\"$f\" ->" && ok "matches() decides '$f'" || bad "matches() has no branch for '$f'"
+  jq -e --arg f "$f" '.apps_mesh.filters | map(.id) | index($f)' "$CONTROLS" >/dev/null \
+    && ok "filter '$f' has a declared chip" || bad "filter '$f' has no chip in apps_mesh.filters"
+done
+for t in $(jq -r '.apps_mesh.tool_rows[][]' "$CONTROLS"); do
+  printf '%s' "$MPAGE" | grep -qF "\"$t\" to {" && ok "tool '$t' has a handler" || bad "tool '$t' is laid out but has no handler"
+done
+for t in wake all; do
+  jq -e --arg t "$t" '.apps_mesh.tool_rows | flatten | index($t)' "$CONTROLS" >/dev/null \
+    && ok "the '$t' tool is on the page" || bad "the '$t' tool is not laid out in tool_rows"
+done
+printf '%s' "$MPAGE" | grep -qF 'putString(PREF_FILTER' && ok "the chosen filter is remembered" || bad "the filter is not persisted"
+last2="$(printf '%s\n' "$MPAGE" | grep -nE '^        (refresh\(null\)|probe\(wake = false\))$' | cut -d: -f2 | tr -d ' ' | tr '\n' ' ')"
+[ "$last2" = "refresh(null) probe(wake=false) " ] && ok "the page draws everything static first, then probes" \
+  || bad "the page does not draw before probing (saw: $last2)"
+printf '%s' "$MPAGE" | grep -qF 'readCache(ctx)' && printf '%s' "$MPAGE" | grep -qF 'StoreMesh.probeEach(' \
+  && ok "the page opens on the cached probe and fills member by member" || bad "the page does not use the cache or the per-member probe"
+fn "$SMESH" probeEach | grep -qF 'Executors.newFixedThreadPool(POOL)' \
+  && fn "$SMESH" probeEach | grep -qF 'if (port != null) { found(id, port); emit(listOf(id)) }' \
+  && ok "probeEach runs a bounded pool and emits each member as it lands" || bad "probeEach is not bounded or not per member"
+code "$API" | grep -qF 'q["filter"]' && fn "$MESH" catalogue | grep -qF 'matches(filter, it, links, live)' \
+  && ok "/api/fleet/endpoints?filter= keeps what the page's chip keeps" || bad "the endpoints API does not filter like the page"
 
 echo
 echo "== RESULT(#733 apps mesh): $PASS passed, $FAIL failed =="
