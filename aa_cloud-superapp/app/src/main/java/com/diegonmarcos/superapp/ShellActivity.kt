@@ -38,7 +38,7 @@ import com.diegonmarcos.superapp.search.SearchOpener
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.profile.BusinessCardFragment
 
-import com.diegonmarcos.superapp.core.SuppressVerticalSwipe
+import com.diegonmarcos.superapp.shell.SuppressVerticalSwipe
 import com.diegonmarcos.superapp.launcher.LauncherToolbarFx
 import com.diegonmarcos.superapp.launcher.LauncherNavController
 import com.diegonmarcos.superapp.onehand.ArcMenu
@@ -47,9 +47,9 @@ import com.diegonmarcos.superapp.onehand.CircularMenu
 import com.diegonmarcos.superapp.onehand.SiriusStar
 import com.diegonmarcos.superapp.media.MusicIslandController
 
-import com.diegonmarcos.superapp.core.SuppressHorizontalSwipe
+import com.diegonmarcos.superapp.shell.SuppressHorizontalSwipe
 
-import com.diegonmarcos.superapp.core.Collapsible
+import com.diegonmarcos.superapp.shell.Collapsible
 
 import android.os.Bundle
 import android.view.Menu

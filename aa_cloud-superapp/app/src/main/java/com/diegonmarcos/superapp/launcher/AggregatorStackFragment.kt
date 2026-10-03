@@ -16,7 +16,7 @@ import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 
 import com.diegonmarcos.superapp.configs.BadgePanes
-import com.diegonmarcos.superapp.core.Collapsible
+import com.diegonmarcos.superapp.shell.Collapsible
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationStore
 
 import android.graphics.Typeface

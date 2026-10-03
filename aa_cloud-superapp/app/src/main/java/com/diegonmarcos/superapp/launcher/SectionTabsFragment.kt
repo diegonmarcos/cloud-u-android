@@ -9,7 +9,7 @@ import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.core.Collapsible
+import com.diegonmarcos.superapp.shell.Collapsible
 import com.diegonmarcos.superapp.system.ModePrefs
 import com.google.android.material.tabs.TabLayout
 
