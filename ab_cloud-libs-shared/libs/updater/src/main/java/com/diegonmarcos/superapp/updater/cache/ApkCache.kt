@@ -386,21 +386,73 @@ object ApkCache {
      *  left no choice. */
     class Eviction(val freedBytes: Long, val deleted: List<String>, val unverified: List<String>)
 
+    // ── #812 the bound, from the device's REAL free storage ───────────────
+
+    /** Bytes the cache volume really has free (StatFs). A seam so a test can
+     *  stand in for a 40 GB-free phone or a full one. */
+    @Volatile
+    var freeBytes: (Context) -> Long = { c ->
+        runCatching { android.os.StatFs(dir(c).path).availableBytes }.getOrElse { dir(c).usableSpace }
+    }
+
+    /** Has [e]'s package landed (its bytes are installed, or the device runs
+     *  newer)? A seam over [landed] so the eviction rule is testable without
+     *  a PackageManager. */
+    @Volatile
+    var isLanded: (Context, Entry) -> Boolean = { c, e -> e.record != null && landed(c, e, e.record.pkg) }
+
     /**
-     * Bring the cache under [BuildConfig.APK_CACHE_MAX_BYTES], by the declared
-     * [BuildConfig.APK_CACHE_EVICT] policy.
+     * The cache bound, DERIVED: what the volume has free plus what the cache
+     * already holds, minus the declared reserve, clamped to the declared
+     * [min, max]. It used to be the fixed 1073 MB max_bytes alone — on a phone
+     * with ~40 GB free the Store said "no room" and evicted its own pending
+     * downloads (#812/#808).
+     */
+    fun boundOf(free: Long, cached: Long,
+                min: Long = BuildConfig.APK_CACHE_MIN_BYTES,
+                max: Long = BuildConfig.APK_CACHE_MAX_BYTES,
+                reserve: Long = BuildConfig.APK_CACHE_RESERVE_BYTES): Long =
+        (free + cached - reserve).coerceIn(min, maxOf(min, max))
+
+    /** The live bound. A seam so a test can hold the cache to kilobytes. */
+    @Volatile
+    var boundFor: (Context) -> Long = { c -> boundOf(freeBytes(c), totalBytes(c)) }
+
+    fun bound(ctx: Context): Long = boundFor(ctx)
+
+    /** Bytes a download may still write: real free storage less the declared
+     *  reserve, and never past the derived bound. */
+    fun roomOf(free: Long, cached: Long, reserve: Long = BuildConfig.APK_CACHE_RESERVE_BYTES,
+               bound: Long = boundOf(free, cached)): Long =
+        minOf(free - reserve, bound - cached).coerceAtLeast(0)
+
+    fun room(ctx: Context): Long { val f = freeBytes(ctx); val t = totalBytes(ctx); return roomOf(f, t) }
+
+    /** The numbers behind a "no room", for the progress line and /api/store/auto. */
+    fun roomText(ctx: Context): String {
+        val f = freeBytes(ctx); val t = totalBytes(ctx)
+        return "${mb(roomOf(f, t))} MB usable — ${mb(f)} MB free on the device, " +
+            "${mb(BuildConfig.APK_CACHE_RESERVE_BYTES)} MB kept in reserve, cache ${mb(t)} of ${mb(boundOf(f, t))} MB"
+    }
+
+    private fun mb(b: Long) = b / 1_000_000
+
+    /**
+     * Bring the cache under its derived [bound], by the declared
+     * [BuildConfig.APK_CACHE_EVICT] policy — taking ONLY what can never be
+     * needed again:
      *
-     * `superseded-then-oldest`: an entry whose package also has a NEWER cached
-     * build goes first — it can never be installed again, so it is free to
-     * lose. Then oldest by mtime. UNVERIFIED entries (no record, or a `.part`)
-     * are LAST, not first: a partial download is the one thing resume exists to
-     * protect, and dropping it is the behaviour this ticket is about. When the
-     * bound still forces one out, it is named in the log and in the returned
-     * [Eviction.unverified] — a cache may delete to stay inside its bound, but
-     * it may not do it quietly.
+     *  - SUPERSEDED: its package also has a NEWER cached build;
+     *  - LANDED: its bytes are installed (or the device runs newer).
+     *
+     * #812 NEVER a pending entry (downloaded, not yet installed) and never an
+     * unverified one (a `.part` is what resume exists for): evicting those is
+     * how the Store re-downloaded the same APKs in a loop while 77 updates
+     * waited. A cache still over its bound after that stays over it, says so,
+     * and the downloaders' [room] check is what stops new bytes coming in.
      */
     fun evict(ctx: Context): Eviction {
-        val max = BuildConfig.APK_CACHE_MAX_BYTES
+        val max = bound(ctx)
         var total = totalBytes(ctx)
         if (total <= max) return Eviction(0, emptyList(), emptyList())
         val all = entries(ctx)
@@ -408,36 +460,29 @@ object ApkCache {
             .groupBy { it.pkg }.mapValues { (_, v) -> v.maxOf { it.versionCode } }
         fun superseded(e: Entry) =
             e.record != null && (newestByPkg[e.record.pkg] ?: 0L) > e.record.versionCode
-        val order = when (BuildConfig.APK_CACHE_EVICT) {
-            "superseded-then-oldest" -> all.sortedWith(
-                compareBy({ if (it.record == null) 2 else if (superseded(it)) 0 else 1 },
-                          { it.modifiedAt }))
-            // An unrecognised policy is not a reason to do nothing (the bound
-            // is real) and not a reason to invent one silently either.
-            else -> {
-                Log.w(TAG, "unknown eviction policy '${BuildConfig.APK_CACHE_EVICT}' declared in " +
-                    "build.json::release.apk_cache — falling back to oldest-first and saying so")
-                all.sortedBy { it.modifiedAt }
-            }
-        }
+        if (BuildConfig.APK_CACHE_EVICT != "superseded-then-oldest")
+            Log.w(TAG, "unknown eviction policy '${BuildConfig.APK_CACHE_EVICT}' declared in " +
+                "build.json::release.apk_cache — superseded, then landed oldest-first, and saying so")
+        val order = all.filter { !it.partial && it.record != null }
+            .map { it to if (superseded(it)) 0 else if (isLanded(ctx, it)) 1 else -1 }
+            .filter { it.second >= 0 }
+            .sortedWith(compareBy<Pair<Entry, Int>>({ it.second }, { it.first.modifiedAt }))
         val freed = ArrayList<String>()
-        val unverified = ArrayList<String>()
         var bytes = 0L
-        for (e in order) {
+        for ((e, rank) in order) {
             if (total <= max) break
-            val why = if (e.record == null) "UNVERIFIED (no download record)"
-                      else if (superseded(e)) "superseded by a newer cached build of ${e.record.pkg}"
-                      else "oldest"
+            val why = if (rank == 0) "superseded by a newer cached build of ${e.record?.pkg}" else "already installed"
             val size = e.bytes
             drop(e.file)
             if (e.file.exists()) continue
             total -= size; bytes += size
             freed += e.file.name
-            if (e.record == null) unverified += e.file.name
             Log.w(TAG, "evicted ${e.file.name} (${size / 1_000_000} MB, $why) — the cache was " +
-                "over its declared ${max / 1_000_000} MB bound")
+                "over its ${max / 1_000_000} MB bound")
         }
-        return Eviction(bytes, freed, unverified)
+        if (total > max) Log.i(TAG, "cache ${total / 1_000_000} MB stays over its ${max / 1_000_000} MB " +
+            "bound: the rest is pending install or a resumable partial, and is never evicted")
+        return Eviction(bytes, freed, emptyList())
     }
 
     /**

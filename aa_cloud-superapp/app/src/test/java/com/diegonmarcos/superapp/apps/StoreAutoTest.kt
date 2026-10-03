@@ -382,4 +382,122 @@ class StoreAutoTest {
         assertEquals(StoreAuto.INSTALLING, q.getJSONObject(1).getString("result"))
         assertFalse("no secret or URL in the answer", j.toString().contains("http"))
     }
+
+    // ── #812 real free storage, never evicting what is pending ───────────────
+
+    private fun resetRoom() {
+        StoreStages.room = { c -> ApkCache.room(c) }
+        ApkCache.freeBytes = { c -> runCatching { android.os.StatFs(ApkCache.dir(c).path).availableBytes }.getOrElse { ApkCache.dir(c).usableSpace } }
+        ApkCache.boundFor = { c -> ApkCache.boundOf(ApkCache.freeBytes(c), ApkCache.totalBytes(c)) }
+        ApkCache.isLanded = { c, e -> e.record != null && ApkCache.landed(c, e, e.record!!.pkg) }
+        StoreAuto.onPending = { _, _ -> }
+    }
+
+    private fun cached(name: String, pkg: String, code: Long, bytes: Int, age: Long): java.io.File {
+        val f = ApkCache.file(ctx, name).apply { writeBytes(ByteArray(bytes) { 7 }); setLastModified(age) }
+        java.io.File(f.parentFile, f.name + ".record").writeText("$pkg\n$code\n${hex(f.readBytes())}\n")
+        return f
+    }
+
+    @Test
+    fun `812 space check reads REAL free storage - 40 GB free and a full cache is not no room`() {
+        val gb = 1_000_000_000L
+        // The owner's S21+: ~40 GB free, the cache already past the old fixed 1073 MB.
+        val room = ApkCache.roomOf(free = 40 * gb, cached = 1_100_000_000L)
+        assertTrue("40 GB free must leave room, got $room", room > 5 * gb)
+        assertTrue("the bound is derived, not the old 1073 MB",
+            ApkCache.boundOf(40 * gb, 1_100_000_000L) > 1_073_741_824L)
+        // Control: a genuinely full device has no room, whatever the bound.
+        assertEquals(0L, ApkCache.roomOf(free = 1 * gb, cached = 0L))
+        assertEquals("the bound never drops under its declared min", 1_073_741_824L, ApkCache.boundOf(0L, 0L))
+        // And the live seam is the StatFs reading, not the cache bound.
+        ApkCache.freeBytes = { 40 * gb }
+        try {
+            assertTrue(StoreStages.room(ctx) > 5 * gb)
+            assertTrue(StoreAuto.roomJson(ctx).getString("text").contains("40000 MB free"))
+        } finally { resetRoom() }
+    }
+
+    @Test
+    fun `812 a cache over its bound never evicts an APK pending install - only landed or superseded`() {
+        val pendA = cached("fleet-calc-release.apk", "org.example.calc", 5, 40_000, 1_000)
+        val pendB = cached("fleet-rootfs-release.apk", "org.example.rootfs", 3, 60_000, 2_000)
+        val old = cached("fleet-notes-old.apk", "org.example.notes", 1, 30_000, 500)
+        val newer = cached("fleet-notes-release.apk", "org.example.notes", 2, 30_000, 3_000)
+        val done = cached("fleet-news-release.apk", "org.example.news", 4, 30_000, 100)
+        val part = ApkCache.file(ctx, "fleet-camera-release.apk.part").apply { writeBytes(ByteArray(20_000)); setLastModified(50) }
+        ApkCache.boundFor = { 10_000L }      // pending total alone is far over the bound
+        ApkCache.isLanded = { _, e -> e.record?.pkg == "org.example.news" }
+        try {
+            val ev = ApkCache.evict(ctx)
+            assertTrue("pending calc kept", pendA.exists())
+            assertTrue("pending rootfs-sized lib kept", pendB.exists())
+            assertTrue("the newest notes build is pending: kept", newer.exists())
+            assertTrue("a resumable partial is never evicted", part.exists())
+            assertFalse("superseded build evicted", old.exists())
+            assertFalse("landed build evicted", done.exists())
+            assertEquals(setOf(old.name, done.name), ev.deleted.toSet())
+            assertTrue(ev.unverified.isEmpty())
+        } finally { resetRoom() }
+    }
+
+    @Test
+    fun `812 pending total over the room - download, install, clear in rounds, each fetched once`() {
+        val apps = fleet()
+        val one = bodies["lib1.apk"]!!.size.toLong()
+        // Room for ONE package at a time (rootfs-sized, relatively).
+        StoreStages.room = { c -> (one * 3 / 2 - ApkCache.totalBytes(c)).coerceAtLeast(0) }
+        val told = ArrayList<Int>()
+        StoreAuto.onPending = { _, n -> told += n }
+        try {
+            val s = StoreAuto.run(ctx, apps, StoreAuto.TRIGGER_WIFI)
+            assertEquals(s.summary, StoreAuto.DONE, s.phase)
+            for (id in listOf("lib1", "lib2", "appa")) {
+                assertEquals(id, StoreAuto.INSTALLED, statusOf(s, id))
+                assertEquals("$id fetched exactly once — nothing evicted and re-fetched", 1, gets(id))
+            }
+            assertEquals("one at a time when only one fits",
+                listOf("get:lib1", "install:lib1", "get:lib2", "install:lib2", "get:appa", "install:appa"),
+                events.filter { it.startsWith("get:") || it.startsWith("install:") })
+            assertEquals("the badge is told nothing is left", listOf(0), told)
+        } finally { resetRoom() }
+    }
+
+    @Test
+    fun `812 genuinely no room says so with the real numbers, no thrash, badge keeps the count`() {
+        val apps = fleet()
+        StoreStages.room = { 0L }
+        val told = ArrayList<Int>()
+        StoreAuto.onPending = { _, n -> told += n }
+        try {
+            val s = StoreAuto.run(ctx, apps, StoreAuto.TRIGGER_WIFI)
+            assertEquals(StoreAuto.DONE, s.phase)
+            assertEquals("nothing fetched", 0, totalGets())
+            for (id in listOf("lib1", "lib2", "appa")) {
+                val i = s.queue.first { it.id == id }
+                assertEquals(StoreAuto.FAILED, i.status)
+                assertTrue(i.error.orEmpty(), i.error.orEmpty().contains("usable") && i.error.orEmpty().contains("reserve"))
+            }
+            val j = StoreAuto.json(ctx)
+            assertTrue(j.getString("lastError").contains("usable"))
+            assertTrue(j.getJSONObject("room").has("freeBytes"))
+            assertEquals(3, j.getInt("pending"))
+            assertEquals(listOf(3), told)
+        } finally { resetRoom() }
+    }
+
+    @Test
+    fun `812 Cancel stops the batch with the state persisted, and the next trigger resumes it`() {
+        val apps = fleet()
+        StoreAuto.checkpoint = { p, i -> if (p == StoreAuto.DOWNLOAD && i == "lib2") UpdateProgress.requestCancel() }
+        val first = StoreAuto.run(ctx, apps, StoreAuto.TRIGGER_WIFI)
+        StoreAuto.checkpoint = { _, _ -> }
+        assertTrue(first.lastError.orEmpty(), first.lastError.orEmpty().contains("cancelled"))
+        assertEquals("nothing installed after a Cancel", 0, events.count { it.startsWith("install:") })
+        assertEquals(StoreAuto.DOWNLOAD, StoreAuto.load(ctx)!!.phase)
+        val s = StoreAuto.run(ctx, apps, StoreAuto.TRIGGER_APP_START)
+        assertEquals(s.summary, StoreAuto.DONE, s.phase)
+        assertEquals(listOf("install:lib1", "install:lib2", "install:appa"), events.filter { it.startsWith("install:") })
+        assertEquals("lib1 not fetched again after the resume", 1, gets("lib1"))
+    }
 }

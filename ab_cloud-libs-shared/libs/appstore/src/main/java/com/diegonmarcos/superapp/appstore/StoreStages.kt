@@ -370,16 +370,14 @@ object StoreStages {
     }.getOrDefault(true)
 
     /**
-     * Bytes Download all may still write: the disk's free space, and the cache's
-     * own declared bound ([ApkCache.evict] deletes past it — oldest first, i.e.
-     * what this same batch fetched a minute ago). A seam like [installer] so a
-     * test can stand in for a full disk.
+     * Bytes Download all may still write — [ApkCache.room]: the device's REAL
+     * free storage (StatFs) less the declared reserve, within the cache bound
+     * derived from it (#812: it was the fixed 1073 MB bound, which said "no
+     * room" with 40 GB free). A seam like [installer] so a test can stand in
+     * for a full disk.
      */
     @Volatile
-    var room: (Context) -> Long = { c ->
-        minOf(ApkCache.dir(c).usableSpace,
-            com.diegonmarcos.superapp.updater.BuildConfig.APK_CACHE_MAX_BYTES - ApkCache.totalBytes(c)).coerceAtLeast(0)
-    }
+    var room: (Context) -> Long = { c -> ApkCache.room(c) }
 
     private const val HOST = "the host — its own updater runs after the batch"
 

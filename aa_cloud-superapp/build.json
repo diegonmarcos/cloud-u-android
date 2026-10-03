@@ -8410,9 +8410,39 @@
           "members": ["fleet_alerts"],
           "alerts": true,
           "max_in_shade": 20
+        },
+        {
+          "id": "store",
+          "label": "Store",
+          "members": ["store_updates"]
         }
       ],
       "producers": [
+        {
+          "id": "store_updates",
+          "label": "Store",
+          "subtitle": "#812 How many Store updates are pending, after each auto-update chain. NON-persistent: never ongoing, posted only while updates wait, cleared when they are gone or the Store is opened.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "store_updates",
+          "owner": "notificationcenter/StoreBadgeNotifier.kt",
+          "shows_badge": true,
+          "enabled": true,
+          "badge": true,
+          "persistent": false,
+          "on_demand": true,
+          "service": "",
+          "requires": [],
+          "shows": "'N Store updates pending'; tap opens the Store.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            }
+          ]
+        },
         {
           "id": "kde_status",
           "label": "KDE Connect",
@@ -9674,8 +9704,10 @@
       "_doc": "#625 WHERE A DOWNLOADED APK LIVES BETWEEN FETCH AND INSTALL, and when it may be deleted. Read at gradle eval time into libs:updater's BuildConfig (APK_CACHE_DIR / APK_CACHE_MAX_BYTES / APK_CACHE_EVICT) and used by ApkCache at runtime, so the policy exists once, here, and never as a constant in Kotlin. FLEET-WIDE: libs:updater resolves this block from the CONSUMING app's build.json and falls back to THIS file, the same way it resolves constellation-fleet.json — an app may narrow the policy, none has to restate it.",
       "_doc_dir": "Subdirectory under the app's no_backup files dir (NOT cacheDir). cacheDir is reclaimable: Android purges it under storage pressure without asking and Settings ▸ Clear cache wipes it, so a 267 MB download really did vanish between fetch and install — which is exactly the 'the store deleted my download' the owner reported. no_backup is app-private, persistent, and excluded from cloud backup, so nothing but this app's own retention rule removes an APK.",
       "dir": "apk-cache",
-      "_doc_max_bytes": "Upper bound on the whole cache, evicted by `evict` below. 1 GiB holds the biggest artifact in the fleet (cloud-office, 278 MB) three times over plus the ordinary 6-33 MB apps.",
-      "max_bytes": 1073741824,
+      "_doc_max_bytes": "#812 The cache bound is DERIVED, not fixed: (real free storage on the cache volume + what the cache holds - reserve_bytes), clamped to [min_bytes, max_bytes]. The fixed 1 GiB bound said 'no room' on a phone with ~40 GB free and evicted downloaded-but-not-installed APKs (the two rootfs libs alone are ~1 GB), so Download all re-fetched in a loop. Eviction takes only superseded or already-installed entries, never one pending install. reserve_bytes is what a download may never eat into.",
+      "min_bytes": 1073741824,
+      "max_bytes": 8589934592,
+      "reserve_bytes": 2147483648,
       "_doc_evict": "superseded-then-oldest: an entry for a package that also has a NEWER cached build goes first (it can never be installed again), then the oldest by mtime. An entry with no download record — a .part, or a file whose sidecar is gone — is UNVERIFIED and is only ever taken as a last resort, and when it is, it is named in the log and in the eviction report. Silently deleting a file nobody can vouch for is the bug this whole block exists to end.",
       "evict": "superseded-then-oldest"
     }

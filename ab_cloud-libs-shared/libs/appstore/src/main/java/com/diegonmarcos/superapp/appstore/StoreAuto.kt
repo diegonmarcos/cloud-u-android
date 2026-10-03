@@ -10,6 +10,7 @@ import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
@@ -143,6 +144,13 @@ object StoreAuto {
     /** The host's own update, last: its self-updater (UpdateWorker). */
     @Volatile var selfUpdate: (Context) -> Unit = { Updater.start(it) }
 
+    /** #812 the Store badge: told how many updates still wait after every
+     *  chain (0 clears it). The SuperApp's StoreBadge sets it. */
+    @Volatile var onPending: (Context, Int) -> Unit = { _, _ -> }
+
+    /** Updates still waiting on the device after [s]: everything not landed. */
+    fun pending(s: State): Int = s.queue.count { it.status != INSTALLED && it.status != HANDED }
+
     /** Called right after a package's transition is persisted, before its work
      *  starts — a test kills the "process" here to prove the resume. */
     @Volatile var checkpoint: (phase: String, id: String) -> Unit = { _, _ -> }
@@ -182,14 +190,37 @@ object StoreAuto {
                 else -> State(REFRESH, trigger, now)
             }
             live = s
+            // A Cancel stops THAT batch; the next trigger is the "resume later"
+            // (#812). Left armed, one Cancel would stop every chain after it.
+            UpdateProgress.beginDownload()
             val byId = apps.associateBy { it.id }
             // Each phase moves s.phase on only when it completed; one that
             // stops (cancel, install budget) leaves it, and the rest wait for
             // the next trigger, which resumes exactly there.
-            if (s.phase == REFRESH) refresh(ctx, s, apps)
-            if (s.phase == DOWNLOAD) download(ctx, s, byId)
-            if (s.phase == INSTALL) install(ctx, s, byId)
-            if (s.phase == CLEAR) clear(ctx, s, byId, selfAfter)
+            //
+            // #812 ROUNDS: what does not fit in the real free storage stays
+            // queued while what was downloaded is installed and cleared — then
+            // the chain goes round again for the rest (rootfs-sized items end
+            // up one at a time). A round that lands nothing ends the loop and
+            // the leftovers fail with the real numbers instead of thrashing.
+            var rounds = 0
+            while (true) {
+                val landedBefore = s.count(INSTALLED)
+                if (s.phase == REFRESH) refresh(ctx, s, apps)
+                if (s.phase == DOWNLOAD) download(ctx, s, byId)
+                if (s.phase == INSTALL) install(ctx, s, byId)
+                if (s.phase != CLEAR) break
+                val deferred = s.queue.filter { it.kind != HOST && it.status == QUEUED }
+                if (deferred.isNotEmpty() && s.count(INSTALLED) > landedBefore && rounds++ < s.queue.size) {
+                    reap(ctx, s, byId)
+                    s.phase = DOWNLOAD
+                    save(ctx, s)
+                    continue
+                }
+                deferred.forEach { fail(it, DOWNLOAD, it.error ?: "not downloaded") }
+                clear(ctx, s, byId, selfAfter)
+                break
+            }
             Log.i(TAG, "$trigger: chain at ${s.phase} — ${s.summary}" + (s.lastError?.let { " — $it" } ?: ""))
             return s
         } finally {
@@ -257,11 +288,16 @@ object StoreAuto {
             if (app == null) { fail(item, DOWNLOAD, "no longer in the fleet"); save(ctx, s); continue }
             val r = remoteOf(item)
             // Killed after the bytes landed: the cache already holds it.
-            if (StoreStages.actionableFor(ctx, app, r) != null) { item.status = DOWNLOADED; save(ctx, s); continue }
+            if (StoreStages.actionableFor(ctx, app, r) != null) { item.status = DOWNLOADED; item.failedAt = null; item.error = null; save(ctx, s); continue }
             val want = (item.bytes - StoreStages.partialBytes(ctx, app)).coerceAtLeast(0)
             val room = StoreStages.room(ctx)
             if (want > room) {
-                fail(item, DOWNLOAD, "needs ${mb(want)}, ${mb(room)} free — not downloaded")
+                // #812 Not a failure yet: it stays queued for the next round,
+                // after what is downloaded has been installed and cleared.
+                item.error = "needs ${mb(want)}, ${mb(room)} usable (${ApkCache.roomText(ctx)}) — " +
+                    "waits for the downloaded ones to install and clear"
+                item.failedAt = DOWNLOAD
+                s.lastError = "${item.id}: ${item.error}"
                 save(ctx, s); continue
             }
             item.status = DOWNLOADING
@@ -271,6 +307,12 @@ object StoreAuto {
             StoreStages.beginNext(UpdateProgress.Job(app.id, app.pkg, app.label, UpdateProgress.STAGE_DOWNLOADING,
                 item.version, n + 1, go.size, go.getOrNull(n + 1)?.let { byId[it.id]?.label }))
             val st = try { StoreStages.download(ctx, app) } catch (e: Exception) { null }
+            if (UpdateProgress.cancelRequested && StoreStages.actionableFor(ctx, app, r) == null) {
+                // #812 Cancel mid-download: not a failure. Its .part stays for
+                // the Range resume, and it stays queued for the next trigger.
+                item.status = QUEUED
+                return stop(ctx, s, "cancelled by the user — ${item.id} resumes from its partial on the next pass")
+            }
             if (StoreStages.actionableFor(ctx, app, r) != null) {
                 item.status = DOWNLOADED; item.failedAt = null; item.error = null
             } else fail(item, st?.failedAt ?: DOWNLOAD, st?.text ?: "download stopped")
@@ -330,10 +372,14 @@ object StoreAuto {
         save(ctx, s)
     }
 
-    private fun clear(ctx: Context, s: State, byId: Map<String, Fleet.App>, selfAfter: Boolean) {
-        // stage() reaps a cache whose bytes ARE the installed APK — the same
-        // proof-only rule as every other Clear.
+    /** stage() reaps a cache whose bytes ARE the installed APK — the same
+     *  proof-only rule as every other Clear. */
+    private fun reap(ctx: Context, s: State, byId: Map<String, Fleet.App>) {
         for (item in s.queue) if (item.kind != HOST) byId[item.id]?.let { StoreStages.stage(ctx, it) }
+    }
+
+    private fun clear(ctx: Context, s: State, byId: Map<String, Fleet.App>, selfAfter: Boolean) {
+        reap(ctx, s, byId)
         val failed = s.queue.filter { it.status == FAILED || it.status == HELD }
         s.lastError = failed.firstOrNull()?.let { "${it.id}: ${it.status} at ${it.failedAt} — ${it.error}" }
         StoreStages.finishBatch(failed.mapNotNull { i ->
@@ -349,6 +395,7 @@ object StoreAuto {
         s.finishedAt = System.currentTimeMillis()
         // Persisted BEFORE the host update: installing this app kills this process.
         save(ctx, s)
+        runCatching { onPending(ctx, pending(s)) }
         if (host != null && selfAfter) runCatching { selfUpdate(ctx) }
             .onFailure { Log.w(TAG, "self-update hand-off failed: ${it.message}") }
     }
@@ -405,7 +452,19 @@ object StoreAuto {
         val s = load(ctx) ?: return JSONObject().put("ok", true).put("running", run).put("phase", IDLE)
             .put("queue", JSONArray())
         return toJson(s).put("ok", true).put("running", run).put("summary", s.summary)
+            .put("pending", pending(s))
+            .put("room", runCatching { roomJson(ctx) }.getOrDefault(JSONObject()))
             .put("resumable", !run && s.phase in PHASES).put("label", label() ?: JSONObject.NULL)
+    }
+
+    /** #812 the real numbers behind any "no room": free storage, reserve,
+     *  the derived bound, what the cache holds and what may still be written. */
+    fun roomJson(ctx: Context): JSONObject {
+        val free = ApkCache.freeBytes(ctx); val cached = ApkCache.totalBytes(ctx)
+        return JSONObject().put("freeBytes", free).put("cachedBytes", cached)
+            .put("reserveBytes", com.diegonmarcos.superapp.updater.BuildConfig.APK_CACHE_RESERVE_BYTES)
+            .put("boundBytes", ApkCache.boundOf(free, cached)).put("usableBytes", StoreStages.room(ctx))
+            .put("text", ApkCache.roomText(ctx))
     }
 
     fun load(ctx: Context): State? = runCatching {

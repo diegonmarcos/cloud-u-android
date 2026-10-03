@@ -275,6 +275,13 @@ class StoreCloudFragment : Fragment() {
     }
 
     /** The observer holds a view; leaving it attached would outlive the view tree. */
+    /** #812 Opening the Store is reading the badge: it clears. A later chain
+     *  that still finds updates pending posts it again. */
+    override fun onResume() {
+        super.onResume()
+        context?.let { c -> runCatching { StoreAuto.onPending(c.applicationContext, 0) } }
+    }
+
     override fun onDestroyView() {
         UpdateProgress.removeObserver(progressObserver)
         progressRow = null; progressIcon = null; progressLabel = null; progressBar = null; progressCancel = null
@@ -1086,54 +1093,31 @@ class StoreCloudFragment : Fragment() {
     /**
      * #784 "Download all": every update (or missing entry) into the cache,
      * nothing installed — pre-fetch on Wi-Fi, Update all later, offline if need
-     * be. A dry run sizes it first; when it will not fit in the free space (or
-     * the cache's own bound) the owner is told BEFORE anything is written, and
-     * what does not fit is skipped rather than evicting the rest.
+     * be. What does not fit in the REAL free storage (less the declared
+     * reserve, #812) is skipped rather than evicting the rest. #812 no dialog:
+     * progress and the outcome are drawn in the bar under the buttons.
      */
     private fun downloadAll(ctx: Context, targets: List<Fleet.App>) {
-        Toast.makeText(ctx, "Checking what to download…", Toast.LENGTH_SHORT).show()
-        thread(name = "fleet-download-all-plan") {
-            val plan = StoreStages.downloadAll(ctx, targets, dryRun = true)
-            view?.post {
-                if (!isAdded) return@post
-                val n = plan.count(StoreStages.DOWNLOAD)
-                if (n == 0) return@post report(ctx, "Download all", plan)
-                val fits = plan.needBytes <= plan.roomBytes
-                AlertDialog.Builder(requireActivity())
-                    .setTitle("Download all — $n app(s), ${human(plan.needBytes)}")
-                    .setMessage((if (fits) "" else "⚠ Only ${human(plan.roomBytes)} free for the cache: " +
-                        "what does not fit is skipped, never squeezed in.\n\n") +
-                        lines(plan))
-                    .setPositiveButton(FleetActions.label(ctx, "download")) { _, _ ->
-                        thread(name = "fleet-download-all") {
-                            val done = StoreStages.downloadAll(ctx, targets)
-                            view?.post { report(ctx, "Download all", done) }
-                            checkAll(ctx)
-                        }
-                    }
-                    .setNegativeButton(R.string.store_close, null)
-                    .show()
-            }
+        thread(name = "fleet-download-all") {
+            val done = StoreStages.downloadAll(ctx, targets)
+            view?.post { report(ctx, "Download all", done) }
+            checkAll(ctx)
         }
     }
 
-    /** The per-app lines of a batch, skipped ones folded into a count. */
-    private fun lines(b: StoreStages.Batch): String {
-        val shown = b.outcomes.filter { it.result != StoreStages.SKIPPED }
-        val skipped = b.outcomes.size - shown.size
-        return (shown.map { o ->
-            "${o.app.label}: ${o.result.replace('_', ' ')}" +
-                (o.failedAt?.let { " at $it" } ?: "") + " — ${o.text}"
-        } + listOfNotNull(if (skipped > 0) "$skipped skipped (already current)" else null)).joinToString("\n")
-    }
-
+    /** #812 A batch's outcome, IN the page's progress bar — never a dialog.
+     *  A failure already drawn there ([StoreStages.progress]) keeps the bar. */
     private fun report(ctx: Context, title: String, b: StoreStages.Batch) {
         if (!isAdded) return
-        AlertDialog.Builder(requireActivity())
-            .setTitle("$title — ${b.summary.ifEmpty { "nothing to do" }}" + if (b.online) "" else " (offline)")
-            .setMessage(lines(b).ifEmpty { "Nothing to do." })
-            .setPositiveButton(R.string.store_close, null)
-            .show()
+        val row = progressRow ?: return
+        if (StoreStages.progress() != null) return
+        progressLabel?.text = "$title — ${b.summary.ifEmpty { "nothing to do" }}" + if (b.online) "" else " (offline)"
+        progressLabel?.setTextColor(cUpd)
+        progressBar?.apply { isIndeterminate = false; progress = 100 }
+        progressCancel?.visibility = View.GONE
+        progressIcon?.visibility = View.GONE
+        row.setOnClickListener(null)
+        row.visibility = View.VISIBLE
     }
 
     // "Install all" — only apps not yet on the device.

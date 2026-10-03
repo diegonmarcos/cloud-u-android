@@ -25,7 +25,6 @@ import com.diegonmarcos.superapp.devtools.DevControlBridge
 import com.diegonmarcos.superapp.settings.LauncherProfiles
 import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemes
-import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.settings.LauncherProfilePrefs
@@ -80,6 +79,10 @@ import com.diegonmarcos.superapp.mail.MailHost
 import com.diegonmarcos.superapp.mail.MailPages
 import com.diegonmarcos.superapp.launcher.BackHandler
 // WalletHost removed — libs:wallet moved to ac_cloud-wallet (constellation APK).
+
+
+/** The tag the old update overlay was attached under (#812: removed). */
+private const val UPDATE_OVERLAY_TAG = "update_overlay"
 
 /**
  * Top-level shell.
@@ -2471,48 +2474,23 @@ open class ShellActivity : AppCompatActivity(),
         resetIdleTimer()
     }
 
+    /**
+     * #812 NO PROGRESS POPUP. The full-screen update overlay is gone from the
+     * SuperApp: progress (app, stage, version, bytes/%, batch position) and
+     * Cancel live in the Store page's own bar under its buttons (#785), the
+     * same line `/api/store/progress` returns. This only removes an overlay a
+     * previous build may have left attached, and lets a finished pass go Idle.
+     */
     private fun handleUpdateState(state: com.diegonmarcos.superapp.updater.UpdateProgress.State) {
-        // Skip if the activity isn't in a state where it can commit
-        // fragment transactions — otherwise we crash with
-        // "Can not perform this action after onSaveInstanceState".
         if (supportFragmentManager.isStateSaved) return
         runCatching {
-            val tag = UpdateOverlayFragment.TAG
-            val existing = supportFragmentManager.findFragmentByTag(tag) as? UpdateOverlayFragment
-            // Last gate before the overlay reaches the screen: an unattended
-            // pass, or a manual one the user minimized, draws nothing. Asked
-            // here rather than upstream because this is the only place that
-            // actually attaches, and every previous fix sat above it.
-            // Failed states are never suppressed.
-            if (com.diegonmarcos.superapp.updater.UpdateProgress.suppressed(this, state)) {
-                if (existing != null) {
-                    supportFragmentManager.beginTransaction()
-                        .remove(existing).commitAllowingStateLoss()
-                }
-                return@runCatching
+            supportFragmentManager.findFragmentByTag(UPDATE_OVERLAY_TAG)?.let {
+                supportFragmentManager.beginTransaction().remove(it).commitAllowingStateLoss()
             }
-            when (state) {
-                is com.diegonmarcos.superapp.updater.UpdateProgress.State.Idle -> {
-                    if (existing != null) {
-                        supportFragmentManager.beginTransaction()
-                            .remove(existing).commitAllowingStateLoss()
-                    }
-                }
-                else -> {
-                    if (existing == null) {
-                        val frag = UpdateOverlayFragment.newInstance()
-                        supportFragmentManager.beginTransaction()
-                            .add(R.id.overlay_container, frag, tag)
-                            .commitAllowingStateLoss()
-                    } else {
-                        existing.applyState(state)
-                    }
-                    if (state is com.diegonmarcos.superapp.updater.UpdateProgress.State.Done) {
-                        findViewById<View>(R.id.fragment_container)?.postDelayed({
-                            com.diegonmarcos.superapp.updater.UpdateProgress.reset()
-                        }, 1200)
-                    }
-                }
+            if (state is com.diegonmarcos.superapp.updater.UpdateProgress.State.Done) {
+                findViewById<View>(R.id.fragment_container)?.postDelayed({
+                    com.diegonmarcos.superapp.updater.UpdateProgress.reset()
+                }, 1200)
             }
         }
     }

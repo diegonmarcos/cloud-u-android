@@ -48,7 +48,10 @@ import json, sys
 nc = json.load(open(sys.argv[1]))['ui']['notification_center']
 ps = nc['producers']
 on_demand = {m for g in nc.get('groups', []) if g.get('alerts') for m in g.get('members', [])}
-badges = [p for p in ps if p.get('badge') and p['id'] not in on_demand]
+# #812 a badge declared on_demand (the Store badge) is non-persistent BY DESIGN:
+# posted only while it has something to say, no service, never ongoing.
+transient = {p['id'] for p in ps if p.get('on_demand') and not p.get('persistent') and not p.get('service')}
+badges = [p for p in ps if p.get('badge') and p['id'] not in on_demand | transient]
 if not badges:                                   print('no producer has badge=true')
 elif len(on_demand) > 1:                         print('more than one on-demand alerts member: %s' % sorted(on_demand))
 else:

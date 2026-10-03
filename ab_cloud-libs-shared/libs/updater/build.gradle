@@ -60,8 +60,9 @@ def au   = buildJson.release.auto_update
 // reclaims without asking, and which is the whole bug (#625).
 def apkCacheDecl = buildJson.release.apk_cache ?: new groovy.json.JsonSlurper()
     .parse(new File(projectDir, '../../../aa_cloud-superapp/build.json').canonicalFile).release.apk_cache
-if (!apkCacheDecl?.dir || !apkCacheDecl?.max_bytes || !apkCacheDecl?.evict) {
-    throw new GradleException("release.apk_cache{dir,max_bytes,evict} is missing from " +
+if (!apkCacheDecl?.dir || !apkCacheDecl?.max_bytes || !apkCacheDecl?.evict ||
+        !apkCacheDecl?.min_bytes || apkCacheDecl?.reserve_bytes == null) {
+    throw new GradleException("release.apk_cache{dir,min_bytes,max_bytes,reserve_bytes,evict} is missing from " +
         "${rootDir}/build.json and from the canonical aa_cloud-superapp/build.json. " +
         ":libs:updater bakes it into APK_CACHE_DIR/APK_CACHE_MAX_BYTES/APK_CACHE_EVICT; " +
         "ApkCache has no fallback on purpose, because the fallback WAS cacheDir and " +
@@ -159,6 +160,10 @@ android {
         // #625 the apk cache: directory name, size bound, eviction policy.
         buildConfigField "String",  "APK_CACHE_DIR",               "\"${apkCacheDecl.dir}\""
         buildConfigField "long",    "APK_CACHE_MAX_BYTES",         "${apkCacheDecl.max_bytes}L"
+        // #812 the bound is DERIVED from real free storage within [min, max],
+        // keeping reserve_bytes free for the device — never a fixed max alone.
+        buildConfigField "long",    "APK_CACHE_MIN_BYTES",         "${apkCacheDecl.min_bytes}L"
+        buildConfigField "long",    "APK_CACHE_RESERVE_BYTES",     "${apkCacheDecl.reserve_bytes}L"
         buildConfigField "String",  "APK_CACHE_EVICT",             "\"${apkCacheDecl.evict}\""
         // javac caps ONE string constant at 65,535 UTF-8 bytes (JVMS 4.4.7, CONSTANT_Utf8).
         // The fleet manifest's base64 crossed that on 2026-09-24 — 68,072 bytes at 72

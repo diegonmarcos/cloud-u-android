@@ -164,6 +164,11 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #777: the Alerts group is drawn from the store, so it comes back
         // (silently) after a reboot or an update cleared the shade.
         runCatching { com.diegonmarcos.superapp.notificationcenter.AlertsNotifier.refresh(this) }
+        // #812 the Store badge (Notify ▸ Store): the auto chain reports how many
+        // updates still wait; 0, or opening the Store, clears it. Never ongoing.
+        com.diegonmarcos.superapp.appstore.StoreAuto.onPending = { c, n ->
+            com.diegonmarcos.superapp.notificationcenter.StoreBadgeNotifier.update(c, n)
+        }
         // #778: /api/account/* — Account's tabs, profiles, runtime, drift and their actions.
         runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
         // #794: /api/net/dns/overview — the DNS page as JSON: preset in effect or not, every app's path, every server.
