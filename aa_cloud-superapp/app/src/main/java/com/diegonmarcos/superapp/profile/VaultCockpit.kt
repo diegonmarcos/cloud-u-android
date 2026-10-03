@@ -88,7 +88,12 @@ object VaultCockpit {
         val vaultFields: Map<String, VaultField> = emptyMap(),
         /** #790 `agent_auth`: the terminals' credentials store, derived from the declared vault values. */
         val agentAuth: AgentAuth? = null,
-    )
+        /** #802 `derived_settings`: more app stores derived the same way (the browser's autofill profile). */
+        val derivedSettings: List<AgentAuth> = emptyList(),
+    ) {
+        /** Every derivation, agent_auth first. */
+        val derivations: List<AgentAuth> get() = listOfNotNull(agentAuth) + derivedSettings
+    }
 
     /**
      * #790 cockpit `agent_auth`: each fleet app in [apps] gets `settings › app › [store] › NAME` =
@@ -97,6 +102,16 @@ object VaultCockpit {
      * ([AccountFleet.derive]).
      */
     data class AgentAuth(val store: String, val apps: List<String>, val env: Map<String, List<String>>)
+
+    /** One `{store, apps, env|keys: {KEY: [vault path]}}` block (agent_auth, or a derived_settings entry). */
+    private fun parseDerivation(a: JSONObject): AgentAuth {
+        val apps = a.optJSONArray("apps") ?: JSONArray()
+        val env = a.optJSONObject("keys") ?: a.optJSONObject("env") ?: JSONObject()
+        return AgentAuth(a.optString("store"), (0 until apps.length()).map { apps.getString(it) },
+            env.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
+                env.getJSONArray(k).let { p -> (0 until p.length()).map { p.getString(it) } }
+            })
+    }
 
     fun parseLayout(o: JSONObject): Layout {
         val arr = o.optJSONArray("sections") ?: JSONArray()
@@ -129,13 +144,9 @@ object VaultCockpit {
                 val apps = e.optJSONArray("apps") ?: JSONArray()
                 VaultField((0 until apps.length()).map { apps.getString(it) }, e.optBoolean("held", true), e.optString("why"))
             },
-            o.optJSONObject("agent_auth")?.let { a ->
-                val apps = a.optJSONArray("apps") ?: JSONArray()
-                val env = a.optJSONObject("env") ?: JSONObject()
-                AgentAuth(a.optString("store"), (0 until apps.length()).map { apps.getString(it) },
-                    env.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
-                        env.getJSONArray(k).let { p -> (0 until p.length()).map { p.getString(it) } }
-                    })
+            o.optJSONObject("agent_auth")?.let { parseDerivation(it) },
+            o.optJSONArray("derived_settings").let { a ->
+                if (a == null) emptyList() else (0 until a.length()).map { parseDerivation(a.getJSONObject(it)) }
             },
         )
     }

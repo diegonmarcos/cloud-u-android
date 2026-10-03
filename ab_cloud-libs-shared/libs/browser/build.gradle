@@ -48,6 +48,10 @@ dependencies {
     // #802 "Translate page": the fleet's text-tools contract (a thin binder client; the
     // row is disabled with its reason when no app on the phone serves it).
     implementation project(':libs:text-tools')
+    // #802 the autofill profile is an EncryptedSharedPreferences store (browser_autofill, class
+    // secret) opened with the same MasterKey scheme FleetConfig imports it through. libs:core
+    // only compileOnly-s the cipher, so the app that keeps the store ships it.
+    implementation 'androidx.security:security-crypto:1.1.0'
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'

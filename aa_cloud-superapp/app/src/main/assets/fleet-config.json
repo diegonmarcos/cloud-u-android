@@ -215,6 +215,14 @@
     "ac_cloud-mail"
    ]
   },
+  "browser_autofill": {
+   "kind": "encrypted",
+   "class": "secret",
+   "doc": "#802 the browser's autofill profile: identity + addresses + card METADATA (label, holder, last4, expiry, type) — never a card number or security code. vault_profile/vault_addresses are the vault bundle's about.profile/about.addresses (cockpit derived_settings, applied by server → runtime); profile is what was imported on the phone.",
+   "used_by": [
+    "lib-browser"
+   ]
+  },
   "browser_bookmarks": {
    "kind": "prefs",
    "class": "config",

@@ -10,6 +10,8 @@ import com.diegonmarcos.superapp.browser.BrowserSitePermissions
 import com.diegonmarcos.superapp.browser.BrowserDownloads
 import com.diegonmarcos.superapp.browser.BrowserConfig
 import com.diegonmarcos.superapp.browser.BrowserHistory
+import com.diegonmarcos.superapp.browser.BrowserProfile
+import com.diegonmarcos.superapp.browser.BrowserProfileStore
 import com.diegonmarcos.superapp.browser.BrowserSettings
 import com.diegonmarcos.superapp.browser.BrowserTabPrefs
 import com.diegonmarcos.superapp.devtools.AppDebugServer
@@ -54,6 +56,10 @@ object BrowserDebugApi {
         Op("downloads/clear", "", "forget the download list (the files stay in Downloads)"),
         Op("sites", "host=<host, optional>", "per-site rules; with host=, every declared permission's effective value there"),
         Op("sites/set", "host=<host>&perm=<permission id>&value=<allow|deny|ask>", "store a per-site decision (covers subdomains)"),
+        Op("profile", "", "the autofill profile, MASKED: identity present + initials, address count, card last4s"),
+        Op("profile/import", "format=<csv|firefox|bitwarden|vault|native, optional> + POST body", "merge an export into the profile (card numbers and codes are dropped at parse)"),
+        Op("profile/clear", "confirm=1", "forget the profile on this phone"),
+        Op("profile/fill", "", "the live page's fillable fields and which profile key each would get (dry: no value is read out or written)"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
@@ -171,6 +177,18 @@ object BrowserDebugApi {
                     else -> BrowserBus.onMain("privacy/clear") { done -> BrowserClearData.clear(app, boxes, q["url"], done) }
                 }
             }
+            // #802 nothing below answers a profile VALUE: masked() only, and fill is dry.
+            "profile" -> BrowserProfileStore(app).load().masked()
+            "profile/import" -> {
+                val body = q["_body"].orEmpty()
+                if (body.isBlank()) JSONObject().put("ok", false).put("error", "POST the export as the request body")
+                else runCatching { BrowserProfile.parse(q["format"], body) }.fold(
+                    { p -> BrowserProfileStore(app).import(p); JSONObject().put("ok", true).put("profile", BrowserProfileStore(app).load().masked()) },
+                    { e -> JSONObject().put("ok", false).put("error", "not a ${q["format"] ?: "recognised"} export: ${e.javaClass.simpleName}") })
+            }
+            "profile/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
+                else { BrowserProfileStore(app).clear(); JSONObject().put("ok", true) }
+            "profile/fill" -> BrowserBus.call("fill_dry")
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

@@ -20,7 +20,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
-| cloud-browser | `com.diegonmarcos.cloudbrowser` | 8 | 0 | 100% |
+| cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 10 | 0 | 100% |
@@ -46,7 +46,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **161** | **35** | **82%** |
+| **fleet** | | **162** | **35** | **82%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -199,6 +199,7 @@ Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devto
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `browser_autofill` | encrypted | secret | yes | #802 the browser's autofill profile: identity + addresses + card METADATA (label, holder, last4, expiry, type) — never a card number or security code. vault_profile/vault_addresses are the vault bundle's about.profile/about.addresses (cockpit derived_settings, applied by server → runtime); profile is what was imported on the phone. |
 | `browser_bookmarks` | prefs | config | yes | #802 the browser's bookmarks with their folders (bookmarks_json: url, title, folder path, ts). |
 | `browser_downloads` | prefs | device | no | #802 index of the downloads the browser started (DownloadManager ids and file names on THIS phone); the files themselves stay in Downloads. |
 | `browser_history` | prefs | content | no | Browsing history entries the user accumulated. |
@@ -215,7 +216,7 @@ Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devto
 |---|---|---|
 | `browser_settings` | config | #802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them. |
 
-Coverage: 8 covered, 0 gaps.
+Coverage: 9 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 

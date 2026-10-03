@@ -96,6 +96,16 @@ class BrowserHostFragment : Fragment(), Collapsible,
         permDone?.invoke(r.values.all { it }); permDone = null
     }
 
+    /** #802 Profile ▸ Import file: a CSV / Firefox / Bitwarden / own-JSON export, merged into the profile. */
+    private val importProfile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@registerForActivityResult
+        val text = runCatching { requireContext().contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() } }.getOrNull()
+        val p = text?.let { runCatching { BrowserProfile.parse(null, it) }.getOrNull() }
+        if (p == null || p.isEmpty) { toast("Nothing importable in that file"); return@registerForActivityResult }
+        BrowserProfileStore(requireContext()).import(p)
+        toast("Imported ${p.addresses.size} address(es), ${p.cards.size} card(s) (metadata only)")
+    }
+
     private sealed class Mode {
         object GRID : Mode()
         data class DETAIL(val url: String) : Mode()
@@ -450,6 +460,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.setGeolocationEnabled(true)
+            // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
+            importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
+                else View.IMPORTANT_FOR_AUTOFILL_YES
             // #802 a private tab keeps nothing in the HTTP cache.
             if (currentTab()?.isPrivate == true) settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
             applySettings(this, url)
@@ -659,6 +672,26 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
+    /** #802 Profile: what is held (masked: counts, initials, last4s), Import file, Clear. */
+    private fun showProfile() {
+        val m = runCatching { BrowserProfileStore(requireContext()).load().masked() }.getOrNull()
+        val summary = if (m == null) "The profile store could not be opened." else
+            "Identity: ${if (m.getJSONObject("identity").optBoolean("present")) m.getJSONObject("identity").optString("initials") else "none"}\n" +
+            "Addresses: ${m.optInt("addresses")}\nCards (metadata only, never numbers): ${m.optInt("cards_meta")}\n\n" +
+            "The Account (SuperApp ▸ Account ▸ server → runtime) brings the vault profile; Import adds a CSV, Firefox or Bitwarden export."
+        overlay { close ->
+            BrowserTextPanel("Profile", summary,
+                listOf(SheetRow("import", "Import file…"), SheetRow("clear", "Clear the profile on this phone")),
+                onPick = { r ->
+                    close()
+                    when (r) {
+                        "import" -> importProfile.launch(arrayOf("text/*", "application/json", "application/octet-stream"))
+                        "clear" -> { BrowserProfileStore(requireContext()).clear(); toast("Profile cleared") }
+                    }
+                }, onClose = close)
+        }
+    }
+
     private fun showClearData() {
         overlay { close ->
             BrowserClearScreen(config.clearData,
@@ -733,6 +766,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "pinned" to (prefs.all().firstOrNull { it.url == active }?.pinned == true),
             "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
             "private_tab" to (currentTab()?.isPrivate == true),
+            "profile_present" to (runCatching { !BrowserProfileStore(requireContext()).load().isEmpty }.getOrDefault(false)),
             "shield_js" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "javascript")),
             "shield_images" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "images")),
             "text_tools" to BrowserPageActions.textTools(requireContext()).isServingAppInstalled(),
@@ -843,6 +877,34 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "new_private_tab" -> { promptForUrl(private_ = true); done(ok().put("toast", "Private tabs keep no history; cookies are shared with normal tabs")) }
             "site_settings" -> { showSiteSettings(BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }); done(ok()) }
             "clear_data" -> { showClearData(); done(ok()) }
+            "profile" -> { showProfile(); done(ok()) }
+            "fill_profile", "fill_dry" -> {
+                wv ?: return needPage()
+                val dry = id == "fill_dry"
+                BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "autofill_scan")) { r ->
+                    val plan = BrowserAutofillMatch.plan(r?.optJSONArray("fields") ?: org.json.JSONArray())
+                    val fields = org.json.JSONArray(plan.map { (i, k) -> JSONObject().put("i", i).put("fills", k) })
+                    val p = BrowserProfileStore(requireContext()).load()
+                    when {
+                        dry -> done(ok().put("fields", fields).put("profile_present", !p.isEmpty))   // kinds only, never values
+                        p.isEmpty -> done(ok().put("ok", false).put("error", "the profile is empty: import one, or apply the Account"))
+                        plan.isEmpty() -> done(ok().put("ok", false).put("error", "no fillable field on this page"))
+                        p.addresses.size > 1 && args["address"] == null -> overlay { close ->
+                            BrowserTextPanel("Fill with which address?", "",
+                                p.addresses.mapIndexed { n, a -> SheetRow(n.toString(), a.label.ifBlank { a.city }, why = a.city) },
+                                onPick = { n -> close(); runAction(id, args + ("address" to n), done) },
+                                onClose = { close(); done(ok().put("ok", false).put("error", "cancelled")) })
+                        }
+                        else -> {
+                            val ai = args["address"]?.toIntOrNull() ?: 0
+                            val fill = JSONObject()
+                            plan.forEach { (i, k) -> BrowserAutofillMatch.value(k, p, ai).takeIf { it.isNotBlank() }?.let { fill.put(i.toString(), it) } }
+                            val js = BrowserPageActions.script(requireContext(), "autofill_fill").replace("__FILL__", fill.toString())
+                            BrowserPageActions.run(wv, js) { f -> done(ok().put("filled", f?.optInt("filled") ?: 0)) }
+                        }
+                    }
+                }
+            }
             "shield_js", "shield_images" -> {
                 val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
                 val perm = if (id == "shield_js") "javascript" else "images"

@@ -6599,6 +6599,17 @@
             "OPENROUTER_API_KEY": ["ai", "tokens", "openrouter_hermes_agent"]
           }
         },
+        "derived_settings": [
+          {
+            "_doc": "#802 the browser's autofill profile, from the declared profile: Account reads `settings › browser › browser_autofill › KEY` as the vault subtree at keys.KEY (an object or list travels as its JSON text; AccountFleet.derive, the #790 mechanism), so server → runtime and the new-phone migration import it over the #783 FleetConfig contract into the browser's encrypted, secret-class store, and Drift shows it masked. The browser maps the raw subtree itself (libs:browser BrowserProfile.fromVaultBundle). Cards are not in the bundle and never travel this way.",
+            "store": "browser_autofill",
+            "apps": ["browser"],
+            "keys": {
+              "vault_profile": ["about", "profile"],
+              "vault_addresses": ["about", "addresses"]
+            }
+          }
+        ],
         "_doc_vault_fields": "#781 THE FIELD MAP: every field Profiles shows (ui.profile.infos.schema, `section › field`) → the app(s) that use it at runtime (`apps`, cockpit section ids) and whether those apps HOLD it live (`held`: Runtime reads it and Drift compares it) or only take it as input when applying (`held` false). A field no phone app uses has `apps` [] and a `why`, so Profiles and Runtime never disagree about what exists. test-account-vault-fields.sh holds this map EQUAL to the schema (both ways), every app id to a declared section, every held field's section to its app's `vault`, and every item of the cloud-vault sources beside it to a schema field. AccountRuntime counts each app's declared / reported / missing from it.",
         "vault_fields": {
           "mesh › profiles": {"apps": ["mesh"], "held": true},

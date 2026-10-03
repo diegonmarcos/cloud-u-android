@@ -98,7 +98,13 @@ object AccountFleet {
     fun derive(body: JSONObject?, a: VaultCockpit.AgentAuth?, schema: (String) -> Int): JSONObject? {
         if (body == null || a == null || a.store.isBlank()) return body
         val values = a.env.mapNotNull { (name, path) ->
-            (path.fold(body as Any?) { o, k -> (o as? JSONObject)?.opt(k) } as? String)?.trim()?.takeIf { it.isNotEmpty() }?.let { name to it }
+            // #802 a subtree (an object or a list, e.g. about › addresses) travels as its JSON text.
+            when (val v = path.fold(body as Any?) { o, k -> (o as? JSONObject)?.opt(k) }) {
+                is String -> v.trim()
+                is JSONObject -> v.takeIf { it.length() > 0 }?.toString()
+                is JSONArray -> v.takeIf { it.length() > 0 }?.toString()
+                else -> null
+            }?.takeIf { it.isNotEmpty() }?.let { name to it }
         }
         if (values.isEmpty()) return body
         val out = AccountDrift.copy(body)

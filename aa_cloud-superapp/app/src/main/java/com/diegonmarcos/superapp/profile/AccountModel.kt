@@ -49,8 +49,8 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
         return d.copy(body = derived(d.body)!!).also { serverView = d to it }
     }
     @Volatile private var serverView: Pair<AccountStore.Doc, AccountStore.Doc>? = null
-    private fun derived(body: JSONObject?) = AccountFleet.derive(body, VaultCockpit.layout.agentAuth) { id ->
-        AccountFleet.manifest(ctx).apps[id]?.schema ?: 1
+    private fun derived(body: JSONObject?) = VaultCockpit.layout.derivations.fold(body) { b, a ->
+        AccountFleet.derive(b, a) { id -> AccountFleet.manifest(ctx).apps[id]?.schema ?: 1 }
     }
     fun runtime(): AccountStore.Doc? = doc(Slot.R)
     fun savedLocal(): AccountStore.Doc? = doc(Slot.L)

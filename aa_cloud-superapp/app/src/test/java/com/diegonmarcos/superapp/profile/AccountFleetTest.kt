@@ -149,4 +149,28 @@ class AccountFleetTest {
         assertTrue("nothing to derive returns the body itself", AccountFleet.derive(subscription, a) { 1 } === subscription)
         assertFalse(subscription.has("settings"))
     }
+
+    @Test fun `802 the browser's autofill profile is derived from about, as JSON, into its secret store`() {
+        val a = VaultCockpit.layout.derivedSettings.firstOrNull { it.store == "browser_autofill" }
+            ?: error("cockpit derived_settings declares no browser_autofill block")
+        assertEquals(listOf("browser"), a.apps)
+        val app = m.apps.getValue("browser")
+        val store = m.storeOfFile(app.pkg, a.store) ?: error("${a.store} is not a store of browser")
+        for (k in a.env.keys) {
+            assertTrue("browser › $k migrates", m.migratesKey(store, k, "browser"))
+            assertTrue("browser › $k is masked", AccountFleet.isSecret(m, "settings${S}browser$S${a.store}$S$k"))
+        }
+        val addresses = JSONArray().put(JSONObject().put("first_name", "Ada").put("city", "Berlin"))
+        val server = JSONObject().put("about", JSONObject()
+            .put("profile", JSONObject().put("name", "Ada L").put("email", "ada@example.test"))
+            .put("addresses", addresses))
+        val d = VaultCockpit.layout.derivations.fold(server as JSONObject?) { b, x -> AccountFleet.derive(b, x) { 1 } }!!
+        val st = d.getJSONObject("settings").getJSONObject("browser").getJSONObject(a.store)
+        // An object or a list travels as its JSON text, which the browser parses back.
+        assertEquals("Ada L", JSONObject(st.getString("vault_profile")).getString("name"))
+        assertEquals("Berlin", JSONArray(st.getString("vault_addresses")).getJSONObject(0).getString("city"))
+        // An empty subtree adds nothing.
+        val none = AccountFleet.derive(JSONObject().put("about", JSONObject().put("addresses", JSONArray())), a) { 1 }!!
+        assertFalse(none.has("settings"))
+    }
 }
