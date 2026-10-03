@@ -60,6 +60,15 @@ def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
 def searchDecl = new groovy.json.JsonSlurper().parse(file('../../ac_cloud-search/build.json')).search
 (buildJson.ui.browser?.addons ?: []).findAll { it.id == 'search' }.each { it.engines = searchDecl.engines }
 def searchConfigB64 = b64(searchDecl)
+// #802 I10 an add-on's requires_fleet → its package, from the fleet manifest (and into <queries>,
+// without which an installed app reads as "not installed" on API 30+).
+def fleetApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps
+(buildJson.ui.browser?.addons ?: []).findAll { it.requires_fleet }.each { a ->
+    def row = fleetApps.find { it.id == a.requires_fleet }
+    if (row == null) throw new GradleException("add-on ${a.id}: requires_fleet '${a.requires_fleet}' is not in the constellation fleet manifest")
+    a.requires_package = row.package.toString()
+}
+def vaultPackage = ((buildJson.ui.browser?.addons ?: []).find { it.id == 'vault' }?.requires_package ?: '').toString()
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #802 the /api/<group>/* name this app's routes register under (cloud-search's shape).
 def debugGroup = (buildJson.ui?.debug_api?.group ?: '').toString()
@@ -199,7 +208,7 @@ android {
         buildConfigField "String", "AUTH_MISSION_B64",          "\"${authMissionB64}\""
         // #684 the manifest cannot read JSON; the declared action and signature permission are
         // injected as placeholders so the guarded activity and its intent-filter are data-driven.
-        manifestPlaceholders = [authMissionAction: authMissionAction, authMissionPermission: authMissionPermission]
+        manifestPlaceholders = [authMissionAction: authMissionAction, authMissionPermission: authMissionPermission, vaultPackage: vaultPackage]
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_INITIALS",  "\"${profileInitials}\""

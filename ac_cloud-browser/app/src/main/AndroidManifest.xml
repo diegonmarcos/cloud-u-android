@@ -19,6 +19,8 @@
 
     <queries>
         <package android:name="com.diegonmarcos.cloudbrowser" />
+        <!-- #802 I10 Cloud Vault (the vault add-on's requires_fleet, resolved by app/build.gradle). -->
+        <package android:name="${vaultPackage}" />
     </queries>
 
     <!-- #684 THE FLEET AUTH MISSION cloud-browser answers. The permission is SIGNATURE-level:

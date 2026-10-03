@@ -39,6 +39,7 @@ on:
       # The gate skips it, so the run costs the test step alone.
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-browser.yml"
+      - "aa_cloud-superapp/data/constellation-fleet.json"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/browser/**"
       - "ab_cloud-libs-shared/libs/core/**"

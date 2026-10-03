@@ -843,6 +843,35 @@
               "label": "Ask the assistant…"
             }
           ]
+        },
+        {
+          "id": "vault",
+          "label": "Cloud Vault",
+          "doc": "Logins and cards are filled by Cloud Vault (the fleet's Bitwarden) through Android's autofill: this browser never holds a password. The add-on shows whether Cloud Vault is the autofill service, asks it to fill the focused login, and opens it.",
+          "default_enabled": true,
+          "permissions": [
+            "vault_autofill"
+          ],
+          "engine": "device",
+          "requires_fleet": "vault",
+          "_doc_requires_fleet": "app/build.gradle resolves the fleet id to its package (aa_cloud-superapp/data/constellation-fleet.json) into requires_package and the manifest's <queries>; no package is spelled here or in Kotlin.",
+          "menu": [
+            {
+              "id": "vault_fill",
+              "label": "Fill with Cloud Vault",
+              "requires": [
+                "page"
+              ]
+            },
+            {
+              "id": "vault_open",
+              "label": "Open Cloud Vault"
+            },
+            {
+              "id": "vault_set_service",
+              "label": "Use Cloud Vault for autofill…"
+            }
+          ]
         }
       ]
     },

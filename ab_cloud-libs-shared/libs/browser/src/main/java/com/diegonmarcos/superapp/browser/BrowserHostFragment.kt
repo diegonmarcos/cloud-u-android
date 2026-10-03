@@ -1096,6 +1096,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "scraper" -> { showScraper(); done(ok()) }
             "search_with" -> { showSearchWith(); done(ok()) }
             "ai_chat" -> { showAgentChat(); done(ok()) }
+            "vault_fill", "vault_request_fill" -> { wv ?: return needPage(); VaultAutofill.requestFill(wv) { r -> done(r.put("ok", true)) } }
+            "vault_open" -> done(VaultAutofill.open(requireContext(), config.addons["vault"]?.requiresPackage)?.let { ok().put("ok", false).put("error", it) } ?: ok())
+            "vault_set_service" -> done(VaultAutofill.setAsService(requireContext(), config.addons["vault"]?.requiresPackage)?.let { ok().put("why", it) } ?: ok())
             "agent_confirm" -> { showAgentConfirm(args["call"].orEmpty(), args["sentence"].orEmpty()); done(ok().put("shown", true)) }
             "agent_tool" -> runAgentTool(args["name"].orEmpty(), AgentLoop.args(args["args"]), wv, url, done)
             "scrape_run" -> {

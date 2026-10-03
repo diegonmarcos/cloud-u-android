@@ -18,6 +18,7 @@ import com.diegonmarcos.superapp.browser.BrowserSettings
 import com.diegonmarcos.superapp.browser.BrowserTabPrefs
 import com.diegonmarcos.superapp.browser.ScrapeEngine
 import com.diegonmarcos.superapp.browser.ScrapeRemote
+import com.diegonmarcos.superapp.browser.VaultAutofill
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.devtools.AppDebugServer.Op
 import org.json.JSONArray
@@ -76,6 +77,8 @@ object BrowserDebugApi {
         Op("ai/tools", "", "the assistant's declared tools: id, mutating, confirm, route"),
         Op("ai/ask", "text=<message>&session=<id, default api>", "one assistant turn on the live page; a mutating tool answers pending_confirmation and puts the consent sheet on screen (there is no allow over the API)"),
         Op("ai/sessions", "", "the assistant's sessions: message count and any waiting tool"),
+        Op("vault/status", "", "Cloud Vault installed, the phone's autofill service, and whether Cloud Vault is it (no vault data is read)"),
+        Op("vault/request_fill", "", "focus the live page's login field and ask Android autofill (Cloud Vault) to fill: requested true/false + why"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
@@ -253,6 +256,11 @@ object BrowserDebugApi {
                     }
                 }
             }
+            "vault/status" -> VaultAutofill.status(app, config.addons["vault"]?.requiresPackage)
+                .put("addon_enabled", config.addons.enabled("vault", settings.stringSet("addons_enabled")))
+            "vault/request_fill" -> if (!config.addons.enabled("vault", settings.stringSet("addons_enabled")))
+                JSONObject().put("ok", false).put("error", "the vault add-on is off (addons/set?id=vault&on=true)")
+                else BrowserBus.call("vault_request_fill")
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null
