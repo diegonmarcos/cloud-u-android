@@ -18,7 +18,11 @@ class BrowserMenuTest {
 
     @Test
     fun `every declared row survives the parse, in a declared section, in order`() {
-        assertEquals(browser.getJSONObject("menu").getJSONArray("items").length(), menu.items.size)
+        // The declared rows plus each add-on's rows (#802 I7: they join the Add-ons section).
+        val addons = browser.optJSONArray("addons")
+        val addonRows = (0 until (addons?.length() ?: 0)).sumOf { addons!!.getJSONObject(it).optJSONArray("menu")?.length() ?: 0 }
+        assertTrue("the add-ons contribute rows", addonRows > 0)
+        assertEquals(browser.getJSONObject("menu").getJSONArray("items").length() + addonRows, menu.items.size)
         val ids = menu.sections.map { it.id }
         val declared = browser.getJSONObject("menu").getJSONArray("sections").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
         assertEquals(declared, ids)
