@@ -117,7 +117,14 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           working-directory: ac_cloud-nav
+          # #855 FleetMigrationTest drives the fleet-config provider, whose policy runs in
+          # Cloud-Lib-Fleetconfig (#825): without that APK on the device the test can only
+          # skip. Installed from the published release (same signing key, so the
+          # CONSTELLATION_DATA signature grant holds); a failed download or install fails
+          # the job rather than quietly skipping the migration test again.
           script: |
+            curl -fsSL --retry 3 -o /tmp/Cloud-Lib-Fleetconfig.apk https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Lib-Fleetconfig.apk
+            adb install -r /tmp/Cloud-Lib-Fleetconfig.apk
             rc=0
             ./build.sh instrument || rc=$?
             # Collect evidence into a WORKSPACE-relative dir — upload-artifact v4
