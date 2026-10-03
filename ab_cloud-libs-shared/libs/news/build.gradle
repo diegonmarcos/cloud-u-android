@@ -68,6 +68,7 @@ android {
 dependencies {
     // api: NewsBackendService extends core's DataBackendService.
     api project(':libs:core')
+    api project(':libs:databackend')   // #825 the engine wire (DataBackendService), no longer in core
 
     implementation 'androidx.core:core-ktx:1.13.1'
 }

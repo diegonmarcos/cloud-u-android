@@ -1,0 +1,40 @@
+// libs:databackend — #825 the generic engine wire: IDataBackend.aidl, DataBackendService (what
+// an engine extends) and DataBackendClient (what an app binds with). It used to sit in libs:core,
+// which every app compiles, so one edit to the wire rebuilt all 32 apps although only the engine
+// libraries and the six apps that bind one use it. Compiled now by exactly those: an edit here
+// rebuilds them and nothing else. Package unchanged (com.diegonmarcos.superapp.core), so no
+// consumer's imports moved. Depends on nothing but the platform: keep it that way, it is the
+// stable half of the engine boundary.
+plugins {
+    id 'com.android.library'
+    // Conditional apply, the libs:core pattern: AGP 9 consumers register `kotlin` themselves.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.databackend'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        aidl true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}

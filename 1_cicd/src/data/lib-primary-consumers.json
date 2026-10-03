@@ -5,6 +5,7 @@
     "auth": "aa_cloud-superapp",
     "bottomnav": "aa_cloud-superapp",
     "core": null,
+    "databackend": "ac_cloud-contacts",
     "decisions": "ac_cloud-calc",
     "devtools": null,
     "health": "aa_cloud-superapp",

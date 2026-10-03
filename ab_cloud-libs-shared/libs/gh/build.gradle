@@ -254,6 +254,7 @@ dependencies {
     // #705 GhBackendService extends core's DataBackendService, and core's manifest
     // defines the CONSTELLATION_DATA permission the service is guarded by.
     implementation project(':libs:core')
+    api project(':libs:databackend')   // #825 the engine wire (DataBackendService), no longer in core
     // #741 how gh resolves a name inside an app: the fleet's one bridge to Android's resolver.
     implementation project(':libs:sysdns')
     implementation 'androidx.core:core-ktx:1.15.0'

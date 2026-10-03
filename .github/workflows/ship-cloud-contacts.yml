@@ -52,6 +52,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/contacts/**"
+      - "ab_cloud-libs-shared/libs/databackend/**"
       - "ac_cloud-contacts/**"
 permissions:
   contents: write

@@ -23,5 +23,6 @@ dependencies {
     // api, not implementation: FeedBackendService extends core's
     // DataBackendService, so the base type must be on the consumer's classpath.
     api project(':libs:core')
+    api project(':libs:databackend')   // #825 the engine wire (DataBackendService), no longer in core
     implementation 'androidx.core:core-ktx:1.13.1'
 }

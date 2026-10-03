@@ -112,6 +112,7 @@ dependencies {
 
     // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
     implementation project(':libs:core')
+    api project(':libs:databackend')   // #825 the engine wire (DataBackendService), no longer in core
     // The wire (IImageScanEngine) this service implements.
     implementation project(':libs:ml-l-image')
 

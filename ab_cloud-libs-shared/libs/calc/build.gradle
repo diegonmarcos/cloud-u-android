@@ -128,6 +128,7 @@ kotlin {
 dependencies {
     // api: CalcBackendService extends core's DataBackendService.
     api project(':libs:core')
+    api project(':libs:databackend')   // #825 the engine wire (DataBackendService), no longer in core
     implementation 'androidx.core:core-ktx:1.13.1'
 
     testImplementation 'junit:junit:4.13.2'

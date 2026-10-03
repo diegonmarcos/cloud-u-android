@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:databackend (#825): the engine wire. No components: each engine declares its own
+     service, each client app its own <queries>. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
