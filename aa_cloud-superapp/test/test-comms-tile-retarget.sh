@@ -65,7 +65,11 @@ python3 - "$BJ" <<'PY' && ok "FloatingNav 'Cloud Comms' parent → section:commu
 import json,sys
 d=json.load(open(sys.argv[1]))
 fn=d["ui"]["floating_nav"] if "floating_nav" in d.get("ui",{}) else d["floating_nav"]
-p=[x for x in fn["parents"] if x["label"]=="Cloud Comms"][0]
+# The parent was relabelled "Cloud Comms" -> "Inboxes" with the retarget; find
+# it under either name (exactly one), then assert the target as before.
+c=[x for x in fn["parents"] if x["label"] in ("Cloud Comms","Inboxes")]
+assert len(c)==1, ("comms parent not found exactly once", [x["label"] for x in fn["parents"]])
+p=c[0]
 assert p["target"]=="section:communication", p
 assert "install_app" not in p, p
 PY

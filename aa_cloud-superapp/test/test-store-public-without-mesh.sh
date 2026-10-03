@@ -23,7 +23,17 @@
 #
 # The one mesh-aware thing on the Store is the #668 feed reader, whose OPTIONAL
 # `proxy` may be a fleet host; its `url` is the public fallback and must stay
-# public. `proxy` is therefore the only field exempt below.
+# public. `proxy` is therefore exempt below.
+#
+# The download path has the code-side twin of that field: the #831/#837
+# MeshMirror leg (libs:updater source/ApkSource.kt), an OPTIONAL mirror tried
+# only after both public legs. Its declared origins (MeshMirror.BASE / BASE_WG)
+# are exempt exactly while Fleet's source list keeps it LAST — T3 asserts that
+# order, so moving the mesh leg ahead of a public one fails here.
+#
+# Not mesh: a default route (0.0.0.0/0, ::/0 in a full-tunnel profile) names
+# every address, not the mesh, so it is not a mesh CIDR; and loopback is the
+# phone itself (the fleet's on-device debug APIs), reached with wg0 down.
 #
 # Overrides (for mutation runs): FLEET_JSON, BUILD_JSON, LIBS.
 set -u
@@ -50,8 +60,9 @@ def walk(o):
         for k, v in o.items():
             if k in ("allowed_ips", "address", "interface_address") and isinstance(v, str):
                 for c in v.split(","):
-                    try: mesh.add(ipaddress.ip_network(c.strip(), strict=False))
-                    except ValueError: pass
+                    try: n = ipaddress.ip_network(c.strip(), strict=False)
+                    except ValueError: continue
+                    if n.prefixlen: mesh.add(n)   # /0 is a full tunnel, not the mesh
             walk(v)
     elif isinstance(o, list):
         for v in o: walk(v)
@@ -64,8 +75,9 @@ def mesh_only(host):
     h = host.strip("[]").lower()
     try:
         ip = ipaddress.ip_address(h)
+        if ip.is_loopback: return None   # on-device; never crosses wg0
         if any(ip in n for n in mesh): return "inside a declared WireGuard CIDR"
-        if ip.is_private or ip.is_loopback or ip.is_link_local: return "a private IP"
+        if ip.is_private or ip.is_link_local: return "a private IP"
         return None
     except ValueError: pass
     if "." not in h: return "a single-label name only mesh DNS can answer"
@@ -141,13 +153,30 @@ def strings_of(o, key=""):
     elif isinstance(o, list):
         for v in o: yield from strings_of(v, key)
     elif isinstance(o, str): yield o
+# The declared mesh leg: exempt only while it is the LAST download source.
+upd_src = os.path.join(libs, "updater/src/main/java/com/diegonmarcos/superapp/updater")
+srcs = re.search(r"val sources: List<ApkSource> = listOf\(([^)]*)\)", code(read(os.path.join(upd_src, "Fleet.kt"))))
+order = [x.strip() for x in srcs.group(1).split(",")] if srcs else []
+if order and order[-1] == "MeshMirrorSource" and {"ReleaseSource", "GhcrSource"} <= set(order[:-1]):
+    ok("the mesh leg is tried last, after the public legs: %s" % " -> ".join(order))
+    mesh_leg_ok = True
+else:
+    bad("Fleet's download sources do not keep MeshMirrorSource last after the public legs: %s" % order)
+    mesh_leg_ok = False
+MESH_LEG = re.compile(r"^\s*const val BASE(?:_WG)? = \"[^\"]*\"\s*$", re.M)
+def exempt(f, text):
+    """Drop MeshMirror's declared origins (only those two lines) from ApkSource.kt."""
+    if f != "ApkSource.kt" or not mesh_leg_ok: return text
+    m = re.search(r"object MeshMirror \{.*?@Volatile var bases", text, re.S)
+    if not m: return text
+    return text[:m.start()] + MESH_LEG.sub("", m.group(0)) + text[m.end():]
 hits, scanned = [], 0
 for sub in ("updater/src", "appstore/src"):
     for dp, _, fs in os.walk(os.path.join(libs, sub)):
         if "/test" in dp: continue
         for f in fs:
             p = os.path.join(dp, f)
-            if f.endswith(".kt"): texts = re.findall(r'"((?:[^"\\\n]|\\.)*)"', code(read(p)))
+            if f.endswith(".kt"): texts = re.findall(r'"((?:[^"\\\n]|\\.)*)"', exempt(f, code(read(p))))
             elif f.endswith(".json"): texts = list(strings_of(json.loads(read(p))))
             else: continue
             scanned += 1

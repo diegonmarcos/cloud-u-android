@@ -20,7 +20,8 @@ has "$UPD/Updater.kt" "AutoUpdatePrefs.enabled(context)" "Updater.start gates on
 has "$CFG/ConstellationWorker.kt" "AutoUpdatePrefs.enabled" "fleet worker gates on enabled"
 
 echo "== T2: fleet manifest carries the GH release URL per app =="
-jq -e '.apps[] | select(.id=="superapp") | .release_url and .asset' "$APP/data/constellation-fleet.json" >/dev/null 2>&1 \
+# The SuperApp's fleet id is its directory name (regen.sh strips only ac_cloud-/ac_c3-).
+jq -e '.apps[] | select(.id=="aa_cloud-superapp") | .release_url and .asset' "$APP/data/constellation-fleet.json" >/dev/null 2>&1 \
   && ok "manifest has release_url + asset" || bad "manifest missing release_url/asset"
 has "$UPD/Fleet.kt" "val releaseUrl: String" "Fleet.App carries releaseUrl"
 has "$CFG/StoreCloudFragment.kt" "app.releaseUrl" "UI shows the release URL link"

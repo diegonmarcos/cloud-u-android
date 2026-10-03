@@ -31,8 +31,8 @@
 #       held its only definition
 #   T6  the twelve back ends were MOVED, not dropped: gone from this build.json,
 #       present in ac_cloud-drive/data/drive-connections.json, and actually
-#       carried into that APK (gradle bakes it, the bridge exposes it, the page
-#       reads it)
+#       carried into that APK (gradle bakes it, Declarations decodes it, the
+#       Home page reads it)
 #   T7  the one-hand pair is byte-identical — the left handle's `down` sector and
 #       the matching circular_menu.actions option. When they diverge the picker
 #       finds no match, falls back to index 0 and shows a working slot as 'None',
@@ -206,8 +206,10 @@ else:
     # Present in the repo is not the same as present in the APK.
     carriers = [
         ("app/build.gradle", 'CONNECTIONS_B64'),
-        ("app/src/main/java/com/diegonmarcos/clouddrive/FilesBridge.kt", "fun connections()"),
-        ("app/src/main/assets/drive.html", "Bridge.raw('connections')"),
+        # Drive is native now (no WebView bridge / drive.html): Declarations
+        # decodes the baked list and the Home page reads it from there.
+        ("app/src/main/java/com/diegonmarcos/clouddrive/Declarations.kt", "parseConnections(decode(BuildConfig.CONNECTIONS_B64))"),
+        ("app/src/main/java/com/diegonmarcos/clouddrive/home/HomeScreen.kt", "Declarations.connections"),
     ]
     for relative, token in carriers:
         path = os.path.join(drive_app, relative)

@@ -21,7 +21,10 @@ if [ -f "$FLEET" ]; then
   # Every standalone ac_cloud-<id> self-registers: the top-level apps +
   # the 4 promoted ex-comms fork-apps (dialer/chat/mail/matrix), each now its
   # OWN dir + ship-cloud-<id>.yml CI. Fleet ids = the dir basenames.
-  for id in superapp nav code browser vault wallet dialer chat mail matrix; do
+  # The SuperApp's own fleet id is its directory, aa_cloud-superapp (regen.sh
+  # strips only ac_cloud-/ac_c3-), and other declarations key it that way
+  # (ac_cloud-drive/build.json "fleet", assets/fleet-config.json).
+  for id in aa_cloud-superapp nav code browser vault wallet dialer chat mail matrix; do
     jq -e --arg i "$id" '.apps[] | select(.id==$i) | .package and .image and .registry' "$FLEET" >/dev/null 2>&1 \
       && ok "fleet entry $id has package+image" || bad "fleet entry $id missing/incomplete"
   done
@@ -45,7 +48,10 @@ has "$APP/app/build.gradle" 'buildConfigField "String", "CONSTELLATION_FLEET_B64
 echo "== T3: engine reuses libs/updater primitives (no reinvention) =="
 ENG="$(cd "$APP/.." && pwd)/ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt"
 has "$ENG" "GhcrClient(app.registry, app.namespace, app.image)" "Fleet checks per-image via existing GhcrClient"
-has "$ENG" "UpdateInstaller(ctx).install(apk, app.pkg)" "Fleet installs foreign pkg via existing UpdateInstaller"
+# The PackageInstaller fallback lives in install/InstallChannel.kt since the
+# install channels were split out of Fleet.kt; Fleet.commit routes through it.
+CHAN="$(dirname "$ENG")/install/InstallChannel.kt"
+has "$CHAN" "UpdateInstaller(ctx).install(apk, app.pkg)" "Fleet installs foreign pkg via existing UpdateInstaller"
 has "$ENG" "packageInstaller.uninstall(pkg" "Fleet uninstall via PackageInstaller"
 
 echo "== T4: UI page + navigation + worker wired =="

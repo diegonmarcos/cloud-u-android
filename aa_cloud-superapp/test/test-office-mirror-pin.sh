@@ -189,7 +189,9 @@ has "$UPD/Fleet.kt" 'VersionOrder.isDowngrade(identity.versionCode, installedCod
   "commit() asks VersionOrder whether the candidate is older than what is installed"
 has "$UPD/VersionOrder.kt" 'compare(candidateCode, installedCode) == Order.OLDER' \
   "VersionOrder.isDowngrade really compares the two codes"
-has "$UPD/Fleet.kt" 'apk.file.delete()' \
+# The delete moved behind ApkCache.drop (one owner for evicting cached APKs);
+# assert the call that commit() makes on the downgrade path.
+has "$UPD/Fleet.kt" 'ApkCache.drop(apk.file)   // stale: never re-offer these exact bytes' \
   "a refused downgrade drops the cached artifact instead of re-offering it"
 
 echo "== T5: every name the fleet OWNS agrees =="
@@ -208,8 +210,17 @@ ROSTER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $
 [ -n "$OURS" ] && [ "$OURS" != "null" ] \
   && ok "$OFFICE_DIR/build.json::name is set ($OURS)" \
   || bad "$OFFICE_DIR/build.json::name is missing — the AppStore row would fall back to the id"
-[ "$TILE" = "$OURS" ] && ok "launcher tile label matches ($TILE)" \
-  || bad "launcher tile says '$TILE' but the fleet name is '$OURS' — home screen and AppStore disagree"
+# #380 made the tile label a CAPTION ("Office"), not a name: identity lives in
+# the target + external_apps id + the app's build.json::name. What must still
+# hold is that the caption never reads as a DIFFERENT fleet name — any
+# cloud-<x> label on this tile has to be exactly ours.
+if [ -z "$TILE" ]; then
+  bad "no launcher tile targets extapp:cloud-$OFFICE_ID"
+elif [ "$TILE" = "$OURS" ] || ! printf '%s' "$TILE" | grep -qiE '^cloud-'; then
+  ok "launcher tile caption '$TILE' does not contradict the fleet name ($OURS)"
+else
+  bad "launcher tile says '$TILE' but the fleet name is '$OURS' — home screen and AppStore disagree"
+fi
 [ "$ROSTER" = "$OURS" ] && ok "ui.external_apps[cloud-$OFFICE_ID].label matches ($ROSTER)" \
   || bad "external_apps label says '$ROSTER' but the fleet name is '$OURS' — the install notification names a different app"
 
@@ -231,10 +242,15 @@ FOLDER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $
 [ -n "$HUB" ] && [ "$HUB" != "null" ] \
   && ok "ui.external_apps[cloud-$OFFICE_ID].hub_package is set ($HUB)" \
   || bad "ui.external_apps[cloud-$OFFICE_ID].hub_package is unset — the launcher cannot tell whether the app is installed"
-jq -e --arg f "$FOLDER" --arg p "pkg:$HUB" \
-  '.ui.phone_folders[] | select(.id == $f) | .match_keywords | index($p)' "$SUP" >/dev/null 2>&1 \
-  && ok "phone_folders[$FOLDER] names pkg:$HUB" \
-  || bad "phone_folders[$FOLDER] does not name pkg:$HUB — the grid files it under $FOLDER while Notify drops it in the sink"
+# PhoneFolders now DERIVES the pkg: keyword from ui.external_apps[].folder +
+# hub_package (a literal keyword is forbidden, test-app-identity-resolves T8b),
+# so the agreement is: the folder exists in ui.phone_folders, and the derivation
+# still reads hub_package.
+PF="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneFolders.kt"
+jq -e --arg f "$FOLDER" '[.ui.phone_folders[].id] | index($f)' "$SUP" >/dev/null 2>&1 \
+  && grep -qF 'PACKAGE_FIELDS = listOf("hub_package"' "$PF" 2>/dev/null \
+  && ok "phone_folders[$FOLDER] exists and PhoneFolders derives pkg:$HUB from hub_package" \
+  || bad "phone_folders[$FOLDER] does not classify pkg:$HUB — the grid files it under $FOLDER while Notify drops it in the sink"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

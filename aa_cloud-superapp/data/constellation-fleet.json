@@ -11,7 +11,7 @@
 {"id":"language","label":"Text & Voice","members":["keyboard-engines","lib-text-tools","lib-translate","lib-voice"]},
 {"id":"data","label":"Data & Code","members":["lib-calc","lib-datamanager","lib-mounts","lib-rclone","lib-search","lib-file-editor","lib-git-sync","lib-gix","lib-gh"]},
 {"id":"net","label":"Network","members":["lib-net","lib-net-wg","lib-firewall","lib-webserver","lib-kde-connect"]},
-{"id":"content","label":"Comms & Content","members":["lib-mail","lib-chat","lib-contacts","lib-cal","lib-news","lib-feed","lib-media","lib-maps","lib-browser"]},
+{"id":"content","label":"Comms & Content","members":["lib-mail","lib-chat","lib-contacts","lib-cal","lib-news","lib-feed","lib-media","lib-maps","lib-browser","lib-search-page"]},
 {"id":"life","label":"Money & Health","members":["lib-fin","lib-wallet","lib-health"]},
 {"id":"os","label":"OS","members":["lib-rootfs-nixdroid","lib-rootfs-termux","ae-tool_termux-boot"]}
 ],

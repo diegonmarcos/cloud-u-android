@@ -43,7 +43,9 @@ CHECKS = [
     ("the bar is drawn from StoreStages.progress, described on the publishing thread",
      lambda s: re.search(r"progressObserver[^\n]*=\s*\{\s*state\s*->\s*\n\s*val p = StoreStages\.progress\(state\)", code(s["page"]))),
     ("the bar's label IS the progress line",
-     lambda s: "label.text = p.text" in fun(code(s["page"]), "renderProgress")),
+     # A failed job shows the row's error banner instead (StoreRowError); every
+     # other state must still draw the progress line itself.
+     lambda s: "label.text = if (p.failed) StoreRowError.banner(p.app) else p.text" in fun(code(s["page"]), "renderProgress")),
     ("a tap on the bar opens the named app's row",
      lambda s: re.search(r"row\.setOnClickListener\s*\{[^}]*openDetail\(", fun(code(s["page"]), "renderProgress"))),
     ("/api/store/progress answers the SAME object",
@@ -80,7 +82,7 @@ print("== T2: the validator sees each regression (mutation) ==")
 MUTANTS = [
     ("the page goes back to drawing the raw state", "page",
      "val p = StoreStages.progress(state)", "val p = null as StoreStages.Progress?"),
-    ("the label shows the stage only", "page", "label.text = p.text", "label.text = p.stage"),
+    ("the label shows the stage only", "page", "else p.text", "else p.stage"),
     ("the tap does nothing", "page", "target?.let { openDetail(row.context, it) }", "target?.let { }"),
     ("the API route is dropped", "api", '"progress" -> progress().toString()', ""),
     ("Download all loses its position", "stages",

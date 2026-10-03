@@ -24,13 +24,15 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 # CanopusStar moved to libs/launcher-onehand and no longer owns page routing;
-# MainActivity now builds the ArcMenu items and emits the page: grammar.
-CAN="$APP/app/src/main/java/com/diegonmarcos/superapp/MainActivity.kt"
+# The ArcMenu items are built by the shell host (ShellActivity, since the
+# MainActivity split): a page with no declared action falls back to the page:
+# grammar, which routes through openSectionPage.
+CAN="$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt"
 
 echo "== T1: the arc menu routes taps through the page: grammar (→ openSectionPage) =="
-grep -qF 'page:$section/${it.id}' "$CAN" 2>/dev/null \
-  && ok "CanopusStar emits page:<section>/<id> targets" \
-  || bad "CanopusStar no longer emits page: targets (routing changed?)"
+grep -E 'ArcMenu\.Item\(' "$CAN" 2>/dev/null | grep -qF 'ifBlank { "page:$section/${it.id}" }' \
+  && ok "the arc menu emits page:<section>/<id> targets for non-action pages" \
+  || bad "the arc menu no longer emits page:<section>/<id> targets — its taps bypass openSectionPage"
 
 echo "== T2: openSectionPage establishes the section base BEFORE the action dispatch =="
 # Line of the base-establishment (goSection) vs the action early-return.
