@@ -31,13 +31,24 @@ configurations {
 // android {} block Cordova applies this file BEFORE (a DSL applicationId here
 // would be silently overwritten by that block). ${applicationId} manifest
 // placeholders resolve to the overridden value.
+// #830 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet (#826): GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched.
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
 def cloudBuildJson = new groovy.json.JsonSlurper().parse(new File(rootProject.projectDir, '../../build.json'))
 androidComponents {
     onVariants(selector().all()) { variant ->
         variant.applicationId.set(cloudBuildJson.android.application_id as String)
         variant.outputs.each { output ->
             output.versionCode.set(cloudBuildJson.android.version_code as Integer)
-            output.versionName.set(cloudBuildJson.android.version_name as String)
+            output.versionName.set("${cloudBuildJson.android.version_name} (sha-${shortSha})")
         }
     }
 }
@@ -50,6 +61,7 @@ def cloudDnsBridge = new groovy.json.JsonSlurper().parse(cloudDnsBridgeJson)
 android {
     buildFeatures { buildConfig true }
     defaultConfig {
+        buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
         buildConfigField 'int', 'CLOUD_DNS_BRIDGE_PORT', "${cloudDnsBridge.bridge_port as int}"
     }
     sourceSets {

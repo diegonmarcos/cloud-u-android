@@ -1,0 +1,35 @@
+// cloud-office (#830): the build commit, baked into versionName "(sha-xxxxxxxx)" and
+// BuildConfig.GIT_SHORT_SHA, so Store Details (libs/appstore BuiltFrom) and About can
+// name the installed build — the same bake the rest of the fleet does in its own
+// app/build.gradle (#826).
+//
+// Cloud Office has no app module of ours: android/app is upstream's, materialized
+// outside this repository, and its versionName comes from configure's
+// appSettings.gradle. So the bake is an INIT SCRIPT that build.sh hands to gradle
+// (build.json::build.gradle_init_script), not a patch on a generated file.
+//
+// Same derivation as the fleet: GITHUB_SHA first, `git rev-parse` when unset — run
+// in THIS repository (CLOUD_OFFICE_REPO_DIR, set by build.sh), never in the
+// materialized upstream clone, whose HEAD is Collabora's commit. versionCode is
+// untouched.
+allprojects {
+    pluginManager.withPlugin('com.android.application') {
+        def shortSha = (System.getenv('GITHUB_SHA')
+                        ?: providers.exec {
+                               commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                               workingDir(System.getenv('CLOUD_OFFICE_REPO_DIR') ?: rootDir)
+                               ignoreExitValue = true
+                           }.standardOutput.asText.get().trim())
+                        .take(8)
+        extensions.getByName('android').defaultConfig {
+            buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
+        }
+        extensions.getByName('androidComponents').with { components ->
+            components.onVariants(components.selector().all()) { variant ->
+                variant.outputs.each { output ->
+                    output.versionName.set(output.versionName.map { v -> "${v} (sha-${shortSha})".toString() })
+                }
+            }
+        }
+    }
+}

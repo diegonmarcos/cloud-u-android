@@ -257,8 +257,14 @@ step_build() {
         die "sdkmanager could not install ${packages[*]} — see its output above"
     fi
 
-    log "build: gradle $task"
-    ( cd "$ONLINE_DIR/android" && ./gradlew --no-daemon --stacktrace "$task" ) || die "gradle $task failed"
+    # #830: the build commit is baked by an init script of ours (upstream's app
+    # module is not ours to edit); git's fallback must read THIS repository.
+    local init_script
+    init_script="$SCRIPT_DIR/$(_json '.build.gradle_init_script')"
+    [ -f "$init_script" ] || die "build.json::build.gradle_init_script does not name a file beside build.json"
+    log "build: gradle $task (init script $(basename "$init_script"))"
+    ( cd "$ONLINE_DIR/android" && CLOUD_OFFICE_REPO_DIR="$SCRIPT_DIR" \
+        ./gradlew --no-daemon --stacktrace -I "$init_script" "$task" ) || die "gradle $task failed"
 
     apk="$(find "$ONLINE_DIR/android/build/app/outputs/apk/release" -name "*$ABI*.apk" | head -1)"
     [ -f "$apk" ] || die "no $ABI release APK under android/build/app/outputs/apk/release"

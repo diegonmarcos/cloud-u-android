@@ -34,6 +34,17 @@ apply from: 'capacitor.build.gradle'
 def buildJson = new groovy.json.JsonSlurper().parse(file('../../../../../../build.json'))
 def androidMeta = buildJson.android
 
+// #830 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet (#826): GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched.
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
 android {
     namespace = "app.affine.pro"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -51,7 +62,8 @@ android {
         // set to Spanish still gets English — and the i18n guard requires it.
         resConfigs "en"
         versionCode = androidMeta.version_code
-        versionName = androidMeta.version_name
+        versionName = "${androidMeta.version_name} (sha-${shortSha})"
+        buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
         // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
         // literal "AFFiNE" — the upstream project's name rendered as this
         // product's identity on the owner's home screen, the #380/#381/#390/#424

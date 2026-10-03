@@ -38,6 +38,17 @@ val fleetVersionCode: Int = run {
     if (mins > 0) (3000000L + mins).toInt() else 3000000
 }
 
+// #830 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet (#826): GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 android {
     compileSdk = (androidJson["compile_sdk"] as Number).toInt()
     namespace = androidJson["application_id"] as String
@@ -49,7 +60,8 @@ android {
         minSdk = (androidJson["min_sdk"] as Number).toInt()
         targetSdk = (androidJson["target_sdk"] as Number).toInt()
         versionCode = fleetVersionCode
-        versionName = androidJson["version_name"] as String
+        versionName = "${androidJson["version_name"] as String} (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
         // Launcher label = build.json::name, the application's one name (#351).
         resValue("string", "app_name", buildJson["name"] as String)
         resValue("string", "main_activity_title", buildJson["name"] as String)

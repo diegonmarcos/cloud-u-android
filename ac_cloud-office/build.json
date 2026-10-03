@@ -235,6 +235,8 @@
       "python3-polib"
     ],
     "gradle_task": "assembleRelease",
+    "_doc_gradle_init_script": "#830: bakes the build commit into versionName \"(sha-xxxxxxxx)\" and BuildConfig.GIT_SHORT_SHA (GITHUB_SHA first, git rev-parse of this repository when unset). An init script because android/app is upstream's, materialized outside this repository; build.sh passes it with -I. aa_cloud-superapp/test/test-fleet-bakes-build-sha.sh reads it.",
+    "gradle_init_script": "gradle/cloud-build-sha.init.gradle",
     "_doc_gradle_task": "assembleRelease, not a per-ABI task: android/app/build.gradle splits by ABI from coAbiSplit and declares no product flavours, so the arm64-v8a APK is one output of assembleRelease.",
     "modules": {
       "text-tools": {
