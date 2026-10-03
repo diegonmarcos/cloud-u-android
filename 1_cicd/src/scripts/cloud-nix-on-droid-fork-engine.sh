@@ -152,7 +152,8 @@ _export_variant_abis() {
 #   gradle_task the task that builds it, run in the fork's OWN tracker
 #   apk_glob    where its APK lands inside that tracker
 #   asset       published asset name; assets{<variant-id>} overrides per ABI
-#   paths_from  the ONLY inputs it is gated on, relative to the repo root
+#   module_dir  the wrapper module whose gradle/manifest are the APK's own bytes;
+#               the gate inputs are DERIVED: identity_files + module_dir (#796)
 #   package     applicationId to assert on the built APK, when declared
 #
 # ZERO companions are declared today, so every loop below iterates nothing and
@@ -188,18 +189,53 @@ _companion_asset() {
   printf '%s' "$n"
 }
 
-# The gate's declared inputs, written to $1. Validated HERE and not at the call
-# site: a companion with no paths_from would be gated against the whole app's
-# identity, which republishes it on every app-code change — the bug this
-# mechanism exists to prevent, so it is refused rather than defaulted. The
-# publish gate refuses the same combination for the same reason.
+# The gate's inputs, written to $1 — DERIVED, never declared a second time
+# (#796). A companion's bytes are a function of exactly two things: the
+# content-address declaration the fleet row is versioned by (fleet-lib.json's
+# declared_in/at pointer → artifact.identity_files) and the APK wrapper module
+# that packages them (module_dir: its gradle and manifest are bytes of the lib).
+# The gate therefore reads those two and nothing else. The hand-kept paths_from
+# this replaces was a second statement of the first half, and it drifted both
+# ways: on 2026-10-03 termux gated on the whole of rootfs/, so ten edits to
+# verify-rootfs.sh in thirty days each republished 437 MB that had not changed,
+# and nixdroid gated on the whole of ab_cloud-terminal-store/. #786's guard rule
+# ("paths_from covers identity_files") could only ever catch the narrow side.
+# A declared paths_from is refused for the same reason a missing one used to be:
+# a second declaration is one that can be wrong while the other is right.
 _companion_paths_file() {
   local id="$1" out="$2"
-  _companion_json "$id" '.paths_from[]?' > "$out"
-  if [ ! -s "$out" ]; then
-    errlog "companion[$id] declares no release.companions[].paths_from — gating one asset against the whole app's identity republishes it on every unrelated change (see cloud-android-publish-gate.sh, which refuses --asset without --paths-from)"
+  if [ -n "$(_companion_json "$id" '.paths_from')" ]; then
+    errlog "companion[$id] declares release.companions[].paths_from — the gate's inputs are DERIVED from the content address (fleet-lib.json::declared_in/at → artifact.identity_files) plus module_dir; a hand-kept list is a second declaration of the same fact and it drifts (#796)"
     return 1
   fi
+  local module_dir; module_dir="$(_companion_json "$id" '.module_dir')"
+  if [ -z "$module_dir" ] || [ ! -d "$SCRIPT_DIR/$module_dir" ]; then
+    errlog "companion[$id] declares no release.companions[].module_dir that exists under $SCRIPT_DIR — the wrapper module's gradle and manifest are bytes of the library APK, so they must gate it"
+    return 1
+  fi
+  python3 - "$SCRIPT_DIR" "$id" "$module_dir" > "$out" <<'COMPANIONPATHS' || { errlog "companion[$id]: could not derive the gate's inputs (see above)"; return 1; }
+import json, os, sys
+app, cid, module_dir = sys.argv[1:4]
+root = os.path.dirname(app)
+decl_path = os.path.join(app, "fleet-lib.json")
+try:
+    decl = json.load(open(decl_path, encoding="utf-8"))
+except (OSError, ValueError) as e:
+    sys.exit("%s: unreadable (%s) — the companion's content address is reached through it" % (decl_path, e))
+if decl.get("companion") != cid:
+    sys.exit("%s names companion %r, not %r — no content address points at this companion" % (decl_path, decl.get("companion"), cid))
+pointed = os.path.join(app, decl.get("declared_in") or "build.json")
+blob = json.load(open(pointed, encoding="utf-8"))
+for part in (decl.get("at") or "").split("."):
+    blob = blob.get(part) if isinstance(blob, dict) else None
+files = (blob or {}).get("identity_files") if isinstance(blob, dict) else None
+if not files:
+    sys.exit("%s::%s resolves to no artifact with identity_files — nothing addresses this companion's bytes" % (pointed, decl.get("at")))
+paths = {os.path.relpath(os.path.normpath(os.path.join(app, rel)), root) for rel in files}
+paths.add(os.path.relpath(os.path.join(app, module_dir), root))
+print("\n".join(sorted(paths)))
+COMPANIONPATHS
+  [ -s "$out" ] || { errlog "companion[$id]: derived an empty input set — an identity of nothing never moves"; return 1; }
   return 0
 }
 
@@ -1386,6 +1422,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     phone-install)    step_phone_install "$@" ;;
     gh-release)       step_gh_release ;;
     gh-release-fork)  step_gh_release_fork "$@" ;;
+    # #796 the ONE answer to "which paths gate this companion" — the derived set
+    # (_companion_paths_file), one per line, no gh and no gradle, so the fan-out
+    # simulator (cloud_android_ci_fanout.py --builds) reads the engine's answer
+    # instead of re-deriving it; the lib-apks harness exposes module-paths the
+    # same way.
+    companion-paths)
+      [ -n "${2:-}" ] || { errlog "usage: build.sh companion-paths <companion-id>"; exit 2; }
+      _cp_out="$(mktemp)"; _companion_paths_file "$2" "$_cp_out" || { rm -f "$_cp_out"; exit 1; }
+      cat "$_cp_out"; rm -f "$_cp_out" ;;
     help|*)
       sed -n '2,/^set -euo/p' "$0" | sed 's/^# *//; /^set/d; /^$/d'
       ;;

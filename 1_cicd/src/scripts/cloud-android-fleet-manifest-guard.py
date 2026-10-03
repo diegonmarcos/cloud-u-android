@@ -491,35 +491,38 @@ def rootfs_libs(root):
                 "      not declare. The fleet would offer a library nothing builds." % (
                     app, FLEET_LIB, companion_id, app))
             continue
-        missing = [field for field in ("gradle_task", "apk_glob", "paths_from", "package")
+        missing = [field for field in ("gradle_task", "apk_glob", "module_dir", "package")
                    if not companion.get(field)]
         if missing:
             failures.append(
                 "%s/build.json::release.companions[%r] declares no %s.\n"
                 "      Without gradle_task/apk_glob nothing builds or finds the APK; without\n"
-                "      paths_from the 400 MB is gated on the whole app's identity and gets\n"
-                "      republished by every unrelated code change, which is the #618 regression\n"
-                "      this whole design exists to avoid; without package the row names no\n"
-                "      installable thing." % (app, companion_id, ", ".join(missing)))
+                "      module_dir the wrapper module's own gradle and manifest -- bytes of the\n"
+                "      library APK -- are outside its publish gate; without package the row\n"
+                "      names no installable thing." % (app, companion_id, ", ".join(missing)))
             continue
 
-        # #786: identity_files version the ROW, paths_from decide whether the lib is
-        # REBUILT. An identity file under no paths_from entry moves the row and never
-        # republishes the lib: the Store is told one rootfs and handed the old one.
-        # #771 added two such files (ab_cloud-terminal-store/gitconfig, noexec-shebang.c).
-        gated = [p.rstrip("/") for p in companion["paths_from"]]
-        uncovered = []
-        for rel in artifact["identity_files"]:
-            path = os.path.relpath(os.path.normpath(os.path.join(app_dir, rel)), root)
-            if not any(path == g or path.startswith(g + "/") for g in gated):
-                uncovered.append(path)
-        if uncovered:
+        # #796: the publish gate's inputs are DERIVED -- this artifact's
+        # identity_files (the content address the row's version_name is built
+        # from) plus module_dir -- so the lib is rebuilt exactly when its content
+        # address moves. #786 held a hand-kept paths_from to "cover" the identity
+        # files; that caught the narrow side only, and the wide side is what
+        # actually happened: termux gated on the whole rootfs/ directory and
+        # republished 437 MB for every verify-script edit. A paths_from is now a
+        # second declaration of the same inputs, and is refused as such.
+        if "paths_from" in companion:
             failures.append(
-                "%s/build.json::release.companions[%r].paths_from does not cover %s.\n"
-                "      Those files are in the content address (the fleet row's version_name), so\n"
-                "      an edit to one moves the row while the publish gate, which reads only\n"
-                "      paths_from, keeps the old lib on the release." % (
-                    app, companion_id, ", ".join(uncovered)))
+                "%s/build.json::release.companions[%r] declares paths_from.\n"
+                "      The gate's inputs are derived from %s::%s.identity_files plus module_dir\n"
+                "      (#796); a hand-kept list is a second declaration of the same fact, and\n"
+                "      the last one gated the 437 MB rootfs on verify scripts it never contained."
+                % (app, companion_id, decl.get("declared_in") or "build.json", decl.get("at")))
+            continue
+        if not os.path.isdir(os.path.join(app_dir, companion["module_dir"])):
+            failures.append(
+                "%s/build.json::release.companions[%r].module_dir is %r, which is not a\n"
+                "      directory under %s -- the gate would hash nothing for the wrapper module."
+                % (app, companion_id, companion["module_dir"], app))
             continue
 
         package = companion["package"]

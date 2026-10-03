@@ -57,6 +57,19 @@ assert_contains() {
   esac
 }
 
+# #796 the companion's gate inputs are DERIVED from its content address, so a
+# fixture app carries what a real terminal carries beside build.json: the
+# fleet-lib.json pointer, the artifact declaration it points at, and the
+# wrapper module directory. Written by every fixture; the mutations below
+# break each one in turn.
+fixture_content_address() {
+  local dir="$1"
+  mkdir -p "$dir/rootfs" "$dir/rootfs-lib"
+  printf '%s\n' '{"module":"rootfs-termux","kind":"lib","companion":"rootfs-termux","declared_in":"rootfs/rootfs.json","at":"artifact"}' > "$dir/fleet-lib.json"
+  printf '%s\n' '{"artifact":{"identity_files":["rootfs/rootfs.json","rootfs/build-rootfs.sh","../ab_cloud-terminal-store/store.json"]}}' > "$dir/rootfs/rootfs.json"
+  printf '#!/bin/sh\n' > "$dir/rootfs/build-rootfs.sh"
+}
+
 # $1 = engine path, $2 = fixture build.json, $3 = bash expr evaluated after
 # sourcing. SCRIPT_DIR derives from $0/dirname, so the engine is sourced from
 # inside a throwaway dir holding only the fixture. The engine's main-guard
@@ -66,6 +79,7 @@ run_in_fixture() {
   local engine="$1" json="$2" expr="$3"
   local dir; dir="$(mktemp -d "$WORK/fixture.XXXX")"
   printf '%s' "$json" > "$dir/build.json"
+  fixture_content_address "$dir"
   ( cd "$dir" && bash -c '
       set -euo pipefail
       set -- help
@@ -81,6 +95,7 @@ run_in_fixture_status() {
   local engine="$1" json="$2" expr="$3" out
   local dir; dir="$(mktemp -d "$WORK/fixture.XXXX")"
   printf '%s' "$json" > "$dir/build.json"
+  fixture_content_address "$dir"
   set +e
   out="$( ( cd "$dir" && bash -c '
       set -euo pipefail
@@ -113,7 +128,7 @@ FIXTURE='{
         "apk_glob": "rootfs-lib/build/outputs/apk/**/*.apk",
         "asset": "cloud-lib-rootfs-termux.apk",
         "assets": { "arm64": "cloud-lib-rootfs-termux.apk", "x86_64": "cloud-lib-rootfs-termux-x86_64.apk" },
-        "paths_from": ["ac_cloud-termux/rootfs/rootfs.json"],
+        "module_dir": "rootfs-lib",
         "package": "com.diegonmarcos.cloudlib.rootfstermux"
       }
     ]
@@ -193,14 +208,45 @@ for pair in "${ENGINES[@]}"; do
   # fail-open shape these testers exist to catch, so it is not used to build them.
   mutate() { jq -c "$1" <<<"$FIXTURE"; }
 
-  # (1) no paths_from — would gate one asset against the whole app's identity
-  #     and republish 437 MB on every unrelated app-code change, which is the
-  #     #618 regression this design exists to avoid.
-  out="$(run_in_fixture_status "$engine" "$(mutate 'del(.release.companions[0].paths_from)')" \
+  # (1) THE DERIVED GATE (#796). The inputs are the content address plus the
+  #     wrapper module and nothing else: rootfs.json, build-rootfs.sh and the
+  #     store file the artifact names, plus rootfs-lib/ — NOT the rootfs/
+  #     directory as a whole, which is what the old hand-kept paths_from said
+  #     and why every verify-script edit republished 437 MB.
+  out="$(run_in_fixture "$engine" "$FIXTURE" 'f=$(mktemp); _companion_paths_file rootfs-termux "$f"; echo "paths=$(tr "\n" "," < "$f")"')"
+  eval "$out"
+  fx="$(printf '%s' "$paths" | tr ',' '\n' | grep '/rootfs-lib$' | sed 's|/rootfs-lib$||')"   # the fixture dir's basename, as the engine saw it
+  assert_eq "$name: the gate inputs are the content address plus the wrapper module" \
+    "ab_cloud-terminal-store/store.json,$fx/rootfs-lib,$fx/rootfs/build-rootfs.sh,$fx/rootfs/rootfs.json," "$paths"
+
+  # (1z) the same set through the public subcommand the simulator reads (#796).
+  dir="$(mktemp -d "$WORK/fixture.XXXX")"; printf '%s' "$FIXTURE" > "$dir/build.json"; fixture_content_address "$dir"
+  cp "$engine" "$dir/build.sh"
+  assert_eq "$name: build.sh companion-paths prints exactly the derived set" \
+    "${paths//$fx/FIXTURE}" "$( (cd "$dir" && bash ./build.sh companion-paths rootfs-termux | sed "s|^$(basename "$dir")/|FIXTURE/|" | tr '\n' ',') )"
+
+  # (1a) a hand-kept paths_from is a SECOND declaration of the gate inputs and is
+  #      refused: the last one drifted to the whole rootfs/ directory.
+  out="$(run_in_fixture_status "$engine" "$(mutate '.release.companions[0].paths_from = ["ac_cloud-termux/rootfs"]')" \
         '_companion_should_publish rootfs-termux x.apk')"
-  assert_contains "$name MUTATION: a companion with no paths_from is REFUSED" "paths_from" "$out"
-  case "$out" in *"--status=0"*) printf '  [FAIL] %s\n' "$name MUTATION: no-paths_from exited 0"; fail=$((fail+1)) ;;
-                 *) printf '  [PASS] %s\n' "$name MUTATION: no-paths_from is a non-zero exit"; pass=$((pass+1)) ;; esac
+  assert_contains "$name MUTATION: a companion with a hand-kept paths_from is REFUSED" "paths_from" "$out"
+  case "$out" in *"--status=0"*) printf '  [FAIL] %s\n' "$name MUTATION: paths_from exited 0"; fail=$((fail+1)) ;;
+                 *) printf '  [PASS] %s\n' "$name MUTATION: paths_from is a non-zero exit"; pass=$((pass+1)) ;; esac
+
+  # (1b) no module_dir — the wrapper's gradle/manifest would sit outside the gate.
+  out="$(run_in_fixture_status "$engine" "$(mutate 'del(.release.companions[0].module_dir)')" \
+        '_companion_should_publish rootfs-termux x.apk')"
+  assert_contains "$name MUTATION: a companion with no module_dir is REFUSED" "module_dir" "$out"
+  case "$out" in *"--status=0"*) printf '  [FAIL] %s\n' "$name MUTATION: no-module_dir exited 0"; fail=$((fail+1)) ;;
+                 *) printf '  [PASS] %s\n' "$name MUTATION: no-module_dir is a non-zero exit"; pass=$((pass+1)) ;; esac
+
+  # (1c) a content address that points at nothing — the gate would otherwise be
+  #      derived from an empty set, an identity that never moves.
+  out="$(run_in_fixture_status "$engine" "$FIXTURE" \
+        'jq ".at = \"nowhere\"" fleet-lib.json > f.tmp && mv f.tmp fleet-lib.json; _companion_should_publish rootfs-termux x.apk')"
+  assert_contains "$name MUTATION: a pointer resolving to no artifact is REFUSED" "identity_files" "$out"
+  case "$out" in *"--status=0"*) printf '  [FAIL] %s\n' "$name MUTATION: dangling pointer exited 0"; fail=$((fail+1)) ;;
+                 *) printf '  [PASS] %s\n' "$name MUTATION: dangling pointer is a non-zero exit"; pass=$((pass+1)) ;; esac
 
   # (2) declared but unbuildable — no gradle_task. A declared companion that
   #     nothing builds must be a failure, not a silent skip: a skip here is a
@@ -277,31 +323,30 @@ for app in ac_cloud-termux ac_cloud-nix-on-droid; do
   named="$(jq -r --arg c "$companion" '[(.release.companions // [])[] | select(.id==$c) | .assets | keys[]] | sort | join(",")' "$bj")"
   assert_eq "$app's companion names an asset for every release variant" "$variants" "$named"
 
-  # THE INDEPENDENT GATE is the whole reason this mechanism exists. Without
-  # paths_from the 400 MB library is gated on the app's identity and every
-  # one-line code fix republishes it — the #618 regression, reintroduced.
-  gated="$(jq -r --arg c "$companion" '[(.release.companions // [])[] | select(.id==$c) | .paths_from[]?] | length' "$bj")"
-  case "$gated" in
-    0) printf '  [FAIL] %s\n' "$app's companion declares no paths_from"; fail=$((fail+1)) ;;
-    *) printf '  [PASS] %s\n' "$app's companion is gated on its own declared inputs ($gated path(s))"; pass=$((pass+1)) ;;
-  esac
-
-  # AND every one of them EXISTS. Found while writing this file:
-  # cloud-android-source-identity.sh hashes a paths_from entry that names nothing
-  # as nothing and still prints a confident 64-hex identity with status 0 — so a
-  # typo does not fail, it silently NARROWS the gate's input set, and the gate
-  # then skips a republish that was genuinely needed. That is strictly worse than
-  # the phantom republish the gate exists to prevent, and it is invisible: the
-  # identity looks exactly as real as a correct one. Asserted here, where the
-  # declaration lives, because it is the declarations this ticket adds.
+  # THE INDEPENDENT GATE is the whole reason this mechanism exists, and since
+  # #796 its inputs are DERIVED (identity_files + module_dir) rather than listed,
+  # so what is asserted here is that the derivation resolves, that every input
+  # it names exists in the tree (cloud-android-source-identity.sh refuses an
+  # entry naming nothing at HEAD -- a typo would otherwise silently NARROW the
+  # gate), and that the wide, drifting shape is gone: no input is a directory
+  # other than the wrapper module itself.
+  derived="$WORK/derived.$app"
+  if ( cd "$REPO/$app" && bash -c 'set -euo pipefail; c="$1"; d="$2"; set -- help; source ./build.sh; _companion_paths_file "$c" "$d"' _ "$companion" "$derived" ) 2>"$derived.err"; then
+    printf '  [PASS] %s\n' "$app's companion gate inputs derive from its content address"; pass=$((pass+1))
+  else
+    printf '  [FAIL] %s\n' "$app's companion gate inputs could not be derived: $(cat "$derived.err")"; fail=$((fail+1))
+  fi
+  module_dir="$(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .module_dir' "$bj")"
   while IFS= read -r decl_path; do
     [ -n "$decl_path" ] || continue
-    if [ -e "$REPO/$decl_path" ]; then
-      printf '  [PASS] %s\n' "$app's companion gates on $decl_path, which exists"; pass=$((pass+1))
-    else
+    if [ ! -e "$REPO/$decl_path" ]; then
       printf '  [FAIL] %s\n' "$app's companion gates on $decl_path, which does not exist — the gate would hash it as nothing and narrow its own scope silently"; fail=$((fail+1))
+    elif [ -d "$REPO/$decl_path" ] && [ "$decl_path" != "$app/$module_dir" ]; then
+      printf '  [FAIL] %s\n' "$app's companion gates on the directory $decl_path — a directory other than the wrapper module republishes the lib for files it never contained"; fail=$((fail+1))
+    else
+      printf '  [PASS] %s\n' "$app's companion gates on $decl_path, which exists"; pass=$((pass+1))
     fi
-  done < <(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .paths_from[]?' "$bj")
+  done < "$derived"
 
   # The gradle module the companion names must actually exist, and be included
   # in the gradle build — a gradle_task pointing at no project is a build that

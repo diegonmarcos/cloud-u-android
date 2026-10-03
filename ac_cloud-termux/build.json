@@ -139,7 +139,7 @@
     },
     "companions": [
       {
-        "_doc": "#628 Slice 2 \u2014 the rootfs is an INSTALLABLE fleet library APK, not a bare release asset (#618). Gated on its own paths_from so an app-code change never republishes the ~400 MB payload \u2014 the #618 regression this design exists to avoid. Built by the same job, toolchain and keystore as this app's own APK (_build_companions, called from build-fork) and uploaded to the SAME rolling release (_publish_companions), so no second signing path and no second channel are introduced.",
+        "_doc": "#628 Slice 2 \u2014 the rootfs is an INSTALLABLE fleet library APK, not a bare release asset (#618). Gated on its own content address (identity_files + module_dir, derived; #796) so an app-code change never republishes the ~400 MB payload \u2014 the #618 regression this design exists to avoid. Built by the same job, toolchain and keystore as this app's own APK (_build_companions, called from build-fork) and uploaded to the SAME rolling release (_publish_companions), so no second signing path and no second channel are introduced.",
         "id": "rootfs-termux",
         "gradle_task": ":rootfs-lib:assembleRelease",
         "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",
@@ -148,14 +148,8 @@
           "arm64": "Cloud-Lib-Rootfs-Termux.apk",
           "x86_64": "Cloud-Lib-Rootfs-Termux-x86_64.apk"
         },
-        "paths_from": [
-          "ac_cloud-termux/rootfs",
-          "ac_cloud-termux/rootfs-lib",
-          "ab_cloud-terminal-store/store.json",
-          "ab_cloud-terminal-store/noexec-shebang.c",
-          "ab_cloud-terminal-store/gitconfig"
-        ],
-        "_doc_paths_from_786": "#786 -- must cover every rootfs.json artifact.identity_files entry (the fleet row's version_name); the fleet manifest guard is red otherwise. #771 put these two in the identity only, so an edit to either would have moved the row and left the old lib on the release.",
+        "module_dir": "rootfs-lib",
+        "_doc_module_dir_796": "#796 -- the gate's inputs are DERIVED, not listed: rootfs/rootfs.json::artifact.identity_files (reached through fleet-lib.json's declared_in/at pointer, the same content address the fleet row's version_name is built from) plus this wrapper module, whose gradle and manifest are bytes of the lib APK. The paths_from list this replaces gated on the whole rootfs/ directory, so every edit to verify-rootfs.sh or enter.sh (17 commits in the 30 days to 2026-10-03) republished 437 MB that had not changed; the engine now refuses a paths_from outright, because a second declaration of the same inputs is one that can drift.",
         "package": "com.diegonmarcos.cloudlib.rootfstermux"
       }
     ]

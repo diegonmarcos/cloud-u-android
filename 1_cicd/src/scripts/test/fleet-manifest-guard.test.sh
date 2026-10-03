@@ -103,7 +103,7 @@ scaffold_rootfs_lib() {
      "asset": "Cloud-Lib-Rootfs-Term.apk",
      "assets": {"arm64": "Cloud-Lib-Rootfs-Term.apk",
                 "x86_64": "Cloud-Lib-Rootfs-Term-x86_64.apk"},
-     "paths_from": ["ac_cloud-term/rootfs", "ac_cloud-term/rootfs-lib"],
+     "module_dir": "rootfs-lib",
      "package": "com.diegonmarcos.cloudlib.rootfsterm"}
   ]}}
 JSON
@@ -424,11 +424,14 @@ PY
 #     ever produces — a green pipeline and a permanently failing install.
 orphan_the_companion() { jq_edit "$1/ac_cloud-term/fleet-lib.json" '.companion = "nobody-builds-this"'; }
 
-# (6) The companion gated on nothing. Without paths_from the 437 MB library is
-#     gated on the whole app's identity and gets republished by every unrelated
-#     one-line code change — which is precisely the regression #618 removed and
-#     that #628 must not walk back.
-ungate_the_companion() { jq_edit "$1/ac_cloud-term/build.json" 'del(.release.companions[0].paths_from)'; }
+# (6) #796: the gate's inputs are DERIVED from the content address plus the
+#     wrapper module. A companion with no module_dir leaves the wrapper's own
+#     gradle and manifest outside its gate; a companion that still carries a
+#     hand-kept paths_from is a second declaration of the same inputs, and the
+#     last one gated the 437 MB rootfs on the whole rootfs/ directory.
+ungate_the_companion() { jq_edit "$1/ac_cloud-term/build.json" 'del(.release.companions[0].module_dir)'; }
+hand_gate_the_companion() { jq_edit "$1/ac_cloud-term/build.json" '.release.companions[0].paths_from = ["ac_cloud-term/rootfs"]'; }
+misplace_the_module_dir() { jq_edit "$1/ac_cloud-term/build.json" '.release.companions[0].module_dir = "no-such-module"'; }
 
 # (7) A library that only LOOKS like one: an applicationId off the one prefix
 #     every other lib APK derives from. "Consistency means follow the same
@@ -512,8 +515,12 @@ case_is "a stripped signature check is CAUGHT"                         1 strip_t
         "compares no signatures"
 case_is "a companion nothing declares is CAUGHT"                      1 orphan_the_companion \
         "points at companion"
-case_is "a companion gated on nothing (no paths_from) is CAUGHT"       1 ungate_the_companion \
-        "declares no paths_from"
+case_is "a companion with no module_dir is CAUGHT"                     1 ungate_the_companion \
+        "declares no module_dir"
+case_is "a companion with a hand-kept paths_from is CAUGHT (#796)"     1 hand_gate_the_companion \
+        "declares paths_from"
+case_is "a companion whose module_dir is not a directory is CAUGHT"    1 misplace_the_module_dir \
+        "is not a"
 case_is "an off-prefix library applicationId is CAUGHT"                1 offbrand_the_package \
         "not the canonical"
 case_is "per-ABI assets disagreeing with the companion is CAUGHT"      1 break_per_abi_assets \
