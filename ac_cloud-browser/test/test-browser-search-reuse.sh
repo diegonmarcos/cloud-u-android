@@ -46,6 +46,16 @@ def check(root, ok):
     ok(api.count('!config.addons.enabled("search"') >= 2, "search/open and chat/send refuse while the add-on is off")
     frag = src.get(os.path.join(LIB, "BrowserHostFragment.kt"), "")
     ok('"search_with" -> { showSearchWith()' in frag and "config.addons.searchEngines()" in frag, "the Search with row is wired to the declared engines")
+    # #823 the on-screen page is cloud-search's own (libs:search-page), not a copy, on its declared engines.
+    page = src.get(os.path.join(APP, "search", "SearchPageScreen.kt"), "")
+    ok(bj["modules"].get("libs:search-page", {}).get("dir") == "../ab_cloud-libs-shared/libs/search-page"
+       and "implementation project(':libs:search-page')" in gradle, "the app links libs:search-page by reference")
+    ok("SearchChatPage(" in page and "engines = search.cfg.engines.map" in page and "query = { e, q -> search.searchUrl(q, e.id) }" in page,
+       "the page is libs:search-page's, on cloud-search's declared engines")
+    ok("search.send(session.id, text, model, web) { SearchAddon.accountToken(" in page, "its chat is the add-on's send, the token read per send")
+    ok('"search_chat" -> { showSearchPage()' in frag and "openEntryUrl(url)" in frag[frag.find("private fun showSearchPage("):][:400],
+       "the Search & AI chat row is wired, and a result opens as a tab")
+    ok("SearchPageScreen.install(" in api, "the app installs the page at start-up")
 
 BJ = "ac_cloud-browser/build.json"
 APPP = "ac_cloud-browser/app/src/main/java/com/diegonmarcos/cloudbrowser/"
@@ -53,6 +63,9 @@ main("search reuse", check, [
     ("an engine URL is copied into the browser", APPP + "search/SearchAddon.kt", 'class SearchAddon(val cfg: SearchConfig) {', 'class SearchAddon(val cfg: SearchConfig) {\n    val ddg = "https://duckduckgo.com/?q={q}"', "is not spelled in the browser"),
     ("the token is stored", APPP + "search/SearchAddon.kt", "val (value, why) = token()", "val (value, why) = token()\n        prefsX.putString(\"token\", value)", "no token is written"),
     ("the gradle stops reading cloud-search", "ac_cloud-browser/app/build.gradle", "it.engines = searchDecl.engines", "it.engines = []", "reads cloud-search's declaration"),
+    ("the page restates its own engines", APPP + "search/SearchPageScreen.kt", "engines = search.cfg.engines.map", "engines = emptyList<com.diegonmarcos.cloudsearch.core.SearchConfig.Engine>().map", "on cloud-search's declared engines"),
+    ("a result replaces the page instead of a tab", "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt", "page({ url -> close(); openEntryUrl(url) }, close)", "page({ url -> close(); webView?.loadUrl(url) }, close)", "opens as a tab"),
+    ("the page reads a token of its own", APPP + "search/SearchPageScreen.kt", "{ SearchAddon.accountToken(app, search.cfg.ai.accountProvider) }", "{ \"x\" to \"\" }", "the token read per send"),
     ("chat/send ignores the switch", APPP + "debugapi/BrowserDebugApi.kt", '"search/chat/send" -> if (!config.addons.enabled("search"', '"search/chat/send" -> if (false && !config.addons.enabled("searchx"', "refuse while the add-on is off"),
 ])
 PYEOF

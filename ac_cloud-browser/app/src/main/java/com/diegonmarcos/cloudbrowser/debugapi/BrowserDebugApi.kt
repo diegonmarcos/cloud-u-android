@@ -6,6 +6,7 @@ import com.diegonmarcos.cloudbrowser.search.AgentRunner
 import com.diegonmarcos.cloudbrowser.search.PageSummarizer
 import com.diegonmarcos.superapp.browser.PageSummary
 import com.diegonmarcos.cloudbrowser.search.SearchAddon
+import com.diegonmarcos.cloudbrowser.search.SearchPageScreen
 import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
 import com.diegonmarcos.superapp.browser.BrowserBookmarks
 import com.diegonmarcos.superapp.browser.BrowserBus
@@ -95,6 +96,8 @@ object BrowserDebugApi {
             AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), it).summarizeRoute =
                 { BrowserSettings(app, config.settings).string("summarize_route") }
         } }
+        // #823 the Search add-on's on-screen page (Cloud Search's Search page, libs:search-page).
+        config.addons["search"]?.let { runCatching { SearchPageScreen.install(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64)) } }
         AppDebugServer.route(BuildConfig.DEBUG_API_GROUP, OPS) { op, q ->
             handle(app, config, op, q)?.toString()
         }

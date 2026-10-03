@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // #823 the Search add-on's page (libs:search-page) is themed and hosted here, in Compose.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -228,7 +230,7 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures { buildConfig = true; compose = true }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
@@ -265,6 +267,9 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:text-tools')
     implementation project(':search-core')
+    // #823 Cloud Search's Search page, drawn over the browser in the kit palette (libs:ui-kit).
+    implementation project(':libs:search-page')
+    implementation project(':libs:ui-kit')
     // #823 Summarize the page, on-device route: ML Kit's GenAI summarizer (runs on AICore / Gemini
     // Nano where the phone ships it; elsewhere it reports UNAVAILABLE and the extractive summary answers).
     implementation 'com.google.mlkit:genai-summarization:1.0.0-beta1'

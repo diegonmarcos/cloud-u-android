@@ -44,6 +44,8 @@
         "libs:browser",
         "libs:updater",
         "libs:text-tools",
+        "libs:ui-kit",
+        "libs:search-page",
         "search-core"
       ]
     },
@@ -77,6 +79,10 @@
     "libs:text-tools": {
       "_doc_dir": "#802 shared BY REFERENCE: the text-tools contract client (thin binder). libs:browser's Translate page row calls it; disabled with its reason when no app serves it.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
+    },
+    "libs:search-page": {
+      "_doc_dir": "#823 shared BY REFERENCE: Cloud Search's Search page (engine boxes + AI chat). The Search add-on's Search & AI chat row draws it over the page, hosted by search/SearchPageScreen.kt (cloud-search's engines and chat protocol through SearchAddon, results opening as tabs) in the browser's kit palette.",
+      "dir": "../ab_cloud-libs-shared/libs/search-page"
     },
     "search-core": {
       "_doc_dir": "#802 I8 shared BY REFERENCE: cloud-search's plain-JVM core (its build.json::search reader and the OpenRouter chat protocol). The browser's search/chat routes use it; nothing is copied. Its own suite and PIT run in cloud-search's CI (this app's unit task is scoped to :app).",
@@ -664,6 +670,10 @@
             {
               "id": "search_with",
               "label": "Search with…"
+            },
+            {
+              "id": "search_chat",
+              "label": "Search & AI chat"
             }
           ]
         },

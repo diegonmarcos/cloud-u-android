@@ -793,6 +793,12 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
+    /** #823 Cloud Search's Search page over the browser: its engine boxes and AI chat; a result opens as a tab. */
+    private fun showSearchPage() {
+        val page = BrowserSearchPageHost.page ?: return toast("The Search page is not available in this app")
+        overlay { close -> page({ url -> close(); openEntryUrl(url) }, close) }
+    }
+
     /** #802 I8 one query, one of cloud-search's engines (the Search add-on): its results open as a new tab. */
     private fun showSearchWith() {
         val engines = config.addons.searchEngines()
@@ -1123,6 +1129,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "addons_manage" -> { showAddons(); done(ok()) }
             "scraper" -> { showScraper(); done(ok()) }
             "search_with" -> { showSearchWith(); done(ok()) }
+            "search_chat" -> { showSearchPage(); done(ok()) }
             "ai_chat" -> { showAgentChat(); done(ok()) }
             "ai_summarize" -> { showPageSummary(); done(ok()) }
             "vault_fill", "vault_request_fill" -> { wv ?: return needPage(); VaultAutofill.requestFill(wv) { r -> done(r.put("ok", true)) } }
