@@ -52,6 +52,16 @@
     "_doc": "Feature libs are shared from ../aa_cloud-superapp/libs/ via relative project references in settings.gradle.",
     "libs:analytics": {
       "dir": "../libs/analytics"
+    },
+    "libs:core": {
+      "type": "library",
+      "_doc_dir": "#792 this APK runs engine services and providers, so it is a full mesh member: libs:core defines and holds CONSTELLATION_DATA and carries libs:devtools (fleet provider, MESH_MEMBER, the debug API on this package's port in libs/devtools/debug-ports.json). Before this it was installable but the Store could not wake, list or read it.",
+      "dir": "../libs/core"
+    },
+    "libs:devtools": {
+      "type": "library",
+      "_doc_dir": "Pulled in by libs:core with an api dependency; declared because core references it by project path.",
+      "dir": "../libs/devtools"
     }
   },
   "keyboard_media": {

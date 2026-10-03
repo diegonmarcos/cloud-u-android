@@ -18,7 +18,11 @@
 #   M2  the APK versionCode is the wall clock, never build.json's declared
 #       version_code (1): a lib whose code never moves shows no build age and
 #       is refused by anything that orders by versionCode.
-#   MUT both properties, broken on a copy, go red.
+#   M3  #792 EVERY shipped flavor's closure contains core: every Cloud-Lib APK is
+#       a full mesh member, not only the ones whose module happens to link core
+#       (eighteen did not — the Store could install them but never wake, list
+#       or read one). Read from the all-flavors loop in lib-apks/app/build.gradle.
+#   MUT every property, broken on a copy, goes red.
 #
 # OWN-SOURCE ONLY, python3 only, no build, no network.
 set -uo pipefail
@@ -52,6 +56,12 @@ app = open(os.path.join(apks, 'app', 'build.gradle')).read()
 extra = {}
 for flav, dep in re.findall(r"flavorOf\('([\w-]+)'\)\}Implementation\",\s*project\(':libs:([\w-]+)'\)", app):
     extra.setdefault(flav, set()).add(dep)
+# #792 the all-flavors edge: shipped.findAll { it != 'x' && ... }.each { name -> add("${flavorOf(name)}Implementation", project(':libs:y')) }
+for skip, dep in re.findall(r"shipped\.findAll \{ ([^}]*) \}\.each \{ name ->\s*add\(\"\$\{flavorOf\(name\)\}Implementation\",\s*project\(':libs:([\w-]+)'\)\)", app):
+    skipped = set(re.findall(r"it != '([\w-]+)'", skip))
+    for name in shipped:
+        if name not in skipped:
+            extra.setdefault(name, set()).add(dep)
 def closure(seed):
     seen, todo = set(), list(seed)
     while todo:
@@ -64,6 +74,9 @@ for name in shipped:
     if 'devtools' in c and 'core' not in c:
         print(f"FAIL M1 Cloud-Lib APK '{name}' is a mesh member (compiles devtools) but not libs:core: "
               f"it carries the fleet provider without defining or holding CONSTELLATION_DATA")
+    elif 'core' not in c:
+        print(f"FAIL M3 Cloud-Lib APK '{name}' does not link libs:core: not a mesh member, so the Store "
+              f"cannot wake it, list it or read its debug API")
 body = app.split('def cloudVersionCode', 1)[1].split('\nandroid {', 1)[0] if 'def cloudVersionCode' in app else ''
 if not body:
     print("FAIL M2 lib-apks/app/build.gradle has no cloudVersionCode")
@@ -89,7 +102,9 @@ mutate() {   # mutate <label> <python-edit-of-app/build.gradle>
     else echo "  FAIL  MUT $1 stayed green — the check cannot see it"; FAIL=1; fi
 }
 mutate "devtools flavor without core" \
-    "import re; s=re.sub(r\"\\n.*flavorOf\\('devtools'\\).*\\n\", '\\n', s)"
+    "s=s.replace(\"shipped.findAll { it != 'core' }\", \"shipped.findAll { it != 'core' && it != 'devtools' }\", 1); assert 'devtools' in s"
+mutate "the all-flavors core edge dropped (eighteen libs back out of the mesh)" \
+    "import re; s=re.sub(r\"shipped\\.findAll \\{ it != 'core' \\}\\.each \\{ name ->\\s*add\\([^\\n]*\\n\\s*\\}\", '', s, count=1)"
 mutate "static versionCode override restored" \
     "s=s.replace('def cloudVersionCode = { ->', 'def cloudVersionCode = { ->\\n    if (buildJson.android.version_code) return buildJson.android.version_code as int', 1)"
 

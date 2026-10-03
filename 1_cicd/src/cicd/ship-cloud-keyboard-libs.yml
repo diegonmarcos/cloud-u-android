@@ -51,6 +51,8 @@ on:
       - "ab_cloud-keyboard-libs/**"
       - "ab_cloud-libs-shared/keyboard-engines/**"
       - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/media/**"
       - "ab_cloud-libs-shared/libs/ml-l-text-mlkit/**"
       - "ab_cloud-libs-shared/libs/ml-l-voice-vosk/**"

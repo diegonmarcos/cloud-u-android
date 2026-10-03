@@ -147,14 +147,18 @@ dependencies {
     shipped.each { name ->
         add("${flavorOf(name)}Implementation", project(":libs:${name}"))
     }
-    // The devtools APK is a mesh member (its manifest carries FleetTokenProvider
-    // and FleetMemberReceiver), and both are guarded by CONSTELLATION_DATA - a
-    // permission libs:core DEFINES and REQUESTS. Every other member reaches core
-    // transitively; devtools cannot, because the edge runs core -> devtools and
-    // must stay that way (libs/core/build.gradle). Without this the published
-    // Cloud-Lib-Devtools.apk neither defined nor held the permission: the one
-    // member short of full membership, and the one every app's peer view lacked.
-    if (shipped.contains('devtools') && shipped.contains('core'))
-        add("${flavorOf('devtools')}Implementation", project(':libs:core'))
+    // #792 EVERY Cloud-Lib APK is a full mesh member: each flavor links libs:core
+    // (CONSTELLATION_DATA defined + held, the fleet provider, MESH_MEMBER, the
+    // debug API on its own port from libs/devtools/debug-ports.json). It used to be
+    // only the flavors whose module happened to depend on core, so eighteen libs
+    // (analytics, watchdog, webserver, voice, ...) shipped APKs the Store could
+    // install but never wake, list or read a log from. Per-flavor, not per-module:
+    // a module stays free of core for the apps that compile it in; only its own
+    // APK gains the membership. devtools was the first case of this (#743): the
+    // edge runs core -> devtools, so its APK can only reach core from here.
+    if (shipped.contains('core'))
+        shipped.findAll { it != 'core' }.each { name ->
+            add("${flavorOf(name)}Implementation", project(':libs:core'))
+        }
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }

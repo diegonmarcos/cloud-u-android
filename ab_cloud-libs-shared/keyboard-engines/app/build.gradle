@@ -122,6 +122,8 @@ android {
 }
 
 dependencies {
+    // #792 mesh membership (CONSTELLATION_DATA, fleet provider, debug API) — see build.json::modules.libs:core.
+    implementation project(':libs:core')
     implementation project(':libs:media')
     implementation project(':libs:translate')
     // ML Kit engine (LocalTranslateEngineClient) — registered in App.onCreate
