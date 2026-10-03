@@ -23,7 +23,6 @@ import android.widget.AutoCompleteTextView
 import android.widget.Filter
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,7 +44,7 @@ import java.security.MessageDigest
  *            collapsible headers.
  *   DETAIL   WebView fullscreen. The address bar searches as well as
  *            navigates, and suggests from local history + open tabs.
- *   HISTORY  the on-device visit list, with a clear button.
+ *   (history, bookmarks and downloads are #802 Compose pages drawn over these.)
  *
  * WHAT IS SHARED AND WHAT IS NOT. Every mechanism above lives in this
  * module and reaches every app that links it. None of the CONTENT does:
@@ -69,6 +68,8 @@ class BrowserHostFragment : Fragment(), Collapsible,
 
     private lateinit var prefs: BrowserTabPrefs
     private lateinit var history: BrowserHistory
+    private lateinit var bookmarks: BrowserBookmarks
+    private lateinit var downloads: BrowserDownloads
     private lateinit var browserSettings: BrowserSettings
     private lateinit var config: BrowserConfig
     private lateinit var rootContainer: FrameLayout
@@ -88,7 +89,6 @@ class BrowserHostFragment : Fragment(), Collapsible,
 
     private sealed class Mode {
         object GRID : Mode()
-        object HISTORY : Mode()
         data class DETAIL(val url: String) : Mode()
     }
 
@@ -99,6 +99,8 @@ class BrowserHostFragment : Fragment(), Collapsible,
         val ctx = inflater.context
         prefs = BrowserTabPrefs(ctx)
         history = BrowserHistory(ctx)
+        bookmarks = BrowserBookmarks(ctx)
+        downloads = BrowserDownloads(ctx)
         config = BrowserConfig.parseBase64(arguments?.getString(ARG_CONFIG_B64))
         browserSettings = BrowserSettings(ctx, config.settings)
 
@@ -451,6 +453,10 @@ class BrowserHostFragment : Fragment(), Collapsible,
                     postDelayed({ capturePreview(this@apply, u) }, 600)
                 }
             }
+            setDownloadListener { dlUrl, ua, disposition, mime, _ ->
+                val d = download(dlUrl, ua, disposition, mime)
+                toast("Downloading ${d.file}")
+            }
             webChromeClient = object : WebChromeClient() {
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     val u = view?.url ?: return
@@ -466,86 +472,59 @@ class BrowserHostFragment : Fragment(), Collapsible,
         rootContainer.addView(column)
     }
 
-    // ── HISTORY mode (item 5) ────────────────────────────────────────
+    // ── Library: history, bookmarks, downloads (#802: Compose, over the page) ──
 
+    /** Item 5's view of the on-device history, with Clear. */
     private fun showHistory() {
-        mode = Mode.HISTORY
-        teardownWebView()
-        val ctx = requireContext()
-
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(12); setPadding(pad, dp(8), pad, pad)
-        }
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-        }
-        header.addView(TextView(ctx).apply {
-            text = " ← Tabs "
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-            setOnClickListener { showGrid() }
-        })
-        header.addView(TextView(ctx).apply {
-            text = "History"
-            setTextColor(0xFFE9D8FD.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            setTextAppearance(android.R.style.TextAppearance_Material_Title)
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            val m = dp(8); setPadding(m, 0, m, 0)
-        })
-        header.addView(pill(ctx, "Clear") {
-            androidx.appcompat.app.AlertDialog.Builder(ctx)
-                .setTitle("Clear history?")
-                .setMessage("Removes every recorded visit from this device.")
-                .setPositiveButton("Clear") { _, _ -> history.clear(); showHistory() }
-                .setNegativeButton("Cancel", null)
-                .show()
-        })
-        column.addView(header)
-
         val visits = history.all()
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        if (visits.isEmpty()) {
-            list.addView(TextView(ctx).apply {
-                text = "No history yet."
-                setTextColor(0xCCFFFFFF.toInt())
-                alpha = 0.7f
-                val pad = dp(20); setPadding(pad, pad, pad, pad)
-            })
-        } else {
-            for (v in visits) {
-                list.addView(LinearLayout(ctx).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(6), dp(10), dp(6), dp(10))
-                    addView(TextView(ctx).apply {
-                        text = v.title.ifBlank { v.url }
-                        setTextColor(Color.WHITE)
-                        isSingleLine = true
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    })
-                    addView(TextView(ctx).apply {
-                        text = v.url
-                        setTextColor(0x99FFFFFF.toInt())
-                        isSingleLine = true
-                        ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-                        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                    })
-                    setOnClickListener { navigateTo(v.url) }
-                })
-            }
+        overlay { close ->
+            BrowserListScreen("History", visits.map { ListRow(it.url, it.title.ifBlank { it.url }, it.url) },
+                empty = "No history yet.", onOpen = { close(); navigateTo(it.id) }, onRemove = null,
+                headerAction = "Clear" to { history.clear(); close(); showHistory() }, onClose = close)
         }
-        column.addView(ScrollView(ctx).apply {
-            addView(list)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
-        })
+    }
 
-        overlays.clear()
-        rootContainer.removeAllViews()
-        rootContainer.addView(column)
+    /** Bookmarks under folder headers; ✕ on a header deletes the folder, ✎ renames it. */
+    private fun showBookmarks() {
+        val all = bookmarks.all()
+        val rows = (listOf("") + bookmarks.folders()).flatMap { f ->
+            val inF = all.filter { it.folder == f }
+            (if (f.isEmpty()) emptyList() else listOf(ListRow(f, f, "${inF.size} here", header = true))) +
+                inF.map { ListRow(it.url, it.title, it.url) }
+        }
+        overlay { close ->
+            BrowserListScreen("Bookmarks", rows, empty = "No bookmarks yet: ☆ in the menu adds this page.",
+                onOpen = { if (!it.header) { close(); navigateTo(it.id) } },
+                onRemove = { r -> if (r.header) bookmarks.deleteFolder(r.id) else bookmarks.remove(r.id); close(); showBookmarks() },
+                onRename = { r, to -> bookmarks.moveFolder(r.id, to); close(); showBookmarks() },
+                onClose = close)
+        }
+    }
+
+    private fun showDownloads() {
+        val rows = downloads.all().map { ListRow(it.id.toString(), it.file, "${downloads.status(it.id)} · ${it.url}") }
+        overlay { close ->
+            BrowserListScreen("Downloads", rows, empty = "Nothing downloaded yet.",
+                onOpen = { startActivity(android.content.Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS)) },
+                onRemove = null, headerAction = "Clear list" to { downloads.clear(); close(); showDownloads() },
+                onClose = close)
+        }
+    }
+
+    /** A page download, with the page's cookies and agent, into the `download_dir` setting. */
+    private fun download(url: String, ua: String?, disposition: String?, mime: String?): BrowserDownload =
+        downloads.enqueue(url, ua, disposition, mime, browserSettings.string("download_dir").orEmpty())
+
+    /** Pin [url] to the launcher; it opens here (MainActivity takes VIEW intents). */
+    private fun addToHome(url: String, title: String): Boolean {
+        val ctx = requireContext()
+        if (!androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(ctx)) return false
+        val info = androidx.core.content.pm.ShortcutInfoCompat.Builder(ctx, "page:" + sha256(url).take(16))
+            .setShortLabel(title.ifBlank { url }.take(24))
+            .setIntent(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).setPackage(ctx.packageName))
+            .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(ctx, ctx.applicationInfo.icon))
+            .build()
+        return androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(ctx, info, null)
     }
 
     // ── misc ─────────────────────────────────────────────────────────
@@ -640,6 +619,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "reader_on" to readerOn,
             "desktop_mode" to desktopMode,
             "pinned" to (prefs.all().firstOrNull { it.url == active }?.pinned == true),
+            "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
             "text_tools" to BrowserPageActions.textTools(requireContext()).isServingAppInstalled(),
             "can_be_default" to BrowserPageActions.canRequestDefault(requireContext()),
         )
@@ -811,6 +791,23 @@ class BrowserHostFragment : Fragment(), Collapsible,
                 }
             }
             "history" -> { showHistory(); done(ok()) }
+            "bookmarks" -> { showBookmarks(); done(ok()) }
+            "downloads" -> { showDownloads(); done(ok()) }
+            "bookmark" -> {
+                wv ?: return needPage()
+                val on = !bookmarks.has(url)
+                if (on) bookmarks.add(url, wv.title.orEmpty(), args["folder"].orEmpty()) else bookmarks.remove(url)
+                done(ok().put("bookmarked", on).put("toast", if (on) "Bookmarked" else "Bookmark removed"))
+            }
+            "download_page" -> {
+                wv ?: return needPage()
+                val d = download(url, wv.settings.userAgentString, null, null)
+                done(ok().put("id", d.id).put("file", d.file).put("toast", "Downloading ${d.file}"))
+            }
+            "add_to_home" -> {
+                val asked = addToHome(url, wv?.title.orEmpty())
+                done(ok().put("requested", asked).put("toast", if (asked) "" else "This launcher cannot pin shortcuts"))
+            }
             "settings" -> { showSettings(); done(ok()) }
             "default_browser" -> {
                 val i = BrowserPageActions.defaultBrowserIntent(requireContext())

@@ -2,7 +2,10 @@ package com.diegonmarcos.cloudbrowser.debugapi
 
 import android.content.Context
 import com.diegonmarcos.cloudbrowser.BuildConfig
+import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
+import com.diegonmarcos.superapp.browser.BrowserBookmarks
 import com.diegonmarcos.superapp.browser.BrowserBus
+import com.diegonmarcos.superapp.browser.BrowserDownloads
 import com.diegonmarcos.superapp.browser.BrowserConfig
 import com.diegonmarcos.superapp.browser.BrowserHistory
 import com.diegonmarcos.superapp.browser.BrowserSettings
@@ -38,6 +41,15 @@ object BrowserDebugApi {
         Op("page/find", "q=<text>", "find in the live page: the match count (the find bar shows it)"),
         Op("page/text", "n=<chars, default 2000>", "the live page's title, url and first n chars of visible text"),
         Op("page/reader", "", "reader-mode extraction of the live page: title + text length, page unchanged"),
+        Op("bookmarks", "", "every bookmark: url, title, folder"),
+        Op("bookmarks/add", "url=<url>&title=<title>&folder=<a/b>", "add (or update) a bookmark"),
+        Op("bookmarks/remove", "url=<url>", "remove a bookmark"),
+        Op("bookmarks/folders", "", "every folder in use, parents included"),
+        Op("bookmarks/folder/rename", "from=<a/b>&to=<c>", "move a folder and everything under it"),
+        Op("bookmarks/folder/delete", "folder=<a/b>&confirm=1", "delete a folder and every bookmark under it"),
+        Op("downloads", "", "downloads this browser started, with DownloadManager's live status"),
+        Op("downloads/enqueue", "url=<url>", "download a URL into the download_dir setting (a test hook)"),
+        Op("downloads/clear", "", "forget the download list (the files stay in Downloads)"),
     )
 
     fun register(ctx: Context) {
@@ -102,6 +114,35 @@ object BrowserDebugApi {
             "page/find" -> BrowserBus.call("find", q)
             "page/text" -> BrowserBus.call("page_text", q)
             "page/reader" -> BrowserBus.call("reader_extract")
+            "bookmarks" -> BrowserBookmarkOps.toJson(BrowserBookmarks(app).all())
+            "bookmarks/add" -> need(url, "url") ?: run {
+                BrowserBookmarks(app).add(url, q["title"].orEmpty(), q["folder"].orEmpty())
+                JSONObject().put("ok", true).put("url", url).put("folder", BrowserBookmarkOps.normFolder(q["folder"].orEmpty()))
+            }
+            "bookmarks/remove" -> need(url, "url") ?: run {
+                BrowserBookmarks(app).remove(url); JSONObject().put("ok", true).put("url", url)
+            }
+            "bookmarks/folders" -> JSONArray(BrowserBookmarks(app).folders())
+            "bookmarks/folder/rename" -> need(q["from"].orEmpty(), "from") ?: run {
+                BrowserBookmarks(app).moveFolder(q["from"].orEmpty(), q["to"].orEmpty())
+                JSONObject().put("ok", true).put("folders", JSONArray(BrowserBookmarks(app).folders()))
+            }
+            "bookmarks/folder/delete" -> need(q["folder"].orEmpty(), "folder") ?: if (q["confirm"] != "1")
+                JSONObject().put("ok", false).put("error", "add confirm=1: this deletes every bookmark under the folder")
+                else { BrowserBookmarks(app).deleteFolder(q["folder"].orEmpty()); JSONObject().put("ok", true) }
+            "downloads" -> {
+                val dl = BrowserDownloads(app)
+                JSONArray().also { arr ->
+                    dl.all().forEach {
+                        arr.put(JSONObject().put("id", it.id).put("url", it.url).put("file", it.file).put("ts", it.ts).put("status", dl.status(it.id)))
+                    }
+                }
+            }
+            "downloads/enqueue" -> need(url, "url") ?: run {
+                val d = BrowserDownloads(app).enqueue(url, config.userAgents["mobile"], null, null, settings.string("download_dir").orEmpty())
+                JSONObject().put("ok", true).put("id", d.id).put("file", d.file)
+            }
+            "downloads/clear" -> { BrowserDownloads(app).clear(); JSONObject().put("ok", true) }
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

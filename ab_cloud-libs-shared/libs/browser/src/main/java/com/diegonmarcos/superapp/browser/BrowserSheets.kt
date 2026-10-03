@@ -191,3 +191,55 @@ fun BrowserTextPanel(title: String, text: String, rows: List<SheetRow> = emptyLi
         }
     }
 }
+
+/** One line of a library list (a bookmark, a download, a visit), or a folder header when [header]. */
+data class ListRow(val id: String, val title: String, val subtitle: String = "", val header: Boolean = false)
+
+/**
+ * #802 the Library pages (bookmarks, downloads, history): a titled list over the page.
+ * Tap opens a row; ✕ removes it (or the whole folder, on a header); [headerAction] is
+ * a page-wide button (Clear). Rename on a folder header asks for the new path inline.
+ */
+@Composable
+fun BrowserListScreen(
+    title: String,
+    rows: List<ListRow>,
+    empty: String,
+    onOpen: (ListRow) -> Unit,
+    onRemove: ((ListRow) -> Unit)?,
+    onRename: ((ListRow, String) -> Unit)? = null,
+    headerAction: Pair<String, () -> Unit>? = null,
+    onClose: () -> Unit,
+) {
+    val p = LocalKitPalette.current
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var newName by remember { mutableStateOf("") }
+    Column(
+        Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(16.dp)
+            .testTag("browser:list:$title"),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text(title, color = p.textPrimary, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            headerAction?.let { (label, act) -> TextButton(act) { Text(label) } }
+        }
+        if (rows.isEmpty()) Text(empty, color = p.textSecondary, modifier = Modifier.padding(16.dp))
+        rows.forEach { r ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).clickable { onOpen(r) }.padding(vertical = 8.dp)) {
+                    Text(if (r.header) "▸ ${r.title}" else r.title, color = if (r.header) p.accent else p.textPrimary,
+                        style = if (r.header) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    if (r.subtitle.isNotBlank()) Text(r.subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+                if (r.header && onRename != null) TextButton({ renaming = r.id; newName = r.id }) { Text("✎") }
+                onRemove?.let { rm -> TextButton({ rm(r) }) { Text("✕") } }
+            }
+            if (renaming == r.id && onRename != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(newName, { newName = it }, Modifier.weight(1f), singleLine = true)
+                    TextButton({ onRename(r, newName); renaming = null }) { Text("Save") }
+                }
+            }
+        }
+    }
+}

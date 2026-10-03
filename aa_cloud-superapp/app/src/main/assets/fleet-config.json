@@ -215,6 +215,22 @@
     "ac_cloud-mail"
    ]
   },
+  "browser_bookmarks": {
+   "kind": "prefs",
+   "class": "config",
+   "doc": "#802 the browser's bookmarks with their folders (bookmarks_json: url, title, folder path, ts).",
+   "used_by": [
+    "lib-browser"
+   ]
+  },
+  "browser_downloads": {
+   "kind": "prefs",
+   "class": "device",
+   "doc": "#802 index of the downloads the browser started (DownloadManager ids and file names on THIS phone); the files themselves stay in Downloads.",
+   "used_by": [
+    "lib-browser"
+   ]
+  },
   "browser_history": {
    "kind": "prefs",
    "class": "content",
@@ -229,7 +245,10 @@
    "doc": "#802 the browser's settings catalogue (ac_cloud-browser/build.json::ui.browser.settings): search engine, homepage, desktop site, text size, JavaScript, images, third-party cookies; one typed key per declared setting. Served by /api/browser/settings.",
    "used_by": [
     "lib-browser"
-   ]
+   ],
+   "keys": {
+    "download_dir": "device"
+   }
   },
   "cal_bridge": {
    "kind": "prefs",

@@ -13,3 +13,4 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | `javascript` | bool | true |  | privacy | config | Run page scripts. Off breaks most sites; per-site shields come later. |
 | `load_images` | bool | true |  | privacy | config | Off saves data on metered networks. |
 | `block_third_party_cookies` | bool | false |  | privacy | config | CookieManager.setAcceptThirdPartyCookies(false) on every page. |
+| `download_dir` | string | "" |  | general | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |

@@ -181,6 +181,15 @@
           "section": "privacy",
           "class": "config",
           "doc": "CookieManager.setAcceptThirdPartyCookies(false) on every page."
+        },
+        {
+          "key": "download_dir",
+          "type": "string",
+          "default": "",
+          "label": "Download folder",
+          "section": "general",
+          "class": "device",
+          "doc": "Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone."
         }
       ],
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
@@ -262,6 +271,24 @@
             "api": true
           },
           {
+            "id": "bookmark",
+            "section": "icons",
+            "label": "☆",
+            "kind": "toggle",
+            "checked": "bookmarked",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "download_page",
+            "section": "icons",
+            "label": "⤓",
+            "requires": [
+              "page"
+            ]
+          },
+          {
             "id": "new_tab",
             "section": "tabs",
             "label": "New tab"
@@ -323,6 +350,14 @@
             ]
           },
           {
+            "id": "add_to_home",
+            "section": "page",
+            "label": "Add to home screen",
+            "requires": [
+              "page"
+            ]
+          },
+          {
             "id": "desktop",
             "section": "page",
             "label": "Desktop site",
@@ -368,6 +403,16 @@
             "id": "history",
             "section": "library",
             "label": "History"
+          },
+          {
+            "id": "bookmarks",
+            "section": "library",
+            "label": "Bookmarks"
+          },
+          {
+            "id": "downloads",
+            "section": "library",
+            "label": "Downloads"
           },
           {
             "id": "settings",
@@ -426,7 +471,7 @@
     "debug_api": {
       "group": "browser"
     },
-    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1, menu, menu/act?id=&q=&value=, page/find?q=, page/text?n=, page/reader. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
+    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1, menu, menu/act?id=&q=&value=, page/find?q=, page/text?n=, page/reader, bookmarks, bookmarks/add?url=&title=&folder=, bookmarks/remove?url=, bookmarks/folders, bookmarks/folder/rename?from=&to=, bookmarks/folder/delete?folder=, downloads, downloads/enqueue?url=, downloads/clear. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
   },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed the browser had NO tests at all and its ship workflow asserted only that Gradle exited 0.",
