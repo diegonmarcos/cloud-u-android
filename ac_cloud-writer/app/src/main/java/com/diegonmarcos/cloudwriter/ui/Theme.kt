@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudwriter.ui
 
 import android.app.Activity
+import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -11,12 +12,14 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.diegonmarcos.cloudwriter.WriterPrefs
 
 /**
  * cloud-writer's Material 3 theme — the design system this application did not have.
@@ -122,9 +125,36 @@ internal fun ColorScheme.pulledToBlack(): ColorScheme = copy(
  * @param pureBlack the OLED pull described above. ON by default because the owner's phone is a
  *   Samsung on a black Power Saving theme; it changes nothing in light mode.
  */
+/**
+ * #800 the owner's theme choice: follow the system, or always light, or always dark. One state,
+ * read by [CloudWriterTheme]'s default, so the editor, the list and every settings page switch
+ * together; stored in WriterPrefs (KEY_THEME) so it survives a restart.
+ */
+object WriterTheme {
+    const val SYSTEM = "system"
+    const val LIGHT = "light"
+    const val DARK = "dark"
+
+    private val mode = mutableStateOf<String?>(null)
+
+    fun current(context: Context): String = mode.value ?: WriterPrefs.string(context, WriterPrefs.KEY_THEME, SYSTEM)
+
+    fun set(context: Context, value: String) {
+        WriterPrefs.put(context, WriterPrefs.KEY_THEME, value)
+        mode.value = value
+    }
+
+    @Composable
+    fun isDark(): Boolean = when (current(LocalContext.current)) {
+        LIGHT -> false
+        DARK -> true
+        else -> isSystemInDarkTheme()
+    }
+}
+
 @Composable
 fun CloudWriterTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = WriterTheme.isDark(),
     dynamicColor: Boolean = true,
     pureBlack: Boolean = true,
     content: @Composable () -> Unit,

@@ -27,7 +27,8 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "core"
+        "core",
+        "libs:ui-kit"
       ]
     },
     "core": {
@@ -54,6 +55,11 @@
       "type": "library",
       "_doc": "#800 the fleet's OpenRouter transport (Http/UrlHttp, apiError), shared BY REFERENCE: :core's Model route speaks through it, as Cloud Calc's Jev and the image engine do. A `contract` lib (lib-classes.json), plain JVM, PIT-gated in its own suite.",
       "dir": "../ab_cloud-libs-shared/libs/decisions"
+    },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc": "#800 the fleet's shared Compose kit (a `gui` lib, lib-classes.json): the redesigned Writer draws its empty state and section headers with it, through ui.KitBridge, which hands the kit a palette taken from this app's own Material scheme so a theme switch recolours kit parts with the rest of the screen. Shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     }
   },
   "writer_ai": {
@@ -709,7 +715,7 @@
     "voice_engine": {
       "package": "com.diegonmarcos.cloudkeyboardlibs",
       "action": "com.diegonmarcos.cloudkeyboardlibs.IVoiceEngine",
-      "label": "Cloud Keyboard Libs"
+      "label": "cloud-lib-keyboard-engines"
     },
     "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/writer/listen/status (running, paused, the requested and answering route, the last fallback reason, partial text, segments, mic permission, engine bind, token presence - never the token), /api/writer/translate?text=&to= (a real translation on the configured route, answering which route did it), /api/writer/route (both functions' route, model, last answer, online, token presence, and the text-tools serving app's state).",
     "debug_api": {

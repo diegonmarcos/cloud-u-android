@@ -26,6 +26,17 @@
 #   R6  Listen survives the screen off: a microphone foreground service and its permissions
 #   R7  Configs > Routes is a private page the home screen opens
 #   R8  no debug reply can carry the Account token
+#   D1  documents are core DocStore files, listed, searched, created, saved, deleted
+#   D2  the editor draws Markdown rich over the SAME characters (identity offsets)
+#   D3  the formatting toolbar is core's Markdown actions
+#   D4  the outline lists core headings and jumps to them
+#   D5  find counts and steps through core matches, wrapping
+#   D6  share (ACTION_SEND) and export (.md and .txt through the document picker)
+#   D7  the theme is System / Light / Dark and every screen follows it
+#   D8  Listen writes at the caret while the editor shows, to the file once it stops
+#   D9  a tool's answer replaces exactly the range it read
+#   D10 shared or PROCESS_TEXT text becomes a new document
+#   D11 the fleet UI kit draws inside this app's theme
 
 set -uo pipefail
 
@@ -163,7 +174,7 @@ if grep -q 'if (onDevice) v.feed(buf, n)' <<<"$LISTEN" && grep -q 'if (modelLive
 else
     fail "R3 Listen no longer feeds both the on-device engine and the segmenter — the live text or the fallback is gone"
 fi
-if grep -q 'WriterRoutes.transcribe(app, pcm, blocker)' <<<"$LISTEN" && grep -q 'WriterRoutes.translate(app, heardText, s.target)' <<<"$LISTEN"; then
+if grep -q 'WriterRoutes.transcribe(app, pcm, blocker)' <<<"$LISTEN" && grep -q 'WriterRoutes.translate(app, heardText, target)' <<<"$LISTEN"; then
     pass "R3 segments are transcribed on the Speech route and auto-translated on the Translation route"
 else
     fail "R3 Listen's segments skip the Speech route or the auto-translation"
@@ -220,6 +231,44 @@ if [ -n "$RJ" ] && [ -n "$SJ" ] && ! grep -qE 'accountToken|revealAiKey' <<<"$RJ
 else
     fail "R8 a debug reply reads the Account token (or its builder could not be found)"
 fi
+
+# ── D ── the document UI ──────────────────────────────────────────────────
+MAINKT="$(code "$SRC/MainActivity.kt")"
+UIKT="$(code "$SRC/ui/DocumentsUi.kt" "$SRC/ui/Theme.kt")"
+d() { # d <id> <message> <pattern>...  — every pattern must be in MainActivity/ui code
+    local id="$1" msg="$2"; shift 2
+    local p
+    for p in "$@"; do
+        if ! grep -qF -- "$p" <<<"$MAINKT$UIKT"; then fail "$id $msg (missing: $p)"; return; fi
+    done
+    pass "$id $msg"
+}
+d D1 "documents are core DocStore files under filesDir/documents" \
+    'store = DocStore(ListenEngine.docsDir(this))' 'store.search(q)' 'store.create("")' 'store.write(id, field.value.text)' 'store.delete(id)'
+d D2 "the editor draws Markdown rich over the same characters" \
+    'Markdown.spans(v.text)' 'visualTransformation = look' 'OffsetMapping.Identity'
+d D3 "the toolbar applies core's Markdown actions" \
+    'Markdown.heading(t, s, e, 1)' 'Markdown.wrap(t, s, e, "**")' 'Markdown.wrap(t, s, e, "*")' 'Markdown.prefixLines(t, s, e, "- ")' 'Markdown.prefixLines(t, s, e, "> ")'
+d D4 "the outline lists core headings and jumps to them" \
+    'Markdown.outline(text)' 'selection = TextRange(h.offset)'
+d D5 "find counts and steps through core matches, wrapping" \
+    'Markdown.find(v.text, q)' '((findIndex.value + by) % n + n) % n'
+d D6 "share and export as .md and .txt" \
+    'Intent(Intent.ACTION_SEND)' 'CreateDocument("text/markdown")' 'CreateDocument("text/plain")' 'contentResolver.openOutputStream(uri)'
+d D7 "System / Light / Dark, followed by every screen" \
+    'darkTheme: Boolean = WriterTheme.isDark()' 'WriterTheme.set(this@MainActivity, id)' 'LIGHT -> false' 'DARK -> true'
+ONSTOP="$(awk '/override fun onStop\(\)/,/^    }$/' <<<"$MAINKT")"
+if grep -qF 'field.value = insertAtCaret(field.value, segment)' <<<"$MAINKT" && grep -qF 'ListenEngine.sink = null' <<<"$ONSTOP"; then
+    pass "D8 Listen writes at the caret while the editor shows, to the file once it stops"
+else
+    fail "D8 Listen no longer inserts at the caret, or onStop leaves the editor as its sink — a stopped activity recomposes nothing and the dictation would never be saved"
+fi
+d D9 "a tool's answer replaces exactly the range it read" \
+    'val (from, to) = rangeFor(tool, v)' 'ToolResult(tool, produced, note, from, to)' 'text.substring(0, from) + r.text + text.substring(to)'
+d D10 "shared text becomes a new document" \
+    'open(store.create(shared))'
+d D11 "the fleet UI kit draws inside this app's theme" \
+    'KitBridge {' 'KitEmptyState(' 'CloudKitTheme('
 
 echo "── $FAILURES failed ──"
 [ "$FAILURES" = "0" ]

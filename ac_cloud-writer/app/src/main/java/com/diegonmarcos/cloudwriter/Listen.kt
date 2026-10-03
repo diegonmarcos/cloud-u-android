@@ -347,14 +347,18 @@ object ListenEngine {
         }
         update { it.copy(lastRoute = answer.route, fallbackReason = answer.fallbackReason, error = null) }
         if (heardText.isEmpty()) return
-        val s = status
-        val written = if (s.translate) {
-            val t = WriterRoutes.translate(app, heardText, s.target)
+        // Read live, not from the session's start: the panel's switch applies to the next segment.
+        val translate = WriterRoutes.listenTranslate(app)
+        val target = WriterRoutes.listenTarget(app)
+        val mode = WriterRoutes.listenMode(app)
+        update { it.copy(translate = translate, target = target, mode = mode) }
+        val written = if (translate) {
+            val t = WriterRoutes.translate(app, heardText, target)
             if (!t.ok) update { it.copy(error = app.getString(R.string.listen_translate_failed, t.error.orEmpty())) }
-            Dictation.withTranslation(heardText, t.text, Dictation.TranslateMode.of(s.mode))
+            Dictation.withTranslation(heardText, t.text, Dictation.TranslateMode.of(mode))
         } else heardText
         update { it.copy(segments = it.segments + 1, chars = it.chars + written.length) }
-        val docId = s.docId
+        val docId = status.docId
         main.post {
             val into = sink
             if (into != null) into(written)

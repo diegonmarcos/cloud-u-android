@@ -114,6 +114,9 @@ object WriterPrefs {
      * that does not exist yet. A mode that silently did the AI rewrite instead would put "improve
      * this text" behind a button the owner set to Remote.
      */
+    /** #800 System / Light / Dark — ui.WriterTheme. */
+    const val KEY_THEME = "writer_theme"
+
     const val KEY_GRAMMAR_MODE = "grammar_mode"
 
     /** Grammar check, the three local fixes. Live: "local" mode applies exactly the ones that are on. */
