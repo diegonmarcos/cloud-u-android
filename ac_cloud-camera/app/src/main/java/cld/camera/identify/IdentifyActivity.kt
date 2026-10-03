@@ -34,6 +34,7 @@ import cld.camera.analyzer.SoundIdentifier
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -208,7 +209,7 @@ class IdentifyActivity : AppCompatActivity() {
                 if (r.ok) { heard = r; heardAt = SystemClock.elapsedRealtime() }
                 runOnUiThread {
                     if (mode == SOUND) status.text = if (!r.ok) r.error.orEmpty() else r.labels.joinToString(", ") { "${it.label} ${Math.round(it.p * 100)}%" }
-                        .ifBlank { getString(R.string.identify_nothing) }
+                        .ifBlank { getString(R.string.identify_nothing) } + "\n" + RecognitionRoutes.answeredBy(r, SoundConfig.routes())
                 }
                 // A missing engine or a refused microphone does not get better by asking again at once.
                 if (!r.ok) break

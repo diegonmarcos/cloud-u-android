@@ -20,6 +20,9 @@ import org.json.JSONObject
 import kotlin.math.min
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.sound.SoundEngine
+import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.sound.SoundPrefs
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import java.io.File
 
 /**
@@ -103,6 +106,37 @@ object SoundFlow {
 
     /** #798 /api/sound/classify?path=<wav>: a WAV file this app can read, on device. */
     fun identifyOnDevice(ctx: Context, wav: File): Recognition = engine(ctx).classify(wav)
+
+    /** #799 one "What is this sound?" answer: the uniform result (which route answered, and why) and, when the model answered, its decision. */
+    data class Identified(val result: Recognition, val decision: Decision?)
+
+    /**
+     * #799 "What is this sound?" on the user's route (libs:ml-l-sound/sound.json; Model (Jev) by
+     * default) or [route]: the decision model is asked through this app's own Jev client with this
+     * app's measurements; offline, no token, a timeout or an error fall back to YAMNet on device, and
+     * the result says so. Recorded as the sound type's last route (RecognitionRoutes).
+     */
+    fun identifyRouted(ctx: Context, pcm: ShortArray, sampleRate: Int, r: Analysis.Result?, knobs: SoundStore.Knobs, route: String? = null): Identified {
+        val chosen = route ?: SoundPrefs.route(ctx)
+        var decision: Decision? = null
+        val hasToken = if (chosen == SoundConfig.OPENROUTER) JevStore.token(ctx).value != null else null
+        val res = RecognitionRoutes.routed(RecognitionRoutes.SOUND, chosen, RecognitionRoutes.online(ctx), hasToken, SoundConfig.fallback(),
+            onDevice = { identifyOnDevice(ctx, pcm, sampleRate) },
+            model = { identify(ctx, pcm, sampleRate, r ?: analyze(pcm, sampleRate), knobs).also { decision = it }.let(::recognition) })
+        return Identified(res, decision?.takeIf { it.ok && res.route == SoundConfig.OPENROUTER })
+    }
+
+    /** A decision in the fleet's one result shape: the class probabilities as labels, the extra questions as answers. */
+    fun recognition(d: Decision): Recognition {
+        val answers = d.answers?.keys()?.asSequence()?.filter { it != JevConfig.IDENTIFY_CLASS }
+            ?.associateWith { q -> d.options(q).map { Recognition.Label(it.key, it.p) } }.orEmpty()
+        return Recognition(
+            ok = d.ok, route = SoundConfig.OPENROUTER, requested = SoundConfig.OPENROUTER, fellBack = false, reason = "",
+            labels = d.options(JevConfig.IDENTIFY_CLASS).map { Recognition.Label(it.key, it.p) }, boxes = emptyList(), text = "",
+            colours = emptyList(), barcode = null, answers = answers, model = d.model, latencyMs = d.latencyMs, cost = d.cost,
+            width = 0, height = 0, error = if (d.ok) null else d.error.ifBlank { "the model did not answer" },
+        )
+    }
 
     /** Null when the sound engine is installed and answers, else what to do (the contract handshake). */
     fun engineStatus(ctx: Context): String? = engine(ctx).check()

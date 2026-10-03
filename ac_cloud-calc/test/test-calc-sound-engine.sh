@@ -9,7 +9,9 @@
 #   S2  the screen offers the DECLARED routes (SoundConfig.routes), starts on the user's
 #       (SoundPrefs.route, whose default is the declaration's) and saves a pick (SoundPrefs.set).
 #   S3  the on-device route answers through SoundFlow.identifyOnDevice, which is the contract's
-#       SoundEngine.classify; the decision model is asked ONLY on the other route.
+#       SoundEngine.classify; #799 the screen asks on the user's route through identifyRouted,
+#       whose on-device half is identifyOnDevice and whose model half is the decision model
+#       (the route rule itself is test-recognition-routes.sh's).
 #   S4  every class the engine heard is shown with its probability, a failure with its reason.
 #   S5  /api/<sound_group>/classify is documented and answered (ms | path | test | generator)
 #       and reports the engine's readiness; /api/<image_group>/detect refuses an undeclared mode.
@@ -72,11 +74,11 @@ def checks(s, sources):
     need("S2 the screen starts on the user's route", "mutableStateOf(SoundPrefs.route(ctx))" in sc)
     need("S2 a pick is saved", "SoundPrefs.set(ctx, id)" in sc)
     # S3
-    need("S3 the on-device route asks the engine",
-         "if (route == SoundConfig.ML) heard = io { SoundFlow.identifyOnDevice(ctx, pcm, cfg.sampleRate) }" in sc)
-    need("S3 the decision model only on the other route",
-         re.search(r"else decision = io \{ SoundFlow\.identify\(ctx, pcm, cfg\.sampleRate, r, knobs\) \}", sc) is not None)
     fl = code(s["flow"])
+    need("S3 the screen asks on the user's route",
+         "val id = io { SoundFlow.identifyRouted(ctx, pcm, cfg.sampleRate, r, knobs, route) }" in sc)
+    need("S3 the on-device half asks the engine", "onDevice = { identifyOnDevice(ctx, pcm, sampleRate) }" in fl)
+    need("S3 the model half is the decision model", "model = { identify(ctx, pcm, sampleRate, r ?: analyze(pcm, sampleRate), knobs)" in fl)
     need("S3 identifyOnDevice is the contract's classify", "fun identifyOnDevice(ctx: Context, pcm: ShortArray, sampleRate: Int): Recognition = engine(ctx).classify(pcm, sampleRate)" in fl)
     # S4
     need("S4 every heard class is shown with its probability", re.search(r"h\.labels\.forEach \{ o ->[\s\S]{0,400}Math\.round\(o\.p \* 100\)", sc) is not None)
@@ -109,10 +111,9 @@ MUTATIONS = [
     ("routes-literal", "screen", "SoundConfig.routes().forEach { (id, label) ->", 'mapOf("ml" to "On device").forEach { (id, label) ->'),
     ("starts-on-decision", "screen", "mutableStateOf(SoundPrefs.route(ctx))", "mutableStateOf(SoundConfig.OPENROUTER)"),
     ("pick-forgotten", "screen", "SoundPrefs.set(ctx, id)", "Unit"),
-    ("on-device-skipped", "screen", "if (route == SoundConfig.ML) heard = io { SoundFlow.identifyOnDevice(ctx, pcm, cfg.sampleRate) }",
-     "if (route == SoundConfig.ML) heard = null"),
-    ("decision-always", "screen", "else decision = io { SoundFlow.identify(ctx, pcm, cfg.sampleRate, r, knobs) }",
-     "decision = io { SoundFlow.identify(ctx, pcm, cfg.sampleRate, r, knobs) }"),
+    ("on-device-skipped", "flow", "onDevice = { identifyOnDevice(ctx, pcm, sampleRate) }", "onDevice = { Recognition.failed(\"ml\", \"off\") }"),
+    ("route-ignored", "screen", "SoundFlow.identifyRouted(ctx, pcm, cfg.sampleRate, r, knobs, route)", "SoundFlow.identifyRouted(ctx, pcm, cfg.sampleRate, r, knobs, SoundConfig.ML)"),
+    ("model-skipped", "flow", "model = { identify(ctx, pcm, sampleRate, r ?: analyze(pcm, sampleRate), knobs)", "model = { identifyOnDevice(ctx, pcm, sampleRate)"),
     ("flow-bypass", "flow", "= engine(ctx).classify(pcm, sampleRate)", "= Recognition.failed(\"ml\", \"off\")"),
     ("no-probability", "screen", 'Text("${Math.round(o.p * 100)}%")\n            }\n        }\n        if (h.segments', 'Text("")\n            }\n        }\n        if (h.segments'),
     ("failure-hidden", "screen", "R.string.sound_identify_unavailable, h.error.orEmpty()", "R.string.sound_identify_unavailable, \"\""),

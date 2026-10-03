@@ -236,4 +236,5 @@
         <item quantity="one">%1$d timer</item>
         <item quantity="other">%1$d timers</item>
     </plurals>
+    <string name="sound_answered_by">Answered by: %1$s</string>
 </resources>

@@ -84,7 +84,7 @@ def checks(s):
     scan = fn(sc, "scan")
     need("R1 scan keeps decodeBarcode", "engine.decodeBarcode(uri)" in scan)
     need("R1 scan keeps recognizeText", "engine.recognizeText(uri)" in scan)
-    need("R1 scan recognises with the identify request", re.search(r"engine\.recognize\(uri,\s*identifyRequest\(ctx\)\)", scan) is not None)
+    need("R1 scan recognises with the identify request", re.search(r"RecognitionRoutes\.image\(ctx,\s*identifyRequest\(ctx\)\)\s*\{\s*engine\.recognize\(uri,\s*it\)\s*\}", scan) is not None)
 
     ident = fn(sc, "identifyRequest")
     need("R2 identify turns OCR off", re.search(r'put\("ocr",\s*false\)', ident) is not None)
@@ -146,7 +146,7 @@ print("  %d failure(s)" % len(bad))
 MUTATIONS = [
     ("no-barcode", "scanner", "val barcode = engine.decodeBarcode(uri)", "val barcode: BarcodeScan? = null"),
     ("no-ocr", "scanner", "val ocr = engine.recognizeText(uri)", "val ocr = OcrResult(\"\", null)"),
-    ("no-recognize", "scanner", "engine.recognize(uri, identifyRequest(ctx))", "Recognition.failed(\"ml\", \"off\")"),
+    ("no-recognize", "scanner", "RecognitionRoutes.image(ctx, identifyRequest(ctx)) { engine.recognize(uri, it) }", "Recognition.failed(\"ml\", \"off\")"),
     ("ocr-twice", "scanner", '.put("ocr", false)', '.put("ocr", true)'),
     ("hardcoded-route", "scanner", "route ?: RecognitionPrefs.route(ctx)", "route ?: \"openrouter\""),
     ("default-model", "scanner", "RecognitionPrefs.model(ctx))", "RecognitionConfig.defaultModel())"),

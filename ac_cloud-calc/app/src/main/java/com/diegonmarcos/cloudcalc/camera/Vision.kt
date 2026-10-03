@@ -12,6 +12,7 @@ import com.diegonmarcos.superapp.image.mlkit.OcrResult
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -38,8 +39,9 @@ object Vision {
     fun request(ctx: Context, route: String? = null, context: String = ""): JSONObject =
         RecognitionConfig.request(route ?: RecognitionPrefs.route(ctx), RecognitionPrefs.model(ctx), JevStore.manualToken(ctx), context)
 
+    /** #799 on the user's route (Model (Jev) by default) with the fallback rule; offline asks on device at once. */
     fun recognize(ctx: Context, photo: File, route: String? = null, context: String = ""): Recognition =
-        engine(ctx).recognize(photo, request(ctx, route, context))
+        RecognitionRoutes.image(ctx, request(ctx, route, context)) { engine(ctx).recognize(photo, it) }
 
     fun ocr(ctx: Context, photo: File): OcrResult = engine(ctx).recognizeText(photo)
 

@@ -28,6 +28,8 @@ import cld.camera.databinding.MoreSettingsBinding
 import cld.camera.util.storageLocationToUiString
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.sound.SoundPrefs
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 
@@ -258,6 +260,9 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         // #772 the route the gallery's Scan contents identifies a photo on (per app, RecognitionPrefs).
         showImageRoute()
         binding.imageRouteSetting.setOnClickListener { pickImageRoute() }
+        // #799 one switch per recognition type: Sound has its own (per app, SoundPrefs), applied on the next listen.
+        showSoundRoute()
+        binding.soundRouteSetting.setOnClickListener { pickSoundRoute() }
 
         binding.appBar.setNavigationOnClickListener {
             finish()
@@ -284,7 +289,27 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         )
     }
 
-    /** The route first; OpenRouter then asks for its model. On-device stays the default and needs no network. */
+    private fun showSoundRoute() {
+        binding.soundRouteSubtitle.text = getString(
+            R.string.image_route_summary,
+            SoundConfig.routes()[SoundPrefs.route(this)], RecognitionPrefs.model(this)
+        )
+    }
+
+    /** #799 Model (Jev), the default, or On-device ML; the model is the Image route's (one decision model per app). */
+    private fun pickSoundRoute() {
+        val routes = SoundConfig.routes().entries.toList()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.sound_route_pick)
+            .setSingleChoiceItems(routes.map { it.value }.toTypedArray(), routes.indexOfFirst { it.key == SoundPrefs.route(this) }) { d, i ->
+                d.dismiss()
+                SoundPrefs.set(this, routes[i].key)
+                showSoundRoute()
+            }
+            .show()
+    }
+
+    /** The route first; Model (Jev) then asks for its model (#799 the default; on-device needs no network). */
     private fun pickImageRoute() {
         val routes = RecognitionConfig.routes().entries.toList()
         MaterialAlertDialogBuilder(this)

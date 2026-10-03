@@ -1,10 +1,11 @@
 {
   "_doc": "#772 THE ONE declaration of image recognition, shared by every app that compiles this contract (Cloud Camera and Cloud Calc first): which routes exist, which is the default, the thresholds, the colour names, and the OpenRouter route's endpoint, model, categories and questions. libs:ml-l-image bakes it into BuildConfig (IMAGE_RECOGNITION_B64), RecognitionConfig reads it, and every recognize request carries the parts the engine needs, so the engine (Cloud-Lib-Ml-L-Image-Mlkit.apk) holds no copy of its own and an edit here re-ships the apps that show it. Per device, each app keeps only the user's route and model choice (RecognitionPrefs).",
   "_doc_routes": "ml = on-device ML Kit (image labelling, object detection with boxes, text recognition) plus ZXing barcodes and the dominant colours: fully offline, the default. openrouter = a decision model on OpenRouter's Decisions API (libs:decisions) asked one choice over `categories` plus the extra `questions`, the photo attached as an image part and the on-device colours as text: decision models answer with calibrated probabilities, mapped into the same labels/answers shape. When the OpenRouter route fails (no token, HTTP error, timeout) and fallback_to_ml is true, the on-device route answers and the result says fell_back with the reason. A model that cannot see images still answers, from the text part: that is why the colours ride along.",
-  "default_route": "ml",
+  "_doc_799": "#799 owner decision, superseding #772's on-device default: the default route is the decision model (openrouter, shown as \"Model (Jev)\", default_model typesafe/jev-1.13; the #770 picker still allows any other decision model). The phone falls back to on-device ML automatically when it is offline, has no OpenRouter token (the fleet Account's), or the model times out or errors, and the result says which route answered (route, fell_back, reason). The SAME switch, labels and fallback rule drive sound (libs:ml-l-sound/sound.json) through RecognitionRoutes; each app reports the active route and the last route used on its debug routes.",
+  "default_route": "openrouter",
   "routes": {
-    "ml": "On-device ML (offline)",
-    "openrouter": "OpenRouter decision model"
+    "openrouter": "Model (Jev)",
+    "ml": "On-device ML (offline)"
   },
   "fallback_to_ml": true,
   "ml": {
@@ -17,7 +18,11 @@
   },
   "_doc_detect": "#798 live identification (detect, contract 3): always on device, whatever the route, because a decision model per camera frame is neither offline nor fast. objects = ML Kit object detection with the engine's full-label classifier (1000 ImageNet classes), up to max_objects boxes each with labels_per_object labels at or above min_confidence, tracking ids in stream mode; labels = ML Kit image labelling of the whole frame (max_labels); text = one box per recognised line. A frame is sized to max_side before detection (live_side for a viewfinder frame, which is smaller so the round trip stays under a few hundred ms); interval_ms is the shortest gap between two live frames a caller sends. The user's route applies to the photo a snapshot saves, through recognize.",
   "detect": {
-    "modes": ["objects", "labels", "text"],
+    "modes": [
+      "objects",
+      "labels",
+      "text"
+    ],
     "default_mode": "objects",
     "max_side": 1024,
     "live_side": 480,

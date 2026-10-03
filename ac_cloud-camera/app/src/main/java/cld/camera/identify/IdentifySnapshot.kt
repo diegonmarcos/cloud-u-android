@@ -19,7 +19,7 @@ import java.util.Locale
 /**
  * #798 a snapshot from the Identify viewfinder, saved WITH what was identified: the live detection
  * at the moment of the shot, the saved photo identified again on the user's route (More settings ▸
- * Image recognition route: on-device by default, OpenRouter when picked, falling back to on-device),
+ * Image recognition route: #799 Model (Jev) by default, falling back to on-device and saying so),
  * and the ambient sound classes when Sound mode heard something recently. All of it rides in the
  * photo's own EXIF — ImageDescription a sentence a gallery shows, UserComment the JSON — so it
  * travels with the file into DCIM/Camera and any app that reads it.
@@ -55,7 +55,7 @@ object IdentifySnapshot {
                 .put("labels", labels(r.labels)).put("text", r.text)
         } ?: JSONObject.NULL)
         .put("photo", photo?.takeIf { it.ok }?.let { r ->
-            JSONObject().put("route", r.route).put("requested", r.requested).put("fell_back", r.fellBack).put("model", r.model).put("labels", labels(r.labels))
+            JSONObject().put("route", r.route).put("requested", r.requested).put("fell_back", r.fellBack).put("reason", r.reason).put("model", r.model).put("labels", labels(r.labels))
         } ?: JSONObject.NULL)
         .put("sound", labels(sound))
 

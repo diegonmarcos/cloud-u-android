@@ -298,6 +298,8 @@
     <string name="image_route_summary">%1$s · %2$s</string>
     <string name="image_route_pick">Recognise photos with</string>
     <string name="image_route_model">Decision model (OpenRouter)</string>
+    <string name="sound_route_title">Sound recognition route</string>
+    <string name="sound_route_pick">Identify sounds with</string>
     <string name="scan_contents_barcode_label">Barcode: </string>
     <string name="scan_contents_failed">Could not read this photo.</string>
 </resources>

@@ -110,7 +110,7 @@ def checks(s):
     need("I7 the sound group is baked from build.json", "BuildConfig.DEBUG_API_SOUND_GROUP" in pr
          and 'buildConfigField("String", "DEBUG_API_SOUND_GROUP", "\\"$debugSoundGroup\\"")' in s["gradle"]
          and re.search(r'"sound_group"\s*:\s*"sound"', s["build"]) is not None)
-    need("I7 classify takes ms, path and test", 'q["ms"]' in pr and 'q["path"]' in pr and 'q["test"]' in pr and 'if (op == "classify") classify(app, q)' in pr)
+    need("I7 classify takes ms, path and test", 'q["ms"]' in pr and 'q["path"]' in pr and 'q["test"]' in pr and '"classify" -> classify(app, q)' in pr)
     need("I7 the microphone needs RECORD_AUDIO", "Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED" in pr)
     need("I7 test clips are the contract's", "SoundCapture.testClip(test, SoundConfig.captureMs(ms))" in pr)
     # I8

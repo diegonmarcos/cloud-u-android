@@ -75,6 +75,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import com.diegonmarcos.superapp.sound.SoundPrefs
 
 /** Microphone and file work block: always off the main thread. */
@@ -416,9 +417,10 @@ fun SoundIdentifyMode(mode: Declarations.Mode) = MicGate {
     var error by remember { mutableStateOf("") }
     var measured by remember { mutableStateOf<Pair<Analysis.Result, JSONObject>?>(null) }
     var decision by remember { mutableStateOf<Decision?>(null) }
-    // #798 the route: on device (YAMNet, offline) by default, the decision model only when picked.
+    // #799 the route: Model (Jev) by default, On-device ML (YAMNet, offline) when picked or when the model cannot answer.
     var route by remember { mutableStateOf(SoundPrefs.route(ctx)) }
     var heard by remember { mutableStateOf<Recognition?>(null) }
+    var answered by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
         SoundConfig.routes().forEach { (id, label) ->
             Row(
@@ -438,19 +440,22 @@ fun SoundIdentifyMode(mode: Declarations.Mode) = MicGate {
         )
         Button(enabled = !busy, modifier = Modifier.testTag(SoundTags.LISTEN), onClick = {
             scope.launch {
-                busy = true; error = ""; decision = null; heard = null
+                busy = true; error = ""; decision = null; heard = null; answered = ""
                 runCatching {
                     val pcm = io { Mic.record(ctx, cfg.sampleRate, cfg.recordMs) }
                     val knobs = SoundStore.knobs(ctx)
                     val r = io { SoundFlow.analyze(pcm, cfg.sampleRate) }
                     measured = r to SoundFlow.summary(r, knobs)
-                    if (route == SoundConfig.ML) heard = io { SoundFlow.identifyOnDevice(ctx, pcm, cfg.sampleRate) }
-                    else decision = io { SoundFlow.identify(ctx, pcm, cfg.sampleRate, r, knobs) }
+                    // #799 the user's route with the fallback rule: the model's decision when it answered, else YAMNet's, saying why.
+                    val id = io { SoundFlow.identifyRouted(ctx, pcm, cfg.sampleRate, r, knobs, route) }
+                    answered = RecognitionRoutes.answeredBy(id.result, SoundConfig.routes())
+                    if (id.decision != null) decision = id.decision else heard = id.result
                 }.onFailure { error = it.message ?: it.javaClass.simpleName }
                 busy = false
             }
         }) { Text(stringResource(if (busy) R.string.sound_listening else R.string.sound_identify)) }
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+        if (answered.isNotBlank()) Text(stringResource(R.string.sound_answered_by, answered), style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(SoundTags.ANSWERED))
         heard?.let { h -> HeardBars(h) }
         decision?.let { d -> DecisionBars(d) }
         measured?.let { (r, s) ->
@@ -521,6 +526,7 @@ object SoundTags {
     const val WATERFALL = "sound_waterfall"
     const val SCOPE = "sound_scope"
     const val VERDICT = "sound_verdict"
+    const val ANSWERED = "sound_answered"
     const val GUARD_NOTE = "sound_guard_note"
     fun route(id: String) = "sound_route_$id"
     fun event(i: Int) = "sound_event_$i"

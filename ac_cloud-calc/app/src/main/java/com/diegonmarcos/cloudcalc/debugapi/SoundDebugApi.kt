@@ -14,6 +14,8 @@ import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.sound.SoundCapture
 import com.diegonmarcos.superapp.sound.SoundConfig
 import com.diegonmarcos.superapp.sound.SoundPrefs
+import com.diegonmarcos.superapp.sound.SoundRouting
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -51,7 +53,8 @@ object SoundDebugApi {
                 AppDebugServer.Op("analyze", "ms=<duration>&source=<mic|generator>", "record (or re-read the last generated tone) and report frequency, note, level, events"),
                 AppDebugServer.Op("status", "", "microphone permission, knobs, last generation, History session, saved sessions"),
                 AppDebugServer.Op("classify", "ms=<n> | path=<wav> | test=<${SoundCapture.TESTS.joinToString("|")}> | source=generator",
-                    "#798 identify a sound on device through the shared engine (YAMNet): labels, timeline, peak, engine readiness"),
+                    "#798/#799 identify a sound on the user's route (or route=<openrouter|ml>): Model (Jev) by default, YAMNet on device as the fallback; a path= WAV is on device. Labels, timeline, peak, which route answered"),
+                AppDebugServer.Op("route", "[set=<openrouter|ml>]", "#799 the sound route: active (the user's), declared default, and the last route that answered"),
             ),
         ) { op, q ->
             when (op) {
@@ -59,6 +62,7 @@ object SoundDebugApi {
                 "analyze" -> analyze(app, q).toString()
                 "status" -> status(app).toString()
                 "classify" -> classify(app, q).toString()
+                "route" -> route(app, q).toString()
                 else -> null
             }
         }
@@ -106,37 +110,51 @@ object SoundDebugApi {
     /** #798 the on-device route of "What is this sound?", the same call the screen makes. */
     fun classify(ctx: Context, q: Map<String, String>): JSONObject {
         val cfg = SoundDecl.config
+        val route = q["route"]?.takeIf { it.isNotBlank() }
+        if (route != null && route !in SoundConfig.routes()) return JSONObject().put("ok", false).put("error", "route must be one of ${SoundConfig.routes().keys}")
+        val knobs = SoundStore.knobs(ctx)
+        fun routed(pcm: ShortArray, sr: Int) = SoundFlow.identifyRouted(ctx, pcm, sr, null, knobs, route).result
         val path = q["path"]?.takeIf { it.isNotBlank() }
         val test = q["test"]?.takeIf { it.isNotBlank() }
         val (r, source, pcm) = when {
             path != null -> {
                 val f = if (path.startsWith("/")) File(path) else File(ctx.filesDir, path)
                 if (!f.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${f.path}")
-                Triple(SoundFlow.identifyOnDevice(ctx, f), "file:${f.path}", null)
+                Triple(RecognitionRoutes.record(RecognitionRoutes.SOUND, SoundConfig.ML, SoundFlow.identifyOnDevice(ctx, f)), "file:${f.path}", null)
             }
             test != null -> {
                 if (test !in SoundCapture.TESTS) return JSONObject().put("ok", false).put("error", "test must be one of ${SoundCapture.TESTS}")
                 val clip = SoundCapture.testClip(test, SoundConfig.captureMs(q["ms"]?.toLongOrNull()), cfg.sampleRate)
-                Triple(SoundFlow.identifyOnDevice(ctx, clip, cfg.sampleRate), "test:$test", clip)
+                Triple(routed(clip, cfg.sampleRate), "test:$test", clip)
             }
             q["source"] == "generator" -> {
                 val g = SoundStore.lastGenerated ?: return JSONObject().put("ok", false).put("error", "nothing generated yet — call generate first")
-                Triple(SoundFlow.identifyOnDevice(ctx, g.pcm, g.sampleRate), "generator", g.pcm)
+                Triple(routed(g.pcm, g.sampleRate), "generator", g.pcm)
             }
             q["ms"] != null -> {
                 val ms = (q["ms"]?.toIntOrNull() ?: cfg.recordMs).coerceIn(50, cfg.maxRecordMs)
                 val clip = runCatching { Mic.record(ctx, cfg.sampleRate, ms) }
                     .getOrElse { return JSONObject().put("ok", false).put("source", "mic").put("error", it.message ?: it.javaClass.simpleName) }
-                Triple(SoundFlow.identifyOnDevice(ctx, clip, cfg.sampleRate), "mic", clip)
+                Triple(routed(clip, cfg.sampleRate), "mic", clip)
             }
             else -> return JSONObject().put("ok", false).put("error", "one of ms=<n>, path=<wav>, test=<${SoundCapture.TESTS.joinToString("|")}> or source=generator is required")
         }
-        return JSONObject().put("ok", r.ok).put("route", r.route).put("source", source).put("model", r.model).put("latency_ms", r.latencyMs)
+        return JSONObject().put("ok", r.ok).put("route", r.route).put("requested", r.requested).put("fell_back", r.fellBack).put("reason", r.reason).put("source", source).put("model", r.model).put("latency_ms", r.latencyMs)
             .put("labels", JSONArray().apply { r.labels.forEach { put(JSONObject().put("label", it.label).put("p", it.p)) } })
             .put("segments", JSONArray().apply { r.segments.forEach { put(JSONObject().put("label", it.label).put("p", it.p).put("start_ms", it.startMs).put("end_ms", it.endMs)) } })
             .put("peak", pcm?.let { SoundCapture.peak(it) } ?: JSONObject.NULL)
             .put("error", r.error ?: JSONObject.NULL)
             .put("chosen_route", SoundPrefs.route(ctx)).put("engine", SoundFlow.engineStatus(ctx) ?: "ready")
+            .put("routes", SoundRouting.status(ctx))
+    }
+
+    /** #799 /api/sound/route[?set=]: the active sound route, the declared default, the last route used. */
+    fun route(ctx: Context, q: Map<String, String>): JSONObject {
+        q["set"]?.takeIf { it.isNotBlank() }?.let { r ->
+            if (r !in SoundConfig.routes()) return JSONObject().put("ok", false).put("error", "set must be one of ${SoundConfig.routes().keys}")
+            SoundPrefs.set(ctx, r)
+        }
+        return SoundRouting.status(ctx).put("ok", true).put("model", SoundFlow.model(ctx))
     }
 
     /** One line a human reads first: the frequency and what kind of sound carried it. */

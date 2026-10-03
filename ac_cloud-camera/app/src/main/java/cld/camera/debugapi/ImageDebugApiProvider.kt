@@ -15,8 +15,11 @@ import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import com.diegonmarcos.superapp.sound.SoundCapture
 import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.sound.SoundPrefs
+import com.diegonmarcos.superapp.sound.SoundRouting
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -38,10 +41,12 @@ class ImageDebugApiProvider : ContentProvider() {
                 listOf(
                     AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file>", "recognise an image through the shared engine, on a route"),
                     AppDebugServer.Op("detect", "path=<file>&mode=<objects|labels|text>", "#798 live identification's detection of one image: boxes, labels, tracking ids (on device)"),
+                    AppDebugServer.Op("route", "[set=<openrouter|ml>]", "#799 the image route: active (the user's), declared default, and the last route that answered"),
                 ),
             ) { op, q ->
                 when (op) {
                     "recognize" -> recognize(app, q).toString()
+                    "route" -> imageRoute(app, q).toString()
                     "detect" -> detect(app, q).toString()
                     else -> null
                 }
@@ -50,9 +55,18 @@ class ImageDebugApiProvider : ContentProvider() {
         runCatching {
             AppDebugServer.route(
                 BuildConfig.DEBUG_API_SOUND_GROUP,
-                listOf(AppDebugServer.Op("classify", "ms=<n> | path=<wav> | test=<${SoundCapture.TESTS.joinToString("|")}>[&ms=<n>]",
-                    "#798 identify a sound through the shared engine (YAMNet, on device): from the microphone, a WAV file, or a synthetic test clip")),
-            ) { op, q -> if (op == "classify") classify(app, q).toString() else null }
+                listOf(
+                    AppDebugServer.Op("classify", "ms=<n> | path=<wav> | test=<${SoundCapture.TESTS.joinToString("|")}>[&ms=<n>][&route=<openrouter|ml>]",
+                        "#798/#799 identify a sound on the user's route (or route=): Model (Jev) through the image engine, else YAMNet on device; from the microphone, a WAV file (on device), or a synthetic test clip"),
+                    AppDebugServer.Op("route", "[set=<openrouter|ml>]", "#799 the sound route: active (the user's), declared default, and the last route that answered"),
+                ),
+            ) { op, q ->
+                when (op) {
+                    "classify" -> classify(app, q).toString()
+                    "route" -> soundRoute(app, q).toString()
+                    else -> null
+                }
+            }
         }
         return true
     }
@@ -86,6 +100,8 @@ class ImageDebugApiProvider : ContentProvider() {
          */
         fun classify(ctx: Context, q: Map<String, String>): JSONObject {
             val sound = SoundIdentifier(ctx)
+            val route = q["route"]?.takeIf { it.isNotBlank() }
+            if (route != null && route !in SoundConfig.routes()) return JSONObject().put("ok", false).put("error", "route must be one of ${SoundConfig.routes().keys}")
             val ms = q["ms"]?.toLongOrNull()
             val test = q["test"]?.takeIf { it.isNotBlank() }
             val path = q["path"]?.takeIf { it.isNotBlank() }
@@ -98,17 +114,35 @@ class ImageDebugApiProvider : ContentProvider() {
                 test != null -> {
                     if (test !in SoundCapture.TESTS) return JSONObject().put("ok", false).put("error", "test must be one of ${SoundCapture.TESTS}")
                     val pcm = SoundCapture.testClip(test, SoundConfig.captureMs(ms))
-                    json(sound.classify(pcm)).put("source", "test:$test").put("samples", pcm.size).put("peak", SoundCapture.peak(pcm))
+                    json(sound.classify(pcm, route = route)).put("source", "test:$test").put("samples", pcm.size).put("peak", SoundCapture.peak(pcm))
                 }
                 ms != null -> {
                     if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
                         return JSONObject().put("ok", false).put("error", "RECORD_AUDIO is not granted to this app")
-                    val (r, pcm) = sound.listen(ms)
+                    val (r, pcm) = sound.listen(ms, route)
                     json(r).put("source", "mic").put("samples", pcm.size).put("peak", SoundCapture.peak(pcm))
                 }
                 else -> return JSONObject().put("ok", false).put("error", "one of ms=<n>, path=<wav> or test=<${SoundCapture.TESTS.joinToString("|")}> is required")
             }
-            return out.put("engine", sound.status() ?: "ready")
+            return out.put("engine", sound.status() ?: "ready").put("routes", SoundRouting.status(ctx))
+        }
+
+        /** #799 /api/image/route[?set=]: the active image route, the declared default, the last route used. */
+        fun imageRoute(ctx: Context, q: Map<String, String>): JSONObject {
+            q["set"]?.takeIf { it.isNotBlank() }?.let { r ->
+                if (r !in RecognitionConfig.routes()) return JSONObject().put("ok", false).put("error", "set must be one of ${RecognitionConfig.routes().keys}")
+                RecognitionPrefs.set(ctx, r, RecognitionPrefs.model(ctx))
+            }
+            return RecognitionRoutes.imageStatus(RecognitionPrefs.route(ctx)).put("ok", true).put("model", RecognitionPrefs.model(ctx))
+        }
+
+        /** #799 /api/sound/route[?set=]: the active sound route, the declared default, the last route used. */
+        fun soundRoute(ctx: Context, q: Map<String, String>): JSONObject {
+            q["set"]?.takeIf { it.isNotBlank() }?.let { r ->
+                if (r !in SoundConfig.routes()) return JSONObject().put("ok", false).put("error", "set must be one of ${SoundConfig.routes().keys}")
+                SoundPrefs.set(ctx, r)
+            }
+            return SoundRouting.status(ctx).put("ok", true).put("model", RecognitionPrefs.model(ctx))
         }
 
         fun recognize(ctx: Context, q: Map<String, String>): JSONObject {
@@ -122,7 +156,7 @@ class ImageDebugApiProvider : ContentProvider() {
             return json(scanner.recognize(file, route))
                 .put("path", file.path)
                 .put("chosen_route", RecognitionPrefs.route(ctx)).put("chosen_model", RecognitionPrefs.model(ctx))
-                .put("engine", scanner.status() ?: "ready")
+                .put("engine", scanner.status() ?: "ready").put("routes", RecognitionRoutes.imageStatus(RecognitionPrefs.route(ctx)))
         }
 
         /** The uniform result, field by field (the same shape Cloud Calc's route reports). */

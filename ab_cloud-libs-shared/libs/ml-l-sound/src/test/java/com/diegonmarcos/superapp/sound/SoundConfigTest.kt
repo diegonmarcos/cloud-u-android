@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.sound
 
 import com.diegonmarcos.superapp.image.mlkit.Recognition
+import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import org.json.JSONObject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -21,9 +22,52 @@ class SoundConfigTest {
     /** The suite runs from this module's directory, wherever a consumer links it. */
     private val decl = JSONObject(File("sound.json").readText())
 
-    @Test fun `on device is the declared default, and both routes are declared`() {
-        assertEquals("ml", decl.getString("default_route"))
+    @Test fun `#799 Model (Jev) is the declared default, on-device the fallback, and both routes are declared`() {
+        assertEquals(SoundConfig.OPENROUTER, decl.getString("default_route"))
         assertEquals(setOf(SoundConfig.ML, SoundConfig.OPENROUTER), SoundConfig.routes(decl).keys)
+        assertEquals("Model (Jev)", SoundConfig.routes(decl)[SoundConfig.OPENROUTER])
+        assertEquals("the image switch and the sound switch read the same", RecognitionConfig.routes(image), SoundConfig.routes(decl))
+        assertTrue(SoundConfig.fallback(decl))
+    }
+
+    private val image = JSONObject(File("../ml-l-image/recognition.json").readText())
+
+    @Test fun `#799 the Model request asks the sound question on the one OpenRouter, with the engine's own fallback off`() {
+        val q = SoundConfig.modelRequest("", "heard_on_device: Speech 0.80", image, decl)
+        assertEquals(SoundConfig.OPENROUTER, q.getString("route"))
+        assertEquals(RecognitionConfig.defaultModel(image), q.getString("model"))
+        assertEquals(false, q.getBoolean("fallback"))
+        assertEquals(false, q.getJSONObject("ml").getBoolean("ocr"))
+        assertEquals(false, q.getJSONObject("ml").getBoolean("barcode"))
+        val o = q.getJSONObject("openrouter")
+        assertEquals(image.getJSONObject("openrouter").getString("endpoint"), o.getString("endpoint"))
+        assertEquals(image.getJSONObject("openrouter").getString("account_provider"), o.getString("account_provider"))
+        assertEquals(decl.getJSONObject("openrouter").getJSONObject("categories").keys().asSequence().toSet(), o.getJSONObject("categories").keys().asSequence().toSet())
+        assertEquals(decl.getJSONObject("openrouter").getString("instructions"), o.getString("instructions"))
+        assertEquals(setOf("natural"), o.getJSONObject("questions").keys().asSequence().toSet())
+        assertEquals("heard_on_device: Speech 0.80", q.getString("context"))
+        assertTrue("the image declaration is not changed", image.getJSONObject("openrouter").getJSONObject("categories").has("plant"))
+    }
+
+    @Test fun `#799 the model is told what was heard on device, the peak and the length`() {
+        val heard = Recognition.failed("ml", "").copy(ok = true, error = null, labels = listOf(Recognition.Label("Speech", 0.8)))
+        val pcm = ShortArray(16000) { if (it == 5) 16384 else 0 }
+        assertEquals("heard_on_device: Speech 0.80; peak: 0.500; length_ms: 1000", SoundConfig.modelContext(heard, pcm, 16000))
+        assertEquals("heard_on_device: unavailable; peak: 0.500; length_ms: 1000", SoundConfig.modelContext(Recognition.failed("ml", "no engine"), pcm, 16000))
+    }
+
+    @Test fun `#799 a spectrogram is brightest at the tone's band and black for silence`() {
+        val rate = 16000; val w = 16; val h = 32
+        val tone = ShortArray(rate) { (Math.sin(2 * Math.PI * 1000.0 * it / rate) * 12000).toInt().toShort() }
+        val px = SoundConfig.spectrogram(tone, rate, w, h)
+        assertEquals(w * h, px.size)
+        assertTrue("opaque", px.all { (it ushr 24) == 0xFF })
+        val grey = { y: Int -> px[(h - 1 - y) * w + w / 2] and 0xFF }
+        val brightest = (0 until h).maxByOrNull { grey(it) }!!
+        val f = 60.0 * Math.pow((rate / 2.0) / 60.0, (brightest + 0.5) / h)
+        assertTrue("the brightest band ($f Hz) is the tone's", f in 800.0..1250.0)
+        assertTrue("silence is black", SoundConfig.spectrogram(ShortArray(4096), rate, w, h).all { it == 0xFF000000.toInt() })
+        assertTrue(SoundConfig.spectrogram(ShortArray(0), rate, w, h).all { it == 0xFF000000.toInt() })
     }
 
     @Test fun `the request carries the declared on-device thresholds and nothing else`() {

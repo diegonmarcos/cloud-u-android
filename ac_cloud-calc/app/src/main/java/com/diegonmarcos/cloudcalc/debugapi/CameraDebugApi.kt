@@ -12,6 +12,7 @@ import com.diegonmarcos.cloudcalc.measure.Level
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import org.json.JSONObject
 import java.io.File
 
@@ -52,10 +53,12 @@ object CameraDebugApi {
             listOf(
                 AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file, or last>&context=<text>", "recognise an image through the shared engine, on a route"),
                 AppDebugServer.Op("detect", "path=<file, or last>&mode=<objects|labels|text>", "#798 live identification's detection of one image: boxes, labels, tracking ids (on device)"),
+                AppDebugServer.Op("route", "[set=<openrouter|ml>]", "#799 the image route: active (the user's), declared default, and the last route that answered"),
             ),
         ) { op, q ->
             when (op) {
                 "recognize" -> recognize(app, q).toString()
+                "route" -> route(app, q).toString()
                 "detect" -> detect(app, q).toString()
                 else -> null
             }
@@ -74,6 +77,7 @@ object CameraDebugApi {
             .put("route", RecognitionPrefs.route(ctx))
             .put("model", RecognitionPrefs.model(ctx))
             .put("routes", JSONObject(RecognitionConfig.routes()))
+            .put("route_status", RecognitionRoutes.imageStatus(RecognitionPrefs.route(ctx)))
             .put("last_photo", if (last.isFile) JSONObject().put("path", last.path).put("bytes", last.length()).put("modified", last.lastModified()) else JSONObject.NULL)
             .put("level", tilt?.let { JSONObject().put("tilt_deg", it.tiltDeg).put("pitch_deg", it.pitchDeg).put("roll_deg", it.rollDeg).put("edge_deg", it.edgeDeg) } ?: JSONObject.NULL)
     }
@@ -107,5 +111,15 @@ object CameraDebugApi {
         }
         if (!file.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${file.path} — take a photo in Measure ▸ Camera first, or give a path this app can read")
         return Vision.json(Vision.recognize(ctx, file, route, q["context"].orEmpty())).put("path", file.path)
+            .put("routes", RecognitionRoutes.imageStatus(RecognitionPrefs.route(ctx)))
+    }
+
+    /** #799 /api/image/route[?set=]: the active image route, the declared default, the last route used. */
+    fun route(ctx: Context, q: Map<String, String>): JSONObject {
+        q["set"]?.takeIf { it.isNotBlank() }?.let { r ->
+            if (r !in RecognitionConfig.routes()) return JSONObject().put("ok", false).put("error", "set must be one of ${RecognitionConfig.routes().keys}")
+            RecognitionPrefs.set(ctx, r, RecognitionPrefs.model(ctx))
+        }
+        return RecognitionRoutes.imageStatus(RecognitionPrefs.route(ctx)).put("ok", true).put("model", RecognitionPrefs.model(ctx))
     }
 }

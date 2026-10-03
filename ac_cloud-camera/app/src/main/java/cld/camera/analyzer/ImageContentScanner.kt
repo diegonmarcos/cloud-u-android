@@ -38,6 +38,7 @@ import com.diegonmarcos.superapp.image.mlkit.OcrResult
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.image.mlkit.RecognitionRoutes
 import org.json.JSONObject
 import java.io.File
 
@@ -70,11 +71,17 @@ class ImageContentScanner(context: Context) {
     fun scan(uri: Uri): Content {
         val barcode = engine.decodeBarcode(uri)
         val ocr = engine.recognizeText(uri)
-        return Content(barcode, ocr, engine.recognize(uri, identifyRequest(ctx)))
+        return Content(barcode, ocr, RecognitionRoutes.image(ctx, identifyRequest(ctx)) { engine.recognize(uri, it) })
     }
 
-    /** /api/image/recognize: the uniform recognition of a file, on [route] or the user's. */
-    fun recognize(file: File, route: String?): Recognition = engine.recognize(file, request(ctx, route))
+    /**
+     * /api/image/recognize and a snapshot: the uniform recognition of a file, on [route] or the
+     * user's (#799 Model (Jev) by default; the engine falls back on device and says so).
+     */
+    fun recognize(file: File, route: String?): Recognition = RecognitionRoutes.image(ctx, request(ctx, route)) { engine.recognize(file, it) }
+
+    /** #799 one request as given, no route rule of its own: the Sound route's Model half (SoundIdentifier) asks through here. */
+    fun recognizeAsGiven(bitmap: android.graphics.Bitmap, request: JSONObject): Recognition = engine.recognize(bitmap, request)
 
     /** The engine's live decision-model catalogue (slugs), for the model picker; empty when it cannot answer. */
     fun models(): List<String> = engine.decisionModels(RecognitionConfig.request(RecognitionConfig.OPENROUTER, "")).map { it.slug }

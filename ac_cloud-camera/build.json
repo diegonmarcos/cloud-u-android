@@ -117,6 +117,7 @@
     "image_group": "image",
     "sound_group": "sound"
   },
+  "_doc_debug_api_799": "#799 /api/<image_group>/route[?set=openrouter|ml] and /api/<sound_group>/route[?set=] report the active recognition route per type (the user's; Model (Jev) by default), the declared default and the last route that answered (with fell_back and the reason); /api/<sound_group>/classify takes route= and reports the same. The rule is libs:ml-l-image RecognitionRoutes; the Sound route's Model half asks the decision model through the image engine.",
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh, which ship-cloud-camera.yml already invokes for shell/lint/unit — so this block is all that was needed to turn those three calls from 'SKIPPED LOUDLY' into real assertions. Before it, this app's green tick meant only that Gradle exited 0.",
     "shell": {

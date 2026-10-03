@@ -1,10 +1,11 @@
 {
   "_doc": "#798 THE ONE declaration of sound identification, shared by every app that compiles this contract (Cloud Calc's 'What is this sound?' and Cloud Camera's Sound mode): which routes exist, which is the default, what the on-device engine is asked for, how long a capture is, and which classes are good enough to tag a photo with. libs:ml-l-sound bakes it into BuildConfig (SOUND_CONFIG_B64); SoundConfig reads it and every classify request carries the `ml` block, so the engine (Cloud-Lib-Ml-L-Sound-Yamnet.apk) holds no thresholds of its own. Per device, each app keeps only the user's route (SoundPrefs).",
-  "_doc_routes": "ml = YAMNet (521 AudioSet classes) in the engine APK: fully offline, the default. openrouter = the app's own decision model asked about the measurements (Cloud Calc's build.json::jev.identify.sound): the engine has no network and no such route, so only an app that declares one offers it, and it stays optional.",
-  "default_route": "ml",
+  "_doc_routes": "ml = YAMNet (521 AudioSet classes) in the engine APK: fully offline. openrouter (\"Model (Jev)\", #799 THE DEFAULT) = a decision model asked one choice over the declared classes: Cloud Calc asks its own decision client with its own measurements (build.json::jev.identify.sound, the Jev model picker); every other app (Cloud Camera) asks through the image engine, which holds the network and the fleet Account's token, with the `openrouter` block below, YAMNet's classes as the measurement and a spectrogram as the image. The sound engine itself has no network. When the model cannot answer (offline, no token, timeout, error) and fallback_to_ml is true, YAMNet answers and the result says fell_back with the reason (RecognitionRoutes, libs:ml-l-image).",
+  "default_route": "openrouter",
+  "fallback_to_ml": true,
   "routes": {
-    "ml": "On-device (YAMNet, offline)",
-    "openrouter": "OpenRouter decision model"
+    "openrouter": "Model (Jev)",
+    "ml": "On-device ML (offline)"
   },
   "_doc_ml": "top_k classes with a mean score of at least min_score are returned; a window whose best class scores segment_min or more joins the timeline; the engine reads at most max_ms of a clip.",
   "ml": {
@@ -23,5 +24,33 @@
   "tags": {
     "max": 3,
     "min_score": 0.2
+  },
+  "_doc_openrouter": "#799 the Model route of an app with no decision client of its own (Cloud Camera), sent through the image engine's recognize on the openrouter route with fallback off (the fallback is YAMNet's, here, not the engine's photo labels). endpoint, models_url, account_provider and default_model are recognition.json's (one OpenRouter, one default model); only what is asked differs. image_side sizes the spectrogram.",
+  "openrouter": {
+    "timeout_ms": 15000,
+    "image_side": 256,
+    "instructions": "Which kind of sound source best explains this sound recorded by a phone microphone? `measured` is the image's size and colours; `context` lists the AudioSet classes an on-device model (YAMNet) heard with their mean scores, the clip's peak level and its length; the attached image is the clip's spectrogram (time across, log frequency up, brighter is louder).",
+    "categories": {
+      "speech": "Human speech or voice.",
+      "music": "Music or singing.",
+      "birdsong": "Birdsong or bird calls.",
+      "animal": "Another animal: a dog, a cat, insects.",
+      "siren": "A siren.",
+      "alarm": "An alarm, beeper, ringtone or smoke detector.",
+      "vehicle": "An engine, traffic or a vehicle.",
+      "machine": "A fan, an appliance, a power tool or other machine.",
+      "water": "Running water or rain.",
+      "wind": "Wind.",
+      "impact": "A knock, clap, footstep or impact.",
+      "silence": "Silence or near silence.",
+      "other": "Something else, or too ambiguous to say."
+    },
+    "questions": {
+      "natural": {
+        "label": "Natural?",
+        "type": "noul",
+        "instructions": "The sound comes from a natural source (an animal, a person, weather, water) rather than a machine or a device."
+      }
+    }
   }
 }
