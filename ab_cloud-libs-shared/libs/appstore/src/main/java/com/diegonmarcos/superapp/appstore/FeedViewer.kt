@@ -160,18 +160,17 @@ object FeedViewer {
         val proxy = feed.proxy ?: return try {
             read(feed.shape, feed.url, emptyMap()).also { note(feed, LEG_PUBLIC, it.size, null, null) }
         } catch (direct: Exception) { note(feed, LEG_FAILED, 0, null, explain(direct)); throw direct }
-        return try {
+        var proxyWhy: String? = null
+        val got = try {
             val bearer = runCatching { fleetBearer() }.getOrDefault("").trim()
             read(feed.proxyShape, proxy, if (bearer.isEmpty()) emptyMap() else mapOf("Authorization" to "Bearer $bearer"))
-                .also { note(feed, LEG_PROXY, it.size, null, null) }
         } catch (viaProxy: Exception) {
-            val proxyWhy = explain(viaProxy)
-            try {
-                read(feed.shape, feed.url, emptyMap()).also { note(feed, LEG_FALLBACK, it.size, proxyWhy, null) }
-            } catch (direct: Exception) {
-                direct.addSuppressed(viaProxy); note(feed, LEG_FAILED, 0, proxyWhy, explain(direct)); throw direct
+            try { read(feed.shape, feed.url, emptyMap()).also { proxyWhy = explain(viaProxy) } } catch (direct: Exception) {
+                direct.addSuppressed(viaProxy); note(feed, LEG_FAILED, 0, explain(viaProxy), explain(direct)); throw direct
             }
         }
+        note(feed, if (proxyWhy == null) LEG_PROXY else LEG_FALLBACK, got.size, proxyWhy, null)
+        return got
     }
 
     // ── #841 which leg served each feed, for /api/store/feeds ───────────────
