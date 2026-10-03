@@ -112,8 +112,29 @@ object StoreMigration {
         renames.mapNotNull { (old, new) ->
             val stray = File(gitRoot, old)
             if (old == new || !stray.isDirectory) null
+            // #821 an EMPTY old-name folder is the leftover of a seed that failed before it wrote
+            // anything (front-diegonmarcos: a declared name GitHub never had). It holds nothing to
+            // lose and is not a user folder of the old name, so it is removed rather than left as
+            // an undeclared directory forever — settle() would leave it (a non-clone is never ours).
+            else if (stray.list()?.isEmpty() == true) {
+                val removed = stray.delete()
+                Move(new, stray, File(gitRoot, new), moved = false, removed = removed,
+                    decision = "renamed $old -> $new: " + if (removed) "removed: the old-name folder was empty" else "left: the empty old-name folder could not be removed")
+            }
             else settle(stray, File(gitRoot, new))?.let { it.copy(decision = "renamed $old -> $new: ${it.decision}") }
         }
+
+    /**
+     * #821 THE RECONCILIATION THE STORE OWES ITS MANIFEST: every directory under [gitRoot] whose
+     * name is not [declared] (the manifest's names; a `renamed_from` name is NOT declared — after
+     * the migration it must be gone). The seed logs and persists this set on every pass so the
+     * device itself names any undeclared directory; nothing is deleted from it, because the Git
+     * page's personal section legitimately clones the owner's private repositories into the store.
+     * The parking folder of an in-flight settle is not a repository and is excluded.
+     */
+    fun undeclared(gitRoot: File, declared: Set<String>): List<String> =
+        gitRoot.listFiles()?.filter { it.isDirectory && it.name !in declared && !it.name.endsWith(PARKED_SUFFIX) }
+            ?.map { it.name }?.sorted() ?: emptyList()
 
     /** One name's decision. null ⇒ there was nothing at the root worth reporting. */
     private fun settle(stray: File, dest: File): Move? {

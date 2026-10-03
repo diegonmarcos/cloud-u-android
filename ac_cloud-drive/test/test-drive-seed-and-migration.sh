@@ -202,6 +202,31 @@ sys.exit(1 if bad else 0)
 PYTHON
 if [ $? -eq 0 ]; then pass "every declared seed repository is public and its prose agrees with its flag"; else fail "the seed manifest contradicts itself"; fi
 
+# r1 <manifest> <StoreMigration.kt> <StoreSeed.kt> : #821 store dirs == declared repos.
+# The names a device's git/ is known to hold beyond today's manifest (code history:
+# ffront renamed to front by #731; front-diegonmarcos seeded until 81249a55 although
+# GitHub never had it) must each be declared or migrated by a renamed_from; empty
+# old-name leftovers are removable; and the seed reports any remaining undeclared dir.
+KNOWN_STORE_LEFTOVERS="ffront front-diegonmarcos"
+r1() {
+    python3 - "$1" "$KNOWN_STORE_LEFTOVERS" <<'PYTHON' || return 1
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+names = {r["name"] for r in d["repos"]}
+renamed = {o: r["name"] for r in d["repos"] for o in r.get("renamed_from", [])}
+bad = [n for n in sys.argv[2].split() if n not in names and n not in renamed]
+bad += [o for o, n in renamed.items() if o in names]
+for n in bad: print("    %s: a store directory the manifest neither declares nor migrates" % n)
+sys.exit(1 if bad else 0)
+PYTHON
+    grep -q 'stray.list()?.isEmpty() == true' "$2" || { echo "    the empty old-name leftover is never removed"; return 1; }
+    grep -q 'fun undeclared(gitRoot: File' "$2" || { echo "    no reconciliation of git/ against the manifest"; return 1; }
+    grep -q 'StoreMigration.undeclared(SharedStore.gitRoot()' "$3" || { echo "    the seed never reports undeclared directories"; return 1; }
+    grep -q 'StoreMigration.migrateRenames(SharedStore.gitRoot(), family.renames)' "$3" || { echo "    the rename migration is not armed"; return 1; }
+}
+echo "── R the store reconciles with the manifest (#821) ──"
+if r1 "$MANIFEST" "$MIGRATION" "$SEED"; then pass "every known store leftover is declared or migrated, and undeclared dirs are reported"; else fail "the store can hold directories the manifest does not account for"; fi
+
 echo "── MUT mutations ──"
 MUT="$(mktemp -d)"
 trap 'rm -rf "$MUT"' EXIT
@@ -255,6 +280,16 @@ s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE)", "RESUMABLE =
 open(p, "w", encoding="utf-8").write(s)
 PYTHON
 if s6 "$SEED" "$MUT/report-resumable.kt" >/dev/null 2>&1 || s4 "$MUT/report-resumable.kt" >/dev/null 2>&1; then fail "MUT needs-credential made resumable: the mutation passed"; else pass "MUT needs-credential made resumable goes RED (s4 and s6 both)"; fi
+
+# #821 the reconciliation, mutated: drop the front-diegonmarcos migration; drop the
+# empty-leftover removal; stop reporting undeclared directories.
+cp "$MANIFEST" "$MUT/m.json"; python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('\"renamed_from\": [\"front-diegonmarcos\"]','\"renamed_from\": []');open(p,'w').write(s)" "$MUT/m.json"
+if r1 "$MUT/m.json" "$MIGRATION" "$SEED" >/dev/null 2>&1; then fail "MUT front-diegonmarcos migration dropped: the mutation passed"; else pass "MUT front-diegonmarcos migration dropped goes RED"; fi
+cp "$MIGRATION" "$MUT/mig.kt"; python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('stray.list()?.isEmpty() == true','false');open(p,'w').write(s)" "$MUT/mig.kt"
+if r1 "$MANIFEST" "$MUT/mig.kt" "$SEED" >/dev/null 2>&1; then fail "MUT empty-leftover removal dropped: the mutation passed"; else pass "MUT empty-leftover removal dropped goes RED"; fi
+cp "$SEED" "$MUT/seed-undecl.kt"; python3 -c "import sys;p=sys.argv[1];s=open(p).read().replace('StoreMigration.undeclared(SharedStore.gitRoot()','emptyList<String>().also { SharedStore.gitRoot()');open(p,'w').write(s)" "$MUT/seed-undecl.kt"
+if r1 "$MANIFEST" "$MIGRATION" "$MUT/seed-undecl.kt" >/dev/null 2>&1; then fail "MUT undeclared report dropped: the mutation passed"; else pass "MUT undeclared report dropped goes RED"; fi
+r1 "$MANIFEST" "$MIGRATION" "$SEED" >/dev/null 2>&1 || fail "MUT control: r1 is red on the unmutated tree"
 
 # the unmutated tree must still be green, or every mutation above proves nothing
 s1 "$SEED" >/dev/null 2>&1 && s2 "$SEED" >/dev/null 2>&1 && s5 "$SEED" >/dev/null 2>&1 && s6 "$SEED" "$REPORT" >/dev/null 2>&1 && m1 "$MIGRATION" >/dev/null 2>&1 && m2 "$MIGRATION" >/dev/null 2>&1 \

@@ -149,6 +149,15 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         report.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
         // Persisted next to the registry so the Sync ▸ Git page can show "9/12, will retry: …"
         // on the device instead of the user inferring it from a folder listing.
+        // #821 the store is reconciled against the manifest on every pass: any directory under
+        // git/ the manifest does not name is logged BY NAME, so "12 declared vs 14
+        // directories" is never again a count someone has to diff by hand. It goes to the on-device debug log (where
+        // the original count was read), NOT the report file, whose last line is the page's tally. Report-only: the
+        // personal section's own clones are legitimate and are never deleted here.
+        val undeclared = StoreMigration.undeclared(SharedStore.gitRoot(), family.repos.map { it.name }.toSet())
+        val undeclaredLine = if (undeclared.isEmpty()) "store: every git/ directory is declared"
+            else "store: ${undeclared.size} undeclared git/ director${if (undeclared.size == 1) "y" else "ies"}: ${undeclared.joinToString(", ")}"
+        DriveDebugLog.i(applicationContext, TAG, undeclaredLine)
         runCatching { reportFile(applicationContext).writeText(report.text()) }
         // THE LOAD-BEARING LINE. retry, not success, on an incomplete pass: success is terminal for
         // unique work, and a terminal success is how three repositories went missing for good.

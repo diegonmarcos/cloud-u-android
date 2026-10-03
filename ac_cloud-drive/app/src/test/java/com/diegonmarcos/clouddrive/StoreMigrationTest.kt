@@ -192,4 +192,40 @@ class StoreMigrationTest {
         assertEquals("front", family.renames["ffront"])
         assertTrue(family.repos.none { it.name == "ffront" })
     }
+
+    /**
+     * #821 STORE DIRS == DECLARED REPOS. The device's git/ as the code history leaves it: every
+     * declared repository cloned, plus the two names the manifest no longer declares — git/ffront
+     * (renamed upstream to front, #731) and git/front-diegonmarcos (a seed entry for a repository
+     * GitHub never had, dropped by 81249a55; here both its shapes: an empty leftover, and the site
+     * cloned under its farm name). After the manifest's own migration the store holds EXACTLY the
+     * declared set and reconciliation reports nothing.
+     */
+    @Test fun afterTheMigrationTheStoreHoldsExactlyTheDeclaredRepositories() {
+        val data = listOf(File("data"), File("../data"), File("ac_cloud-drive/data")).first { File(it, "drive-git-repos.json").isFile }
+        val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
+        val declaredNames = family.repos.map { it.name }.toSet()
+        for (leftover in listOf("empty", "clone")) {
+            val git = File(tmp(), "git")
+            declaredNames.forEach { clone(File(git, it)) }
+            File(git, "ffront").let { clone(it) }
+            File(git, "front-diegonmarcos").let { if (leftover == "clone") clone(it) else it.mkdirs() }
+            assertEquals(listOf("ffront", "front-diegonmarcos"), StoreMigration.undeclared(git, declaredNames))
+            StoreMigration.migrateRenames(git, family.renames)
+            assertEquals("leftover=$leftover", emptyList<String>(), StoreMigration.undeclared(git, declaredNames))
+            assertEquals(declaredNames, git.listFiles()!!.filter { it.isDirectory }.map { it.name }.toSet())
+        }
+    }
+
+    /** #821 an empty old-name folder goes; a NON-empty non-clone of the old name is a user's and stays. */
+    @Test fun onlyAnEmptyOldNameFolderIsRemoved() {
+        val git = File(tmp(), "git")
+        clone(File(git, "front"))
+        File(git, "ffront").mkdirs()
+        assertTrue(StoreMigration.migrateRenames(git, mapOf("ffront" to "front")).single().removed)
+        assertFalse(File(git, "ffront").exists())
+        File(git, "ffront").mkdirs(); File(git, "ffront/mine.txt").writeText("x")
+        StoreMigration.migrateRenames(git, mapOf("ffront" to "front"))
+        assertTrue(File(git, "ffront/mine.txt").exists())
+    }
 }
