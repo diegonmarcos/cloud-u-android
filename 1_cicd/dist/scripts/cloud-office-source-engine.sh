@@ -117,6 +117,12 @@ step_materialize() {
     if [ -n "$target" ]; then
         ln -sfn "$BUILD_JSON" "$ONLINE_DIR/$target"
         log "materialize: linked build.json → $target"
+        # #796: the debug-API port slice beside it (cloud-android-mesh-slices-gen.py
+        # writes <app>/debug-api.json; libs:devtools walks up from the gradle root
+        # for it exactly as it does for build.json, and that walk ends here too).
+        [ -f "$SCRIPT_DIR/debug-api.json" ] || die "no debug-api.json beside $BUILD_JSON — run ./build.sh workflow (libs:devtools bakes this app's port from it)"
+        ln -sfn "$SCRIPT_DIR/debug-api.json" "$ONLINE_DIR/$(dirname "$target")/debug-api.json"
+        log "materialize: linked debug-api.json → $(dirname "$target")/debug-api.json"
     fi
 }
 

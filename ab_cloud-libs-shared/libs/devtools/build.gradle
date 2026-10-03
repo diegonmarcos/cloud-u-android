@@ -58,11 +58,21 @@ def diagTargetsB64 = groovy.json.JsonOutput.toJson(buildJson.diagnostics?.report
 // `fallback` sub-range no package is ever assigned. A duplicate, out-of-range
 // or fallback-colliding port fails the build here, because two members baked
 // onto one number is the exhaustion bug again in another shape.
-def debugApiFile = new File(buildJsonFile.parentFile, 'debug-api.json')
-if (!debugApiFile.isFile()) {
-    throw new GradleException("libs:devtools: ${debugApiFile} is missing — run ./build.sh workflow " +
-        "(cloud-android-mesh-slices-gen.py writes it from 1_cicd/src/data/debug-ports.json)")
-}
+// Found by walking UP from rootDir like build.json above, not as a sibling of
+// build.json: Cordova's gradle root (ac_cloud-code/platforms/android) carries a
+// build.json of its own two levels below the app's, and cloud-office builds in a
+// scratch tree where its engine LINKS build.json and this slice side by side.
+// Run 37121703089 / 37121703154 (2026-10-03) are the two shapes this covers.
+def debugApiFile = { ->
+    def d = rootDir
+    for (int i = 0; i < 6 && d != null; i++) {
+        def f = new File(d, 'debug-api.json')
+        if (f.exists()) return f
+        d = d.parentFile
+    }
+    throw new GradleException("libs:devtools: no debug-api.json at or above ${rootDir} — run ./build.sh workflow " +
+        "(cloud-android-mesh-slices-gen.py writes it beside the consuming root's build.json from 1_cicd/src/data/debug-ports.json)")
+}()
 def debugApi = new groovy.json.JsonSlurper().parse(debugApiFile)
 def (portFirst, portLast) = debugApi.range
 def (fallbackFirst, fallbackLast) = debugApi.fallback
