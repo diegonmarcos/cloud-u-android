@@ -26,8 +26,13 @@
     "app": {
       "type": "application",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "core"
       ]
+    },
+    "core": {
+      "type": "library",
+      "_doc": "#800 the pure logic as a plain-JVM module (core/build.gradle): Model/on-device routing with fallback, the OpenRouter wire for translation and speech-to-text, the Listen segmenter and WAV, dictation layout, the Markdown editor tools and the document store. Unit-tested and PIT-mutated in the JVM step."
     },
     "libs:text-tools": {
       "type": "library",
@@ -44,6 +49,11 @@
       "type": "library",
       "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
       "dir": "../ab_cloud-libs-shared/libs/devtools"
+    },
+    "libs:decisions": {
+      "type": "library",
+      "_doc": "#800 the fleet's OpenRouter transport (Http/UrlHttp, apiError), shared BY REFERENCE: :core's Model route speaks through it, as Cloud Calc's Jev and the image engine do. A `contract` lib (lib-classes.json), plain JVM, PIT-gated in its own suite.",
+      "dir": "../ab_cloud-libs-shared/libs/decisions"
     }
   },
   "writer_ai": {
@@ -646,9 +656,9 @@
       "quarantine": {}
     },
     "unit": {
-      "_doc": "No JVM unit tests exist in this application and none can be written from the container that maintains it, which has no JVM at all. Left disabled rather than pointed at an empty task, so the engine LOGS the gap on every run instead of printing a green tick for a suite that is not there.",
-      "task": null,
-      "enabled": false
+      "_doc": "#800 `gradle test`: the plain-JVM :core suites (RoutingTest, OpenRouterTest, AudioTest, DictationTest, MarkdownTest, DocStoreTest) and the shared libs:decisions suite, each followed by its PIT mutation gate (mutationThreshold 80). Runs after JDK/SDK/Gradle setup in ship-cloud-writer.yml.",
+      "task": "test",
+      "enabled": true
     }
   },
   "toolchain": {

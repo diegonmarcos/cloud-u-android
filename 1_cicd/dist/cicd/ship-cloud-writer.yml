@@ -102,6 +102,7 @@ on:
       # does not match what the source produces.
       - "1_cicd/src/cicd/ship-cloud-writer.yml"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/decisions/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-writer/**"
@@ -150,12 +151,6 @@ jobs:
 
       - name: "Test → assertions that cannot fail"
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
-
-      # Prints the coverage gap rather than a tick. There are no JVM unit tests
-      # in this application and the container that maintains it has no JVM to
-      # write them with, so the honest output is a line saying so on every run.
-      - name: "Test → JVM unit tests (coverage gap is logged, not hidden)"
-        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -226,6 +221,19 @@ jobs:
         uses: ./.github/actions/install-pinned-tools
         with:
           tools: oras sops
+
+      # #800 the JVM suites: :core (routing and fallback, the OpenRouter wire, the
+      # Listen segmenter, the documents, the Markdown tools) and libs:decisions,
+      # each followed by its PIT mutation gate. PLACED HERE, after JDK, SDK and
+      # Gradle exist — up with the shell testers there is no gradle on PATH and
+      # the engine fails closed (#531, the ship-cloud-calc.yml placement). Gated
+      # on the publish gate: unchanged source recompiles nothing new.
+      - name: JVM unit tests + PIT (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'

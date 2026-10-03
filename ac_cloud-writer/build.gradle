@@ -23,4 +23,8 @@ plugins {
     id 'com.android.library'                 version '8.7.3' apply false
     id 'org.jetbrains.kotlin.android'        version '2.1.0' apply false
     id 'org.jetbrains.kotlin.plugin.compose' version '2.1.0' apply false
+    // #800 :core is a plain-JVM module (routing, OpenRouter wire, segmenter, documents) and PIT
+    // mutation-tests it — the same two plugins, at the same versions, ac_cloud-calc's :measure uses.
+    id 'org.jetbrains.kotlin.jvm'            version '2.1.0' apply false
+    id 'info.solidsoft.pitest'               version '1.19.0' apply false
 }

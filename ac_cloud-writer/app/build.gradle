@@ -108,6 +108,9 @@ dependencies {
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
     implementation project(':libs:core')
+    // #800 the pure logic (routing, OpenRouter wire, segmenter, documents, Markdown tools), a
+    // plain-JVM module tested and PIT-mutated on its own; it carries libs:decisions by `api`.
+    implementation project(':core')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
