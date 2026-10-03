@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Dark is the fleet-wide default (#336); SearchTheme carries the Compose half and the toggle. -->
+    <!-- Dark is the default (#336, the mockup's body.dark); SearchTheme draws the glass gradient and the toggle. -->
     <style name="Theme.CloudSearch" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowBackground">@color/search_background</item>
-        <item name="android:textColorPrimary">@color/search_text</item>
-        <item name="android:textColorSecondary">@color/search_text_secondary</item>
-        <item name="colorOnBackground">@color/search_text</item>
-        <item name="colorOnSurface">@color/search_text</item>
+        <item name="android:windowBackground">@color/dark_bg_start</item>
+        <item name="android:textColorPrimary">@color/dark_text_main</item>
+        <item name="android:textColorSecondary">@color/dark_text_secondary</item>
+        <item name="colorOnBackground">@color/dark_text_main</item>
+        <item name="colorOnSurface">@color/dark_text_main</item>
         <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>

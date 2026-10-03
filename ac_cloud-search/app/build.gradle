@@ -142,10 +142,8 @@ android {
 
 dependencies {
     implementation project(':libs:core')
-    // The fleet's bottom-nav island; this app supplies its own entries from search.verticals.
-    implementation project(':libs:bottomnav')
-    // #773 the fleet's Compose kit: theme over this app's palette, cards, headers, rows.
-    implementation project(':libs:ui-kit')
+    // #797 no libs:bottomnav and no libs:ui-kit: Cloud Search draws its OWN chrome from the owner's
+    // mockup (ui/Glass.kt — glass theme, top bar, its own bottom nav; Phosphor icons in res/drawable).
     // The fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // Everything computed or parsed: plain JVM, mutation-tested on its own (core/build.gradle).
@@ -155,7 +153,6 @@ dependencies {
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.core:core-ktx:1.15.0'

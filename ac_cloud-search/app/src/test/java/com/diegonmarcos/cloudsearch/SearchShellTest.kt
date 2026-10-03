@@ -16,7 +16,6 @@ import com.diegonmarcos.cloudsearch.debugapi.SearchDebugApi
 import com.diegonmarcos.cloudsearch.ui.SearchShell
 import com.diegonmarcos.cloudsearch.ui.SearchState
 import com.diegonmarcos.cloudsearch.ui.Tags
-import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,8 +35,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The UI smoke test PER VERTICAL AND SUBPAGE: the real shell composed under Robolectric against a
- * fake network, every declared vertical reached through the bottom-nav island and every one of its
- * declared subpages composed. Every id comes from the declaration, none is restated here.
+ * fake network, every declared vertical reached through the app's own bottom nav (#797) and every
+ * one of its declared subpages composed. Every id comes from the declaration, none is restated here.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-mdpi")
@@ -62,9 +61,15 @@ class SearchShellTest {
         val asked = mutableListOf<String>()
         override fun get(url: String, headers: Map<String, String>, timeoutMs: Int): Http.Response {
             synchronized(asked) { asked += url }
-            return if ("arbeitsagentur" in url) Http.Response(200,
-                """{"maxErgebnisse":1,"ergebnisliste":[{"referenznummer":"r-1","stellenangebotsTitel":"Kotlin Developer","firma":"ACME","arbeitszeitVollzeit":true}]}""")
-            else Http.Response(503, "")
+            return when {
+                "arbeitsagentur" in url -> Http.Response(200,
+                    """{"maxErgebnisse":1,"ergebnisliste":[{"referenznummer":"r-1","stellenangebotsTitel":"Kotlin Developer","firma":"ACME","arbeitszeitVollzeit":true}]}""")
+                // The Bundesbank's SDMX-JSON shape, two observations a year apart.
+                "bundesbank" in url -> Http.Response(200,
+                    """{"data":{"structure":{"dimensions":{"observation":[{"id":"TIME_PERIOD","values":[{"id":"2025-08"},{"id":"2026-08"}]}]}},
+                       "dataSets":[{"series":{"0:0":{"observations":{"0":["3.71"],"1":["4.01"]}}}}]}}""")
+                else -> Http.Response(503, "")
+            }
         }
         override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int): Http.Response {
             synchronized(asked) { asked += url }
@@ -98,10 +103,12 @@ class SearchShellTest {
         launch()
         val cfg = Decl.config
         for (v in cfg.verticals) {
-            compose.onNodeWithTag(BottomNavTags.item(v.id)).performClick()
+            compose.onNodeWithTag(Tags.nav(v.id)).performClick()
             compose.waitForIdle()
             assertEquals(v.id, state.vertical)
-            if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.first())).performClick()
+            // A vertical with one subpage draws no sub-nav (the mockup's Search, Groceries, Things).
+            assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(v.subpages.first())).fetchSemanticsNodes().isNotEmpty())
+            if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.last())).performClick()
             for (sub in v.subpages) {
                 compose.runOnIdle { state.showSubpage(v, sub) }
                 // Bounded wait, not an instant check: a heavy page (the payslip runs the whole PAP
@@ -115,7 +122,7 @@ class SearchShellTest {
 
     @Test fun jobsListingShowsWhatTheSourceReturnedAndWhyTheOthersDidNot() {
         launch()
-        compose.onNodeWithTag(BottomNavTags.item("jobs")).performClick()
+        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
         waitFor(Tags.card("ba-jobsuche:r-1"))
         compose.onNodeWithTag(Tags.card("ba-jobsuche:r-1")).assertTextContains("Kotlin Developer", substring = true)
         waitFor(Tags.source("arbeitnow"))
@@ -125,7 +132,7 @@ class SearchShellTest {
 
     @Test fun payslipComputesOnScreen() {
         launch()
-        compose.onNodeWithTag(BottomNavTags.item("jobs")).performClick()
+        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
         compose.runOnIdle { state.showSubpage(state.v(), "calculators") }
         waitFor(Tags.output("payslip", "net"))
         // 5,000 € gross, class I, childless, 2.9 % extra rate: PayslipTest's hand-checked net.
@@ -135,7 +142,7 @@ class SearchShellTest {
 
     @Test fun chatWithoutATokenSaysWhyAndSendsNothing() {
         launch()
-        compose.onNodeWithTag(BottomNavTags.item("search")).performClick()
+        compose.onNodeWithTag(Tags.nav("search")).performClick()
         compose.runOnIdle { state.showSubpage(state.v(), "chat") }
         waitFor(Tags.CHAT_INPUT)
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("What is the Grundfreibetrag?")
@@ -153,6 +160,54 @@ class SearchShellTest {
         compose.onNodeWithTag(Tags.THEME).performClick()
         compose.runOnIdle { assertEquals(!before, state.dark) }
         assertEquals(!before, services.prefs.dark)
+    }
+
+    @Test fun theMenuOpensEveryCategoryAndSavedItems() {
+        launch()
+        compose.onNodeWithTag(Tags.MENU).performClick()
+        waitFor(Tags.drawer("jobs"))
+        compose.onNodeWithTag(Tags.drawer("jobs")).performClick()
+        compose.runOnIdle { assertEquals("jobs", state.vertical); assertEquals(null, state.menu) }
+        compose.onNodeWithTag(Tags.MENU).performClick()
+        waitFor(Tags.drawer("saved"))
+        compose.onNodeWithTag(Tags.drawer("saved")).performClick()
+        waitFor(Tags.SAVED)
+        compose.onNodeWithTag(Tags.ISLAND).assertTextContains("Saved Items", substring = true)
+        compose.onNodeWithTag(Tags.nav("house")).performClick()
+        compose.runOnIdle { assertFalse(state.saved); assertEquals("house", state.vertical) }
+    }
+
+    @Test fun extensiveFiltersApplyTheDeclaredOptions() {
+        launch()
+        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
+        waitFor(Tags.MORE_FILTERS)
+        compose.onNodeWithTag(Tags.MORE_FILTERS).performClick()
+        waitFor(Tags.APPLY_FILTERS)
+        compose.onNodeWithTag(Tags.option("remote")).performClick()
+        compose.onNodeWithTag(Tags.APPLY_FILTERS).performClick()
+        compose.runOnIdle {
+            assertEquals(setOf("remote"), state.filtersOf("jobs").chips)
+            assertEquals(null, state.menu)
+        }
+    }
+
+    @Test fun houseAnalysisShowsTheSeriesAndSaysWhatIsMissing() {
+        launch()
+        compose.onNodeWithTag(Tags.nav("house")).performClick()
+        compose.runOnIdle { state.showSubpage(state.v(), "analysis") }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("4.01 %", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithText("+0.30 pp vs 2025-08", substring = true).fetchSemanticsNodes().let { assertTrue(it.isNotEmpty()) }
+        // Eurostat is down in this test: its two series read "no source", never a number.
+        assertEquals(2, compose.onAllNodesWithText("no source").fetchSemanticsNodes().size)
+    }
+
+    @Test fun theSearchPageHasOneBoxPerDeclaredEngine() {
+        launch()
+        compose.onNodeWithTag(Tags.nav("search")).performClick()
+        for (e in Decl.config.engines) waitFor(Tags.engine(e.id))
+        waitFor(Tags.MODEL)
+        compose.onNodeWithTag(Tags.SESSIONS).performClick()
+        compose.runOnIdle { assertEquals(com.diegonmarcos.cloudsearch.ui.Menu.SESSIONS, state.menu) }
     }
 
     @Test fun debugRoutesAnswerFromTheSameEngine() {

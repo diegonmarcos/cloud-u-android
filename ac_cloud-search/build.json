@@ -101,13 +101,11 @@
     }
   },
   "modules": {
-    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): Cloud Search is installed and updated by the Store (SuperApp ▸ Constellation), like Cloud Calc.",
+    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): Cloud Search is installed and updated by the Store (SuperApp ▸ Constellation), like Cloud Calc. #797: the app draws its OWN chrome from the owner's mockup (glass theme, top bar, its own bottom nav), so neither the fleet bottom-nav island (libs:bottomnav) nor the fleet kit (libs:ui-kit) is linked.",
     "app": {
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:bottomnav",
-        "libs:ui-kit",
         "libs:text-tools",
         "search-core"
       ]
@@ -125,16 +123,6 @@
     "libs:devtools": {
       "_doc_dir": "Not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which makes this app a fleet mesh member with the debug API (/api/search/* below).",
       "dir": "../ab_cloud-libs-shared/libs/devtools",
-      "type": "library"
-    },
-    "libs:bottomnav": {
-      "_doc_dir": "The fleet bottom-nav island: this app supplies its five entries from search.verticals.",
-      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
-      "type": "library"
-    },
-    "libs:ui-kit": {
-      "_doc": "#773 the fleet's shared Compose kit (CloudKitTheme over this app's palette, KitCard, KitSectionHeader, KitEmptyState, KitSwitchRow): a `gui` lib, no L4 edge.",
-      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
       "type": "library"
     },
     "libs:text-tools": {
@@ -157,7 +145,7 @@
       ]
     },
     "unit": {
-      "_doc": "`gradle test`: core's JVM suite (BMF golden payslips, calculators, every parser against its saved response, filters, the engine against a fake network and a real cache dir, chat protocol and sessions, this build.json through the parser) followed by its PIT mutation gate, and app's Robolectric smoke test (every vertical and subpage composed, a calculator computed, the debug routes answered).",
+      "_doc": "`gradle test`: core's JVM suite (BMF golden payslips, calculators, every parser against its saved response, filters, the engine against a fake network and a real cache dir, chat protocol and sessions, this build.json through the parser) followed by its PIT mutation gate, and app's Robolectric smoke test (every vertical reached through the app's own bottom nav and every subpage composed, the menu's categories and Saved Items, Extensive Filters applied, the House market tiles, one Search box per engine, a calculator computed, the debug routes answered).",
       "task": "test",
       "enabled": true
     }
@@ -244,19 +232,9 @@
         "kind": "calculators"
       },
       {
-        "id": "web",
-        "label": "Web",
-        "kind": "web"
-      },
-      {
-        "id": "chat",
-        "label": "AI chat",
-        "kind": "chat"
-      },
-      {
-        "id": "saved",
-        "label": "Saved",
-        "kind": "saved"
+        "id": "assistant",
+        "label": "Assistant",
+        "kind": "assistant"
       }
     ],
     "verticals": [
@@ -271,8 +249,7 @@
           "listing",
           "analysis",
           "feed",
-          "calculators",
-          "saved"
+          "calculators"
         ],
         "sources": [
           "immoscout24",
@@ -310,7 +287,8 @@
         "calculators": [
           "rent_vs_buy",
           "max_rent"
-        ]
+        ],
+        "chart_color": "chart_house"
       },
       {
         "id": "jobs",
@@ -323,8 +301,7 @@
           "listing",
           "analysis",
           "feed",
-          "calculators",
-          "saved"
+          "calculators"
         ],
         "sources": [
           "ba-jobsuche",
@@ -369,7 +346,8 @@
         ],
         "calculators": [
           "payslip"
-        ]
+        ],
+        "chart_color": "chart_jobs"
       },
       {
         "id": "search",
@@ -379,8 +357,7 @@
         "icon": "assistant",
         "placeholder": "Ask anything...",
         "subpages": [
-          "web",
-          "chat"
+          "assistant"
         ],
         "sources": [],
         "chips": [],
@@ -397,8 +374,7 @@
         "icon": "groceries",
         "placeholder": "Search products or brands",
         "subpages": [
-          "listing",
-          "saved"
+          "listing"
         ],
         "sources": [
           "open-prices",
@@ -432,8 +408,7 @@
         "icon": "things",
         "placeholder": "Search electronics, furniture...",
         "subpages": [
-          "listing",
-          "saved"
+          "listing"
         ],
         "sources": [
           "kleinanzeigen",
@@ -646,22 +621,30 @@
       {
         "id": "google",
         "label": "Google",
-        "url": "https://www.google.com/search?q={q}"
+        "url": "https://www.google.com/search?q={q}",
+        "icon": "globe",
+        "accent": "engine_google"
       },
       {
         "id": "duckduckgo",
         "label": "DuckDuckGo",
-        "url": "https://duckduckgo.com/?q={q}"
+        "url": "https://duckduckgo.com/?q={q}",
+        "icon": "bird",
+        "accent": "engine_duckduckgo"
       },
       {
         "id": "brave",
         "label": "Brave",
-        "url": "https://search.brave.com/search?q={q}"
+        "url": "https://search.brave.com/search?q={q}",
+        "icon": "shield-check",
+        "accent": "engine_brave"
       },
       {
         "id": "qwant",
         "label": "Qwant",
-        "url": "https://www.qwant.com/?q={q}"
+        "url": "https://www.qwant.com/?q={q}",
+        "icon": "magnifying-glass",
+        "accent": "engine_qwant"
       }
     ],
     "calculators": {
@@ -775,12 +758,13 @@
             "id": "advantage_buy",
             "label": "Buying ahead by",
             "format": "eur",
-            "emphasis": true
+            "tone": "result"
           }
         ],
         "notes": [
           "Purchase costs default to Berlin: Grunderwerbsteuer 6.0% + notary and land registry about 2.0% + the buyer's broker share 3.57%."
-        ]
+        ],
+        "icon": "percent"
       },
       "max_rent": {
         "label": "Max rent ratio",
@@ -807,7 +791,7 @@
             "id": "max_rent",
             "label": "Max warm rent",
             "format": "eur",
-            "emphasis": true
+            "tone": "result"
           },
           {
             "id": "rent_share_pct",
@@ -820,7 +804,8 @@
             "format": "eur"
           }
         ],
-        "notes": []
+        "notes": [],
+        "icon": "wallet"
       },
       "payslip": {
         "label": "German Payslip (2026)",
@@ -917,98 +902,115 @@
             "id": "company_cost",
             "label": "Company total cost",
             "format": "eur",
-            "emphasis": true
+            "tone": "total"
           },
           {
             "id": "employer_social",
             "label": "Employer social contributions",
-            "format": "eur"
+            "format": "eur",
+            "tone": "minus"
           },
           {
             "id": "employer_kv",
             "label": "  Health (employer)",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_rv",
             "label": "  Pension (employer)",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_av",
             "label": "  Unemployment (employer)",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_pv",
             "label": "  Care (employer)",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_insolvency",
             "label": "  Insolvency levy",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_u1",
             "label": "  U1 levy",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "employer_u2",
             "label": "  U2 levy",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "gross",
             "label": "Gross salary",
-            "format": "eur"
+            "format": "eur",
+            "tone": "total"
           },
           {
             "id": "employee_social",
             "label": "Employee social contributions",
-            "format": "eur"
+            "format": "eur",
+            "tone": "minus"
           },
           {
             "id": "kv",
             "label": "  Health",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "rv",
             "label": "  Pension",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "av",
             "label": "  Unemployment",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "pv",
             "label": "  Care",
-            "format": "eur"
+            "format": "eur",
+            "tone": "detail"
           },
           {
             "id": "lohnsteuer",
             "label": "Wage tax (Lohnsteuer)",
-            "format": "eur"
+            "format": "eur",
+            "tone": "minus"
           },
           {
             "id": "soli",
             "label": "Solidarity surcharge",
-            "format": "eur"
+            "format": "eur",
+            "tone": "minus"
           },
           {
             "id": "church",
             "label": "Church tax",
-            "format": "eur"
+            "format": "eur",
+            "tone": "minus"
           },
           {
             "id": "net",
             "label": "Net salary",
             "format": "eur",
-            "emphasis": true
+            "tone": "result"
           }
         ],
         "warnings": {
@@ -1019,8 +1021,10 @@
           "Wage tax, solidarity surcharge and church-tax base: the BMF's Programmablaufplan 2026 (bmf-steuerrechner.de, Stand 2025-10-23), run as is.",
           "Social insurance 2026 (SV-Rechengrößenverordnung 2026): health 14.6% + the insurer's extra rate, pension 18.6%, unemployment 2.6%, care 3.6% (+0.6% childless, -0.25% per child from the second), insolvency levy 0.15%; ceilings 5,812.50 €/month (health, care) and 8,450 €/month (pension, unemployment).",
           "U1/U2 depend on the insurer and are 0 until entered; accident insurance (BG) is not included."
-        ]
-      }
+        ],
+        "icon": "calculator"
+      },
+      "_doc_tone": "#797 an output's `tone` is how the mockup's result box draws it: total (bold), minus (a deduction, red), result (the answer, green bold), detail (an indented line of the one above, small); none = a plain row."
     },
     "social_2026": {
       "_doc": "SV-Rechengrößenverordnung 2026 (BGBl. 26 Nov 2025) as summarised by lohn-info.de/sozialversicherungsbeitraege2026.html, read 2026-10-02. PayslipTest holds bbg_* and the pension/unemployment halves equal to the values the BMF's PAP 2026 itself carries (MPARA), so the two declarations cannot drift. Rates in percent (totals; the payslip splits them), limits in euro.",
@@ -1053,7 +1057,9 @@
       "web_plugin": "web",
       "native_web_param": "web_search_options",
       "title_chars": 40
-    }
+    },
+    "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the mockup's Search, Groceries and Things). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
+    "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped."
   },
   "ui": {
     "_doc": "The shell: build.json::search drives every list; ui holds only the chrome's own settings.",

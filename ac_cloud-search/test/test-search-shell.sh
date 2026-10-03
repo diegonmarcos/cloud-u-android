@@ -9,7 +9,9 @@
 #       ministry's PAP it claims to be.
 #   S2  the subpage kinds build.json::search.subpages declares and the kinds SearchShell's
 #       `when (kind)` dispatches are the same set, both ways; every vertical's subpage is declared.
-#   S3  every vertical icon has a branch in IconCatalog — a misspelt name would draw the fallback.
+#   S3  every declared icon (vertical, engine, calculator) has a branch in IconCatalog — a misspelt
+#       name would draw the fallback — and every declared colour name (engine accent, vertical
+#       chart_color) is a colors.xml entry (#797).
 #   S4  every enabled api source names a parser Parsers.parse dispatches, every declared calculator
 #       is a Calculators.run branch, every declared series names a Series.parse branch (#797), and
 #       no dispatch has a branch nothing declares.
@@ -22,6 +24,12 @@
 #       build.json::ui.debug_api.group, and no op is named `state` (GET /api/state's key).
 #   S8  no mock data ships: no placeholder image host, lorem ipsum or `mock` identifier in app or
 #       core sources, and no Kotlin colour literal (colours are res/values/colors.xml).
+#   S9  (#797) the Phosphor icon set is one list: app/tools/phosphor.json, the generated
+#       res/drawable/ph_*.xml (each carrying the generator's header) and every R.drawable.ph_* the
+#       Kotlin names agree, both ways.
+#   S10 (#797) Cloud Search draws its OWN chrome (the owner's mockup): neither the fleet bottom-nav
+#       island (libs:bottomnav) nor the fleet kit (libs:ui-kit) is in build.json's module graph or
+#       imported by any Kotlin source, and the shell draws Glass.kt's BottomNav from the verticals.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-search and nothing else. python3 + grep.
@@ -86,9 +94,18 @@ for v in S["verticals"]:
 # S3
 ic = code(os.path.join(src, "ui", "IconCatalog.kt"))
 icons = set(re.findall(r'^\s*"([\w-]+)" ->', ic, re.M))
-for v in S["verticals"]:
-    if v.get("icon") not in icons:
-        bad.append("S3 vertical %s icon %r has no IconCatalog branch — it would draw the fallback" % (v["id"], v.get("icon")))
+declared_icons = [("vertical", v["id"], v.get("icon")) for v in S["verticals"]]
+declared_icons += [("engine", e["id"], e.get("icon")) for e in S["engines"]]
+declared_icons += [("calculator", k, c.get("icon")) for k, c in S["calculators"].items() if not k.startswith("_")]
+for kind, ident, icon in declared_icons:
+    if icon not in icons:
+        bad.append("S3 %s %s icon %r has no IconCatalog branch — it would draw the fallback" % (kind, ident, icon))
+colors = set(re.findall(r'<color name="([\w]+)"', open(os.path.join(app, "app", "src", "main", "res", "values", "colors.xml"), encoding="utf-8").read()))
+declared_colors = [("engine", e["id"], e.get("accent")) for e in S["engines"]]
+declared_colors += [("vertical", v["id"], v.get("chart_color")) for v in S["verticals"] if v.get("analysis", "none") != "none"]
+for kind, ident, name in declared_colors:
+    if name not in colors:
+        bad.append("S3 %s %s colour %r is not in colors.xml — it would draw the accent instead" % (kind, ident, name))
 
 # S4
 def branches(path, fn):
@@ -104,9 +121,10 @@ for p in sorted(used - parsers):
 for p in sorted(parsers - used):
     bad.append("S4 Parsers.parse has parser %s, which no enabled source uses — dead parser" % p)
 calcs = branches(os.path.join(core, "Calculators.kt"), "run")
-for c in sorted(set(S["calculators"]) - calcs):
+declared_calcs = {k for k in S["calculators"] if not k.startswith("_")}
+for c in sorted(declared_calcs - calcs):
     bad.append("S4 calculator %s is declared but Calculators.run does not compute it" % c)
-for c in sorted(calcs - set(S["calculators"])):
+for c in sorted(calcs - declared_calcs):
     bad.append("S4 Calculators.run computes %s, which no calculator declares — dead branch" % c)
 sparsers = branches(os.path.join(core, "Market.kt"), "parse")
 sused = {x["parser"] for k, x in S.get("series", {}).items() if not k.startswith("_")}
@@ -160,14 +178,44 @@ for p in kts + cks:
     if re.search(r"Color\(0x", code(p)):
         bad.append("S8 %s names a colour literal — colours are res/values/colors.xml" % os.path.basename(p))
 
+# S9
+ph = json.load(open(os.path.join(app, "app", "tools", "phosphor.json"), encoding="utf-8"))
+listed = {"ph_" + n.replace("-", "_") for n in ph["regular"]} | {"ph_" + n.replace("-", "_") + "_fill" for n in ph["fill"]}
+draw = os.path.join(app, "app", "src", "main", "res", "drawable")
+on_disk = {f[:-4] for f in os.listdir(draw) if f.startswith("ph_") and f.endswith(".xml")}
+for d in sorted(listed - on_disk):
+    bad.append("S9 phosphor.json lists %s but res/drawable has no %s.xml — run app/tools/phosphor2vd.py" % (d, d))
+for d in sorted(on_disk - listed):
+    bad.append("S9 res/drawable/%s.xml is not in phosphor.json — an icon nothing regenerates" % d)
+for d in sorted(on_disk):
+    if "GENERATED by app/tools/phosphor2vd.py" not in open(os.path.join(draw, d + ".xml"), encoding="utf-8").read():
+        bad.append("S9 res/drawable/%s.xml was not written by phosphor2vd.py — hand-drawn icons drift from the set" % d)
+named = set()
+for p in kts:
+    named |= set(re.findall(r"R\.drawable\.(ph_\w+)", code(p)))
+for d in sorted(named - on_disk):
+    bad.append("S9 Kotlin draws R.drawable.%s, which phosphor.json does not generate" % d)
+
+# S10
+deps = bj["modules"]["app"]["depends_on"]
+for lib in ("libs:bottomnav", "libs:ui-kit"):
+    if lib in deps or lib in bj["modules"]:
+        bad.append("S10 build.json links %s — Cloud Search draws its own chrome from the owner's mockup" % lib)
+for p in kts:
+    hit = re.search(r"import com\.diegonmarcos\.superapp\.(bottomnav|uikit)\.", code(p))
+    if hit:
+        bad.append("S10 %s imports the fleet %s — the app's own Glass.kt draws its chrome" % (os.path.basename(p), hit.group(1)))
+if not re.search(r"\bBottomNav\(\s*entries = state\.cfg\.verticals\.map", shell):
+    bad.append("S10 SearchShell does not draw Glass.kt's BottomNav from the declared verticals")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── S1-S8 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  S1-S8"; else FAILURES=$((FAILURES + 1)); fi
+echo "── S1-S10 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  S1-S10"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -199,9 +247,20 @@ J="$K"
 mutate pap-hand-edited "$C/tax/Lohnsteuer2026.kt" 's.replace("GFB = bd(12348)", "GFB = bd(12000)")' "S1 tax/Lohnsteuer2026.kt differs"
 mutate pap-xml-changed core/pap/Lohnsteuer2026.xml 's.replace("BigDecimal.valueOf(20350)", "BigDecimal.valueOf(20000)")' "S1 tax/Lohnsteuer2026.kt differs"
 mutate kind-without-page "$J/ui/SearchShell.kt" 's.replace("\"feed\" -> FeedPage(v)", "")' "S2 subpage kind feed is declared"
-mutate dead-page "$J/ui/SearchShell.kt" 's.replace("\"saved\" -> SavedPage(v)", "\"saved\" -> SavedPage(v)\n            \"atlas\" -> SavedPage(v)")' "S2 SearchShell draws kind atlas"
-mutate subpage-undeclared build.json 's.replace("\"subpages\": [\n          \"web\",", "\"subpages\": [\n          \"webz\",")' "names subpage webz"
+mutate dead-page "$J/ui/SearchShell.kt" 's.replace("\"assistant\" -> AssistantPage(v)", "\"assistant\" -> AssistantPage(v)\n            \"atlas\" -> AssistantPage(v)")' "S2 SearchShell draws kind atlas"
+mutate subpage-undeclared build.json 's.replace("\"listing\",\n          \"analysis\",", "\"listing\",\n          \"analysiz\",")' "names subpage analysiz"
 mutate icon-misspelt build.json 's.replace("\"icon\": \"groceries\"", "\"icon\": \"grocerys\"")' "S3 vertical groceries icon"
+mutate engine-icon-misspelt build.json 's.replace("\"icon\": \"bird\"", "\"icon\": \"birb\"")' "S3 engine duckduckgo icon"
+mutate calc-icon-misspelt build.json 's.replace("\"icon\": \"wallet\"", "\"icon\": \"walet\"")' "S3 calculator max_rent icon"
+mutate accent-missing build.json 's.replace("\"accent\": \"engine_brave\"", "\"accent\": \"engine_bravo\"")' "S3 engine brave colour"
+mutate chart-colour-missing app/src/main/res/values/colors.xml 's.replace("<color name=\"chart_jobs\">", "<color name=\"chart_job\">")' "S3 vertical jobs colour"
+mutate phosphor-unlisted app/tools/phosphor.json 's.replace("\"warning\", ", "")' "S9 res/drawable/ph_warning.xml is not in phosphor.json"
+mutate phosphor-listed-missing app/tools/phosphor.json 's.replace("\"wallet\",", "\"wallet\", \"rocket\",")' "S9 phosphor.json lists ph_rocket"
+mutate hand-drawn-icon app/src/main/res/drawable/ph_x.xml 's.replace("GENERATED by app/tools/phosphor2vd.py", "drawn by hand")' "S9 res/drawable/ph_x.xml was not written"
+mutate icon-not-generated "$J/ui/SearchShell.kt" 's.replace("R.drawable.ph_caret_down", "R.drawable.ph_caret_up")' "S9 Kotlin draws R.drawable.ph_caret_up"
+mutate fleet-nav-linked build.json 's.replace("\"libs:core\",\n        \"libs:text-tools\"", "\"libs:core\",\n        \"libs:bottomnav\",\n        \"libs:text-tools\"")' "S10 build.json links libs:bottomnav"
+mutate fleet-kit-imported "$J/ui/SearchTheme.kt" 's.replace("import com.diegonmarcos.cloudsearch.R\n", "import com.diegonmarcos.cloudsearch.R\nimport com.diegonmarcos.superapp.uikit.KitCard\n")' "S10 SearchTheme.kt imports the fleet uikit"
+mutate own-nav-dropped "$J/ui/SearchShell.kt" 's.replace("BottomNav(\n                        entries = state.cfg.verticals.map", "NavRail(\n                        entries = state.cfg.verticals.map")' "S10 SearchShell does not draw"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
 mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"
@@ -220,5 +279,5 @@ mutate mock-shipped "$J/ui/VerticalPages.kt" 's + "\nprivate val mockData = list
 mutate placeholder-image "$C/Listing.kt" 's + "\nprivate const val IMG = \"https://placehold.co/400x200\"\n"' "S8 Listing.kt carries mock data"
 mutate colour-literal "$J/ui/SearchTheme.kt" 's + "\nprivate val x = androidx.compose.ui.graphics.Color(0xFF000000)\n"' "S8 SearchTheme.kt names a colour literal"
 
-echo "── S1-S8 + mutations: $FAILURES failure(s) ──"
+echo "── S1-S10 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

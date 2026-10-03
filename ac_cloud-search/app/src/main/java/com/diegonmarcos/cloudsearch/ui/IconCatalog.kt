@@ -1,27 +1,36 @@
 package com.diegonmarcos.cloudsearch.ui
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Work
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.diegonmarcos.cloudsearch.R
 
 /**
- * The icon VOCABULARY a vertical's `icon` may name. test/test-search-shell.sh holds every declared
- * icon to a branch here, so a misspelt name fails the build instead of drawing [fallback].
+ * #797 the icon VOCABULARY a declaration may name (a vertical's, an engine's or a calculator's
+ * `icon`), each a Phosphor icon as the mockup draws it (app/tools/phosphor.json, generated into
+ * res/drawable/ph_*). test/test-search-shell.sh holds every declared icon to a branch here, so a
+ * misspelt name fails the build instead of drawing [fallback].
  */
 object IconCatalog {
-    val fallback: ImageVector = Icons.Filled.Apps
+    val fallback: Int = R.drawable.ph_package
 
-    fun vector(name: String): ImageVector = when (name) {
-        "house" -> Icons.Filled.Home
-        "jobs" -> Icons.Filled.Work
-        "assistant" -> Icons.Filled.AutoAwesome
-        "groceries" -> Icons.Filled.ShoppingCart
-        "things" -> Icons.Filled.Category
+    /** The island's icon while Saved Items is showing (not a declared name). */
+    const val SAVED = "saved"
+
+    fun res(name: String): Int = when (name) {
+        "house" -> R.drawable.ph_house
+        "jobs" -> R.drawable.ph_briefcase
+        "assistant" -> R.drawable.ph_shooting_star
+        "groceries" -> R.drawable.ph_shopping_cart
+        "things" -> R.drawable.ph_package
+        "globe" -> R.drawable.ph_globe
+        "bird" -> R.drawable.ph_bird
+        "shield-check" -> R.drawable.ph_shield_check
+        "magnifying-glass" -> R.drawable.ph_magnifying_glass
+        "percent" -> R.drawable.ph_percent
+        "wallet" -> R.drawable.ph_wallet
+        "calculator" -> R.drawable.ph_calculator
+        SAVED -> R.drawable.ph_star
         else -> fallback
     }
+
+    /** The assistant vertical's icon is drawn in the .ai-nav-icon gradient wherever it appears. */
+    fun gradient(name: String): Boolean = name == "assistant"
 }

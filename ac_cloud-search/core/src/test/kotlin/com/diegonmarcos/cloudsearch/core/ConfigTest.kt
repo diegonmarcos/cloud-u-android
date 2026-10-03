@@ -15,6 +15,10 @@ class ConfigTest {
         assertEquals("berlin", c.city("atlantis").id)
         assertTrue(c.problems().isEmpty())
         assertEquals(listOf("google", "duckduckgo", "brave", "qwant"), c.engines.map { it.id })
+        assertEquals("bird", c.engines[1].icon)
+        assertEquals("engine_duckduckgo", c.engines[1].accent)
+        assertEquals("calculator", c.calculators.getValue("payslip").icon)
+        assertEquals("result", c.calculators.getValue("payslip").outputs.last().tone)
     }
 
     @Test fun everySourceIsFetchedLinkedOrExplained() {
@@ -55,5 +59,7 @@ class ConfigTest {
         assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(1).getJSONArray("chips").getJSONObject(0).put("tag", "x") }.contains("exactly one of flag or tag"))
         assertTrue(problemsAfter { c -> c.getJSONObject("calculators").getJSONObject("payslip").getJSONArray("fields").getJSONObject(1).put("default", 9) }.contains("default is not one of its options"))
         assertTrue(problemsAfter { c -> c.getJSONObject("calculators").getJSONObject("max_rent").put("outputs", JSONArray()) }.contains("declares no output"))
+        assertTrue(problemsAfter { c -> c.getJSONObject("calculators").getJSONObject("max_rent").getJSONArray("outputs").getJSONObject(0).put("tone", "loud") }.contains("output max_rent tone loud"))
+        assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(1).remove("chart_color") }.contains("vertical jobs has an analysis chart but no chart_color"))
     }
 }

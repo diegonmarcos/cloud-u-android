@@ -36,7 +36,7 @@ data class SearchConfig(
         val id: String, val label: String, val title: String, val blurb: String, val icon: String,
         val placeholder: String, val subpages: List<String>, val sources: List<String>, val chips: List<ChipSpec>,
         val feeds: List<String>, val feedKeywords: List<String>, val calculators: List<String>, val analysis: String,
-        val series: List<String>, val chart: String, val chartPoints: Int,
+        val series: List<String>, val chart: String, val chartPoints: Int, val chartColor: String,
     )
 
     /**
@@ -59,11 +59,13 @@ data class SearchConfig(
         val id: String, val label: String, val source: String, val detail: String, val parser: String,
         val url: String, val headers: Map<String, String>, val unit: String, val change: String, val terms: String,
     )
-    data class Engine(val id: String, val label: String, val url: String)
+    /** A Search-page engine box: [icon] is a Phosphor name, [accent] a colour name in the app's colors.xml. */
+    data class Engine(val id: String, val label: String, val url: String, val icon: String, val accent: String)
     data class Field(val id: String, val label: String, val default: Double, val kind: String, val options: List<Pair<String, Double>>)
-    data class Output(val id: String, val label: String, val format: String, val emphasis: Boolean)
+    /** [tone]: "" (a plain row), total, minus (a deduction), result (the answer) or detail (a sub-line). */
+    data class Output(val id: String, val label: String, val format: String, val tone: String)
     data class Calculator(
-        val id: String, val label: String, val blurb: String, val fields: List<Field>, val outputs: List<Output>,
+        val id: String, val label: String, val blurb: String, val icon: String, val fields: List<Field>, val outputs: List<Output>,
         val notes: List<String>, val warnings: Map<String, String>,
     )
 
@@ -93,6 +95,7 @@ data class SearchConfig(
         /** What a vertical's Analysis page may compute: nothing, the jobs statistics, or official market series. */
         val ANALYSES = setOf("none", "jobs", "market")
         val CHANGES = setOf("pct", "pp")
+        val TONES = setOf("", "total", "minus", "result", "detail")
 
         /** [json] is build.json::search. Throws on a declaration that would draw a broken app. */
         fun parse(json: String): SearchConfig = parse(JSONObject(json))
@@ -119,6 +122,7 @@ data class SearchConfig(
                         feeds = strings(v.optJSONArray("feeds")), feedKeywords = strings(v.optJSONArray("feed_keywords")),
                         calculators = strings(v.optJSONArray("calculators")), analysis = v.optString("analysis", "none"),
                         series = strings(v.optJSONArray("series")), chart = v.optString("chart"), chartPoints = v.optInt("chart_points", 0),
+                        chartColor = v.optString("chart_color"),
                     )
                 },
                 sources = members(o.getJSONObject("sources")).associate { (id, s) ->
@@ -138,17 +142,17 @@ data class SearchConfig(
                         unit = x.getString("unit"), change = x.getString("change"), terms = x.optString("terms"),
                     )
                 },
-                engines = objects(o.getJSONArray("engines")).map { Engine(it.getString("id"), it.getString("label"), it.getString("url")) },
+                engines = objects(o.getJSONArray("engines")).map { Engine(it.getString("id"), it.getString("label"), it.getString("url"), it.getString("icon"), it.getString("accent")) },
                 calculators = members(o.getJSONObject("calculators")).associate { (id, c) ->
                     id to Calculator(
-                        id = id, label = c.getString("label"), blurb = c.optString("blurb"),
+                        id = id, label = c.getString("label"), blurb = c.optString("blurb"), icon = c.getString("icon"),
                         fields = objects(c.getJSONArray("fields")).map { f ->
                             Field(
                                 f.getString("id"), f.getString("label"), f.getDouble("default"), f.optString("kind", "number"),
                                 objects(f.optJSONArray("options")).map { it.getString("label") to it.getDouble("value") },
                             )
                         },
-                        outputs = objects(c.getJSONArray("outputs")).map { Output(it.getString("id"), it.getString("label"), it.optString("format", "eur"), it.optBoolean("emphasis", false)) },
+                        outputs = objects(c.getJSONArray("outputs")).map { Output(it.getString("id"), it.getString("label"), it.optString("format", "eur"), it.optString("tone")) },
                         notes = strings(c.optJSONArray("notes")),
                         warnings = stringMap(c.optJSONObject("warnings")),
                     )
@@ -212,6 +216,7 @@ data class SearchConfig(
                 if (v.chart !in v.series) bad += "vertical ${v.id} charts ${v.chart.ifBlank { "nothing" }}, which is not one of its series"
                 if (v.chartPoints < 2) bad += "vertical ${v.id} chart_points must be at least 2"
             }
+            if (v.analysis != "none" && v.chartColor.isBlank()) bad += "vertical ${v.id} has an analysis chart but no chart_color"
         }
         for (x in series.values) {
             if (x.change !in CHANGES) bad += "series ${x.id} change ${x.change} is none of $CHANGES"
@@ -224,6 +229,7 @@ data class SearchConfig(
         }
         for (c in calculators.values) {
             if (c.outputs.isEmpty()) bad += "calculator ${c.id} declares no output"
+            c.outputs.filter { it.tone !in TONES }.forEach { bad += "calculator ${c.id} output ${it.id} tone ${it.tone} is none of $TONES" }
             c.fields.filter { it.kind == "choice" && it.options.none { o -> o.second == it.default } }
                 .forEach { bad += "calculator ${c.id} field ${it.id} default is not one of its options" }
         }

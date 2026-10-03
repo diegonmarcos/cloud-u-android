@@ -1,50 +1,30 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
 package com.diegonmarcos.cloudsearch.ui
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -58,12 +38,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.cloudsearch.BuildConfig
 import com.diegonmarcos.cloudsearch.R
@@ -71,17 +50,12 @@ import com.diegonmarcos.cloudsearch.core.Filters
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.Services
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
-import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
-import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
-import com.diegonmarcos.superapp.uikit.KitSwitchRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Which sheet is open over the shell. */
-enum class Sheet { PROFILE, FILTERS, SESSIONS }
+/** Which of the mockup's menus is open over the shell (one at a time, like its closeAllMenus()). */
+enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
 
 /** Everything the shell remembers while it is up; the durable half lives in [Services.prefs]. */
 class SearchState(val services: Services) {
@@ -89,7 +63,9 @@ class SearchState(val services: Services) {
     var vertical by mutableStateOf(cfg.defaultVertical)
     var dark by mutableStateOf(services.prefs.dark)
     var city by mutableStateOf(services.prefs.city)
-    var sheet by mutableStateOf<Sheet?>(null)
+    var menu by mutableStateOf<Menu?>(null)
+    /** Saved Items (the menu's own view of every starred result) is showing instead of a vertical. */
+    var saved by mutableStateOf(false)
     var busy by mutableStateOf(0)
     private val subpages = mutableStateMapOf<String, String>()
     val filters = mutableStateMapOf<String, Filters>()
@@ -102,6 +78,9 @@ class SearchState(val services: Services) {
     fun filtersOf(v: String): Filters = filters[v] ?: Filters()
     fun listing(v: String): ListingModel = listings.getOrPut(v) { ListingModel(services.prefs.lastQuery(v)) }
 
+    /** The mockup's switchTopic(): a vertical opens on its first subpage, menus close. */
+    fun open(id: String) { vertical = id; saved = false; menu = null; cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() } }
+    fun toggle(m: Menu) { menu = if (menu == m) null else m }
     fun toggleDark() { dark = !dark; services.prefs.dark = dark }
     fun pickCity(id: String) { city = id; services.prefs.city = id; listings.values.forEach { it.stale = true } }
 }
@@ -114,15 +93,26 @@ object Tags {
     const val MENU = "search_menu"
     const val ISLAND = "search_island"
     const val PROFILE = "search_profile"
+    const val PROFILE_MENU = "search_profile_menu"
+    const val CATEGORIES = "search_categories"
+    const val FILTERS = "search_filters"
+    const val SESSIONS_MENU = "search_sessions_menu"
+    const val CLOSE_MENU = "search_close_menu"
     const val THEME = "search_theme_toggle"
     const val TOKEN = "search_token_status"
+    const val TOKEN_CHECK = "search_token_check"
     const val SEARCH_BOX = "search_box"
     const val MORE_FILTERS = "search_more_filters"
     const val APPLY_FILTERS = "search_apply_filters"
+    const val SORT = "search_sort"
     const val CHAT_INPUT = "search_chat_input"
     const val CHAT_SEND = "search_chat_send"
+    const val NEW_CHAT = "search_new_chat"
     const val SESSIONS = "search_sessions"
     const val MODEL = "search_model"
+    const val WEB = "search_web_toggle"
+    const val SAVED = "search_saved"
+    fun nav(id: String) = "search_nav_$id"
     fun subpage(id: String) = "search_subpage_$id"
     fun page(kind: String) = "search_page_$kind"
     fun card(key: String) = "search_card_$key"
@@ -131,136 +121,64 @@ object Tags {
     fun engine(id: String) = "search_engine_$id"
     fun source(id: String) = "search_source_$id"
     fun drawer(id: String) = "search_drawer_$id"
+    fun chip(id: String) = "search_chip_$id"
+    fun city(id: String) = "search_city_$id"
+    fun option(id: String) = "search_option_$id"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchShell(state: SearchState) {
     CompositionLocalProvider(LocalState provides state) {
         SearchTheme(state.dark) {
-            val drawer = rememberDrawerState(DrawerValue.Closed)
-            val scope = rememberCoroutineScope()
-            ModalNavigationDrawer(
-                drawerState = drawer,
-                drawerContent = {
-                    ModalDrawerSheet {
-                        Text(stringResource(R.string.drawer_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(Metrics.gutter))
-                        state.cfg.verticals.forEach { v ->
-                            NavigationDrawerItem(
-                                label = { Text(v.title) },
-                                icon = { Icon(IconCatalog.vector(v.icon), contentDescription = null) },
-                                selected = v.id == state.vertical,
-                                onClick = { state.vertical = v.id; scope.launch { drawer.close() } },
-                                modifier = Modifier.testTag(Tags.drawer(v.id)),
-                            )
-                        }
-                        HorizontalDivider(Modifier.padding(vertical = Metrics.gap))
-                        NavigationDrawerItem(
-                            label = { Text(stringResource(R.string.saved_items)) },
-                            icon = { Icon(Icons.Filled.Bookmark, contentDescription = null) },
-                            selected = false,
-                            onClick = {
-                                val v = state.cfg.verticals.firstOrNull { it.id == state.vertical && "saved" in it.subpages }
-                                    ?: state.cfg.verticals.first { "saved" in it.subpages }
-                                state.vertical = v.id
-                                state.showSubpage(v, "saved")
-                                scope.launch { drawer.close() }
-                            },
-                            modifier = Modifier.testTag(Tags.drawer("saved")),
-                        )
+            val g = LocalGlass.current
+            val v = state.v()
+            Box(Modifier.fillMaxSize().background(g.background).testTag(Tags.SHELL)) {
+                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding()) {
+                    // The page under the chrome: it pads itself by contentTop / contentBottom.
+                    if (state.saved) SavedPage()
+                    else {
+                        val sub = state.subpageOf(v)
+                        key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
                     }
-                },
-            ) {
-                Body(state, onMenu = { scope.launch { drawer.open() } })
-            }
-            when (state.sheet) {
-                Sheet.PROFILE -> ProfileSheet(state)
-                Sheet.FILTERS -> FiltersSheet(state)
-                Sheet.SESSIONS -> SessionsSheet(state)
-                null -> Unit
+                    TopBar(state, v, Modifier.align(Alignment.TopCenter))
+                    // The keyboard takes the bottom of the screen; the nav returns when it closes.
+                    if (!WindowInsets.isImeVisible) BottomNav(
+                        entries = state.cfg.verticals.map { NavEntry(it.id, it.label, it.icon) },
+                        selected = if (state.saved) "" else state.vertical,
+                        onSelect = { state.open(it) },
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Metrics.navBottom),
+                    )
+                }
+                Scrim(state.menu != null) { state.menu = null }
+                SideMenu(state.menu == Menu.CATEGORIES, Tags.CATEGORIES) { Categories(state) }
+                SideMenu(state.menu == Menu.FILTERS, Tags.FILTERS) { FiltersMenu(state) }
+                SideMenu(state.menu == Menu.SESSIONS, Tags.SESSIONS_MENU) { SessionsMenu(state) }
+                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
+                    ProfilePopover(state.menu == Menu.PROFILE) { ProfileMenu(state) }
+                }
             }
         }
     }
 }
 
+/** .top-nav: menu · the dynamic island · profile. */
 @Composable
-private fun Body(state: SearchState, onMenu: () -> Unit) {
-    val collapse = rememberBottomNavCollapse()
-    val insets = bottomNavInsets()
-    val entries = state.cfg.verticals.map { BottomNavEntry(it.id, it.label, rememberVectorPainter(IconCatalog.vector(it.icon))) }
-    val v = state.v()
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag(Tags.SHELL)) {
-        TopBar(state, v, onMenu)
-        if (v.subpages.size > 1) SubpageRow(state, v)
-        Box(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
-                .nestedScroll(collapse),
-        ) {
-            val sub = state.subpageOf(v)
-            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
-        }
-        BottomNavIsland(
-            entries = entries,
-            selectedId = state.vertical,
-            onSelect = { state.vertical = it.id },
-            collapsed = collapse.collapsed,
-            insets = insets,
-        )
-    }
-}
-
-/** Menu · the dynamic island (the vertical, or what is running) · profile. */
-@Composable
-private fun TopBar(state: SearchState, v: SearchConfig.Vertical, onMenu: () -> Unit) {
+private fun TopBar(state: SearchState, v: SearchConfig.Vertical, modifier: Modifier) {
     Row(
-        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = Metrics.gap),
+        modifier.fillMaxWidth().padding(top = Metrics.topOffset, start = Metrics.gutter, end = Metrics.gutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMenu, modifier = Modifier.testTag(Tags.MENU)) {
-            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.menu))
-        }
+        IconBtn(R.drawable.ph_list, stringResource(R.string.menu), Tags.MENU) { state.toggle(Menu.CATEGORIES) }
         Spacer(Modifier.weight(1f))
-        Row(
-            Modifier
-                .height(Metrics.islandHeight)
-                .clip(RoundedCornerShape(Metrics.corner))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = Metrics.gutter)
-                .testTag(Tags.ISLAND),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Metrics.gap),
-        ) {
-            Icon(IconCatalog.vector(v.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(
-                if (state.busy > 0) stringResource(R.string.island_busy) else v.title,
-                style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
+        val text = when {
+            state.busy > 0 || state.chat.sending -> stringResource(R.string.island_busy)
+            state.saved -> stringResource(R.string.saved_items)
+            else -> v.title
         }
+        Island(if (state.saved) IconCatalog.SAVED else v.icon, text, Modifier.testTag(Tags.ISLAND))
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = { state.sheet = Sheet.PROFILE }, modifier = Modifier.testTag(Tags.PROFILE)) {
-            Icon(Icons.Filled.AccountCircle, contentDescription = stringResource(R.string.profile))
-        }
-    }
-}
-
-@Composable
-private fun SubpageRow(state: SearchState, v: SearchConfig.Vertical) {
-    val selected = state.subpageOf(v)
-    LazyRow(
-        Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = Metrics.gutter, vertical = Metrics.small),
-        horizontalArrangement = Arrangement.spacedBy(Metrics.gap),
-    ) {
-        items(v.subpages, key = { it }) { id ->
-            FilterChip(
-                selected = id == selected,
-                onClick = { state.showSubpage(v, id) },
-                label = { Text(state.cfg.subpage(id)?.label ?: id) },
-                modifier = Modifier.testTag(Tags.subpage(id)),
-            )
-        }
+        IconBtn(R.drawable.ph_user, stringResource(R.string.profile), Tags.PROFILE) { state.toggle(Menu.PROFILE) }
     }
 }
 
@@ -273,98 +191,148 @@ private fun Page(v: SearchConfig.Vertical, kind: String) {
             "analysis" -> AnalysisPage(v)
             "feed" -> FeedPage(v)
             "calculators" -> CalculatorsPage(v)
-            "web" -> WebPage(v)
-            "chat" -> ChatPage()
-            "saved" -> SavedPage(v)
+            "assistant" -> AssistantPage(v)
             else -> Text(stringResource(R.string.no_renderer, kind), Modifier.padding(Metrics.gutter))
         }
     }
 }
 
-/** Profile & settings: where the AI token comes from, the theme, the city. */
+/** The hamburger menu: Categories (every vertical) and Saved Items. */
 @Composable
-private fun ProfileSheet(state: SearchState) {
+private fun Categories(state: SearchState) {
+    val g = LocalGlass.current
+    MenuTitle(stringResource(R.string.drawer_title))
+    state.cfg.verticals.forEach { v ->
+        MenuItem(v.title, Tags.drawer(v.id), icon = { DeclaredIcon(v.icon, Metrics.icon, g.text) }) { state.open(v.id) }
+    }
+    Hairline(Modifier.padding(vertical = Metrics.gutter))
+    MenuItem(stringResource(R.string.saved_items), Tags.drawer("saved"), icon = { Ph(R.drawable.ph_star, Metrics.icon, g.text) }) {
+        state.saved = true
+        state.menu = null
+    }
+}
+
+/** Extensive Filters: sort, price range, the vertical's declared options. Applied on Apply Filters. */
+@Composable
+private fun FiltersMenu(state: SearchState) {
+    val g = LocalGlass.current
+    val v = state.v()
+    val f0 = state.filtersOf(v.id)
+    var sort by remember(v.id) { mutableStateOf(f0.sort) }
+    var min by remember(v.id) { mutableStateOf(f0.min?.let { plain(it) } ?: "") }
+    var max by remember(v.id) { mutableStateOf(f0.max?.let { plain(it) } ?: "") }
+    var chips by remember(v.id) { mutableStateOf(f0.chips) }
+    MenuTitle(stringResource(R.string.extensive_filters), { state.menu = null }, stringResource(R.string.close))
+    FieldLabel(stringResource(R.string.sort_by))
+    Select(stringResource(sortLabel(sort)), Filters.Sort.entries.map { it to stringResource(sortLabel(it)) }, Tags.SORT) { sort = it }
+    FieldLabel(stringResource(R.string.price_range))
+    Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+        GlassField(min, { min = it }, stringResource(R.string.min), Tags.option("min"), Modifier.weight(1f), icon = null, number = true)
+        GlassField(max, { max = it }, stringResource(R.string.max), Tags.option("max"), Modifier.weight(1f), icon = null, number = true)
+    }
+    Hairline(Modifier.padding(vertical = Metrics.small))
+    if (v.chips.isEmpty()) Text(stringResource(R.string.no_advanced_filters), color = g.text2, style = Type.style(Type.small))
+    else {
+        FieldLabel(stringResource(R.string.more_options))
+        v.chips.chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.chipGap)) {
+                pair.forEach { c ->
+                    val on = c.id in chips
+                    Row(
+                        Modifier.weight(1f).clip(RoundedCornerShape(Metrics.tileRadius)).background(g.field)
+                            .clickable { chips = if (on) chips - c.id else chips + c.id }.testTag(Tags.option(c.id))
+                            .padding(horizontal = Metrics.chipGap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(on, { chips = if (on) chips - c.id else chips + c.id }, colors = CheckboxDefaults.colors(checkedColor = g.accent, uncheckedColor = g.text2))
+                        Text(c.label, color = g.text, style = Type.style(Type.body), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+    Text(
+        stringResource(R.string.apply_filters), color = g.onBadge, style = Type.style(Type.menuItem, FontWeight.Bold),
+        modifier = Modifier.fillMaxWidth().padding(top = Metrics.gap).clip(RoundedCornerShape(Metrics.tileRadius)).background(g.accent)
+            .clickable {
+                state.filters[v.id] = f0.copy(sort = sort, min = num(min), max = num(max), chips = chips)
+                state.menu = null
+            }
+            .testTag(Tags.APPLY_FILTERS).padding(vertical = Metrics.menuItemPad),
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** A <select>: the current choice with a caret; the options drop down. */
+@Composable
+fun <T> Select(current: String, options: List<Pair<T, String>>, tag: String, modifier: Modifier = Modifier, onPick: (T) -> Unit) {
+    val g = LocalGlass.current
+    var open by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(Metrics.tileRadius)
+    Box(modifier) {
+        Row(
+            Modifier.clip(shape).background(g.field).border(Metrics.hairline, g.tileBorder, shape)
+                .clickable { open = true }.testTag(tag).padding(horizontal = Metrics.gap, vertical = Metrics.chipGap),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Metrics.small),
+        ) {
+            Text(current, color = g.text, style = Type.style(Type.small), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Ph(R.drawable.ph_caret_down, Metrics.iconXs, g.text2)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (value, label) ->
+                DropdownMenuItem(text = { Text(label, style = Type.style(Type.small)) }, onClick = { onPick(value); open = false })
+            }
+        }
+    }
+}
+
+/** Profile & settings: where the AI token comes from, the theme, the city, the build. */
+@Composable
+private fun ProfileMenu(state: SearchState) {
+    val g = LocalGlass.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var token by remember { mutableStateOf<String?>(null) }
-    ModalBottomSheet(onDismissRequest = { state.sheet = null }) {
-        Column(Modifier.padding(Metrics.gutter).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-            Text(stringResource(R.string.profile), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.token_title), style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.token_blurb), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(Modifier.testTag(Tags.PROFILE_MENU), verticalArrangement = Arrangement.spacedBy(Metrics.small)) {
+        Row(Modifier.padding(Metrics.gap), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.cardPad)) {
+            Box(Modifier.size(Metrics.profileAvatar).clip(CircleShape).background(g.field), contentAlignment = Alignment.Center) {
+                Ph(R.drawable.ph_user, Metrics.icon, g.accent)
+            }
+            Column {
+                Text(stringResource(R.string.fleet_account), color = g.text, style = Type.style(Type.menuItem, FontWeight.SemiBold))
+                Text(stringResource(R.string.version, BuildConfig.GIT_SHORT_SHA), color = g.text2, style = Type.style(Type.label))
+            }
+        }
+        Hairline()
+        val box = RoundedCornerShape(Metrics.cardRadius)
+        Column(
+            Modifier.fillMaxWidth().clip(box).background(g.field).border(Metrics.hairline, g.glassBorder, box).padding(Metrics.cardPad),
+            verticalArrangement = Arrangement.spacedBy(Metrics.small),
+        ) {
+            Text(stringResource(R.string.token_title), color = g.text2, style = Type.style(Type.label, FontWeight.Bold))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                OutlinedButton(onClick = {
+                Chip(stringResource(R.string.token_check), Tags.TOKEN_CHECK, icon = R.drawable.ph_key) {
                     token = ctx.getString(R.string.token_checking)
                     scope.launch {
                         val t = withContext(Dispatchers.IO) { Account.token(ctx, state.cfg.ai.accountProvider) }
                         token = if (t.value != null) ctx.getString(R.string.token_present) else ctx.getString(R.string.token_missing, t.why)
                     }
-                }) { Text(stringResource(R.string.token_check)) }
-                Text(token ?: "", style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(Tags.TOKEN))
-            }
-            HorizontalDivider()
-            KitSwitchRow(
-                title = stringResource(R.string.dark_theme), subtitle = "", checked = state.dark,
-                onCheckedChange = { state.toggleDark() }, modifier = Modifier.testTag(Tags.THEME),
-            )
-            HorizontalDivider()
-            Text(stringResource(R.string.city), style = MaterialTheme.typography.titleSmall)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                items(state.cfg.cities, key = { it.id }) { c ->
-                    FilterChip(selected = c.id == state.city, onClick = { state.pickCity(c.id) }, label = { Text(c.label) })
                 }
+                Text(token ?: "", color = g.text, style = Type.style(Type.label), modifier = Modifier.weight(1f).testTag(Tags.TOKEN))
             }
-            HorizontalDivider()
-            Text(stringResource(R.string.version, BuildConfig.GIT_SHORT_SHA, BuildConfig.BUILD_TIMESTAMP),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.token_blurb), color = g.text2, style = Type.style(Type.tiny))
         }
-    }
-}
-
-/** Extensive Filters: sort, price range, the vertical's declared chips. Applied on Apply. */
-@Composable
-private fun FiltersSheet(state: SearchState) {
-    val v = state.v()
-    val f0 = state.filtersOf(v.id)
-    var sort by remember { mutableStateOf(f0.sort) }
-    var min by remember { mutableStateOf(f0.min?.toString() ?: "") }
-    var max by remember { mutableStateOf(f0.max?.toString() ?: "") }
-    var chips by remember { mutableStateOf(f0.chips) }
-    ModalBottomSheet(onDismissRequest = { state.sheet = null }) {
-        Column(Modifier.padding(Metrics.gutter).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-            Text(stringResource(R.string.extensive_filters), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.sort_by), style = MaterialTheme.typography.titleSmall)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                items(Filters.Sort.entries.toList(), key = { it.id }) { s ->
-                    FilterChip(selected = s == sort, onClick = { sort = s }, label = { Text(stringResource(sortLabel(s))) })
-                }
-            }
-            Text(stringResource(R.string.price_range), style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                OutlinedTextField(min, { min = it }, Modifier.weight(1f), label = { Text(stringResource(R.string.min)) }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                OutlinedTextField(max, { max = it }, Modifier.weight(1f), label = { Text(stringResource(R.string.max)) }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-            }
-            if (v.chips.isNotEmpty()) {
-                Text(stringResource(R.string.more_options), style = MaterialTheme.typography.titleSmall)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                    items(v.chips, key = { it.id }) { c ->
-                        FilterChip(selected = c.id in chips, onClick = { chips = if (c.id in chips) chips - c.id else chips + c.id }, label = { Text(c.label) })
-                    }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-                OutlinedButton(onClick = { state.filters[v.id] = Filters(); state.sheet = null }) { Text(stringResource(R.string.reset)) }
-                Button(
-                    onClick = {
-                        state.filters[v.id] = f0.copy(sort = sort, min = num(min), max = num(max), chips = chips)
-                        state.sheet = null
-                    },
-                    modifier = Modifier.testTag(Tags.APPLY_FILTERS),
-                ) { Text(stringResource(R.string.apply_filters)) }
-            }
-            Spacer(Modifier.width(Metrics.gap))
+        MenuItem(stringResource(R.string.toggle_theme), Tags.THEME, icon = { Ph(if (state.dark) R.drawable.ph_moon else R.drawable.ph_sun, Metrics.icon, g.text) }) {
+            state.toggleDark()
+        }
+        Row(Modifier.padding(horizontal = Metrics.menuItemPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.cardPad)) {
+            Ph(R.drawable.ph_map_pin, Metrics.icon, g.text)
+            Text(stringResource(R.string.city), color = g.text, style = Type.style(Type.menuItem))
+        }
+        ChipRow {
+            state.cfg.cities.forEach { c -> Chip(c.label, Tags.city(c.id), selected = c.id == state.city) { state.pickCity(c.id) } }
         }
     }
 }

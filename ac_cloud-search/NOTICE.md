@@ -33,9 +33,11 @@ build.json::search.social_2026 and held equal to the limits the PAP itself carri
 
 ## Reuse, and what was not reused
 
-- libs:core / libs:devtools (mesh member, debug API), libs:bottomnav (the island), libs:ui-kit
-  (#773, theme and cards), libs:text-tools (the fleet Account's OpenRouter token) — shared by
-  reference.
+- libs:core / libs:devtools (mesh member, debug API) and libs:text-tools (the fleet Account's
+  OpenRouter token) — shared by reference. #797: libs:bottomnav and libs:ui-kit are NOT linked any
+  more; the app draws its own chrome from the owner's mockup.
+- Icons: Phosphor Icons (@phosphor-icons/core 2.1.1, MIT, © 2023 Phosphor Icons), converted to
+  vector drawables by `app/tools/phosphor2vd.py` from the list in `app/tools/phosphor.json`.
 - Cloud Calc's engine (Cloud-Lib-Calc, libqalculate behind a binder, #767) was considered for the
   calculators and not used: the payslip must reproduce the BMF's BigDecimal rounding statement by
   statement, which is the PAP's own code and not an expression; rent-vs-buy is a month-by-month

@@ -39,11 +39,9 @@ on:
       # The gate skips it, so the run costs the test step alone.
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-search.yml"
-      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
-      - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ac_cloud-search/**"
 permissions:
   contents: write

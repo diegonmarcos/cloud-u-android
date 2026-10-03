@@ -1,25 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- #779 the palette, one declaration each: the fleet values (ac_cloud-calc / ac_cloud-c3, from
-     aa_cloud-superapp and libs:bottomnav colors.xml) for dark, the default (#336), and their light
-     counterparts for the theme toggle. SearchTheme.kt reads these; no Kotlin file names a colour. -->
+<!-- #797 the owner's mockup's design tokens, one declaration each: its :root (light) and .dark
+     custom properties, then the fixed colours its Tailwind classes name. SearchTheme.kt reads these
+     into the Glass palette; no Kotlin file names a colour. dark_default (build.json::ui) = .dark. -->
 <resources>
-    <color name="search_background">#FF07040F</color>
-    <color name="search_surface">#FF140B26</color>
-    <color name="search_surface_raised">#FF1F1238</color>
-    <color name="search_outline">#33A78BFA</color>
-    <color name="search_accent">#FFB794F4</color>
-    <color name="search_on_accent">#FF14082B</color>
-    <color name="search_text">#FFFFFFFF</color>
-    <color name="search_text_secondary">#AAFFFFFF</color>
-    <color name="search_error">#FFF87171</color>
+    <!-- .dark -->
+    <color name="dark_glass_bg">#99141419</color>
+    <color name="dark_glass_border">#1AFFFFFF</color>
+    <color name="dark_accent">#FF0A84FF</color>
+    <color name="dark_bg_start">#FF0F172A</color>
+    <color name="dark_bg_end">#FF1E293B</color>
+    <color name="dark_text_main">#FFF8FAFC</color>
+    <color name="dark_text_secondary">#FF94A3B8</color>
+    <color name="dark_card_bg">#991E293B</color>
+    <color name="dark_nav_bg">#B30F172A</color>
+    <color name="dark_input_bg">#CC0F172A</color>
+    <color name="dark_menu_bg">#F21E293B</color>
+    <color name="dark_border_light">#1AFFFFFF</color>
+    <!-- bg-black bg-opacity-20 (selects, calc result box), bg-gray-800/40 tiles, gray-600 borders -->
+    <color name="dark_field_bg">#33000000</color>
+    <color name="dark_tile_bg">#661F2937</color>
+    <color name="dark_tile_border">#FF4B5563</color>
+    <color name="dark_chat_bar">#E61E1E24</color>
+    <color name="dark_positive">#FF4ADE80</color>
+    <color name="dark_negative">#FFF87171</color>
 
-    <color name="search_light_background">#FFF6F3FC</color>
-    <color name="search_light_surface">#FFFFFFFF</color>
-    <color name="search_light_surface_raised">#FFEDE7F9</color>
-    <color name="search_light_outline">#33583C9A</color>
-    <color name="search_light_accent">#FF6D4BC3</color>
-    <color name="search_light_on_accent">#FFFFFFFF</color>
-    <color name="search_light_text">#FF14082B</color>
-    <color name="search_light_text_secondary">#AA14082B</color>
-    <color name="search_light_error">#FFB91C1C</color>
+    <!-- :root (light) -->
+    <color name="light_glass_bg">#80FFFFFF</color>
+    <color name="light_glass_border">#66FFFFFF</color>
+    <color name="light_accent">#FF007AFF</color>
+    <color name="light_bg_start">#FFE0EAFC</color>
+    <color name="light_bg_end">#FFCFDEF3</color>
+    <color name="light_text_main">#FF1D1D1F</color>
+    <color name="light_text_secondary">#FF5A5A5E</color>
+    <color name="light_card_bg">#B3FFFFFF</color>
+    <color name="light_nav_bg">#99FFFFFF</color>
+    <color name="light_input_bg">#CCFFFFFF</color>
+    <color name="light_menu_bg">#E6FFFFFF</color>
+    <color name="light_border_light">#1A000000</color>
+    <color name="light_field_bg">#14000000</color>
+    <color name="light_tile_bg">#80FFFFFF</color>
+    <color name="light_tile_border">#33000000</color>
+    <color name="light_chat_bar">#E6FFFFFF</color>
+    <color name="light_positive">#FF16A34A</color>
+    <color name="light_negative">#FFDC2626</color>
+
+    <!-- fixed in both themes -->
+    <color name="island_bg">#CC000000</color>
+    <color name="on_island">#FFFFFFFF</color>
+    <color name="scrim">#66000000</color>
+    <color name="price_badge">#FF16A34A</color>
+    <color name="on_badge">#FFFFFFFF</color>
+    <color name="user_bubble">#FFE5E7EB</color>
+    <color name="on_user_bubble">#FF000000</color>
+    <!-- from-blue-500 to-purple-500 (avatar, send button, greeting) -->
+    <color name="ai_start">#FF3B82F6</color>
+    <color name="ai_end">#FFA855F7</color>
+    <!-- .ai-nav-icon: #ff416c, #8a2387, #24d292 -->
+    <color name="ai_nav_1">#FFFF416C</color>
+    <color name="ai_nav_2">#FF8A2387</color>
+    <color name="ai_nav_3">#FF24D292</color>
+    <!-- build.json::search.engines[].accent -->
+    <color name="engine_google">#FF3B82F6</color>
+    <color name="engine_duckduckgo">#FFF97316</color>
+    <color name="engine_brave">#FFEF4444</color>
+    <color name="engine_qwant">#FFA855F7</color>
+    <!-- build.json::search.verticals[].chart_color: the mockup's blue (house) and purple (jobs) bars -->
+    <color name="chart_house">#FF3B82F6</color>
+    <color name="chart_jobs">#FFA855F7</color>
 </resources>
