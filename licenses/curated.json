@@ -173,7 +173,7 @@
    "kind": "own",
    "what": "shared libraries (libs/*), lib-apks and keyboard-engines; the upstream-derived libs are listed in licenses/upstreams.json and keep their upstream licence",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
-   "exceptions": "libs/keyboard GPL-3.0-only; libs/gitsync GPL-3.0; libs/firewall/firestack MPL-2.0; libs/net, libs/net-wg, libs/cropper, libs/gesture, libs/panoramaviewer Apache-2.0; libs/calc native build pulls GPL-2.0-or-later libqalculate (see ac_cloud-calc/NOTICE.md); libs/contacts SocialImport.kt ported from Fossify Contacts (GPL-3.0)"
+   "exceptions": "libs/keyboard GPL-3.0-only; libs/gitsync GPL-3.0; libs/firewall/firestack MPL-2.0; libs/net, libs/net-wg, libs/cropper, libs/gesture, libs/panoramaviewer Apache-2.0; libs/calc native build pulls GPL-2.0-or-later libqalculate (see ac_cloud-calc/NOTICE.md); libs/contacts SocialImport.kt is own code (clean-room rewrite #828, replacing a Fossify Contacts GPL-3.0 port)"
   },
   "ab_cloud-terminal-store": {
    "licence": "LicenseRef-NoLicenseGranted",
