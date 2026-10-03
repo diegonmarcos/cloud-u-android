@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -92,8 +91,9 @@ class AppsGridLayoutTest {
         val island = compose.onNodeWithTag(BottomNavTags.ISLAND).fetchSemanticsNode().boundsInRoot
         val last = compose.onNodeWithTag(DriveTags.appTile(apps.last().label)).fetchSemanticsNode()
         val lastBounds = last.boundsInRoot
-        val unclipped = last.layoutInfo.let { androidx.compose.ui.geometry.Rect(it.coordinates.positionInRoot(), it.coordinates.size.toSize()) }
-        assertEquals("the last tile is not clipped: $lastBounds vs $unclipped", unclipped.height, lastBounds.height, 0.5f)
+        // A clipped tile is shorter than an unclipped one: the last must be as tall as the first.
+        val first = compose.onNodeWithTag(DriveTags.appTile(apps.first().label)).fetchSemanticsNode().boundsInRoot
+        assertEquals("the last tile is not clipped: $lastBounds vs the first $first", first.height, lastBounds.height, 0.5f)
         assertTrue("the last tile ends inside the grid: $lastBounds in $grid", lastBounds.bottom <= grid.bottom + 0.5f)
         assertTrue("the last tile ends above the island: $lastBounds over $island", lastBounds.bottom <= island.top + 0.5f)
         assertTrue("the last tile has height", lastBounds.height > 0f)
@@ -104,8 +104,6 @@ class AppsGridLayoutTest {
         compose.onNodeWithTag(DriveTags.appTile(disk.label)).performClick()
         assertEquals("home" to PAGE_DISK, routed)
     }
-
-    private fun androidx.compose.ui.unit.IntSize.toSize() = androidx.compose.ui.geometry.Size(width.toFloat(), height.toFloat())
 
     private companion object {
         const val LIST = "apps_grid_test_list"
