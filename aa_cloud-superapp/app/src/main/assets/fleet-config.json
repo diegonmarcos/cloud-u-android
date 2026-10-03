@@ -1295,6 +1295,22 @@
     "*/seen_at": "device"
    }
   },
+  "store_auto": {
+   "kind": "prefs",
+   "class": "device",
+   "doc": "#804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own.",
+   "used_by": [
+    "lib-appstore"
+   ]
+  },
+  "store_batch": {
+   "kind": "prefs",
+   "class": "device",
+   "doc": "#804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself.",
+   "used_by": [
+    "lib-appstore"
+   ]
+  },
   "sterna_account": {
    "kind": "prefs",
    "class": "config",

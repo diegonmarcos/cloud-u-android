@@ -103,6 +103,8 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `recent_cloud_tiles` | prefs | device | no | Most-recently-opened cloud tile list (max 12), usage history. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
+| `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
+| `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
