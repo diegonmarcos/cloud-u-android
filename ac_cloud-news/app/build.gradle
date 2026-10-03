@@ -256,6 +256,7 @@ android {
 dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
+    implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     implementation project(':libs:updater')
     // libs:news is NOT linked: it ships as Cloud-Lib-News.apk and the app
     // reaches it through core's DataBackendClient (see NewsBridge). Re-adding
