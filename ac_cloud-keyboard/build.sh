@@ -256,6 +256,11 @@ case "$CMD" in
     _enforce_signature "$DIST_DIR/Cloud-Keyboard.apk"
     log "APK → $DIST_DIR/Cloud-Keyboard.apk"
     ;;
+  unit)
+    # #843: the JVM tests of libs:keyboard (KeyboardViewStateTest - the view-state invariant).
+    log "Running libs:keyboard JVM unit tests…"
+    _gradle :libs:keyboard:testDebugUnitTest
+    ;;
   clean)
     _gradle clean
     rm -rf "$DIST_DIR"
@@ -310,6 +315,6 @@ case "$CMD" in
       || { errlog "gh-release: Cloud-Keyboard.apk or its .sha256 sidecar missing/size-mismatched on release latest after upload (remote=$remote_size local=$local_size)"; exit 1; }
     ;;
   help|*)
-    echo "Usage: build.sh <build|release|clean|oras-push|gh-release>"
+    echo "Usage: build.sh <build|release|unit|clean|oras-push|gh-release>"
     ;;
 esac

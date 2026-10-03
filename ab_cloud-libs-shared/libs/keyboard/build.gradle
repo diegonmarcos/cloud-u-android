@@ -126,6 +126,9 @@ dependencies {
     // EmojiPalettesView type-tab row shows a MediaPanelView from this module.
     implementation project(':libs:media')
 
+    // #843: JVM tests of the view-state model (KeyboardViewStateTest). Pure Kotlin, no Robolectric.
+    testImplementation 'junit:junit:4.13.2'
+
     // ── Keyboard engine dependencies. ─────────────────────────────────────
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 

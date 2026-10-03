@@ -788,7 +788,7 @@ public class LatinIME extends InputMethodService implements
             mSuggestionStripView.setListener(this, view);
             // #776: the strip being (re-)attached is where a row built for another mode
             // (HIDDEN while the keyguard was locked) used to survive the unlock.
-            mSuggestionStripView.ensureToolbar("strip attached");
+            mKeyboardSwitcher.requestToolbarCheck("strip attached");
         }
     }
 
@@ -1092,8 +1092,8 @@ public class LatinIME extends InputMethodService implements
         // #776: the toolbar row is built once per input view, from the settings of that
         // moment. Re-check it on every start so a row built for stale settings, or one that
         // draws nothing, is rebuilt here instead of only by a keyboard switch.
-        if (hasSuggestionStripView())
-            mSuggestionStripView.ensureToolbar(restarting ? "onStartInputView(restarting)" : "onStartInputView");
+        // #843: through the view-state model, which defers it while a panel is open.
+        mKeyboardSwitcher.requestToolbarCheck(restarting ? "onStartInputView(restarting)" : "onStartInputView");
 
         if (editorInfo == null) {
             Log.e(TAG, "Null EditorInfo in onStartInputView()");
@@ -2037,6 +2037,11 @@ public class LatinIME extends InputMethodService implements
     // Hooks for hardware keyboard
     @Override
     public boolean onKeyDown(final int keyCode, final KeyEvent keyEvent) {
+        // #843: system back is an exit from every panel - back to typing, not a hidden window.
+        // Not tracked, so the matching key-up does not hide the window either.
+        if (keyCode == KeyEvent.KEYCODE_BACK && keyEvent.getRepeatCount() == 0
+                && mKeyboardSwitcher.closePanelIfOpen("system back"))
+            return true;
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
             return true;
         return super.onKeyDown(keyCode, keyEvent);

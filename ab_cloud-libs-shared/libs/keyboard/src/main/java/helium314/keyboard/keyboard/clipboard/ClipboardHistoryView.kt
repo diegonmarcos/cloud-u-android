@@ -11,6 +11,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
 import android.util.TypedValue
+import helium314.keyboard.latin.utils.Log
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
@@ -25,6 +26,7 @@ import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.KeyboardTypeface
+import helium314.keyboard.keyboard.KeyboardViewState
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.PointerTracker
 import helium314.keyboard.keyboard.internal.KeyDrawParams
@@ -78,10 +80,9 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val keyboardViewAttr = context.obtainStyledAttributes(attrs, R.styleable.KeyboardView, defStyle, R.style.KeyboardView)
         keyBackgroundId = keyboardViewAttr.getResourceId(R.styleable.KeyboardView_keyBackground, 0)
         keyboardViewAttr.recycle()
-        if (Settings.getValues().mSecondaryStripVisible) {
-            getEnabledClipboardToolbarKeys(context.prefs())
-                .forEach { toolbarKeys.add(createToolbarKey(context, it)) }
-        }
+        // #843: the strip keys are NOT built here any more. Built once from the settings of the
+        // inflation instant, a view inflated while the keyguard was locked (secondary strip
+        // hidden) had no CLOSE_HISTORY for the rest of its life. See rebuildStripKeys().
         fitsSystemWindows = true
     }
 
@@ -135,13 +136,30 @@ class ClipboardHistoryView @JvmOverloads constructor(
             clipboardLayoutParams.setListProperties(this)
             placeholderView = this@ClipboardHistoryView.placeholderView
         }
+    }
+
+    /**
+     * #843: the clipboard strip's keys, rebuilt at EVERY open from the current settings by
+     * KeyboardViewState.clipboardStripKeys, which always includes CLOSE_HISTORY (alone when the
+     * secondary strip is hidden). The panel can therefore never be shown without its close key.
+     */
+    private fun rebuildStripKeys() {
+        val colors = Settings.getValues().mColors
         val clipboardStrip = KeyboardSwitcher.getInstance().clipboardStrip
-        toolbarKeys.forEach {
-            clipboardStrip.addView(it)
-            it.setOnClickListener(this@ClipboardHistoryView)
-            it.setOnLongClickListener(this@ClipboardHistoryView)
-            colors.setColor(it, ColorType.TOOL_BAR_KEY)
-            colors.setBackground(it, ColorType.STRIP_BACKGROUND)
+        toolbarKeys.forEach { clipboardStrip.removeView(it) }
+        toolbarKeys.clear()
+        val keys = KeyboardViewState.clipboardStripKeys(
+            getEnabledClipboardToolbarKeys(context.prefs()), Settings.getValues().mSecondaryStripVisible, ToolbarKey.CLOSE_HISTORY)
+        for (key in keys) {
+            val button = try { createToolbarKey(context, key) } catch (t: Throwable) {
+                Log.e("ClipboardHistoryView", "clipboard strip key $key dropped, it cannot be built", t); continue
+            }
+            clipboardStrip.addView(button)
+            button.setOnClickListener(this@ClipboardHistoryView)
+            button.setOnLongClickListener(this@ClipboardHistoryView)
+            colors.setColor(button, ColorType.TOOL_BAR_KEY)
+            colors.setBackground(button, ColorType.STRIP_BACKGROUND)
+            toolbarKeys.add(button)
         }
     }
 
@@ -187,6 +205,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         historyManager.setCurrentList(null) // always reopen on the default (unpinned) page
         historyManager.searchQuery = "" // clear any leftover search from the previous session
         initialize()
+        rebuildStripKeys()
         setupToolbarKeys()
         historyManager.prepareClipboardHistory()
         historyManager.setHistoryChangeListener(this)

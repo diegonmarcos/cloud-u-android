@@ -112,8 +112,12 @@ theme_recreates = re.search(r"if \(themeUpdated\)\s*\{[^}]*setInputView\(onCreat
 def code(src): return re.sub(r"//[^\n]*", "", src)  # a commented-out call is not a call
 start = code(body(IME, r"void onStartInputViewInternal\("))
 attach = code(body(IME, r"public void updateSuggestionStripView\("))
-start_ensures = "mSuggestionStripView.ensureToolbar(" in start
-attach_ensures = "mSuggestionStripView.ensureToolbar(" in attach
+# #843: LatinIME asks the view-state model (KeyboardSwitcher.requestToolbarCheck), which runs
+# the strip's ensureToolbar in typing and defers it while a panel is open.
+switch_check = code(body(KS, r"public void requestToolbarCheck\("))
+switch_ensures = "mSuggestionStripView.ensureToolbar(" in switch_check
+start_ensures = "mKeyboardSwitcher.requestToolbarCheck(" in start and switch_ensures
+attach_ensures = "mKeyboardSwitcher.requestToolbarCheck(" in attach and switch_ensures
 ensure = body(SV, r"fun ensureToolbar\(")
 measure = body(SV, r"fun measureToolbar\(")
 ensure_uses_rule = ("ToolbarStatus.rebuildReason(" in measure and "measureToolbar(" in ensure
@@ -311,7 +315,7 @@ mutate() {
 }
 echo "== mutations =="
 mutate "LatinIME never re-checks the row (the pre-fix state)" "$J/latin/LatinIME.java" \
-    "s=s.replace('mSuggestionStripView.ensureToolbar(','// mSuggestionStripView.ensureToolbar(')" "T1 after lock"
+    "s=s.replace('mKeyboardSwitcher.requestToolbarCheck(','// mKeyboardSwitcher.requestToolbarCheck(')" "T1 after lock"
 mutate "the mode-mismatch branch is dropped" "$J/latin/suggestions/ToolbarStatus.kt" \
     "s=re.sub(r'\n\s*builtFor\.mode != now\.mode ->[^\n]*', '', s)" "T1 the rebuild names"
 mutate "the self-heal branch is dropped" "$J/latin/suggestions/ToolbarStatus.kt" \
@@ -322,7 +326,7 @@ mutate "toolbarBuiltFor declared below the building init" "$J/latin/suggestions/
     "d='    private var toolbarBuiltFor: ToolbarStatus.Layout? = null\n'; s=s.replace(d,'',1); s=s.replace('    private lateinit var listener: Listener\n', d+'    private lateinit var listener: Listener\n',1)" \
     "T2 toolbarBuiltFor is declared"
 mutate "onStartInputView no longer re-checks" "$J/latin/LatinIME.java" \
-    "s=s.replace('mSuggestionStripView.ensureToolbar(restarting','mSuggestionStripView.toString(); //(restarting')" "T2 LatinIME re-checks"
+    "s=s.replace('mKeyboardSwitcher.requestToolbarCheck(restarting','mKeyboardSwitcher.toString(); //(restarting')" "T2 LatinIME re-checks"
 mutate "the debug op is renamed" ac_cloud-keyboard/app/src/main/java/com/diegonmarcos/cloudkeyboard/App.kt \
     "s=s.replace('op == \"toolbar\"','op == \"tb\"')" "T3 App registers"
 mutate "the debug query repairs the row it reports on" "$J/latin/suggestions/ToolbarStatus.kt" \

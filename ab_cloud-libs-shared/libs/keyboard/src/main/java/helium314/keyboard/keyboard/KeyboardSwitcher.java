@@ -82,6 +82,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private boolean mIsHardwareAcceleratedDrawingEnabled;
 
     private KeyboardState mState;
+    /** #843: the one model of what the input view shows; see {@link #applyViewState()}. */
+    private final KeyboardViewState mViewState = new KeyboardViewState();
 
     private KeyboardLayoutSet mKeyboardLayoutSet;
 
@@ -200,6 +202,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void onHideWindow() {
+        // #843: a hidden keyboard never comes back inside a panel whose strip was built for
+        // settings that no longer hold; the next show starts from typing.
+        closePanelIfOpen("window hidden");
         if (mKeyboardView != null) {
             mKeyboardView.onHideWindow();
         }
@@ -332,23 +337,92 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private void setMainKeyboardFrame(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
-        final int visibility = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState) ? View.GONE : View.VISIBLE;
-        final int stripVisibility = mLatinIME.hasSuggestionStripView()? View.VISIBLE : View.GONE;
-        mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);
-        mKeyboardView.setVisibility(visibility);
+        final String deferred = mViewState.toTyping(isImeSuppressedByHardwareKeyboard(settingsValues, toggleState));
+        applyViewState();
+        mEmojiPalettesView.stopEmojiPalettes();
+        mClipboardHistoryView.stopClipboardHistory();
+        if (deferred != null) requestToolbarCheck("deferred while a panel was open: " + deferred);
+    }
+
+    /**
+     * #843: the ONLY place that sets the visibility of the input view's pieces. Every
+     * transition changes {@link #mViewState} and then renders its plan here, with the
+     * settings of THIS moment - so a re-inflation or a locked config change can never leave
+     * a panel rendered without the exit the plan guarantees.
+     */
+    private void applyViewState() {
+        if (mCurrentInputView == null) return;
+        final KeyboardViewState.Plan plan = mViewState.plan(new KeyboardViewState.Inputs(
+                mLatinIME.hasSuggestionStripView(),
+                Settings.getValues().mSecondaryStripVisible,
+                mViewState.getImeSuppressed(),
+                Settings.getInstance().readShowToolbarOnly()));
         // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
         // @see #getVisibleKeyboardView() and
         // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
-        mMainKeyboardFrame.setVisibility(visibility);
-        mKeyboardViewWrapper.setVisibility(Settings.getInstance().readShowToolbarOnly() ? View.GONE : View.VISIBLE);
-        mEmojiPalettesView.setVisibility(View.GONE);
-        mEmojiPalettesView.stopEmojiPalettes();
-        mEmojiTabStripView.setVisibility(View.GONE);
-        mClipboardStripScrollView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(stripVisibility);
-        mClipboardHistoryView.setVisibility(View.GONE);
-        mClipboardHistoryView.stopClipboardHistory();
+        show(mMainKeyboardFrame, plan.shows(KeyboardViewState.Piece.MAIN_FRAME));
+        show(mKeyboardViewWrapper, plan.shows(KeyboardViewState.Piece.KEYBOARD_WRAPPER));
+        show(mKeyboardView, plan.shows(KeyboardViewState.Piece.MAIN_KEYBOARD));
+        show(mStripContainer, plan.shows(KeyboardViewState.Piece.STRIP_CONTAINER));
+        show(mSuggestionStripView, plan.shows(KeyboardViewState.Piece.SUGGESTION_STRIP));
+        show(mEmojiTabStripView, plan.shows(KeyboardViewState.Piece.EMOJI_TAB_STRIP));
+        show(mClipboardStripScrollView, plan.shows(KeyboardViewState.Piece.CLIPBOARD_STRIP));
+        show(mEmojiPalettesView, plan.shows(KeyboardViewState.Piece.EMOJI_PALETTES));
+        show(mClipboardHistoryView, plan.shows(KeyboardViewState.Piece.CLIPBOARD_HISTORY));
+        if (mViewState.isPanel() && plan.getExits().isEmpty())
+            Log.e(TAG, "view state " + plan.getMode() + " rendered with NO exit - KeyboardViewState.plan is broken");
+    }
+
+    private static void show(@Nullable final View view, final boolean visible) {
+        if (view != null) view.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * #843: the emoji panel's Sticker/GIF body hides the emoji category strip. That strip is
+     * one of the views {@link #applyViewState()} owns, so the panel asks here instead of
+     * toggling it itself.
+     */
+    public void setEmojiCategoryStripShown(final boolean shown) {
+        mViewState.showEmojiCategoryStrip(shown);
+        applyViewState();
+    }
+
+    /** The current view state, for the debug API and logs. */
+    @NonNull
+    public KeyboardViewState.Mode getViewMode() {
+        return mViewState.getMode();
+    }
+
+    /**
+     * #843: leaves an open panel for typing - what the close key, the panel's toolbar key and
+     * system back all do. Returns false (and does nothing) when no panel is open.
+     */
+    public boolean closePanelIfOpen(@NonNull final String why) {
+        if (!mViewState.isPanel()) return false;
+        Log.i(TAG, "closing " + mViewState.getMode() + ": " + why);
+        setAlphabetKeyboard();
+        if (mViewState.isPanel()) { // setKeyboard bailed out (no keyboard view yet): still leave
+            final String deferred = mViewState.toTyping(false);
+            applyViewState();
+            if (deferred != null) requestToolbarCheck("deferred while a panel was open: " + deferred);
+        }
+        return true;
+    }
+
+    /**
+     * #843: the #776 toolbar self-heal goes through here, never straight to the strip. While a
+     * panel is open the check is deferred to the moment it closes; otherwise the strip checks
+     * (and if needed rebuilds) its row, and the view state is re-rendered on top of it.
+     */
+    public void requestToolbarCheck(@NonNull final String trigger) {
+        if (mSuggestionStripView == null || !mLatinIME.hasSuggestionStripView()) return;
+        if (mViewState.deferToolbarCheck(trigger)) {
+            Log.i(TAG, "toolbar check on " + trigger + " deferred: " + mViewState.getMode() + " is open");
+            return;
+        }
+        mSuggestionStripView.ensureToolbar(trigger);
+        applyViewState();
     }
 
     // Implements {@link KeyboardState.SwitchActions}.
@@ -357,19 +431,11 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (DEBUG_ACTION) {
             Log.d(TAG, "setEmojiKeyboard");
         }
-        mMainKeyboardFrame.setVisibility(View.VISIBLE);
-        // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
-        // @see #getVisibleKeyboardView() and
-        // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
-        mKeyboardView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(View.GONE);
-        mStripContainer.setVisibility(getSecondaryStripVisibility());
-        mClipboardStripScrollView.setVisibility(View.GONE);
-        mEmojiTabStripView.setVisibility(View.VISIBLE);
-        mClipboardHistoryView.setVisibility(View.GONE);
+        mViewState.openPanel(KeyboardViewState.PanelKind.EMOJI);
+        mClipboardHistoryView.stopClipboardHistory();
         mEmojiPalettesView.startEmojiPalettes(mKeyboardView.getKeyVisualAttribute(),
                 mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener);
-        mEmojiPalettesView.setVisibility(View.VISIBLE);
+        applyViewState();
     }
 
     // Implements {@link KeyboardState.SwitchActions}.
@@ -378,20 +444,13 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (DEBUG_ACTION) {
             Log.d(TAG, "setClipboardKeyboard");
         }
-        mMainKeyboardFrame.setVisibility(View.VISIBLE);
-        // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
-        // @see #getVisibleKeyboardView() and
-        // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
-        mKeyboardView.setVisibility(View.GONE);
-        mEmojiTabStripView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(View.GONE);
-        mStripContainer.setVisibility(getSecondaryStripVisibility());
-        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
-        mClipboardStripScrollView.setVisibility(View.VISIBLE);
-        mEmojiPalettesView.setVisibility(View.GONE);
+        mViewState.openPanel(KeyboardViewState.PanelKind.CLIPBOARD);
+        mEmojiPalettesView.stopEmojiPalettes();
+        // Builds the strip's keys (CLOSE_HISTORY always among them) from the settings of NOW.
         mClipboardHistoryView.startClipboardHistory(mLatinIME.getClipboardHistoryManager(), mKeyboardView.getKeyVisualAttribute(),
                 mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener);
-        mClipboardHistoryView.setVisibility(View.VISIBLE);
+        applyViewState();
+        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
     }
 
     @Override
@@ -444,26 +503,25 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     public void onToggleKeyboard(@NonNull final KeyboardSwitchState toggleState) {
         KeyboardSwitchState currentState = getKeyboardSwitchState();
-        Log.w(TAG, "onToggleKeyboard() : Current = " + currentState + " : Toggle = " + toggleState);
-        if (currentState == toggleState) {
+        Log.w(TAG, "onToggleKeyboard() : Current = " + currentState + " : Toggle = " + toggleState
+                + " : view state = " + mViewState.getMode());
+        // #843: a panel's own toolbar key is one of its exits - pressed while that panel is
+        // open it returns to typing. (Upstream hid the whole window here instead.)
+        final KeyboardViewState.PanelKind kind = toggleState == KeyboardSwitchState.EMOJI ? KeyboardViewState.PanelKind.EMOJI
+                : toggleState == KeyboardSwitchState.CLIPBOARD ? KeyboardViewState.PanelKind.CLIPBOARD : null;
+        if (kind != null && mViewState.toggleTarget(kind) == KeyboardViewState.Mode.Typing.INSTANCE) {
+            closePanelIfOpen("its toolbar key was pressed again");
+        } else if (currentState == toggleState) {
             mLatinIME.stopShowingInputView();
             mLatinIME.hideWindow();
             setAlphabetKeyboard();
         } else {
             mLatinIME.startShowingInputView(true);
-            if (toggleState == KeyboardSwitchState.EMOJI) {
+            if (kind == KeyboardViewState.PanelKind.EMOJI) {
                 setEmojiKeyboard();
-            } else if (toggleState == KeyboardSwitchState.CLIPBOARD) {
+            } else if (kind == KeyboardViewState.PanelKind.CLIPBOARD) {
                 setClipboardKeyboard();
             } else {
-                mEmojiPalettesView.stopEmojiPalettes();
-                mEmojiPalettesView.setVisibility(View.GONE);
-
-                mClipboardHistoryView.stopClipboardHistory();
-                mClipboardHistoryView.setVisibility(View.GONE);
-
-                mMainKeyboardFrame.setVisibility(View.VISIBLE);
-                mKeyboardView.setVisibility(View.VISIBLE);
                 setKeyboard(toggleState.mKeyboardId, toggleState);
             }
         }
@@ -561,8 +619,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     public void reloadMainKeyboard() {
         // Reload the entire keyboard, and switch to the previous layout
-        final boolean wasEmoji = isShowingEmojiPalettes();
-        final boolean wasClipboard = isShowingClipboardHistory();
+        final boolean wasEmoji = mViewState.isPanel(KeyboardViewState.PanelKind.EMOJI);
+        final boolean wasClipboard = mViewState.isPanel(KeyboardViewState.PanelKind.CLIPBOARD);
         loadKeyboard(mLatinIME.getCurrentInputEditorInfo(), Settings.getValues(),
                 mLatinIME.getCurrentAutoCapsState(), mLatinIME.getCurrentRecapitalizeState(), null);
         if (wasEmoji) {
@@ -756,6 +814,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
         updateKeyboardThemeAndContextThemeWrapper(displayContext, KeyboardTheme.getKeyboardTheme(displayContext));
         mCurrentInputView = (InputView)LayoutInflater.from(mThemeContext).inflate(R.layout.input_view, null);
+        // #843: the fresh views are the typing layout; the model starts there too.
+        mViewState.onInputViewRecreated();
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);

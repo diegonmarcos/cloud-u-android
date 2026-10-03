@@ -326,7 +326,8 @@ public final class EmojiPalettesView extends LinearLayout
         final boolean emoji = type == MediaType.EMOJI;
         mPager.setVisibility(emoji ? VISIBLE : GONE);
         mEmojiCategoryPageIndicatorView.setVisibility(emoji ? VISIBLE : GONE);
-        if (mTabStrip != null) mTabStrip.setVisibility(emoji ? VISIBLE : GONE);
+        // #843: the category strip belongs to KeyboardSwitcher's view-state model.
+        KeyboardSwitcher.getInstance().setEmojiCategoryStripShown(emoji);
         if (mMediaPanel != null) {
             mMediaPanel.setVisibility(emoji ? GONE : VISIBLE);
             if (!emoji) mMediaPanel.showType(type);

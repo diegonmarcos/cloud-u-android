@@ -180,7 +180,7 @@
       "quarantine": {}
     },
     "unit": {
-      "_doc": "No JVM unit tests exist in this app (0 files under */src/test/) and none can be written from the container that maintains it, which has no JVM. Left disabled rather than pointed at an empty task so the engine LOGS the gap on every run instead of printing a green tick for a suite that is not there.",
+      "_doc": "Left disabled HERE because this engine step runs before the JDK/SDK setup. The JVM tests that exist (libs:keyboard KeyboardViewStateTest, #843) run in their own ship-cloud-keyboard.yml step after the SDK setup, via ./build.sh unit (:libs:keyboard:testDebugUnitTest).",
       "task": null,
       "enabled": false
     }

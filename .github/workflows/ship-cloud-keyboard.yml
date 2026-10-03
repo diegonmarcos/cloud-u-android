@@ -187,6 +187,17 @@ jobs:
             echo "variant=debug" >> "$GITHUB_OUTPUT"
           fi
 
+      # #843: libs:keyboard's JVM tests (the view-state invariant: every panel renders a
+      # visible exit). After the SDK/JDK setup, which the static test step above lacks.
+      - name: "Test → libs:keyboard JVM unit tests"
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+        run: |
+          chmod +x build.sh
+          ./build.sh unit
+
       - name: Build APK
         if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}
