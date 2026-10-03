@@ -75,7 +75,9 @@ object VaultCockpit {
 
     /** #781 One Profiles field's runtime mapping (cockpit `vault_fields`): the app ids that use it,
      *  whether they HOLD it live ([held]: Runtime reads it), and [why] when no app does or none holds it. */
-    data class VaultField(val apps: List<String>, val held: Boolean, val why: String = "")
+    data class VaultField(val apps: List<String>, val held: Boolean, val why: String = "",
+        /** #810 why a held field may go unread on a given phone (e.g. another peer's profiles). */
+        val unreadWhy: String = "")
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
      *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest.
@@ -142,7 +144,7 @@ object VaultCockpit {
             vf.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
                 val e = vf.getJSONObject(k)
                 val apps = e.optJSONArray("apps") ?: JSONArray()
-                VaultField((0 until apps.length()).map { apps.getString(it) }, e.optBoolean("held", true), e.optString("why"))
+                VaultField((0 until apps.length()).map { apps.getString(it) }, e.optBoolean("held", true), e.optString("why"), e.optString("unread_why"))
             },
             o.optJSONObject("agent_auth")?.let { parseDerivation(it) },
             o.optJSONArray("derived_settings").let { a ->

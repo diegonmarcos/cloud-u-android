@@ -16,6 +16,9 @@
 #   V4  every item the cloud-vault sources declare (C_A1-configs/<section>/sources.json, when the
 #       vault is checked out beside this repo) is a schema field — "the vault schema"
 #   V5  every app that reports something holds at least one field
+#   V6  (#810) every HELD field is one its app's reader reads, or carries an `unread_why`
+#       (a field no reader reaches and no reason names would sit as "not read" forever)
+#   V7  (#810) `unread_why` is a non-empty reason, and only on a field an app holds
 #   M   each rule, broken on purpose, goes RED
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
@@ -61,6 +64,24 @@ if vault:
         for item in json.load(open(src)).get("items", {}):
             if not any(f == sec + SEP + item or f.startswith(sec + SEP + item + SEP) for f in schema):
                 die(f"V4: the vault declares {sec}{SEP}{item}, which no Profiles field (and so no app mapping) covers")
+# V6: what each reader reads unconditionally (AccountRuntime.readOne), by the section's `apply`.
+def readable(s):
+    a, rt = s.get("apply"), s.get("runtime", {})
+    if a == "about": return {"about" + SEP + "profile"} if s.get("fields") else set()
+    if a in ("drive",): return {"git" + SEP + "github_token", "git" + SEP + "ssh_private_key"}   # VaultCockpit.DRIVE_SECRETS
+    if a == "cloud-drive": return {p for p, e in vf.items() if s["id"] in e.get("apps", []) and e.get("held", True)}
+    if a == "mail": return {"mail" + SEP + k for k in ("endpoints", "accounts", "passwords")}
+    if a == "ai": return {"ai" + SEP + "tokens" + SEP + k for k in cockpit.get("ai_tokens", {})}
+    if a == "keyboard": return {"autocomplete" + SEP + "manifest"} | {"autocomplete" + SEP + k for k in rt.get("lists", {})}
+    return set()   # mesh: per device (picked or from the live tunnel) — every field needs its reason
+for path, e in vf.items():
+    why = e.get("unread_why")
+    if why is not None and not str(why).strip(): die(f"V7: {path} has an empty unread_why")
+    if why is not None and not (e.get("apps") and e.get("held", True)): die(f"V7: {path} carries unread_why but no app holds it")
+    if not (e.get("apps") and e.get("held", True)) or why: continue
+    for a in e["apps"]:
+        if not any(path == r or path.startswith(r + SEP) or r.startswith(path + SEP) for r in readable(sections[a])):
+            die(f"V6: {path} is held by '{a}', whose reader never reads it, and gives no unread_why")
 for sid, s in sections.items():
     if s.get("runtime", {}).get("reports", True) is False or s.get("runtime", {}).get("fields", True) is False: continue
     if not any(sid in e.get("apps", []) and e.get("held", True) for e in vf.values()):
@@ -68,7 +89,7 @@ for sid, s in sections.items():
 PY
 }
 
-echo "== V1-V5: the field map against the schema${VAULT:+ and the vault sources ($VAULT)} =="
+echo "== V1-V7: the field map against the schema${VAULT:+ and the vault sources ($VAULT)} =="
 msg=$(check "$BJ" "$VAULT") && ok "V1-V5: $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") Profiles fields, each mapped to its app(s) or a why" || bad "$msg"
 [ -n "$VAULT" ] || echo "  (cloud-vault not beside this repo — V4 not checked here)"
 held=$(jq '[.ui.vault_connect.cockpit.vault_fields | to_entries[] | select(.key | startswith("_") | not) | select(.value.held != false and (.value.apps | length) > 0)] | length' "$BJ")
@@ -79,6 +100,10 @@ echo "== the app reads the map (Kotlin) =="
 PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
 grep -qF 'o.optJSONObject("vault_fields")' "$PKG/VaultCockpit.kt" && ok "VaultCockpit parses vault_fields" || bad "vault_fields is not parsed"
 grep -qF 'VaultCockpit.layout.vaultFields)' "$PKG/AccountRuntime.kt" && ok "every reading is counted against it" || bad "AccountRuntime ignores vault_fields"
+grep -qF 'e.optString("unread_why")' "$PKG/VaultCockpit.kt" && ok "#810 VaultCockpit parses unread_why" || bad "unread_why is not parsed"
+grep -qF 'partition { vf[it]?.unreadWhy?.isNotBlank() == true }' "$PKG/AccountRuntime.kt" && ok "#810 a field with an unread_why is justified, not unread" || bad "AccountRuntime ignores unread_why"
+grep -qF 'unreadOf(fields, values.keys, r.json)' "$PKG/AccountFleet.kt" && ok "#810 fleet store files the export walked are justified when empty" || bad "AccountFleet does not use unreadOf"
+grep -qF '.put("justified", r.justified.size)' "$PKG/AccountRuntime.kt" && ok "#810 /api/account/runtime counts justified per app (totals sum it)" || bad "justified is not counted"
 grep -qF '"unmapped", unmapped()' "$PKG/AccountDebugApi.kt" && ok "/api/account/runtime lists the unheld fields with their why" || bad "the debug API does not list unheld fields"
 
 echo "== the keyboard serves its lists (no longer 'not reporting') =="
@@ -104,6 +129,12 @@ mutate "a mapping for a field nobody shows"   '.ui.vault_connect.cockpit.vault_f
 mutate "an undeclared app"                    '.ui.vault_connect.cockpit.vault_fields["git › github_token"].apps = ["nope"]'
 mutate "held by an app outside its sections"  '.ui.vault_connect.cockpit.vault_fields["git › github_token"].apps = ["mail"]'
 mutate "unused with no why"                   '.ui.vault_connect.cockpit.vault_fields["git › repos"] |= del(.why)'
+mutate "a peer's profiles, no unread_why"     '.ui.vault_connect.cockpit.vault_fields["peers › samsung-a37 › profiles"] |= del(.unread_why)'
+mutate "mesh profiles, no unread_why"         '.ui.vault_connect.cockpit.vault_fields["mesh › profiles"] |= del(.unread_why)'
+mutate "a held field no reader reads"         '.ui.vault_connect.cockpit.vault_fields["about › addresses"] = {"apps": ["about"], "held": true}'
+mutate "an empty unread_why"                  '.ui.vault_connect.cockpit.vault_fields["mesh › profiles"].unread_why = " "'
+mutate "unread_why on an unheld field"        '.ui.vault_connect.cockpit.vault_fields["git › repos"].unread_why = "x"'
+mutate "an AI token the reader never maps"    '.ui.vault_connect.cockpit.ai_tokens = {}'
 mutate "a reporting app holding nothing"      '.ui.vault_connect.cockpit.vault_fields |= with_entries(if (.value.apps | index("keyboard")) then .value.apps = [] | .value.why = "x" else . end)'
 if [ -n "$VAULT" ]; then
     mkdir -p "$TMP/vault"; cp -r "$VAULT/." "$TMP/vault/"

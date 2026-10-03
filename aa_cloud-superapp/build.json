@@ -6613,7 +6613,7 @@
         ],
         "_doc_vault_fields": "#781 THE FIELD MAP: every field Profiles shows (ui.profile.infos.schema, `section › field`) → the app(s) that use it at runtime (`apps`, cockpit section ids) and whether those apps HOLD it live (`held`: Runtime reads it and Drift compares it) or only take it as input when applying (`held` false). A field no phone app uses has `apps` [] and a `why`, so Profiles and Runtime never disagree about what exists. test-account-vault-fields.sh holds this map EQUAL to the schema (both ways), every app id to a declared section, every held field's section to its app's `vault`, and every item of the cloud-vault sources beside it to a schema field. AccountRuntime counts each app's declared / reported / missing from it.",
         "vault_fields": {
-          "mesh › profiles": {"apps": ["mesh"], "held": true},
+          "mesh › profiles": {"apps": ["mesh"], "held": true, "unread_why": "read once a device is picked on Connect or the live tunnel's address names a declared device; without either there is no declared profile set to compare"},
           "mesh › public_key": {"apps": [], "held": false, "why": "the phone's public key, derived from the private key inside each profile; nothing on the phone reads it"},
           "mail › authoritative_store": {"apps": [], "held": false, "why": "names the authoritative mail store for the server deploy; read by cloud hosts (the mail server, the agents), not by a phone app"},
           "mail › endpoints": {"apps": ["mail"], "held": true},
@@ -6656,15 +6656,15 @@
           "peers › registry": {"apps": [], "held": false, "why": "Connect's who / which-device list (libs:auth UserRegistry), sign-in input; no app holds it"},
           "peers › samsung-s21plus › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
           "peers › samsung-s21plus › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
-          "peers › samsung-s21plus › profiles": {"apps": ["mesh"], "held": true},
+          "peers › samsung-s21plus › profiles": {"apps": ["mesh"], "held": true, "unread_why": "another peer's mesh profiles: Runtime reads only this phone's own peer (picked on Connect, or found from the live tunnel); the others are read on their own device"},
           "peers › samsung-s21plus › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
           "peers › samsung-a37 › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
           "peers › samsung-a37 › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
-          "peers › samsung-a37 › profiles": {"apps": ["mesh"], "held": true},
+          "peers › samsung-a37 › profiles": {"apps": ["mesh"], "held": true, "unread_why": "another peer's mesh profiles: Runtime reads only this phone's own peer (picked on Connect, or found from the live tunnel); the others are read on their own device"},
           "peers › samsung-a37 › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
           "peers › surface-8-pro › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},
           "peers › surface-8-pro › wg_public": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"},
-          "peers › surface-8-pro › profiles": {"apps": ["mesh"], "held": true},
+          "peers › surface-8-pro › profiles": {"apps": ["mesh"], "held": true, "unread_why": "another peer's mesh profiles: Runtime reads only this phone's own peer (picked on Connect, or found from the live tunnel); the others are read on their own device"},
           "peers › surface-8-pro › public_key": {"apps": [], "held": false, "why": "a peer's second-tunnel / public key; nothing on the phone reads it"}
         }
       }

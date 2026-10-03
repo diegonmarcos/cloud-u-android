@@ -61,6 +61,7 @@ object AccountTags {
     fun runtimeApp(id: String) = "runtime:app:$id"
     fun runtimeStatus(id: String) = "runtime:status:$id"
     fun runtimeCounts(id: String) = "runtime:counts:$id"
+    fun runtimeRoster(id: String) = "runtime:roster:$id"
     fun exportFile(slot: Slot) = "drift:export:${slot.name}"
     const val EXPORT_REPORT = "drift:export:report"
     fun pair(id: String) = "drift:pair:$id"
@@ -249,6 +250,13 @@ fun RuntimeTab(m: AccountModel) {
                     val paths = a.optJSONArray(key)?.let { o -> (0 until o.length()).map { o.optString(it) } }.orEmpty()
                     if (paths.isNotEmpty()) Text(stringResource(res, paths.joinToString(", ")), color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
                 }
+                // #810 declared fields not read here WITH their reason.
+                a.optJSONObject("justified")?.let { j -> j.keys().asSequence().sorted().forEach { f ->
+                    Text(stringResource(R.string.account_runtime_justified, f, j.optString(f)), color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+                } }
+                // #782 the fleet roster (apps) / the live tunnel (mesh): listed with no device pick.
+                a.optJSONArray("roster")?.let { ro -> for (i in 0 until ro.length()) Text(rosterLine(ro.optJSONObject(i)),
+                    color = p.textPrimary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(AccountTags.runtimeRoster(section.id))) }
                 if (observed.isNotEmpty()) Text(stringResource(R.string.account_runtime_fields, observed.size), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
                 for (path in observed) {
                     Text(path, color = p.textSecondary, style = MaterialTheme.typography.labelMedium)
@@ -373,4 +381,13 @@ fun DriftTab(m: AccountModel, device: String, export: (name: String, text: Strin
             dismissButton = { TextButton(onClick = { token = ""; askPat = false }) { Text(stringResource(android.R.string.cancel)) } },
         )
     }
+}
+
+/** #782 One roster row as a line: a fleet app (label · version · stage · auto-update) or the live tunnel. */
+fun rosterLine(o: org.json.JSONObject?): String = when {
+    o == null -> ""
+    o.has("tunnel") -> "${o.optString("tunnel")} · ${o.optString("address")} · ${o.optInt("peers")} peers"
+    else -> o.optString("label") + " · " +
+        (if (o.optBoolean("installed")) "${o.optString("version_name")} (${o.optLong("version_code")})" else "not installed") +
+        " · " + o.optString("stage") + (if (o.optBoolean("auto_update")) " · auto-update" else "")
 }

@@ -164,14 +164,30 @@ object AccountFleet {
             when (val r = FleetConfig.export(ctx, app.pkg)) {
                 is FleetConfig.Reply.Ok -> {
                     val values = flatten(app.id, r.json)
+                    val (unread, justified) = unreadOf(fields, values.keys, r.json)
                     AccountRuntime.AppRead(app.id, label, AccountRuntime.Status.REACHABLE,
                         "${values.size - 1} values · $covLine", values,
-                        fields = fields, unread = fields.filter { f -> values.keys.none { it.startsWith(f + SEP) } })
+                        fields = fields, unread = unread, justified = justified)
                 }
                 is FleetConfig.Reply.Unreachable -> AccountRuntime.AppRead(app.id, label, AccountRuntime.Status.NOT_REPORTING, r.why, emptyMap())
                 is FleetConfig.Reply.Refused -> AccountRuntime.AppRead(app.id, label, AccountRuntime.Status.NOT_REPORTING, r.why, emptyMap())
             }
         }
+    }
+
+    const val EMPTY_WHY = "empty on this phone: the app answered its export and holds no migrating value in this store, so its defaults apply"
+
+    /**
+     * #810 Which declared store files ([fields], `settings › id › file`) went unread. The provider's
+     * export walks EVERY declared migrating file and leaves out only one that does not exist or holds
+     * no migrating value — so once it answers, a file it left out WAS read and is empty: justified
+     * with [EMPTY_WHY], not unread. Unread is left for a file the answer could not have covered (an
+     * export that names no `stores` at all — an app older than the contract's walk).
+     */
+    fun unreadOf(fields: List<String>, observed: Set<String>, export: JSONObject): Pair<List<String>, Map<String, String>> {
+        val walked = export.optJSONObject("stores") != null
+        val absent = fields.filter { f -> observed.none { it.startsWith(f + SEP) } }
+        return if (walked) emptyList<String>() to absent.associateWith { EMPTY_WHY } else absent to emptyMap()
     }
 
     /** [reads] folded into the cockpit's reads: one entry per id, the best status, both value sets. */
@@ -185,6 +201,7 @@ object AccountFleet {
                 detail = listOf(c.detail, f.detail).filter { it.isNotBlank() }.joinToString(" · "),
                 values = c.values + f.values,
                 fields = c.fields + f.fields, missing = c.missing + f.missing, unread = c.unread + f.unread,
+                justified = c.justified + f.justified, roster = c.roster + f.roster,
             )
         }
         return out.values.toList()

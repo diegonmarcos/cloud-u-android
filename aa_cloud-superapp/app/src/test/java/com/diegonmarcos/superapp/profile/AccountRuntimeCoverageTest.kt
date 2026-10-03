@@ -128,4 +128,70 @@ class AccountRuntimeCoverageTest {
         assertNull(AccountRuntime.hostOf(""))
         assertNull(AccountRuntime.hostOf("not a url"))
     }
+
+    // ── #810 justified, not unread ───────────────────────────────────────
+
+    @Test fun `810 a held field with an unread_why is justified, one without stays unread`() {
+        val vf = mapOf(
+            "peers${s}a${s}profiles" to VaultCockpit.VaultField(listOf("mesh"), true, unreadWhy = "another peer's"),
+            "mesh${s}profiles" to VaultCockpit.VaultField(listOf("mesh"), true),
+        )
+        val r = AccountRuntime.coverage(AppRead("mesh", "Mesh", Status.REACHABLE, "", emptyMap()), vf)
+        assertEquals(listOf("mesh${s}profiles"), r.unread)
+        assertEquals(mapOf("peers${s}a${s}profiles" to "another peer's"), r.justified)
+        val snap = AccountRuntime.snapshot(listOf(r)).second.getJSONObject("mesh")
+        assertEquals(1, snap.getJSONObject("counts").getInt("justified"))
+        assertEquals(1, snap.getJSONObject("counts").getInt("unread"))
+        assertEquals("another peer's", snap.getJSONObject("justified").getString("peers${s}a${s}profiles"))
+    }
+
+    @Test fun `810 the baked map - every peer's profiles carry a reason`() {
+        val peers = layout.vaultFields.filterKeys { it.startsWith("peers$s") && it.endsWith("${s}profiles") }
+        assertTrue(peers.isNotEmpty())
+        peers.forEach { (k, f) -> assertTrue("$k has no unread_why", f.unreadWhy.isNotBlank()) }
+    }
+
+    @Test fun `810 fleet - a store file the export walked and left out is empty, not unread`() {
+        val f = listOf("settings${s}calc${s}a", "settings${s}calc${s}b")
+        val seen = setOf("settings${s}calc${s}a${s}k")
+        val (u, j) = AccountFleet.unreadOf(f, seen, JSONObject().put("stores", JSONObject()))
+        assertEquals(emptyList<String>(), u)
+        assertEquals(setOf("settings${s}calc${s}b"), j.keys)
+        assertEquals(AccountFleet.EMPTY_WHY, j.values.single())
+        // an answer that names no stores walked nothing: the absent file stays unread
+        val (u2, j2) = AccountFleet.unreadOf(f, seen, JSONObject())
+        assertEquals(listOf("settings${s}calc${s}b"), u2)
+        assertTrue(j2.isEmpty())
+    }
+
+    // ── #782 apps and mesh with no device pick ───────────────────────────
+
+    @Test fun `782 an app row carries version, stage and auto-update - installed or not`() {
+        val a = AccountRuntime.appRow("calc", "Cloud Calc", "com.x.calc", "1.2", 42L, "installed", "installed v42", true, "1.2")
+        assertTrue(a.getBoolean("installed")); assertEquals(42L, a.getLong("version_code"))
+        assertEquals("1.2", a.getString("version_name")); assertEquals("installed", a.getString("stage"))
+        assertTrue(a.getBoolean("auto_update"))
+        val b = AccountRuntime.appRow("nav", "Nav", "com.x.nav", null, null, "not_installed", "", false, null)
+        assertFalse(b.getBoolean("installed")); assertTrue(b.isNull("version_code"))
+        assertEquals("Cloud Calc · 1.2 (42) · installed · auto-update", rosterLine(a))
+        assertEquals("Nav · not installed · not_installed", rosterLine(b))
+    }
+
+    @Test fun `782 the roster reaches the runtime snapshot with its count`() {
+        val rows = listOf(AccountRuntime.appRow("a", "A", "p.a", "1", 1L, "installed", "", true, null),
+            AccountRuntime.appRow("b", "B", "p.b", null, null, "not_installed", "", true, null))
+        val snap = AccountRuntime.snapshot(listOf(AppRead("apps", "Apps", Status.REACHABLE, "no device picked on Connect · whole fleet", emptyMap(), roster = rows))).second.getJSONObject("apps")
+        assertEquals(2, snap.getJSONArray("roster").length())
+        assertEquals(2, snap.getJSONObject("counts").getInt("roster"))
+        val merged = AccountFleet.merge(listOf(AppRead("apps", "Apps", Status.REACHABLE, "", emptyMap(), roster = rows)),
+            listOf(AppRead("apps", "Apps", Status.REACHABLE, "", emptyMap())))
+        assertEquals("a fleet merge keeps the roster", 2, merged.single().roster.size)
+    }
+
+    @Test fun `782 the live tunnel row names no key`() {
+        val t = AccountRuntime.tunnelRow(VaultCockpit.TunnelState("wg0", "10.0.0.5/32", setOf("KEY1=", "KEY2=")))
+        assertEquals("wg0", t.getString("tunnel")); assertEquals(2, t.getInt("peers"))
+        assertFalse(t.toString().contains("KEY1"))
+        assertEquals("wg0 · 10.0.0.5/32 · 2 peers", rosterLine(t))
+    }
 }

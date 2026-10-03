@@ -536,6 +536,7 @@
     <string name="account_runtime_counts">%1$d declared · %2$d reported · %3$d missing · %4$d not read</string>
     <string name="account_runtime_missing">Missing: %1$s</string>
     <string name="account_runtime_unread">Not read here: %1$s</string>
+    <string name="account_runtime_justified">Not read, with reason: %1$s — %2$s</string>
     <string name="account_status_reachable">reachable</string>
     <string name="account_status_not_installed">not installed</string>
     <string name="account_status_not_reporting">not reporting</string>

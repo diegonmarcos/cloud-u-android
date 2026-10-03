@@ -40,6 +40,11 @@ object AccountRuntime {
         val id: String, val label: String, val status: Status, val detail: String,
         val values: Map<String, Any?>, val readOnly: Set<String> = emptySet(), val summary: String = "",
         val fields: List<String> = emptyList(), val missing: List<String> = emptyList(), val unread: List<String> = emptyList(),
+        /** #810 declared fields not read this time WITH a reason (the field map's `unread_why`, or an
+         *  app store that is empty on this phone) — named, counted, and not "unread". */
+        val justified: Map<String, String> = emptyMap(),
+        /** #782 rows that are not vault fields: the fleet roster (apps), the live tunnel (mesh). */
+        val roster: List<JSONObject> = emptyList(),
     ) {
         val reported: Int get() = values.count { it.value != null }
     }
@@ -55,8 +60,10 @@ object AccountRuntime {
         val fields = vf.filter { (_, f) -> f.held && r.id in f.apps }.keys.toList()
         if (r.status != Status.REACHABLE) return r.copy(fields = fields, missing = fields, unread = emptyList())
         val missing = r.values.filterValues { it == null }.keys.sorted()
-        val unread = fields.filter { f -> r.values.keys.none { under(it, f) } }
-        return r.copy(fields = fields, missing = missing, unread = unread)
+        val (why, unread) = fields.filter { f -> r.values.keys.none { under(it, f) } }
+            .partition { vf[it]?.unreadWhy?.isNotBlank() == true }
+        return r.copy(fields = fields, missing = missing, unread = unread,
+            justified = r.justified + why.associateWith { vf.getValue(it).unreadWhy })
     }
 
     // ── R: the snapshot (pure) ───────────────────────────────────────────
@@ -77,8 +84,11 @@ object AccountRuntime {
                 .put("fields", JSONArray(r.fields))
                 .put("missing", JSONArray(r.missing))
                 .put("unread", JSONArray(r.unread))
+                .put("justified", JSONObject(r.justified.toSortedMap() as Map<*, *>))
+                .put("roster", JSONArray(r.roster))
                 .put("counts", JSONObject().put("declared", r.fields.size).put("observed", r.values.size)
-                    .put("reported", r.reported).put("missing", r.missing.size).put("unread", r.unread.size)))
+                    .put("reported", r.reported).put("missing", r.missing.size).put("unread", r.unread.size)
+                    .put("justified", r.justified.size).put("roster", r.roster.size)))
         }
         return body to apps
     }
@@ -164,6 +174,25 @@ object AccountRuntime {
         return devices.firstOrNull { it.wgIp in live || (it.wgIpv6.isNotBlank() && it.wgIpv6 in live) }?.let { it to true }
     }
 
+    /**
+     * #782 One fleet app's row on Runtime ▸ apps — what the SuperApp itself knows, with no device
+     * pick: installed or not, the installed versionName/versionCode, the Store stage, whether the
+     * unattended pass may update it, and the version the fleet roster declares.
+     */
+    fun appRow(id: String, label: String, pkg: String, versionName: String?, versionCode: Long?,
+               stage: String, stageText: String, autoUpdate: Boolean, declaredVersion: String?): JSONObject =
+        JSONObject().put("id", id).put("label", label).put("pkg", pkg)
+            .put("installed", versionCode != null)
+            .put("version_name", versionName ?: JSONObject.NULL)
+            .put("version_code", versionCode ?: JSONObject.NULL)
+            .put("stage", stage).put("stage_text", stageText)
+            .put("auto_update", autoUpdate)
+            .put("declared_version", declaredVersion ?: JSONObject.NULL)
+
+    /** #782 The live tunnel as Runtime ▸ mesh shows it with no device pick: name, address, peer count — never a key. */
+    fun tunnelRow(t: VaultCockpit.TunnelState): JSONObject =
+        JSONObject().put("tunnel", t.name.ifBlank { "none" }).put("address", t.address.ifBlank { "none" }).put("peers", t.peerKeys.size)
+
     // ── reading (Android) ────────────────────────────────────────────────
 
     /** One binder client per process: constructing it binds, which is what wakes a stopped serving app. */
@@ -182,6 +211,21 @@ object AccountRuntime {
         }, AccountFleet.reads(ctx))  // #783 every fleet app's own configuration, through its contract
 
     private fun installed(ctx: Context, pkg: String) = runCatching { ctx.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+
+    /** #782 Every constellation-fleet.json member as [appRow]: PackageManager for the version, StoreStages for the stage. */
+    private fun appsRoster(ctx: Context): List<JSONObject> {
+        val auto = com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctx)
+        return AccountFleet.fleetApps().map { app ->
+            val pi = listOfNotNull(app.pkg, app.altId).firstNotNullOfOrNull { p ->
+                runCatching { ctx.packageManager.getPackageInfo(p, 0) }.getOrNull()
+            }
+            @Suppress("DEPRECATION")
+            val code = pi?.let { if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
+            val st = runCatching { com.diegonmarcos.superapp.appstore.StoreStages.stage(ctx, app) }.getOrNull()
+            appRow(app.id, app.label, app.pkg, pi?.versionName, code, st?.id ?: "unknown", st?.text.orEmpty(),
+                auto && !app.blocked, app.declaredVersionName)
+        }
+    }
 
     private fun device(ctx: Context, declared: JSONObject?): Pair<VaultCockpit.Device, Boolean>? =
         declared?.let { deviceFor(VaultCockpit.devices(it), VaultCockpit.selectedDevice(ctx), WgState.prefs(ctx).interfaceAddress) }
@@ -227,18 +271,20 @@ object AccountRuntime {
                 ), readOnly = domain.keys)
             }
             "mesh" -> {
-                val picked = device(ctx, declared)
-                    ?: return base.copy(detail = "no device picked on Connect, and the live tunnel's address is no declared device's")
-                val d = picked.first
                 val wg = WgState.prefs(ctx)
                 val tunnel = VaultCockpit.tunnelState(wg)
+                // #782 the live tunnel is shown whether or not a device is picked.
+                val live = listOf(tunnelRow(tunnel))
+                val picked = device(ctx, declared)
+                    ?: return base.copy(detail = "no device picked on Connect · live tunnel ${tunnel.name.ifBlank { "none" }}", roster = live)
+                val d = picked.first
                 val rows = VaultCockpit.meshRows(declared!!, d, tunnel).associateBy { it.label }
                 val values = VaultCockpit.meshProfiles(declared, d).entries.associate { (name, conf) ->
                     // The tunnel IS the declared profile when address and peers agree; otherwise what it runs.
                     meshPath(name) to (if (rows[name]?.state == VaultCockpit.State.MATCH) conf else rows[name]?.device)
                 }
                 base.copy(detail = "${deviceLabel(picked)} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values,
-                    readOnly = if (rt.writable) emptySet() else values.keys)
+                    readOnly = if (rt.writable) emptySet() else values.keys, roster = live)
             }
             "ai" -> base.copy(values = aiPaths(VaultCockpit.layout.aiTokens).mapValues { (_, provider) ->
                 client!!.revealAiKey(provider).text?.trim()?.ifBlank { null }
@@ -251,12 +297,18 @@ object AccountRuntime {
                 base.copy(detail = "${export.optJSONArray("tabs")?.length() ?: 0} lists", values = values)
             }
             "apps" -> {
+                // #782 the fleet roster is the SuperApp's own knowledge: listed with or without a pick.
+                val roster = appsRoster(ctx)
+                val auto = com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctx)
+                val inst = roster.count { it.optBoolean("installed") }
+                val autoLine = "auto-update " + if (auto) "on" else "off"
                 val fleet = com.diegonmarcos.superapp.appstore.AppInventory.fleetPackages()
                 val picked = device(ctx, declared)
-                    ?: return base.copy(detail = "no device picked on Connect · whole fleet", summary = "${fleet.count { installed(ctx, it) }} / ${fleet.size}")
+                    ?: return base.copy(detail = "no device picked on Connect · whole fleet · $autoLine",
+                        summary = "$inst / ${roster.size}", roster = roster)
                 val want = VaultCockpit.appsDeclared(declared!!, picked.first, fleet)
                 val have = want.count { installed(ctx, it.pkg) }
-                base.copy(detail = deviceLabel(picked), summary = "$have / ${want.size}")
+                base.copy(detail = "${deviceLabel(picked)} · $autoLine", summary = "$have / ${want.size} declared · $inst / ${roster.size} fleet", roster = roster)
             }
             // #789 cloud-drive's own copy of the token, through its #783 FleetConfig export
             // (libs:core's provider, CONSTELLATION_DATA-guarded) — no channel of its own.
