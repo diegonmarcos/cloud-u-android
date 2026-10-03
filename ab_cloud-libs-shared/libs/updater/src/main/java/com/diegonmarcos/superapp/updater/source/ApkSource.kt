@@ -276,7 +276,9 @@ object MeshMirror {
                 throw DownloadFailure.Unresolvable(java.net.URL(sidecar).host, u)
             }
             if (code !in 200..299) {
-                val err = runCatching { c.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
+                // The body is only detail for the message; a read failure here must
+                // not replace the status it is describing.
+                val err = try { c.errorStream?.bufferedReader()?.use { it.readText() } } catch (_: java.io.IOException) { null }
                 throw DownloadFailure.HttpStatus(code, sidecar, err)
             }
             val body = c.inputStream.bufferedReader().use { it.readText() }
