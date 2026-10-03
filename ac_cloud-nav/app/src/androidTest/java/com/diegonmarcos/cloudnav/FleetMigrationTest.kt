@@ -13,6 +13,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,11 +41,18 @@ class FleetMigrationTest {
 
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    /** The SuperApp's manifest, read from the test APK (the instrumentation package's assets). */
-    private val manifest: FleetConfig.Manifest by lazy {
-        FleetConfig.Manifest(JSONObject(InstrumentationRegistry.getInstrumentation().context.assets
-            .open(FleetConfig.ASSET).bufferedReader().use { it.readText() }))
+    /** The SuperApp's manifest, read from the test APK (the instrumentation package's assets).
+     *  #825 handed over as text: the policy that parses it runs in Cloud-Lib-Fleetconfig, not in
+     *  libs:core, so this test names no class of it. */
+    private val manifest: String by lazy {
+        InstrumentationRegistry.getInstrumentation().context.assets
+            .open(FleetConfig.ASSET).bufferedReader().use { it.readText() }
     }
+
+    /** cloud-nav's declared schema_version, or null when the manifest does not declare it. */
+    private fun schema(): Int? = JSONObject(manifest).optJSONObject("apps")?.let { apps ->
+        apps.keys().asSequence().map { apps.getJSONObject(it) }.firstOrNull { it.optString("package") == ctx.packageName }
+    }?.optInt("schema_version", 1)
 
     private fun canonical(v: Any?): String = when (v) {
         is JSONObject -> v.keys().asSequence().sorted().joinToString(",", "{", "}") { JSONObject.quote(it) + ":" + canonical(v.opt(it)) }
@@ -55,7 +63,7 @@ class FleetMigrationTest {
 
     private fun call(method: String, body: JSONObject? = null): JSONObject {
         val extras = Bundle().apply {
-            putString(FleetConfig.KEY_MANIFEST, manifest.json.toString())
+            putString(FleetConfig.KEY_MANIFEST, manifest)
             body?.let { putString(FleetConfig.KEY_JSON, it.toString()) }
         }
         val out = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), method, null, extras)
@@ -69,7 +77,15 @@ class FleetMigrationTest {
      *  hid the Explored tab from ExploredRenderTest). */
     private lateinit var saved: JSONObject
 
-    @Before fun snapshot() { saved = call(FleetConfig.METHOD_EXPORT).getJSONObject("stores") }
+    @Before fun snapshot() {
+        // #825 the policy is Cloud-Lib-Fleetconfig's: on an emulator that was not given the
+        // engine APK, the provider says so, and there is nothing of this app's to test.
+        val probe = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), FleetConfig.METHOD_EXPORT, null,
+            Bundle().apply { putString(FleetConfig.KEY_MANIFEST, manifest) })
+        Assume.assumeFalse("Cloud-Lib-Fleetconfig is not installed on this device",
+            probe?.getString(FleetConfig.KEY_ERROR).orEmpty().startsWith("Cloud-Lib-Fleetconfig"))
+        saved = call(FleetConfig.METHOD_EXPORT).getJSONObject("stores")
+    }
 
     @After fun restore() {
         for (f in call(FleetConfig.METHOD_EXPORT).getJSONObject("stores").keys()) ctx.deleteSharedPreferences(f)
@@ -87,9 +103,8 @@ class FleetMigrationTest {
     }
 
     @Test fun a_configured_profile_survives_wipe_and_import_through_the_provider() {
-        val m = manifest
-        val app = m.appByPackage(ctx.packageName)
-        assertNotNull("cloud-nav is a declared fleet app", app)
+        val schema = schema()
+        assertNotNull("cloud-nav is a declared fleet app", schema)
 
         // The old phone's configuration: plain stores of every value type.
         val old = JSONObject().put("stores", JSONObject()
@@ -110,7 +125,7 @@ class FleetMigrationTest {
 
         // Apply the declared copy through the provider, as the SuperApp does (restart=false: the
         // instrumentation lives in this process).
-        call(FleetConfig.METHOD_IMPORT, JSONObject().put("schema_version", app!!.schema).put("stores", before))
+        call(FleetConfig.METHOD_IMPORT, JSONObject().put("schema_version", schema!!).put("stores", before))
         val after = call(FleetConfig.METHOD_EXPORT).getJSONObject("stores")
         for (f in before.keys())
             assertEquals("$f equal after the migration", canonical(before.getJSONObject(f)), canonical(after.optJSONObject(f)))
