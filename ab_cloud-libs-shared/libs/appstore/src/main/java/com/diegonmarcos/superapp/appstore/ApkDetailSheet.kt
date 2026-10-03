@@ -99,11 +99,24 @@ object ApkDetailSheet {
             thread(name = "apk-detail-${app.id}") {
                 val asset = Fleet.releaseAsset(app)
                 val sha256 = Fleet.releaseSha256(app)
+                val commit = BuiltFrom.fetchReleaseCommit(app)
                 root.post {
+                    // #820 AVAILABLE's built-from, from the release .source sidecar.
+                    val inst = BuiltFrom.shaFromVersionName(installed?.versionName)
+                    val tag = when {
+                        commit == null -> ""
+                        BuiltFrom.same(inst, commit) -> " (same as installed)"
+                        inst != null -> " (installed: ${BuiltFrom.short(inst)})"
+                        else -> ""
+                    }
+                    val url = BuiltFrom.commitUrl(app.releaseUrl, commit)
+                    val builtFromRow = kv(ctx, "Available built from",
+                        BuiltFrom.short(commit) + tag + (url?.let { "\n$it" } ?: ""))
                     availableCard.removeAllViews()
                     renderAvailable(ctx, availableCard, app, state, installed, asset, sha256) {
                         verifyExact(activity, app, installed, availableCard)
                     }
+                    availableCard.addView(builtFromRow)
                 }
             }
         }
@@ -183,6 +196,8 @@ object ApkDetailSheet {
         // spell a version differently from the row that opened it — and so the
         // wall-clock versionCode is labelled `apk build` here too.
         into.addView(kv(ctx, "Version", FleetIdentity.version(d.versionName, 0L, d.versionCode)))
+        // #820 the commit this build baked into its own versionName.
+        into.addView(kv(ctx, "Built from", BuiltFrom.short(BuiltFrom.shaFromVersionName(d.versionName))))
         into.addView(kv(ctx, "First installed", ts(d.firstInstallAtMs)))
         into.addView(kv(ctx, "Last updated", ts(d.lastUpdateAtMs)))
         into.addView(kv(ctx, "APK size", FleetIdentity.size(d.bytes)))
