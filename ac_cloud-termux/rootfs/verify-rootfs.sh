@@ -189,7 +189,16 @@ echo "── #790: a rootfs update re-unpacks the tree and keeps \$HOME, agent l
 AUTH_ENV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["agent_auth"]["env_file"])' "$HERE/../../ab_cloud-terminal-store/store.json")"
 AGENT_FILES=".claude/.credentials.json .claude.json .config/goose/config.yaml .hermes/.env .ssh/id_ed25519 .gitconfig .local/share/fish/fish_history .bash_history $AUTH_ENV"
 plant_agent_files() {
-    for f in $AGENT_FILES; do mkdir -p "$(dirname "$W/home/$f")"; echo "ci-fixture $f" > "$W/home/$f"; done
+    # Each fixture is valid in its file's format: a corrupt ~/.claude.json makes claude exit 1 and a
+    # bad ~/.gitconfig breaks git, which would fail the selftest below for the fixture's sake.
+    for f in $AGENT_FILES; do
+        mkdir -p "$(dirname "$W/home/$f")"
+        case "$f" in
+            *.json) echo "{\"ci_fixture\": \"$f\"}" ;;
+            *fish_history) printf -- "- cmd: echo ci-fixture\n  when: 1\n" ;;
+            *) echo "# ci-fixture $f" ;;
+        esac > "$W/home/$f"
+    done
     printf "export CLAUDE_CODE_OAUTH_TOKEN='ci-fixture-not-a-token'\nexport OPENROUTER_API_KEY='ci-fixture-not-a-key'\n" > "$W/home/$AUTH_ENV"
     chmod 0600 "$W/home/$AUTH_ENV"
 }
