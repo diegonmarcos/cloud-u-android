@@ -127,6 +127,43 @@ class SysDnsTest {
         }
     }
 
+    /** #794 what the SuperApp's DNS page reads off a terminal's /api/sysdns/state. */
+    @Test
+    fun theStateCountsEveryQueryByHowItEndedAndKeepsTheLastError() {
+        fun field(json: String, k: String) = Regex("\"$k\":([^,}]+)").find(json)?.groupValues?.get(1)
+        bridge { _, done -> done.reply(answer(16)) }.use { b ->
+            assertEquals("a fresh bridge has seen nothing", "0", field(b.stateJson(), "queries"))
+            assertEquals("and no query time", "0", field(b.stateJson(), "last_query_ms"))
+            udpAsk(b.port(), query); tcpAsk(b.port(), query)
+            val s = b.stateJson()
+            assertEquals(s, "true", field(s, "listening"))
+            assertEquals(s, b.port().toString(), field(s, "port"))
+            assertEquals(s, "2", field(s, "queries"))
+            assertEquals(s, "2", field(s, "answered"))
+            assertEquals(s, "0", field(s, "servfail"))
+            assertEquals(s, "0", field(s, "errors"))
+            assertEquals(s, "null", field(s, "last_error"))
+            assertTrue(s, field(s, "last_query_ms")!!.toLong() > 0)
+        }
+        bridge { _, done -> done.reply(null) }.use { b ->
+            udpAsk(b.port(), query)
+            val s = b.stateJson()
+            assertEquals(s, "1", field(s, "servfail"))
+            assertEquals(s, "0", field(s, "answered"))
+            assertEquals("no answer is a SERVFAIL, not an error of the bridge's", "0", field(s, "errors"))
+        }
+        bridge { _, _ -> throw IllegalStateException("netd said \"no\"") }.use { b ->
+            udpAsk(b.port(), query)
+            val s = b.stateJson()
+            assertEquals(s, "1", field(s, "errors"))
+            assertTrue("the last error, JSON-escaped: $s", s.contains("netd said \\\"no\\\""))
+            assertTrue(s, field(s, "last_error_ms")!!.toLong() > 0)
+            b.close()
+            assertEquals("a closed bridge says so", "false", field(b.stateJson(), "listening"))
+        }
+        assertEquals("{\"listening\":false,\"port\":2053,\"why\":\"taken\"}", SystemDnsBridge.notListeningJson(2053, "taken"))
+    }
+
     @Test
     fun anAnswerTooBigForUdpIsTruncatedThereAndWholeOverTcp() {
         bridge { _, done -> done.reply(answer(900)) }.use { b ->

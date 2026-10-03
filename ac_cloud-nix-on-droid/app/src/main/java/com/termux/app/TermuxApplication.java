@@ -29,6 +29,8 @@ public class TermuxApplication extends Application {
 
     /** #758 held so the bridge's sockets live as long as the process. */
     private static SystemDnsBridge dnsBridge;
+    /** #794 why there is no bridge here, for /api/sysdns/state; null while none was tried. */
+    private static String dnsBridgeWhyNot;
 
     public void onCreate() {
         super.onCreate();
@@ -107,16 +109,25 @@ public class TermuxApplication extends Application {
         if (Build.VERSION.SDK_INT < 29) {
             // ponytail: no raw system resolver below Android 10 (DnsResolver is API 29); the shell
             // then has no DNS rather than a server of its own, as in the termux terminal.
-            Logger.logError(LOG_TAG, "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail");
+            dnsBridgeWhyNot = "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail";
+            Logger.logError(LOG_TAG, dnsBridgeWhyNot);
             return;
         }
         try {
             dnsBridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
                 line -> Logger.logInfo(LOG_TAG, line));
         } catch (IOException e) {
-            Logger.logWarn(LOG_TAG, "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
-                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS");
+            dnsBridgeWhyNot = "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
+                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS";
+            Logger.logWarn(LOG_TAG, dnsBridgeWhyNot);
         }
+    }
+
+    /** #794 the body of /api/sysdns/state: this terminal's bridge, or why it has none. */
+    static synchronized String dnsBridgeState() {
+        if (dnsBridge != null) return dnsBridge.stateJson();
+        return SystemDnsBridge.notListeningJson(BuildConfig.CLOUD_DNS_BRIDGE_PORT,
+            dnsBridgeWhyNot != null ? dnsBridgeWhyNot : "not started yet: the app's start starts it");
     }
 
     public static void setLogConfig(Context context) {

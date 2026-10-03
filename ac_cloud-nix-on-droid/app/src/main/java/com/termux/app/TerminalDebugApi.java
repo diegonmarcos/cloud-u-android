@@ -87,6 +87,13 @@ final class TerminalDebugApi {
                 return "{\"ok\":false,\"error\":" + JSONObject.quote(e.toString()) + "}";
             }
         });
+        // #794 the shell's DNS bridge as the SuperApp's DNS page shows it: listening or why not,
+        // queries and how they ended, the last one's time and the last error. Its own group so a
+        // client can ask any app for it and read a 404 as "no bridge here".
+        AppDebugServer.INSTANCE.route("sysdns", Arrays.asList(
+            new AppDebugServer.Op("state", "", "this terminal's 127.0.0.1 DNS bridge: listening (or why not), "
+                + "port, queries, answered, servfail, errors, last_query_ms, last_error")
+        ), (op, query) -> "state".equals(op) ? TermuxApplication.dnsBridgeState() : null);
     }
 
     private static String exec(Context app, Map<String, String> query) throws JSONException {

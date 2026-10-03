@@ -23,6 +23,8 @@ public final class CloudDnsBridge {
 
     private static final String LOG_TAG = "CloudDnsBridge";
     private static SystemDnsBridge bridge;
+    /** #794 why there is no bridge here, for /api/sysdns/state; null while none was tried. */
+    private static String whyNot;
 
     private CloudDnsBridge() { }
 
@@ -32,15 +34,24 @@ public final class CloudDnsBridge {
             // ponytail: no raw system resolver below Android 10 (DnsResolver is API 29); the shell
             // then has no DNS rather than a server of its own. Add an InetAddress-backed upstream
             // if a pre-10 phone ever joins the fleet.
-            Logger.logError(LOG_TAG, "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail");
+            whyNot = "Android " + Build.VERSION.SDK_INT + " has no raw system resolver: shell lookups will fail";
+            Logger.logError(LOG_TAG, whyNot);
             return;
         }
         try {
             bridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
                 line -> Logger.logInfo(LOG_TAG, line));
         } catch (IOException e) {
-            Logger.logWarn(LOG_TAG, "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
-                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS");
+            whyNot = "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
+                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS";
+            Logger.logWarn(LOG_TAG, whyNot);
         }
+    }
+
+    /** #794 the body of /api/sysdns/state: this terminal's bridge, or why it has none. */
+    public static synchronized String state() {
+        if (bridge != null) return bridge.stateJson();
+        return SystemDnsBridge.notListeningJson(BuildConfig.CLOUD_DNS_BRIDGE_PORT,
+            whyNot != null ? whyNot : "not started yet: the terminal service starts it");
     }
 }

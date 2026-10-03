@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * #741 THE DNS SERVER A TERMINAL'S SHELL TALKS TO (data/sysdns.json::_doc). A rootfs under proot
@@ -59,6 +60,19 @@ public final class SystemDnsBridge implements Closeable {
      */
     private final ExecutorService replies = Executors.newSingleThreadExecutor(named("sysdns-reply"));
 
+    /**
+     * #794 what the SuperApp's DNS page shows for this terminal's bridge, read through the terminal's
+     * /api/sysdns/state ({@link #stateJson}): how many queries came in, how they ended, when the last
+     * one arrived and the last thing that went wrong. Counters only — never a name or an answer.
+     */
+    private final AtomicLong queries = new AtomicLong();
+    private final AtomicLong answered = new AtomicLong();
+    private final AtomicLong servfail = new AtomicLong();
+    private final AtomicLong errors = new AtomicLong();
+    private volatile long lastQueryAt;
+    private volatile long lastErrorAt;
+    private volatile String lastError;
+
     public SystemDnsBridge(int port, Upstream upstream, Log log) throws IOException {
         InetAddress lo = InetAddress.getByName("127.0.0.1");
         this.upstream = upstream;
@@ -90,6 +104,7 @@ public final class SystemDnsBridge implements Closeable {
             try { udp.receive(in); } catch (IOException e) { break; }
             final byte[] q = Arrays.copyOf(in.getData(), in.getLength());
             if (q.length < 12) continue;
+            asked();
             final int limit = arcount(q) > 0 ? UDP_EDNS : UDP_PLAIN;
             resolve(q, new Answer() {
                 @Override public void reply(byte[] a) {
@@ -97,7 +112,7 @@ public final class SystemDnsBridge implements Closeable {
                     try {
                         udp.send(new DatagramPacket(out, out.length, in.getSocketAddress()));
                     } catch (IOException e) {
-                        log.line("sysdns: an answer could not be sent (" + e + "); dropped, the client retries");
+                        error("sysdns: an answer could not be sent (" + e + "); dropped, the client retries");
                     }
                 }
             });
@@ -125,12 +140,16 @@ public final class SystemDnsBridge implements Closeable {
                 byte[] q = new byte[in.readUnsignedShort()];
                 in.readFully(q);
                 if (q.length < 12) break;
+                asked();
                 final byte[][] slot = new byte[1][];
                 final CountDownLatch done = new CountDownLatch(1);
                 resolve(q, new Answer() {
                     @Override public void reply(byte[] a) { slot[0] = a; done.countDown(); }
                 });
-                if (!done.await(ANSWER_TIMEOUT_S, TimeUnit.SECONDS)) slot[0] = servfail(q);
+                if (!done.await(ANSWER_TIMEOUT_S, TimeUnit.SECONDS)) {
+                    slot[0] = servfail(q);
+                    error("sysdns: no answer within " + ANSWER_TIMEOUT_S + "s; replying SERVFAIL");
+                }
                 out.writeShort(slot[0].length);
                 out.write(slot[0]);
                 out.flush();
@@ -152,7 +171,7 @@ public final class SystemDnsBridge implements Closeable {
                 @Override public void reply(byte[] a) { deliver(q, a, done); }
             });
         } catch (RuntimeException e) {
-            log.line("sysdns: the system resolver refused the query (" + e + "); replying SERVFAIL");
+            error("sysdns: the system resolver refused the query (" + e + "); replying SERVFAIL");
             deliver(q, null, done);
         }
     }
@@ -166,7 +185,7 @@ public final class SystemDnsBridge implements Closeable {
                         done.reply(own(q, a));
                     } catch (RuntimeException e) {
                         // A reply that fails costs that one client a retry, never the process.
-                        log.line("sysdns: an answer failed (" + e + "); dropped");
+                        error("sysdns: an answer failed (" + e + "); dropped");
                     }
                 }
             });
@@ -177,13 +196,52 @@ public final class SystemDnsBridge implements Closeable {
 
     private byte[] own(byte[] q, byte[] a) {
         if (a == null || a.length < 12) {
+            servfail.incrementAndGet();
             log.line("sysdns: the system resolver gave no answer; replying SERVFAIL");
             return servfail(q);
         }
+        answered.incrementAndGet();
         byte[] own = a.clone();
         own[0] = q[0];
         own[1] = q[1];
         return own;
+    }
+
+    private void asked() {
+        queries.incrementAndGet();
+        lastQueryAt = System.currentTimeMillis();
+    }
+
+    private void error(String line) {
+        errors.incrementAndGet();
+        lastErrorAt = System.currentTimeMillis();
+        lastError = line;
+        log.line(line);
+    }
+
+    /** #794 this bridge's state as one JSON object (the body of a terminal's /api/sysdns/state). */
+    public String stateJson() {
+        return "{\"listening\":" + !udp.isClosed() + ",\"port\":" + port()
+            + ",\"queries\":" + queries.get() + ",\"answered\":" + answered.get()
+            + ",\"servfail\":" + servfail.get() + ",\"errors\":" + errors.get()
+            + ",\"last_query_ms\":" + lastQueryAt + ",\"last_error_ms\":" + lastErrorAt
+            + ",\"last_error\":" + quote(lastError) + "}";
+    }
+
+    /** #794 the same object for a terminal whose bridge is not running, and why (e.g. the port is taken). */
+    public static String notListeningJson(int port, String why) {
+        return "{\"listening\":false,\"port\":" + port + ",\"why\":" + quote(why) + "}";
+    }
+
+    static String quote(String s) {
+        if (s == null) return "null";
+        StringBuilder b = new StringBuilder("\"");
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\') b.append('\\').append(c);
+            else if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
+            else b.append(c);
+        }
+        return b.append('"').toString();
     }
 
     /** ARCOUNT: a client that added an OPT record (EDNS) takes answers over 512 bytes. */
