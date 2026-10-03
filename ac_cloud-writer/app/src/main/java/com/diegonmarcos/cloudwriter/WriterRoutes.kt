@@ -103,9 +103,11 @@ object WriterRoutes {
     fun listenLanguage(context: Context): String = WriterPrefs.string(context, KEY_LISTEN_LANGUAGE, LANGUAGE_AUTO)
 
     /** The BCP-47 code of a writer_ai.languages id (its `tag`), what the on-device engines take. */
-    fun tagOf(languageId: String?): String? =
-        WriterRegistry.registry.optJSONObject("languages")?.optJSONObject(languageId ?: return null)
+    fun tagOf(languageId: String?): String? {
+        if (languageId.isNullOrBlank()) return null
+        return WriterRegistry.registry.optJSONObject("languages")?.optJSONObject(languageId)
             ?.optString("tag")?.takeIf { it.isNotBlank() }
+    }
 
     /** A language id from an id or a tag ("es" → "spanish"); null when neither names a language. */
     fun languageIdOf(idOrTag: String): String? {
