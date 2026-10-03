@@ -108,6 +108,10 @@ android {
         // #758 where TermuxService's bridge answers the shell's lookups (bin/login's proot -p lands :53 here).
         buildConfigField "int", "CLOUD_DNS_BRIDGE_PORT", "${cloudDnsBridge().port}"
 
+        // #790 the file AgentAuth writes the agent CLIs' credentials to and login-init.sh sources:
+        // ab_cloud-terminal-store/store.json::agent_auth.env_file, the one declaration both read.
+        buildConfigField "String", "CLOUD_AGENT_AUTH_ENV", "\"${new groovy.json.JsonSlurper().parse(new File(projectDir.parentFile.parentFile, "ab_cloud-terminal-store/store.json")).agent_auth.env_file}\""
+
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"

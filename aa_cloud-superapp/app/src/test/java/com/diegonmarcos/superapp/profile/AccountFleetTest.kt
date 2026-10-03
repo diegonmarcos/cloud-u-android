@@ -103,4 +103,50 @@ class AccountFleetTest {
         assertEquals(AccountFleet.APPLY, plan().getValue("nav").action)
         assertEquals(JSONArray::class, AccountFleet.planJson(plan().values.toList())::class)
     }
+
+    @Test fun `790 the terminals' agent credentials are derived from the declared ai tokens, as fleet settings`() {
+        val a = VaultCockpit.layout.agentAuth ?: error("cockpit agent_auth is not declared")
+        assertEquals(listOf("termux", "nix-on-droid"), a.apps)
+        // The store is a declared, migrating, secret store of both terminals — so FleetConfig imports it and Drift masks it.
+        for (id in a.apps) {
+            val app = m.apps.getValue(id)
+            val store = m.storeOfFile(app.pkg, a.store) ?: error("${a.store} is not a store of $id")
+            for (k in a.env.keys) {
+                assertTrue("$id › $k migrates", m.migratesKey(store, k, id))
+                assertTrue("$id › $k is masked", AccountFleet.isSecret(m, "settings$S$id$S${a.store}$S$k"))
+            }
+        }
+        val server = JSONObject()
+            .put("ai", JSONObject().put("tokens", JSONObject()
+                .put("claude", JSONObject().put("plan", "subscription").put("token", "tok-claude"))
+                .put("openrouter_hermes_agent", " tok-router ")))
+            .put("settings", JSONObject().put("termux", JSONObject().put("pending", true).put("reason", "not yet")))
+        val before = server.toString()
+        val d = AccountFleet.derive(server, a) { 1 }!!
+        assertEquals("the server body is never mutated", before, server.toString())
+        for (id in a.apps) {
+            val sub = d.getJSONObject("settings").getJSONObject(id)
+            assertFalse("a pending subtree becomes a declared one", sub.optBoolean("pending"))
+            assertEquals(1, sub.getInt(AccountFleet.SCHEMA))
+            val store = sub.getJSONObject(a.store)
+            assertEquals("tok-claude", store.getString("CLAUDE_CODE_OAUTH_TOKEN"))
+            assertEquals("tok-router", store.getString("OPENROUTER_API_KEY"))
+        }
+        // The new-phone migration applies it: both terminals plan an import of exactly that store.
+        val p = AccountFleet.plan(m, d, emptyMap(), { true }, { null }).associateBy { it.id }
+        for (id in a.apps) {
+            assertEquals(AccountFleet.APPLY, p.getValue(id).action)
+            val body = AccountFleet.body(d.getJSONObject("settings").getJSONObject(id))
+            assertEquals(listOf(a.store), body.getJSONObject("stores").keys().asSequence().toList())
+        }
+        // Controls: a key the profile declares itself wins; a null token and no tokens add nothing.
+        server.getJSONObject("settings").put("termux", JSONObject().put(a.store, JSONObject().put("OPENROUTER_API_KEY", "own")))
+        val own = AccountFleet.derive(server, a) { 1 }!!.getJSONObject("settings").getJSONObject("termux").getJSONObject(a.store)
+        assertEquals("own", own.getString("OPENROUTER_API_KEY"))
+        assertEquals("tok-claude", own.getString("CLAUDE_CODE_OAUTH_TOKEN"))
+        val subscription = JSONObject().put("ai", JSONObject().put("tokens", JSONObject()
+            .put("claude", JSONObject().put("plan", "subscription").put("token", JSONObject.NULL))))
+        assertTrue("nothing to derive returns the body itself", AccountFleet.derive(subscription, a) { 1 } === subscription)
+        assertFalse(subscription.has("settings"))
+    }
 }

@@ -177,6 +177,55 @@ fi
 rm -f "$STAGE/enter-mutant.sh"
 kill "$dns_pid" 2>/dev/null || true
 
+echo "── #790: a rootfs update re-unpacks the tree and keeps \$HOME, agent logins included ──"
+# 2026-10-03 a phone reported both terminals logged out after a rootfs update. Plant the agent
+# CLIs' state in $HOME (credentials, configs, keys, history -- fixtures, never real values), make
+# enter.sh see a new rootfs digest so it deletes and re-extracts the tree, and require every file
+# intact on the host AND at /root inside the guest. Two mutants prove the check can fail: an
+# enter.sh that no longer binds $HOME as /root (home inside the replaced tree), and one whose
+# unpack also clears ~/.claude (an update that wipes the login). The agent-auth env file
+# (store.json::agent_auth.env_file) is planted the way AgentAuth.java writes it, so the selftest
+# below also proves the login sources it: `claude auth status` passes only with it.
+AUTH_ENV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["agent_auth"]["env_file"])' "$HERE/../../ab_cloud-terminal-store/store.json")"
+AGENT_FILES=".claude/.credentials.json .claude.json .config/goose/config.yaml .hermes/.env .ssh/id_ed25519 .gitconfig .local/share/fish/fish_history .bash_history $AUTH_ENV"
+plant_agent_files() {
+    for f in $AGENT_FILES; do mkdir -p "$(dirname "$W/home/$f")"; echo "ci-fixture $f" > "$W/home/$f"; done
+    printf "export CLAUDE_CODE_OAUTH_TOKEN='ci-fixture-not-a-token'\nexport OPENROUTER_API_KEY='ci-fixture-not-a-key'\n" > "$W/home/$AUTH_ENV"
+    chmod 0600 "$W/home/$AUTH_ENV"
+}
+plant_agent_files
+want_home="$(cd "$W/home" && cat $AGENT_FILES)"
+reunpack_view() {  # $1 = enter.sh; forces the update path, prints what the guest reads at /root
+    cp "$ART/rootfs.tar.zst" "$STAGE/rootfs.tar.zst"
+    echo stale-digest > "$STAGE/rootfs/.cloud-rootfs.sha256"
+    HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$1" -c "sh -c 'cd /root && cat $AGENT_FILES'" 2>/dev/null </dev/null || true
+}
+home_kept() {  # $1 = the guest's view; both views must equal what was planted
+    [ "$1" = "$want_home" ] && [ "$(cd "$W/home" && cat $AGENT_FILES 2>/dev/null)" = "$want_home" ]
+}
+got="$(reunpack_view "$STAGE/enter.sh")"
+if [ "$(cat "$STAGE/rootfs/.cloud-rootfs.sha256")" != "$(cat "$STAGE/rootfs.sha256")" ]; then
+    echo "FAIL the forced update did not re-unpack the tree: the test exercised nothing"; fail=1
+elif home_kept "$got"; then
+    echo "ok   after a re-unpack every planted file is intact in \$HOME and at /root in the guest ($(echo $AGENT_FILES | wc -w) files)"
+else
+    echo "FAIL a re-unpack lost agent state: the guest read '$(echo "$got" | head -3 | tr '\n' ' ')'"; fail=1
+fi
+home_mutant() {  # $1 = sed expression applied to enter.sh, $2 = what it breaks
+    sed "$1" "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
+    if cmp -s "$STAGE/enter.sh" "$STAGE/enter-mutant.sh"; then
+        echo "FAIL MUTATION DID NOT APPLY: $2"; fail=1
+    elif home_kept "$(reunpack_view "$STAGE/enter-mutant.sh")"; then
+        echo "FAIL MUTATION SURVIVED: $2, and the re-unpack check still passed"; fail=1
+    else
+        echo "ok   mutation proved: $2 goes red"
+    fi
+    rm -f "$STAGE/enter-mutant.sh"
+    plant_agent_files
+}
+home_mutant 's| -b "$HOME:/root"||' "an enter.sh that does not bind \$HOME as /root"
+home_mutant 's|^    rm -rf "$ROOTFS"$|    rm -rf "$ROOTFS" "$HOME/.claude"|' "an unpack that clears ~/.claude"
+
 echo "── #771: the app's own selftest, every check, against a noexec, foreign-owned shared store ──"
 # The phone's measured store: FUSE-mounted noexec, owned by a media uid that is not the
 # terminal's, so git refused it as dubious and ./script was Permission denied. Staged the same
@@ -222,6 +271,16 @@ else
     }
     mutant etc/gitconfig "git status" "git status in the foreign-owned repo"
     mutant etc/ld.so.preload './\$f' "running ./script on the noexec store"
+    # #790: the auth checks pass because the login sourced the Account's credentials file; without it
+    # claude reports logged out and neither goose nor hermes finds a provider key.
+    mv "$W/home/$AUTH_ENV" "$W/home/$AUTH_ENV.off"
+    got="$(selftest_failures)"
+    mv "$W/home/$AUTH_ENV.off" "$W/home/$AUTH_ENV"
+    if echo "$got" | grep -q "claude auth status" && [ "$(echo "$got" | grep -c OPENROUTER_API_KEY)" -eq 2 ]; then
+        echo "ok   mutation proved: without the agent-auth file claude, goose and hermes all go red"
+    else
+        echo "FAIL MUTATION SURVIVED: without the agent-auth file the auth checks still passed — they prove nothing"; fail=1
+    fi
     sudo -n umount "$G"
     sudo -n rm -rf /storage
 fi

@@ -181,6 +181,8 @@ def render(terminal):
         "CLOUD_STORE_NIX_PROFILE=%s" % _quote(nix_profile),
         "CLOUD_STORE_TOOLS=%s" % _quote(" ".join(tools)),
         "CLOUD_STORE_FIXED_LINKS=%s" % _quote(" ".join(fixed)),
+        # #790 the agent CLIs' credentials file the app writes and login-init.sh sources.
+        "CLOUD_AGENT_AUTH_ENV=%s" % _quote(decl["agent_auth"]["env_file"]),
     ]
     return "\n".join(lines) + "\n"
 

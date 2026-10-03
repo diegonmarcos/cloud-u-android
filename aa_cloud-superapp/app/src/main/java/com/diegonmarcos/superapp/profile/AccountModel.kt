@@ -41,7 +41,17 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     /** The last action's report line, shown under the actions and returned by the debug API. */
     var last: String = ""; private set
 
-    fun server(): AccountStore.Doc? = doc(Slot.S)
+    /** #790 S as the Account reads it: the stored server file plus the settings [AccountFleet.derive]
+     *  adds from it (the terminals' credentials), derived once per stored file. The file itself is untouched. */
+    fun server(): AccountStore.Doc? {
+        val d = doc(Slot.S) ?: return null
+        serverView?.let { (raw, view) -> if (raw === d) return view }
+        return d.copy(body = derived(d.body)!!).also { serverView = d to it }
+    }
+    @Volatile private var serverView: Pair<AccountStore.Doc, AccountStore.Doc>? = null
+    private fun derived(body: JSONObject?) = AccountFleet.derive(body, VaultCockpit.layout.agentAuth) { id ->
+        AccountFleet.manifest(ctx).apps[id]?.schema ?: 1
+    }
     fun runtime(): AccountStore.Doc? = doc(Slot.R)
     fun savedLocal(): AccountStore.Doc? = doc(Slot.L)
 
@@ -113,7 +123,9 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     // ── Drift ────────────────────────────────────────────────────────────
 
     fun leavesOf(slot: Slot): Map<String, Any> = synchronized(docs) { leafCache[slot] } ?: when (slot) {
-        Slot.L -> AccountDrift.leaves(local ?: savedLocal()?.body)
+        // #790 L is read through the same derivation as S, so a derived setting is no L↔S drift.
+        Slot.L -> AccountDrift.leaves(derived(local ?: savedLocal()?.body))
+        Slot.S -> AccountDrift.leaves(server()?.body)
         else -> AccountDrift.leaves(doc(slot)?.body)
     }.also { synchronized(docs) { leafCache[slot] = it } }
 

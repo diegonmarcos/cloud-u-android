@@ -142,6 +142,15 @@
     "aa_cloud-superapp"
    ]
   },
+  "agent-auth": {
+   "kind": "prefs",
+   "class": "secret",
+   "doc": "#790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session.",
+   "used_by": [
+    "ac_cloud-nix-on-droid",
+    "ac_cloud-termux"
+   ]
+  },
   "app_tabs": {
    "kind": "prefs",
    "class": "config",
@@ -2289,7 +2298,8 @@
      "id": "claude-credentials",
      "path": "$HOME/.claude/.credentials.json",
      "class": "secret",
-     "doc": "Claude login tokens; vault only."
+     "doc": "Claude login. #790: Account imports CLAUDE_CODE_OAUTH_TOKEN into the agent-auth store and every login exports it, so no /login is needed and a re-unpack or new phone loses nothing; a credentials file `claude /login` writes here is the phone's own extra copy.",
+     "store": "agent-auth"
     },
     {
      "id": "goose-config",
@@ -2307,7 +2317,8 @@
      "id": "agent-api-keys",
      "path": "$HOME/.hermes/.env, exported keys in rc",
      "class": "secret",
-     "doc": "Provider API keys; vault only."
+     "doc": "Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own.",
+     "store": "agent-auth"
     },
     {
      "id": "ssh-dir",
@@ -2444,7 +2455,8 @@
      "id": "claude-credentials",
      "path": "$HOME/.claude/.credentials.json, ~/.claude.json oauth fields",
      "class": "secret",
-     "doc": "Claude login tokens; vault only."
+     "doc": "Claude login. #790: Account imports CLAUDE_CODE_OAUTH_TOKEN into the agent-auth store and every login exports it, so no /login is needed and a re-unpack or new phone loses nothing; a credentials file `claude /login` writes here is the phone's own extra copy.",
+     "store": "agent-auth"
     },
     {
      "id": "goose-config",
@@ -2462,7 +2474,8 @@
      "id": "agent-api-keys",
      "path": "$HOME/.hermes/.env, goose keyring/env, exported API keys in rc",
      "class": "secret",
-     "doc": "Provider API keys for agent CLIs; vault only."
+     "doc": "Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own.",
+     "store": "agent-auth"
     },
     {
      "id": "ssh-dir",

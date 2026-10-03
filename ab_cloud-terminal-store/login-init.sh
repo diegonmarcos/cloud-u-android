@@ -17,6 +17,14 @@ if [ -r "$CLOUD_STORE_INSTALL_DIR/declaration.sh" ]; then
     . "$CLOUD_STORE_INSTALL_DIR/declaration.sh"
     PATH="${HOME:-/root}/$CLOUD_STORE_ROOT/$CLOUD_STORE_CURRENT/$CLOUD_STORE_BIN:$PATH"
     export PATH
+    # #790 the agent CLIs' credentials: the app writes its agent-auth store (Account ▸ settings,
+    # FleetConfig) to this file on every start, one `export NAME='value'` per key, and this puts
+    # them in every session's environment. Silent: no value reaches the terminal or a log.
+    if [ -n "${CLOUD_AGENT_AUTH_ENV:-}" ] && [ -r "${HOME:-/root}/$CLOUD_AGENT_AUTH_ENV" ]; then
+        # shellcheck disable=SC1090 # written by the app, path from declaration.sh
+        . "${HOME:-/root}/$CLOUD_AGENT_AUTH_ENV" >/dev/null 2>&1 \
+            || echo "⚠ agent credentials could not be read; claude/goose/hermes start logged out" >&2
+    fi
     # Rule 1, enforced rather than hoped: `ensure` forks the engine and, behind
     # it, dozens of subprocesses -- under single-threaded ptrace proot that once
     # wedged the nix terminal right after the welcome banner, forever, silently.

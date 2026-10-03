@@ -2,6 +2,7 @@ package com.termux.app;
 
 import android.app.Application;
 
+import com.termux.cloud.AgentAuth;
 import com.termux.cloud.CloudTermuxProperties;
 import com.termux.shared.crash.TermuxCrashUtils;
 import com.termux.shared.settings.preferences.TermuxAppSharedPreferences;
@@ -17,6 +18,10 @@ public class TermuxApplication extends Application {
         // file. Without it RunCommandService refuses the boot runner's intent, and
         // nothing in this app ever wrote the property (it only read it).
         CloudTermuxProperties.ensureAllowExternalApps();
+
+        // #790 the agent CLIs' credentials from the Account (the agent-auth store a FleetConfig
+        // import fills and then restarts this app) into the file every login sources.
+        AgentAuth.provision(this);
 
         // Set crash handler for the app
         TermuxCrashUtils.setCrashHandler(this);

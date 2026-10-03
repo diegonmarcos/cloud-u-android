@@ -86,7 +86,17 @@ object VaultCockpit {
         val journeyIcons: Map<String, String> = emptyMap(),
         /** #781 `vault_fields`: every Profiles field (`section › field`) → its [VaultField], in schema order. */
         val vaultFields: Map<String, VaultField> = emptyMap(),
+        /** #790 `agent_auth`: the terminals' credentials store, derived from the declared vault values. */
+        val agentAuth: AgentAuth? = null,
     )
+
+    /**
+     * #790 cockpit `agent_auth`: each fleet app in [apps] gets `settings › app › [store] › NAME` =
+     * the declared value at [env]'s vault path for NAME (an environment variable an agent CLI reads),
+     * so the terminals' credentials are applied over FleetConfig like any other app setting
+     * ([AccountFleet.derive]).
+     */
+    data class AgentAuth(val store: String, val apps: List<String>, val env: Map<String, List<String>>)
 
     fun parseLayout(o: JSONObject): Layout {
         val arr = o.optJSONArray("sections") ?: JSONArray()
@@ -118,6 +128,14 @@ object VaultCockpit {
                 val e = vf.getJSONObject(k)
                 val apps = e.optJSONArray("apps") ?: JSONArray()
                 VaultField((0 until apps.length()).map { apps.getString(it) }, e.optBoolean("held", true), e.optString("why"))
+            },
+            o.optJSONObject("agent_auth")?.let { a ->
+                val apps = a.optJSONArray("apps") ?: JSONArray()
+                val env = a.optJSONObject("env") ?: JSONObject()
+                AgentAuth(a.optString("store"), (0 until apps.length()).map { apps.getString(it) },
+                    env.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
+                        env.getJSONArray(k).let { p -> (0 until p.length()).map { p.getString(it) } }
+                    })
             },
         )
     }

@@ -6,6 +6,7 @@ import android.os.Build;
 
 import com.diegonmarcos.cloudlib.sysdns.SystemDnsBridge;
 import com.termux.BuildConfig;
+import com.termux.cloud.AgentAuth;
 import com.termux.cloud.CloudTermuxProperties;
 import com.termux.shared.errors.Error;
 import com.termux.shared.logger.Logger;
@@ -60,6 +61,10 @@ public class TermuxApplication extends Application {
         // refuses the boot runner's intent on every single reboot, and nothing
         // in this app ever wrote the property (it only read it).
         CloudTermuxProperties.ensureAllowExternalApps();
+
+        // #790 the agent CLIs' credentials from the Account (the agent-auth store a FleetConfig
+        // import fills and then restarts this app) into the file every login sources.
+        AgentAuth.provision(this);
 
         // Init app wide SharedProperties loaded from termux.properties
         TermuxAppSharedProperties properties = TermuxAppSharedProperties.init(context);

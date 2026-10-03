@@ -87,6 +87,31 @@ object AccountFleet {
         return out
     }
 
+    /**
+     * #790 [body] as the Account reads it: plus the settings the cockpit's `agent_auth` [a] derives
+     * from it, so the terminals' credentials store is declared wherever the profile declares the
+     * tokens (`ai › tokens`), and Drift, server → runtime and the new-phone migration apply it like
+     * any other app setting. A value the profile declares at that key itself wins; a `pending` app
+     * subtree becomes a declared one ([schema] of the app); a null or blank token adds nothing.
+     * Never mutates [body]; returns it as is when there is nothing to add.
+     */
+    fun derive(body: JSONObject?, a: VaultCockpit.AgentAuth?, schema: (String) -> Int): JSONObject? {
+        if (body == null || a == null || a.store.isBlank()) return body
+        val values = a.env.mapNotNull { (name, path) ->
+            (path.fold(body as Any?) { o, k -> (o as? JSONObject)?.opt(k) } as? String)?.trim()?.takeIf { it.isNotEmpty() }?.let { name to it }
+        }
+        if (values.isEmpty()) return body
+        val out = AccountDrift.copy(body)
+        val settings = out.optJSONObject(SECTION) ?: JSONObject().also { out.put(SECTION, it) }
+        for (app in a.apps) {
+            val sub = settings.optJSONObject(app)?.takeUnless { it.optBoolean("pending") }
+                ?: JSONObject().put(SCHEMA, schema(app)).also { settings.put(app, it) }
+            val store = sub.optJSONObject(a.store) ?: JSONObject().also { sub.put(a.store, it) }
+            for ((k, v) in values) if (!store.has(k)) store.put(k, v)
+        }
+        return out
+    }
+
     /** True when [path] holds a value the manifest classes `secret` — drawn masked, whatever its name. */
     fun isSecret(m: FleetConfig.Manifest, path: String): Boolean {
         val seg = path.split(SEP)

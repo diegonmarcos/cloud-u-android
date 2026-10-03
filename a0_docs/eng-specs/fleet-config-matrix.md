@@ -38,15 +38,15 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 10 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
-| cloud-terminal-nix | `cld.termux.nix` | 3 | 9 | 25% |
+| cloud-terminal-nix | `cld.termux.nix` | 6 | 7 | 46% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 0 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
-| cloud-terminal-termux | `cld.termux` | 4 | 9 | 30% |
+| cloud-terminal-termux | `cld.termux` | 7 | 7 | 50% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **149** | **39** | **79%** |
+| **fleet** | | **155** | **35** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -632,6 +632,7 @@ Module `ac_cloud-nix-on-droid`; libs: none.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
 
 | file | class | doc |
 |---|---|---|
@@ -642,13 +643,13 @@ Module `ac_cloud-nix-on-droid`; libs: none.
 | `$HOME/.termux/termux.properties` | config | Same as termux: only allow-external-apps is touched by CloudTermuxProperties.java; rest user-edited state. |
 | `$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig` | config | User rc content is on-device edited state; login wiring declared in ab_cloud-terminal-store/login-init.sh only. |
 | `$HOME/.claude/ (settings.json, CLAUDE.md, mcp config)` | config | Binary declared in store.json toolset; config not declared in git; user-edited state. |
-| `$HOME/.claude/.credentials.json` | secret | Claude login tokens; vault only. |
+| `$HOME/.claude/.credentials.json` | secret | Claude login. #790: Account imports CLAUDE_CODE_OAUTH_TOKEN into the agent-auth store and every login exports it, so no /login is needed and a re-unpack or new phone loses nothing; a credentials file `claude /login` writes here is the phone's own extra copy. |
 | `$HOME/.config/goose/config.yaml` | config | Goose provider/model; binary declared (rootfs-extras.nix), config user-edited state. |
 | `$HOME/.hermes/config.yaml` | config | Hermes config; binary declared (rootfs-extras.nix), config user-edited state. |
-| `$HOME/.hermes/.env, exported keys in rc` | secret | Provider API keys; vault only. |
+| `$HOME/.hermes/.env, exported keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys; sshd on port 8024)` | config | authorized_keys with the cloud-myterminal hub key; private keys secret. |
 
-Coverage: 3 covered, 9 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.claude/.credentials.json, file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.hermes/.env, exported keys in rc, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
+Coverage: 6 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
@@ -707,6 +708,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -720,14 +722,14 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools.
 | `$HOME/.termux/ (colors.properties, font.ttf, style)` | config | User-edited terminal appearance; no declaration in git, copy as state. |
 | `$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig` | config | Shell rc and user dotfiles: only login wiring (ab_cloud-terminal-store/login-init.sh) is declared; user rc content is on-device edited state, copy it. |
 | `$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents)` | config | Binary baked from rootfs.json (@anthropic-ai/claude-code) but its config is NOT declared anywhere in the terminal modules; user-edited on-device state. |
-| `$HOME/.claude/.credentials.json, ~/.claude.json oauth fields` | secret | Claude login tokens; vault only. |
+| `$HOME/.claude/.credentials.json, ~/.claude.json oauth fields` | secret | Claude login. #790: Account imports CLAUDE_CODE_OAUTH_TOKEN into the agent-auth store and every login exports it, so no /login is needed and a re-unpack or new phone loses nothing; a credentials file `claude /login` writes here is the phone's own extra copy. |
 | `$HOME/.config/goose/config.yaml` | config | Goose provider/model choice; binary baked from rootfs.json tarballs.goose, config not declared in git; user-edited state. |
 | `$HOME/.hermes/ (config.yaml, skills, memory)` | config | Hermes agent config in venv /opt/hermes; binary declared (rootfs.json pip_venvs.hermes-agent), config not declared; user-edited state. Its .env API keys are secret. |
-| `$HOME/.hermes/.env, goose keyring/env, exported API keys in rc` | secret | Provider API keys for agent CLIs; vault only. |
+| `$HOME/.hermes/.env, goose keyring/env, exported API keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
 | `$HOME/cloud-drive-shared-store` | device | Link to shared storage CloudDrive; recreated by the app. |
 
-Coverage: 4 covered, 9 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.claude/.credentials.json, ~/.claude.json oauth fields, file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.hermes/.env, goose keyring/env, exported API keys in rc, file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
+Coverage: 7 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 

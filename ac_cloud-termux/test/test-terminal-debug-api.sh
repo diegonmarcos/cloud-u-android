@@ -89,6 +89,13 @@ for t in ("claude", "goose", "hermes"):
     has(lambda s, t=t: s.startswith(t + " ") and s != f"{t} --version", f"makes a functional {t} call")
 for t in ("node", "gh", "git", "zsh"):
     has(lambda s, t=t: s == f"{t} --version", f"runs `{t} --version`")
+# #790: a non-network auth check per agent CLI, and no check can print a key.
+has(lambda s: s == "claude auth status", "asks claude whether it is logged in (#790)")
+for t, f in (("goose", "~/.config/goose/"), ("hermes", "~/.hermes/")):
+    has(lambda s, f=f: s.startswith('test -n "$OPENROUTER_API_KEY" || grep -q') and f in s,
+        f"finds a {t} provider key, the Account's or the tool's own (#790)")
+problems += [f"a check could print an agent key: {c}" for c in script
+             for v in ("$OPENROUTER_API_KEY", "$CLAUDE_CODE_OAUTH_TOKEN") if v in c.replace(f'test -n "{v}"', "")]
 has(lambda s: s == "ls ~/emulated | head", "lists ~/emulated (#736)")
 has(lambda s: s == "ls ~/cloud-drive-shared-store/git | head", "lists the shared store (#736)")
 has(lambda s: s == "test ! -e ~/storage", "proves no upstream ~/storage (#736)")

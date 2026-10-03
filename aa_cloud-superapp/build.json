@@ -6577,6 +6577,15 @@
         "ai_tokens": {
           "openrouter_my_ai_api": "openrouter"
         },
+        "agent_auth": {
+          "_doc": "#790 the terminals' agent CLIs, logged in from the declared profile instead of a /login typed into one phone. For each fleet app in `apps` (fleet-config.json ids), Account reads `settings › app › <store> › NAME` as the declared value at env.NAME's vault path (AccountFleet.derive, applied to S and L as read, never written into either file), so server → runtime and the new-phone migration import it over the #783 FleetConfig contract like any other app setting. NAME is the environment variable the CLI reads; the terminal writes the store to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600) and every login sources it. A value the profile declares at that settings key itself wins; a null token (ai › tokens › claude is `subscription, token: null` until a `claude setup-token` token is put in a vault sops store) adds nothing.",
+          "store": "agent-auth",
+          "apps": ["termux", "nix-on-droid"],
+          "env": {
+            "CLAUDE_CODE_OAUTH_TOKEN": ["ai", "tokens", "claude", "token"],
+            "OPENROUTER_API_KEY": ["ai", "tokens", "openrouter_hermes_agent"]
+          }
+        },
         "_doc_vault_fields": "#781 THE FIELD MAP: every field Profiles shows (ui.profile.infos.schema, `section › field`) → the app(s) that use it at runtime (`apps`, cockpit section ids) and whether those apps HOLD it live (`held`: Runtime reads it and Drift compares it) or only take it as input when applying (`held` false). A field no phone app uses has `apps` [] and a `why`, so Profiles and Runtime never disagree about what exists. test-account-vault-fields.sh holds this map EQUAL to the schema (both ways), every app id to a declared section, every held field's section to its app's `vault`, and every item of the cloud-vault sources beside it to a schema field. AccountRuntime counts each app's declared / reported / missing from it.",
         "vault_fields": {
           "mesh › profiles": {"apps": ["mesh"], "held": true},
@@ -6586,10 +6595,10 @@
           "mail › accounts": {"apps": ["mail"], "held": true},
           "mail › passwords": {"apps": ["mail"], "held": true},
           "ai › tokens › openrouter_my_ai_api": {"apps": ["ai"], "held": true},
-          "ai › tokens › openrouter_hermes_agent": {"apps": [], "held": false, "why": "the hermes agent's own key; read by cloud hosts (the mail server, the agents), not by a phone app"},
+          "ai › tokens › openrouter_hermes_agent": {"apps": [], "held": false, "why": "the hermes agent's own key; read by cloud hosts (the mail server, the agents) and, #790, applied to the terminals as OPENROUTER_API_KEY through cockpit agent_auth (settings › termux|nix-on-droid › agent-auth), not by a cockpit app"},
           "ai › tokens › openrouter_3": {"apps": [], "held": false, "why": "pending in the vault and mapped to no provider (cockpit ai_tokens)"},
           "ai › tokens › openrouter_4": {"apps": [], "held": false, "why": "pending in the vault and mapped to no provider (cockpit ai_tokens)"},
-          "ai › tokens › claude": {"apps": [], "held": false, "why": "no phone app calls Claude with a token"},
+          "ai › tokens › claude": {"apps": [], "held": false, "why": "no cockpit app calls Claude; #790 its token is applied to the terminals as CLAUDE_CODE_OAUTH_TOKEN through cockpit agent_auth (settings › termux|nix-on-droid › agent-auth)"},
           "ai › configs › claude_folder": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
           "ai › configs › mcps": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
           "ai › configs › hermes_build_json": {"apps": [], "held": false, "why": "agent and MCP configuration; read by cloud hosts (the mail server, the agents), not by a phone app"},
