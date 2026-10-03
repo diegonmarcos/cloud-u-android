@@ -186,6 +186,20 @@
       }
     },
     {
+      "id": "engine wire (libs/databackend, one source file)",
+      "_doc": "#825 IDataBackend + DataBackendClient/Service lived in libs:core until 2026-10-03, so this edit started the lib builder for 29 lib APKs and queued all 32 apps for fleet-refresh. Now: the 8 engines that extend it, its primary consumer (cloud-contacts) per push, and the 6 other apps that bind an engine at the next refresh.",
+      "files": [
+        "ab_cloud-libs-shared/libs/databackend/src/main/java/com/diegonmarcos/superapp/core/DataBackendClient.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 8,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 6
+      }
+    },
+    {
       "id": "fleet-config manifest (one app's store)",
       "files": [
         "aa_cloud-superapp/app/src/main/assets/fleet-config.json"

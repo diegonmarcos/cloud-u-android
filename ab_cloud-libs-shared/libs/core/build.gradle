@@ -13,11 +13,9 @@ if (project.extensions.findByName('kotlin') == null) {
 
 android {
 
-    buildFeatures {
-        // IDataBackend: the shared contract for engine libraries that ship
-        // as their own APK. Declared here because every app already links core.
-        aidl true
-    }
+    // #825 IDataBackend (the engine wire) and its client/service left for
+    // libs:databackend: compiled only by the engines and the apps that bind one,
+    // so a wire edit no longer rebuilds every app, and a core edit cannot touch it.
 
     namespace 'com.diegonmarcos.superapp.core'
     compileSdk 36
