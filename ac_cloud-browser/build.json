@@ -67,6 +67,14 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:ui-kit": {
+      "_doc_dir": "#802 shared BY REFERENCE: the fleet's Compose kit. libs:browser draws its menu sheet, settings page and find bar with it.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
+    },
+    "libs:text-tools": {
+      "_doc_dir": "#802 shared BY REFERENCE: the text-tools contract client (thin binder). libs:browser's Translate page row calls it; disabled with its reason when no app serves it.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools"
     }
   },
   "ui": {
@@ -174,7 +182,209 @@
           "class": "config",
           "doc": "CookieManager.setAcceptThirdPartyCookies(false) on every page."
         }
-      ]
+      ],
+      "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
+      "user_agents": {
+        "mobile": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 CloudSuperApp/1.0",
+        "desktop": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 CloudSuperApp/1.0"
+      },
+      "_doc_palette": "#802 the seven KitPalette roles the Compose surfaces (menu sheet, settings, find bar, panels) paint with; the browser's purple-on-black chrome.",
+      "palette": {
+        "surface": "#1A0033",
+        "surface_selected": "#2D0A55",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#99FFFFFF",
+        "accent": "#7C3AED",
+        "hairline": "#33FFFFFF",
+        "tile_ink": "#000000"
+      },
+      "_doc_reader_css": "#802 the stylesheet reader mode renders the extracted article with (assets/browser/reader.js does the extraction).",
+      "reader_css": "body{max-width:42em;margin:auto;padding:1em;font:18px/1.6 Georgia,serif;background:#111;color:#eee}img,video{max-width:100%;height:auto}a{color:#a78bfa}pre{white-space:pre-wrap}",
+      "_doc_menu": "#802 THE OVERFLOW MENU, declared. libs:browser BrowserMenu parses it; the Compose sheet draws `sections` in order (section `icons` is the top icon row; the `settings` section's other rows are also listed at the foot of the Settings page); every item's `action` id is one branch of BrowserHostFragment.runAction (test-browser-menu-wired.sh holds that). requires = page facts that must all be true (page, can_go_back, can_go_forward, text_tools, can_be_default); requires_why says why a row is disabled. checked = the fact a toggle shows. api: true = /api/browser/menu/act may run it (non-destructive page actions only).",
+      "menu": {
+        "sections": [
+          {
+            "id": "icons",
+            "label": ""
+          },
+          {
+            "id": "tabs",
+            "label": "Tabs"
+          },
+          {
+            "id": "page",
+            "label": "Page"
+          },
+          {
+            "id": "library",
+            "label": "Library"
+          },
+          {
+            "id": "settings",
+            "label": "Settings"
+          }
+        ],
+        "requires_why": {
+          "page": "open a page first",
+          "can_go_back": "no earlier page in this tab",
+          "can_go_forward": "no later page in this tab",
+          "text_tools": "no app on this phone serves the fleet's text tools",
+          "can_be_default": "already the default browser, or Android offers no browser role"
+        },
+        "items": [
+          {
+            "id": "back",
+            "section": "icons",
+            "label": "←",
+            "requires": [
+              "page",
+              "can_go_back"
+            ],
+            "api": true
+          },
+          {
+            "id": "forward",
+            "section": "icons",
+            "label": "→",
+            "requires": [
+              "page",
+              "can_go_forward"
+            ],
+            "api": true
+          },
+          {
+            "id": "reload",
+            "section": "icons",
+            "label": "↻",
+            "requires": [
+              "page"
+            ],
+            "api": true
+          },
+          {
+            "id": "new_tab",
+            "section": "tabs",
+            "label": "New tab"
+          },
+          {
+            "id": "tab_groups",
+            "section": "tabs",
+            "label": "Tab groups…"
+          },
+          {
+            "id": "pin_tab",
+            "section": "tabs",
+            "label": "Pin tab",
+            "kind": "toggle",
+            "checked": "pinned",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "close_tab",
+            "section": "tabs",
+            "label": "Close tab",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "find",
+            "section": "page",
+            "label": "Find in page",
+            "requires": [
+              "page"
+            ],
+            "api": true
+          },
+          {
+            "id": "share",
+            "section": "page",
+            "label": "Share…",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "copy_url",
+            "section": "page",
+            "label": "Copy URL",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "print",
+            "section": "page",
+            "label": "Print / Save as PDF",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "desktop",
+            "section": "page",
+            "label": "Desktop site",
+            "kind": "toggle",
+            "checked": "desktop_mode",
+            "api": true
+          },
+          {
+            "id": "reader",
+            "section": "page",
+            "label": "Reader mode",
+            "kind": "toggle",
+            "checked": "reader_on",
+            "requires": [
+              "page"
+            ],
+            "api": true
+          },
+          {
+            "id": "zoom",
+            "section": "page",
+            "label": "Text size…",
+            "api": true
+          },
+          {
+            "id": "translate",
+            "section": "page",
+            "label": "Translate page",
+            "requires": [
+              "page",
+              "text_tools"
+            ]
+          },
+          {
+            "id": "open_external",
+            "section": "page",
+            "label": "Open in another browser…",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "history",
+            "section": "library",
+            "label": "History"
+          },
+          {
+            "id": "settings",
+            "section": "settings",
+            "label": "Settings",
+            "kind": "screen"
+          },
+          {
+            "id": "default_browser",
+            "section": "settings",
+            "label": "Set as default browser",
+            "requires": [
+              "can_be_default"
+            ]
+          }
+        ]
+      }
     },
     "profile_default": {
       "name": "Diego Coelho Marcos",
@@ -216,7 +426,7 @@
     "debug_api": {
       "group": "browser"
     },
-    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
+    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1, menu, menu/act?id=&q=&value=, page/find?q=, page/text?n=, page/reader. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
   },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed the browser had NO tests at all and its ship workflow asserted only that Gradle exited 0.",

@@ -16,6 +16,31 @@ COPY = ["ac_cloud-browser", "ab_cloud-libs-shared/libs/browser", MANIFEST]
 SKIP = shutil.ignore_patterns("build", ".gradle", "dist", ".result")
 
 
+def comment_depth(src):
+    """Open block comments at end of file. Kotlin block comments NEST, so a `page/*` inside a
+    KDoc opens one that swallows the rest of the file — the compiler fails, and every grep
+    after it here would see nothing."""
+    i, n, depth = 0, len(src), 0
+    while i < n:
+        two = src[i:i + 2]
+        if depth:
+            if two == "/*": depth += 1; i += 2; continue
+            if two == "*/": depth -= 1; i += 2; continue
+            i += 1; continue
+        if src[i:i + 3] == '"""':
+            j = src.find('"""', i + 3); i = n if j < 0 else j + 3; continue
+        if src[i] in ('"', "'"):
+            q = src[i]; j = i + 1
+            while j < n and src[j] != q:
+                j += 2 if src[j] == "\\" else 1
+            i = min(j + 1, n); continue
+        if two == "/*": depth += 1; i += 2; continue
+        if two == "//":
+            j = src.find("\n", i); i = n if j < 0 else j; continue
+        i += 1
+    return depth
+
+
 def strip(src):
     out, i, n, depth = [], 0, len(src), 0
     while i < n:
@@ -83,6 +108,13 @@ def run(check, root):
         if not cond:
             fails.append(label + ((" — " + detail) if detail else ""))
         return cond
+    for d in (LIB, APP):
+        for base, _, files in os.walk(os.path.join(root, d)):
+            for f in files:
+                if f.endswith(".kt"):
+                    p = os.path.join(base, f)
+                    ok(comment_depth(open(p, encoding="utf-8").read()) == 0,
+                       "%s closes every block comment" % os.path.relpath(p, root))
     check(root, ok)
     return fails
 
@@ -121,7 +153,9 @@ def main(name, check, mutations):
         sys.exit(1)
     print("  PASS  %s: every assertion holds on the real tree" % name)
     dead = []
-    for label, rel, old, new in mutations:
+    for m in mutations:
+        label, rel, old, new = m[:4]
+        expect = m[4] if len(m) > 4 else None   # the assertion this mutation must trip
         tmp = mutated(root, rel, old, new)
         if tmp is None:
             dead.append(label + " (mutation target not found — the tester drifted from the code)")
@@ -130,6 +164,8 @@ def main(name, check, mutations):
             caught = run(check, tmp)
         finally:
             shutil.rmtree(tmp)
+        if expect is not None:
+            caught = [c for c in caught if expect in c]
         if caught:
             print("  PASS  mutation caught: " + label)
         else:

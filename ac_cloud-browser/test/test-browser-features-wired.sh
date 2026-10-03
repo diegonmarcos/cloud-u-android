@@ -67,7 +67,7 @@ def strip_kotlin_comments(src):
 SRC = {}
 for name in ("BrowserHostFragment", "BrowserTabGrid", "BrowserTabPrefs",
              "BrowserSuggest", "BrowserHistory", "BrowserSearch",
-             "BrowserGridRows", "BrowserTab"):
+             "BrowserGridRows", "BrowserTab", "BrowserSettingsCatalogue"):
     p = os.path.join(PKG, name + ".kt")
     if not os.path.isfile(p):          # fail CLOSED
         check(False, "source exists: " + name + ".kt")
@@ -146,7 +146,9 @@ check(has("BrowserSuggest", "Source.TAB", "Source.HISTORY", "Source.SEARCH"),
 # ── 7. the address bar searches ──────────────────────────────────────
 check(has("BrowserHostFragment", "BrowserSearch.resolve(text.toString(), engine())"),
       "7: the address bar resolves through the engine, not straight to a URL")
-check(has("BrowserHostFragment", "showEnginePicker", "config.engines"),
+# #802 the engine picker became a catalogue setting: an enum whose values ARE the app's
+# engine list (values_from), drawn by the generic settings page.
+check(has("BrowserSettingsCatalogue", 'o.optString("values_from") == "search_engines"', "engineIds"),
       "7: the engine is a setting, and its list comes from the app's config")
 check(has("BrowserSearch", "if (isUrlLike(s)) normalizeUrl(s) else searchUrl(s, engine)"),
       "7: a URL navigates, anything else searches")

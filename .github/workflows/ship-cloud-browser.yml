@@ -43,6 +43,8 @@ on:
       - "ab_cloud-libs-shared/libs/browser/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-browser/**"
 permissions:

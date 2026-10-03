@@ -15,8 +15,9 @@ import org.json.JSONObject
 /**
  * #802 Cloud Browser on the fleet debug API (loopback, fleet token), so every browser
  * setting and store can be read and driven with the phone locked:
- * `/api/browser/<op>`. The group is build.json::ui.debug_api.group. Ops act on the
- * stores the screen reads; [BrowserBus] tells a live screen to redraw.
+ * `/api/browser/<op>`. The group is build.json::ui.debug_api.group. Store ops act on the
+ * stores the screen reads and [BrowserBus.post] tells a live screen to redraw; page ops
+ * run on the live page through [BrowserBus.call] and answer what it observed.
  * No op is named `state` (update-ack-guard owns GET /api/state).
  */
 object BrowserDebugApi {
@@ -32,6 +33,11 @@ object BrowserDebugApi {
         Op("tabs/pin", "url=<url>&on=<true|false>", "pin or unpin a tab"),
         Op("history", "n=<count, default 50>", "on-device history, newest first"),
         Op("history/clear", "confirm=1", "erase the on-device history"),
+        Op("menu", "", "the declared overflow menu, by section, each row with enabled/why/checked against the live page"),
+        Op("menu/act", "id=<menu item with api:true>&q=<find text>&value=<zoom %>", "run a non-destructive menu action on the live page (back, forward, reload, find, reader, desktop, zoom)"),
+        Op("page/find", "q=<text>", "find in the live page: the match count (the find bar shows it)"),
+        Op("page/text", "n=<chars, default 2000>", "the live page's title, url and first n chars of visible text"),
+        Op("page/reader", "", "reader-mode extraction of the live page: title + text length, page unchanged"),
     )
 
     fun register(ctx: Context) {
@@ -83,6 +89,19 @@ object BrowserDebugApi {
                     }
                 }
             }
+            "menu" -> config.menu.toJson(BrowserBus.facts())
+            "menu/act" -> {
+                val id = q["id"].orEmpty()
+                val item = config.menu.item(id)
+                when {
+                    item == null -> JSONObject().put("ok", false).put("error", "$id: not a declared menu item (see menu)")
+                    !item.api -> JSONObject().put("ok", false).put("error", "$id: not runnable over the API (api:false in build.json::ui.browser.menu)")
+                    else -> BrowserBus.call(id, q - "id")
+                }
+            }
+            "page/find" -> BrowserBus.call("find", q)
+            "page/text" -> BrowserBus.call("page_text", q)
+            "page/reader" -> BrowserBus.call("reader_extract")
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

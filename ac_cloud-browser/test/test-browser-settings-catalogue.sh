@@ -57,7 +57,7 @@ BJ = "ac_cloud-browser/build.json"
 FRAG = LIB + "/BrowserHostFragment.kt"
 API = APP + "/debugapi/BrowserDebugApi.kt"
 main("settings catalogue", check, [
-    ("a declared setting nobody reads", FRAG, '"text_zoom"', '"text_zoom_unused"'),
+    ("a declared setting nobody reads", BJ, '"settings": [', '"settings": [{"key": "never_read", "type": "bool", "default": false, "class": "config"},', "`never_read` is read"),
     ("a second writer of browser_settings", FRAG, "private fun applySettings(", 'private val rogue = requireContext().getSharedPreferences("browser_settings", 0)\n    private fun applySettings('),
     ("settings/set stops validating", API, "val err = settings.set(key, q[\"value\"].orEmpty())", "val err: String? = null"),
     ("the generated doc goes stale", BJ, "WebSettings.textZoom, in percent.", "WebSettings.textZoom."),

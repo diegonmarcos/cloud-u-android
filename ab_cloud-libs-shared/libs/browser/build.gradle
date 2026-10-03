@@ -7,8 +7,8 @@
 // engine" lives under libs/ — only thin dispatch stays in app/.
 //
 // Native deps: NONE. WebView is part of the Android framework so we
-// don't ship a renderer. No Compose either; the existing host is
-// programmatic View code (LinearLayout / GridLayout / FrameLayout).
+// don't ship a renderer. The host is still programmatic View code; #802's
+// new surfaces (menu sheet, settings, find bar) are Compose via libs:ui-kit.
 //
 // Resources owned here:
 //   • res/drawable/bg_gradient_black_purple.xml — the host chrome
@@ -18,6 +18,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -29,6 +30,9 @@ android {
     }
     buildFeatures {
         buildConfig = true
+        // #802 the overflow sheet, settings page, find bar and panels are Compose (#773:
+        // new UI is Compose), drawn over the Views host through libs:ui-kit's interop.
+        compose = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -39,6 +43,11 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    // #802 the fleet's Compose kit (theme, rows, switches) — the sheet and settings page draw with it.
+    implementation project(':libs:ui-kit')
+    // #802 "Translate page": the fleet's text-tools contract (a thin binder client; the
+    // row is disabled with its reason when no app on the phone serves it).
+    implementation project(':libs:text-tools')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'

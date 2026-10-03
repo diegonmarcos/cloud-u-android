@@ -33,6 +33,14 @@ data class BrowserConfig(
     val defaultEngineId: String,
     /** #802 the user settings this app offers; empty = WebView defaults, nothing offered. */
     val settings: BrowserSettingsCatalogue = BrowserSettingsCatalogue.EMPTY,
+    /** #802 the overflow menu, as the app declares it. */
+    val menu: BrowserMenu = BrowserMenu.EMPTY,
+    /** #802 `mobile` / `desktop` user-agent strings; absent = WebView's own. */
+    val userAgents: Map<String, String> = emptyMap(),
+    /** #802 the colour roles of the Compose surfaces (KitPalette's seven), ARGB. */
+    val palette: Map<String, Int> = emptyMap(),
+    /** #802 the stylesheet reader mode renders the extracted article with. */
+    val readerCss: String = "",
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -107,7 +115,24 @@ data class BrowserConfig(
                 defaultEngineId = defaultId,
                 settings = BrowserSettingsCatalogue.parse(
                     o.optJSONArray("settings"), finalEngines.map { it.id }, defaultId),
+                menu = BrowserMenu.parse(o.optJSONObject("menu")),
+                userAgents = o.optJSONObject("user_agents").strings(),
+                palette = o.optJSONObject("palette").strings().mapNotNull { (k, v) ->
+                    parseColor(v)?.let { k to it }
+                }.toMap(),
+                readerCss = o.optString("reader_css"),
             )
+        }
+
+        private fun JSONObject?.strings(): Map<String, String> =
+            if (this == null) emptyMap() else keys().asSequence().filterNot { it.startsWith("_") }
+                .associateWith { optString(it) }
+
+        /** `#RRGGBB` or `#AARRGGBB` → ARGB; null for anything else. Pure, unlike android.graphics.Color. */
+        internal fun parseColor(v: String): Int? {
+            val h = v.removePrefix("#")
+            val n = h.toLongOrNull(16) ?: return null
+            return when (h.length) { 6 -> (0xFF000000 or n).toInt(); 8 -> n.toInt(); else -> null }
         }
 
         /** Same, for the base64 BuildConfig field the gradle script bakes. */
