@@ -7,7 +7,8 @@
 # The release sidecar held one line: the publish gate's INPUT identity, a
 # content digest. It answers "did the inputs move?" and nothing else, so no
 # published APK could say which commit it came from. The gate now stamps two
-# lines — identity, then `git rev-parse HEAD` — and refuses to upload a
+# lines — identity, then the commit the APK's versionName baked (#826:
+# ${GITHUB_SHA:-$(git rev-parse HEAD)}) — and refuses to upload a
 # sidecar whose line 2 is not a 40-hex commit in this repository. `check`
 # still compares line 1 only, so skipping unchanged builds is untouched.
 #
@@ -57,7 +58,7 @@ v_all() {
 # the script's CODE, comment lines stripped
 _code() { grep -vE '^[[:space:]]*#' "$1"; }
 s_stamp() {
-    [ "$(_code "$1" | grep -cF 'COMMIT="$(git -C "$ROOT" rev-parse HEAD)"')" -eq 1 ] &&
+    [ "$(_code "$1" | grep -cF 'COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"')" -eq 1 ] &&
     [ "$(_code "$1" | grep -cF "printf '%s\n%s\n' \"\$IDENTITY\" \"\$COMMIT\" > \"\$tmp/\$ASSET.source\"")" -eq 1 ] &&
     [ "$(_code "$1" | grep -cF 'if ! _verify_source "$tmp/$ASSET.source"; then')" -eq 1 ]
 }
@@ -74,7 +75,7 @@ verify "$GATE" "$GHOST"  && bad "a 40-hex sha that is no commit here passed"    
 verify "$GATE" "$UPPER"  && bad "an uppercase sha passed"                         || ok "non-canonical (uppercase) sha refused"
 
 echo "── S stamp/check wiring ──"
-s_stamp "$GATE" && ok "stamp writes identity + rev-parse HEAD and verifies before upload" || bad "stamp can upload a sidecar naming no commit"
+s_stamp "$GATE" && ok "stamp writes identity + the baked commit (GITHUB_SHA, else HEAD) and verifies before upload" || bad "stamp can upload a sidecar naming no commit"
 s_check "$GATE" && ok "check compares line 1 only" || bad "check compares the commit too — every push would republish"
 cmp -s <(sed 1d 1_cicd/dist/scripts/cloud-android-publish-gate.sh) "$GATE" \
     && ok "dist mirror equals source" || bad "dist/scripts copy drifted from the source the CI runs"
@@ -92,6 +93,7 @@ mut "length check dropped"      v_all   's/\[ "\$\{#sha\}" -eq 40 \]/true/'
 mut "hex check dropped"         v_all   's/\*\[!0-9a-f\]\*\|""\)/"")/'
 mut "reads line 1 as the sha"   v_all   's/sha="\$\(sed -n 2p/sha="$(sed -n 1p/'
 mut "stamp writes identity only" s_stamp "s/printf '%s\\\\n%s\\\\n' \"\\\$IDENTITY\" \"\\\$COMMIT\"/printf '%s\\\\n' \"\$IDENTITY\"/"
+mut "stamp ignores GITHUB_SHA" s_stamp 's/COMMIT="\$\{GITHUB_SHA:-\$\(git -C "\$ROOT" rev-parse HEAD\)\}"/COMMIT="$(git -C "$ROOT" rev-parse HEAD)"/'
 mut "stamp skips the verify"    s_stamp 's/if ! _verify_source "\$tmp\/\$ASSET\.source"; then/if false; then/'
 mut "check reads whole file"    s_check 's/prev="\$\(head -n 1 "\$tmp\/\$ASSET\.source" \| tr -d/prev="$(cat "$tmp\/$ASSET.source" | tr -d/'
 
