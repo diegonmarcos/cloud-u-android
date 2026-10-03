@@ -51,6 +51,12 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // on the very first inflation.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         super.onCreate()
+        // #841 the Store's Commits / CI-CD feeds read the fleet git-proxy with the
+        // SAME Authelia bearer every other fleet call here sends (libs:ops
+        // DaguPrefs, as OpsClient does). Read lazily per request; never logged.
+        com.diegonmarcos.superapp.appstore.FeedViewer.fleetBearer = {
+            runCatching { com.diegonmarcos.superapp.ops.dagu.DaguPrefs(this).bearerToken }.getOrDefault("")
+        }
         // Privileged plane re-arm on every launch (unique, KEEP): BOOT_COMPLETED is
         // delayed or dropped on some OEMs, and the first successful connect right
         // after the one-time pairing must not wait for a reboot. Cheap when

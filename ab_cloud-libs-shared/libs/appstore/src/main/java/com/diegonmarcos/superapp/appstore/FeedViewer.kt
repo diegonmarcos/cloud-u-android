@@ -39,18 +39,33 @@ import java.util.Date
  * file opens no connection of its own.
  *
  * A READER, not an actor. The only thing a row does is open the link the feed
- * itself supplied, so there is no install, write or credential anywhere in
- * here — which is why the declared endpoints are the unauthenticated public
- * ones. A token would buy a reader nothing and would be one more secret on the
- * device.
+ * itself supplied, so there is no install or write anywhere in here. The one
+ * credential is the fleet bearer (#841), sent only to the fleet git-proxy so
+ * reads stop spending the anonymous GitHub quota; the public url is still read
+ * without one, as the fallback.
  */
 object FeedViewer {
 
     const val FEEDS_ASSET = "appstore-feeds.json"
 
+    /** How one url's body is read into rows: which array, and the templates.
+     *  The fleet git-proxy (#841) answers a REDUCED shape (`.commits[]` with a
+     *  flat `message`/`author`, `.runs[]` not `.workflow_runs[]`), so the proxy
+     *  leg carries a shape of its own and the public leg keeps GitHub's. */
+    class Shape(
+        val items: String?,
+        val ref: String,
+        val title: String,
+        val subtitle: String,
+        val link: String,
+        val state: String?,
+    )
+
     /** One declared feed. [items] is null when the response IS the array.
      *  [proxy] is null until the fleet serves this feed; when set it is tried
-     *  FIRST and [url] stays the public fallback (#668). */
+     *  FIRST, with the fleet bearer, and [url] stays the public fallback (#668,
+     *  #841). [proxyShape] is how the proxy's body is read; it inherits every
+     *  field the declaration's `proxy` object leaves out. */
     class Feed(
         val id: String,
         val label: String,
@@ -65,7 +80,23 @@ object FeedViewer {
         val state: String?,
         val ok: Set<String>,
         val bad: Set<String>,
-    )
+        proxyShape: Shape? = null,
+    ) {
+        /** The public leg's shape: the feed's own fields. */
+        val shape = Shape(items, ref, title, subtitle, link, state)
+        val proxyShape: Shape = proxyShape ?: shape
+    }
+
+    /**
+     * #841 THE FLEET BEARER, handed in by the host - this library cannot read
+     * the host's credential store and must not grow a second one. The SuperApp
+     * sets it to the same Authelia bearer its other fleet calls send
+     * (libs:ops DaguPrefs, as OpsClient/ContainerSheet do). Read per request so
+     * a token pasted after launch is used without a restart. Blank = send no
+     * Authorization; the proxy then answers 401 and the read falls through to
+     * the public url. Never logged, never put in a message, never sent to [Feed.url].
+     */
+    @Volatile var fleetBearer: () -> String = { "" }
 
     /** One row, already rendered down to strings by the templates. */
     class Entry(val ref: String, val title: String, val subtitle: String, val link: String, val state: String)
@@ -87,13 +118,26 @@ object FeedViewer {
             val f = array.optJSONObject(i) ?: return@mapNotNull null
             val id = f.optString("id").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val url = f.optString("url").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            val items = f.optString("items").takeIf { it.isNotEmpty() }
+            val ref = f.optString("ref"); val title = f.optString("title")
+            val subtitle = f.optString("subtitle"); val link = f.optString("link")
+            val state = f.optString("state").takeIf { it.isNotEmpty() }
+            // `proxy` is either a bare url (same shape as the public one) or an
+            // object {url, items, ref, title, subtitle, link, state} whose
+            // absent fields inherit the feed's.
+            val po = f.optJSONObject("proxy")
+            val proxy = (po?.optString("url") ?: f.optString("proxy")).takeIf { it.isNotEmpty() && it != "null" }
+            val proxyShape = po?.let {
+                Shape(items = if (it.has("items")) it.optString("items").takeIf { s -> s.isNotEmpty() } else items,
+                    ref = it.optString("ref", ref), title = it.optString("title", title),
+                    subtitle = it.optString("subtitle", subtitle), link = it.optString("link", link),
+                    state = if (it.has("state")) it.optString("state").takeIf { s -> s.isNotEmpty() } else state)
+            }
             Feed(id = id, label = f.optString("label", id), blurb = f.optString("blurb"),
-                url = url, proxy = f.optString("proxy").takeIf { it.isNotEmpty() && it != "null" },
-                items = f.optString("items").takeIf { it.isNotEmpty() },
-                ref = f.optString("ref"), title = f.optString("title"),
-                subtitle = f.optString("subtitle"), link = f.optString("link"),
-                state = f.optString("state").takeIf { it.isNotEmpty() },
-                ok = words(f.optJSONArray("ok")), bad = words(f.optJSONArray("bad")))
+                url = url, proxy = proxy, items = items, ref = ref, title = title,
+                subtitle = subtitle, link = link, state = state,
+                ok = words(f.optJSONArray("ok")), bad = words(f.optJSONArray("bad")),
+                proxyShape = proxyShape)
         }
     }
 
@@ -111,17 +155,22 @@ object FeedViewer {
         // data must stay readable with the fleet down, so any proxy failure
         // falls through to the public url, and is kept (suppressed) so the
         // sentence can still say the proxy failed too.
-        val proxy = feed.proxy ?: return read(feed, feed.url)
-        return try { read(feed, proxy) } catch (viaProxy: Exception) {
-            try { read(feed, feed.url) } catch (direct: Exception) { direct.addSuppressed(viaProxy); throw direct }
+        // The bearer goes ONLY to the proxy: the public url is GitHub's, and the
+        // fleet credential must never leave the fleet.
+        val proxy = feed.proxy ?: return read(feed.shape, feed.url, emptyMap())
+        return try {
+            val bearer = runCatching { fleetBearer() }.getOrDefault("").trim()
+            read(feed.proxyShape, proxy, if (bearer.isEmpty()) emptyMap() else mapOf("Authorization" to "Bearer $bearer"))
+        } catch (viaProxy: Exception) {
+            try { read(feed.shape, feed.url, emptyMap()) } catch (direct: Exception) { direct.addSuppressed(viaProxy); throw direct }
         }
     }
 
     /** One url's entries. There is NO path from a failed read to an empty
      *  list: a 404 or a body without the declared array THROWS, so the only
      *  way to draw "nothing in this feed" is a 2xx that carried an empty one. */
-    private fun read(feed: Feed, url: String): List<Entry> {
-        val body = SourceResolver.getBody(url) ?: throw SourceResolver.HttpStatus(404, url, "HTTP 404 from $url")
+    private fun read(feed: Shape, url: String, headers: Map<String, String>): List<Entry> {
+        val body = SourceResolver.getBody(url, headers) ?: throw SourceResolver.HttpStatus(404, url, "HTTP 404 from $url")
         val root = JSONTokener(body).nextValue()
         val array = when {
             feed.items != null -> (root as? JSONObject)?.optJSONArray(feed.items)

@@ -422,11 +422,14 @@ object SourceResolver {
      * how two fetch paths end up with two sets of timeouts and two redirect
      * policies. ONE request, and the caller picks the parser.
      */
-    fun getBody(url: String): String? {
+    fun getBody(url: String, headers: Map<String, String> = emptyMap()): String? {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.instanceFollowRedirects = true; c.connectTimeout = TIMEOUT_MS; c.readTimeout = TIMEOUT_MS
             c.setRequestProperty("Accept", "application/json")
+            // #841 caller headers (the fleet bearer). Values are never echoed
+            // into a message below - only the url and the server's own words.
+            for ((k, v) in headers) c.setRequestProperty(k, v)
             val code = c.responseCode
             if (code == 404) return null
             // #668 SAY WHAT THE SERVER SAID. "HTTP 403 from <url>" named the
@@ -443,7 +446,9 @@ object SourceResolver {
             if (code !in 200..299) {
                 val why = runCatching {
                     c.errorStream?.bufferedReader()?.use { it.readText() }
-                        ?.let { JSONObject(it).optString("message") }
+                        // GitHub says `message`; the fleet git-proxy says {error, code} (#841).
+                        ?.let { JSONObject(it).let { j -> j.optString("message").ifEmpty {
+                            listOf(j.optString("error"), j.optString("code")).filter { s -> s.isNotEmpty() }.joinToString(" · ") } } }
                 }.getOrNull()?.takeIf { it.isNotEmpty() }
                 throw HttpStatus(code, url, if (why == null) "HTTP $code from $url" else "HTTP $code from $url — $why",
                     quota = isQuota(code, c), resetEpoch = c.getHeaderField("X-RateLimit-Reset")?.toLongOrNull())
