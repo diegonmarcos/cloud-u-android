@@ -23,6 +23,7 @@ data class SearchConfig(
     val verticals: List<Vertical>,
     val sources: Map<String, Source>,
     val feeds: Map<String, Feed>,
+    val series: Map<String, Series>,
     val engines: List<Engine>,
     val calculators: Map<String, Calculator>,
     val social: Social,
@@ -35,6 +36,7 @@ data class SearchConfig(
         val id: String, val label: String, val title: String, val blurb: String, val icon: String,
         val placeholder: String, val subpages: List<String>, val sources: List<String>, val chips: List<ChipSpec>,
         val feeds: List<String>, val feedKeywords: List<String>, val calculators: List<String>, val analysis: String,
+        val series: List<String>, val chart: String, val chartPoints: Int,
     )
 
     /**
@@ -51,6 +53,12 @@ data class SearchConfig(
     }
 
     data class Feed(val id: String, val label: String, val url: String)
+
+    /** One official time series (a `market` analysis reads them); [change] is pct (an index) or pp (a rate). */
+    data class Series(
+        val id: String, val label: String, val source: String, val detail: String, val parser: String,
+        val url: String, val headers: Map<String, String>, val unit: String, val change: String, val terms: String,
+    )
     data class Engine(val id: String, val label: String, val url: String)
     data class Field(val id: String, val label: String, val default: Double, val kind: String, val options: List<Pair<String, Double>>)
     data class Output(val id: String, val label: String, val format: String, val emphasis: Boolean)
@@ -82,6 +90,10 @@ data class SearchConfig(
         const val KIND_API = "api"
         const val KIND_LINK = "link"
 
+        /** What a vertical's Analysis page may compute: nothing, the jobs statistics, or official market series. */
+        val ANALYSES = setOf("none", "jobs", "market")
+        val CHANGES = setOf("pct", "pp")
+
         /** [json] is build.json::search. Throws on a declaration that would draw a broken app. */
         fun parse(json: String): SearchConfig = parse(JSONObject(json))
 
@@ -106,6 +118,7 @@ data class SearchConfig(
                         chips = objects(v.optJSONArray("chips")).map { ChipSpec(it.getString("id"), it.getString("label"), it.optString("flag"), it.optString("tag")) },
                         feeds = strings(v.optJSONArray("feeds")), feedKeywords = strings(v.optJSONArray("feed_keywords")),
                         calculators = strings(v.optJSONArray("calculators")), analysis = v.optString("analysis", "none"),
+                        series = strings(v.optJSONArray("series")), chart = v.optString("chart"), chartPoints = v.optInt("chart_points", 0),
                     )
                 },
                 sources = members(o.getJSONObject("sources")).associate { (id, s) ->
@@ -118,6 +131,13 @@ data class SearchConfig(
                     )
                 },
                 feeds = members(o.getJSONObject("feeds")).associate { (id, f) -> id to Feed(id, f.getString("label"), f.getString("url")) },
+                series = (o.optJSONObject("series")?.let { members(it) } ?: emptyList()).associate { (id, x) ->
+                    id to Series(
+                        id = id, label = x.getString("label"), source = x.getString("source"), detail = x.optString("detail"),
+                        parser = x.getString("parser"), url = x.getString("url"), headers = stringMap(x.optJSONObject("headers")),
+                        unit = x.getString("unit"), change = x.getString("change"), terms = x.optString("terms"),
+                    )
+                },
                 engines = objects(o.getJSONArray("engines")).map { Engine(it.getString("id"), it.getString("label"), it.getString("url")) },
                 calculators = members(o.getJSONObject("calculators")).associate { (id, c) ->
                     id to Calculator(
@@ -185,6 +205,16 @@ data class SearchConfig(
             if ("calculators" in kinds && v.calculators.isEmpty()) bad += "vertical ${v.id} has a calculators page but no calculator"
             if ("feed" in kinds && v.feeds.isEmpty()) bad += "vertical ${v.id} has a feed page but no feed"
             v.chips.filter { it.flag.isBlank() == it.tag.isBlank() }.forEach { bad += "chip ${v.id}/${it.id} must set exactly one of flag or tag" }
+            if (v.analysis !in ANALYSES) bad += "vertical ${v.id} analysis ${v.analysis} is none of $ANALYSES"
+            v.series.filter { it !in series }.forEach { bad += "vertical ${v.id} names series $it, which is not declared" }
+            if (v.analysis == "market") {
+                if (v.series.isEmpty()) bad += "vertical ${v.id} has a market analysis but no series"
+                if (v.chart !in v.series) bad += "vertical ${v.id} charts ${v.chart.ifBlank { "nothing" }}, which is not one of its series"
+                if (v.chartPoints < 2) bad += "vertical ${v.id} chart_points must be at least 2"
+            }
+        }
+        for (x in series.values) {
+            if (x.change !in CHANGES) bad += "series ${x.id} change ${x.change} is none of $CHANGES"
         }
         for (s in sources.values) {
             if (s.kind != KIND_API && s.kind != KIND_LINK) bad += "source ${s.id} kind ${s.kind} is neither api nor link"

@@ -8,13 +8,16 @@
 | Arbeitnow job board API | listings + remote share | "Free public API for jobs, please do not abuse … linking back" — every card links to the posting. |
 | Open Prices (Open Food Facts) | grocery prices near the city | ODbL. |
 | Open Food Facts search | grocery products | ODbL. |
+| Deutsche Bundesbank time-series API (MFI rate on new housing loans, DE) | House analysis | Free reuse with the source named. |
+| Eurostat dissemination API (`prc_hpi_q` house prices, `prc_hicp_minr` CP041 rents, DE) | House analysis | Reuse authorised with the source named (Commission Decision 2011/833/EU). |
 | tagesschau RSS (Wirtschaft, Verbraucher) | Feed headlines, linked | Public RSS; only headlines and the feed's own teaser are shown, each linking to the article. |
 | OpenRouter chat completions + model catalogue | AI chat | The user's own token from the fleet Account. |
 | ImmoScout24, Immowelt, Kleinanzeigen, WG-Gesucht, StepStone, Indeed, LinkedIn Jobs, REWE, Lidl, Kaufland, eBay, Vinted | **never fetched** | No public API, or terms that forbid automated access: the site's own search opens in cloud-browser. |
 | Fleet scraper (scrappers-api, successor of the archived crawlee-cloud) | **disabled** | Behind two-factor auth; `/scrape` returns a summary, not the data; and the portals above forbid scraping anyway. |
 
 The test fixtures in `core/src/test/resources/fixtures/` are trimmed responses saved from these
-sources on 2026-10-02 (teaser texts cut to a few words).
+sources on 2026-10-02 (teaser texts cut to a few words); the three market series
+(`bbk-mortgage-rate.json`, `eurostat-hpi.json`, `eurostat-rent.json`) are whole answers saved on 2026-10-03.
 
 ## The payslip
 

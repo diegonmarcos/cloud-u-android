@@ -62,6 +62,7 @@ import com.diegonmarcos.cloudsearch.core.Analysis
 import com.diegonmarcos.cloudsearch.core.Calculators
 import com.diegonmarcos.cloudsearch.core.FeedItem
 import com.diegonmarcos.cloudsearch.core.Listing
+import com.diegonmarcos.cloudsearch.core.Market
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.SearchEngine
 import com.diegonmarcos.cloudsearch.data.Browser
@@ -273,7 +274,9 @@ fun AnalysisPage(v: SearchConfig.Vertical) {
                 items(state.cfg.cities, key = { it.id }) { c -> FilterChip(selected = c.id == state.city, onClick = { state.pickCity(c.id) }, label = { Text(c.label) }) }
             }
         }
-        if (v.analysis == "none") {
+        if (v.analysis == "market") {
+            item { MarketSection(v) }
+        } else if (v.analysis == "none") {
             item {
                 Box(Modifier.fillMaxWidth().height(Metrics.chartHeight * 2)) {
                     KitEmptyState(stringResource(R.string.analysis_none_title), stringResource(R.string.analysis_none))
@@ -312,6 +315,64 @@ fun AnalysisPage(v: SearchConfig.Vertical) {
             }
             if (!loading && result == null) item { Text(stringResource(R.string.analysis_failed), color = MaterialTheme.colorScheme.error) }
         }
+    }
+}
+
+/** A `market` analysis: official series, each with its latest value and its change over a year. */
+@Composable
+private fun MarketSection(v: SearchConfig.Vertical) {
+    val state = LocalState.current
+    var market by remember { mutableStateOf<Market.Result?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    LaunchedEffect(v.id) {
+        loading = true
+        market = withContext(Dispatchers.IO) { runCatching { state.services.engine.market(v.id) }.getOrNull() }
+        loading = false
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+        if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        market?.let { m ->
+            KitCard {
+                Text(stringResource(R.string.market_germany), style = MaterialTheme.typography.titleMedium)
+                m.stats.forEach { st -> Stat(st.label, seriesValue(st), seriesChange(st)) }
+            }
+            m.chart?.let { c ->
+                if (m.chartPoints.isNotEmpty()) KitCard {
+                    Text(c.detail, style = MaterialTheme.typography.titleSmall)
+                    val top = m.chartPoints.maxOf { it.value }
+                    m.chartPoints.forEach { p ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+                            Text(p.period, style = MaterialTheme.typography.labelSmall)
+                            Box(Modifier.weight(1f).height(Metrics.bar)) {
+                                Box(Modifier.fillMaxWidth((p.value / top).toFloat()).height(Metrics.bar).clip(RoundedCornerShape(Metrics.small)).background(MaterialTheme.colorScheme.primary))
+                            }
+                            Text(String.format(Locale.ROOT, "%.1f", p.value), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+            SourceStrip(m.statuses)
+            Text(stringResource(R.string.market_sources), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (!loading && market == null) Text(stringResource(R.string.analysis_failed), color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** 4.01 % for a rate, 153.5 for an index; null when the series did not answer. */
+fun seriesValue(s: Market.Stat): String? = s.latest?.let { p ->
+    (if (s.unit == "%") String.format(Locale.ROOT, "%.2f %%", p.value) else String.format(Locale.ROOT, "%.1f", p.value)) + " (" + p.period + ")"
+}
+
+/** +0.30 pp or +0.59 %, against the same period a year before. */
+fun seriesChange(s: Market.Stat): String? = s.delta?.let { d ->
+    String.format(Locale.ROOT, if (s.change == "pp") "%+.2f pp" else "%+.2f %%", d) + " vs " + s.yearAgo!!.period
+}
+
+@Composable
+private fun Stat(label: String, value: String?, change: String?) {
+    Column(Modifier.fillMaxWidth()) {
+        Stat(label, value)
+        if (change != null) Text(change, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
     }
 }
 

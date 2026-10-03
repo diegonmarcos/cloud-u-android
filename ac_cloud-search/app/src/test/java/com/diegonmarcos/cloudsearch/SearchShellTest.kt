@@ -165,5 +165,16 @@ class SearchShellTest {
         assertTrue(q.getBoolean("ok"))
         assertEquals("Kotlin Developer", q.getJSONArray("listings").getJSONObject(0).getString("title"))
         assertFalse(SearchDebugApi.query(services, mapOf("v" to "nope")).getBoolean("ok"))
+        // #797 the Analysis and Feed pages, screen-locked: offline here, so every source says why.
+        val house = SearchDebugApi.analysis(services, mapOf("v" to "house"))
+        assertEquals("market", house.getString("kind"))
+        assertEquals(Decl.config.vertical("house")!!.series.size, house.getJSONArray("sources").length())
+        assertEquals("error", house.getJSONArray("sources").getJSONObject(0).getString("state"))
+        assertEquals("jobs", SearchDebugApi.analysis(services, mapOf("v" to "jobs", "q" to "kotlin")).getString("kind"))
+        assertFalse(SearchDebugApi.analysis(services, mapOf("v" to "nope")).getBoolean("ok"))
+        val feed = SearchDebugApi.feed(services, mapOf("v" to "jobs"))
+        assertTrue(feed.getBoolean("ok"))
+        assertEquals("error", feed.getJSONArray("sources").getJSONObject(0).getString("state"))
+        assertFalse(SearchDebugApi.feed(services, mapOf("v" to "search")).getBoolean("ok"))
     }
 }

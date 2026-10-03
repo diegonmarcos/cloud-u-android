@@ -61,6 +61,8 @@
     <string name="analysis_failed">Could not compute the analysis: no source answered.</string>
     <string name="analysis_none_title">No market data</string>
     <string name="analysis_none">No source this app may read publishes listings or market statistics for this category, so there is nothing real to analyse. The sources below open in cloud-browser instead.</string>
+    <string name="market_germany">Market overview · Germany</string>
+    <string name="market_sources">Official statistics, Germany-wide: the Bundesbank\'s rate on new housing loans and Eurostat\'s house price and rent indices, each against the same period a year before. No source this app may read publishes rents or prices per city.</string>
     <string name="feed_empty">None of the %1$d latest headlines is about this topic.</string>
     <string name="calc_failed">These inputs cannot be computed.</string>
 

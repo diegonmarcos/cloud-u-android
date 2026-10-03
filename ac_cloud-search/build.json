@@ -282,7 +282,15 @@
           "scrappers-api"
         ],
         "chips": [],
-        "analysis": "none",
+        "analysis": "market",
+        "_doc_analysis": "#797 market = the declared `series` (official statistics, Germany-wide: no source publishes city-level rents or prices this app may read), each with its latest value and its change against the same period a year before; `chart` is drawn as the last chart_points values.",
+        "series": [
+          "bbk-mortgage-rate",
+          "eurostat-house-prices",
+          "eurostat-rents"
+        ],
+        "chart": "eurostat-house-prices",
+        "chart_points": 6,
         "feeds": [
           "tagesschau-wirtschaft",
           "tagesschau-verbraucher"
@@ -583,6 +591,44 @@
         "enabled": true,
         "url": "https://www.vinted.de/catalog?search_text={q}",
         "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      }
+    },
+    "series": {
+      "_doc": "#797 official time series for a vertical whose analysis is `market`. Each URL returns ONE series (every dimension but time pinned), parsed by `parser` (core/Market.kt Series.parse: jsonstat = Eurostat's JSON-stat 2.0, sdmx_json = SDMX-JSON 1.0 as the Bundesbank and the ECB serve it), cached like a source. change: pct = percent change of an index against the same period a year before; pp = percentage-point change of a rate. Verified 2026-10-03 from the mesh; the ECB's own data API answered an HTML error page on one of two tries, so the mortgage rate is read from the Bundesbank, which publishes the same MFI interest-rate statistic for Germany.",
+      "bbk-mortgage-rate": {
+        "label": "Mortgage rate",
+        "source": "Deutsche Bundesbank",
+        "detail": "Effective rate on new housing loans to households, Germany",
+        "parser": "sdmx_json",
+        "url": "https://api.statistiken.bundesbank.de/rest/data/BBIM1/M.DE.B.A2C.A.R.A.2250.EUR.N?lastNObservations=25",
+        "headers": {
+          "Accept": "application/vnd.sdmx.data+json;version=1.0.0"
+        },
+        "unit": "%",
+        "change": "pp",
+        "terms": "Bundesbank time-series database; free reuse with the source named."
+      },
+      "eurostat-house-prices": {
+        "label": "House prices",
+        "source": "Eurostat",
+        "detail": "House price index, all dwellings, Germany (2015 = 100)",
+        "parser": "jsonstat",
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hpi_q?geo=DE&purchase=TOTAL&unit=I15_Q&lastTimePeriod=12&lang=EN",
+        "headers": {},
+        "unit": "index",
+        "change": "pct",
+        "terms": "Eurostat dissemination API; reuse authorised with the source named (Commission Decision 2011/833/EU)."
+      },
+      "eurostat-rents": {
+        "label": "Rents",
+        "source": "Eurostat",
+        "detail": "HICP actual rentals for housing, Germany (2025 = 100)",
+        "parser": "jsonstat",
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hicp_minr?geo=DE&coicop18=CP041&unit=I25&lastTimePeriod=25&lang=EN",
+        "headers": {},
+        "unit": "index",
+        "change": "pct",
+        "terms": "Eurostat dissemination API; reuse authorised with the source named (Commission Decision 2011/833/EU)."
       }
     },
     "feeds": {
@@ -1014,7 +1060,7 @@
     "debug_api": {
       "group": "search"
     },
-    "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings). The ops never include `state` (update-ack-guard owns GET /api/state).",
+    "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state).",
     "dark_default": true
   }
 }

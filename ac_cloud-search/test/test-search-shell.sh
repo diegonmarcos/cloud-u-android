@@ -11,13 +11,14 @@
 #       `when (kind)` dispatches are the same set, both ways; every vertical's subpage is declared.
 #   S3  every vertical icon has a branch in IconCatalog — a misspelt name would draw the fallback.
 #   S4  every enabled api source names a parser Parsers.parse dispatches, every declared calculator
-#       is a Calculators.run branch, and neither dispatch has a branch nothing declares.
+#       is a Calculators.run branch, every declared series names a Series.parse branch (#797), and
+#       no dispatch has a branch nothing declares.
 #   S5  one network door: only core/Engine.kt (UrlHttp) opens a connection; no app or other core
 #       source names java.net, HttpURLConnection, OkHttp or a socket, and the app declares INTERNET.
 #   S6  one token door: only data/Account.kt calls revealAiKey; it and data/ChatFlow.kt never log,
 #       and Account.kt writes nothing (no SharedPreferences, no file) — the fleet Account is the
 #       only store of the OpenRouter token.
-#   S7  /api/<group>/verticals, query and calc are documented and answered under
+#   S7  /api/<group>/verticals, query, calc, analysis and feed are documented and answered under
 #       build.json::ui.debug_api.group, and no op is named `state` (GET /api/state's key).
 #   S8  no mock data ships: no placeholder image host, lorem ipsum or `mock` identifier in app or
 #       core sources, and no Kotlin colour literal (colours are res/values/colors.xml).
@@ -31,7 +32,7 @@ APP="$(cd "$HERE/.." && pwd)"
 K='app/src/main/java/com/diegonmarcos/cloudsearch'
 C='core/src/main/kotlin/com/diegonmarcos/cloudsearch/core'
 for f in build.json app/src/main/AndroidManifest.xml core/pap/Lohnsteuer2026.xml core/tools/pap2kt.py \
-         "$C/tax/Lohnsteuer2026.kt" "$C/Listing.kt" "$C/Calculators.kt" "$C/Engine.kt" \
+         "$C/tax/Lohnsteuer2026.kt" "$C/Listing.kt" "$C/Calculators.kt" "$C/Engine.kt" "$C/Market.kt" \
          "$K/ui/SearchShell.kt" "$K/ui/IconCatalog.kt" "$K/data/Account.kt" "$K/debugapi/SearchDebugApi.kt"; do
     [ -f "$APP/$f" ] || { echo "ERROR missing source: $APP/$f — this tester is unrun, not passing"; exit 1; }
 done
@@ -107,6 +108,14 @@ for c in sorted(set(S["calculators"]) - calcs):
     bad.append("S4 calculator %s is declared but Calculators.run does not compute it" % c)
 for c in sorted(calcs - set(S["calculators"])):
     bad.append("S4 Calculators.run computes %s, which no calculator declares — dead branch" % c)
+sparsers = branches(os.path.join(core, "Market.kt"), "parse")
+sused = {x["parser"] for k, x in S.get("series", {}).items() if not k.startswith("_")}
+if not sparsers:
+    bad.append("S4 Series.parse has no dispatch this tester can read")
+for p in sorted(sused - sparsers):
+    bad.append("S4 a series uses parser %s, which Series.parse does not have" % p)
+for p in sorted(sparsers - sused):
+    bad.append("S4 Series.parse has parser %s, which no series uses — dead parser" % p)
 
 # S5
 net = re.compile(r"java\.net\.|HttpURLConnection|okhttp3|\bSocket\(|\bURL\(")
@@ -134,7 +143,7 @@ if re.search(r"SharedPreferences|getSharedPreferences|putString|writeText|FileOu
 api = code(os.path.join(src, "debugapi", "SearchDebugApi.kt"))
 if "BuildConfig.DEBUG_API_GROUP" not in api:
     bad.append("S7 SearchDebugApi does not register under build.json::ui.debug_api.group")
-for op in ("verticals", "query", "calc"):
+for op in ("verticals", "query", "calc", "analysis", "feed"):
     if not re.search(r'AppDebugServer\.Op\("%s"' % op, api) or not re.search(r'"%s" ->' % op, api):
         bad.append("S7 /api/<group>/%s is not both documented and answered" % op)
 if re.search(r'"state"', api):
@@ -195,6 +204,9 @@ mutate subpage-undeclared build.json 's.replace("\"subpages\": [\n          \"we
 mutate icon-misspelt build.json 's.replace("\"icon\": \"groceries\"", "\"icon\": \"grocerys\"")' "S3 vertical groceries icon"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
+mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"
+mutate dead-series-parser "$C/Market.kt" 's.replace("\"sdmx_json\" -> sdmxJson(body)", "\"sdmx_json\" -> sdmxJson(body)\n        \"csv\" -> sdmxJson(body)")' "S4 Series.parse has parser csv"
+mutate debug-feed-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"feed\" -> feed(Services.get(app), q).toString()", "")' "S7 /api/<group>/feed"
 mutate calc-missing "$C/Calculators.kt" 's.replace("\"max_rent\" -> Result(", "\"max_rentx\" -> Result(")' "S4 calculator max_rent is declared"
 mutate app-online "$J/ui/VerticalPages.kt" 's + "\nprivate val u = java.net.URL(\"https://example.org\")\n"' "S5 VerticalPages.kt uses the network"
 mutate core-online "$C/Chat.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "S5 Chat.kt uses the network"

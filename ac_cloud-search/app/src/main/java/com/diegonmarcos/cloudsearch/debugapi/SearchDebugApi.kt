@@ -19,6 +19,11 @@ import org.json.JSONObject
  *                                            stale, error, skipped, link, disabled)
  *   /api/search/calc?name=payslip&gross=5000 a calculator's outputs and warnings; any field not
  *                                            given takes its declared default
+ *   /api/search/analysis?v=house             the Analysis page's numbers: the jobs statistics
+ *                                            (v=jobs&q=&city=) or the market series (v=house),
+ *                                            with each series' status
+ *   /api/search/feed?v=jobs                  the Feed page: the vertical's headlines and each
+ *                                            feed's status
  *
  * The group is build.json::ui.debug_api.group. No op is named `state` (GET /api/state's key), and
  * nothing here reads the AI token.
@@ -36,12 +41,16 @@ object SearchDebugApi {
                 AppDebugServer.Op("verticals", "", "every vertical, subpage and source (kind, enabled, why)"),
                 AppDebugServer.Op("query", "v=<vertical id>&q=<search term>&city=<city id, optional>", "run a search through the app's engine and cache: listings + per-source status"),
                 AppDebugServer.Op("calc", "name=<calculator id>&<field>=<number>...", "a calculator's outputs and warnings (missing fields take their defaults)"),
+                AppDebugServer.Op("analysis", "v=<vertical id>&q=<term, jobs>&city=<city id, jobs>", "the Analysis page's numbers: jobs statistics or market series with their sources' status"),
+                AppDebugServer.Op("feed", "v=<vertical id>", "the Feed page's headlines and each feed's status"),
             ),
         ) { op, q ->
             when (op) {
                 "verticals" -> verticals(Services.get(app)).toString()
                 "query" -> query(Services.get(app), q).toString()
                 "calc" -> calc(Services.get(app), q).toString()
+                "analysis" -> analysis(Services.get(app), q).toString()
+                "feed" -> feed(Services.get(app), q).toString()
                 else -> null
             }
         }
@@ -76,5 +85,26 @@ object SearchDebugApi {
             .put("inputs", JSONObject(c.fields.associate { it.id to (given[it.id] ?: it.default) }))
             .put("outputs", JSONObject(r.values))
             .put("warnings", JSONArray(r.warnings.map { c.warnings[it] ?: it }))
+    }
+
+    fun analysis(s: Services, q: Map<String, String>): JSONObject {
+        val v = s.cfg.vertical(q["v"].orEmpty()) ?: return JSONObject().put("ok", false).put("error", "v must be one of ${s.cfg.verticals.map { it.id }}")
+        return when (v.analysis) {
+            "jobs" -> s.engine.analysis(v.id, q["q"].orEmpty(), q["city"] ?: s.prefs.city)
+                ?.let { JSONObject().put("ok", true).put("kind", "jobs").put("jobs", it.toJson()) }
+                ?: JSONObject().put("ok", false).put("error", "no source answered")
+            "market" -> s.engine.market(v.id)!!.let { m ->
+                JSONObject().put("ok", true).put("kind", "market").put("market", m.toJson()).put("sources", s.engine.statusJson(m.statuses))
+            }
+            else -> JSONObject().put("ok", true).put("kind", v.analysis)
+        }
+    }
+
+    fun feed(s: Services, q: Map<String, String>): JSONObject {
+        val v = s.cfg.vertical(q["v"].orEmpty())?.takeIf { it.feeds.isNotEmpty() }
+            ?: return JSONObject().put("ok", false).put("error", "v must be one of ${s.cfg.verticals.filter { it.feeds.isNotEmpty() }.map { it.id }}")
+        val f = s.engine.feed(v.id)
+        return JSONObject().put("ok", true).put("vertical", v.id).put("fetched", f.fetched).put("sources", s.engine.statusJson(f.statuses))
+            .put("items", JSONArray(f.items.map { JSONObject().put("title", it.title).put("feed", it.feed).put("url", it.url ?: JSONObject.NULL).put("date", it.date ?: JSONObject.NULL) }))
     }
 }

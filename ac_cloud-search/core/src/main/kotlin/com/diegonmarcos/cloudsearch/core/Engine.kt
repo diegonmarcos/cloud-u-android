@@ -176,6 +176,29 @@ class SearchEngine(val cfg: SearchConfig, private val http: Http, private val ca
         return Analysis.jobs(r, baBody)
     }
 
+    /**
+     * A `market` analysis: every declared series through the cache like a source (fresh, cached,
+     * stale offline, or an error with its reason), its latest value and year-on-year change, and
+     * the charted series' last chart_points values. Null for a vertical whose analysis is not market.
+     */
+    fun market(verticalId: String): Market.Result? {
+        val v = cfg.vertical(verticalId) ?: return null
+        if (v.analysis != "market") return null
+        val read = v.series.mapNotNull { cfg.series[it] }.map { x ->
+            val f = fetch("series|${x.id}|${x.url}", x.url, x.headers, cfg.timeoutMs)
+            val parsed = f.body?.let { b -> runCatching { Series.parse(x.parser, b) } }
+            val points = parsed?.getOrNull().orEmpty()
+            val status = when {
+                f.body == null -> SourceStatus(x.id, x.source, f.state, 0, f.detail, f.at, null)
+                parsed?.isFailure == true -> SourceStatus(x.id, x.source, State.ERROR, 0, "unreadable answer: ${parsed?.exceptionOrNull()?.message}", f.at, null)
+                else -> SourceStatus(x.id, x.source, f.state, points.size, f.detail, f.at, null)
+            }
+            Triple(Market.stat(x, points), points, status)
+        }
+        val chart = read.firstOrNull { it.first.id == v.chart }
+        return Market.Result(read.map { it.first }, chart?.first, chart?.second.orEmpty().takeLast(v.chartPoints), read.map { it.third })
+    }
+
     /** Statuses as JSON, for the debug API and the offline view's banner. */
     fun statusJson(s: List<SourceStatus>): JSONArray = JSONArray(s.map {
         JSONObject().put("id", it.id).put("label", it.label).put("state", it.state.name.lowercase())
