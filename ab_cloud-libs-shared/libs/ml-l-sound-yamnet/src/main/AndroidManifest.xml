@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:ml-l-sound-yamnet — the sound identification ENGINE (#798: YAMNet on LiteRT), shipped
+     only as Cloud-Lib-Ml-L-Sound-Yamnet.apk. Consumers compile libs:ml-l-sound and bind this
+     service with a WAV file descriptor. No INTERNET: it runs fully offline. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.cloudlib.sound.SoundBackendService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

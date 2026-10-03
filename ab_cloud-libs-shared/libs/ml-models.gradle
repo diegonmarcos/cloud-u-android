@@ -1,0 +1,66 @@
+// #798 THE ONE model fetch of the on-device ML engines (libs:ml-l-image-mlkit, libs:ml-l-sound-yamnet),
+// applied from each engine's build.gradle. The applying module's data/models.json is THE PIN: each
+// model's URL, sha256, byte count, the APK asset it is staged as, and its licence. fetchModels
+// downloads each model once into the module's build cache, refuses a sha256 or size mismatch, and
+// stages it under build/generated/models, which the module adds to its assets. Models are never
+// committed: the hash is the identity. A model with no recorded licence or source fails the build.
+// Same shape as libs:calc's FetchQalcNative (a real task class, configuration-cache safe).
+// Exposes `models` (the parsed pin) and `modelAssetsDir` to the applying script.
+
+abstract class FetchModels extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
+
+    @TaskAction
+    void fetch() {
+        def pin = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        for (e in pin.models.entrySet()) {
+            def m = e.value
+            def cached = new File(cacheDir.get().asFile, m.sha256 + ".tflite")
+            if (!(cached.exists() && sha256Of(cached) == m.sha256)) {
+                logger.quiet("models: downloading " + m.url)
+                cached.parentFile.mkdirs(); cached.delete()
+                def c = new URL(m.url).openConnection()
+                c.setInstanceFollowRedirects(true)
+                cached.withOutputStream { it << c.inputStream }
+                def actual = sha256Of(cached)
+                if (actual != m.sha256) {
+                    cached.delete()
+                    throw new GradleException("models: wrong sha256 for " + m.url + "\n  expected " + m.sha256 + "\n  actual   " + actual)
+                }
+            }
+            if (cached.length() != (long) m.bytes)
+                throw new GradleException("models: " + e.key + " is " + cached.length() + " bytes; the pin declares " + m.bytes)
+            def staged = new File(outDir.get().asFile, m.asset)
+            staged.parentFile.mkdirs(); staged.delete()
+            java.nio.file.Files.copy(cached.toPath(), staged.toPath())
+            logger.quiet("models: staged " + m.asset + " (" + staged.length() + " bytes, " + m.licence + ")")
+        }
+    }
+
+    protected static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+}
+
+ext.models = new groovy.json.JsonSlurper().parse(file('data/models.json')).models
+models.each { id, m ->
+    if (!m.licence || !m.licence_source)
+        throw new GradleException("${project.path}: model ${id} has no recorded licence and source in data/models.json — not shipped")
+    if (!(m.sha256 ==~ /[0-9a-f]{64}/) || !(m.bytes instanceof Number) || !m.url?.startsWith('https://'))
+        throw new GradleException("${project.path}: model ${id} needs an https url, a sha256 and a byte count in data/models.json")
+}
+// A File, not a Provider: assets.srcDirs and a test's system property both take a path.
+ext.modelAssetsDir = new File(buildDir, 'generated/models')
+
+def fetchModels = tasks.register('fetchModels', FetchModels) {
+    description = "Download, verify (sha256 + byte count) and stage the pinned models of data/models.json as assets"
+    pinFile = file('data/models.json')
+    cacheDir = layout.buildDirectory.dir('models-cache')
+    outDir = layout.buildDirectory.dir('generated/models')
+}
+tasks.named('preBuild') { dependsOn fetchModels }
+tasks.withType(Test).configureEach { dependsOn fetchModels }

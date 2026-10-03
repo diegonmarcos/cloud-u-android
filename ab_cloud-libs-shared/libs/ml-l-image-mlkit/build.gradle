@@ -29,6 +29,12 @@ if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'org.jetbrains.kotlin.android'
 }
 
+// #798 the pinned full-label classifier object detection names boxes with, fetched and verified
+// by the engines' one shared script (data/models.json; never committed).
+apply from: '../ml-models.gradle'
+def detectModel = models.detect
+if (detectModel == null) throw new GradleException("libs:ml-l-image-mlkit: data/models.json declares no detect model")
+
 android {
     namespace 'com.diegonmarcos.superapp.image.mlkit'
     compileSdk 36
@@ -36,6 +42,16 @@ android {
     defaultConfig {
         minSdk 26
         consumerProguardFiles 'consumer-rules.pro'
+        buildConfigField "String", "DETECT_MODEL_ASSET", "\"${detectModel.asset}\""
+        buildConfigField "String", "DETECT_MODEL_NAME",  "\"${detectModel.name}\""
+    }
+
+    sourceSets {
+        main { assets.srcDirs += modelAssetsDir }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {
@@ -48,6 +64,8 @@ android {
         unitTests {
             includeAndroidResources = true
             all {
+                // #798 the suite reads the real, verified classifier (its label list and size).
+                systemProperty 'detect.model', new File(modelAssetsDir, detectModel.asset).path
                 testLogging {
                     events 'failed'
                     exceptionFormat 'full'
@@ -84,6 +102,9 @@ dependencies {
     // the BUNDLED models (in this APK, so the route works offline from the first run).
     implementation 'com.google.mlkit:image-labeling:17.0.9'
     implementation 'com.google.mlkit:object-detection:17.0.2'
+    // #798 live identification: the same detector with a full-label classifier (data/models.json),
+    // single-image and stream mode (tracking ids across a caller's frames).
+    implementation 'com.google.mlkit:object-detection-custom:17.0.2'
     // #772 the OpenRouter route speaks the fleet's one Decisions client (Cloud Calc's Jev uses it too),
     implementation project(':libs:decisions')
     // and reads the fleet Account's OpenRouter token over the ITextTools binder (a contract lib).

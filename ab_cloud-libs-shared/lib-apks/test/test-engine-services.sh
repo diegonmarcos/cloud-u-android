@@ -36,7 +36,8 @@
 #       cal (Cloud Me and Cloud Agenda, engine-apk-split move 3), feed (SuperApp,
 #       move 4), news (Cloud News, move 5) and ml-l-image-mlkit (the image scan
 #       Drive, Mail, Camera, Media Center and Office reach through libs:ml-l-image,
-#       move 6) and calc (Cloud Calc, #767). An engine whose contract meta-data
+#       move 6), calc (Cloud Calc, #767) and ml-l-sound-yamnet (the sound identification
+#       Cloud Calc and Cloud Camera reach through libs:ml-l-sound, #798). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
@@ -51,7 +52,7 @@ BJ="$SHARED/lib-apks/build.json"
 GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
                 "$LIBS/news/src/main/AndroidManifest.xml" "$LIBS/calc/src/main/AndroidManifest.xml" \
-                "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" \
+                "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -181,7 +182,7 @@ for module in modules:
                 no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
                    "the moment the browser is up")
 
-for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -208,7 +209,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -333,8 +334,28 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
         && _applied "$R_IMGSVC" "$M_IMGSVC" 'BARCODE -> scanner' \
         && _red "E4 the typed engine lists ocr but its dispatch no longer answers it" engines "$MUT/libs" "$MUT/build.json"; }
 
+M_SNDMF="$MUT/libs/ml-l-sound-yamnet/src/main/AndroidManifest.xml"
+M_SNDSVC="$MUT/libs/ml-l-sound-yamnet/src/main/java/com/diegonmarcos/cloudlib/sound/SoundBackendService.kt"
+R_SNDSVC="$LIBS/ml-l-sound-yamnet/src/main/java/com/diegonmarcos/cloudlib/sound/SoundBackendService.kt"
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNDMF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" "$M_SNDMF" 'engine.VERSION' \
+        && _red "E8 #798 the sound engine Cloud Calc and Cloud Camera bind stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNDSVC" '        INFO -> info()
+' ''
+    python3 -c 'import sys; sys.exit(0 if "INFO -> info()" not in open(sys.argv[1]).read() else 1)' "$M_SNDSVC" \
+        && _applied "$R_SNDSVC" "$M_SNDSVC" 'CLASSIFY -> classifier' \
+        && _red "E4 #798 the sound engine lists info but its dispatch no longer answers it" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNDMF" 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' ''
+    _applied "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" "$M_SNDMF" 'android:exported="true"' \
+        && _red "E1 #798 the sound engine is exported without the signature guard" engines "$MUT/libs" "$MUT/build.json"; }
+
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
-[ "$MUTATIONS" -ge 19 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
+[ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))
 
 echo

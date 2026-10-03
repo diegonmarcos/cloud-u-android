@@ -1,0 +1,19 @@
+{
+  "_doc": "#798 THE PIN: the model files this engine ships beyond ML Kit's bundled ones, each downloaded once by ../ml-models.gradle's fetchModels, refused on a sha256 or byte-count mismatch, and staged as an APK asset under `asset` (lib-apks build.json::android.no_compress keeps .tflite stored, which ML Kit's LocalModel needs). Never committed: the hash is the identity. `detect` is the full-label classifier ML Kit object detection runs on every detected object (CustomObjectDetectorOptions over LocalModel): its labels come from the model's own metadata (`labels_entry`), so a box is named with one of 1000 ImageNet classes instead of ML Kit's five coarse ones. `input`/`output` are checked against the real file by lib-apks/test/test-ml-goldens.sh. A licence and its source are required.",
+  "models": {
+    "detect": {
+      "name": "EfficientNet-Lite0 int8 (ImageNet, 1000 classes) on ML Kit object detection",
+      "url": "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/image_classification/android/efficientnet_lite0_int8_2.tflite",
+      "sha256": "aa03e4017f54fd5c743bd397b0a3e136fab0942f9c7cd715064a31ca3e4fc996",
+      "bytes": 5434493,
+      "asset": "models/efficientnet_lite0_int8.tflite",
+      "labels_entry": "labels_without_background.txt",
+      "classes": 1000,
+      "input": { "shape": [1, 224, 224, 3], "dtype": "uint8" },
+      "output": { "shape": [1, 1000], "dtype": "uint8" },
+      "licence": "Apache-2.0",
+      "licence_source": "https://github.com/tensorflow/tpu/tree/master/models/official/efficientnet/lite (tensorflow/tpu, Apache License 2.0); class names are the ILSVRC-2012 (ImageNet) synset words",
+      "source": "TensorFlow Lite Task Library image-classification example (tfhub tensorflow/lite-model/efficientnet/lite0/int8/2)"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "_doc": "#798 THE ONE declaration of sound identification, shared by every app that compiles this contract (Cloud Calc's 'What is this sound?' and Cloud Camera's Sound mode): which routes exist, which is the default, what the on-device engine is asked for, how long a capture is, and which classes are good enough to tag a photo with. libs:ml-l-sound bakes it into BuildConfig (SOUND_CONFIG_B64); SoundConfig reads it and every classify request carries the `ml` block, so the engine (Cloud-Lib-Ml-L-Sound-Yamnet.apk) holds no thresholds of its own. Per device, each app keeps only the user's route (SoundPrefs).",
+  "_doc_routes": "ml = YAMNet (521 AudioSet classes) in the engine APK: fully offline, the default. openrouter = the app's own decision model asked about the measurements (Cloud Calc's build.json::jev.identify.sound): the engine has no network and no such route, so only an app that declares one offers it, and it stays optional.",
+  "default_route": "ml",
+  "routes": {
+    "ml": "On-device (YAMNet, offline)",
+    "openrouter": "OpenRouter decision model"
+  },
+  "_doc_ml": "top_k classes with a mean score of at least min_score are returned; a window whose best class scores segment_min or more joins the timeline; the engine reads at most max_ms of a clip.",
+  "ml": {
+    "top_k": 5,
+    "min_score": 0.05,
+    "segment_min": 0.3,
+    "max_ms": 30000
+  },
+  "_doc_capture": "How long the apps listen for one identification (default_ms, capped at max_ms) and at which rate they record. 16 kHz is the rate YAMNet reads, so no resampling happens on the common path.",
+  "capture": {
+    "default_ms": 3000,
+    "max_ms": 10000,
+    "sample_rate": 16000
+  },
+  "_doc_tags": "A photo is tagged with at most `max` ambient classes whose score is at least `min_score`.",
+  "tags": {
+    "max": 3,
+    "min_score": 0.2
+  }
+}

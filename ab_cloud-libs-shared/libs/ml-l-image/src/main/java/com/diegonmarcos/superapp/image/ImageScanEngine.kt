@@ -105,6 +105,18 @@ class ImageScanEngine(context: Context) {
     fun recognize(uri: Uri, request: org.json.JSONObject): Recognition = recognition(request) { ctx.contentResolver.openFileDescriptor(uri, "r") }
     fun recognize(bitmap: Bitmap, request: org.json.JSONObject): Recognition = recognition(request) { descriptorOf(bitmap) }
 
+    /**
+     * #798 live identification (RecognitionConfig.detectRequest): objects with boxes, labels and
+     * tracking ids, image labels, or text lines, always on device. A viewfinder frame crosses as a
+     * JPEG (a PNG of every frame costs more than the detection). Never throws.
+     */
+    fun detect(bitmap: Bitmap, request: org.json.JSONObject): Recognition = detection(request) { descriptorOf(bitmap, Bitmap.CompressFormat.JPEG) }
+    fun detect(file: File, request: org.json.JSONObject): Recognition = detection(request) { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY) }
+
+    private fun detection(request: org.json.JSONObject, open: () -> ParcelFileDescriptor?): Recognition =
+        runCatching { Recognition.parse(ask(DETECT, open, request.toString(), BuildConfig.IMAGE_DETECT_CONTRACT), RecognitionConfig.ML) }
+            .getOrElse { Recognition.failed(RecognitionConfig.ML, it.message ?: it.toString()) }
+
     private fun recognition(request: org.json.JSONObject, open: () -> ParcelFileDescriptor?): Recognition {
         val route = request.optString("route", RecognitionConfig.ML)
         return runCatching { Recognition.parse(ask(RECOGNIZE, open, request.toString(), BuildConfig.IMAGE_RECOGNIZE_CONTRACT), route) }
@@ -164,11 +176,11 @@ class ImageScanEngine(context: Context) {
         }
     }
 
-    /** A Bitmap has no descriptor: write it once as PNG into this app's cache, open it, unlink it. */
-    private fun descriptorOf(bitmap: Bitmap): ParcelFileDescriptor {
-        val tmp = File.createTempFile("scan", ".png", ctx.cacheDir)
+    /** A Bitmap has no descriptor: write it once (PNG unless told otherwise) into this app's cache, open it, unlink it. */
+    private fun descriptorOf(bitmap: Bitmap, format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG): ParcelFileDescriptor {
+        val tmp = File.createTempFile("scan", if (format == Bitmap.CompressFormat.PNG) ".png" else ".jpg", ctx.cacheDir)
         try {
-            tmp.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            tmp.outputStream().use { bitmap.compress(format, JPEG_QUALITY, it) }
             return ParcelFileDescriptor.open(tmp, ParcelFileDescriptor.MODE_READ_ONLY)
         } finally {
             tmp.delete()
@@ -185,8 +197,12 @@ class ImageScanEngine(context: Context) {
         const val OCR = "ocr"
         const val RECOGNIZE = "recognize"
         const val MODELS = "models"
+        const val DETECT = "detect"
 
         const val BIND_TIMEOUT_MS = 4000L
+
+        /** A live frame's JPEG quality (PNG ignores it): high enough for text mode to read small print. */
+        const val JPEG_QUALITY = 90
     }
 }
 

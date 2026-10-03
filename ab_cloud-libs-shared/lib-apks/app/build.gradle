@@ -102,6 +102,11 @@ android {
         }
     }
 
+    // #798 build.json::android.no_compress: ML Kit memory-maps a bundled .tflite, so it stays stored.
+    androidResources {
+        noCompress.addAll((buildJson.android?.no_compress ?: []) as List)
+    }
+
     packaging {
         resources {
             // See build.json::android._doc_packaging_excludes - one flavor's

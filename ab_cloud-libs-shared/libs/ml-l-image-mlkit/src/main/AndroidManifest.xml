@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- libs:ml-l-image-mlkit — the image-scan ENGINE (ZXing barcode decode + ML Kit OCR),
+<!-- libs:ml-l-image-mlkit — the image-scan ENGINE (ZXing barcode decode + ML Kit OCR; #772
+     recognition, contract 2; #798 live detection with a full-label classifier, contract 3),
      shipped only as Cloud-Lib-Ml-L-Image-Mlkit.apk (engine-apk-split move 6). Consumers
      compile libs:ml-l-image and bind this service with a file descriptor of the image. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -22,7 +23,7 @@
             </intent-filter>
             <meta-data
                 android:name="com.diegonmarcos.cloud.engine.CONTRACT"
-                android:value="2" />
+                android:value="3" />
         </service>
     </application>
 </manifest>

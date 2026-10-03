@@ -28,19 +28,25 @@ import java.io.ByteArrayOutputStream
  * one result shape) and models (the live decision-model catalogue for the route's picker),
  * both through scanWith, which carries a JSON request. INTERNET is this APK's since: only the
  * OpenRouter route and the catalogue use it, through libs:decisions over Android's resolver.
+ *
+ * #798 CONTRACT 3: detect (the [Detector]: objects with a full-label classifier and tracking ids,
+ * image labels, or text lines with boxes; fully on device), through scanWith.
  */
 class ImageScanBackendService : Service() {
 
     private val scanner by lazy { ImageScanner() }
-    private val recognizer by lazy { Recognizer(scanner, MlKitOnDevice(), UrlHttp, ::accountToken) }
+    private val onDevice by lazy { MlKitOnDevice() }
+    private val recognizer by lazy { Recognizer(scanner, onDevice, UrlHttp, ::accountToken) }
+    private val detector by lazy { Detector(scanner, onDevice) }
 
-    fun methodNames(): Array<String> = arrayOf(BARCODE, OCR, RECOGNIZE, MODELS)
+    fun methodNames(): Array<String> = arrayOf(BARCODE, OCR, RECOGNIZE, MODELS, DETECT)
 
     fun dispatch(method: String, image: ByteArray, request: String = "{}"): String = when (method) {
         BARCODE -> scanner.barcodeJson(image)
         OCR -> scanner.ocrJson(image)
         RECOGNIZE -> recognizer.json(image, request)
         MODELS -> models(JSONObject(request))
+        DETECT -> detector.json(image, request)
         else -> throw IllegalArgumentException("unknown method: $method")
     }
 
@@ -99,6 +105,7 @@ class ImageScanBackendService : Service() {
         const val OCR = "ocr"
         const val RECOGNIZE = "recognize"
         const val MODELS = "models"
+        const val DETECT = "detect"
 
         /** How long a first call waits for the text-tools bind before saying "no token". */
         const val ACCOUNT_WAIT_MS = 3000L

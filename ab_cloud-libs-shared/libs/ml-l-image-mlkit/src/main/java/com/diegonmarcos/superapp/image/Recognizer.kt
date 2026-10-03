@@ -164,13 +164,6 @@ internal class Recognizer(
         return "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
 
-    private fun fit(bmp: Bitmap, side: Int): Bitmap {
-        val longest = maxOf(bmp.width, bmp.height)
-        if (side <= 0 || longest <= side) return bmp
-        val s = side.toFloat() / longest
-        return Bitmap.createScaledBitmap(bmp, maxOf(1, (bmp.width * s).toInt()), maxOf(1, (bmp.height * s).toInt()), true)
-    }
-
     private fun JSONObject.stripDocs(): JSONObject = JSONObject().also { o -> keys().asSequence().filterNot { it.startsWith("_") }.forEach { o.put(it, get(it)) } }
 
     companion object {
@@ -194,4 +187,12 @@ internal class Recognizer(
         /** The id of the category choice in a request and its answers. */
         const val CATEGORY = "category"
     }
+}
+
+/** [bmp] scaled so its longest side is at most [side] (the same bitmap when it already fits); shared with [Detector]. */
+internal fun fit(bmp: Bitmap, side: Int): Bitmap {
+    val longest = maxOf(bmp.width, bmp.height)
+    if (side <= 0 || longest <= side) return bmp
+    val s = side.toFloat() / longest
+    return Bitmap.createScaledBitmap(bmp, maxOf(1, (bmp.width * s).toInt()), maxOf(1, (bmp.height * s).toInt()), true)
 }

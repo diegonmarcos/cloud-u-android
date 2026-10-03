@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:ml-l-sound — the contract half of sound identification (#798). No components: the
+     engine's service lives in Cloud-Lib-Ml-L-Sound-Yamnet.apk. This query merges into every
+     consumer, so the engine is visible to each of them on Android 11+ (engine-client.json). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="${soundEnginePackage}" />
+    </queries>
+</manifest>

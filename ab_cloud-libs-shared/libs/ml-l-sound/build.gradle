@@ -1,0 +1,78 @@
+// libs:ml-l-sound — the CONTRACT half of on-device sound identification (#798). Every consumer
+// (Cloud Calc, Cloud Camera) compiles THIS module; none compiles the engine. It holds the wire
+// (ISoundEngine.aidl), the client (SoundEngine) that hands the ENGINE (libs:ml-l-sound-yamnet,
+// Cloud-Lib-Ml-L-Sound-Yamnet.apk) a WAV file descriptor and reads JSON back, sound.json (THE
+// declaration) and the per-app route choice. The answer is libs:ml-l-image's Recognition, the
+// fleet's one result type for image and sound alike, hence the api edge. YAMNet and the TFLite
+// runtime live only in the engine APK, so an engine change ships that APK alone.
+plugins {
+    id 'com.android.library'
+    // Conditional, exactly like libs:ml-l-image: AGP 8 consumers need the Kotlin plugin applied.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+// The engine this client binds: engine-client.json beside this file, its package from the
+// constellation fleet manifest (the libs:ml-l-image shape, anchored on this module's own directory).
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.sound
+if (engineDecl == null) throw new GradleException("libs:ml-l-sound: engine-client.json::engines.sound is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:ml-l-sound: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:ml-l-sound: engine-client.json::engines.sound.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def soundEnginePackage     = engineFleet.package.toString()
+def soundEngineAction      = engineDecl.action.toString().replace('{package}', soundEnginePackage)
+def soundEngineMinContract = engineDecl.min_contract as int
+if (soundEngineMinContract < 1) throw new GradleException("libs:ml-l-sound: engines.sound.min_contract must be >= 1")
+def soundFile = new File(moduleDir, 'sound.json')
+def sound = new groovy.json.JsonSlurper().parse(soundFile)
+if (!sound.routes?.containsKey(sound.default_route))
+    throw new GradleException("libs:ml-l-sound: sound.json default_route '${sound.default_route}' is not one of its routes")
+if ((sound.capture?.default_ms ?: 0) <= 0 || sound.capture.default_ms > sound.capture.max_ms)
+    throw new GradleException("libs:ml-l-sound: sound.json capture.default_ms must be in 1..capture.max_ms")
+def soundConfigB64 = soundFile.text.bytes.encodeBase64().toString()
+
+android {
+    namespace 'com.diegonmarcos.superapp.sound'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "SOUND_ENGINE_PACKAGE",      "\"${soundEnginePackage}\""
+        buildConfigField "String", "SOUND_ENGINE_ACTION",       "\"${soundEngineAction}\""
+        buildConfigField "int",    "SOUND_ENGINE_MIN_CONTRACT", "${soundEngineMinContract}"
+        buildConfigField "String", "SOUND_CONFIG_B64",          "\"${soundConfigB64}\""
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [soundEnginePackage: soundEnginePackage]
+    }
+
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // The answer is a Recognition: one result type for image and sound.
+    api project(':libs:ml-l-image')
+}

@@ -11,6 +11,9 @@ import org.json.JSONObject
  * category probabilities as [labels], its extra questions as [answers]). Cloud Camera and Cloud
  * Calc render this one shape. [fellBack] says the OpenRouter route failed and on-device answered;
  * [reason] says why.
+ *
+ * #798 the SAME type answers live detection (each box's tracking [Box.id] and its next-best
+ * [Box.alts]) and sound identification (libs:ml-l-sound: labels over a clip, [segments] its timeline).
  */
 data class Recognition(
     val ok: Boolean,
@@ -30,9 +33,12 @@ data class Recognition(
     val width: Int,
     val height: Int,
     val error: String?,
+    val mode: String = "",
+    val segments: List<Segment> = emptyList(),
 ) {
     data class Label(val label: String, val p: Double)
-    data class Box(val label: String, val p: Double, val x: Int, val y: Int, val w: Int, val h: Int)
+    data class Box(val label: String, val p: Double, val x: Int, val y: Int, val w: Int, val h: Int, val id: Int? = null, val alts: List<Label> = emptyList())
+    data class Segment(val label: String, val p: Double, val startMs: Long, val endMs: Long)
     data class Colour(val hex: String, val name: String, val share: Double)
 
     companion object {
@@ -50,7 +56,8 @@ data class Recognition(
                 reason = o.optString("reason"),
                 labels = labels(o.optJSONArray("labels")),
                 boxes = o.optJSONArray("boxes")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
-                    .map { Box(it.optString("label"), it.optDouble("p", 0.0), it.optInt("x"), it.optInt("y"), it.optInt("w"), it.optInt("h")) },
+                    .map { Box(it.optString("label"), it.optDouble("p", 0.0), it.optInt("x"), it.optInt("y"), it.optInt("w"), it.optInt("h"),
+                        if (it.isNull("id")) null else it.optInt("id"), labels(it.optJSONArray("alts"))) },
                 text = o.optString("text"),
                 colours = o.optJSONArray("colours")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
                     .map { Colour(it.optString("hex"), it.optString("name"), it.optDouble("share", 0.0)) },
@@ -62,6 +69,9 @@ data class Recognition(
                 width = o.optInt("width"),
                 height = o.optInt("height"),
                 error = err,
+                mode = o.optString("mode"),
+                segments = o.optJSONArray("segments")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
+                    .map { Segment(it.optString("label"), it.optDouble("p", 0.0), it.optLong("start_ms"), it.optLong("end_ms")) },
             )
         }
 
@@ -86,6 +96,22 @@ object RecognitionConfig {
         decl.getJSONObject("routes").let { r -> r.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { r.getString(it) } }
 
     fun defaultModel(decl: JSONObject = json): String = decl.getJSONObject("openrouter").getString("default_model")
+
+    /** #798 the live-identification modes, in declared order, and the one a viewfinder opens in. */
+    fun detectModes(decl: JSONObject = json): List<String> = decl.getJSONObject("detect").getJSONArray("modes").let { a -> (0 until a.length()).map { a.getString(it) } }
+    fun defaultDetectMode(decl: JSONObject = json): String = decl.getJSONObject("detect").getString("default_mode")
+
+    /**
+     * #798 a detect request: the [mode], whether it is one of a [live] viewfinder's successive frames
+     * (stream mode, tracking ids, the smaller live_side) and the declaration's detect block. Always on
+     * device; the user's route applies to a saved photo through [request].
+     */
+    fun detectRequest(mode: String, live: Boolean, decl: JSONObject = json): JSONObject {
+        require(mode in detectModes(decl)) { "unknown detect mode $mode (one of ${detectModes(decl)})" }
+        val d = JSONObject(decl.getJSONObject("detect").toString())
+        if (live) d.put("max_side", d.getInt("live_side"))
+        return JSONObject().put("mode", mode).put("stream", live).put("detect", d)
+    }
 
     /**
      * What the engine is sent: the route, the model (a blank one means the declared default),

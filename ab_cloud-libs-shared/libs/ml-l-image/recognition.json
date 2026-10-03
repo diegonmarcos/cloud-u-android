@@ -15,6 +15,18 @@
     "ocr": true,
     "barcode": true
   },
+  "_doc_detect": "#798 live identification (detect, contract 3): always on device, whatever the route, because a decision model per camera frame is neither offline nor fast. objects = ML Kit object detection with the engine's full-label classifier (1000 ImageNet classes), up to max_objects boxes each with labels_per_object labels at or above min_confidence, tracking ids in stream mode; labels = ML Kit image labelling of the whole frame (max_labels); text = one box per recognised line. A frame is sized to max_side before detection (live_side for a viewfinder frame, which is smaller so the round trip stays under a few hundred ms); interval_ms is the shortest gap between two live frames a caller sends. The user's route applies to the photo a snapshot saves, through recognize.",
+  "detect": {
+    "modes": ["objects", "labels", "text"],
+    "default_mode": "objects",
+    "max_side": 1024,
+    "live_side": 480,
+    "interval_ms": 150,
+    "min_confidence": 0.4,
+    "max_objects": 5,
+    "labels_per_object": 3,
+    "max_labels": 8
+  },
   "colours": {
     "max": 5,
     "_doc_names": "The vocabulary a dominant colour is named in: the nearest by the redmean distance. Hex values are sRGB.",

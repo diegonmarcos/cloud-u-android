@@ -118,7 +118,10 @@ internal class ImageScanner {
             val segments = JSONArray()
             visionText.textBlocks.forEach { block ->
                 block.lines.forEach { line ->
-                    segments.put(JSONObject().put("text", line.text).put("confidence", line.confidence))
+                    segments.put(JSONObject().put("text", line.text).put("confidence", line.confidence).apply {
+                        // #798 where the line is, in the recognised bitmap's pixels (live text mode draws it).
+                        line.boundingBox?.let { r -> put("box", JSONObject().put("x", r.left).put("y", r.top).put("w", r.width()).put("h", r.height())) }
+                    })
                 }
             }
             JSONObject().put("text", visionText.text.orEmpty()).put("segments", segments).put("language",

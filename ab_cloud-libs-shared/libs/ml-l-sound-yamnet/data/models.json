@@ -1,0 +1,20 @@
+{
+  "_doc": "#798 THE PIN: the model files this engine ships, each downloaded once by build.gradle's fetchModels, refused on a sha256 or byte-count mismatch, and staged as an APK asset under `asset`. Never committed: the hash is the identity, and the file is the publisher's own. `labels_entry` is the label list inside the model's own metadata zip (read by libs:sound-tags ModelZip, so index -> name comes from the very file that scores). `input`/`output` are the tensors the engine feeds and reads, checked against the real file by lib-apks/test/test-ml-goldens.sh. A licence and its source are required: a model with no recorded licence is not shipped.",
+  "models": {
+    "yamnet": {
+      "name": "YAMNet (AudioSet, 521 classes)",
+      "url": "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/audio_classification/android/lite-model_yamnet_classification_tflite_1.tflite",
+      "sha256": "10c95ea3eb9a7bb4cb8bddf6feb023250381008177ac162ce169694d05c317de",
+      "bytes": 4126810,
+      "asset": "models/yamnet.tflite",
+      "labels_entry": "yamnet_label_list.txt",
+      "classes": 521,
+      "input": { "name": "waveform_binary", "shape": [15600], "dtype": "float32", "sample_rate": 16000, "range": [-1.0, 1.0] },
+      "output": { "shape": [1, 521], "dtype": "float32" },
+      "hop_samples": 7680,
+      "licence": "Apache-2.0",
+      "licence_source": "https://github.com/tensorflow/models/blob/master/research/audioset/yamnet/README.md (tensorflow/models, Apache License 2.0); class names from the AudioSet ontology (CC BY-SA 4.0, https://research.google.com/audioset/)",
+      "source": "TensorFlow Lite Task Library audio-classification example (tfhub google/lite-model/yamnet/classification/tflite/1)"
+    }
+  }
+}

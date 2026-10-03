@@ -1,0 +1,10 @@
+{
+  "_doc": "#798 THE ENGINE THIS CONTRACT MODULE'S CLIENT BINDS: on-device sound identification, Cloud-Lib-Ml-L-Sound-Yamnet.apk. Same shape as libs:ml-l-image's engine-client.json: `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which build.gradle resolves the package (an unknown id fails the build) into BuildConfig and the merged <queries>; `action` finds the service ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method SoundEngine calls, read through PackageManager BEFORE binding. Cloud Calc and Cloud Camera compile this module; neither compiles the engine.",
+  "engines": {
+    "sound": {
+      "fleet": "lib-ml-l-sound-yamnet",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  }
+}

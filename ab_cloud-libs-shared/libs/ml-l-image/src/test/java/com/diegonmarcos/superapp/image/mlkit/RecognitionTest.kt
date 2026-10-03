@@ -94,4 +94,37 @@ class RecognitionTest {
         }
         decl.getJSONObject("colours").getJSONObject("names").let { n -> n.keys().forEach { assertTrue(n.getString(it).matches(Regex("#[0-9A-Fa-f]{6}"))) } }
     }
+
+    @Test fun `a detection reads back its mode, tracking ids and alternatives, a sound answer its timeline`() {
+        val r = Recognition.parse(JSONObject().put("ok", true).put("route", "ml").put("mode", "objects")
+            .put("boxes", org.json.JSONArray()
+                .put(JSONObject().put("label", "suit").put("p", 0.7).put("x", 1).put("y", 2).put("w", 3).put("h", 4).put("id", 7)
+                    .put("alts", org.json.JSONArray().put(JSONObject().put("label", "suit").put("p", 0.7)).put(JSONObject().put("label", "bow tie").put("p", 0.1))))
+                .put(JSONObject().put("label", "object").put("p", 0.0).put("x", 0).put("y", 0).put("w", 1).put("h", 1).put("id", JSONObject.NULL)))
+            .put("segments", org.json.JSONArray().put(JSONObject().put("label", "Beep, bleep").put("p", 0.9).put("start_ms", 0).put("end_ms", 1935)))
+            .toString(), "ml")
+        assertEquals("objects", r.mode)
+        assertEquals(7, r.boxes[0].id)
+        assertEquals(listOf("suit", "bow tie"), r.boxes[0].alts.map { it.label })
+        assertNull("a box with no tracking id says so", r.boxes[1].id)
+        assertTrue(r.boxes[1].alts.isEmpty())
+        assertEquals(Recognition.Segment("Beep, bleep", 0.9, 0, 1935), r.segments.single())
+        assertTrue("an answer with no timeline has none", Recognition.parse("""{"ok":true}""", "ml").segments.isEmpty())
+    }
+
+    @Test fun `a detect request is on device, its mode declared, live frames streamed at live_side`() {
+        val modes = RecognitionConfig.detectModes(decl)
+        assertEquals(listOf("objects", "labels", "text"), modes)
+        assertTrue(RecognitionConfig.defaultDetectMode(decl) in modes)
+        val live = RecognitionConfig.detectRequest("objects", live = true, decl = decl)
+        assertEquals("objects", live.getString("mode"))
+        assertTrue(live.getBoolean("stream"))
+        assertEquals(decl.getJSONObject("detect").getInt("live_side"), live.getJSONObject("detect").getInt("max_side"))
+        assertFalse("detection never carries a route or a token", live.has("route") || live.has("token"))
+        val photo = RecognitionConfig.detectRequest("text", live = false, decl = decl)
+        assertFalse(photo.getBoolean("stream"))
+        assertEquals(decl.getJSONObject("detect").getInt("max_side"), photo.getJSONObject("detect").getInt("max_side"))
+        assertEquals("a live request copies the declaration, never edits it", 1024, decl.getJSONObject("detect").getInt("max_side"))
+        try { RecognitionConfig.detectRequest("faces", live = true, decl = decl); fail() } catch (e: IllegalArgumentException) { assertTrue(e.message!!.contains("faces")) }
+    }
 }

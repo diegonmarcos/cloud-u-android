@@ -1,0 +1,42 @@
+// libs:sound-tags — the arithmetic of on-device sound identification (#798), plain JVM so its
+// suite runs without Android and PIT mutation-tests it: RIFF/WAVE decoding to mono, resampling
+// to the model's rate, the model's analysis windows, the per-window scores averaged into the
+// top classes and merged into a timeline, the Recognition-shaped answer, and the label list a
+// TFLite model carries in its metadata zip. Compiled by the sound ENGINE only
+// (libs:ml-l-sound-yamnet, Cloud-Lib-Ml-L-Sound-Yamnet.apk); no app compiles it and it installs
+// nothing (lib-apks build.json::lib_apks.exclude).
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.superapp.soundtags.*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 80
+}
+
+tasks.named('test') { finalizedBy 'pitest' }

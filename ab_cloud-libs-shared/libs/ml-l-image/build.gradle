@@ -39,12 +39,17 @@ if (imageEngineMinContract < 1) throw new GradleException("libs:ml-l-image: engi
 // #772 recognize/models need contract 2; the floor for barcode/OCR stays min_contract.
 def imageRecognizeContract = (engineDecl.method_contracts?.recognize ?: 0) as int
 if (imageRecognizeContract < imageEngineMinContract) throw new GradleException("libs:ml-l-image: engines.image.method_contracts.recognize must be >= min_contract")
+// #798 detect (live identification) needs contract 3.
+def imageDetectContract = (engineDecl.method_contracts?.detect ?: 0) as int
+if (imageDetectContract < imageRecognizeContract) throw new GradleException("libs:ml-l-image: engines.image.method_contracts.detect must be >= recognize's")
 // #772 THE image-recognition declaration (recognition.json beside this file), baked whole for
 // RecognitionConfig; a route without an https endpoint would send the token in clear.
 def recognitionFile = new File(moduleDir, 'recognition.json')
 def recognition = new groovy.json.JsonSlurper().parse(recognitionFile)
 if (!(recognition.openrouter?.endpoint ?: '').startsWith('https://') || !(recognition.openrouter?.models_url ?: '').startsWith('https://'))
     throw new GradleException("libs:ml-l-image: recognition.json openrouter endpoint and models_url must be https")
+if (!(recognition.detect?.modes ?: []).contains(recognition.detect?.default_mode))
+    throw new GradleException("libs:ml-l-image: recognition.json detect.default_mode '${recognition.detect?.default_mode}' is not one of detect.modes")
 if (!recognition.routes?.containsKey(recognition.default_route))
     throw new GradleException("libs:ml-l-image: recognition.json default_route '${recognition.default_route}' is not one of its routes")
 def imageRecognitionB64 = recognitionFile.text.bytes.encodeBase64().toString()
@@ -59,6 +64,7 @@ android {
         buildConfigField "String", "IMAGE_ENGINE_ACTION",       "\"${imageEngineAction}\""
         buildConfigField "int",    "IMAGE_ENGINE_MIN_CONTRACT", "${imageEngineMinContract}"
         buildConfigField "int",    "IMAGE_RECOGNIZE_CONTRACT",  "${imageRecognizeContract}"
+        buildConfigField "int",    "IMAGE_DETECT_CONTRACT",     "${imageDetectContract}"
         buildConfigField "String", "IMAGE_RECOGNITION_B64",     "\"${imageRecognitionB64}\""
         // Resolved in THIS library's manifest (ProcessLibraryManifest merges with the
         // library's own placeholders), so every consumer's merged manifest queries the

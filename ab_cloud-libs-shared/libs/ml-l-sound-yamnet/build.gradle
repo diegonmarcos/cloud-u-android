@@ -1,0 +1,85 @@
+// libs:ml-l-sound-yamnet — the ONE on-device sound identification ENGINE (#798), shipped only as
+// Cloud-Lib-Ml-L-Sound-Yamnet.apk. YAMNet (521 AudioSet classes) runs here, on the LiteRT (TFLite)
+// interpreter, inside this APK's process; Cloud Calc and Cloud Camera compile the CONTRACT half
+// (libs:ml-l-sound: the ISoundEngine wire and the client) and hand this engine a WAV descriptor.
+// So no app links TFLite or carries the model, and an edit here republishes this APK alone. Do
+// not add this module to an app's module map: the engine contract guard's K6 fails it.
+//
+// THE MODEL IS A PINNED DOWNLOAD, NEVER COMMITTED: data/models.json names its URL, sha256, byte
+// count and licence; ../ml-models.gradle downloads it once, refuses a mismatch, and stages it as an
+// asset. A pin that cannot be met is a build failure, never an engine APK with no model in it.
+//
+// NO COMPOSE, NO VIEWS: an engine renders nothing (#763 lib-classes L2).
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// The pinned models, fetched and verified by the engines' one shared script.
+apply from: '../ml-models.gradle'
+def yamnet = models.yamnet
+if (yamnet == null) throw new GradleException("libs:ml-l-sound-yamnet: data/models.json declares no yamnet model")
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.sound'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
+        buildConfigField "String", "YAMNET_ASSET",  "\"${yamnet.asset}\""
+        buildConfigField "String", "YAMNET_NAME",   "\"${yamnet.name}\""
+        buildConfigField "String", "YAMNET_LABELS", "\"${yamnet.labels_entry}\""
+        buildConfigField "int",    "YAMNET_WINDOW", "${yamnet.input.shape[0]}"
+        buildConfigField "int",    "YAMNET_RATE",   "${yamnet.input.sample_rate}"
+        buildConfigField "int",    "YAMNET_HOP",    "${yamnet.hop_samples}"
+        buildConfigField "int",    "YAMNET_CLASSES", "${yamnet.classes}"
+    }
+
+    sourceSets {
+        main { assets.srcDirs += modelAssetsDir }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                // The suite reads the real, verified model file (its label list and size).
+                systemProperty 'yamnet.model', new File(modelAssetsDir, yamnet.asset).path
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // LiteRT 1.4.0: org.tensorflow.lite.Interpreter, its .so 16 KB-aligned (checked on the aar's
+    // arm64-v8a libtensorflowlite_jni.so: every LOAD segment aligned 16384).
+    implementation 'com.google.ai.edge.litert:litert:1.4.0'
+    // The windows, the averaging, the WAV decoding and the label list: plain JVM, PIT-tested.
+    implementation project(':libs:sound-tags')
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
+    implementation project(':libs:core')
+    // The wire (ISoundEngine) this service implements.
+    implementation project(':libs:ml-l-sound')
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

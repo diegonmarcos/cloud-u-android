@@ -1,0 +1,13 @@
+{
+  "_doc": "#798 what the pinned YAMNet (data/models.json::models.yamnet) must answer for synthetic golden clips, checked against the REAL model through LiteRT's runtime by lib-apks/test/test-ml-goldens.sh. Clips are generated, not recorded, so no audio of unknown licence is shipped: tone [Hz, amplitude, seconds], silence [seconds], noise [amplitude, seconds, seed]; each is one model window (0.975 s) unless longer. `replay` regenerates the clip the JVM suite (ClassifierTest) replays and holds every window's recorded scores to the model's answer now, so the JVM golden cannot drift from the model it stands for.",
+  "clips": [
+    { "name": "1 kHz tone", "parts": [{ "tone": [1000, 0.5, 0.975] }], "top1": ["Beep, bleep", "Sine wave"] },
+    { "name": "silence", "parts": [{ "silence": 0.975 }], "top1": ["Silence"] },
+    { "name": "white noise", "parts": [{ "noise": [0.3, 0.975, 7] }], "top1": ["Static", "Noise", "White noise"] }
+  ],
+  "replay": {
+    "file": "tone_then_silence.json",
+    "parts": [{ "tone": [1000, 0.5, 1.5] }, { "silence": 1.5 }],
+    "tolerance": 0.0001
+  }
+}
