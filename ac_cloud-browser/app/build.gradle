@@ -56,6 +56,9 @@ def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
 // libs:browser is shared by reference and its own defaults pin NOTHING,
 // so this block is the only thing that puts tabs in THIS app's browser.
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
+// #802 the /api/<group>/* name this app's routes register under (cloud-search's shape).
+def debugGroup = (buildJson.ui?.debug_api?.group ?: '').toString()
+if (!debugGroup) throw new GradleException("build.json::ui.debug_api.group missing — /api/<group>/* would register under no name")
 // #684 THE AUTH-MISSION CONTRACT cloud-browser ANSWERS. It is declared once, by libs:auth
 // (ab_cloud-libs-shared/build.json::auth.browser_mission); this is the FLEET'S browser, so it
 // reads the same block and bakes it (with {package} resolved to this app) so AuthMissionActivity
@@ -186,6 +189,7 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_BROWSER_CONFIG_B64",      "\"${uiBrowserConfigB64}\""
+        buildConfigField "String", "DEBUG_API_GROUP",           "\"${debugGroup}\""
         buildConfigField "String", "AUTH_MISSION_B64",          "\"${authMissionB64}\""
         // #684 the manifest cannot read JSON; the declared action and signature permission are
         // injected as placeholders so the guarded activity and its intent-filter are data-driven.

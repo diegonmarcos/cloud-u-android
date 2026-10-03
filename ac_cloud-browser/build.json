@@ -97,6 +97,83 @@
           "label": "Google",
           "template": "https://www.google.com/search?q={q}"
         }
+      ],
+      "_doc_settings": "#802 THE SETTINGS CATALOGUE: every user setting, declared once. libs:browser BrowserSettingsCatalogue parses it (baked inside UI_BROWSER_CONFIG_B64 with the rest of this block), BrowserSettings stores the user's choice in the `browser_settings` prefs (declared in the fleet manifest, so FleetConfig moves every key to a new phone), /api/browser/settings* serve and set it, and ./build.sh catalogue renders docs/settings-catalogue.md from it. type: bool|int|string|enum|set; class: config (migrates) | device (stays). values_from: search_engines takes the enum and its default from search_engines/default_engine above. A key is only declared once something reads it (test-browser-settings-catalogue.sh holds that).",
+      "settings": [
+        {
+          "key": "search_engine_id",
+          "type": "enum",
+          "values_from": "search_engines",
+          "label": "Search engine",
+          "section": "general",
+          "class": "config",
+          "doc": "Where a typed query that is not a URL goes."
+        },
+        {
+          "key": "homepage",
+          "type": "string",
+          "default": "",
+          "label": "Homepage",
+          "section": "general",
+          "class": "config",
+          "doc": "What an empty New tab opens. Empty = nothing (the dialog just closes)."
+        },
+        {
+          "key": "restore_tabs_on_start",
+          "type": "bool",
+          "default": false,
+          "label": "Reopen last tab on launch",
+          "section": "general",
+          "class": "config",
+          "doc": "Launch into the last active tab instead of the tab grid."
+        },
+        {
+          "key": "desktop_mode",
+          "type": "bool",
+          "default": false,
+          "label": "Desktop site",
+          "section": "page",
+          "class": "config",
+          "doc": "Desktop user agent + wide viewport for every page."
+        },
+        {
+          "key": "text_zoom",
+          "type": "int",
+          "default": 100,
+          "min": 50,
+          "max": 200,
+          "label": "Text size (%)",
+          "section": "page",
+          "class": "config",
+          "doc": "WebSettings.textZoom, in percent."
+        },
+        {
+          "key": "javascript",
+          "type": "bool",
+          "default": true,
+          "label": "JavaScript",
+          "section": "privacy",
+          "class": "config",
+          "doc": "Run page scripts. Off breaks most sites; per-site shields come later."
+        },
+        {
+          "key": "load_images",
+          "type": "bool",
+          "default": true,
+          "label": "Load images",
+          "section": "privacy",
+          "class": "config",
+          "doc": "Off saves data on metered networks."
+        },
+        {
+          "key": "block_third_party_cookies",
+          "type": "bool",
+          "default": false,
+          "label": "Block third-party cookies",
+          "section": "privacy",
+          "class": "config",
+          "doc": "CookieManager.setAcceptThirdPartyCookies(false) on every page."
+        }
       ]
     },
     "profile_default": {
@@ -135,7 +212,11 @@
         }
       ],
       "roles": []
-    }
+    },
+    "debug_api": {
+      "group": "browser"
+    },
+    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
   },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed the browser had NO tests at all and its ship workflow asserted only that Gradle exited 0.",

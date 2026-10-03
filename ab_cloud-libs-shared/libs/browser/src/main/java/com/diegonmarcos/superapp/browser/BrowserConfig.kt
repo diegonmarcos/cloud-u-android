@@ -31,6 +31,8 @@ data class BrowserConfig(
     val defaultPinnedTabs: List<String>,
     val engines: List<BrowserSearchEngine>,
     val defaultEngineId: String,
+    /** #802 the user settings this app offers; empty = WebView defaults, nothing offered. */
+    val settings: BrowserSettingsCatalogue = BrowserSettingsCatalogue.EMPTY,
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -97,10 +99,14 @@ data class BrowserConfig(
                 }
             }
 
+            val finalEngines = if (engines.isEmpty()) DEFAULT.engines else engines
+            val defaultId = o.optString("default_engine", DEFAULT.defaultEngineId)
             return BrowserConfig(
                 defaultPinnedTabs = pins,
-                engines = if (engines.isEmpty()) DEFAULT.engines else engines,
-                defaultEngineId = o.optString("default_engine", DEFAULT.defaultEngineId),
+                engines = finalEngines,
+                defaultEngineId = defaultId,
+                settings = BrowserSettingsCatalogue.parse(
+                    o.optJSONArray("settings"), finalEngines.map { it.id }, defaultId),
             )
         }
 

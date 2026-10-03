@@ -57,8 +57,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
     override fun suppressHorizontalSwipe(): Boolean = mode is Mode.DETAIL
     override fun suppressVerticalSwipe(): Boolean = mode is Mode.DETAIL
 
-    /** Desktop-mode toggle — WebView UA + width override + initial scale. */
-    private var desktopMode: Boolean = false
+    /** Desktop-mode toggle — WebView UA + width override + initial scale. #802 persisted
+     *  as the catalogue's `desktop_mode`, so it survives a restart and moves with the Account. */
+    private val desktopMode: Boolean get() = browserSettings.bool("desktop_mode") == true
 
     private lateinit var prefs: BrowserTabPrefs
     private lateinit var history: BrowserHistory
@@ -81,8 +82,8 @@ class BrowserHostFragment : Fragment(), Collapsible,
         val ctx = inflater.context
         prefs = BrowserTabPrefs(ctx)
         history = BrowserHistory(ctx)
-        browserSettings = BrowserSettings(ctx)
         config = BrowserConfig.parseBase64(arguments?.getString(ARG_CONFIG_B64))
+        browserSettings = BrowserSettings(ctx, config.settings)
 
         // FIRST RUN ONLY, and only with what the app configured. A library
         // default of zero tabs means an app that supplies nothing gets
@@ -102,13 +103,35 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
 
         val openUrl = arguments?.getString(ARG_OPEN_URL)
+        val restore = prefs.activeUrl().takeIf { browserSettings.bool("restore_tabs_on_start") == true }
         if (!openUrl.isNullOrBlank()) {
             prefs.add(openUrl, openUrl); prefs.setActive(openUrl)
             showDetail(openUrl)
+        } else if (!restore.isNullOrBlank() && prefs.all().any { it.url == restore }) {
+            showDetail(restore)
         } else {
             showGrid()
         }
         return rootContainer
+    }
+
+    /** #802 a write from outside the screen (debug route, fleet import) shows up live. */
+    override fun onResume() {
+        super.onResume()
+        BrowserBus.listener = { change -> if (isAdded) onBusChange(change) }
+    }
+
+    override fun onPause() {
+        BrowserBus.listener = null
+        super.onPause()
+    }
+
+    private fun onBusChange(change: String) {
+        when {
+            change == BrowserBus.SETTINGS -> webView?.let { applySettings(it); it.reload() }
+            change == BrowserBus.TABS -> if (mode is Mode.GRID) showGrid()
+            change.startsWith(BrowserBus.OPEN) -> navigateTo(change.removePrefix(BrowserBus.OPEN))
+        }
     }
 
     override fun toggleAllCollapsed(): Boolean {
@@ -257,9 +280,11 @@ class BrowserHostFragment : Fragment(), Collapsible,
             .show()
     }
 
-    /** Resolve what was typed to a destination, open it as a new tab. */
+    /** Resolve what was typed to a destination, open it as a new tab.
+     *  Nothing typed opens the `homepage` setting, when he has set one. */
     private fun openEntry(raw: String) {
-        val url = BrowserSearch.resolve(raw, engine())
+        val typed = raw.ifBlank { browserSettings.string("homepage").orEmpty() }
+        val url = BrowserSearch.resolve(typed, engine())
         if (url.isBlank()) return
         prefs.add(url, url)
         prefs.setActive(url)
@@ -412,7 +437,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
-            applyViewMode(this)
+            applySettings(this)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
             webViewClient = object : WebViewClient() {
@@ -540,6 +565,18 @@ class BrowserHostFragment : Fragment(), Collapsible,
         return md.digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(40)
     }
 
+    /** #802 the catalogue's page settings onto [wv]. An undeclared key leaves WebView's own. */
+    private fun applySettings(wv: WebView) {
+        val s = wv.settings
+        browserSettings.bool("javascript")?.let { s.javaScriptEnabled = it }
+        browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
+        browserSettings.int("text_zoom")?.let { s.textZoom = it }
+        browserSettings.bool("block_third_party_cookies")?.let {
+            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, !it)
+        }
+        applyViewMode(wv)
+    }
+
     private fun applyViewMode(wv: WebView) {
         val s = wv.settings
         if (desktopMode) {
@@ -579,10 +616,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
                 miEngine -> showEnginePicker(anchor)
                 miExt -> openInExternalBrowser(url)
                 miReload -> webView?.reload()
-                miView -> {
-                    desktopMode = !desktopMode
-                    webView?.let { applyViewMode(it); it.reload() }
-                }
+                miView -> browserSettings.put("desktop_mode", !desktopMode)
                 miCopy -> {
                     val clip = ctx.getSystemService(Context.CLIPBOARD_SERVICE)
                         as? android.content.ClipboardManager

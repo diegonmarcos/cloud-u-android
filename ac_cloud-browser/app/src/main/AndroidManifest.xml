@@ -68,6 +68,12 @@
             </intent-filter>
         </activity>
 
+        <!-- #802 registers /api/browser/* on the fleet debug server. Not exported, not a real provider. -->
+        <provider
+            android:name=".debugapi.BrowserDebugApiProvider"
+            android:authorities="${applicationId}.browserdebugapi"
+            android:exported="false" />
+
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />

@@ -23,6 +23,7 @@
 # ║   waydroid-install build + install APK into running Waydroid       ║
 # ║   emulator    boot arm64 AVD (full-fidelity test; then `ship`)     ║
 # ║   gh-release  attach APK to GitHub Release (release.gh_release)   ║
+# ║   catalogue   render docs/settings-catalogue.md from build.json    ║
 # ║                                                                  ║
 # ║ NEVER bypass this script for build operations.                    ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -266,6 +267,8 @@ step_test() {
 }
 step_instrument() { log "Test: instrumented (needs device)"; _resolve_signing; in_nix gradle connectedAndroidTest; }
 step_lint()       { log "Lint"; _resolve_signing; in_nix gradle lint; }
+# #802 docs/settings-catalogue.md, rendered from build.json::ui.browser.settings.
+step_catalogue()  { log "Settings catalogue"; python3 "$SCRIPT_DIR/test/browser_tester.py" catalogue > "$SCRIPT_DIR/docs/settings-catalogue.md"; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }
 step_shell()      { log "Entering Nix devShell"; exec nix develop "$SCRIPT_DIR"; }
 
@@ -687,6 +690,7 @@ case "$CMD" in
   waydroid-install) step_waydroid_install "$@" ;;
   emulator)     step_emulator "$@" ;;
   gh-release)   step_gh_release ;;
+  catalogue)    step_catalogue ;;
   help|*)
     sed -n '2,/^set -euo/p' "$0" | sed 's/^# *//; /^set/d; /^$/d'
     ;;

@@ -20,7 +20,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
-| cloud-browser | `com.diegonmarcos.cloudbrowser` | 5 | 0 | 100% |
+| cloud-browser | `com.diegonmarcos.cloudbrowser` | 6 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 10 | 0 | 100% |
@@ -46,7 +46,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **158** | **35** | **81%** |
+| **fleet** | | **159** | **35** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -200,7 +200,7 @@ Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devto
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `browser_history` | prefs | content | no | Browsing history entries the user accumulated. |
-| `browser_settings` | prefs | config | yes | Chosen default search engine id. |
+| `browser_settings` | prefs | config | yes | #802 the browser's settings catalogue (ac_cloud-browser/build.json::ui.browser.settings): search engine, homepage, desktop site, text size, JavaScript, images, third-party cookies; one typed key per declared setting. Served by /api/browser/settings. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -210,9 +210,9 @@ Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devto
 
 | file | class | doc |
 |---|---|---|
-| `-` | device | keeps no configuration of its own; uses libs:browser, libs:auth, libs:core, libs:updater, libs:analytics (browser state lives in the lib). |
+| `browser_settings` | config | #802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them. |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 

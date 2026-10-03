@@ -226,7 +226,7 @@
   "browser_settings": {
    "kind": "prefs",
    "class": "config",
-   "doc": "Chosen default search engine id.",
+   "doc": "#802 the browser's settings catalogue (ac_cloud-browser/build.json::ui.browser.settings): search engine, homepage, desktop site, text size, JavaScript, images, third-party cookies; one typed key per declared setting. Served by /api/browser/settings.",
    "used_by": [
     "lib-browser"
    ]
@@ -1789,10 +1789,11 @@
    ],
    "items": [
     {
-     "id": "none",
-     "path": "-",
-     "class": "device",
-     "doc": "keeps no configuration of its own; uses libs:browser, libs:auth, libs:core, libs:updater, libs:analytics (browser state lives in the lib)."
+     "id": "settings",
+     "path": "browser_settings",
+     "store": "browser_settings",
+     "class": "config",
+     "doc": "#802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them."
     }
    ]
   },
