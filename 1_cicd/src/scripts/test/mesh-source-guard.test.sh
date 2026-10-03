@@ -71,13 +71,15 @@ mutate "mail drops updater, its only route to core" "$MAIL" \
 mutate "core stops exporting devtools" "$CORE" \
     "s=s.replace(\"api project(':libs:devtools')\", '', 1)" \
     "G1 dependency closure lacks libs:devtools"
+# #836: writer is not core's primary consumer, so core is a DEFERRED input of
+# its workflow (a fenced `#   input:` line: hashed, refreshed, not push-watched).
 mutate "writer's ship workflow stops watching core" "$WRITER_WF" \
-    "s=s.replace('      - \"ab_cloud-libs-shared/libs/core/**\"\n', '', 1)" \
+    "s=s.replace('      #   input: \"ab_cloud-libs-shared/libs/core/**\"\n', '', 1)" \
     "writer           G2 ship-cloud-writer.yml does not watch ab_cloud-libs-shared/libs/core/**"
 # #763 G2 is two-sided: watching a lib the app does not compile rebuilds and
 # republishes it for nothing (vault watched analytics, browser and updater).
 mutate "writer's ship workflow watches a lib writer does not compile" "$WRITER_WF" \
-    "s=s.replace('      - \"ab_cloud-libs-shared/libs/core/**\"\n', '      - \"ab_cloud-libs-shared/libs/core/**\"\n      - \"ab_cloud-libs-shared/libs/fin/**\"\n', 1)" \
+    "s=s.replace('      #   input: \"ab_cloud-libs-shared/libs/core/**\"\n', '      #   input: \"ab_cloud-libs-shared/libs/core/**\"\n      - \"ab_cloud-libs-shared/libs/fin/**\"\n', 1)" \
     "writer           G2 ship-cloud-writer.yml watches ab_cloud-libs-shared/libs/fin/** which"
 mutate "core stops requesting CONSTELLATION_DATA" "$CORE_MF" \
     "s=re.sub(r'<uses-permission[^>]*CONSTELLATION_DATA\"\s*/>', '', s, count=1)" \
