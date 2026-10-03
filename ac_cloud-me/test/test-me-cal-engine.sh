@@ -240,8 +240,9 @@ import org.json.JSONArray'
         && _red "M1 the tab imports the cal library again" m1 "$BJ" "$GRADLE" "$MUT/java" "$WF"; }
 cp "$WF" "$MUT/wf.yml"
 _green m1 m1 "$BJ" "$GRADLE" "$MAIN" "$MUT/wf.yml" && {
-    _sub "$MUT/wf.yml" '      - "ab_cloud-libs-shared/libs/core/**"' '      - "ab_cloud-libs-shared/libs/cal/**"
-      - "ab_cloud-libs-shared/libs/core/**"'
+    # #836 libs/core is a deferred (commented) input now; anchor on the push-watched fin lib.
+    _sub "$MUT/wf.yml" '      - "ab_cloud-libs-shared/libs/fin/**"' '      - "ab_cloud-libs-shared/libs/cal/**"
+      - "ab_cloud-libs-shared/libs/fin/**"'
     _applied "$WF" "$MUT/wf.yml" 'libs/cal/**' && _red "M1 the ship workflow watches libs/cal again" m1 "$BJ" "$GRADLE" "$MAIN" "$MUT/wf.yml"; }
 # M2 — the declaration rots
 cp "$BJ" "$MUT/b.json"
