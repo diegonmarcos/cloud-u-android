@@ -30,6 +30,9 @@ class GitStatusReaderTest {
     @Before fun setUp() { tmp = Files.createTempDirectory("git-status-reader").toFile() }
     @After fun tearDown() { release.countDown(); tmp.deleteRecursively() }
 
+    /** A probe that ignores interrupts until released — what a JGit walk can do. */
+    private fun hang() { while (release.count > 0) try { release.await() } catch (_: InterruptedException) {} }
+
     private fun clone(name: String): GitStatusReader.Target {
         val d = File(tmp, name); File(d, ".git").mkdirs(); return GitStatusReader.Target(name, d)
     }
@@ -39,7 +42,7 @@ class GitStatusReaderTest {
 
     @Test fun hangingStatusEndsInTimeoutErrorAndDoesNotHoldTheOthers() = runBlocking {
         val reader = GitStatusReader(
-            probe = { dir -> if (dir.name == "huge") { release.await(); probe() } else probe(ahead = 2) },
+            probe = { dir -> if (dir.name == "huge") { hang(); probe() } else probe(ahead = 2) },
             timeoutMs = 300, concurrency = 1, ttlMs = 60_000,
         )
         val targets = listOf(clone("huge"), clone("a"), clone("b"))
@@ -56,7 +59,7 @@ class GitStatusReaderTest {
     @Test fun aStuckProbeIsNeverStartedTwice() = runBlocking {
         val calls = AtomicInteger()
         val reader = GitStatusReader(
-            probe = { calls.incrementAndGet(); release.await(); probe() },
+            probe = { calls.incrementAndGet(); hang(); probe() },
             timeoutMs = 100, concurrency = 2, ttlMs = 0,
         )
         val t = listOf(clone("stuck"))

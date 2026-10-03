@@ -481,8 +481,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             GitStatusReader.Probe(s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState)
         }
 
-        const val PREFS_PAGE = "git-page"
-        const val KEY_AUTO_PULL = "auto_pull_on_open"
+        const val PREFS_PAGE = "cloud-drive-prefs"
+        const val KEY_AUTO_PULL = "git.auto_pull_on_open"
         const val TRIGGER_OPEN = "open"
         const val AUTO_PULL_GO = "go"
         const val AUTO_PULL_OFF = ""
