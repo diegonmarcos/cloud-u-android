@@ -71,10 +71,20 @@ object ApkDetailSheet {
 
         // Direct install + App settings, in the order and wording
         // appstore-fleet-actions.json declares.
+        // App settings only for an INSTALLED package: Android's page for an
+        // absent package shows nothing, so the button is not drawn at all.
         val actions = card(ctx); pane.addView(actions)
         actions.addView(blockTitle(ctx, "Actions"))
-        for (a in FleetActions.details(ctx))
+        for (a in FleetActions.details(ctx)) {
+            if (a.id == "app_settings" && Fleet.installedId(ctx, app) == null) continue
             actions.addView(action(ctx, a.label, a.detail) { detailAction(activity, app, a) })
+        }
+
+        // #678 the libs this app uses — its own build.json declares them
+        // (Fleet.App.libs / engineLibs, carried by regen.sh). Each names the
+        // lib's own fleet row and opens that row's Details.
+        val libs = card(ctx); pane.addView(libs)
+        renderLibs(activity, libs, app)
 
         pane.addView(note(ctx,
             "INSTALLED is read straight from PackageManager. AVAILABLE's size/timestamp/sha256 " +
@@ -138,6 +148,27 @@ object ApkDetailSheet {
     }
 
     private fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+
+    // ── LIBS ─────────────────────────────────────────────────────────────
+
+    /** Linked libs (compiled in: nothing to install for this app) and bound
+     *  engines (installed separately), each resolved to its own fleet row. */
+    private fun renderLibs(activity: FragmentActivity, into: LinearLayout, app: Fleet.App) {
+        val ctx: Context = activity
+        into.addView(blockTitle(ctx, "Libs"))
+        val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64).associateBy { it.id }
+        fun group(title: String, ids: List<String>, how: String) {
+            into.addView(note(ctx, "$title — $how"))
+            if (ids.isEmpty()) { into.addView(note(ctx, "none declared in ${app.label}'s build.json")); return }
+            for (id in ids) {
+                val row = fleet[id]
+                if (row == null) into.addView(kv(ctx, "cloud-$id", "no Store row for $id"))
+                else into.addView(action(ctx, row.label, "its Store row's Details") { show(activity, row, null) })
+            }
+        }
+        group("Compiled in", app.libs, "linked into this APK, nothing to install for it")
+        group("Installed separately", app.engineLibs, "bound at runtime, its own APK must be installed")
+    }
 
     // ── INSTALLED ────────────────────────────────────────────────────────
 

@@ -81,6 +81,13 @@ object Fleet {
         // substituting a number from somewhere else.
         val declaredVersionName: String? = null,
         val declaredVersionCode: Long = 0L,
+        // #678 the libs this app LINKS (fleet ids, lib-<module>), from its own
+        // build.json::modules.app.depends_on via data/regen.sh — compiled in by
+        // definition, so never presented as something to install for this app.
+        val libs: List<String> = emptyList(),
+        // The engines it BINDS at runtime (fleet ids), from build.json::engines
+        // (#728) — the libs that must be installed separately.
+        val engineLibs: List<String> = emptyList(),
     ) {
         /**
          * [releaseUrl] with its asset filename swapped for THIS device's ABI
@@ -153,6 +160,13 @@ object Fleet {
                     kind = o.optString("kind", "app").takeIf { it.isNotEmpty() } ?: "app",
                     declaredVersionName = o.optString("version_name").takeIf { it.isNotEmpty() },
                     declaredVersionCode = o.optLong("version_code", 0L),
+                    libs = o.optJSONArray("libs")?.let { a ->
+                        (0 until a.length()).map { a.optString(it) }.filter { it.isNotEmpty() }
+                    } ?: emptyList(),
+                    engineLibs = o.optJSONArray("engines")?.let { a ->
+                        (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("fleet") }
+                            .filter { it.isNotEmpty() }.distinct()
+                    } ?: emptyList(),
                 )
             }
         } catch (t: Throwable) {

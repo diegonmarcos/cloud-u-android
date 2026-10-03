@@ -128,6 +128,18 @@ regen_constellation() {
                     min_contract: .value.min_contract }) ) as $e
         | if ($e | length) > 0 then { engines: $e } else {} end'
 
+    # #678 THE LIBS AN APP LINKS, carried onto its own fleet row. Store ▸ Cloud
+    # ▸ Details lists them, so the list is the app's own
+    # build.json::modules.app.depends_on (the gradle project edges — compiled
+    # in by definition) and never a list in Kotlin. Emitted as fleet ids
+    # (lib-<module>), the id the lib's own Libs row carries. Engines installed
+    # separately are the `engines` above, not this.
+    local libdeps='
+        ( [ (.modules.app.depends_on // [])[]
+            | select(type == "string" and startswith("libs:"))
+            | "lib-" + ltrimstr("libs:") ] ) as $l
+        | if ($l | length) > 0 then { libs: $l } else {} end'
+
     # Scan EVERY sibling repo's build.json, not just ac_cloud-*/. Membership is a
     # property of the DATA, not of the directory name: a dir self-registers as a
     # top-level app (.android.application_id + .release.ghcr), a multi-lib repo
@@ -282,6 +294,7 @@ regen_constellation() {
                              kind: (.release.kind // "app") }
                              + ('"$vers"')
                              + ('"$engines"')
+                             + ('"$libdeps"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         elif jq -e '(.forks // {}) | to_entries
                     | map(select(.key != "_doc" and (.value|type=="object")))
@@ -340,6 +353,7 @@ regen_constellation() {
                              kind: (.release.kind // "app") }
                              + ('"$vers"')
                              + ('"$engines"')
+                             + ('"$libdeps"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         fi
     done
