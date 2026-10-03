@@ -33,11 +33,12 @@
       ]
     },
     "fork-engine-guard.yml": {
-      "_doc": "The shared fork engines, every app's build.json and the per-fork build files they read.",
+      "_doc": "The shared fork engines, every app's build.json and the per-fork build files they read. #796: the companion tester derives each rootfs lib's gate inputs through fleet-lib.json's pointer, so the artifact declaration it points at (today ac_cloud-termux/rootfs/rootfs.json; nixdroid's is inside build.json) is read too.",
       "paths": [
         "*/build.json",
         "*/build.sh",
         "*/fleet-lib.json",
+        "*/rootfs/rootfs.json",
         "*/settings.gradle",
         "1_cicd/src/scripts/cloud-*-engine.sh",
         "1_cicd/src/scripts/test/test-apk-identity-reader.sh",

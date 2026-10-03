@@ -31,6 +31,7 @@ on:
       - "*/build.json"
       - "*/build.sh"
       - "*/fleet-lib.json"
+      - "*/rootfs/rootfs.json"
       - "*/settings.gradle"
       - "1_cicd/src/cicd/fork-engine-guard.yml"
       - "1_cicd/src/scripts/cloud-*-engine.sh"

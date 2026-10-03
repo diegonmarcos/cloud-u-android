@@ -124,6 +124,17 @@ expect "coverage names the read a too-narrow declaration misses" 1 "read data/in
 fixture "cat data/in.txt > /dev/null; bash -c 'cat other/x.txt'" '{"paths":["data/**"]}'
 expect "coverage sees a read made by a child process" 1 "read other/x.txt" python3 "$GT" coverage "$T"
 
+# #796: a child that cd's and opens a RELATIVE path is resolved where the kernel
+# resolved it (strace -y), not joined onto the repo root. Run 37121207754
+# reported `read build.sh — no declared path matches it` for a tester that ran
+# `cd ac_cloud-termux && bash ./build.sh`, a file inside its declared */build.sh.
+# The same-named file at the repo root is what made the old join look like a
+# real read: without it the misresolved path simply did not exist and the case
+# passed vacuously.
+fixture "cd data && cat in.txt" '{"paths":["data/**"]}'
+printf 'decoy\n' > "$T/in.txt"
+expect "coverage resolves a cwd-relative read where the child opened it" 0 "COVERED guard-a.yml" python3 "$GT" coverage "$T"
+
 fixture "cat data/in.txt; exit 3" '{"paths":["data/**"]}'
 expect "coverage refuses to vouch for a guard step that failed" 1 "exited 3" python3 "$GT" coverage "$T"
 

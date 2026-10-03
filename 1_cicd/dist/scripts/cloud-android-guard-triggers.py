@@ -115,7 +115,13 @@ def inject(root):
 # Actions whose effect the coverage job reproduces itself (it checks out, and
 # installs nix), so the run steps after them can be replayed in place.
 REPLAYABLE = ("actions/checkout@", "cachix/install-nix-action@")
-READ = re.compile(r'^\d+\s+(?:openat\(AT_FDCWD, |open\()"([^"]+)", ([A-Z_|]+)')
+READ = re.compile(r'^\d+\s+(?:openat\(AT_FDCWD(?:<[^>]*>)?, |open\()"([^"]+)", ([A-Z_|]+)')
+# strace -y decorates a successful open's return value with the path the kernel
+# actually resolved: `= 3</repo/ac_cloud-termux/build.sh>`. That is the only
+# honest answer for a child that `cd`s and opens "./build.sh": joined onto the
+# repo root instead, run 37121207754 reported a GAP for a file that was inside
+# its declared paths all along (#796).
+RESOLVED = re.compile(r' = \d+<([^>]+?)(?: \(deleted\))?>\s*$')
 
 
 def reads(log, root):
@@ -125,7 +131,8 @@ def reads(log, root):
         m = READ.match(line)
         if not m or " = -1 " in line or "O_DIRECTORY" in m.group(2) or "O_WRONLY" in m.group(2):
             continue
-        p = m.group(1)
+        r = RESOLVED.search(line)
+        p = r.group(1) if r else m.group(1)
         a = os.path.normpath(p if p.startswith("/") else os.path.join(root, p))
         if a.startswith(root + os.sep) and os.sep + ".git" + os.sep not in a + os.sep and os.path.isfile(a):
             out.add(os.path.relpath(a, root))
@@ -162,7 +169,7 @@ def coverage(root):
             if "apt-get" in run:
                 continue
             with tempfile.NamedTemporaryFile(suffix=".strace") as log:
-                p = subprocess.run(["strace", "-f", "-qq", "-e", "trace=openat,open", "-o", log.name,
+                p = subprocess.run(["strace", "-f", "-y", "-qq", "-e", "trace=openat,open", "-o", log.name,
                                     "bash", "-e", "-c", run], cwd=root, capture_output=True, text=True)
                 if p.returncode != 0:
                     failed.append(f"step {n} exited {p.returncode}: {(p.stdout + p.stderr).strip()[-400:]}")
