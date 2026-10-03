@@ -88,6 +88,9 @@ class FleetMigrationTest {
     }
 
     @After fun restore() {
+        // A skipped test (no engine on this device) snapshotted nothing, and must restore nothing:
+        // JUnit runs @After even when @Before stopped on an assumption.
+        if (!::saved.isInitialized) return
         for (f in call(FleetConfig.METHOD_EXPORT).getJSONObject("stores").keys()) ctx.deleteSharedPreferences(f)
         if (saved.length() > 0) call(FleetConfig.METHOD_IMPORT, JSONObject().put("stores", saved))
     }
