@@ -1,0 +1,81 @@
+name: "Build → nix-on-droid bootstrap zip (from the bake's nixpkgs pin)"
+
+# #847 -- builds the bootstrap zip ac_cloud-nix-on-droid bakes, per arch, from
+# build.json::forks.nixdroid.bootstrap.default_packages.nixpkgs_pin, and
+# publishes it to release nixdroid-bootstrap-<id>, where <id> is the first 12
+# hex of sha256 over the pin and every file under bootstrap-src/. Nothing is
+# shipped from here: build.json pins the published bytes' sha256 exactly as it
+# pinned the third-party zip's, and the ship workflow's bake + gates consume
+# them. A release that already carries both zips is left untouched.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "ac_cloud-nix-on-droid/bootstrap-src/**"
+      - "1_cicd/src/cicd/build-nixdroid-bootstrap.yml"
+
+permissions:
+  contents: write   # gh release create/upload
+
+concurrency:
+  group: build-nixdroid-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: "Bootstrap zip (${{ matrix.arch }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x86_64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      SRC: ac_cloud-nix-on-droid/bootstrap-src
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Release tag (content address of the pin + bootstrap-src)
+        id: tag
+        run: |
+          pin="$(jq -er '.forks.nixdroid.bootstrap.default_packages.nixpkgs_pin' ac_cloud-nix-on-droid/build.json)"
+          id="$( { echo "$pin"; find "$SRC" -type f | LC_ALL=C sort | xargs sha256sum; } | sha256sum | cut -c1-12)"
+          tag="$(jq -er .release_tag_prefix "$SRC/bootstrap-src.json")$id"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "bootstrap-${{ matrix.arch }}.zip"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$tag already carries bootstrap-${{ matrix.arch }}.zip"
+          fi
+
+      - name: Install Nix
+        if: steps.tag.outputs.skip != 'true'
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build bootstrap-${{ matrix.arch }}.zip
+        if: steps.tag.outputs.skip != 'true'
+        run: |
+          "$SRC/build-bootstrap.sh" "${{ matrix.arch }}" "$RUNNER_TEMP/bootstrap-${{ matrix.arch }}.zip"
+          cd "$RUNNER_TEMP"
+          sha256sum "bootstrap-${{ matrix.arch }}.zip" | tee "bootstrap-${{ matrix.arch }}.zip.sha256"
+          python3 - "bootstrap-${{ matrix.arch }}.zip" <<'PY'
+          import sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1]); n = z.namelist()
+          for need in ("bin/login", "usr/lib/login-inner", "bin/proot-static", "SYMLINKS.txt", "EXECUTABLES.txt"):
+              assert need in n, need
+          print(f"entries={len(n)} store_paths={len({p.split('/')[2] for p in n if p.startswith('nix/store/') and p.count('/') >= 2})}")
+          PY
+
+      - name: Publish to ${{ steps.tag.outputs.tag }}
+        if: steps.tag.outputs.skip != 'true'
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --prerelease --latest=false \
+            --title "$tag" --notes "#847 nix-on-droid bootstrap built from the bake's nixpkgs pin (${{ github.sha }})" \
+            || gh release view "$tag" >/dev/null
+          gh release upload "$tag" "$RUNNER_TEMP/bootstrap-${{ matrix.arch }}.zip" "$RUNNER_TEMP/bootstrap-${{ matrix.arch }}.zip.sha256" --clobber

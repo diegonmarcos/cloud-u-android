@@ -1,0 +1,21 @@
+{
+  "_doc": "#847 -- the nix-on-droid bootstrap zip, BUILT HERE from build.json::forks.nixdroid.bootstrap.default_packages.nixpkgs_pin instead of downloaded prebuilt from a third-party host at nixpkgs 24.05. build-bootstrap.sh evaluates upstream nix-on-droid's own bootstrap derivation (pkgs/bootstrap.nix -> bootstrap-zip.nix: bin/login, usr/lib/login-inner, etc/static, SYMLINKS.txt/EXECUTABLES.txt) at the pinned upstream rev below, with its nixpkgs-for-bootstrap input overridden to the bake pin, and two files replaced: nix-directory.nix (the store comes from the pin's own nix/bash/cacert for the target system -- not upstream's nix-2.20.5 binary tarball -- so every store path it ships is one bake_default_packages.py would otherwise add a second copy of) and proot-mutant.nix (see _doc_proot). The id rewrite (com.termux.nix -> cld.termux.nix) stays where it was, patch_bootstrap_ids.py at bake time: upstream generates bin/login with its own id and the rewrite gate is what proves none survives. .github/workflows/build-nixdroid-bootstrap.yml runs it per ABI and publishes bootstrap-<arch>.zip to release nixdroid-bootstrap-<id>; build.json::forks.nixdroid.bootstrap pins those bytes' sha256 exactly as it pinned the third-party ones.",
+  "upstream_repo": "https://github.com/nix-community/nix-on-droid",
+  "upstream_rev": "f3d3b8294039f2f9a8fb7ea82c320f29c6b0fe25",
+  "_doc_upstream_rev": "release-24.05 HEAD: the branch the replaced bootstrap-release-24.05 zip was cut from, so its generated login and login-inner are the exact text bake_default_packages.py patches (master's login-inner differs in the usershell block). Only the nixpkgs it is evaluated against moves.",
+  "_doc_proot": "#795 -- bin/proot-static in this zip is NOT the proot that ships: bake_default_packages.py replaces it with ab_cloud-terminal-store/proot.json's, and first runs the pty selftests under the zip's ORIGINAL proot as the mutant that must go red. So the zip keeps the proot the 24.05 bootstrap carried (termux/proot 60485d2), fetched from upstream's binary cache and checked against the narinfo FileHash below, rather than cross-building an Android toolchain for a binary that is thrown away after serving as the mutant.",
+  "proot_mutant": {
+    "cache": "https://nix-on-droid.cachix.org",
+    "aarch64": {
+      "store_path": "/nix/store/7qd99m1w65x2vgqg453nd70y60sm3kay-proot-termux-static-aarch64-unknown-linux-android-unstable-2024-05-04",
+      "nar": "nar/1e8f6daf-f73f-4c04-92e2-6fb417447446.nar.zst",
+      "file_sha256": "54fc461b5547ae3590f42d3500c73ef32b7bcfbe8c98784fdd20fafac55f3b02"
+    },
+    "x86_64": {
+      "store_path": "/nix/store/pakj3svvw84rhkzdc6211yhc2cgvc21f-proot-termux-static-x86_64-unknown-linux-android-unstable-2024-05-04",
+      "nar": "nar/dfbfbdbd-85cd-4410-9c66-df63245251c4.nar.zst",
+      "file_sha256": "4c765f81bb3e99fe6c04e4539a88344f15955600faf18af0b47b275eeffd99d4"
+    }
+  },
+  "release_tag_prefix": "nixdroid-bootstrap-"
+}
