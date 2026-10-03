@@ -93,6 +93,24 @@
             "size": 39291055
           }
         },
+        "source": "self_built",
+        "self_built": {
+          "_doc": "#847 -- the zip the bake starts from when source is self_built: built by .github/workflows/build-nixdroid-bootstrap.yml from bootstrap-src/ (upstream nix-on-droid release-24.05's bootstrap derivation, evaluated against default_packages.nixpkgs_pin) and published to OUR release, so neither the third-party host nor nixpkgs 24.05 is in the build path and the zip's nix/bash/glibc are the same store paths the baked profile reuses. CI run 37152352348 built these bytes (aarch64 68,103,357 B / 6000 entries, x86_64 69,592,864 B). The top-level url_base/release/archs stay as the declared fallback (set source to anything else to bake from them) and as the 24.05 proot ac_cloud-termux/rootfs/verify-rootfs.sh fetches as its #795 mutant.",
+          "url_base": "https://github.com/diegonmarcos/cloud-u-android/releases/download",
+          "release": "nixdroid-bootstrap-7fc927a68576",
+          "archs": {
+            "arm64-v8a": {
+              "arch": "aarch64",
+              "sha256": "39bd4d752ed5637edfeeca8cc9375d6c45a29c436b7a4f6a6c333c616c35714d",
+              "size": 68103357
+            },
+            "x86_64": {
+              "arch": "x86_64",
+              "sha256": "4d5ed721ca6f7e3c1e9048f95b81bd1ee4fb3e994a4ee9c9b7e1ad4b2d1c7386",
+              "size": 69592864
+            }
+          }
+        },
         "_doc_archs": "Keyed by the Android ABI in release.variants[].abis, valued with the arch token upstream names the zip after and the pin for it. size is the unpatched download; the patched copy is slightly larger because re-deflating is not byte-identical (aarch64 37,671,948 -> 37,841,339; x86_64 39,291,055 -> 39,515,852), which is why only sha256 is enforced and size is documentation.",
         "default_packages": {
           "_doc": "#595 -- agent tooling BAKED into the store this terminal ships, same 'no first-run install' rule #348 applied to the runtime itself. Without this block a fresh install has Nix and nothing else: upstream's own first login (usr/lib/login-inner) is an INTERACTIVE, NETWORKED wizard -- it prompts 'set up with flakes? (y/N)' on stdin and only then fetches/builds a config -- so 'open the terminal, run claude' would otherwise need a Y/N answer and a build before any tool exists. bakeBootstrap realizes these attrs as a real Nix profile generation on the CI runner (native: the runner's CPU already matches system, no proot/qemu needed for the BUILD, only the shipped rootfs needs proot to RUN on Android) and bake_default_packages.py copies that generation's whole closure into the same nix/store/ the id-rewrite already produced, points nix/var/nix/profiles/per-user/nix-on-droid/profile at it, drops etc/UNINTIALISED so the wizard is skipped, and patches usr/lib/login-inner's one unconditional session-init line to fall back to a baked PATH script when $HOME/.nix-profile (which the wizard would have created) does not exist.",

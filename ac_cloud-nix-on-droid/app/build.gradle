@@ -476,7 +476,11 @@ task bakeBootstrap() {
     doLast {
         def spec = bootstrapSpec()
         def abi = bootstrapAbi()
-        def pin = spec.archs[abi]
+        // #847 -- `source` picks which declared zip the bake starts from: "self_built" (ours,
+        // bootstrap-src/, from the bake's nixpkgs pin) or anything else for the top-level
+        // third-party 24.05 pins, kept as the declared fallback.
+        def source = (spec.source == "self_built" && spec.self_built != null) ? spec.self_built : spec
+        def pin = source.archs[abi]
         def art = spec.artifact
         if (art == null)
             throw new GradleException("build.json::forks.nixdroid.bootstrap has no artifact block -- refusing to "
@@ -499,7 +503,7 @@ task bakeBootstrap() {
         bootstrapAssetsDir.mkdirs()
 
         def downloaded = new File(staging, "bootstrap-" + pin.arch + ".zip")
-        def remoteUrl = spec.url_base + "/" + spec.release + "/bootstrap-" + pin.arch + ".zip"
+        def remoteUrl = source.url_base + "/" + source.release + "/bootstrap-" + pin.arch + ".zip"
 
         // Re-use a cached download only when it already hashes to the pin.
         if (!downloaded.exists() || sha256Of(downloaded) != pin.sha256) {
@@ -516,7 +520,7 @@ task bakeBootstrap() {
         if (actual != pin.sha256) {
             downloaded.delete()
             throw new GradleException("bakeBootstrap: wrong sha256 for " + remoteUrl
-                    + "\n  expected " + pin.sha256 + " (build.json::forks.nixdroid.bootstrap.archs['" + abi + "'])"
+                    + "\n  expected " + pin.sha256 + " (build.json::forks.nixdroid.bootstrap" + (source.is(spec) ? "" : ".self_built") + ".archs['" + abi + "'])"
                     + "\n  actual   " + actual
                     + "\nThe pin is the only thing standing between this APK and whatever that third-party host "
                     + "served today. Verify the new bytes by hand before touching the pin.")
