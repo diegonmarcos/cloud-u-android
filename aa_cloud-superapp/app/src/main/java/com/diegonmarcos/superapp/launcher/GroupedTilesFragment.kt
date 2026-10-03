@@ -267,7 +267,9 @@ class GroupedTilesFragment : Fragment() {
         if (iconRes != 0) {
             cell.addView(android.widget.ImageView(ctx).apply {
                 setImageResource(iconRes)
-                imageTintList = android.content.res.ColorStateList.valueOf(
+                // A tile that declares tint:false keeps its glyph's own colours;
+                // the not-installed placeholder is always tinted.
+                if (missing || tile.tint) imageTintList = android.content.res.ColorStateList.valueOf(
                     if (missing) palette.textSecondary else 0xFFFFFFFF.toInt())
                 val sz = dp(32)
                 layoutParams = LinearLayout.LayoutParams(sz, sz)

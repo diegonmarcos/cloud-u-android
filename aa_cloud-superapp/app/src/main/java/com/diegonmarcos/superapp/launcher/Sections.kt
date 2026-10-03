@@ -320,6 +320,11 @@ object Sections {
         /** The value at the END of a table row — for S-LLM, which model
          *  answers that task. Empty everywhere else. `"note"` in build.json. */
         val note: String = "",
+        /** false = draw the glyph in its own colours instead of the white
+         *  every tile glyph is tinted. Cloud Search's tile is the case: its
+         *  glyph IS the mockup's gradient, and a tint flattens it to a
+         *  silhouette. `"tint": false` in build.json (default true). */
+        val tint: Boolean = true,
     ) {
         /** What can actually be OPENED from this tile: itself when it is a
          *  destination, and its [children] when it is a folder. A folder
@@ -734,6 +739,7 @@ object Sections {
                             childrenUi = t.optString("children_ui", ""),
                             caption    = t.optString("caption", ""),
                             note       = t.optString("note", ""),
+                            tint       = t.optBoolean("tint", true),
                         )
                     )
                 }
