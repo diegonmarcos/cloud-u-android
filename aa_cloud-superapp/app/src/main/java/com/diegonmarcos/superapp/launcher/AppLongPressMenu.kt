@@ -202,6 +202,12 @@ object AppLongPressMenu {
                     ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(l.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
             })
+        } else AppUrls.absence(ctx, pkg).let { why ->
+            // #677 not silent: say whether a declared URL is missing or the app
+            // has no URL kind at all — two different messages.
+            menu.addView(divider(ctx, d))
+            menu.addView(sectionHeader(ctx, "URLs", d))
+            menu.addView(makeMenuRow(ctx, why, "system") {}.also { it.alpha = 0.5f })
         }
 
         backdrop.addView(menu)

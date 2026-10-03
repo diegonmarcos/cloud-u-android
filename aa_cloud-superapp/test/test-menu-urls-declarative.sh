@@ -12,17 +12,21 @@
 # http(s) URLs. A URL typed into either is the table this ticket forbids, and
 # there is no allow-list of "ok" files to widen: the declaration is JSON.
 #
+# #677 adds the third source, a published static site: `site` names a
+# linktree.json link label (T6), and an empty URLs section says WHY (T7).
+# Overrides for mutation runs: BUILD, MENU, URLS, LINKTREE.
+#
 # The scanner proves it can fail: T5 feeds it a planted URL and a planted
 # package table and requires both to be caught.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 LAUNCHER="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher"
 
-python3 - "$APP/build.json" "$APP/data/services_public.json" "$APP/data/services_private.json" \
-    "$LAUNCHER/AppLongPressMenu.kt" "$LAUNCHER/AppUrls.kt" <<'PY'
+python3 - "${BUILD:-$APP/build.json}" "$APP/data/services_public.json" "$APP/data/services_private.json" \
+    "${MENU:-$LAUNCHER/AppLongPressMenu.kt}" "${URLS:-$LAUNCHER/AppUrls.kt}" "${LINKTREE:-$APP/data/linktree.json}" <<'PY'
 import json, re, sys
 
-build_p, pub_p, priv_p, menu_p, urls_p = sys.argv[1:]
+build_p, pub_p, priv_p, menu_p, urls_p, lt_p = sys.argv[1:]
 PASS = FAIL = 0
 def ok(m):
     global PASS; PASS += 1; print("  PASS: " + m)
@@ -89,6 +93,39 @@ print("== T5: the scanner can fail (planted violations must be caught) ==")
 ok("a planted URL is caught") if violations('val u = "https://example.org/x"') else bad("scanner missed a planted URL")
 ok("a planted package table is caught") if violations('val t = mapOf("com.foo.bar" to 1)') else bad("scanner missed a planted package literal")
 ok("a URL in a comment is ignored") if not violations('// see https://example.org\nval x = 1') else bad("scanner flags comments")
+
+print("== T6: a published-site `site` resolves to exactly one linktree link (#677) ==")
+lt = json.load(open(lt_p, encoding="utf-8"))
+def lt_urls(label):
+    found = set()
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("label") == label and re.match(r"https?://[^/]", str(o.get("url", ""))): found.add(o["url"])
+            for v in o.values(): walk(v)
+        elif isinstance(o, list):
+            for v in o: walk(v)
+    walk(lt); return found
+withsite = [a for a in ui["external_apps"] if "site" in a]
+ok("%d external_apps entries declare a site" % len(withsite)) if withsite else bad("no external_apps entry declares a site")
+for a in withsite:
+    u = lt_urls(a["site"])
+    ok("%s -> site %r = %s" % (a["id"], a["site"], next(iter(u)))) if len(u) == 1 else bad("%s names site %r, which matches %d linktree links (need exactly 1)" % (a["id"], a["site"], len(u)))
+uc = code(urls)
+ok("AppUrls.of draws the site source") if re.search(r"fun of\(.*?site\(pkg, ext, decode\(BuildConfig\.LINKTREE_JSON_B64\)\)", uc, re.S) else bad("AppUrls.of does not include the site source")
+sb = re.search(r"fun site\(.*?\n    }", uc, re.S); sb = sb.group(0) if sb else ""
+ok("site() reads the url from linktree via siteUrl, nothing else") if ("siteUrl(label, linktree)" in sb and "github.io" not in sb and "+ \"/\"" not in sb) else bad("site() does not resolve through linktree (or builds a URL)")
+su = re.search(r"fun siteUrl\(.*?\n    }", uc, re.S); su = su.group(0) if su else ""
+ok("an ambiguous or absent label yields no URL (singleOrNull)") if "found.singleOrNull()" in su else bad("siteUrl guesses among several links or none")
+
+print("== T7: an empty URLs section says why, two different ways (#677) ==")
+ex = re.search(r"fun explain\(.*?\n    }", uc, re.S); ex = ex.group(0) if ex else ""
+m1 = re.search(r'"(URL missing: )"', ex); m2 = re.search(r'"(No URL kind for this app:[^"]*)"', ex)
+ok("missing value -> %r" % m1.group(1)) if m1 else bad("no 'URL missing:' message for a declared kind that does not resolve")
+ok("unsupported kind -> %r" % m2.group(1)) if m2 else bad("no 'No URL kind for this app:' message")
+if m1 and m2 and m1.group(1) != m2.group(1)[:len(m1.group(1))]: ok("the two messages differ")
+elif m1 and m2: bad("missing and unsupported produce the same message")
+ok("explain checks a declared site against linktree") if "siteUrl(it, linktree) == null" in ex else bad("explain does not detect a missing site")
+ok("the menu draws AppUrls.absence when no link resolved") if re.search(r"\} else AppUrls\.absence\(ctx, pkg\)", mc) else bad("an empty URLs section is still silent")
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
