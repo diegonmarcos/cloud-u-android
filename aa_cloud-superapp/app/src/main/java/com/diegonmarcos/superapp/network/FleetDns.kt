@@ -8,6 +8,10 @@ import android.provider.Settings
 import android.util.Base64
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
+import com.diegonmarcos.superapp.core.FleetAlerts
+import com.diegonmarcos.superapp.net.AidlBackend
+import com.wireguard.android.backend.BackendException
+import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import com.wireguard.config.Interface
 import com.wireguard.config.Peer
@@ -69,9 +73,13 @@ object FleetDns {
         val androidModes: List<Pair<String, String>>,
         val hostnameSuggestions: List<String>,
         val presets: List<Preset>,
+        val selfResolvers: List<SelfResolver> = emptyList(),
     ) {
         fun preset(id: String?): Preset? = presets.firstOrNull { it.id == id }
     }
+
+    /** #794 fleet code that talks DNS itself (ui.dns.self_resolvers): flagged on the DNS page. */
+    data class SelfResolver(val pkg: String, val what: String, val how: String)
 
     const val KIND_MIRROR = "mirror"
     const val KIND_PUBLIC = "public"
@@ -87,6 +95,7 @@ object FleetDns {
         val modes = apd.optJSONArray("modes") ?: JSONArray()
         val ps = o.getJSONArray("presets")
         val md = o.getJSONObject("mesh_down")
+        val sr = o.optJSONArray("self_resolvers") ?: JSONArray()
         return Decl(
             defaultPreset = o.getString("default_preset"),
             meshZones = o.optJSONArray("mesh_zones").strings(),
@@ -116,6 +125,9 @@ object FleetDns {
                     encryption = p.optString("encryption"),
                     tlsHostnames = p.optJSONArray("tls_hostnames").strings(),
                 )
+            },
+            selfResolvers = (0 until sr.length()).map {
+                val r = sr.getJSONObject(it); SelfResolver(r.getString("pkg"), r.getString("what"), r.getString("how"))
             },
         )
     }
@@ -260,6 +272,126 @@ object FleetDns {
             meshDownConfig(decl, meshDownServers(decl, p.preset, p.fallbacks, fleet), fleet, self, sink)
         }
         return WgState.backend(ctx).setIdleTunnel(decl.meshDownTunnel, config, raiseNow)
+    }
+
+    // ── #794 is the choice in effect? ────────────────────────────────────
+
+    /**
+     * #794 What the chosen preset promises Android resolves with right now: the
+     * mesh tunnel's list while Cloud Mesh is up, the mesh-down list for an
+     * explicit choice while it is down, else nothing (Android's own). This is
+     * the promise, never what the engine happens to be carrying — the page
+     * once showed the engine's state here and so called a preset that could
+     * not start "Android's own (mirror)" while the radio said Public open.
+     */
+    fun promised(d: Decl, presetId: String?, fallbacks: List<String>, chosen: Boolean, fleet: List<String>, meshUp: Boolean): List<String> = when {
+        meshUp -> vpnServers(d, presetId, fallbacks, fleet)
+        chosen -> meshDownServers(d, presetId, fallbacks, fleet)
+        else -> emptyList()
+    }
+
+    /** [ok] = Android resolves with what was [promised]; [needsConsent] = the one cause a tap fixes. */
+    data class Verdict(
+        val ok: Boolean,
+        val needsConsent: Boolean,
+        val promised: List<String>,
+        val actual: List<String>,
+        val why: String,
+    )
+
+    /**
+     * #794 Compare the promise with what Android really hands this app (the
+     * active network's DNS servers). Pure: the page, the alert and
+     * /api/net/dns/overview all read this one verdict, and FleetDnsTest drives
+     * it with phones it invents. [engine] is the label of the app that owns the
+     * VPN slot, named in the consent message.
+     */
+    fun verdict(
+        d: Decl, presetId: String?, fallbacks: List<String>, chosen: Boolean, fleet: List<String>,
+        meshUp: Boolean, idle: String, android: AndroidDns, engine: String,
+    ): Verdict {
+        val p = effective(d, presetId)
+        val actual = android.activeServers
+        val needsConsent = !meshUp && chosen && p.kind != KIND_MIRROR &&
+            idle.contains(BackendException.Reason.VPN_NOT_AUTHORIZED.name)
+        val want = runCatching { promised(d, presetId, fallbacks, chosen, fleet, meshUp) }.getOrElse {
+            return Verdict(false, needsConsent, emptyList(), actual, "${p.label} cannot be applied: ${it.message}")
+        }
+        val now = actual.joinToString(", ").ifEmpty { "none" }
+        if (want.isEmpty()) return Verdict(true, false, want, actual,
+            "Android's own DNS (${if (android.onVpn) "VPN" else "network"} ${now})" +
+                if (!meshUp && !chosen) " — no preset was chosen here, so none applies without the mesh" else "")
+        fun bad(why: String) = Verdict(false, needsConsent, want, actual, why)
+        return when {
+            android.mode == "hostname" ->
+                bad("Android's strict Private DNS (${android.specifier}) answers every lookup — ${p.label} is bypassed")
+            android.onVpn && actual.toSet() == want.toSet() ->
+                Verdict(true, false, want, actual, "${p.label} is in effect: Android resolves with $now")
+            needsConsent ->
+                bad("${p.label} is NOT in effect: $engine has no VPN permission, so its DNS-only tunnel cannot start. Android resolves with $now instead.")
+            !meshUp && idle == "STANDBY" ->
+                bad("${p.label} is NOT in effect: another tunnel of the engine holds the VPN slot. Android resolves with $now.")
+            !meshUp && idle == "OFF" ->
+                bad("${p.label} is NOT in effect: $engine was never handed the choice — pick the preset again. Android resolves with $now.")
+            !meshUp && idle.startsWith("DOWN") ->
+                bad("${p.label} is NOT in effect: the DNS-only tunnel is down (${idle.removePrefix("DOWN: ")}). Android resolves with $now.")
+            else ->
+                bad("${p.label} is NOT in effect: Android resolves with $now, the preset promises ${want.joinToString(", ")}.")
+        }
+    }
+
+    fun meshUp(ctx: Context): Boolean =
+        runCatching { WgState.backend(ctx).getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
+
+    fun fleetResolvers(ctx: Context): List<String> = splitServers(WgState.prefs(ctx).interfaceDns)
+
+    /** The engine's name as the phone shows it, for the consent message. */
+    fun engineLabel(ctx: Context): String = runCatching {
+        val pm = ctx.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(AidlBackend.ENGINE_PKG, 0)).toString()
+    }.getOrDefault(AidlBackend.ENGINE_PKG)
+
+    /** The live state behind [verdict]. Blocks on the engine binder: off the main thread. */
+    class Live(val meshUp: Boolean, val idle: String, val android: AndroidDns, val verdict: Verdict)
+
+    fun live(ctx: Context): Live {
+        val p = Prefs(ctx)
+        val up = meshUp(ctx)
+        val idle = WgState.backend(ctx).idleStatus()
+        val a = readAndroid(ctx)
+        return Live(up, idle, a, verdict(decl, p.preset, p.fallbacks, p.chosen, fleetResolvers(ctx), up, idle, a, engineLabel(ctx)))
+    }
+
+    /** Dedupe key of the one alert this raises: re-raising replaces it, a good verdict withdraws it. */
+    const val CONSENT_ALERT = "fleet-dns-consent"
+
+    /**
+     * #794 Hand the engine the choice (as [syncMeshDown]), then CHECK it took:
+     * Android's DNS must become the promised servers. A tunnel that just came
+     * up takes a moment to reach LinkProperties, so a mismatch is re-read for
+     * up to [settleMs]; missing consent is final at once. Missing consent
+     * raises a fleet alert that opens the DNS page, where one tap asks for it;
+     * any other verdict takes that alert back. Run at the launcher's start
+     * (a reboot), on an engine update or reinstall (consent can be dropped)
+     * and after the page's consent. Blocks: off the main thread.
+     */
+    fun syncAndCheck(ctx: Context, raiseNow: Boolean, settleMs: Long = 4_000): Verdict {
+        if (Prefs(ctx).chosen) runCatching { syncMeshDown(ctx, raiseNow) }
+            .onFailure { android.util.Log.w("FleetDns", "mesh-down DNS not handed to the engine", it) }
+        val until = System.currentTimeMillis() + settleMs
+        var v = live(ctx).verdict
+        while (!v.ok && !v.needsConsent && System.currentTimeMillis() < until) {
+            Thread.sleep(500)
+            v = live(ctx).verdict
+        }
+        if (v.needsConsent) FleetAlerts.raise(ctx, FleetAlerts.Alert(
+            title = "Fleet DNS is not in effect",
+            text = v.why + " Tap to allow it.",
+            severity = FleetAlerts.ERROR,
+            deepLink = "page:config/dns",
+            dedupeKey = CONSENT_ALERT,
+        )) else FleetAlerts.withdraw(ctx, CONSENT_ALERT)
+        return v
     }
 
     // ── Android's own Private DNS ────────────────────────────────────────

@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.network
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -15,7 +16,10 @@ import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.firewall.FirewallController
 import com.wireguard.android.backend.Tunnel
 import java.net.InetAddress
@@ -32,8 +36,15 @@ import java.util.Date
  *     fallbacks for Private with fallbacks). Saving re-applies it to a running
  *     Cloud Mesh tunnel, which is the VPN every fleet app resolves through, and
  *     (#751) hands the engine the mesh-down form it carries while the mesh is off.
- *  3. Status — the resolver list in force, the last successful lookup and a
- *     Test lookup that names the upstream that answered.
+ *  3. Status — (#794) whether the preset is IN EFFECT: what it promises next
+ *     to the DNS servers Android really hands this app, in red when they
+ *     differ. When the engine that owns the VPN slot (Cloud-Lib-Net-Wg) has no
+ *     VPN consent, one tap asks for it, raises the tunnel and checks again.
+ *     Plus the last successful lookup and a Test lookup naming the upstream.
+ *  4. Bridges and 5. DNS servers (#794) — every fleet member's path to an
+ *     answer with its terminal bridge, and every known server probed now;
+ *     both rendered from [DnsOverview.collect], the body of
+ *     /api/net/dns/overview.
  */
 class DnsFragment : Fragment() {
 
@@ -41,7 +52,28 @@ class DnsFragment : Fragment() {
     private lateinit var prefs: FleetDns.Prefs
     private lateinit var androidState: TextView
     private lateinit var status: TextView
+    private lateinit var consentButton: View
     private lateinit var results: TextView
+    private lateinit var bridges: TextView
+    private lateinit var servers: TextView
+
+    /** #794 The engine's consent activity answers RESULT_OK once Android's VPN dialog is
+     *  accepted (at once when consent is already held): hand it the choice and check it took. */
+    private val consentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val ctx = context ?: return@registerForActivityResult
+        if (r.resultCode != Activity.RESULT_OK) { toast("VPN permission refused — the preset stays off without the mesh"); refreshStatus(ctx); return@registerForActivityResult }
+        status.text = "VPN allowed — starting the DNS tunnel and checking Android's resolver…"
+        background({ runCatching { FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx)) } }) { v ->
+            v.fold({ toast(if (it.ok) "In effect: ${it.actual.joinToString(", ")}" else "Still not in effect — see Status") },
+                   { toast("Not applied: ${it.message}") })
+            refreshStatus(ctx)
+        }
+    }
+
+    private fun askConsent(ctx: Context) {
+        WgState.backend(ctx).consentIntent()?.let { consentLauncher.launch(it) }
+            ?: toast("Cloud-Lib-Net-Wg is not installed — install it from Store ▸ Cloud Constellation ▸ Libs")
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -123,9 +155,21 @@ class DnsFragment : Fragment() {
         // ── 3. Status ───────────────────────────────────────────────────
         col.addView(header(ctx, "Status"))
         status = readonly(ctx, ""); col.addView(status)
+        consentButton = button(ctx, "Allow the VPN for ${FleetDns.engineLabel(ctx)}") { askConsent(ctx) }
+            .apply { setBackgroundColor(0xFFDC2626.toInt()); visibility = View.GONE }
+        col.addView(consentButton)
         col.addView(button(ctx, "Test lookup") { testLookup(ctx) })
         results = readonly(ctx, "${decl.testPublic} · ${decl.testMesh}"); col.addView(results)
         refreshStatus(ctx)
+
+        // ── 4. Bridges · 5. DNS servers ─────────────────────────────────
+        col.addView(header(ctx, "Bridges"))
+        col.addView(caption(ctx, "How each fleet app resolves, as that app reports it (/api/net/dns), with what it talks to. Terminals go through their 127.0.0.1 bridge to Android's resolver; apps that resolve by themselves are flagged."))
+        bridges = readonly(ctx, "Scan to ask every app."); col.addView(bridges)
+        col.addView(header(ctx, "DNS servers"))
+        col.addView(caption(ctx, "Every server the presets, the mesh and Android name: protocol, role, which preset uses it, reachable now (a test query) and which one answers."))
+        servers = readonly(ctx, "Scan to probe them."); col.addView(servers)
+        col.addView(button(ctx, "Scan bridges and servers") { scan(ctx) })
 
         return ScrollView(ctx).apply { addView(col) }
     }
@@ -150,22 +194,6 @@ class DnsFragment : Fragment() {
         }
     }
 
-    private fun meshUp(ctx: Context): Boolean =
-        runCatching { WgState.backend(ctx).getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
-
-    private fun fleetResolvers(ctx: Context) = FleetDns.splitServers(WgState.prefs(ctx).interfaceDns)
-
-    /** #751 The resolvers in force: the mesh tunnel's list while it is up, the
-     *  mesh-down list while the engine carries it, else none (Android's own). */
-    private fun planFor(ctx: Context, up: Boolean, idle: String): Result<List<String>> = runCatching {
-        val fleet = fleetResolvers(ctx)
-        when {
-            up -> FleetDns.vpnServers(decl, prefs.preset, prefs.fallbacks, fleet)
-            idle == "UP" -> FleetDns.meshDownServers(decl, prefs.preset, prefs.fallbacks, fleet)
-            else -> emptyList()
-        }
-    }
-
     private fun idleLabel(ctx: Context, idle: String): String = when {
         idle == "UP" -> "carried by the engine's DNS-only tunnel"
         idle == "STANDBY" -> "ready — the engine raises it when Cloud Mesh goes down"
@@ -175,24 +203,32 @@ class DnsFragment : Fragment() {
         else -> idle
     }
 
-    private class Snapshot(val up: Boolean, val idle: String, val servers: Result<List<String>>, val last: String)
-
+    /** #794 Promise next to reality, from [FleetDns.live] — the verdict the alert and the API read too. */
     private fun refreshStatus(ctx: Context) {
-        background({
-            val up = meshUp(ctx)
-            val idle = WgState.backend(ctx).idleStatus()
-            Snapshot(up, idle, planFor(ctx, up, idle), prefs.lastLookup)
-        }) { snap ->
-            val up = snap.up; val servers = snap.servers; val last = snap.last
+        background({ runCatching { FleetDns.live(ctx) } to prefs.lastLookup }) { (r, last) ->
             val p = FleetDns.effective(decl, prefs.preset)
+            val live = r.getOrElse { e -> status.text = "Status unreadable: ${e.message}"; return@background }
+            val v = live.verdict
             status.text = buildString {
-                append("Preset: ${p.label}\nCloud Mesh: ${if (up) "up" else "down"}\n")
-                append("Active resolver: ")
-                append(servers.fold({ l -> if (l.isEmpty()) "Android's own (mirror)" else l.joinToString(" → ") },
-                                    { e -> "ERROR — ${e.message}" }))
-                append("\nWithout the mesh: ${idleLabel(ctx, snap.idle)}")
+                append("Preset: ${p.label}${if (prefs.chosen) "" else " (default, not chosen here)"}\nCloud Mesh: ${if (live.meshUp) "up" else "down"}\n")
+                append("Preset promises: ${v.promised.joinToString(" → ").ifEmpty { "Android's own (mirror)" }}\n")
+                append("Android resolves with: ${v.actual.joinToString(", ").ifEmpty { "—" }}${if (live.android.onVpn) " (VPN)" else " (network)"}\n")
+                append(if (v.ok) "✓ ${v.why}" else "✗ ${v.why}")
+                append("\nWithout the mesh: ${idleLabel(ctx, live.idle)}")
                 append("\nLast successful lookup: ${last.ifEmpty { "none yet" }}")
             }
+            status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else ContextCompat.getColor(ctx, R.color.status_light_off))
+            status.setBackgroundColor(if (v.ok) 0x33000000 else 0x55DC2626)
+            consentButton.visibility = if (v.needsConsent) View.VISIBLE else View.GONE
+        }
+    }
+
+    /** #794 Sections 4 and 5: one [DnsOverview.collect], rendered as text. */
+    private fun scan(ctx: Context) {
+        bridges.text = "Asking every fleet app…"; servers.text = "Probing…"
+        background({ runCatching { DnsOverview.collect(ctx) } }) { r ->
+            r.fold({ o -> bridges.text = DnsOverview.pathsText(o); servers.text = DnsOverview.serversText(o) },
+                   { e -> bridges.text = "Scan failed: ${e.message}"; servers.text = "" })
         }
     }
 
@@ -200,24 +236,26 @@ class DnsFragment : Fragment() {
      * Re-establish a running tunnel so its VPN carries the new DNS list, and
      * (#751) hand the engine the mesh-down form. It takes the slot at once when
      * the mesh is down — unless the firewall holds it: that one stays, and the
-     * engine raises the choice the next time the mesh goes down.
+     * engine raises the choice the next time the mesh goes down. (#794) Then
+     * check Android took it; missing VPN consent goes straight to the one tap.
      */
     private fun applyToTunnel(ctx: Context) {
+        status.text = "Applying ${FleetDns.effective(decl, prefs.preset).label}…"
         background({
             runCatching {
-                val up = meshUp(ctx)
+                val up = FleetDns.meshUp(ctx)
                 if (up) WgState.backend(ctx).setState(WgState.tunnel, Tunnel.State.UP, WgState.prefs(ctx).toTunnelConfig())
-                up to FleetDns.syncMeshDown(ctx, raiseNow = !FirewallController.isEnabled(ctx))
+                up to FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx))
             }
         }) { r ->
-            r.fold({ (up, idle) ->
+            r.fold({ (up, v) ->
                 when {
-                    idle.contains("VPN_NOT_AUTHORIZED") -> {
-                        toast("Allow the VPN, then pick the preset again")
-                        WgState.backend(ctx).consentIntent()?.let { startActivity(it) }
+                    v.needsConsent -> {
+                        toast("${FleetDns.engineLabel(ctx)} needs the VPN permission for this preset")
+                        askConsent(ctx)
                     }
-                    up -> toast("Cloud Mesh re-applied with the new DNS")
-                    else -> toast("Without the mesh: ${idleLabel(ctx, idle)}")
+                    up && v.ok -> toast("Cloud Mesh re-applied with the new DNS")
+                    else -> toast(v.why)
                 }
             }, { e -> toast("Not applied: ${e.message}") })
             refreshStatus(ctx)
@@ -227,9 +265,9 @@ class DnsFragment : Fragment() {
     private fun testLookup(ctx: Context) {
         results.text = "Resolving…"
         background({
-            val up = meshUp(ctx)
-            val fleet = fleetResolvers(ctx)
-            val plan = planFor(ctx, up, WgState.backend(ctx).idleStatus())
+            val up = FleetDns.meshUp(ctx)
+            val fleet = FleetDns.fleetResolvers(ctx)
+            val plan = runCatching { FleetDns.promised(decl, prefs.preset, prefs.fallbacks, prefs.chosen, fleet, up) }
             listOf(decl.testPublic, decl.testMesh).filter { it.isNotEmpty() }.map { name ->
                 val sys = runCatching { InetAddress.getAllByName(name).joinToString(", ") { it.hostAddress ?: "" } }
                     .getOrElse { "FAILED (${it.javaClass.simpleName})" }

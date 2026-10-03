@@ -141,10 +141,12 @@ class AidlBackend(context: Context) : Backend {
         service = null
     }
 
-    private companion object {
-        const val TAG = "AidlBackend"
+    companion object {
+        private const val TAG = "AidlBackend"
+        /** #794 public so a client can watch this package (an engine update or reinstall can
+         *  drop the tunnel and its VPN consent) and name it to the user by its label. */
         const val ENGINE_PKG = "com.diegonmarcos.cloudlib.netwg"
-        const val SERVICE = "com.diegonmarcos.superapp.netwg.NetBackendService"
-        const val CONSENT_ACTIVITY = "com.diegonmarcos.superapp.netwg.VpnConsentActivity"
+        private const val SERVICE = "com.diegonmarcos.superapp.netwg.NetBackendService"
+        private const val CONSENT_ACTIVITY = "com.diegonmarcos.superapp.netwg.VpnConsentActivity"
     }
 }

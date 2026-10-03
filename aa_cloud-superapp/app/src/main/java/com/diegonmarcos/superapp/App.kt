@@ -76,12 +76,30 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // it in the VPN slot, but nothing starts the engine after a reboot or a
         // killed process, so the launcher's own start hands it back. Only for an
         // explicit choice, and never over a running firewall (it keeps the slot).
-        if (com.diegonmarcos.superapp.network.FleetDns.Prefs(this).chosen) Thread {
+        // #794 ...and then CHECKS it took: a choice Android does not resolve with
+        // is never silent. Missing VPN consent (never given, or dropped by an
+        // engine reinstall) raises the alert that opens the DNS page's one-tap
+        // consent; an engine update or reinstall re-runs the same check, since
+        // it kills the process that held the DNS-only tunnel.
+        val dnsCheck = Runnable {
             runCatching {
-                com.diegonmarcos.superapp.network.FleetDns.syncMeshDown(this,
+                com.diegonmarcos.superapp.network.FleetDns.syncAndCheck(this,
                     raiseNow = !com.diegonmarcos.superapp.firewall.FirewallController.isEnabled(this))
-            }.onFailure { android.util.Log.w("App", "mesh-down DNS not handed to the engine", it) }
-        }.start()
+            }.onFailure { android.util.Log.w("App", "fleet DNS not handed to the engine or not checked", it) }
+        }
+        if (com.diegonmarcos.superapp.network.FleetDns.Prefs(this).chosen) Thread(dnsCheck).start()
+        runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(this, object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: android.content.Context, i: android.content.Intent) {
+                    if (i.data?.schemeSpecificPart == com.diegonmarcos.superapp.net.AidlBackend.ENGINE_PKG &&
+                        com.diegonmarcos.superapp.network.FleetDns.Prefs(c).chosen) Thread(dnsCheck).start()
+                }
+            }, android.content.IntentFilter().apply {
+                addAction(android.content.Intent.ACTION_PACKAGE_REPLACED)
+                addAction(android.content.Intent.ACTION_PACKAGE_ADDED)
+                addDataScheme("package")
+            }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
 
         // Tell libs:appstore what it cannot know: this app's entry Activity,
         // its notification icon, how this launcher routes a tap, and the
@@ -148,6 +166,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { com.diegonmarcos.superapp.notificationcenter.AlertsNotifier.refresh(this) }
         // #778: /api/account/* — Account's tabs, profiles, runtime, drift and their actions.
         runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
+        // #794: /api/net/dns/overview — the DNS page as JSON: preset in effect or not, every app's path, every server.
+        runCatching { com.diegonmarcos.superapp.network.DnsOverview.register(this) }
         // Schedule the periodic battery-session tick (15 min cadence).
         // Idempotent — KEEP policy ensures re-scheduling on every cold
         // start is a no-op. Without this the discharge anchor only

@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.network
 
 import android.app.Application
+import com.wireguard.android.backend.BackendException
 import com.wireguard.config.InetNetwork
 import com.wireguard.crypto.KeyPair
 import java.net.InetAddress
@@ -165,5 +166,84 @@ class FleetDnsTest {
         val nx = pkt.copyOf().also { it[3] = 0x83.toByte() }
         assertEquals("NXDOMAIN", FleetDns.parseAnswer(nx, nx.size, 0x1234, q.size))
         assertThrows(IllegalStateException::class.java) { FleetDns.parseAnswer(pkt, pkt.size, 0x4321, q.size) }
+    }
+
+    // ── #794 is the choice in effect? ───────────────────────────────────
+
+    private val NET = listOf("198.51.100.53") // TEST-NET-2, stands in for the Wi-Fi's own resolver
+    private val NOT_AUTHORIZED = "DOWN: " + BackendException.Reason.VPN_NOT_AUTHORIZED.name
+    private fun android(servers: List<String>, onVpn: Boolean, mode: String? = "opportunistic", spec: String? = null) =
+        FleetDns.AndroidDns(mode, spec, false, null, servers, onVpn)
+    private fun verdict(id: String, chosen: Boolean, up: Boolean, idle: String, a: FleetDns.AndroidDns, fb: List<String> = emptyList()) =
+        FleetDns.verdict(d, id, fb, chosen, FLEET, up, idle, a, "ENGINE")
+
+    @Test fun aChosenPresetTheEngineCannotStartForWantOfConsentIsRedAndAsksForIt() {
+        // the owner's phone, 2026-10-03: Public open chosen, mesh down, no consent, Android on the Wi-Fi's DNS
+        val pub = publics.first()
+        val v = verdict(pub.id, chosen = true, up = false, idle = NOT_AUTHORIZED, a = android(NET, onVpn = false))
+        assertFalse(v.why, v.ok)
+        assertTrue("missing consent is the cause a tap fixes", v.needsConsent)
+        assertEquals((pub.servers + pub.fallback).distinct(), v.promised)
+        assertEquals(NET, v.actual)
+        assertTrue(v.why, "ENGINE" in v.why && "NOT in effect" in v.why && NET.single() in v.why)
+        // control: once consent is given and the tunnel carries the choice, the same preset is in effect
+        val ok = verdict(pub.id, true, false, "UP", android(v.promised, onVpn = true))
+        assertTrue(ok.why, ok.ok)
+        assertFalse(ok.needsConsent)
+    }
+
+    @Test fun aPresetIsInEffectOnlyWhenAndroidResolvesWithExactlyItsServers() {
+        val pub = publics.first().id
+        val want = servers(pub)
+        assertTrue("the order is Android's business", verdict(pub, true, false, "UP", android(want.reversed(), true)).ok)
+        assertFalse("a VPN carrying other servers", verdict(pub, true, false, "UP", android(want.drop(1), true)).ok)
+        assertFalse("the right servers, but not on the VPN", verdict(pub, true, false, "UP", android(want, false)).ok)
+        // with the mesh up the promise is the mesh tunnel's list
+        val up = verdict(privateOnly.id, false, true, "STANDBY", android(FLEET, true))
+        assertTrue(up.why, up.ok)
+        assertEquals(FLEET, up.promised)
+        assertFalse(verdict(privateOnly.id, false, true, "STANDBY", android(NET, false)).ok)
+    }
+
+    @Test fun onlyMissingConsentAsksForConsent() {
+        val pub = publics.first().id
+        for (idle in listOf("UP", "STANDBY", "OFF", "DOWN: UNABLE_TO_START_VPN", "DOWN: the engine is not installed")) {
+            val v = verdict(pub, true, false, idle, android(NET, false))
+            assertFalse(idle, v.ok)
+            assertFalse(idle, v.needsConsent)
+        }
+        // nor when nothing was chosen here or Mirror was: nothing needs the VPN without the mesh then
+        assertFalse(verdict(pub, false, false, NOT_AUTHORIZED, android(NET, false)).needsConsent)
+        val mirror = d.presets.single { it.kind == FleetDns.KIND_MIRROR }.id
+        assertFalse(verdict(mirror, true, false, NOT_AUTHORIZED, android(NET, false)).needsConsent)
+        // control: the same idle state on a chosen preset does
+        assertTrue(verdict(pub, true, false, NOT_AUTHORIZED, android(NET, false)).needsConsent)
+    }
+
+    @Test fun mirrorAndAnUnchosenDefaultWithoutTheMeshAreAndroidsOwnAndFine() {
+        val mirror = d.presets.single { it.kind == FleetDns.KIND_MIRROR }.id
+        val m = verdict(mirror, true, false, "OFF", android(NET, false))
+        assertTrue(m.why, m.ok)
+        assertEquals(emptyList<String>(), m.promised)
+        val unchosen = verdict(d.defaultPreset, false, false, "OFF", android(NET, false))
+        assertTrue(unchosen.why, unchosen.ok)
+        assertTrue(unchosen.why, "no preset was chosen" in unchosen.why)
+        // control: the same default, chosen, promises servers and is not in effect on the Wi-Fi's DNS
+        assertFalse(verdict(d.defaultPreset, true, false, "UP", android(NET, false)).ok)
+    }
+
+    @Test fun strictPrivateDnsBypassesAnyPresetAndSaysSo() {
+        val pub = publics.first().id
+        val v = verdict(pub, true, false, "UP", android(servers(pub), true, mode = "hostname", spec = "dot.example"))
+        assertFalse(v.ok)
+        assertTrue(v.why, "dot.example" in v.why)
+        // control: Automatic with the same servers is in effect
+        assertTrue(verdict(pub, true, false, "UP", android(servers(pub), true)).ok)
+    }
+
+    @Test fun aPrivatePresetWithNoFleetResolverIsRedNotAndroidsOwn() {
+        val v = FleetDns.verdict(d, privateOnly.id, emptyList(), true, emptyList(), true, "STANDBY", android(NET, false), "ENGINE")
+        assertFalse(v.why, v.ok)
+        assertTrue(v.why, "cannot be applied" in v.why)
     }
 }

@@ -6367,6 +6367,19 @@
       "mesh_zones": ["app", "db", "diegonmarcos.com"],
       "test_names": { "public": "github.com", "mesh": "maddy.app" },
       "lookup_timeout_ms": 2500,
+      "_doc_self_resolvers": "#794 Fleet code that talks DNS ITSELF instead of asking Android's resolver, so the preset in force does not decide where those lookups go. Each entry is inside a tree 1_cicd/src/data/dns-resolver-guard.json allows (that guard fails the build on any other), and the DNS page's Bridges list flags the app `pkg` names with `what` and `how`. Everything else in the fleet resolves through Android: Kotlin/Java code directly, terminal shells through their 127.0.0.1 SystemDnsBridge, bundled binaries through libs:sysdns ResolverProxy.",
+      "self_resolvers": [
+        {
+          "pkg": "com.diegonmarcos.superapp",
+          "what": "the DNS page's Test lookup and server probes",
+          "how": "plain DNS over UDP straight to each listed server (FleetDns.query), so the page can name the one that answers"
+        },
+        {
+          "pkg": "com.diegonmarcos.superapp",
+          "what": "firestack (libs:firewall)",
+          "how": "its own DoH / DoT / dns53 transports — compiled into the firewall, not the engine the VPN runs today"
+        }
+      ],
       "_doc_mesh_down": "#751 The choice also holds while Cloud Mesh is DOWN. The WireGuard engine (Cloud-Lib-Net-Wg) owns the phone's one VPN slot; when no mesh tunnel is up it carries the choice as a PEERLESS tunnel named `tunnel_name`: these addresses, the preset's DNS servers, no route, so every app's lookups go to the chosen resolver and all other traffic falls through to the underlying network exactly as it does outside a split mesh. The fleet resolver is unreachable without the mesh, so Private with fallbacks uses its fallbacks alone, and Private only keeps the fleet resolver with a route to nowhere: lookups fail, none leaks to the local network. Mirror releases the slot.",
       "mesh_down": {
         "tunnel_name": "fleet-dns",

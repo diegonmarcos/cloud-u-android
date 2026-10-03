@@ -265,9 +265,10 @@ object StoreMesh {
      * first; only when one of them did not answer there (a build from before
      * #792, or a member that fell back off a held port) is the whole range
      * swept. Raw socket, not HttpURLConnection: loopback cleartext is then not
-     * subject to the host's network-security policy.
+     * subject to the host's network-security policy. Public for the SuperApp's
+     * DNS page (#794), which asks every member the same way.
      */
-    private fun locate(expected: Collection<String>): Map<String, Int> {
+    fun locate(expected: Collection<String>): Map<String, Int> {
         val pool = Executors.newFixedThreadPool(16)
         fun pingAll(ports: Iterable<Int>) = ports
             .map { port -> pool.submit(Callable { ping(port)?.let { it to port } }) }

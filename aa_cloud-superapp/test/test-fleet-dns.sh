@@ -21,6 +21,16 @@
 #       through two AIDL calls appended after every older one; the DNS page and
 #       the launcher's start push it, only for an explicit choice, and neither
 #       takes the slot from the firewall
+#   D7  #794 a chosen preset is never silently not in effect: FleetDns.verdict
+#       holds the promise against the DNS Android really hands out; missing VPN
+#       consent for the engine raises the fleet alert that opens the page,
+#       whose one tap launches the engine's consent FOR A RESULT and then
+#       syncs and re-checks; the same check runs at the launcher's start and on
+#       an engine update/reinstall. The page and /api/net/dns/overview share
+#       ONE collector (DnsOverview), which asks every member for /api/net/dns,
+#       /api/sysdns/state (the terminals' SystemDnsBridge counters) and, for a
+#       bridge holder, its crash reports (#791). Every D7 rule is
+#       mutation-proved: each mutant is checked to have APPLIED, then to FAIL.
 #
 # WHAT each preset puts on the VPN (Private-only has no fallback, split DNS for
 # mesh names, fail-loud without a fleet resolver) is asserted by
@@ -199,8 +209,9 @@ grep -qF 'meshDownConfig(decl, meshDownServers(decl, p.preset, p.fallbacks, flee
   && grep -qF 'if (!p.chosen) null' "$DNS" \
   && ok "syncMeshDown builds the tunnel from meshDownServers, and only for an explicit choice" \
   || bad "syncMeshDown does not build from meshDownServers, or applies the unchosen default"
-grep -qF 'FleetDns.syncMeshDown(ctx, raiseNow = !FirewallController.isEnabled(ctx))' "$FRAG" \
-  && ok "every DNS page change pushes the mesh-down form, never over the firewall" \
+grep -qF 'FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx))' "$FRAG" \
+  && grep -qE 'if \(Prefs\(ctx\)\.chosen\) runCatching \{ syncMeshDown\(ctx, raiseNow\) \}' "$DNS" \
+  && ok "every DNS page change pushes the mesh-down form (syncAndCheck → syncMeshDown), never over the firewall" \
   || bad "the DNS page does not push the mesh-down form (or ignores the firewall)"
 grep -qF 'raiseNow = !com.diegonmarcos.superapp.firewall.FirewallController.isEnabled(this)' "$APPKT" \
   && ok "the launcher's start hands it back to an engine a reboot emptied" \
@@ -208,6 +219,115 @@ grep -qF 'raiseNow = !com.diegonmarcos.superapp.firewall.FirewallController.isEn
 for t in withoutTheMeshEachPresetKeepsWhatItCanStillReach theMeshDownTunnelRoutesNothingButAnUnreachableFleetResolver; do
   grep -qE "@Test fun $t\(\)" "$UT" && ok "FleetDnsTest.$t" || bad "FleetDnsTest.$t is gone"
 done
+
+echo "== D7: #794 the preset is in effect, or the page says so in red =="
+OV="$SRC/network/DnsOverview.kt"
+OVT="$APP/app/src/test/java/com/diegonmarcos/superapp/network/DnsOverviewTest.kt"
+BRIDGE="$LIBS/sysdns/src/bridge/java/com/diegonmarcos/cloudlib/sysdns/SystemDnsBridge.java"
+SYST="$LIBS/sysdns/src/test/java/com/diegonmarcos/cloudlib/sysdns/SysDnsTest.kt"
+TX="$APP/../ac_cloud-termux/app/src/main/java/com/termux"
+NX="$APP/../ac_cloud-nix-on-droid/app/src/main/java/com/termux/app"
+for f in "$OV" "$OVT" "$BRIDGE" "$SYST" "$TX/app/TerminalDebugApi.java" "$TX/cloud/CloudDnsBridge.java" "$NX/TerminalDebugApi.java" "$NX/TermuxApplication.java"; do
+  [ -f "$f" ] || { echo "ERROR: missing $f — a check over nothing passes" >&2; exit 2; }
+done
+# d7 role=path ...: every rule over code only (whole-line comments dropped). Exit 0 = all hold;
+# 1 = a rule broke (each named on stdout).
+d7() {
+  python3 - "$@" <<'PY'
+import json, re, sys
+f = dict(a.split('=', 1) for a in sys.argv[1:])
+def code(role):
+    out = []
+    for l in open(f[role], encoding='utf-8'):
+        t = l.strip()
+        if t.startswith(('//', '*', '/*')): continue
+        out.append(l)
+    return ''.join(out)
+src = {r: code(r) for r in f if r != 'bj'}
+pr = []
+def need(role, text, why, n=1):
+    if src[role].count(text) < n: pr.append('%s: %s' % (role, why))
+need('dns', 'if (v.needsConsent) FleetAlerts.raise(', 'missing consent no longer raises the fleet alert')
+need('dns', 'deepLink = "page:config/dns"', 'the alert no longer opens the DNS page')
+need('dns', 'else FleetAlerts.withdraw(ctx, CONSENT_ALERT)', 'a good verdict no longer takes the alert back')
+need('dns', 'idle.contains(BackendException.Reason.VPN_NOT_AUTHORIZED.name)', 'the verdict no longer recognises missing VPN consent')
+need('dns', 'android.onVpn && actual.toSet() == want.toSet() ->', '"in effect" no longer needs the promised servers ON the VPN')
+need('frag', 'registerForActivityResult(ActivityResultContracts.StartActivityForResult())', 'the consent is not launched for a result')
+need('frag', 'WgState.backend(ctx).consentIntent()?.let { consentLauncher.launch(it) }', 'the one tap no longer launches the engine consent for a result')
+need('frag', 'FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx))', 'consent / a preset change no longer syncs and re-checks', 2)
+need('frag', 'consentButton.visibility = if (v.needsConsent) View.VISIBLE else View.GONE', 'the consent button no longer follows the verdict')
+need('frag', 'status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else ContextCompat.getColor(ctx, R.color.status_light_off))', 'a preset not in effect is no longer red')
+need('app', 'FleetDns.syncAndCheck(this,', 'the launcher start no longer checks the choice took')
+need('app', 'android.content.Intent.ACTION_PACKAGE_REPLACED', 'an engine update no longer re-checks')
+need('app', 'com.diegonmarcos.superapp.net.AidlBackend.ENGINE_PKG', 'the package receiver is not about the engine')
+need('app', 'DnsOverview.register(this)', '/api/net/dns/overview is not registered')
+need('ov', 'AppDebugServer.route("net"', 'the overview is not served under /api/net')
+need('ov', 'op == "dns/overview"', 'the overview op is not dns/overview')
+for path in ('"/api/net/dns"', '"/api/sysdns/state"', '"/api/diagnostics/crashes"'):
+    need('ov', path, 'the overview no longer asks each member ' + path)
+need('ov', 'StoreMesh.locate(FleetPeers.list(ctx)', 'the overview no longer finds every fleet peer the way Apps Mesh does')
+need('bridge', 'public String stateJson()', 'the bridge has no state')
+need('bridge', 'asked();', 'a UDP or TCP query is not counted', 2)
+need('bridge', 'answered.incrementAndGet()', 'answers are not counted')
+need('bridge', 'servfail.incrementAndGet()', 'SERVFAILs are not counted')
+need('bridge', 'error("sysdns: an answer failed', 'a failed answer (#791 class) is not recorded')
+need('txapi', '"state".equals(op) ? CloudDnsBridge.state() : null', 'cld.termux does not serve its bridge state')
+need('txbridge', 'if (bridge != null) return bridge.stateJson();', 'cld.termux reports no live bridge state')
+need('nxapi', '"state".equals(op) ? TermuxApplication.dnsBridgeState() : null', 'cld.termux.nix does not serve its bridge state')
+need('nxapp', 'if (dnsBridge != null) return dnsBridge.stateJson();', 'cld.termux.nix reports no live bridge state')
+for t in ('aChosenPresetTheEngineCannotStartForWantOfConsentIsRedAndAsksForIt', 'aPresetIsInEffectOnlyWhenAndroidResolvesWithExactlyItsServers',
+          'onlyMissingConsentAsksForConsent', 'mirrorAndAnUnchosenDefaultWithoutTheMeshAreAndroidsOwnAndFine',
+          'strictPrivateDnsBypassesAnyPresetAndSaysSo', 'aPrivatePresetWithNoFleetResolverIsRedNotAndroidsOwn'):
+    need('ut', '@Test fun %s()' % t, 'FleetDnsTest.%s is gone' % t)
+for t in ('everyMemberIsListedWithItsPathAndTheAddressesAtItsEnd', 'whatAMemberGetsWrongIsFlagged', 'eachDeclaredSelfResolverIsFlaggedOnItsApp',
+          'theCrashCountReadsOnlyReportsThroughTheBridge', 'everyKnownServerIsListedOnceWithEveryRoleItPlays',
+          'theAnsweringServerIsTheFirstReachableOneAndroidIsHanded'):
+    need('ovt', '@Test fun %s()' % t, 'DnsOverviewTest.%s is gone' % t)
+need('syst', 'fun theStateCountsEveryQueryByHowItEndedAndKeepsTheLastError()', 'SysDnsTest no longer runs the bridge state')
+sr = json.load(open(f['bj']))['ui']['dns'].get('self_resolvers') or []
+if not sr: pr.append('bj: ui.dns.self_resolvers is empty')
+for r in sr:
+    if not all(str(r.get(k, '')).strip() for k in ('pkg', 'what', 'how')): pr.append('bj: a self_resolvers entry lacks pkg/what/how: %r' % r)
+print('\n'.join(pr))
+sys.exit(1 if pr else 0)
+PY
+}
+ROLES=(dns="$DNS" frag="$FRAG" app="$APPKT" ov="$OV" bridge="$BRIDGE" txapi="$TX/app/TerminalDebugApi.java"
+       txbridge="$TX/cloud/CloudDnsBridge.java" nxapi="$NX/TerminalDebugApi.java" nxapp="$NX/TermuxApplication.java"
+       ut="$UT" ovt="$OVT" syst="$SYST" bj="$BJ")
+if out="$(d7 "${ROLES[@]}")"; then
+  ok "#794 verdict, alert, one-tap consent for a result, start/engine-update re-check, overview route and members, bridge state in both terminals, tests"
+else
+  bad "#794:"; printf '%s\n' "$out" | sed 's/^/      /'
+fi
+# Mutants: role | python expression over the file text s → the mutated text.
+TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
+while IFS='|' read -r role expr; do
+  [ -n "$role" ] || continue
+  src=""; for r in "${ROLES[@]}"; do [ "${r%%=*}" = "$role" ] && src="${r#*=}"; done
+  mut="$TMP/$role.$RANDOM"
+  python3 -c "import sys; s=open(sys.argv[1], encoding='utf-8').read(); open(sys.argv[2], 'w', encoding='utf-8').write($expr)" "$src" "$mut"
+  if cmp -s "$src" "$mut"; then bad "D7-mutation did not apply — $role: ${expr:0:80}"; continue; fi
+  args=(); for r in "${ROLES[@]}"; do [ "${r%%=*}" = "$role" ] && args+=("$role=$mut") || args+=("$r"); done
+  if d7 "${args[@]}" >/dev/null; then bad "D7-mutation NOT caught — $role: ${expr:0:80}"; else ok "D7-mutation caught — $role: ${expr:0:70}"; fi
+done <<'MUTANTS'
+dns|s.replace('if (v.needsConsent) FleetAlerts.raise(', 'if (false) FleetAlerts.raise(')
+dns|s.replace('android.onVpn && actual.toSet() == want.toSet() ->', 'actual.toSet() == want.toSet() ->')
+dns|s.replace('idle.contains(BackendException.Reason.VPN_NOT_AUTHORIZED.name)', 'idle.contains("NOPE")')
+frag|s.replace('consentLauncher.launch(it)', 'startActivity(it)')
+frag|s.replace('FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx))', 'FleetDns.syncMeshDown(ctx, raiseNow = !FirewallController.isEnabled(ctx))', 1)
+frag|s.replace('status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else ContextCompat.getColor(ctx, R.color.status_light_off))', 'status.setTextColor(0xFFFFFFFF.toInt())')
+app|s.replace('addAction(android.content.Intent.ACTION_PACKAGE_REPLACED)', '')
+app|s.replace('DnsOverview.register(this)', 'toString()')
+ov|s.replace('"/api/sysdns/state"', '"/api/sysdns/nothing"')
+ov|s.replace('"/api/diagnostics/crashes"', '"/api/diagnostics/none"')
+bridge|s.replace('            asked();\n', '', 1)
+bridge|s.replace('error("sysdns: an answer failed', 'log.line("sysdns: an answer failed')
+txapi|s.replace('CloudDnsBridge.state()', 'null')
+nxapp|s.replace('if (dnsBridge != null) return dnsBridge.stateJson();', '')
+ut|s.replace('@Test fun onlyMissingConsentAsksForConsent()', 'fun onlyMissingConsentAsksForConsent()')
+bj|s.replace('"how": "plain DNS over UDP', '"why": "plain DNS over UDP')
+MUTANTS
 
 echo "== RESULT(#740/#751 fleet dns): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
