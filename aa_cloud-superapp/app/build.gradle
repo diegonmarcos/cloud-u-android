@@ -1054,6 +1054,7 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
+    implementation project(':libs:fleetconfig-model')   // #825 FleetPolicy: the manifest + policy this app plans the fleet with
     implementation project(':libs:updater')
     implementation project(':libs:appstore')
     implementation project(':libs:devtools')

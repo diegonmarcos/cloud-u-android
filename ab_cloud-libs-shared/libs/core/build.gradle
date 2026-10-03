@@ -25,6 +25,13 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
+    // #825 IFleetConfigEngine: the provider's one wire to the fleet-config policy engine
+    // (Cloud-Lib-Fleetconfig). Tiny and versioned (FleetConfigEngine.CONTRACT_VERSION); the policy
+    // it replaced in this module was ~300 lines every app recompiled on each edit.
+    buildFeatures {
+        aidl true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

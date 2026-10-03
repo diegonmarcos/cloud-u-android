@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.profile
 
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
+
 import android.content.Context
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.appstore.StoreStages
@@ -119,7 +121,7 @@ object AccountFleet {
     }
 
     /** True when [path] holds a value the manifest classes `secret` — drawn masked, whatever its name. */
-    fun isSecret(m: FleetConfig.Manifest, path: String): Boolean {
+    fun isSecret(m: FleetPolicy.Manifest, path: String): Boolean {
         val seg = path.split(SEP)
         if (seg.size < 4 || seg[0] != SECTION || seg[3] == FleetConfig.TYPES) return false
         val app = m.apps[seg[1]] ?: return true          // an app this build does not know: fail closed
@@ -131,7 +133,7 @@ object AccountFleet {
 
     /** One [AccountDrift.App] per fleet app, owning `settings › <id>`; an id the cockpit also
      *  declares (mail, keyboard, drive) is ONE app holding both its cockpit sections and its settings. */
-    fun driftApps(cockpit: List<AccountDrift.App>, m: FleetConfig.Manifest, labels: Map<String, String>): List<AccountDrift.App> {
+    fun driftApps(cockpit: List<AccountDrift.App>, m: FleetPolicy.Manifest, labels: Map<String, String>): List<AccountDrift.App> {
         val out = LinkedHashMap<String, AccountDrift.App>()
         cockpit.forEach { out[it.id] = it }
         m.apps.keys.forEach { id ->
@@ -143,7 +145,7 @@ object AccountFleet {
 
     // ── reading (Android) ────────────────────────────────────────────────
 
-    fun manifest(ctx: Context) = FleetConfig.manifest(ctx)
+    fun manifest(ctx: Context) = FleetPolicy.manifest(ctx)
 
     fun fleetApps(): List<Fleet.App> = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
 
@@ -242,7 +244,7 @@ object AccountFleet {
      * first): install-then-apply, apply, done (journal holds this exact subtree), or nothing.
      * Pure over its inputs so the JVM suite pins it.
      */
-    fun plan(m: FleetConfig.Manifest, declared: JSONObject?, labels: Map<String, String>,
+    fun plan(m: FleetPolicy.Manifest, declared: JSONObject?, labels: Map<String, String>,
              installed: (String) -> Boolean, journal: (String) -> String?): List<Step> {
         val settings = declared?.optJSONObject(SECTION)
         return m.apps.values.map { app ->

@@ -1,5 +1,8 @@
 package com.diegonmarcos.superapp.profile
 
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicyEngine
+
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
@@ -26,7 +29,7 @@ import org.robolectric.annotation.Config
  * the manifest keeps on the device ever leaving.
  *
  * The two "phones" are two prefixes over Robolectric's SharedPreferences (the engine opens a store
- * through an [FleetConfig.Opener], the provider's real opener differs only in where files live and
+ * through an [FleetPolicy.Opener], the provider's real opener differs only in where files live and
  * in going through EncryptedSharedPreferences for `encrypted` stores, which needs the Keystore a
  * JVM does not have). CI has no emulator, so this is where the migration is proven.
  */
@@ -35,9 +38,9 @@ import org.robolectric.annotation.Config
 class FleetConfigTest {
 
     private val ctx: Application get() = ApplicationProvider.getApplicationContext()
-    private val m: FleetConfig.Manifest by lazy { FleetConfig.manifest(ctx) }
+    private val m: FleetPolicy.Manifest by lazy { FleetPolicy.manifest(ctx) }
 
-    private fun phone(name: String) = FleetConfig.Opener { _, file, create ->
+    private fun phone(name: String) = FleetPolicy.Opener { _, file, create ->
         val p = ctx.getSharedPreferences("${name}__$file", Context.MODE_PRIVATE)
         if (!create && p.all.isEmpty()) null else p
     }
@@ -48,7 +51,7 @@ class FleetConfigTest {
 
     /** Every migrating store of [app] filled with one value of every type, plus a key its manifest
      *  keeps on the device where the store narrows one, plus a whole device store. */
-    private fun configure(phone: String, app: FleetConfig.App): Int {
+    private fun configure(phone: String, app: FleetPolicy.App): Int {
         var n = 0
         for (s in m.stores.values) {
             val cls = m.classOf(s, app.id)
@@ -76,10 +79,10 @@ class FleetConfigTest {
         var migrating = 0
         for (app in m.apps.values) {
             migrating += configure("old", app)
-            val exported = FleetConfig.exportApp(m, app, phone("old"))
-            val result = FleetConfig.importApp(m, app, exported, phone("new"))
+            val exported = FleetPolicy.exportApp(m, app, phone("old"))
+            val result = FleetPolicy.importApp(m, app, exported, phone("new"))
             assertFalse("${app.id}: ${result.optString("error")}", result.has("error"))
-            val again = FleetConfig.exportApp(m, app, phone("new"))
+            val again = FleetPolicy.exportApp(m, app, phone("new"))
             assertEquals("${app.id}: the new phone's export differs from the old one's",
                 AccountDrift.canonical(exported), AccountDrift.canonical(again))
             // Every declared migrating field arrived with its type, readable the way the app reads it.
@@ -99,7 +102,7 @@ class FleetConfigTest {
     @Test fun `nothing the manifest keeps on the device ever leaves it`() {
         for (app in m.apps.values) {
             configure("dev", app)
-            val stores = FleetConfig.exportApp(m, app, phone("dev")).getJSONObject("stores")
+            val stores = FleetPolicy.exportApp(m, app, phone("dev")).getJSONObject("stores")
             for (file in stores.keys()) {
                 val s = m.storeOfFile(app.pkg, file)!!
                 assertTrue("$file of ${app.id} is ${m.classOf(s, app.id)}", m.classOf(s, app.id) in m.migrate)
@@ -115,12 +118,12 @@ class FleetConfigTest {
     @Test fun `a key a config store narrows to device stays behind, its siblings move`() {
         val app = m.apps.getValue("aa_cloud-superapp")
         prefs("k1", "profile_prefs").edit().putString("name", "Ada").putString("install_id", "dev-1").commit()
-        val v = FleetConfig.exportApp(m, app, phone("k1")).getJSONObject("stores").getJSONObject("profile_prefs")
+        val v = FleetPolicy.exportApp(m, app, phone("k1")).getJSONObject("stores").getJSONObject("profile_prefs")
         assertEquals("Ada", v.getString("name"))
         assertFalse(v.has("install_id"))
         // …and an import carrying it anyway refuses it.
         val body = JSONObject().put("stores", JSONObject().put("profile_prefs", JSONObject().put("name", "Eve").put("install_id", "forged")))
-        val r = FleetConfig.importApp(m, app, body, phone("k2"))
+        val r = FleetPolicy.importApp(m, app, body, phone("k2"))
         assertEquals(JSONArray().put("install_id").toString(), r.getJSONObject("files").getJSONObject("profile_prefs").getJSONArray("refused").toString())
         assertNull(prefs("k2", "profile_prefs").getString("install_id", null))
         assertEquals("Eve", prefs("k2", "profile_prefs").getString("name", null))
@@ -128,28 +131,36 @@ class FleetConfigTest {
 
     @Test fun `an import refuses an undeclared store, a device store and a newer schema — never guesses`() {
         val app = m.apps.getValue("calc")
-        val r = FleetConfig.importApp(m, app, JSONObject().put("stores", JSONObject()
+        val r = FleetPolicy.importApp(m, app, JSONObject().put("stores", JSONObject()
             .put("not_a_store", JSONObject().put("x", 1))
             .put("cloud_camera", JSONObject().put("zero_tilt", 1.0))), phone("r1"))
         assertEquals("not a declared store", r.getJSONObject("files").getJSONObject("not_a_store").getString("error"))
         assertTrue(r.getJSONObject("files").getJSONObject("cloud_camera").getString("error").contains("never migrates"))
         assertEquals(0, r.getInt("written"))
-        val newer = FleetConfig.importApp(m, app, JSONObject().put("schema_version", app.schema + 1).put("stores", JSONObject()), phone("r1"))
+        val newer = FleetPolicy.importApp(m, app, JSONObject().put("schema_version", app.schema + 1).put("stores", JSONObject()), phone("r1"))
         assertTrue(newer.getString("error").contains("update calc first"))
     }
 
     @Test fun `applying the same declared copy twice changes nothing (idempotent)`() {
         val app = m.apps.getValue("nav")
         configure("i1", app)
-        val body = FleetConfig.exportApp(m, app, phone("i1"))
-        val first = FleetConfig.importApp(m, app, body, phone("i2"))
-        val snap = FleetConfig.exportApp(m, app, phone("i2"))
-        val second = FleetConfig.importApp(m, app, body, phone("i2"))
+        val body = FleetPolicy.exportApp(m, app, phone("i1"))
+        val first = FleetPolicy.importApp(m, app, body, phone("i2"))
+        val snap = FleetPolicy.exportApp(m, app, phone("i2"))
+        val second = FleetPolicy.importApp(m, app, body, phone("i2"))
         assertEquals(first.getInt("written"), second.getInt("written"))
-        assertEquals(AccountDrift.canonical(snap), AccountDrift.canonical(FleetConfig.exportApp(m, app, phone("i2"))))
+        assertEquals(AccountDrift.canonical(snap), AccountDrift.canonical(FleetPolicy.exportApp(m, app, phone("i2"))))
     }
 
     @Test fun `the provider answers export and import for its own app, and nothing else`() {
+        // #825 the policy runs in Cloud-Lib-Fleetconfig on a phone; here the same engine code runs in-process.
+        FleetConfigProvider.engine = { _, method, a ->
+            JSONObject(when (method) {
+                "plan" -> FleetPolicyEngine.plan(a[0], a[1])
+                "export" -> FleetPolicyEngine.export(a[0], a[1], a[2])
+                else -> FleetPolicyEngine.import(a[0], a[1], a[2], a[3])
+            })
+        }
         val provider = Robolectric.setupContentProvider(FleetConfigProvider::class.java, FleetConfig.authority(ctx.packageName))
         ctx.getSharedPreferences("launcher_theme_prefs", Context.MODE_PRIVATE).edit().putString("theme", "cloud_minimalist_black").commit()
         val out = provider.call(FleetConfig.METHOD_EXPORT, null, null)

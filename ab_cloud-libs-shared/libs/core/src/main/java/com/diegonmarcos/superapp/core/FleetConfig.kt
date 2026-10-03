@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
@@ -12,43 +11,25 @@ import java.io.File
  * #783 THE fleet configuration contract: every fleet app exports and imports its own
  * configuration through ONE call, so a brand-new phone can be made to match the old one.
  *
- *     FleetConfig.export(ctx, "com.diegonmarcos.cloudcalc")          // → {"stores": {...}} or null
+ *     FleetConfig.export(ctx, "com.diegonmarcos.cloudcalc")          // → Reply.Ok({"stores": {...}})
  *     FleetConfig.import(ctx, "com.diegonmarcos.cloudcalc", body)    // → per-store result
  *
- * WHAT moves is declared once, in the manifest (fleet-config.json): every store an app or lib
- * opens, with its class. #796 the manifest is fleet-wide DATA, and it is not baked into this lib
- * any more: it lives in the SuperApp (aa_cloud-superapp/app/src/main/assets), which is the one
- * app that reads the whole of it, and it TRAVELS WITH EVERY CALL ([KEY_MANIFEST]) -- the
- * provider in each app applies whatever manifest the fleet-signed caller hands it, and carries
- * none of its own. Before that, each of the three manifest edits of 2026-10-02/03 rebuilt and
- * republished all 33 fleet apps for a change that touched one app's declaration. Only `config` and `secret` classes migrate; a
- * `device` store (install ids, caches, Keystore-bound blobs) or a `content` store (data that
- * lives on a server) never leaves the phone, and a key-level override can narrow one key of a
- * migrating store the same way. fleet-config-guard.yml fails the build when the code opens a
- * store the manifest does not declare — so nothing here is ever a list of app settings.
+ * WHAT moves is declared once, in the manifest (fleet-config.json, in the SuperApp's assets since
+ * #796), and it TRAVELS WITH EVERY CALL ([KEY_MANIFEST]). Only `config` and `secret` classes
+ * migrate; fleet-config-guard.yml fails the build when code opens a store the manifest does not
+ * declare.
  *
- * HOW: there is no per-app code. Every fleet app links libs:core, and libs:core's manifest
- * merges [FleetConfigProvider] into each of them at `<package>.fleetconfig`. The provider runs
- * IN the owning app's process, so it reads and writes that app's own SharedPreferences (and its
- * EncryptedSharedPreferences, through the same default MasterKey) — the files no other app can
- * open. It is the thin, stable half: the policy (which stores, which classes migrate) arrives
- * with the call, so a declaration change never changes this lib's bytes. `hello` is the
- * handshake: it answers [CONTRACT] and whether the build carries a manifest of its own. A provider call starts a stopped app, so this works with the app closed. The cipher
- * (security-crypto) is compileOnly here: an app that keeps an encrypted store ships it already, and
- * in one that does not, an encrypted file is never there to open (an import naming one is refused).
+ * #825 this is now only the in-app half: the constants, the client one fleet app uses to ask
+ * another (or itself), and [FleetConfigProvider], which reads and writes the app's OWN
+ * SharedPreferences (no other process can open them). Parsing the manifest and deciding what
+ * migrates - the policy - runs in the Cloud-Lib-Fleetconfig engine ([FleetConfigEngine];
+ * libs:fleetconfig over libs:fleetconfig-model), so a policy edit no longer rebuilds every app.
  *
- * WHO may call: the provider is exported behind CONSTELLATION_DATA, the fleet's signature
- * permission; the system refuses to hand it to an APK signed with any other key, and the
- * provider re-checks the caller itself because `call()` is not permission-checked on its own.
+ * WHO may call: the provider is exported behind CONSTELLATION_DATA and re-checks the caller.
  *
  * WIRE FORMAT (one app):
- *     {"contract": 1, "app": "calc", "schema_version": 1,
+ *     {"contract": 2, "app": "calc", "schema_version": 1,
  *      "stores": {"<file>": {"<key>": <value>, …, "_types": {"<key>": "i|l|f"}}}}
- * A value is its natural JSON (string, boolean, number, array = string set); `_types` keeps
- * the int/long/float distinction a JSON number loses, so an import never makes `getInt` throw
- * on a value written as a long. Store keys are the on-disk file names.
- *
- * test: aa_cloud-superapp FleetConfigTest (export → clean profile → import, field by field).
  */
 object FleetConfig {
 
@@ -66,8 +47,7 @@ object FleetConfig {
     const val METHOD_HELLO = "hello"
     const val KEY_JSON = "json"
     const val KEY_ERROR = "error"
-    /** Export/import extra: the manifest JSON the provider applies. A build that carries none
-     *  (every fleet app but the SuperApp, since #796) refuses a call without it. */
+    /** Export/import extra: the manifest JSON the provider applies. */
     const val KEY_MANIFEST = "manifest"
     const val KEY_CONTRACT = "contract"
     /** Import extra: the app restarts once the reply is out, so no cached copy of the old
@@ -78,216 +58,21 @@ object FleetConfig {
 
     fun authority(pkg: String) = pkg + AUTHORITY_SUFFIX
 
-    // ── the declaration ──────────────────────────────────────────────────
-
-    data class Store(
-        val name: String, val kind: String, val cls: String, val doc: String,
-        val keys: Map<String, String>, val classByApp: Map<String, String>, val files: List<String>,
-        val usedBy: List<String> = emptyList(),
-    ) {
-        /** The on-disk file names in [pkg] (`{pkg}` expanded). */
-        fun filesFor(pkg: String): List<String> = files.map { it.replace("{pkg}", pkg) }
+    /** The manifest text this APK carries in its assets (the SuperApp), or null. Never parsed here. */
+    fun manifestText(ctx: Context): String? = try {
+        ctx.applicationContext.assets.open(ASSET).bufferedReader().use { it.readText() }
+    } catch (e: java.io.FileNotFoundException) {
+        null
     }
 
-    data class Coverage(val app: String, val covered: List<String>, val gaps: List<String>) {
-        val total: Int get() = covered.size + gaps.size
-        /** Percent of declared migrating items the contract moves; an app with none is fully covered. */
-        val percent: Int get() = if (total == 0) 100 else covered.size * 100 / total
-        fun json(): JSONObject = JSONObject().put("covered", JSONArray(covered)).put("gaps", JSONArray(gaps))
-            .put("total", total).put("percent", percent)
-    }
-
-    data class App(val id: String, val pkg: String, val module: String, val schema: Int, val libs: List<String>, val items: List<JSONObject>)
-
-    class Manifest(val json: JSONObject) {
-        val migrate: Set<String> = json.optJSONArray("migrate").strings().toSet()
-        /** Kinds this contract can read and write without the app's help. */
-        val portable = setOf("prefs", "encrypted")
-
-        val stores: Map<String, Store> = json.optJSONObject("stores").let { o ->
-            o?.keys()?.asSequence()?.associateWith { n ->
-                val s = o.getJSONObject(n)
-                Store(n, s.optString("kind"), s.optString("class"), s.optString("doc"),
-                    s.optJSONObject("keys").stringMap(), s.optJSONObject("class_by_app").stringMap(),
-                    s.optJSONArray("files")?.strings() ?: listOf(if (n == "<default>") "{pkg}_preferences" else n),
-                    s.optJSONArray("used_by").strings())
-            }.orEmpty()
-        }
-
-        val apps: Map<String, App> = json.optJSONObject("apps").let { o ->
-            o?.keys()?.asSequence()?.associateWith { id ->
-                val a = o.getJSONObject(id)
-                App(id, a.optString("package"), a.optString("module"), a.optInt("schema_version", 1),
-                    a.optJSONArray("libs").strings(),
-                    a.optJSONArray("items")?.let { arr -> (0 until arr.length()).map { arr.getJSONObject(it) } }.orEmpty())
-            }.orEmpty()
-        }
-
-        fun appByPackage(pkg: String): App? = apps.values.firstOrNull { it.pkg == pkg }
-
-        fun classOf(s: Store, appId: String): String = s.classByApp[appId] ?: s.cls
-
-        /** A key's class: the store's, unless an override (exact, or a `*` glob) narrows it. */
-        fun keyClass(s: Store, key: String, appId: String): String {
-            val own = classOf(s, appId)
-            s.keys[key]?.let { return it }
-            s.keys.entries.firstOrNull { (pat, _) -> '*' in pat && glob(pat).matches(key) }?.let { return it.value }
-            return own
-        }
-
-        fun migrates(s: Store, appId: String) = s.kind in portable && classOf(s, appId) in migrate
-        fun migratesKey(s: Store, key: String, appId: String) = migrates(s, appId) && keyClass(s, key, appId) in migrate
-        fun secret(s: Store, key: String, appId: String) = keyClass(s, key, appId) == "secret"
-
-        /** Library items (files a lib keeps), by lib module id. */
-        val libItems: Map<String, List<JSONObject>> = json.optJSONObject("libs").let { o ->
-            o?.keys()?.asSequence()?.associateWith { l ->
-                o.getJSONObject(l).optJSONArray("items")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
-            }.orEmpty()
-        }
-
-        /**
-         * How much of [app]'s migrating configuration this contract moves on its own: every
-         * config/secret store its code or its libs open, plus every declared config/secret file.
-         * A prefs/encrypted store is covered; a DataStore, a Room table or a file is a named gap.
-         */
-        fun coverage(app: App): Coverage {
-            val mods = app.libs.toSet() + app.module
-            val mine = stores.values.filter { s -> s.usedBy.any { it in mods } && classOf(s, app.id) in migrate }.sortedBy { it.name }
-            // An item is moved when a portable store holds it, when installing the same build
-            // reproduces it (`via: install`), or when Connect re-fetches it (`via: connect`).
-            val (moved, notMoved) = (app.items + app.libs.flatMap { libItems[it].orEmpty() })
-                .filter { it.optString("class") in migrate }
-                .partition { it.optString("via") in setOf("install", "connect") || stores[it.optString("store")]?.kind in portable }
-            fun label(i: JSONObject) = "file:" + i.optString("path").ifBlank { i.optString("id") }
-            return Coverage(app.id,
-                covered = mine.filter { it.kind in portable }.map { it.name } + moved.map(::label),
-                gaps = mine.filter { it.kind !in portable }.map { it.name } + notMoved.map(::label))
-        }
-
-        /** The declared store a file in [pkg] belongs to (a store may own several files). */
-        fun storeOfFile(pkg: String, file: String): Store? = stores.values.firstOrNull { file in it.filesFor(pkg) }
-    }
-
-    @Volatile private var cached: Manifest? = null
-
-    /** The manifest this APK carries in its own assets (the SuperApp), or null when the build
-     *  carries none. A manifest that is present but malformed still throws: that is a broken
-     *  build, not an absent declaration. */
-    fun manifestOrNull(ctx: Context): Manifest? = cached ?: synchronized(this) {
-        cached ?: try {
-            Manifest(JSONObject(ctx.applicationContext.assets.open(ASSET).bufferedReader().use { it.readText() }))
-                .also { cached = it }
-        } catch (e: java.io.FileNotFoundException) {
-            null
-        }
-    }
-
-    /** The manifest this APK carries. Only the SuperApp may assume one. */
-    fun manifest(ctx: Context): Manifest = manifestOrNull(ctx)
-        ?: throw IllegalStateException("${ctx.packageName} carries no $ASSET: since #796 only the SuperApp does, and every other app is handed one per call")
-
-    // ── the engine (pure over SharedPreferences: the JVM suite runs it on two profiles) ──
-
-    /** Opens one store file; null = the file does not exist (export) — import passes create=true. */
-    fun interface Opener { fun open(store: Store, file: String, create: Boolean): SharedPreferences? }
-
-    /** Every migrating value [appId] holds, in the wire format. Device/content keys never leave. */
-    fun exportApp(m: Manifest, app: App, opener: Opener): JSONObject {
-        val stores = JSONObject()
-        for (s in m.stores.values.sortedBy { it.name }) {
-            if (!m.migrates(s, app.id)) continue
-            for (file in s.filesFor(app.pkg)) {
-                val prefs = runCatching { opener.open(s, file, false) }
-                    .onFailure { Log.w(TAG, "export ${app.id}/$file unreadable: ${it.javaClass.simpleName}") }
-                    .getOrNull() ?: continue
-                val out = JSONObject(); val types = JSONObject()
-                for ((k, v) in prefs.all.toSortedMap()) {
-                    if (v == null || !m.migratesKey(s, k, app.id)) continue
-                    when (v) {
-                        is Int -> { out.put(k, v); types.put(k, "i") }
-                        is Long -> { out.put(k, v); types.put(k, "l") }
-                        is Float -> { out.put(k, v.toDouble()); types.put(k, "f") }
-                        is Set<*> -> out.put(k, JSONArray(v.map { it.toString() }.sorted()))
-                        else -> out.put(k, v)   // String, Boolean
-                    }
-                }
-                if (out.length() == 0) continue
-                if (types.length() > 0) out.put(TYPES, types)
-                stores.put(file, out)
-            }
-        }
-        return JSONObject().put("contract", CONTRACT).put("app", app.id).put("schema_version", app.schema).put("stores", stores)
-    }
-
-    /**
-     * Writes [body] (the wire format) into [app]'s stores and says, per file, what it wrote and
-     * what it refused. Refuses — never guesses — a newer schema, an undeclared file, a store that
-     * does not migrate, and any key the manifest keeps on the device. Keys the phone holds and
-     * [body] does not are left alone. Idempotent: the same body twice writes the same values.
-     */
-    fun importApp(m: Manifest, app: App, body: JSONObject, opener: Opener): JSONObject {
-        val result = JSONObject().put("app", app.id)
-        val incoming = body.optInt("schema_version", app.schema)
-        if (incoming > app.schema)
-            return result.put(KEY_ERROR, "the declared copy is schema $incoming, this app understands ${app.schema} — update ${app.id} first")
-        val files = JSONObject()
-        var written = 0
-        body.optJSONObject("stores")?.let { stores ->
-            for (file in stores.keys().asSequence().sorted()) {
-                val r = JSONObject(); files.put(file, r)
-                val s = m.storeOfFile(app.pkg, file) ?: run { r.put(KEY_ERROR, "not a declared store"); null } ?: continue
-                if (!m.migrates(s, app.id)) { r.put(KEY_ERROR, "${m.classOf(s, app.id)} store: never migrates"); continue }
-                val values = stores.getJSONObject(file)
-                val types = values.optJSONObject(TYPES) ?: JSONObject()
-                // An encrypted store in an app that ships no cipher throws here (NoClassDefFoundError).
-                val prefs = runCatching { opener.open(s, file, true) }.getOrNull() ?: run { r.put(KEY_ERROR, "cannot open"); null } ?: continue
-                val existing = prefs.all
-                val ed = prefs.edit()
-                val wrote = JSONArray(); val refused = JSONArray()
-                for (k in values.keys().asSequence().filter { it != TYPES }.sorted()) {
-                    if (!m.migratesKey(s, k, app.id)) { refused.put(k); continue }
-                    if (!put(ed, k, values.get(k), types.optString(k), existing[k])) { refused.put(k); continue }
-                    wrote.put(k)
-                }
-                if (!ed.commit()) { r.put(KEY_ERROR, "commit failed"); continue }
-                written += wrote.length()
-                r.put("written", wrote).put("refused", refused)
-            }
-        }
-        return result.put("files", files).put("written", written)
-    }
-
-    /** One value with its declared type, else the type the key already has, else its JSON type. */
-    private fun put(ed: SharedPreferences.Editor, k: String, v: Any?, type: String, existing: Any?): Boolean {
-        val t = type.ifEmpty {
-            when (existing) { is Int -> "i"; is Long -> "l"; is Float -> "f"; else -> "" }
-        }
-        when {
-            v == null || v == JSONObject.NULL -> ed.remove(k)
-            v is JSONArray -> ed.putStringSet(k, (0 until v.length()).map { v.optString(it) }.toSet())
-            v is Boolean -> ed.putBoolean(k, v)
-            v is Number -> when (t) {
-                "i" -> ed.putInt(k, v.toInt())
-                "f" -> ed.putFloat(k, v.toFloat())
-                "l" -> ed.putLong(k, v.toLong())
-                else -> if (v.toDouble() % 1.0 != 0.0) ed.putFloat(k, v.toFloat())
-                        else if (v.toLong() in Int.MIN_VALUE..Int.MAX_VALUE) ed.putInt(k, v.toInt()) else ed.putLong(k, v.toLong())
-            }
-            v is String -> ed.putString(k, v)
-            else -> return false
-        }
-        return true
-    }
-
-    // ── on the phone ─────────────────────────────────────────────────────
-
-    /** The real opener: a plain file directly, an encrypted one through its cipher. An export
-     *  never creates a file: an absent plain store reads as empty, an absent encrypted one is not
-     *  opened at all (opening one writes its keyset). */
-    fun deviceOpener(ctx: Context): Opener = Opener { s, file, create ->
+    /** This app's store file: a plain one directly, an encrypted one through its cipher. Never
+     *  creates a file unless [create]: an absent plain store reads as null, an absent encrypted
+     *  one is not opened at all (opening one writes its keyset). The cipher (security-crypto)
+     *  is compileOnly: in an app that ships none, opening an encrypted store throws, and the
+     *  caller reports that file alone. */
+    fun openStore(ctx: Context, kind: String, file: String, create: Boolean): SharedPreferences? {
         val app = ctx.applicationContext
-        when (s.kind) {
+        return when (kind) {
             "prefs" -> app.getSharedPreferences(file, Context.MODE_PRIVATE).takeIf { create || it.all.isNotEmpty() }
             "encrypted" -> if (!create && !File(app.dataDir, "shared_prefs/$file.xml").isFile) null else androidx.security.crypto.EncryptedSharedPreferences.create(
                 app, file,
@@ -299,21 +84,6 @@ object FleetConfig {
         }
     }
 
-    /** This app's own export under [m] (what the provider answers; the SuperApp reads itself
-     *  with its own manifest). */
-    fun exportSelf(ctx: Context, m: Manifest = manifest(ctx)): JSONObject? {
-        val app = m.appByPackage(ctx.packageName) ?: return null
-        return exportApp(m, app, deviceOpener(ctx))
-    }
-
-    fun importSelf(ctx: Context, body: JSONObject, m: Manifest = manifest(ctx)): JSONObject {
-        val app = m.appByPackage(ctx.packageName)
-            ?: return JSONObject().put(KEY_ERROR, "${ctx.packageName} is not a declared fleet app")
-        return importApp(m, app, body, deviceOpener(ctx))
-    }
-
-    // ── the client: one fleet app asks another ───────────────────────────
-
     sealed class Reply {
         data class Ok(val json: JSONObject) : Reply()
         /** Not installed, not visible, or an older build without the contract. */
@@ -322,24 +92,20 @@ object FleetConfig {
     }
 
     /** [pkg]'s configuration under this app's manifest, which travels with the call. Starts the
-     *  app if it is stopped. BLOCKS: call off the main thread. */
-    fun export(ctx: Context, pkg: String): Reply =
-        if (pkg == ctx.packageName) exportSelf(ctx)?.let { Reply.Ok(it) } ?: Reply.Refused("not a declared fleet app")
-        else call(ctx, pkg, METHOD_EXPORT, withManifest(ctx, Bundle()))
+     *  app if it is stopped. BLOCKS: call off the main thread. [pkg] may be this app. */
+    fun export(ctx: Context, pkg: String): Reply = call(ctx, pkg, METHOD_EXPORT, withManifest(ctx, Bundle()))
 
-    /** Applies [body] to [pkg]; [restart] lets the app restart so nothing cached outlives it. */
+    /** Applies [body] to [pkg]; [restart] lets the app restart so nothing cached outlives it
+     *  (never this app: the caller is still running in it). */
     fun import(ctx: Context, pkg: String, body: JSONObject, restart: Boolean = true): Reply =
-        if (pkg == ctx.packageName) importSelf(ctx, body).let { if (it.has(KEY_ERROR) && !it.has("files")) Reply.Refused(it.getString(KEY_ERROR)) else Reply.Ok(it) }
-        else call(ctx, pkg, METHOD_IMPORT, withManifest(ctx, Bundle().apply { putString(KEY_JSON, body.toString()); putBoolean(KEY_RESTART, restart) }))
+        call(ctx, pkg, METHOD_IMPORT, withManifest(ctx, Bundle().apply {
+            putString(KEY_JSON, body.toString()); putBoolean(KEY_RESTART, restart && pkg != ctx.packageName)
+        }))
 
     /** The handshake with [pkg]: its [CONTRACT], and whether it carries a manifest of its own. */
-    fun hello(ctx: Context, pkg: String): Reply =
-        if (pkg == ctx.packageName) Reply.Ok(helloSelf(ctx)) else call(ctx, pkg, METHOD_HELLO, Bundle())
+    fun hello(ctx: Context, pkg: String): Reply = call(ctx, pkg, METHOD_HELLO, Bundle())
 
-    fun helloSelf(ctx: Context): JSONObject =
-        JSONObject().put(KEY_CONTRACT, CONTRACT).put(KEY_MANIFEST, if (manifestOrNull(ctx) != null) "self" else "caller")
-
-    private fun withManifest(ctx: Context, b: Bundle): Bundle = b.apply { putString(KEY_MANIFEST, manifest(ctx).json.toString()) }
+    private fun withManifest(ctx: Context, b: Bundle): Bundle = b.apply { manifestText(ctx)?.let { putString(KEY_MANIFEST, it) } }
 
     private fun call(ctx: Context, pkg: String, method: String, extras: Bundle): Reply {
         try {
@@ -357,10 +123,4 @@ object FleetConfig {
             return Reply.Unreachable("${t.javaClass.simpleName}: ${t.message.orEmpty().take(120)}")
         }
     }
-
-    // ── helpers ──────────────────────────────────────────────────────────
-
-    private fun JSONArray?.strings(): List<String> = this?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()
-    private fun JSONObject?.stringMap(): Map<String, String> = this?.let { o -> o.keys().asSequence().associateWith { o.optString(it) } }.orEmpty()
-    fun glob(p: String) = Regex(p.split('*').joinToString(".*") { Regex.escape(it) })
 }

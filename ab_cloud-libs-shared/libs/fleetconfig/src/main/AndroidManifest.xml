@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- #825 the fleet-config policy engine every fleet app's FleetConfigProvider binds
+             (by class name, FleetConfigEngine.SERVICE). Guarded by the constellation's
+             signature permission; CONTRACT is FleetConfigEngine.CONTRACT_VERSION, which the
+             client also reads off the binder before its first call. -->
+        <service
+            android:name="com.diegonmarcos.superapp.fleetconfig.FleetConfigEngineService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

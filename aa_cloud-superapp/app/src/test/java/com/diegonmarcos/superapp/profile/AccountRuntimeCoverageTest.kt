@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.profile
 
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
+
 import android.app.Application
 import com.diegonmarcos.superapp.profile.AccountRuntime.AppRead
 import com.diegonmarcos.superapp.profile.AccountRuntime.Status
@@ -52,7 +54,7 @@ class AccountRuntimeCoverageTest {
         assertTrue("#789 cloud-drive reports now", drive.runtime.reports)
         assertEquals("git-sync-credentials", drive.runtime.store)
         assertTrue("the store it reads is a declared fleet-config secret store",
-            com.diegonmarcos.superapp.core.FleetConfig.manifest(androidx.test.core.app.ApplicationProvider
+            FleetPolicy.manifest(androidx.test.core.app.ApplicationProvider
                 .getApplicationContext()).stores[drive.runtime.store]?.cls == "secret")
     }
 

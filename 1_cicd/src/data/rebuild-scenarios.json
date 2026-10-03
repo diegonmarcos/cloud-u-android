@@ -3,12 +3,13 @@
   "scenarios": [
     {
       "id": "libs/core (one source file)",
+      "_doc_libs": "#825 29 -> 30: Cloud-Lib-Fleetconfig, the fleet-config policy engine, compiles libs:core (IFleetConfigEngine). It is the price of taking the policy out of the 32 apps.",
       "files": [
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
       "expect": {
         "apps": 0,
-        "libs": 29,
+        "libs": 30,
         "rootfs": 0,
         "ship": 1,
         "refresh": 32
@@ -16,12 +17,13 @@
     },
     {
       "id": "libs/devtools (one source file)",
+      "_doc_libs": "#825 30 -> 31: Cloud-Lib-Fleetconfig (through libs:core).",
       "files": [
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
       "expect": {
         "apps": 0,
-        "libs": 30,
+        "libs": 31,
         "rootfs": 0,
         "ship": 1,
         "refresh": 32
@@ -197,6 +199,34 @@
         "rootfs": 0,
         "ship": 2,
         "refresh": 6
+      }
+    },
+    {
+      "id": "fleet-config policy engine (libs/fleetconfig, one source file)",
+      "_doc": "#825 the fleet-config policy lived in libs:core (FleetConfig, 366 lines) until 2026-10-03: any edit queued all 32 apps. The engine service is compiled by no app: the lib builder alone, 0 apps per push and 0 at refresh.",
+      "files": [
+        "ab_cloud-libs-shared/libs/fleetconfig/src/main/java/com/diegonmarcos/superapp/fleetconfig/FleetConfigEngineService.kt"
+      ],
+      "expect": {
+        "apps": 0,
+        "libs": 1,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "fleet-config policy (libs/fleetconfig-model, one source file)",
+      "_doc": "#825 the manifest parsing + migration policy: the engine APK and its one in-app reader, the SuperApp (it plans the fleet with it). Was every app.",
+      "files": [
+        "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/FleetPolicy.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 1,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 0
       }
     },
     {

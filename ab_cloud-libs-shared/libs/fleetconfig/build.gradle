@@ -1,0 +1,38 @@
+// libs:fleetconfig — #825 the fleet-config policy ENGINE (Cloud-Lib-Fleetconfig.apk). Every fleet
+// app's `<package>.fleetconfig` provider (libs:core) asks it, over IFleetConfigEngine, which of its
+// own files to read and what an export carries or an import writes; the provider only touches the
+// app's SharedPreferences. No application compiles this module (#763 `engine`), so a policy edit
+// rebuilds this APK and, through libs:fleetconfig-model, the SuperApp - not the fleet.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.fleetconfig'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    api project(':libs:core')                    // IFleetConfigEngine + CONSTELLATION_DATA
+    implementation project(':libs:fleetconfig-model')
+}

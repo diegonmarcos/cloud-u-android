@@ -1,0 +1,35 @@
+// libs:fleetconfig-model — #825 the fleet configuration manifest (fleet-config.json) parsed into
+// stores, classes and apps, and the migration policy over it (what an export carries, what an
+// import writes or refuses). It used to be libs:core's FleetConfig, compiled into all 32 apps;
+// only two things read it: the Cloud-Lib-Fleetconfig engine (which every app's provider asks over
+// IPC) and the SuperApp (which plans and diffs the whole fleet). So an edit here rebuilds those
+// two and nothing else. Pure over SharedPreferences + org.json: no component, no UI.
+plugins {
+    id 'com.android.library'
+    // Conditional apply, the libs:core pattern: AGP 9 consumers register `kotlin` themselves.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.fleetconfig.model'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}

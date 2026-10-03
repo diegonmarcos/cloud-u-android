@@ -32,6 +32,9 @@
          a local notification on every device. -->
     <queries>
         <provider android:authorities="com.diegonmarcos.superapp.fleetalerts" />
+        <!-- #825 FleetConfigProvider asks the fleet-config policy engine
+             (Cloud-Lib-Fleetconfig) over IFleetConfigEngine; binding it needs it visible. -->
+        <package android:name="com.diegonmarcos.cloudlib.fleetconfig" />
     </queries>
 
     <application>

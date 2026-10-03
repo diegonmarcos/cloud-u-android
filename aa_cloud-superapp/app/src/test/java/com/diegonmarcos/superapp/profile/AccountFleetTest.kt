@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.profile
 
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
+
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.core.FleetConfig
@@ -23,7 +25,7 @@ import org.robolectric.annotation.Config
 class AccountFleetTest {
 
     private val ctx: Application get() = ApplicationProvider.getApplicationContext()
-    private val m: FleetConfig.Manifest by lazy { FleetConfig.manifest(ctx) }
+    private val m: FleetPolicy.Manifest by lazy { FleetPolicy.manifest(ctx) }
     private val S = AccountDrift.SEP
 
     private val export = JSONObject().put("schema_version", 1).put("stores", JSONObject()

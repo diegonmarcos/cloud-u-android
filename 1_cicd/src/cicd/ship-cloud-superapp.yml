@@ -109,6 +109,7 @@ on:
       - "ab_cloud-libs-shared/libs/chat/**"
       - "ab_cloud-libs-shared/libs/datamanager/**"
       - "ab_cloud-libs-shared/libs/firewall/**"
+      - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/health/**"
       - "ab_cloud-libs-shared/libs/kde-connect/**"
       - "ab_cloud-libs-shared/libs/launcher-apptabs/**"

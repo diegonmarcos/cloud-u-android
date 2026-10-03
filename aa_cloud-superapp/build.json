@@ -280,6 +280,11 @@
       "dir": "../ab_cloud-libs-shared/libs/databackend",
       "type": "library"
     },
+    "libs:fleetconfig-model": {
+      "_doc_dir": "#825 the fleet-config manifest + migration policy (FleetPolicy), out of libs:core: compiled by this app (it plans and diffs the whole fleet) and the Cloud-Lib-Fleetconfig engine every other app's provider asks over IPC.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
     "libs:devtools": {
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"

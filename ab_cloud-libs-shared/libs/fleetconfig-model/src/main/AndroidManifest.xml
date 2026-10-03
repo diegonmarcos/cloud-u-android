@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:fleetconfig-model (#825): the fleet-config manifest and its migration policy. No
+     components: the engine (libs:fleetconfig) declares the service. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
