@@ -6,8 +6,7 @@
 , stdenvNoCC
 , closureInfo
 , prootTermux
-, proot
-, pkgsStatic
+, nix
 , system
 , nixpkgs
 }:
@@ -16,13 +15,10 @@ let
   buildRootDirectory = "root-directory";
   target = import nixpkgs { inherit system; };
 
-  prootCommand = lib.concatStringsSep " " [
-    "${proot}/bin/proot"
-    "-b ${pkgsStatic.nix}:/static-nix"
-    "-b /proc:/proc"
-    "-r ${buildRootDirectory}"
-    "-w /"
-  ];
+  # Upstream registers the store by running a static nix-store under proot with the tree as /.
+  # At this pin nix-store is a symlink into another store path proot's root cannot see, so the
+  # tree is opened as a chroot store instead: same /nix/store paths in the db, no proot.
+  nixStore = "${nix}/bin/nix-store --store $PWD/${buildRootDirectory}";
 
   targetClosure = closureInfo { rootPaths = [ target.nix target.bash target.cacert ]; };
   prootTermuxClosure = closureInfo { rootPaths = [ prootTermux ]; };
@@ -32,17 +28,14 @@ stdenvNoCC.mkDerivation {
   name = "nix-directory";
   dontUnpack = true;
 
-  PROOT_NO_SECCOMP = 1;
-
   buildPhase = ''
     mkdir --parents ${buildRootDirectory}/nix/var/nix/db ${buildRootDirectory}/nix/store
     for i in $(< ${targetClosure}/store-paths) $(< ${prootTermuxClosure}/store-paths); do
       [ -e "${buildRootDirectory}$i" ] || cp --archive "$i" "${buildRootDirectory}$i"
     done
 
-    USER=${config.user.userName} ${prootCommand} "/static-nix/bin/nix-store" --init
-    USER=${config.user.userName} ${prootCommand} "/static-nix/bin/nix-store" --load-db < ${targetClosure}/registration
-    USER=${config.user.userName} ${prootCommand} "/static-nix/bin/nix-store" --load-db < ${prootTermuxClosure}/registration
+    HOME=$TMPDIR USER=${config.user.userName} ${nixStore} --load-db < ${targetClosure}/registration
+    HOME=$TMPDIR USER=${config.user.userName} ${nixStore} --load-db < ${prootTermuxClosure}/registration
 
     cat > package-info.nix <<EOF2
     {
