@@ -290,6 +290,44 @@ else
     else
         echo "FAIL MUTATION SURVIVED: without the agent-auth file the auth checks still passed — they prove nothing"; fail=1
     fi
+
+    echo "── #797: the pty checks the PHONE runs (pty-check in a real pty) can each see their failure ──"
+    # The list above now carries ab_cloud-terminal-store/pty-selftest.json's checks through pty-check
+    # (zsh/zpty: the shell opens the pty itself), and they just passed under the shipped proot. The
+    # pipe-fed checks were all green on the 2026-10-03 phone, so a check that could not go red here
+    # would prove nothing there. Three mutants, one property each of that phone's failure: a claude
+    # that answers with the --print refusal (claude-tui), a login config that stalls fish 5 s so no
+    # prompt comes within 3 s of its spawn (prompt), and a /dev with no ptmx so no pty can be opened
+    # at all (tty and stty). Under the real policy the fourth property, EACCES on the tty ioctls, is
+    # what pty-selftest.py's seccomp mutant below proves for the python harness.
+    pty_red() {  # $1 = what was mutated, then the pty-check names that must go red
+        got="$(selftest_failures)"; why="$1"; shift
+        for n in "$@"; do
+            if echo "$got" | grep -q -- "pty-check $n'"; then echo "ok   mutation proved: $why turns pty-check $n red"
+            else echo "FAIL MUTATION SURVIVED: $why left pty-check $n green — the on-phone check cannot see this failure"; fail=1; fi
+        done
+    }
+    claude_bin="$STAGE/rootfs/usr/local/bin/claude"
+    [ -e "$claude_bin" ] || { echo "FAIL MUTATION DID NOT APPLY: no $claude_bin to replace"; fail=1; }
+    mv "$claude_bin" "$claude_bin.off"
+    printf '#!/bin/sh\necho "Error: Input must be provided either through stdin or as a prompt argument when using --print" >&2\nexit 1\n' > "$claude_bin"
+    chmod 0755 "$claude_bin"
+    pty_red "a claude that refuses in --print mode" claude-tui
+    rm -f "$claude_bin"; mv -f "$claude_bin.off" "$claude_bin"
+    fish_cfg="$STAGE/rootfs/etc/fish/config.fish"
+    if [ -f "$fish_cfg" ]; then cp "$fish_cfg" "$fish_cfg.off"; had_cfg=1; else had_cfg=0; fi
+    echo 'sleep 5' >> "$fish_cfg"
+    pty_red "a login config that stalls fish 5 s" prompt
+    if [ "$had_cfg" = 1 ]; then mv -f "$fish_cfg.off" "$fish_cfg"; else rm -f "$fish_cfg"; fi
+    mv "$STAGE/enter.sh" "$STAGE/enter.sh.shipped"
+    sed 's|-b /dev -b /proc|-b /dev/null:/dev/null -b /proc|' "$STAGE/enter.sh.shipped" > "$STAGE/enter.sh"
+    chmod 0700 "$STAGE/enter.sh"
+    if cmp -s "$STAGE/enter.sh" "$STAGE/enter.sh.shipped"; then
+        echo "FAIL MUTATION DID NOT APPLY: enter.sh has no '-b /dev -b /proc' to narrow"; fail=1
+    else
+        pty_red "a /dev with no ptmx" tty stty
+    fi
+    mv -f "$STAGE/enter.sh.shipped" "$STAGE/enter.sh"
     sudo -n umount "$G"
     sudo -n rm -rf /storage
 fi

@@ -313,11 +313,28 @@ grep -q '\[ -d "\$HERE/cloud-store" \]' "$E" \
     || bad "enter.sh wires the store unconditionally; a missing asset would cost the terminal its shell"
 
 MISSING=""
-for f in cloud-store declaration.sh login-init.sh login-exec; do
+for f in cloud-store declaration.sh login-init.sh login-exec pty-check pty-selftest.json; do
     grep -q "cloud-store/$f" "$G" || MISSING="$MISSING $f"
 done
-[ -z "$MISSING" ] && ok "verifyCloudRootfs requires all four store assets, so a staging failure is a red build not a silent loss" \
+[ -z "$MISSING" ] && ok "verifyCloudRootfs requires all six store assets (#644 store, #797 pty selftest), so a staging failure is a red build not a silent loss" \
     || bad "app/build.gradle's asset gate does not require:$MISSING"
+grep -q 'pty-check' "$R/build-rootfs.sh" && grep -q 'pty-selftest.json' "$R/build-rootfs.sh" \
+    && ok "build-rootfs.sh stages pty-check and pty-selftest.json beside the store (#797)" \
+    || bad "build-rootfs.sh does not stage the pty selftest: terminal-selftest.json's pty-check lines would run nothing"
+
+# #797 — the phone had the store assets in the APK and NOTHING copied them: refreshFiles staged only
+# FILES (proot, enter.sh), enter.sh found no cloud-store beside itself and, guarded as above, left
+# the store unwired on every termux phone (measured 2026-10-03: /usr/lib/cloud-store empty in the
+# guest), while verify-rootfs.sh staged the directory itself and stayed green. The whole asset
+# directory is enumerated from the APK, so a file build-rootfs.sh adds needs no name in Java.
+grep -q 'STORE_DIR = "cloud-store"' "$CR" \
+    && grep -q 'getAssets().list(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + STORE_DIR)' "$CR" \
+    && grep -q 'names.add(STORE_DIR + "/" + name)' "$CR" \
+    && ok "refreshFiles stages every file of the cloud-store asset directory beside enter.sh (#797)" \
+    || bad "CloudRootfs.refreshFiles does not stage assets/<dir>/cloud-store: enter.sh finds no store on the phone and the pty selftest has no harness"
+grep -q 'carries no assets/' "$CR" \
+    && ok "an APK with an empty cloud-store asset directory is refused at stage time, not quietly entered without a store" \
+    || bad "CloudRootfs.refreshFiles tolerates an empty cloud-store asset directory"
 
 grep -q 'cloud-store' "$R/verify-rootfs.sh" \
     && ok "verify-rootfs.sh stages the store too, so the runtime half exercises the path the phone takes" \

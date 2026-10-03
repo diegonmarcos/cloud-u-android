@@ -1,0 +1,141 @@
+#!/usr/bin/env zsh
+# #797 -- pty-selftest.json, run ON THE PHONE. /api/terminal/selftest hands every check to the
+# login over PIPES, so every check before this one was green on the phone where fish drew no
+# prompt and a bare `claude` fell into --print (#795: glibc 2.42's TCGETS2 answered EACCES by
+# Android's tty ioctl policy, passed through by the old proot). This runs ONE named check of
+# pty-selftest.json inside a pseudo-terminal the shell opens itself -- zsh/zpty: openpty,
+# setsid, TIOCSCTTY, a session leader on its own pts, the shape terminal-emulator's termux.c
+# gives a typed session -- under the proot, the uid, the SELinux policy and the /dev the phone
+# really has. Measured 2026-10-03 on the S21+ through /api/terminal/exec: under the old proot
+# the nix terminal's `tty` said `not a tty` and `stty` said `Permission denied`, the owner's two
+# lines verbatim, while every pipe-fed check stayed green.
+#
+# The same file runs in CI: ac_cloud-termux/rootfs/verify-rootfs.sh runs every
+# terminal-selftest.json check (these included) through enter.sh under the shipped proot, and
+# ac_cloud-nix-on-droid's bake runs them through bin/login's proot flags on the x86_64 leg.
+# pty-selftest.py is the CI-only sibling that adds the seccomp model of Android's ioctl policy;
+# the DECLARATIONS are one file, pty-selftest.json, so a check is added there and runs in both.
+#
+# Usage: zsh pty-check <name>     pty-selftest.json and declaration.sh are read beside this file
+# Prints `ok   <name> (<s>s)` or `FAIL <name>: <why> | <last output>`; exit status 1 on FAIL.
+# zsh because both terminals ship it (store.json::toolset) and the nix tree has no python3
+# (#665); jq and GNU grep (-E with \b and \s) are toolset tools as well.
+emulate -L zsh
+zmodload zsh/zpty zsh/datetime zsh/zselect 2>/dev/null \
+    || { print -r -- "FAIL ${1:-?}: this zsh lacks zsh/zpty, zsh/datetime or zsh/zselect"; exit 1 }
+
+HERE=${0:A:h}
+DECL=$HERE/pty-selftest.json
+name=${1:?usage: pty-check <check name>}
+[[ -r $DECL ]] || { print -r -- "FAIL $name: $DECL is not readable"; exit 1 }
+
+# Which terminal this is: render-store.py's declaration.sh, rendered per terminal and shipped
+# beside this file. The environment wins so CI and a hand run can say so without a store
+# directory; with neither, this is a store that was never staged (the termux phones before #797),
+# and a check that silently assumed one terminal could skip what the other declares.
+if [[ -z ${CLOUD_STORE_TERMINAL:-} ]]; then
+    [[ -r $HERE/declaration.sh ]] || { print -r -- "FAIL $name: no declaration.sh beside $0 and no CLOUD_STORE_TERMINAL: the link store is not staged"; exit 1 }
+    . $HERE/declaration.sh
+fi
+terminal=${CLOUD_STORE_TERMINAL:?}
+
+typeset -g out=""
+start=$EPOCHREALTIME
+elapsed() { local -i t=$(( (EPOCHREALTIME - start) * 10 )); print -rn -- "$(( t / 10 )).$(( t % 10 ))" }
+# The last three non-empty lines of what the pty printed, control bytes shown as dots.
+tail3() { print -rn -- "${out//$'\r'/}" | tr -c '[:print:]\n' . | grep -v '^$' | tail -n 3 | tr '\n' '|' | cut -c1-300 }
+ok()   { print -r -- "ok   $name ($(elapsed)s)"; exit 0 }
+fail() {
+    print -r -- "FAIL $name: $1 | $(tail3)"
+    # PTY_CHECK_DEBUG=1 dumps everything the pty printed (control bytes as dots) to stderr.
+    [[ -n ${PTY_CHECK_DEBUG:-} ]] && print -rn -- "${out//$'\r'/}" | tr -c '[:print:]\n' . >&2
+    exit 1
+}
+TRAPEXIT() { zpty -d 2>/dev/null; return 0 }
+
+field() { jq -r --arg n "$name" --arg f "$1" '.checks[] | select(.name == $n) | .[$f] // empty' "$DECL" }
+[[ -n "$(jq -r --arg n "$name" '.checks[] | select(.name == $n) | .name' "$DECL")" ]] \
+    || fail "no check named $name in $DECL"
+terminals=$(jq -r --arg n "$name" '.checks[] | select(.name == $n) | (.terminals // []) | join(" ")' "$DECL")
+if [[ -n $terminals && " $terminals " != *" $terminal "* ]]; then
+    print -r -- "ok   $name (declared for $terminals only, not for the $terminal terminal: skipped)"
+    exit 0
+fi
+shell=$(jq -r '.login_shell' "$DECL")
+deadline=$(field deadline_s)
+# The debug API gives one check 30 s (TerminalDebugApi.DEFAULT_TIMEOUT_MS), the login included,
+# so a longer deadline would make the API's timeout the verdict instead of this check's.
+max=${PTY_CHECK_MAX_S:-20}
+(( deadline > max )) && deadline=$max
+
+# What a terminal answers to the two queries shells block on (pty-selftest.py's REPLIES): primary
+# device attributes (fish 4 waits for it before its first prompt) and the cursor position.
+answer_queries() {
+    [[ $1 == *$'\e[c'* || $1 == *$'\e[0c'* ]] && zpty -w -n p $'\e[?62;22c'
+    [[ $1 == *$'\e[6n'* ]] && zpty -w -n p $'\e[1;1R'
+    return 0
+}
+# Collects what the pty has printed so far; status 0 while the command is still running.
+pump() {
+    local chunk
+    while zpty -r -t p chunk 2>/dev/null; do out+=$chunk; answer_queries "$chunk"; done
+    zpty -t p 2>/dev/null
+}
+# zpty evaluates its arguments as one command line, so every word is quoted to stay one word:
+# the child is a session leader whose controlling tty is the new pts, non-blocking for reads.
+spawn() { zpty -b p "${(j: :)${(q)@}}" || fail "cannot open a pseudo-terminal for ${(j: :)${(q)@}}" }
+running() { (( EPOCHREALTIME - start < deadline )) }
+
+if [[ -n "$(field run)" ]]; then
+    # One command in the pty, through the login shell as CI does (`-c <run>`). The window is set
+    # from inside (TIOCSWINSZ) where pty-selftest.py sets it on the master: the declared
+    # expectations (`rows 24`) are the same for both harnesses.
+    run=$(field run); expect=$(field expect)
+    spawn $shell -c "stty rows 24 cols 80; $run"
+    exited=0
+    while running; do
+        pump || { pump; exited=1; break }
+        zselect -t 5
+    done
+    if print -rn -- "${out//$'\r'/}" | grep -Eq -- "$expect"; then ok; fi
+    fail "no line matching $expect within ${deadline}s ($( (( exited )) && print exited || print "still running"))"
+elif [[ -n "$(field prompt)" ]]; then
+    # An INTERACTIVE login shell reaches its line reader: typed the moment the shell turns on
+    # bracketed paste (its reader is up) or once it has printed something and gone quiet for
+    # 0.3 s, the line must come back evaluated before the deadline (3 s, from the spawn: the
+    # brief's bar, measured on the phone where fish alone takes ~2.7 s under proot). A shell
+    # that never prompts, or one reading stdin as a script, prints no marker.
+    typed=$(field prompt); expect=$(field expect)
+    spawn $shell -l -i
+    exited=0 last=0 typed_at=0
+    while running; do
+        before=${#out}
+        pump || exited=1
+        (( ${#out} > before )) && last=$EPOCHREALTIME
+        [[ $out == *"$expect"* ]] && ok
+        (( exited )) && break
+        if (( ! typed_at )) && { [[ $out == *$'\e[?2004h'* ]] || (( last && EPOCHREALTIME - last > 0.3 )) }; then
+            zpty -w -n p "$typed"$'\r'
+            typed_at=1
+        fi
+        zselect -t 5
+    done
+    (( exited )) && fail "the shell exited before it echoed $expect"
+    (( typed_at )) || fail "the shell printed nothing in ${deadline}s, so nothing could be typed"
+    fail "no $expect within ${deadline}s of the spawn"
+else
+    # A command that must take over the terminal: bracketed paste on, or the cursor hidden --
+    # and never the --print refusal the phone printed. Nothing is typed; the session is hung up.
+    tui=$(field tui); refuse=$(field refuse)
+    marks=("${(@f)$(jq -r --arg n "$name" '.checks[] | select(.name == $n) | .expect_any[]' "$DECL")}")
+    spawn $shell -c "$tui"
+    exited=0
+    while running; do
+        pump || exited=1
+        [[ -n $refuse && $out == *"$refuse"* ]] && fail "printed $refuse"
+        for m in "${marks[@]}"; do [[ $out == *"$m"* ]] && ok; done
+        (( exited )) && fail "exited without a TUI (no bracketed paste, no hidden cursor)"
+        zselect -t 5
+    done
+    fail "no TUI within ${deadline}s (still running)"
+fi

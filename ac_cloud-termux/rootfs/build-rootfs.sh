@@ -71,6 +71,10 @@ cp "$HERE/enter.sh" "$OUT/enter.sh"
 # engine serve two apps that stay separate.
 mkdir -p "$OUT/cloud-store"
 cp "$STORE_SRC/cloud-store" "$STORE_SRC/login-init.sh" "$STORE_SRC/login-exec" "$OUT/cloud-store/"
+# #797 -- the pty selftest the phone runs (pty-check, zsh) and the one declaration of its checks,
+# shared with CI's pty-selftest.py. Beside the store because enter.sh binds this directory at
+# /usr/lib/cloud-store, the path terminal-selftest.json names in both terminals.
+cp "$STORE_SRC/pty-check" "$STORE_SRC/pty-selftest.json" "$OUT/cloud-store/"
 python3 "$STORE_SRC/render-store.py" termux "$OUT/cloud-store/declaration.sh"
 chmod 0755 "$OUT/cloud-store/cloud-store" "$OUT/cloud-store/login-exec"
 

@@ -60,6 +60,8 @@
             "../ab_cloud-terminal-store/render-store.py",
             "../ab_cloud-terminal-store/login-init.sh",
             "../ab_cloud-terminal-store/login-exec",
+        "../ab_cloud-terminal-store/pty-check",
+        "../ab_cloud-terminal-store/pty-selftest.json",
             "app/src/main/cpp/rootfs-extras.nix",
             "../ac_cloud-termux/rootfs/rootfs.json",
             "../ab_cloud-terminal-store/noexec-shebang.c",

@@ -72,7 +72,7 @@ grep -q '.put("installed", CloudRootfs.installed(app))' "$API" \
     && ok "the selftest answer names the app APK, lib and staged/unpacked digests it ran against" \
     || bad "the selftest answer does not say which builds produced it"
 
-python3 - "$SELFTEST" "$SIBLING" <<'PY' && ok "selftest declares the #747/#771 checks, each under sh, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
+python3 - "$SELFTEST" "$SIBLING" "$DIR/../ab_cloud-terminal-store/pty-selftest.json" "$DIR/../ab_cloud-terminal-store/store.json" <<'PY' && ok "selftest declares the #747/#771/#797 checks, each under sh, identical in both terminals" || bad "terminal-selftest.json is wrong or the two terminals' copies differ"
 import json, sys
 mine, sibling = (json.load(open(p))["checks"] for p in sys.argv[1:3])
 problems = [] if mine == sibling else ["the two terminals' lists differ"]
@@ -103,6 +103,14 @@ store = [s for s in script if "~/cloud-drive-shared-store/git/*/.git" in s]
 has(lambda s: s in store and "git status" in s and "|" not in s.split("git status")[1], "runs git status in a shared-store repo, unpiped")
 has(lambda s: s in store and "echo one > $f" in s and "sed -i" in s and "rm $f" in s, "creates, edits and deletes a file in a shared-store repo")
 has(lambda s: s in store and "#!/usr/bin/env sh" in s and "./$f" in s and "rm -f $f" in s, "runs a #! script as ./script in a shared-store repo")
+# #797: every check pty-selftest.json declares runs ON THE PHONE, by name, through pty-check at the
+# store's install dir (store.json), the one path both terminals bind alike. The pipe-fed checks above
+# were all green on the phone whose sessions had no usable tty; only a check inside a real pty sees that.
+pty, store = json.load(open(sys.argv[3])), json.load(open(sys.argv[4]))
+pty_bin = "/" + store["store"]["install_dir"].strip("/") + "/pty-check"
+for c in pty["checks"]:
+    has(lambda s, c=c: s == f"zsh {pty_bin} {c['name']}",
+        f"runs pty-selftest.json's `{c['name']}` in a real pty on the phone through {pty_bin} (#797)")
 for p in problems:
     print("  " + p)
 sys.exit(1 if problems else 0)

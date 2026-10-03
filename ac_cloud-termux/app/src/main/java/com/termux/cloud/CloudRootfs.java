@@ -65,6 +65,18 @@ public final class CloudRootfs {
     private static final String MANIFEST_ENTRY = "assets/rootfs-lib.json";
     /** The small files this app still carries in its own assets/ — the tarball does not, any more. */
     private static final String[] FILES = {"proot", "enter.sh"};
+    /**
+     * #797 The directory of small files beside them, staged by rootfs/build-rootfs.sh: the #644 link
+     * store (engine, rendered declaration, login wiring) and the pty selftest the phone runs
+     * (ab_cloud-terminal-store/pty-check + pty-selftest.json). enter.sh binds it onto
+     * /usr/lib/cloud-store and enters through its login-exec, which sources login-init.sh: the
+     * store's PATH and #790's agent credentials. Enumerated from the APK rather than named here,
+     * so a file build-rootfs.sh adds ships without a second list. Until #797 nothing copied it:
+     * enter.sh found no cloud-store beside itself and, by design, left the store unwired -- so on
+     * every termux phone login-init.sh never ran, while CI (verify-rootfs.sh) staged the directory
+     * itself and stayed green.
+     */
+    private static final String STORE_DIR = "cloud-store";
 
     private CloudRootfs() {}
 
@@ -204,12 +216,20 @@ public final class CloudRootfs {
     public static synchronized void refreshFiles(Context context) throws IOException, ErrnoException {
         File dir = stageDir();
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
-        for (String name : FILES) {
+        java.util.List<String> names = new java.util.ArrayList<>(java.util.Arrays.asList(FILES));
+        String[] store = context.getAssets().list(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + STORE_DIR);
+        if (store == null || store.length == 0)
+            throw new IOException("this APK carries no assets/" + BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + STORE_DIR
+                + ": build-rootfs.sh did not stage the link store, and app/build.gradle should have refused the build");
+        for (String name : store) names.add(STORE_DIR + "/" + name);
+        for (String name : names) {
             byte[] want;
             try (InputStream in = context.getAssets().open(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + name)) {
                 want = bytes(in);
             }
             File target = new File(dir, name);
+            File parent = target.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("cannot create " + parent);
             if (target.isFile() && java.util.Arrays.equals(want, bytes(new FileInputStream(target)))) continue;
             File tmp = new File(dir, name + ".new");
             try (OutputStream out = new FileOutputStream(tmp)) {

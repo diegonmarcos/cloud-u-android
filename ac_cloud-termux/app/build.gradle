@@ -510,9 +510,12 @@ tasks.register('verifyCloudRootfs') {
         // of rebuilding ~400 MB. Required here for the same reason proot is: a
         // missing one means enter.sh declines to wire the store and the terminal
         // silently loses every managed link.
+        // #797 -- pty-check and pty-selftest.json are the pty selftest /api/terminal/selftest
+        // runs on the phone; missing, the terminal's TTY would again be unprovable from outside.
         ['proot', 'enter.sh',
          'cloud-store/cloud-store', 'cloud-store/declaration.sh',
-         'cloud-store/login-init.sh', 'cloud-store/login-exec'].each { name ->
+         'cloud-store/login-init.sh', 'cloud-store/login-exec',
+         'cloud-store/pty-check', 'cloud-store/pty-selftest.json'].each { name ->
             def f = new File(cloudRootfsAssetsDir, name)
             if (!f.isFile() || f.length() == 0) {
                 throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${cloudRootfsAssetsDir} first (CI does)")

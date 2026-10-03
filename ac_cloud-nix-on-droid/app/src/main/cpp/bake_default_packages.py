@@ -29,6 +29,7 @@ Usage:
 this function already has open.
 """
 import importlib.util
+import json
 import os
 import re
 import stat
@@ -601,17 +602,18 @@ PTY_PROOT_FLAGS = ["--kill-on-exit", "--link2symlink", "--sysvipc", "-p"]
 PTY_MUTANT_RED = ("tty", "stty", "prompt", "claude-tui")
 
 
-def pty_gate(proot: str, old_proot: str, generation: str, login_shell: str, nix_system: str) -> int:
+def pty_gate(proot: str, old_proot: str, generation: str, login_shell: str, nix_system: str,
+             store_dir: str, store_files: dict) -> int:
     """#795: ../ab_cloud-terminal-store/pty-selftest.json in a real pty under `proot`, with this
     profile's own login shell and claude (the store paths the zip ships, realized on this runner),
     then the same run under the zip's original proot, which must fail every check: that mutant IS
     the phone of 2026-10-03, so a green mutant would mean the checks cannot see the bug."""
     host = {"arm64": "aarch64"}.get(os.uname().machine, os.uname().machine)
     if nix_system.split("-")[0] != host:
-        print(f"COVERAGE-GAP #795: the pty selftest needs a {nix_system} host (an Android proot cannot "
+        print(f"COVERAGE-GAP #795/#797: the pty selftests need a {nix_system} host (an Android proot cannot "
               f"trace under qemu-user); this {host} runner ships the {nix_system} proot without running "
-              "it. The x86_64 leg runs the same checks on the same proot revision, and the termux "
-              "rootfs job runs them on arm64.", file=sys.stderr)
+              "them. The x86_64 leg runs the same checks on the same proot revision, and the termux "
+              "rootfs job runs them (pty-check included) natively on arm64.", file=sys.stderr)
         return 0
 
     def selftest(p):
@@ -637,7 +639,80 @@ def pty_gate(proot: str, old_proot: str, generation: str, login_shell: str, nix_
               f"cannot see the phone's failure:\n{out}", file=sys.stderr)
         return 1
     print(f"ok   mutation proved #795: under the 24.05 proot {list(PTY_MUTANT_RED)} all go red", file=sys.stderr)
-    return 0
+    return phone_pty_gate(proot, generation, login_shell, store_dir, store_files)
+
+
+# #797 -- the checks the PHONE runs: app/src/main/assets/terminal-selftest.json's pty-check lines,
+# each handed to the login shell over PIPES exactly as /api/terminal/selftest hands it, with the
+# store directory this zip ships bound where bin/login binds it. pty-selftest.py above models
+# Android's ioctl policy around the python harness; this proves the harness the phone has (pty-check:
+# zsh/zpty, jq and GNU grep out of this very profile) opens a pty under this proot and judges every
+# declared check. Three mutants, one property each of the 2026-10-03 phone: a claude answering with
+# the --print refusal (claude-tui), a login config stalling fish 5 s so no prompt comes within 3 s of
+# its spawn (prompt), a /dev with no ptmx so no pty opens at all (tty, stty).
+SELFTEST_JSON = Path(__file__).resolve().parents[1] / "assets" / "terminal-selftest.json"  # app/src/main/assets
+PRINT_REFUSAL = "Error: Input must be provided either through stdin or as a prompt argument when using --print"
+
+
+def phone_pty_gate(proot: str, generation: str, login_shell: str, store_dir: str, store_files: dict) -> int:
+    checks = [c for c in json.loads(SELFTEST_JSON.read_text())["checks"] if "pty-check" in c]
+    if not checks:
+        print(f"FAIL #797: {SELFTEST_JSON} runs no pty-check line", file=sys.stderr)
+        return 1
+    base_path = f"{generation}/bin:/usr/bin:/bin"
+    with tempfile.TemporaryDirectory() as store:
+        for name, (data, executable) in store_files.items():
+            f = Path(store) / name
+            f.write_bytes(data)
+            if executable:
+                f.chmod(0o755)
+
+        def failures(env_extra=None, binds=()):
+            with tempfile.TemporaryDirectory() as home:
+                env = {"HOME": home, "TMPDIR": home, "TERM": "xterm-256color", "LANG": "C.UTF-8",
+                       "PATH": base_path, **(env_extra or {})}
+                failed = []
+                for check in checks:
+                    r = subprocess.run([proot, *PTY_PROOT_FLAGS, *binds, "-b", f"{store}:/{store_dir}",
+                                        os.path.join(generation, "bin", login_shell), "-l", "-c", check],
+                                       env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=600)
+                    if r.returncode != 0:
+                        last = (r.stdout + r.stderr).strip().splitlines()[-1:] or ["(no output)"]
+                        failed.append(f"{check} => {last[0][:300]}")
+                return failed
+
+        got = failures()
+        if got:
+            print("FAIL #797: a pty-check line of terminal-selftest.json fails under the shipped proot:\n  "
+                  + "\n  ".join(got), file=sys.stderr)
+            return 1
+        print(f"ok   #797: all {len(checks)} pty-check lines pass under the shipped proot (zsh/zpty, a real pty)",
+              file=sys.stderr)
+
+        def red(why, got, *names):
+            rc = 0
+            for n in names:
+                if any(f"pty-check {n}'" in g for g in got):
+                    print(f"ok   mutation proved #797: {why} turns pty-check {n} red", file=sys.stderr)
+                else:
+                    print(f"FAIL MUTATION SURVIVED #797: {why} left pty-check {n} green -- the phone's check "
+                          "cannot see this failure:\n  " + "\n  ".join(got or ["(all green)"]), file=sys.stderr)
+                    rc = 1
+            return rc
+
+        rc = 0
+        with tempfile.TemporaryDirectory() as stub:
+            Path(stub, "claude").write_text(f"#!/bin/sh\necho '{PRINT_REFUSAL}' >&2\nexit 1\n")
+            os.chmod(os.path.join(stub, "claude"), 0o755)
+            rc |= red("a claude that refuses in --print mode", failures({"PATH": f"{stub}:{base_path}"}), "claude-tui")
+        with tempfile.TemporaryDirectory() as cfg:
+            os.makedirs(os.path.join(cfg, "fish"))
+            Path(cfg, "fish", "config.fish").write_text("sleep 5\n")
+            rc |= red("a login config that stalls fish 5 s", failures({"XDG_CONFIG_HOME": cfg}), "prompt")
+        with tempfile.TemporaryDirectory() as nodev:
+            rc |= red("a /dev with no ptmx", failures(binds=("-b", f"{nodev}:/dev", "-b", "/dev/null:/dev/null")),
+                      "tty", "stty")
+        return rc
 
 
 def main() -> int:
@@ -716,6 +791,27 @@ def main() -> int:
             etc_profile = zin.read(ETC_PROFILE_ENTRY).decode()
             proot_bytes = Path(proot).read_bytes()
 
+            # ── #644: the declarative link store, and its login wiring ─────
+            # (before the #795 gate: #797 runs the phone's pty checks with these files bound in)
+            try:
+                render_store = load_render_store()
+                store_decl = render_store.load()["store"]
+                store_dir = store_decl["install_dir"]
+                store_files = {
+                    store_decl["engine"]: ((STORE_SRC / store_decl["engine"]).read_bytes(), True),
+                    "login-init.sh": ((STORE_SRC / "login-init.sh").read_bytes(), False),
+                    "login-exec": ((STORE_SRC / "login-exec").read_bytes(), True),
+                    "declaration.sh": (render_store.render("nix").encode(), False),
+                    # #797 the pty selftest the phone runs (terminal-selftest.json calls it by check
+                    # name at /<store_dir>/pty-check) and the one declaration of its checks.
+                    "pty-check": ((STORE_SRC / "pty-check").read_bytes(), False),
+                    "pty-selftest.json": ((STORE_SRC / "pty-selftest.json").read_bytes(), False),
+                }
+                store_tools = render_store.tools_of("nix")
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+
             # ── #795: the session's terminal, proven in a pty before the proot is swapped in
             if PROOT_ENTRY not in existing:
                 print(f"FAIL: the input zip has no {PROOT_ENTRY} for ab_cloud-terminal-store/proot.json to replace",
@@ -724,7 +820,7 @@ def main() -> int:
             old_proot = os.path.join(work, "proot-static.zip-original")
             Path(old_proot).write_bytes(zin.read(PROOT_ENTRY))
             os.chmod(old_proot, 0o755)
-            if pty_gate(proot, old_proot, generation, login_shell, nix_system) != 0:
+            if pty_gate(proot, old_proot, generation, login_shell, nix_system, store_dir, store_files) != 0:
                 return 1
 
             # ── #612/#736: shared storage + the cloud-drive shared store in
@@ -747,22 +843,6 @@ def main() -> int:
                 return 1
             if dns_resolv_conf in existing:
                 print(f"FAIL: the input zip already carries {dns_resolv_conf}", file=sys.stderr)
-                return 1
-
-            # ── #644: the declarative link store, and its login wiring ─────
-            try:
-                render_store = load_render_store()
-                store_decl = render_store.load()["store"]
-                store_dir = store_decl["install_dir"]
-                store_files = {
-                    store_decl["engine"]: ((STORE_SRC / store_decl["engine"]).read_bytes(), True),
-                    "login-init.sh": ((STORE_SRC / "login-init.sh").read_bytes(), False),
-                    "login-exec": ((STORE_SRC / "login-exec").read_bytes(), True),
-                    "declaration.sh": (render_store.render("nix").encode(), False),
-                }
-                store_tools = render_store.tools_of("nix")
-            except ValueError as e:
-                print(f"FAIL: {e}", file=sys.stderr)
                 return 1
 
             # ── patch login-inner's session-init line and its env execs ────
