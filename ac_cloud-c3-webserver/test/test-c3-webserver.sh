@@ -41,6 +41,10 @@
 #       test-c3-webserver-no-kotlin.sh.)
 #   T6  RENAME LEDGER. The retired spellings (the old cloud- id without the c3-
 #       family, its asset and image names) appear nowhere in this app.
+#   T7  ROUTE <-> TAB END TO END (needs cargo). The compiled /__api__/routes of
+#       the real routes.rs, rendered by the shell's own nav code under node, is
+#       the five tabs; a tab row planted in a copy of routes.rs appears in the
+#       nav, the Configs row removed from a copy disappears.
 #   M   mutation-proof: each defect above is planted in a copy and shown red.
 #
 # OWN-SOURCE ONLY: reads this application's directory and nothing else.
@@ -311,16 +315,72 @@ t6() {
   return 0
 }
 
+# ── t7 <app> : route <-> tab, end to end ───────────────────────────────────
+# The chain the user sees: routes.rs ROUTES -> (compiled) /__api__/routes JSON
+# -> the shell's own tabsFrom/renderNav under node -> the bottom-nav buttons.
+# On copies: the real table draws exactly Pages, API, Home, Files, Configs; a
+# tab row PLANTED in routes.rs appears in the nav; the Configs row REMOVED from
+# routes.rs disappears from it. Needs cargo (the crate is compiled).
+nav_of() {  # nav_of <app> -> one caption per line, as rendered
+  local out json
+  out="$(cd "$1/server" && CARGO_TARGET_DIR="$T7_TARGET" cargo test -q --lib dump_routes_json -- --ignored --nocapture 2>/dev/null)" || return 1
+  json="$(printf '%s' "$out" | sed -n 's/.*ROUTES_JSON_BEGIN\(.*\)ROUTES_JSON_END.*/\1/p')"
+  [ -n "$json" ] || return 1
+  python3 - "$1/server/ui/shell.html" "$json" <<'PY'
+import os, re, subprocess, sys, tempfile
+pure = re.search(r'<script id="pure">(.*?)</script>', open(sys.argv[1]).read(), re.S).group(1)
+with tempfile.TemporaryDirectory() as d:
+    js = os.path.join(d, "pure.js"); open(js, "w").write(pure)
+    h = os.path.join(d, "h.js"); open(h, "w").write(
+        "const p=require(process.argv[2]);const r=JSON.parse(process.argv[3]);"
+        "const t=p.tabsFrom(r);const n=p.renderNav(t,p.defaultTab(t));"
+        "(n.match(/<button[^>]*>[^<]*<\\/button>/g)||[]).forEach(b=>console.log(b.replace(/<[^>]*>/g,'')));")
+    r = subprocess.run(["node", h, js, sys.argv[2]], capture_output=True, text=True)
+    sys.stdout.write(r.stdout); sys.exit(r.returncode)
+PY
+}
+t7() {
+  local copy nav rc=0
+  T7_TARGET="$WORK7/target"
+  nav="$(nav_of "$1" | tr '\n' ',')"
+  [ "$nav" = "Pages,API,Home,Files,Configs," ] || { echo "    real table: nav is '$nav', want Pages,API,Home,Files,Configs"; rc=1; }
+  copy="$WORK7/plant"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$copy/"; rm -rf "$copy/server/target"
+  python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    plant did not apply"; return 1; }
+import sys; p = sys.argv[1]; s = open(p).read()
+anchor = '    Route { kind: Kind::Api, path: "/__api__/routes"'
+assert anchor in s
+s = s.replace(anchor, '    Route { kind: Kind::Page, path: "/__tab__/planted", tab: Some("Planted"), summary: "planted", handler: page_shell },\n' + anchor, 1)
+open(p, "w").write(s)
+PY
+  nav="$(nav_of "$copy" | tr '\n' ',')"
+  [ "$nav" = "Pages,API,Home,Files,Configs,Planted," ] || { echo "    tab row planted: nav is '$nav', want ...,Configs,Planted"; rc=1; }
+  copy="$WORK7/remove"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$copy/"; rm -rf "$copy/server/target"
+  python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    remove did not apply"; return 1; }
+import re, sys; p = sys.argv[1]; s = open(p).read()
+n = re.sub(r'\n    Route \{ kind: Kind::Page, path: "/__tab__/configs".*?\},', "", s, count=1)
+assert n != s; open(p, "w").write(n)
+PY
+  nav="$(nav_of "$copy" | tr '\n' ',')"
+  [ "$nav" = "Pages,API,Home,Files," ] || { echo "    Configs row removed: nav is '$nav', want Pages,API,Home,Files"; rc=1; }
+  return $rc
+}
+
+WORK7="$(mktemp -d)"
 echo "── cloud-c3-webserver ──"
 t1 "$APP" && pass "T1 one route table: every route literal is a ROUTES path and dispatch walks the table" || fail "T1 a route lives outside the table"
 t2 "$APP" && pass "T2 five tabs, Home centre, declared in the table; every tab has a view and every view a tab" || fail "T2 tabs and views disagree"
 t3 "$APP" && pass "T3 the shell is derived: no caption or /__tab__/ href typed, and under node it draws a planted route and drops a removed one" || fail "T3 the shell hand-lists or misrenders"
 t4 "$APP" && pass "T4 no placeholder wording in a shipped tab" || fail "T4 a shipped tab can render a placeholder"
 t5 "$APP" && pass "T5 Tauri shape: ABIs mapped, lib + server crate linked, identity from build.json, bind before window, storage asked from Rust, no shell residue" || fail "T5 the Tauri shape is broken"
+if command -v cargo >/dev/null 2>&1; then
+  t7 "$APP" && pass "T7 route<->tab end to end: a tab row planted in routes.rs appears in the rendered nav, a removed one disappears" || fail "T7 the nav does not follow routes.rs"
+else
+  echo "  SKIP  T7 cargo absent — the route<->tab chain is unverified here"
+fi
 t6 "$APP" && pass "T6 rename ledger clean: no retired spelling anywhere in this app" || fail "T6 a retired spelling survives"
 
 # ── M: mutation-proof ──────────────────────────────────────────────────────
-WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
+WORK="$(mktemp -d)"; trap 'rm -rf "$WORK" "$WORK7"' EXIT
 mutate() {
   local title="$1" check="$2" mut="$3" copy="$WORK/m$RANDOM$RANDOM"
   mkdir -p "$copy"; cp -R "$APP/." "$copy/"
@@ -405,6 +465,15 @@ new=s.replace("return '# ' + s.title + '\\n' + s.rows.map(", "return '# ' + s.ti
 assert new!=s; open(p,"w").write(new)
 PY
 }
+m_json_drops_tab() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/src/routes.rs"; s=open(p).read()
+new=s.replace('match r.tab { Some(t) => jstr(t), None => "null".to_string() }', '"null".to_string()')
+assert new!=s; open(p,"w").write(new)
+PY
+}
+if command -v cargo >/dev/null 2>&1; then
+  mutate "/__api__/routes stops carrying the tab caption"  t7 m_json_drops_tab
+fi
 mutate "a handler attached outside the route table"        t1 m_route_outside
 mutate "the Home tab removed from the table"                t2 m_drop_home_tab
 mutate "a view with no declared tab"                        t2 m_view_orphan

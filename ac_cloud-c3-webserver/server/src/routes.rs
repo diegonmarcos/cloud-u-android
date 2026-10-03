@@ -542,6 +542,15 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
+    /// Not a check: prints what `/__api__/routes` serves, so
+    /// test-c3-webserver.sh (T7) can feed the REAL table to the shell's nav
+    /// under node, and plant/remove rows in a copy of this file.
+    #[test]
+    #[ignore]
+    fn dump_routes_json() {
+        println!("ROUTES_JSON_BEGIN{}ROUTES_JSON_END", routes_json());
+    }
+
     #[test]
     fn json_strings_escape() {
         assert_eq!(jstr("a\"b\\c\n"), "\"a\\\"b\\\\c\\n\"");
