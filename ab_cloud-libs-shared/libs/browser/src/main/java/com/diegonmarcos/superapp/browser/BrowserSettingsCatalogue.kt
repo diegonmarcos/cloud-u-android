@@ -84,8 +84,12 @@ class BrowserSettingsCatalogue(val settings: List<BrowserSetting>) {
         /**
          * `values_from: "search_engines"` takes the enum from the app's engine list, and
          * its default is the app's default engine — the list is declared once, there.
+         * `values_from: "addons"` does the same for the add-on set.
          */
-        fun parse(arr: JSONArray?, engineIds: List<String>, defaultEngine: String): BrowserSettingsCatalogue {
+        fun parse(
+            arr: JSONArray?, engineIds: List<String>, defaultEngine: String,
+            addonIds: List<String> = emptyList(), addonDefaults: Set<String> = emptySet(),
+        ): BrowserSettingsCatalogue {
             if (arr == null) return EMPTY
             val out = ArrayList<BrowserSetting>()
             for (i in 0 until arr.length()) {
@@ -94,9 +98,12 @@ class BrowserSettingsCatalogue(val settings: List<BrowserSetting>) {
                 val type = o.optString("type", "string")
                 if (key.isEmpty()) continue
                 val fromEngines = o.optString("values_from") == "search_engines"
-                val values = if (fromEngines) engineIds else o.optJSONArray("values").strings()
+                // #802 values_from: addons — the set of add-on ids; default = the default_enabled ones.
+                val fromAddons = o.optString("values_from") == "addons"
+                val values = if (fromEngines) engineIds else if (fromAddons) addonIds else o.optJSONArray("values").strings()
                 val default: Any? = when {
                     fromEngines -> defaultEngine
+                    fromAddons -> addonDefaults
                     !o.has("default") || o.isNull("default") -> null
                     type == "bool" -> o.optBoolean("default")
                     type == "int" -> o.optInt("default")

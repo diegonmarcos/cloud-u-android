@@ -266,3 +266,45 @@ fun BrowserClearScreen(boxes: List<Pair<String, String>>, note: String, onClear:
         TextButton({ onClear(picked) }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:clear:go")) { Text("Clear") }
     }
 }
+
+/**
+ * #802 the Web Scraper sheet: a CSS selector (typed, or picked by tapping the page), an
+ * optional attribute, pages to follow through a "next" link, then Run on the phone or on
+ * the server; Export writes the last result to Downloads as CSV.
+ */
+@Composable
+fun BrowserScraperScreen(
+    result: String,
+    onPick: () -> Unit,
+    onUsePicked: ((String) -> Unit) -> Unit,
+    onRun: (css: String, attr: String, pages: Int, next: String) -> Unit,
+    onRemote: (css: String) -> Unit,
+    onExport: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val p = LocalKitPalette.current
+    var css by remember { mutableStateOf("") }
+    var attr by remember { mutableStateOf("") }
+    var next by remember { mutableStateOf("") }
+    var pages by remember { mutableStateOf("1") }
+    Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(16.dp).testTag("browser:scraper")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text("Web scraper", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+        }
+        OutlinedTextField(css, { css = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("CSS selector") })
+        Row {
+            TextButton(onPick) { Text("Pick on page") }
+            TextButton({ onUsePicked { css = it } }) { Text("Use picked") }
+        }
+        OutlinedTextField(attr, { attr = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Attribute (optional: href, src…)") })
+        OutlinedTextField(next, { next = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Next-page link selector (optional)") })
+        OutlinedTextField(pages, { pages = it.filter { c -> c.isDigit() }.take(2) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Pages") })
+        Row {
+            TextButton({ onRun(css, attr, pages.toIntOrNull() ?: 1, next) }, enabled = css.isNotBlank()) { Text("Run here") }
+            TextButton({ onRemote(css) }) { Text("Run on server") }
+            TextButton(onExport) { Text("Export CSV") }
+        }
+        Text(result, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+    }
+}

@@ -45,6 +45,8 @@ data class BrowserConfig(
     val sitePerms: List<BrowserSitePerm> = emptyList(),
     /** #802 the boxes of "Clear browsing data", id → label. */
     val clearData: List<Pair<String, String>> = emptyList(),
+    /** #802 the add-ons; their menu rows are already merged into [menu]. */
+    val addons: BrowserAddons = BrowserAddons.EMPTY,
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -113,13 +115,21 @@ data class BrowserConfig(
 
             val finalEngines = if (engines.isEmpty()) DEFAULT.engines else engines
             val defaultId = o.optString("default_engine", DEFAULT.defaultEngineId)
+            val addons = BrowserAddons.parse(o.optJSONArray("addons"))
+            val menu = BrowserMenu.parse(o.optJSONObject("menu")).let { m ->
+                // An add-on's rows join the Add-ons section (when the menu declares one).
+                if (m.sections.none { it.id == "addons" }) m
+                else BrowserMenu(m.sections, m.items + addons.all.flatMap { it.menu }, m.whys)
+            }
             return BrowserConfig(
                 defaultPinnedTabs = pins,
                 engines = finalEngines,
                 defaultEngineId = defaultId,
                 settings = BrowserSettingsCatalogue.parse(
-                    o.optJSONArray("settings"), finalEngines.map { it.id }, defaultId),
-                menu = BrowserMenu.parse(o.optJSONObject("menu")),
+                    o.optJSONArray("settings"), finalEngines.map { it.id }, defaultId,
+                    addonIds = addons.all.map { it.id }, addonDefaults = addons.all.filter { it.defaultEnabled }.map { it.id }.toSet()),
+                menu = menu,
+                addons = addons,
                 userAgents = o.optJSONObject("user_agents").strings(),
                 palette = o.optJSONObject("palette").strings().mapNotNull { (k, v) ->
                     parseColor(v)?.let { k to it }

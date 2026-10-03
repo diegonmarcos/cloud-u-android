@@ -14,6 +14,8 @@ import com.diegonmarcos.superapp.browser.BrowserProfile
 import com.diegonmarcos.superapp.browser.BrowserProfileStore
 import com.diegonmarcos.superapp.browser.BrowserSettings
 import com.diegonmarcos.superapp.browser.BrowserTabPrefs
+import com.diegonmarcos.superapp.browser.ScrapeEngine
+import com.diegonmarcos.superapp.browser.ScrapeRemote
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.devtools.AppDebugServer.Op
 import org.json.JSONArray
@@ -60,6 +62,11 @@ object BrowserDebugApi {
         Op("profile/import", "format=<csv|firefox|bitwarden|vault|native, optional> + POST body", "merge an export into the profile (card numbers and codes are dropped at parse)"),
         Op("profile/clear", "confirm=1", "forget the profile on this phone"),
         Op("profile/fill", "", "the live page's fillable fields and which profile key each would get (dry: no value is read out or written)"),
+        Op("addons", "", "every declared add-on: enabled, permissions, the fleet app it needs and whether it is installed"),
+        Op("addons/set", "id=<add-on>&on=<true|false>", "turn an add-on on or off"),
+        Op("scraper/run", "css=<selector>&attr=<optional>&pages=<n>&next=<next-link selector>", "scrape the live page (and up to n pages through next) into a table"),
+        Op("scraper/last", "", "the last scrape's table"),
+        Op("scraper/remote", "url=<page>&css=<selector>", "ask scrappers-api (mesh) to crawl: its summary, or why not"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
@@ -189,6 +196,23 @@ object BrowserDebugApi {
             "profile/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserProfileStore(app).clear(); JSONObject().put("ok", true) }
             "profile/fill" -> BrowserBus.call("fill_dry")
+            "addons" -> config.addons.toJson(settings.stringSet("addons_enabled")) { pkg ->
+                runCatching { app.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+            }
+            "addons/set" -> {
+                val id = q["id"].orEmpty()
+                if (config.addons[id] == null) JSONObject().put("ok", false).put("error", "id must be one of ${config.addons.all.map { it.id }}")
+                else {
+                    val cur = config.addons.all.filter { config.addons.enabled(it.id, settings.stringSet("addons_enabled")) }.map { it.id }.toSet()
+                    settings.put("addons_enabled", if (q["on"]?.lowercase() == "false") cur - id else cur + id)
+                    JSONObject().put("ok", true).put("enabled", JSONArray(settings.stringSet("addons_enabled")!!.sorted()))
+                }
+            }
+            "scraper/run" -> if (!config.addons.enabled("scraper", settings.stringSet("addons_enabled")))
+                JSONObject().put("ok", false).put("error", "the scraper add-on is off (addons/set?id=scraper&on=true)")
+                else BrowserBus.call("scrape_run", q, timeoutMs = 120_000)
+            "scraper/last" -> ScrapeEngine.last ?: JSONObject().put("ok", false).put("error", "nothing scraped yet")
+            "scraper/remote" -> need(url, "url") ?: ScrapeRemote.crawl(config.addons["scraper"]?.config?.optJSONObject("remote"), url, q["css"])
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

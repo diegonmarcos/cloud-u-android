@@ -93,6 +93,10 @@ def render_catalogue(bj):
         if s.get("values_from") == "search_engines":
             allowed = ", ".join(e["id"] for e in bj["ui"]["browser"]["search_engines"])
             default = bj["ui"]["browser"]["default_engine"]
+        elif s.get("values_from") == "addons":
+            ads = bj["ui"]["browser"].get("addons", [])
+            allowed = ", ".join(a["id"] for a in ads)
+            default = ", ".join(a["id"] for a in ads if a.get("default_enabled"))
         else:
             allowed = ", ".join(s.get("values", [])) or (
                 "%s..%s" % (s["min"], s["max"]) if "min" in s else "")

@@ -672,6 +672,111 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
+    // ── #802 add-ons ─────────────────────────────────────────────────────
+
+    /** Each add-on as a switch: what it is, what it may touch (in words), whether its fleet app is here. */
+    private fun showAddons() {
+        val cat = BrowserSettingsCatalogue(config.addons.all.map { a ->
+            val may = a.permissions.joinToString("; ") { BrowserAddons.PERMISSIONS[it] ?: it }
+            val needs = a.requiresPackage?.let { if (installed(it)) "" else " Needs its fleet app, not installed." }.orEmpty()
+            BrowserSetting(a.id, "bool", a.defaultEnabled, label = a.label, section = "Add-ons", doc = "${a.doc} May: $may.$needs")
+        })
+        overlay { close ->
+            BrowserSettingsScreen(cat,
+                value = { id -> config.addons.enabled(id, browserSettings.stringSet("addons_enabled")) },
+                onSet = { id, on ->
+                    val cur = config.addons.all.filter { config.addons.enabled(it.id, browserSettings.stringSet("addons_enabled")) }.map { it.id }.toSet()
+                    browserSettings.put("addons_enabled", if (on == true) cur + id else cur - id)
+                },
+                extra = emptyList(), onExtra = {}, onClose = close)
+        }
+    }
+
+    /** The result line the scraper sheet shows; Compose state so a finished run redraws it. */
+    private val scrapeResult = androidx.compose.runtime.mutableStateOf("")
+
+    private fun showScraper() {
+        val sc = config.addons["scraper"]?.config ?: JSONObject()
+        overlay { close ->
+            BrowserScraperScreen(scrapeResult.value,
+                onPick = { webView?.let { BrowserPageActions.run(it, BrowserPageActions.script(requireContext(), "pick")) { } }; toast("Tap an element on the page, then Use picked") },
+                onUsePicked = { use -> webView?.evaluateJavascript("window.__cbPick || ''") { v -> runCatching { org.json.JSONTokener(v).nextValue() as? String }.getOrNull()?.takeIf { it.isNotBlank() }?.let(use) } },
+                onRun = { css, attr, pages, next ->
+                    val wv = webView ?: return@BrowserScraperScreen
+                    scrapeResult.value = "Running…"
+                    runScrape(wv, ScrapeEngine.simple(css, attr, pages, next, sc.optInt("max_pages", 5)), sc) { r ->
+                        val rows = r.optJSONArray("rows")
+                        scrapeResult.value = "${r.optInt("count")} row(s) from ${r.optInt("pages")} page(s)\n" +
+                            (0 until minOf(10, rows?.length() ?: 0)).joinToString("\n") { rows!!.optJSONObject(it).toString() }
+                    }
+                },
+                onRemote = { css ->
+                    val target = webView?.url.orEmpty()
+                    scrapeResult.value = "Asking the server…"
+                    Thread { val r = ScrapeRemote.crawl(sc.optJSONObject("remote"), target, css); webView?.post { scrapeResult.value = r.toString(2) } }.start()
+                },
+                onExport = { scrapeResult.value = exportScrape(sc).toString(2) },
+                onClose = close)
+        }
+    }
+
+    /**
+     * Run [plan] on the live page, then follow its next link page by page in a HIDDEN WebView
+     * (the one on screen stays where he is), up to the plan's cap; answer the merged table.
+     */
+    private fun runScrape(wv: WebView, plan: ScrapeEngine.Plan, sc: JSONObject, done: (JSONObject) -> Unit) {
+        val js = BrowserPageActions.script(requireContext(), "scrape").replace("__PLAN__", plan.toJson().toString())
+        val pages = ArrayList<List<Map<String, String>>>()
+        val settle = sc.optLong("settle_ms", 800)
+        fun finish(hidden: WebView?) {
+            hidden?.destroy()
+            val rows = ScrapeEngine.merge(pages, sc.optInt("max_rows", 2000))
+            val out = JSONObject().put("url", wv.url).put("columns", org.json.JSONArray(plan.columns.map { it.name }))
+                .put("pages", pages.size).put("count", rows.size).put("rows", ScrapeEngine.json(rows))
+            ScrapeEngine.last = out
+            done(JSONObject(out.toString()))
+        }
+        fun onPage(r: JSONObject?, n: Int, hidden: WebView?) {
+            pages.add(ScrapeEngine.rows(r, plan))
+            val next = r?.optString("next")?.takeIf { it.startsWith("http") }
+            if (next == null || n >= plan.maxPages) return finish(hidden)
+            val h = hidden ?: WebView(requireContext()).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true }
+            var waiting = true
+            h.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    if (!waiting) return
+                    waiting = false
+                    h.postDelayed({ BrowserPageActions.run(h, js) { onPage(it, n + 1, h) } }, settle)
+                }
+            }
+            h.loadUrl(next)
+        }
+        BrowserPageActions.run(wv, js) { onPage(it, 1, null) }
+    }
+
+    /** The last result to Downloads as CSV (MediaStore, Android 10+). */
+    private fun exportScrape(sc: JSONObject): JSONObject {
+        val last = ScrapeEngine.last ?: return JSONObject().put("ok", false).put("error", "nothing scraped yet")
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q)
+            return JSONObject().put("ok", false).put("error", "export needs Android 10+")
+        val cols = (0 until last.getJSONArray("columns").length()).map { last.getJSONArray("columns").getString(it) }
+        val rowsArr = last.getJSONArray("rows")
+        val rows = (0 until rowsArr.length()).map { i -> rowsArr.getJSONObject(i).let { o -> cols.associateWith { o.optString(it) } } }
+        val name = "scrape-${System.currentTimeMillis() / 1000}.csv"
+        val dir = listOf(android.os.Environment.DIRECTORY_DOWNLOADS, BrowserBookmarkOps.normFolder(browserSettings.string("download_dir").orEmpty()))
+            .filter { it.isNotEmpty() }.joinToString("/")
+        val cv = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, dir)
+        }
+        val cr = requireContext().contentResolver
+        val uri = cr.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
+            ?: return JSONObject().put("ok", false).put("error", "MediaStore refused the file")
+        cr.openOutputStream(uri)!!.use { it.write(ScrapeEngine.csv(rows, cols).toByteArray()) }
+        return JSONObject().put("ok", true).put("file", "$dir/$name").put("rows", rows.size)
+    }
+
     /** #802 Profile: what is held (masked: counts, initials, last4s), Import file, Clear. */
     private fun showProfile() {
         val m = runCatching { BrowserProfileStore(requireContext()).load().masked() }.getOrNull()
@@ -774,8 +879,13 @@ class BrowserHostFragment : Fragment(), Collapsible,
         )
     }
 
+    /** Every fact: the page's, plus each add-on's `addon:<id>` (enabled, and its fleet app installed). */
+    private fun allFacts(): Map<String, Boolean> = facts() + config.addons.facts(browserSettings.stringSet("addons_enabled")) { installed(it) }
+
+    private fun installed(pkg: String) = runCatching { requireContext().packageManager.getPackageInfo(pkg, 0) }.isSuccess
+
     private fun showMenuSheet() {
-        val grouped = config.menu.grouped(facts())
+        val grouped = config.menu.grouped(allFacts())
         val icons = grouped.firstOrNull { it.first.id == ICON_SECTION }?.second.orEmpty().map { it.sheet() }
         val sections = grouped.filter { it.first.id != ICON_SECTION }
             .map { (s, rows) -> s.label to rows.map { it.sheet() } }
@@ -869,7 +979,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
         val ok = { JSONObject().put("ok", true).put("id", id) }
         val needPage = { done(JSONObject().put("ok", false).put("error", "$id: no page is open")) }
         when (id) {
-            "_facts" -> done(ok().put("facts", JSONObject(facts())))
+            "_facts" -> done(ok().put("facts", JSONObject(allFacts())))
             "back" -> if (wv?.canGoBack() == true) { wv.goBack(); done(ok()) } else done(ok().put("ok", false).put("why", "no earlier page"))
             "forward" -> if (wv?.canGoForward() == true) { wv.goForward(); done(ok()) } else done(ok().put("ok", false).put("why", "no later page"))
             "reload" -> { wv?.reload() ?: return needPage(); done(ok()) }
@@ -878,6 +988,16 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "site_settings" -> { showSiteSettings(BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }); done(ok()) }
             "clear_data" -> { showClearData(); done(ok()) }
             "profile" -> { showProfile(); done(ok()) }
+            "addons_manage" -> { showAddons(); done(ok()) }
+            "scraper" -> { showScraper(); done(ok()) }
+            "scrape_run" -> {
+                wv ?: return needPage()
+                val sc = config.addons["scraper"]?.config ?: JSONObject()
+                val plan = ScrapeEngine.simple(args["css"].orEmpty(), args["attr"], args["pages"]?.toIntOrNull() ?: 1,
+                    args["next"], sc.optInt("max_pages", 5))
+                if (plan.columns.first().css.isBlank()) return done(ok().put("ok", false).put("error", "css= is required"))
+                runScrape(wv, plan, sc) { r -> done(r.put("ok", true)) }
+            }
             "fill_profile", "fill_dry" -> {
                 wv ?: return needPage()
                 val dry = id == "fill_dry"

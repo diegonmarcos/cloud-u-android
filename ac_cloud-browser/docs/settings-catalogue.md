@@ -16,3 +16,4 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | `download_dir` | string | "" |  | general | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
 | `private_by_default` | bool | false |  | privacy | config | A new tab opens private: no history, no preview, no HTTP cache. Cookies are shared with normal tabs (Android WebView keeps them per process). |
 | `autofill_enabled` | bool | true |  | privacy | config | Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered. |
+| `addons_enabled` | set | scraper | scraper | add-ons | config | The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled. |
