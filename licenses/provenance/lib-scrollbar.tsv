@@ -1,0 +1,8 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ab_cloud-libs-shared/libs/scrollbar/.gitignore	verbatim		1	0	txt
+ab_cloud-libs-shared/libs/scrollbar/build.gradle.kts	modified	build.gradle.kts	39	1	txt
+ab_cloud-libs-shared/libs/scrollbar/src/main/AndroidManifest.xml	verbatim		3	0	txt
+ab_cloud-libs-shared/libs/scrollbar/src/main/kotlin/com/diegonmarcos/mediacenter/scrollbar/GridScrollbarController.kt	modified	src/main/kotlin/com/dot/gallery/scrollbar/GridScrollbarController.kt	312	1	txt
+ab_cloud-libs-shared/libs/scrollbar/src/main/kotlin/com/diegonmarcos/mediacenter/scrollbar/LazyVerticalGridScrollbar.kt	modified	src/main/kotlin/com/dot/gallery/scrollbar/LazyVerticalGridScrollbar.kt	118	1	txt
+ab_cloud-libs-shared/libs/scrollbar/src/main/kotlin/com/diegonmarcos/mediacenter/scrollbar/ScrollbarSettings.kt	modified	src/main/kotlin/com/dot/gallery/scrollbar/ScrollbarSettings.kt	66	1	txt
+ab_cloud-libs-shared/libs/scrollbar/src/main/kotlin/com/diegonmarcos/mediacenter/scrollbar/VerticalScrollbarLayout.kt	modified	src/main/kotlin/com/dot/gallery/scrollbar/VerticalScrollbarLayout.kt	159	1	txt

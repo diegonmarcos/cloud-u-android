@@ -1,0 +1,30 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ac_cloud-code/codemirror-lsp-client/.gitignore	modified	.gitignore	6	2	txt
+ac_cloud-code/codemirror-lsp-client/CHANGELOG.md	verbatim		47	0	txt
+ac_cloud-code/codemirror-lsp-client/LICENSE	verbatim		17	0	txt
+ac_cloud-code/codemirror-lsp-client/README.md	verbatim		76	0	txt
+ac_cloud-code/codemirror-lsp-client/UPSTREAM.md	verbatim		25	0	txt
+ac_cloud-code/codemirror-lsp-client/bin/tsserver-ws.js	verbatim		58	0	txt
+ac_cloud-code/codemirror-lsp-client/dist/index.cjs	verbatim		2142	0	txt
+ac_cloud-code/codemirror-lsp-client/dist/index.d.cts	verbatim		631	0	txt
+ac_cloud-code/codemirror-lsp-client/dist/index.d.ts	verbatim		631	0	txt
+ac_cloud-code/codemirror-lsp-client/dist/index.js	verbatim		2115	0	txt
+ac_cloud-code/codemirror-lsp-client/package.json	verbatim		40	0	txt
+ac_cloud-code/codemirror-lsp-client/src/README.md	verbatim		34	0	txt
+ac_cloud-code/codemirror-lsp-client/src/client.ts	verbatim		476	0	txt
+ac_cloud-code/codemirror-lsp-client/src/completion.ts	verbatim		265	0	txt
+ac_cloud-code/codemirror-lsp-client/src/definition.ts	verbatim		74	0	txt
+ac_cloud-code/codemirror-lsp-client/src/diagnostics.ts	verbatim		56	0	txt
+ac_cloud-code/codemirror-lsp-client/src/formatting.ts	verbatim		50	0	txt
+ac_cloud-code/codemirror-lsp-client/src/hover.ts	verbatim		88	0	txt
+ac_cloud-code/codemirror-lsp-client/src/index.ts	verbatim		65	0	txt
+ac_cloud-code/codemirror-lsp-client/src/plugin.ts	verbatim		235	0	txt
+ac_cloud-code/codemirror-lsp-client/src/pos.ts	verbatim		16	0	txt
+ac_cloud-code/codemirror-lsp-client/src/references.ts	verbatim		184	0	txt
+ac_cloud-code/codemirror-lsp-client/src/rename.ts	verbatim		72	0	txt
+ac_cloud-code/codemirror-lsp-client/src/signature.ts	verbatim		253	0	txt
+ac_cloud-code/codemirror-lsp-client/src/text.ts	verbatim		50	0	txt
+ac_cloud-code/codemirror-lsp-client/src/theme.ts	verbatim		74	0	txt
+ac_cloud-code/codemirror-lsp-client/src/workspace.ts	verbatim		141	0	txt
+ac_cloud-code/codemirror-lsp-client/test/server.ts	verbatim		185	0	txt
+ac_cloud-code/codemirror-lsp-client/test/webtest-client.ts	verbatim		367	0	txt

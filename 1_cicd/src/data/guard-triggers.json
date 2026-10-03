@@ -5,7 +5,7 @@
     "app-names-guard.yml": "reads every application's identity files across all ~30 app trees and the fleet roster",
     "compose-ratchet-guard.yml": "#773: counts View UI in every app and lib tree and discovers new ones; a filter would be a second list of app trees",
     "dns-resolver-guard.yml": "scans the sources of every app and lib for resolver bypasses (30k files traced)",
-  "fleet-alerts-guard.yml": "#777: scans every app and lib tree for a direct notify(); the commit it must catch can be any source file anywhere",
+    "fleet-alerts-guard.yml": "#777: scans every app and lib tree for a direct notify(); the commit it must catch can be any source file anywhere",
     "fleet-config-guard.yml": "#783: scans every app and lib tree for a store (SharedPreferences, encrypted, DataStore, Room) the migration manifest does not declare; the commit it must catch can be any source file anywhere",
     "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
     "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
@@ -14,7 +14,8 @@
     "mesh-membership-guard.yml": "#753: the edit that drops an app from the mesh can be anywhere on its route to libs:core; see the workflow",
     "one-pdf-engine-guard.yml": "scans every app and lib for an in-process PDF renderer (26k files traced)",
     "sync-submodules.yml": "keeps submodule pointers current; it is not a guard over any path",
-    "update-ack-guard.yml": "scans every app's update routes (10k files traced)"
+    "update-ack-guard.yml": "scans every app's update routes (10k files traced)",
+    "licence-inventory-guard.yml": "#805: the subjects it must catch are a new top-level directory, binary or vendored LICENSE anywhere in the tree; a filter would be 'everything'"
   },
   "filtered": {
     "analytics-retry-guard.yml": {

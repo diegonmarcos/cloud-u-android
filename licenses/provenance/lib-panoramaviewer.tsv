@@ -1,0 +1,15 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ab_cloud-libs-shared/libs/panoramaviewer/.gitignore	verbatim		1	0	txt
+ab_cloud-libs-shared/libs/panoramaviewer/README.md	verbatim		149	0	txt
+ab_cloud-libs-shared/libs/panoramaviewer/build.gradle.kts	modified	build.gradle.kts	40	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/AndroidManifest.xml	verbatim		2	0	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/CameraState.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/CameraState.kt	36	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/DetailRegion.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/DetailRegion.kt	30	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/PanoramaGLSurfaceView.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/PanoramaGLSurfaceView.kt	511	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/PanoramaImageLoader.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/PanoramaImageLoader.kt	101	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/PanoramaLog.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/PanoramaLog.kt	43	2	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/PanoramaRenderer.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/PanoramaRenderer.kt	449	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/PanoramaViewer.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/PanoramaViewer.kt	145	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/ProjectionType.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/ProjectionType.kt	37	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/RegionLoader.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/RegionLoader.kt	205	1	txt
+ab_cloud-libs-shared/libs/panoramaviewer/src/main/kotlin/com/diegonmarcos/mediacenter/libs/panoramaviewer/SphereGeometry.kt	modified	src/main/kotlin/com/dot/gallery/libs/panoramaviewer/SphereGeometry.kt	168	1	txt

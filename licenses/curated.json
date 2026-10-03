@@ -1,0 +1,608 @@
+{
+ "_doc": "Hand-curated half of the licence inventory (#805): what each top-level directory IS and which licence applies to it today, per-asset overrides, and Maven group licences that need no POM lookup. 1_cicd/src/scripts/cloud-android-licence-inventory.py refresh merges this with registry-resolved licences into licenses/inventory.json; check fails when the tree has a subject neither covers. LicenseRef-NoLicenseGranted = no licence file applies: all rights reserved by default. `proposed` is a proposal only - nothing is relicensed. Not legal advice.",
+ "scan_skip_prefixes": [
+  "z_archive/"
+ ],
+ "asset_extensions": [
+  ".so",
+  ".a",
+  ".aar",
+  ".jar",
+  ".dll",
+  ".dylib",
+  ".exe",
+  ".tflite",
+  ".onnx",
+  ".pt",
+  ".gguf",
+  ".ttf",
+  ".otf",
+  ".woff",
+  ".woff2",
+  ".dict"
+ ],
+ "maven_repos": [
+  "https://dl.google.com/android/maven2",
+  "https://repo1.maven.org/maven2",
+  "https://jitpack.io",
+  "https://plugins.gradle.org/m2"
+ ],
+ "maven_group_licences": {
+  "androidx": {
+   "licence": "Apache-2.0"
+  },
+  "com.google.android.material": {
+   "licence": "Apache-2.0"
+  },
+  "org.jetbrains.kotlin": {
+   "licence": "Apache-2.0"
+  },
+  "org.jetbrains.kotlinx": {
+   "licence": "Apache-2.0"
+  },
+  "com.squareup": {
+   "licence": "Apache-2.0"
+  },
+  "com.android.tools": {
+   "licence": "Apache-2.0",
+   "note": "build tooling"
+  },
+  "com.google.mlkit": {
+   "licence": "LicenseRef-Google-MLKit-Terms",
+   "note": "proprietary binary SDK under the ML Kit Terms of Service - not GPL-compatible if linked into a GPL app"
+  },
+  "com.google.android.gms": {
+   "licence": "LicenseRef-Google-Play-Services-Terms",
+   "note": "proprietary Play Services client libraries"
+  },
+  "com.google.ar": {
+   "licence": "LicenseRef-Google-ARCore-Terms",
+   "note": "proprietary; Google APIs ToS + ARCore Additional Terms (see ac_cloud-calc/NOTICE.md)"
+  }
+ },
+ "directories": {
+  ".claude": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "Claude Code project settings"
+  },
+  ".githooks": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "git hooks (repo tooling)"
+  },
+  ".github": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "generated GitHub Actions workflows (sources in 1_cicd/src/cicd)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  ".obsidian": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "Obsidian vault settings"
+  },
+  ".vscode": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "editor settings"
+  },
+  "0_apps": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "app index / launch scripts",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "0_git": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "git config (gitignore, attributes)"
+  },
+  "1_cicd": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "CI/CD sources, guard scripts, generators",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "2_configs": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "repo configuration"
+  },
+  "2_sops": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "operating procedures (docs)"
+  },
+  "3_secrets": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "encrypted secrets (no licensable code)"
+  },
+  "4_reports": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "generated reports"
+  },
+  "9_others": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "build system and CI helpers",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "a0_docs": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "documentation",
+   "proposed": "PROPOSED (owner decides): CC-BY-NC-4.0 for prose, or keep all rights reserved"
+  },
+  "a0_tasks": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "task notes"
+  },
+  "a_solutions": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "own Android tooling (termux-boot replacement, hooking engines, data exporter...) - README in ae-tool_termux-boot states it is not a termux-boot fork",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "aa_cloud-superapp": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud SuperApp launcher; links shared libs incl. GPL-3.0 libs:keyboard/libs:gitsync - see LICENSING.md conflicts",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
+   "compiled_into": [
+    "Cloud-SuperApp.apk"
+   ]
+  },
+  "ab_cloud-keyboard-libs": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "build wrapper script only",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ab_cloud-libs": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "build wrapper script only",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ab_cloud-libs-shared": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "shared libraries (libs/*), lib-apks and keyboard-engines; the upstream-derived libs are listed in licenses/upstreams.json and keep their upstream licence",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
+   "exceptions": "libs/keyboard GPL-3.0-only; libs/gitsync GPL-3.0; libs/firewall/firestack MPL-2.0; libs/net, libs/net-wg, libs/cropper, libs/gesture, libs/panoramaviewer Apache-2.0; libs/calc native build pulls GPL-2.0-or-later libqalculate (see ac_cloud-calc/NOTICE.md); libs/contacts SocialImport.kt ported from Fossify Contacts (GPL-3.0)"
+  },
+  "ab_cloud-terminal-store": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "terminal package store",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_ANDROID_______________________________": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "visual separator directory"
+  },
+  "ac_c3-morpheus": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "C3 Morpheus Android app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_c3-watchdog": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "C3 Watchdog Android app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_c3-watchtower": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "C3 WatchTower Android app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-agenda": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Agenda app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-browser": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Browser app shell",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-c3": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud C3 app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-c3-webserver": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Tauri 2 Android web server (Rust + web)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-calc": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Calc app; its engine APK (libs/calc) statically links GPL-2.0-or-later libqalculate and ships as GPL-3.0-or-later per ac_cloud-calc/NOTICE.md",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
+   "note": "NOTICE.md present"
+  },
+  "ac_cloud-camera": {
+   "licence": "MIT",
+   "kind": "upstream-fork",
+   "upstream_module": "camera",
+   "what": "GrapheneOS Camera fork"
+  },
+  "ac_cloud-chat": {
+   "licence": "Apache-2.0",
+   "kind": "upstream-fork",
+   "upstream_module": "chat",
+   "what": "Mattermost Mobile fork"
+  },
+  "ac_cloud-code": {
+   "licence": "MIT",
+   "kind": "upstream-fork",
+   "upstream_module": "code",
+   "what": "Acode fork"
+  },
+  "ac_cloud-contacts": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Contacts app (README: native, not a fork)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-dialer": {
+   "licence": "GPL-3.0-only",
+   "kind": "upstream-fork",
+   "upstream_module": "dialer",
+   "what": "Fossify Phone fork"
+  },
+  "ac_cloud-drive": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Drive app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-keyboard": {
+   "licence": "GPL-3.0-only",
+   "kind": "own-shell-over-gpl",
+   "what": "Cloud Keyboard app module; compiles libs/keyboard (HeliBoard-derived, GPL-3.0-only) so the APK is GPL-3.0-only"
+  },
+  "ac_cloud-mail": {
+   "licence": "GPL-3.0-only",
+   "kind": "upstream-fork",
+   "upstream_module": "mail",
+   "what": "Sterna Mail fork"
+  },
+  "ac_cloud-matrix": {
+   "licence": "AGPL-3.0-only OR LicenseRef-Element-Commercial",
+   "kind": "upstream-fork",
+   "upstream_module": "matrix",
+   "what": "Element X Android fork"
+  },
+  "ac_cloud-me": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Me app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-media-center": {
+   "licence": "Apache-2.0",
+   "kind": "upstream-fork",
+   "upstream_module": "media-center",
+   "what": "ReFra/Gallery fork"
+  },
+  "ac_cloud-myterminal": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "hub APK (own) + patch series for Amaze File Manager/Utilities (GPL-3.0) and Acode (MIT) in forks/; the patches carry their upstream licence",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
+   "exceptions": "forks/files, forks/utils GPL-3.0; forks/editor MIT"
+  },
+  "ac_cloud-nav": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Nav maps app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-news": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud News app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-nix-on-droid": {
+   "licence": "GPL-3.0-only",
+   "kind": "upstream-fork",
+   "upstream_module": "nix-on-droid",
+   "what": "Nix-on-Droid app fork"
+  },
+  "ac_cloud-notes": {
+   "licence": "MIT",
+   "kind": "upstream-fork",
+   "upstream_module": "notes",
+   "what": "AFFiNE fork (MIT part; Enterprise dirs pruned and guarded by licence-guard.yml)"
+  },
+  "ac_cloud-office": {
+   "licence": "MPL-2.0",
+   "kind": "patch-series",
+   "upstream_module": "office",
+   "what": "Collabora Online patch series + own build engine; patches MPL-2.0, engine scripts own"
+  },
+  "ac_cloud-search": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Search app; data-source terms in ac_cloud-search/NOTICE.md",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
+   "note": "NOTICE.md present"
+  },
+  "ac_cloud-termux": {
+   "licence": "GPL-3.0-only",
+   "kind": "upstream-fork",
+   "upstream_module": "termux",
+   "what": "Termux app fork"
+  },
+  "ac_cloud-vault": {
+   "licence": "GPL-3.0-only",
+   "kind": "upstream-fork",
+   "upstream_module": "vault",
+   "what": "Bitwarden Android fork"
+  },
+  "ac_cloud-wallet": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Wallet app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ac_cloud-writer": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Writer app",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "b_infra": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "infra notes/scripts",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "c_devices": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "device configuration",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "licenses": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "repo-meta",
+   "what": "this licence inventory (#805)",
+   "proposed": "PROPOSED (owner decides): CC0-1.0 for the data"
+  }
+ },
+ "assets": {
+  "ab_cloud-libs-shared/libs/gitsync/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Bold.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Atkinson Hyperlegible is published by the Braille Institute under the SIL Open Font License 1.1"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-BoldItalic.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Atkinson Hyperlegible is published by the Braille Institute under the SIL Open Font License 1.1"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Italic.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Atkinson Hyperlegible is published by the Braille Institute under the SIL Open Font License 1.1"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Regular.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Atkinson Hyperlegible is published by the Braille Institute under the SIL Open Font License 1.1"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/RobotoMono/RobotoMono-Bold.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto Mono (Google Fonts) is Apache-2.0"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/RobotoMono/RobotoMono-BoldItalic.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto Mono (Google Fonts) is Apache-2.0"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/RobotoMono/RobotoMono-Italic.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto Mono (Google Fonts) is Apache-2.0"
+  },
+  "ab_cloud-libs-shared/libs/gitsync/fonts/RobotoMono/RobotoMono-Regular.ttf": {
+   "licence": "Apache-2.0",
+   "licence_source": "Roboto Mono (Google Fonts) is Apache-2.0"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_bg.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_bn.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_de.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_el.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_en.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_es.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_fr.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_hu.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_it.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_nl.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_pl.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_pt.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_ro.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_ru.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_sv.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/emoji_tr.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_bg.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_bn.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_de.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_el.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_en-GB.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_en-US.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_es.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_fr.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_hu.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_it.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_nl.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_pl.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_pt-BR.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_pt-PT.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_ro.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_ru.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_sv.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "ab_cloud-libs-shared/libs/keyboard/dicts-data/main_tr.dict": {
+   "licence": "NOASSERTION",
+   "licence_source": "vendored from codeberg.org/Helium314/aosp-dictionaries (libs/keyboard/README.md); that project's licence differs per dictionary source and is not recorded in this repo - record it per file"
+  },
+  "a_solutions/ae-tool_termux-boot/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-c3-webserver/src-tauri/gen/android/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-camera/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-chat/android/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-dialer/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-mail/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-matrix/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-media-center/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-nix-on-droid/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-notes/packages/frontend/apps/android/App/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-termux/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-vault/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  }
+ }
+}

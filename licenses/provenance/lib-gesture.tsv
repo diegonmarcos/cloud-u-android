@@ -1,0 +1,9 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ab_cloud-libs-shared/libs/gesture/.gitignore	verbatim		1	0	txt
+ab_cloud-libs-shared/libs/gesture/build.gradle.kts	verbatim		39	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/AndroidManifest.xml	verbatim		3	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/java/com/smarttoolfactory/gesture/AwaitPointerMotionEvent.kt	verbatim		198	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/java/com/smarttoolfactory/gesture/MotionEvent.kt	verbatim		4	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/java/com/smarttoolfactory/gesture/PointerMotionModifier.kt	verbatim		420	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/java/com/smarttoolfactory/gesture/TouchDelegateModifier.kt	verbatim		186	0	txt
+ab_cloud-libs-shared/libs/gesture/src/main/java/com/smarttoolfactory/gesture/TransformGesture.kt	verbatim		277	0	txt

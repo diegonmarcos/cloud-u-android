@@ -1,0 +1,23 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ab_cloud-libs-shared/libs/net/build.gradle	new		0	45	txt
+ab_cloud-libs-shared/libs/net/src/main/AndroidManifest.xml	modified	src/main/AndroidManifest.xml	2	11	txt
+ab_cloud-libs-shared/libs/net/src/main/aidl/com/diegonmarcos/superapp/net/INetBackend.aidl	new		0	48	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/diegonmarcos/superapp/net/AidlBackend.kt	new		0	132	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/android/backend/Backend.java	verbatim		75	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/android/backend/BackendException.java	verbatim		54	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/android/backend/Statistics.java	modified	src/main/java/com/wireguard/android/backend/Statistics.java	89	68	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/android/backend/Tunnel.java	verbatim		47	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/Attribute.java	verbatim		49	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/BadConfigException.java	verbatim		98	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/Config.java	verbatim		201	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/InetAddresses.java	verbatim		77	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/InetEndpoint.java	verbatim		111	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/InetNetwork.java	verbatim		68	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/Interface.java	verbatim		380	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/ParseException.java	verbatim		38	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/config/Peer.java	verbatim		276	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/crypto/Curve25519.java	verbatim		461	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/crypto/Key.java	verbatim		265	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/crypto/KeyFormatException.java	verbatim		30	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/crypto/KeyPair.java	verbatim		47	0	txt
+ab_cloud-libs-shared/libs/net/src/main/java/com/wireguard/util/NonNullForAll.java	verbatim		23	0	txt

@@ -1,0 +1,230 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ac_cloud-camera/.gitignore	verbatim		74	0	txt
+ac_cloud-camera/LICENSE	verbatim		16	0	txt
+ac_cloud-camera/README.md	verbatim		2	0	txt
+ac_cloud-camera/app/.gitignore	verbatim		68	0	txt
+ac_cloud-camera/app/build.gradle.kts	modified	app/build.gradle.kts	84	68	txt
+ac_cloud-camera/app/lint.xml	verbatim		15	0	txt
+ac_cloud-camera/app/proguard-rules.pro	verbatim		11	0	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/CameraModeTabsRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/CameraModeTabsRegressionTest.kt	133	5	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/CapturedItemsRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/CapturedItemsRegressionTest.kt	86	1	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/EditMediaRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/EditMediaRegressionTest.kt	113	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/Fling.kt	modified	app/src/androidTest/java/app/grapheneos/camera/Fling.kt	36	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/InAppGalleryRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/InAppGalleryRegressionTest.kt	102	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/LocationSelectionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/LocationSelectionTest.kt	79	1	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/ModeTabs.kt	modified	app/src/androidTest/java/app/grapheneos/camera/ModeTabs.kt	10	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/PhotoQualityRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/PhotoQualityRegressionTest.kt	79	3	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/SafTreeGrantsRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/SafTreeGrantsRegressionTest.kt	98	4	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/ScreenAwakeRule.kt	modified	app/src/androidTest/java/app/grapheneos/camera/ScreenAwakeRule.kt	55	1	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/SelfTimerRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/SelfTimerRegressionTest.kt	160	10	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/SettingsDialogRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/SettingsDialogRegressionTest.kt	63	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/ShareMediaRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/ShareMediaRegressionTest.kt	72	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/VideoCapturerRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/VideoCapturerRegressionTest.kt	433	5	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/VideoPlayerRegressionTest.kt	modified	app/src/androidTest/java/app/grapheneos/camera/VideoPlayerRegressionTest.kt	46	2	txt
+ac_cloud-camera/app/src/androidTest/java/cld/camera/WaitUntil.kt	modified	app/src/androidTest/java/app/grapheneos/camera/WaitUntil.kt	24	1	txt
+ac_cloud-camera/app/src/main/AndroidManifest.xml	modified	app/src/main/AndroidManifest.xml	182	38	txt
+ac_cloud-camera/app/src/main/feature_graphic.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/ic_launcher-playstore.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/java/androidxc/camera/core/impl/utils/Exif.java	verbatim		815	0	txt
+ac_cloud-camera/app/src/main/java/androidxc/exifinterface/media/ExifInterface.java	verbatim		7966	0	txt
+ac_cloud-camera/app/src/main/java/androidxc/exifinterface/media/ExifInterfaceUtils.java	verbatim		146	0	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ActivityLifeCycleHelper.kt	modified	app/src/main/java/app/grapheneos/camera/ActivityLifeCycleHelper.kt	22	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/App.kt	modified	app/src/main/java/app/grapheneos/camera/App.kt	151	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/AutoFinishOnSleep.kt	modified	app/src/main/java/app/grapheneos/camera/AutoFinishOnSleep.kt	31	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/BlurBitmap.kt	modified	app/src/main/java/app/grapheneos/camera/BlurBitmap.kt	212	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/CamConfig.kt	modified	app/src/main/java/app/grapheneos/camera/CamConfig.kt	1793	26	txt
+ac_cloud-camera/app/src/main/java/cld/camera/CapturedItems.kt	modified	app/src/main/java/app/grapheneos/camera/CapturedItems.kt	383	4	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ExifHelper.kt	modified	app/src/main/java/app/grapheneos/camera/ExifHelper.kt	239	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/GSlideTransformer.kt	modified	app/src/main/java/app/grapheneos/camera/GSlideTransformer.kt	40	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/GallerySliderAdapter.kt	modified	app/src/main/java/app/grapheneos/camera/GallerySliderAdapter.kt	128	8	txt
+ac_cloud-camera/app/src/main/java/cld/camera/LocationSelection.kt	modified	app/src/main/java/app/grapheneos/camera/LocationSelection.kt	17	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/NumInputFilter.kt	modified	app/src/main/java/app/grapheneos/camera/NumInputFilter.kt	39	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/TunePlayer.kt	modified	app/src/main/java/app/grapheneos/camera/TunePlayer.kt	80	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/analyzer/ImageContentScanner.kt	new		0	99	txt
+ac_cloud-camera/app/src/main/java/cld/camera/analyzer/QRAnalyzer.kt	modified	app/src/main/java/app/grapheneos/camera/analyzer/QRAnalyzer.kt	95	11	txt
+ac_cloud-camera/app/src/main/java/cld/camera/analyzer/ScannedPayload.kt	new		0	136	txt
+ac_cloud-camera/app/src/main/java/cld/camera/analyzer/SoundIdentifier.kt	new		0	45	txt
+ac_cloud-camera/app/src/main/java/cld/camera/capturer/ImageCapturer.kt	modified	app/src/main/java/app/grapheneos/camera/capturer/ImageCapturer.kt	174	17	txt
+ac_cloud-camera/app/src/main/java/cld/camera/capturer/ImageSaver.kt	modified	app/src/main/java/app/grapheneos/camera/capturer/ImageSaver.kt	300	12	txt
+ac_cloud-camera/app/src/main/java/cld/camera/capturer/ImageSaverException.kt	modified	app/src/main/java/app/grapheneos/camera/capturer/ImageSaverException.kt	10	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/capturer/VideoCapturer.kt	modified	app/src/main/java/app/grapheneos/camera/capturer/VideoCapturer.kt	399	32	txt
+ac_cloud-camera/app/src/main/java/cld/camera/debugapi/ImageDebugApiProvider.kt	new		0	168	txt
+ac_cloud-camera/app/src/main/java/cld/camera/identify/BoxMapping.kt	new		0	21	txt
+ac_cloud-camera/app/src/main/java/cld/camera/identify/DetectionOverlay.kt	new		0	56	txt
+ac_cloud-camera/app/src/main/java/cld/camera/identify/IdentifyActivity.kt	new		0	239	txt
+ac_cloud-camera/app/src/main/java/cld/camera/identify/IdentifySnapshot.kt	new		0	71	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ktx/PreviewView.kt	modified	app/src/main/java/app/grapheneos/camera/ktx/PreviewView.kt	16	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ktx/SystemSettingsObserver.kt	modified	app/src/main/java/app/grapheneos/camera/ktx/SystemSettingsObserver.kt	33	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/notifier/SensorOrientationChangeNotifier.kt	modified	app/src/main/java/app/grapheneos/camera/notifier/SensorOrientationChangeNotifier.kt	172	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/BottomTabLayout.kt	modified	app/src/main/java/app/grapheneos/camera/ui/BottomTabLayout.kt	127	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/CountDownTimerUI.kt	modified	app/src/main/java/app/grapheneos/camera/ui/CountDownTimerUI.kt	109	12	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/CustomGrid.kt	modified	app/src/main/java/app/grapheneos/camera/ui/CustomGrid.kt	72	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/DialogUtil.kt	modified	app/src/main/java/app/grapheneos/camera/ui/DialogUtil.kt	21	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/QROverlay.kt	modified	app/src/main/java/app/grapheneos/camera/ui/QROverlay.kt	55	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/QRToggle.kt	modified	app/src/main/java/app/grapheneos/camera/ui/QRToggle.kt	42	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/SettingsDialog.kt	modified	app/src/main/java/app/grapheneos/camera/ui/SettingsDialog.kt	727	39	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/SettingsFrameLayout.kt	modified	app/src/main/java/app/grapheneos/camera/ui/SettingsFrameLayout.kt	64	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/ZoomableImageView.kt	modified	app/src/main/java/app/grapheneos/camera/ui/ZoomableImageView.kt	304	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/CaptureActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/CaptureActivity.kt	205	12	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/InAppGallery.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/InAppGallery.kt	688	77	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/MainActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/MainActivity.kt	1463	305	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/MoreSettings.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/MoreSettings.kt	300	74	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/MoreSettingsSecure.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/MoreSettingsSecure.kt	12	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/QrTile.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/QrTile.kt	29	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/SecureActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/SecureActivity.kt	4	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/SecureCaptureActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/SecureCaptureActivity.kt	7	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/SecureMainActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/SecureMainActivity.kt	18	5	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/VideoCaptureActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/VideoCaptureActivity.kt	82	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/VideoOnlyActivity.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/VideoOnlyActivity.kt	25	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/VideoPlayer.kt	modified	app/src/main/java/app/grapheneos/camera/ui/activities/VideoPlayer.kt	155	5	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/fragment/GallerySlide.kt	modified	app/src/main/java/app/grapheneos/camera/ui/fragment/GallerySlide.kt	4	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/seekbar/ExposureBar.kt	modified	app/src/main/java/app/grapheneos/camera/ui/seekbar/ExposureBar.kt	99	3	txt
+ac_cloud-camera/app/src/main/java/cld/camera/ui/seekbar/ZoomBar.kt	modified	app/src/main/java/app/grapheneos/camera/ui/seekbar/ZoomBar.kt	124	4	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/BitmapUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/BitmapUtils.kt	14	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/CameraControl.kt	modified	app/src/main/java/app/grapheneos/camera/util/CameraControl.kt	18	2	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/ImageDecoderUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/ImageDecoderUtils.kt	11	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/IntentUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/IntentUtils.kt	10	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/MediaCenter.kt	new		0	83	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/PackageManagerUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/PackageManagerUtils.kt	12	23	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/SharedPrefs.kt	modified	app/src/main/java/app/grapheneos/camera/util/SharedPrefs.kt	135	1	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/Utils.kt	modified	app/src/main/java/app/grapheneos/camera/util/Utils.kt	80	5	txt
+ac_cloud-camera/app/src/main/java/cld/camera/voice/VoiceShutterController.kt	new		0	104	txt
+ac_cloud-camera/app/src/main/res/anim/slide_down.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/anim/slide_up.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable-nodpi/aztec.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/drawable-nodpi/data_matrix.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/drawable-nodpi/pdf417.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/drawable-nodpi/qr_code.png	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/drawable/aspect_ratio.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/auto.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/drawable/back.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/back_white.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/camera_shutter.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/drawable/camera_shutter_normal.xml	verbatim		13	0	txt
+ac_cloud-camera/app/src/main/res/drawable/camera_shutter_pressed.xml	verbatim		13	0	txt
+ac_cloud-camera/app/src/main/res/drawable/cancel.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/cbutton_bg.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/circle.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/copy_to_clipboard.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/delete.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/done.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/dropdown.xml	verbatim		8	0	txt
+ac_cloud-camera/app/src/main/res/drawable/edit.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/exposure_icon.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/exposure_neg.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/exposure_plus.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/exposure_thumb.xml	verbatim		32	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_auto.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_auto_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_off.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_off_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_on.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flash_on_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/flip_camera.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/drawable/focus_ring.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/folder.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_3x3.xml	verbatim		11	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_3x3_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_4x4.xml	verbatim		11	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_4x4_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_goldenratio.xml	verbatim		11	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_goldenratio_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_off.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/grid_off_circle.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/ic_launcher_foreground.xml	verbatim		30	0	txt
+ac_cloud-camera/app/src/main/res/drawable/ic_open_with.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/image_quality.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/info.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/info_adaptable.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/location.xml	verbatim		35	0	txt
+ac_cloud-camera/app/src/main/res/drawable/location_off.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/location_on.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/megapixel.xml	verbatim		13	0	txt
+ac_cloud-camera/app/src/main/res/drawable/mic_off.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/mic_on.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/mode_indicator.xml	verbatim		11	0	txt
+ac_cloud-camera/app/src/main/res/drawable/more.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/more_options.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/drawable/more_options_raw.xml	verbatim		11	0	txt
+ac_cloud-camera/app/src/main/res/drawable/more_settings_bg.xml	verbatim		4	0	txt
+ac_cloud-camera/app/src/main/res/drawable/option_circle.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/pause.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/photo.xml	new		0	10	txt
+ac_cloud-camera/app/src/main/res/drawable/play.xml	verbatim		5	0	txt
+ac_cloud-camera/app/src/main/res/drawable/play_button_circle.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable/progress_bar_style.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/drawable/qr_result_background.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/drawable/recording.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/refresh.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/retake.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/selfie_preview.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/settings_bg.xml	verbatim		4	0	txt
+ac_cloud-camera/app/src/main/res/drawable/settings_icon.xml	verbatim		7	0	txt
+ac_cloud-camera/app/src/main/res/drawable/settings_normal.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable/settings_pressed.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable/shade.xml	verbatim		4	0	txt
+ac_cloud-camera/app/src/main/res/drawable/share.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/share_white.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/storage.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/straighten.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/thumb.xml	verbatim		16	0	txt
+ac_cloud-camera/app/src/main/res/drawable/timer.xml	verbatim		14	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch.xml	verbatim		37	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_off.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_off_button.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_off_white.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_on.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_on_button.xml	verbatim		19	0	txt
+ac_cloud-camera/app/src/main/res/drawable/torch_on_white.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/videocam.xml	new		0	10	txt
+ac_cloud-camera/app/src/main/res/drawable/volume_up.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/drawable/white_option_circle.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/white_shadow_rect.xml	verbatim		9	0	txt
+ac_cloud-camera/app/src/main/res/drawable/yellow_shadow_rect.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/drawable/zoom_in.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/drawable/zoom_out.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/drawable/zsl.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/layout/activity_main.xml	modified	app/src/main/res/layout/activity_main.xml	618	75	txt
+ac_cloud-camera/app/src/main/res/layout/gallery.xml	verbatim		26	0	txt
+ac_cloud-camera/app/src/main/res/layout/gallery_placeholder.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/layout/gallery_slide.xml	modified	app/src/main/res/layout/gallery_slide.xml	23	1	txt
+ac_cloud-camera/app/src/main/res/layout/more_settings.xml	modified	app/src/main/res/layout/more_settings.xml	581	84	txt
+ac_cloud-camera/app/src/main/res/layout/scan_result_dialog.xml	verbatim		76	0	txt
+ac_cloud-camera/app/src/main/res/layout/settings.xml	modified	app/src/main/res/layout/settings.xml	348	51	txt
+ac_cloud-camera/app/src/main/res/layout/video_player.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/layout/zoom_bar_thumb.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/menu/gallery.xml	modified	app/src/main/res/menu/gallery.xml	32	5	txt
+ac_cloud-camera/app/src/main/res/mipmap-anydpi/ic_launcher.xml	verbatim		6	0	txt
+ac_cloud-camera/app/src/main/res/raw/focus_start.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/raw/image_shot.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/raw/keep.xml	verbatim		3	0	txt
+ac_cloud-camera/app/src/main/res/raw/timer_final_second.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/raw/timer_increment.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/raw/video_start.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/raw/video_stop.ogg	verbatim		0	0	bin
+ac_cloud-camera/app/src/main/res/values-es/strings.xml	modified	app/src/main/res/values/strings.xml	1	20	txt
+ac_cloud-camera/app/src/main/res/values/arrays.xml	verbatim		10	0	txt
+ac_cloud-camera/app/src/main/res/values/colors.xml	verbatim		12	0	txt
+ac_cloud-camera/app/src/main/res/values/dimens.xml	verbatim		17	0	txt
+ac_cloud-camera/app/src/main/res/values/ic_launcher_background.xml	verbatim		4	0	txt
+ac_cloud-camera/app/src/main/res/values/strings.xml	modified	app/src/main/res/values/strings.xml	211	64	txt
+ac_cloud-camera/app/src/main/res/values/themes.xml	modified	app/src/main/res/values/themes.xml	36	19	txt
+ac_cloud-camera/app/src/main/res/xml/data_extraction_rules.xml	verbatim		8	0	txt
+ac_cloud-camera/app/src/main/res/xml/full_backup_content.xml	verbatim		3	0	txt
+ac_cloud-camera/build.gradle.kts	verbatim		14	0	txt
+ac_cloud-camera/build.json	new		0	131	txt
+ac_cloud-camera/build.sh	new		0	1150	txt
+ac_cloud-camera/debug-api.json	new		0	14	txt
+ac_cloud-camera/gradle.properties	verbatim		3	0	txt
+ac_cloud-camera/gradle/libs.versions.toml	verbatim		43	0	txt
+ac_cloud-camera/gradle/verification-metadata.xml	modified	gradle/verification-metadata.xml	7636	461	txt
+ac_cloud-camera/gradle/wrapper/gradle-wrapper.jar	verbatim		0	0	bin
+ac_cloud-camera/gradle/wrapper/gradle-wrapper.properties	verbatim		10	0	txt
+ac_cloud-camera/gradlew	verbatim		220	0	txt
+ac_cloud-camera/gradlew.bat	modified	gradlew.bat	64	0	txt
+ac_cloud-camera/settings.gradle.kts	modified	settings.gradle.kts	15	27	txt
+ac_cloud-camera/test/test-camera-identify.sh	new		0	158	txt
+ac_cloud-camera/test/test-camera-image-route.sh	new		0	163	txt
+ac_cloud-camera/test/test-camera-scan-engine.sh	new		0	199	txt
+ac_cloud-camera/test/test-media-center-button.sh	new		0	583	txt
+ac_cloud-camera/test/test-recognition-routes.sh	new		0	143	txt

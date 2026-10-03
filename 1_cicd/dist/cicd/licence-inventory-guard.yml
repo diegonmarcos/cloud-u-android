@@ -1,0 +1,42 @@
+name: "licence inventory guard — every dependency, vendored dir and binary has an inventory entry"
+
+# WHY (#805). licenses/inventory.json is the repository's licence map: every
+# Maven coordinate and npm package a build file declares, every directory that
+# carries a foreign LICENSE/COPYING/NOTICE, every native library / model / font
+# binary and every top-level directory, each with its licence. A map nobody keeps
+# whole is worse than none, because it reads as complete. This guard fails the
+# push that adds a subject with no entry, naming it, so the entry is written in
+# the same commit (curated.json for a directory, then `refresh`).
+#
+# WHY NO PATH FILTER. The subjects it must catch are a new top-level directory, a
+# new .so or a new vendored LICENSE anywhere in the tree; a filter would have to
+# list "everything". The check reads build files and three JSON files and takes
+# about a second. It never touches the network: licence lookup happens only in
+# `refresh`, run by hand.
+#
+# Not legal advice: a green tick here means the inventory is complete, not that
+# the licences are compatible. LICENSING.md lists the known conflicts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licence-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it breaks the inventory eight ways on a fixture repo
+      # and requires the check to fail each time, and makes three changes that
+      # must stay green (a version bump among them).
+      - name: The check still fails when the inventory is incomplete
+        run: bash 1_cicd/src/scripts/test/licence-inventory-guard.test.sh
+
+      - name: Every dependency, vendored directory and binary has a licence entry
+        run: python3 1_cicd/src/scripts/cloud-android-licence-inventory.py check .

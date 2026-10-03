@@ -1,0 +1,17 @@
+path	class	upstream_counterpart	lines_derived	lines_new	kind
+ab_cloud-libs-shared/libs/net-wg/build.gradle	new		0	81	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/AndroidManifest.xml	modified	src/main/AndroidManifest.xml	16	20	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/CMakeLists.txt	modified	tools/CMakeLists.txt	8	31	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/.gitignore	verbatim		1	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/Makefile	verbatim		43	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/api-android.go	verbatim		203	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/go.mod	verbatim		11	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/go.sum	verbatim		16	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/goruntime-boottime-over-monotonic.diff	verbatim		144	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/libwg-go/jni.c	verbatim		63	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/ndk-compat/compat.c	verbatim		21	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/cpp/ndk-compat/compat.h	verbatim		8	0	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt	new		0	143	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/VpnConsentActivity.kt	new		0	35	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/java/com/wireguard/android/backend/GoBackend.java	modified	src/main/java/com/wireguard/android/backend/GoBackend.java	297	54	txt
+ab_cloud-libs-shared/libs/net-wg/src/main/java/com/wireguard/android/util/SharedLibraryLoader.java	verbatim		85	0	txt
