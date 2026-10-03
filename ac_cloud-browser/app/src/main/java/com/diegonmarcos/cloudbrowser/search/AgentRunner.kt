@@ -52,6 +52,9 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
         }
     }
 
+    /** #823 New chat: the session is forgotten (a waiting action with it: it never runs). */
+    fun reset(session: String) { synchronized(sessions) { sessions.remove(session) } }
+
     /** His decision from the sheet. */
     fun decide(callId: String, allow: Boolean): JSONObject {
         val (session, loop) = synchronized(sessions) { sessions.entries.firstOrNull { it.value.pending?.id == callId } }
@@ -92,14 +95,16 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
 
     companion object {
         @Volatile private var instance: AgentRunner? = null
+        private const val SCREEN = "screen"
 
         fun get(app: Context, search: SearchAddon, addon: BrowserAddon): AgentRunner = instance ?: synchronized(this) {
             instance ?: AgentRunner(app.applicationContext, search, addon).also { r ->
                 instance = r
-                // The screen's chat dialog and consent sheet.
-                BrowserAgentHost.ask = { text -> r.ask("screen", text).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
+                // The screen's side panel: its messages, its consent card, Summarize and New chat.
+                BrowserAgentHost.ask = { text -> r.ask(SCREEN, text) }
                 BrowserAgentHost.summarize = { r.summarizer.summarizePage(r.summarizeRoute()) }
-                BrowserAgentHost.decide = { id, allow -> r.decide(id, allow).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
+                BrowserAgentHost.decide = { id, allow -> r.decide(id, allow) }
+                BrowserAgentHost.reset = { r.reset(SCREEN) }
             }
         }
     }

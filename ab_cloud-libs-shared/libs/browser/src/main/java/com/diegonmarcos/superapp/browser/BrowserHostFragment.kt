@@ -692,48 +692,61 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
-    /** #802 I9 one message to the assistant; its answer (or the confirmation it waits for) in a panel. */
+    /** #823 the assistant's conversation: kept here so it survives closing the side panel. */
+    private val agentState = AgentPanelState()
+    private var agentPanel: View? = null
+
+    /**
+     * #823 the assistant as a Compose side panel over the page (the page stays visible and usable
+     * beside it). Its consent card is the ONLY place a waiting action can be allowed.
+     */
     private fun showAgentChat() {
-        val ask = BrowserAgentHost.ask ?: return toast("The assistant is not available in this app")
-        val ctx = requireContext()
-        val input = android.widget.EditText(ctx).apply { hint = "Ask about this page, or ask it to do something" }
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Ask the assistant")
-            .setView(input)
-            .setPositiveButton("Send") { _, _ ->
-                val text = input.text.toString().trim()
-                if (text.isNotEmpty()) agentAnswer { ask(text) }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        if (BrowserAgentHost.ask == null) return toast("The assistant is not available in this app")
+        if (agentPanel?.parent != null) return
+        agentPanel = overlay(side = true) { close ->
+            AgentChatPanel(agentState,
+                onSend = { text ->
+                    agentState.lines.add(AgentLine(AgentLine.USER, text))
+                    agentRun { listOfNotNull(BrowserAgentHost.ask?.invoke(text)?.let(AgentPanelText::lineFor)) }
+                },
+                onDecide = { pend, allow ->
+                    val decide = BrowserAgentHost.decide
+                    agentState.pending = null
+                    agentState.lines.add(AgentPanelText.decisionLine(allow, pend.sentence))
+                    if (decide != null) agentRun { listOfNotNull(AgentPanelText.lineFor(decide(pend.callId, allow))) }
+                },
+                onSummarize = { summarizeIntoPanel() },
+                onNewChat = { BrowserAgentHost.reset?.invoke(); agentState.lines.clear(); agentState.pending = null },
+                onClose = close)
+        }
     }
 
     /** #823 the page's summary on his route (Settings ▸ Summarize with), naming the route and engine that answered. */
     private fun showPageSummary() {
-        val summarize = BrowserAgentHost.summarize ?: return toast("Summaries are not available in this app")
-        agentAnswer {
-            val r = summarize()
-            if (!r.optBoolean("ok")) "Could not summarize: ${r.optString("error")}"
-            else r.optString("summary") + "\n\n— " + PageSummary.credit(r)
-        }
+        if (BrowserAgentHost.summarize == null) return toast("Summaries are not available in this app")
+        showAgentChat()
+        summarizeIntoPanel()
     }
 
-    /** Run [work] (a model turn: network) off the main thread; show what it answers. */
-    private fun agentAnswer(work: () -> String) {
-        toast("Asking…")
-        Thread { val out = runCatching(work).getOrElse { "error: ${it.javaClass.simpleName}" }; view?.post { if (isAdded) showTextPanel("Assistant", out) } }.start()
+    private fun summarizeIntoPanel() {
+        val summarize = BrowserAgentHost.summarize ?: return
+        agentState.lines.add(AgentLine(AgentLine.USER, "Summarize this page"))
+        agentRun { AgentPanelText.summaryLines(summarize()) }
     }
 
-    /** #802 I9 the consent sheet: the exact action and site; nothing runs until he picks. */
+    /** Run [work] (a model turn: network) off the main thread; its lines join the panel's transcript. */
+    private fun agentRun(work: () -> List<AgentLine>) {
+        agentState.busy = true
+        Thread {
+            val out = runCatching(work).getOrElse { listOf(AgentLine(AgentLine.NOTE, "Error: ${it.javaClass.simpleName}")) }
+            view?.post { agentState.lines.addAll(out); agentState.busy = false } ?: run { agentState.busy = false }
+        }.start()
+    }
+
+    /** #802 I9 / #823 the consent card: the exact action and site, in the side panel; nothing runs until he picks. */
     private fun showAgentConfirm(callId: String, sentence: String) {
-        val decide = BrowserAgentHost.decide ?: return
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Allow this action?")
-            .setMessage(sentence)
-            .setCancelable(false)
-            .setPositiveButton("Allow") { _, _ -> agentAnswer { decide(callId, true) } }
-            .setNegativeButton("Deny") { _, _ -> agentAnswer { decide(callId, false) } }
-            .show()
+        agentState.pending = AgentPending(callId, sentence)
+        showAgentChat()
     }
 
     /**
@@ -952,18 +965,23 @@ class BrowserHostFragment : Fragment(), Collapsible,
     }
 
     /** Draw [content] over the page; it is handed its own close. Back closes the top one. */
-    private fun overlay(bottom: Boolean = false, content: @Composable (close: () -> Unit) -> Unit) {
-        val ctx = context ?: return
+    /** [side]: a panel on the right edge, the page left visible and usable beside it (#823 the assistant). */
+    private fun overlay(bottom: Boolean = false, side: Boolean = false, content: @Composable (close: () -> Unit) -> Unit): View? {
+        val ctx = context ?: return null
         lateinit var v: View
         val close = { rootContainer.removeView(v); overlays.remove(v); Unit }
         v = ctx.kitComposeView(palette()) { content(close) }
-        v.layoutParams = FrameLayout.LayoutParams(
+        v.layoutParams = if (side) FrameLayout.LayoutParams(
+            minOf((resources.displayMetrics.widthPixels * 0.88f).toInt(), dp(480)),
+            FrameLayout.LayoutParams.MATCH_PARENT, android.view.Gravity.END,
+        ) else FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             if (bottom) FrameLayout.LayoutParams.WRAP_CONTENT else FrameLayout.LayoutParams.MATCH_PARENT,
             if (bottom) android.view.Gravity.BOTTOM else android.view.Gravity.NO_GRAVITY,
         )
         overlays.add(v)
         rootContainer.addView(v)
+        return v
     }
 
     private fun closeOverlays() {

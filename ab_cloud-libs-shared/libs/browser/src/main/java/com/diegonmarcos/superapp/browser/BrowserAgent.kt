@@ -167,10 +167,12 @@ class AgentLoop(private val tools: List<AgentTool>, private val maxCallsPerTurn:
  * calls them off the main thread and shows what comes back. Unset = the add-on's rows say so.
  */
 object BrowserAgentHost {
-    /** One message from him → the answer text (or the waiting confirmation's sentence). */
-    @Volatile var ask: ((text: String) -> String)? = null
-    /** His decision on a waiting call → the answer text once the turn finishes (or the next confirmation). */
-    @Volatile var decide: ((callId: String, allow: Boolean) -> String)? = null
+    /** One message from him → the runner's answer: status answered (message) | pending_confirmation | failed (error). */
+    @Volatile var ask: ((text: String) -> JSONObject)? = null
+    /** His decision on a waiting call (only from the panel's consent card) → the answer once the turn finishes. */
+    @Volatile var decide: ((callId: String, allow: Boolean) -> JSONObject)? = null
     /** #823 the page's summary on his route: the PageSummary.Result json (summary, route, engine, fell_back, reason). */
-    @Volatile var summarize: (() -> org.json.JSONObject)? = null
+    @Volatile var summarize: (() -> JSONObject)? = null
+    /** #823 New chat: forget the on-screen session. */
+    @Volatile var reset: (() -> Unit)? = null
 }

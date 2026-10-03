@@ -51,6 +51,17 @@ def check(root, ok):
         ok('Op("%s"' % op in api and '"%s"' % op in api, "route %s is documented and handled" % op)
     ok('!config.addons.enabled("ai"' in api, "the ai routes refuse while the add-on is off")
     ok('"ai_chat" -> { showAgentChat()' in frag and '"agent_confirm" -> { showAgentConfirm(' in frag, "the chat row and the consent sheet are wired")
+    # #823 the side panel replaces the dialog: the consent card is the one place a waiting action is decided.
+    panel = src.get(os.path.join(LIB, "AgentChatPanel.kt"), "")
+    ok("agentState.pending = AgentPending(callId, sentence)" in frag, "a waiting action puts the consent card in the side panel")
+    ok(re.findall(r"onDecide\(pend, (true|false)\)", panel) == ["false", "true"]
+       and 'OutlinedButton({ onDecide(pend, false) }, Modifier.testTag("browser:agent:deny")' in panel
+       and 'Button({ onDecide(pend, true) }, Modifier.testTag("browser:agent:allow")' in panel,
+       "the card's Allow and Deny are the only decisions")
+    ok(frag.count("BrowserAgentHost.decide") == 1 and "decide(pend.callId, allow)" in frag, "the host decides only from the card")
+    ok('Modifier.testTag("browser:agent:send"),\n                enabled = !state.busy && state.pending == null' in panel, "nothing new is sent while an action waits")
+    sect = frag[frag.find("private fun showAgentChat("):frag.find("private fun runAgentTool(")]
+    ok("AlertDialog" not in sect, "the assistant draws no dialog: it is the Compose side panel")
 
 BJ = "ac_cloud-browser/build.json"
 LIBP = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/"
@@ -60,6 +71,9 @@ main("agent consent", check, [
     ("a confirm tool runs undecided", LIBP + "BrowserAgent.kt", "null -> return Outcome.Pending(", "null -> run(c).also { Outcome.Pending(", "stops the turn"),
     ("a tool reads the profile", LIBP + "BrowserHostFragment.kt", '"list_tabs" -> done(', '"list_tabs" -> done(JSONObject().put("p", BrowserProfileStore(requireContext()).load().toString())); "x_list" -> done(', "reads no profile"),
     ("the API can allow", APPP + "debugapi/BrowserDebugApi.kt", 'else -> need(q["text"].orEmpty(), "text") ?: r.ask(', 'else -> if (q["allow"] == "1") r.decide(q["call"].orEmpty(), AgentLoop.Decision.ALLOW == AgentLoop.Decision.ALLOW) else need(q["text"].orEmpty(), "text") ?: r.ask(', "never decides"),
+    ("the panel allows on Deny", LIBP + "AgentChatPanel.kt", "onDecide(pend, false)", "onDecide(pend, true)", "the only decisions"),
+    ("the host allows without the card", LIBP + "BrowserHostFragment.kt", "if (decide != null) agentRun {", "BrowserAgentHost.decide?.invoke(\"x\", true); if (decide != null) agentRun {", "decides only from the card"),
+    ("send while an action waits", LIBP + "AgentChatPanel.kt", 'Modifier.testTag("browser:agent:send"),\n                enabled = !state.busy && state.pending == null', 'Modifier.testTag("browser:agent:send"),\n                enabled = !state.busy', "nothing new is sent"),
     ("the scrape tool loses its branch", LIBP + "BrowserHostFragment.kt", '            "scrape" -> {\n                wv ?: return needPage()\n                val sc = config.addons["scraper"]', '            "scrape_x" -> {\n                wv ?: return needPage()\n                val sc = config.addons["scraper"]', "`scrape` has its runAgentTool"),
 ])
 PYEOF
