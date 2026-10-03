@@ -54,6 +54,7 @@ on:
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
+      - "ab_cloud-libs-shared/libs/ml-l-sound/**"
       - "ac_cloud-camera/**"
 permissions:
   contents: write

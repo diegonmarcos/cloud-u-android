@@ -223,6 +223,8 @@ dependencies {
     // ARCore SDK for the AR measure route (optional: the app installs and runs without ARCore).
     implementation project(':measure')
     implementation project(':libs:ml-l-image')
+    // #798 sound identification's CONTRACT: 'What is this sound?' on device (YAMNet in Cloud-Lib-Ml-L-Sound-Yamnet.apk).
+    implementation project(':libs:ml-l-sound')
     implementation 'androidx.camera:camera-camera2:1.4.2'
     implementation 'androidx.camera:camera-lifecycle:1.4.2'
     implementation 'androidx.camera:camera-view:1.4.2'

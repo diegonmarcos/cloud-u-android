@@ -272,6 +272,23 @@
     <string name="invalid_photo_quality_value">Invalid value set for photo quality</string>
 
     <!-- #461: scan the CONTENT of a captured image (shared ImageScanEngine). -->
+    <!-- #798 Identify: the live viewfinder that names what it sees and hears, fully on device. -->
+    <string name="identify_title">Identify</string>
+    <string name="identify_mode_sound">Sound</string>
+    <string name="identify_snapshot">Save photo with what was identified</string>
+    <string name="identify_starting">Starting the camera…</string>
+    <string name="identify_looking">Looking…</string>
+    <string name="identify_listening">Listening…</string>
+    <string name="identify_nothing">Nothing identified yet</string>
+    <string name="identify_failed">Could not identify this frame.</string>
+    <string name="identify_saving">Saving…</string>
+    <string name="identify_saved">Saved to DCIM/Camera with what was identified.</string>
+    <string name="identify_save_failed">Could not save the photo: %1$s</string>
+    <string name="identify_camera_failed">Could not start the camera: %1$s</string>
+    <string name="identify_camera_denied">Identify needs the camera.</string>
+    <string name="identify_mic_denied">Sound mode needs the microphone.</string>
+    <string name="identify_tracking">Tracking #%1$d</string>
+    <string name="identify_model">Model: %1$s</string>
     <string name="scan_contents">Scan contents</string>
     <string name="scan_contents_in_progress">Reading this photo…</string>
     <string name="scan_contents_nothing_found">No barcode and no readable text were found in this photo.</string>

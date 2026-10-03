@@ -1,16 +1,22 @@
 package cld.camera.debugapi
 
+import android.Manifest
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import cld.camera.BuildConfig
+import androidx.core.content.ContextCompat
 import cld.camera.analyzer.ImageContentScanner
+import cld.camera.analyzer.SoundIdentifier
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.image.mlkit.Recognition
 import com.diegonmarcos.superapp.image.mlkit.RecognitionConfig
 import com.diegonmarcos.superapp.image.mlkit.RecognitionPrefs
+import com.diegonmarcos.superapp.sound.SoundCapture
+import com.diegonmarcos.superapp.sound.SoundConfig
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -29,8 +35,24 @@ class ImageDebugApiProvider : ContentProvider() {
         runCatching {
             AppDebugServer.route(
                 BuildConfig.DEBUG_API_IMAGE_GROUP,
-                listOf(AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file>", "recognise an image through the shared engine, on a route")),
-            ) { op, q -> if (op == "recognize") recognize(app, q).toString() else null }
+                listOf(
+                    AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file>", "recognise an image through the shared engine, on a route"),
+                    AppDebugServer.Op("detect", "path=<file>&mode=<objects|labels|text>", "#798 live identification's detection of one image: boxes, labels, tracking ids (on device)"),
+                ),
+            ) { op, q ->
+                when (op) {
+                    "recognize" -> recognize(app, q).toString()
+                    "detect" -> detect(app, q).toString()
+                    else -> null
+                }
+            }
+        }
+        runCatching {
+            AppDebugServer.route(
+                BuildConfig.DEBUG_API_SOUND_GROUP,
+                listOf(AppDebugServer.Op("classify", "ms=<n> | path=<wav> | test=<${SoundCapture.TESTS.joinToString("|")}>[&ms=<n>]",
+                    "#798 identify a sound through the shared engine (YAMNet, on device): from the microphone, a WAV file, or a synthetic test clip")),
+            ) { op, q -> if (op == "classify") classify(app, q).toString() else null }
         }
         return true
     }
@@ -42,6 +64,53 @@ class ImageDebugApiProvider : ContentProvider() {
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = 0
 
     companion object {
+        /** A path this app can read: absolute, or relative to its files. */
+        private fun file(ctx: Context, path: String) = if (path.startsWith("/")) File(path) else File(ctx.filesDir, path)
+
+        /** #798 /api/image/detect?path=<file>&mode=objects|labels|text — the same call Identify makes, as a single photo. */
+        fun detect(ctx: Context, q: Map<String, String>): JSONObject {
+            val mode = q["mode"]?.takeIf { it.isNotBlank() } ?: RecognitionConfig.defaultDetectMode()
+            if (mode !in RecognitionConfig.detectModes()) return JSONObject().put("ok", false).put("error", "mode must be one of ${RecognitionConfig.detectModes()}")
+            val path = q["path"].orEmpty()
+            if (path.isBlank()) return JSONObject().put("ok", false).put("error", "path is required: a file this app can read (relative = under its files)")
+            val f = file(ctx, path)
+            if (!f.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${f.path}")
+            val scanner = ImageContentScanner(ctx)
+            return json(scanner.detect(f, mode)).put("path", f.path).put("engine", scanner.detectStatus() ?: "ready")
+        }
+
+        /**
+         * #798 /api/sound/classify — ms=<n> listens on the microphone (a backgrounded app is handed
+         * silence by Android: `peak` 0 says so), path=<wav> reads a file, test=<kind> makes a
+         * synthetic clip. The same engine call Identify's Sound mode makes.
+         */
+        fun classify(ctx: Context, q: Map<String, String>): JSONObject {
+            val sound = SoundIdentifier(ctx)
+            val ms = q["ms"]?.toLongOrNull()
+            val test = q["test"]?.takeIf { it.isNotBlank() }
+            val path = q["path"]?.takeIf { it.isNotBlank() }
+            val out = when {
+                path != null -> {
+                    val f = file(ctx, path)
+                    if (!f.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${f.path}")
+                    json(sound.classify(f)).put("source", "file").put("path", f.path)
+                }
+                test != null -> {
+                    if (test !in SoundCapture.TESTS) return JSONObject().put("ok", false).put("error", "test must be one of ${SoundCapture.TESTS}")
+                    val pcm = SoundCapture.testClip(test, SoundConfig.captureMs(ms))
+                    json(sound.classify(pcm)).put("source", "test:$test").put("samples", pcm.size).put("peak", SoundCapture.peak(pcm))
+                }
+                ms != null -> {
+                    if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+                        return JSONObject().put("ok", false).put("error", "RECORD_AUDIO is not granted to this app")
+                    val (r, pcm) = sound.listen(ms)
+                    json(r).put("source", "mic").put("samples", pcm.size).put("peak", SoundCapture.peak(pcm))
+                }
+                else -> return JSONObject().put("ok", false).put("error", "one of ms=<n>, path=<wav> or test=<${SoundCapture.TESTS.joinToString("|")}> is required")
+            }
+            return out.put("engine", sound.status() ?: "ready")
+        }
+
         fun recognize(ctx: Context, q: Map<String, String>): JSONObject {
             val route = q["route"]?.takeIf { it.isNotBlank() }
             if (route != null && route !in RecognitionConfig.routes()) return JSONObject().put("ok", false).put("error", "route must be one of ${RecognitionConfig.routes().keys}")
@@ -66,5 +135,10 @@ class ImageDebugApiProvider : ContentProvider() {
             .put("barcode", r.barcode?.let { JSONObject().put("format", it.format).put("raw", it.rawValue) } ?: JSONObject.NULL)
             .put("answers", JSONObject().apply { r.answers.forEach { (k, opts) -> put(k, JSONArray().apply { opts.forEach { put(JSONObject().put("label", it.label).put("p", it.p)) } }) } })
             .put("model", r.model).put("latency_ms", r.latencyMs).put("error", r.error ?: JSONObject.NULL)
+            // #798 a detection's mode and each box's tracking id and alternatives; a sound answer's timeline
+            .put("mode", r.mode)
+            .put("tracking", JSONArray().apply { r.boxes.forEach { b -> put(JSONObject().put("label", b.label).put("id", b.id ?: JSONObject.NULL)
+                .put("alts", JSONArray().apply { b.alts.forEach { put(JSONObject().put("label", it.label).put("p", it.p)) } })) } })
+            .put("segments", JSONArray().apply { r.segments.forEach { put(JSONObject().put("label", it.label).put("p", it.p).put("start_ms", it.startMs).put("end_ms", it.endMs)) } })
     }
 }

@@ -22,10 +22,15 @@
  * decision model only when picked (the engine falls back to on-device on
  * error, timeout or no token). Barcode and OCR stay on their contract-1 calls,
  * so they keep working against an engine too old to recognise.
+ *
+ * #798 live identification (IdentifyActivity) also comes through this door: detect asks the engine
+ * for objects with a full-label classifier and tracking ids, labels, or text lines, always on
+ * device; a saved snapshot is then identified on the user's route through recognize.
  */
 package cld.camera.analyzer
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import com.diegonmarcos.superapp.image.mlkit.BarcodeScan
 import com.diegonmarcos.superapp.image.mlkit.ImageScanEngine
@@ -73,6 +78,15 @@ class ImageContentScanner(context: Context) {
 
     /** The engine's live decision-model catalogue (slugs), for the model picker; empty when it cannot answer. */
     fun models(): List<String> = engine.decisionModels(RecognitionConfig.request(RecognitionConfig.OPENROUTER, "")).map { it.slug }
+
+    /** #798 one viewfinder frame, in stream mode (tracking ids across the frames that follow); always on device. */
+    fun detectLive(frame: Bitmap, mode: String): Recognition = engine.detect(frame, RecognitionConfig.detectRequest(mode, live = true))
+
+    /** #798 /api/image/detect: one file this app can read, as a single photo. */
+    fun detect(file: File, mode: String): Recognition = engine.detect(file, RecognitionConfig.detectRequest(mode, live = false))
+
+    /** Null when the engine can detect, else what to do — the contract-3 handshake. */
+    fun detectStatus(): String? = engine.check(com.diegonmarcos.superapp.image.BuildConfig.IMAGE_DETECT_CONTRACT)
 
     /** Null when the engine can recognise, else what to do — the contract-2 handshake. */
     fun status(): String? = engine.check(com.diegonmarcos.superapp.image.BuildConfig.IMAGE_RECOGNIZE_CONTRACT)

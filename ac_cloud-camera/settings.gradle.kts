@@ -22,6 +22,9 @@ include(":app")
 // does not exist in this app. Same AGP-9 consumption path media-center uses.
 include(":libs:ml-l-image")
 project(":libs:ml-l-image").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image")
+// #798 sound identification's contract, by reference the same way (the engine is a Store lib).
+include(":libs:ml-l-sound")
+project(":libs:ml-l-sound").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-sound")
 
 // Fleet mesh membership: libs:core manifest-merges the CONSTELLATION_DATA
 // signature permission and, through libs:devtools, FleetTokenProvider +

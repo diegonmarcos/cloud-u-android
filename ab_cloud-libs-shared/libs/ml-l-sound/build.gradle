@@ -75,4 +75,9 @@ kotlin {
 dependencies {
     // The answer is a Recognition: one result type for image and sound.
     api project(':libs:ml-l-image')
+
+    // SoundConfigTest is pure JVM (the real org.json; android.jar's copy is a stub that throws),
+    // so it runs in every consumer's unit phase.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

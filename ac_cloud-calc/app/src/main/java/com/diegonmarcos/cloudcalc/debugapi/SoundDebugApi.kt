@@ -11,8 +11,12 @@ import com.diegonmarcos.cloudcalc.sound.Analysis
 import com.diegonmarcos.cloudcalc.sound.Dsp
 import com.diegonmarcos.cloudcalc.sound.Generator
 import com.diegonmarcos.superapp.devtools.AppDebugServer
+import com.diegonmarcos.superapp.sound.SoundCapture
+import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.sound.SoundPrefs
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * The Sound tools on the fleet debug API (#772), a loopback self-test that works with the screen
@@ -25,6 +29,10 @@ import org.json.JSONObject
  *                                           re-reads the last generated buffer instead
  *   /api/sound/status                       permission, knobs, last generation, History session,
  *                                           saved sessions
+ *   /api/sound/classify?test=tone           #798 "What is this sound?" ON DEVICE (YAMNet, the shared
+ *                                           sound engine): ms=<n> from the microphone, path=<wav>
+ *                                           from a file, test=tone|silence|noise a synthetic clip,
+ *                                           source=generator the last generated buffer
  *
  * Same path as the screens (SoundFlow). Android silences a background app's microphone: analyze
  * says `silenced: true` rather than reporting the frequency of nothing.
@@ -42,12 +50,15 @@ object SoundDebugApi {
                 AppDebugServer.Op("generate", "f=<Hz>&ms=<duration>&kind=<tone|sweep|noise|dual|beats>&wave=<sine|square|triangle|saw>&f2=<Hz>&amp=<0..1>&colour=<white|pink>&log=<0|1>", "play a tone through the safe-volume guard and keep its samples"),
                 AppDebugServer.Op("analyze", "ms=<duration>&source=<mic|generator>", "record (or re-read the last generated tone) and report frequency, note, level, events"),
                 AppDebugServer.Op("status", "", "microphone permission, knobs, last generation, History session, saved sessions"),
+                AppDebugServer.Op("classify", "ms=<n> | path=<wav> | test=<${SoundCapture.TESTS.joinToString("|")}> | source=generator",
+                    "#798 identify a sound on device through the shared engine (YAMNet): labels, timeline, peak, engine readiness"),
             ),
         ) { op, q ->
             when (op) {
                 "generate" -> generate(app, q).toString()
                 "analyze" -> analyze(app, q).toString()
                 "status" -> status(app).toString()
+                "classify" -> classify(app, q).toString()
                 else -> null
             }
         }
@@ -90,6 +101,42 @@ object SoundDebugApi {
         return SoundFlow.summary(r, knobs).put("ok", true).put("source", source).put("ms", pcm.size * 1000L / sr)
             .put("silenced", silenced).put("onset_times_s", JSONArray(r.onsets.map { Math.round(it * 1000) / 1000.0 }))
             .put("event_kinds", JSONArray(r.events.map { it.kind })).put("detected", detected(r))
+    }
+
+    /** #798 the on-device route of "What is this sound?", the same call the screen makes. */
+    fun classify(ctx: Context, q: Map<String, String>): JSONObject {
+        val cfg = SoundDecl.config
+        val path = q["path"]?.takeIf { it.isNotBlank() }
+        val test = q["test"]?.takeIf { it.isNotBlank() }
+        val (r, source, pcm) = when {
+            path != null -> {
+                val f = if (path.startsWith("/")) File(path) else File(ctx.filesDir, path)
+                if (!f.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${f.path}")
+                Triple(SoundFlow.identifyOnDevice(ctx, f), "file:${f.path}", null)
+            }
+            test != null -> {
+                if (test !in SoundCapture.TESTS) return JSONObject().put("ok", false).put("error", "test must be one of ${SoundCapture.TESTS}")
+                val clip = SoundCapture.testClip(test, SoundConfig.captureMs(q["ms"]?.toLongOrNull()), cfg.sampleRate)
+                Triple(SoundFlow.identifyOnDevice(ctx, clip, cfg.sampleRate), "test:$test", clip)
+            }
+            q["source"] == "generator" -> {
+                val g = SoundStore.lastGenerated ?: return JSONObject().put("ok", false).put("error", "nothing generated yet — call generate first")
+                Triple(SoundFlow.identifyOnDevice(ctx, g.pcm, g.sampleRate), "generator", g.pcm)
+            }
+            q["ms"] != null -> {
+                val ms = (q["ms"]?.toIntOrNull() ?: cfg.recordMs).coerceIn(50, cfg.maxRecordMs)
+                val clip = runCatching { Mic.record(ctx, cfg.sampleRate, ms) }
+                    .getOrElse { return JSONObject().put("ok", false).put("source", "mic").put("error", it.message ?: it.javaClass.simpleName) }
+                Triple(SoundFlow.identifyOnDevice(ctx, clip, cfg.sampleRate), "mic", clip)
+            }
+            else -> return JSONObject().put("ok", false).put("error", "one of ms=<n>, path=<wav>, test=<${SoundCapture.TESTS.joinToString("|")}> or source=generator is required")
+        }
+        return JSONObject().put("ok", r.ok).put("route", r.route).put("source", source).put("model", r.model).put("latency_ms", r.latencyMs)
+            .put("labels", JSONArray().apply { r.labels.forEach { put(JSONObject().put("label", it.label).put("p", it.p)) } })
+            .put("segments", JSONArray().apply { r.segments.forEach { put(JSONObject().put("label", it.label).put("p", it.p).put("start_ms", it.startMs).put("end_ms", it.endMs)) } })
+            .put("peak", pcm?.let { SoundCapture.peak(it) } ?: JSONObject.NULL)
+            .put("error", r.error ?: JSONObject.NULL)
+            .put("chosen_route", SoundPrefs.route(ctx)).put("engine", SoundFlow.engineStatus(ctx) ?: "ready")
     }
 
     /** One line a human reads first: the frequency and what kind of sound carried it. */

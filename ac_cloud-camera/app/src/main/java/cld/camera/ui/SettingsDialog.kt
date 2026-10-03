@@ -45,6 +45,7 @@ import cld.camera.CamConfig
 import cld.camera.R
 import cld.camera.databinding.SettingsBinding
 import cld.camera.ui.activities.MainActivity
+import cld.camera.identify.IdentifyActivity
 import cld.camera.ui.activities.MoreSettings
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -94,6 +95,8 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
     private val sizedForRegion = Rect()
 
     private var moreSettingsButton: View
+    // #798 Identify: the live viewfinder that names what it sees and hears.
+    private var identifyButton: View
 
     private val tabSelectedColor =
         MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary)
@@ -120,6 +123,16 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
         moreSettingsButton.setOnClickListener {
             if (!mActivity.videoCapturer.isRecording) {
                 MoreSettings.start(mActivity)
+            } else {
+                mActivity.showMessage(getString(R.string.more_settings_unavailable_during_recording))
+            }
+        }
+
+        identifyButton = binding.identifyLive
+        identifyButton.setOnClickListener {
+            if (!mActivity.videoCapturer.isRecording) {
+                dismiss()
+                IdentifyActivity.start(mActivity)
             } else {
                 mActivity.showMessage(getString(R.string.more_settings_unavailable_during_recording))
             }
@@ -420,6 +433,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
             ContextCompat.getDrawable(context, R.drawable.settings_bg)
         moreSettingsBackgroundDrawable?.setTint(backgroundColor)
         binding.moreSettings.background = moreSettingsBackgroundDrawable
+        binding.identifyLive.background = moreSettingsBackgroundDrawable?.constantState?.newDrawable()?.mutate()
     }
 
     /**
@@ -730,6 +744,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
 
             override fun onAnimationEnd(p0: Animation?) {
                 moreSettingsButton.visibility = View.VISIBLE
+                identifyButton.visibility = View.VISIBLE
             }
 
             override fun onAnimationRepeat(p0: Animation?) {}
@@ -755,6 +770,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
 
                 override fun onAnimationStart(p0: Animation?) {
                     moreSettingsButton.visibility = View.INVISIBLE
+                    identifyButton.visibility = View.INVISIBLE
                 }
 
                 override fun onAnimationEnd(p0: Animation?) {

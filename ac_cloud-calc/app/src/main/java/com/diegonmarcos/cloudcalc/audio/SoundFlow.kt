@@ -18,6 +18,9 @@ import com.diegonmarcos.cloudcalc.sound.Session
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.min
+import com.diegonmarcos.superapp.image.mlkit.Recognition
+import com.diegonmarcos.superapp.sound.SoundEngine
+import java.io.File
 
 /**
  * The Sound tools end to end, shared by the screens and /api/sound/{generate,analyze,status} so a green debug route is
@@ -86,6 +89,23 @@ object SoundFlow {
         val played = play && runCatching { Player.play(pcm, cfg.sampleRate) }.isSuccess
         return SoundStore.Generated(g.spec, g.notes, pcm, cfg.sampleRate, System.currentTimeMillis(), played).also { SoundStore.lastGenerated = it }
     }
+
+    @Volatile private var engine: SoundEngine? = null
+    private fun engine(ctx: Context): SoundEngine =
+        engine ?: synchronized(this) { engine ?: SoundEngine(ctx.applicationContext).also { engine = it } }
+
+    /**
+     * #798 "What is this sound?" on device — the default route (libs:ml-l-sound/sound.json): YAMNet's
+     * 521 AudioSet classes in Cloud-Lib-Ml-L-Sound-Yamnet.apk, offline, the audio never leaving the
+     * phone. The answer is the fleet's one Recognition type, with the clip's timeline.
+     */
+    fun identifyOnDevice(ctx: Context, pcm: ShortArray, sampleRate: Int): Recognition = engine(ctx).classify(pcm, sampleRate)
+
+    /** #798 /api/sound/classify?path=<wav>: a WAV file this app can read, on device. */
+    fun identifyOnDevice(ctx: Context, wav: File): Recognition = engine(ctx).classify(wav)
+
+    /** Null when the sound engine is installed and answers, else what to do (the contract handshake). */
+    fun engineStatus(ctx: Context): String? = engine(ctx).check()
 
     fun model(ctx: Context): String = JevStore.model(ctx, SOUND_USE)
 

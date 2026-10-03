@@ -457,6 +457,22 @@
             android:paddingVertical="10dp"
             android:text="@string/more_settings"/>
 
+        <!-- #798 Identify: the live viewfinder that names what it sees and hears (IdentifyActivity). -->
+        <TextView
+            android:id="@+id/identify_live"
+            android:visibility="invisible"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_below="@id/settings_dialog"
+            android:layout_alignParentStart="true"
+            android:background="@drawable/settings_bg"
+            android:foreground="@drawable/more_settings_bg"
+            android:layout_marginStart="@dimen/settings_dialog_horizontal_margin"
+            android:layout_marginTop="8dp"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="10dp"
+            android:text="@string/identify_title"/>
+
     </RelativeLayout>
 
 </cld.camera.ui.SettingsFrameLayout>

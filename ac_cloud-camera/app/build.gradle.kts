@@ -26,6 +26,9 @@ val voiceSection = appMetadataJson["voice"] as? Map<*, *>
 // #772 the image recognition debug group, declared in build.json::debug_api.
 val debugImageGroup = ((appMetadataJson["debug_api"] as? Map<*, *>)?.get("image_group") as? String)
     ?: error("build.json::debug_api.image_group is required")
+// #798 the sound identification debug group, declared in the same place.
+val debugSoundGroup = ((appMetadataJson["debug_api"] as? Map<*, *>)?.get("sound_group") as? String)
+    ?: error("build.json::debug_api.sound_group is required")
 val voiceShutterTrigger =
     (voiceSection?.get("shutter_trigger_word") as? String).orEmpty().ifBlank { "capture" }
 val voiceShutterEnabledByDefault =
@@ -93,6 +96,7 @@ android {
         buildConfigField("String", "VOICE_SHUTTER_TRIGGER_WORD", "\"$voiceShutterTrigger\"")
         buildConfigField("Boolean", "VOICE_SHUTTER_ENABLED_BY_DEFAULT", voiceShutterEnabledByDefault.toString())
         buildConfigField("String", "DEBUG_API_IMAGE_GROUP", "\"$debugImageGroup\"")
+        buildConfigField("String", "DEBUG_API_SOUND_GROUP", "\"$debugSoundGroup\"")
     }
 
     buildTypes {
@@ -152,6 +156,9 @@ dependencies {
     // same way cloud-drive and cloud-media-center consume it. One engine, no
     // private copy to drift (#170/#261).
     implementation(project(":libs:ml-l-image"))
+    // #798 the CONTRACT half of sound identification (Identify's Sound mode, /api/sound/classify);
+    // the engine (YAMNet) is Cloud-Lib-Ml-L-Sound-Yamnet.apk, bound after a handshake, never compiled.
+    implementation(project(":libs:ml-l-sound"))
 
     // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
     // provider, receiver, <queries> and the signature permission into this APK.

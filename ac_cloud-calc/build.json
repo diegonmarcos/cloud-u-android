@@ -113,7 +113,8 @@
         "libs:text-tools",
         "libs:decisions",
         "measure",
-        "libs:ml-l-image"
+        "libs:ml-l-image",
+        "libs:ml-l-sound"
       ]
     },
     "clock": {
@@ -135,6 +136,11 @@
     "libs:ml-l-image": {
       "_doc": "#772 the CONTRACT half of the fleet's one image engine (engine-apk-split move 6), shared with Cloud Camera, Drive, Mail, Media Center and Office: the IImageScanEngine wire, the uniform Recognition result, recognition.json (THE image-recognition declaration: routes, thresholds, the OpenRouter model and categories) and the per-app route choice. Identify, Colour and Text run in Cloud-Lib-Ml-L-Image-Mlkit.apk, which this app binds after a contract handshake and never compiles (a `contract` lib, no L4 edge).",
       "dir": "../ab_cloud-libs-shared/libs/ml-l-image",
+      "type": "library"
+    },
+    "libs:ml-l-sound": {
+      "_doc": "#798 the CONTRACT half of the fleet's sound identification (ISoundEngine wire, SoundEngine client, sound.json: routes, thresholds, capture length), shared with Cloud Camera: 'What is this sound?' answers on device by default (YAMNet's 521 AudioSet classes), the decision model stays an optional route. YAMNet runs in Cloud-Lib-Ml-L-Sound-Yamnet.apk, which this app binds after a contract handshake and never compiles (a `contract` lib, no L4 edge).",
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-sound",
       "type": "library"
     },
     "libs:decisions": {

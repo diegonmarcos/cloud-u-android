@@ -49,10 +49,14 @@ object CameraDebugApi {
         }
         AppDebugServer.route(
             BuildConfig.DEBUG_API_IMAGE_GROUP,
-            listOf(AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file, or last>&context=<text>", "recognise an image through the shared engine, on a route")),
+            listOf(
+                AppDebugServer.Op("recognize", "route=<ml|openrouter>&path=<file, or last>&context=<text>", "recognise an image through the shared engine, on a route"),
+                AppDebugServer.Op("detect", "path=<file, or last>&mode=<objects|labels|text>", "#798 live identification's detection of one image: boxes, labels, tracking ids (on device)"),
+            ),
         ) { op, q ->
             when (op) {
                 "recognize" -> recognize(app, q).toString()
+                "detect" -> detect(app, q).toString()
                 else -> null
             }
         }
@@ -72,6 +76,24 @@ object CameraDebugApi {
             .put("routes", JSONObject(RecognitionConfig.routes()))
             .put("last_photo", if (last.isFile) JSONObject().put("path", last.path).put("bytes", last.length()).put("modified", last.lastModified()) else JSONObject.NULL)
             .put("level", tilt?.let { JSONObject().put("tilt_deg", it.tiltDeg).put("pitch_deg", it.pitchDeg).put("roll_deg", it.rollDeg).put("edge_deg", it.edgeDeg) } ?: JSONObject.NULL)
+    }
+
+    /** #798 /api/image/detect: the shared engine's detection (contract 3) of one photo, always on device. */
+    fun detect(ctx: Context, q: Map<String, String>): JSONObject {
+        val mode = q["mode"]?.takeIf { it.isNotBlank() } ?: RecognitionConfig.defaultDetectMode()
+        if (mode !in RecognitionConfig.detectModes()) return JSONObject().put("ok", false).put("error", "mode must be one of ${RecognitionConfig.detectModes()}")
+        val path = q["path"].orEmpty().ifBlank { "last" }
+        val file = when {
+            path == "last" -> Vision.last(ctx)
+            path.startsWith("/") -> File(path)
+            else -> File(ctx.filesDir, path)
+        }
+        if (!file.canRead()) return JSONObject().put("ok", false).put("error", "cannot read ${file.path} — take a photo in Measure ▸ Camera first, or give a path this app can read")
+        val r = Vision.detect(ctx, file, mode)
+        return Vision.json(r).put("path", file.path).put("mode", r.mode)
+            .put("tracking", org.json.JSONArray().apply { r.boxes.forEach { b -> put(JSONObject().put("label", b.label).put("id", b.id ?: JSONObject.NULL)
+                .put("alts", org.json.JSONArray().apply { b.alts.forEach { put(JSONObject().put("label", it.label).put("p", it.p)) } })) } })
+            .put("engine", Vision.detectStatus(ctx) ?: "ready")
     }
 
     fun recognize(ctx: Context, q: Map<String, String>): JSONObject {

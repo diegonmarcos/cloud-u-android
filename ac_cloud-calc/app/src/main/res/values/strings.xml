@@ -71,6 +71,10 @@
     <string name="sound_measured">Measured</string>
     <string name="sound_class">Kind of sound</string>
     <string name="sound_decision_meta">%1$s · %2$s ms · cost %3$s</string>
+    <!-- #798 "What is this sound?" on device: the shared sound engine (YAMNet), the default route. -->
+    <string name="sound_identify_on_device_doc">The phone itself identifies the sound (YAMNet, 521 kinds of sound, fully offline): the audio never leaves the device. Every probability is shown, then when each sound was heard.</string>
+    <string name="sound_heard_nothing">Nothing was heard above the model\'s floor.</string>
+    <string name="sound_on_device_meta">%1$s · %2$s ms · on this phone</string>
 
     <!-- #772 the Camera tools -->
     <string name="camera_needed">The camera tools need the camera. Photos stay in this app\'s own storage; only Identify on the OpenRouter route sends one out, and only when you picked that route.</string>

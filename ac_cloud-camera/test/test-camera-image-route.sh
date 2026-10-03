@@ -126,7 +126,7 @@ def checks(s):
     need("R5 the group is baked from build.json", 'buildConfigField("String", "DEBUG_API_IMAGE_GROUP", "\\"$debugImageGroup\\"")' in s["gradle"]
          and 'get("image_group")' in s["gradle"])
     need("R5 the route registers under the baked group", "BuildConfig.DEBUG_API_IMAGE_GROUP" in pr)
-    need("R5 the op is recognize", re.search(r'op == "recognize"\)\s*recognize\(', pr) is not None)
+    need("R5 the op is recognize", re.search(r'"recognize"\s*->\s*recognize\(', pr) is not None)
     need("R5 no state op", '"state"' not in pr)
     need("R5 an unknown route is refused", re.search(r"route !in RecognitionConfig\.routes\(\)", pr) is not None)
 
@@ -159,7 +159,7 @@ MUTATIONS = [
     ("provider-exported", "manifest", 'android:authorities="${applicationId}.imagedebugapi"\n            android:exported="false"', 'android:authorities="${applicationId}.imagedebugapi"\n            android:exported="true"'),
     ("provider-gone", "manifest", 'android:name=".debugapi.ImageDebugApiProvider"', 'android:name=".debugapi.Other"'),
     ("group-literal", "provider", "BuildConfig.DEBUG_API_IMAGE_GROUP,", '"image",'),
-    ("state-op", "provider", 'if (op == "recognize")', 'if (op == "state")'),
+    ("state-op", "provider", '"recognize" -> recognize(app, q)', '"state" -> recognize(app, q)'),
     ("any-route", "provider", "if (route != null && route !in RecognitionConfig.routes())", "if (false)"),
     ("labels-hidden", "gallery", "ImageContentScanner.labels(content.recognition)", "\"\""),
     ("no-probability", "scanner", '"${it.label} ${Math.round(it.p * 100)}%"', '"${it.label}"'),

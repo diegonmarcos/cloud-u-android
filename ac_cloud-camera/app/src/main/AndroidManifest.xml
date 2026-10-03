@@ -237,7 +237,15 @@
             android:excludeFromRecents="true"
             tools:ignore="DiscouragedApi" />
 
-        <!-- #772 /api/image/recognize on the fleet debug API (registers before Application.onCreate). -->
+        <!-- #798 Identify: live on-device object/label/text detection and sound identification. -->
+        <activity
+            android:name=".identify.IdentifyActivity"
+            android:theme="@style/Theme.App"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+
+        <!-- #772 /api/image/recognize, #798 /api/image/detect and /api/sound/classify on the fleet debug API (registers before Application.onCreate). -->
         <provider
             android:name=".debugapi.ImageDebugApiProvider"
             android:authorities="${applicationId}.imagedebugapi"

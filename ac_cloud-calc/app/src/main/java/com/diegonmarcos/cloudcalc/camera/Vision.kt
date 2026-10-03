@@ -43,6 +43,12 @@ object Vision {
 
     fun ocr(ctx: Context, photo: File): OcrResult = engine(ctx).recognizeText(photo)
 
+    /** #798 the engine's detection (contract 3) of one photo: boxes named by the full-label classifier, labels, or text lines. */
+    fun detect(ctx: Context, photo: File, mode: String): Recognition = engine(ctx).detect(photo, RecognitionConfig.detectRequest(mode, live = false))
+
+    /** Null when the engine can detect, else what to do — the contract-3 handshake. */
+    fun detectStatus(ctx: Context): String? = engine(ctx).check(com.diegonmarcos.superapp.image.BuildConfig.IMAGE_DETECT_CONTRACT)
+
     /** The live decision-model catalogue for the Image route picker (the engine fetches it). */
     fun models(ctx: Context): List<DecisionModel> = engine(ctx).decisionModels(RecognitionConfig.request(RecognitionConfig.OPENROUTER, ""))
 

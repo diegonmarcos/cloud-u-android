@@ -69,6 +69,13 @@ import org.json.JSONObject
 import java.io.File
 import kotlin.math.ln
 import kotlin.math.max
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import com.diegonmarcos.superapp.image.mlkit.Recognition
+import com.diegonmarcos.superapp.sound.SoundConfig
+import com.diegonmarcos.superapp.sound.SoundPrefs
 
 /** Microphone and file work block: always off the main thread. */
 private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
@@ -409,30 +416,75 @@ fun SoundIdentifyMode(mode: Declarations.Mode) = MicGate {
     var error by remember { mutableStateOf("") }
     var measured by remember { mutableStateOf<Pair<Analysis.Result, JSONObject>?>(null) }
     var decision by remember { mutableStateOf<Decision?>(null) }
+    // #798 the route: on device (YAMNet, offline) by default, the decision model only when picked.
+    var route by remember { mutableStateOf(SoundPrefs.route(ctx)) }
+    var heard by remember { mutableStateOf<Recognition?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
-        Text(stringResource(R.string.sound_identify_doc, SoundFlow.model(ctx)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SoundConfig.routes().forEach { (id, label) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().selectable(selected = route == id, role = Role.RadioButton, onClick = {
+                    route = id
+                    SoundPrefs.set(ctx, id)
+                }).testTag(SoundTags.route(id)),
+            ) {
+                RadioButton(selected = route == id, onClick = null)
+                Text(label)
+            }
+        }
+        Text(
+            if (route == SoundConfig.ML) stringResource(R.string.sound_identify_on_device_doc) else stringResource(R.string.sound_identify_doc, SoundFlow.model(ctx)),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Button(enabled = !busy, modifier = Modifier.testTag(SoundTags.LISTEN), onClick = {
             scope.launch {
-                busy = true; error = ""; decision = null
+                busy = true; error = ""; decision = null; heard = null
                 runCatching {
                     val pcm = io { Mic.record(ctx, cfg.sampleRate, cfg.recordMs) }
                     val knobs = SoundStore.knobs(ctx)
                     val r = io { SoundFlow.analyze(pcm, cfg.sampleRate) }
                     measured = r to SoundFlow.summary(r, knobs)
-                    decision = io { SoundFlow.identify(ctx, pcm, cfg.sampleRate, r, knobs) }
+                    if (route == SoundConfig.ML) heard = io { SoundFlow.identifyOnDevice(ctx, pcm, cfg.sampleRate) }
+                    else decision = io { SoundFlow.identify(ctx, pcm, cfg.sampleRate, r, knobs) }
                 }.onFailure { error = it.message ?: it.javaClass.simpleName }
                 busy = false
             }
         }) { Text(stringResource(if (busy) R.string.sound_listening else R.string.sound_identify)) }
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+        heard?.let { h -> HeardBars(h) }
         decision?.let { d -> DecisionBars(d) }
         measured?.let { (r, s) ->
             HorizontalDivider(Modifier.padding(vertical = CalcMetrics.gap))
             Text(stringResource(R.string.sound_measured), style = MaterialTheme.typography.titleMedium)
             AnalysisView(r, s)
-            val top = decision?.options(JevConfig.IDENTIFY_CLASS)?.firstOrNull()
-            AskAboutResult(mode.id, detected(r, s), top?.let { "${it.label} ${Math.round(it.p * 100)}%" } ?: detected(r, s))
+            val top = heard?.labels?.firstOrNull()?.let { it.label to it.p }
+                ?: decision?.options(JevConfig.IDENTIFY_CLASS)?.firstOrNull()?.let { it.label to it.p }
+            AskAboutResult(mode.id, detected(r, s), top?.let { "${it.first} ${Math.round(it.second * 100)}%" } ?: detected(r, s))
         }
+    }
+}
+
+/** #798 what the on-device model heard: every class over the declared floor with its probability, then when. */
+@Composable
+internal fun HeardBars(h: Recognition) {
+    if (!h.ok) {
+        Text(stringResource(R.string.sound_identify_unavailable, h.error.orEmpty()), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag(SoundTags.VERDICT))
+        return
+    }
+    Column(Modifier.fillMaxWidth().testTag(SoundTags.VERDICT)) {
+        if (h.labels.isEmpty()) Text(stringResource(R.string.sound_heard_nothing))
+        h.labels.forEach { o ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
+                Text(o.label, Modifier.weight(1f))
+                LinearProgressIndicator(progress = { o.p.toFloat() }, modifier = Modifier.weight(1f).padding(vertical = CalcMetrics.gap))
+                Text("${Math.round(o.p * 100)}%")
+            }
+        }
+        if (h.segments.isNotEmpty()) Text(
+            h.segments.joinToString("  ·  ") { "%.1f–%.1f s %s".format(java.util.Locale.ROOT, it.startMs / 1000.0, it.endMs / 1000.0, it.label) },
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(stringResource(R.string.sound_on_device_meta, h.model, h.latencyMs.toString()), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -470,6 +522,7 @@ object SoundTags {
     const val SCOPE = "sound_scope"
     const val VERDICT = "sound_verdict"
     const val GUARD_NOTE = "sound_guard_note"
+    fun route(id: String) = "sound_route_$id"
     fun event(i: Int) = "sound_event_$i"
     fun chip(id: String) = "sound_chip_$id"
 }
