@@ -78,7 +78,7 @@
         "url": "http://localhost:8080/"
       },
       {
-        "label": "localhost:8765 (cloud-webserver)",
+        "label": "localhost:8765 (cloud-c3-webserver)",
         "url": "http://localhost:8765/"
       }
     ]
