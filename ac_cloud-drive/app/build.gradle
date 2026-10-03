@@ -591,6 +591,7 @@ android {
 dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
+    implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     implementation project(':libs:updater')
     // The shared scan engine: ZXing barcode decode + ML Kit OCR for the image
     // viewer. Same module cloud-media-center compiles in (task #459/#460).

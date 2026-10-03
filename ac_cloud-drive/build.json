@@ -700,6 +700,11 @@
       "dir": "../ab_cloud-libs-shared/libs/core",
       "type": "library"
     },
+    "libs:databackend": {
+      "_doc_dir": "#825 the engine wire (IDataBackend + DataBackendClient/Service), out of libs:core so a wire edit rebuilds only the engines and the apps that bind one.",
+      "dir": "../ab_cloud-libs-shared/libs/databackend",
+      "type": "library"
+    },
     "libs:devtools": {
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/, same as libs:core. Not listed in app.depends_on and not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which is what gives every app the constellation-wide debug API (127.0.0.1:38090+, own-process logcat) without per-app wiring that would drift.",
       "dir": "../ab_cloud-libs-shared/libs/devtools",
