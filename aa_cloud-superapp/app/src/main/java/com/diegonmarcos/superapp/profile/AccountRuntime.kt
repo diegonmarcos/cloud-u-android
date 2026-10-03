@@ -283,8 +283,8 @@ object AccountRuntime {
                     // The tunnel IS the declared profile when address and peers agree; otherwise what it runs.
                     meshPath(name) to (if (rows[name]?.state == VaultCockpit.State.MATCH) conf else rows[name]?.device)
                 }
-                base.copy(detail = "${deviceLabel(picked)} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values,
-                    readOnly = if (rt.writable) emptySet() else values.keys, roster = live)
+                base.copy(detail = "${deviceLabel(picked)} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values, roster = live,
+                    readOnly = if (rt.writable) emptySet() else values.keys)
             }
             "ai" -> base.copy(values = aiPaths(VaultCockpit.layout.aiTokens).mapValues { (_, provider) ->
                 client!!.revealAiKey(provider).text?.trim()?.ifBlank { null }
