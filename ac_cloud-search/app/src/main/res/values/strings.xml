@@ -74,9 +74,9 @@
     <string name="calc_failed">These inputs cannot be computed.</string>
 
     <string name="assistant_hello">Hi, I\'m your AI Assistant</string>
+    <string name="assistant_hello_sub">Search the web below or ask me a complex question.</string>
     <string name="search_the_web">Search the Web…</string>
     <string name="search_with">Search %1$s…</string>
-    <string name="web_opens_in_browser">Engine results open in cloud-browser.</string>
     <string name="sessions">Sessions</string>
     <string name="chat_sessions">Chat Sessions</string>
     <string name="no_sessions">No chats yet.</string>

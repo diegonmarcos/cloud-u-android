@@ -9,5 +9,11 @@
   ],
   "fill": [
     "star"
-  ]
+  ],
+  "launcher": {
+    "_doc": "#803 the app icon is the mockup's central bottom-nav icon: Phosphor `icon` filled with .ai-nav-icon's 135deg gradient (`gradient` names colors.xml entries, start to end; the mockup's rule declares no glow, only the gradient and its fallback colour). phosphor2vd.py writes res/drawable/ic_launcher_foreground.xml (the glyph at `size_dp`, centred in the 108dp adaptive canvas, inside the 66dp safe zone) and ic_launcher_monochrome.xml (the same glyph in one colour, for Android 13 themed icons) from the generated ph_<icon>.xml, so it needs no network: `python3 app/tools/phosphor2vd.py --launcher`. cloud-superapp's Cloud > Apps > AGI Search tile is a byte-identical copy of the foreground (aa_cloud-superapp/test/test-agi-tiles.sh T3).",
+    "icon": "shooting-star",
+    "gradient": ["ai_nav_1", "ai_nav_2", "ai_nav_3"],
+    "size_dp": 56
+  }
 }

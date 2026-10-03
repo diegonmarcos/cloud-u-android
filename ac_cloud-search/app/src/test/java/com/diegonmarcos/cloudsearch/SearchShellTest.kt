@@ -2,14 +2,20 @@ package com.diegonmarcos.cloudsearch
 
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.cloudsearch.core.Http
+import com.diegonmarcos.cloudsearch.core.Templates
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.Services
 import com.diegonmarcos.cloudsearch.debugapi.SearchDebugApi
@@ -143,7 +149,6 @@ class SearchShellTest {
     @Test fun chatWithoutATokenSaysWhyAndSendsNothing() {
         launch()
         compose.onNodeWithTag(Tags.nav("search")).performClick()
-        compose.runOnIdle { state.showSubpage(state.v(), "chat") }
         waitFor(Tags.CHAT_INPUT)
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("What is the Grundfreibetrag?")
         compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
@@ -201,11 +206,60 @@ class SearchShellTest {
         assertEquals(2, compose.onAllNodesWithText("no source").fetchSemanticsNodes().size)
     }
 
-    @Test fun theSearchPageHasOneBoxPerDeclaredEngine() {
+    /**
+     * #803 the owner's renderUnifiedSearchChat: the Search tab is ONE page holding both the engine
+     * boxes and the AI chat, not a web page and a chat page. Which vertical that is comes from the
+     * declaration (the one whose subpage is of kind `assistant`).
+     */
+    @Test fun theSearchTabIsOnePageWithTheEnginesAndTheChat() {
         launch()
-        compose.onNodeWithTag(Tags.nav("search")).performClick()
-        for (e in Decl.config.engines) waitFor(Tags.engine(e.id))
-        waitFor(Tags.MODEL)
+        val cfg = Decl.config
+        val app = RuntimeEnvironment.getApplication()
+        val search = cfg.verticals.single { v -> v.subpages.any { cfg.subpage(it)?.kind == "assistant" } }
+        compose.onNodeWithTag(Tags.nav(search.id)).performClick()
+        waitFor(Tags.page("assistant"))
+        // One page: the assistant's is the only page composed, and no sub-nav offers another.
+        for (kind in cfg.subpages.map { it.kind }.toSet())
+            assertEquals("pages of kind $kind", if (kind == "assistant") 1 else 0, compose.onAllNodesWithTag(Tags.page(kind)).fetchSemanticsNodes().size)
+        for (sub in cfg.subpages)
+            assertTrue("no sub-nav tab ${sub.id}", compose.onAllNodesWithTag(Tags.subpage(sub.id)).fetchSemanticsNodes().isEmpty())
+
+        // Both parts at once, inside that one page, in the mockup's order of appearance.
+        val onPage = hasAnyAncestor(hasTestTag(Tags.page("assistant")))
+        val hello = app.getString(R.string.assistant_hello)
+        val top = { m: SemanticsMatcher -> compose.onNode(m and onPage).fetchSemanticsNode().boundsInRoot.top }
+        val greeting = top(hasText(hello))
+        val engines = cfg.engines.map { top(hasTestTag(Tags.engine(it.id))) }
+        assertTrue("Sessions and the model sit above the greeting", top(hasTestTag(Tags.SESSIONS)) < greeting && top(hasTestTag(Tags.MODEL)) < greeting)
+        assertTrue("the greeting sits above the engine boxes", greeting < engines.first())
+        assertEquals("the engine boxes run in declared order", engines.sorted(), engines)
+        assertTrue("the chat input sits below the last engine box", top(hasTestTag(Tags.CHAT_INPUT)) > engines.last())
+        compose.onNode(hasTestTag(Tags.NEW_CHAT) and onPage).assertExists()
+        compose.onNode(hasTestTag(Tags.CHAT_SEND) and onPage).assertExists()
+
+        // An engine box opens that engine's own results in cloud-browser.
+        val shadow = shadowOf(app)
+        while (shadow.nextStartedActivity != null) Unit
+        val first = cfg.engines.first()
+        compose.onNodeWithTag(Tags.engine(first.id)).performTextInput("kotlin jobs")
+        compose.onNodeWithTag(Tags.engine(first.id)).performImeAction()
+        val opened = shadow.nextStartedActivity
+        assertEquals(Templates.fill(first.url, "kotlin jobs", cfg.city(state.city)), opened?.dataString)
+        assertEquals(BuildConfig.BROWSER_PACKAGE, opened?.`package`)
+
+        // Sending a message hides the initial view; the chat goes on in the same page.
+        compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("Hello")
+        compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
+        compose.waitUntil(10_000) { !state.chat.sending && compose.onAllNodes(hasText("Hello") and onPage).fetchSemanticsNodes().isNotEmpty() }
+        assertTrue("the greeting is gone", compose.onAllNodesWithText(hello).fetchSemanticsNodes().isEmpty())
+        for (e in cfg.engines)
+            assertTrue("engine box ${e.id} is gone", compose.onAllNodesWithTag(Tags.engine(e.id)).fetchSemanticsNodes().isEmpty())
+        assertEquals(1, compose.onAllNodesWithTag(Tags.page("assistant")).fetchSemanticsNodes().size)
+        compose.onNode(hasTestTag(Tags.CHAT_INPUT) and onPage).assertExists()
+
+        // A new chat brings the initial view back; Sessions opens its menu.
+        compose.onNodeWithTag(Tags.NEW_CHAT).performClick()
+        for (e in cfg.engines) waitFor(Tags.engine(e.id))
         compose.onNodeWithTag(Tags.SESSIONS).performClick()
         compose.runOnIdle { assertEquals(com.diegonmarcos.cloudsearch.ui.Menu.SESSIONS, state.menu) }
     }

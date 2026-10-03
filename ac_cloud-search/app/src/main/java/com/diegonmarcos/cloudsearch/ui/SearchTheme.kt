@@ -149,6 +149,10 @@ object Metrics {
     val profileAvatar: Dp = 48.dp
     val aiAvatar: Dp = 32.dp
     val robot: Dp = 64.dp
+    /** The Search page's engine boxes: rounded-2xl, space-y-3, shadow-lg. */
+    val engineRadius: Dp = 16.dp
+    val engineGap: Dp = 12.dp
+    val engineShadow: Dp = 6.dp
     val chatBarRadius: Dp = 28.dp
     val sendButton: Dp = 40.dp
     val bubbleRadius: Dp = 24.dp

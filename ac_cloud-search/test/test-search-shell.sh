@@ -30,6 +30,15 @@
 #   S10 (#797) Cloud Search draws its OWN chrome (the owner's mockup): neither the fleet bottom-nav
 #       island (libs:bottomnav) nor the fleet kit (libs:ui-kit) is in build.json's module graph or
 #       imported by any Kotlin source, and the shell draws Glass.kt's BottomNav from the verticals.
+#   S11 (#803) the app icon is the mockup's central nav icon: res/drawable/ic_launcher_foreground.xml
+#       and ic_launcher_monochrome.xml are exactly what app/tools/phosphor2vd.py makes of
+#       phosphor.json::launcher (the Phosphor glyph, the .ai-nav-icon gradient from colors.xml), and
+#       both adaptive icons declare the foreground and the monochrome layer.
+#   S12 (#803) the Search tab is ONE page, as the owner's renderUnifiedSearchChat: exactly one
+#       vertical holds the `assistant` subpage and it declares no other (so no sub-nav, no second
+#       page); AssistantPage draws the engine boxes (Welcome, every declared engine, each opened by
+#       Browser.open) and the chat (Conversation + ChatBar) itself; and SearchShellTest keeps the UI
+#       test that asserts both parts inside that one page.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-search and nothing else. python3 + grep.
@@ -208,14 +217,58 @@ for p in kts:
 if not re.search(r"\bBottomNav\(\s*entries = state\.cfg\.verticals\.map", shell):
     bad.append("S10 SearchShell does not draw Glass.kt's BottomNav from the declared verticals")
 
+# S11
+res = os.path.join(app, "app", "src", "main", "res")
+try:
+    import importlib.util
+    spec_ = importlib.util.spec_from_file_location("phosphor2vd", os.path.join(app, "app", "tools", "phosphor2vd.py"))
+    gen_ = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(gen_)
+    want_files = gen_.launcher_files(res, ph)
+except Exception as e:  # a missing glyph, colour or key is a red, not a crash
+    want_files = {}
+    bad.append("S11 phosphor2vd.py cannot make the launcher icon from phosphor.json::launcher: %r" % e)
+for rel, text in sorted(want_files.items()):
+    p = os.path.join(res, rel)
+    if not os.path.isfile(p) or open(p, encoding="utf-8").read() != text:
+        bad.append("S11 res/%s is not what phosphor2vd.py makes of phosphor.json::launcher — run `python3 app/tools/phosphor2vd.py --launcher`, never edit it" % rel)
+for icon in ("ic_launcher.xml", "ic_launcher_round.xml"):
+    x = open(os.path.join(res, "mipmap-anydpi-v26", icon), encoding="utf-8").read()
+    for layer in ('<foreground android:drawable="@drawable/ic_launcher_foreground"', '<monochrome android:drawable="@drawable/ic_launcher_monochrome"'):
+        if layer not in x:
+            bad.append("S11 mipmap-anydpi-v26/%s lacks %s" % (icon, layer.split()[0][1:]))
+
+# S12
+kinds = {sp["id"]: sp["kind"] for sp in S["subpages"]}
+holders = [v for v in S["verticals"] if any(kinds.get(x) == "assistant" for x in v["subpages"])]
+if len(holders) != 1:
+    bad.append("S12 %d verticals hold the assistant subpage — the Search tab is exactly one" % len(holders))
+for v in holders:
+    if len(v["subpages"]) != 1:
+        bad.append("S12 vertical %s declares subpages %s — the Search tab is ONE page (engines + chat), not a split" % (v["id"], v["subpages"]))
+ap = code(os.path.join(src, "ui", "AssistantPages.kt"))
+def body(fn):
+    m = re.search(r"fun %s\(.*?\n\}" % fn, ap, re.S)
+    return m.group(0) if m else ""
+page, welcome = body("AssistantPage"), body("Welcome")
+for call in ("Welcome(", "Conversation(", "ChatBar("):
+    if call not in page:
+        bad.append("S12 AssistantPage does not draw %s) — both halves of the Search tab live in the one page" % call[:-1])
+if not re.search(r"state\.cfg\.engines\.forEach", welcome) or "Browser.open(" not in welcome:
+    bad.append("S12 Welcome does not draw a box per declared engine opening its results in cloud-browser")
+ui_test = open(os.path.join(app, "app", "src", "test", "java", "com", "diegonmarcos", "cloudsearch", "SearchShellTest.kt"), encoding="utf-8").read()
+if not re.search(r"@Test fun theSearchTabIsOnePageWithTheEnginesAndTheChat\(\)", ui_test) \
+        or 'hasAnyAncestor(hasTestTag(Tags.page("assistant")))' not in ui_test:
+    bad.append("S12 SearchShellTest lost theSearchTabIsOnePageWithTheEnginesAndTheChat, the UI test of the one page")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── S1-S10 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  S1-S10"; else FAILURES=$((FAILURES + 1)); fi
+echo "── S1-S12 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  S1-S12"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -279,5 +332,17 @@ mutate mock-shipped "$J/ui/VerticalPages.kt" 's + "\nprivate val mockData = list
 mutate placeholder-image "$C/Listing.kt" 's + "\nprivate const val IMG = \"https://placehold.co/400x200\"\n"' "S8 Listing.kt carries mock data"
 mutate colour-literal "$J/ui/SearchTheme.kt" 's + "\nprivate val x = androidx.compose.ui.graphics.Color(0xFF000000)\n"' "S8 SearchTheme.kt names a colour literal"
 
-echo "── S1-S10 + mutations: $FAILURES failure(s) ──"
+mutate launcher-hand-edited app/src/main/res/drawable/ic_launcher_foreground.xml 's.replace("#FFFF416C", "#FFFF0000")' "S11 res/drawable/ic_launcher_foreground.xml is not what"
+mutate launcher-icon-changed app/tools/phosphor.json 's.replace("\"icon\": \"shooting-star\"", "\"icon\": \"robot\"")' "S11 res/drawable/ic_launcher_foreground.xml is not what"
+mutate launcher-colour-moved app/src/main/res/values/colors.xml 's.replace("<color name=\"ai_nav_2\">#FF8A2387", "<color name=\"ai_nav_2\">#FF8A2388")' "S11 res/drawable/ic_launcher_foreground.xml is not what"
+mutate launcher-glyph-missing app/tools/phosphor.json 's.replace("\"icon\": \"shooting-star\"", "\"icon\": \"comet\"")' "S11 phosphor2vd.py cannot make the launcher icon"
+mutate monochrome-dropped app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml 's.replace("    <monochrome android:drawable=\"@drawable/ic_launcher_monochrome\" />\n", "")' "S11 mipmap-anydpi-v26/ic_launcher_round.xml lacks monochrome"
+mutate search-split build.json 's.replace("\"subpages\": [\n          \"assistant\"\n        ]", "\"subpages\": [\n          \"assistant\",\n          \"listing\"\n        ]")' "S12 vertical search declares subpages"
+mutate assistant-twice build.json 's.replace("\"subpages\": [\n          \"listing\"\n        ],\n        \"sources\": [\n          \"open-prices\"", "\"subpages\": [\n          \"assistant\"\n        ],\n        \"sources\": [\n          \"open-prices\"")' "S12 2 verticals hold the assistant subpage"
+mutate chat-moved-out "$J/ui/AssistantPages.kt" 's.replace("        ChatBar(\n            text,", "        NoBar(\n            text,")' "S12 AssistantPage does not draw ChatBar"
+mutate engines-moved-out "$J/ui/AssistantPages.kt" 's.replace("if (chat.session.messages.isEmpty() && !chat.sending) Welcome()", "if (chat.session.messages.isEmpty() && !chat.sending) Unit")' "S12 AssistantPage does not draw Welcome"
+mutate engine-boxes-dropped "$J/ui/AssistantPages.kt" 's.replace("state.cfg.engines.forEachIndexed", "emptyList<SearchConfig.Engine>().forEachIndexed")' "S12 Welcome does not draw a box per declared engine"
+mutate one-page-test-dropped app/src/test/java/com/diegonmarcos/cloudsearch/SearchShellTest.kt 's.replace("fun theSearchTabIsOnePageWithTheEnginesAndTheChat()", "fun theSearchTabComposes()")' "S12 SearchShellTest lost"
+
+echo "── S1-S12 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

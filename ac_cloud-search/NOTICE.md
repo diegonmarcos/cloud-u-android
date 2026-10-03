@@ -38,6 +38,9 @@ build.json::search.social_2026 and held equal to the limits the PAP itself carri
   more; the app draws its own chrome from the owner's mockup.
 - Icons: Phosphor Icons (@phosphor-icons/core 2.1.1, MIT, © 2023 Phosphor Icons), converted to
   vector drawables by `app/tools/phosphor2vd.py` from the list in `app/tools/phosphor.json`.
+  The app icon (#803) is Phosphor `shooting-star` in the mockup's `.ai-nav-icon` gradient, generated
+  by the same script from `phosphor.json::launcher`; cloud-superapp's Search tile carries a
+  byte-identical copy of it.
 - Cloud Calc's engine (Cloud-Lib-Calc, libqalculate behind a binder, #767) was considered for the
   calculators and not used: the payslip must reproduce the BMF's BigDecimal rounding statement by
   statement, which is the PAP's own code and not an expression; rent-vs-buy is a month-by-month

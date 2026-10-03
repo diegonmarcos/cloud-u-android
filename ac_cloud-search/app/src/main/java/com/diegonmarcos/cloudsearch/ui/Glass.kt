@@ -191,9 +191,10 @@ fun GlassField(
     value: String, onValue: (String) -> Unit, placeholder: String, tag: String,
     modifier: Modifier = Modifier, icon: Int? = R.drawable.ph_magnifying_glass, iconTint: Color = LocalGlass.current.text2,
     number: Boolean = false, onSearch: (() -> Unit)? = null, size: androidx.compose.ui.unit.TextUnit = Type.input,
+    radius: Dp = Metrics.inputRadius, fill: Color = LocalGlass.current.input, bordered: Boolean = true,
 ) {
     val g = LocalGlass.current
-    val shape = RoundedCornerShape(Metrics.inputRadius)
+    val shape = RoundedCornerShape(radius)
     BasicTextField(
         value = value, onValueChange = onValue, singleLine = true,
         textStyle = TextStyle(color = g.text, fontSize = size),
@@ -206,7 +207,7 @@ fun GlassField(
         modifier = modifier.fillMaxWidth().testTag(tag),
         decorationBox = { inner ->
             Row(
-                Modifier.clip(shape).background(g.input).border(Metrics.hairline, g.glassBorder, shape)
+                Modifier.clip(shape).background(fill).then(if (bordered) Modifier.border(Metrics.hairline, g.glassBorder, shape) else Modifier)
                     .padding(horizontal = Metrics.inputPadH, vertical = Metrics.inputPadV),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Metrics.gap),

@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -75,9 +76,11 @@ class ChatModel(private val services: Services) {
 }
 
 /**
- * The mockup's one Search page: Sessions and the model on top; until the chat has a message, the
- * greeting and one box per declared engine (each opens that engine's own results in cloud-browser);
- * then the conversation. The Gemini-style input is pinned above the nav.
+ * The mockup's one Search page (renderUnifiedSearchChat): Sessions and the model on top; until the
+ * chat has a message, its #initial-search-view - the greeting and one box per declared engine (each
+ * opens that engine's own results in cloud-browser) - then the conversation in the same place. The
+ * Gemini-style input is pinned above the nav the whole time. There is no second page: the search
+ * vertical declares this one subpage (test-search-shell.sh S11).
  */
 @Composable
 fun AssistantPage(v: SearchConfig.Vertical) {
@@ -97,7 +100,7 @@ fun AssistantPage(v: SearchConfig.Vertical) {
             ModelSelect(chat)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (chat.session.messages.isEmpty() && !chat.sending) Welcome(v)
+            if (chat.session.messages.isEmpty() && !chat.sending) Welcome()
             else Conversation(chat)
         }
         ChatBar(
@@ -129,9 +132,9 @@ fun AssistantPage(v: SearchConfig.Vertical) {
     }
 }
 
-/** The greeting and the four engine boxes. */
+/** #initial-search-view: the greeting and the engine boxes; it gives way once a message is sent. */
 @Composable
-private fun Welcome(v: SearchConfig.Vertical) {
+private fun Welcome() {
     val state = LocalState.current
     val g = LocalGlass.current
     val ctx = LocalContext.current
@@ -144,17 +147,21 @@ private fun Welcome(v: SearchConfig.Vertical) {
             Ph(R.drawable.ph_robot, Metrics.iconLg, g.onIsland)
         }
         Text(stringResource(R.string.assistant_hello), style = TextStyle(brush = g.ai, fontSize = Type.greeting, fontWeight = FontWeight.Bold), textAlign = TextAlign.Center)
-        Text(v.blurb, color = g.text2, style = Type.style(Type.greetingSub), textAlign = TextAlign.Center)
-        state.cfg.engines.forEachIndexed { i, e ->
-            var q by remember(e.id) { mutableStateOf("") }
-            GlassField(
-                q, { q = it },
-                if (i == 0) stringResource(R.string.search_the_web) else stringResource(R.string.search_with, e.label),
-                Tags.engine(e.id), icon = IconCatalog.res(e.icon), iconTint = namedColor(e.accent),
-                onSearch = { if (q.isNotBlank()) { Browser.open(ctx, Templates.fill(e.url, q.trim(), state.cfg.city(state.city))); q = "" } },
-            )
+        Text(stringResource(R.string.assistant_hello_sub), color = g.text2, style = Type.style(Type.greetingSub), textAlign = TextAlign.Center)
+        // .search-container.rounded-2xl.shadow-lg, input !border-none !bg-gray-800/40: the engine boxes.
+        Column(Modifier.padding(top = Metrics.gap), verticalArrangement = Arrangement.spacedBy(Metrics.engineGap)) {
+            state.cfg.engines.forEachIndexed { i, e ->
+                var q by remember(e.id) { mutableStateOf("") }
+                GlassField(
+                    q, { q = it },
+                    if (i == 0) stringResource(R.string.search_the_web) else stringResource(R.string.search_with, e.label),
+                    Tags.engine(e.id), Modifier.shadow(Metrics.engineShadow, RoundedCornerShape(Metrics.engineRadius)),
+                    icon = IconCatalog.res(e.icon), iconTint = namedColor(e.accent),
+                    radius = Metrics.engineRadius, fill = g.tile, bordered = false,
+                    onSearch = { if (q.isNotBlank()) { Browser.open(ctx, Templates.fill(e.url, q.trim(), state.cfg.city(state.city))); q = "" } },
+                )
+            }
         }
-        Text(stringResource(R.string.web_opens_in_browser), color = g.text2, style = Type.style(Type.label))
     }
 }
 
