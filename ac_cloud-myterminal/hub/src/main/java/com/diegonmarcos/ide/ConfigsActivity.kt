@@ -107,6 +107,19 @@ class ConfigsActivity : AppCompatActivity() {
             enabled = true,
         ) { showTerminalConnDialog(currentBackend) })
 
+        // ── #787 wake lock while a shell is open (ON by default) ──────────
+        val wakeWanted = IdePrefs.wakeLockWanted(this)
+        body.addView(Ui.appCard(
+            this, "⏻",
+            getString(R.string.cfg_wake_lock),
+            getString(if (wakeWanted) R.string.cfg_wake_lock_on else R.string.cfg_wake_lock_off),
+            enabled = true,
+        ) {
+            IdePrefs.setWakeLockWanted(this, !wakeWanted)
+            TerminalWakeLock.sync(this)
+            recreate()
+        })
+
         // ── Terminal SSH key — copy to authorized_keys ────────────────────
         body.addView(Ui.appCard(
             this, "🔑",

@@ -65,4 +65,8 @@
     <string name="about_forks">Forks</string>
     <string name="about_endpoints">Endpoints</string>
     <string name="about_links">Links</string>
+    <!-- #787 Configs: the open-shell wake lock toggle -->
+    <string name="cfg_wake_lock">Wake lock</string>
+    <string name="cfg_wake_lock_on">On — the phone stays awake while a shell is open. Tap to turn off.</string>
+    <string name="cfg_wake_lock_off">Off — a shell may stop when the screen locks. Tap to turn on.</string>
 </resources>

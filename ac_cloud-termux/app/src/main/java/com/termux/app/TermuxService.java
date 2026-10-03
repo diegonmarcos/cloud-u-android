@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -21,11 +22,13 @@ import android.widget.ArrayAdapter;
 
 import androidx.annotation.Nullable;
 
+import com.termux.BuildConfig;
 import com.termux.R;
 import com.termux.app.settings.properties.TermuxAppSharedProperties;
 import com.termux.app.terminal.TermuxTerminalSessionClient;
 import com.termux.app.utils.PluginUtils;
 import com.termux.cloud.CloudDnsBridge;
+import com.termux.cloud.CloudWakeLock;
 import com.termux.shared.data.IntentUtils;
 import com.termux.shared.models.errors.Errno;
 import com.termux.shared.shell.ShellUtils;
@@ -105,7 +108,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
      */
     final TermuxTerminalSessionClientBase mTermuxTerminalSessionClientBase = new TermuxTerminalSessionClientBase();
 
-    /** The wake lock and wifi lock are always acquired and released together. */
+    /** The wake lock and wifi lock are always acquired and released together: #787 automatically,
+     *  while {@link CloudWakeLock} says so (the user wants them and a session is open). */
     private PowerManager.WakeLock mWakeLock;
     private WifiManager.WifiLock mWifiLock;
 
@@ -142,11 +146,11 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
                     break;
                 case TERMUX_SERVICE.ACTION_WAKE_LOCK:
                     Logger.logDebug(LOG_TAG, "ACTION_WAKE_LOCK intent received");
-                    actionAcquireWakeLock();
+                    setWakeLockWanted(true);
                     break;
                 case TERMUX_SERVICE.ACTION_WAKE_UNLOCK:
                     Logger.logDebug(LOG_TAG, "ACTION_WAKE_UNLOCK intent received");
-                    actionReleaseWakeLock(true);
+                    setWakeLockWanted(false);
                     break;
                 case TERMUX_SERVICE.ACTION_SERVICE_EXECUTE:
                     Logger.logDebug(LOG_TAG, "ACTION_SERVICE_EXECUTE intent received");
@@ -169,7 +173,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
 
         TermuxShellUtils.clearTermuxTMPDIR(true);
 
-        actionReleaseWakeLock(false);
+        CloudWakeLock.STATE.destroyed();
+        releaseLocks();
         if (!mWantsToStop)
             killAllTermuxExecutionCommands();
         runStopForeground();
@@ -285,27 +290,54 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
 
 
 
-    /** Process action to acquire Power and Wi-Fi WakeLocks. */
-    @SuppressLint({"WakelockTimeout", "BatteryLife"})
-    private void actionAcquireWakeLock() {
-        if (mWakeLock != null) {
-            Logger.logDebug(LOG_TAG, "Ignoring acquiring WakeLocks since they are already held");
-            return;
-        }
+    // #787 Termux's "Acquire wakelock", ON by default (build.json wake_lock.default_on) and taken
+    // without being asked: held while a session is open, released when the last one ends. The
+    // notification action still turns it off, and that choice is kept across restarts.
+    private static final String WAKE_PREFS = "cloud_wake_lock";
+    private static final String KEY_WANTED = "wanted";
+    private static final String KEY_EXEMPTION_ASKED = "battery_exemption_asked";
 
+    /** The user's choice, or the declared default until they make one. */
+    static boolean wakeLockWanted(Context context) {
+        return context.getSharedPreferences(WAKE_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_WANTED, BuildConfig.CLOUD_WAKE_LOCK_DEFAULT_ON);
+    }
+
+    private void setWakeLockWanted(boolean wanted) {
+        getSharedPreferences(WAKE_PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_WANTED, wanted).apply();
+        updateNotification();
+    }
+
+    /** Take or drop the locks to match the user's choice and the open sessions. */
+    private synchronized void syncWakeLock() {
+        switch (CloudWakeLock.STATE.update(wakeLockWanted(this), mTermuxSessions.size(), System.currentTimeMillis())) {
+            case ACQUIRE: acquireLocks(); break;
+            case RELEASE: releaseLocks(); break;
+            default: break;
+        }
+    }
+
+    @SuppressLint({"WakelockTimeout", "BatteryLife"})
+    private void acquireLocks() {
+        if (mWakeLock != null) return;
         Logger.logDebug(LOG_TAG, "Acquiring WakeLocks");
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TermuxConstants.TERMUX_APP_NAME.toLowerCase() + ":service-wakelock");
         mWakeLock.acquire();
 
-        // http://tools.android.com/tech-docs/lint-in-studio-2-3#TOC-WifiManager-Leak
-        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        mWifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TermuxConstants.TERMUX_APP_NAME.toLowerCase());
-        mWifiLock.acquire();
+        if (BuildConfig.CLOUD_WIFI_LOCK) {
+            // http://tools.android.com/tech-docs/lint-in-studio-2-3#TOC-WifiManager-Leak
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            mWifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TermuxConstants.TERMUX_APP_NAME.toLowerCase());
+            mWifiLock.acquire();
+        }
 
+        // The standard exemption prompt, ONCE: a lock taken on every session must not re-ask every time.
         String packageName = getPackageName();
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+        SharedPreferences prefs = getSharedPreferences(WAKE_PREFS, Context.MODE_PRIVATE);
+        if (!pm.isIgnoringBatteryOptimizations(packageName) && !prefs.getBoolean(KEY_EXEMPTION_ASKED, false)) {
+            prefs.edit().putBoolean(KEY_EXEMPTION_ASKED, true).apply();
             Intent whitelist = new Intent();
             whitelist.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
             whitelist.setData(Uri.parse("package:" + packageName));
@@ -317,36 +349,18 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
                 Logger.logStackTraceWithMessage(LOG_TAG, "Failed to call ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", e);
             }
         }
-
-        updateNotification();
-
-        Logger.logDebug(LOG_TAG, "WakeLocks acquired successfully");
-
     }
 
-    /** Process action to release Power and Wi-Fi WakeLocks. */
-    private void actionReleaseWakeLock(boolean updateNotification) {
-        if (mWakeLock == null && mWifiLock == null) {
-            Logger.logDebug(LOG_TAG, "Ignoring releasing WakeLocks since none are already held");
-            return;
-        }
-
-        Logger.logDebug(LOG_TAG, "Releasing WakeLocks");
-
+    private void releaseLocks() {
         if (mWakeLock != null) {
+            Logger.logDebug(LOG_TAG, "Releasing WakeLocks");
             mWakeLock.release();
             mWakeLock = null;
         }
-
         if (mWifiLock != null) {
             mWifiLock.release();
             mWifiLock = null;
         }
-
-        if (updateNotification)
-            updateNotification();
-
-        Logger.logDebug(LOG_TAG, "WakeLocks released successfully");
     }
 
     /** Process {@link TERMUX_SERVICE#ACTION_SERVICE_EXECUTE} intent to execute a shell command in
@@ -757,11 +771,12 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
         builder.addAction(android.R.drawable.ic_delete, res.getString(R.string.notification_action_exit), PendingIntent.getService(this, 0, exitIntent, 0));
 
 
-        // Set Wakelock button actions
-        String newWakeAction = wakeLockHeld ? TERMUX_SERVICE.ACTION_WAKE_UNLOCK : TERMUX_SERVICE.ACTION_WAKE_LOCK;
+        // Set Wakelock button actions. #787 it toggles the user's choice: with it ON the lock follows the sessions.
+        final boolean wakeLockWanted = wakeLockWanted(this);
+        String newWakeAction = wakeLockWanted ? TERMUX_SERVICE.ACTION_WAKE_UNLOCK : TERMUX_SERVICE.ACTION_WAKE_LOCK;
         Intent toggleWakeLockIntent = new Intent(this, TermuxService.class).setAction(newWakeAction);
-        String actionTitle = res.getString(wakeLockHeld ? R.string.notification_action_wake_unlock : R.string.notification_action_wake_lock);
-        int actionIcon = wakeLockHeld ? android.R.drawable.ic_lock_idle_lock : android.R.drawable.ic_lock_lock;
+        String actionTitle = res.getString(wakeLockWanted ? R.string.notification_action_wake_unlock : R.string.notification_action_wake_lock);
+        int actionIcon = wakeLockWanted ? android.R.drawable.ic_lock_idle_lock : android.R.drawable.ic_lock_lock;
         builder.addAction(actionIcon, actionTitle, PendingIntent.getService(this, 0, toggleWakeLockIntent, 0));
 
 
@@ -777,6 +792,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
 
     /** Update the shown foreground service notification after making any changes that affect it. */
     private synchronized void updateNotification() {
+        // #787 every session and lock change comes through here, so the locks follow them from one place.
+        syncWakeLock();
         if (mWakeLock == null && mTermuxSessions.isEmpty() && mTermuxTasks.isEmpty()) {
             // Exit if we are updating after the user disabled all locks with no sessions or tasks running.
             requestStopService();

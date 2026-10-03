@@ -144,6 +144,7 @@ class SshBackend(private val ctx: Context) {
 
         val stdin = ch.outputStream
         shells[id] = ShellEntry(ch, stdin, sess)
+        TerminalWakeLock.sync(ctx, shells.size)
 
         // Optional cwd navigation — send before the user types anything.
         if (cwd.isNotEmpty()) {
@@ -165,6 +166,7 @@ class SshBackend(private val ctx: Context) {
                 // Channel closed or error — fall through to onExit.
             } finally {
                 shells.remove(id)
+                TerminalWakeLock.sync(ctx, shells.size)
                 ch.disconnect()
                 onExit()
             }
@@ -188,6 +190,7 @@ class SshBackend(private val ctx: Context) {
     /** Disconnect and remove an open shell. */
     fun kill(id: String) {
         shells.remove(id)?.channel?.disconnect()
+        TerminalWakeLock.sync(ctx, shells.size)
     }
 
     // ── File operations ───────────────────────────────────────────────────────
@@ -296,6 +299,7 @@ class SshBackend(private val ctx: Context) {
     fun disconnectAll() {
         shells.values.forEach { it.channel.disconnect() }
         shells.clear()
+        TerminalWakeLock.sync(ctx, 0)
         sessions.values.forEach { if (it.isConnected) it.disconnect() }
         sessions.clear()
     }

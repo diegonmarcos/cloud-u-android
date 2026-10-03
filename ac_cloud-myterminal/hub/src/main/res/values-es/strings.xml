@@ -70,4 +70,8 @@
     <string name="about_forks">Forks</string>
     <string name="about_endpoints">Endpoints</string>
     <string name="about_links">Enlaces</string>
+    <!-- #787 Configs: the open-shell wake lock toggle -->
+    <string name="cfg_wake_lock">Bloqueo de suspensión</string>
+    <string name="cfg_wake_lock_on">Activado — el teléfono no se duerme mientras haya un shell abierto. Toca para desactivar.</string>
+    <string name="cfg_wake_lock_off">Desactivado — un shell puede detenerse al bloquear la pantalla. Toca para activar.</string>
 </resources>

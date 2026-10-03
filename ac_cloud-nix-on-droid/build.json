@@ -182,6 +182,11 @@
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
+  "wake_lock": {
+    "_doc": "#787 Termux's 'Acquire wakelock', ON by default: TermuxService takes a partial wake lock (plus the Wi-Fi lock when wifi_lock) whenever a session is open and drops it when the last one ends (com.termux.cloud.CloudWakeLock decides; test/test-wake-lock.sh runs it). The notification action still turns it off, and that choice persists. Read by app/build.gradle into BuildConfig; the build fails if either key is missing. State: GET /api/terminal/wakelock (also /api/terminal).",
+    "default_on": true,
+    "wifi_lock": true
+  },
   "release": {
     "companions": [
       {
@@ -252,7 +257,9 @@
       "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs, so a missing tool is a loud red instead of an assertion quietly answering from its absence. test-bootstrap-baked.sh reads build.json with python3; test-noexec-shebang.sh compiles the #771 shim with cc.",
       "requires": [
         "python3",
-        "cc"
+        "cc",
+        "javac",
+        "java"
       ]
     },
     "_doc_unit": "tests.unit.task is deliberately UNSET: this fork has no JVM test source set, and the engine reports that as a named coverage gap on every run. Declaring a task that runs nothing would convert an honest gap into a false green."

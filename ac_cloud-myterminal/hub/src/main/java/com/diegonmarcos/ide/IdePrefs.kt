@@ -59,6 +59,24 @@ object IdePrefs {
         sp(ctx).edit().putBoolean(KEY_DEV_API, v).apply()
     }
 
+    // ── #787 wake lock while a shell is open ──────────────────────────────────
+    private const val KEY_WAKE_LOCK = "wake_lock_wanted"
+    private const val KEY_EXEMPTION_ASKED = "battery_exemption_asked"
+
+    /** The user's choice, or build.json::wake_lock.default_on until they make one. */
+    fun wakeLockWanted(ctx: Context): Boolean =
+        sp(ctx).getBoolean(KEY_WAKE_LOCK, BuildConfig.CLOUD_WAKE_LOCK_DEFAULT_ON)
+
+    fun setWakeLockWanted(ctx: Context, v: Boolean) {
+        sp(ctx).edit().putBoolean(KEY_WAKE_LOCK, v).apply()
+    }
+
+    fun batteryExemptionAsked(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_EXEMPTION_ASKED, false)
+
+    fun setBatteryExemptionAsked(ctx: Context) {
+        sp(ctx).edit().putBoolean(KEY_EXEMPTION_ASKED, true).apply()
+    }
+
     /** Remove all connection overrides for [backend], reverting to baked defaults. */
     fun clearTerminalConn(ctx: Context, backend: String) {
         sp(ctx).edit()

@@ -112,6 +112,10 @@ android {
         // ab_cloud-terminal-store/store.json::agent_auth.env_file, the one declaration both read.
         buildConfigField "String", "CLOUD_AGENT_AUTH_ENV", "\"${new groovy.json.JsonSlurper().parse(new File(projectDir.parentFile.parentFile, "ab_cloud-terminal-store/store.json")).agent_auth.env_file}\""
 
+        // #787 the session wake lock: build.json::wake_lock, the one declaration (ON by default).
+        buildConfigField "boolean", "CLOUD_WAKE_LOCK_DEFAULT_ON", "${cloudWakeLock().default_on}"
+        buildConfigField "boolean", "CLOUD_WIFI_LOCK", "${cloudWakeLock().wifi_lock}"
+
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
@@ -703,3 +707,14 @@ tasks.register('devKeystore') {
 }
 tasks.matching { it.name.toLowerCase().contains('debug') && it.name.startsWith('validateSigning') }
      .configureEach { dependsOn 'devKeystore' }
+
+// #787 build.json::wake_lock -- whether a session takes the wake lock without being asked, and
+// whether the Wi-Fi lock comes with it. Both must be declared booleans: a missing key must not
+// quietly become "off".
+def cloudWakeLock() {
+    def declaration = new File(projectDir.parentFile, "build.json")
+    def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).wake_lock
+    if (!(decl?.default_on instanceof Boolean) || !(decl?.wifi_lock instanceof Boolean))
+        throw new GradleException(declaration.toString() + " wake_lock must declare boolean default_on and wifi_lock")
+    return decl
+}

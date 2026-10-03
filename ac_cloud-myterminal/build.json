@@ -76,6 +76,10 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools"
     }
   },
+  "wake_lock": {
+    "_doc": "#787 this terminal's sessions are the SSH shells SshBackend holds open (there is no terminal service here), so TerminalWakeLock takes a partial wake lock while at least one is open and drops it when the last one closes; CloudWakeLock (the same class cld.termux and cld.termux.nix run) decides, and test/test-wake-lock.sh runs it. ON by default; Configs > Wake lock turns it off and the choice persists. No Wi-Fi lock: this app never had one and its shells dial a terminal on the same phone. Read by hub/build.gradle into BuildConfig; the build fails if default_on is not a boolean. State: GET /api/terminal/wakelock (also /api/terminal).",
+    "default_on": true
+  },
   "release": {
     "_doc": "Per-APK distribution for the HUB \u2014 SAME data-driven pattern as aa_cloud-superapp / ea_cloud-comms build.json::release. build.sh oras-push + gh-release read this block; the GHA workflow (1_cicd/src/cicd/ship-cloud-myterminal.yml) only invokes those engine commands, no hardcoded registry/tag strings. The three forks publish their own OCI artifacts under their own build systems. {sha} \u2192 git short sha, {version_name} \u2192 android.version_name.",
     "abis": {
@@ -159,7 +163,9 @@
         "awk",
         "grep",
         "python3",
-        "node"
+        "node",
+        "javac",
+        "java"
       ]
     }
   }

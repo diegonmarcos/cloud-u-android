@@ -6,9 +6,11 @@ import android.os.Bundle;
 import android.os.PowerManager;
 
 import com.diegonmarcos.superapp.devtools.AppDebugServer;
+import com.termux.BuildConfig;
 import com.termux.cloud.CloudDnsBridge;
 import com.termux.cloud.CloudExecService;
 import com.termux.cloud.CloudRootfs;
+import com.termux.cloud.CloudWakeLock;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxConstants;
 
@@ -61,16 +63,23 @@ final class TerminalDebugApi {
 
     static void register(Context context) {
         final Context app = context.getApplicationContext();
+        // #787 the toggle's value before the service first starts; NONE, nothing is open yet.
+        CloudWakeLock.STATE.update(TermuxService.wakeLockWanted(app), 0, 0);
         AppDebugServer.INSTANCE.route("terminal", Arrays.asList(
             new AppDebugServer.Op("exec", "cmd=<shell command>, timeout=<ms, default " + DEFAULT_TIMEOUT_MS
                 + ", max " + MAX_TIMEOUT_MS + ">",
                 "run cmd in a fresh login session's environment (rootfs, HOME, PATH); "
                     + "returns stdout, stderr, exit. Bootstraps the terminal first if it never was."),
             new AppDebugServer.Op("selftest", "",
-                "run the declared tool and storage checks (" + SELFTEST_ASSET + ") and report each")
+                "run the declared tool and storage checks (" + SELFTEST_ASSET + ") and report each"),
+            new AppDebugServer.Op("wakelock", "",
+                "#787 the session wake lock (also at /api/terminal): held, since (epoch ms or null), "
+                    + "sessions, wanted (the in-app toggle), wifi_lock")
         ), (op, query) -> {
             try {
                 switch (op) {
+                    case "":
+                    case "wakelock": return CloudWakeLock.STATE.json(BuildConfig.CLOUD_WIFI_LOCK);
                     case "exec": return exec(app, query);
                     case "selftest": return selftest(app);
                     default: return null;
