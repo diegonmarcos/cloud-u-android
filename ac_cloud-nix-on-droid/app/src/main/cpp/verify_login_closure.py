@@ -28,10 +28,16 @@ login creates at run time.
 Pure functions over a Rootfs, so test/test-login-closure.sh drives every
 verdict with synthetic zips and no network.
 
+#665 also holds the SIZE here: the shipped zip must not exceed the declared
+size_ceiling_bytes in login-closure.json, so an attr addition that blows the
+budget goes red in the bake instead of silently shipping a bigger rootfs to
+every phone. A missing or non-positive ceiling is itself a failure.
+
 Usage: verify_login_closure.py <rootfs.zip> <build.json> <login-closure.json>
 """
 import fnmatch
 import json
+import os
 import posixpath
 import re
 import struct
@@ -286,6 +292,20 @@ def declared_commands(build_json: str, closure: dict) -> list:
     return list(dict.fromkeys(toolset + tooling["binaries"] + closure.get("path_commands", [])))
 
 
+def size_problems(zip_path: str, closure: dict) -> list:
+    """#665: the zip on disk against the declared ceiling. The ceiling is required."""
+    ceiling = closure.get("size_ceiling_bytes")
+    if not isinstance(ceiling, int) or isinstance(ceiling, bool) or ceiling <= 0:
+        return ["login-closure.json declares no positive integer size_ceiling_bytes -- "
+                "the rootfs size budget is unguarded (#665)"]
+    size = os.path.getsize(zip_path)
+    if size > ceiling:
+        return [f"rootfs size {size} B exceeds size_ceiling_bytes {ceiling} B by {size - ceiling} B -- "
+                "an attr or closure grew past the declared budget; shrink it or raise the ceiling "
+                "deliberately in login-closure.json (#665)"]
+    return []
+
+
 def main(argv) -> int:
     if len(argv) != 4:
         print(__doc__.strip().splitlines()[-1], file=sys.stderr)
@@ -298,6 +318,7 @@ def main(argv) -> int:
     with zipfile.ZipFile(zip_path) as zf:
         problems = verify(Rootfs(zf), bootstrap["package_name_rewrite"]["to"],
                           tooling["profile_link"], commands, closure)
+    problems += size_problems(zip_path, closure)
     for p in problems:
         print(f"FAIL: {p}", file=sys.stderr)
     if problems:
@@ -305,7 +326,8 @@ def main(argv) -> int:
               "log in on the phone", file=sys.stderr)
         return 1
     print(f"OK: {zip_path}: login closure resolves ({len(closure['scan'])} scripts scanned, "
-          f"{len(commands)} PATH commands, every executable chmod-ed with its interpreter)")
+          f"{len(commands)} PATH commands, every executable chmod-ed with its interpreter; "
+          f"{os.path.getsize(zip_path)} B <= ceiling {closure['size_ceiling_bytes']} B)")
     return 0
 
 

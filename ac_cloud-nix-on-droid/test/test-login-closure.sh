@@ -209,6 +209,34 @@ TOOLSET_LAST="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[
 mutation no-toolset-tool  "PATH command '$TOOLSET_LAST'"       "#737: a tool store.json::toolset promises on both terminals ('$TOOLSET_LAST') is missing from the shipped profile"
 mutation exec-renamed     "binds nothing"                      "bin/login's proot exec line not recognised (the gate must not pass blind)"
 
+# ── #665 GUARD 4 — the size ceiling, mutation-proved on the declaration ──
+# A ceiling one byte under the clean zip must fail; a closure with the ceiling
+# removed must fail too, so the budget cannot be dropped silently.
+CLEAN_SIZE="$(wc -c < "$SB/clean.zip" | tr -d ' ')"
+for m in under absent; do
+    python3 - "$CLOSURE" "$SB/closure-$m.json" "$m" "$CLEAN_SIZE" <<'EOF2'
+import json, sys
+src, out, m, size = sys.argv[1:]
+d = json.load(open(src))
+if m == "under": d["size_ceiling_bytes"] = int(size) - 1
+else: d.pop("size_ceiling_bytes", None)
+json.dump(d, open(out, "w"))
+EOF2
+    if cmp -s "$CLOSURE" "$SB/closure-$m.json"; then bad "size mutation $m DID NOT MUTATE"; continue; fi
+    if python3 "$GATE" "$SB/clean.zip" "$BUILD_JSON" "$SB/closure-$m.json" >"$SB/out" 2>&1; then
+        bad "MUTATION SURVIVED (size-$m): the gate passed a rootfs with no enforceable size budget"
+    elif grep -q "size_ceiling_bytes" "$SB/out"; then
+        ok "mutation proved (size-$m): a rootfs over (or without) its declared size ceiling fails the bake (#665)"
+    else
+        bad "size mutation $m went red for the wrong reason: $(head -2 "$SB/out")"
+    fi
+done
+if python3 -c 'import json,sys; c=json.load(open(sys.argv[1]))["size_ceiling_bytes"]; sys.exit(0 if isinstance(c,int) and 600000000 < c < 800000000 else 1)' "$CLOSURE"; then
+    ok "login-closure.json declares a size ceiling in the measured band"
+else
+    bad "login-closure.json size_ceiling_bytes missing or outside the measured band"
+fi
+
 # A stale exemption would excuse a future real miss, so it is itself a failure.
 python3 - "$CLOSURE" "$SB/stale.json" <<'EOF'
 import json, sys
