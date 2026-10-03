@@ -15,6 +15,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,6 +51,13 @@ public final class SystemDnsBridge implements Closeable {
     private final ServerSocket tcp;
     private final Upstream upstream;
     private final Log log;
+    /**
+     * #791 where every answer is shaped and sent. An {@link Upstream} may call back on any thread,
+     * and Android's DnsResolver calls back from the MAIN looper: a UDP send there is a
+     * NetworkOnMainThreadException that killed the terminal on its first lookup. So an answer
+     * never does anything on the thread it arrived on but hand itself to this one.
+     */
+    private final ExecutorService replies = Executors.newSingleThreadExecutor(named("sysdns-reply"));
 
     public SystemDnsBridge(int port, Upstream upstream, Log log) throws IOException {
         InetAddress lo = InetAddress.getByName("127.0.0.1");
@@ -68,6 +80,7 @@ public final class SystemDnsBridge implements Closeable {
     @Override public void close() {
         udp.close();
         try { tcp.close(); } catch (IOException ignored) { }
+        replies.shutdown();
     }
 
     private void serveUdp() {
@@ -81,7 +94,11 @@ public final class SystemDnsBridge implements Closeable {
             resolve(q, new Answer() {
                 @Override public void reply(byte[] a) {
                     byte[] out = fit(q, a, limit);
-                    try { udp.send(new DatagramPacket(out, out.length, in.getSocketAddress())); } catch (IOException ignored) { }
+                    try {
+                        udp.send(new DatagramPacket(out, out.length, in.getSocketAddress()));
+                    } catch (IOException e) {
+                        log.line("sysdns: an answer could not be sent (" + e + "); dropped, the client retries");
+                    }
                 }
             });
         }
@@ -125,26 +142,48 @@ public final class SystemDnsBridge implements Closeable {
         }
     }
 
-    /** One query to the upstream; whatever happens, [done] gets an answer carrying the query's id. */
+    /**
+     * One query to the upstream; whatever happens, [done] gets an answer carrying the query's id,
+     * on the bridge's own reply thread and never on the one the upstream called back on.
+     */
     private void resolve(final byte[] q, final Answer done) {
         try {
             upstream.query(q, new Answer() {
-                @Override public void reply(byte[] a) {
-                    if (a == null || a.length < 12) {
-                        log.line("sysdns: the system resolver gave no answer; replying SERVFAIL");
-                        done.reply(servfail(q));
-                    } else {
-                        byte[] own = a.clone();
-                        own[0] = q[0];
-                        own[1] = q[1];
-                        done.reply(own);
-                    }
-                }
+                @Override public void reply(byte[] a) { deliver(q, a, done); }
             });
         } catch (RuntimeException e) {
             log.line("sysdns: the system resolver refused the query (" + e + "); replying SERVFAIL");
-            done.reply(servfail(q));
+            deliver(q, null, done);
         }
+    }
+
+    /** Runs on whatever thread the answer arrived on, so it only queues: no I/O, no blocking. */
+    private void deliver(final byte[] q, final byte[] a, final Answer done) {
+        try {
+            replies.execute(new Runnable() {
+                @Override public void run() {
+                    try {
+                        done.reply(own(q, a));
+                    } catch (RuntimeException e) {
+                        // A reply that fails costs that one client a retry, never the process.
+                        log.line("sysdns: an answer failed (" + e + "); dropped");
+                    }
+                }
+            });
+        } catch (RejectedExecutionException closed) {
+            // The bridge is closed: nobody is listening for this answer any more.
+        }
+    }
+
+    private byte[] own(byte[] q, byte[] a) {
+        if (a == null || a.length < 12) {
+            log.line("sysdns: the system resolver gave no answer; replying SERVFAIL");
+            return servfail(q);
+        }
+        byte[] own = a.clone();
+        own[0] = q[0];
+        own[1] = q[1];
+        return own;
     }
 
     /** ARCOUNT: a client that added an OPT record (EDNS) takes answers over 512 bytes. */
@@ -186,22 +225,33 @@ public final class SystemDnsBridge implements Closeable {
     }
 
     private static void daemon(String name, Runnable body) {
-        Thread t = new Thread(body, name);
-        t.setDaemon(true);
-        t.start();
+        named(name).newThread(body).start();
+    }
+
+    private static ThreadFactory named(final String name) {
+        return new ThreadFactory() {
+            @Override public Thread newThread(Runnable body) {
+                Thread t = new Thread(body, name);
+                t.setDaemon(true);
+                return t;
+            }
+        };
     }
 
     /**
      * Android's resolver, raw: the query bytes go to netd for THIS app's uid on its default network
      * (the VPN's when the SuperApp routes this app), and the wire answer comes back. API 29+.
+     *
+     * #791 DnsResolver hands each answer to [callbacks] from a file-descriptor listener on the MAIN
+     * looper; the inline executor this once passed ran the callback right there. Its own thread
+     * keeps main out of it, and the bridge moves the answer to its reply thread regardless.
      */
     @TargetApi(29)
     public static Upstream android() {
+        final Executor callbacks = Executors.newSingleThreadExecutor(named("sysdns-netd"));
         return new Upstream() {
             @Override public void query(byte[] query, final Answer done) {
-                DnsResolver.getInstance().rawQuery(null, query, DnsResolver.FLAG_EMPTY, new java.util.concurrent.Executor() {
-                    @Override public void execute(Runnable r) { r.run(); }
-                }, null, new DnsResolver.Callback<byte[]>() {
+                DnsResolver.getInstance().rawQuery(null, query, DnsResolver.FLAG_EMPTY, callbacks, null, new DnsResolver.Callback<byte[]>() {
                     @Override public void onAnswer(byte[] answer, int rcode) { done.reply(answer); }
                     @Override public void onError(DnsResolver.DnsException error) { done.reply(null); }
                 });

@@ -7,7 +7,12 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketPermission
+import java.security.Permission
 import java.util.Base64
+import java.util.concurrent.Callable
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -76,6 +81,49 @@ class SysDnsTest {
         }
         bridge { _, _ -> throw IllegalStateException("netd said no") }.use { b ->
             assertEquals("a resolver that throws is a SERVFAIL, not silence", 2, udpAsk(b.port(), query)[3].toInt() and 0x0f)
+        }
+    }
+
+    /**
+     * #791 the crash the phone hit (cld.termux, Android 15): DnsResolver calls back from the MAIN
+     * looper, and an app's main thread runs under StrictMode detectNetwork() with death as the
+     * penalty, so the bridge's UDP send there killed the terminal on its first lookup. The JVM has
+     * no StrictMode; the same policy here is a SecurityManager that refuses every socket permission
+     * on a fake main thread (the per-call check BlockGuard makes on the phone) and remembers each
+     * refusal. The fake resolver answers on that thread, as netd's callback does.
+     */
+    @Suppress("DEPRECATION", "removal")
+    @Test
+    fun anAnswerArrivingOnTheMainLooperIsSentWithoutMainTouchingASocket() {
+        val main = Executors.newSingleThreadExecutor { r -> Thread(r, "main").apply { isDaemon = true } }
+        val mainThread = main.submit(Callable { Thread.currentThread() }).get()
+        val deaths = CopyOnWriteArrayList<String>()
+        val previous = System.getSecurityManager()
+        System.setSecurityManager(object : SecurityManager() {
+            override fun checkPermission(perm: Permission) {
+                if (perm is SocketPermission && Thread.currentThread() === mainThread) {
+                    deaths += perm.toString()
+                    throw SecurityException("NetworkOnMainThreadException: $perm")
+                }
+            }
+            override fun checkPermission(perm: Permission, context: Any?) = checkPermission(perm)
+        })
+        try {
+            // The policy bites exactly what the old bridge did on main: an unconnected UDP send.
+            DatagramSocket().use { s ->
+                val p = DatagramPacket(query, query.size, InetAddress.getByName("127.0.0.1"), 9)
+                val refused = main.submit(Callable { runCatching { s.send(p) }.exceptionOrNull() }).get()
+                assertTrue("the fake StrictMode refuses a send on main, got $refused", refused is SecurityException)
+            }
+            deaths.clear()
+            bridge { _, done -> main.execute { done.reply(answer(16)) } }.use { b ->
+                assertEquals("UDP answered", 0x34, udpAsk(b.port(), query)[1].toInt())
+                assertEquals("TCP answered", 0x34, tcpAsk(b.port(), query)[1].toInt())
+            }
+            assertEquals("socket calls the main looper made", emptyList<String>(), deaths.toList())
+        } finally {
+            System.setSecurityManager(previous)
+            main.shutdown()
         }
     }
 
