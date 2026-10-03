@@ -30,6 +30,11 @@ if (writerAi == null) {
 }
 def writerAiB64 = groovy.json.JsonOutput.toJson(writerAi).bytes.encodeBase64().toString()
 
+// build.json::update (#800) — where the status card's one tap goes when the app serving the text
+// tools needs installing or updating. ServingApp.kt reads it; an absent block bakes {} and the
+// tap opens nothing rather than a guessed address.
+def writerUpdateB64 = groovy.json.JsonOutput.toJson(buildJson.update ?: [:]).bytes.encodeBase64().toString()
+
 // versionCode MUST move on every build, or nothing lands.
 //
 // Same encoding as ac_c3-morpheus, ac_c3-watchdog, ac_cloud-mail and lib-apks,
@@ -75,6 +80,7 @@ android {
         ndk { abiFilters a.abi_filters as String[] }
 
         buildConfigField "String", "WRITER_AI_ROUTING_B64", "\"${writerAiB64}\""
+        buildConfigField "String", "WRITER_UPDATE_B64", "\"${writerUpdateB64}\""
     }
 
     buildFeatures { buildConfig = true; compose = true }

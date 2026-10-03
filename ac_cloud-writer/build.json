@@ -621,6 +621,18 @@
     ],
     "summary_not_bullets_note": "[Asked for bullet points, the model answered in prose. Its reply is above, unchanged.]"
   },
+  "update": {
+    "_doc": "#800 the one tap from the status card to the repair. When the app serving the text tools is missing, silent or older than the AI-routing part of the ITextTools contract, the card names it and opens the fleet Store's Cloud Constellation page, where that app's row carries Update/Install - the same target and the same shape as ac_cloud-keyboard/build.json::update (#776). Baked into BuildConfig.WRITER_UPDATE_B64 by app/build.gradle; ServingApp.kt reads it.",
+    "store_package": "com.diegonmarcos.superapp",
+    "store_activity": "com.diegonmarcos.superapp.MainActivity",
+    "store_extras": {
+      "shortcut_action": "page:config/store-cloud"
+    },
+    "_doc_fallback_url": "Only when the SuperApp is not installed: the rolling release, where both serving apps (Cloud-Writer.apk, Cloud-Keyboard.apk) are published.",
+    "fallback_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest",
+    "_doc_bind_wait_ms": "How long the status probe waits for the ITextTools bind before calling the peer silent. bindService answers through a callback, so the probe that ran without this wait read a current Cloud Keyboard as too old (#800). 3000 = libs:ml-l-image-mlkit ImageScanBackendService.ACCOUNT_WAIT_MS, the fleet's other wait for the same bind.",
+    "bind_wait_ms": 3000
+  },
   "tests": {
     "_doc": "What CI runs to prove this application works, read by 1_cicd/src/scripts/cloud-android-test-engine.sh. The shell testers are STATIC assertions - no JDK, no Android SDK, no gradle - and they run above the publish gate so a change outside this application that breaks it still goes red.",
     "shell": {

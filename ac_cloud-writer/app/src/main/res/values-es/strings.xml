@@ -12,7 +12,9 @@
 
     <string name="status_checking">Comprobando qué aplicación atiende las herramientas de texto…</string>
     <string name="status_no_serving_app">Ninguna aplicación de este teléfono atiende las herramientas de texto. Instala Cloud Keyboard: es la que guarda los ajustes de enrutado de IA y la clave del proveedor que usan estas herramientas.</string>
-    <string name="status_serving_app_too_old">La aplicación que atiende las herramientas de texto no ha dicho nada sobre su enrutado de IA, así que es anterior a esa parte del contrato. Actualízala.</string>
+    <string name="status_serving_app_too_old">%1$s (versión %2$s) atiende las herramientas de texto pero no ha dicho nada sobre su enrutado de IA, así que es anterior a esa parte del contrato. Actualízala.</string>
+    <string name="status_serving_app_silent">%1$s está instalada pero no ha respondido en %2$d s. Ábrela una vez o actualízala.</string>
+    <string name="action_store_update">Abrir en la Store</string>
     <string name="status_served_by">Atendido por %1$s, a través de %2$s</string>
     <string name="status_provider_unknown">un proveedor sin nombre</string>
 

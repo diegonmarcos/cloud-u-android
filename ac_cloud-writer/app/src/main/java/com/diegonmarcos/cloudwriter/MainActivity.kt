@@ -137,7 +137,10 @@ class MainActivity : AppCompatActivity() {
                 HomeScreen()
             }
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         refreshStatus()
     }
 
@@ -224,16 +227,26 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 Spacer(Modifier.width(PageGutter))
-                Text(
-                    text = line ?: stringResource(R.string.status_checking),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = line ?: stringResource(R.string.status_checking),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (line != null && storeRepair.value) {
+                        TextButton(onClick = { ServingApp.openStore(this@MainActivity) }) {
+                            Text(stringResource(R.string.action_store_update))
+                        }
+                    }
+                }
             }
         }
     }
 
     /** True once the probe has named a peer; drives the status card's icon and its colour. */
     private val servingAppNamed: MutableState<Boolean> = mutableStateOf(false)
+
+    /** True when the Store can repair what the probe found; shows the card's one-tap button. */
+    private val storeRepair: MutableState<Boolean> = mutableStateOf(false)
 
     /**
      * The writing surface: the box, the tools, the result.
@@ -531,20 +544,29 @@ class MainActivity : AppCompatActivity() {
      */
     private fun refreshStatus() {
         worker.execute {
-            val installed = runner.isServingAppInstalled()
-            val snapshot = if (installed) runner.aiRoutingApp() else null
-            val provider = if (installed) runner.providerLabel() else null
-            val line = when {
-                !installed -> getString(R.string.status_no_serving_app)
-                snapshot == null -> getString(R.string.status_serving_app_too_old)
-                else -> getString(
+            val serving = ServingApp.probe(this, runner)
+            val provider = if (serving.state == ServingApp.State.OK) runner.providerLabel() else null
+            val line = when (serving.state) {
+                ServingApp.State.NONE -> getString(R.string.status_no_serving_app)
+                ServingApp.State.SILENT -> getString(
+                    R.string.status_serving_app_silent,
+                    serving.label,
+                    (ServingApp.bindWaitMs / 1000).toInt(),
+                )
+                ServingApp.State.TOO_OLD -> getString(
+                    R.string.status_serving_app_too_old,
+                    serving.label,
+                    serving.version ?: "?",
+                )
+                ServingApp.State.OK -> getString(
                     R.string.status_served_by,
-                    snapshot,
+                    serving.packageName,
                     provider ?: getString(R.string.status_provider_unknown),
                 )
             }
             main.post {
-                servingAppNamed.value = snapshot != null
+                servingAppNamed.value = serving.state == ServingApp.State.OK
+                storeRepair.value = serving.needsStore
                 status.value = line
             }
         }

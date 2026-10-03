@@ -23,7 +23,9 @@
          different repairs: an install, an update of the peer, or nothing. -->
     <string name="status_checking">Checking which app is serving the text tools…</string>
     <string name="status_no_serving_app">No app on this phone is serving the text tools. Install Cloud Keyboard — it holds the AI routing settings and the provider key that these tools use.</string>
-    <string name="status_serving_app_too_old">The app serving the text tools said nothing about its AI routing, so it is older than that part of the contract. Update it.</string>
+    <string name="status_serving_app_too_old">%1$s (version %2$s) serves the text tools but said nothing about its AI routing, so it is older than that part of the contract. Update it.</string>
+    <string name="status_serving_app_silent">%1$s is installed but did not answer within %2$d s. Open it once, or update it.</string>
+    <string name="action_store_update">Open in Store</string>
     <string name="status_served_by">Served by %1$s, through %2$s</string>
     <string name="status_provider_unknown">an unnamed provider</string>
 

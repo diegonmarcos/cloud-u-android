@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudwriter
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import com.diegonmarcos.superapp.texttools.TextTools
 import com.diegonmarcos.superapp.texttools.TextToolsClient
@@ -86,6 +87,20 @@ class WriterToolRunner(context: Context) {
 
     /** Is a serving application on this phone at all — the question a status line must ask. */
     fun isServingAppInstalled(): Boolean = client.isServingAppInstalled()
+
+    /**
+     * Wait up to [timeoutMs] for the binder. bindService answers through a callback, so a call made
+     * right after the client was constructed finds no binder yet; reading that as an answer is how
+     * a current Cloud Keyboard got reported as "older than the contract" (#800). BLOCKS.
+     */
+    fun awaitBound(timeoutMs: Long): Boolean {
+        val until = SystemClock.elapsedRealtime() + timeoutMs
+        while (!client.isConnected()) {
+            if (SystemClock.elapsedRealtime() >= until) return false
+            Thread.sleep(100)
+        }
+        return true
+    }
 
     /**
      * The package name of the peer that is ANSWERING, read out of its own reply.
