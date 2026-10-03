@@ -135,7 +135,8 @@ class StoreProgressBarTest {
         idle()
         b = bar(root)
         val err = b.label.text.toString()
-        assertTrue(err, err.startsWith("✗ ${app.label}") && "failed at installing" in err && "no space left" in err)
+        // #831 the bar names the app and points at its row; the reason is drawn whole THERE, never cut here.
+        assertTrue(err, err.startsWith("⚠ ") && "failed" in err && "on its row" in err && "no space left" !in err)
         assertEquals("a failure is drawn red", 0xFFF56565.toInt(), b.label.currentTextColor)
 
         // ── tap → that app's row, open ──

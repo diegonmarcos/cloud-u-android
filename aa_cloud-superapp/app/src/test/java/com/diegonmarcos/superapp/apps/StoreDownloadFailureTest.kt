@@ -116,7 +116,7 @@ class StoreDownloadFailureTest {
 
     @Test fun `a failed row is marked with a warning, never a tick, and keeps the whole reason`() {
         val reason = "could not download wallet: release → DNS: cannot resolve github.com (active resolver: 10.9.0.1) | " +
-            "ghcr → DNS: cannot resolve ghcr.io (active resolver: 10.9.0.1)"
+            "ghcr → DNS: cannot resolve ghcr.io (active resolver: 10.9.0.1 · via VPN · Private DNS dns.example)"
         val look = StoreRowError.of(reason, null)!!
         assertEquals("⚠", look.glyph)
         assertFalse(look.glyph.contains("✓") || look.meta.contains("✓"))
