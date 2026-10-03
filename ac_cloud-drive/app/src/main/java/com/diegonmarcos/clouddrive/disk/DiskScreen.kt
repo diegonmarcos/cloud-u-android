@@ -64,7 +64,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * #813 HOME ▸ DISK MANAGEMENT. Renders libs:disk's engine ([DriveDisk.engine], the SAME instance
- * /api/disk/* answers from) in six sections: Storage (volumes + the map by top-level folder),
+ * /api/disk/<op> answers from) in six sections: Storage (volumes + the map by top-level folder),
  * Huge files (threshold presets, open / share / delete), Duplicates (keep one), Apps (APK / data /
  * cache per fleet app, with the usage-access grant as a BUTTON — #639, never a sentence telling the
  * user where to go), Clean (a dry run first; the run deletes exactly the previewed plan) and Memory.

@@ -2,7 +2,7 @@ package com.diegonmarcos.cloudlib.disk
 
 /**
  * #813 THE CONTRACT of the Disk Management engine. [VERSION] is in every answer
- * ([DiskEngine] JSON `contract`), so a page or an agent reading /api/disk/* can tell which shape
+ * ([DiskEngine] JSON `contract`), so a page or an agent reading /api/disk/<op> can tell which shape
  * it got. Bump it when a field changes meaning or disappears; adding a field is not a bump.
  *
  * The ops are the /api/disk/<op> routes and the page's sections, one list for both.

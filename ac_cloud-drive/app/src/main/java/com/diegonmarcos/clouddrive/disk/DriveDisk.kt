@@ -8,7 +8,7 @@ import com.diegonmarcos.superapp.updater.cache.ApkCache
 
 /**
  * #813 the ONE Disk Management engine of this process: the page (DiskScreen) and the debug API
- * (/api/disk/*) both get it here, so they share the last scan and can never disagree.
+ * (/api/disk/<op>) both get it here, so they share the last scan and can never disagree.
  *
  * Fleet packages come from the constellation manifest baked into Declarations (no second list).
  * The Store's APK cache joins the clean as a [CacheOwner] through the appstore contract,

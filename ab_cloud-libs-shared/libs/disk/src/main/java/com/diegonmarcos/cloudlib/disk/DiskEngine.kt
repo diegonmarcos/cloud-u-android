@@ -14,7 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * #813 THE DISK MANAGEMENT ENGINE — one facade the page and /api/disk/* both call, so a number on
+ * #813 THE DISK MANAGEMENT ENGINE — one facade the page and /api/disk/<op> both call, so a number on
  * the screen and a number an agent reads off a locked phone come from the same code.
  *
  * [fleet] is the consuming app's list of fleet packages (cloud-drive passes its constellation
@@ -96,7 +96,7 @@ class DiskEngine(
     /** A path no clean may touch: anything inside an APK cache (pending installs live there). */
     private fun isProtected(path: String): Boolean = PROTECTED_SEGMENTS.any { it in path }
 
-    // ── JSON for /api/disk/* ───────────────────────────────────────────
+    // ── JSON for /api/disk/<op> ───────────────────────────────────────────
 
     fun json(op: String, q: Map<String, String>): JSONObject? = when (op) {
         DiskContract.OP_VOLUMES -> ok().put("volumes", JSONArray(Volumes.list(ctx).map { v ->
