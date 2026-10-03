@@ -20,7 +20,9 @@ class BrowserMenuTest {
     fun `every declared row survives the parse, in a declared section, in order`() {
         assertEquals(browser.getJSONObject("menu").getJSONArray("items").length(), menu.items.size)
         val ids = menu.sections.map { it.id }
-        assertEquals(listOf("icons", "tabs", "page", "library", "settings"), ids)
+        val declared = browser.getJSONObject("menu").getJSONArray("sections").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
+        assertEquals(declared, ids)
+        assertEquals("the icon row comes first", "icons", ids.first())
         menu.items.forEach { assertTrue("${it.id} in ${it.section}", it.section in ids) }
     }
 
