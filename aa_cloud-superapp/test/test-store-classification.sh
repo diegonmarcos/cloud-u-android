@@ -181,7 +181,16 @@ else:
     #     field or status word from the declaration may appear in the store's
     #     code. This is the assertion that fails when someone hardcodes a tab.
     owned = set()
+    # #841 `proxy` may be an object {url, items, ref, title, subtitle, link,
+    # state} describing the fleet git-proxy's reduced body: its strings are
+    # declared strings too, so each is walked as one more feed-shaped entry.
+    walk = []
     for f in feeds:
+        p = f.get("proxy")
+        if isinstance(p, dict):
+            walk += [dict(f, proxy=None), dict(p, id=None, label=None, proxy=None)]
+        else: walk.append(f)
+    for f in walk:
         for key in ("id", "label", "url", "proxy", "items", "state"):
             if f.get(key): owned.add(f[key])
         for key in ("ok", "bad"):
@@ -194,8 +203,13 @@ else:
         for key in ("ref", "title", "subtitle", "link"):
             owned.update(re.findall(r"\{([A-Za-z0-9_.]+)\}", f.get(key, "")))
     owned = {w for w in owned if len(w) > 2}
+    # SourceResolver reads a non-2xx body's own error keys (GitHub `message`,
+    # the git-proxy's {error, code}); that is the error parser, not a feed
+    # template, so those three words are exempt in that one file only.
+    err_keys = {"message", "error", "code"}
     leaked = sorted({"%s: %r" % (fn, w) for fn, t in store_files.items()
-                     for w in owned if '"%s"' % w in t})
+                     for w in owned if '"%s"' % w in t
+                     and not (fn == "SourceResolver.kt" and w in err_keys)})
     if owned and not leaked:
         ok("none of the %d declared feed strings is written in the store's code" % len(owned))
     else: bad("a feed string is hardcoded outside the one declaration: %s" % "; ".join(leaked[:6]))
@@ -300,9 +314,15 @@ else:
     mesh = [f.get("id") for f in feeds if re.match(r"https?://(10\.|localhost|127\.|[^/]*\.internal)", f.get("url", ""))]
     if not mesh: ok("every feed's url is public, so reading it never requires the fleet")
     else: bad("feed url points into the mesh, so public data now needs the fleet up: %s" % mesh)
-    if re.search(r"read\(feed, proxy\)\s*\}\s*catch[^{]*\{\s*try\s*\{\s*read\(feed, feed\.url\)", fetch):
+    if re.search(r"read\(feed\.proxyShape, proxy,[^\n]*\)\s*\}\s*catch[^{]*\{\s*try\s*\{\s*read\(feed\.shape, feed\.url,", fetch):
         ok("a declared proxy is tried first and falls back to the public url")
     else: bad("a proxy failure does not fall back to the public url")
+    # #841 THE FLEET BEARER NEVER LEAVES THE FLEET. Every read of the public
+    # `url` sends no headers; only the proxy leg may carry Authorization.
+    pub = re.findall(r"read\(feed\.shape, feed\.url, ([^\n]*)", fetch)
+    if pub and all(h.startswith("emptyMap())") for h in pub) and "fleetBearer" in fetch:
+        ok("the fleet bearer goes to the proxy only; every public read sends no credential")
+    else: bad("the public GitHub read can carry the fleet bearer (or no bearer is sent at all): %s" % pub)
     # (m) #674 ADOPTION IS DATA. Every feed declares a `proxy` key (null until
     #     the route exists) and the reader parses it, so adopting the proxy is
     #     setting values in the asset - no Kotlin.
