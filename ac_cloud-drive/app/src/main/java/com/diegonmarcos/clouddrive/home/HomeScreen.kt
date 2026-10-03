@@ -15,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -23,6 +24,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.SharedStore
 import com.diegonmarcos.clouddrive.apps.AppsGrid
+import com.diegonmarcos.clouddrive.disk.DiskScreen
 import com.diegonmarcos.clouddrive.files.FileOps
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.ui.DriveCard
@@ -60,7 +62,19 @@ fun HomeScreen(
     onRoute: (tab: String, page: String) -> Unit,
     onSyncAll: () -> Unit,
     modifier: Modifier = Modifier,
+    page: String? = null,
+    onPageConsumed: () -> Unit = {},
 ) {
+    // #813 Home's one sub-page: Disk Management (the Apps tile routes {tab: home, page: disk}).
+    // It opens over the overview and Back returns; the request is consumed once, like Sync's.
+    var sub by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(page) {
+        if (page != null) { if (page == PAGE_DISK) sub = PAGE_DISK; onPageConsumed() }
+    }
+    if (sub == PAGE_DISK) {
+        DiskScreen(actions, onClose = { sub = null }, modifier = modifier)
+        return
+    }
     val sections = Declarations.files.sections
     val connections = Declarations.connections
     val containerConnections = remember(connections) { connections.filter { it.machine == Declarations.MACHINE_CONTAINER } }
@@ -146,3 +160,6 @@ private fun dirOf(sectionId: String): File? {
 
 private fun statOf(dir: File?): Pair<Long, Long>? =
     if (dir == null) null else runCatching { StatFs(dir.absolutePath).let { it.availableBytes to it.totalBytes } }.getOrNull()
+
+/** #813 the declared Home sub-page id (data/drive-apps.json `route.page`). */
+const val PAGE_DISK = "disk"

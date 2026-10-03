@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity(), DriveActions {
             when (tabId) {
                 "files" -> FilesScreen(files, this, hasAccess)
                 "volumes" -> VolumesScreen(rclone, prefs, this, openPath)
-                "home" -> HomeScreen(git, this, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll)
+                "home" -> HomeScreen(git, this, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
                 "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
                 "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)

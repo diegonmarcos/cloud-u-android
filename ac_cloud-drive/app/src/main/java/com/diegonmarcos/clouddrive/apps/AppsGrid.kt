@@ -5,15 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -63,40 +60,49 @@ fun AppsGrid(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit
     val installed = remember(apps) {
         apps.associate { a -> a.label to (a.routeTab.isNotBlank() || (a.packageName.isNotBlank() && runCatching { ctx.packageManager.getLaunchIntentForPackage(a.packageName) }.getOrNull() != null)) }
     }
-    val rows = apps.size / 3 + if (apps.size % 3 == 0) 0 else 1
+    // #813 the grid is laid out by its CONTENT, never by a height computed from a row count:
+    // the old LazyVerticalGrid was given `appTile * rows`, which left out its own padding and
+    // row spacing and a tile taller than appTile (glyph + label + padding), so the last row was
+    // clipped -- and, being lazy, never even composed. Inside Home's LazyColumn the grid does
+    // not scroll anyway, so plain rows measure exactly what they draw and the list scrolls the
+    // last one above the bottom-nav island (DriveShell consumes the island's inset once).
     Column(modifier.fillMaxWidth()) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxWidth().height(DriveMetrics.appTile * rows).testTag(DriveTags.APPS_GRID),
-            contentPadding = PaddingValues(DriveMetrics.gutter),
-            horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
+        Column(
+            Modifier.fillMaxWidth().testTag(DriveTags.APPS_GRID).padding(DriveMetrics.gutter),
             verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
-            userScrollEnabled = false,
         ) {
-            items(apps, key = { it.label }) { app ->
-                val present = installed[app.label] == true
-                Column(
-                    Modifier.clip(RoundedCornerShape(DriveMetrics.cardRadius)).background(MaterialTheme.colorScheme.surface)
-                        .clickable {
-                            if (app.routeTab.isNotBlank()) {
-                                onRoute(app.routeTab, app.routePage)
-                            } else {
-                                val ok = actions.launchApp(app.packageName, app.fallbackUrl)
-                                if (!ok) scope.launch { snackbar.showSnackbar(ctx.getString(R.string.chrome_not_installed, app.label)) }
+            apps.chunked(COLUMNS).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
+                    row.forEach { app ->
+                        val present = installed[app.label] == true
+                        Column(
+                            Modifier.weight(1f).testTag(DriveTags.appTile(app.label)).clip(RoundedCornerShape(DriveMetrics.cardRadius)).background(MaterialTheme.colorScheme.surface)
+                                .clickable {
+                                    if (app.routeTab.isNotBlank()) {
+                                        onRoute(app.routeTab, app.routePage)
+                                    } else {
+                                        val ok = actions.launchApp(app.packageName, app.fallbackUrl)
+                                        if (!ok) scope.launch { snackbar.showSnackbar(ctx.getString(R.string.chrome_not_installed, app.label)) }
+                                    }
+                                }
+                                .padding(vertical = DriveMetrics.padWide),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(Modifier.size(DriveMetrics.appGlyph).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                                Text(app.icon, fontSize = DriveMetrics.tileGlyphText)
+                                if (!present) Text(StatusLight.glyph(StatusLight.State.OFF), Modifier.align(Alignment.BottomEnd).padding(DriveMetrics.gap), color = colorResource(StatusLight.colourRes(StatusLight.State.OFF)), fontSize = DriveMetrics.statusGlyphText)
                             }
+                            Spacer(Modifier.height(DriveMetrics.pad))
+                            Text(app.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = DriveMetrics.gapWide))
                         }
-                        .padding(vertical = DriveMetrics.padWide),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(Modifier.size(DriveMetrics.appGlyph).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                        Text(app.icon, fontSize = DriveMetrics.tileGlyphText)
-                        if (!present) Text(StatusLight.glyph(StatusLight.State.OFF), Modifier.align(Alignment.BottomEnd).padding(DriveMetrics.gap), color = colorResource(StatusLight.colourRes(StatusLight.State.OFF)), fontSize = DriveMetrics.statusGlyphText)
                     }
-                    Spacer(Modifier.height(DriveMetrics.pad))
-                    Text(app.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = DriveMetrics.gapWide))
+                    // A short last row keeps its tiles the width of the others.
+                    repeat(COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
         SnackbarHost(snackbar)
     }
 }
+
+private const val COLUMNS = 3

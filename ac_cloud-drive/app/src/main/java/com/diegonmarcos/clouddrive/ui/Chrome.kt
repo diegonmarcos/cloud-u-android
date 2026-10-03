@@ -188,6 +188,10 @@ object DriveTags {
     const val HOME_CARD = "home_card"
     const val HOME_STORAGE_BAR = "home_storage_bar"
     const val APPS_GRID = "apps_grid"
+    /** #813 one tile of the Apps grid, by its declared label. */
+    fun appTile(label: String) = "apps_tile_$label"
+    const val DISK_SCREEN = "disk_screen"
+    const val DISK_SECTION = "disk_section"
     const val BACKUPS_MIRROR_CARD = "backups_mirror_card"
     const val CONFIGS_CARD = "configs_card"
 }

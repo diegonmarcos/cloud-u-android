@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:disk (#813) — no components. Re-declares the usage-access permission
+     StorageStatsManager needs for another package's sizes, so the module is
+     self-contained; the grant itself is special access the USER gives the
+     consuming app in Settings (AppSizes.grantIntents). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+</manifest>

@@ -1,0 +1,33 @@
+// libs:disk — the Disk Management engine (#813): volumes, the storage map, huge files,
+// duplicates, per-app sizes (StorageStatsManager), the cache/temp clean and memory, behind one
+// versioned facade (DiskEngine, DiskContract.VERSION) that a page renders and the debug API
+// answers on /api/disk/*. Renders NOTHING: the page is the consuming app's (cloud-drive's
+// home/DiskScreen.kt). Its arithmetic is libs:disk-scan, plain JVM and PIT-gated.
+//
+// #763 class `pinned` (1_cicd/src/data/lib-classes.json): every number here is read under a
+// grant that belongs to the CALLING package — PACKAGE_USAGE_STATS for other apps' sizes, all-files
+// access for the shared-storage walk, and the deletes run as that package. An engine APK would
+// hold neither grant and read nothing; so it is compiled into the app that holds them and ships
+// no APK of its own (lib-apks build.json::lib_apks.exclude).
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.disk'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    api project(':libs:disk-scan')
+}

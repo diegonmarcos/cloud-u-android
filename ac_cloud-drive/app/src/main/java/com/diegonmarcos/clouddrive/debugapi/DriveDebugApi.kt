@@ -114,6 +114,9 @@ object DriveDebugApi {
             "log",
             listOf(AppDebugServer.Op("tail", "lines=N (default $TAIL_DEFAULT, max $TAIL_MAX)", "tail of the on-device debug log (Download/${BuildConfig.DEBUG_LOG_DIR}/)")),
         ) { op, query -> if (op == "tail") logTailJson(app, query) else null }
+
+        // #813 /api/disk/* — the Disk Management engine the Home ▸ Disk page renders.
+        com.diegonmarcos.clouddrive.disk.DiskDebugApi.register(app)
     }
 
     // ── /api/health ─────────────────────────────────────────────────────────

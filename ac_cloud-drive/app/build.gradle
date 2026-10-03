@@ -608,6 +608,9 @@ dependencies {
     // #587 THE sign-in of the fleet: Configs ▸ Sign in hosts libs:auth's Compose surface
     // (the same one superapp's Profile ▸ Connect hosts) and applies the drive sections.
     implementation project(':libs:auth')
+    // #813 the Disk Management engine (Home ▸ Apps ▸ Disk Management, /api/disk/*); pinned to
+    // this app's own grants, so it is compiled in (1_cicd/src/data/lib-classes.json).
+    implementation project(':libs:disk')
     // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
     // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
     // GitAuthChain. #705 neither of its binaries is linked here: gh runs in
