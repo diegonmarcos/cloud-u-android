@@ -62,6 +62,11 @@ object UpdateProgress {
             val appId: String = "",
             val pkg: String = "",
             val apkPath: String = "",
+            /** #785 the stage it stopped at ([STAGE_DOWNLOADING]…) and the app's
+             *  name, so a failure the Store bar draws later — after the job that
+             *  raised it has ended — still says WHAT failed WHERE. */
+            val stage: String = "",
+            val app: String = "",
         ) : State()
         /** User hit Cancel — overlay dismisses, worker is being torn down. */
         object Cancelled : State()
@@ -181,7 +186,56 @@ object UpdateProgress {
         batchLabel = if (total > 1) "$label · $index/$total" else null
     }
 
-    fun endBatch() { if (quiet) return; batchLabel = null }
+    /** Also ends the [job]: every batch, quiet or not, ends here. */
+    fun endBatch() { job = null; if (quiet) return; batchLabel = null }
+
+    // ── #785 WHICH app, WHICH stage ─────────────────────────────────────────
+
+    const val STAGE_DOWNLOADING = "downloading"
+    const val STAGE_VERIFYING = "verifying"
+    const val STAGE_INSTALLING = "installing"
+    const val STAGE_CLEARING = "clearing"
+
+    /**
+     * What [state] is ABOUT. The Store's bar under its buttons drew
+     * "Downloading 42%" with no app, no stage and no position, so in a 12-app
+     * Update all nobody could tell which app was moving, what came next, or
+     * which one had failed. The pipeline doing the work names it here and
+     * StoreStages.progress turns state + job into the one line the bar and
+     * `/api/store/progress` both show.
+     *
+     * [stage] is a STAGE_* word; [index]/[total] is the batch position (1/1 for
+     * one row); [next] is the label of the app after this one, null at the end.
+     * NOT gated by [quiet]: the overlay never reads it, and an inline observer
+     * is a screen the user opened to watch exactly this.
+     */
+    data class Job(
+        val appId: String,
+        val pkg: String,
+        val app: String,
+        val stage: String,
+        val version: String = "",
+        val index: Int = 1,
+        val total: Int = 1,
+        val next: String? = null,
+    )
+
+    @Volatile var job: Job? = null
+        private set
+
+    fun beginJob(j: Job) { job = j; republish() }
+
+    /** The running job moves to [stage]. No job → no-op: the host's own
+     *  self-update has no Store row to name. */
+    fun stage(stage: String) {
+        val j = job ?: return
+        if (j.stage != stage) { job = j.copy(stage = stage); republish() }
+    }
+
+    fun endJob() { job = null; republish() }
+
+    /** A job change with no state change still has to reach the inline rows. */
+    private fun republish() = observers.toList().forEach { it(state) }
 
     private var listener: ((State) -> Unit)? = null
 
@@ -241,5 +295,5 @@ object UpdateProgress {
         observers.toList().forEach { it(next) }
     }
 
-    fun reset() { batchLabel = null; minimized = false; update(State.Idle) }
+    fun reset() { batchLabel = null; job = null; minimized = false; update(State.Idle) }
 }

@@ -35,6 +35,8 @@ import kotlin.concurrent.thread
 object StoreBar {
 
     const val TAG = "store-bar"
+    /** #785 the live progress row under this bar (drawn by the Cloud tab). */
+    const val PROGRESS_TAG = "store-progress"
 
     enum class Item { CHECK, INSTALL, DOWNLOAD, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG, DEV_OPTIONS }
 

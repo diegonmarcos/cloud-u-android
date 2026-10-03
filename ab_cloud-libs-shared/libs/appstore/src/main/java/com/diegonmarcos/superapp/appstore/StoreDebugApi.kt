@@ -48,6 +48,8 @@ object StoreDebugApi {
             AppDebugServer.Op("updateAll", "dryRun=1 (plan only) · offline=1 (no network)",
                 "install every cached newer build (no network), full chain for the rest online; per-app report"),
             AppDebugServer.Op("batch", "", "the report of the last real downloadAll / updateAll"),
+            AppDebugServer.Op("progress", "",
+                "the Store bar's line now: app, version, stage, bytes/total, %, batch position, next, error"),
         )) { op, q -> route(app, op, q) }
         // #792 /api/fleet/endpoints — the Apps Mesh catalogue, off the same probe
         // the page runs. fleet/peers and fleet/wake are AppDebugServer's own and
@@ -72,6 +74,7 @@ object StoreDebugApi {
         "cache" -> cache(ctx, q["verify"] == "1").toString()
         "downloadAll", "updateAll" -> batch(ctx, op, q["dryRun"] == "1", q["offline"] != "1" && StoreStages.isOnline(ctx)).toString()
         "batch" -> (last ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
+        "progress" -> progress().toString()
         "stage", "download", "install", "clear", "auto" -> {
             val key = q["pkg"].orEmpty()
             val app = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
@@ -106,6 +109,16 @@ object StoreDebugApi {
         thread(name = "store-api-$op") { last = json(run()) }
         return JSONObject().put("ok", true).put("op", op).put("started", true).put("online", online)
             .put("poll", "store/batch")
+    }
+
+    /** #785 [StoreStages.progress] — the very object the Store bar draws. */
+    fun progress(): JSONObject {
+        val p = StoreStages.progress() ?: return JSONObject().put("ok", true).put("active", false)
+        return JSONObject().put("ok", true).put("active", true).put("text", p.text)
+            .put("id", p.appId).put("pkg", p.pkg).put("app", p.app).put("version", p.version)
+            .put("stage", p.stage).put("bytes", p.bytes).put("totalBytes", p.totalBytes).put("percent", p.percent)
+            .put("index", p.index).put("count", p.count).put("next", p.next ?: JSONObject.NULL)
+            .put("failed", p.failed).put("error", if (p.failed) p.detail else JSONObject.NULL)
     }
 
     private fun json(b: StoreStages.Batch): JSONObject = JSONObject().put("ok", true).put("op", b.op)

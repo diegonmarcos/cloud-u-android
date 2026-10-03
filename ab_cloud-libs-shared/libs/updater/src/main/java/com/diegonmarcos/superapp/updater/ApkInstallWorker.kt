@@ -40,6 +40,7 @@ class ApkInstallWorker(
         }
         try {
             val apk = ApkCache.file(applicationContext, "companion-$pkg.apk")
+            UpdateProgress.beginJob(UpdateProgress.Job(pkg, pkg, label, UpdateProgress.STAGE_DOWNLOADING))
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, -1))
             var declared = 0L
             // The private copy of this loop is gone. It was the only one of the
@@ -61,6 +62,7 @@ class ApkInstallWorker(
             // alone. Either beats handing the installer an unexamined file,
             // which is how a truncated download became
             // "INSTALL_PARSE_FAILED_NOT_APK" rather than "the download stopped".
+            UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
             val verified = VerifiedApk.bySize(apk, declared)
                 ?: VerifiedApk.structural(apk)
                 ?: error("companion APK for $pkg failed verification (${apk.length()} B)")
@@ -72,6 +74,7 @@ class ApkInstallWorker(
             // Failed) is driven by PackageInstallerReceiver from the real
             // PackageInstaller callback, so the overlay tracks the actual
             // install lifecycle instead of flickering straight to "Done".
+            UpdateProgress.stage(UpdateProgress.STAGE_INSTALLING)
             UpdateInstaller(applicationContext).install(verified, pkg)
             Result.success()
         } catch (c: java.util.concurrent.CancellationException) {
@@ -81,7 +84,8 @@ class ApkInstallWorker(
             Result.success()
         } catch (t: Throwable) {
             Log.w(TAG, "install of $pkg failed: ${t.message}", t)
-            UpdateProgress.update(UpdateProgress.State.Failed(t.message ?: t.toString()))
+            UpdateProgress.update(UpdateProgress.State.Failed(t.message ?: t.toString(), appId = pkg,
+                pkg = pkg, stage = UpdateProgress.job?.stage.orEmpty(), app = label))
             Result.failure()
         }
     }

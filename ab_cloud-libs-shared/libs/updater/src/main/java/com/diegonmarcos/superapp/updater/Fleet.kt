@@ -500,6 +500,8 @@ object Fleet {
         // looked: Download.toFile short-circuits only on a complete `.part`, and
         // a finished download is no longer a `.part`. GhcrClient.blob had its
         // own content-addressed hit; the release path, tried FIRST, had none.
+        // #785 hashing a cached build can take seconds; the bar says so.
+        UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
         cachedRelease(ctx, app)?.let { hit ->
             Log.i(TAG, "download ${app.kind} ${app.id}: cache HIT ${hit.file.name} → ${hit.evidence}")
             UpdateProgress.update(UpdateProgress.State.Downloading(100, hit.length, hit.length))
@@ -514,6 +516,7 @@ object Fleet {
         // turned "the transfer stalled at 182 MB of 265 MB with no new data for
         // two minutes" into "no source could provide a verified APK".
         val declined = mutableListOf<String>()
+        UpdateProgress.stage(UpdateProgress.STAGE_DOWNLOADING)
         for (source in sources) {
             val apk = try {
                 source.fetch(ctx, app)
@@ -973,6 +976,8 @@ object Fleet {
         val established = ensureShellChannel(ctx)
         val silent = established != null
         val channel = established?.name()
+        // #785 the version each selected app is moving to, for the Store bar.
+        val versions = HashMap<String, String>()
         val todo = apps.filter { app ->
             if (app.blocked) return@filter false
             // THE HOST IS NOT A BATCH ENTRY, AND BOTH CALLERS ALREADY SAY SO.
@@ -1024,6 +1029,7 @@ object Fleet {
             // here is a secret, and no URL or token is ever printed.
             if (take) Log.i(TAG, "$mode selects ${app.kind} ${app.id} (${app.pkg}): " +
                                  describe(state))
+            (state as? State.UpdateAvailable)?.versionName?.let { versions[app.id] = it }
             take
         }
         Log.i(TAG, "$mode scanned ${apps.size} fleet entries → ${todo.size} need work " +
@@ -1144,6 +1150,9 @@ object Fleet {
                     "cancelled by the user during download")
             }
             UpdateProgress.beginBatch("↓ ${app.label}$capNote", i + 1, batch.size)
+            UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label,
+                UpdateProgress.STAGE_DOWNLOADING, versions[app.id].orEmpty(), i + 1, batch.size,
+                batch.getOrNull(i + 1)?.label))
             try {
                 staged += app to download(ctx, app)
             } catch (c: java.util.concurrent.CancellationException) {
@@ -1185,6 +1194,9 @@ object Fleet {
                     "cancelled by the user after $acted install(s)")
             }
             UpdateProgress.beginBatch("${app.label}$capNote", i + 1, staged.size)
+            UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label,
+                UpdateProgress.STAGE_INSTALLING, versions[app.id].orEmpty(), i + 1, staged.size,
+                staged.getOrNull(i + 1)?.first?.label))
             try {
                 // commit() blocks until this install settles: UpdateInstaller
                 // runs every install through InstallGate, so the batch does not

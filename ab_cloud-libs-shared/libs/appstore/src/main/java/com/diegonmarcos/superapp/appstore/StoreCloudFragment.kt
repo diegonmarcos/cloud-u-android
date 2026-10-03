@@ -15,6 +15,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -201,6 +202,7 @@ class StoreCloudFragment : Fragment() {
     // place with an answer was the shell's overlay — which is not this screen, and
     // is not there at all when a satellite app hosts the page.
     private var progressRow: LinearLayout? = null
+    private var progressIcon: ImageView? = null
     private var progressLabel: TextView? = null
     private var progressBar: ProgressBar? = null
     private var progressCancel: TextView? = null
@@ -209,10 +211,14 @@ class StoreCloudFragment : Fragment() {
      * Attached with [UpdateProgress.addObserver], never setListener: that slot is
      * the shell overlay's, and taking it would turn the overlay off for as long as
      * this page is open. The pipeline posts from its worker thread, so hop to the
-     * view's looper before touching anything.
+     * view's looper before touching anything — but describe it HERE, on the
+     * thread that published it, so the line pairs this state with the job that
+     * was running when it was published, not whatever job runs by the time the
+     * looper gets to it.
      */
     private val progressObserver: (UpdateProgress.State) -> Unit = { state ->
-        progressRow?.post { renderProgress(state) }
+        val p = StoreStages.progress(state)
+        progressRow?.post { renderProgress(state, p) }
     }
     private val filterChips = ArrayList<TextView>()
     private val actionRows = HashMap<String, LinearLayout>()
@@ -271,7 +277,7 @@ class StoreCloudFragment : Fragment() {
     /** The observer holds a view; leaving it attached would outlive the view tree. */
     override fun onDestroyView() {
         UpdateProgress.removeObserver(progressObserver)
-        progressRow = null; progressLabel = null; progressBar = null; progressCancel = null
+        progressRow = null; progressIcon = null; progressLabel = null; progressBar = null; progressCancel = null
         // Restore the unconditional-refuse default the moment this page is
         // no longer visible. Any downgrade a background pass hits after this
         // must be refused, not asked — there is nothing left to ask it on.
@@ -626,8 +632,15 @@ class StoreCloudFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(ctx, 6), 0, dp(ctx, 4))
             visibility = View.GONE
+            tag = StoreBar.PROGRESS_TAG
         }
+        // #785 WHICH app: its launcher icon (when it is on the device — the
+        // PackageManager already has it, so it costs one lookup) beside the line.
+        val icon = ImageView(ctx).apply { visibility = View.GONE }
         val label = TextView(ctx).apply { textSize = 12f; setTextColor(cUpd) }
+        val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        head.addView(icon, LinearLayout.LayoutParams(dp(ctx, 18), dp(ctx, 18)).apply { marginEnd = dp(ctx, 6) })
+        head.addView(label, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         // Horizontal style = a real determinate bar; the default is the spinner,
         // which cannot show a percentage.
         val bar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -644,7 +657,7 @@ class StoreCloudFragment : Fragment() {
             Updater.cancelNow(requireContext())
         }.apply { visibility = View.GONE }
 
-        row.addView(label)
+        row.addView(head)
         row.addView(bar, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 6)).apply {
             topMargin = dp(ctx, 4)
@@ -655,93 +668,54 @@ class StoreCloudFragment : Fragment() {
             topMargin = dp(ctx, 6)
             gravity = android.view.Gravity.END
         })
-        progressRow = row; progressLabel = label; progressBar = bar
+        progressRow = row; progressIcon = icon; progressLabel = label; progressBar = bar
         progressCancel = cancel
         // Re-attaching on every render would stack observers, so drop the old one
         // first — the field is the same lambda instance for the fragment's life.
         UpdateProgress.removeObserver(progressObserver)
         UpdateProgress.addObserver(progressObserver)
-        renderProgress(UpdateProgress.state)
         return row
     }
 
-    private fun renderProgress(state: UpdateProgress.State) {
+    /**
+     * #785 Draws [StoreStages.progress] — the SAME line `/api/store/progress`
+     * returns, so the screen and the API cannot disagree. It names the app, its
+     * version and the stage (downloading / verifying / installing / clearing),
+     * bytes and %, and in a batch the position and what is next; a failure names
+     * app + stage + reason. A tap jumps to that app's row.
+     *
+     * The states keep their old rules: an unknown size is an indeterminate bar
+     * and never a hard 0% (identical, to the person watching, to a stalled
+     * transfer); a failure is never hidden (silence about work that did not
+     * happen is hiding, not quietness); a Cancel the user asked for is not a
+     * failure to report, so the row goes; and the Done/Idle dip between two apps
+     * of a batch keeps the row up instead of flickering it out per app.
+     */
+    private fun renderProgress(state: UpdateProgress.State, p: StoreStages.Progress?) {
         val row = progressRow ?: return
         val label = progressLabel ?: return
         val bar = progressBar ?: return
-        // "Chat · 2/5" during an Update all, so a bar that restarts per app reads as
-        // progress through a batch rather than as a bar that keeps resetting.
-        val batch = UpdateProgress.batchLabel
-        val prefix = if (batch == null) "" else "$batch  ·  "
-        when (state) {
-            is UpdateProgress.State.Downloading -> {
-                // THE FOUR STATES MUST NOT SHARE A PICTURE. This branch drew a
-                // determinate bar unconditionally, so a download with no
-                // declared Content-Length sat at a hard 0% while bytes were
-                // genuinely arriving — identical, to the person watching, to a
-                // transfer that had stopped. Unknown total ⇒ say so, on an
-                // indeterminate bar, and report the bytes actually written.
-                if (state.total > 0) {
-                    bar.isIndeterminate = false
-                    bar.progress = state.percent
-                    label.text = prefix + "Downloading  ${state.percent}%  ·  " +
-                        "${human(state.bytes)} / ${human(state.total)}"
-                } else {
-                    bar.isIndeterminate = true
-                    label.text = prefix + "Downloading  ·  ${human(state.bytes)} so far  ·  " +
-                        "total size unknown"
-                }
-            }
-            // Held by a constraint, not by a failing network. Without its own
-            // branch this fell into `else` and rendered as nothing at all, so
-            // an auto-update parked on "wait for Wi-Fi" (task #46) was
-            // indistinguishable from one that had silently died.
-            is UpdateProgress.State.Waiting -> {
-                bar.isIndeterminate = true
-                label.text = prefix + "Waiting  ·  " + state.reason
-            }
-            is UpdateProgress.State.CheckingManifest -> {
-                bar.isIndeterminate = true
-                label.text = prefix + "Checking manifest…"
-            }
-            is UpdateProgress.State.UpdateAvailable -> {
-                bar.isIndeterminate = true
-                label.text = prefix + "Update available  ·  ${human(state.totalBytes)}"
-            }
-            is UpdateProgress.State.Installing -> {
-                bar.isIndeterminate = true
-                label.text = prefix + "Installing…"
-            }
-            // Never hidden: silence about work that did not happen is hiding, not
-            // quietness — the same rule UpdateProgress.suppressed states.
-            is UpdateProgress.State.Failed -> {
-                bar.isIndeterminate = false
-                bar.progress = 0
-                label.setTextColor(cBlk)
-                label.text = prefix + "Failed — " + state.message
-            }
-            // Cancelled had no branch at all, so it fell into `else` and — with
-            // a batch still labelled — left the row sitting there showing the
-            // batch it had just abandoned. A cancel the user asked for is not
-            // a failure to report; it is work that stopped, so the row goes.
-            is UpdateProgress.State.Cancelled -> {
-                UpdateProgress.reset()
-                progressCancel?.visibility = View.GONE
-                row.visibility = View.GONE
-                return
-            }
-            // Between apps of a batch the state dips through Done; hiding there
-            // would flicker the row out and back for every app in the pass.
-            else -> {
-                if (batch == null) { row.visibility = View.GONE; return }
-                bar.isIndeterminate = true
-                label.text = batch
-            }
+        if (state is UpdateProgress.State.Cancelled) {
+            UpdateProgress.reset()
+            progressCancel?.visibility = View.GONE
+            row.visibility = View.GONE
+            return
         }
-        if (state !is UpdateProgress.State.Failed) label.setTextColor(cUpd)
+        if (p == null) { row.visibility = View.GONE; return }
+        label.text = p.text
+        label.setTextColor(if (p.failed) cBlk else cUpd)
+        bar.isIndeterminate = !p.failed && p.percent < 0
+        bar.progress = if (p.failed) 0 else p.percent.coerceAtLeast(0)
+        val icon = p.pkg.takeIf { it.isNotEmpty() }?.let { pkg ->
+            runCatching { row.context.packageManager.getApplicationIcon(pkg) }.getOrNull()
+        }
+        progressIcon?.apply { setImageDrawable(icon); visibility = if (icon != null) View.VISIBLE else View.GONE }
+        val target = fleet.firstOrNull { it.id == p.appId || (p.pkg.isNotEmpty() && it.pkg == p.pkg) }
+        row.setOnClickListener { target?.let { openDetail(row.context, it) } }
+        row.isClickable = target != null
         // Offer Cancel only while something is actually cancellable. Failed
-        // has already stopped, and the batch-gap `else` above is a moment
-        // between apps rather than a job of its own.
+        // has already stopped, and the batch-gap between apps is not a job of
+        // its own.
         progressCancel?.visibility = when (state) {
             is UpdateProgress.State.Downloading,
             is UpdateProgress.State.CheckingManifest,

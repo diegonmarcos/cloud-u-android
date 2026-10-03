@@ -46,6 +46,9 @@ FLEET="$UPD/Fleet.kt"
 PROG="$UPD/UpdateProgress.kt"
 OVL="$UPD/UpdateOverlayFragment.kt"
 PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
+# #785 the page's progress line is StoreStages.progress — the one derivation the
+# bar and /api/store/progress share — so the unknown-size rule lives there.
+STAGES="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStages.kt"
 CWORK="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationWorker.kt"
 PREFS="$UPD/AutoUpdatePrefs.kt"
 
@@ -95,9 +98,10 @@ has "$PREFS" 'fun deferredReason'                             "one place owns 'w
 has "$CWORK" 'UpdateProgress.State.Waiting(why)'              "the auto pass SAYS it deferred instead of returning silently"
 # Unknown total must read as unknown on BOTH surfaces — a determinate bar
 # pinned at 0% while bytes flow is the exact ambiguity being removed.
-has "$PAGE" 'total size unknown'                              "Constellation row says so when the length is unknown"
+has "$STAGES" 'total size unknown'                            "Store progress line says so when the length is unknown"
 has "$OVL"  'total size unknown'                              "overlay says so when the length is unknown"
-has "$PAGE" 'if (state.total > 0)'                            "Constellation row only draws a percentage it actually has"
+has "$STAGES" 'if (state.total > 0) state.percent else -1'    "Store progress line only carries a percentage it actually has"
+has "$PAGE" 'bar.isIndeterminate = !p.failed && p.percent < 0' "Store bar draws no percentage it does not have"
 
 echo "== T6: only ONE metered policy, not one per worker =="
 # The CALL, not the constant name — the constant is also named in comments.

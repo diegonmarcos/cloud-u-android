@@ -122,10 +122,18 @@ class UpdateWorker(
             // Poll BOTH: isStopped covers WorkManager cancels of the one-shot;
             // cancelRequested covers a Cancel hit during a PERIODIC run (whose
             // WORK_NAME cancelNow deliberately leaves scheduled).
+            // #785 the host's own update is a row too: name it on the Store bar.
+            // Left set after the handoff — the install sheet it raised is still
+            // this app's — and replaced by whichever job runs next.
+            UpdateProgress.beginJob(UpdateProgress.Job(applicationContext.packageName,
+                applicationContext.packageName,
+                applicationContext.applicationInfo.loadLabel(applicationContext.packageManager).toString(),
+                UpdateProgress.STAGE_DOWNLOADING))
             val apk = UpdateChecker(applicationContext).download(available) {
                 isStopped || UpdateProgress.cancelRequested
             }
             Log.i("Updater/Worker", "downloaded ${available.assetTitle} (${available.remoteSize} bytes)")
+            UpdateProgress.stage(UpdateProgress.STAGE_INSTALLING)
             installSelf(apk)
             Result.success()
         } catch (c: java.util.concurrent.CancellationException) {

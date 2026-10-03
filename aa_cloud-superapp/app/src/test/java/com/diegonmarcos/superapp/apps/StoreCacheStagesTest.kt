@@ -8,9 +8,11 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.appstore.FleetInstall
+import com.diegonmarcos.superapp.appstore.StoreDebugApi
 import com.diegonmarcos.superapp.appstore.StoreStages
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.PackageInstallerReceiver
+import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.cache.ApkCache
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -125,6 +127,7 @@ class StoreCacheStagesTest {
 
     @Before
     fun up() {
+        UpdateProgress.reset()
         ApkCache.clear(ctx)
         room0 = StoreStages.room
         apk = fakeApk()
@@ -155,6 +158,8 @@ class StoreCacheStagesTest {
         StoreStages.room = room0
         ApkCache.clear(ctx)
         ApkCache.clearNote(ctx, pkg)
+        UpdateProgress.removeObserver(watch)
+        UpdateProgress.reset()
     }
 
     private fun app(releaseUrl: String = "http://127.0.0.1:${server.port}/r/Rootfs.apk") = Fleet.App(
@@ -701,5 +706,93 @@ class StoreCacheStagesTest {
             ApkCache.pruneStale(ctx, pkg, fork, except = nu))
         assertEquals(listOf(old.name), ApkCache.pruneStale(ctx, pkg, fork, except = nu, sameCodeToo = true))
         assertTrue(nu.exists())
+    }
+
+    // ── #785 the Store bar says WHICH app, WHICH stage, and where in the batch ──
+    //
+    // The bar under the Store buttons drew "Downloading 42%" with no app, no
+    // stage, no position, and lost a failure the moment the next app started.
+    // Every line below is StoreStages.progress — what the bar draws and what
+    // /api/store/progress returns — recorded on the thread that published it,
+    // exactly as the fragment's observer reads it.
+
+    private val lines = java.util.Collections.synchronizedList(ArrayList<String>())
+    private val watch: (UpdateProgress.State) -> Unit = { st -> StoreStages.progress(st)?.let { lines += it.text } }
+    private fun watching() { UpdateProgress.addObserver(watch); lines.clear() }
+
+    /** A second lib served by the same release, so a batch has a "next". */
+    private fun two() = app().copy(id = "lib-two-test", label = "Two", pkg = "org.example.two")
+
+    @Test
+    fun `785 Download all names each app, its stage, bytes and %, its place in the batch and what is next`() {
+        watching()
+        val got = StoreStages.downloadAll(ctx, listOf(app(), two()), online = true)
+        assertEquals(got.summary, 2, got.count(StoreStages.DOWNLOADED))
+        val seen = lines.toList()
+        assertTrue("no line named Rootfs downloading with bytes, %, 1 of 2 and next Two: $seen", seen.any {
+            it.startsWith("Rootfs") && "downloading" in it && Regex("""\d+%""").containsMatchIn(it) &&
+                " / " in it && "1 of 2" in it && "next: Two" in it })
+        assertTrue("no line named Two as 2 of 2: $seen", seen.any { it.startsWith("Two") && "downloading" in it && "2 of 2" in it })
+        // Controls: the position belongs to the app it names, and the last app has no next.
+        assertFalse(seen.any { it.startsWith("Rootfs") && "2 of 2" in it })
+        assertFalse(seen.any { "2 of 2" in it && "next:" in it })
+        assertEquals("a clean batch leaves nothing on the bar", null, StoreStages.progress())
+    }
+
+    @Test
+    fun `785 Update all walks each app through verifying and installing, and ends on its failure`() {
+        sheet(accept = false)
+        installedAt(1, bytesOf("v1")); cachedAt(2, bytesOf("v2"))
+        val b2 = bytesOf("two-v2")
+        ApkCache.file(ctx, "fleet-lib-two-test-v2-${hex(b2).take(6)}.apk").apply {
+            writeBytes(b2); java.io.File(parentFile, "$name.record").writeText("org.example.two\n2\n${hex(b2)}\n")
+        }
+        watching()
+        val up = StoreStages.updateAll(ctx, listOf(app(), two()), online = false)
+        assertEquals(up.summary, StoreStages.FAILED, up.outcomes.first { it.app.id == app().id }.result)
+        val seen = lines.toList()
+        for (st in listOf("verifying", "installing"))
+            assertTrue("no '$st' line for Rootfs v2, 1 of 2, next Two: $seen",
+                seen.any { it.startsWith("Rootfs v2") && "  ·  $st  ·  " in it && "1 of 2" in it && "next: Two" in it })
+        assertTrue("Two never got the bar as 2 of 2: $seen", seen.any { it.startsWith("Two v2") && "2 of 2" in it })
+        // The batch is over, its job is gone — and the bar still says what failed, where, and why.
+        assertEquals(null, UpdateProgress.job)
+        val p = StoreStages.progress()!!
+        assertTrue(p.failed)
+        assertEquals(app().id, p.appId)
+        assertEquals("Rootfs", p.app)
+        assertEquals("installing", p.stage)
+        assertTrue(p.text, p.text.startsWith("✗ Rootfs") && "failed at installing" in p.text && "User rejected" in p.text)
+        // Control: the same batch with nothing failing ends with an empty bar.
+        sheet(accept = true)
+        StoreStages.updateAll(ctx, listOf(app()), online = false)
+        assertEquals(null, StoreStages.progress())
+    }
+
+    @Test
+    fun `785 a lone Install that stops names the stage it stopped at, and the API answers the same line`() {
+        sheet(accept = true)
+        // Nothing cached and no source: it stops while DOWNLOADING.
+        StoreStages.install(ctx, app(releaseUrl = ""))
+        val dl = StoreStages.progress()!!
+        assertEquals(dl.text, "downloading", dl.stage)
+        assertTrue(dl.failed); assertEquals("Rootfs", dl.app)
+        // Control: a cancelled sheet stops it while INSTALLING — the stage is read, not assumed.
+        UpdateProgress.reset()
+        sheet(accept = false)
+        StoreStages.install(ctx, app())
+        assertEquals(null, UpdateProgress.job)
+        val p = StoreStages.progress()!!
+        assertEquals(p.text, "installing", p.stage)
+        val api = StoreDebugApi.progress()
+        assertEquals(p.text, api.getString("text"))
+        assertEquals(app().id, api.getString("id"))
+        assertEquals("installing", api.getString("stage"))
+        assertTrue(api.getBoolean("failed"))
+        assertTrue(api.getString("error"), api.getString("error").contains("User rejected"))
+        // Control: a clean Install leaves the bar (and the API) empty.
+        sheet(accept = true)
+        StoreStages.install(ctx, app())
+        assertFalse(StoreDebugApi.progress().getBoolean("active"))
     }
 }

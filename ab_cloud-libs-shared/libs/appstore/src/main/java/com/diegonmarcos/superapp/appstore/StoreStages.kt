@@ -205,9 +205,9 @@ object StoreStages {
 
     /** Stage 1. Blocking — call off the main thread. Errors are already in the
      *  note ([Fleet.download] writes it); the returned stage shows them. */
-    fun download(ctx: Context, app: Fleet.App): Stage {
+    fun download(ctx: Context, app: Fleet.App): Stage = named(app, UpdateProgress.STAGE_DOWNLOADING, "") {
         fetch(ctx, app)
-        return stage(ctx, app)
+        stage(ctx, app)
     }
 
     /** Stage 1, returning what it fetched: the PUBLISHED build, verified by its
@@ -216,6 +216,7 @@ object StoreStages {
         if (busy.putIfAbsent(app.pkg, DOWNLOAD) != null) return null
         return try {
             UpdateProgress.beginDownload()
+            UpdateProgress.stage(UpdateProgress.STAGE_DOWNLOADING)
             Fleet.download(ctx, app)
         } catch (t: Throwable) {
             Log.w(TAG, "download ${app.id} stopped: ${t.message}")
@@ -239,13 +240,57 @@ object StoreStages {
      * Blocking — call off the main thread.
      */
     fun install(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
-        val e = actionableFor(ctx, app, remote)
-            ?: fetch(ctx, app)?.let { ApkCache.entry(it.file) }?.takeIf { !ApkCache.landed(ctx, it, app.pkg) }
-            ?: return stage(ctx, app)
-        installCached(ctx, app, e)
-        if (!e.file.exists()) return stage(ctx, app)   // the receiver already reaped it
-        if (!ApkCache.landed(ctx, ApkCache.entry(e.file), app.pkg)) return stage(ctx, app)
-        return clear(ctx, app)
+        val cached = actionableFor(ctx, app, remote)
+        return named(app, if (cached != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
+            versionOf(remote, cached)) {
+            val e = cached
+                ?: fetch(ctx, app)?.let { ApkCache.entry(it.file) }?.takeIf { !ApkCache.landed(ctx, it, app.pkg) }
+                ?: return@named stage(ctx, app)
+            installCached(ctx, app, e)
+            if (!e.file.exists()) return@named stage(ctx, app)   // the receiver already reaped it
+            if (!ApkCache.landed(ctx, ApkCache.entry(e.file), app.pkg)) return@named stage(ctx, app)
+            clear(ctx, app)
+        }
+    }
+
+    /** "1.4.2" from the remote, else the cached build's "v42", else unknown. */
+    private fun versionOf(remote: Fleet.State?, cached: ApkCache.Entry?): String =
+        (remote as? Fleet.State.UpdateAvailable)?.versionName?.takeIf { it.isNotEmpty() }
+            ?: cached?.record?.versionCode?.let { "v$it" } ?: ""
+
+    /**
+     * #785 Names the app on the Store bar for the length of one verb. A batch
+     * has already named it, with its position and what comes next, so a verb
+     * inside one only moves the stage; a verb run alone owns a 1-of-1 job and
+     * ends it. A verb that stops on a stage publishes WHAT stopped WHERE — the
+     * app and the stage ride on [UpdateProgress.State.Failed], so the bar's
+     * error line outlives the job that raised it. One that finishes clean
+     * clears the bar: left alone it sat on its last "100%" frame, nameless,
+     * until something else moved — a pending install sheet is on screen itself.
+     * ponytail: one global job, like [UpdateProgress.state]; two rows running at
+     * once share the bar, last one named wins.
+     */
+    private fun named(app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage {
+        val mine = UpdateProgress.job?.appId != app.id
+        if (mine) UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
+        else UpdateProgress.stage(stage)
+        try {
+            val s = verb()
+            if (s.failedAt != null) UpdateProgress.update(UpdateProgress.State.Failed(s.text, app.id, app.pkg,
+                stage = UpdateProgress.job?.stage ?: stageOf(s.failedAt), app = app.label))
+            else if (mine) UpdateProgress.update(UpdateProgress.State.Idle)
+            return s
+        } finally {
+            if (mine) UpdateProgress.endJob()
+        }
+    }
+
+    /** A verb ([DOWNLOAD]…) as the stage word the bar shows. */
+    private fun stageOf(verb: String): String = when (verb) {
+        DOWNLOAD -> UpdateProgress.STAGE_DOWNLOADING
+        INSTALL -> UpdateProgress.STAGE_INSTALLING
+        CLEAR -> UpdateProgress.STAGE_CLEARING
+        else -> verb
     }
 
     /** The unattended name for the same chain — #783's AccountFleet drives the
@@ -256,6 +301,7 @@ object StoreStages {
     private fun installCached(ctx: Context, app: Fleet.App, e: ApkCache.Entry) {
         if (busy.putIfAbsent(app.pkg, INSTALL) != null) return
         try {
+            UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
             // Re-verify before handing bytes to the installer: against the
             // digest recorded at download time, or — record-less — against the
             // published sidecar. A record that no longer matches means the file
@@ -271,6 +317,7 @@ object StoreStages {
                 return
             }
             ApkCache.clearNote(ctx, app.pkg)
+            UpdateProgress.stage(UpdateProgress.STAGE_INSTALLING)
             installer(ctx, app, v)?.let { msg ->
                 if (ApkCache.noteOf(ctx, app.pkg) == null) ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, msg)
             }
@@ -283,12 +330,12 @@ object StoreStages {
 
     /** Stage 3. Deletes this app's cached APK(s) and any partial. On demand it
      *  is the user's call; the chain only calls it after [ApkCache.landed]. */
-    fun clear(ctx: Context, app: Fleet.App): Stage {
+    fun clear(ctx: Context, app: Fleet.App): Stage = named(app, UpdateProgress.STAGE_CLEARING, "") {
         ApkCache.entries(ctx).filter { e ->
             e.record?.pkg?.let { it in pkgs(app) } ?: e.file.name.startsWith("fleet-${app.id}-")
         }.forEach { ApkCache.drop(it.file) }
         ApkCache.clearNote(ctx, app.pkg)
-        return stage(ctx, app)
+        stage(ctx, app)
     }
 
     // ── #784 the batch verbs: Download all, Update all ───────────────────
@@ -350,6 +397,9 @@ object StoreStages {
      * be). An app that would not fit in [room] is NOT started: filling the disk
      * or the cache bound would only evict what this batch already fetched.
      * [dryRun] checks and sizes everything and downloads nothing. Blocking.
+     *
+     * #785 Decide first, act second, so the bar's "3 of 12 · next: Chat" counts
+     * only what will actually be fetched, not the current apps passed on the way.
      */
     fun downloadAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch {
         val todo = apps.filter { !it.blocked }
@@ -357,10 +407,10 @@ object StoreStages {
         var free = startRoom
         var need = 0L
         val out = ArrayList<Outcome>()
+        val go = ArrayList<Pair<Fleet.App, Fleet.State>>()
         if (!dryRun) UpdateProgress.beginDownload()
-        for ((i, app) in todo.withIndex()) {
+        for (app in todo) {
             if (app.pkg == ctx.packageName) { out += Outcome(app, SKIPPED, HOST); continue }
-            if (!dryRun && UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
             if (!dryRun) reapLanded(ctx, app)
             if (!online) {
                 out += if (actionableFor(ctx, app) != null) Outcome(app, CACHED, "already cached")
@@ -368,29 +418,40 @@ object StoreStages {
                 continue
             }
             val remote = Fleet.status(ctx, app)
-            out += when {
-                remote is Fleet.State.Error -> Outcome(app, FAILED, remote.message, failedAt = DOWNLOAD)
+            when {
+                remote is Fleet.State.Error -> out += Outcome(app, FAILED, remote.message, failedAt = DOWNLOAD)
                 remote !is Fleet.State.UpdateAvailable && remote !is Fleet.State.Missing ->
-                    Outcome(app, SKIPPED, "already current")
-                actionableFor(ctx, app, remote) != null -> Outcome(app, CACHED, "already cached")
+                    out += Outcome(app, SKIPPED, "already current")
+                actionableFor(ctx, app, remote) != null -> out += Outcome(app, CACHED, "already cached")
                 else -> {
                     val want = (remote.bytes - partialBytes(ctx, app)).coerceAtLeast(0)
                     need += want
                     when {
-                        want > free -> Outcome(app, NO_ROOM, "needs ${mb(want)}, ${mb(free)} free — not downloaded")
-                        dryRun -> { free -= want; Outcome(app, DOWNLOAD, "would download ${mb(want)}") }
+                        want > free -> out += Outcome(app, NO_ROOM, "needs ${mb(want)}, ${mb(free)} free — not downloaded")
                         else -> {
-                            UpdateProgress.beginBatch("↓ ${app.label}", i + 1, todo.size)
-                            val s = download(ctx, app)
-                            free = room(ctx)
-                            if (actionableFor(ctx, app) != null) Outcome(app, DOWNLOADED, s.text)
-                            else Outcome(app, FAILED, s.text, failedAt = s.failedAt ?: DOWNLOAD)
+                            free -= want
+                            if (dryRun) out.add(Outcome(app, DOWNLOAD, "would download ${mb(want)}")) else go.add(app to remote)
                         }
                     }
                 }
             }
         }
-        if (!dryRun) UpdateProgress.endBatch()
+        for ((i, pair) in go.withIndex()) {
+            val (app, remote) = pair
+            if (UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
+            // The plan reserved room for this one; re-read it, since what is
+            // really free may have moved under the batch.
+            val want = (remote.bytes - partialBytes(ctx, app)).coerceAtLeast(0)
+            val now = room(ctx)
+            if (want > now) { out += Outcome(app, NO_ROOM, "needs ${mb(want)}, ${mb(now)} free — not downloaded"); continue }
+            UpdateProgress.beginBatch("↓ ${app.label}", i + 1, go.size)
+            beginNext(UpdateProgress.Job(app.id, app.pkg, app.label, UpdateProgress.STAGE_DOWNLOADING,
+                versionOf(remote, null), i + 1, go.size, go.getOrNull(i + 1)?.first?.label))
+            val s = download(ctx, app)
+            out += if (actionableFor(ctx, app) != null) Outcome(app, DOWNLOADED, s.text)
+                   else Outcome(app, FAILED, s.text, failedAt = s.failedAt ?: DOWNLOAD)
+        }
+        if (!dryRun) finishBatch(out)
         return Batch("downloadAll", dryRun, online, out, need, startRoom)
     }
 
@@ -400,7 +461,8 @@ object StoreStages {
      * the full [install] chain (updates for every entry, missing ones for libs
      * only — Install all takes missing apps, as [Fleet.Mode.AUTO] does).
      * Sequential: each install may raise the system sheet. [dryRun] reports
-     * what would happen and changes nothing. Blocking.
+     * what would happen and changes nothing. Blocking. Decides first and acts
+     * second, as [downloadAll] does (#785).
      *
      * ponytail: no batch lease and no session-headroom cap, same as tapping each
      * row's Install in turn; a refused session reports as failed at install.
@@ -408,17 +470,17 @@ object StoreStages {
     fun updateAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch {
         val todo = apps.filter { !it.blocked }
         val out = ArrayList<Outcome>()
+        val go = ArrayList<Pair<Fleet.App, Fleet.State?>>()
         if (!dryRun) UpdateProgress.beginDownload()
-        for ((i, app) in todo.withIndex()) {
+        for (app in todo) {
             if (app.pkg == ctx.packageName) { out += Outcome(app, SKIPPED, HOST); continue }
-            if (!dryRun && UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
             if (!dryRun) reapLanded(ctx, app)
             val remote = if (online) Fleet.status(ctx, app) else null
             val act = actionableFor(ctx, app, remote)
             val wanted = act != null || remote is Fleet.State.UpdateAvailable ||
                 (remote is Fleet.State.Missing && app.kind == "lib")
-            out += when {
-                !wanted -> when (remote) {
+            when {
+                !wanted -> out += when (remote) {
                     is Fleet.State.Error -> Outcome(app, FAILED, remote.message, failedAt = DOWNLOAD)
                     is Fleet.State.Missing -> Outcome(app, SKIPPED, "not installed — Install all takes missing apps")
                     null -> if (ApkCache.noteOf(ctx, app.pkg)?.stage == ApkCache.STAGE_DOWNLOAD ||
@@ -428,23 +490,115 @@ object StoreStages {
                             else Outcome(app, SKIPPED, "offline — nothing newer cached (not checked)")
                     else -> Outcome(app, SKIPPED, "already current")
                 }
-                dryRun -> Outcome(app, INSTALL,
+                dryRun -> out += Outcome(app, INSTALL,
                     if (act != null) "would install${act.record?.versionCode?.let { " v$it" } ?: ""} from the cache"
                     else "would download ${mb(remote?.bytes ?: 0L)} and install")
-                else -> {
-                    UpdateProgress.beginBatch(app.label, i + 1, todo.size)
-                    val before = installedCode(ctx, app)
-                    val s = install(ctx, app, remote)
-                    val after = installedCode(ctx, app)
-                    when {
-                        after != null && after != before -> Outcome(app, INSTALLED, s.text)
-                        s.failedAt != null -> Outcome(app, FAILED, s.text, failedAt = s.failedAt)
-                        else -> Outcome(app, PENDING, "handed to the installer — confirm it on screen")
-                    }
-                }
+                else -> go += app to remote
             }
         }
-        if (!dryRun) UpdateProgress.endBatch()
+        for ((i, pair) in go.withIndex()) {
+            val (app, remote) = pair
+            if (UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
+            val act = actionableFor(ctx, app, remote)
+            UpdateProgress.beginBatch(app.label, i + 1, go.size)
+            beginNext(UpdateProgress.Job(app.id, app.pkg, app.label,
+                if (act != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
+                versionOf(remote, act), i + 1, go.size, go.getOrNull(i + 1)?.first?.label))
+            val before = installedCode(ctx, app)
+            val s = install(ctx, app, remote)
+            val after = installedCode(ctx, app)
+            out += when {
+                after != null && after != before -> Outcome(app, INSTALLED, s.text)
+                s.failedAt != null -> Outcome(app, FAILED, s.text, failedAt = s.failedAt)
+                else -> Outcome(app, PENDING, "handed to the installer — confirm it on screen")
+            }
+        }
+        if (!dryRun) finishBatch(out)
         return Batch("updateAll", dryRun, online, out)
+    }
+
+    /** A batch's next app. The last app's failure is not drawn over this one
+     *  (it held the bar until some state happened to change); [finishBatch]
+     *  reports every failure when the batch ends. */
+    private fun beginNext(j: UpdateProgress.Job) {
+        if (UpdateProgress.state is UpdateProgress.State.Failed) UpdateProgress.update(UpdateProgress.State.Idle)
+        UpdateProgress.beginJob(j)
+    }
+
+    /**
+     * #785 A batch ends on its failures, not on whatever frame the last app
+     * left: each app's failure was on the bar only until the next app replaced
+     * it, so a 12-app run with one failure in the middle ended looking clean.
+     * The first failed app is the one a tap on the bar jumps to; a clean batch
+     * clears the bar, as a clean single verb does.
+     */
+    private fun finishBatch(out: List<Outcome>) {
+        UpdateProgress.endBatch()
+        val failed = out.filter { it.result == FAILED }
+        val first = failed.firstOrNull() ?: return UpdateProgress.update(UpdateProgress.State.Idle)
+        val more = if (failed.size > 1) " (+${failed.size - 1} more failed: " +
+            failed.drop(1).joinToString(", ") { it.app.label } + ")" else ""
+        UpdateProgress.update(UpdateProgress.State.Failed(first.text + more, first.app.id, first.app.pkg,
+            stage = stageOf(first.failedAt ?: DOWNLOAD), app = first.app.label))
+    }
+
+    // ── #785 THE progress line ─────────────────────────────────────────────
+
+    /**
+     * What the Store bar under the buttons draws and `/api/store/progress`
+     * returns: ONE derivation from [UpdateProgress.state] (bytes, %, failure) and
+     * [UpdateProgress.job] (which app, which stage, which version, its place in
+     * the batch, what is next) — the same two fields the rows' "downloading 42%"
+     * reads. Two renderers of one truth cannot disagree about it.
+     * [percent] is -1 when there is no honest percentage (size unknown, or a
+     * stage that has none). [index]/[count] are 0 outside a batch of the job.
+     */
+    class Progress(
+        val appId: String, val pkg: String, val app: String, val stage: String, val version: String,
+        val bytes: Long, val totalBytes: Long, val percent: Int,
+        val index: Int, val count: Int, val next: String?,
+        val failed: Boolean, val detail: String?,
+    ) {
+        val text: String get() = listOfNotNull(
+            (if (failed) "✗ " else "") + listOf(app, version).filter { it.isNotEmpty() }.joinToString(" ")
+                .ifEmpty { "Update" },
+            if (failed) "failed${if (stage.isNotEmpty()) " at $stage" else ""}" else stage,
+            if (percent >= 0) "$percent%" else null,
+            when {
+                totalBytes > 0 -> "${FleetIdentity.human(bytes)} / ${FleetIdentity.human(totalBytes)}"
+                bytes > 0 -> "${FleetIdentity.human(bytes)} so far · total size unknown"
+                else -> null
+            },
+            detail,
+            if (count > 1) "$index of $count" else null,
+            next?.let { "next: $it" },
+        ).filter { it.isNotEmpty() }.joinToString("  ·  ")
+    }
+
+    fun progress(state: UpdateProgress.State = UpdateProgress.state, job: UpdateProgress.Job? = UpdateProgress.job): Progress? {
+        fun of(j: UpdateProgress.Job?, stage: String, bytes: Long = 0, total: Long = 0, percent: Int = -1,
+               failed: Boolean = false, detail: String? = null, appId: String = "", pkg: String = "", app: String = "") =
+            Progress(j?.appId ?: appId, j?.pkg ?: pkg, j?.app ?: app, stage, j?.version.orEmpty(),
+                bytes, total, percent, j?.index ?: 0, j?.total ?: 0, j?.next, failed, detail)
+        return when (state) {
+            is UpdateProgress.State.Downloading ->
+                of(job, job?.stage ?: UpdateProgress.STAGE_DOWNLOADING, state.bytes, state.total,
+                    if (state.total > 0) state.percent else -1)
+            is UpdateProgress.State.CheckingManifest -> of(job, job?.stage ?: "checking")
+            is UpdateProgress.State.Installing -> of(job, job?.stage ?: UpdateProgress.STAGE_INSTALLING)
+            is UpdateProgress.State.UpdateAvailable -> of(job, "update available", detail = mb(state.totalBytes))
+            is UpdateProgress.State.Waiting -> of(job, "waiting", detail = state.reason)
+            // The job only describes a failure it raised: a failure about another
+            // app (the batch moved on, or a late install receiver) names itself.
+            is UpdateProgress.State.Failed -> {
+                val j = job?.takeIf { it.appId.isNotEmpty() && it.appId == state.appId }
+                of(j, state.stage.ifEmpty { j?.stage.orEmpty() }, failed = true, detail = state.message,
+                    appId = state.appId, pkg = state.pkg, app = state.app.ifEmpty { state.appId })
+            }
+            is UpdateProgress.State.Cancelled -> null
+            // Idle / Done: only the gap between two apps of a batch is shown;
+            // a single row's finished job is nothing left to watch.
+            else -> job?.takeIf { it.total > 1 }?.let { of(it, it.stage) }
+        }
     }
 }
