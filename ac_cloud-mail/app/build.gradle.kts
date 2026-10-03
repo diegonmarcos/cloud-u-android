@@ -133,6 +133,17 @@ fun commsVersionCode(upstreamVersionCode: Int): Int {
     return if (minutes > 0) (3_000_000L + minutes).toInt() else upstreamVersionCode
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 android {
     namespace = "app.sterna"
     compileSdk = 36
@@ -157,7 +168,8 @@ android {
         // a -P property and an env var, and a dev build with neither falls back to
         // upstream's own code.
         versionCode = commsVersionCode(174)
-        versionName = "1.5.4"
+        versionName = "1.5.4 (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
         // Shown on the Settings About row. Bump alongside versionCode/versionName at each
         // release (a static literal, so builds stay reproducible — never derive from clock).
         buildConfigField("String", "VERSION_DATE", "\"2026-09-06\"")

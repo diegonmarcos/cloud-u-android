@@ -32,8 +32,7 @@
         "gradle_props": {
           "_doc": "-P props patch 0005/0006 read. APPLICATION_ID is MANDATORY — without it the APK builds as stock org.fossify.phone and identity-assert refuses to publish (CI 32145181294). Updater props have safe in-repo defaults; we enable auto-update explicitly (fleet updater is the point of the fork).",
           "APPLICATION_ID": "com.diegonmarcos.comms.dialer",
-          "AUTO_UPDATE_ENABLED": "true",
-          "GIT_SHORT_SHA": "$ENV:GITHUB_SHA"
+          "AUTO_UPDATE_ENABLED": "true"
         },
         "signing": "keystore_properties"
       },

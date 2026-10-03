@@ -200,9 +200,13 @@ stamp)
         log "workflow_dispatch: not stamping (set PUBLISH_GATE_STAMP=1 to force)"; exit 0
     fi
     tmp="$(mktemp -d)"
-    # HEAD, not GITHUB_SHA: HEAD is the tree these bytes were built from,
-    # whatever ref the job checked out. A shallow checkout still has it.
-    COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+    # The SAME value the APK baked (#826): every app's build.gradle derives
+    # versionName "(sha-…)" + BuildConfig.GIT_SHORT_SHA from GITHUB_SHA first,
+    # `git rev-parse HEAD` only when that is unset — and build.sh tags/annotates
+    # the OCI layer the same way. Stamping HEAD alone let the sidecar and the
+    # installed versionName name different commits (workflow_dispatch), so the
+    # Store's Installed/Available built-from disagreed for one build.
+    COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
     printf '%s\n%s\n' "$IDENTITY" "$COMMIT" > "$tmp/$ASSET.source"
     if ! _verify_source "$tmp/$ASSET.source"; then
         rm -rf "$tmp"; log "refusing to stamp $ASSET.source: it would name no real commit"; exit 1

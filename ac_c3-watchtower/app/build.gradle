@@ -39,6 +39,17 @@ def codeFinal = { ->
 // them would mean the string the app parses is not the string the file holds.
 def analyticsB64 = groovy.json.JsonOutput.toJson(buildJson.analytics).bytes.encodeBase64().toString()
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally. versionCode
+// is untouched — identity on the fleet's update path stays what it was.
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
 android {
     namespace 'com.diegonmarcos.watchtower'
     compileSdk a.compile_sdk
@@ -52,7 +63,8 @@ android {
         minSdk        a.min_sdk
         targetSdk     a.target_sdk
         versionCode   codeFinal
-        versionName   a.version_name
+        versionName   "${a.version_name} (sha-${shortSha})"
+        buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
 
         // Declared, and a no-op here, exactly as in ac_c3-morpheus and
         // ac_c3-watchdog — and that is worth stating rather than leaving as a

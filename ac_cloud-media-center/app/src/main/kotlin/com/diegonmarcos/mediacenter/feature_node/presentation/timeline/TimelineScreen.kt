@@ -207,7 +207,7 @@ fun TimelineScreen(
         }
     }
     var lastSeenVersion by rememberLastSeenVersion()
-    val showWhatsNew = remember(lastSeenVersion) { lastSeenVersion != BuildConfig.VERSION_NAME }
+    val showWhatsNew = remember(lastSeenVersion) { lastSeenVersion != BuildConfig.VERSION_NAME.substringBefore(" (sha-") }
 
     // Story Cards
     val storyCardsViewModel = hiltViewModel<StoryCardsViewModel>()
@@ -227,13 +227,13 @@ fun TimelineScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         WhatsNewHeroCard(
-                            versionName = BuildConfig.VERSION_NAME,
+                            versionName = BuildConfig.VERSION_NAME.substringBefore(" (sha-"),
                             onClick = {
-                                lastSeenVersion = BuildConfig.VERSION_NAME
+                                lastSeenVersion = BuildConfig.VERSION_NAME.substringBefore(" (sha-")
                                 eventHandler.navigate(Screen.WhatsNewScreen())
                             },
                             onDismiss = {
-                                lastSeenVersion = BuildConfig.VERSION_NAME
+                                lastSeenVersion = BuildConfig.VERSION_NAME.substringBefore(" (sha-")
                             }
                         )
                     }

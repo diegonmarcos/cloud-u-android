@@ -12,6 +12,17 @@ ext {
     packageVariant = System.getenv("TERMUX_PACKAGE_VARIANT") ?: "apt-android-7" // Default: "apt-android-7"
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally. versionCode
+// is untouched — identity on the fleet's update path stays what it was.
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
 android {
     // #758 SystemDnsBridge is compiled from libs/sysdns BY REFERENCE (plain Java, its own
     // source dir), as the termux terminal does, so there is one bridge and no copy.
@@ -81,6 +92,9 @@ android {
 
         if (appVersionName) versionName = appVersionName
         //validateVersionName(versionName)
+        // #826 suffix AFTER the upstream semver check: "(sha-…)" is not semver build metadata.
+        versionName = "${versionName} (sha-${shortSha})"
+        buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
 
         buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
 

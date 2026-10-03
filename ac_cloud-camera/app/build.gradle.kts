@@ -50,6 +50,16 @@ val cloudVersionCode: Int = run {
     if (mins > 0) (3_000_000L + mins).toInt() else 3_000_000
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 android {
     if (useKeystoreProperties) {
         signingConfigs {
@@ -86,7 +96,8 @@ android {
         // moved across our builds, so Android and the owner saw no progress; it
         // stays the versionName, read from build.json::android.version_name.
         versionCode = cloudVersionCode
-        versionName = (appMetadataJson["android"] as Map<*, *>)["version_name"].toString()
+        versionName = "${(appMetadataJson["android"] as Map<*, *>)["version_name"]} (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -38,6 +38,17 @@ plugins {
     // alias(libs.plugins.gms.google.services)
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 android {
     namespace = "io.element.android.x"
 
@@ -45,7 +56,8 @@ android {
         applicationId = BuildTimeConfig.APPLICATION_ID
         targetSdk = Versions.TARGET_SDK
         versionCode = Versions.VERSION_CODE
-        versionName = Versions.VERSION_NAME
+        versionName = "${Versions.VERSION_NAME} (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
 
         // Keep abiFilter for the universalApk
         ndk {

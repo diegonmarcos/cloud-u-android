@@ -24,6 +24,17 @@ def cloudRootfsLibPackage = new groovy.json.JsonSlurper()
     .release.companions.find { it.id == 'rootfs-termux' }?.package
 if (!cloudRootfsLibPackage) throw new GradleException("build.json::release.companions[] declares no 'rootfs-termux' entry")
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally. versionCode
+// is untouched — identity on the fleet's update path stays what it was.
+def shortSha = (System.getenv('GITHUB_SHA')
+                ?: providers.exec {
+                       commandLine 'git', 'rev-parse', '--short=8', 'HEAD'
+                       ignoreExitValue = true
+                   }.standardOutput.asText.get().trim())
+                .take(8)
+
 android {
     // #744 AGP 8: the namespace (R and BuildConfig's package) lives here, not in
     // the manifest, and BuildConfig and AIDL are opt-in — this app's own code
@@ -88,6 +99,9 @@ android {
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
+        // #826 suffix AFTER the upstream semver check: "(sha-…)" is not semver build metadata.
+        versionName = "${versionName} (sha-${shortSha})"
+        buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
 
         // #470: where the baked glibc rootfs lives inside the APK. Read from the
         // declaration so the Java that stages it and the CI that builds it

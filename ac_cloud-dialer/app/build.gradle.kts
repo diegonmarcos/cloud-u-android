@@ -23,6 +23,17 @@ fun hasSigningVars(): Boolean {
             && providers.environmentVariable("SIGNING_STORE_PASSWORD").orNull != null
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched (#789: identity stays sha-based, not code-based).
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 android {
     compileSdk = project.libs.versions.app.build.compileSDKVersion.get().toInt()
 
@@ -37,7 +48,7 @@ android {
         applicationId = (project.findProperty("APPLICATION_ID") ?: project.property("APP_ID")).toString()
         minSdk = project.libs.versions.app.build.minimumSDK.get().toInt()
         targetSdk = project.libs.versions.app.build.targetSDK.get().toInt()
-        versionName = project.property("VERSION_NAME").toString()
+        versionName = "${project.property("VERSION_NAME")} (sha-$gitShortSha)"
         versionCode = project.property("VERSION_CODE").toString().toInt()
         setProperty("archivesBaseName", "phone-$versionCode")
 
@@ -50,7 +61,7 @@ android {
         buildConfigField("String", "GHCR_IMAGE", "\"${project.findProperty("GHCR_IMAGE") ?: "cloud-comms-dialer"}\"")
         buildConfigField("String", "AUTO_UPDATE_TAG", "\"${project.findProperty("AUTO_UPDATE_TAG") ?: "latest"}\"")
         buildConfigField("String", "AUTO_UPDATE_TAG_MAP", "\"${project.findProperty("AUTO_UPDATE_TAG_MAP") ?: ""}\"")
-        buildConfigField("String", "GIT_SHORT_SHA", "\"${project.findProperty("GIT_SHORT_SHA") ?: "dev"}\"")
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
         buildConfigField("boolean", "AUTO_UPDATE_ENABLED", "${project.findProperty("AUTO_UPDATE_ENABLED") ?: "false"}")
         buildConfigField("boolean", "AU_REQUIRE_UNMETERED", "${project.findProperty("AU_REQUIRE_UNMETERED") ?: "true"}")
         buildConfigField("boolean", "AU_REQUIRE_CHARGING", "${project.findProperty("AU_REQUIRE_CHARGING") ?: "false"}")

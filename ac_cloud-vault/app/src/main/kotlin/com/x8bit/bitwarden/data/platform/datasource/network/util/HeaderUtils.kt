@@ -8,7 +8,7 @@ import com.x8bit.bitwarden.BuildConfig
  */
 @Suppress("MaxLineLength")
 val HEADER_VALUE_USER_AGENT: String =
-    "Bitwarden_Mobile/${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}/${BuildConfig.FLAVOR}) (Android ${Build.VERSION.RELEASE}; SDK ${Build.VERSION.SDK_INT}; Model ${Build.MODEL})"
+    "Bitwarden_Mobile/${BuildConfig.CLIENT_VERSION} (${BuildConfig.BUILD_TYPE}/${BuildConfig.FLAVOR}) (Android ${Build.VERSION.RELEASE}; SDK ${Build.VERSION.SDK_INT}; Model ${Build.MODEL})"
 
 /**
  * The value used for the 'bitwarden-client-name' headers.
@@ -18,4 +18,4 @@ const val HEADER_VALUE_CLIENT_NAME: String = "mobile"
 /**
  * The value used for the 'bitwarden-client-version' headers.
  */
-const val HEADER_VALUE_CLIENT_VERSION: String = BuildConfig.VERSION_NAME
+const val HEADER_VALUE_CLIENT_VERSION: String = BuildConfig.CLIENT_VERSION

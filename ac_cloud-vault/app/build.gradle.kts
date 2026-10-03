@@ -53,6 +53,18 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched. The server-facing client version (bitwarden-client-version /
+// user-agent) stays the bare upstream version via BuildConfig.CLIENT_VERSION: servers parse it.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
 configure<ApplicationExtension> {
     namespace = "com.x8bit.bitwarden"
     compileSdk {
@@ -68,7 +80,9 @@ configure<ApplicationExtension> {
             version = release(libs.versions.targetSdk.get().toInt())
         }
         versionCode = libs.versions.appVersionCode.get().toInt()
-        versionName = libs.versions.appVersionName.get()
+        versionName = "${libs.versions.appVersionName.get()} (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
+        buildConfigField("String", "CLIENT_VERSION", "\"${libs.versions.appVersionName.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

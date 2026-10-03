@@ -66,11 +66,26 @@ val abiVersionCodes = mapOf(
     "universal" to 0
 )
 
+// #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
+// Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
+// derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
+// versionCode is untouched. File names keep the bare version (`mediaCenterVersion`): the
+// APK name must not grow a space and parentheses for build.sh's globs.
+val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() }
+    ?: providers.exec {
+        commandLine("git", "rev-parse", "--short=8", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim())
+    .take(8)
+
+val mediaCenterVersion = "5.1.1"
+
 apkVersioning {
     flavorVersionCodes.set(abiVersionCodes)
     versionCodeMultiplier.set(10)
-    outputFileName.set("{appName}-{versionName}-{versionCode}{suffix}-{ml}-{abi}-{buildType}")
+    outputFileName.set("{appName}-{fileVersion}-{versionCode}{suffix}-{ml}-{abi}-{buildType}")
     variables.put("appName", "Cloud-Media-Center")
+    variables.put("fileVersion", mediaCenterVersion)
     val offlineSuffix = if (isOffline) "-offline" else ""
     variables.put("suffix", offlineSuffix)
 }
@@ -123,14 +138,15 @@ android {
         minSdk = 29
         targetSdk = 37
         versionCode = wallClockVersionCode
-        versionName = "5.1.1"
+        versionName = "$mediaCenterVersion (sha-$gitShortSha)"
+        buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
         val offlinePrefix = if (isOffline) "-offline" else ""
-        base.archivesName.set("Cloud-Media-Center-${versionName}-$versionCode$offlinePrefix")
+        base.archivesName.set("Cloud-Media-Center-$mediaCenterVersion-$versionCode$offlinePrefix")
 
         externalNativeBuild {
             cmake {
