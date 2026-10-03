@@ -16,8 +16,8 @@
 #   C6  Peer Control: a peer selector at the top, fed by the declarations, and no
 #       action targets "whichever link is open first" any more
 #   C7  #793 the Store's OWN controls: every button on the page (tools, each
-#       member's row, All endpoints) is StoreControls.button and every filter
-#       chip StoreControls.chip — the same two builders the Store's bar, rows and
+#       member's row, All endpoints) is StoreBar.button and every filter
+#       chip StoreBar.chip — the same two builders the Store's bar, rows and
 #       filter use; the declared filters and tools each have their handler; the
 #       page draws before it probes and probes member by member; the endpoints
 #       API takes the same filter
@@ -169,19 +169,18 @@ clip="$(printf '%s\n' "$cv" | grep -nF 'root.addView(buildClipboardCard' | cut -
 echo "== C7: the Store's own controls, filters, lazy probe (#793) =="
 MPAGE="$(fn "$MESH" page)"
 [ -n "$MPAGE" ] || bad "could not isolate AppsMesh.page — the checks below would verify nothing"
-code "$CTRLS" | grep -qF 'class Button(ctx: Context) : TextView(ctx)' \
-  && code "$CTRLS" | grep -qF 'class Chip(ctx: Context, val style: Style) : TextView(ctx)' \
-  && ok "StoreControls owns the one Button and the one Chip" || bad "StoreControls has no Button/Chip class"
-fn "$BAR" btn | grep -qF 'StoreControls.button(' && ok "the Store bar (Check all …) draws StoreControls.button" \
+fn "$BAR" button | grep -qF 'setTag(R.id.store_control, BUTTON)' && fn "$BAR" chip | grep -qF 'setTag(R.id.store_control, style)' \
+  && ok "StoreBar owns the one marked button and the one marked chip" || bad "StoreBar's button/chip carry no mark"
+fn "$BAR" btn | grep -qF 'button(ctx, StoreControls.load(ctx).action' && ok "the Store bar (Check all …) draws StoreBar.button" \
   || bad "the Store bar draws its own buttons"
-fn "$PAGE" btn | grep -qF 'StoreControls.button(' && ok "the Store's app rows draw StoreControls.button" \
+fn "$PAGE" btn | grep -qF 'StoreBar.button(' && ok "the Store's app rows draw StoreBar.button" \
   || bad "the Store's app rows draw their own buttons"
-fn "$PAGE" filterBar | grep -qF 'StoreControls.chip(' && ok "the Store's filter draws StoreControls.chip" \
+fn "$PAGE" filterBar | grep -qF 'StoreBar.chip(' && ok "the Store's filter draws StoreBar.chip" \
   || bad "the Store's filter draws its own chips"
-n="$(code "$MESH" | grep -cF 'StoreControls.button(')"
-[ "$n" -ge 3 ] && ok "Apps Mesh draws its buttons with StoreControls.button ($n call sites: tools, rows, All endpoints)" \
-  || bad "Apps Mesh has only $n StoreControls.button call sites"
-printf '%s' "$MPAGE" | grep -qF 'StoreControls.chip(' && ok "Apps Mesh filters with StoreControls.chip" \
+n="$(code "$MESH" | grep -cF 'StoreBar.button(')"
+[ "$n" -ge 3 ] && ok "Apps Mesh draws its buttons with StoreBar.button ($n call sites: tools, rows, All endpoints)" \
+  || bad "Apps Mesh has only $n StoreBar.button call sites"
+printf '%s' "$MPAGE" | grep -qF 'StoreBar.chip(' && ok "Apps Mesh filters with StoreBar.chip" \
   || bad "Apps Mesh draws its own filter chips"
 code "$MESH" | grep -qE 'setBackgroundColor\(|GradientDrawable|private fun tool\(' \
   && bad "Apps Mesh paints a control of its own" || ok "Apps Mesh paints no control of its own"

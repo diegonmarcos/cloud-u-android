@@ -220,7 +220,7 @@ class StoreCloudFragment : Fragment() {
         val p = StoreStages.progress(state)
         progressRow?.post { renderProgress(state, p) }
     }
-    private val filterChips = ArrayList<StoreControls.Chip>()
+    private val filterChips = ArrayList<TextView>()
     private val actionRows = HashMap<String, LinearLayout>()
     // #774 the Download / Install / Clear buttons per app, and the stage that
     // decides which of them are live. StoreStages owns the logic; this only draws.
@@ -557,9 +557,9 @@ class StoreCloudFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(ctx, 6)) }
         }
         filterChips.clear()
-        // #793 the shared chip (StoreControls.chip), the same one Apps Mesh filters with.
+        // #793 the shared chip (StoreBar.chip), the same one Apps Mesh filters with.
         listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed").forEachIndexed { i, label ->
-            val c = StoreControls.chip(ctx, controls.filter, label, i == 0) {
+            val c = StoreBar.chip(ctx, controls.filter, label, i == 0) {
                 if (filter != i) { filter = i; paintFilter(); renderList(ctx, list) }
             }
             filterChips.add(c); bar.addView(c)
@@ -568,7 +568,7 @@ class StoreCloudFragment : Fragment() {
         return bar
     }
 
-    private fun paintFilter() = filterChips.forEachIndexed { i, c -> StoreControls.paint(c, i == filter) }
+    private fun paintFilter() = filterChips.forEachIndexed { i, c -> StoreBar.paint(c, i == filter) }
 
     /** True when [app] belongs in the current filter. An app whose state has not
      *  landed yet only shows under "All" - guessing would flicker it in and out. */
@@ -1367,10 +1367,10 @@ class StoreCloudFragment : Fragment() {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE
     }
     /** #732 the `action` style in the verb's own colour — #793 drawn by the
-     *  shared [StoreControls.button], the same component the Apps Mesh page uses. */
+     *  shared [StoreBar.button], the same component the Apps Mesh page uses. */
     private fun btn(ctx: Context, label: String, bg: Int, onClick: () -> Unit): TextView {
         val style = controls.action
-        return StoreControls.button(ctx, style, label, bg, onClick)
+        return StoreBar.button(ctx, style, label, bg, onClick)
     }
     private fun buttonRow(ctx: Context, vararg views: View) = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL; for (v in views) addView(v)

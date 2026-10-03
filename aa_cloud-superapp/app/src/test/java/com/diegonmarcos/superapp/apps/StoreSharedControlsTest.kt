@@ -37,9 +37,9 @@ import org.robolectric.annotation.Config
  * hosted by Configs (AppsMeshFragment).
  *
  * "Same component" is checked two ways that can each fail on their own: the
- * view is a [StoreControls.Button] / [StoreControls.Chip] (a TextView painted
- * to look alike is not), and it measures the same — text size, weight,
- * padding, corner radius — as the Store's own.
+ * view carries the mark only [StoreBar.button] / [StoreBar.chip] set (a
+ * TextView painted to look alike does not), and it measures the same — text
+ * size, weight, padding, corner radius — as the Store's own.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -63,12 +63,12 @@ class StoreSharedControlsTest {
 
     private fun tagged(root: View, prefix: String) = views(root).filter { (it.tag as? String)?.startsWith(prefix) == true }
 
-    /** What makes two controls look the same: their class and their measures. */
+    /** What makes two controls look the same: their mark and their measures. */
     private fun look(v: View): String {
         val t = v as TextView
         val lp = t.layoutParams as LinearLayout.LayoutParams
         val bg = t.background as GradientDrawable
-        return "${v.javaClass.simpleName} ${t.textSize} w${lp.weight} p${t.paddingLeft},${t.paddingTop} r${bg.cornerRadius}"
+        return "${if (StoreBar.isButton(v)) "button" else if (StoreBar.isChip(v)) "chip" else "plain"} ${t.textSize} w${lp.weight} p${t.paddingLeft},${t.paddingTop} r${bg.cornerRadius}"
     }
 
     @Test
@@ -81,12 +81,12 @@ class StoreSharedControlsTest {
         assertNotNull("Store ▸ Cloud draws no bar", bar)
         val barButtons = views(bar!!).filter { it.tag is StoreBar.Item }
         assertTrue("the bar drew no buttons", barButtons.size >= 4)
-        assertEquals("a Store bar control is not the shared button: ${barButtons.filter { it !is StoreControls.Button }.map { it.tag }}",
-            emptyList<Any>(), barButtons.filter { it !is StoreControls.Button }.map { it.tag })
+        assertEquals("a Store bar control is not the shared button: ${barButtons.filterNot { StoreBar.isButton(it) }.map { it.tag }}",
+            emptyList<Any>(), barButtons.filterNot { StoreBar.isButton(it) }.map { it.tag })
         val rowButtons = views(root).filter { it is TextView && it.text.toString() == "Details" }
         assertTrue("no app row drew its Details button", rowButtons.isNotEmpty())
-        assertTrue("an app row's button is not the shared button", rowButtons.all { it is StoreControls.Button })
-        val storeChips = views(root).filterIsInstance<StoreControls.Chip>()
+        assertTrue("an app row's button is not the shared button", rowButtons.all { StoreBar.isButton(it) })
+        val storeChips = views(root).filter { StoreBar.isChip(it) }
         assertEquals("the Store's filter is not four shared chips", 4, storeChips.size)
         val storeButtonLook = look(barButtons.first())
         val storeChipLook = look(storeChips.first())
@@ -107,7 +107,7 @@ class StoreSharedControlsTest {
         val tools = tagged(root, AppsMesh.TAG_TOOL)
         assertEquals("$where tools", decl.toolRows.flatten().sorted(), tools.map { (it.tag as String).removePrefix(AppsMesh.TAG_TOOL) }.sorted())
         for (t in tools) {
-            assertTrue("$where tool ${t.tag} is not the shared button", t is StoreControls.Button)
+            assertTrue("$where tool ${t.tag} is not the shared button", StoreBar.isButton(t))
             assertEquals("$where tool ${t.tag} does not look like the Store's buttons",
                 buttonLook.substringBefore(" r"), look(t).substringBefore(" r"))
             assertEquals(buttonLook.substringAfter(" r"), look(t).substringAfter(" r"))
@@ -118,13 +118,13 @@ class StoreSharedControlsTest {
         for (app in fleet) for (a in actions)
             assertTrue("$where: ${app.id} has no '$a' button",
                 rowButtons.any { it.tag == "${AppsMesh.TAG_ACTION}$a:${app.id}" })
-        assertTrue("$where: a member's row button is not the shared button", rowButtons.all { it is StoreControls.Button })
+        assertTrue("$where: a member's row button is not the shared button", rowButtons.all { StoreBar.isButton(it) })
         assertEquals("$where: Store row offered where there is no Store", hasStore, rowButtons.any { (it.tag as String).startsWith("${AppsMesh.TAG_ACTION}store:") })
         assertEquals(buttonLook, look(rowButtons.first()))
         // filter chips: the declared five, the shared chip, with a count, looking like the Store's filter
         val chips = tagged(root, AppsMesh.TAG_FILTER)
         assertEquals("$where chips", AppsMesh.FILTERS, chips.map { (it.tag as String).removePrefix(AppsMesh.TAG_FILTER) })
-        assertTrue("$where: a filter chip is not the shared chip", chips.all { it is StoreControls.Chip })
+        assertTrue("$where: a filter chip is not the shared chip", chips.all { StoreBar.isChip(it) })
         assertTrue("$where: a chip carries no count", chips.all { Regex("\\(\\d+\\)$").containsMatchIn((it as TextView).text) })
         assertEquals(chipLook, look(chips.first()))
         // static first: every member's card is on the page before any probe answered
@@ -137,13 +137,14 @@ class StoreSharedControlsTest {
     fun `control - a TextView painted like the button is not the shared component`() {
         // the class check above discriminates: a look-alike fails it
         val style = StoreControls.load(ctx).action
-        val real = StoreControls.button(ctx, style, "x", 0, {})
-        val fake = TextView(ctx).apply { background = real.background; textSize = 12f }
-        assertTrue(real is StoreControls.Button)
-        assertFalse(fake is StoreControls.Button)
+        val real = StoreBar.button(ctx, style, "x", 0, {})
+        val fake = TextView(ctx).apply { background = real.background; textSize = 12f; tag = real.tag }
+        assertTrue(StoreBar.isButton(real))
+        assertFalse(StoreBar.isButton(fake))
+        assertFalse("a button reads as a chip", StoreBar.isChip(real))
         // and a disabled verb is still the shared button, drawn dimmed
-        val off = StoreControls.button(ctx, style, "x", 0, null)
-        assertFalse(off.isEnabled); assertTrue(off.alpha < 1f)
+        val off = StoreBar.button(ctx, style, "x", 0, null)
+        assertTrue(StoreBar.isButton(off)); assertFalse(off.isEnabled); assertTrue(off.alpha < 1f)
         // Base64 of the baked fleet is what both pages draw from
         assertTrue(String(Base64.decode(b64, Base64.DEFAULT)).contains("\"apps\""))
     }

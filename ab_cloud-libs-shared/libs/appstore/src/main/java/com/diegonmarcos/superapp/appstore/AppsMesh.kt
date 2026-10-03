@@ -39,7 +39,7 @@ import org.json.JSONObject
  *     member, and Export endpoints: the whole fleet's [catalogue] as JSON —
  *     the same body the SuperApp serves at /api/fleet/endpoints
  *   - #793 the Store's OWN controls: every tool and every member's row of
- *     buttons is [StoreControls.button], the filter chips [StoreControls.chip];
+ *     buttons is [StoreBar.button], the filter chips [StoreBar.chip];
  *     filters ([FILTERS]) with counts; drawn at once from the roster and the
  *     last cached probe ([readCache]), then filled member by member as
  *     [StoreMesh.probeEach] returns; endpoints fetched only when a row's Docs
@@ -449,7 +449,7 @@ object AppsMesh {
 
         var drawn: StoreMesh.Drawn? = null
         val rows = HashMap<String, View>()
-        val chipViews = LinkedHashMap<String, StoreControls.Chip>()
+        val chipViews = LinkedHashMap<String, TextView>()
         val onLink = { app: Fleet.App -> onStore?.invoke(app); Unit }
         fun shown() = live?.let { withDocs(it, docs) }
         fun saved() { live?.let { writeCache(appCtx, Cached(at, withDocs(it, docs), HashMap(docsAt))) } }
@@ -471,7 +471,7 @@ object AppsMesh {
             val n = counts(fleet, links, live)
             for (f in decl.filters) chipViews[f.id]?.let { c ->
                 c.text = "${f.label} (${n[f.id] ?: 0})"
-                StoreControls.paint(c, f.id == filter)
+                StoreBar.paint(c, f.id == filter)
             }
         }
         lateinit var reprobe: (Fleet.App) -> Unit
@@ -484,7 +484,7 @@ object AppsMesh {
             val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() })
             val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
             for (a in actionsFor(decl, onStore != null))
-                buttons.addView(StoreControls.button(ctx, looks.action, a.label, a.color) {
+                buttons.addView(StoreBar.button(ctx, looks.action, a.label, a.color) {
                     act(host, a.id, app, links, live, onStore, row)
                 }.apply { tag = "$TAG_ACTION${a.id}:${app.id}" })
             box.addView(buttons); box.addView(panel)
@@ -505,7 +505,7 @@ object AppsMesh {
         }
 
         for ((i, f) in decl.filters.withIndex())
-            chipViews[f.id] = StoreControls.chip(ctx, looks.filter, f.label, i == 0) {
+            chipViews[f.id] = StoreBar.chip(ctx, looks.filter, f.label, i == 0) {
                 if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply(); paintChips(); applyFilter() }
             }.apply { tag = TAG_FILTER + f.id }.also { chips.addView(it) }
 
@@ -560,7 +560,7 @@ object AppsMesh {
         for (ids in decl.toolRows) {
             val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
             for (id in ids) handlers[id]?.let { h ->
-                row.addView(StoreControls.button(ctx, looks.action, decl.tool(id), decl.toolColor(id), h).apply { tag = TAG_TOOL + id })
+                row.addView(StoreBar.button(ctx, looks.action, decl.tool(id), decl.toolColor(id), h).apply { tag = TAG_TOOL + id })
             }
             tools.addView(row)
         }
@@ -663,12 +663,12 @@ object AppsMesh {
             override fun afterTextChanged(s: android.text.Editable?) { members.forEach { fill(it) } }
         })
         fun now() = withDocs(live, docs)
-        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("copy"), decl.toolColor("copy")) {
+        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("copy"), decl.toolColor("copy")) {
             copy(ctx, markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:copy" })
-        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("json"), decl.toolColor("json")) {
+        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("json"), decl.toolColor("json")) {
             share(host, "Apps Mesh endpoints", "application/json",
                 catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) }.apply { tag = TAG_TOOL + "all:json" })
-        actions.addView(StoreControls.button(ctx, looks.action, decl.tool("markdown"), decl.toolColor("markdown")) {
+        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("markdown"), decl.toolColor("markdown")) {
             share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:markdown" })
 
         AlertDialog.Builder(ctx).setTitle(decl.word("title"))

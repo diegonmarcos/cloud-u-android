@@ -2,7 +2,9 @@ package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.provider.Settings
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -167,8 +169,56 @@ object StoreBar {
         text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
     }
 
-    /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable.
-     *  #793 the shared [StoreControls.button] in the declared action style. */
+    /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable. */
     private fun btn(ctx: Context, item: Item, label: String, bg: Int, onClick: (() -> Unit)?) =
-        StoreControls.button(ctx, StoreControls.load(ctx).action, label, bg, onClick).apply { tag = item }
+        button(ctx, StoreControls.load(ctx).action, label, bg, onClick).apply { tag = item }
+
+    // ── #793 THE Store's action button and filter chip ────────────────────────
+    // This bar's button is the Store's action button: every Store app row
+    // (StoreCloudFragment.btn), the Store's filter chips, and every Apps Mesh
+    // tool, member row button and filter chip are drawn by these two builders,
+    // in the styles appstore-controls.json declares (`action`, `filter_style`).
+    // Each view they draw is marked under R.id.store_control, so a test can tell
+    // the shared component from a TextView merely painted to look like it.
+
+    const val BUTTON = "store-control:button"
+
+    fun isButton(v: View) = v.getTag(R.id.store_control) == BUTTON
+    fun isChip(v: View) = v.getTag(R.id.store_control) is StoreControls.Style
+
+    /** The action button: [style] in [fill], the verb's own colour; weight 1, so
+     *  a row of them shares its width. Null [onClick] = drawn, dimmed, inert. */
+    fun button(ctx: Context, style: StoreControls.Style, label: String, fill: Int?, onClick: (() -> Unit)?) = TextView(ctx).apply {
+        setTag(R.id.store_control, BUTTON)
+        text = label; gravity = Gravity.CENTER; textSize = 12f
+        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
+        setTextColor(style.text)
+        background = StoreControls.background(ctx, style, false, if (onClick != null) fill else DISABLED)
+        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            .apply { setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)) }
+        isEnabled = onClick != null
+        if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
+    }
+
+    /** One filter chip of a row that partitions a list; [paint] draws it on or
+     *  off. [first] has no leading gap. It carries its style under its mark, so
+     *  its plain tag stays free for the page that draws it. */
+    fun chip(ctx: Context, style: StoreControls.Style, label: String, first: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
+        setTag(R.id.store_control, style)
+        text = label; textSize = 11f; gravity = Gravity.CENTER; maxLines = 1
+        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        setPadding(dp(ctx, 6), dp(ctx, 6), dp(ctx, 6), dp(ctx, 6))
+        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            .apply { setMargins(if (first) 0 else dp(ctx, 4), 0, 0, 0) }
+        isClickable = true; setOnClickListener { onClick() }
+    }
+
+    fun paint(chip: TextView, active: Boolean) {
+        val style = chip.getTag(R.id.store_control) as StoreControls.Style
+        chip.background = StoreControls.background(chip.context, style, active)
+        chip.setTextColor(if (active) style.textActive else style.text)
+    }
+
+    private const val DISABLED = 0xFF3A3A44.toInt()
 }

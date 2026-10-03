@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #793 the key StoreBar.button / StoreBar.chip mark the views they draw
+         with, so a test can tell the Store's shared control from a look-alike. -->
+    <item name="store_control" type="id" />
+</resources>

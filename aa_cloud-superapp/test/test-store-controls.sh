@@ -88,13 +88,13 @@ printf '%s' "$PAINT" | grep -qF 'StoreControls.background(t.context, style, on)'
   && ok "paintTabs builds each background from that button's declared style" \
   || bad "paintTabs paints without the declared style"
 printf '%s' "$BTN" | grep -qF 'val style = controls.action' \
-  && printf '%s' "$BTN" | grep -qF 'StoreControls.button(ctx, style, label, bg, onClick)' \
-  && ok "btn() wears the declared action style in its verb's colour (#793 via the shared StoreControls.button)" \
+  && printf '%s' "$BTN" | grep -qF 'StoreBar.button(ctx, style, label, bg, onClick)' \
+  && ok "btn() wears the declared action style in its verb's colour (#793 via the shared StoreBar.button)" \
   || bad "btn() ignores the action style"
-SB="$(awk '/fun button\(/{f=1} f{print} f && /^    }$/{exit}' "$CTRL")"
+SB="$(awk '/fun button\(/{f=1} f{print} f && /^    }$/{exit}' "$(dirname "$CTRL")/StoreBar.kt")"
 printf '%s' "$SB" | grep -qF 'background = StoreControls.background(ctx, style, false,' \
-  && ok "StoreControls.button builds its background from the style it is given" \
-  || bad "StoreControls.button ignores the declared style"
+  && ok "StoreBar.button builds its background from the style it is given" \
+  || bad "StoreBar.button ignores the declared style"
 [ "$(jq -r '.filter_style' "$DECL")" = "tab" ] && ok "filter chips wear 'tab' (they select a subset)" \
   || bad "filter_style is not 'tab' - a filter chip would be a fourth look"
 BG="$(awk '/fun background\(/{f=1} f{print} f && /^    }$/{exit}' "$CTRL")"
