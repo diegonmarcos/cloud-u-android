@@ -6,22 +6,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * #792 the port table every member binds from, as this build baked it, and the
- * fallback that must never land in a sibling's slot. Pure JVM.
+ * #792 the port slice this build baked, and the fallback that must never land
+ * in a sibling's slot. Pure JVM. #796: the slice holds this root's own
+ * package(s) (the whole fleet only in the SuperApp), and the fallback is a
+ * declared sub-range no package is assigned, so the checks are on the slice's
+ * consistency with the range, not on fleet-wide headroom (the ports guard
+ * holds that against the one table).
  */
 class AppDebugServerPortsTest {
 
     @Test
-    fun theBakedTableIsUniqueAndInsideTheRange() {
+    fun theBakedSliceIsUniqueInsideTheRangeAndOutsideTheFallback() {
         val ports = AppDebugServer.PORTS
-        assertTrue("debug-ports.json baked an empty table", ports.isNotEmpty())
+        assertTrue("debug-api.json baked an empty slice", ports.isNotEmpty())
         assertEquals("two packages share a port", ports.size, ports.values.toSet().size)
+        assertTrue("fallback ${AppDebugServer.FALLBACK_FIRST}..${AppDebugServer.FALLBACK_LAST} is not inside the range",
+            AppDebugServer.PORT_FIRST <= AppDebugServer.FALLBACK_FIRST &&
+                AppDebugServer.FALLBACK_FIRST <= AppDebugServer.FALLBACK_LAST &&
+                AppDebugServer.FALLBACK_LAST <= AppDebugServer.PORT_LAST)
         ports.forEach { (pkg, p) ->
             assertTrue("$pkg :$p is outside the range", p in AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
+            assertFalse("$pkg :$p is inside the fallback sub-range", p in AppDebugServer.FALLBACK_FIRST..AppDebugServer.FALLBACK_LAST)
         }
-        // The headroom: every member could fall back at once and still find a port.
-        val free = AppDebugServer.fallbackPorts(AppDebugServer.PORT_FIRST, AppDebugServer.PORT_LAST, ports.values)
-        assertTrue("only ${free.size} unowned ports for ${ports.size} members", free.size >= ports.size)
+        // The fallback scan never offers an owned port, so it is the whole sub-range here.
+        val free = AppDebugServer.fallbackPorts(AppDebugServer.FALLBACK_FIRST, AppDebugServer.FALLBACK_LAST, ports.values)
+        assertEquals((AppDebugServer.FALLBACK_FIRST..AppDebugServer.FALLBACK_LAST).toList(), free)
     }
 
     @Test

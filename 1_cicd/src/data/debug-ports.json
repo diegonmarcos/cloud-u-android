@@ -1,8 +1,17 @@
 {
-  "_doc": "#792 THE debug-API port of every constellation package, ONE declaration. AppDebugServer (libs:devtools) binds the port named here for its own applicationId; build.gradle bakes this file into BuildConfig.DEBUG_PORTS so every app, the Store's Apps Mesh probe and /api/fleet/endpoints read the same table. It replaced a first-free scan of 38090-38139: fifty ports for sixty mesh members, so whichever members woke last found nothing free and answered nowhere (16 NO_DEBUG_API on the S21+, 2026-10-03). Ports are FIXED per package and never reused: append a new package at the next free number, never renumber (an APK built before the change still binds the old number until it is updated). `range` bounds the whole facility; every port in it that no package owns is the fallback a member scans when a foreign process holds its own port. 38090-38139 is deliberately left unassigned: builds from before #792 still take first-free there, so assigning those numbers would make every such leftover a collision. 1_cicd/src/scripts/cloud-android-debug-ports-guard.py holds: every constellation-fleet.json package has exactly one port, ports are unique and inside range, and the unassigned headroom can absorb every member falling back.",
+  "_doc": "#792 THE debug-API port of every constellation package, ONE declaration. #796 moved it out of libs/devtools: there it was a compile input of all 32 apps, so assigning one new package's port rebuilt and republished the whole fleet (run of 2b6f155b4, 2026-10-03). Now every gradle root that compiles libs:devtools gets a GENERATED slice beside its build.json, <root>/debug-api.json (cloud-android-mesh-slices-gen.py, run by ./build.sh workflow and checked by generated-up-to-date): exactly its own package(s), `range` and `fallback`. An app's bytes depend on its slice, which is in its own tree and in its publish identity, so an edit here rebuilds exactly the roots whose slice changed. AppDebugServer binds the port named for its own applicationId, and only when a foreign process holds it falls back into `fallback`, a sub-range no package is ever assigned, so a fallback can never land in a sibling's slot. The roots named in `full_table_for` bake the WHOLE table: the Store's Apps Mesh probe pings every member's assigned port. Ports are FIXED per package and never reused: append a new package at the next free number below `fallback`, never renumber (an APK built before the change still binds the old number until it is updated). 38090-38139 is deliberately left unassigned: builds from before #792 still take first-free there, so assigning those numbers would make every such leftover a collision. 1_cicd/src/scripts/cloud-android-debug-ports-guard.py holds: every constellation-fleet.json package has exactly one port, ports are unique, inside `range` and outside `fallback`, `fallback` can absorb every member falling back at once, and every slice on disk is what the generator produces.",
   "range": [
     38090,
     38389
+  ],
+  "_doc_fallback": "The ports a member may take when its own is held: never assigned to a package, so a fallback cannot push a sibling off its slot. Sized to absorb every owned port at once (guard P3).",
+  "fallback": [
+    38300,
+    38389
+  ],
+  "_doc_full_table_for": "Packages whose gradle root bakes the whole table instead of its own slice: the SuperApp's Apps Mesh probe (libs:appstore StoreMesh/AppsMesh) pings every fleet member's assigned port.",
+  "full_table_for": [
+    "com.diegonmarcos.superapp"
   ],
   "ports": {
     "com.diegonmarcos.superapp": 38140,

@@ -69,3 +69,11 @@ jobs:
 
       - name: Every fleet package owns a unique debug port, with headroom
         run: python3 1_cicd/src/scripts/cloud-android-debug-ports-guard.py .
+
+      # #796: what one change REBUILDS (publish gates, not triggers) is held to
+      # 1_cicd/src/data/rebuild-scenarios.json both ways. Here and not in a
+      # path-filtered guard: the edit that widens a fan-out can be anywhere —
+      # a lib newly compiled into an app, a build.json module map, a slice that
+      # stopped being per-root — which is this guard's every-push reason too.
+      - name: What one change rebuilds does not widen (#796 rebuild fan-out ratchet)
+        run: bash 1_cicd/src/scripts/test/rebuild-fanout.test.sh

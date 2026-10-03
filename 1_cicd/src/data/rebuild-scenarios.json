@@ -1,0 +1,140 @@
+{
+  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB.",
+  "scenarios": [
+    {
+      "id": "libs/core (one source file)",
+      "files": [
+        "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
+      ],
+      "expect": {
+        "apps": 32,
+        "libs": 29,
+        "rootfs": 0,
+        "ship": 33
+      }
+    },
+    {
+      "id": "libs/devtools (one source file)",
+      "files": [
+        "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+      ],
+      "expect": {
+        "apps": 32,
+        "libs": 30,
+        "rootfs": 0,
+        "ship": 33
+      }
+    },
+    {
+      "id": "fleet-config manifest (one app's store)",
+      "files": [
+        "aa_cloud-superapp/app/src/main/assets/fleet-config.json"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "debug port table (one new package)",
+      "files": [
+        "1_cicd/src/data/debug-ports.json",
+        "aa_cloud-superapp/debug-api.json",
+        "ac_cloud-zz-new/debug-api.json"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "one app's port slice",
+      "files": [
+        "ac_cloud-news/debug-api.json"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "one engine: libs/news",
+      "files": [
+        "ab_cloud-libs-shared/libs/news/src/main/java/com/diegonmarcos/superapp/news/NewsEngine.kt"
+      ],
+      "expect": {
+        "apps": 0,
+        "libs": 1,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "one app: ac_cloud-news",
+      "files": [
+        "ac_cloud-news/app/src/main/java/com/diegonmarcos/cloudnews/MainActivity.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "rootfs declaration: termux rootfs.json",
+      "files": [
+        "ac_cloud-termux/rootfs/rootfs.json"
+      ],
+      "expect": {
+        "apps": 2,
+        "libs": 0,
+        "rootfs": 2,
+        "ship": 2
+      }
+    },
+    {
+      "id": "rootfs tester only: termux verify-rootfs.sh",
+      "files": [
+        "ac_cloud-termux/rootfs/verify-rootfs.sh"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1
+      }
+    },
+    {
+      "id": "terminal store tester only: pty-selftest.py",
+      "files": [
+        "ab_cloud-terminal-store/pty-selftest.py"
+      ],
+      "expect": {
+        "apps": 3,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 3
+      }
+    },
+    {
+      "id": "docs only",
+      "files": [
+        "README.md",
+        "a0_docs/eng-specs/x.md"
+      ],
+      "expect": {
+        "apps": 0,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 0
+      }
+    }
+  ]
+}

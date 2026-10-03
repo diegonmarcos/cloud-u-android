@@ -47,17 +47,35 @@ def diagReportUrl = (buildJson.diagnostics?.report_url ?: '')
 def diagTargetsB64 = groovy.json.JsonOutput.toJson(buildJson.diagnostics?.report_targets ?: [])
         .bytes.encodeBase64().toString()
 
-// #792 every package's fixed debug-API port, from the ONE table beside this
-// file (projectDir, not rootDir: it is the fleet's table, not the consuming
-// app's). A duplicate or out-of-range port fails the build here, because two
-// members baked onto one number is the exhaustion bug again in another shape.
-def debugPorts = new groovy.json.JsonSlurper().parse(new File(projectDir, 'debug-ports.json'))
-def (portFirst, portLast) = debugPorts.range
-def portTable = debugPorts.ports.findAll { !it.key.startsWith('_') }
+// #792 every package's fixed debug-API port. #796: read from THIS ROOT's slice
+// of the fleet table, <root>/debug-api.json beside the consuming build.json,
+// written by 1_cicd/src/scripts/cloud-android-mesh-slices-gen.py from the ONE
+// declaration 1_cicd/src/data/debug-ports.json (./build.sh workflow regenerates
+// it; generated-up-to-date fails when it is stale). The table used to sit in
+// this module and was baked whole into every app, so one new package's port
+// moved libs/devtools' tree sha and the publish gate rebuilt all 32 apps. A
+// slice carries the root's own package(s), the facility's `range` and the
+// `fallback` sub-range no package is ever assigned. A duplicate, out-of-range
+// or fallback-colliding port fails the build here, because two members baked
+// onto one number is the exhaustion bug again in another shape.
+def debugApiFile = new File(buildJsonFile.parentFile, 'debug-api.json')
+if (!debugApiFile.isFile()) {
+    throw new GradleException("libs:devtools: ${debugApiFile} is missing — run ./build.sh workflow " +
+        "(cloud-android-mesh-slices-gen.py writes it from 1_cicd/src/data/debug-ports.json)")
+}
+def debugApi = new groovy.json.JsonSlurper().parse(debugApiFile)
+def (portFirst, portLast) = debugApi.range
+def (fallbackFirst, fallbackLast) = debugApi.fallback
+if (fallbackFirst < portFirst || fallbackLast > portLast || fallbackFirst > fallbackLast) {
+    throw new GradleException("libs:devtools: ${debugApiFile} fallback ${fallbackFirst}..${fallbackLast} is not inside ${portFirst}..${portLast}")
+}
+def portTable = debugApi.ports.findAll { !it.key.startsWith('_') }
+if (portTable.isEmpty()) throw new GradleException("libs:devtools: ${debugApiFile} names no package — this root compiles the debug API for nobody")
 def portOwner = [:]
 portTable.each { pkg, p ->
-    if (p < portFirst || p > portLast) throw new GradleException("libs:devtools: debug-ports.json gives ${pkg} port ${p}, outside ${portFirst}..${portLast}")
-    if (portOwner.containsKey(p)) throw new GradleException("libs:devtools: debug-ports.json gives port ${p} to both ${portOwner[p]} and ${pkg}")
+    if (p < portFirst || p > portLast) throw new GradleException("libs:devtools: ${debugApiFile} gives ${pkg} port ${p}, outside ${portFirst}..${portLast}")
+    if (p >= fallbackFirst && p <= fallbackLast) throw new GradleException("libs:devtools: ${debugApiFile} gives ${pkg} port ${p}, inside the fallback sub-range ${fallbackFirst}..${fallbackLast} that no package may own")
+    if (portOwner.containsKey(p)) throw new GradleException("libs:devtools: ${debugApiFile} gives port ${p} to both ${portOwner[p]} and ${pkg}")
     portOwner[p] = pkg
 }
 def portTableStr = portTable.collect { pkg, p -> "${pkg}=${p}" }.join(',')
@@ -74,6 +92,8 @@ android {
         buildConfigField "String", "DIAG_TARGETS_B64", "\"${diagTargetsB64}\""
         buildConfigField "int", "DEBUG_PORT_FIRST", "${portFirst}"
         buildConfigField "int", "DEBUG_PORT_LAST", "${portLast}"
+        buildConfigField "int", "DEBUG_FALLBACK_FIRST", "${fallbackFirst}"
+        buildConfigField "int", "DEBUG_FALLBACK_LAST", "${fallbackLast}"
         buildConfigField "String", "DEBUG_PORTS", "\"${portTableStr}\""
     }
 

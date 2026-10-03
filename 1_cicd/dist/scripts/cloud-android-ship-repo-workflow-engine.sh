@@ -214,6 +214,14 @@ PYRENDER
 log_step "inject guard triggers"
 PYTHONDONTWRITEBYTECODE=1 python3 "$CICD_SRC/scripts/cloud-android-guard-triggers.py" inject "$CLOUD_ANDROID_ROOT" || exit 1
 
+# ── #796: each gradle root's slice of the fleet's debug-API port table ──
+# ONE declaration (1_cicd/src/data/debug-ports.json) → <root>/debug-api.json
+# for every root that compiles libs:devtools, read by its build.gradle. The
+# table itself is no longer a compile input of every app; generated-up-to-date
+# fails when a slice on disk is not what the table produces.
+log_step "debug-api.json slices"
+PYTHONDONTWRITEBYTECODE=1 python3 "$CICD_SRC/scripts/cloud-android-mesh-slices-gen.py" "$CLOUD_ANDROID_ROOT" || exit 1
+
 log_step "sync workflow triggers"
 python3 - "$CLOUD_ANDROID_ROOT" <<'PYEOF' || exit 1
 import glob, json, os, re, sys

@@ -819,7 +819,7 @@
    "class": "device",
    "doc": "Health Connect snapshots, history and source last-seen; cache of device data.",
    "used_by": [
-    "lib-core"
+    "lib-health"
    ]
   },
   "home_swipe_prefs": {

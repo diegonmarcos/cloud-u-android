@@ -49,13 +49,16 @@ import java.util.concurrent.atomic.AtomicBoolean
  * unused: SuperApp mints it, siblings adopt it over a signature-guarded
  * provider, and the human reads it once from Configs → About.
  *
- * Port: #792 each package's OWN fixed port from libs/devtools/debug-ports.json
- * ([PORTS], baked by build.gradle), so port→app is known before anything is
+ * Port: #792 each package's OWN fixed port from the fleet table
+ * 1_cicd/src/data/debug-ports.json, so port→app is known before anything is
  * probed. It used to be the first free port in a 50-port range, and with sixty
  * mesh members the last ones to wake found nothing free and served nowhere.
  * Only when a foreign process holds the assigned port does a member scan, and
- * then only ports NO package owns, so one collision cannot cascade into the
- * next member's slot.
+ * then only [FALLBACK_FIRST]..[FALLBACK_LAST], a sub-range NO package is ever
+ * assigned, so one collision cannot cascade into the next member's slot.
+ * #796: build.gradle bakes this root's SLICE of the table ([PORTS]: its own
+ * package(s); the SuperApp, which probes everyone, bakes it whole), so a new
+ * member's port no longer rebuilds every app.
  */
 object AppDebugServer {
     private const val TAG = "AppDebugServer"
@@ -67,7 +70,14 @@ object AppDebugServer {
     val PORT_FIRST: Int = BuildConfig.DEBUG_PORT_FIRST
     val PORT_LAST: Int = BuildConfig.DEBUG_PORT_LAST
 
-    /** #792 applicationId → its assigned port, the whole fleet's table. */
+    /** #796 the sub-range a member scans when its own port is held: inside the
+     *  range, never assigned to any package. Declared in the table so a build
+     *  that knows only its own port still cannot land on a sibling's. */
+    val FALLBACK_FIRST: Int = BuildConfig.DEBUG_FALLBACK_FIRST
+    val FALLBACK_LAST: Int = BuildConfig.DEBUG_FALLBACK_LAST
+
+    /** #792 applicationId → its assigned port: this build's slice of the table
+     *  (#796) — its own package(s), or the whole fleet in the SuperApp. */
     val PORTS: Map<String, Int> by lazy { parsePorts(BuildConfig.DEBUG_PORTS) }
 
     /** `pkg=port,pkg=port` (BuildConfig cannot hold a map) → map. */
@@ -80,9 +90,10 @@ object AppDebugServer {
     /** The port [pkg] binds, or null for a package the table does not name. */
     fun portOf(pkg: String): Int? = PORTS[pkg]
 
-    /** #792 the ports a member may take when its own is held: every port in
-     *  range that no package owns, so a fallback never lands in a sibling's
-     *  slot and pushes THAT member into a fallback of its own. */
+    /** #792 the ports a member may take when its own is held: [first]..[last]
+     *  minus [owned] — called with the fallback sub-range, which no package
+     *  owns, so a fallback never lands in a sibling's slot and pushes THAT
+     *  member into a fallback of its own. */
     internal fun fallbackPorts(first: Int, last: Int, owned: Collection<Int>): List<Int> {
         val taken = owned.toHashSet()
         return (first..last).filter { it !in taken }
@@ -221,7 +232,7 @@ object AppDebugServer {
         if (!running.compareAndSet(false, true)) return
         val sock = bindOwn(app.packageName)
         if (sock == null) {
-            Log.w(TAG, "no port bound in $PORT_FIRST..$PORT_LAST — not starting (last error: $lastBindError)")
+            Log.w(TAG, "no port bound: own ${portOf(app.packageName) ?: "unassigned"} and fallback $FALLBACK_FIRST..$FALLBACK_LAST all held — not starting (last error: $lastBindError)")
             running.set(false)
             return
         }
@@ -266,7 +277,7 @@ object AppDebugServer {
         } else {
             Log.w(TAG, "$pkg has no port in debug-ports.json — falling back to an unowned port")
         }
-        for (p in fallbackPorts(PORT_FIRST, PORT_LAST, PORTS.values)) {
+        for (p in fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST, PORTS.values)) {
             val s = tryBind(p) ?: continue
             bindNote = if (own == null) "no assigned port for $pkg in debug-ports.json; took unowned :$p"
                 else "assigned :$own was held ($ownError); took unowned :$p"
@@ -473,7 +484,7 @@ object AppDebugServer {
         append(""""auth":"Bearer <fleet token> — one token for the whole fleet, """)
         append("""shown in SuperApp under Configs → About. /api/system/ping is open.",""")
         append(""""scan":"each package has a fixed port (libs:devtools debug-ports.json); a member whose """)
-        append("""port was held falls back elsewhere in $PORT_FIRST..$PORT_LAST, where /api/system/ping answers """)
+        append("""port was held falls back into $FALLBACK_FIRST..$FALLBACK_LAST, where /api/system/ping answers """)
         append("""'pong <applicationId>' unauthenticated",""")
         append(""""body":"a POST body (Content-Length, max $MAX_BODY_BYTES bytes, else 413) reaches an app route """)
         append("""as query param _body; _body in the query string is dropped",""")

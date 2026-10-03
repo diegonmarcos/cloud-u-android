@@ -135,7 +135,6 @@ Module `ac_c3-morpheus`; libs: lib-core, lib-devtools.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -151,7 +150,6 @@ Module `ac_c3-watchdog`; libs: lib-core, lib-devtools, lib-watchdog.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -167,7 +165,6 @@ Module `ac_c3-watchtower`; libs: lib-core, lib-devtools.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `watchtower_cache` | prefs | device | no | TTL cache of GitHub workflow-runs responses per repo (<owner>/<repo>/runs.ts/.body). |
 
@@ -185,7 +182,6 @@ Module `ac_cloud-agenda`; libs: lib-analytics, lib-core, lib-devtools, lib-updat
 | `caldav_secure_prefs` | encrypted | secret | yes | Agenda EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password). |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -207,7 +203,6 @@ Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devto
 | `browser_settings` | prefs | config | yes | Chosen default search engine id. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `tabs` | prefs | config (keys: active_url→device, defaults_seeded_v1→device) | yes | Browser tab groups/active URL are user state; defaults_seeded_v1 is a migration marker. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -226,7 +221,6 @@ Module `ac_cloud-c3-webserver`; libs: lib-core, lib-devtools.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -247,7 +241,6 @@ Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools
 | `dagu_prefs_fallback` | prefs | config (keys: bearer_token→secret) | yes | Plain-prefs fallback of dagu_prefs (same keys). |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `gh_feed_cache` | prefs | device | no | 15-minute TTL cache of GitHub commits/workflow-run feeds. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -269,7 +262,6 @@ Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtoo
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `cloud_sound` | prefs | config (keys: calibration_db→device) | yes | cloud-calc sound meter calibration_db, a4_hz, temperature_c user-set parameters. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -293,7 +285,6 @@ Module `ac_cloud-camera`; libs: lib-core, lib-devtools, lib-ml-l-image.
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `commons` | prefs | config (keys: last_captured_item_date_string→device, last_captured_item_type→device, last_captured_item_uri→device, previous_saf_trees→device, storage_location→device) | yes | cloud-camera shared settings (grid, flash, quality, timers, scan, geotag, sounds, aspect ratio); last captured item and storage URIs are device. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `voice_shutter` | prefs | config | yes | cloud-camera voice shutter on/off toggle ('enabled'). |
 
@@ -315,7 +306,6 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-devtools.
 | `VERSION_PREFERENCE` | prefs | device | no | Mattermost app-version marker that resets the notification cache on upgrade. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `secure_pdf_attempts` | encrypted | device | no | Mattermost secure PDF viewer wrong-password attempt counters (encrypted prefs); lockout state. |
 
@@ -337,7 +327,6 @@ Module `ac_cloud-code`; libs: lib-core, lib-devtools.
 | `acode_theme` | prefs | config | yes | Acode editor colour scheme (key per theme colour) written by System.java so the crash/launch screens match the chosen theme; a user theme choice. |
 | `ads` | encrypted | device | no | Acode RewardPassManager ad-reward pass state; per-install ad counters, not configuration. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -357,7 +346,6 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-dev
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -378,7 +366,6 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-core, lib-devtools.
 |---|---|---|---|---|
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -404,7 +391,6 @@ Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core,
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `git-sync-credentials` | encrypted | secret | yes | Encrypted git credentials (tokens/passwords/keys). |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `mounts-credentials` | encrypted | secret | yes | Encrypted mount passwords and key passphrases keyed by mount id. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -433,7 +419,6 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-core, lib-devtools, lib-key
 | `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device). |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -456,7 +441,6 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-ml-l-im
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |
 | `room:SternaDatabase` | room | content | no | Sterna Room mail cache (emails, mailboxes, bodies, FTS, local drafts, snooze); mirror of the server; migrate only the account. |
@@ -501,7 +485,6 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-devtools.
 | `datastore:session_<hash>_seen-invites` | datastore | device | no | Invites already seen; notification dedupe state. |
 | `datastore:vector_analytics` | datastore | config (keys: analytics_id→device, did_ask_user_consent→device) | GAP | Analytics opt-in consent choice (user_consent); analytics_id and did_ask_user_consent are device-local. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -563,7 +546,6 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools.
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled and the #787 wake_lock_wanted toggle; all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
@@ -587,7 +569,6 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-core, lib-devtools, lib-maps, li
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_nav_cockpit` | prefs | config | yes | cloud-nav cockpit selected mode id ('mode'); a user layout choice. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `maps_api_keys` | prefs | secret | yes | Per-provider map API keys (key_<providerId>). |
 | `maps_basemap_prefs` | prefs | config | yes | Basemap family, style key and 3D toggle. |
 | `maps_demo_prefs` | prefs | device | no | Demo-data seeded signature marker. |
@@ -616,7 +597,6 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-devtools, lib-updater
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `news_bridge` | prefs | device | no | News one-time 'seeded' flag for legacy saved-articles import. |
 | `news_legacy_saved` | prefs | content | no | News legacy saved-articles JSON read once and seeded into the engine; saved items are user data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -664,7 +644,6 @@ Module `ac_cloud-notes`; libs: lib-core, lib-devtools.
 | `datastore:affine` | datastore | device | no | AFFiNE generic key/value DataStore written by the web layer via a plugin (caches/state, no Kotlin-defined settings); not a curated config. |
 | `datastore:auth-sessions` | datastore | secret | GAP | AFFiNE per-server auth session cookies/tokens. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -695,7 +674,6 @@ Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-text-
 |---|---|---|---|---|
 | `cloud_search` | prefs | config (keys: q:*→device) | yes | Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). The last query per vertical (q:<vertical>) is device state. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -715,7 +693,6 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools.
 | `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
 | `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -745,7 +722,6 @@ Module `ac_cloud-vault`; libs: lib-core, lib-devtools.
 | `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device). |
 | `AppCenter` | prefs | device | no | Legacy Xamarin AppCenter prefs read once by LegacyAppCenterMigrator to carry old Bitwarden settings forward; migration source only. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:AuthenticatorDatabase` | room | content | no | Bitwarden Authenticator TOTP items stored locally; user data (secrets inside), migrate only via the vault account, never the bytes. |
 | `room:PasswordHistoryDatabase` | room | content | no | Bitwarden generator password history; user data kept locally, not migrated. |
@@ -771,7 +747,6 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devt
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -788,7 +763,6 @@ Module `ac_cloud-writer`; libs: lib-core, lib-devtools, lib-text-tools.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
-| `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target. |
 

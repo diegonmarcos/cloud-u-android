@@ -154,7 +154,8 @@ dependencies {
     }
     // #792 EVERY Cloud-Lib APK is a full mesh member: each flavor links libs:core
     // (CONSTELLATION_DATA defined + held, the fleet provider, MESH_MEMBER, the
-    // debug API on its own port from libs/devtools/debug-ports.json). It used to be
+    // debug API on its own port from 1_cicd/src/data/debug-ports.json, baked from
+    // this root's generated debug-api.json slice, #796). It used to be
     // only the flavors whose module happened to depend on core, so eighteen libs
     // (analytics, watchdog, webserver, voice, ...) shipped APKs the Store could
     // install but never wake, list or read a log from. Per-flavor, not per-module:
