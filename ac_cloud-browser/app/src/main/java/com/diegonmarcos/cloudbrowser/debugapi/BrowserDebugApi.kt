@@ -2,6 +2,7 @@ package com.diegonmarcos.cloudbrowser.debugapi
 
 import android.content.Context
 import com.diegonmarcos.cloudbrowser.BuildConfig
+import com.diegonmarcos.cloudbrowser.search.SearchAddon
 import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
 import com.diegonmarcos.superapp.browser.BrowserBookmarks
 import com.diegonmarcos.superapp.browser.BrowserBus
@@ -67,6 +68,10 @@ object BrowserDebugApi {
         Op("scraper/run", "css=<selector>&attr=<optional>&pages=<n>&next=<next-link selector>", "scrape the live page (and up to n pages through next) into a table"),
         Op("scraper/last", "", "the last scrape's table"),
         Op("scraper/remote", "url=<page>&css=<selector>", "ask scrappers-api (mesh) to crawl: its summary, or why not"),
+        Op("search/engines", "", "the Search add-on's engines: cloud-search's build.json::search.engines, verbatim"),
+        Op("search/open", "q=<query>&engine=<engine id, default the first>", "open the engine's results for q as a tab"),
+        Op("search/chat/sessions", "", "this run's AI chat sessions: id, title, model, turns"),
+        Op("search/chat/send", "text=<message>&session=<id, optional>&model=<optional>&web=<true|false>", "one AI chat turn (cloud-search's protocol, the fleet Account's token read per call and never answered)"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
@@ -213,6 +218,22 @@ object BrowserDebugApi {
                 else BrowserBus.call("scrape_run", q, timeoutMs = 120_000)
             "scraper/last" -> ScrapeEngine.last ?: JSONObject().put("ok", false).put("error", "nothing scraped yet")
             "scraper/remote" -> need(url, "url") ?: ScrapeRemote.crawl(config.addons["scraper"]?.config?.optJSONObject("remote"), url, q["css"])
+            "search/engines" -> SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).enginesJson()
+            "search/open" -> if (!config.addons.enabled("search", settings.stringSet("addons_enabled")))
+                JSONObject().put("ok", false).put("error", "the search add-on is off (addons/set?id=search&on=true)")
+                else need(q["q"].orEmpty(), "q") ?: run {
+                    val target = SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).searchUrl(q["q"].orEmpty(), q["engine"])
+                    if (target == null) JSONObject().put("ok", false).put("error", "engine must be one of ${SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).engines().map { it.id }}")
+                    else { tabs.add(target, target); tabs.setActive(target); BrowserBus.post(BrowserBus.OPEN + target); JSONObject().put("ok", true).put("url", target) }
+                }
+            "search/chat/sessions" -> SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).sessionsJson()
+            "search/chat/send" -> if (!config.addons.enabled("search", settings.stringSet("addons_enabled")))
+                JSONObject().put("ok", false).put("error", "the search add-on is off (addons/set?id=search&on=true)")
+                else need(q["text"].orEmpty(), "text") ?: SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).let { s ->
+                    s.outcomeJson(s.send(q["session"], q["text"].orEmpty(), q["model"], q["web"]?.lowercase() == "true") {
+                        SearchAddon.accountToken(app, s.cfg.ai.accountProvider)
+                    })
+                }
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

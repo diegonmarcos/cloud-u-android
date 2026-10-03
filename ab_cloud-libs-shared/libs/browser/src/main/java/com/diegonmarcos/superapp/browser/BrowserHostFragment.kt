@@ -692,6 +692,32 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
+    /** #802 I8 one query, one of cloud-search's engines (the Search add-on): its results open as a new tab. */
+    private fun showSearchWith() {
+        val engines = config.addons.searchEngines()
+        if (engines.isEmpty()) return toast("The Search add-on declares no engines")
+        val ctx = requireContext()
+        val input = suggestField(ctx, "")
+        input.hint = "Search for…"
+        var pick = 0
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle("Search with")
+            .setSingleChoiceItems(engines.map { it.label }.toTypedArray(), 0) { _, i -> pick = i }
+            .setView(input)
+            .setPositiveButton("Search") { _, _ ->
+                val q = input.text.toString().trim()
+                if (q.isNotEmpty()) openEntryUrl(BrowserSearch.searchUrl(q, engines[pick]))
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openEntryUrl(url: String) {
+        prefs.add(url, url)
+        prefs.setActive(url)
+        showDetail(url)
+    }
+
     /** The result line the scraper sheet shows; Compose state so a finished run redraws it. */
     private val scrapeResult = androidx.compose.runtime.mutableStateOf("")
 
@@ -990,6 +1016,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "profile" -> { showProfile(); done(ok()) }
             "addons_manage" -> { showAddons(); done(ok()) }
             "scraper" -> { showScraper(); done(ok()) }
+            "search_with" -> { showSearchWith(); done(ok()) }
             "scrape_run" -> {
                 wv ?: return needPage()
                 val sc = config.addons["scraper"]?.config ?: JSONObject()

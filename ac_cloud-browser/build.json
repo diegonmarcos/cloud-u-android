@@ -42,7 +42,9 @@
       "depends_on": [
         "libs:core",
         "libs:browser",
-        "libs:updater"
+        "libs:updater",
+        "libs:text-tools",
+        "search-core"
       ]
     },
     "libs:core": {
@@ -75,6 +77,11 @@
     "libs:text-tools": {
       "_doc_dir": "#802 shared BY REFERENCE: the text-tools contract client (thin binder). libs:browser's Translate page row calls it; disabled with its reason when no app serves it.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
+    },
+    "search-core": {
+      "_doc_dir": "#802 I8 shared BY REFERENCE: cloud-search's plain-JVM core (its build.json::search reader and the OpenRouter chat protocol). The browser's search/chat routes use it; nothing is copied. Its own suite and PIT run in cloud-search's CI (this app's unit task is scoped to :app).",
+      "dir": "../ac_cloud-search/core",
+      "type": "library"
     }
   },
   "ui": {
@@ -628,6 +635,25 @@
               "requires": [
                 "page"
               ]
+            }
+          ]
+        },
+        {
+          "id": "search",
+          "label": "Search",
+          "doc": "Cloud Search's engines open their results in a new tab; its AI chat answers over the fleet API with the fleet Account's OpenRouter token (read per call, never stored).",
+          "default_enabled": true,
+          "permissions": [
+            "network",
+            "ai_model"
+          ],
+          "engine": "device",
+          "_doc_config_from": "app/build.gradle copies ../ac_cloud-search/build.json::search.engines into this add-on's `engines` and bakes the whole search block as BuildConfig.SEARCH_CONFIG_B64: ONE declaration, cloud-search's. No engine URL or model is spelled here or in Kotlin.",
+          "config_from": "../ac_cloud-search/build.json::search",
+          "menu": [
+            {
+              "id": "search_with",
+              "label": "Search with…"
             }
           ]
         }

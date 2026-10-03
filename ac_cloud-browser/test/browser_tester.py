@@ -11,8 +11,9 @@ import json, os, shutil, sys, tempfile
 LIB = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser"
 APP = "ac_cloud-browser/app/src/main/java/com/diegonmarcos/cloudbrowser"
 MANIFEST = "aa_cloud-superapp/app/src/main/assets/fleet-config.json"
-# What a mutated copy needs: the app, the shared browser lib, the fleet manifest.
-COPY = ["ac_cloud-browser", "ab_cloud-libs-shared/libs/browser", MANIFEST]
+# What a mutated copy needs: the app, the shared browser lib, the fleet manifest, cloud-search's declaration.
+COPY = ["ac_cloud-browser", "ab_cloud-libs-shared/libs/browser", MANIFEST,
+        "ac_cloud-search/build.json"]  # #802 I8 the Search add-on's declaration
 SKIP = shutil.ignore_patterns("build", ".gradle", "dist", ".result")
 
 

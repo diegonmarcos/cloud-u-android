@@ -55,6 +55,11 @@ def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
 // Per-app browser content (pinned-on-first-run tabs, search engines).
 // libs:browser is shared by reference and its own defaults pin NOTHING,
 // so this block is the only thing that puts tabs in THIS app's browser.
+// #802 I8 the Search add-on reads cloud-search's declaration (its config_from), not a copy:
+// its engines join the add-on's block, and the whole search block is baked for the chat routes.
+def searchDecl = new groovy.json.JsonSlurper().parse(file('../../ac_cloud-search/build.json')).search
+(buildJson.ui.browser?.addons ?: []).findAll { it.id == 'search' }.each { it.engines = searchDecl.engines }
+def searchConfigB64 = b64(searchDecl)
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #802 the /api/<group>/* name this app's routes register under (cloud-search's shape).
 def debugGroup = (buildJson.ui?.debug_api?.group ?: '').toString()
@@ -189,6 +194,7 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_BROWSER_CONFIG_B64",      "\"${uiBrowserConfigB64}\""
+        buildConfigField "String", "SEARCH_CONFIG_B64",          "\"${searchConfigB64}\""
         buildConfigField "String", "DEBUG_API_GROUP",           "\"${debugGroup}\""
         buildConfigField "String", "AUTH_MISSION_B64",          "\"${authMissionB64}\""
         // #684 the manifest cannot read JSON; the declared action and signature permission are
@@ -248,6 +254,8 @@ dependencies {
     implementation project(':libs:core')
     implementation project(':libs:browser')
     implementation project(':libs:updater')
+    implementation project(':libs:text-tools')
+    implementation project(':search-core')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

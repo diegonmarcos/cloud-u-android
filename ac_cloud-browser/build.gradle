@@ -7,4 +7,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.20' apply false
     // #802 libs:browser draws its menu, settings and find bar in Compose (libs:ui-kit).
     id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
+    // #802 I8 search-core (../ac_cloud-search/core) is a plain-JVM module with PIT, linked by reference.
+    id 'org.jetbrains.kotlin.jvm'                  version '2.3.20' apply false
+    id 'info.solidsoft.pitest'                     version '1.19.0' apply false
 }

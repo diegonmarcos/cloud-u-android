@@ -35,6 +35,18 @@ class BrowserAddons(val all: List<BrowserAddon>) {
     fun enabled(id: String, enabledSet: Set<String>?): Boolean =
         (enabledSet ?: all.filter { it.defaultEnabled }.map { it.id }.toSet()).contains(id) && get(id) != null
 
+    /**
+     * #802 I8 the Search add-on's engines: its `engines` array, which the app's build copies from
+     * cloud-search's build.json (config_from). Empty when the add-on or the array is absent.
+     */
+    fun searchEngines(): List<BrowserSearchEngine> {
+        val arr = get("search")?.config?.optJSONArray("engines") ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.mapNotNull { e ->
+            val id = e.optString("id"); val url = e.optString("url")
+            if (id.isBlank() || BrowserSearchEngine.QUERY !in url) null else BrowserSearchEngine(id, e.optString("label", id), url)
+        }
+    }
+
     /** The facts the menu resolves add-on rows against. */
     fun facts(enabledSet: Set<String>?, installed: (String) -> Boolean): Map<String, Boolean> =
         all.associate { a ->
