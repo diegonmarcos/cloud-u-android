@@ -157,13 +157,59 @@ object FeedViewer {
         // sentence can still say the proxy failed too.
         // The bearer goes ONLY to the proxy: the public url is GitHub's, and the
         // fleet credential must never leave the fleet.
-        val proxy = feed.proxy ?: return read(feed.shape, feed.url, emptyMap())
+        val proxy = feed.proxy ?: return try {
+            read(feed.shape, feed.url, emptyMap()).also { note(feed, LEG_PUBLIC, it.size, null, null) }
+        } catch (direct: Exception) { note(feed, LEG_FAILED, 0, null, explain(direct)); throw direct }
         return try {
             val bearer = runCatching { fleetBearer() }.getOrDefault("").trim()
             read(feed.proxyShape, proxy, if (bearer.isEmpty()) emptyMap() else mapOf("Authorization" to "Bearer $bearer"))
+                .also { note(feed, LEG_PROXY, it.size, null, null) }
         } catch (viaProxy: Exception) {
-            try { read(feed.shape, feed.url, emptyMap()) } catch (direct: Exception) { direct.addSuppressed(viaProxy); throw direct }
+            val proxyWhy = explain(viaProxy)
+            try {
+                read(feed.shape, feed.url, emptyMap()).also { note(feed, LEG_FALLBACK, it.size, proxyWhy, null) }
+            } catch (direct: Exception) {
+                direct.addSuppressed(viaProxy); note(feed, LEG_FAILED, 0, proxyWhy, explain(direct)); throw direct
+            }
         }
+    }
+
+    // ── #841 which leg served each feed, for /api/store/feeds ───────────────
+
+    const val LEG_PROXY = "proxy"
+    const val LEG_FALLBACK = "github-fallback"
+    const val LEG_PUBLIC = "github"
+    const val LEG_FAILED = "failed"
+
+    /** The last [load] of one feed: the leg that answered, and why the proxy
+     *  was passed over. Messages come from [explain], which never carries the
+     *  bearer (it is only ever a request header). */
+    class Served(val leg: String, val entries: Int, val proxyError: String?, val error: String?, val at: Long)
+
+    private val served = java.util.concurrent.ConcurrentHashMap<String, Served>()
+
+    private fun note(feed: Feed, leg: String, n: Int, proxyError: String?, error: String?) {
+        served[feed.id] = Served(leg, n, proxyError, error, System.currentTimeMillis())
+    }
+
+    fun lastServed(id: String): Served? = served[id]
+
+    /** Every declared feed with its two urls and the last leg that served it
+     *  (null = not loaded since launch). Pure over [feeds] + [served]. */
+    fun servedJson(feeds: List<Feed>): org.json.JSONObject {
+        val arr = JSONArray()
+        for (f in feeds) {
+            val s = served[f.id]
+            arr.put(org.json.JSONObject().put("id", f.id).put("proxy", f.proxy ?: org.json.JSONObject.NULL)
+                .put("url", f.url)
+                .put("bearerSet", runCatching { fleetBearer() }.getOrDefault("").isNotBlank())
+                .put("last", s?.let {
+                    org.json.JSONObject().put("leg", it.leg).put("entries", it.entries)
+                        .put("proxyError", it.proxyError ?: org.json.JSONObject.NULL)
+                        .put("error", it.error ?: org.json.JSONObject.NULL).put("at", it.at)
+                } ?: org.json.JSONObject.NULL))
+        }
+        return org.json.JSONObject().put("ok", true).put("feeds", arr)
     }
 
     /** One url's entries. There is NO path from a failed read to an empty

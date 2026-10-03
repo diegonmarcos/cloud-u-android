@@ -63,6 +63,9 @@ object StoreDebugApi {
             AppDebugServer.Op("updateAll", "dryRun=1 (plan only) · offline=1 (no network)",
                 "install every cached newer build (no network), full chain for the rest online; per-app report"),
             AppDebugServer.Op("batch", "", "the report of the last real downloadAll / updateAll"),
+            AppDebugServer.Op("feeds", "load=1 (optional: re-read every feed now)",
+                "#841 Commits / CI-CD feeds: proxy + public url, bearer set (yes/no, never the value), and the " +
+                "leg that last served each (proxy | github-fallback | github | failed) with the proxy's error"),
             AppDebugServer.Op("progress", "",
                 "the Store bar's line now: app, version, stage, bytes/total, %, batch position, next, error"),
         )) { op, q -> route(app, op, q) }
@@ -107,8 +110,16 @@ object StoreDebugApi {
         "batch" -> (lastBatch(ctx) ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
         "auto" -> if (q["pkg"].isNullOrEmpty()) auto(ctx, q["run"] == "1").toString() else verb(ctx, q)
         "progress" -> progress().toString()
+        "feeds" -> feeds(ctx, q["load"] == "1").toString()
         "stage", "download", "install", "clear" -> verb(ctx, q, op)
         else -> null
+    }
+
+    /** #841 which leg (fleet git-proxy or GitHub fallback) served each feed. */
+    private fun feeds(ctx: Context, load: Boolean): JSONObject {
+        val feeds = FeedViewer.feeds(ctx)
+        if (load) feeds.forEach { f -> runCatching { FeedViewer.load(f) } }
+        return FeedViewer.servedJson(feeds)
     }
 
     private fun verb(ctx: Context, q: Map<String, String>, op: String = "auto"): String {

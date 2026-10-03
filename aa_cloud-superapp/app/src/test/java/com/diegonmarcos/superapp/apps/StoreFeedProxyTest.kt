@@ -163,4 +163,25 @@ class StoreFeedProxyTest {
             }
         }
     }
+
+    @Test fun `the feeds debug record names the leg that served each feed, never the bearer`() {
+        val hits = Collections.synchronizedList(mutableListOf<Hit>())
+        val e401 = """{"error":"authorization required","code":"missing_authorization"}"""
+        server(hits, mapOf(CP to (401 to e401), GC to (200 to ghCommits), RP to (200 to proxyRuns))).use { ss ->
+            FeedViewer.fleetBearer = { "tok-test" }
+            val feeds = feedsAt(ss.localPort)
+            feeds.forEach { FeedViewer.load(it) }
+            assertEquals(FeedViewer.LEG_FALLBACK, FeedViewer.lastServed("commits")!!.leg)
+            assertTrue(FeedViewer.lastServed("commits")!!.proxyError!!.contains("HTTP 401"))
+            assertEquals(FeedViewer.LEG_PROXY, FeedViewer.lastServed("cicd")!!.leg)
+            assertNull(FeedViewer.lastServed("cicd")!!.proxyError)
+            val j = FeedViewer.servedJson(feeds)
+            val text = j.toString()
+            assertFalse("no bearer in the debug record", text.contains("tok-"))
+            val byId = (0 until j.getJSONArray("feeds").length()).map { j.getJSONArray("feeds").getJSONObject(it) }.associateBy { it.getString("id") }
+            assertEquals("github-fallback", byId.getValue("commits").getJSONObject("last").getString("leg"))
+            assertEquals(1, byId.getValue("cicd").getJSONObject("last").getInt("entries"))
+            assertTrue(byId.getValue("cicd").getBoolean("bearerSet"))
+        }
+    }
 }
