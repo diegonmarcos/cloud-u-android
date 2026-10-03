@@ -846,7 +846,7 @@
         },
         {
           "id": "vault",
-          "label": "Cloud Vault",
+          "label": "Vault autofill",
           "doc": "Logins and cards are filled by Cloud Vault (the fleet's Bitwarden) through Android's autofill: this browser never holds a password. The add-on shows whether Cloud Vault is the autofill service, asks it to fill the focused login, and opens it.",
           "default_enabled": true,
           "permissions": [
