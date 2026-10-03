@@ -7,14 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -82,7 +79,6 @@ class ChatModel(private val services: Services) {
  * greeting and one box per declared engine (each opens that engine's own results in cloud-browser);
  * then the conversation. The Gemini-style input is pinned above the nav.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AssistantPage(v: SearchConfig.Vertical) {
     val state = LocalState.current
@@ -93,7 +89,7 @@ fun AssistantPage(v: SearchConfig.Vertical) {
     var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { state.services.models.models() } }
     // With the keyboard up the nav is gone (SearchShell), so the input sits right on the keyboard.
-    val bottom = if (WindowInsets.isImeVisible) Metrics.small else Metrics.contentBottom
+    val bottom = if (imeOpen()) Metrics.small else Metrics.contentBottom
     Column(Modifier.fillMaxSize().padding(top = Metrics.contentTop, bottom = bottom)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Metrics.gutter, vertical = Metrics.small), verticalAlignment = Alignment.CenterVertically) {
             Chip(stringResource(R.string.sessions), Tags.SESSIONS, icon = R.drawable.ph_list_dashes) { state.menu = Menu.SESSIONS }

@@ -1,6 +1,5 @@
 package com.diegonmarcos.cloudsearch.ui
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -126,7 +124,6 @@ object Tags {
     fun option(id: String) = "search_option_$id"
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchShell(state: SearchState) {
     CompositionLocalProvider(LocalState provides state) {
@@ -143,7 +140,7 @@ fun SearchShell(state: SearchState) {
                     }
                     TopBar(state, v, Modifier.align(Alignment.TopCenter))
                     // The keyboard takes the bottom of the screen; the nav returns when it closes.
-                    if (!WindowInsets.isImeVisible) BottomNav(
+                    if (!imeOpen()) BottomNav(
                         entries = state.cfg.verticals.map { NavEntry(it.id, it.label, it.icon) },
                         selected = if (state.saved) "" else state.vertical,
                         onSelect = { state.open(it) },

@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,8 +58,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -71,6 +75,14 @@ import com.diegonmarcos.cloudsearch.R
  * slideUp entrance), .filter-chip, .search-input, .sub-nav-btn, .bottom-nav, .overlay, .side-menu,
  * .profile-menu, .menu-item. Colours come from [LocalGlass], sizes from [Metrics] and [Type].
  */
+
+/**
+ * The keyboard is up. Read from the IME's bottom inset, NOT WindowInsets.isImeVisible: that one
+ * starts out true until the window first dispatches insets (and under Robolectric it never does),
+ * which hid the bottom nav from every test.
+ */
+@Composable
+fun imeOpen(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
 /** A Phosphor icon (res/drawable/ph_*), tinted. */
 @Composable
@@ -113,7 +125,7 @@ fun IconBtn(res: Int, description: String, tag: String, onClick: () -> Unit) {
 fun Island(icon: String, text: String, modifier: Modifier = Modifier) {
     val g = LocalGlass.current
     Row(
-        modifier.clip(RoundedCornerShape(Metrics.navRadius)).background(g.island)
+        modifier.semantics(mergeDescendants = true) {}.clip(RoundedCornerShape(Metrics.navRadius)).background(g.island)
             .defaultMinSize(minWidth = Metrics.islandMinWidth)
             .padding(horizontal = Metrics.islandPadH, vertical = Metrics.islandPadV),
         verticalAlignment = Alignment.CenterVertically,

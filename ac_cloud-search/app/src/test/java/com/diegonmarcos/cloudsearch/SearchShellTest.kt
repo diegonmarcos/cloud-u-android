@@ -224,7 +224,9 @@ class SearchShellTest {
         val house = SearchDebugApi.analysis(services, mapOf("v" to "house"))
         assertEquals("market", house.getString("kind"))
         assertEquals(Decl.config.vertical("house")!!.series.size, house.getJSONArray("sources").length())
-        assertEquals("error", house.getJSONArray("sources").getJSONObject(0).getString("state"))
+        val houseSources = (0 until house.getJSONArray("sources").length()).map { house.getJSONArray("sources").getJSONObject(it) }.associateBy { it.getString("id") }
+        assertEquals("ok", houseSources.getValue("bbk-mortgage-rate").getString("state"))
+        assertEquals("error", houseSources.getValue("eurostat-house-prices").getString("state"))
         assertEquals("jobs", SearchDebugApi.analysis(services, mapOf("v" to "jobs", "q" to "kotlin")).getString("kind"))
         assertFalse(SearchDebugApi.analysis(services, mapOf("v" to "nope")).getBoolean("ok"))
         val feed = SearchDebugApi.feed(services, mapOf("v" to "jobs"))
