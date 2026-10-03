@@ -78,6 +78,8 @@ class StoreAutoTest {
         }
     }.toByteArray()
 
+    @Volatile private var cancelOn: String? = null
+
     private fun gets(id: String) = gets["$id.apk"]?.get() ?: 0
     private fun totalGets() = gets.values.sumOf { it.get() }
 
@@ -97,6 +99,8 @@ class StoreAutoTest {
                 method == "HEAD" -> Triple(200, emptyMap(), body)
                 else -> {
                     events += "get:${name.removeSuffix(".apk")}"
+                    // #812 the user taps Cancel while this one is on the wire.
+                    if (name == "$cancelOn.apk") UpdateProgress.requestCancel()
                     gets.getOrPut(name) { AtomicInteger() }.incrementAndGet()
                     val range = headers["range"]
                     if (range != null) ranges += "$name $range"
@@ -492,9 +496,11 @@ class StoreAutoTest {
     @Test
     fun `812 Cancel stops the batch with the state persisted, and the next trigger resumes it`() {
         val apps = fleet()
-        StoreAuto.checkpoint = { p, i -> if (p == StoreAuto.DOWNLOAD && i == "lib2") UpdateProgress.requestCancel() }
+        // Cancel lands DURING lib2's transfer (a download start re-arms the
+        // flag, so a cancel before it is not the user's tap mid-batch).
+        cancelOn = "lib2"
         val first = StoreAuto.run(ctx, apps, StoreAuto.TRIGGER_WIFI)
-        StoreAuto.checkpoint = { _, _ -> }
+        cancelOn = null
         assertTrue(first.lastError.orEmpty(), first.lastError.orEmpty().contains("cancelled"))
         assertEquals("nothing installed after a Cancel", 0, events.count { it.startsWith("install:") })
         assertEquals(StoreAuto.DOWNLOAD, StoreAuto.load(ctx)!!.phase)
