@@ -54,7 +54,11 @@ jobs:
         if: steps.tag.outputs.skip != 'true'
         uses: DeterminateSystems/nix-installer-action@main
         with:
+          # upstream's activation package names the 24.05 proot by store path
+          # (modules/environment/login/default.nix); it is served from here.
           extra-conf: |
+            extra-substituters = https://nix-on-droid.cachix.org
+            extra-trusted-public-keys = nix-on-droid.cachix.org-1:56snoMJTXmDRC1Ei24CmKoUqvHJ9XCp+nidK7qkMQrU=
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Build bootstrap-${{ matrix.arch }}.zip
