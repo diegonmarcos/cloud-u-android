@@ -26,7 +26,20 @@ import kotlin.concurrent.thread
 object StoreDebugApi {
 
     @Volatile private var registered = false
-    @Volatile private var last: JSONObject? = null
+
+    /** #804 the last batch report is PERSISTED: a batch that ends by updating
+     *  the SuperApp kills the process that held it in a field (#784's was lost
+     *  on exactly that restart). commit(): the next thing may be that kill. */
+    private const val BATCH_PREFS = "store_batch"
+
+    fun lastBatch(ctx: Context): JSONObject? = runCatching {
+        ctx.getSharedPreferences(BATCH_PREFS, Context.MODE_PRIVATE).getString("last", null)?.let { JSONObject(it) }
+    }.getOrNull()
+
+    @android.annotation.SuppressLint("ApplySharedPref")
+    private fun keepBatch(ctx: Context, b: JSONObject) {
+        ctx.getSharedPreferences(BATCH_PREFS, Context.MODE_PRIVATE).edit().putString("last", b.toString()).commit()
+    }
 
     fun register(ctx: Context) {
         if (registered) return
@@ -42,7 +55,9 @@ object StoreDebugApi {
                 "download (if nothing installable is cached) → install → clear, in the background, " +
                 "stopping at the first stage that fails; poll stage"),
             AppDebugServer.Op("clear", "pkg=…", "stage 3: delete this app's cached APK(s)"),
-            AppDebugServer.Op("auto", "pkg=…", "same as install (kept for old callers)"),
+            AppDebugServer.Op("auto", "run=1 (optional: start / resume it now) · pkg=… (old alias of install)",
+                "#804 the auto chain: phase (refresh/download/install/clear/done), queue with each package's " +
+                "status, current package, last error — persisted, so it survives the app restarting"),
             AppDebugServer.Op("downloadAll", "dryRun=1 (plan only) · offline=1 (no network)",
                 "fetch every update / missing entry into the cache, install nothing; per-app report"),
             AppDebugServer.Op("updateAll", "dryRun=1 (plan only) · offline=1 (no network)",
@@ -79,16 +94,29 @@ object StoreDebugApi {
     private fun route(ctx: Context, op: String, q: Map<String, String>): String? = when (op) {
         "cache" -> cache(ctx, q["verify"] == "1").toString()
         "downloadAll", "updateAll" -> batch(ctx, op, q["dryRun"] == "1", q["offline"] != "1" && StoreStages.isOnline(ctx)).toString()
-        "batch" -> (last ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
+        "batch" -> (lastBatch(ctx) ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
+        "auto" -> if (q["pkg"].isNullOrEmpty()) auto(ctx, q["run"] == "1").toString() else verb(ctx, q)
         "progress" -> progress().toString()
-        "stage", "download", "install", "clear", "auto" -> {
-            val key = q["pkg"].orEmpty()
-            val app = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
-                .firstOrNull { it.pkg == key || it.id == key || it.altId == key }
-            if (app == null) JSONObject().put("ok", false).put("error", "no fleet entry for pkg='$key'").toString()
-            else verb(ctx, app, op, q["remote"] == "1").toString()
-        }
+        "stage", "download", "install", "clear" -> verb(ctx, q, op)
         else -> null
+    }
+
+    private fun verb(ctx: Context, q: Map<String, String>, op: String = "auto"): String {
+        val key = q["pkg"].orEmpty()
+        val app = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+            .firstOrNull { it.pkg == key || it.id == key || it.altId == key }
+        return if (app == null) JSONObject().put("ok", false).put("error", "no fleet entry for pkg='$key'").toString()
+        else verb(ctx, app, op, q["remote"] == "1").toString()
+    }
+
+    /** #804 [StoreAuto.json]; run=1 starts (or resumes) the chain in the
+     *  background, ungated by Wi-Fi — the caller asked. */
+    private fun auto(ctx: Context, run: Boolean): JSONObject {
+        if (run) thread(name = "store-api-auto") {
+            StoreAuto.run(ctx, Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64), StoreAuto.TRIGGER_API)
+        }
+        if (run) Thread.sleep(150)
+        return StoreAuto.json(ctx)
     }
 
     private fun verb(ctx: Context, app: Fleet.App, op: String, remote: Boolean): JSONObject {
@@ -112,7 +140,7 @@ object StoreDebugApi {
         fun run() = if (op == "downloadAll") StoreStages.downloadAll(ctx, fleet, online, dryRun)
                     else StoreStages.updateAll(ctx, fleet, online, dryRun)
         if (dryRun) return json(run())
-        thread(name = "store-api-$op") { last = json(run()) }
+        thread(name = "store-api-$op") { keepBatch(ctx, json(run())) }
         return JSONObject().put("ok", true).put("op", op).put("started", true).put("online", online)
             .put("poll", "store/batch")
     }

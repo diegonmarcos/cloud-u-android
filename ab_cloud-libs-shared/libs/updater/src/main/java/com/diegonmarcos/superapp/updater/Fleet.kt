@@ -914,13 +914,40 @@ object Fleet {
      * for the duration so nothing is drawn over whatever the user is doing.
      * Every event still goes to logcat under [TAG], ungated.
      */
+    /**
+     * #804 The host's persisted auto chain, when it has one. libs:appstore sets
+     * it (StoreAuto: refresh → Download ALL → install libs-then-apps → clear,
+     * resumable across process death) and both unattended workers keep calling
+     * [autoPass], so whichever wakes first runs the ONE chain. A host without
+     * the store keeps [runBatch]. libs:updater cannot name the store (appstore
+     * depends on updater), hence a seam — the same shape as [downgradePolicy].
+     */
+    @Volatile
+    var autoChain: ((Context, List<App>, String) -> Pass)? = null
+
+    /**
+     * #804 How many installs ONE unattended pass may start now: unbounded with a
+     * privileged shell channel (no session, nothing shown), 0 when there is none
+     * and the device opted out of prompting, else [BuildConfig.AU_MAX_PER_PASS]
+     * held to the PackageInstaller session headroom — the same three rules
+     * [installAllLocked] applies, for a caller that downloads everything first.
+     */
+    fun unattendedInstallBudget(ctx: Context): Int = when {
+        ensureShellChannel(ctx) != null -> Int.MAX_VALUE
+        AutoUpdatePrefs.requireSilent(ctx) -> 0
+        else -> minOf(BuildConfig.AU_MAX_PER_PASS, UpdateInstaller(ctx).freeSessionSlots())
+    }
+
     fun autoPass(ctx: Context, apps: List<App>, owner: String): Pass {
         // The cap exists for ONE reason: a SessionInstall leaves a
         // tap-to-confirm notification holding a PackageInstaller session until
         // the user answers it, and Android refuses new sessions past 50 per
         // UID. A shell install opens no session and shows nothing, so with a
         // privileged channel live there is nothing to cap.
-        val limit = if (silentCapable(ctx)) Int.MAX_VALUE else BuildConfig.AU_MAX_PER_PASS
+        // #804 the host's chain applies its own budget per install, after
+        // downloading everything — so no channel probe here when it has one.
+        val chain = autoChain
+        val limit = if (chain != null || silentCapable(ctx)) Int.MAX_VALUE else BuildConfig.AU_MAX_PER_PASS
         UpdateProgress.quiet = true
         // The same intent, PERSISTED, for the one consumer that cannot see the
         // field: PackageInstallerReceiver. Install results land tens of seconds
@@ -930,7 +957,7 @@ object Fleet {
         // appearing" that auto-update:ON is supposed to mean the absence of.
         AutoUpdatePrefs.setUnattendedPass(ctx, true)
         return try {
-            runBatch(ctx, apps, Mode.AUTO, limit, owner)
+            chain?.invoke(ctx, apps, owner) ?: runBatch(ctx, apps, Mode.AUTO, limit, owner)
         } finally {
             UpdateProgress.quiet = false
             AutoUpdatePrefs.setUnattendedPass(ctx, false)

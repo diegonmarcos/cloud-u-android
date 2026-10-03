@@ -234,8 +234,9 @@ object UpdateProgress {
 
     fun endJob() { job = null; republish() }
 
-    /** A job change with no state change still has to reach the inline rows. */
-    private fun republish() = observers.toList().forEach { it(state) }
+    /** A job change with no state change still has to reach the inline rows —
+     *  and so does a #804 auto-chain phase change (StoreAuto). */
+    fun republish() = observers.toList().forEach { it(state) }
 
     private var listener: ((State) -> Unit)? = null
 

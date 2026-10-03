@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -49,6 +50,10 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         }
         if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(applicationContext))
             return@withContext Result.success()
+        // #804 the pass below IS the persisted auto chain (Fleet.autoChain);
+        // attach is idempotent and makes that true in any process WorkManager wakes.
+        StoreAuto.attach(applicationContext) { c, t -> kick(c, t) }
+        val trigger = inputData.getString(KEY_TRIGGER) ?: StoreAuto.TRIGGER_PERIODIC
         // The metered decision the UNMETERED constraint used to make, made here
         // instead (same place UpdateWorker makes it). Deliberately a different
         // question: WorkManager's constraint asks the system default network,
@@ -74,7 +79,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             // longer disagree about either depending on who won the race.
             // Fleet.status catches its own per-app errors so one bad image
             // can't throw here (the old 'forever looping' bug).
-            val pass = Fleet.autoPass(applicationContext, fleet, owner = TAG)
+            val pass = Fleet.autoPass(applicationContext, fleet, owner = "$TAG:$trigger")
             // SILENT IS NOT QUIET. pass.reason always says what happened and,
             // when nothing happened, which of the three reasons it was:
             // nothing to do / no session slots / no privileged channel. The
@@ -136,6 +141,37 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         private const val WORK_NAME = "superapp-constellation-check"
         private const val KEY_INSTALLED = "store:updates_installed"
         private const val KEY_NO_CHANNEL = "store:needs_confirmation"
+        private const val KEY_TRIGGER = "trigger"
+
+        /** CONNECTED, never UNMETERED (see [start]); #804 and never on a nearly
+         *  full disk — Download all would only fail its storage check there. */
+        private fun constraints() = Constraints.Builder().apply {
+            setRequiredNetworkType(NetworkType.CONNECTED)
+            setRequiresStorageNotLow(true)
+            if (AuConfig.AU_REQUIRE_CHARGING) setRequiresCharging(true)
+        }.build()
+
+        private fun triggerData(trigger: String) = Data.Builder().putString(KEY_TRIGGER, trigger).build()
+
+        /**
+         * #804 Run the auto chain now for [trigger] (Wi-Fi appeared, the Store
+         * refreshed). KEEP: a kick already queued or running is this request
+         * being served. doWork gates it exactly like the periodic run — the
+         * toggle, the identity, Wi-Fi only.
+         */
+        fun kick(context: Context, trigger: String) {
+            // A screen calls this (the Store refresh): an uninitialised WorkManager
+            // must cost the trigger, never the screen.
+            runCatching {
+                if (!InstallIdentity.isManaged(context)) return
+                if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
+                val req = OneTimeWorkRequestBuilder<ConstellationWorker>()
+                    .setConstraints(constraints())
+                    .setInputData(triggerData(trigger))
+                    .build()
+                WorkManager.getInstance(context).enqueueUniqueWork("$WORK_NAME-kick", ExistingWorkPolicy.KEEP, req)
+            }.onFailure { Log.w(TAG, "auto chain kick ($trigger) not enqueued: ${it.message}") }
+        }
 
         /** Schedule the periodic fleet check. Idempotent. Call from App.onCreate. */
         fun start(context: Context) {
@@ -150,6 +186,10 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                 WorkManager.getInstance(context).cancelUniqueWork("$WORK_NAME-now")
                 return
             }
+            // #804 the persisted chain becomes THE unattended pass, and joining
+            // Wi-Fi becomes a trigger. Before the toggles: the network trigger
+            // gates itself (kick), and the chain must be the one any pass runs.
+            StoreAuto.attach(context) { c, t -> kick(c, t) }
             // Battery-hungry: a periodic GHCR network check. Gated by the
             // "Constellation update check" toggle (Configs → Launcher → Battery
             // Hunger Ones) in addition to the auto-update master switch. Off →
@@ -176,10 +216,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             // ENQUEUED with a constraint that was never going to be met. Run on
             // metered too and decide in doWork, where we can look at the ACTIVE
             // network instead.
-            val constraints = Constraints.Builder().apply {
-                setRequiredNetworkType(NetworkType.CONNECTED)
-                if (AuConfig.AU_REQUIRE_CHARGING) setRequiresCharging(true)
-            }.build()
+            val constraints = constraints()
             val request = PeriodicWorkRequestBuilder<ConstellationWorker>(
                 AuConfig.AUTO_UPDATE_INTERVAL_HOURS, TimeUnit.HOURS,
             ).setConstraints(constraints).build()
@@ -206,12 +243,9 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                 return
             }
             if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
-            val constraints = Constraints.Builder().apply {
-                setRequiredNetworkType(NetworkType.CONNECTED)
-                if (AuConfig.AU_REQUIRE_CHARGING) setRequiresCharging(true)
-            }.build()
             val req = OneTimeWorkRequestBuilder<ConstellationWorker>()
-                .setConstraints(constraints)
+                .setConstraints(constraints())
+                .setInputData(triggerData(StoreAuto.TRIGGER_APP_START))
                 .setInitialDelay(30, TimeUnit.SECONDS)
                 .build()
             // REPLACE (not KEEP): this kick is what a toggle-ON tap re-arms with.

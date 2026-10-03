@@ -36,7 +36,7 @@ src = {k: open(p, encoding="utf-8").read() for k, p in FILES.items()}
 
 def fun(t, name):
     """The body of `fun <name>(`, up to the next top-level member."""
-    m = re.search(r"\n    (?:private )?fun %s\(.*?(?=\n    (?:private |@|/\*\*|//|fun |class |const |val |var )|\Z)" % re.escape(name), t, re.S)
+    m = re.search(r"\n    (?:private |internal )?fun %s\(.*?(?=\n    (?:private |internal |@|/\*\*|//|fun |class |const |val |var )|\Z)" % re.escape(name), t, re.S)
     return m.group(0) if m else ""
 
 CHECKS = [

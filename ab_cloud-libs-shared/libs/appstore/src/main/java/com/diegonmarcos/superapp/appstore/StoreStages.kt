@@ -286,7 +286,7 @@ object StoreStages {
     }
 
     /** A verb ([DOWNLOAD]…) as the stage word the bar shows. */
-    private fun stageOf(verb: String): String = when (verb) {
+    internal fun stageOf(verb: String): String = when (verb) {
         DOWNLOAD -> UpdateProgress.STAGE_DOWNLOADING
         INSTALL -> UpdateProgress.STAGE_INSTALLING
         CLEAR -> UpdateProgress.STAGE_CLEARING
@@ -383,7 +383,7 @@ object StoreStages {
 
     private const val HOST = "the host — its own updater runs after the batch"
 
-    private fun installedCode(ctx: Context, app: Fleet.App): Pair<Long, Long>? = pkgs(app).firstNotNullOfOrNull { p ->
+    internal fun installedCode(ctx: Context, app: Fleet.App): Pair<Long, Long>? = pkgs(app).firstNotNullOfOrNull { p ->
         runCatching {
             @Suppress("DEPRECATION") val pi = ctx.packageManager.getPackageInfo(p, 0)
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode
@@ -520,7 +520,7 @@ object StoreStages {
     /** A batch's next app. The last app's failure is not drawn over this one
      *  (it held the bar until some state happened to change); [finishBatch]
      *  reports every failure when the batch ends. */
-    private fun beginNext(j: UpdateProgress.Job) {
+    internal fun beginNext(j: UpdateProgress.Job) {
         if (UpdateProgress.state is UpdateProgress.State.Failed) UpdateProgress.update(UpdateProgress.State.Idle)
         UpdateProgress.beginJob(j)
     }
@@ -532,7 +532,7 @@ object StoreStages {
      * The first failed app is the one a tap on the bar jumps to; a clean batch
      * clears the bar, as a clean single verb does.
      */
-    private fun finishBatch(out: List<Outcome>) {
+    internal fun finishBatch(out: List<Outcome>) {
         UpdateProgress.endBatch()
         val failed = out.filter { it.result == FAILED }
         val first = failed.firstOrNull() ?: return UpdateProgress.update(UpdateProgress.State.Idle)
@@ -558,10 +558,13 @@ object StoreStages {
         val bytes: Long, val totalBytes: Long, val percent: Int,
         val index: Int, val count: Int, val next: String?,
         val failed: Boolean, val detail: String?,
+        /** #804 "Auto ▸ downloading 3 of 12" while the auto chain runs, else null. */
+        val phase: String? = null,
     ) {
         val text: String get() = listOfNotNull(
+            phase,
             (if (failed) "✗ " else "") + listOf(app, version).filter { it.isNotEmpty() }.joinToString(" ")
-                .ifEmpty { "Update" },
+                .ifEmpty { if (phase != null) "" else "Update" },
             if (failed) "failed${if (stage.isNotEmpty()) " at $stage" else ""}" else stage,
             if (percent >= 0) "$percent%" else null,
             when {
@@ -576,6 +579,16 @@ object StoreStages {
     }
 
     fun progress(state: UpdateProgress.State = UpdateProgress.state, job: UpdateProgress.Job? = UpdateProgress.job): Progress? {
+        // #804 the auto chain's phase rides in front of whatever the job says;
+        // between two packages (no job) it is the whole line.
+        val phase = StoreAuto.label() ?: return progressOf(state, job)
+        val p = progressOf(state, job)
+            ?: return Progress("", "", "", "", "", 0, 0, -1, 0, 0, null, false, null, phase)
+        return Progress(p.appId, p.pkg, p.app, p.stage, p.version, p.bytes, p.totalBytes, p.percent,
+            p.index, p.count, p.next, p.failed, p.detail, phase)
+    }
+
+    private fun progressOf(state: UpdateProgress.State, job: UpdateProgress.Job?): Progress? {
         fun of(j: UpdateProgress.Job?, stage: String, bytes: Long = 0, total: Long = 0, percent: Int = -1,
                failed: Boolean = false, detail: String? = null, appId: String = "", pkg: String = "", app: String = "") =
             Progress(j?.appId ?: appId, j?.pkg ?: pkg, j?.app ?: app, stage, j?.version.orEmpty(),

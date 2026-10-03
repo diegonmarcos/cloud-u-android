@@ -838,6 +838,10 @@ class StoreCloudFragment : Fragment() {
 
     // ── concurrent status — one thread per app, independent + non-blocking ───
     private fun checkAll(ctx: Context, list: List<Fleet.App> = current()) {
+        // #804 a Store refresh is an auto-chain trigger: what it is about to
+        // show as pending is what the chain downloads and installs (gated by
+        // the toggle and Wi-Fi only in the worker, like every other trigger).
+        ConstellationWorker.kick(ctx, StoreAuto.TRIGGER_STORE_REFRESH)
         for (app in list) {
             statusViews[app.id]?.let { tv -> tv.post { tv.text = "checking…"; tv.setTextColor(cDim) } }
             thread(name = "fleet-check-${app.id}") {
