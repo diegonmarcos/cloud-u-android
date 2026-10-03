@@ -543,6 +543,16 @@ task bakeBootstrap() {
             // aarch64-linux substitutes for git/nodejs_22/claude-code, so this
             // needs no qemu -- it just fetches the right arch's binaries.
             def nixSystem = pin.arch == "aarch64" ? "aarch64-linux" : "x86_64-linux"
+            // #795 -- the proot both terminals ship (ab_cloud-terminal-store/proot.json), replacing
+            // the zip's 24.05 copy, which hands glibc 2.42's TCGETS2 to Android and gets EACCES.
+            def prootFetcher = new File(projectDir.parentFile.parentFile, "ab_cloud-terminal-store/fetch-proot.py")
+            def fetchedProot = new File(staging, "proot-static-" + abi)
+            def prootResult = exec {
+                commandLine "python3", prootFetcher.absolutePath, abi, fetchedProot.absolutePath
+                ignoreExitValue = true
+            }
+            if (prootResult.exitValue != 0)
+                throw new GradleException("fetch-proot.py failed (exit " + prootResult.exitValue + "); see log above")
             def toolingResult = exec {
                 commandLine "python3", toolingBaker.absolutePath, idPatched.absolutePath, baked.absolutePath,
                         tooling.nixpkgs_pin, tooling.attrs.join(","), tooling.profile_link,
@@ -554,7 +564,8 @@ task bakeBootstrap() {
                         cloudDnsBridge().resolv_conf, cloudDnsBridge().nameservers.join(","),
                         // #771 -- goose, hermes and the noexec shim, from rootfs-extras.nix.
                         new File(projectDir.parentFile, tooling.extras.expr).absolutePath,
-                        tooling.extras.attrs.join(","), tooling.extras.preload
+                        tooling.extras.attrs.join(","), tooling.extras.preload,
+                        fetchedProot.absolutePath
                 ignoreExitValue = true
             }
             idPatched.delete()

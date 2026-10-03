@@ -63,8 +63,11 @@
             "app/src/main/cpp/rootfs-extras.nix",
             "../ac_cloud-termux/rootfs/rootfs.json",
             "../ab_cloud-terminal-store/noexec-shebang.c",
-            "../ab_cloud-terminal-store/gitconfig"
+            "../ab_cloud-terminal-store/gitconfig",
+            "../ab_cloud-terminal-store/proot.json",
+            "../ab_cloud-terminal-store/fetch-proot.py"
           ],
+          "_doc_identity_files_795": "#795 -- proot.json pins and fetch-proot.py fetches the bin/proot-static this zip ships in place of the 24.05 bootstrap's own.",
           "_doc_identity_files_771": "#771 -- rootfs-extras.nix builds goose, hermes and the noexec shim into this zip; it reads goose's and hermes' version and url from ac_cloud-termux/rootfs/rootfs.json (so a bump there must re-address this zip too, even though it also moves on termux-only edits to that file: a stale address is the false green, an extra republish is only bytes); noexec-shebang.c is the shim's source and gitconfig ships as etc/gitconfig.",
           "_doc_identity_files_store": "#644 -- the five ab_cloud-terminal-store entries are here because the link store is BAKED INTO THIS ZIP (usr/lib/cloud-store) and the login-inner patch sources it. Leave them out and an engine fix keeps the old content address: the asset is not uploaded, no phone refetches, and CI is green over a rootfs that still carries the broken engine -- the exact false-green shape #618's address was introduced to prevent. Paths are app-relative and resolved with os.path.join/new File(projectDir.parentFile, ...) by both readers (cloud-android-fleet-manifest-guard.py::_content_address and app/build.gradle::bootstrapArtifactId), so \"../\" reaches the repo root.",
           "digest_asset": "bootstrap.zip.sha256",

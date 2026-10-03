@@ -1,0 +1,20 @@
+{
+  "_doc": "#795 THE proot both terminals ship: ac_cloud-nix-on-droid's bake_default_packages.py puts it in the bootstrap zip as bin/proot-static, and ac_cloud-termux/rootfs/build-rootfs.sh stages it as that app's `proot` asset. Here, beside the store both ship, because both ship workflows watch this directory. The zip's own copy is termux/proot 60485d2 (2024-05-04, bootstrap-release-24.05), which passes glibc 2.42's TCGETS2/TCSETS*2 straight to the kernel, and Android's SELinux tty allowlist answers them EACCES: on the phone fish's stty said `Permission denied`, fish drew no prompt in 20 s and a bare `claude` fell into --print. This build is termux/proot ab2e346 (2026-02-20), which rewrites them to TCGETS/TCSETS* (6fa36f7, 228a5f2, 2cb63b8) -- upstream nix-on-droid's own bump for the same bug (nix-community/nix-on-droid 7b57de1, modules/environment/login/default.nix's store paths), fetched from upstream's binary cache rather than rebuilt with an Android cross toolchain. fetch-proot.py refuses any byte that differs from nar_sha256 (the compressed NAR the cache serves) or sha256 (the binary inside it). pty-selftest.json proves the result in a real pty under an emulated Android ioctl policy.",
+  "cache": "https://nix-on-droid.cachix.org",
+  "entry": "bin/proot-static",
+  "source": "github:termux/proot/ab2e3464d04483b98a0614b470f3f8950d5a6468",
+  "archs": {
+    "arm64-v8a": {
+      "store_path": "/nix/store/dvf2ck9bkw7yyrlkjk87xz1anaxsgrd6-proot-termux-static-aarch64-unknown-linux-android-unstable-2026-02-20",
+      "nar": "nar/70065fa7-6ac7-4e3b-91e0-ac05e81e97ea.nar.zst",
+      "nar_sha256": "7364e5a94a9533d446111415734f8af1852504330bae0a28c168ed4766b5a117",
+      "sha256": "713eb72bfe8c78316c71a9f93b090d293d138796968feb93ca2eb7b0e8c25244"
+    },
+    "x86_64": {
+      "store_path": "/nix/store/w7fksni07fhss7hzkyf4knn5171prj88-proot-termux-static-x86_64-unknown-linux-android-unstable-2026-02-20",
+      "nar": "nar/aae05484-717a-4636-bb4a-aa592f646c7e.nar.zst",
+      "nar_sha256": "93b15024f7ccae03c2b14d665b506b3e8b7dc2f9983202ab00291b9aa224b451",
+      "sha256": "47243d24cb8770aa2b62726596e5b768369fda64efeab80fa6baf9a38e732a90"
+    }
+  }
+}

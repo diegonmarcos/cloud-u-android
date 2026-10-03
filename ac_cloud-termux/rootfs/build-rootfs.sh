@@ -5,7 +5,7 @@
 # four files the APK carries as assets/<asset_dir>/ into <out-dir>:
 #   rootfs.tar.zst  the tree, from rootfs.json + the fleet tool belt
 #   rootfs.sha256   its digest: the app re-stages and enter.sh re-unpacks when it moves
-#   proot           the static Android proot #348 pins in the nix-on-droid bootstrap
+#   proot           the static Android proot both terminals ship (ab_cloud-terminal-store/proot.json)
 #   enter.sh        the login shell that unpacks and enters the tree
 # verify-rootfs.sh then proves those exact files work.
 set -eu
@@ -56,14 +56,8 @@ sudo tar -C "$W/tree" --numeric-owner --exclude='./dev/*' --exclude='./proc/*' -
     | zstd -T0 -12 --long=27 -q -o "$OUT/rootfs.tar.zst" -f
 sha256sum "$OUT/rootfs.tar.zst" | cut -d' ' -f1 > "$OUT/rootfs.sha256"
 
-# ── proot, read from the pin #348 already maintains ─────────────────────────
-url="$(from_abi proot_bootstrap url)"
-sha="$(from_abi proot_bootstrap sha256)"
-curl -fsSL --retry 3 -o "$W/bootstrap.zip" "$url"
-echo "$sha  $W/bootstrap.zip" | sha256sum -c -
-python3 -c 'import sys, zipfile; open(sys.argv[3], "wb").write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))' \
-    "$W/bootstrap.zip" "$(resolved proot_entry)" "$OUT/proot"
-chmod 0755 "$OUT/proot"
+# ── proot: #795 the one both terminals ship, ab_cloud-terminal-store/proot.json ──
+python3 "$STORE_SRC/fetch-proot.py" "$ABI" "$OUT/proot"
 
 cp "$HERE/enter.sh" "$OUT/enter.sh"
 

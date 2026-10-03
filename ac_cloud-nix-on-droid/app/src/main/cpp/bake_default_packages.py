@@ -592,20 +592,68 @@ def capture(cmd):
     return subprocess.run(cmd, check=True, capture_output=True, text=True, env=NIX_ENV).stdout
 
 
+# #795 -- the zip entry ab_cloud-terminal-store/proot.json replaces, and the proot extensions bin/login
+# runs it with (--link2symlink --sysvipc, plus #758's -p). --kill-on-exit only lets the CI run
+# tear a session down; it changes nothing a check looks at.
+PROOT_ENTRY = "bin/proot-static"
+PTY_PROOT_FLAGS = ["--kill-on-exit", "--link2symlink", "--sysvipc", "-p"]
+# Every check fails under the zip's own 24.05 proot, because this profile's glibc is 2.42.
+PTY_MUTANT_RED = ("tty", "stty", "prompt", "claude-tui")
+
+
+def pty_gate(proot: str, old_proot: str, generation: str, login_shell: str, nix_system: str) -> int:
+    """#795: ../ab_cloud-terminal-store/pty-selftest.json in a real pty under `proot`, with this
+    profile's own login shell and claude (the store paths the zip ships, realized on this runner),
+    then the same run under the zip's original proot, which must fail every check: that mutant IS
+    the phone of 2026-10-03, so a green mutant would mean the checks cannot see the bug."""
+    host = {"arm64": "aarch64"}.get(os.uname().machine, os.uname().machine)
+    if nix_system.split("-")[0] != host:
+        print(f"COVERAGE-GAP #795: the pty selftest needs a {nix_system} host (an Android proot cannot "
+              f"trace under qemu-user); this {host} runner ships the {nix_system} proot without running "
+              "it. The x86_64 leg runs the same checks on the same proot revision, and the termux "
+              "rootfs job runs them on arm64.", file=sys.stderr)
+        return 0
+
+    def selftest(p):
+        with tempfile.TemporaryDirectory() as home:
+            env = {"HOME": home, "TMPDIR": home, "TERM": "xterm-256color", "LANG": "C.UTF-8",
+                   "PATH": f"{generation}/bin:/usr/bin:/bin"}
+            r = subprocess.run([sys.executable, str(STORE_SRC / "pty-selftest.py"),
+                                str(STORE_SRC / "pty-selftest.json"), "nix", "--", p, *PTY_PROOT_FLAGS,
+                                os.path.join(generation, "bin", login_shell), "-l"],
+                               env=env, capture_output=True, text=True, timeout=900)
+            return r.returncode, r.stdout + r.stderr
+
+    rc, out = selftest(proot)
+    print(f"#795 pty selftest under the shipped proot:\n{out}", file=sys.stderr)
+    if rc != 0:
+        print("FAIL: a login under the proot this zip ships has no usable terminal (see FAIL lines above)",
+              file=sys.stderr)
+        return 1
+    rc, out = selftest(old_proot)
+    survived = [n for n in PTY_MUTANT_RED if f"FAIL {n}:" not in out]
+    if survived:
+        print(f"FAIL MUTATION SURVIVED #795: under the 24.05 proot {survived} still passed -- those checks "
+              f"cannot see the phone's failure:\n{out}", file=sys.stderr)
+        return 1
+    print(f"ok   mutation proved #795: under the 24.05 proot {list(PTY_MUTANT_RED)} all go red", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
-    if len(sys.argv) != 16:
+    if len(sys.argv) != 17:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
             "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system> "
             "<shared_root_name> <login_shell_attr> <dns resolv_conf> <dns nameservers csv> "
-            "<extras expr> <extras attrs csv> <preload>",
+            "<extras expr> <extras attrs csv> <preload> <proot-static>",
             file=sys.stderr,
         )
         return 2
 
     (input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system,
      shared_root_name, login_shell, dns_resolv_conf, dns_nameservers,
-     extras_expr, extras_csv, preload) = sys.argv[1:16]
+     extras_expr, extras_csv, preload, proot) = sys.argv[1:17]
     attrs = [a for a in attrs_csv.split(",") if a]
     extras = [a for a in extras_csv.split(",") if a]
     if not attrs:
@@ -666,6 +714,18 @@ def main() -> int:
             symlinks_txt = zin.read("SYMLINKS.txt").decode()
             executables_txt = zin.read("EXECUTABLES.txt").decode()
             etc_profile = zin.read(ETC_PROFILE_ENTRY).decode()
+            proot_bytes = Path(proot).read_bytes()
+
+            # ── #795: the session's terminal, proven in a pty before the proot is swapped in
+            if PROOT_ENTRY not in existing:
+                print(f"FAIL: the input zip has no {PROOT_ENTRY} for ab_cloud-terminal-store/proot.json to replace",
+                      file=sys.stderr)
+                return 1
+            old_proot = os.path.join(work, "proot-static.zip-original")
+            Path(old_proot).write_bytes(zin.read(PROOT_ENTRY))
+            os.chmod(old_proot, 0o755)
+            if pty_gate(proot, old_proot, generation, login_shell, nix_system) != 0:
+                return 1
 
             # ── #612/#736: shared storage + the cloud-drive shared store in
             # $HOME (storage_setup), the same generated-text-injection
@@ -855,6 +915,8 @@ def main() -> int:
                         zout.writestr(info, executables_txt)
                     elif name == ETC_PROFILE_ENTRY:
                         zout.writestr(info, etc_profile)
+                    elif name == PROOT_ENTRY:
+                        zout.writestr(info, proot_bytes)
                     else:
                         zout.writestr(info, zin.read(name))
                 for rel, data in new_files.items():

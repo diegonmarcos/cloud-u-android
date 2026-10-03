@@ -285,6 +285,55 @@ else
     sudo -n rm -rf /storage
 fi
 
+echo "── #795: a session in a real pty, under the shipped proot and Android's tty ioctl policy ──"
+# ab_cloud-terminal-store/pty-selftest.json, check by check, each in a pty whose child is a session
+# leader on the pts (termux.c's create_subprocess), under a seccomp filter that denies what Android's
+# SELinux denies. The selftest of #771 above runs over pipes and was green on the phone that drew no
+# prompt. Two mutants prove these checks can fail: the 24.05 proot this replaced (termios2 must go
+# red: the phone's EACCES, from a glibc that issues TCGETS2), and a policy that also denies TCGETS,
+# the ioctl this tree's own glibc 2.36 issues (tty, stty and claude-tui must go red: the phone's
+# three symptoms, including claude's --print refusal).
+STORE_SRC="$HERE/../../ab_cloud-terminal-store"
+got="$(sha256sum "$STAGE/proot" | cut -d' ' -f1)"
+abi="$(python3 -c 'import json,sys; print(" ".join(a for a, p in json.load(open(sys.argv[1]))["archs"].items() if p["sha256"] == sys.argv[2]))' \
+    "$STORE_SRC/proot.json" "$got")"
+if [ -n "$abi" ]; then echo "ok   the staged proot is proot.json's $abi pin (sha256 $got)"
+else echo "FAIL the staged proot (sha256 $got) is no ab_cloud-terminal-store/proot.json pin"; fail=1; fi
+pty_selftest() {  # $1 = the checks json
+    HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false python3 "$STORE_SRC/pty-selftest.py" "$1" termux -- sh "$STAGE/enter.sh" 2>&1
+}
+if out="$(pty_selftest "$STORE_SRC/pty-selftest.json")"; then
+    echo "$out"; echo "ok   every pty-selftest.json check passes under the shipped proot"
+else
+    echo "$out" | sed 's/^FAIL /FAIL pty: /'; fail=1
+fi
+pty_mutant() {  # $1 = the checks json, $2 = why, then the check names that must go red
+    got="$(pty_selftest "$1" || true)"; why="$2"; shift 2
+    for n in "$@"; do
+        if echo "$got" | grep -q "^FAIL $n:"; then echo "ok   mutation proved: $why turns $n red"
+        else echo "FAIL MUTATION SURVIVED: $why left $n green — the check cannot see the phone's failure"; fail=1; fi
+    done
+}
+old="$W/proot-24.05"
+if [ -z "$abi" ]; then
+    echo "FAIL cannot tell the staged proot's ABI, so the 24.05 mutant cannot be fetched"; fail=1
+else
+    url="$(resolved proot_bootstrap | python3 -c 'import json,sys; print(json.load(sys.stdin)[sys.argv[1]]["url"])' "$abi")"
+    sha="$(resolved proot_bootstrap | python3 -c 'import json,sys; print(json.load(sys.stdin)[sys.argv[1]]["sha256"])' "$abi")"
+    curl -fsSL --retry 3 -o "$W/bootstrap-24.05.zip" "$url"
+    echo "$sha  $W/bootstrap-24.05.zip" | sha256sum -c - >/dev/null
+    python3 -c 'import sys, zipfile; open(sys.argv[3], "wb").write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))' \
+        "$W/bootstrap-24.05.zip" "$(resolved proot_entry)" "$old"
+    rm -f "$W/bootstrap-24.05.zip"
+    chmod 0700 "$old"
+    mv "$STAGE/proot" "$STAGE/proot.shipped"; cp "$old" "$STAGE/proot"
+    pty_mutant "$STORE_SRC/pty-selftest.json" "the 24.05 proot" termios2
+    mv -f "$STAGE/proot.shipped" "$STAGE/proot"
+fi
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["android_denied_tty_ioctls"]["TCGETS"]="0x5401"; json.dump(d, open(sys.argv[2], "w"))' \
+    "$STORE_SRC/pty-selftest.json" "$W/pty-tcgets-denied.json"
+pty_mutant "$W/pty-tcgets-denied.json" "denying TCGETS" tty stty claude-tui
+
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
 exit "$fail"

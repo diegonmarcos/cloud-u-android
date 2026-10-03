@@ -1,0 +1,49 @@
+{
+  "_doc": "#795 -- what a terminal session must do INSIDE A REAL PTY, the way the phone runs it: the app opens /dev/ptmx, the child setsid()s, takes the pts as its controlling tty and execs the login (terminal-emulator/src/main/jni/termux.c). The fleet's other selftest (app/src/main/assets/terminal-selftest.json) runs through /api/terminal/exec over PIPES, so it could never see this class of bug: on 2026-10-03 every check there was green while fish drew no prompt (`stty: 'standard input': Permission denied`) and a bare `claude` died in --print mode. Run by pty-selftest.py, in CI, under the proot the APK ships: ac_cloud-termux/rootfs/verify-rootfs.sh (termux, both ABIs, native runners) and ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py (nix, the x86_64 leg: the bake runner is x86_64 for both ABIs and an Android proot cannot trace under qemu-user, so the arm64 leg prints a COVERAGE-GAP line instead). Every check runs the login shell (fish in both terminals) with `-c <run>`, except `prompt` (an interactive login, typed at) and `tui` (a command that must take over the terminal). No check needs the network.",
+  "android_denied_tty_ioctls": {
+    "_doc": "Android's SELinux policy lets an app issue only the tty ioctls in system/sepolicy ioctl_macros `unpriv_tty_ioctls` on its own pts (TCGETS, TCSETS, TCSETSW, TCSETSF, TIOCGWINSZ, ...). The termios2 family is not in it, so the kernel answers EACCES. glibc 2.42 issues exactly these from tcgetattr/tcsetattr (and so from isatty), which is the whole #795 failure: proot-static from bootstrap-release-24.05 (termux/proot 60485d2) passes them through, termux/proot 6fa36f7/228a5f2/2cb63b8 rewrite them to their TCGETS/TCSETS* twins. pty-selftest.py denies these numbers with a seccomp filter on the session, and runs proot with PROOT_NO_SECCOMP=1 so proot rewrites the ioctl at its ptrace syscall-enter stop BEFORE the kernel evaluates seccomp (kernel/entry: `Do seccomp after ptrace, to catch any tracer changes`) -- the same order in which SELinux sees the rewritten number on the phone. Numbers are _IOR/_IOW('T', 0x2a..0x2d, struct termios2), identical on arm64 and x86_64.",
+    "TCGETS2": "0x802c542a",
+    "TCSETS2": "0x402c542b",
+    "TCSETSW2": "0x402c542c",
+    "TCSETSF2": "0x402c542d"
+  },
+  "checks": [
+    {
+      "name": "tty",
+      "_doc": "The session's stdin is its terminal: `tty` names the pts (glibc's ttyname goes through isatty, i.e. tcgetattr).",
+      "run": "tty",
+      "expect": "^/dev/pts/[0-9]+\\s*$",
+      "deadline_s": 30
+    },
+    {
+      "name": "stty",
+      "_doc": "The phone's exact failure line was `stty: 'standard input': Permission denied`.",
+      "run": "stty -a",
+      "expect": "\\brows 24\\b",
+      "deadline_s": 30
+    },
+    {
+      "name": "termios2",
+      "_doc": "tcgetattr exactly as glibc 2.42 issues it, from a tree whose own glibc is older: the termux rootfs is Debian bookworm (glibc 2.36, plain TCGETS), so without this probe its run could not tell the fixed proot from the broken one. The nix tree has no python3 (#665) and needs no probe: its glibc is the 2.42 one, so `stty` and `tty` above already issue TCGETS2.",
+      "terminals": ["termux"],
+      "run": "python3 -c 'import fcntl; fcntl.ioctl(0, 0x802c542a, bytes(44)); print(\"termios2-ok\")'",
+      "expect": "^termios2-ok\\s*$",
+      "deadline_s": 30
+    },
+    {
+      "name": "prompt",
+      "_doc": "An interactive login reaches its line reader in time: the line is typed once the shell has printed something and gone quiet, and only an INTERACTIVE fish evaluates `status is-interactive` true, so a shell that fell back to reading stdin as a script prints nothing. The deadline is counted from the spawn and is the brief's: a prompt in under 3 s. The login-inner watchdog gave up at 20 s.",
+      "prompt": "status is-interactive; and echo __pty_(math 40 + 2)__",
+      "expect": "__pty_42__",
+      "deadline_s": 3
+    },
+    {
+      "name": "claude-tui",
+      "_doc": "A bare `claude` opens the interactive TUI: it switches the terminal into bracketed paste or hides the cursor, and never prints the --print refusal it printed on the phone. The env vars keep it off the network; nothing is typed and the session is killed after the deadline.",
+      "tui": "env DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 claude",
+      "refuse": "Input must be provided",
+      "expect_any": ["\u001b[?2004h", "\u001b[?25l"],
+      "deadline_s": 30
+    }
+  ]
+}

@@ -150,7 +150,7 @@
     "source": "ab_cloud-libs-shared/libs/sysdns/data/sysdns.json"
   },
   "proot": {
-    "_doc": "The Android-built static proot that #348 already pins inside the cloud-terminal-nix bootstrap. Static means no PT_INTERP: the same binary runs on bionic Android and on the glibc CI runner, so CI tests the exact bytes the phone executes. Read from that app's build.json rather than pinned twice.",
+    "_doc": "#795 The proot this terminal ships is ab_cloud-terminal-store/proot.json's, the one the nix terminal ships too (build-rootfs.sh stages it with fetch-proot.py). Static means no PT_INTERP: the same binary runs on bionic Android and on the glibc CI runner, so CI tests the exact bytes the phone executes. The two keys below name the copy it replaced, the bootstrap-release-24.05 one #348 pinned in the nix app's build.json: verify-rootfs.sh runs it as the mutant the pty selftest must fail under, so the selftest is proven to see the phone's 2026-10-03 failure.",
     "source_build_json": "ac_cloud-nix-on-droid/build.json",
     "entry": "bin/proot-static"
   },
