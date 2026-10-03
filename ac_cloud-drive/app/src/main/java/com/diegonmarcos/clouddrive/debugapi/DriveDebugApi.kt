@@ -101,6 +101,8 @@ object DriveDebugApi {
                 AppDebugServer.Op("state", "", "registered repos (name, path, remote HOST only, authKind, lastSync) + whether a fleet session is present (boolean only)"),
                 AppDebugServer.Op("chain", "", "run DriveGitChain.resolve with the in-process session; outcome narrative + answeredBy, never a token"),
                 AppDebugServer.Op("list", "rung=<declared rung id, optional>", "run that rung's listing (DriveGitChain.repos: gh repo list for the github rung, FleetGit.repos for a fleet one) with the in-process session; count + names/owners, no URLs"),
+                AppDebugServer.Op("status", "force=1 (optional: re-read even fresh entries)", "#850 the ONE status reader's per-repo result (clean / ahead N / behind N / dirty / not cloned / error(reason)) with read_at and took_ms; bounded by the declared timeout"),
+                AppDebugServer.Op("pull", "force=1 (force pull = fetch + reset) & name=<repo, optional — blank = every clone>", "#850 the page's own pullAll on the one credential path; waits for every per-repo outcome (summaries only, never a credential)"),
                 AppDebugServer.Op("clone", "name=<repo>&url=<clone url, optional — blank resolves it from the fleet listing the way the page does>", "clone through the page's own path (GitSyncCoordinator.cloneInto) and wait for the real outcome"),
             ),
         ) { op, query -> gitRoute(app, op, query) }
@@ -133,6 +135,8 @@ object DriveDebugApi {
         "chain" -> chainJson(ctx)
         "list" -> listJson(ctx, query["rung"].orEmpty())
         "clone" -> cloneJson(ctx, query)
+        "status" -> statusJson(ctx, query)
+        "pull" -> pullJson(ctx, query)
         else -> null
     }
 
@@ -271,6 +275,47 @@ object DriveDebugApi {
             Thread.sleep(POLL_MS)
         }
         return """{"ok":false,"status":"timeout","host":"${esc(host)}","leg":"${esc(leg)}","why":"no outcome within ${CLONE_WAIT_MS / 1000}s — the clone keeps running; read /api/git/state and /api/log/tail for its result"}"""
+    }
+
+    /** #850 the reader the page reads — the process-wide one — asked and waited on, bounded. */
+    private fun statusJson(ctx: Context, query: Map<String, String>): String {
+        val force = query["force"] == "1" || query["force"] == "true"
+        val c = coordinator(ctx)
+        val wait = com.diegonmarcos.clouddrive.Declarations.sync.git.status.timeoutSeconds * 1000L * 4 + 5_000L
+        val finished = kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(wait) { c.refresh(force).join(); true } ?: false
+        }
+        val repos = c.repos.value
+        val st = GitSyncCoordinator.statusReader.statuses.value
+        return buildString {
+            append("""{"ok":true,"finished":$finished,"count":${repos.size},"repos":[""")
+            repos.forEachIndexed { i, r ->
+                val s = st[r.id]
+                if (i > 0) append(',')
+                append("""{"name":"${esc(r.name)}","state":"${esc(s?.state?.name?.lowercase() ?: "unrequested")}",""")
+                append(""""label":"${esc(s?.label() ?: "unrequested")}","read_at_ms":${s?.readAtMs ?: 0},"took_ms":${s?.tookMs ?: 0}}""")
+            }
+            append("]}")
+        }
+    }
+
+    /** #850 THE PAGE'S pullAll, driven and waited on — never a second pull implementation. */
+    private fun pullJson(ctx: Context, query: Map<String, String>): String {
+        val force = query["force"] == "1" || query["force"] == "true"
+        val name = query["name"].orEmpty()
+        val c = coordinator(ctx)
+        val job = c.pullAll(force = force, trigger = "debug-api", only = if (name.isBlank()) null else setOf(name))
+            ?: return errJson("a pull-all is already running — read /api/git/status afterwards")
+        val finished = kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(CLONE_WAIT_MS * 3) { job.join(); true } ?: false }
+        val b = c.bulk.value
+        return buildString {
+            append("""{"ok":${finished && (b?.failed ?: 0) == 0},"finished":$finished,"force":$force,"total":${b?.total ?: 0},"failed":${b?.failed ?: 0},"results":[""")
+            b?.results.orEmpty().entries.sortedBy { it.key }.forEachIndexed { i, e ->
+                if (i > 0) append(',')
+                append("""{"name":"${esc(e.key)}","ok":${e.value.ok},"summary":"${esc(e.value.summary)}"}""")
+            }
+            append("]}")
+        }
     }
 
     // ── /api/session ────────────────────────────────────────────────────────

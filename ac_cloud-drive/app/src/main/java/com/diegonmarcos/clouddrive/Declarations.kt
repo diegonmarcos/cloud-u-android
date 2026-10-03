@@ -73,6 +73,16 @@ object Declarations {
         fun webUrlFor(owner: String, name: String): String = webUrl.replace("{owner}", owner).replace("{name}", name)
     }
 
+    /** #850 the status reader's bounds: per-repository timeout, how many are read at once, cache age. */
+    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 3, val ttlSeconds: Int = 60)
+
+    /**
+     * #850 "Auto pull on open": [defaultOn] is the setting before the owner touches it, the
+     * toggle's value is then persisted per device; [requireUnmetered] keeps it off mobile data
+     * (Wi-Fi only), the same constraint git_sync and the seed declare.
+     */
+    data class GitAutoPullDecl(val defaultOn: Boolean = false, val requireUnmetered: Boolean = true)
+
     /** One repository of the declared public set. */
     data class GitPublicRepoDecl(val name: String, val label: String)
 
@@ -121,6 +131,10 @@ object Declarations {
         val nameFamilies: List<String>,
         val publicRepos: List<GitPublicRepoDecl>,
         val terminal: GitTerminalDecl?,
+        /** #850 how the ONE status reader is bounded (ui.sync.git.status). */
+        val status: GitStatusDecl = GitStatusDecl(),
+        /** #850 the page's "Auto pull on open" setting (ui.sync.git.auto_pull). */
+        val autoPull: GitAutoPullDecl = GitAutoPullDecl(),
     ) {
         fun op(id: String): GitOpDecl? = ops.firstOrNull { it.id == id }
         fun remoteMode(id: String): GitRemoteModeDecl? = remoteModes.firstOrNull { it.id == id }
@@ -319,7 +333,15 @@ object Declarations {
         val o = e as? JsonObject ?: return EMPTY_GIT_PAGE
         val api = (o["api"] as? JsonObject) ?: JsonObject(emptyMap())
         val term = o["terminal"] as? JsonObject
+        val st = o["status"] as? JsonObject ?: JsonObject(emptyMap())
+        val ap = o["auto_pull"] as? JsonObject ?: JsonObject(emptyMap())
         return GitPageDecl(
+            status = GitStatusDecl(
+                timeoutSeconds = (st.int("timeout_seconds") ?: 20).coerceIn(1, 600),
+                concurrency = (st.int("concurrency") ?: 3).coerceIn(1, 16),
+                ttlSeconds = (st.int("ttl_seconds") ?: 60).coerceAtLeast(0),
+            ),
+            autoPull = GitAutoPullDecl(ap.bool("default_on", false), ap.bool("require_unmetered_network", true)),
             dense = o.bool("dense", true),
             owner = o.str("owner"),
             sections = objects(o["sections"]).mapNotNull { s ->

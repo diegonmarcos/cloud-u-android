@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveDebugLog
 import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.SharedStore
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -41,10 +43,25 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * engine touches that repository's transport. Everything else is the store's:
      * one store, one id, unchanged.
      */
-    private fun authFor(repo: ManagedRepo): com.diegonmarcos.cloudlib.gitsync.GitAuth =
-        if (repo.authKind == AUTH_SESSION)
-            com.diegonmarcos.cloudlib.gitsync.GitAuth.Session(FleetGit.sessionHeader(), FleetSession.cookie)
-        else credentials.authFor(repo)
+    private fun authFor(repo: ManagedRepo, token: () -> String = { declaredToken() }): com.diegonmarcos.cloudlib.gitsync.GitAuth =
+        pickAuth(
+            kind = repo.authKind,
+            stored = { credentials.authFor(repo) },
+            session = { com.diegonmarcos.cloudlib.gitsync.GitAuth.Session(FleetGit.sessionHeader(), FleetSession.cookie) },
+            declaredToken = token,
+            owner = Declarations.sync.git.owner,
+            declaredHost = hostOf(repo.remoteUrl) == hostOf(Declarations.sync.git.cloneUrl(repo.name)),
+        )
+
+    /**
+     * #850/#818 THE ONE DECLARED GIT CREDENTIAL, the same path StoreSeed clones with: the
+     * vault-delivered token under the one declared id, then the declared chain. A seeded
+     * repository is registered with no credential of its own, so without this a pull of a
+     * private seeded clone would ride no auth at all. Blocking — call off the main thread.
+     */
+    private fun declaredToken(): String =
+        com.diegonmarcos.clouddrive.configs.DriveAuthApply.vaultGitToken(ctx)
+            .ifBlank { runCatching { com.diegonmarcos.clouddrive.configs.DriveGitChain.resolve(ctx).token.orEmpty() }.getOrDefault("") }
     val history = SyncHistory(File(ctx.filesDir, SyncHistory.FILE))
 
     data class Glance(
@@ -58,6 +75,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val error: String? = null,
         val gone: Boolean = false,
         val read: Boolean = false,
+        /** #850 the reader's terminal word: clean / ahead / behind / dirty / not_cloned / error. */
+        val state: String = "",
+        /** #850 when this glance was read (epoch ms) — the cache's timestamp. */
+        val readAtMs: Long = 0,
     )
 
     enum class Step { STAGING, COMMITTING, PULLING, PUSHING }
@@ -69,26 +90,125 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     val running = MutableStateFlow<Map<String, Running>>(emptyMap())
     val events = MutableStateFlow<List<SyncEvent>>(emptyList())
 
-    fun refresh() {
-        scope.launch {
-            val list = withContext(Dispatchers.IO) { registry.load() }
-            repos.value = list
-            events.value = withContext(Dispatchers.IO) { history.load() }
-            val read = withContext(Dispatchers.IO) {
-                list.associate { r ->
-                    val dir = File(r.path)
-                    r.id to when {
-                        !dir.isDirectory -> Glance(gone = true, read = true)
-                        else -> runCatching {
-                            GitEngine(dir).use { e ->
-                                val s = e.status()
-                                Glance(s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState, read = true)
-                            }
-                        }.getOrElse { Glance(error = it.message ?: it.toString(), read = true) }
-                    }
-                }
+    init {
+        // #850 the glances ARE the one reader's statuses, entry by entry as each ends — a
+        // slow repository no longer holds every other row on "reading…".
+        scope.launch { statusReader.statuses.collect { m -> glances.value = m.mapValues { (_, s) -> glanceOf(s) } } }
+    }
+
+    /**
+     * Re-load the registry and ASK the one status reader for every repository. Cheap and
+     * idempotent: a repository already being read, or read less than the declared ttl ago,
+     * starts nothing ([force] re-reads the fresh ones too). Returns once the registry is
+     * loaded and the reads are requested, with the job that ends when they have all ended.
+     */
+    fun refresh(force: Boolean = false): kotlinx.coroutines.Job = scope.launch {
+        val list = withContext(Dispatchers.IO) { registry.load() }
+        repos.value = list
+        events.value = withContext(Dispatchers.IO) { history.load() }
+        statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force).join()
+    }
+
+    /** After an operation changed [repo]'s tree: its cached status is stale, re-read it. */
+    private fun reread(repo: ManagedRepo) { statusReader.invalidate(repo.id); refresh() }
+
+    // ── #850 Force pull (all / one) and Auto pull on open ─────────────────────
+
+    /** The bulk pull in flight or last finished: progress and each repository's outcome. */
+    data class BulkPull(
+        val force: Boolean,
+        val trigger: String,
+        val total: Int,
+        val done: Int = 0,
+        val results: Map<String, GitOpResult> = emptyMap(),
+    ) {
+        val finished: Boolean get() = done >= total
+        val failed: Int get() = results.count { !it.value.ok }
+    }
+
+    val bulk = MutableStateFlow<BulkPull?>(null)
+
+    /**
+     * Pull every registered clone — [force] = the engine's forcePull (fetch + reset to
+     * upstream, the declared destructive op), otherwise a plain pull. Per repository, at
+     * most the declared status concurrency at once, each on the ONE credential path; the
+     * declared token is resolved ONCE for the whole pass. Each outcome lands in [opResults],
+     * the history and the debug log exactly as a single runOp's does.
+     */
+    fun pullAll(force: Boolean, trigger: String = SyncHistory.TRIGGER_MANUAL, only: Set<String>? = null): kotlinx.coroutines.Job? {
+        if (!bulkRunning.compareAndSet(false, true)) return null
+        val opId = if (force) OP_FORCE_PULL else OP_PULL
+        bulk.value = BulkPull(force, trigger, total = Int.MAX_VALUE)
+        return scope.launch {
+          try {
+            val list = withContext(Dispatchers.IO) {
+                registry.load().filter { only == null || it.name in only || it.id in only }
+                    .filter { GitEngine.isRepository(File(it.path)) }
             }
-            glances.value = read
+            bulk.value = BulkPull(force, trigger, list.size)
+            val token = lazy { declaredToken() }
+            val gate = kotlinx.coroutines.sync.Semaphore(Declarations.sync.git.status.concurrency)
+            list.map { repo ->
+                launch {
+                    gate.acquire()
+                    try {
+                        if (running.value.containsKey(repo.id)) {
+                            bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to GitOpResult(false, "skipped: an operation is already running"))) }
+                            return@launch
+                        }
+                        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+                        val result = withContext(Dispatchers.IO) { perform(repo, opId, "", { token.value }, trigger) }
+                        opResults.update { it + (repo.id to result) }
+                        running.update { it - repo.id }
+                        statusReader.invalidate(repo.id)
+                        bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to result)) }
+                    } finally { gate.release() }
+                }
+            }.joinAll()
+            DriveDebugLog.i(ctx, TAG, "pull-all ${opId} ($trigger): ${list.size} repos, ${bulk.value?.failed ?: 0} failed")
+          } finally { bulkRunning.set(false) }
+            refresh().join()
+        }
+    }
+
+    private val bulkRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private val pagePrefs by lazy { ctx.getSharedPreferences(PREFS_PAGE, Context.MODE_PRIVATE) }
+
+    /** #850 the persisted "Auto pull on open" toggle; before the owner touches it, the declared default. */
+    val autoPullOnOpen = MutableStateFlow(false).also { f ->
+        scope.launch(Dispatchers.IO) { f.value = pagePrefs.getBoolean(KEY_AUTO_PULL, Declarations.sync.git.autoPull.defaultOn) }
+    }
+
+    fun setAutoPullOnOpen(on: Boolean) {
+        autoPullOnOpen.value = on
+        scope.launch(Dispatchers.IO) { pagePrefs.edit().putBoolean(KEY_AUTO_PULL, on).apply() }
+    }
+
+    /** What the last page-open did about auto pull, in words the page shows ("" = nothing to say). */
+    val autoPullNote = MutableStateFlow("")
+
+    /** Whether the active network is unmetered (Wi-Fi / ethernet) — the declared constraint. */
+    private fun unmetered(): Boolean = runCatching {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return@runCatching false
+        caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }.getOrDefault(false)
+
+    /**
+     * #850 the page opened: read every status (cached, bounded) and, when the toggle is on
+     * and the declared network constraint holds, pull every clone (plain pull). Called from
+     * the page's LaunchedEffect(Unit) — once per entry, never per recomposition.
+     */
+    fun onPageOpened() {
+        refresh()
+        scope.launch {
+            val on = withContext(Dispatchers.IO) { pagePrefs.getBoolean(KEY_AUTO_PULL, Declarations.sync.git.autoPull.defaultOn) }
+            autoPullOnOpen.value = on
+            autoPullNote.value = when (val d = autoPullDecision(on, Declarations.sync.git.autoPull.requireUnmetered, unmetered(), bulkRunning.get())) {
+                AUTO_PULL_GO -> { pullAll(force = false, trigger = TRIGGER_OPEN); "" }
+                else -> d
+            }
         }
     }
 
@@ -141,7 +261,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 else DriveDebugLog.e(ctx, TAG, "sync ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
             }
             running.update { it - repo.id }
-            refresh()
+            reread(repo)
         }
     }
 
@@ -213,10 +333,19 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
         running.update { it + (repo.id to Running(repo.id, step)) }
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) { perform(repo, opId, message, { declaredToken() }, SyncHistory.TRIGGER_MANUAL) }
+            opResults.update { it + (repo.id to result) }
+            running.update { it - repo.id }
+            reread(repo)
+        }
+    }
+
+    /** ONE operation on ONE repository, recorded — the shared body of [runOp] and [pullAll]. Blocking. */
+    private fun perform(repo: ManagedRepo, opId: String, message: String, token: () -> String, trigger: String): GitOpResult {
+            val result = run {
                 runCatching {
                     GitEngine(File(repo.path)).use { e ->
-                        val auth = authFor(repo)
+                        val auth = authFor(repo, token)
                         when (opId) {
                             OP_FETCH -> e.fetch(auth = auth)
                             OP_PULL -> e.pull(rebase = repo.pullRebase, auth = auth)
@@ -241,16 +370,13 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
             }
             val now = System.currentTimeMillis() / 1000
-            withContext(Dispatchers.IO) {
+            runCatching {
                 registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = "$opId: ${result.summary}"))
-                history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, "$opId: ${result.summary}", result.details))
-                if (result.ok) DriveDebugLog.i(ctx, TAG, "$opId ${repo.name}: ${result.summary}")
-                else DriveDebugLog.e(ctx, TAG, "$opId ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
+                history.append(SyncEvent(now, repo.id, repo.name, trigger, result.ok, "$opId: ${result.summary}", result.details))
             }
-            opResults.update { it + (repo.id to result) }
-            running.update { it - repo.id }
-            refresh()
-        }
+            if (result.ok) DriveDebugLog.i(ctx, TAG, "$opId ${repo.name}: ${result.summary}")
+            else DriveDebugLog.e(ctx, TAG, "$opId ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
+            return result
     }
 
     /**
@@ -334,6 +460,76 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     companion object {
         private const val TAG = "GitSync"
+
+        /**
+         * #850 THE ONE STATUS READER of this process — shared by the page's coordinator and
+         * the debug route's, so the cache, the in-flight claims and the bounds are one set.
+         */
+        val statusReader: GitStatusReader by lazy {
+            val d = Declarations.sync.git.status
+            GitStatusReader(
+                probe = ::probeStatus,
+                timeoutMs = d.timeoutSeconds * 1000L,
+                concurrency = d.concurrency,
+                ttlMs = d.ttlSeconds * 1000L,
+            )
+        }
+
+        /** The real probe: libs:git-sync's own status, never a second JGit call here. */
+        fun probeStatus(dir: File): GitStatusReader.Probe = GitEngine(dir).use { e ->
+            val s = e.status()
+            GitStatusReader.Probe(s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState)
+        }
+
+        const val PREFS_PAGE = "git-page"
+        const val KEY_AUTO_PULL = "auto_pull_on_open"
+        const val TRIGGER_OPEN = "open"
+        const val AUTO_PULL_GO = "go"
+        const val AUTO_PULL_OFF = ""
+        const val AUTO_PULL_METERED = "metered"
+        const val AUTO_PULL_BUSY = "busy"
+
+        /** #850 the pure auto-pull decision: [AUTO_PULL_GO], or why not. */
+        fun autoPullDecision(enabled: Boolean, requireUnmetered: Boolean, unmetered: Boolean, busy: Boolean): String = when {
+            !enabled -> AUTO_PULL_OFF
+            requireUnmetered && !unmetered -> AUTO_PULL_METERED
+            busy -> AUTO_PULL_BUSY
+            else -> AUTO_PULL_GO
+        }
+
+        /** The row's [Glance] for one reader status — READING is the only non-read state. */
+        fun glanceOf(s: GitStatusReader.Status): Glance = when (s.state) {
+            GitStatusReader.State.READING -> Glance()
+            GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs)
+            GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs)
+            else -> s.probe!!.let { p ->
+                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs)
+            }
+        }
+
+        /**
+         * #850/#818 which credential a transport verb rides: the fleet session for a
+         * session repository, the repository's own stored secret when it has one, else the
+         * ONE declared credential (vault token, then the chain) — never a second mechanism,
+         * and only to the declared host ([declaredHost]) the credential belongs to.
+         */
+        fun pickAuth(
+            kind: String,
+            stored: () -> com.diegonmarcos.cloudlib.gitsync.GitAuth,
+            session: () -> com.diegonmarcos.cloudlib.gitsync.GitAuth,
+            declaredToken: () -> String,
+            owner: String,
+            declaredHost: Boolean,
+        ): com.diegonmarcos.cloudlib.gitsync.GitAuth {
+            if (kind == AUTH_SESSION) return session()
+            val own = stored()
+            if (own is com.diegonmarcos.cloudlib.gitsync.GitAuth.Ssh) return own
+            if (own is com.diegonmarcos.cloudlib.gitsync.GitAuth.Https && own.secret.isNotBlank()) return own
+            // The declared token is the DECLARED host's: never presented to another host.
+            if (!declaredHost) return own
+            val token = declaredToken()
+            return if (token.isNotBlank()) com.diegonmarcos.cloudlib.gitsync.GitAuth.Https(owner, token) else own
+        }
 
         /**
          * The URL's HOST alone, for the on-device debug log: a host names which leg a clone

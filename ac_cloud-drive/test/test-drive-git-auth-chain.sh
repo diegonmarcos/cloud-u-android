@@ -1044,7 +1044,7 @@ _stage && _green "c11" _c11 && {
                                     'credentials.authFor(repo)'
     _red "C11 the coordinator stops assembling the session auth (store-only, which cannot hold it)" _c11; }
 _stage && _green "c11" _c11 && {
-    _sub "$W/GitSyncCoordinator.kt" 'val auth = authFor(repo)' 'val auth = credentials.authFor(repo)'
+    _sub "$W/GitSyncCoordinator.kt" 'val auth = authFor(repo, token)' 'val auth = credentials.authFor(repo)'
     _red "C11 an engine call bypasses the session-aware auth — a session repository dials anonymously" _c11; }
 _stage && _green "c11" _c11 && {
     _sub "$W/GitSyncCoordinator.kt" 'GitOpResult(false, if (authKind == AUTH_SESSION) FleetGit.explainCloneFailure(why) else why)' \

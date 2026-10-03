@@ -158,7 +158,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #689 THE GITHUB CARD IS gh: who gh is signed in as, and the one-time code its own
     // `auth login` is waiting on. Neither is a secret; the credential stays in gh's config.
     var ghAuth by remember { mutableStateOf(GhAuth()) }
-    LaunchedEffect(Unit) { coordinator.refresh() }
+    // #850 once per entry to the page: the bounded, cached status read, and the auto pull
+    // when it is on and the network is unmetered. Recomposition never re-runs this.
+    LaunchedEffect(Unit) { coordinator.onPageOpened() }
+    val bulk by coordinator.bulk.collectAsState()
+    val autoPull by coordinator.autoPullOnOpen.collectAsState()
+    val autoPullNote by coordinator.autoPullNote.collectAsState()
+    var confirmPullAll by remember { mutableStateOf(false) }
 
     /**
      * #653 THE FLEET SIGN-IN'S HOST. The browser login's session arrives through
@@ -639,6 +645,42 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 Pill(stringResource(R.string.sync_add_repo), { actions.openEngine(EngineActivity.ENGINE_GIT, root) }, filled = true)
             }
         }
+        // #850 THE PAGE'S PULL ACTIONS: force pull every clone (asks first — it is the
+        // declared destructive verb), and the persisted Auto pull on open (Wi-Fi only).
+        item {
+            Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_PULL_ALL).padding(horizontal = DriveMetrics.sectionInset)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Pill(stringResource(R.string.git_force_pull_all), { confirmPullAll = true }, icon = Icons.Filled.Sync, enabled = bulk?.finished != false && repos.isNotEmpty())
+                    Spacer(Modifier.width(DriveMetrics.pad))
+                    Pill(stringResource(R.string.git_pull_all), { coordinator.pullAll(force = false) }, enabled = bulk?.finished != false && repos.isNotEmpty())
+                    Spacer(Modifier.weight(1f))
+                    Text(stringResource(R.string.git_auto_pull_on_open), style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.width(DriveMetrics.gap))
+                    Switch(checked = autoPull, onCheckedChange = { coordinator.setAutoPullOnOpen(it) }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_AUTO_PULL))
+                }
+                if (page.autoPull.requireUnmetered) Text(stringResource(R.string.git_auto_pull_wifi_only), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                when (autoPullNote) {
+                    GitSyncCoordinator.AUTO_PULL_METERED -> Text(stringResource(R.string.git_auto_pull_skipped_metered), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    GitSyncCoordinator.AUTO_PULL_BUSY -> Text(stringResource(R.string.git_auto_pull_skipped_busy), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                bulk?.let { b ->
+                    if (!b.finished) {
+                        val total = if (b.total == Int.MAX_VALUE) 0 else b.total
+                        Text(stringResource(R.string.git_pull_all_progress, b.done, total), style = MaterialTheme.typography.labelSmall)
+                        LinearProgressIndicator(progress = { if (total == 0) 0f else b.done.toFloat() / total }, modifier = Modifier.fillMaxWidth())
+                    } else {
+                        Text(stringResource(R.string.git_pull_all_done, b.total - b.failed, b.failed), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                    b.results.toSortedMap().forEach { (name, r) ->
+                        Text(
+                            "$name: " + r.summary,
+                            style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (r.ok) MaterialTheme.colorScheme.onSurfaceVariant else colorResource(R.color.status_light_off),
+                        )
+                    }
+                }
+            }
+        }
 
         // THE TWO DECLARED SECTIONS, in declared order. The dispatch on a section id is the
         // ONE place Kotlin names them; test-drive-git-page.sh diffs it both ways.
@@ -792,6 +834,15 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
 
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
+    if (confirmPullAll) {
+        AlertDialog(
+            onDismissRequest = { confirmPullAll = false },
+            title = { Text(stringResource(R.string.git_force_pull_all)) },
+            text = { Text(stringResource(R.string.git_confirm_force_pull_all, repos.size)) },
+            confirmButton = { TextButton(onClick = { coordinator.pullAll(force = true); confirmPullAll = false }) { Text(stringResource(R.string.git_force_pull_all)) } },
+            dismissButton = { TextButton(onClick = { confirmPullAll = false }) { Text(stringResource(R.string.chrome_cancel)) } },
+        )
+    }
 }
 
 /**

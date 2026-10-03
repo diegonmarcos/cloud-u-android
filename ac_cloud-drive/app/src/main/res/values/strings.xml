@@ -269,6 +269,15 @@
     <string name="git_fork">fork</string>
     <string name="git_cloning">cloning…</string>
     <string name="git_not_cloned">not cloned</string>
+    <string name="git_force_pull_all">Force pull all</string>
+    <string name="git_pull_all">Pull all</string>
+    <string name="git_confirm_force_pull_all">Force pull overwrites the LOCAL clone of each of the %1$d repositories with its remote branch. Local commits and uncommitted edits are lost.</string>
+    <string name="git_auto_pull_on_open">Auto pull on open</string>
+    <string name="git_auto_pull_wifi_only">Auto pull runs on Wi-Fi only.</string>
+    <string name="git_auto_pull_skipped_metered">Auto pull skipped: not on Wi-Fi.</string>
+    <string name="git_auto_pull_skipped_busy">Auto pull skipped: a pull is already running.</string>
+    <string name="git_pull_all_progress">Pulling %1$d of %2$d…</string>
+    <string name="git_pull_all_done">Pull finished: %1$d ok, %2$d failed</string>
     <string name="git_expand">Show operations</string>
     <string name="git_collapse">Hide operations</string>
     <string name="git_readonly_blocked">read-only remote: push and force push are refused</string>
