@@ -38,6 +38,7 @@ on:
       - "1_cicd/src/scripts/test/test-apk-identity-reader.sh"
       - "1_cicd/src/scripts/test/test-fork-*.sh"
       - "ab_cloud-libs-shared/lib-apks/build.json"
+      - "build.sh"
     # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
