@@ -692,6 +692,84 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
     }
 
+    /** #802 I9 one message to the assistant; its answer (or the confirmation it waits for) in a panel. */
+    private fun showAgentChat() {
+        val ask = BrowserAgentHost.ask ?: return toast("The assistant is not available in this app")
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply { hint = "Ask about this page, or ask it to do something" }
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle("Ask the assistant")
+            .setView(input)
+            .setPositiveButton("Send") { _, _ ->
+                val text = input.text.toString().trim()
+                if (text.isNotEmpty()) agentAnswer { ask(text) }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /** Run [work] (a model turn: network) off the main thread; show what it answers. */
+    private fun agentAnswer(work: () -> String) {
+        toast("Asking…")
+        Thread { val out = runCatching(work).getOrElse { "error: ${it.javaClass.simpleName}" }; view?.post { if (isAdded) showTextPanel("Assistant", out) } }.start()
+    }
+
+    /** #802 I9 the consent sheet: the exact action and site; nothing runs until he picks. */
+    private fun showAgentConfirm(callId: String, sentence: String) {
+        val decide = BrowserAgentHost.decide ?: return
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Allow this action?")
+            .setMessage(sentence)
+            .setCancelable(false)
+            .setPositiveButton("Allow") { _, _ -> agentAnswer { decide(callId, true) } }
+            .setNegativeButton("Deny") { _, _ -> agentAnswer { decide(callId, false) } }
+            .show()
+    }
+
+    /**
+     * #802 I9 one tool on the live page. The agent loop has already applied [AgentPolicy] and his
+     * confirmation; this only executes. No branch reads the profile store or the vault.
+     */
+    private fun runAgentTool(name: String, a: JSONObject, wv: WebView?, url: String, done: (JSONObject) -> Unit) {
+        val ok = { JSONObject().put("ok", true).put("tool", name) }
+        val needPage = { done(JSONObject().put("ok", false).put("error", "no page is open")) }
+        val cap = config.addons["ai"]?.config?.optInt("page_text_cap_chars", 6000) ?: 6000
+        when (name) {
+            "read_page", "summarize_page" -> {
+                wv ?: return needPage()
+                BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "page_text", cap)) { r -> done(r?.put("ok", true) ?: ok().put("ok", false)) }
+            }
+            "find_in_page" -> { wv ?: return needPage(); BrowserPageActions.find(wv, a.optString("q")) { n -> done(ok().put("matches", n)) } }
+            "scrape" -> {
+                wv ?: return needPage()
+                val sc = config.addons["scraper"]?.config ?: JSONObject()
+                val plan = ScrapeEngine.simple(a.optString("css"), a.optString("attr").ifBlank { null }, 1, null, 1)
+                if (plan.columns.first().css.isBlank()) return done(ok().put("ok", false).put("error", "css is required"))
+                runScrape(wv, plan, sc) { r -> done(r.put("ok", true)) }
+            }
+            "list_tabs" -> done(ok().put("tabs", org.json.JSONArray(prefs.all().map { JSONObject().put("url", it.url).put("title", it.title).put("pinned", it.pinned) })))
+            "click" -> {
+                wv ?: return needPage()
+                BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "agent_click").replace("__CSS__", JSONObject.quote(a.optString("css")))) { r -> done(r ?: ok().put("ok", false)) }
+            }
+            "fill_form" -> {
+                wv ?: return needPage()
+                val f = a.optJSONObject("fields") ?: JSONObject()
+                BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "agent_fill").replace("__FIELDS__", f.toString())) { r -> done(r ?: ok().put("ok", false)) }
+            }
+            "navigate" -> { wv ?: return needPage(); wv.loadUrl(a.optString("url")); done(ok().put("url", a.optString("url"))) }
+            "open_tab" -> { openEntryUrl(a.optString("url")); done(ok().put("url", a.optString("url"))) }
+            "close_tab" -> { val closed = prefs.remove(a.optString("url")); BrowserBus.post(BrowserBus.TABS); done(ok().put("ok", closed)) }
+            "pin_tab" -> { prefs.setPinned(a.optString("url"), a.optBoolean("on", true)); BrowserBus.post(BrowserBus.TABS); done(ok()) }
+            "bookmark_page" -> {
+                if (!url.startsWith("http")) return needPage()
+                BrowserBookmarks(requireContext()).add(url, wv?.title.orEmpty(), a.optString("folder"))
+                done(ok().put("url", url))
+            }
+            else -> done(JSONObject().put("ok", false).put("error", "no tool named $name"))
+        }
+    }
+
     /** #802 I8 one query, one of cloud-search's engines (the Search add-on): its results open as a new tab. */
     private fun showSearchWith() {
         val engines = config.addons.searchEngines()
@@ -1017,6 +1095,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "addons_manage" -> { showAddons(); done(ok()) }
             "scraper" -> { showScraper(); done(ok()) }
             "search_with" -> { showSearchWith(); done(ok()) }
+            "ai_chat" -> { showAgentChat(); done(ok()) }
+            "agent_confirm" -> { showAgentConfirm(args["call"].orEmpty(), args["sentence"].orEmpty()); done(ok().put("shown", true)) }
+            "agent_tool" -> runAgentTool(args["name"].orEmpty(), AgentLoop.args(args["args"]), wv, url, done)
             "scrape_run" -> {
                 wv ?: return needPage()
                 val sc = config.addons["scraper"]?.config ?: JSONObject()

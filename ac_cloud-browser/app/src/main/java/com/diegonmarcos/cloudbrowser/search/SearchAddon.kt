@@ -73,7 +73,7 @@ class SearchAddon(val cfg: SearchConfig) {
         .put("message", o.session.messages.lastOrNull()?.takeIf { it.role == "assistant" }?.content ?: JSONObject.NULL)
         .put("citations", JSONArray(o.citations))
 
-    private fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int): Pair<Int, String> {
+    internal fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int): Pair<Int, String> {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.requestMethod = "POST"; c.doOutput = true

@@ -13,7 +13,14 @@ import java.time.ZoneId
 object Chat {
     data class Msg(val role: String, val content: String)
     data class Model(val id: String, val name: String, val nativeWeb: Boolean, val free: Boolean, val context: Int)
-    data class Reply(val text: String?, val citations: List<String>, val model: String?, val error: String?)
+    data class Reply(val text: String?, val citations: List<String>, val model: String?, val error: String?,
+                     val toolCalls: List<ToolCall> = emptyList())
+
+    /** #802 I9 a tool the model may call (OpenAI-compatible `tools`); [parameters] is a JSON-Schema object. Names are data. */
+    data class ToolSpec(val name: String, val description: String, val parameters: JSONObject)
+
+    /** One call the model asked for: [arguments] is its JSON text, unparsed. */
+    data class ToolCall(val id: String, val name: String, val arguments: String)
     data class Session(val id: String, val title: String, val model: String, val updated: Long, val messages: List<Msg>) {
         fun toJson(): JSONObject = JSONObject().put("id", id).put("title", title).put("model", model).put("updated", updated)
             .put("messages", JSONArray(messages.map { JSONObject().put("role", it.role).put("content", it.content) }))
@@ -32,6 +39,23 @@ object Chat {
         return o.toString()
     }
 
+    /**
+     * #802 I9 a tool-using request: [messages] are already in wire shape (an assistant turn may carry
+     * `tool_calls`, a `tool` turn its `tool_call_id`), so a multi-step turn round-trips unchanged.
+     * No tools → no `tools`/`tool_choice` keys at all.
+     */
+    fun toolsBody(model: String, messages: JSONArray, tools: List<ToolSpec>): String {
+        val o = JSONObject().put("model", model).put("messages", messages)
+        if (tools.isNotEmpty()) {
+            o.put("tools", JSONArray(tools.map { t ->
+                JSONObject().put("type", "function").put("function",
+                    JSONObject().put("name", t.name).put("description", t.description).put("parameters", t.parameters))
+            }))
+            o.put("tool_choice", "auto")
+        }
+        return o.toString()
+    }
+
     fun headers(ai: SearchConfig.Ai, token: String): Map<String, String> =
         mapOf("Authorization" to "Bearer $token", "HTTP-Referer" to ai.referer, "X-Title" to ai.title)
 
@@ -45,7 +69,14 @@ object Chat {
         val cites = if (notes == null) emptyList() else (0 until notes.length()).mapNotNull { i ->
             notes.optJSONObject(i)?.optJSONObject("url_citation")?.optStr("url")
         }.distinct()
-        return Reply(msg.optStr("content"), cites, o.optStr("model"), null)
+        val calls = msg.optJSONArray("tool_calls")?.let { a ->
+            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { c ->
+                val f = c.optJSONObject("function") ?: return@mapNotNull null
+                val name = f.optStr("name") ?: return@mapNotNull null
+                ToolCall(c.optString("id"), name, f.optString("arguments", "{}").ifBlank { "{}" })
+            }
+        }.orEmpty()
+        return Reply(msg.optStr("content"), cites, o.optStr("model"), null, calls)
     }
 
     /** The live catalogue: text-output models, the natively web-searching ones flagged, free ones flagged. */

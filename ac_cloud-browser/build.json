@@ -656,6 +656,193 @@
               "label": "Search with…"
             }
           ]
+        },
+        {
+          "id": "ai",
+          "label": "AI chat",
+          "doc": "An assistant that reads and acts on the open page with the declared tools. Reading tools run freely; every tool that clicks, types, navigates or changes tabs or bookmarks asks first, naming the action and the site. It never fills passwords or card data and never sees the vault or the autofill profile.",
+          "default_enabled": true,
+          "permissions": [
+            "page_read",
+            "page_write",
+            "network",
+            "ai_model"
+          ],
+          "engine": "device",
+          "_doc_model": "The model is cloud-search's search.ai.default_model unless `model` is set here; the token is the fleet Account's OpenRouter key, read per turn (the Search add-on's path).",
+          "model": "",
+          "max_tool_calls_per_turn": 6,
+          "page_text_cap_chars": 6000,
+          "_doc_tools": "Each tool: mutating:true must be confirm:true (test-browser-agent-consent.sh). route model = the result goes back to the model. Names are the wire names the model sees.",
+          "tools": [
+            {
+              "id": "read_page",
+              "label": "Read the page",
+              "description": "The open page's title, URL, and visible text (capped at page_text_cap_chars).",
+              "params": {},
+              "mutating": false,
+              "confirm": false,
+              "route": "model"
+            },
+            {
+              "id": "summarize_page",
+              "label": "Summarize the page",
+              "description": "The open page's text, for you to summarize in your answer.",
+              "params": {},
+              "mutating": false,
+              "confirm": false,
+              "route": "model"
+            },
+            {
+              "id": "find_in_page",
+              "label": "Find in page",
+              "description": "How many times a text occurs on the open page (the find bar highlights it).",
+              "params": {
+                "q": {
+                  "type": "string",
+                  "description": "the text to find"
+                }
+              },
+              "mutating": false,
+              "confirm": false,
+              "route": "model"
+            },
+            {
+              "id": "scrape",
+              "label": "Scrape",
+              "description": "Rows of the open page's elements matching a CSS selector, optionally one attribute of each.",
+              "params": {
+                "css": {
+                  "type": "string",
+                  "description": "CSS selector"
+                },
+                "attr": {
+                  "type": "string",
+                  "description": "attribute to read, e.g. href; omit for text"
+                }
+              },
+              "mutating": false,
+              "confirm": false,
+              "route": "model"
+            },
+            {
+              "id": "list_tabs",
+              "label": "List tabs",
+              "description": "The open tabs: url, title, pinned, active.",
+              "params": {},
+              "mutating": false,
+              "confirm": false,
+              "route": "model"
+            },
+            {
+              "id": "click",
+              "label": "Click",
+              "description": "Click the first element matching a CSS selector on the open page.",
+              "params": {
+                "css": {
+                  "type": "string",
+                  "description": "CSS selector"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "fill_form",
+              "label": "Fill form",
+              "description": "Type values into fields of the open page: fields maps a CSS selector to its value. Never passwords or card data.",
+              "params": {
+                "fields": {
+                  "type": "object",
+                  "description": "{css selector: value}"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "navigate",
+              "label": "Navigate",
+              "description": "Load a URL in the current tab.",
+              "params": {
+                "url": {
+                  "type": "string",
+                  "description": "http(s) URL"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "open_tab",
+              "label": "Open tab",
+              "description": "Open a URL in a new tab.",
+              "params": {
+                "url": {
+                  "type": "string",
+                  "description": "http(s) URL"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "close_tab",
+              "label": "Close tab",
+              "description": "Close the tab with this URL (a pinned tab is refused).",
+              "params": {
+                "url": {
+                  "type": "string",
+                  "description": "the tab's URL"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "pin_tab",
+              "label": "Pin tab",
+              "description": "Pin or unpin the tab with this URL.",
+              "params": {
+                "url": {
+                  "type": "string",
+                  "description": "the tab's URL"
+                },
+                "on": {
+                  "type": "boolean",
+                  "description": "true to pin"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            },
+            {
+              "id": "bookmark_page",
+              "label": "Bookmark page",
+              "description": "Bookmark the open page, optionally into a folder.",
+              "params": {
+                "folder": {
+                  "type": "string",
+                  "description": "folder path, e.g. reading/later"
+                }
+              },
+              "mutating": true,
+              "confirm": true,
+              "route": "model"
+            }
+          ],
+          "menu": [
+            {
+              "id": "ai_chat",
+              "label": "Ask the assistant…"
+            }
+          ]
         }
       ]
     },

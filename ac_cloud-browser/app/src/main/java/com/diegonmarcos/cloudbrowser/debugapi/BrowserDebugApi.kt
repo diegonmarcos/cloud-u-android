@@ -2,6 +2,7 @@ package com.diegonmarcos.cloudbrowser.debugapi
 
 import android.content.Context
 import com.diegonmarcos.cloudbrowser.BuildConfig
+import com.diegonmarcos.cloudbrowser.search.AgentRunner
 import com.diegonmarcos.cloudbrowser.search.SearchAddon
 import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
 import com.diegonmarcos.superapp.browser.BrowserBookmarks
@@ -72,6 +73,9 @@ object BrowserDebugApi {
         Op("search/open", "q=<query>&engine=<engine id, default the first>", "open the engine's results for q as a tab"),
         Op("search/chat/sessions", "", "this run's AI chat sessions: id, title, model, turns"),
         Op("search/chat/send", "text=<message>&session=<id, optional>&model=<optional>&web=<true|false>", "one AI chat turn (cloud-search's protocol, the fleet Account's token read per call and never answered)"),
+        Op("ai/tools", "", "the assistant's declared tools: id, mutating, confirm, route"),
+        Op("ai/ask", "text=<message>&session=<id, default api>", "one assistant turn on the live page; a mutating tool answers pending_confirmation and puts the consent sheet on screen (there is no allow over the API)"),
+        Op("ai/sessions", "", "the assistant's sessions: message count and any waiting tool"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
@@ -80,6 +84,8 @@ object BrowserDebugApi {
         registered = true
         val app = ctx.applicationContext
         val config = BrowserConfig.parseBase64(BuildConfig.UI_BROWSER_CONFIG_B64)
+        // #802 I9 the screen's chat dialog and consent sheet reach the runner from the first frame.
+        config.addons["ai"]?.let { runCatching { AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), it) } }
         AppDebugServer.route(BuildConfig.DEBUG_API_GROUP, OPS) { op, q ->
             handle(app, config, op, q)?.toString()
         }
@@ -234,6 +240,19 @@ object BrowserDebugApi {
                         SearchAddon.accountToken(app, s.cfg.ai.accountProvider)
                     })
                 }
+            "ai/tools", "ai/ask", "ai/sessions" -> {
+                val addon = config.addons["ai"]
+                if (addon == null || !config.addons.enabled("ai", settings.stringSet("addons_enabled")))
+                    JSONObject().put("ok", false).put("error", "the ai add-on is off (addons/set?id=ai&on=true)")
+                else {
+                    val r = AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), addon)
+                    when (op) {
+                        "ai/tools" -> r.toolsJson
+                        "ai/sessions" -> r.sessionsJson()
+                        else -> need(q["text"].orEmpty(), "text") ?: r.ask(q["session"]?.ifBlank { null } ?: "api", q["text"].orEmpty())
+                    }
+                }
+            }
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

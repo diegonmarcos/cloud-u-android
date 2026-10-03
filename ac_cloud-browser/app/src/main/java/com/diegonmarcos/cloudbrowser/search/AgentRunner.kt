@@ -1,0 +1,95 @@
+package com.diegonmarcos.cloudbrowser.search
+
+import android.content.Context
+import com.diegonmarcos.cloudsearch.core.Chat
+import com.diegonmarcos.superapp.browser.AgentLoop
+import com.diegonmarcos.superapp.browser.BrowserAddon
+import com.diegonmarcos.superapp.browser.BrowserAgentHost
+import com.diegonmarcos.superapp.browser.BrowserBus
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * #802 I9 the AI Chat add-on's runner: one [AgentLoop] per session, the model reached with
+ * cloud-search's protocol ([Chat.toolsBody]/[Chat.reply]) and the fleet Account's token (read
+ * per model call, never kept), every tool executed on the live page through [BrowserBus]. A
+ * mutating tool stops the turn: the consent sheet is put on screen and the turn resumes only
+ * from his Allow/Deny ([BrowserAgentHost.decide]). The debug route can ask, never allow.
+ */
+class AgentRunner(private val app: Context, private val search: SearchAddon, addon: BrowserAddon) {
+
+    private val cfg = addon.config
+    private val tools = AgentLoop.parseTools(cfg.optJSONArray("tools"))
+    private val cap = cfg.optInt("max_tool_calls_per_turn", 6)
+    private val model = cfg.optString("model").ifBlank { search.cfg.ai.defaultModel }
+    private val specs = tools.map { Chat.ToolSpec(it.id, it.description, it.schema()) }
+    private val sessions = LinkedHashMap<String, AgentLoop>()
+
+    val toolsJson: JSONArray get() = JSONArray(tools.map {
+        JSONObject().put("id", it.id).put("label", it.label).put("mutating", it.mutating).put("confirm", it.confirm).put("route", it.route)
+    })
+
+    fun sessionsJson(): JSONArray = synchronized(sessions) {
+        JSONArray(sessions.map { (id, l) -> JSONObject().put("id", id).put("messages", l.messages.length()).put("pending", l.pending?.name ?: JSONObject.NULL) })
+    }
+
+    /** One message from him in [session] (created when new). Blocking: off the main thread. */
+    fun ask(session: String, text: String): JSONObject {
+        val loop = synchronized(sessions) { sessions.getOrPut(session) { AgentLoop(tools, cap) } }
+        synchronized(loop) {
+            loop.pending?.let { return JSONObject().put("ok", false).put("session", session).put("status", "pending_confirmation")
+                .put("tool", it.name).put("error", "answer the confirmation on screen first") }
+            loop.user(text)
+            return step(session, loop)
+        }
+    }
+
+    /** His decision from the sheet. */
+    fun decide(callId: String, allow: Boolean): JSONObject {
+        val (session, loop) = synchronized(sessions) { sessions.entries.firstOrNull { it.value.pending?.id == callId } }
+            ?.let { it.key to it.value } ?: return JSONObject().put("ok", false).put("error", "no action is waiting")
+        synchronized(loop) {
+            loop.decide(callId, if (allow) AgentLoop.Decision.ALLOW else AgentLoop.Decision.DENY)
+            return step(session, loop)
+        }
+    }
+
+    private fun step(session: String, loop: AgentLoop): JSONObject {
+        val out = loop.step(model = ::callModel, run = { c ->
+            BrowserBus.call("agent_tool", mapOf("name" to c.name, "args" to c.args.toString()), timeoutMs = 60_000).toString().take(cfg.optInt("page_text_cap_chars", 6000) + 500)
+        }, currentUrl = { BrowserBus.call("page_text", mapOf("n" to "1")).optString("url").ifBlank { null } })
+        val base = JSONObject().put("session", session)
+        return when (out) {
+            is AgentLoop.Outcome.Answer -> base.put("ok", true).put("status", "answered").put("message", out.text)
+            is AgentLoop.Outcome.Failed -> base.put("ok", false).put("status", "failed").put("error", out.error)
+            is AgentLoop.Outcome.Pending -> {
+                BrowserBus.call("agent_confirm", mapOf("call" to out.call.id, "sentence" to out.sentence))
+                base.put("ok", true).put("status", "pending_confirmation").put("tool", out.call.name).put("confirm", out.sentence)
+            }
+        }
+    }
+
+    private fun callModel(messages: JSONArray): AgentLoop.ModelTurn {
+        val ai = search.cfg.ai
+        val (token, why) = SearchAddon.accountToken(app, ai.accountProvider)
+        if (token == null) return AgentLoop.ModelTurn(null, emptyList(), why)
+        val res = runCatching { search.post(ai.chatUrl, Chat.headers(ai, token), Chat.toolsBody(model, messages, specs), ai.timeoutMs) }
+        val body = res.getOrNull() ?: return AgentLoop.ModelTurn(null, emptyList(), res.exceptionOrNull()?.javaClass?.simpleName ?: "no answer")
+        val r = Chat.reply(body.second)
+        if (r.error != null) return AgentLoop.ModelTurn(null, emptyList(), r.error)
+        return AgentLoop.ModelTurn(r.text, r.toolCalls.map { AgentLoop.Call(it.id, it.name, AgentLoop.args(it.arguments)) })
+    }
+
+    companion object {
+        @Volatile private var instance: AgentRunner? = null
+
+        fun get(app: Context, search: SearchAddon, addon: BrowserAddon): AgentRunner = instance ?: synchronized(this) {
+            instance ?: AgentRunner(app.applicationContext, search, addon).also { r ->
+                instance = r
+                // The screen's chat dialog and consent sheet.
+                BrowserAgentHost.ask = { text -> r.ask("screen", text).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
+                BrowserAgentHost.decide = { id, allow -> r.decide(id, allow).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
+            }
+        }
+    }
+}
