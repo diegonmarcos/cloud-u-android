@@ -95,6 +95,27 @@ class AppsMeshTest {
     }
 
     @Test
+    fun `809 Details is a page with its own Copy, and the debug API lists exactly the drawn controls`() {
+        assertEquals("page", decl.of("member").first { it.id == "details" }.type)
+        assertEquals(listOf("copy"), decl.of("details", "action").map { it.id })
+        val j = AppsMesh.controlsJson(decl)
+        val arr = j.getJSONArray("controls")
+        val listed = (0 until arr.length()).map { arr.getJSONObject(it) }
+        assertEquals("the API lists a control the page does not draw, or misses one",
+            decl.controls.map { "${it.scope}:${it.id}:${it.type}" },
+            listed.map { "${it.getString("scope")}:${it.getString("id")}:${it.getString("type")}" })
+        assertEquals(decl.controls.size, j.getInt("count"))
+        assertEquals(AppsMesh.TYPES, (0 until j.getJSONArray("types").length()).map { j.getJSONArray("types").getString(it) })
+        assertTrue(listed.any { it.getString("scope") == "member" && it.getString("id") == "details" && it.getString("type") == "page" })
+        // mutation: a control dropped by the filter (a typo) is not listed either
+        val typo = AppsMesh.decl(JSONObject().put("apps_mesh", JSONObject().put("controls", org.json.JSONArray()
+            .put(JSONObject().put("scope", "details").put("id", "copy").put("type", "action"))
+            .put(JSONObject().put("scope", "details").put("id", "cpy").put("type", "action"))
+            .put(JSONObject().put("scope", "details").put("id", "copy").put("type", "chip")))))
+        assertEquals(1, AppsMesh.controlsJson(typo).getInt("count"))
+    }
+
+    @Test
     fun `809 a typo in type or id is dropped, not drawn as a dead control`() {
         val bad = AppsMesh.decl(JSONObject().put("apps_mesh", JSONObject().put("controls", org.json.JSONArray()
             .put(JSONObject().put("scope", "root").put("id", "reprobe").put("type", "button"))

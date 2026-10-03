@@ -62,6 +62,8 @@ object AppsMesh {
     const val TAG_GROUP = "apps-mesh-group:"
     /** #809 the sub-page being shown: "$TAG_SUB<page id>". */
     const val TAG_SUB = "apps-mesh-sub:"
+    /** #809 the Details sub-page's body: "$TAG_DETAILS<member id>". */
+    const val TAG_DETAILS = "apps-mesh-details:"
     /** #793 a member's row button: "$TAG_ACTION<action id>:<member id>". */
     const val TAG_ACTION = "apps-mesh-action:"
     const val TAG_FILTER = "apps-mesh-filter:"
@@ -83,6 +85,7 @@ object AppsMesh {
         "member" to listOf("api", "start", "stop", "open", "details", "store"),
         "endpoints" to listOf("json", "markdown", "copy"),
         "gaps" to listOf("export", "copy"),
+        "details" to listOf("copy"),
         "sub" to listOf("back"),
     )
 
@@ -103,6 +106,22 @@ object AppsMesh {
         fun group(type: String) = groups[type]?.takeIf { it.isNotEmpty() } ?: type
         /** One of the page's remaining sentences (`words`). */
         fun word(id: String) = words[id]?.takeIf { it.isNotEmpty() } ?: id
+    }
+
+    /** #809 the typed control list as data, for the debug API
+     *  (/api/fleet/controls): every control that survived [decl]'s filter,
+     *  in declared order, with its scope, type and caption — so a device check
+     *  reads what the page draws without a screenshot. */
+    fun controlsJson(decl: Decl): JSONObject {
+        val arr = org.json.JSONArray()
+        for (c in decl.controls) arr.put(JSONObject().put("scope", c.scope).put("id", c.id).put("type", c.type)
+            .put("label", c.label).put("icon", c.icon)
+            .put("color", c.color?.let { "0x%08X".format(it) } ?: JSONObject.NULL))
+        val scopes = JSONObject()
+        for ((s, ids) in HANDLED) scopes.put(s, org.json.JSONArray(ids))
+        return JSONObject().put("ok", true).put("types", org.json.JSONArray(TYPES))
+            .put("groups", JSONObject(TYPES.associateWith { decl.group(it) }))
+            .put("handled", scopes).put("controls", arr).put("count", arr.length())
     }
 
     fun decl(controls: JSONObject): Decl {
@@ -423,6 +442,8 @@ object AppsMesh {
         /** re-probe this one member, waking it if it does not answer. */
         val reprobe: (Fleet.App) -> Unit,
         val saved: () -> Unit,
+        /** #809 open this member's Details sub-page (a page, not a dialog). */
+        val details: (Fleet.App) -> Unit = {},
     )
 
     /**
@@ -503,13 +524,14 @@ object AppsMesh {
             }
         }
         lateinit var reprobe: (Fleet.App) -> Unit
+        lateinit var detailsOf: (Fleet.App) -> Unit
         fun rowOf(app: Fleet.App): View = rows.getOrPut(app.id) {
             val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             val panel = text(ctx, "", 11f, DIM).apply {
                 typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
                 tag = TAG_DOCS + app.id
             }
-            val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() })
+            val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() }, { detailsOf(it) })
             // #809 a member's actions in one row, its pages in another: two kinds, two groups
             val mine = actionsFor(decl, onStore != null)
             for (type in listOf("action", "page")) {
@@ -569,10 +591,10 @@ object AppsMesh {
 
         // ── #809 sub-pages: each carries its own actions, and a way back ──
         fun back() { sub.removeAllViews(); sub.visibility = View.GONE; root.visibility = View.VISIBLE; refresh(emptyList()) }
-        fun open(id: String, build: (LinearLayout) -> Unit) {
+        fun open(id: String, title: String = decl.label("root", id), build: (LinearLayout) -> Unit) {
             sub.removeAllViews(); sub.tag = TAG_SUB + id
             controls(ctx, decl, looks, sub, "sub", mapOf("back" to ::back))
-            sub.addView(text(ctx, decl.label("root", id), 14f, BLUE, bold = true))
+            sub.addView(text(ctx, title, 14f, BLUE, bold = true))
             build(sub)
             root.visibility = View.GONE; sub.visibility = View.VISIBLE
         }
@@ -585,6 +607,25 @@ object AppsMesh {
             val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             renderGaps(ctx, decl, box, gaps(decl, fleet, links, l)); page.addView(box)
         }
+        // #809 a member's Details: a sub-page like App API Endpoints, carrying
+        // its own Copy, filled off the main thread (it may ask the member's
+        // /api/system/info), never a dialog over the page.
+        fun detailsPage(app: Fleet.App) = open("details", "${app.label} · ${decl.label("member", "details")}") { page ->
+            var body = ""
+            controls(ctx, decl, looks, page, "details", mapOf("copy" to { copy(ctx, body) }))
+            val out = text(ctx, "⟳", 12f, DIM).apply {
+                typeface = Typeface.MONOSPACE; setTextIsSelectable(true); tag = TAG_DETAILS + app.id
+            }
+            page.addView(out)
+            val l = live
+            thread(name = "apps-mesh-details") {
+                val port = l?.reachable?.get(app.id)
+                val info = port?.let { StoreMesh.get(it, "/api/system/info", FleetToken.get(appCtx)) }
+                val t = details(appCtx, app, links, l, info)
+                out.post { body = t; out.text = t }
+            }
+        }
+        detailsOf = { app -> detailsPage(app) }
         fun endpointsPage() = open("endpoints") { page ->
             val l = shown() ?: return@open page.addView(text(ctx, waitWord, 12f, DIM))
             allEndpoints(host, page, decl, looks, fleet, links, l, docs, docsAt, mesh) { saved() }
@@ -818,12 +859,8 @@ object AppsMesh {
                     }
                 }
             }
-            "details" -> thread(name = "apps-mesh-details") {
-                val port = live?.reachable?.get(app.id)
-                val info = port?.let { StoreMesh.get(it, "/api/system/info", FleetToken.get(appCtx)) }
-                val text = details(appCtx, app, links, live, info)
-                ui { textDialog(ctx, "${app.label} · Details", text) }
-            }
+            // #809 Details is a page: the host swaps to the member's Details sub-page
+            "details" -> row.details(app)
         }
     }
 
@@ -915,19 +952,6 @@ object AppsMesh {
         for (g in gaps) box.addView(text(ctx, "✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", 12f, RED).apply {
             tag = "$TAG_GAP${g.app.id}:${g.kind.name}"
         })
-    }
-
-    private fun textDialog(ctx: Context, title: String, body: String) {
-        AlertDialog.Builder(ctx).setTitle(title)
-            .setView(android.widget.ScrollView(ctx).apply {
-                addView(TextView(ctx).apply {
-                    text = body; textSize = 12f; setTextIsSelectable(true); typeface = Typeface.MONOSPACE
-                    val p = dp(ctx, 16); setPadding(p, p, p, p)
-                })
-            })
-            .setPositiveButton(load(ctx).word("copy")) { _, _ -> copy(ctx, body) }
-            .setNegativeButton(load(ctx).word("close"), null)
-            .show()
     }
 
     private fun copy(ctx: Context, body: String) {

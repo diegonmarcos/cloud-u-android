@@ -22,6 +22,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -138,6 +139,19 @@ class StoreSharedControlsTest {
         assertTrue("$where: back did not return to Apps Mesh", tagged(root, AppsMesh.TAG_TOOL + "sub:").isEmpty())
         tagged(root, AppsMesh.TAG_TOOL + "root:gaps").single().performClick()
         tagged(root, AppsMesh.TAG_TOOL + "sub:back").single().performClick()
+        // #809 a member's Details is a sub-page like App API Endpoints, not a dialog:
+        // the page swaps, carries its own declared Copy and a way back, and no dialog opens
+        val member = fleet.first().id
+        tagged(root, "${AppsMesh.TAG_ACTION}details:$member").single().performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals("$where: Details did not open as the details sub-page", "${AppsMesh.TAG_SUB}details",
+            tagged(root, AppsMesh.TAG_SUB).single().tag)
+        assertNull("$where: Details opened a dialog", org.robolectric.shadows.ShadowDialog.getLatestDialog())
+        assertControlsGrouped(root, "details", where, buttonLook)
+        assertControlsGrouped(root, "sub", where, buttonLook)
+        assertEquals("$where: Details body is not this member's", 1, tagged(root, AppsMesh.TAG_DETAILS + member).size)
+        tagged(root, AppsMesh.TAG_TOOL + "sub:back").single().performClick()
+        assertTrue("$where: back did not leave Details", tagged(root, AppsMesh.TAG_TOOL + "details:").isEmpty())
         // static first: every member's card is on the page before any probe answered
         val cards = tagged(root, StoreMesh.TAG_NODE).map { (it.tag as String).removePrefix(StoreMesh.TAG_NODE) }
         assertEquals("$where: not every member is drawn up front", fleet.map { it.id }.sorted(), cards.sorted())

@@ -15,6 +15,8 @@
 #       mesh member visible to every other (queries + exported, guarded marker)
 #   C6  Peer Control: a peer selector at the top, fed by the declarations, and no
 #       action targets "whichever link is open first" any more
+#   C9  #809 a member's Details is a sub-page (no dialog) with its own Copy, and
+#       /api/fleet/controls serves the typed controls the page draws; 6 mutants
 #   C7  #793 the Store's OWN controls: every button on the page (tools, each
 #       member's row, All endpoints) is StoreBar.button and every filter
 #       chip StoreBar.chip — the same two builders the Store's bar, rows and
@@ -115,10 +117,11 @@ branch stop    | grep -qF 'PhoneAppActions.forceStop('  && branch stop | grep -q
   && ok "Stop force-stops via the privileged channel and says so when none is armed" \
   || bad "Stop does not use the shell channel, or is silent when it is not armed"
 branch open    | grep -qF 'getLaunchIntentForPackage'   && ok "Open launches the app" || bad "Open does not launch the app"
-branch details | grep -qF 'details('                    && ok "Details builds the full detail text" || bad "Details does not build details()"
+DPAGE="$(code "$MESH" | awk '/fun detailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
+printf '%s' "$DPAGE" | grep -qF 'details(appCtx, app' && ok "Details builds the full detail text (on its sub-page)" || bad "the Details page does not build details()"
 fn "$MESH" details | grep -qF 'installedDetails' && fn "$MESH" details | grep -qF 'permissions(' \
   && ok "details() reads the installed APK identity and its permissions" || bad "details() lacks installed identity or permissions"
-fn "$MESH" textDialog | grep -qF 'copy(ctx, body)' && ok "the detail/API dialog offers Copy all" || bad "no Copy all on the detail dialog"
+printf '%s' "$DPAGE" | grep -qF '"copy" to { copy(ctx, body) }' && ok "the Details page offers Copy all" || bad "no Copy all on the Details page"
 fn "$MESH" page | grep -qF 'val mine = actionsFor(decl, onStore != null)' && fn "$MESH" page | grep -qF 'for (a in cs)' \
   && ok "each member's card draws the declared actions" || bad "member cards do not draw the declared actions"
 code "$MESH" | grep -qF 'fun showActions(' && bad "a member's actions still hide behind a dialog" || ok "no action dialog: the buttons are on the card"
@@ -241,6 +244,54 @@ printf '%s' "$grp" | grep -qF 'StoreBar.page(ctx, looks.page' && printf '%s' "$g
 fn "$BAR" page | grep -qF 'setTag(R.id.store_control, PAGE)' && ok "StoreBar owns the one marked page button" || bad "StoreBar.page carries no mark"
 [ "$(jq -r '.page_style' "$CONTROLS")" = "page" ] && ok "page buttons wear 'page'" || bad "page_style is not 'page' - a fourth look"
 fn "$MESH" allEndpoints | grep -qF 'AlertDialog' && bad "App API Endpoints is still a dialog, not a page" || ok "App API Endpoints is a page"
+
+echo "== C9: Details is a sub-page, and the typed controls are on the debug API (#809) =="
+# c9 <AppsMesh.kt> <StoreDebugApi.kt> <appstore-controls.json> — prints one FAIL line per defect
+c9() {
+  local act det
+  act="$(fn "$1" act)"
+  printf '%s' "$act" | grep -qE 'textDialog|AlertDialog[^\n]*Details|"details" -> thread' \
+    && echo "FAIL the member 'details' action still opens a dialog"
+  printf '%s' "$act" | grep -qF '"details" -> row.details(app)' \
+    || echo "FAIL the member 'details' action does not hand over to the page's Details sub-page"
+  det="$(code "$1" | awk '/fun detailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
+  printf '%s' "$det" | grep -qF 'open("details"' || echo "FAIL detailsPage is not opened as the 'details' sub-page"
+  printf '%s' "$det" | grep -qF 'controls(ctx, decl, looks, page, "details"' \
+    || echo "FAIL the Details sub-page does not draw its own declared controls"
+  printf '%s' "$det" | grep -qF 'AlertDialog' && echo "FAIL the Details sub-page builds a dialog"
+  jq -e 'any(.apps_mesh.controls[]; .scope=="member" and .id=="details" and .type=="page")' "$3" >/dev/null \
+    || echo "FAIL member 'details' is not declared as a page"
+  jq -e 'any(.apps_mesh.controls[]; .scope=="details" and .id=="copy" and .type=="action")' "$3" >/dev/null \
+    || echo "FAIL the Details page's Copy is not declared on the details scope"
+  code "$2" | grep -qF 'AppDebugServer.Op("controls"' || echo "FAIL /api/fleet/controls is not listed in the fleet route group"
+  code "$2" | grep -qF '"controls" -> AppsMesh.controlsJson(AppsMesh.load(app))' \
+    || echo "FAIL /api/fleet/controls does not answer from the page's own declaration (AppsMesh.load)"
+  fn "$1" controlsJson | grep -qF 'for (c in decl.controls)' \
+    || echo "FAIL controlsJson does not list the filtered decl.controls (what the page draws)"
+}
+out="$(c9 "$MESH" "$API" "$CONTROLS")"
+[ -z "$out" ] && ok "Details opens as a sub-page with its own Copy; /api/fleet/controls serves the drawn controls" \
+  || { printf '%s\n' "$out" | sed 's/^/    /'; bad "C9 Details / controls API"; }
+# mutations: each planted defect must turn C9 red
+MW="$(mktemp -d)"
+c9mut() {  # c9mut <title> <file-key mesh|api|json> <python replace old> <new>
+  cp "$MESH" "$MW/m.kt"; cp "$API" "$MW/a.kt"; cp "$CONTROLS" "$MW/c.json"
+  local f; case "$2" in mesh) f="$MW/m.kt";; api) f="$MW/a.kt";; json) f="$MW/c.json";; esac
+  python3 - "$f" "$3" "$4" <<'EOF' || { bad "C9 mutation '$1' did not apply"; return; }
+import sys; p, old, new = sys.argv[1:4]; s = open(p).read()
+assert old in s, old; open(p, "w").write(s.replace(old, new, 1))
+EOF
+  [ -n "$(c9 "$MW/m.kt" "$MW/a.kt" "$MW/c.json")" ] && ok "C9 mutant '$1' goes red" || bad "C9 mutant '$1' stayed GREEN"
+}
+c9mut "details back to a dialog"         mesh '"details" -> row.details(app)' '"details" -> AlertDialog.Builder(ctx).setTitle(app.label).show()'
+c9mut "Details page drops its Copy"      mesh 'controls(ctx, decl, looks, page, "details"' 'controls(ctx, decl, looks, page, "gaps"'
+c9mut "details declared as an action"    json '"id": "details",
+        "type": "page"' '"id": "details",
+        "type": "action"'
+c9mut "controls op unregistered"         api 'AppDebugServer.Op("controls"' 'AppDebugServer.Op("controlz"'
+c9mut "controls API answers a hand list" api '"controls" -> AppsMesh.controlsJson(AppsMesh.load(app))' '"controls" -> "[]"'
+c9mut "controlsJson lists raw JSON"      mesh 'for (c in decl.controls)' 'for (c in emptyList<Action>())'
+rm -rf "$MW"
 
 echo
 echo "== RESULT(#733 apps mesh): $PASS passed, $FAIL failed =="

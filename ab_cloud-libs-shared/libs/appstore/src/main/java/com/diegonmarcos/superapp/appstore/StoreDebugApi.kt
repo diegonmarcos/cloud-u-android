@@ -76,7 +76,17 @@ object StoreDebugApi {
                 "whole fleet, `filter` keeping what the Apps Mesh chip of that id shows, with every chip's " +
                 "count (probes; wake=1, the default, wakes stopped members first and can take ~15 s; wake=0 " +
                 "only looks, as the page does)"),
-        )) { op, q -> if (op == "endpoints") endpoints(app, q["filter"] ?: "all", q["wake"] != "0").toString() else null }
+            AppDebugServer.Op("controls", "",
+                "#809 the Apps Mesh page's typed controls as drawn: each {scope, id, type page|action|filter, " +
+                "label, icon, color}, the group captions and the ids each page handles — what the page draws, " +
+                "readable without a screen"),
+        )) { op, q ->
+            when (op) {
+                "endpoints" -> endpoints(app, q["filter"] ?: "all", q["wake"] != "0").toString()
+                "controls" -> AppsMesh.controlsJson(AppsMesh.load(app)).toString()
+                else -> null
+            }
+        }
     }
 
     /** #793 an unknown filter is an error, not "all": a typo must not look like a full answer. */

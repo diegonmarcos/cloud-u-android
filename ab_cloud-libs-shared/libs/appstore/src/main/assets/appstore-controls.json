@@ -72,7 +72,7 @@
   },
   "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row. #793/#809: every control is ONE entry of `controls` (see `_doc_controls`), drawn by the Store's own builders (StoreBar.page / button / chip); `api` (Docs) unfolds the member's own /api/docs in its card, fetched on first open and cached. `words` are the page's remaining sentences.",
   "apps_mesh": {
-    "_doc_controls": "#809 EVERY control on the Apps Mesh page and its sub-pages is one entry here, with a `type` saying which of three kinds it is and so which group it is drawn in: `page` navigates to a sub-page (StoreBar.page, `page_style`), `action` does something (StoreBar.button, `action_style`, in its declared `color`), `filter` narrows the list (StoreBar.chip, `filter_style`). Each type is drawn in its own captioned group (tagged apps-mesh-group:<scope>:<type>), never mixed. `scope` is the page the control sits on, because an action belongs on the page it acts on: `root` = the Apps Mesh page, `member` = each member's card, `endpoints` = the App API Endpoints page (Export JSON / Markdown and Copy live there, not on root), `gaps` = the Missing membership page (its report's Export / Copy), `sub` = every sub-page (the way back). An id AppsMesh.HANDLED does not implement for its scope, or a type outside AppsMesh.TYPES, is not drawn, so a typo cannot ship a dead control. `store` is drawn only where the host has a Store row to open. Filter ids are AppsMesh.FILTERS, counted over whatever the probe has returned so far; the choice is remembered.",
+    "_doc_controls": "#809 EVERY control on the Apps Mesh page and its sub-pages is one entry here, with a `type` saying which of three kinds it is and so which group it is drawn in: `page` navigates to a sub-page (StoreBar.page, `page_style`), `action` does something (StoreBar.button, `action_style`, in its declared `color`), `filter` narrows the list (StoreBar.chip, `filter_style`). Each type is drawn in its own captioned group (tagged apps-mesh-group:<scope>:<type>), never mixed. `scope` is the page the control sits on, because an action belongs on the page it acts on: `root` = the Apps Mesh page, `member` = each member's card, `endpoints` = the App API Endpoints page (Export JSON / Markdown and Copy live there, not on root), `gaps` = the Missing membership page (its report's Export / Copy), `details` = a member's Details page (opened from its card, a sub-page like App API Endpoints, never a dialog; its Copy), `sub` = every sub-page (the way back). An id AppsMesh.HANDLED does not implement for its scope, or a type outside AppsMesh.TYPES, is not drawn, so a typo cannot ship a dead control. `store` is drawn only where the host has a Store row to open. Filter ids are AppsMesh.FILTERS, counted over whatever the probe has returned so far; the choice is remembered.",
     "controls": [
       {
         "scope": "root",
@@ -207,6 +207,13 @@
         "id": "copy",
         "type": "action",
         "label": "Copy report",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "details",
+        "id": "copy",
+        "type": "action",
+        "label": "Copy",
         "color": "0xFF2A2A33"
       },
       {
