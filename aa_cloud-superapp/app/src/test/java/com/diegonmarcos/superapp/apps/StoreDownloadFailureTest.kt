@@ -103,8 +103,8 @@ class StoreDownloadFailureTest {
         }
     }
 
-    @Test fun `legs are release then ghcr - no invented third leg`() {
-        assertEquals(listOf("release", "ghcr"), Fleet.sourceOrder)
+    @Test fun `legs are release, ghcr, then the declared mesh leg (#837) - nothing else`() {
+        assertEquals(listOf("release", "ghcr", "mesh"), Fleet.sourceOrder)
     }
 
     @Test fun `resolver summary names servers, VPN and active Private DNS`() {
