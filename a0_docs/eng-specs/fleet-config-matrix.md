@@ -38,15 +38,15 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 10 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
-| cloud-terminal-nix | `cld.termux.nix` | 6 | 7 | 46% |
+| cloud-terminal-nix | `cld.termux.nix` | 7 | 7 | 50% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 0 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
-| cloud-terminal-termux | `cld.termux` | 7 | 7 | 50% |
+| cloud-terminal-termux | `cld.termux` | 8 | 7 | 53% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **155** | **35** | **81%** |
+| **fleet** | | **157** | **35** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -561,7 +561,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools.
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
-| `ide_prefs` | prefs | config | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user) and dev_api_enabled toggle; all user choices. |
+| `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled and the #787 wake_lock_wanted toggle; all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
@@ -633,6 +633,7 @@ Module `ac_cloud-nix-on-droid`; libs: none.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
+| `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 
 | file | class | doc |
 |---|---|---|
@@ -649,7 +650,7 @@ Module `ac_cloud-nix-on-droid`; libs: none.
 | `$HOME/.hermes/.env, exported keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys; sshd on port 8024)` | config | authorized_keys with the cloud-myterminal hub key; private keys secret. |
 
-Coverage: 6 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
+Coverage: 7 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
@@ -709,6 +710,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools.
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
+| `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -729,7 +731,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools.
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
 | `$HOME/cloud-drive-shared-store` | device | Link to shared storage CloudDrive; recreated by the app. |
 
-Coverage: 7 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
+Coverage: 8 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 

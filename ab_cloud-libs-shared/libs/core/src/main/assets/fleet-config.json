@@ -408,6 +408,18 @@
     "calibration_db": "device"
    }
   },
+  "cloud_wake_lock": {
+   "kind": "prefs",
+   "class": "config",
+   "doc": "#787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again.",
+   "used_by": [
+    "ac_cloud-nix-on-droid",
+    "ac_cloud-termux"
+   ],
+   "keys": {
+    "battery_exemption_asked": "device"
+   }
+  },
   "cloud_webserver": {
    "kind": "prefs",
    "class": "config",
@@ -805,10 +817,13 @@
   "ide_prefs": {
    "kind": "prefs",
    "class": "config",
-   "doc": "cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user) and dev_api_enabled toggle; all user choices.",
+   "doc": "cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled and the #787 wake_lock_wanted toggle; all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown.",
    "used_by": [
     "ac_cloud-myterminal"
-   ]
+   ],
+   "keys": {
+    "battery_exemption_asked": "device"
+   }
   },
   "idle_tunnel": {
    "kind": "prefs",
