@@ -65,6 +65,14 @@ class RecognitionRoutesTest {
         assertEquals(0, asked); assertEquals(RecognitionRoutes.NO_TOKEN, tokenless.reason); assertEquals(ML, tokenless.route)
     }
 
+    @Test fun `when on-device cannot answer either, the model's failure is what is reported`() {
+        val r = RecognitionRoutes.routed(RecognitionRoutes.IMAGE, MODEL, true, null, true, { Recognition.failed(ML, "engine not installed") }, { Recognition.failed(MODEL, "engine not installed") })
+        assertFalse(r.ok); assertEquals(MODEL, r.route); assertFalse(r.fellBack)
+        val off = RecognitionRoutes.routed(RecognitionRoutes.IMAGE, MODEL, false, null, true, { Recognition.failed(ML, "engine not installed") }, { answer(MODEL) })
+        assertFalse(off.ok); assertEquals(MODEL, off.route)
+        assertEquals(RecognitionRoutes.OFFLINE + "; on device: engine not installed", off.error)
+    }
+
     @Test fun `with fallback off a failed model stays failed`() {
         var device = 0
         val r = RecognitionRoutes.routed(RecognitionRoutes.SOUND, MODEL, true, true, false, { device++; answer(ML, "x") }, { Recognition.failed(MODEL, "HTTP 401") })

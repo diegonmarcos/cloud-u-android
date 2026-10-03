@@ -70,7 +70,8 @@ def checks(s):
     # W2
     need("W2 offline is never sent to the model", "online == false -> Plan(false, OFFLINE)" in rt)
     need("W2 no token is never sent to the model", "hasToken == false -> Plan(false, NO_TOKEN)" in rt)
-    need("W2 a failed model falls back", "if (m.ok || !fallback) m else fellBack(onDevice()" in rt)
+    need("W2 a skipped model falls back", "else onDevice().let { d -> if (d.ok) fellBack(d, p.reason)" in rt)
+    need("W2 a failed model falls back", "if (m.ok || !fallback) m else onDevice().let { d -> if (d.ok) fellBack(d" in rt)
     need("W2 every answer is recorded", "return record(type, chosen, r, clock())" in rt)
     need("W2 the image rule goes through routed", "routed(IMAGE, chosen, online, null" in rt)
     se = code(s["sound_engine"])
@@ -118,7 +119,7 @@ MUTATIONS = [
     ("no-fallback", "sound_decl", '"fallback_to_ml": true', '"fallback_to_ml": false'),
     ("offline-asked", "routes", "online == false -> Plan(false, OFFLINE)", "online == false -> Plan(true, OFFLINE)"),
     ("tokenless-asked", "routes", "hasToken == false -> Plan(false, NO_TOKEN)", "hasToken == false -> Plan(true, NO_TOKEN)"),
-    ("never-falls-back", "routes", "if (m.ok || !fallback) m else fellBack(onDevice()", "if (true) m else fellBack(onDevice()"),
+    ("never-falls-back", "routes", "if (m.ok || !fallback) m else onDevice().let { d -> if (d.ok) fellBack(d", "if (true) m else fellBack(onDevice()"),
     ("unrecorded", "routes", "return record(type, chosen, r, clock())", "return r"),
     ("cam-photo-direct", "cam_scanner", "RecognitionRoutes.image(ctx, request(ctx, route)) { engine.recognize(file, it) }", "engine.recognize(file, request(ctx, route))"),
     ("cam-sound-fixed", "cam_sound", "SoundRouting.identify(route ?: SoundPrefs.route(ctx)", "SoundRouting.identify(route ?: SoundConfig.ML"),

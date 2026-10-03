@@ -66,10 +66,12 @@ object RecognitionRoutes {
         val p = plan(chosen, online, hasToken)
         val r = when {
             chosen != RecognitionConfig.OPENROUTER -> onDevice()
-            !p.askModel -> if (fallback) fellBack(onDevice(), p.reason) else Recognition.failed(RecognitionConfig.OPENROUTER, p.reason)
+            !p.askModel -> if (!fallback) Recognition.failed(RecognitionConfig.OPENROUTER, p.reason)
+                else onDevice().let { d -> if (d.ok) fellBack(d, p.reason) else Recognition.failed(RecognitionConfig.OPENROUTER, "${p.reason}; on device: ${d.error}") }
             else -> {
                 val m = runCatching { model() }.getOrElse { Recognition.failed(RecognitionConfig.OPENROUTER, it.message ?: it.toString()) }
-                if (m.ok || !fallback) m else fellBack(onDevice(), m.error ?: "the model did not answer")
+                // When on-device cannot answer either, the model's own failure is the more useful sentence.
+                if (m.ok || !fallback) m else onDevice().let { d -> if (d.ok) fellBack(d, m.error ?: "the model did not answer") else m }
             }
         }
         return record(type, chosen, r, clock())
