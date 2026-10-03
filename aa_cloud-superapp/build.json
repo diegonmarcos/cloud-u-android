@@ -280,6 +280,11 @@
       "depends_on": [],
       "comment": "Shared models, DB, theming, prefs, auth. No domain logic."
     },
+    "libs:databackend": {
+      "_doc_dir": "#825 the engine wire (IDataBackend + DataBackendClient/Service), out of libs:core so a wire edit rebuilds only the engines and the apps that bind one.",
+      "dir": "../ab_cloud-libs-shared/libs/databackend",
+      "type": "library"
+    },
     "libs:devtools": {
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"

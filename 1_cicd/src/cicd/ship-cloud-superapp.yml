@@ -87,6 +87,7 @@ on:
       # since its last published build.
       #   input: "1_cicd/src/cicd/ship-cloud-superapp.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/databackend/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       # ── end MANAGED-PATHS-HEADER ──
       # ab_cloud-libs-shared/build.json is watched because it carries
