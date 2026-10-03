@@ -109,11 +109,19 @@ class App : Application(), WorkManagerConfiguration.Provider {
             launchActivity = MainActivity::class.java
             notificationIcon = R.drawable.ic_stat_notify
             launchExtras = mapOf("shortcut_action" to "page:config/store-cloud")
+            // #831 a DNS failure on a Store row opens the same page the DNS alert does.
+            dnsPageExtras = mapOf("shortcut_action" to "page:config/dns")
             // #563: both Store pages group by the launcher's own taxonomy.
             classify = com.diegonmarcos.superapp.apps.StoreShelves::of
             periodicCheckAllowed = { ctx ->
                 com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).toggle("fleet_check")
             }
+        }
+        // #831 a download that cannot resolve its host names the resolver in
+        // effect, read from the same state the DNS page shows (#794).
+        val dnsCtx = applicationContext
+        com.diegonmarcos.superapp.updater.source.DownloadFailure.activeResolver = {
+            com.diegonmarcos.superapp.network.FleetDns.resolverSummary(dnsCtx)
         }
         // Capture process-start time before anything else so About →
         // Battery & Usage can report the real uptime.

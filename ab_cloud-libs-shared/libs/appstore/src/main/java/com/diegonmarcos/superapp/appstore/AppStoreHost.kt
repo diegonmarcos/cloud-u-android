@@ -59,4 +59,11 @@ object AppStoreHost {
      */
     @Volatile var classify: (android.content.Context, Map<String, String>) -> Map<String, Shelf> =
         { _, _ -> emptyMap() }
+
+    /**
+     * #831 Extras on [launchActivity] that open the host's DNS page. A row
+     * whose download failed on name resolution offers it as a button (#639).
+     * Empty = the host has no DNS page, and no button is drawn.
+     */
+    @Volatile var dnsPageExtras: Map<String, String> = emptyMap()
 }

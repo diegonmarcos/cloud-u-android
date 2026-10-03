@@ -185,6 +185,8 @@ class StoreCloudFragment : Fragment() {
     // the detail pane, so both need painting from the same state.
     private val fullStatusViews = HashMap<String, TextView>()
     private val dots = HashMap<String, TextView>()
+    /** #831 each row's own error area (full reason + DNS button), under the row. */
+    private val errBoxes = HashMap<String, LinearLayout>()
     private val quickBtns = HashMap<String, TextView>()
     // Last known state per app, kept so the filter chips can re-slice the list
     // WITHOUT re-hitting the network - re-checking 24 libs to hide 21 of them
@@ -478,7 +480,7 @@ class StoreCloudFragment : Fragment() {
     private fun renderTab(ctx: Context) {
         body.removeAllViews()
         statusViews.clear(); actionRows.clear(); stageBtns.clear()
-        fullStatusViews.clear(); dots.clear(); quickBtns.clear(); filterChips.clear()
+        fullStatusViews.clear(); dots.clear(); errBoxes.clear(); quickBtns.clear(); filterChips.clear()
         // Past the last group are the declared feeds (#642), then Perms. Each
         // blurb is data beside its group or its feed, so the caption naming the
         // out-of-process engines moves with the engines.
@@ -589,7 +591,7 @@ class StoreCloudFragment : Fragment() {
     private fun renderList(ctx: Context, list: List<Fleet.App>) {
         listHost.removeAllViews()
         statusViews.clear(); actionRows.clear(); stageBtns.clear()
-        fullStatusViews.clear(); dots.clear(); quickBtns.clear()
+        fullStatusViews.clear(); dots.clear(); errBoxes.clear(); quickBtns.clear()
         val shown = list.filter { inFilter(it) }
         if (shown.isEmpty()) { listHost.addView(caption(ctx, "Nothing in this filter.")); return }
         // One heading per run of rows sharing a heading. The list is already
@@ -702,7 +704,9 @@ class StoreCloudFragment : Fragment() {
             return
         }
         if (p == null) { row.visibility = View.GONE; return }
-        label.text = p.text
+        // #831 a failure's reason is long and this line is one slot above the
+        // list: name the app and point at its row, where the reason is whole.
+        label.text = if (p.failed) StoreRowError.banner(p.app) else p.text
         label.setTextColor(if (p.failed) cBlk else cUpd)
         bar.isIndeterminate = !p.failed && p.percent < 0
         bar.progress = if (p.failed) 0 else p.percent.coerceAtLeast(0)
@@ -798,8 +802,54 @@ class StoreCloudFragment : Fragment() {
         }
 
         dots[app.id] = dot; statusViews[app.id] = meta; quickBtns[app.id] = quick
-        card.addView(head); card.addView(detail)
+        errBoxes[app.id] = errorArea(ctx)
+        card.addView(head); card.addView(errBoxes[app.id]); card.addView(detail)
         return card
+    }
+
+    /** #831 The row's error area: the WHOLE reason (folded when long, tap to
+     *  expand) and, for a DNS failure, a button to the DNS page. Hidden until a
+     *  failure is painted into it by [showError]. */
+    private fun errorArea(ctx: Context) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(ctx, 12), 0, dp(ctx, 12), dp(ctx, 8))
+        visibility = View.GONE
+        val text = TextView(ctx).apply {
+            textSize = 12f; setTextColor(cErr); setTextIsSelectable(false)
+            maxLines = StoreRowError.FOLDED_LINES; ellipsize = TextUtils.TruncateAt.END
+            setOnClickListener {
+                maxLines = if (maxLines == StoreRowError.FOLDED_LINES) Int.MAX_VALUE else StoreRowError.FOLDED_LINES
+            }
+        }
+        addView(text)
+        val dns = btn(ctx, StoreRowError.DNS_BUTTON, 0xFF4A4A55.toInt()) { openDnsPage(ctx) }.apply { visibility = View.GONE }
+        addView(dns, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(ctx, 4) })
+    }
+
+    /** Paint [look] into [appId]'s row, or clear it (null). */
+    private fun showError(appId: String, look: StoreRowError.Look?) {
+        val box = errBoxes[appId] ?: return
+        if (look == null) { box.visibility = View.GONE; return }
+        dots[appId]?.let { it.text = look.glyph; it.setTextColor(cErr) }
+        statusViews[appId]?.let { it.text = look.meta; it.setTextColor(cErr) }
+        (box.getChildAt(0) as TextView).apply {
+            text = look.error + if (StoreRowError.foldable(look.error)) "  (tap to expand)" else ""
+            maxLines = StoreRowError.FOLDED_LINES
+        }
+        box.getChildAt(1).visibility =
+            if (look.dnsButton && AppStoreHost.dnsPageExtras.isNotEmpty()) View.VISIBLE else View.GONE
+        box.visibility = View.VISIBLE
+    }
+
+    private fun openDnsPage(ctx: Context) {
+        val cls = AppStoreHost.launchActivity ?: return
+        runCatching {
+            startActivity(Intent(ctx, cls).apply {
+                AppStoreHost.dnsPageExtras.forEach { (k, v) -> putExtra(k, v) }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            })
+        }
     }
 
     /** Everything the old always-visible card carried, now behind the chevron. */
@@ -918,6 +968,7 @@ class StoreCloudFragment : Fragment() {
             }
         }
 
+        showError(appId, StoreRowError.of(null, (s as? Fleet.State.Error)?.message))
         stage?.let { paintStage(appId, it) }
     }
 
@@ -937,6 +988,8 @@ class StoreCloudFragment : Fragment() {
             statusViews[appId]?.let { it.text = stg.text; it.setTextColor(color) }
             fullStatusViews[appId]?.let { it.text = stg.text; it.setTextColor(color) }
         }
+        // #831 a stopped stage: ⚠ mark, short meta, the whole reason in the row's error area.
+        if (stg.failedAt != null) showError(appId, StoreRowError.of(stg.text, null))
         quickBtns[appId]?.let { b ->
             val verb = stg.actions.firstOrNull()
             when {

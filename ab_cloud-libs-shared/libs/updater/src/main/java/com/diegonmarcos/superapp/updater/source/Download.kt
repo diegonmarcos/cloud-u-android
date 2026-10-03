@@ -144,6 +144,10 @@ object Download {
                 io
             }
             if (failure == null) break
+            // #831 a name that does not resolve, or an asset that is not on
+            // the release, is the same answer on every attempt: fail this leg
+            // once, classified, instead of retrying it into "stalled at 0".
+            if (DownloadFailure.isFinal(failure)) throw failure
 
             val after = if (part.isFile) part.length() else 0L
             if (after > before) {
@@ -230,7 +234,12 @@ object Download {
                 if (URL(current).host == origin) headers.forEach { (k, v) -> setRequestProperty(k, v) }
                 if (resumeFrom > 0) setRequestProperty("Range", "bytes=$resumeFrom-")
             }
-            val code = conn.responseCode
+            val code = try {
+                conn.responseCode
+            } catch (u: java.net.UnknownHostException) {
+                conn.disconnect()
+                throw DownloadFailure.Unresolvable(URL(current).host, u)
+            }
             if (code in 300..399) {
                 val location = conn.getHeaderField("Location")
                     ?: throw IOException("HTTP $code with no Location for $current")
@@ -242,7 +251,7 @@ object Download {
             if (code !in 200..299) {
                 val body = conn.errorStream?.bufferedReader()?.readText()
                 conn.disconnect()
-                throw IOException("HTTP $code for $current: $body")
+                throw DownloadFailure.HttpStatus(code, current, body)
             }
             // 206 = the server honoured Range and is sending the REMAINDER.
             // 200 after asking for a range = it ignored Range and is resending

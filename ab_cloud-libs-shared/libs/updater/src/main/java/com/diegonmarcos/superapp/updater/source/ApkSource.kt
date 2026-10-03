@@ -153,6 +153,9 @@ internal object ReleaseSource : ApkSource {
             // and may well succeed where the release CDN did not — but it must
             // be a decision that leaves evidence, and the partial file stays on
             // disk so a retry resumes rather than restarts.
+            // #831 a classified failure (DNS / not published) is reported as
+            // what it is; "kept 0 B for resume" only buries it.
+            if (DownloadFailure.isFinal(t)) throw t
             val kept = File(target.parentFile, target.name + ".part").length()
             throw java.io.IOException(
                 "${t.message ?: t.javaClass.simpleName} (kept $kept B on disk for resume)", t)

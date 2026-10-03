@@ -430,6 +430,17 @@ object FleetDns {
         )
     }
 
+    /** #831 One line naming the resolver in effect, for a failure message:
+     *  "10.0.0.1, 1.1.1.1 · via VPN · Private DNS dns.example". */
+    fun summary(a: AndroidDns): String = listOfNotNull(
+        a.activeServers.joinToString(", ").ifEmpty { "no DNS servers on the active network" },
+        if (a.onVpn) "via VPN" else null,
+        a.privateDnsServer?.takeIf { a.privateDnsActive == true }?.let { "Private DNS $it" }
+            ?: a.specifier?.takeIf { a.mode == "hostname" && it.isNotBlank() }?.let { "Private DNS $it (not active)" },
+    ).joinToString(" · ")
+
+    fun resolverSummary(ctx: Context): String = summary(readAndroid(ctx))
+
     private val HOSTNAME = Regex("^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
     /**

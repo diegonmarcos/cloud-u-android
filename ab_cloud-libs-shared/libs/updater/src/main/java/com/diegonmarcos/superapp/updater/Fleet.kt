@@ -270,7 +270,7 @@ object Fleet {
             // "Installed" while an update sat on the release (2026-08-30).
             // Missing stays a local fact; a failed check on an installed app
             // is an honest Error.
-            installed?.let { State.Error("check failed: ${t.message ?: t.javaClass.simpleName}") }
+            installed?.let { State.Error("check failed: " + com.diegonmarcos.superapp.updater.source.DownloadFailure.describe(t)) }
                 ?: State.Missing()
         }
     }
@@ -490,6 +490,11 @@ object Fleet {
      */
     private val sources: List<ApkSource> = listOf(ReleaseSource, GhcrSource)
 
+    /** #831 the legs in the order they are tried, by name. No third leg yet:
+     *  the fleet has no mesh-reachable mirror of release assets or GHCR blobs
+     *  (git-proxy-api serves repo listings and tarballs only). */
+    val sourceOrder: List<String> get() = sources.map { it.name }
+
     /**
      * Does a clean return from [channelName] mean INSTALLED, or only HANDED OVER?
      *
@@ -542,7 +547,9 @@ object Fleet {
                 // carries a digest and may well succeed where the release CDN
                 // did not — but the reason has to survive the fall.
                 Log.w(TAG, "source '${source.name}' could not serve ${app.id}: ${t.message}", t)
-                declined += "${source.name} → ${t.message ?: t.javaClass.simpleName}"
+                // #831 classified: "DNS: cannot resolve github.com (active
+                // resolver: …)" / "not published on the release yet", else the raw reason.
+                declined += "${source.name} → ${com.diegonmarcos.superapp.updater.source.DownloadFailure.describe(t)}"
                 null
             } ?: continue
             // WHICH SOURCE SERVED IT is the first question to ask of a stale
