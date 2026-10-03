@@ -5,24 +5,42 @@
   "styles": {
     "tab": {
       "_role": "selects a subset (line 1): a segmented control, square, stretched, filled when active",
-      "fill": "0xFF2A2A33", "fill_active": "0xFF7C3AED",
-      "stroke": null, "stroke_active": null,
-      "text": "0x99FFFFFF", "text_active": "0xFFFFFFFF",
-      "radius_dp": 0, "stretch": true, "bold": true, "chevron": ""
+      "fill": "0xFF2A2A33",
+      "fill_active": "0xFF7C3AED",
+      "stroke": null,
+      "stroke_active": null,
+      "text": "0x99FFFFFF",
+      "text_active": "0xFFFFFFFF",
+      "radius_dp": 0,
+      "stretch": true,
+      "bold": true,
+      "chevron": ""
     },
     "page": {
       "_role": "opens a page (line 2): an outlined, rounded chip with an icon and a chevron, wrapping its caption, never filled solid",
-      "fill": null, "fill_active": "0x337C3AED",
-      "stroke": "0xFF4A4A55", "stroke_active": "0xFFB794F4",
-      "text": "0xFFE2E8F0", "text_active": "0xFFB794F4",
-      "radius_dp": 14, "stretch": false, "bold": false, "chevron": "›"
+      "fill": null,
+      "fill_active": "0x337C3AED",
+      "stroke": "0xFF4A4A55",
+      "stroke_active": "0xFFB794F4",
+      "text": "0xFFE2E8F0",
+      "text_active": "0xFFB794F4",
+      "radius_dp": 14,
+      "stretch": false,
+      "bold": false,
+      "chevron": "›"
     },
     "action": {
       "_role": "acts on one app: a solid block in the verb's own colour, white bold caption, slightly rounded",
-      "fill": "0xFF4A4A55", "fill_active": null,
-      "stroke": null, "stroke_active": null,
-      "text": "0xFFFFFFFF", "text_active": null,
-      "radius_dp": 6, "stretch": true, "bold": true, "chevron": ""
+      "fill": "0xFF4A4A55",
+      "fill_active": null,
+      "stroke": null,
+      "stroke_active": null,
+      "text": "0xFFFFFFFF",
+      "text_active": null,
+      "radius_dp": 6,
+      "stretch": true,
+      "bold": true,
+      "chevron": ""
     }
   },
   "_doc_wearers": "`group_tab_style` is the style every line-1 group tab wears (groups come from the fleet manifest, which says nothing about looks). `action_style` is what btn() draws. `pages` is every line-2 entry by id: a feed's id from appstore-feeds.json (its caption stays THERE, its one declaration, so a feed entry here carries no label) or one of the two pages StoreCloudFragment owns, `mesh` and `perms`, whose captions live here. A line-2 id with no entry here still draws, as a `page` with no icon, so a new feed never vanishes for want of an icon.",
@@ -30,40 +48,213 @@
   "action_style": "action",
   "_doc_filter_style": "#793 `filter_style` is what every filter chip wears (StoreControls.chip): the Store's fleet filter (All / Updates / Missing / Installed) and the Apps Mesh filter. A filter selects a subset, which is what `tab` declares, so it adds no fourth look.",
   "filter_style": "tab",
+  "_doc_page_style": "#809 `page_style` is what a page button wears outside line 2 (StoreBar.page): every Apps Mesh page button. It opens a page, which is what `page` declares, so it adds no fourth look.",
+  "page_style": "page",
   "pages": {
-    "commits": { "icon": "📜", "style": "page" },
-    "cicd":    { "icon": "⚙️", "style": "page" },
-    "mesh":    { "label": "Apps Mesh", "icon": "🕸️", "style": "page" },
-    "perms":   { "label": "Perms", "icon": "🔐", "style": "page" }
+    "commits": {
+      "icon": "📜",
+      "style": "page"
+    },
+    "cicd": {
+      "icon": "⚙️",
+      "style": "page"
+    },
+    "mesh": {
+      "label": "Apps Mesh",
+      "icon": "🕸️",
+      "style": "page"
+    },
+    "perms": {
+      "label": "Perms",
+      "icon": "🔐",
+      "style": "page"
+    }
   },
-  "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `member_actions` is what tapping a member offers, in this order, each `id` handled by AppsMesh.act (an id with no handler is not drawn, so a typo cannot ship a dead button). `store` is offered only where the page is hosted by the Store, which is the one host with a row to open. `tools` are the page-level buttons. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row. #793: every button on the page is the Store's own action button (StoreControls.button, the `action` style) and every filter chip the Store's own chip (StoreControls.chip, `filter_style`). `member_actions` are drawn as a row of buttons on each member's card, like a Store app row's, in their declared `color`; `api` (Docs) unfolds the member's own /api/docs in the card, fetched on first open and cached. `tool_rows` lays the page-level `tools` out as button rows in `tool_colors`, each id handled by AppsMesh.page (an id with no handler is not drawn). `filters` are the chips, each id one of AppsMesh.FILTERS, counted over whatever the probe has returned so far; the choice is remembered. `all_endpoints` are the words of the consolidated endpoints view.",
+  "_doc_apps_mesh": "#733 THE APPS MESH PAGE's own words. One page with two ways in: Store ▸ Apps Mesh (the `mesh` entry above, whose label is the page's caption) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (aa_cloud-superapp/build.json page `apps-mesh`, which must carry the SAME label — test-apps-mesh.sh holds the two equal). Both hosts draw it with AppsMesh.page; neither has a copy. `gaps` is the missing-membership vocabulary: one entry per GapKind, its heading and the remedy the report prints, with {repo} / {missing} / {seen} / {total} filled from the row. #793/#809: every control is ONE entry of `controls` (see `_doc_controls`), drawn by the Store's own builders (StoreBar.page / button / chip); `api` (Docs) unfolds the member's own /api/docs in its card, fetched on first open and cached. `words` are the page's remaining sentences.",
   "apps_mesh": {
-    "member_actions": [
-      { "id": "start",   "label": "Wake",      "color": "0xFF2F855A" },
-      { "id": "open",    "label": "Open",      "color": "0xFF2A2A33" },
-      { "id": "api",     "label": "Docs",      "color": "0xFF2B6CB0" },
-      { "id": "stop",    "label": "Stop",      "color": "0xFF4A4A55" },
-      { "id": "details", "label": "Details",   "color": "0xFF2A2A33" },
-      { "id": "store",   "label": "Store row", "color": "0xFF7C3AED" }
+    "_doc_controls": "#809 EVERY control on the Apps Mesh page and its sub-pages is one entry here, with a `type` saying which of three kinds it is and so which group it is drawn in: `page` navigates to a sub-page (StoreBar.page, `page_style`), `action` does something (StoreBar.button, `action_style`, in its declared `color`), `filter` narrows the list (StoreBar.chip, `filter_style`). Each type is drawn in its own captioned group (tagged apps-mesh-group:<scope>:<type>), never mixed. `scope` is the page the control sits on, because an action belongs on the page it acts on: `root` = the Apps Mesh page, `member` = each member's card, `endpoints` = the App API Endpoints page (Export JSON / Markdown and Copy live there, not on root), `gaps` = the Missing membership page (its report's Export / Copy), `sub` = every sub-page (the way back). An id AppsMesh.HANDLED does not implement for its scope, or a type outside AppsMesh.TYPES, is not drawn, so a typo cannot ship a dead control. `store` is drawn only where the host has a Store row to open. Filter ids are AppsMesh.FILTERS, counted over whatever the probe has returned so far; the choice is remembered.",
+    "controls": [
+      {
+        "scope": "root",
+        "id": "endpoints",
+        "type": "page",
+        "label": "App API Endpoints",
+        "icon": "📡"
+      },
+      {
+        "scope": "root",
+        "id": "gaps",
+        "type": "page",
+        "label": "Missing membership",
+        "icon": "🧩"
+      },
+      {
+        "scope": "root",
+        "id": "reprobe",
+        "type": "action",
+        "label": "Re-probe",
+        "color": "0xFF2B6CB0"
+      },
+      {
+        "scope": "root",
+        "id": "wake",
+        "type": "action",
+        "label": "Wake all",
+        "color": "0xFF2F855A"
+      },
+      {
+        "scope": "root",
+        "id": "all",
+        "type": "filter",
+        "label": "All"
+      },
+      {
+        "scope": "root",
+        "id": "reachable",
+        "type": "filter",
+        "label": "Reachable"
+      },
+      {
+        "scope": "root",
+        "id": "engine",
+        "type": "filter",
+        "label": "Engine links"
+      },
+      {
+        "scope": "root",
+        "id": "running",
+        "type": "filter",
+        "label": "Running"
+      },
+      {
+        "scope": "root",
+        "id": "stopped",
+        "type": "filter",
+        "label": "Not running"
+      },
+      {
+        "scope": "member",
+        "id": "start",
+        "type": "action",
+        "label": "Wake",
+        "color": "0xFF2F855A"
+      },
+      {
+        "scope": "member",
+        "id": "open",
+        "type": "action",
+        "label": "Open",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "member",
+        "id": "api",
+        "type": "action",
+        "label": "Docs",
+        "color": "0xFF2B6CB0"
+      },
+      {
+        "scope": "member",
+        "id": "stop",
+        "type": "action",
+        "label": "Stop",
+        "color": "0xFF4A4A55"
+      },
+      {
+        "scope": "member",
+        "id": "details",
+        "type": "page",
+        "label": "Details",
+        "icon": "ℹ️"
+      },
+      {
+        "scope": "member",
+        "id": "store",
+        "type": "page",
+        "label": "Store row",
+        "icon": "🛍️"
+      },
+      {
+        "scope": "endpoints",
+        "id": "json",
+        "type": "action",
+        "label": "Export JSON",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "endpoints",
+        "id": "markdown",
+        "type": "action",
+        "label": "Export Markdown",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "endpoints",
+        "id": "copy",
+        "type": "action",
+        "label": "Copy",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "gaps",
+        "id": "export",
+        "type": "action",
+        "label": "Export report",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "gaps",
+        "id": "copy",
+        "type": "action",
+        "label": "Copy report",
+        "color": "0xFF2A2A33"
+      },
+      {
+        "scope": "sub",
+        "id": "back",
+        "type": "page",
+        "label": "Apps Mesh",
+        "icon": "‹"
+      }
     ],
-    "tools": { "reprobe": "Re-probe", "wake": "Wake all", "all": "All endpoints", "export": "Export report", "endpoints": "Export endpoints", "copy": "Copy all", "close": "Close", "json": "Export JSON", "markdown": "Export Markdown" },
-    "tool_colors": { "reprobe": "0xFF2B6CB0", "wake": "0xFF2F855A", "all": "0xFF7C3AED", "export": "0xFF2A2A33", "endpoints": "0xFF2A2A33", "copy": "0xFF2A2A33", "json": "0xFF2A2A33", "markdown": "0xFF2A2A33" },
-    "tool_rows": [ ["reprobe", "wake", "all"], ["export", "endpoints", "copy"] ],
-    "filters": [
-      { "id": "all",       "label": "All" },
-      { "id": "reachable", "label": "Reachable" },
-      { "id": "engine",    "label": "Engine links" },
-      { "id": "running",   "label": "Running" },
-      { "id": "stopped",   "label": "Not running" }
-    ],
-    "all_endpoints": { "title": "All endpoints", "search": "Search path, params, description or app", "not_serving": "not serving a debug API", "fetching": "fetching /api/docs…", "no_answer": "did not answer /api/docs with the fleet token" },
+    "_doc_groups": "The caption over each group, by type, so the three kinds read as three kinds.",
+    "groups": {
+      "page": "Go to",
+      "action": "Do",
+      "filter": "Show"
+    },
+    "words": {
+      "search": "Search path, params, description or app",
+      "not_serving": "not serving a debug API",
+      "fetching": "fetching /api/docs…",
+      "no_answer": "did not answer /api/docs with the fleet token",
+      "missing_none": "every installed app is a full mesh member",
+      "probing": "Re-probe…",
+      "close": "Close",
+      "copy": "Copy"
+    },
     "exposure": "Every member's debug API binds 127.0.0.1 on its own port (libs:devtools debug-ports.json) and wants the fleet Bearer token on everything but /api/system/ping. It is NOT served on this phone's mesh address ({mesh}): from the mesh, ssh to the phone and curl the loopback address there.",
     "gaps": {
-      "NO_PROVIDER":   { "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it", "fix": "link libs:core (it carries libs:devtools) into {repo}/build.json modules and rebuild" },
-      "NO_DEBUG_API":  { "label": "no debug API answered on 127.0.0.1 — not on its assigned port, nor anywhere in the fleet's debug range", "fix": "provider present but the server never answered after a wake: open the app once (a force-stopped app stays stopped), then Re-probe" },
-      "NO_PERMISSION": { "label": "CONSTELLATION_DATA not held", "fix": "link libs:core into {repo} (core declares and requests the permission); if it already links it, reinstall from our release — a signature permission is granted only to the fleet key" },
-      "PEER_BLIND":    { "label": "cannot see the whole mesh ({seen} of {total}; missing {missing})", "fix": "rebuild {repo} on libs:devtools from #733 — its manifest now queries every mesh member" },
-      "ENGINE_BROKEN": { "label": "engine contract not reachable", "fix": "{fix}" }
+      "NO_PROVIDER": {
+        "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it",
+        "fix": "link libs:core (it carries libs:devtools) into {repo}/build.json modules and rebuild"
+      },
+      "NO_DEBUG_API": {
+        "label": "no debug API answered on 127.0.0.1 — not on its assigned port, nor anywhere in the fleet's debug range",
+        "fix": "provider present but the server never answered after a wake: open the app once (a force-stopped app stays stopped), then Re-probe"
+      },
+      "NO_PERMISSION": {
+        "label": "CONSTELLATION_DATA not held",
+        "fix": "link libs:core into {repo} (core declares and requests the permission); if it already links it, reinstall from our release — a signature permission is granted only to the fleet key"
+      },
+      "PEER_BLIND": {
+        "label": "cannot see the whole mesh ({seen} of {total}; missing {missing})",
+        "fix": "rebuild {repo} on libs:devtools from #733 — its manifest now queries every mesh member"
+      },
+      "ENGINE_BROKEN": {
+        "label": "engine contract not reachable",
+        "fix": "{fix}"
+      }
     }
   }
 }

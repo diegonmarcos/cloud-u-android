@@ -26,11 +26,14 @@ object StoreControls {
     class Control(val label: String, val icon: String, val style: Style)
 
     class Decl(private val styles: Map<String, Style>, private val pages: JSONObject,
-               groupTabStyle: String, actionStyle: String, filterStyle: String = groupTabStyle) {
+               groupTabStyle: String, actionStyle: String, filterStyle: String = groupTabStyle,
+               pageStyle: String = "") {
         val groupTab: Style = style(groupTabStyle)
         val action: Style = style(actionStyle)
         /** #793 what a filter chip wears: it selects a subset, so it is a tab. */
         val filter: Style = style(filterStyle)
+        /** #809 what a page button wears outside line 2 (Apps Mesh's page buttons). */
+        val page: Style = style(pageStyle)
 
         fun style(token: String): Style = styles[token] ?: PLAIN
 
@@ -61,7 +64,8 @@ object StoreControls {
         }
         return Decl(styles, decl.optJSONObject("pages") ?: JSONObject(),
             decl.optString("group_tab_style"), decl.optString("action_style"),
-            decl.optString("filter_style", decl.optString("group_tab_style")))
+            decl.optString("filter_style", decl.optString("group_tab_style")),
+            decl.optString("page_style"))
     }
 
     private fun argb(o: JSONObject, key: String): Int? =

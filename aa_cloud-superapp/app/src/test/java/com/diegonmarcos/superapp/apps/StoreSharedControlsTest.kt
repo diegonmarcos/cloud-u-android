@@ -103,34 +103,70 @@ class StoreSharedControlsTest {
 
     private fun assertMeshPage(root: View, hasStore: Boolean, buttonLook: String, chipLook: String) {
         val where = if (hasStore) "Store ▸ Apps Mesh" else "Configs ▸ Apps Mesh"
-        // page tools: every laid-out tool, each the shared button, looking like the Store's
-        val tools = tagged(root, AppsMesh.TAG_TOOL)
-        assertEquals("$where tools", decl.toolRows.flatten().sorted(), tools.map { (it.tag as String).removePrefix(AppsMesh.TAG_TOOL) }.sorted())
-        for (t in tools) {
-            assertTrue("$where tool ${t.tag} is not the shared button", StoreBar.isButton(t))
-            assertEquals("$where tool ${t.tag} does not look like the Store's buttons",
-                buttonLook.substringBefore(" r"), look(t).substringBefore(" r"))
-            assertEquals(buttonLook.substringAfter(" r"), look(t).substringAfter(" r"))
-        }
+        // #809 root controls: each declared page / action in the group of its declared type, never another
+        assertControlsGrouped(root, "root", where, buttonLook)
         // each member's row of buttons, like a Store app row's
         val actions = AppsMesh.actionsFor(decl, hasStore).map { it.id }
         val rowButtons = tagged(root, AppsMesh.TAG_ACTION)
         for (app in fleet) for (a in actions)
             assertTrue("$where: ${app.id} has no '$a' button",
                 rowButtons.any { it.tag == "${AppsMesh.TAG_ACTION}$a:${app.id}" })
-        assertTrue("$where: a member's row button is not the shared button", rowButtons.all { StoreBar.isButton(it) })
+        for (b in rowButtons) {
+            val id = (b.tag as String).removePrefix(AppsMesh.TAG_ACTION).substringBefore(':')
+            val type = decl.of("member").first { it.id == id }.type
+            assertTrue("$where: member control $id ($type) is not the shared $type control",
+                if (type == "page") StoreBar.isPage(b) else StoreBar.isButton(b))
+            assertEquals("$where: member control $id sits outside its $type group",
+                "${AppsMesh.TAG_GROUP}member:$type", (b.parent as View).tag)
+        }
         assertEquals("$where: Store row offered where there is no Store", hasStore, rowButtons.any { (it.tag as String).startsWith("${AppsMesh.TAG_ACTION}store:") })
-        assertEquals(buttonLook, look(rowButtons.first()))
+        assertEquals(buttonLook, look(rowButtons.first { StoreBar.isButton(it) }))
         // filter chips: the declared five, the shared chip, with a count, looking like the Store's filter
         val chips = tagged(root, AppsMesh.TAG_FILTER)
         assertEquals("$where chips", AppsMesh.FILTERS, chips.map { (it.tag as String).removePrefix(AppsMesh.TAG_FILTER) })
         assertTrue("$where: a filter chip is not the shared chip", chips.all { StoreBar.isChip(it) })
         assertTrue("$where: a chip carries no count", chips.all { Regex("\\(\\d+\\)$").containsMatchIn((it as TextView).text) })
         assertEquals(chipLook, look(chips.first()))
+        assertTrue("$where: a filter chip sits outside the filter group",
+            chips.all { ((it.parent as View).parent as View).tag == "${AppsMesh.TAG_GROUP}root:filter" })
+        // #809 Export lives on the endpoints page, not on root; opening it shows its own actions and a way back
+        assertTrue("$where: an endpoints-page action is on the root page",
+            tagged(root, AppsMesh.TAG_TOOL + "endpoints:").isEmpty())
+        tagged(root, AppsMesh.TAG_TOOL + "root:endpoints").single().performClick()
+        assertControlsGrouped(root, "sub", where, buttonLook)
+        tagged(root, AppsMesh.TAG_TOOL + "sub:back").single().performClick()
+        assertTrue("$where: back did not return to Apps Mesh", tagged(root, AppsMesh.TAG_TOOL + "sub:").isEmpty())
+        tagged(root, AppsMesh.TAG_TOOL + "root:gaps").single().performClick()
+        tagged(root, AppsMesh.TAG_TOOL + "sub:back").single().performClick()
         // static first: every member's card is on the page before any probe answered
         val cards = tagged(root, StoreMesh.TAG_NODE).map { (it.tag as String).removePrefix(StoreMesh.TAG_NODE) }
         assertEquals("$where: not every member is drawn up front", fleet.map { it.id }.sorted(), cards.sorted())
         assertFalse("$where: no probe-age line", tagged(root, AppsMesh.TAG_AGE).isEmpty())
+    }
+
+    /** Every declared page / action of [scope] is drawn once, the shared control of its
+     *  type, inside the group of its type — and every group holds only its own type. */
+    private fun assertControlsGrouped(root: View, scope: String, where: String, buttonLook: String) {
+        val drawn = tagged(root, "${AppsMesh.TAG_TOOL}$scope:")
+        val want = decl.of(scope).filter { it.type != "filter" }
+        assertEquals("$where $scope controls", want.map { it.id }.sorted(),
+            drawn.map { (it.tag as String).substringAfterLast(':') }.sorted())
+        for (c in want) {
+            val v = drawn.single { (it.tag as String).endsWith(":${c.id}") }
+            assertEquals("$where: ${c.id} (${c.type}) is drawn in another group",
+                "${AppsMesh.TAG_GROUP}$scope:${c.type}", ((v.parent as View).parent as View).tag)
+            if (c.type == "page") assertTrue("$where: page ${c.id} is not the shared page button", StoreBar.isPage(v))
+            else {
+                assertTrue("$where: action ${c.id} is not the shared button", StoreBar.isButton(v))
+                assertEquals(buttonLook.substringAfter(" r"), look(v).substringAfter(" r"))
+            }
+        }
+        for (g in tagged(root, "${AppsMesh.TAG_GROUP}$scope:")) {
+            val type = (g.tag as String).substringAfterLast(':')
+            for (v in views(g).filter { StoreBar.isPage(it) || StoreBar.isButton(it) || StoreBar.isChip(it) })
+                assertEquals("$where: group $type holds a control of another kind: ${v.tag}", type,
+                    when { StoreBar.isPage(v) -> "page"; StoreBar.isButton(v) -> "action"; else -> "filter" })
+        }
     }
 
     @Test
@@ -142,6 +178,8 @@ class StoreSharedControlsTest {
         assertTrue(StoreBar.isButton(real))
         assertFalse(StoreBar.isButton(fake))
         assertFalse("a button reads as a chip", StoreBar.isChip(real))
+        val page = StoreBar.page(ctx, StoreControls.load(ctx).page, "i", "x") {}
+        assertTrue(StoreBar.isPage(page)); assertFalse(StoreBar.isButton(page)); assertFalse(StoreBar.isPage(real))
         // and a disabled verb is still the shared button, drawn dimmed
         val off = StoreBar.button(ctx, style, "x", 0, null)
         assertTrue(StoreBar.isButton(off)); assertFalse(off.isEnabled); assertTrue(off.alpha < 1f)

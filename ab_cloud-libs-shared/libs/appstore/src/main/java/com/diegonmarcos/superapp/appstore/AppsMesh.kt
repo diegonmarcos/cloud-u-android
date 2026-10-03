@@ -44,13 +44,24 @@ import org.json.JSONObject
  *     last cached probe ([readCache]), then filled member by member as
  *     [StoreMesh.probeEach] returns; endpoints fetched only when a row's Docs
  *     opens; All endpoints, one searchable view of every member's routes
+ *   - #809 three kinds of control, declared as data (`apps_mesh.controls`,
+ *     each with a `type` and the `scope` page it sits on) and drawn in three
+ *     groups: PAGE buttons ([StoreBar.page]: App API Endpoints, Missing
+ *     membership, a member's Details), ACTION buttons ([StoreBar.button]:
+ *     Re-probe, Wake all; Export / Copy on the sub-page they act on), FILTER
+ *     chips ([StoreBar.chip])
  *
  * Every word on it is the asset's; this file names no member, package or caption.
  */
 object AppsMesh {
 
     const val TAG_GAP = "apps-mesh-gap:"
+    /** A non-member control: "$TAG_TOOL<scope>:<id>". */
     const val TAG_TOOL = "apps-mesh-tool:"
+    /** #809 a group of one kind of control: "$TAG_GROUP<scope>:<type>". */
+    const val TAG_GROUP = "apps-mesh-group:"
+    /** #809 the sub-page being shown: "$TAG_SUB<page id>". */
+    const val TAG_SUB = "apps-mesh-sub:"
     /** #793 a member's row button: "$TAG_ACTION<action id>:<member id>". */
     const val TAG_ACTION = "apps-mesh-action:"
     const val TAG_FILTER = "apps-mesh-filter:"
@@ -60,47 +71,58 @@ object AppsMesh {
     /** #793 the filter ids [matches] implements; anything else declared is dropped. */
     val FILTERS = listOf("all", "reachable", "engine", "running", "stopped")
 
-    /** #793 the page-level tools [page] implements. */
-    val TOOLS = listOf("reprobe", "wake", "all", "export", "endpoints", "copy")
+    /** #809 the three kinds of control, and so the three groups a page draws:
+     *  `page` navigates, `action` does, `filter` narrows. Nothing else is drawn. */
+    val TYPES = listOf("page", "action", "filter")
 
-    /** The action ids this file implements; anything else declared is dropped,
-     *  so a misspelt id cannot ship as a button that does nothing. */
-    val HANDLED = listOf("api", "start", "stop", "open", "details", "store")
+    /** #809 per scope (the page a control sits on), the control ids this file
+     *  implements; anything else declared is dropped, so a misspelt id cannot
+     *  ship as a control that does nothing. */
+    val HANDLED: Map<String, List<String>> = mapOf(
+        "root" to listOf("endpoints", "gaps", "reprobe", "wake") + FILTERS,
+        "member" to listOf("api", "start", "stop", "open", "details", "store"),
+        "endpoints" to listOf("json", "markdown", "copy"),
+        "gaps" to listOf("export", "copy"),
+        "sub" to listOf("back"),
+    )
 
-    class Action(val id: String, val label: String, val color: Int? = null)
+    class Action(val id: String, val label: String, val color: Int? = null,
+                 val type: String = "action", val scope: String = "member", val icon: String = "")
 
-    class Decl(val actions: List<Action>, private val tools: Map<String, String>,
+    class Decl(val controls: List<Action>,
                val gapWords: Map<String, Pair<String, String>>, val exposure: String = "",
-               val toolRows: List<List<String>> = emptyList(), private val toolColors: Map<String, Int> = emptyMap(),
-               val filters: List<Action> = emptyList(), private val words: Map<String, String> = emptyMap()) {
-        fun tool(id: String) = tools[id]?.takeIf { it.isNotEmpty() } ?: id
-        fun toolColor(id: String): Int? = toolColors[id]
-        /** A word of the All endpoints view (`all_endpoints`). */
+               private val groups: Map<String, String> = emptyMap(), private val words: Map<String, String> = emptyMap()) {
+        /** The controls of [scope], optionally only those of [type], in declared order. */
+        fun of(scope: String, type: String? = null) = controls.filter { it.scope == scope && (type == null || it.type == type) }
+        /** Each member card's controls. */
+        val actions: List<Action> get() = of("member")
+        /** The root page's filter chips. */
+        val filters: List<Action> get() = of("root", "filter")
+        fun label(scope: String, id: String) = controls.firstOrNull { it.scope == scope && it.id == id }?.label ?: id
+        /** The caption over a group of [type]. */
+        fun group(type: String) = groups[type]?.takeIf { it.isNotEmpty() } ?: type
+        /** One of the page's remaining sentences (`words`). */
         fun word(id: String) = words[id]?.takeIf { it.isNotEmpty() } ?: id
     }
 
     fun decl(controls: JSONObject): Decl {
         val m = controls.optJSONObject("apps_mesh") ?: JSONObject()
-        val a = m.optJSONArray("member_actions")
-        fun actions(arr: org.json.JSONArray?, known: List<String>) = (0 until (arr?.length() ?: 0))
-            .map { arr!!.getJSONObject(it) }
-            .map { Action(it.optString("id"), it.optString("label", it.optString("id")), argb(it.optString("color"))) }
-            .filter { it.id in known }
+        val arr = m.optJSONArray("controls")
         fun strings(o: JSONObject?) = (o ?: JSONObject()).let { t ->
             t.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { t.optString(it) } }
         val g = m.optJSONObject("gaps") ?: JSONObject()
-        val rows = m.optJSONArray("tool_rows")
-        return Decl(actions(a, HANDLED),
-            strings(m.optJSONObject("tools")),
+        return Decl(
+            (0 until (arr?.length() ?: 0)).map { arr!!.getJSONObject(it) }.map {
+                Action(it.optString("id"), it.optString("label", it.optString("id")), argb(it.optString("color")),
+                    it.optString("type"), it.optString("scope"), it.optString("icon"))
+            }.filter { it.type in TYPES && it.id in HANDLED[it.scope].orEmpty() }
+                // a filter is a root chip and only a root chip; a filter id is never a button
+                .filter { (it.type == "filter") == (it.scope == "root" && it.id in FILTERS) },
             g.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
                 g.getJSONObject(k).let { it.optString("label", k) to it.optString("fix") } },
             m.optString("exposure"),
-            (0 until (rows?.length() ?: 0)).map { i -> rows!!.optJSONArray(i) }
-                .map { r -> (0 until (r?.length() ?: 0)).map { r!!.optString(it) }.filter { it in TOOLS } }
-                .filter { it.isNotEmpty() },
-            strings(m.optJSONObject("tool_colors")).mapNotNull { (k, v) -> argb(v)?.let { k to it } }.toMap(),
-            actions(m.optJSONArray("filters"), FILTERS),
-            strings(m.optJSONObject("all_endpoints")))
+            strings(m.optJSONObject("groups")),
+            strings(m.optJSONObject("words")))
     }
 
     private fun argb(v: String): Int? = v.takeIf { it.startsWith("0x") }?.removePrefix("0x")?.toLongOrNull(16)?.toInt()
@@ -435,24 +457,22 @@ object AppsMesh {
             ?: decl.filters.firstOrNull()?.id ?: "all"
         val mesh = meshAddresses()
 
-        into.addView(text(ctx, exposure(decl, mesh), 11f, DIM))
-        val tools = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        // #809 the root page and the one sub-page slot; a page button swaps them
+        val root = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val sub = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        into.addView(root); into.addView(sub)
+        root.addView(text(ctx, exposure(decl, mesh), 11f, DIM))
         val ageView = text(ctx, "", 11f, DIM).apply { tag = TAG_AGE }
-        val chips = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 4), 0, dp(ctx, 6)) }
-        }
-        val gapBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val meshBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        into.addView(tools); into.addView(ageView); into.addView(gapBox); into.addView(chips); into.addView(meshBox)
 
         var drawn: StoreMesh.Drawn? = null
         val rows = HashMap<String, View>()
         val chipViews = LinkedHashMap<String, TextView>()
+        val pageViews = HashMap<String, TextView>()
         val onLink = { app: Fleet.App -> onStore?.invoke(app); Unit }
         fun shown() = live?.let { withDocs(it, docs) }
         fun saved() { live?.let { writeCache(appCtx, Cached(at, withDocs(it, docs), HashMap(docsAt))) } }
+        val waitWord = "${decl.label("root", "reprobe")}…"
 
         fun ageLine() = when {
             at == 0L && probing -> "⟳ first probe…"
@@ -474,6 +494,14 @@ object AppsMesh {
                 StoreBar.paint(c, f.id == filter)
             }
         }
+        fun paintPages() {
+            val gaps = live?.let { gaps(decl, fleet, links, it).size }
+            pageViews["gaps"]?.let { v ->
+                val c = decl.of("root", "page").first { it.id == "gaps" }
+                v.text = listOf(c.icon, c.label + (gaps?.let { " ($it)" } ?: ""), looks.page.chevron)
+                    .filter { it.isNotEmpty() }.joinToString("  ")
+            }
+        }
         lateinit var reprobe: (Fleet.App) -> Unit
         fun rowOf(app: Fleet.App): View = rows.getOrPut(app.id) {
             val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
@@ -482,12 +510,21 @@ object AppsMesh {
                 tag = TAG_DOCS + app.id
             }
             val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() })
-            val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (a in actionsFor(decl, onStore != null))
-                buttons.addView(StoreBar.button(ctx, looks.action, a.label, a.color) {
-                    act(host, a.id, app, links, live, onStore, row)
-                }.apply { tag = "$TAG_ACTION${a.id}:${app.id}" })
-            box.addView(buttons); box.addView(panel)
+            // #809 a member's actions in one row, its pages in another: two kinds, two groups
+            val mine = actionsFor(decl, onStore != null)
+            for (type in listOf("action", "page")) {
+                val cs = mine.filter { it.type == type }
+                if (cs.isEmpty()) continue
+                val line = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; tag = "${TAG_GROUP}member:$type" }
+                for (a in cs) {
+                    val go = { act(host, a.id, app, links, live, onStore, row) }
+                    line.addView((if (type == "page") StoreBar.page(ctx, looks.page, a.icon, a.label, go)
+                        else StoreBar.button(ctx, looks.action, a.label, a.color, go))
+                        .apply { tag = "$TAG_ACTION${a.id}:${app.id}" })
+                }
+                box.addView(line)
+            }
+            box.addView(panel)
             box
         }
         fun refresh(ids: Collection<String>?) {
@@ -499,19 +536,12 @@ object AppsMesh {
                 for (id in ids) d.cards[id]?.let { StoreMesh.fill(ctx, it, byId.getValue(id), live, id in pending, links, byId, ::rowOf, onLink) }
                 d.summary.text = StoreMesh.summaryLine(fleet, links, live, pending)
             }
-            gapBox.removeAllViews()
-            live?.let { renderGaps(ctx, gapBox, gaps(decl, fleet, links, it)) }
-            paintChips(); applyFilter(); ageView.text = ageLine()
+            paintChips(); paintPages(); applyFilter(); ageView.text = ageLine()
         }
-
-        for ((i, f) in decl.filters.withIndex())
-            chipViews[f.id] = StoreBar.chip(ctx, looks.filter, f.label, i == 0) {
-                if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply(); paintChips(); applyFilter() }
-            }.apply { tag = TAG_FILTER + f.id }.also { chips.addView(it) }
 
         /** [only] null = every member; [wake] starts the ones that do not answer. */
         fun probe(wake: Boolean, only: Set<String>? = null) {
-            if (probing) return toast(ctx, "${decl.tool("reprobe")}: already probing")
+            if (probing) return toast(ctx, "${decl.label("root", "reprobe")}: already probing")
             probing = true
             val base = live
             var first = only == null
@@ -537,36 +567,79 @@ object AppsMesh {
         }
         reprobe = { app -> probe(wake = true, only = setOf(app.id)) }
 
-        fun withReport(then: (String) -> Unit) {
-            val l = shown() ?: return toast(ctx, "${decl.tool("reprobe")}…")
-            then(report(decl, fleet, links, l))
+        // ── #809 sub-pages: each carries its own actions, and a way back ──
+        fun back() { sub.removeAllViews(); sub.visibility = View.GONE; root.visibility = View.VISIBLE; refresh(emptyList()) }
+        fun open(id: String, build: (LinearLayout) -> Unit) {
+            sub.removeAllViews(); sub.tag = TAG_SUB + id
+            controls(ctx, decl, looks, sub, "sub", mapOf("back" to ::back))
+            sub.addView(text(ctx, decl.label("root", id), 14f, BLUE, bold = true))
+            build(sub)
+            root.visibility = View.GONE; sub.visibility = View.VISIBLE
         }
-        fun withAllDocs(then: (StoreMesh.Live) -> Unit) {
-            val l = live ?: return toast(ctx, "${decl.tool("reprobe")}…")
-            thread(name = "apps-mesh-docs") {
-                fillDocs(appCtx, fleet, l, docs, docsAt) {}
-                into.post { saved(); shown()?.let(then) }
-            }
+        fun gapsPage() = open("gaps") { page ->
+            val l = shown() ?: return@open page.addView(text(ctx, waitWord, 12f, DIM))
+            fun report() = report(decl, fleet, links, l)
+            controls(ctx, decl, looks, page, "gaps", mapOf(
+                "export" to { share(host, "Apps Mesh", "text/plain", report()) },
+                "copy" to { copy(ctx, report()) }))
+            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            renderGaps(ctx, decl, box, gaps(decl, fleet, links, l)); page.addView(box)
         }
-        val handlers: Map<String, () -> Unit> = mapOf(
+        fun endpointsPage() = open("endpoints") { page ->
+            val l = shown() ?: return@open page.addView(text(ctx, waitWord, 12f, DIM))
+            allEndpoints(host, page, decl, looks, fleet, links, l, docs, docsAt, mesh) { saved() }
+        }
+
+        controls(ctx, decl, looks, root, "root", mapOf(
+            "endpoints" to ::endpointsPage,
+            "gaps" to ::gapsPage,
             "reprobe" to { probe(wake = false) },
             "wake" to { probe(wake = true) },
-            "all" to { allEndpoints(host, decl, looks, fleet, links, { shown() }, docs, docsAt, mesh) { saved() } },
-            "export" to { withReport { share(host, "Apps Mesh", "text/plain", it) } },
-            "endpoints" to { withAllDocs { l ->
-                share(host, "Apps Mesh endpoints", "application/json", catalogue(fleet, l, exposure(decl, mesh), mesh, links).toString(2)) } },
-            "copy" to { withReport { copy(ctx, it) } },
-        )
-        for (ids in decl.toolRows) {
-            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (id in ids) handlers[id]?.let { h ->
-                row.addView(StoreBar.button(ctx, looks.action, decl.tool(id), decl.toolColor(id), h).apply { tag = TAG_TOOL + id })
-            }
-            tools.addView(row)
-        }
+        ), pageViews)
+        // the filter group: the Store's own chips, with counts, remembered
+        val chips = group(ctx, decl, root, "root", "filter")
+        for ((i, f) in decl.filters.withIndex())
+            chipViews[f.id] = StoreBar.chip(ctx, looks.filter, f.label, i == 0) {
+                if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply(); paintChips(); applyFilter() }
+            }.apply { tag = TAG_FILTER + f.id }.also { chips.addView(it) }
+        root.addView(ageView); root.addView(meshBox)
 
         refresh(null)
         probe(wake = false)
+    }
+
+    /** #809 one captioned group holding one [type] of control of [scope]; returns its row. */
+    private fun group(ctx: Context, decl: Decl, into: LinearLayout, scope: String, type: String): LinearLayout {
+        val g = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL; tag = "$TAG_GROUP$scope:$type"
+            setPadding(0, dp(ctx, 4), 0, dp(ctx, 2))
+        }
+        g.addView(text(ctx, decl.group(type), 10f, DIM, bold = true))
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        g.addView(row); into.addView(g)
+        return row
+    }
+
+    /** #809 draw [scope]'s page and action controls, a group per type (pages
+     *  first), each with its handler; a declared id with no handler here is
+     *  not drawn. Filters are drawn by the page that owns the list. */
+    private fun controls(
+        ctx: Context, decl: Decl, looks: StoreControls.Decl, into: LinearLayout, scope: String,
+        handlers: Map<String, () -> Unit>, pageViews: MutableMap<String, TextView>? = null,
+    ) {
+        for (type in listOf("page", "action")) {
+            val cs = decl.of(scope, type).filter { it.id in handlers }
+            if (cs.isEmpty()) continue
+            val row = group(ctx, decl, into, scope, type)
+            for (c in cs) {
+                val h = handlers.getValue(c.id)
+                val v = if (type == "page") StoreBar.page(ctx, looks.page, c.icon, c.label, h)
+                    else StoreBar.button(ctx, looks.action, c.label, c.color, h)
+                v.tag = "$TAG_TOOL$scope:${c.id}"
+                if (type == "page") pageViews?.put(c.id, v)
+                row.addView(v)
+            }
+        }
     }
 
     /** #793 every reachable member's /api/docs not yet in [docs], fetched on a
@@ -594,22 +667,23 @@ object AppsMesh {
      * from what is known and filled per app as each member's /api/docs lands.
      */
     private fun allEndpoints(
-        host: Fragment, decl: Decl, looks: StoreControls.Decl, fleet: List<Fleet.App>, links: List<StoreMesh.Link>,
-        current: () -> StoreMesh.Live?, docs: MutableMap<String, String>, docsAt: MutableMap<String, Long>,
-        mesh: List<String>, saved: () -> Unit,
+        host: Fragment, col: LinearLayout, decl: Decl, looks: StoreControls.Decl, fleet: List<Fleet.App>,
+        links: List<StoreMesh.Link>, live: StoreMesh.Live, docs: MutableMap<String, String>,
+        docsAt: MutableMap<String, Long>, mesh: List<String>, saved: () -> Unit,
     ) {
-        val ctx = host.context ?: return
-        val live = current() ?: return toast(ctx, "${decl.tool("reprobe")}…")
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 12); setPadding(p, p, p, p)
-        }
+        val ctx = col.context
         val search = android.widget.EditText(ctx).apply {
             hint = decl.word("search"); textSize = 13f; setSingleLine()
         }
-        val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(search); col.addView(actions); col.addView(list)
+        fun now() = withDocs(live, docs)
+        // #809 this page's actions live on this page, not on the Apps Mesh root
+        controls(ctx, decl, looks, col, "endpoints", mapOf(
+            "json" to { share(host, "Apps Mesh endpoints", "application/json",
+                catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) },
+            "markdown" to { share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) },
+            "copy" to { copy(ctx, markdown(fleet, now())) }))
+        col.addView(search); col.addView(list)
         val members = fleet.filter { it.id in live.installed }
         val bodies = HashMap<String, LinearLayout>()
         val heads = HashMap<String, TextView>()
@@ -662,25 +736,12 @@ object AppsMesh {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) { members.forEach { fill(it) } }
         })
-        fun now() = withDocs(live, docs)
-        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("copy"), decl.toolColor("copy")) {
-            copy(ctx, markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:copy" })
-        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("json"), decl.toolColor("json")) {
-            share(host, "Apps Mesh endpoints", "application/json",
-                catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) }.apply { tag = TAG_TOOL + "all:json" })
-        actions.addView(StoreBar.button(ctx, looks.action, decl.tool("markdown"), decl.toolColor("markdown")) {
-            share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) }.apply { tag = TAG_TOOL + "all:markdown" })
-
-        AlertDialog.Builder(ctx).setTitle(decl.word("title"))
-            .setView(android.widget.ScrollView(ctx).apply { addView(col) })
-            .setNegativeButton(decl.tool("close"), null)
-            .show()
         if (fetching.isEmpty()) return
         thread(name = "apps-mesh-all-endpoints") {
             fillDocs(ctx.applicationContext, fleet, live, docs, docsAt) { id ->
-                list.post { fetching.remove(id); fleet.firstOrNull { it.id == id }?.let { fill(it) } }
+                list.post { fetching.remove(id); if (list.isAttachedToWindow) fleet.firstOrNull { it.id == id }?.let { fill(it) } }
             }
-            list.post { fetching.clear(); members.forEach { fill(it) }; saved() }
+            list.post { if (list.isAttachedToWindow) { fetching.clear(); members.forEach { fill(it) } }; saved() }
         }
     }
 
@@ -728,7 +789,7 @@ object AppsMesh {
                         when {
                             out == null -> AlertDialog.Builder(ctx).setTitle(app.label)
                                 .setMessage(ctx.getString(R.string.store_fleet_stop_no_channel))
-                                .setPositiveButton(load(ctx).tool("close"), null).show()
+                                .setPositiveButton(load(ctx).word("close"), null).show()
                             out.contains("OK") -> toast(ctx, ctx.getString(R.string.store_phone_stopped, app.label))
                             else -> toast(ctx, ctx.getString(R.string.store_phone_failed, app.label, out.trim()))
                         }
@@ -848,9 +909,9 @@ object AppsMesh {
     private const val DIM = 0x99FFFFFF.toInt()
     private const val BLUE = 0xFF63B3ED.toInt()
 
-    private fun renderGaps(ctx: Context, box: LinearLayout, gaps: List<Gap>) {
+    private fun renderGaps(ctx: Context, decl: Decl, box: LinearLayout, gaps: List<Gap>) {
         box.addView(text(ctx, "Missing membership (${gaps.size})", 13f, if (gaps.isEmpty()) GREEN else RED, bold = true))
-        if (gaps.isEmpty()) box.addView(text(ctx, "every installed app is a full mesh member", 12f, GREEN))
+        if (gaps.isEmpty()) box.addView(text(ctx, decl.word("missing_none"), 12f, GREEN))
         for (g in gaps) box.addView(text(ctx, "✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", 12f, RED).apply {
             tag = "$TAG_GAP${g.app.id}:${g.kind.name}"
         })
@@ -864,8 +925,8 @@ object AppsMesh {
                     val p = dp(ctx, 16); setPadding(p, p, p, p)
                 })
             })
-            .setPositiveButton(load(ctx).tool("copy")) { _, _ -> copy(ctx, body) }
-            .setNegativeButton(load(ctx).tool("close"), null)
+            .setPositiveButton(load(ctx).word("copy")) { _, _ -> copy(ctx, body) }
+            .setNegativeButton(load(ctx).word("close"), null)
             .show()
     }
 

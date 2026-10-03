@@ -185,6 +185,24 @@ object StoreBar {
 
     fun isButton(v: View) = v.getTag(R.id.store_control) == BUTTON
     fun isChip(v: View) = v.getTag(R.id.store_control) is StoreControls.Style
+    fun isPage(v: View) = v.getTag(R.id.store_control) == PAGE
+
+    const val PAGE = "store-control:page"
+
+    /** #809 THE page button outside line 2: opens another page, in [style]
+     *  (`page_style`) — icon, label, chevron — wrapping its caption. */
+    fun page(ctx: Context, style: StoreControls.Style, icon: String, label: String, onClick: () -> Unit) = TextView(ctx).apply {
+        setTag(R.id.store_control, PAGE)
+        text = listOf(icon, label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
+        maxLines = 1; textSize = 12f; gravity = Gravity.CENTER_VERTICAL
+        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        setTextColor(style.text)
+        background = StoreControls.background(ctx, style, false)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)) }
+        isClickable = true; setOnClickListener { onClick() }
+    }
 
     /** The action button: [style] in [fill], the verb's own colour; weight 1, so
      *  a row of them shares its width. Null [onClick] = drawn, dimmed, inert. */

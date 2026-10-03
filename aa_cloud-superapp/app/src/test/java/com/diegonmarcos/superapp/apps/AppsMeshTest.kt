@@ -62,7 +62,7 @@ class AppsMeshTest {
     fun `the page declaration ships with the four member actions and every gap's words`() {
         val ids = decl.actions.map { it.id }
         for (a in listOf("api", "start", "stop", "open", "details"))
-            assertTrue("action $a is not declared in appstore-controls.json::apps_mesh.member_actions: $ids", a in ids)
+            assertTrue("action $a is not declared in appstore-controls.json::apps_mesh.controls (scope member): $ids", a in ids)
         for (k in GapKind.values()) {
             val w = decl.gapWords[k.name]
             assertTrue("gap ${k.name} has no label/fix declared", w != null && w.first.isNotBlank() && w.second.isNotBlank())
@@ -74,16 +74,35 @@ class AppsMeshTest {
         assertEquals(listOf("start", "open", "api", "stop", "details"),
             AppsMesh.actionsFor(decl, hasStore = false).map { it.id })
         assertEquals(listOf("Wake", "Open", "Docs"), decl.actions.take(3).map { it.label })
-        assertTrue("a member action has no declared colour", decl.actions.all { it.color != null })
+        assertTrue("a member action has no declared colour", decl.actions.filter { it.type == "action" }.all { it.color != null })
     }
 
     @Test
-    fun `793 every declared filter and tool is one the page implements, and the order is the declared one`() {
+    fun `809 every control is declared with a type, each one the page implements, and the order is the declared one`() {
         assertEquals(AppsMesh.FILTERS, decl.filters.map { it.id })
-        val laid = decl.toolRows.flatten()
-        assertTrue("Wake all / All endpoints are not on the page: $laid", laid.containsAll(listOf("wake", "all")))
-        assertEquals("a laid-out tool has no handler", emptyList<String>(), laid - AppsMesh.TOOLS)
-        assertEquals("a tool is laid out twice", laid.size, laid.toSet().size)
+        assertTrue("a control has no known type", decl.controls.all { it.type in AppsMesh.TYPES })
+        assertTrue("a control's id is not handled on its page",
+            decl.controls.all { it.id in AppsMesh.HANDLED[it.scope].orEmpty() })
+        fun ids(scope: String, type: String) = decl.of(scope, type).map { it.id }
+        assertEquals(listOf("endpoints", "gaps"), ids("root", "page"))
+        assertEquals(listOf("reprobe", "wake"), ids("root", "action"))
+        assertEquals(listOf("json", "markdown", "copy"), ids("endpoints", "action"))
+        assertEquals(listOf("export", "copy"), ids("gaps", "action"))
+        assertEquals("Export is on the page it acts on, not on root", emptyList<String>(),
+            ids("root", "action").filter { it in listOf("json", "markdown", "export", "copy") })
+        for (s in decl.controls.map { it.scope }.distinct())
+            assertEquals("a control is declared twice on $s", decl.of(s).size, decl.of(s).map { it.id }.toSet().size)
+    }
+
+    @Test
+    fun `809 a typo in type or id is dropped, not drawn as a dead control`() {
+        val bad = AppsMesh.decl(JSONObject().put("apps_mesh", JSONObject().put("controls", org.json.JSONArray()
+            .put(JSONObject().put("scope", "root").put("id", "reprobe").put("type", "button"))
+            .put(JSONObject().put("scope", "root").put("id", "reprob").put("type", "action"))
+            .put(JSONObject().put("scope", "root").put("id", "json").put("type", "action"))
+            .put(JSONObject().put("scope", "root").put("id", "wake").put("type", "filter"))
+            .put(JSONObject().put("scope", "root").put("id", "wake").put("type", "action")))))
+        assertEquals(listOf("wake"), bad.controls.map { it.id })
     }
 
     @Test
