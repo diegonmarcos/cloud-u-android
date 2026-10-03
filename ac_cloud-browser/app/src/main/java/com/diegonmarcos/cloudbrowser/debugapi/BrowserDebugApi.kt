@@ -3,6 +3,8 @@ package com.diegonmarcos.cloudbrowser.debugapi
 import android.content.Context
 import com.diegonmarcos.cloudbrowser.BuildConfig
 import com.diegonmarcos.cloudbrowser.search.AgentRunner
+import com.diegonmarcos.cloudbrowser.search.PageSummarizer
+import com.diegonmarcos.superapp.browser.PageSummary
 import com.diegonmarcos.cloudbrowser.search.SearchAddon
 import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
 import com.diegonmarcos.superapp.browser.BrowserBookmarks
@@ -77,6 +79,7 @@ object BrowserDebugApi {
         Op("ai/tools", "", "the assistant's declared tools: id, mutating, confirm, route"),
         Op("ai/ask", "text=<message>&session=<id, default api>", "one assistant turn on the live page; a mutating tool answers pending_confirmation and puts the consent sheet on screen (there is no allow over the API)"),
         Op("ai/sessions", "", "the assistant's sessions: message count and any waiting tool"),
+        Op("ai/summarize", "route=<model|on_device, default the summarize_route setting>", "#823 the open page's summary: summary, route and engine that answered, requested, fell_back and reason (the fleet Account token is read per call and never answered)"),
         Op("vault/status", "", "Cloud Vault installed, the phone's autofill service, and whether Cloud Vault is it (no vault data is read)"),
         Op("vault/request_fill", "", "focus the live page's login field and ask Android autofill (Cloud Vault) to fill: requested true/false + why"),
         Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
@@ -88,7 +91,10 @@ object BrowserDebugApi {
         val app = ctx.applicationContext
         val config = BrowserConfig.parseBase64(BuildConfig.UI_BROWSER_CONFIG_B64)
         // #802 I9 the screen's chat dialog and consent sheet reach the runner from the first frame.
-        config.addons["ai"]?.let { runCatching { AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), it) } }
+        config.addons["ai"]?.let { runCatching {
+            AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), it).summarizeRoute =
+                { BrowserSettings(app, config.settings).string("summarize_route") }
+        } }
         AppDebugServer.route(BuildConfig.DEBUG_API_GROUP, OPS) { op, q ->
             handle(app, config, op, q)?.toString()
         }
@@ -243,7 +249,7 @@ object BrowserDebugApi {
                         SearchAddon.accountToken(app, s.cfg.ai.accountProvider)
                     })
                 }
-            "ai/tools", "ai/ask", "ai/sessions" -> {
+            "ai/tools", "ai/ask", "ai/sessions", "ai/summarize" -> {
                 val addon = config.addons["ai"]
                 if (addon == null || !config.addons.enabled("ai", settings.stringSet("addons_enabled")))
                     JSONObject().put("ok", false).put("error", "the ai add-on is off (addons/set?id=ai&on=true)")
@@ -252,6 +258,10 @@ object BrowserDebugApi {
                     when (op) {
                         "ai/tools" -> r.toolsJson
                         "ai/sessions" -> r.sessionsJson()
+                        "ai/summarize" -> if (q["route"].orEmpty().let { it.isNotBlank() && it !in PageSummary.ROUTES })
+                            JSONObject().put("ok", false).put("error", "route must be one of ${PageSummary.ROUTES}")
+                        else PageSummarizer.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), addon)
+                            .summarizePage(q["route"]?.ifBlank { null } ?: settings.string("summarize_route"))
                         else -> need(q["text"].orEmpty(), "text") ?: r.ask(q["session"]?.ifBlank { null } ?: "api", q["text"].orEmpty())
                     }
                 }

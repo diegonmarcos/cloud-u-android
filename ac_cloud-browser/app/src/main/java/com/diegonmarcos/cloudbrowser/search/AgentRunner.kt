@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.browser.AgentLoop
 import com.diegonmarcos.superapp.browser.BrowserAddon
 import com.diegonmarcos.superapp.browser.BrowserAgentHost
 import com.diegonmarcos.superapp.browser.BrowserBus
+import com.diegonmarcos.superapp.browser.PageSummary
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -24,9 +25,16 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
     private val model = cfg.optString("model").ifBlank { search.cfg.ai.defaultModel }
     private val specs = tools.map { Chat.ToolSpec(it.id, it.description, it.schema()) }
     private val sessions = LinkedHashMap<String, AgentLoop>()
+    /** #823 summarize_page on the user's route: `model` hands the page text to the model, `on_device` summarizes here. */
+    private val summarizer = PageSummarizer.get(app, search, addon)
+    /** The `summarize_route` setting (set by the app; null = the declared default). */
+    @Volatile var summarizeRoute: () -> String? = { null }
+
+    private fun route(t: com.diegonmarcos.superapp.browser.AgentTool): String =
+        if (t.id == "summarize_page") PageSummary.route(summarizeRoute(), summarizer.defaultRoute) else t.route
 
     val toolsJson: JSONArray get() = JSONArray(tools.map {
-        JSONObject().put("id", it.id).put("label", it.label).put("mutating", it.mutating).put("confirm", it.confirm).put("route", it.route)
+        JSONObject().put("id", it.id).put("label", it.label).put("mutating", it.mutating).put("confirm", it.confirm).put("route", route(it))
     })
 
     fun sessionsJson(): JSONArray = synchronized(sessions) {
@@ -56,7 +64,9 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
 
     private fun step(session: String, loop: AgentLoop): JSONObject {
         val out = loop.step(model = ::callModel, run = { c ->
-            BrowserBus.call("agent_tool", mapOf("name" to c.name, "args" to c.args.toString()), timeoutMs = 60_000).toString().take(cfg.optInt("page_text_cap_chars", 6000) + 500)
+            if (c.name == "summarize_page" && route(tools.first { it.id == c.name }) == PageSummary.ON_DEVICE)
+                summarizer.summarizePage(PageSummary.ON_DEVICE).toString()
+            else BrowserBus.call("agent_tool", mapOf("name" to c.name, "args" to c.args.toString()), timeoutMs = 60_000).toString().take(cfg.optInt("page_text_cap_chars", 6000) + 500)
         }, currentUrl = { BrowserBus.call("page_text", mapOf("n" to "1")).optString("url").ifBlank { null } })
         val base = JSONObject().put("session", session)
         return when (out) {
@@ -88,6 +98,7 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
                 instance = r
                 // The screen's chat dialog and consent sheet.
                 BrowserAgentHost.ask = { text -> r.ask("screen", text).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
+                BrowserAgentHost.summarize = { r.summarizer.summarizePage(r.summarizeRoute()) }
                 BrowserAgentHost.decide = { id, allow -> r.decide(id, allow).let { it.optString("message").ifBlank { it.optString("confirm").ifBlank { it.optString("error") } } } }
             }
         }

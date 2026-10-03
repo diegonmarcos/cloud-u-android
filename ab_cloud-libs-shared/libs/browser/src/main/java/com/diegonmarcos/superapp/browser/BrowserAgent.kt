@@ -171,4 +171,6 @@ object BrowserAgentHost {
     @Volatile var ask: ((text: String) -> String)? = null
     /** His decision on a waiting call → the answer text once the turn finishes (or the next confirmation). */
     @Volatile var decide: ((callId: String, allow: Boolean) -> String)? = null
+    /** #823 the page's summary on his route: the PageSummary.Result json (summary, route, engine, fell_back, reason). */
+    @Volatile var summarize: (() -> org.json.JSONObject)? = null
 }

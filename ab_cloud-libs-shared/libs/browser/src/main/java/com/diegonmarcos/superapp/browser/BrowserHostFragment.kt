@@ -708,6 +708,16 @@ class BrowserHostFragment : Fragment(), Collapsible,
             .show()
     }
 
+    /** #823 the page's summary on his route (Settings ▸ Summarize with), naming the route and engine that answered. */
+    private fun showPageSummary() {
+        val summarize = BrowserAgentHost.summarize ?: return toast("Summaries are not available in this app")
+        agentAnswer {
+            val r = summarize()
+            if (!r.optBoolean("ok")) "Could not summarize: ${r.optString("error")}"
+            else r.optString("summary") + "\n\n— " + PageSummary.credit(r)
+        }
+    }
+
     /** Run [work] (a model turn: network) off the main thread; show what it answers. */
     private fun agentAnswer(work: () -> String) {
         toast("Asking…")
@@ -1096,6 +1106,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "scraper" -> { showScraper(); done(ok()) }
             "search_with" -> { showSearchWith(); done(ok()) }
             "ai_chat" -> { showAgentChat(); done(ok()) }
+            "ai_summarize" -> { showPageSummary(); done(ok()) }
             "vault_fill", "vault_request_fill" -> { wv ?: return needPage(); VaultAutofill.requestFill(wv) { r -> done(r.put("ok", true)) } }
             "vault_open" -> done(VaultAutofill.open(requireContext(), config.addons["vault"]?.requiresPackage)?.let { ok().put("ok", false).put("error", it) } ?: ok())
             "vault_set_service" -> done(VaultAutofill.setAsService(requireContext(), config.addons["vault"]?.requiresPackage)?.let { ok().put("why", it) } ?: ok())

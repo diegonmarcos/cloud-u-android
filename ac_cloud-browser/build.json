@@ -217,6 +217,16 @@
           "doc": "Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered."
         },
         {
+          "key": "summarize_route",
+          "type": "enum",
+          "values": ["model", "on_device"],
+          "default": "model",
+          "label": "Summarize with",
+          "section": "add-ons",
+          "class": "config",
+          "doc": "#823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences)."
+        },
+        {
           "key": "addons_enabled",
           "type": "set",
           "values_from": "addons",
@@ -673,6 +683,15 @@
           "model": "",
           "max_tool_calls_per_turn": 6,
           "page_text_cap_chars": 6000,
+          "_doc_summarize": "#823 Summarize the page (menu row, the summarize_page tool, /api/browser/ai/summarize) on the user's route, setting summarize_route: model = the fleet model (this add-on's model) with the fleet Account token read per call; on_device = ML Kit's on-device summarizer where the phone has it (AICore / Gemini Nano), else an extractive summary of the page's own sentences. The #799/#800 rule: a model route that cannot run (offline) or fails falls back on device when fallback is true, and every answer names route, engine, fell_back and reason.",
+          "summarize": {
+            "default_route": "model",
+            "fallback": true,
+            "input_cap_chars": 12000,
+            "bullets": 3,
+            "extractive_sentences": 4,
+            "prompt": "Summarize this web page in %d short bullet points. Answer in the page's language."
+          },
           "_doc_tools": "Each tool: mutating:true must be confirm:true (test-browser-agent-consent.sh). route model = the result goes back to the model. Names are the wire names the model sees.",
           "tools": [
             {
@@ -841,6 +860,10 @@
             {
               "id": "ai_chat",
               "label": "Ask the assistant…"
+            },
+            {
+              "id": "ai_summarize",
+              "label": "Summarize the page"
             }
           ]
         },

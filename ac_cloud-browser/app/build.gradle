@@ -265,6 +265,9 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:text-tools')
     implementation project(':search-core')
+    // #823 Summarize the page, on-device route: ML Kit's GenAI summarizer (runs on AICore / Gemini
+    // Nano where the phone ships it; elsewhere it reports UNAVAILABLE and the extractive summary answers).
+    implementation 'com.google.mlkit:genai-summarization:1.0.0-beta1'
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
