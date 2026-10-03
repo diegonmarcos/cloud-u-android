@@ -108,7 +108,9 @@ fun DiskScreen(actions: DriveActions, onClose: () -> Unit, modifier: Modifier = 
                 SECTION_APPS -> apps = AppSizes.sizes(ctx, (com.diegonmarcos.clouddrive.Declarations.constellation.map { it.packageName } + ctx.packageName).filter { it.isNotBlank() })
                 SECTION_CLEAN -> if (preview == null) preview = engine.cleanPreview()
                 SECTION_MEMORY -> memory = Memory.snapshot(ctx, com.diegonmarcos.clouddrive.Declarations.constellation.map { it.packageName }.filter { it.isNotBlank() })
+                else -> {}
             }
+            Unit
         }
     }
 

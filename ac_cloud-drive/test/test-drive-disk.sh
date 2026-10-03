@@ -56,7 +56,7 @@ k3() {
     [ "$(_code "$1" | grep -cE 'ApkCache\.clear\(|ApkCache\.drop\(|\.delete\(\)|deleteRecursively')" -eq 0 ]
 }
 k4() {
-    grep -c 'val res = CleanPlan.run(preview.plan, ::sizeOf)' "$1" >/dev/null || return 1
+    [ "$(grep -c 'val res = CleanPlan.run(preview.plan, { p -> sizeOf(p) })' "$1")" -eq 1 ] || return 1
     [ "$(grep -c 'if (q\["confirm"\] != "1") ok(false' "$1")" -eq 1 ] || return 1
     [ "$(grep -c 'if (q\["run"\] == "1")' "$1")" -eq 1 ]
 }
@@ -96,7 +96,7 @@ _stage; _sub "$W/DriveDisk.kt" 'ApkCache.clearRedundant(ctx).freedBytes' 'ApkCac
 _red "K3 the clean evicts pending installs (ApkCache.clear)" k3 "$W/DriveDisk.kt"
 _stage; _sub "$W/DriveDisk.kt" 'ApkCache.plan(ctx).redundantBytes' 'ApkCache.totalBytes(ctx)'
 _red "K3 the preview counts the whole cache, pending installs included" k3 "$W/DriveDisk.kt"
-_stage; _sub "$W/DiskEngine.kt" 'val res = CleanPlan.run(preview.plan, ::sizeOf)' 'val res = CleanPlan.run(cleanPreview().plan, ::sizeOf)'
+_stage; _sub "$W/DiskEngine.kt" 'val res = CleanPlan.run(preview.plan, { p -> sizeOf(p) })' 'val res = CleanPlan.run(cleanPreview().plan, { p -> sizeOf(p) })'
 _red "K4 the run re-plans instead of executing the previewed plan" k4 "$W/DiskEngine.kt"
 _stage; _sub "$W/DiskEngine.kt" 'if (q["confirm"] != "1") ok(false' 'if (false) ok(false'
 _red "K4 the API cleans without confirm" k4 "$W/DiskEngine.kt"

@@ -54,7 +54,7 @@ class DiskEngine(
     /** Delete [paths] (a huge file, the other copies of a duplicate); answers the bytes really freed. */
     fun delete(paths: List<String>): CleanPlan.Result {
         val plan = CleanPlan.plan(paths.map { File(it) }.filter { it.isFile }.map { CleanPlan.Item(it.absolutePath, it.length(), "delete") })
-        val res = CleanPlan.run(plan, ::sizeOf) { File(it).delete() }
+        val res = CleanPlan.run(plan, { p -> sizeOf(p) }) { File(it).delete() }
         cached = null
         return res
     }
@@ -79,7 +79,7 @@ class DiskEngine(
     data class CleanResult(val reclaimed: Long, val bySource: Map<String, Long>, val skipped: List<String>)
 
     fun clean(preview: CleanPreview = cleanPreview()): CleanResult {
-        val res = CleanPlan.run(preview.plan, ::sizeOf) { File(it).delete() }
+        val res = CleanPlan.run(preview.plan, { p -> sizeOf(p) }) { File(it).delete() }
         val deleted = res.deleted.toSet()
         val bySource = preview.plan.items.filter { it.path in deleted }.groupBy { it.source }.mapValues { (_, v) -> v.sumOf { it.bytes } }.toMutableMap()
         var total = res.reclaimed
