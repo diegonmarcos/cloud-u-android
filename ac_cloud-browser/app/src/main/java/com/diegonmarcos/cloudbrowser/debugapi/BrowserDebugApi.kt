@@ -5,6 +5,8 @@ import com.diegonmarcos.cloudbrowser.BuildConfig
 import com.diegonmarcos.superapp.browser.BrowserBookmarkOps
 import com.diegonmarcos.superapp.browser.BrowserBookmarks
 import com.diegonmarcos.superapp.browser.BrowserBus
+import com.diegonmarcos.superapp.browser.BrowserClearData
+import com.diegonmarcos.superapp.browser.BrowserSitePermissions
 import com.diegonmarcos.superapp.browser.BrowserDownloads
 import com.diegonmarcos.superapp.browser.BrowserConfig
 import com.diegonmarcos.superapp.browser.BrowserHistory
@@ -50,6 +52,9 @@ object BrowserDebugApi {
         Op("downloads", "", "downloads this browser started, with DownloadManager's live status"),
         Op("downloads/enqueue", "url=<url>", "download a URL into the download_dir setting (a test hook)"),
         Op("downloads/clear", "", "forget the download list (the files stay in Downloads)"),
+        Op("sites", "host=<host, optional>", "per-site rules; with host=, every declared permission's effective value there"),
+        Op("sites/set", "host=<host>&perm=<permission id>&value=<allow|deny|ask>", "store a per-site decision (covers subdomains)"),
+        Op("privacy/clear", "<box>=1 for each of build.json clear_data ids&url=<probe, optional>&confirm=1", "clear browsing data; cookies_after = the probe URL's cookie afterwards"),
     )
 
     fun register(ctx: Context) {
@@ -143,6 +148,29 @@ object BrowserDebugApi {
                 JSONObject().put("ok", true).put("id", d.id).put("file", d.file)
             }
             "downloads/clear" -> { BrowserDownloads(app).clear(); JSONObject().put("ok", true) }
+            "sites" -> {
+                val sp = BrowserSitePermissions(app)
+                val host = q["host"].orEmpty().lowercase()
+                if (host.isEmpty()) JSONObject(sp.rules())
+                else JSONObject().put("host", host).also { o ->
+                    config.sitePerms.forEach { o.put(it.id, sp.resolve(host, it)) }
+                }
+            }
+            "sites/set" -> {
+                val perm = q["perm"].orEmpty()
+                if (config.sitePerms.none { it.id == perm }) JSONObject().put("ok", false).put("error", "perm must be one of ${config.sitePerms.map { it.id }}")
+                else BrowserSitePermissions(app).set(q["host"].orEmpty(), perm, q["value"].orEmpty())
+                    ?.let { JSONObject().put("ok", false).put("error", it) }
+                    ?: run { BrowserBus.post(BrowserBus.SETTINGS); JSONObject().put("ok", true) }
+            }
+            "privacy/clear" -> {
+                val boxes = config.clearData.map { it.first }.filter { q[it] == "1" }.toSet()
+                when {
+                    q["confirm"] != "1" -> JSONObject().put("ok", false).put("error", "add confirm=1")
+                    boxes.isEmpty() -> JSONObject().put("ok", false).put("error", "name at least one of ${config.clearData.map { it.first }} =1")
+                    else -> BrowserBus.onMain("privacy/clear") { done -> BrowserClearData.clear(app, boxes, q["url"], done) }
+                }
+            }
             "history/clear" -> if (q["confirm"] != "1") JSONObject().put("ok", false).put("error", "add confirm=1")
                 else { BrowserHistory(app).clear(); JSONObject().put("ok", true) }
             else -> null

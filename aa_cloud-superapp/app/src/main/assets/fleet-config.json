@@ -250,6 +250,14 @@
     "download_dir": "device"
    }
   },
+  "browser_site_permissions": {
+   "kind": "prefs",
+   "class": "config",
+   "doc": "#802 per-site decisions host|permission -> allow/deny/ask (location, camera, microphone, and the javascript/images shields); a rule covers subdomains.",
+   "used_by": [
+    "lib-browser"
+   ]
+  },
   "cal_bridge": {
    "kind": "prefs",
    "class": "device",

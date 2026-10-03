@@ -190,6 +190,15 @@
           "section": "general",
           "class": "device",
           "doc": "Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone."
+        },
+        {
+          "key": "private_by_default",
+          "type": "bool",
+          "default": false,
+          "label": "New tabs are private",
+          "section": "privacy",
+          "class": "config",
+          "doc": "A new tab opens private: no history, no preview, no HTTP cache. Cookies are shared with normal tabs (Android WebView keeps them per process)."
         }
       ],
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
@@ -223,6 +232,10 @@
           {
             "id": "page",
             "label": "Page"
+          },
+          {
+            "id": "privacy",
+            "label": "Privacy"
           },
           {
             "id": "library",
@@ -292,6 +305,11 @@
             "id": "new_tab",
             "section": "tabs",
             "label": "New tab"
+          },
+          {
+            "id": "new_private_tab",
+            "section": "tabs",
+            "label": "New private tab"
           },
           {
             "id": "tab_groups",
@@ -400,6 +418,39 @@
             ]
           },
           {
+            "id": "site_settings",
+            "section": "privacy",
+            "label": "Site settings (this site)",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "clear_data",
+            "section": "privacy",
+            "label": "Clear browsing data…"
+          },
+          {
+            "id": "shield_js",
+            "section": "privacy",
+            "label": "Block JavaScript here",
+            "kind": "toggle",
+            "checked": "shield_js",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "shield_images",
+            "section": "privacy",
+            "label": "Block images here",
+            "kind": "toggle",
+            "checked": "shield_images",
+            "requires": [
+              "page"
+            ]
+          },
+          {
             "id": "history",
             "section": "library",
             "label": "History"
@@ -429,7 +480,81 @@
             ]
           }
         ]
-      }
+      },
+      "_doc_site_permissions": "#802 the per-site permissions Site settings offers and WebView requests are checked against: default = the answer for a host with no rule (allow|deny|ask); android = runtime permissions the APP must hold too (declared in AndroidManifest.xml; test-browser-privacy-wired.sh holds that); webkit = what WebView asks with (PermissionRequest resources, or geolocation). javascript/images are the shields.",
+      "site_permissions": [
+        {
+          "id": "geolocation",
+          "label": "Location",
+          "default": "ask",
+          "android": [
+            "android.permission.ACCESS_FINE_LOCATION",
+            "android.permission.ACCESS_COARSE_LOCATION"
+          ],
+          "webkit": [
+            "geolocation"
+          ]
+        },
+        {
+          "id": "camera",
+          "label": "Camera",
+          "default": "ask",
+          "android": [
+            "android.permission.CAMERA"
+          ],
+          "webkit": [
+            "android.webkit.resource.VIDEO_CAPTURE"
+          ]
+        },
+        {
+          "id": "microphone",
+          "label": "Microphone",
+          "default": "ask",
+          "android": [
+            "android.permission.RECORD_AUDIO"
+          ],
+          "webkit": [
+            "android.webkit.resource.AUDIO_CAPTURE"
+          ]
+        },
+        {
+          "id": "javascript",
+          "label": "JavaScript",
+          "default": "allow"
+        },
+        {
+          "id": "images",
+          "label": "Images",
+          "default": "allow"
+        }
+      ],
+      "_doc_clear_data": "#802 the boxes of Clear browsing data; each id is one branch of libs:browser BrowserClearData.clear (test-browser-privacy-wired.sh holds that).",
+      "clear_data": [
+        {
+          "id": "history",
+          "label": "History"
+        },
+        {
+          "id": "cookies",
+          "label": "Cookies"
+        },
+        {
+          "id": "cache",
+          "label": "Cached pages and images"
+        },
+        {
+          "id": "storage",
+          "label": "Site storage"
+        },
+        {
+          "id": "previews",
+          "label": "Tab previews"
+        },
+        {
+          "id": "downloads",
+          "label": "Download list (files stay)"
+        }
+      ]
     },
     "profile_default": {
       "name": "Diego Coelho Marcos",
@@ -471,7 +596,7 @@
     "debug_api": {
       "group": "browser"
     },
-    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1, menu, menu/act?id=&q=&value=, page/find?q=, page/text?n=, page/reader, bookmarks, bookmarks/add?url=&title=&folder=, bookmarks/remove?url=, bookmarks/folders, bookmarks/folder/rename?from=&to=, bookmarks/folder/delete?folder=, downloads, downloads/enqueue?url=, downloads/clear. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
+    "_doc_debug_api": "#802 Routes on the fleet debug API (libs:devtools AppDebugServer, loopback + fleet token): /api/browser/settings, settings/catalogue, settings/set?key=&value=, tabs, tabs/open|close|pin?url=, history?n=, history/clear?confirm=1, menu, menu/act?id=&q=&value=, page/find?q=, page/text?n=, page/reader, bookmarks, bookmarks/add?url=&title=&folder=, bookmarks/remove?url=, bookmarks/folders, bookmarks/folder/rename?from=&to=, bookmarks/folder/delete?folder=, downloads, downloads/enqueue?url=, downloads/clear, sites?host=, sites/set?host=&perm=&value=, privacy/clear?history=1&cookies=1&cache=1&storage=1&previews=1&downloads=1&url=&confirm=1. The full list is served by /api/docs. No op is named `state` (update-ack-guard owns GET /api/state)."
   },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed the browser had NO tests at all and its ship workflow asserted only that Gradle exited 0.",

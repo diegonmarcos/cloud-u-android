@@ -70,6 +70,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
     private lateinit var history: BrowserHistory
     private lateinit var bookmarks: BrowserBookmarks
     private lateinit var downloads: BrowserDownloads
+    private lateinit var sitePerms: BrowserSitePermissions
+    /** Origins a private tab visited this session — their site storage goes when the last one closes. */
+    private val privateOrigins = HashSet<String>()
     private lateinit var browserSettings: BrowserSettings
     private lateinit var config: BrowserConfig
     private lateinit var rootContainer: FrameLayout
@@ -87,6 +90,12 @@ class BrowserHostFragment : Fragment(), Collapsible,
 
     private val roleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
+    /** #802 a site was allowed a permission the APP does not hold yet: Android asks first. */
+    private var permDone: ((Boolean) -> Unit)? = null
+    private val permRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        permDone?.invoke(r.values.all { it }); permDone = null
+    }
+
     private sealed class Mode {
         object GRID : Mode()
         data class DETAIL(val url: String) : Mode()
@@ -101,6 +110,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
         history = BrowserHistory(ctx)
         bookmarks = BrowserBookmarks(ctx)
         downloads = BrowserDownloads(ctx)
+        sitePerms = BrowserSitePermissions(ctx)
         config = BrowserConfig.parseBase64(arguments?.getString(ARG_CONFIG_B64))
         browserSettings = BrowserSettings(ctx, config.settings)
 
@@ -233,6 +243,11 @@ class BrowserHostFragment : Fragment(), Collapsible,
             return
         }
         if (tab.previewPath.isNotBlank()) runCatching { File(tab.previewPath).delete() }
+        val left = prefs.all()
+        if (tab.isPrivate && left.none { it.isPrivate }) {
+            BrowserClearData.endPrivateSession(privateOrigins, normalTabsOpen = left.isNotEmpty())
+            privateOrigins.clear()
+        }
         showGrid()
     }
 
@@ -270,25 +285,25 @@ class BrowserHostFragment : Fragment(), Collapsible,
         }
 
     /** New tab. Accepts a URL or a search — same rule as the address bar. */
-    private fun promptForUrl() {
+    private fun promptForUrl(private_: Boolean = browserSettings.bool("private_by_default") == true) {
         val ctx = requireContext()
         val input = suggestField(ctx, "")
         input.hint = "Search ${engine().label}, or type a URL"
         androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("New tab")
+            .setTitle(if (private_) "New private tab" else "New tab")
             .setView(input)
-            .setPositiveButton("Open") { _, _ -> openEntry(input.text.toString()) }
+            .setPositiveButton("Open") { _, _ -> openEntry(input.text.toString(), private_) }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     /** Resolve what was typed to a destination, open it as a new tab.
      *  Nothing typed opens the `homepage` setting, when he has set one. */
-    private fun openEntry(raw: String) {
+    private fun openEntry(raw: String, private_: Boolean = false) {
         val typed = raw.ifBlank { browserSettings.string("homepage").orEmpty() }
         val url = BrowserSearch.resolve(typed, engine())
         if (url.isBlank()) return
-        prefs.add(url, url)
+        prefs.add(url, url, isPrivate = private_)
         prefs.setActive(url)
         showDetail(url)
     }
@@ -434,7 +449,10 @@ class BrowserHostFragment : Fragment(), Collapsible,
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
-            applySettings(this)
+            settings.setGeolocationEnabled(true)
+            // #802 a private tab keeps nothing in the HTTP cache.
+            if (currentTab()?.isPrivate == true) settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+            applySettings(this, url)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
             webViewClient = object : WebViewClient() {
@@ -442,12 +460,19 @@ class BrowserHostFragment : Fragment(), Collapsible,
                     super.onPageStarted(view, startedUrl, favicon)
                     // A real navigation leaves reader view; the reader's own render does not.
                     if (readerPending) readerPending = false else readerOn = false
+                    // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
+                    view?.let { applySettings(it, startedUrl) }
                 }
 
                 override fun onPageFinished(view: WebView?, finishedUrl: String?) {
                     super.onPageFinished(view, finishedUrl)
                     val u = finishedUrl ?: return
                     if (readerOn) return
+                    // #802 a private tab is never recorded: no history, no preview.
+                    if (!BrowserSitePolicy.shouldRecord(currentTab())) {
+                        runCatching { java.net.URI(u) }.getOrNull()?.let { privateOrigins.add("${it.scheme}://${it.authority}") }
+                        return
+                    }
                     // Item 5. Local store, no sink, no sync — see BrowserHistory.
                     history.record(u, view?.title ?: u)
                     postDelayed({ capturePreview(this@apply, u) }, 600)
@@ -461,6 +486,21 @@ class BrowserHostFragment : Fragment(), Collapsible,
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     val u = view?.url ?: return
                     prefs.updateTitle(u, title ?: u)
+                }
+
+                /** #802 camera / microphone: the site's rule, else ask; never silently granted. */
+                override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                    val host = request.origin?.host.orEmpty().lowercase()
+                    val wanted = request.resources.filter { r -> config.sitePerms.any { r in it.webkit } }
+                    val perms = config.sitePerms.filter { p -> wanted.any { it in p.webkit } }
+                    if (wanted.isEmpty()) { request.deny(); return }
+                    decide(host, perms) { ok -> if (ok) request.grant(wanted.toTypedArray()) else request.deny() }
+                }
+
+                override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: android.webkit.GeolocationPermissions.Callback?) {
+                    val perm = config.sitePerms.firstOrNull { "geolocation" in it.webkit }
+                    if (perm == null || origin == null) { callback?.invoke(origin, false, false); return }
+                    decide(BrowserSitePolicy.hostOf(origin), listOf(perm)) { ok -> callback?.invoke(origin, ok, false) }
                 }
             }
             loadUrl(url)
@@ -549,7 +589,7 @@ class BrowserHostFragment : Fragment(), Collapsible,
     }
 
     /** #802 the catalogue's page settings onto [wv]. An undeclared key leaves WebView's own. */
-    private fun applySettings(wv: WebView) {
+    private fun applySettings(wv: WebView, url: String? = wv.url) {
         val s = wv.settings
         browserSettings.bool("javascript")?.let { s.javaScriptEnabled = it }
         browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
@@ -558,6 +598,78 @@ class BrowserHostFragment : Fragment(), Collapsible,
             android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, !it)
         }
         applyViewMode(wv)
+        applyShields(wv, url)
+    }
+
+    /** #802 per-site shields: a `deny` rule for javascript / images on this host turns it off here. */
+    private fun applyShields(wv: WebView, url: String?) {
+        val host = BrowserSitePolicy.hostOf(url)
+        if (host.isEmpty()) return
+        if (shieldDenied(host, "javascript")) wv.settings.javaScriptEnabled = false
+        if (shieldDenied(host, "images")) wv.settings.loadsImagesAutomatically = false
+    }
+
+    private fun shieldDenied(host: String, perm: String): Boolean =
+        config.sitePerms.firstOrNull { it.id == perm }?.let { sitePerms.resolve(host, it) == BrowserSitePolicy.DENY } == true
+
+    private fun currentTab(): BrowserTab? {
+        val u = (mode as? Mode.DETAIL)?.url ?: return null
+        return prefs.all().firstOrNull { it.url == u }
+    }
+
+    /**
+     * #802 may [host] have [perms]? Its rules decide; `ask` shows the question over the
+     * page and remembers the answer; an allowed permission the APP lacks goes through
+     * Android's own prompt first. Every path ends in exactly one [done].
+     */
+    private fun decide(host: String, perms: List<BrowserSitePerm>, done: (Boolean) -> Unit) {
+        val vals = perms.map { sitePerms.resolve(host, it) }
+        when {
+            perms.isEmpty() || BrowserSitePolicy.DENY in vals -> done(false)
+            vals.all { it == BrowserSitePolicy.ALLOW } -> ensureAndroid(perms, done)
+            else -> overlay { close ->
+                BrowserTextPanel("$host wants: ${perms.joinToString { it.label }}",
+                    "Your answer is remembered for this site; Site settings changes it.",
+                    listOf(SheetRow(BrowserSitePolicy.ALLOW, "Allow"), SheetRow(BrowserSitePolicy.DENY, "Deny")),
+                    onPick = { v ->
+                        close()
+                        perms.forEach { sitePerms.set(host, it.id, v) }
+                        if (v == BrowserSitePolicy.ALLOW) ensureAndroid(perms, done) else done(false)
+                    },
+                    onClose = { close(); done(false) })
+            }
+        }
+    }
+
+    private fun ensureAndroid(perms: List<BrowserSitePerm>, done: (Boolean) -> Unit) {
+        val need = perms.flatMap { it.android }.filter {
+            androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (need.isEmpty()) done(true) else { permDone = done; permRequest.launch(need.toTypedArray()) }
+    }
+
+    private fun showSiteSettings(host: String) {
+        val cat = BrowserSettingsCatalogue(config.sitePerms.map {
+            BrowserSetting(it.id, "enum", it.default, BrowserSitePolicy.VALUES, label = it.label, section = host)
+        })
+        overlay { close ->
+            BrowserSettingsScreen(cat, value = { k -> config.sitePerms.first { it.id == k }.let { sitePerms.resolve(host, it) } },
+                onSet = { k, v -> sitePerms.set(host, k, v.toString()); webView?.let { applySettings(it) } },
+                extra = emptyList(), onExtra = {}, onClose = { close(); webView?.reload() })
+        }
+    }
+
+    private fun showClearData() {
+        overlay { close ->
+            BrowserClearScreen(config.clearData,
+                note = "Cookies and site storage are shared by every tab: clearing them signs you out everywhere.",
+                onClear = { boxes ->
+                    BrowserClearData.clear(requireContext(), boxes, null) { r ->
+                        toast(if (r.optBoolean("ok")) "Cleared" else r.optString("error"))
+                    }
+                    close()
+                }, onClose = close)
+        }
     }
 
     private fun applyViewMode(wv: WebView) {
@@ -620,6 +732,9 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "desktop_mode" to desktopMode,
             "pinned" to (prefs.all().firstOrNull { it.url == active }?.pinned == true),
             "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
+            "private_tab" to (currentTab()?.isPrivate == true),
+            "shield_js" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "javascript")),
+            "shield_images" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "images")),
             "text_tools" to BrowserPageActions.textTools(requireContext()).isServingAppInstalled(),
             "can_be_default" to BrowserPageActions.canRequestDefault(requireContext()),
         )
@@ -725,6 +840,17 @@ class BrowserHostFragment : Fragment(), Collapsible,
             "forward" -> if (wv?.canGoForward() == true) { wv.goForward(); done(ok()) } else done(ok().put("ok", false).put("why", "no later page"))
             "reload" -> { wv?.reload() ?: return needPage(); done(ok()) }
             "new_tab" -> { promptForUrl(); done(ok()) }
+            "new_private_tab" -> { promptForUrl(private_ = true); done(ok().put("toast", "Private tabs keep no history; cookies are shared with normal tabs")) }
+            "site_settings" -> { showSiteSettings(BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }); done(ok()) }
+            "clear_data" -> { showClearData(); done(ok()) }
+            "shield_js", "shield_images" -> {
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
+                val perm = if (id == "shield_js") "javascript" else "images"
+                val next = if (shieldDenied(host, perm)) BrowserSitePolicy.ALLOW else BrowserSitePolicy.DENY
+                sitePerms.set(host, perm, next)
+                wv?.let { applySettings(it); it.reload() }
+                done(ok().put(perm, next))
+            }
             "close_tab" -> {
                 val tab = prefs.all().firstOrNull { it.url == tabUrl } ?: return needPage()
                 closeTab(tab); done(ok().put("closed", prefs.all().none { it.url == tabUrl }))

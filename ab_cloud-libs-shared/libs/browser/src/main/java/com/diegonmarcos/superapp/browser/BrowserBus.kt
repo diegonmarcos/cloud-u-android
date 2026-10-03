@@ -43,14 +43,19 @@ object BrowserBus {
     fun call(id: String, args: Map<String, String> = emptyMap(), timeoutMs: Long = 10_000): JSONObject {
         val host = page ?: return JSONObject().put("ok", false)
             .put("error", "the browser is not on screen: open it (or tabs/open?url=) first")
+        return onMain(id, timeoutMs) { done -> host.act(id, args, done) }
+    }
+
+    /** Run [work] on the main thread and wait (off it) for the one answer it gives. */
+    fun onMain(what: String, timeoutMs: Long = 10_000, work: (done: (JSONObject) -> Unit) -> Unit): JSONObject {
         val latch = CountDownLatch(1)
         var out: JSONObject? = null
         main.post {
-            runCatching { host.act(id, args) { if (out == null) { out = it; latch.countDown() } } }
-                .onFailure { out = JSONObject().put("ok", false).put("error", "$id: $it"); latch.countDown() }
+            runCatching { work { if (out == null) { out = it; latch.countDown() } } }
+                .onFailure { out = JSONObject().put("ok", false).put("error", "$what: $it"); latch.countDown() }
         }
         if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS))
-            return JSONObject().put("ok", false).put("error", "$id: no answer from the page in ${timeoutMs}ms")
+            return JSONObject().put("ok", false).put("error", "$what: no answer in ${timeoutMs}ms")
         return out ?: JSONObject().put("ok", false)
     }
 

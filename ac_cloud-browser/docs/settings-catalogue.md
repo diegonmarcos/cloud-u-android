@@ -14,3 +14,4 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | `load_images` | bool | true |  | privacy | config | Off saves data on metered networks. |
 | `block_third_party_cookies` | bool | false |  | privacy | config | CookieManager.setAcceptThirdPartyCookies(false) on every page. |
 | `download_dir` | string | "" |  | general | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
+| `private_by_default` | bool | false |  | privacy | config | A new tab opens private: no history, no preview, no HTTP cache. Cookies are shared with normal tabs (Android WebView keeps them per process). |

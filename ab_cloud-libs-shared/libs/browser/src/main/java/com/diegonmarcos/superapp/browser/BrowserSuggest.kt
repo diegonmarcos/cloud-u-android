@@ -42,7 +42,8 @@ object BrowserSuggest {
 
         val out = LinkedHashMap<String, Suggestion>()
 
-        for (t in BrowserTabOrder.sort(tabs)) {
+        // #802 a private tab is never offered back as a suggestion.
+        for (t in BrowserTabOrder.sort(tabs.filter { BrowserSitePolicy.shouldRecord(it) })) {
             if (t.url.lowercase().contains(needle) || t.title.lowercase().contains(needle)) {
                 out.getOrPut(t.url) {
                     Suggestion(t.url, t.title.ifBlank { t.url }, Source.TAB)

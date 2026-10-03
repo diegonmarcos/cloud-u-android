@@ -24,6 +24,8 @@ data class BrowserTab(
     val order: Int = UNSET_ORDER,
     /** Group name, "" for ungrouped. One field, so a tab is in at most one group. */
     val group: String = "",
+    /** #802 a private tab: never recorded in history, previews or suggestions. */
+    val isPrivate: Boolean = false,
 ) {
     companion object {
         const val UNSET_ORDER: Int = Int.MAX_VALUE

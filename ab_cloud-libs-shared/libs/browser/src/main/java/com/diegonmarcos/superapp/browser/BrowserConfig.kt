@@ -41,6 +41,10 @@ data class BrowserConfig(
     val palette: Map<String, Int> = emptyMap(),
     /** #802 the stylesheet reader mode renders the extracted article with. */
     val readerCss: String = "",
+    /** #802 the per-site permissions the Site settings page offers, with their defaults. */
+    val sitePerms: List<BrowserSitePerm> = emptyList(),
+    /** #802 the boxes of "Clear browsing data", id → label. */
+    val clearData: List<Pair<String, String>> = emptyList(),
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -121,6 +125,12 @@ data class BrowserConfig(
                     parseColor(v)?.let { k to it }
                 }.toMap(),
                 readerCss = o.optString("reader_css"),
+                sitePerms = BrowserSitePolicy.parsePerms(o.optJSONArray("site_permissions")),
+                clearData = o.optJSONArray("clear_data").let { a ->
+                    if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
+                        a.optJSONObject(i)?.let { it.optString("id") to it.optString("label", it.optString("id")) }
+                    }
+                },
             )
         }
 

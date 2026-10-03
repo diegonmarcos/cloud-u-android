@@ -31,7 +31,8 @@ def check(root, ok):
     for it in items:
         i = it["id"]
         ok(it.get("section") in sections, "row `%s` is in a declared section" % i)
-        ok('"%s" ->' % i in run, "row `%s` has its branch in runAction" % i)
+        # a branch may name several ids: "a", "b" -> { ... }
+        ok(re.search(r'"%s"(\s*,\s*"[a-z_]+")*\s*->' % re.escape(i), run), "row `%s` has its branch in runAction" % i)
         for f in it.get("requires", []):
             ok('"%s" to' % f in facts, "fact `%s` (needed by `%s`) is produced by facts()" % (f, i))
             ok(f in whys, "fact `%s` says why in requires_why" % f)

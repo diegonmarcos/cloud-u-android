@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -241,5 +242,27 @@ fun BrowserListScreen(
                 }
             }
         }
+    }
+}
+
+/** #802 "Clear browsing data": one checkbox per declared box, then Clear. */
+@Composable
+fun BrowserClearScreen(boxes: List<Pair<String, String>>, note: String, onClear: (Set<String>) -> Unit, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    var picked by remember { mutableStateOf(boxes.map { it.first }.toSet()) }
+    Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(16.dp).testTag("browser:clear")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text("Clear browsing data", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+        }
+        boxes.forEach { (id, label) ->
+            Row(Modifier.fillMaxWidth().clickable { picked = if (id in picked) picked - id else picked + id },
+                verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(id in picked, onCheckedChange = null)
+                Text(label, color = p.textPrimary)
+            }
+        }
+        Text(note, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+        TextButton({ onClear(picked) }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:clear:go")) { Text("Clear") }
     }
 }

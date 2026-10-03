@@ -9,7 +9,7 @@ import org.json.JSONObject
  * state, drag order and group — so all of it survives a restart.
  * Stored as a JSON array in SharedPreferences: small, plain, no dep.
  *
- * Schema: [{"url","title","ts","preview","pinned","order","group"}]
+ * Schema: [{"url","title","ts","preview","pinned","order","group","private"}]
  *
  * The three fields after "preview" are new. They are read with optional
  * defaults so a tab written by the previous version loads unchanged:
@@ -45,14 +45,15 @@ class BrowserTabPrefs(context: Context) {
                     pinned      = o.optBoolean("pinned", false),
                     order       = o.optInt("order", BrowserTab.UNSET_ORDER),
                     group       = o.optString("group", ""),
+                    isPrivate   = o.optBoolean("private", false),
                 )
             )
         }
         return out
     }
 
-    /** Add, or move-to-top if the URL is already open. */
-    fun add(url: String, title: String = url): BrowserTab {
+    /** Add, or move-to-top if the URL is already open. #802 [isPrivate] applies to a NEW tab only. */
+    fun add(url: String, title: String = url, isPrivate: Boolean = false): BrowserTab {
         if (url.isBlank()) return BrowserTab("", "", 0L)
         val now = System.currentTimeMillis()
         val existing = read().toMutableList()
@@ -61,7 +62,7 @@ class BrowserTabPrefs(context: Context) {
         // Re-opening a pinned tab keeps it pinned, keeps its slot and
         // keeps its group — an add() must never quietly unpin something.
         val tab = prior?.copy(title = title, ts = now)
-            ?: BrowserTab(url, title, now)
+            ?: BrowserTab(url, title, now, isPrivate = isPrivate)
         existing.add(0, tab)
         save(existing)
         return tab
@@ -69,6 +70,9 @@ class BrowserTabPrefs(context: Context) {
 
     fun updateTitle(url: String, title: String) =
         save(read().map { if (it.url == url) it.copy(title = title) else it })
+
+    /** #802 clear-data "previews": forget every captured tab preview. */
+    fun clearPreviews() = save(read().map { it.copy(previewPath = "") })
 
     fun updatePreview(url: String, path: String) =
         save(read().map { if (it.url == url) it.copy(previewPath = path) else it })
@@ -173,6 +177,7 @@ class BrowserTabPrefs(context: Context) {
                 put("pinned",  t.pinned)
                 put("order",   t.order)
                 put("group",   t.group)
+                put("private", t.isPrivate)
             })
         }
         sp.edit().putString(KEY, arr.toString()).apply()

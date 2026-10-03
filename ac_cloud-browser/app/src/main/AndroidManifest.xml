@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- #802 a site may be allowed these per site (build.json::ui.browser.site_permissions);
+         the app asks Android for them only when a site the user allowed first needs one. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Self-update: download + install new APK from GHCR silently.
          UPDATE_PACKAGES_WITHOUT_USER_ACTION is THE permission that makes
          USER_ACTION_NOT_REQUIRED actually silent on Android 12+ (API 31). -->
