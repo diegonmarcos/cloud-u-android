@@ -1336,7 +1336,9 @@ public class FileUtils {
                  * https://github.com/google/guava/blob/v30.1.1/guava/src/com/google/common/io/MoreFiles.java#L775
                  */
                 //noinspection UnstableApiUsage
-                com.google.common.io.MoreFiles.deleteRecursively(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
+                // #832: not Guava's deleteRecursively -- it keeps one suppressed exception per
+                // undeletable file, and a read-only Nix store made that ~10^5 traces and an OOM.
+                BoundedRecursiveDelete.delete(file.toPath());
             } else {
                 if (fileType == FileType.DIRECTORY) {
                     // deleteDirectory() instead of forceDelete() gets the files list first instead of walking directory tree, so seems safer
@@ -1410,7 +1412,7 @@ public class FileUtils {
                     /* If an exception is thrown, the exception message might not contain the full errors.
                      * Individual failures get added to suppressed throwables. */
                     //noinspection UnstableApiUsage
-                    com.google.common.io.MoreFiles.deleteDirectoryContents(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
+                    BoundedRecursiveDelete.deleteContents(file.toPath()); // #832
                 } else {
                     // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
                     org.apache.commons.io.FileUtils.cleanDirectory(new File(filePath));

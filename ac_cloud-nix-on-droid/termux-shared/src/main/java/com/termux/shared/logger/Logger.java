@@ -305,23 +305,9 @@ public class Logger {
 
 
 
+    /** #832: capped (see {@link BoundedStackTrace}); an uncapped trace OOMed a 256 MB heap. */
     public static String getStackTraceString(Throwable throwable) {
-        if (throwable == null) return null;
-
-        String stackTraceString = null;
-
-        try {
-            StringWriter errors = new StringWriter();
-            PrintWriter pw = new PrintWriter(errors);
-            throwable.printStackTrace(pw);
-            pw.close();
-            stackTraceString = errors.toString();
-            errors.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return stackTraceString;
+        return BoundedStackTrace.of(throwable);
     }
 
 
@@ -331,12 +317,7 @@ public class Logger {
     }
 
     public static String[] getStackTracesStringArray(List<Throwable> throwablesList) {
-        if (throwablesList == null) return null;
-        final String[] stackTraceStringArray = new String[throwablesList.size()];
-        for (int i = 0; i < throwablesList.size(); i++) {
-            stackTraceStringArray[i] = getStackTraceString(throwablesList.get(i));
-        }
-        return stackTraceStringArray;
+        return BoundedStackTrace.ofAll(throwablesList);
     }
 
 
