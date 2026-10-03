@@ -15,8 +15,13 @@ import java.io.File
  *     FleetConfig.export(ctx, "com.diegonmarcos.cloudcalc")          // → {"stores": {...}} or null
  *     FleetConfig.import(ctx, "com.diegonmarcos.cloudcalc", body)    // → per-store result
  *
- * WHAT moves is declared once, in this lib's assets/fleet-config.json (the manifest): every
- * store an app or lib opens, with its class. Only `config` and `secret` classes migrate; a
+ * WHAT moves is declared once, in the manifest (fleet-config.json): every store an app or lib
+ * opens, with its class. #796 the manifest is fleet-wide DATA, and it is not baked into this lib
+ * any more: it lives in the SuperApp (aa_cloud-superapp/app/src/main/assets), which is the one
+ * app that reads the whole of it, and it TRAVELS WITH EVERY CALL ([KEY_MANIFEST]) -- the
+ * provider in each app applies whatever manifest the fleet-signed caller hands it, and carries
+ * none of its own. Before that, each of the three manifest edits of 2026-10-02/03 rebuilt and
+ * republished all 33 fleet apps for a change that touched one app's declaration. Only `config` and `secret` classes migrate; a
  * `device` store (install ids, caches, Keystore-bound blobs) or a `content` store (data that
  * lives on a server) never leaves the phone, and a key-level override can narrow one key of a
  * migrating store the same way. fleet-config-guard.yml fails the build when the code opens a
@@ -26,7 +31,9 @@ import java.io.File
  * merges [FleetConfigProvider] into each of them at `<package>.fleetconfig`. The provider runs
  * IN the owning app's process, so it reads and writes that app's own SharedPreferences (and its
  * EncryptedSharedPreferences, through the same default MasterKey) — the files no other app can
- * open. A provider call starts a stopped app, so this works with the app closed. The cipher
+ * open. It is the thin, stable half: the policy (which stores, which classes migrate) arrives
+ * with the call, so a declaration change never changes this lib's bytes. `hello` is the
+ * handshake: it answers [CONTRACT] and whether the build carries a manifest of its own. A provider call starts a stopped app, so this works with the app closed. The cipher
  * (security-crypto) is compileOnly here: an app that keeps an encrypted store ships it already, and
  * in one that does not, an encrypted file is never there to open (an import naming one is refused).
  *
@@ -47,15 +54,22 @@ object FleetConfig {
 
     private const val TAG = "FleetConfig"
 
-    const val CONTRACT = 1
+    /** 2 = the manifest travels with the call ([KEY_MANIFEST]); 1 = each app carried a copy. */
+    const val CONTRACT = 2
     const val ASSET = "fleet-config.json"
     const val AUTHORITY_SUFFIX = ".fleetconfig"
     const val PERMISSION = "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
 
     const val METHOD_EXPORT = "export"
     const val METHOD_IMPORT = "import"
+    /** The handshake: `{"contract": CONTRACT, "manifest": "self"|"caller"}`. */
+    const val METHOD_HELLO = "hello"
     const val KEY_JSON = "json"
     const val KEY_ERROR = "error"
+    /** Export/import extra: the manifest JSON the provider applies. A build that carries none
+     *  (every fleet app but the SuperApp, since #796) refuses a call without it. */
+    const val KEY_MANIFEST = "manifest"
+    const val KEY_CONTRACT = "contract"
     /** Import extra: the app restarts once the reply is out, so no cached copy of the old
      *  values outlives the import (the next launch reads what was written). */
     const val KEY_RESTART = "restart"
@@ -157,11 +171,21 @@ object FleetConfig {
 
     @Volatile private var cached: Manifest? = null
 
-    /** The manifest baked into this APK (libs:core assets). */
-    fun manifest(ctx: Context): Manifest = cached ?: synchronized(this) {
-        cached ?: Manifest(JSONObject(ctx.applicationContext.assets.open(ASSET).bufferedReader().use { it.readText() }))
-            .also { cached = it }
+    /** The manifest this APK carries in its own assets (the SuperApp), or null when the build
+     *  carries none. A manifest that is present but malformed still throws: that is a broken
+     *  build, not an absent declaration. */
+    fun manifestOrNull(ctx: Context): Manifest? = cached ?: synchronized(this) {
+        cached ?: try {
+            Manifest(JSONObject(ctx.applicationContext.assets.open(ASSET).bufferedReader().use { it.readText() }))
+                .also { cached = it }
+        } catch (e: java.io.FileNotFoundException) {
+            null
+        }
     }
+
+    /** The manifest this APK carries. Only the SuperApp may assume one. */
+    fun manifest(ctx: Context): Manifest = manifestOrNull(ctx)
+        ?: throw IllegalStateException("${ctx.packageName} carries no $ASSET: since #796 only the SuperApp does, and every other app is handed one per call")
 
     // ── the engine (pure over SharedPreferences: the JVM suite runs it on two profiles) ──
 
@@ -275,15 +299,14 @@ object FleetConfig {
         }
     }
 
-    /** This app's own export (what the provider answers; the SuperApp reads itself with it). */
-    fun exportSelf(ctx: Context): JSONObject? {
-        val m = manifest(ctx)
+    /** This app's own export under [m] (what the provider answers; the SuperApp reads itself
+     *  with its own manifest). */
+    fun exportSelf(ctx: Context, m: Manifest = manifest(ctx)): JSONObject? {
         val app = m.appByPackage(ctx.packageName) ?: return null
         return exportApp(m, app, deviceOpener(ctx))
     }
 
-    fun importSelf(ctx: Context, body: JSONObject): JSONObject {
-        val m = manifest(ctx)
+    fun importSelf(ctx: Context, body: JSONObject, m: Manifest = manifest(ctx)): JSONObject {
         val app = m.appByPackage(ctx.packageName)
             ?: return JSONObject().put(KEY_ERROR, "${ctx.packageName} is not a declared fleet app")
         return importApp(m, app, body, deviceOpener(ctx))
@@ -298,15 +321,25 @@ object FleetConfig {
         data class Refused(val why: String) : Reply()
     }
 
-    /** [pkg]'s configuration. Starts the app if it is stopped. BLOCKS: call off the main thread. */
+    /** [pkg]'s configuration under this app's manifest, which travels with the call. Starts the
+     *  app if it is stopped. BLOCKS: call off the main thread. */
     fun export(ctx: Context, pkg: String): Reply =
         if (pkg == ctx.packageName) exportSelf(ctx)?.let { Reply.Ok(it) } ?: Reply.Refused("not a declared fleet app")
-        else call(ctx, pkg, METHOD_EXPORT, Bundle())
+        else call(ctx, pkg, METHOD_EXPORT, withManifest(ctx, Bundle()))
 
     /** Applies [body] to [pkg]; [restart] lets the app restart so nothing cached outlives it. */
     fun import(ctx: Context, pkg: String, body: JSONObject, restart: Boolean = true): Reply =
         if (pkg == ctx.packageName) importSelf(ctx, body).let { if (it.has(KEY_ERROR) && !it.has("files")) Reply.Refused(it.getString(KEY_ERROR)) else Reply.Ok(it) }
-        else call(ctx, pkg, METHOD_IMPORT, Bundle().apply { putString(KEY_JSON, body.toString()); putBoolean(KEY_RESTART, restart) })
+        else call(ctx, pkg, METHOD_IMPORT, withManifest(ctx, Bundle().apply { putString(KEY_JSON, body.toString()); putBoolean(KEY_RESTART, restart) }))
+
+    /** The handshake with [pkg]: its [CONTRACT], and whether it carries a manifest of its own. */
+    fun hello(ctx: Context, pkg: String): Reply =
+        if (pkg == ctx.packageName) Reply.Ok(helloSelf(ctx)) else call(ctx, pkg, METHOD_HELLO, Bundle())
+
+    fun helloSelf(ctx: Context): JSONObject =
+        JSONObject().put(KEY_CONTRACT, CONTRACT).put(KEY_MANIFEST, if (manifestOrNull(ctx) != null) "self" else "caller")
+
+    private fun withManifest(ctx: Context, b: Bundle): Bundle = b.apply { putString(KEY_MANIFEST, manifest(ctx).json.toString()) }
 
     private fun call(ctx: Context, pkg: String, method: String, extras: Bundle): Reply {
         try {

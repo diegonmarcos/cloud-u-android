@@ -15,8 +15,12 @@ import org.json.JSONObject
 /**
  * #783 `<package>.fleetconfig` — the [FleetConfig] contract served by EVERY fleet app, merged in
  * from libs:core's manifest so no app writes a line for it. `call(export)` answers this app's
- * migrating configuration; `call(import, json)` writes a declared copy into it. Everything else
- * a ContentProvider can do is refused.
+ * migrating configuration; `call(import, json)` writes a declared copy into it; `call(hello)`
+ * is the handshake. Everything else a ContentProvider can do is refused.
+ *
+ * #796 the manifest that says WHAT migrates arrives in the call ([FleetConfig.KEY_MANIFEST]);
+ * this build carries none unless it is the SuperApp. So this provider is the thin, stable half
+ * of the contract, and a declaration edit changes no byte of the 33 apps that serve it.
  *
  * Gated twice: the manifest entry is exported behind CONSTELLATION_DATA (the system refuses the
  * provider to any APK signed with another key), and [call] re-checks the caller, because the
@@ -31,13 +35,18 @@ class FleetConfigProvider : ContentProvider() {
         if (Binder.getCallingUid() != Process.myUid() &&
             ctx.checkCallingPermission(FleetConfig.PERMISSION) != PackageManager.PERMISSION_GRANTED)
             return error("caller is not a fleet app")
+        if (method == FleetConfig.METHOD_HELLO) return ok(FleetConfig.helloSelf(ctx))
         return runCatching {
+            // The caller's manifest first; this build's own (the SuperApp) second; nothing third.
+            val m = extras?.getString(FleetConfig.KEY_MANIFEST)?.let { FleetConfig.Manifest(JSONObject(it)) }
+                ?: FleetConfig.manifestOrNull(ctx)
+                ?: return error("no manifest: this build carries none and the call brought none (contract ${FleetConfig.CONTRACT} — update the caller)")
             when (method) {
                 FleetConfig.METHOD_EXPORT ->
-                    FleetConfig.exportSelf(ctx)?.let { ok(it) } ?: error("${ctx.packageName} is not a declared fleet app")
+                    FleetConfig.exportSelf(ctx, m)?.let { ok(it) } ?: error("${ctx.packageName} is not a declared fleet app")
                 FleetConfig.METHOD_IMPORT -> {
                     val body = JSONObject(extras?.getString(FleetConfig.KEY_JSON) ?: return error("no body"))
-                    val r = FleetConfig.importSelf(ctx, body)
+                    val r = FleetConfig.importSelf(ctx, body, m)
                     // Restart once the reply is out, so singletons that cached the old values
                     // cannot write them back over the import. Never for a no-op import.
                     if (extras?.getBoolean(FleetConfig.KEY_RESTART) == true && r.optInt("written") > 0)

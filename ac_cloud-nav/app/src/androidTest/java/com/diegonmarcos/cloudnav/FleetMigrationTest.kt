@@ -29,11 +29,22 @@ import org.junit.runner.RunWith
  * cloud-nav keeps no encrypted store, so it ships no cipher (libs:core takes security-crypto
  * compileOnly): an import naming an encrypted store must be refused for that file alone, on the
  * device, without taking the rest of the import — or the app — down with it.
+ *
+ * #796 the manifest is no longer in cloud-nav's APK: it travels with every call, as it does from
+ * the SuperApp. This test is the caller, so it carries the SuperApp's copy in the TEST APK's
+ * assets (app/build.gradle sources aa_cloud-superapp's asset directory into androidTest only)
+ * and hands it over on each call; `hello` must say so.
  */
 @RunWith(AndroidJUnit4::class)
 class FleetMigrationTest {
 
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    /** The SuperApp's manifest, read from the test APK (the instrumentation package's assets). */
+    private val manifest: FleetConfig.Manifest by lazy {
+        FleetConfig.Manifest(JSONObject(InstrumentationRegistry.getInstrumentation().context.assets
+            .open(FleetConfig.ASSET).bufferedReader().use { it.readText() }))
+    }
 
     private fun canonical(v: Any?): String = when (v) {
         is JSONObject -> v.keys().asSequence().sorted().joinToString(",", "{", "}") { JSONObject.quote(it) + ":" + canonical(v.opt(it)) }
@@ -43,7 +54,10 @@ class FleetMigrationTest {
     }
 
     private fun call(method: String, body: JSONObject? = null): JSONObject {
-        val extras = body?.let { Bundle().apply { putString(FleetConfig.KEY_JSON, it.toString()) } }
+        val extras = Bundle().apply {
+            putString(FleetConfig.KEY_MANIFEST, manifest.json.toString())
+            body?.let { putString(FleetConfig.KEY_JSON, it.toString()) }
+        }
         val out = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), method, null, extras)
         assertNotNull("the provider answered $method", out)
         out!!.getString(FleetConfig.KEY_ERROR)?.let { throw AssertionError("$method refused: $it") }
@@ -62,8 +76,18 @@ class FleetMigrationTest {
         if (saved.length() > 0) call(FleetConfig.METHOD_IMPORT, JSONObject().put("stores", saved))
     }
 
+    @Test fun the_handshake_says_the_manifest_comes_from_the_caller() {
+        val h = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), FleetConfig.METHOD_HELLO, null, null)
+        val r = JSONObject(h!!.getString(FleetConfig.KEY_JSON)!!)
+        assertEquals(FleetConfig.CONTRACT, r.getInt(FleetConfig.KEY_CONTRACT))
+        assertEquals("caller", r.getString(FleetConfig.KEY_MANIFEST))
+        // And a call that brings no manifest is refused, not answered from a stale copy.
+        val bare = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), FleetConfig.METHOD_EXPORT, null, null)
+        assertTrue("export without a manifest is refused", bare!!.getString(FleetConfig.KEY_ERROR)!!.startsWith("no manifest"))
+    }
+
     @Test fun a_configured_profile_survives_wipe_and_import_through_the_provider() {
-        val m = FleetConfig.manifest(ctx)
+        val m = manifest
         val app = m.appByPackage(ctx.packageName)
         assertNotNull("cloud-nav is a declared fleet app", app)
 
