@@ -126,9 +126,9 @@ class NotifyGroupsAlertsTest {
 
     @Test fun `order is the owner's and survives a re-read`() {
         NotifyGroups.move(ctx, group("alerts"), -3)
-        assertEquals(listOf("alerts", "live", "actions", "media"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "live", "actions", "media", "store"), NotifyGroups.ordered(ctx).map { it.id })
         NotifyGroups.move(ctx, group("live"), +1)
-        assertEquals(listOf("alerts", "actions", "live", "media"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "actions", "live", "media", "store"), NotifyGroups.ordered(ctx).map { it.id })
     }
 
     // ── mock data is gone ───────────────────────────────────────────────

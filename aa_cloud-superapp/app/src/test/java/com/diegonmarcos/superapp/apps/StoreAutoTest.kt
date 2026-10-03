@@ -84,6 +84,8 @@ class StoreAutoTest {
     @Before
     fun up() {
         UpdateProgress.reset()
+        // #812 room is real free storage (StatFs); Robolectric's reads 0 — a 40 GB phone.
+        ApkCache.freeBytes = { 40_000_000_000L }
         ApkCache.clear(ctx)
         ctx.getSharedPreferences("store_auto", Context.MODE_PRIVATE).edit().clear().commit()
         server = TinyHttp { method, path, headers ->
@@ -127,6 +129,7 @@ class StoreAutoTest {
         StoreAuto.checkpoint = { _, _ -> }
         StoreStages.installer = FleetInstall::install
         Fleet.autoChain = null
+        ApkCache.freeBytes = { c -> runCatching { android.os.StatFs(ApkCache.dir(c).path).availableBytes }.getOrElse { ApkCache.dir(c).usableSpace } }
         UpdateProgress.removeObserver(watch)
         ApkCache.clear(ctx)
         UpdateProgress.reset()

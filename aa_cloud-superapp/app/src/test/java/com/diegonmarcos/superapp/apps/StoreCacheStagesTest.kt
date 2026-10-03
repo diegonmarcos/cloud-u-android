@@ -129,6 +129,8 @@ class StoreCacheStagesTest {
     fun up() {
         UpdateProgress.reset()
         ApkCache.clear(ctx)
+        // #812 room is real free storage (StatFs); Robolectric's reads 0 — a 40 GB phone.
+        ApkCache.freeBytes = { 40_000_000_000L }
         room0 = StoreStages.room
         apk = fakeApk()
         server = TinyHttp { method, path, headers ->
@@ -157,6 +159,7 @@ class StoreCacheStagesTest {
         StoreStages.installer = FleetInstall::install
         StoreStages.room = room0
         ApkCache.clear(ctx)
+        ApkCache.freeBytes = { c -> runCatching { android.os.StatFs(ApkCache.dir(c).path).availableBytes }.getOrElse { ApkCache.dir(c).usableSpace } }
         ApkCache.clearNote(ctx, pkg)
         UpdateProgress.removeObserver(watch)
         UpdateProgress.reset()
