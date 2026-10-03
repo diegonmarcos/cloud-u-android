@@ -1,0 +1,54 @@
+name: "Ship → fleet refresh (apps whose shared-lib inputs moved since their last publish)"
+
+# #836: a push to a shared lib ships only the lib's PRIMARY consumer
+# (1_cicd/src/data/lib-primary-consumers.json). Every other app that compiles it
+# carries the lib as a deferred input of its ship workflow — hashed by the
+# publish gate, not watched by GitHub — and THIS workflow ships it: every 6 h
+# (and on demand) it diffs each app's deferred shared-lib inputs between the
+# commit its published APK was built from (line 2 of the <asset>.source sidecar)
+# and HEAD, and sends one repository_dispatch per app that moved. Each app's
+# own ship workflow then runs exactly as a push run does (publish gate, publish,
+# stamp), under its own per-app concurrency group.
+#
+# No push trigger: editing this file, the generator, or any ship workflow never
+# starts it. Logic: 1_cicd/src/scripts/cloud-android-fleet-refresh.py.
+
+on:
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only print the plan; dispatch nothing"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # POST /repos/{repo}/dispatches
+
+# One batch at a time, never two: a refresh still dispatching when the next
+# fires is waited for, not overlapped and not cancelled half-way.
+concurrency:
+  group: fleet-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (full history — the baselines are old commits)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Plan and dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python3 1_cicd/dist/scripts/cloud-android-fleet-refresh.py dispatch --dry-run
+          else
+            python3 1_cicd/dist/scripts/cloud-android-fleet-refresh.py dispatch
+          fi

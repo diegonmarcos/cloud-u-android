@@ -24,6 +24,9 @@ name: "Ship → Cloud SuperApp APK (build + push to GHCR via ORAS + attach to GH
 #   - workflow_dispatch                            → manual, same as main push
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-aa_cloud-superapp]
   workflow_dispatch:
     inputs:
       variant:
@@ -77,6 +80,14 @@ on:
       # edit must START a run (it is the only pipeline that executes
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
+      # #836 build inputs HASHED but NOT watched per push: each shared lib
+      # this app compiles but is not the primary consumer of
+      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow
+      # file. fleet-refresh.yml ships the app when one of the libs moved
+      # since its last published build.
+      #   input: "1_cicd/src/cicd/ship-cloud-superapp.yml"
+      #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/devtools/**"
       # ── end MANAGED-PATHS-HEADER ──
       # ab_cloud-libs-shared/build.json is watched because it carries
       # firestack.artifact — the tag and per-ABI checksums of the prebuilt
@@ -87,7 +98,6 @@ on:
       # source identity (cloud-android-source-identity.sh hashes exactly this
       # list; a file entry hashes as its git blob), so a pin advance correctly
       # republishes and an unrelated edit elsewhere in that file does not.
-      - "1_cicd/src/cicd/ship-cloud-superapp.yml"
       - "aa_cloud-superapp/**"
       - "ab_cloud-libs-shared/build.json"
       - "ab_cloud-libs-shared/libs/analytics/**"
@@ -96,9 +106,7 @@ on:
       - "ab_cloud-libs-shared/libs/battery/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/chat/**"
-      - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/datamanager/**"
-      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/firewall/**"
       - "ab_cloud-libs-shared/libs/health/**"
       - "ab_cloud-libs-shared/libs/kde-connect/**"

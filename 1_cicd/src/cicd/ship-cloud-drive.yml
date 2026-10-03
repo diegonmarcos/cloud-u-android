@@ -1,6 +1,9 @@
 name: "Ship → Cloud Drive APK (build + push to GHCR via ORAS + attach to GH Release)"
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-ac_cloud-drive]
   workflow_dispatch:
     inputs:
       variant:
@@ -37,22 +40,27 @@ on:
       # edit must START a run (it is the only pipeline that executes
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
+      # #836 build inputs HASHED but NOT watched per push: each shared lib
+      # this app compiles but is not the primary consumer of
+      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow
+      # file. fleet-refresh.yml ships the app when one of the libs moved
+      # since its last published build.
+      #   input: "1_cicd/src/cicd/ship-cloud-drive.yml"
+      #   input: "ab_cloud-libs-shared/libs/analytics/**"
+      #   input: "ab_cloud-libs-shared/libs/auth/**"
+      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
+      #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
+      #   input: "ab_cloud-libs-shared/libs/sysdns/**"
+      #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
-      - "1_cicd/src/cicd/ship-cloud-drive.yml"
-      - "ab_cloud-libs-shared/libs/analytics/**"
-      - "ab_cloud-libs-shared/libs/auth/**"
-      - "ab_cloud-libs-shared/libs/bottomnav/**"
-      - "ab_cloud-libs-shared/libs/core/**"
-      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/disk-scan/**"
       - "ab_cloud-libs-shared/libs/disk/**"
       - "ab_cloud-libs-shared/libs/file-editor/**"
       - "ab_cloud-libs-shared/libs/git-sync/**"
-      - "ab_cloud-libs-shared/libs/ml-l-image/**"
       - "ab_cloud-libs-shared/libs/mounts/**"
       - "ab_cloud-libs-shared/libs/rclone/**"
-      - "ab_cloud-libs-shared/libs/sysdns/**"
-      - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
 permissions:
   contents: write

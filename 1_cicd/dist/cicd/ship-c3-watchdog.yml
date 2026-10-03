@@ -25,6 +25,9 @@ name: "Ship → C3-Watchdog APK (build + push to GHCR via ORAS + attach to GH Re
 # which builds libs:net's libwg-go.so).
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-ac_c3-watchdog]
   workflow_dispatch:
     inputs:
       variant:
@@ -63,10 +66,15 @@ on:
       # edit must START a run (it is the only pipeline that executes
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
+      # #836 build inputs HASHED but NOT watched per push: each shared lib
+      # this app compiles but is not the primary consumer of
+      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow
+      # file. fleet-refresh.yml ships the app when one of the libs moved
+      # since its last published build.
+      #   input: "1_cicd/src/cicd/ship-c3-watchdog.yml"
+      #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/devtools/**"
       # ── end MANAGED-PATHS-HEADER ──
-      - "1_cicd/src/cicd/ship-c3-watchdog.yml"
-      - "ab_cloud-libs-shared/libs/core/**"
-      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/watchdog/**"
       - "ac_c3-watchdog/**"
 permissions:

@@ -1,5 +1,5 @@
 {
-  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB.",
+  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB. #836: `refresh` is how many apps fleet-refresh.yml ships LATER for the change (their deferred shared-lib inputs moved; they are NOT started per push), held both ways like the rest. A shared lib edit now starts its declared primary consumer only (1_cicd/src/data/lib-primary-consumers.json) plus the one lib-APK builder run.",
   "scenarios": [
     {
       "id": "libs/core (one source file)",
@@ -7,10 +7,11 @@
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
       "expect": {
-        "apps": 32,
+        "apps": 0,
         "libs": 29,
         "rootfs": 0,
-        "ship": 33
+        "ship": 1,
+        "refresh": 32
       }
     },
     {
@@ -19,10 +20,169 @@
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
       "expect": {
-        "apps": 32,
+        "apps": 0,
         "libs": 30,
         "rootfs": 0,
-        "ship": 33
+        "ship": 1,
+        "refresh": 32
+      }
+    },
+    {
+      "id": "libs/appstore (#831's lib)",
+      "files": [
+        "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/LibDownloader.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 1,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "libs/updater (700ab854 fired 12 ships)",
+      "files": [
+        "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Updater.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 2,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 10
+      }
+    },
+    {
+      "id": "libs/bottomnav (7 consumers)",
+      "files": [
+        "ab_cloud-libs-shared/libs/bottomnav/src/main/java/com/diegonmarcos/superapp/bottomnav/BottomNav.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 2,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 6
+      }
+    },
+    {
+      "id": "generator run: every ship workflow rewritten",
+      "files": [
+        "1_cicd/src/scripts/cloud-android-ship-repo-workflow-engine.sh",
+        "1_cicd/dist/scripts/cloud-android-ship-repo-workflow-engine.sh",
+        "1_cicd/src/cicd/ship-c3-morpheus.yml",
+        "1_cicd/src/cicd/ship-c3-watchdog.yml",
+        "1_cicd/src/cicd/ship-c3-watchtower.yml",
+        "1_cicd/src/cicd/ship-cloud-agenda.yml",
+        "1_cicd/src/cicd/ship-cloud-browser.yml",
+        "1_cicd/src/cicd/ship-cloud-c3-webserver.yml",
+        "1_cicd/src/cicd/ship-cloud-c3.yml",
+        "1_cicd/src/cicd/ship-cloud-calc.yml",
+        "1_cicd/src/cicd/ship-cloud-camera.yml",
+        "1_cicd/src/cicd/ship-cloud-chat.yml",
+        "1_cicd/src/cicd/ship-cloud-code.yml",
+        "1_cicd/src/cicd/ship-cloud-contacts.yml",
+        "1_cicd/src/cicd/ship-cloud-dialer.yml",
+        "1_cicd/src/cicd/ship-cloud-drive.yml",
+        "1_cicd/src/cicd/ship-cloud-keyboard-libs.yml",
+        "1_cicd/src/cicd/ship-cloud-keyboard.yml",
+        "1_cicd/src/cicd/ship-cloud-libs.yml",
+        "1_cicd/src/cicd/ship-cloud-mail.yml",
+        "1_cicd/src/cicd/ship-cloud-matrix.yml",
+        "1_cicd/src/cicd/ship-cloud-me.yml",
+        "1_cicd/src/cicd/ship-cloud-media-center.yml",
+        "1_cicd/src/cicd/ship-cloud-myterminal.yml",
+        "1_cicd/src/cicd/ship-cloud-nav.yml",
+        "1_cicd/src/cicd/ship-cloud-news.yml",
+        "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml",
+        "1_cicd/src/cicd/ship-cloud-notes.yml",
+        "1_cicd/src/cicd/ship-cloud-office.yml",
+        "1_cicd/src/cicd/ship-cloud-search.yml",
+        "1_cicd/src/cicd/ship-cloud-superapp.yml",
+        "1_cicd/src/cicd/ship-cloud-termux.yml",
+        "1_cicd/src/cicd/ship-cloud-vault.yml",
+        "1_cicd/src/cicd/ship-cloud-wallet.yml",
+        "1_cicd/src/cicd/ship-cloud-writer.yml",
+        "1_cicd/src/cicd/ship-garmin-watchface.yml",
+        "1_cicd/src/cicd/ship-termux-boot.yml",
+        "1_cicd/dist/cicd/ship-c3-morpheus.yml",
+        "1_cicd/dist/cicd/ship-c3-watchdog.yml",
+        "1_cicd/dist/cicd/ship-c3-watchtower.yml",
+        "1_cicd/dist/cicd/ship-cloud-agenda.yml",
+        "1_cicd/dist/cicd/ship-cloud-browser.yml",
+        "1_cicd/dist/cicd/ship-cloud-c3-webserver.yml",
+        "1_cicd/dist/cicd/ship-cloud-c3.yml",
+        "1_cicd/dist/cicd/ship-cloud-calc.yml",
+        "1_cicd/dist/cicd/ship-cloud-camera.yml",
+        "1_cicd/dist/cicd/ship-cloud-chat.yml",
+        "1_cicd/dist/cicd/ship-cloud-code.yml",
+        "1_cicd/dist/cicd/ship-cloud-contacts.yml",
+        "1_cicd/dist/cicd/ship-cloud-dialer.yml",
+        "1_cicd/dist/cicd/ship-cloud-drive.yml",
+        "1_cicd/dist/cicd/ship-cloud-keyboard-libs.yml",
+        "1_cicd/dist/cicd/ship-cloud-keyboard.yml",
+        "1_cicd/dist/cicd/ship-cloud-libs.yml",
+        "1_cicd/dist/cicd/ship-cloud-mail.yml",
+        "1_cicd/dist/cicd/ship-cloud-matrix.yml",
+        "1_cicd/dist/cicd/ship-cloud-me.yml",
+        "1_cicd/dist/cicd/ship-cloud-media-center.yml",
+        "1_cicd/dist/cicd/ship-cloud-myterminal.yml",
+        "1_cicd/dist/cicd/ship-cloud-nav.yml",
+        "1_cicd/dist/cicd/ship-cloud-news.yml",
+        "1_cicd/dist/cicd/ship-cloud-nix-on-droid.yml",
+        "1_cicd/dist/cicd/ship-cloud-notes.yml",
+        "1_cicd/dist/cicd/ship-cloud-office.yml",
+        "1_cicd/dist/cicd/ship-cloud-search.yml",
+        "1_cicd/dist/cicd/ship-cloud-superapp.yml",
+        "1_cicd/dist/cicd/ship-cloud-termux.yml",
+        "1_cicd/dist/cicd/ship-cloud-vault.yml",
+        "1_cicd/dist/cicd/ship-cloud-wallet.yml",
+        "1_cicd/dist/cicd/ship-cloud-writer.yml",
+        "1_cicd/dist/cicd/ship-garmin-watchface.yml",
+        "1_cicd/dist/cicd/ship-termux-boot.yml",
+        ".github/workflows/ship-c3-morpheus.yml",
+        ".github/workflows/ship-c3-watchdog.yml",
+        ".github/workflows/ship-c3-watchtower.yml",
+        ".github/workflows/ship-cloud-agenda.yml",
+        ".github/workflows/ship-cloud-browser.yml",
+        ".github/workflows/ship-cloud-c3-webserver.yml",
+        ".github/workflows/ship-cloud-c3.yml",
+        ".github/workflows/ship-cloud-calc.yml",
+        ".github/workflows/ship-cloud-camera.yml",
+        ".github/workflows/ship-cloud-chat.yml",
+        ".github/workflows/ship-cloud-code.yml",
+        ".github/workflows/ship-cloud-contacts.yml",
+        ".github/workflows/ship-cloud-dialer.yml",
+        ".github/workflows/ship-cloud-drive.yml",
+        ".github/workflows/ship-cloud-keyboard-libs.yml",
+        ".github/workflows/ship-cloud-keyboard.yml",
+        ".github/workflows/ship-cloud-libs.yml",
+        ".github/workflows/ship-cloud-mail.yml",
+        ".github/workflows/ship-cloud-matrix.yml",
+        ".github/workflows/ship-cloud-me.yml",
+        ".github/workflows/ship-cloud-media-center.yml",
+        ".github/workflows/ship-cloud-myterminal.yml",
+        ".github/workflows/ship-cloud-nav.yml",
+        ".github/workflows/ship-cloud-news.yml",
+        ".github/workflows/ship-cloud-nix-on-droid.yml",
+        ".github/workflows/ship-cloud-notes.yml",
+        ".github/workflows/ship-cloud-office.yml",
+        ".github/workflows/ship-cloud-search.yml",
+        ".github/workflows/ship-cloud-superapp.yml",
+        ".github/workflows/ship-cloud-termux.yml",
+        ".github/workflows/ship-cloud-vault.yml",
+        ".github/workflows/ship-cloud-wallet.yml",
+        ".github/workflows/ship-cloud-writer.yml",
+        ".github/workflows/ship-garmin-watchface.yml",
+        ".github/workflows/ship-termux-boot.yml"
+      ],
+      "expect": {
+        "apps": 0,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 0,
+        "refresh": 0
       }
     },
     {
@@ -34,7 +194,8 @@
         "apps": 1,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -48,7 +209,8 @@
         "apps": 1,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -60,7 +222,8 @@
         "apps": 1,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -72,7 +235,8 @@
         "apps": 0,
         "libs": 1,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -84,7 +248,8 @@
         "apps": 1,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -96,7 +261,8 @@
         "apps": 2,
         "libs": 0,
         "rootfs": 2,
-        "ship": 2
+        "ship": 2,
+        "refresh": 0
       }
     },
     {
@@ -108,7 +274,8 @@
         "apps": 1,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1
+        "ship": 1,
+        "refresh": 0
       }
     },
     {
@@ -120,7 +287,8 @@
         "apps": 3,
         "libs": 0,
         "rootfs": 0,
-        "ship": 3
+        "ship": 3,
+        "refresh": 0
       }
     },
     {
@@ -133,7 +301,8 @@
         "apps": 0,
         "libs": 0,
         "rootfs": 0,
-        "ship": 0
+        "ship": 0,
+        "refresh": 0
       }
     }
   ]

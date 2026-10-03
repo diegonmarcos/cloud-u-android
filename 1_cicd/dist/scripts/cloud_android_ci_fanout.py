@@ -33,6 +33,7 @@ USAGE
   cloud_android_ci_fanout.py [--wf DIR] --scenarios FILE  (one table, every scenario)
   add --names to list the workflows, --json for machine output, --builds to
   count the APKs the gates would rebuild (slower: one identity per fired ship)
+  and (#836) the apps fleet-refresh.yml would ship later instead
 EXIT 0 always (it measures; the guards assert)
 """
 import functools, glob, json, os, re, subprocess, sys
@@ -195,6 +196,26 @@ def builds(root, wf_dir, hit, files):
     return out
 
 
+def refreshed(wf_dir, files):
+    """#836: the apps fleet-refresh.yml would ship for this change set — those
+    whose DEFERRED shared-lib inputs (hashed, not push-watched; comment lines
+    inside the managed fence) contain a changed file. The refresh diffs from
+    each app's last published commit; with that commit as the change set's
+    parent this is exactly its answer."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    sys.dont_write_bytecode = True
+    from cloud_android_workflow_paths import deferred_inputs
+    out = []
+    for wf in sorted(glob.glob(os.path.join(wf_dir, "ship-*.yml"))):
+        text = open(wf).read()
+        libs = [d.rstrip("*").rstrip("/") for d in deferred_inputs(text)
+                if d.startswith("ab_cloud-libs-shared/libs/")]
+        app = re.search(r"^  WORK_DIR: (\S+)$", text, re.M)
+        if libs and "fleet-refresh-" in text and under(files, libs):
+            out.append(app.group(1) if app else os.path.basename(wf))
+    return out
+
+
 def scenarios_table(root, wf_dir, path):
     spec = json.load(open(path))
     rows = []
@@ -203,9 +224,10 @@ def scenarios_table(root, wf_dir, path):
         hit = sorted(os.path.basename(w) for w in glob.glob(os.path.join(wf_dir, "*.yml"))
                      if fires(*triggers(w), files))
         b = builds(root, wf_dir, hit, files)
+        b["refresh"] = refreshed(wf_dir, files)
         rows.append({"id": sc["id"], "runs": len(hit), "ship": sum(h.startswith("ship") for h in hit),
-                     "apps": len(b["apps"]), "libs": len(b["libs"]), "rootfs": len(b["rootfs"]), "built": b,
-                     "expect": sc.get("expect")})
+                     "apps": len(b["apps"]), "libs": len(b["libs"]), "rootfs": len(b["rootfs"]),
+                     "refresh": len(b["refresh"]), "built": b, "expect": sc.get("expect")})
     return rows
 
 
@@ -243,14 +265,16 @@ def main(argv):
         if as_json:
             print(json.dumps(rows))
         else:
-            print(f"{'scenario':46} {'runs':>4} {'ship':>4} {'apps':>4} {'libs':>4} {'rootfs':>6}")
+            print(f"{'scenario':46} {'runs':>4} {'ship':>4} {'apps':>4} {'libs':>4} {'rootfs':>6} {'refresh':>7}")
             for r in rows:
-                print(f"{r['id']:46} {r['runs']:4} {r['ship']:4} {r['apps']:4} {r['libs']:4} {r['rootfs']:6}")
+                print(f"{r['id']:46} {r['runs']:4} {r['ship']:4} {r['apps']:4} {r['libs']:4} {r['rootfs']:6} {r['refresh']:7}")
         return 0
     hit = sorted(os.path.basename(w) for w in glob.glob(os.path.join(wf_dir, "*.yml"))
                  if fires(*triggers(w), files))
     ship = [h for h in hit if h.startswith("ship")]
     b = builds(root, wf_dir, hit, files) if want_builds else None
+    if b is not None:
+        b["refresh"] = refreshed(wf_dir, files)
     if as_json:
         print(json.dumps({"files": len(files), "runs": len(hit), "ship": len(ship), "workflows": hit,
                           **({"built": b} if b else {})}))
@@ -260,7 +284,8 @@ def main(argv):
         print(f"{len(hit)} runs ({len(ship)} ship, {len(hit) - len(ship)} other) for {len(files)} changed file(s)")
         if b:
             print(f"rebuilt: {len(b['apps'])} app APK(s), {len(b['libs'])} lib APK(s), {len(b['rootfs'])} rootfs lib(s)")
-            for k in ("apps", "libs", "rootfs"):
+            print(f"deferred to fleet-refresh.yml: {len(b['refresh'])} app(s)")
+            for k in ("apps", "libs", "rootfs", "refresh"):
                 if b[k]:
                     print(f"  {k}: " + " ".join(b[k]))
     return 0

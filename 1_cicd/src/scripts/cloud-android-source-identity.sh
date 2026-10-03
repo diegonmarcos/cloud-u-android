@@ -188,12 +188,20 @@ _paths() {
         exit 3
     }
 
-    # The workflow's `on: push: paths` list, minus the glob tail. A dir entry
+    # The workflow's `on: push: paths` list, minus the glob tail, PLUS the
+    # #836 deferred inputs the generator writes as `#   input: "…"` comment
+    # lines inside the managed fence: shared libs this app compiles but is not
+    # the primary consumer of, and the workflow file itself. GitHub does not
+    # watch them (so a lib edit no longer starts every consumer's ship); this
+    # identity still hashes them, so a refresh- or dispatch-started run
+    # publishes exactly when they moved. Triggers stay a SUBSET of the
+    # identity, which is the property the gate's safety rests on. A dir entry
     # hashes as its git tree, a file entry as its blob — so `ac_cloud-nav/**`
     # and `ac_cloud-nav` are the same object either way.
     entries="$(awk '
         /^    paths:$/            { inblock = 1; next }
         inblock && /^      - "/   { gsub(/^      - "|"$/, ""); print; next }
+        inblock && /^      #   input: "/ { sub(/^      #   input: "/, ""); sub(/"[[:space:]]*$/, ""); print; next }
         inblock && /^      /      { next }
         inblock && NF             { exit }
     ' "$ROOT/$wf")"

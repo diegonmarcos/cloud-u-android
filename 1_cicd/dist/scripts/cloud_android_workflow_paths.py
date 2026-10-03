@@ -114,8 +114,34 @@ def _split(region_lines):
     return comments
 
 
-def rewrite_paths_block(region_lines, final_entries, app):
+# ── #836: build inputs hashed by the publish gate but NOT watched per push ──
+# A shared lib compiled into many apps used to sit in every one of their push
+# lists, so one lib edit started a ship run per consumer (700ab854: 12). Those
+# inputs now live INSIDE the fence as comment lines: GitHub never sees them, so
+# a push to the lib does not start this workflow, while
+# cloud-android-source-identity.sh still hashes them (a dispatched run still
+# publishes when they moved) and fleet-refresh.yml reads them to decide which
+# apps it ships on its schedule.
+DEFERRED_INTRO = [
+    "      # #836 build inputs HASHED but NOT watched per push: each shared lib",
+    "      # this app compiles but is not the primary consumer of",
+    "      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow",
+    "      # file. fleet-refresh.yml ships the app when one of the libs moved",
+    "      # since its last published build.",
+]
+DEFERRED_PREFIX = '      #   input: "'
+DEFERRED_RE = re.compile(r'^      #   input: "([^"]+)"\s*$', re.M)
+
+
+def deferred_inputs(text):
+    """The deferred (hashed, not push-watched) inputs of a workflow's text."""
+    return DEFERRED_RE.findall(text)
+
+
+def rewrite_paths_block(region_lines, final_entries, app, deferred=()):
     header = make_header(app)
+    if deferred:
+        header = header + DEFERRED_INTRO + [DEFERRED_PREFIX + d + '"' for d in deferred]
     comments = _split(region_lines)
 
     B = BEG.strip()

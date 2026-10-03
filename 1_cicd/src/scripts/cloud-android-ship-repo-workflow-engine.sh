@@ -229,6 +229,7 @@ root = sys.argv[1]
 apps = {d for d in os.listdir(root)
         if os.path.exists(os.path.join(root, d, "build.json"))}
 bad = []
+pending = []   # (wf, name, text, lines, start, end, final, app) -- written after pass 2 (#836)
 
 for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     name = os.path.basename(wf)
@@ -242,6 +243,9 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
 
     entries = [m.group(1) for m in
                (re.match(r'^      - "([^"]+)"', l) for l in lines[start + 1:end]) if m]
+    # #836: deferred inputs live as comment lines inside the managed fence; they
+    # are entries all the same (a hand-kept one must survive the next run).
+    entries += re.findall(r'^      #   input: "([^"]+)"\s*$', "\n".join(lines[start + 1:end]), re.M)
 
     # The app is the workflow's declared WORK_DIR, not its filename. Two lib
     # aggregators (ship-cloud-libs, ship-cloud-keyboard-libs) build a
@@ -353,14 +357,95 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     # survive: anything after the END fence is carried through verbatim (the
     # ship-c3-morpheus.yml canary -- it lit up silently last time this was broken,
     # and a silent loss is worse than the drift this rewrite exists to fix).
-    sys.path.insert(0, os.path.join(root, "1_cicd/src/scripts"))
-    sys.dont_write_bytecode = True  # importing the module must not drop a __pycache__ the generated-up-to-date guard flags
-    from cloud_android_workflow_paths import rewrite_paths_block
-    block = rewrite_paths_block(lines[start + 1:end], final, app)
-    new = "\n".join(lines[:start] + block + lines[end:])
+    pending.append((wf, name, text, lines, start, end, final, app, len(entries)))
+
+# ── #836: a shared lib edit ships its PRIMARY consumer per push, nobody else ──
+# Every lib an app compiles used to be in that app's push list, so one edit to
+# libs/updater started 12 ship runs (700ab854) and libs/core 33. The full list
+# is still the app's build INPUT set -- the publish gate hashes all of it -- but
+# it is split in two:
+#   watched per push   the app's own dirs, every non-lib entry, and each shared
+#                      lib the app is the PRIMARY consumer of: declared in
+#                      1_cicd/src/data/lib-primary-consumers.json, or the lib's
+#                      only consumer (a sole consumer is no fan-out)
+#   deferred           every other shared lib it compiles, written as comment
+#                      lines inside the managed fence. GitHub ignores them;
+#                      cloud-android-source-identity.sh hashes them;
+#                      fleet-refresh.yml ships the app on its schedule when one
+#                      moved since the app's last published build.
+# The workflow's OWN file is deferred too, but not refreshed: a generator run
+# rewrites every ship workflow at once, and watching itself turned each such
+# commit into a fleet rebuild. It is still hashed, so the app's next ship
+# carries it.
+# ship-cloud-libs (the lib-APK builder) keeps every lib watched: it is one run
+# that gates each lib APK on its own closure. Only its own file is deferred.
+# A lib compiled by two or more apps MUST be declared (an app, or null for
+# "refresh only"), so a new shared lib cannot silently pick a side.
+SPLIT_EXEMPT = {"ab_cloud-libs-shared/lib-apks"}
+primary_doc = json.load(open(os.path.join(root, "1_cicd/src/data/lib-primary-consumers.json")))
+primary = primary_doc.get("primary", {})
+consumers = {}
+for (_wf, _n, _t, _l, _s, _e, final, app, _c) in pending:
+    if app in SPLIT_EXEMPT or not _n.startswith("ship-"):
+        continue
+    for e in final:
+        mm = lib_entry.match(e)
+        if mm and e == f"{SHARED_LIBS}/{mm.group(1)}/**":
+            consumers.setdefault(mm.group(1), set()).add(app)
+for lib, who in sorted(consumers.items()):
+    if len(who) < 2:
+        continue
+    if lib not in primary:
+        bad.append(f"lib-primary-consumers.json: {SHARED_LIBS}/{lib} is compiled by {len(who)} apps "
+                   f"({', '.join(sorted(who))}) and declares no primary consumer -- name one, or null for refresh-only")
+    elif primary[lib] is not None and primary[lib] not in who:
+        bad.append(f"lib-primary-consumers.json: {lib} -> {primary[lib]}, which does not compile it "
+                   f"(consumers: {', '.join(sorted(who))})")
+for lib in sorted(set(primary) - set(consumers)):
+    bad.append(f"lib-primary-consumers.json: {lib} is compiled by no app -- drop the entry")
+
+sys.path.insert(0, os.path.join(root, "1_cicd/src/scripts"))
+sys.dont_write_bytecode = True  # importing the module must not drop a __pycache__ the generated-up-to-date guard flags
+from cloud_android_workflow_paths import rewrite_paths_block
+
+REFRESH_BEG = "  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──"
+for (wf, name, text, lines, start, end, final, app, n_entries) in pending:
+    watched, deferred = final, []
+    split = app not in SPLIT_EXEMPT and name.startswith("ship-")
+    if name.startswith("ship-"):
+        watched, deferred = [], []
+        for e in final:
+            mm = lib_entry.match(e)
+            lib = mm.group(1) if mm else None
+            is_primary = lib is not None and (not split or primary.get(lib) == app
+                                              or (lib not in primary and len(consumers.get(lib, ())) <= 1))
+            if e == f"1_cicd/src/cicd/{name}" or (lib is not None and not is_primary):
+                deferred.append(e)
+            else:
+                watched.append(e)
+    block = rewrite_paths_block(lines[start + 1:end], watched, app, deferred)
+    out = lines[:start] + block + lines[end:]
+    # repository_dispatch, injected right under `on:`, so the refresh can start
+    # THIS app's ship as a push-equivalent run (it publishes and stamps; a
+    # workflow_dispatch does neither without inputs every workflow spells differently).
+    if split:
+        try:
+            i = out.index(REFRESH_BEG)
+            del out[i:i + 3]
+        except ValueError:
+            pass
+        on = next((i for i, l in enumerate(out) if l == "on:"), None)
+        if not any(lib_entry.match(d) for d in deferred):
+            pass   # nothing the refresh would ever ship it for
+        elif on is None:
+            bad.append(f"{name}: no top-level `on:` to inject the refresh trigger under")
+        else:
+            out[on + 1:on + 1] = [REFRESH_BEG, "  repository_dispatch:",
+                                  f"    types: [fleet-refresh-{app.replace('/', '-')}]"]
+    new = "\n".join(out)
     if new != text:
         open(wf, "w").write(new)
-        print(f"  synced {name}: {len(entries)} → {len(final)} trigger paths")
+        print(f"  synced {name}: {n_entries} → {len(watched)} push trigger paths, {len(deferred)} deferred")
 
 for b in bad:
     print("  " + b, file=sys.stderr)

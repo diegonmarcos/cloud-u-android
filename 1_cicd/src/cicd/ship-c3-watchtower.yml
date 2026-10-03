@@ -38,6 +38,9 @@ name: "Ship → C3-WatchTower APK (build + push to GHCR via ORAS + attach to GH 
 # publishes nothing new unless the bytes would differ.
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-ac_c3-watchtower]
   workflow_dispatch:
     inputs:
       variant:
@@ -76,6 +79,14 @@ on:
       # edit must START a run (it is the only pipeline that executes
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
+      # #836 build inputs HASHED but NOT watched per push: each shared lib
+      # this app compiles but is not the primary consumer of
+      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow
+      # file. fleet-refresh.yml ships the app when one of the libs moved
+      # since its last published build.
+      #   input: "1_cicd/src/cicd/ship-c3-watchtower.yml"
+      #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/devtools/**"
       # ── end MANAGED-PATHS-HEADER ──
       # NO shared lib entry: build.json::modules declares exactly one module,
       # :app, so there is no ab_cloud-libs-shared directory this APK consumes
@@ -93,9 +104,6 @@ on:
       # unrelated commit that regenerated this file. The real guard is
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
-      - "1_cicd/src/cicd/ship-c3-watchtower.yml"
-      - "ab_cloud-libs-shared/libs/core/**"
-      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ac_c3-watchtower/**"
 permissions:
   contents: write   # for gh release create + tag push reads
