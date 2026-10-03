@@ -431,6 +431,7 @@
     },
     "_doc_languages": "Output language for the ENHANCE key. The five starred languages come first, the rest are alphabetical; JSONObject.keys() keeps this insertion order, so this IS the menu order.",
     "default_language": "keep",
+    "_doc_language_tags": "#800 `tag` is the BCP-47 code of each Language Output, the language the on-device engines (ML Kit translation, the Vosk Listen models) are addressed by. It lives on the language row itself so one list names each language once; the Model route ignores it and sends the row's prompt.",
     "languages": {
       "keep": {
         "label": "Keep my language",
@@ -438,159 +439,198 @@
       },
       "english": {
         "label": "English",
-        "prompt": "Write the result in English, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in English, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "en"
       },
       "spanish": {
         "label": "Spanish",
-        "prompt": "Write the result in Spanish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Spanish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "es"
       },
       "german": {
         "label": "German",
-        "prompt": "Write the result in German, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in German, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "de"
       },
       "korean": {
         "label": "Korean",
-        "prompt": "Write the result in Korean, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Korean, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ko"
       },
       "portuguese": {
         "label": "Portuguese",
-        "prompt": "Write the result in Portuguese, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Portuguese, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "pt"
       },
       "arabic": {
         "label": "Arabic",
-        "prompt": "Write the result in Arabic, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Arabic, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ar"
       },
       "bengali": {
         "label": "Bengali",
-        "prompt": "Write the result in Bengali, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Bengali, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "bn"
       },
       "bulgarian": {
         "label": "Bulgarian",
-        "prompt": "Write the result in Bulgarian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Bulgarian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "bg"
       },
       "catalan": {
         "label": "Catalan",
-        "prompt": "Write the result in Catalan, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Catalan, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ca"
       },
       "chinese_simplified": {
         "label": "Chinese (Simplified)",
-        "prompt": "Write the result in Simplified Chinese, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Simplified Chinese, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "zh"
       },
       "chinese_traditional": {
         "label": "Chinese (Traditional)",
-        "prompt": "Write the result in Traditional Chinese, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Traditional Chinese, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "zh-TW"
       },
       "croatian": {
         "label": "Croatian",
-        "prompt": "Write the result in Croatian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Croatian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "hr"
       },
       "czech": {
         "label": "Czech",
-        "prompt": "Write the result in Czech, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Czech, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "cs"
       },
       "danish": {
         "label": "Danish",
-        "prompt": "Write the result in Danish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Danish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "da"
       },
       "dutch": {
         "label": "Dutch",
-        "prompt": "Write the result in Dutch, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Dutch, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "nl"
       },
       "filipino": {
         "label": "Filipino",
-        "prompt": "Write the result in Filipino, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Filipino, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "tl"
       },
       "finnish": {
         "label": "Finnish",
-        "prompt": "Write the result in Finnish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Finnish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "fi"
       },
       "french": {
         "label": "French",
-        "prompt": "Write the result in French, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in French, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "fr"
       },
       "greek": {
         "label": "Greek",
-        "prompt": "Write the result in Greek, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Greek, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "el"
       },
       "hebrew": {
         "label": "Hebrew",
-        "prompt": "Write the result in Hebrew, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Hebrew, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "he"
       },
       "hindi": {
         "label": "Hindi",
-        "prompt": "Write the result in Hindi, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Hindi, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "hi"
       },
       "hungarian": {
         "label": "Hungarian",
-        "prompt": "Write the result in Hungarian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Hungarian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "hu"
       },
       "indonesian": {
         "label": "Indonesian",
-        "prompt": "Write the result in Indonesian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Indonesian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "id"
       },
       "italian": {
         "label": "Italian",
-        "prompt": "Write the result in Italian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Italian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "it"
       },
       "japanese": {
         "label": "Japanese",
-        "prompt": "Write the result in Japanese, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Japanese, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ja"
       },
       "malay": {
         "label": "Malay",
-        "prompt": "Write the result in Malay, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Malay, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ms"
       },
       "norwegian": {
         "label": "Norwegian",
-        "prompt": "Write the result in Norwegian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Norwegian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "no"
       },
       "persian": {
         "label": "Persian",
-        "prompt": "Write the result in Persian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Persian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "fa"
       },
       "polish": {
         "label": "Polish",
-        "prompt": "Write the result in Polish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Polish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "pl"
       },
       "romanian": {
         "label": "Romanian",
-        "prompt": "Write the result in Romanian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Romanian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ro"
       },
       "russian": {
         "label": "Russian",
-        "prompt": "Write the result in Russian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Russian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ru"
       },
       "serbian": {
         "label": "Serbian",
-        "prompt": "Write the result in Serbian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Serbian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "sr"
       },
       "slovak": {
         "label": "Slovak",
-        "prompt": "Write the result in Slovak, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Slovak, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "sk"
       },
       "swedish": {
         "label": "Swedish",
-        "prompt": "Write the result in Swedish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Swedish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "sv"
       },
       "thai": {
         "label": "Thai",
-        "prompt": "Write the result in Thai, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Thai, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "th"
       },
       "turkish": {
         "label": "Turkish",
-        "prompt": "Write the result in Turkish, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Turkish, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "tr"
       },
       "ukrainian": {
         "label": "Ukrainian",
-        "prompt": "Write the result in Ukrainian, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Ukrainian, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "uk"
       },
       "urdu": {
         "label": "Urdu",
-        "prompt": "Write the result in Urdu, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Urdu, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "ur"
       },
       "vietnamese": {
         "label": "Vietnamese",
-        "prompt": "Write the result in Vietnamese, translating it if the text is in another language. This overrides any instruction to keep the original language."
+        "prompt": "Write the result in Vietnamese, translating it if the text is in another language. This overrides any instruction to keep the original language.",
+        "tag": "vi"
       }
     },
     "_doc_summaries": "Text Resume / AI Resume. RESUME HERE MEANS SUMMARISE -- condense a text to its essentials. It is the owner's product name and is kept exactly; it is NOT a curriculum vitae and NOT resuming a paused operation. Same shape as styles/tones/lengths (id -> {label, prompt}, insertion order is menu order), read by AiRouter.summaries. These prompts are DATA rather than Kotlin literals precisely BECAUSE a settings screen displays them: a prompt a screen can show is configuration, and a literal buried in a screen is a second copy of it waiting to disagree with this one. THIS IS THE ONE HOME OF THE SUMMARY PROMPTS FOR THE WHOLE CONSTELLATION -- cloud-mail's AI Resume holds none of its own: it hands text to the keyboard over ITextTools.summarise with an empty summaryId, so the prompt it sends is literally the entry selected here. There is nothing to keep in step because there is only one copy.",
@@ -630,6 +670,51 @@
       "▪ "
     ],
     "summary_not_bullets_note": "[Asked for bullet points, the model answered in prose. Its reply is above, unchanged.]"
+  },
+  "writer_routes": {
+    "_doc": "#800 Cloud Writer's per-function routes, the Camera/Calc #799 shape: Speech-to-text (Listen) and Translation each run on the MODEL route (an OpenRouter model, the fleet Account's token) or ON-DEVICE ML (the keyboard-engines companion: Vosk for speech, ML Kit through libs:translate for translation). Default = model; automatic fallback to on-device when offline, with no token, or on any error; the screen shows which route answered. Baked into BuildConfig.WRITER_ROUTES_B64 by app/build.gradle and read by WriterRoutes.kt. Decision models (typesafe/jev-*) cannot transcribe or translate, so the defaults are models the live catalogue lists with the right modalities: audio in + text out for speech, text in + text out for translation. The picker on Configs > Routes reads the live catalogue (openrouter.models_url) and filters by exactly those modalities (core OpenRouter.speechModels / textModels).",
+    "openrouter": {
+      "chat_url": "https://openrouter.ai/api/v1/chat/completions",
+      "models_url": "https://openrouter.ai/api/v1/models",
+      "_doc_account_provider": "The fleet Account provider whose key the model route spends: read on use through ITextTools.revealAiKey (the key the SuperApp's Profile pushes from the vault's ai.tokens), held for the one request, never stored and never logged - the same reading Cloud Calc's JevStore and the image engine do.",
+      "account_provider": "openrouter",
+      "account_wait_ms": 3000,
+      "timeout_ms": 30000,
+      "max_tokens": 2048
+    },
+    "speech": {
+      "default_route": "model",
+      "_doc_default_model": "Picked from the live catalogue on 2026-10-03: the cheapest general model that takes audio input (input_modalities contains audio, output text). Voxtral (mistralai/voxtral-small-24b-2507) and the Gemini Flash family are the alternatives the picker offers.",
+      "default_model": "google/gemini-2.5-flash-lite",
+      "prompt": "Transcribe the speech in this audio exactly as spoken, in the language it is spoken, with natural punctuation and capitalisation. If more than one person speaks and you can tell the voices apart, start each change of speaker on a new line as 'Speaker 1:', 'Speaker 2:' and so on. Output only the transcript with no comment of your own, and output nothing at all if there is no speech.",
+      "language_hint": "The speech is in %s.",
+      "sample_rate": 16000,
+      "_doc_segment": "Listen's utterance cutter (core Segmenter) for the model route: a segment closes on silence_ms of quiet after min_ms of voice, or at max_ms regardless; silence_rms is the loudness (16-bit sample units) below which a frame is quiet.",
+      "segment": {
+        "silence_rms": 450,
+        "silence_ms": 900,
+        "min_ms": 500,
+        "max_ms": 20000
+      }
+    },
+    "translation": {
+      "default_route": "model",
+      "_doc_default_model": "Same live-catalogue pick as speech, text-only use: fast and cheap for short dictated segments. Any text-in/text-out model is offered.",
+      "default_model": "google/gemini-2.5-flash-lite",
+      "_doc_default_target": "Listen's auto-translate target, a writer_ai.languages id. The Translate tool keeps using Language Output under the text.",
+      "default_target": "english",
+      "default_mode": "alongside"
+    },
+    "_doc_voice_engine": "The on-device speech engine: IVoiceEngine in the keyboard-engines companion (Cloud-Keyboard-Libs.apk, Store row keyboard-engines), the same service cloud-keyboard's AidlVoiceEngineClient binds. Signature permission BIND_ENGINE. Package and action are substituted into the manifest's <queries> and the client by app/build.gradle; nothing is typed in Kotlin.",
+    "voice_engine": {
+      "package": "com.diegonmarcos.cloudkeyboardlibs",
+      "action": "com.diegonmarcos.cloudkeyboardlibs.IVoiceEngine",
+      "label": "Cloud Keyboard Libs"
+    },
+    "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/writer/listen/status (running, paused, the requested and answering route, the last fallback reason, partial text, segments, mic permission, engine bind, token presence - never the token), /api/writer/translate?text=&to= (a real translation on the configured route, answering which route did it), /api/writer/route (both functions' route, model, last answer, online, token presence, and the text-tools serving app's state).",
+    "debug_api": {
+      "group": "writer"
+    }
   },
   "update": {
     "_doc": "#800 the one tap from the status card to the repair. When the app serving the text tools is missing, silent or older than the AI-routing part of the ITextTools contract, the card names it and opens the fleet Store's Cloud Constellation page, where that app's row carries Update/Install - the same target and the same shape as ac_cloud-keyboard/build.json::update (#776). Baked into BuildConfig.WRITER_UPDATE_B64 by app/build.gradle; ServingApp.kt reads it.",

@@ -140,7 +140,10 @@ import sys, xml.etree.ElementTree as ET
 NS = "{http://schemas.android.com/apk/res/android}"
 root = ET.parse(sys.argv[1]).getroot()
 action = sys.argv[2]
-services = root.findall(".//service")
+# #800: ListenService (the microphone foreground service) is a <service> too. What W1 forbids is a
+# service that PUBLISHES the ITextTools action, so a service is read by its intent filters.
+services = [s for s in root.findall(".//service")
+            if any(a.get(NS + "name") == action for a in s.findall("./intent-filter/action"))]
 publishers = [a for a in root.findall(".//action") if a.get(NS + "name") == action]
 if services:
     print("SERVICE " + ",".join(s.get(NS + "name", "?") for s in services))
@@ -175,7 +178,10 @@ if check_body "$ROUTE" "W2 runTool"; then
     # been a control that changes nothing — which is what the old form of this check existed to
     # forbid. The prohibition is not dropped, it is relocated: see the prompt check below, which
     # is now the thing standing between Translate and a rewrite.
-    for pair in "ENHANCE enhanceWith" "GRAMMAR enhanceWith" "SUMMARY summariseWith" "TRANSLATE enhanceWith"; do
+    # #800: TRANSLATE moved again, onto the Translation ROUTE (WriterRoutes.translate: an OpenRouter
+    # model with the fleet Account's token, falling back to ML Kit through libs:translate). Its
+    # prompt check is below; the three rewrite-engine tools keep their binder calls.
+    for pair in "ENHANCE enhanceWith" "GRAMMAR enhanceWith" "SUMMARY summariseWith"; do
         tool="${pair%% *}"; want="${pair##* }"
         arm="$(branch "$tool" <<<"$ROUTE")"
         if [ -z "$arm" ]; then
@@ -218,10 +224,12 @@ if check_body "$ROUTE" "W2 runTool"; then
     # the same language he typed. So the arm must name translatePrompt and must NOT name
     # enhancePrompt. This is the prohibition the old "takes no model" check used to carry.
     arm="$(branch TRANSLATE <<<"$ROUTE")"
-    if [ -n "$arm" ] && grep -q "translatePrompt(" <<<"$arm" && ! grep -q "enhancePrompt(" <<<"$arm"; then
-        pass "W2 TRANSLATE sends translatePrompt and not enhancePrompt — it translates instead of rewriting"
+    XLATE="$(body "$SRC/WriterRoutes.kt" 'fun translate(context: Context')"
+    if [ -n "$arm" ] && grep -q "WriterRoutes.translate(" <<<"$arm" && grep -q "WriterRegistry.translatePrompt(" <<<"$XLATE" \
+        && ! grep -qE "enhancePrompt\(|client\.enhanceWith\(" <<<"$arm$XLATE"; then
+        pass "W2 TRANSLATE runs on the Translation route and sends translatePrompt, not enhancePrompt — it translates instead of rewriting"
     else
-        fail "W2 the TRANSLATE arm does not send translatePrompt (or sends enhancePrompt): sharing enhanceWith without its own prompt turns Translate into a rewrite in the original language"
+        fail "W2 the TRANSLATE arm does not send translatePrompt through WriterRoutes.translate (or sends enhancePrompt): without its own prompt Translate becomes a rewrite in the original language"
     fi
 fi
 
@@ -242,11 +250,22 @@ if check_body "$RUN" "W3 run()"; then
     fi
 fi
 
-# ── W4 ── no credential lands in this application ─────────────────────────
-if grep -rl 'revealAiKey' "$SRC" >/dev/null 2>&1; then
-    fail "W4 something under $SRC calls revealAiKey — that is the one binder method that emits a plaintext credential, and this application has nowhere to put one"
+# ── W4 ── the Account token: read for one request, never kept ─────────────
+#
+# #800 the MODEL route of speech and translation spends the fleet Account's OpenRouter key, read
+# through revealAiKey — the one binder method that emits a plaintext credential. It has exactly
+# one reader here, WriterRoutes.accountToken, and what it returns is never stored or logged.
+READERS="$(grep -rl 'revealAiKey' "$SRC" 2>/dev/null | sed "s|$SRC/||" | sort | tr '\n' ' ')"
+if [ "$READERS" = "WriterRoutes.kt " ]; then
+    pass "W4 revealAiKey has one reader, WriterRoutes.kt"
 else
-    pass "W4 nothing in cloud-writer calls revealAiKey"
+    fail "W4 revealAiKey is called from '${READERS:-nowhere}' — the plaintext credential must have exactly one reader, WriterRoutes.accountToken"
+fi
+ROUTES_CODE="$(sed -e 's,^[[:space:]]*//.*,,' -e 's,^[[:space:]]*\*.*,,' "$SRC/WriterRoutes.kt" 2>/dev/null)"
+if grep -qE 'Log\.|println\(' <<<"$ROUTES_CODE" || grep -qiE 'put[A-Za-z]*\([^)]*token' <<<"$ROUTES_CODE"; then
+    fail "W4 WriterRoutes logs or stores something token-shaped — the Account key is read for one request and dropped"
+else
+    pass "W4 WriterRoutes neither logs nor stores the token"
 fi
 
 KEYS="$(grep -o 'const val KEY_[A-Z_]*' "$PREFS" | awk '{print $3}')"

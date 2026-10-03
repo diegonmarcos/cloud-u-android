@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import androidx.annotation.StringRes
+import com.diegonmarcos.cloudwriter.core.Answer
 import com.diegonmarcos.superapp.texttools.TextTools
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import org.json.JSONObject
@@ -27,13 +28,12 @@ import java.util.concurrent.Executors
  * [GRAMMAR] is not a fourth engine: it is the rewrite engine asked for the one `grammar` style,
  * which is what `ITextTools.enhance(text, "grammar")` describes.
  *
- * [usesModel] IS TRUE FOR ALL FOUR. It was once false for [TRANSLATE], because Translate went to
- * the serving application's translation library and a library takes no model — so a model picker
- * for it would have been a control that changed nothing. Translate now runs on the chat provider
- * like the other three, against a prompt that forbids every improvement the rewrite prompt
- * invites (see [WriterRegistry.translatePrompt]), which is what the owner asked for: "the option
- * to select the model that would do only translation". The flag and the route changed in the same
- * commit, and they have to: either one alone is the defect the old comment was warning about.
+ * [usesModel] is true for the three tools whose model is a registry row picked under the text.
+ * [TRANSLATE] has a model too, but since #800 it is the Translation ROUTE's (Configs > Routes):
+ * Model = an OpenRouter model chosen from the live catalogue with the fleet Account's token,
+ * On-device = ML Kit through libs:translate, falling back from the first to the second. Its prompt
+ * is still [WriterRegistry.translatePrompt], the one that forbids every improvement the rewrite
+ * prompt invites, so Translate translates and does not rewrite.
  *
  * [id] is the string the per-tool model preference is keyed by, so it is written down here once
  * and is not `name.lowercase()`: renaming an enum constant must not silently re-point every
@@ -47,11 +47,14 @@ enum class WriterTool(
     ENHANCE("enhance", R.string.tool_enhance, usesModel = true),
     GRAMMAR("grammar", R.string.tool_grammar, usesModel = true),
     SUMMARY("summary", R.string.tool_summary, usesModel = true),
-    TRANSLATE("translate", R.string.tool_translate, usesModel = true),
+    // #800 Translate runs on the Translation ROUTE (Configs > Routes): its model is picked there from
+    // the live catalogue, so it has no row among the per-tool registry models.
+    TRANSLATE("translate", R.string.tool_translate, usesModel = false),
 }
 
 /** How a finished run ended. Exactly one of [text] and [error] is set, and never neither. */
-class WriterOutcome(val tool: WriterTool, val text: String?, val error: String?)
+/** [answer] is set for a routed tool (Translate): which route answered, and why it fell back. */
+class WriterOutcome(val tool: WriterTool, val text: String?, val error: String?, val answer: Answer? = null)
 
 /**
  * Runs a tool and holds enough state for the screen to say what is happening.
@@ -220,7 +223,8 @@ class WriterToolRunner(context: Context) {
         worker.execute {
             val result = runTool(tool, text)
             busy = null
-            main.post { onDone(WriterOutcome(tool, result.text, result.error)) }
+            val answer = if (tool == WriterTool.TRANSLATE) WriterRoutes.lastTranslation else null
+            main.post { onDone(WriterOutcome(tool, result.text, result.error, answer)) }
         }
     }
 
@@ -272,12 +276,9 @@ class WriterToolRunner(context: Context) {
             // so the owner can pick a translation-ranked model for translation without that model
             // also deciding how his paragraphs read. Non-null: refused in run() above when
             // Language Output is still "keep my language".
-            WriterTool.TRANSLATE -> client.enhanceWith(
-                text,
-                WriterPrefs.translatePrompt(app).orEmpty(),
-                provider,
-                WriterPrefs.modelFor(app, WriterTool.TRANSLATE, provider),
-            )
+            WriterTool.TRANSLATE -> WriterRoutes.translate(app, text, WriterPrefs.enhanceLanguageId(app)).let { a ->
+                if (a.ok) TextTools.Result(a.text, null) else TextTools.Result.failed(a.error ?: app.getString(R.string.run_no_reason))
+            }
         }
     }
 }

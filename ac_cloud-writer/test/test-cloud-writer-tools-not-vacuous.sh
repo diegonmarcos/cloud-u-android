@@ -117,11 +117,19 @@ BREAKS = [
     # enhancePrompt the reply comes back rewritten in the language it was typed in, which
     # looks like a working feature and is not one. So the planted break swaps the prompt,
     # not the model.
+    # #800: Translate now runs on the Translation route, so the borrowed prompt is planted where
+    # that route composes it.
     ("Translate silently borrows the Enhance prompt and rewrites instead of translating",
-     SRC + "/WriterTools.kt",
-     ("WriterPrefs.translatePrompt(app).orEmpty(),",
-      "WriterPrefs.enhancePrompt(app),"),
+     SRC + "/WriterRoutes.kt",
+     ("        val system = WriterRegistry.translatePrompt(languageId)\n",
+      "        val system = WriterPrefs.enhancePrompt(context)\n"),
      "W2 the TRANSLATE arm does not send translatePrompt"),
+
+    ("the Account token is written to a preference", SRC + "/WriterRoutes.kt",
+     ("        val modelId = model(context, Function.TRANSLATION)\n",
+      "        val modelId = model(context, Function.TRANSLATION)\n"
+      "        WriterPrefs.put(context, \"x\", accountToken(context).orEmpty())\n"),
+     "W4 WriterRoutes logs or stores something token-shaped"),
 
     ("a tap on an empty box returns without a word", SRC + "/WriterTools.kt",
      ("        if (text.isBlank()) {\n"
@@ -138,7 +146,7 @@ BREAKS = [
       "    fun borrowKey(client: TextToolsClient, providerId: String) =\n"
       "        client.revealAiKey(providerId)\n\n"
       "    fun isSeeded(context: Context)"),
-     "W4 something under"),
+     "W4 revealAiKey is called from"),
 
     ("a token-shaped preference slot appears", SRC + "/WriterPrefs.kt",
      ('    const val KEY_PROVIDER = "ai_provider"',

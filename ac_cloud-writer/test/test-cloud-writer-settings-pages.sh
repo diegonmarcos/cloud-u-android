@@ -122,10 +122,13 @@ for page in sys.argv[2:]:
     if a.findall("intent-filter"):
         print("FAIL   P1 %s declares an intent-filter — a settings page reachable by action is a page another app can stand in for" % page); bad += 1
     print("ok     P1 %s is a private activity of this application" % page)
-if app.findall("provider"):
-    print("FAIL   P2 this manifest declares a <provider>; that is a route into this app's storage from outside it"); bad += 1
+# #800: the debug-API registrar is a <provider> (the CalcDebugApiProvider trick) and serves no
+# data; what P2 forbids is a provider ANOTHER PROCESS can reach, i.e. one not exported="false".
+reachable = [p.get(A + "name") for p in app.findall("provider") if p.get(A + "exported") != "false"]
+if reachable:
+    print("FAIL   P2 this manifest exports a <provider> (%s); that is a route into this app's storage from outside it" % ", ".join(reachable)); bad += 1
 else:
-    print("ok     P2 no ContentProvider — nothing can read this app's settings from another process")
+    print("ok     P2 no exported ContentProvider — nothing can read this app's settings from another process")
 if root.get(A + "sharedUserId"):
     print("FAIL   P2 sharedUserId is set; it puts this app and another in ONE sandbox, which is shared storage by definition"); bad += 1
 else:
@@ -148,7 +151,9 @@ done
 # fails none of P1. These are the ways this application could reach that store,
 # and none of them may appear anywhere in its source.
 
-reach_keyboard() { grep -n "$1" "$ALL_KT"; }
+# A probe must not end inside a longer name: com.diegonmarcos.cloudkeyboardlibs is the
+# keyboard-engines COMPANION, whose IVoiceEngine Listen binds (#800) — an engine, not a settings store.
+reach_keyboard() { grep -nE "$1([^a-z]|\$)" "$ALL_KT"; }
 
 for probe in "helium314" "cloudkeyboard" "com.diegonmarcos.cloudkeyboard" \
              "createPackageContext" "MODE_WORLD_READABLE" "MODE_WORLD_WRITEABLE" \
@@ -316,18 +321,26 @@ if grep -q 'R.string.ai_pricing_baked, provider.pricingAsOf' <<<"$AI"; then
 else
     fail "P7/219 the table does not print the date its prices were taken — that is exactly how a 0.966 was read as 0.280"
 fi
-# 247: a live catalogue lookup must never be able to hold up the owner's APK.
-# This application makes none at all — it declares no INTERNET permission — so
-# there is nothing here that a slow or moved third party could block.
+# 247: a live catalogue lookup must never be able to hold up the owner's APK. Since #800 the app
+# does reach the network, for the MODEL route of speech and translation and for the Routes page's
+# catalogue refresh — at RUN time, on a tap or a dictated segment, never at build time. What stays
+# forbidden: a socket of its own (every request goes through libs:decisions' UrlHttp, the fleet's
+# one transport over Android's resolver), the AI Routing page fetching anything, and this manifest
+# declaring INTERNET itself (libs:devtools declares it for its debug socket; the merge carries it).
 if grep -qE 'HttpURLConnection|URL\(|OkHttp|catalogUrl\.' "$ALL_KT"; then
-    fail "P7/247 this application opens a connection somewhere. It must not: no INTERNET permission is declared, and a live catalogue fetch is the thing that must never be able to veto a build"
+    fail "P7/247 this application opens a connection of its own. Every request goes through libs:decisions' UrlHttp, and no catalogue URL from the AI Routing registry is ever fetched"
 else
-    pass "P7/247 no network call anywhere in this application — nothing here can be vetoed by a third party's catalogue"
+    pass "P7/247 no socket of its own — every request goes through libs:decisions' transport"
+fi
+if grep -qE 'fetchCatalogue|UrlHttp' <(code "$SRC/AiRoutingActivity.kt"); then
+    fail "P7/247 the AI Routing page makes a network request; its prices are the baked ones and the page must open with no third party involved"
+else
+    pass "P7/247 the AI Routing page makes no request"
 fi
 if grep -q 'android.permission.INTERNET' "$MANIFEST"; then
-    fail "P7/247 the manifest declares INTERNET; this application is a router, not a client, and the permission would be the first sign of an engine growing a second home"
+    fail "P7/247 the manifest declares INTERNET itself; the permission comes with libs:devtools, and a second declaration here is a second owner for it"
 else
-    pass "P7/247 INTERNET is still not declared"
+    pass "P7/247 INTERNET is not declared by this manifest"
 fi
 
 # ── P8  the owner's own screen, character for character ────────────────────

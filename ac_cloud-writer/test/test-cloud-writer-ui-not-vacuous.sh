@@ -83,7 +83,7 @@ BREAKS = [
     ("a card loses its description entirely", SRC + "/MainActivity.kt",
      ("                        R.string.settings_screen_translation_summary,",
       "                        R.string.settings_screen_translation,"),
-     "page description(s) (expected 4"),
+     "page description(s) (expected 5"),
 ]
 
 

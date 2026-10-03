@@ -23,17 +23,37 @@
   engine is still inside libs:keyboard) and _doc_what_serving_needs for the
   four things that must be true before this becomes a <service>.
 
-  INTERNET is NOT declared, and its absence is also deliberate. This app opens
-  no socket of its own: every tool is a binder transaction to the serving app,
-  which makes the request in ITS process with ITS credential. A permission
-  declared here would be a permission the owner grants for something that never
-  happens, and it would be the first sign of an engine quietly growing a second
-  home. The permissions this app DOES need — CONSTELLATION_DATA (signature) and
+  INTERNET is not declared HERE: libs:devtools declares it (its debug socket)
+  and the merged manifest carries it. Since #800 this app does use it, for one
+  thing only: the MODEL route of Speech-to-text and Translation (WriterRoutes),
+  an OpenRouter request through libs:decisions' transport with the fleet
+  Account's token read for that request and dropped. The four text tools still
+  never open a socket here: they are binder transactions to the serving app,
+  which makes the request in ITS process with ITS credential. The permissions this app DOES need — CONSTELLATION_DATA (signature) and
   the action-scoped <queries> grant that makes the serving app resolvable at
   all — are merged in from libs:text-tools' own manifest, so nothing about the
   binder is restated here where the two copies could disagree.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- #800 LISTEN. The microphone is recorded here and its frames are fed to the on-device
+         engine or cut into segments for the speech model; a microphone foreground service keeps
+         it recording with the screen off, because Android silences a background AudioRecord.
+         POST_NOTIFICATIONS shows that service's notice on 13+. ACCESS_NETWORK_STATE is how the
+         model route knows it is offline and falls back to on-device without trying. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The on-device speech engine (Vosk) is IVoiceEngine in the keyboard-engines companion,
+         guarded by its signature permission; the package is build.json::writer_routes.voice_engine,
+         substituted by app/build.gradle. Without the query it is invisible on Android 11+ and reads
+         as "not installed". -->
+    <uses-permission android:name="com.diegonmarcos.cloudkeyboardlibs.BIND_ENGINE" />
+    <queries>
+        <package android:name="${voiceEnginePackage}" />
+    </queries>
 
     <application
         android:label="@string/app_name"
@@ -111,5 +131,21 @@
             android:exported="false"
             android:label="@string/settings_screen_ai_routing"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+        <!-- #800 PAGE 5, Routes: Model vs On-device for speech and translation. -->
+        <activity android:name="com.diegonmarcos.cloudwriter.RoutesActivity"
+            android:exported="false"
+            android:label="@string/settings_screen_routes"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+
+        <!-- #800 Listen with the screen off. Not exported: only this app starts or stops it. -->
+        <service android:name="com.diegonmarcos.cloudwriter.ListenService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- #800 Registers /api/writer/* on the fleet debug server. Not exported, not a real provider. -->
+        <provider
+            android:name="com.diegonmarcos.cloudwriter.WriterDebugApiProvider"
+            android:authorities="${applicationId}.writerdebugapi"
+            android:exported="false" />
     </application>
 </manifest>

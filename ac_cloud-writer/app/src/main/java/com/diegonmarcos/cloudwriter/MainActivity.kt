@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Spellcheck
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Translate
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudwriter.core.Route
 import com.diegonmarcos.cloudwriter.ui.ActionRow
 import com.diegonmarcos.cloudwriter.ui.BlockGap
 import com.diegonmarcos.cloudwriter.ui.ChoiceRow
@@ -513,6 +515,12 @@ class MainActivity : AppCompatActivity() {
                         Icons.Filled.AltRoute,
                         AiRoutingActivity::class.java,
                     ),
+                    Page(
+                        R.string.settings_screen_routes,
+                        R.string.settings_screen_routes_summary,
+                        Icons.Filled.Hearing,
+                        RoutesActivity::class.java,
+                    ),
                 ).forEach { page ->
                     FeatureCard(
                         icon = page.icon,
@@ -606,7 +614,12 @@ class MainActivity : AppCompatActivity() {
             val produced = outcome.text
             if (produced != null) {
                 output.value = produced
-                say(getString(R.string.done, getString(outcome.tool.label)))
+                val a = outcome.answer
+                say(when {
+                    a == null -> getString(R.string.done, getString(outcome.tool.label))
+                    a.fellBack -> getString(R.string.route_fell_back, routeName(a.route), a.fallbackReason.orEmpty())
+                    else -> getString(R.string.route_answered_by, routeName(a.route))
+                })
             } else {
                 // The engine's own reason, verbatim. A generic apology in its place is how a
                 // provider outage, a missing key and an empty field become one unreadable state.
@@ -614,6 +627,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun routeName(r: Route?): String = getString(if (r == Route.ML) R.string.route_ml else R.string.route_model)
 
     private fun say(line: String) {
         report.value = line

@@ -31,6 +31,14 @@ def drop_key(key):
     return edit
 
 
+def routes_edit(fn, key, value):
+    def edit(text):
+        d = json.loads(text)
+        d["writer_routes"][fn][key] = value
+        return json.dumps(d, indent=2)
+    return edit
+
+
 # (label, file, (old, new) or callable, the check that must go red)
 BREAKS = [
     ("probe asks before the bind", SRC + "ServingApp.kt",
@@ -44,6 +52,30 @@ BREAKS = [
     ("no Store button", SRC + "MainActivity.kt",
      ("storeRepair.value = serving.needsStore", "storeRepair.value = false"), "S3"),
     ("no Store fallback", APP + "/build.json", drop_key("fallback_url"), "S4"),
+    ("speech defaults to on-device", APP + "/build.json", routes_edit("speech", "default_route", "ml"), "R1"),
+    ("translation defaults to a decision model", APP + "/build.json", routes_edit("translation", "default_model", "typesafe/jev-1.13"), "R1"),
+    ("translate decides ad hoc", SRC + "WriterRoutes.kt",
+     ("        val answer = Routing.run(\n            requested,\n            blocker,\n            model = { OpenRouter.translate(",
+      "        val answer = runBoth(\n            requested,\n            blocker,\n            model = { OpenRouter.translate("), "R2"),
+    ("on-device translation stops using libs:translate", SRC + "WriterRoutes.kt",
+     ("textTools(context).translate(text, tag)", "textTools(context).enhance(text, tag)"), "R2"),
+    ("Listen stops feeding the on-device engine", SRC + "Listen.kt",
+     ("if (onDevice) v.feed(buf, n)", "if (false) v.feed(buf, n)"), "R3"),
+    ("Listen skips auto-translation", SRC + "Listen.kt",
+     ("WriterRoutes.translate(app, heardText, s.target)", "WriterRoutes.lastTranslation"), "R3"),
+    ("the fallback is hidden on Translate", SRC + "MainActivity.kt",
+     ("R.string.route_fell_back", "R.string.route_answered_by"), "R4"),
+    ("/api/writer/translate unregistered", SRC + "WriterDebugApi.kt",
+     ('                "translate" -> translate(app, q).toString()\n', ""), "R5"),
+    ("the debug provider is exported", APP + "/app/src/main/AndroidManifest.xml",
+     ('android:authorities="${applicationId}.writerdebugapi"\n            android:exported="false"',
+      'android:authorities="${applicationId}.writerdebugapi"\n            android:exported="true"'), "R5"),
+    ("Listen is not a microphone service", APP + "/app/src/main/AndroidManifest.xml",
+     ('android:foregroundServiceType="microphone"', 'android:foregroundServiceType="dataSync"'), "R6"),
+    ("no route to the Routes page", SRC + "MainActivity.kt",
+     ("RoutesActivity::class.java", "AiRoutingActivity::class.java"), "R7"),
+    ("the route reply reads the token", SRC + "WriterRoutes.kt",
+     ('            .put("online", online(context))\n', '            .put("online", online(context))\n            .put("t", accountToken(context))\n'), "R8"),
 ]
 
 failures = []

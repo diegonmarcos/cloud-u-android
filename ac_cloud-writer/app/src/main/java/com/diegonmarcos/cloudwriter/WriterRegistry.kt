@@ -101,7 +101,7 @@ object WriterRegistry {
         val toolModels: Map<String, String> = emptyMap(),
     )
 
-    private val registry: JSONObject by lazy {
+    internal val registry: JSONObject by lazy {
         JSONObject(String(Base64.decode(BuildConfig.WRITER_AI_ROUTING_B64, Base64.DEFAULT), Charsets.UTF_8))
     }
 

@@ -147,7 +147,8 @@ bad = 0
 drawing = []
 for path in sorted(glob.glob(os.path.join(src, "*.kt")) + glob.glob(os.path.join(src, "ui", "*.kt"))):
     body = open(path).read()
-    if "setContent" not in body:
+    # setContent { — the call, not setContentTitle/Text/Intent on a notification (#800 Listen.kt).
+    if not re.search(r"\bsetContent\s*\{", body):
         continue
     drawing.append(os.path.basename(path))
     # The theme must be the thing INSIDE setContent, not merely mentioned in the
@@ -190,11 +191,13 @@ except Exception as exc:
     print("FAIL   T6 MainActivity.kt is unreadable (%s)" % exc); sys.exit(1)
 
 used = sorted(set(re.findall(r"R\.string\.(settings_screen_\w*_summary)", main)))
-# FAIL CLOSED: four cards, four descriptions. Finding none would otherwise report
-# "every description is translated" about an empty set.
-if len(used) != 4:
-    print("FAIL   T6 the home screen names %d page description(s) (expected 4, one per card): %s"
-          % (len(used), ", ".join(used) or "none"))
+# FAIL CLOSED: one description per page card, the cards COUNTED rather than assumed (#800 added
+# Routes, the fifth), and never fewer than five. Finding none would otherwise report "every
+# description is translated" about an empty set.
+cards = len(re.findall(r"Page\(\s*R\.string\.settings_screen_", main))
+if cards < 5 or len(used) != cards:
+    print("FAIL   T6 the home screen names %d page description(s) (expected %d, one per card): %s"
+          % (len(used), max(cards, 5), ", ".join(used) or "none"))
     bad += 1
 
 def keys(path):
@@ -224,7 +227,7 @@ if extra:
     print("FAIL   T6 values-es carries %d string(s) values/ does not: %s" % (len(extra), ", ".join(extra))); bad += 1
 
 if bad == 0:
-    print("ok     T6 all four card descriptions exist in values/ and values-es/, and the two files are in parity")
+    print("ok     T6 every card description exists in values/ and values-es/, and the two files are in parity")
 sys.exit(1 if bad else 0)
 PY
 [ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
