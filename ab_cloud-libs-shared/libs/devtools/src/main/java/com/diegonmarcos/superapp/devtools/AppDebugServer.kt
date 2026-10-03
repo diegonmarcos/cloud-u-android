@@ -312,11 +312,21 @@ object AppDebugServer {
             // reset while it is still writing, picking the credential up on the
             // way past.
             var bearer: String? = null
+            var length: Int? = null
             while (true) {
                 val h = reader.readLine() ?: break
                 if (h.isEmpty()) break
                 bearerOf(h)?.let { bearer = it }
+                contentLengthOf(h)?.let { length = it }
             }
+            // #802 a write carries its payload in the body (a profile import is
+            // kilobytes, past any sane query string). Refused before reading,
+            // so an oversize claim never ties up the one accept thread.
+            if ((length ?: 0) > MAX_BODY_BYTES) {
+                reply(writer, "413 Payload Too Large", "body over $MAX_BODY_BYTES bytes\n")
+                return
+            }
+            val body = readBody(reader, length ?: 0)
 
             val op = canonicalOp(path)
             // Everything but liveness is fleet-only. The loopback bind stopped
@@ -355,13 +365,48 @@ object AppDebugServer {
                     }
                 }
                 else -> {
-                    val body = appRoute(op, query)
-                    if (body != null) reply(writer, "200 OK", body, "application/json")
+                    val out = appRoute(op, withBody(query, body))
+                    if (out != null) reply(writer, "200 OK", out, "application/json")
                     else reply(writer, "404 Not Found", "not found — see /api/docs\n")
                 }
             }
         }
     }
+
+    /** #802 a request may carry at most this many body bytes; past it, 413. */
+    internal const val MAX_BODY_BYTES = 256 * 1024
+
+    /** `Content-Length: n` → n; null for any other header or a value that is not a count. */
+    internal fun contentLengthOf(header: String): Int? {
+        if (!header.startsWith("Content-Length:", ignoreCase = true)) return null
+        return header.substringAfter(':').trim().toIntOrNull()?.takeIf { it >= 0 }
+    }
+
+    /** Exactly [bytes] UTF-8 bytes off [reader] (which already holds what followed
+     *  the headers), or null when there is no body. Counted in bytes, not chars:
+     *  Content-Length is bytes, and reading that many chars would wait on a
+     *  non-ASCII body until the socket timed out. */
+    internal fun readBody(reader: java.io.Reader, bytes: Int): String? {
+        if (bytes <= 0) return null
+        val sb = StringBuilder()
+        var n = 0
+        while (n < bytes) {
+            val c = reader.read()
+            if (c < 0) break
+            sb.append(c.toChar())
+            n += when {
+                c < 0x80 -> 1
+                c < 0x800 || Character.isSurrogate(c.toChar()) -> 2
+                else -> 3
+            }
+        }
+        return sb.toString()
+    }
+
+    /** The query a route sees: `_body` only ever comes from the body, never the
+     *  query string, so a handler can trust where it came from. */
+    internal fun withBody(query: Map<String, String>, body: String?): Map<String, String> =
+        if (body == null) query - "_body" else query - "_body" + ("_body" to body)
 
     /** Accepts /api/{group}/{op} and the short /{op} aliases, matching the
      *  path styles the app-owned DevControlServer already documents. */
@@ -430,6 +475,8 @@ object AppDebugServer {
         append(""""scan":"each package has a fixed port (libs:devtools debug-ports.json); a member whose """)
         append("""port was held falls back elsewhere in $PORT_FIRST..$PORT_LAST, where /api/system/ping answers """)
         append("""'pong <applicationId>' unauthenticated",""")
+        append(""""body":"a POST body (Content-Length, max $MAX_BODY_BYTES bytes, else 413) reaches an app route """)
+        append("""as query param _body; _body in the query string is dropped",""")
         append(""""endpoints":[""")
         append("""{"path":"/api/docs","description":"this catalog"},""")
         append("""{"path":"/api/system/ping","description":"liveness + applicationId, """)
