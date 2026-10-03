@@ -99,9 +99,10 @@ PYTHON
 done <<<"$ENGINES"
 
 echo "── R3 the generated workflow copies carry the source's watched paths ──"
-SRC_PATHS="$(grep -E '^\s*-\s*"[^"]+"\s*$' "$SHIP_SRC" | sort)"
+# #836: deferred inputs (`#   input: "<dir>/**"`) are inputs too; fleet-refresh.yml ships them.
+SRC_PATHS="$(grep -E '^\s*(-|#\s*input:)\s*"[^"]+"\s*$' "$SHIP_SRC" | sort)"
 for copy in "$SHIP_DIST" "$SHIP_GH"; do
-    COPY_PATHS="$(grep -E '^\s*-\s*"[^"]+"\s*$' "$copy" | sort)"
+    COPY_PATHS="$(grep -E '^\s*(-|#\s*input:)\s*"[^"]+"\s*$' "$copy" | sort)"
     if [ "$SRC_PATHS" = "$COPY_PATHS" ]; then
         pass "$(basename "$(dirname "$copy")")/ship-cloud-drive.yml paths match the source"
     else

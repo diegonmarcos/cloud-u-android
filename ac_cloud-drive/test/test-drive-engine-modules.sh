@@ -180,7 +180,10 @@ python3 - "$BUILD_JSON" "$APP" "$ROOT" "$SHIP_SRC" <<'PYTHON' && pass "every bui
 import json, os, re, sys
 build_json, app, root, ship = sys.argv[1:5]
 modules = json.load(open(build_json, encoding="utf-8"))["modules"]
-watched = set(re.findall(r'^\s*-\s*"([^"]+)"\s*$', open(ship, encoding="utf-8").read(), re.M))
+# #836: a shared lib the app is not the primary consumer of is a DEFERRED input -- a
+# `#   input: "<dir>/**"` line inside the managed fence, hashed by the publish gate and
+# shipped by fleet-refresh.yml. It is still an input of this workflow, so it counts.
+watched = set(re.findall(r'^\s*(?:-|#\s*input:)\s*"([^"]+)"\s*$', open(ship, encoding="utf-8").read(), re.M))
 missing = []
 for name, spec in modules.items():
     if name.startswith("_") or not isinstance(spec, dict) or not spec.get("dir"):
