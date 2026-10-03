@@ -27,7 +27,9 @@ allprojects {
         extensions.getByName('androidComponents').with { components ->
             components.onVariants(components.selector().all()) { variant ->
                 variant.outputs.each { output ->
-                    output.versionName.set(output.versionName.map { v -> "${v} (sha-${shortSha})".toString() })
+                    // Read eagerly: a map() of the property it is set on is circular.
+                    def base = output.versionName.getOrNull()
+                    output.versionName.set("${base} (sha-${shortSha})".toString())
                 }
             }
         }
