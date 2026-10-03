@@ -176,13 +176,8 @@ android {
     namespace 'com.diegonmarcos.cloudnav'
     compileSdk 35
 
-    // #796 the fleet configuration manifest left libs:core (fleet-wide data that rebuilt every
-    // app on every edit) and now travels with each call from the SuperApp. FleetMigrationTest is
-    // a caller, so the TEST APK carries the SuperApp's copy by reference; the app APK carries
-    // nothing. Test-only: this directory is not an input of the shipped bytes.
-    sourceSets {
-        androidTest.assets.srcDirs += ['../../aa_cloud-superapp/app/src/main/assets']
-    }
+    // #855 FleetMigrationTest reads the fleet manifest out of the installed Cloud-Lib-Fleetconfig
+    // APK (the emulator job installs it), so neither APK of this app carries a copy.
 
     defaultConfig {
         // Launcher label = build.json::name, the application's one name (#351).

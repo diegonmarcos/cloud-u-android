@@ -32,21 +32,22 @@ import org.junit.runner.RunWith
  * device, without taking the rest of the import — or the app — down with it.
  *
  * #796 the manifest is no longer in cloud-nav's APK: it travels with every call, as it does from
- * the SuperApp. This test is the caller, so it carries the SuperApp's copy in the TEST APK's
- * assets (app/build.gradle sources aa_cloud-superapp's asset directory into androidTest only)
- * and hands it over on each call; `hello` must say so.
+ * the SuperApp. This test is the caller: it reads the copy the installed Cloud-Lib-Fleetconfig
+ * carries (#855) and hands it over on each call; `hello` must say so.
  */
 @RunWith(AndroidJUnit4::class)
 class FleetMigrationTest {
 
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    /** The SuperApp's manifest, read from the test APK (the instrumentation package's assets).
-     *  #825 handed over as text: the policy that parses it runs in Cloud-Lib-Fleetconfig, not in
-     *  libs:core, so this test names no class of it. */
+    /** The fleet manifest, handed over as text (#825: the policy that parses it runs in
+     *  Cloud-Lib-Fleetconfig, so this test names no class of it). #855 read out of the installed
+     *  engine APK, which carries it (libs:fleetconfig-model); empty when the engine is absent,
+     *  and then every test is skipped by [snapshot]. */
     private val manifest: String by lazy {
-        InstrumentationRegistry.getInstrumentation().context.assets
-            .open(FleetConfig.ASSET).bufferedReader().use { it.readText() }
+        runCatching {
+            ctx.createPackageContext(ENGINE, 0).assets.open(FleetConfig.ASSET).bufferedReader().use { it.readText() }
+        }.getOrDefault("{}")
     }
 
     /** cloud-nav's declared schema_version, or null when the manifest does not declare it. */
@@ -76,6 +77,8 @@ class FleetMigrationTest {
      *  share this emulator see cloud-nav exactly as they would have (a leaked cockpit mode once
      *  hid the Explored tab from ExploredRenderTest). */
     private lateinit var saved: JSONObject
+
+    private companion object { const val ENGINE = "com.diegonmarcos.cloudlib.fleetconfig" }
 
     @Before fun snapshot() {
         // #825 the policy is Cloud-Lib-Fleetconfig's: on an emulator that was not given the
