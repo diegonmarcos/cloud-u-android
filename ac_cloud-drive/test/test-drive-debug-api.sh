@@ -5,7 +5,7 @@
 #
 # cloud-drive registers its own route groups (health / git / session / log) on
 # libs:devtools' AppDebugServer — the fleet's ONE loopback debug transport
-# (127.0.0.1:38090+, fleet Bearer on everything but /api/system/ping, whose
+# (127.0.0.1, own port from libs/devtools/debug-ports.json, fleet Bearer on everything but /api/system/ping, whose
 # unauthorized banner proves liveness). This tester pins the properties that
 # make that safe and honest, and MUTATION-PROVES each one: a check that stays
 # green when its property is broken proves nothing.
@@ -138,7 +138,8 @@ if 'DriveDebugApi.register(ctx)' not in provider: sys.exit(1)
 decl = json.load(open(sys.argv[3], encoding="utf-8")).get("diagnostics", {}).get("debug_api")
 if not isinstance(decl, dict): sys.exit(1)
 if decl.get("bind") != "127.0.0.1": sys.exit(1)
-if decl.get("port_range") != [38090, 38139]: sys.exit(1)
+# #792 the port is the fleet table's, not a range this app restates
+if decl.get("port_table") != "ab_cloud-libs-shared/libs/devtools/debug-ports.json": sys.exit(1)
 for g in ("health", "git", "session", "log"):
     if g not in decl.get("groups", []): sys.exit(1)
 sys.exit(0)

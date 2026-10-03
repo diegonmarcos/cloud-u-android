@@ -49,25 +49,44 @@ import java.util.concurrent.atomic.AtomicBoolean
  * unused: SuperApp mints it, siblings adopt it over a signature-guarded
  * provider, and the human reads it once from Configs → About.
  *
- * Port: the first free one in [PORT_FIRST, PORT_LAST]. Every app defaults to
- * the same number, so a fixed port would mean only whichever app started first
- * gets a server. A scanner walks the range and asks each port
- * /api/system/info who it is.
+ * Port: #792 each package's OWN fixed port from libs/devtools/debug-ports.json
+ * ([PORTS], baked by build.gradle), so port→app is known before anything is
+ * probed. It used to be the first free port in a 50-port range, and with sixty
+ * mesh members the last ones to wake found nothing free and served nowhere.
+ * Only when a foreign process holds the assigned port does a member scan, and
+ * then only ports NO package owns, so one collision cannot cascade into the
+ * next member's slot.
  */
 object AppDebugServer {
     private const val TAG = "AppDebugServer"
 
-    /** Range start. 38080 is deliberately excluded — it belongs to the
-     *  app-owned DevControlServer in SuperApp and cloud-nav.
-     *
-     *  The range is wide because the engine APKs count too: libs:news and the
-     *  other engines link libs:core, so Cloud-Lib-News.apk gets a server of
-     *  its own and its process appears here the moment something binds it.
-     *  That is the point — NewsEngine runs in that process, so its logs are
-     *  only reachable from inside it. Roughly eight apps plus a dozen engines
-     *  want a slot, so ten would run out. */
-    const val PORT_FIRST = 38090
-    const val PORT_LAST = 38139
+    /** The facility's whole range, from debug-ports.json. 38080 is outside it
+     *  on purpose — it belongs to the app-owned DevControlServer in SuperApp
+     *  and cloud-nav. Engine APKs count as members too (Cloud-Lib-News.apk
+     *  serves its own NewsEngine logs), which is how fifty ports ran out. */
+    val PORT_FIRST: Int = BuildConfig.DEBUG_PORT_FIRST
+    val PORT_LAST: Int = BuildConfig.DEBUG_PORT_LAST
+
+    /** #792 applicationId → its assigned port, the whole fleet's table. */
+    val PORTS: Map<String, Int> by lazy { parsePorts(BuildConfig.DEBUG_PORTS) }
+
+    /** `pkg=port,pkg=port` (BuildConfig cannot hold a map) → map. */
+    internal fun parsePorts(raw: String): Map<String, Int> = raw.split(',').mapNotNull {
+        val pkg = it.substringBefore('=', "").trim()
+        val port = it.substringAfter('=', "").trim().toIntOrNull()
+        if (pkg.isEmpty() || port == null) null else pkg to port
+    }.toMap()
+
+    /** The port [pkg] binds, or null for a package the table does not name. */
+    fun portOf(pkg: String): Int? = PORTS[pkg]
+
+    /** #792 the ports a member may take when its own is held: every port in
+     *  range that no package owns, so a fallback never lands in a sibling's
+     *  slot and pushes THAT member into a fallback of its own. */
+    internal fun fallbackPorts(first: Int, last: Int, owned: Collection<Int>): List<Int> {
+        val taken = owned.toHashSet()
+        return (first..last).filter { it !in taken }
+    }
 
     /** A client that opens a socket and never sends a request line would
      *  otherwise park the single accept thread forever and take the whole
@@ -97,9 +116,10 @@ object AppDebugServer {
      * nothing else. Everything that returns state or data, /api/docs included,
      * needs the token.
      *
-     * The package name is deliberately in the open half. Ports are assigned
-     * first-come across [PORT_FIRST]..[PORT_LAST], so port→app is the one fact
-     * you need before you can ask anything useful, and gating it makes the
+     * The package name is deliberately in the open half. A member that fell
+     * back off its assigned port ([bindOwn]) is somewhere in
+     * [PORT_FIRST]..[PORT_LAST], so port→app is the one fact you need before
+     * you can ask anything useful, and gating it makes the
      * facility undebuggable in exactly the case you reach for it — a member
      * that cannot adopt the token answers 401 everywhere and you cannot even
      * tell which app is stuck. It gives an attacker nothing: any app can
@@ -199,7 +219,7 @@ object AppDebugServer {
     fun start(ctx: Context) {
         val app = ctx.applicationContext
         if (!running.compareAndSet(false, true)) return
-        val sock = bindFirstFree()
+        val sock = bindOwn(app.packageName)
         if (sock == null) {
             Log.w(TAG, "no port bound in $PORT_FIRST..$PORT_LAST — not starting (last error: $lastBindError)")
             running.set(false)
@@ -225,15 +245,32 @@ object AppDebugServer {
 
     /** #762 why the last bind failed — "EACCES" means no INTERNET permission
      *  (devtools declares it; an app manifest that removes it lands here), not
-     *  fifty busy ports. */
+     *  busy ports. */
     @Volatile private var lastBindError: String? = null
 
-    private fun bindFirstFree(): ServerSocket? {
+    /** #792 why this member is NOT on its assigned port, in words; null when it
+     *  is. Served in /api/system/info so Apps Mesh can say it, not just log it. */
+    @Volatile var bindNote: String? = null
+        private set
+
+    private fun bindOwn(pkg: String): ServerSocket? {
         val loopback = InetAddress.getByName("127.0.0.1")
-        for (p in PORT_FIRST..PORT_LAST) {
-            val s = runCatching { ServerSocket(p, 4, loopback) }
-                .onFailure { lastBindError = it.toString() }.getOrNull()
-            if (s != null) return s
+        fun tryBind(p: Int) = runCatching { ServerSocket(p, 4, loopback) }
+            .onFailure { lastBindError = it.toString() }.getOrNull()
+        val own = portOf(pkg)
+        var ownError: String? = null
+        if (own != null) {
+            tryBind(own)?.let { bindNote = null; return it }
+            ownError = lastBindError
+            Log.w(TAG, "assigned port $own for $pkg is held by another process ($ownError) — falling back to an unowned port")
+        } else {
+            Log.w(TAG, "$pkg has no port in debug-ports.json — falling back to an unowned port")
+        }
+        for (p in fallbackPorts(PORT_FIRST, PORT_LAST, PORTS.values)) {
+            val s = tryBind(p) ?: continue
+            bindNote = if (own == null) "no assigned port for $pkg in debug-ports.json; took unowned :$p"
+                else "assigned :$own was held ($ownError); took unowned :$p"
+            return s
         }
         return null
     }
@@ -370,12 +407,18 @@ object AppDebugServer {
             append(""""versionCode":$versionCode,""")
             append(""""lastUpdateTime":${pi?.lastUpdateTime ?: 0},""")
             append(""""port":$port,""")
+            append(""""assignedPort":${portOf(pkg) ?: -1},""")
+            append(""""bindNote":${jsonStr(bindNote)},""")
             append(""""device":"${esc("${Build.MANUFACTURER} ${Build.MODEL}")}",""")
             append(""""android":"${esc(Build.VERSION.RELEASE)}",""")
             append(""""sdk":${Build.VERSION.SDK_INT}""")
             append("}")
         }
     }
+
+    /** This process's own /api/docs body, without a socket — for a caller on
+     *  the server's own accept thread, where a loopback GET would wait on itself. */
+    fun docs(ctx: Context): String = docsJson(ctx)
 
     private fun docsJson(ctx: Context): String = buildString {
         append("{")
@@ -384,12 +427,13 @@ object AppDebugServer {
         append(""""base":"http://127.0.0.1:$port",""")
         append(""""auth":"Bearer <fleet token> — one token for the whole fleet, """)
         append("""shown in SuperApp under Configs → About. /api/system/ping is open.",""")
-        append(""""scan":"probe $PORT_FIRST..$PORT_LAST with /api/system/ping — it answers """)
-        append("""'pong <applicationId>' unauthenticated, so it maps port to app in one sweep",""")
+        append(""""scan":"each package has a fixed port (libs:devtools debug-ports.json); a member whose """)
+        append("""port was held falls back elsewhere in $PORT_FIRST..$PORT_LAST, where /api/system/ping answers """)
+        append("""'pong <applicationId>' unauthenticated",""")
         append(""""endpoints":[""")
         append("""{"path":"/api/docs","description":"this catalog"},""")
         append("""{"path":"/api/system/ping","description":"liveness + applicationId, """)
-        append("""no token needed — scan the port range with this to map port to app"},""")
+        append("""no token needed — map a port to its app"},""")
         append("""{"path":"/api/system/info","description":"applicationId, label, version, bound port, device"},""")
         append("""{"path":"/api/diagnostics/logcat","params":"n=lines (default $DEFAULT_LINES, max $MAX_LINES)","description":"this app's own logcat, threadtime format"},""")
         append("""{"path":"/api/diagnostics/crashes","description":"stored crash reports, newest first"},""")

@@ -158,6 +158,44 @@ class AppsMeshTest {
     }
 
     @Test
+    fun `every fleet package has its own debug port and the address says when a member is not on it`() {
+        // #792 sixty members on a 50-port first-free range left sixteen with no port at all.
+        val assigned = fleet.filter { it.pkg.isNotEmpty() }.associateWith {
+            com.diegonmarcos.superapp.devtools.AppDebugServer.portOf(it.pkg) }
+        assertEquals("fleet rows with no port in debug-ports.json: ${assigned.filterValues { it == null }.keys.map { it.id }}",
+            emptyList<String>(), assigned.filterValues { it == null }.keys.map { it.id })
+        assertEquals("two fleet packages share a port", assigned.size, assigned.values.toSet().size)
+        val app = apps.first()
+        val own = assigned.getValue(app)!!
+        assertEquals("http://127.0.0.1:$own", StoreMesh.address(app, own))
+        assertTrue(StoreMesh.address(app, own + 1000).contains("assigned :$own"))
+    }
+
+    @Test
+    fun `the endpoints catalogue lists each reachable member's own docs and never claims the mesh`() {
+        val app = apps.first()
+        val docs = """{"endpoints":[{"path":"/api/docs","description":"this catalog"}],
+            "groups":[{"group":"news","endpoints":[{"path":"/api/news/latest","params":"n=count","description":"newest"}]}]}"""
+        assertEquals(listOf("/api/docs", "/api/news/latest"), AppsMesh.endpointList(docs).map { it.getString("path") })
+        assertEquals("news", AppsMesh.endpointList(docs)[1].getString("group"))
+        assertEquals(0, AppsMesh.endpointCount("not json"))
+
+        val live = healthy().let { StoreMesh.Live(it.installed, mapOf(app.id to 38140), it.peers, it.contracts,
+            it.shares, it.granted, it.peerViews, docs = mapOf(app.id to docs)) }
+        val cat = AppsMesh.catalogue(fleet, live, AppsMesh.exposure(decl, listOf("10.0.0.9")), listOf("10.0.0.9"))
+        assertFalse("the catalogue claims the debug API is on the mesh", cat.getBoolean("mesh_reachable"))
+        assertTrue(cat.getString("exposure"), cat.getString("exposure").contains("10.0.0.9"))
+        val members = (0 until cat.getJSONArray("members").length()).map { cat.getJSONArray("members").getJSONObject(it) }
+        assertEquals("every fleet row is in the catalogue", fleet.size, members.size)
+        val me = members.single { it.getString("id") == app.id }
+        assertEquals("http://127.0.0.1:38140", me.getString("base"))
+        assertEquals(2, me.getJSONArray("endpoints").length())
+        // a member that did not answer has no endpoints, not someone else's
+        val other = members.first { it.getString("id") != app.id && it.optBoolean("installed") }
+        assertEquals(0, other.getJSONArray("endpoints").length())
+    }
+
+    @Test
     fun `Peer Control lists every declared device and every mesh VM once, and remembers the choice`() {
         val devices = KdeConnectConfig.get().devices
         val nodes = KdeMesh.nodes()

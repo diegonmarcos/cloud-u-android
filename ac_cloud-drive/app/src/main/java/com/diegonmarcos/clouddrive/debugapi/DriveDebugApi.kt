@@ -21,8 +21,8 @@ import kotlinx.coroutines.SupervisorJob
  * #669 THE SYNC ▸ GIT FLOW, EXERCISABLE FROM THE PHONE'S OWN SHELL.
  *
  * cloud-drive already answers on loopback: libs:core pulls libs:devtools in with an
- * `api` dependency, whose [AppDebugServer] binds the first free 127.0.0.1 port in
- * 38090..38139 and gates every route except /api/system/ping behind the fleet's ONE
+ * `api` dependency, whose [AppDebugServer] binds this package's own 127.0.0.1 port
+ * (libs/devtools/debug-ports.json, #792) and gates every route except /api/system/ping behind the fleet's ONE
  * Bearer token ([com.diegonmarcos.superapp.devtools.FleetToken] — SuperApp mints it,
  * siblings adopt it over the signature-guarded provider, and an unauthorized banner
  * proves liveness). This file adds nothing to that transport and NO SECOND SERVER:

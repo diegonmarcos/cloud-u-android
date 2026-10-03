@@ -48,7 +48,7 @@
       "dir": "../ab_cloud-libs-shared/libs/core"
     },
     "libs:devtools": {
-      "_doc": "The debug server itself - AppDebugServer binds the first free port in 38090..38139 and DebugInitProvider starts it. Listed because libs:core references it by project path.",
+      "_doc": "The debug server itself - AppDebugServer binds its own port from libs/devtools/debug-ports.json (#792) and DebugInitProvider starts it. Listed because libs:core references it by project path.",
       "dir": "../ab_cloud-libs-shared/libs/devtools"
     },
     "libs:text-tools": {

@@ -49,6 +49,23 @@ object StoreDebugApi {
                 "install every cached newer build (no network), full chain for the rest online; per-app report"),
             AppDebugServer.Op("batch", "", "the report of the last real downloadAll / updateAll"),
         )) { op, q -> route(app, op, q) }
+        // #792 /api/fleet/endpoints — the Apps Mesh catalogue, off the same probe
+        // the page runs. fleet/peers and fleet/wake are AppDebugServer's own and
+        // are matched before this group is consulted.
+        AppDebugServer.route("fleet", listOf(
+            AppDebugServer.Op("endpoints", "",
+                "every fleet member: assigned + actual 127.0.0.1 port, membership, shares and its own " +
+                "/api/docs endpoints — one JSON catalogue of the whole fleet (probes; can take ~15 s while " +
+                "stopped members are woken)"),
+        )) { op, _ -> if (op == "endpoints") endpoints(app).toString() else null }
+    }
+
+    private fun endpoints(ctx: Context): JSONObject {
+        val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+        val fleetJson = JSONObject(String(android.util.Base64.decode(BuildConfig.CONSTELLATION_FLEET_B64, android.util.Base64.DEFAULT)))
+        val live = StoreMesh.probe(ctx, fleet, StoreMesh.links(fleetJson))
+        val mesh = AppsMesh.meshAddresses()
+        return AppsMesh.catalogue(fleet, live, AppsMesh.exposure(AppsMesh.load(ctx), mesh), mesh).put("ok", true)
     }
 
     private fun route(ctx: Context, op: String, q: Map<String, String>): String? = when (op) {

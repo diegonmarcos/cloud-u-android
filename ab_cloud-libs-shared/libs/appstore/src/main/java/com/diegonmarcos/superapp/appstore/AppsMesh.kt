@@ -35,6 +35,9 @@ import org.json.JSONObject
  *   - the MISSING MEMBERSHIP report ([gaps]): every installed fleet app that is
  *     not a full mesh member, each gap with its fix
  *   - Export / Copy all of the whole page as text ([report])
+ *   - #792 each member's full address and its own /api/docs, unfoldable per
+ *     member, and Export endpoints: the whole fleet's [catalogue] as JSON —
+ *     the same body the SuperApp serves at /api/fleet/endpoints
  *
  * Every word on it is the asset's; this file names no member, package or caption.
  */
@@ -50,7 +53,7 @@ object AppsMesh {
     class Action(val id: String, val label: String)
 
     class Decl(val actions: List<Action>, private val tools: Map<String, String>,
-               val gapWords: Map<String, Pair<String, String>>) {
+               val gapWords: Map<String, Pair<String, String>>, val exposure: String = "") {
         fun tool(id: String) = tools[id]?.takeIf { it.isNotEmpty() } ?: id
     }
 
@@ -65,7 +68,8 @@ object AppsMesh {
         return Decl(actions,
             t.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { t.optString(it) },
             g.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { k ->
-                g.getJSONObject(k).let { it.optString("label", k) to it.optString("fix") } })
+                g.getJSONObject(k).let { it.optString("label", k) to it.optString("fix") } },
+            m.optString("exposure"))
     }
 
     fun load(ctx: Context): Decl = runCatching {
@@ -155,7 +159,7 @@ object AppsMesh {
                 append("  ${app.label} (${app.id}, ${app.kind}) ")
                 if (v == null) { appendLine("not installed"); continue }
                 append("v${v.ifEmpty { "?" }}")
-                append(live.reachable[app.id]?.let { " · :$it" } ?: " · no debug API")
+                append(live.reachable[app.id]?.let { " · ${StoreMesh.address(app, it)}" } ?: " · no debug API")
                 if (app.id in live.woken) append(" · was stopped, woke ok")
                 append(if (app.id in live.peers) " · member" else " · NOT a member")
                 append(if (app.id in live.granted) " · CONSTELLATION_DATA" else " · no CONSTELLATION_DATA")
@@ -166,6 +170,76 @@ object AppsMesh {
                 live.shares[app.id]?.let { appendLine("      ⇄ serves ${it.joinToString(" · ")}") }
             }
         }
+
+    // ── #792 endpoints catalogue ─────────────────────────────────────────────
+
+    /** This phone's VPN-interface addresses — its mesh address under the
+     *  SuperApp's tunnel. Shown so the page can say the debug API is NOT there. */
+    fun meshAddresses(): List<String> = runCatching {
+        java.net.NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && (it.name.startsWith("tun") || it.name.startsWith("wg")) }
+            .flatMap { it.inetAddresses.toList() }
+            .filter { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+            .mapNotNull { it.hostAddress?.substringBefore('%') }
+    }.getOrDefault(emptyList())
+
+    /** The declared exposure sentence with {mesh} filled. */
+    fun exposure(decl: Decl, mesh: List<String>): String =
+        decl.exposure.replace("{mesh}", mesh.joinToString(", ").ifEmpty { "no mesh tunnel up" })
+
+    /** /api/docs → every endpoint as {group, path, params, description}; the
+     *  universal ones carry group "". Unparseable docs → nothing. */
+    fun endpointList(docs: String): List<JSONObject> = runCatching {
+        val o = JSONObject(docs)
+        fun list(group: String, arr: org.json.JSONArray?) = (0 until (arr?.length() ?: 0)).map {
+            val e = arr!!.getJSONObject(it)
+            JSONObject().put("group", group).put("path", e.optString("path"))
+                .put("params", e.optString("params")).put("description", e.optString("description"))
+        }
+        val groups = o.optJSONArray("groups")
+        list("", o.optJSONArray("endpoints")) + (0 until (groups?.length() ?: 0)).flatMap {
+            val g = groups!!.getJSONObject(it)
+            list(g.optString("group"), g.optJSONArray("endpoints"))
+        }
+    }.getOrDefault(emptyList())
+
+    fun endpointCount(docs: String): Int = endpointList(docs).size
+
+    /**
+     * The whole fleet's endpoints as one JSON document: every fleet row, its
+     * assigned and actual loopback address, membership, what it shares, and
+     * each reachable member's own catalogue. What Export endpoints shares and
+     * what /api/fleet/endpoints answers. Names no token: the docs bodies say
+     * "Bearer <fleet token>", never the token.
+     */
+    fun catalogue(fleet: List<Fleet.App>, live: StoreMesh.Live, exposure: String, mesh: List<String>): JSONObject {
+        val members = org.json.JSONArray()
+        for (app in fleet) {
+            val v = live.installed[app.id]
+            val port = live.reachable[app.id]
+            val m = JSONObject().put("id", app.id).put("label", app.label).put("kind", app.kind)
+                .put("package", app.pkg).put("installed", v != null)
+                .put("assigned_port", com.diegonmarcos.superapp.devtools.AppDebugServer.portOf(app.pkg) ?: JSONObject.NULL)
+            if (v != null) {
+                m.put("version", v).put("member", app.id in live.peers).put("woken", app.id in live.woken)
+                    .put("port", port ?: JSONObject.NULL)
+                    .put("base", port?.let { "http://127.0.0.1:$it" } ?: JSONObject.NULL)
+                    .put("shares", org.json.JSONArray(live.shares[app.id].orEmpty()))
+                    .put("endpoints", org.json.JSONArray(live.docs[app.id]?.let { endpointList(it) }.orEmpty()))
+            }
+            members.put(m)
+        }
+        return JSONObject()
+            .put("range", org.json.JSONArray(listOf(
+                com.diegonmarcos.superapp.devtools.AppDebugServer.PORT_FIRST,
+                com.diegonmarcos.superapp.devtools.AppDebugServer.PORT_LAST)))
+            .put("bind", "127.0.0.1").put("auth", "Bearer <fleet token> on every route but /api/system/ping")
+            .put("mesh_addresses", org.json.JSONArray(mesh)).put("mesh_reachable", false)
+            .put("exposure", exposure)
+            .put("summary", "${fleet.size} members · ${live.installed.size} installed · " +
+                "${live.reachable.size} reachable · ${live.docs.values.sumOf { endpointCount(it) }} endpoints")
+            .put("members", members)
+    }
 
     // ── the page ─────────────────────────────────────────────────────────────
 
@@ -186,6 +260,8 @@ object AppsMesh {
         var live: StoreMesh.Live? = null
 
         val tools = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val mesh = meshAddresses()
+        into.addView(text(ctx, exposure(decl, mesh), 11f, DIM))
         val gapBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val meshBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         into.addView(tools); into.addView(gapBox); into.addView(meshBox)
@@ -218,6 +294,14 @@ object AppsMesh {
             }
         })
         tools.addView(tool(ctx, "copy", decl.tool("copy")) { withReport { copy(ctx, it) } })
+        tools.addView(tool(ctx, "endpoints", decl.tool("endpoints")) {
+            val l = live ?: return@tool toast(ctx, "${decl.tool("reprobe")}…")
+            val text = catalogue(fleet, l, exposure(decl, mesh), mesh).toString(2)
+            runCatching {
+                host.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/json")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Apps Mesh endpoints").putExtra(Intent.EXTRA_TEXT, text), null))
+            }.onFailure { toast(ctx, it.message ?: "export failed") }
+        })
         probe()
     }
 
@@ -296,7 +380,7 @@ object AppsMesh {
     fun endpoints(docs: String, port: Int): String = runCatching {
         val o = JSONObject(docs)
         buildString {
-            appendLine("base http://127.0.0.1:$port · Bearer <fleet token>")
+            appendLine("base http://127.0.0.1:$port · Bearer <fleet token> · loopback only")
             fun list(arr: org.json.JSONArray?) {
                 for (i in 0 until (arr?.length() ?: 0)) {
                     val e = arr!!.getJSONObject(i)
@@ -333,7 +417,8 @@ object AppsMesh {
                 appendLine("sdk: min ${d.minSdk} · target ${d.targetSdk} · abis ${d.abis.joinToString().ifEmpty { "none" }}")
             }
             if (live != null) {
-                appendLine("debug API: " + (live.reachable[app.id]?.let { "127.0.0.1:$it" } ?: "not answering"))
+                appendLine("debug API: " + (live.reachable[app.id]?.let { StoreMesh.address(app, it) } ?: "not answering") +
+                    " · assigned :" + (com.diegonmarcos.superapp.devtools.AppDebugServer.portOf(app.pkg)?.toString() ?: "none"))
                 appendLine("mesh member: " + if (app.id in live.peers) "yes (${d?.pkg ?: app.pkg}.fleet provider)" else "no")
                 appendLine("CONSTELLATION_DATA: " + if (app.id in live.granted) "granted" else "not held")
                 live.peerViews[app.id]?.let { appendLine("sees: ${it.size} of ${live.peers.size} mesh members") }

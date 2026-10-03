@@ -31,8 +31,11 @@ import org.json.JSONObject
  * The LIVE half reuses what the fleet already serves, no new protocol:
  *   - installed + version: the PackageManager, through [Fleet.installedId]
  *   - reachable: every member's AppDebugServer answers the open
- *     `/api/system/ping` with `pong <applicationId>` somewhere in
+ *     `/api/system/ping` with `pong <applicationId>` on its assigned port
+ *     ([AppDebugServer.portOf], #792), or — for a build from before #792 or a
+ *     member that fell back — somewhere in
  *     [AppDebugServer.PORT_FIRST]..[AppDebugServer.PORT_LAST]
+ *   - endpoints: each reachable member's own `/api/docs` (#792)
  *   - mesh member: [FleetPeers.list], the same answer `/api/fleet/peers` serves
  *   - link health: the handshake every engine client does before binding —
  *     resolve the declared action in the engine package and read its CONTRACT
@@ -92,6 +95,9 @@ object StoreMesh {
         /** #762 fleet ids that were stopped, were woken by the probe and then
          *  answered: healthy, reported as "was stopped, woke ok", not a gap. */
         val woken: Set<String> = emptySet(),
+        /** #792 fleet id -> that member's own /api/docs body (the fleet token
+         *  authorises the read; the body names no secret). */
+        val docs: Map<String, String> = emptyMap(),
     )
 
     enum class State { OK, ENGINE_MISSING, ENGINE_OLD, APP_ABSENT }
@@ -141,7 +147,16 @@ object StoreMesh {
             if (pm.checkPermission(CONSTELLATION_PERM, pkg) == PackageManager.PERMISSION_GRANTED) granted.add(id)
         }
         val peers = FleetPeers.list(ctx).mapNotNull { idOf[it] }.toSet()
-        val sweepIds = { sweep().mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap() }
+        // #792 this process answers for itself without a socket: probed from
+        // the debug server's own accept thread (/api/fleet/endpoints), a
+        // loopback ping of our own port would wait on the thread sending it.
+        val self = ctx.packageName
+        val selfPort = AppDebugServer.boundPort().takeIf { it > 0 }
+        val expect = peers.mapNotNull { pkgOf[it] }.filter { it != self }
+        val sweepIds = {
+            (locate(expect) + listOfNotNull(selfPort?.let { self to it }))
+                .mapNotNull { (pkg, port) -> idOf[pkg]?.let { it to port } }.toMap()
+        }
         val first = sweepIds()
         // #733 "no debug API" must mean the member CANNOT serve one, not that it
         // was merely asleep: wake every member that ships the provider and did
@@ -152,7 +167,9 @@ object StoreMesh {
         val reachable = awaitWoken(first, asleep, WAKE_TIMEOUT_MS, WAKE_POLL_MS, sweepIds, Thread::sleep)
         val woken = asleep intersect reachable.keys
         val token = FleetToken.get(ctx)
+        val selfId = idOf[self]
         val peerViews = reachable.mapNotNull { (id, port) ->
+            if (id == selfId) return@mapNotNull id to peers
             val body = get(port, "/api/fleet/peers", token) ?: return@mapNotNull null
             runCatching {
                 val arr = JSONObject(body).getJSONArray("peers")
@@ -168,7 +185,20 @@ object StoreMesh {
             granted = granted,
             peerViews = peerViews,
             woken = woken,
+            docs = docsOf(ctx, reachable, selfId, token),
         )
+    }
+
+    /** #792 every reachable member's /api/docs, fetched in parallel. */
+    private fun docsOf(ctx: Context, reachable: Map<String, Int>, selfId: String?, token: String): Map<String, String> {
+        val pool = Executors.newFixedThreadPool(8)
+        return try {
+            reachable.map { (id, port) ->
+                pool.submit(Callable {
+                    (if (id == selfId) AppDebugServer.docs(ctx) else get(port, "/api/docs", token))?.let { id to it }
+                })
+            }.mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
+        } finally { pool.shutdownNow() }
     }
 
     /** #762 a woken member answered after ~10 s on the phone (cold process,
@@ -230,16 +260,23 @@ object StoreMesh {
             .map { "service ${it.name.substringAfterLast('.')}" }
     }.getOrDefault(emptyList())
 
-    /** package -> port, for every port in the fleet's range that answers the
-     *  open ping. Raw socket, not HttpURLConnection: loopback cleartext is then
-     *  not subject to the host's network-security policy. */
-    private fun sweep(): Map<String, Int> {
+    /**
+     * #792 package -> port for [expected]. Each is pinged on its ASSIGNED port
+     * first; only when one of them did not answer there (a build from before
+     * #792, or a member that fell back off a held port) is the whole range
+     * swept. Raw socket, not HttpURLConnection: loopback cleartext is then not
+     * subject to the host's network-security policy.
+     */
+    private fun locate(expected: Collection<String>): Map<String, Int> {
         val pool = Executors.newFixedThreadPool(16)
+        fun pingAll(ports: Iterable<Int>) = ports
+            .map { port -> pool.submit(Callable { ping(port)?.let { it to port } }) }
+            .mapNotNull { runCatching { it.get() }.getOrNull() }
+            .toMap()
         return try {
-            (AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
-                .map { port -> pool.submit(Callable { ping(port)?.let { it to port } }) }
-                .mapNotNull { runCatching { it.get() }.getOrNull() }
-                .toMap()
+            val direct = pingAll(expected.mapNotNull { AppDebugServer.portOf(it) }.distinct())
+            if (direct.keys.containsAll(expected)) direct
+            else pingAll(AppDebugServer.PORT_FIRST..AppDebugServer.PORT_LAST)
         } finally { pool.shutdownNow() }
     }
 
@@ -327,13 +364,14 @@ object StoreMesh {
         val (dot, status) = when {
             live == null -> DIM to "probing…"
             version == null -> DIM to "not installed"
-            port != null -> GREEN to "${version.ifEmpty { "?" }} · reachable :$port" +
+            port != null -> GREEN to "${version.ifEmpty { "?" }} · ${address(app, port)}" +
                 if (app.id in live.woken) " · was stopped, woke ok" else ""
             app.id in live.peers -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running"
             else -> BLUE to "${version.ifEmpty { "?" }} · installed, no debug API answered"
         }
         card.addView(text(ctx, app.label + (if (app.kind == "lib") "  · lib" else ""), 14f, WHITE, bold = true))
         card.addView(text(ctx, "● $status", 11f, dot))
+        if (live != null && port != null) live.docs[app.id]?.let { card.addView(endpointsToggle(ctx, app, it, port)) }
         if (live != null) for (l in out) card.addView(linkRow(ctx, l, live, label, byId, onOpen))
         if (inn.isNotEmpty())
             card.addView(text(ctx, "← bound by " + inn.joinToString(", ") { label(it.from) }, 11f, DIM))
@@ -343,6 +381,40 @@ object StoreMesh {
                 else "✕ CONSTELLATION_DATA not granted — reinstall from our release", 11f,
                 if (app.id in live.granted) DIM else RED))
         return card
+    }
+
+    /** #792 a member's full loopback address, and — when it is not on the port
+     *  debug-ports.json gives it — the port it should have had, so a fallback
+     *  (or a build from before #792) is visible rather than silently fine. */
+    fun address(app: Fleet.App, port: Int): String {
+        val assigned = AppDebugServer.portOf(app.pkg)
+        return "http://127.0.0.1:$port" + when {
+            assigned == null -> " (no assigned port)"
+            assigned != port -> " (assigned :$assigned — not bound there)"
+            else -> ""
+        }
+    }
+
+    const val TAG_ENDPOINTS = "store-mesh-endpoints:"
+
+    /** #792 "▸ N endpoints": tap to unfold the member's own /api/docs, one line each. */
+    private fun endpointsToggle(ctx: Context, app: Fleet.App, docs: String, port: Int): View {
+        val body = AppsMesh.endpoints(docs, port)
+        val n = AppsMesh.endpointCount(docs)
+        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; tag = TAG_ENDPOINTS + app.id }
+        val list = text(ctx, body, 11f, DIM).apply {
+            typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
+        }
+        val head = text(ctx, "▸ $n endpoints", 12f, BLUE).apply {
+            isClickable = true
+            setOnClickListener {
+                val open = list.visibility != View.VISIBLE
+                list.visibility = if (open) View.VISIBLE else View.GONE
+                text = (if (open) "▾ " else "▸ ") + "$n endpoints"
+            }
+        }
+        box.addView(head); box.addView(list)
+        return box
     }
 
     private fun linkRow(

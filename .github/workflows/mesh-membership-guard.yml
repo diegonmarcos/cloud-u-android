@@ -59,3 +59,13 @@ jobs:
       # moves; a libs/*/build.gradle edge change can break it from outside.
       - name: Every mesh-member Cloud-Lib APK links core
         run: bash ab_cloud-libs-shared/lib-apks/test/test-mesh-membership.sh
+
+      # #792: a member that cannot bind a port is a member that serves nothing.
+      # Each fleet package owns one port in libs/devtools/debug-ports.json; the
+      # roster edit that adds a package without one is caught here, on push,
+      # not as a NO_DEBUG_API row on the phone. Tester first, as above.
+      - name: The debug-ports guard still fails on each rule
+        run: bash 1_cicd/src/scripts/test/debug-ports-guard.test.sh
+
+      - name: Every fleet package owns a unique debug port, with headroom
+        run: python3 1_cicd/src/scripts/cloud-android-debug-ports-guard.py .

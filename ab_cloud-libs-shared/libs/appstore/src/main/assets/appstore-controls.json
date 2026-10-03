@@ -44,10 +44,11 @@
       { "id": "details", "label": "Details" },
       { "id": "store",   "label": "Store row" }
     ],
-    "tools": { "reprobe": "Re-probe", "export": "Export", "copy": "Copy all", "close": "Close" },
+    "tools": { "reprobe": "Re-probe", "export": "Export", "copy": "Copy all", "endpoints": "Export endpoints", "close": "Close" },
+    "exposure": "Every member's debug API binds 127.0.0.1 on its own port (libs:devtools debug-ports.json) and wants the fleet Bearer token on everything but /api/system/ping. It is NOT served on this phone's mesh address ({mesh}): from the mesh, ssh to the phone and curl the loopback address there.",
     "gaps": {
       "NO_PROVIDER":   { "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it", "fix": "link libs:core (it carries libs:devtools) into {repo}/build.json modules and rebuild" },
-      "NO_DEBUG_API":  { "label": "no debug API answered on 127.0.0.1:38090-38139", "fix": "provider present but the server never answered after a wake: open the app once (a force-stopped app stays stopped), then Re-probe" },
+      "NO_DEBUG_API":  { "label": "no debug API answered on 127.0.0.1 — not on its assigned port, nor anywhere in the fleet's debug range", "fix": "provider present but the server never answered after a wake: open the app once (a force-stopped app stays stopped), then Re-probe" },
       "NO_PERMISSION": { "label": "CONSTELLATION_DATA not held", "fix": "link libs:core into {repo} (core declares and requests the permission); if it already links it, reinstall from our release — a signature permission is granted only to the fleet key" },
       "PEER_BLIND":    { "label": "cannot see the whole mesh ({seen} of {total}; missing {missing})", "fix": "rebuild {repo} on libs:devtools from #733 — its manifest now queries every mesh member" },
       "ENGINE_BROKEN": { "label": "engine contract not reachable", "fix": "{fix}" }
