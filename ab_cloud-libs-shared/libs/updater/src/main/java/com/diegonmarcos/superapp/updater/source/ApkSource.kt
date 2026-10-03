@@ -204,3 +204,111 @@ internal object GhcrSource : ApkSource {
         return verified
     }
 }
+
+/**
+ * #837 THE MESH MIRROR — the leg that needs no public DNS.
+ *
+ * #831: the phone could not resolve github.com or ghcr.io, so both legs above
+ * failed and the Store had nothing left to try. The fleet's git-proxy-api now
+ * streams the very same release asset (and its sidecars) from GitHub
+ * server-side, reachable on the mesh-private name the fleet declares for it
+ * (cloud-u-containers infra-api_git-proxy-api build.json: dns
+ * git-proxy-api.app, ports.app 8123). A direct wg0 dial needs no credential
+ * there — which is the point: the Store's downloader has none.
+ *
+ * Tried LAST: the public legs are the canonical path and this one exists for
+ * when they are unreachable. The sha256 sidecar is REQUIRED here, never the
+ * size fallback ReleaseSource keeps for old ships — a second channel must not
+ * be a weaker one, and the digest comes from the mirror itself so it is
+ * readable exactly when this leg is the only one that works.
+ */
+// The mechanism is public (like Download, #571) so the SuperApp's tests can
+// drive it; the ApkSource entry below stays internal like its siblings.
+object MeshMirror {
+
+    /** host:port of git-proxy-api on the mesh (its build.json dns + ports.app). */
+    const val BASE = "http://git-proxy-api.app:8123"
+
+    /** The mirror origin in use; [BASE] in production, a local stub in tests. */
+    @Volatile var base: String = BASE
+
+    private val RELEASE_DOWNLOAD =
+        Regex("^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/?#]+)$")
+
+    /**
+     * The mirror URL for a GitHub release-download URL, or null when the URL is
+     * not one (then this leg does not apply). Pure, so the mapping is pinned by
+     * a test rather than discovered on a phone.
+     */
+    fun urlFor(releaseUrl: String, base: String = BASE): String? {
+        val m = RELEASE_DOWNLOAD.matchEntire(releaseUrl.trim()) ?: return null
+        val (owner, repo, tag, asset) = m.destructured
+        return "${base.trimEnd('/')}/releases/$owner/$repo/$tag/assets/$asset"
+    }
+
+    /** Either a bare digest or the sha256sum(1) form "<hex>  <filename>". */
+    fun parseSha256(body: String?): String? =
+        body?.trim()?.substringBefore(' ')?.trim()?.lowercase()
+            ?.takeIf { s -> s.length == 64 && s.all { it in '0'..'9' || it in 'a'..'f' } }
+
+    /** The sidecar from the mirror. Throws, classified, when it cannot be read. */
+    fun sha256At(assetUrl: String): String {
+        val sidecar = "$assetUrl.sha256"
+        val c = try {
+            (java.net.URL(sidecar).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+            }
+        } catch (t: Throwable) { throw java.io.IOException("mesh sidecar: ${t.message}", t) }
+        try {
+            val code = try { c.responseCode } catch (u: java.net.UnknownHostException) {
+                throw DownloadFailure.Unresolvable(java.net.URL(sidecar).host, u)
+            }
+            if (code !in 200..299) {
+                val err = runCatching { c.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
+                throw DownloadFailure.HttpStatus(code, sidecar, err)
+            }
+            val body = c.inputStream.bufferedReader().use { it.readText() }
+            return parseSha256(body) ?: error("mesh sidecar $sidecar is not a sha256 digest")
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /** The leg itself; [MeshMirrorSource] is only its place in Fleet's list. */
+    fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? {
+        if (app.releaseUrl.isBlank()) return null
+        val url = urlFor(app.abiReleaseUrl, base) ?: return null
+        // Digest FIRST: without it the bytes could not be trusted, so they are
+        // not worth fetching.
+        val sha = sha256At(url)
+        val target = ApkCache.file(ctx, "fleet-${app.id}-mesh.apk")
+        UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, -1L))
+        try {
+            Download.toFile(
+                url = url,
+                target = target,
+                shouldCancel = { UpdateProgress.cancelRequested },
+            ) { written, total ->
+                val pct = if (total > 0) ((written * 100) / total).toInt().coerceIn(0, 100) else 0
+                UpdateProgress.update(UpdateProgress.State.Downloading(pct, written, total))
+            }
+        } catch (c: java.util.concurrent.CancellationException) {
+            throw c
+        } catch (t: Throwable) {
+            if (DownloadFailure.isFinal(t)) throw t
+            val kept = File(target.parentFile, target.name + ".part").length()
+            throw java.io.IOException(
+                "${t.message ?: t.javaClass.simpleName} (kept $kept B on disk for resume)", t)
+        }
+        return VerifiedApk.byDigest(target, sha) ?: run {
+            ApkCache.drop(target)
+            error("mesh mirror asset failed verification (${target.length()} B, sha256 $sha)")
+        }
+    }
+}
+
+internal object MeshMirrorSource : ApkSource {
+    override val name = "mesh"
+    override fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? = MeshMirror.fetch(ctx, app)
+}

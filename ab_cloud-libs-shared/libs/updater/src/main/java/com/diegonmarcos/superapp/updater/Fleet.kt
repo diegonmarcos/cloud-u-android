@@ -11,6 +11,7 @@ import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.ApkSource
 import com.diegonmarcos.superapp.updater.source.GhcrClient
 import com.diegonmarcos.superapp.updater.source.GhcrSource
+import com.diegonmarcos.superapp.updater.source.MeshMirrorSource
 import com.diegonmarcos.superapp.updater.source.ReleaseSource
 import android.app.PendingIntent
 import android.content.Context
@@ -488,11 +489,11 @@ object Fleet {
      * installs afterwards: an install prompt blocks on the user, so
      * interleaving made every tap wait on the next app's network fetch.
      */
-    private val sources: List<ApkSource> = listOf(ReleaseSource, GhcrSource)
+    private val sources: List<ApkSource> = listOf(ReleaseSource, GhcrSource, MeshMirrorSource)
 
-    /** #831 the legs in the order they are tried, by name. No third leg yet:
-     *  the fleet has no mesh-reachable mirror of release assets or GHCR blobs
-     *  (git-proxy-api serves repo listings and tarballs only). */
+    /** #831 the legs in the order they are tried, by name. #837 the third is
+     *  the mesh mirror (git-proxy-api's release-asset route on the wg0-private
+     *  name), for when github.com / ghcr.io do not resolve. */
     val sourceOrder: List<String> get() = sources.map { it.name }
 
     /**
