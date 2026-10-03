@@ -231,14 +231,15 @@
     },
     {
       "id": "fleet-config manifest (one app's store)",
+      "_doc": "#855 the manifest moved from the SuperApp's assets into libs:fleetconfig-model, so the engine that applies it ships it too: the SuperApp per push plus Cloud-Lib-Fleetconfig, still 0 at refresh.",
       "files": [
-        "aa_cloud-superapp/app/src/main/assets/fleet-config.json"
+        "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
       ],
       "expect": {
         "apps": 1,
-        "libs": 0,
+        "libs": 1,
         "rootfs": 0,
-        "ship": 1,
+        "ship": 2,
         "refresh": 0
       }
     },

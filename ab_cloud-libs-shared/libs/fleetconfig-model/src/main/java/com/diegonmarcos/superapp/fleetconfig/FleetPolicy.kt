@@ -21,6 +21,9 @@ import org.json.JSONObject
  *     {"contract": 2, "app": "calc", "schema_version": 1,
  *      "stores": {"<file>": {"<key>": <value>, …, "_types": {"<key>": "i|l|f"}}}}
  *
+ * #855 the manifest itself (assets/fleet-config.json) lives in this module, so it is merged into the
+ * two APKs that apply it: the SuperApp and Cloud-Lib-Fleetconfig.
+ *
  * test: aa_cloud-superapp FleetConfigTest (export → clean profile → import, field by field).
  */
 object FleetPolicy {
@@ -217,7 +220,7 @@ object FleetPolicy {
 
     @Volatile private var cached: Manifest? = null
 
-    /** The manifest this APK carries in its own assets (the SuperApp), or null when the build
+    /** The manifest this APK carries in its own assets (this module's, merged into the SuperApp and the engine), or null when the build
      *  carries none. A manifest that is present but malformed still throws: that is a broken
      *  build, not an absent declaration. */
     fun manifestOrNull(ctx: Context): Manifest? = cached ?: synchronized(this) {
