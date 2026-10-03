@@ -208,6 +208,7 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     // The fleet's bottom-nav island; this app supplies its own entries from ui.tabs.
     implementation project(':libs:bottomnav')
     // The Clock section's rules (#768): plain JVM, mutation-tested on its own (clock/build.gradle).
