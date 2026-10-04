@@ -22,7 +22,10 @@ import org.json.JSONObject
 object StoreInstallWatch {
     private const val TAG = "StoreInstallWatch"
     const val ASSET = "appstore-install-watch.json"
-    private const val PREFS = "store_install_watch"
+    // StoreAuto's declared store (fleet-config.json `store_auto`, device
+    // state), under its own key prefix: a handover is device state too.
+    private const val PREFS = "store_auto"
+    private const val PREFIX = "watch:"
 
     const val LANDED = "landed"
     const val RETRY = "retry"
@@ -30,6 +33,10 @@ object StoreInstallWatch {
 
     const val MSG_RETRY = "the install prompt was dismissed, aborted or not answered — Retry installs " +
         "the downloaded APK again"
+
+    /** A session may not be listed for a moment after handover (or a channel
+     *  may not use one at all): "gone" counts only after this long. */
+    const val SETTLE_MS = 10_000L
 
     class Decl(val timeoutMs: Long, val graceMs: Long, val retryLabel: String)
     val DEFAULT = Decl(180_000L, 20_000L, "Retry")
@@ -49,10 +56,11 @@ object StoreInstallWatch {
      * reported a failure (ABORTED included) for this package; [sessionAlive] =
      * our PackageInstaller session for it still exists.
      */
-    fun decide(p: Pending, now: Long, installed: String, failed: Boolean, sessionAlive: Boolean, timeoutMs: Long): String =
+    fun decide(p: Pending, now: Long, installed: String, failed: Boolean, sessionAlive: Boolean, timeoutMs: Long,
+               settleMs: Long = SETTLE_MS): String =
         when {
             installed != p.before -> LANDED
-            failed || !sessionAlive -> RETRY
+            failed || (!sessionAlive && now - p.since >= settleMs) -> RETRY
             now - p.since >= timeoutMs -> RETRY
             else -> WAITING
         }
@@ -60,15 +68,15 @@ object StoreInstallWatch {
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun record(ctx: Context, pkg: String, before: String, now: Long = System.currentTimeMillis()) {
-        prefs(ctx).edit().putString(pkg, JSONObject().put("since", now).put("before", before).toString()).commit()
+        prefs(ctx).edit().putString(PREFIX + pkg, JSONObject().put("since", now).put("before", before).toString()).commit()
     }
 
     fun pending(ctx: Context, pkg: String): Pending? = runCatching {
-        val o = JSONObject(prefs(ctx).getString(pkg, null)!!)
+        val o = JSONObject(prefs(ctx).getString(PREFIX + pkg, null)!!)
         Pending(pkg, o.getLong("since"), o.getString("before"))
     }.getOrNull()
 
-    fun forget(ctx: Context, pkg: String) { prefs(ctx).edit().remove(pkg).commit() }
+    fun forget(ctx: Context, pkg: String) { prefs(ctx).edit().remove(PREFIX + pkg).commit() }
 
     private fun sessionAlive(ctx: Context, pkg: String): Boolean = runCatching {
         ctx.packageManager.packageInstaller.mySessions.any { it.appPackageName == pkg }
@@ -90,7 +98,9 @@ object StoreInstallWatch {
             LANDED -> forget(ctx, app.pkg)
             RETRY -> {
                 forget(ctx, app.pkg)
-                ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, MSG_RETRY)
+                // The installer's own reason (ABORTED: "User rejected") wins.
+                if (ApkCache.noteOf(ctx, app.pkg) == null)
+                    ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, MSG_RETRY)
                 val st = UpdateProgress.state
                 if (st is UpdateProgress.State.Installing || st is UpdateProgress.State.Waiting)
                     UpdateProgress.update(UpdateProgress.State.Failed(MSG_RETRY, appId = app.id, pkg = app.pkg))

@@ -50,17 +50,18 @@ for line in m.group(1).strip().splitlines():
         cond = cond.replace("||", " or ").replace("&&", " and ").replace("p.", "p_")
         cond = re.sub(r"!(?!=)", " not ", cond)
     arms.append((cond, res))
-def decide(p_before, p_since, now, installed, failed, sessionAlive, timeoutMs):
+def decide(p_before, p_since, now, installed, failed, sessionAlive, timeoutMs, settleMs=10000):
     for c, r in arms:
         if c == "else" or eval(c): return r
 T = 180000
 cases = {
   "aborted":   decide("1/1", 0, 1000, "1/1", True,  False, T) == "RETRY",
   "dismissed": decide("1/1", 0, 1000, "1/1", True,  True,  T) == "RETRY",
-  "abandoned": decide("1/1", 0, 1000, "1/1", False, False, T) == "RETRY",
+  "abandoned": decide("1/1", 0, 15000, "1/1", False, False, T) == "RETRY",
+  "settling":  decide("1/1", 0, 1000, "1/1", False, False, T) == "WAITING",
   "timeout":   decide("1/1", 0, T + 1, "1/1", False, True, T) == "RETRY",
   "waiting":   decide("1/1", 0, 1000, "1/1", False, True,  T) == "WAITING",
-  "landed":    decide("1/1", 0, 1000, "2/9", False, False, T) == "LANDED",
+  "landed":    decide("1/1", 0, 15000, "2/9", False, False, T) == "LANDED",
 }
 print(" ".join(k for k, v in cases.items() if not v) or "ALL_OK")
 ' 2>&1)"
