@@ -1099,8 +1099,7 @@ class StoreCloudFragment : Fragment() {
     private fun stop(ctx: Context, app: Fleet.App) {
         val pkg = Fleet.installedId(ctx, app)
             ?: return Toast.makeText(ctx, "${app.label}: not installed — nothing to stop", Toast.LENGTH_SHORT).show()
-        if (pkg == ctx.packageName)
-            return Toast.makeText(ctx, getString(R.string.store_phone_why_self), Toast.LENGTH_LONG).show()
+        if (SelfStop.isSelf(ctx, pkg)) return SelfStop.stop(ctx, activity)
         thread(name = "fleet-stop-${app.id}") {
             val out = PhoneAppActions.forceStop(ctx, pkg)
             view?.post {

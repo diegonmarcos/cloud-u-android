@@ -823,7 +823,7 @@ object AppsMesh {
             }
             "stop" -> {
                 pkg ?: return toast(ctx, "${app.label}: not installed")
-                if (pkg == ctx.packageName) return toast(ctx, ctx.getString(R.string.store_phone_why_self))
+                if (SelfStop.isSelf(ctx, pkg)) return SelfStop.stop(ctx, host.activity)
                 thread(name = "apps-mesh-stop") {
                     val out = PhoneAppActions.forceStop(appCtx, pkg)
                     ui {

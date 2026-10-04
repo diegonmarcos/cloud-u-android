@@ -23,7 +23,7 @@
     <string name="store_phone_why_unpublished">Not published in the Cloud fleet yet, so there is nothing to update to.</string>
     <string name="store_phone_why_no_launcher">This app has no launcher screen to open.</string>
     <string name="store_phone_why_no_shell">Force-stop needs the embedded adb channel. Pair Wireless Debugging (Store ▸ Cloud header) or use App info ▸ Force stop.</string>
-    <string name="store_phone_why_self">Stopping SuperApp would close this store.</string>
+    <string name="store_self_stop_install_notice">An install is in progress; it resumes when SuperApp opens again. Stopping…</string>
     <string name="store_fleet_stop_no_channel">Stop force-stops the app through the privileged shell channel (embedded adb, local shell or Shizuku), and none is connected right now. Pair Wireless Debugging from the Store header to arm it, or open App settings — Android\'s own Force stop is there.</string>
     <string name="store_fleet_not_installed">%1$s is not installed, so Android has no settings page for it yet.</string>
     <string name="store_phone_why_system">A system app cannot be removed, only disabled from App info.</string>

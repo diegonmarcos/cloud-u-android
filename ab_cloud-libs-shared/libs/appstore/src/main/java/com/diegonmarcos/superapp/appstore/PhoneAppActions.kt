@@ -107,7 +107,7 @@ object PhoneAppActions {
         out += Action(Kind.OPEN, s(R.string.store_phone_open), launch,
             if (launch == null) s(R.string.store_phone_why_no_launcher) else null)
         out += Action(Kind.STOP, s(R.string.store_phone_stop), null, when {
-            pkg == ctx.packageName -> s(R.string.store_phone_why_self)
+            SelfStop.isSelf(ctx, pkg) -> null
             !shellReady -> s(R.string.store_phone_why_no_shell)
             else -> null
         })

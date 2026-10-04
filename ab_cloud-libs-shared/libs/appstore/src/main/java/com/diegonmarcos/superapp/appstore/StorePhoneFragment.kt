@@ -573,7 +573,7 @@ class StorePhoneFragment : Fragment() {
                     view?.post { if (isAdded) reload() }
                 }
             }
-            PhoneAppActions.Kind.STOP -> thread(name = "store-phone-stop") {
+            PhoneAppActions.Kind.STOP -> if (SelfStop.isSelf(ctx, r.pkg)) SelfStop.stop(ctx, activity) else thread(name = "store-phone-stop") {
                 val out = PhoneAppActions.forceStop(ctx, r.pkg)
                 toastLater(ctx, if (out?.contains("OK") == true) ctx.getString(R.string.store_phone_stopped, r.label)
                                 else ctx.getString(R.string.store_phone_failed, r.label, out?.trim() ?: ctx.getString(R.string.store_phone_why_no_shell)))
