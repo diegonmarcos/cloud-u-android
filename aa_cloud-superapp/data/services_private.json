@@ -280,6 +280,16 @@
     "db_engine": null
   },
   {
+    "name": "disk-janitor",
+    "service": "disk-janitor",
+    "vm": "oci-A1-f_0",
+    "private_dns": "disk-janitor",
+    "port": null,
+    "protocol": "none",
+    "category": "tools",
+    "db_engine": null
+  },
+  {
     "name": "authelia-redis",
     "service": "authelia",
     "vm": "gcp-E2-f_0",
@@ -525,56 +535,6 @@
     "vm": "oci-A1-f_0",
     "private_dns": "hedgedoc-db.app:5439",
     "port": 5439,
-    "protocol": "tcp",
-    "category": "app",
-    "db_engine": "postgres"
-  },
-  {
-    "name": "paca-api",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "private_dns": "paca-api.app:8080",
-    "port": 8080,
-    "protocol": "http",
-    "category": "app",
-    "db_engine": null
-  },
-  {
-    "name": "paca-web",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "private_dns": "paca-web.app",
-    "port": null,
-    "protocol": "http",
-    "category": "app",
-    "db_engine": null
-  },
-  {
-    "name": "paca-realtime",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "private_dns": "paca-realtime.app:3001",
-    "port": 3001,
-    "protocol": "http",
-    "category": "app",
-    "db_engine": null
-  },
-  {
-    "name": "paca-valkey",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "private_dns": "paca-valkey.app:6379",
-    "port": 6379,
-    "protocol": "tcp",
-    "category": "app",
-    "db_engine": null
-  },
-  {
-    "name": "paca-postgres",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "private_dns": "paca-postgres.app:5432",
-    "port": 5432,
     "protocol": "tcp",
     "category": "app",
     "db_engine": "postgres"

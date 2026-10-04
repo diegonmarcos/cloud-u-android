@@ -410,16 +410,6 @@
     "category": "app"
   },
   {
-    "name": "paca-gateway",
-    "service": "paca",
-    "vm": "oci-A1-f_0",
-    "public_url": "paca.diegonmarcos.com",
-    "auth": "two_factor",
-    "private_dns": "paca.app:8095",
-    "port": 8095,
-    "category": "app"
-  },
-  {
     "name": "send_app",
     "service": "send",
     "vm": "oci-A1-f_0",
