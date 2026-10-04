@@ -157,6 +157,12 @@ object StoreAuto {
 
     private val running = AtomicBoolean(false)
     @Volatile private var live: State? = null
+
+    /** #857 the phase of the running chain, else of the persisted one. */
+    fun phaseNow(ctx: Context): String? = (live ?: load(ctx))?.phase
+
+    /** #857 a chain is running in this process right now. */
+    fun isRunning(): Boolean = running.get()
     @Volatile private var scanned = 0
     @Volatile private var scanTotal = 0
 

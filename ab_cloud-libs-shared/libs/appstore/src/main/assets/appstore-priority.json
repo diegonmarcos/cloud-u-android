@@ -1,0 +1,11 @@
+{
+  "_doc": "#857 THE ORDER OF STORE WORK, declared. When Auto-update is ON and the active network is unmetered (Wi-Fi, or a VPN riding Wi-Fi), pending updates outrank everything else the Store does: the auto chain (StoreAuto) refreshes the queue and downloads every pending update FIRST, and only once its download phase is over does the Store page run the work listed in `after` (catalogue refresh = the per-row status check, then row icons and detail fetches it feeds). Any other combination (auto-update OFF, or metered) keeps the normal order: the page refreshes immediately. StorePriority reads this file; nothing in Kotlin names the rank or the gate. `max_wait_s` bounds how long the page waits for the download phase before refreshing anyway, so a stuck download never leaves the page blank.",
+  "updates_first": {
+    "enabled": true,
+    "priority": "highest",
+    "when": { "auto_update": true, "network": "unmetered" },
+    "first": "download_all_updates",
+    "after": ["catalogue_refresh", "icons", "details"],
+    "max_wait_s": 900
+  }
+}

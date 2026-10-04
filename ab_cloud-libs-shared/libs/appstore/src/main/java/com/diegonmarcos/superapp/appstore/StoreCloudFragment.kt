@@ -553,7 +553,10 @@ class StoreCloudFragment : Fragment() {
         listHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         body.addView(listHost)
         renderList(ctx, list)
-        checkAll(ctx, list)
+        // #857 Wi-Fi + Auto-update: every pending update is queued and
+        // downloaded first (appstore-priority.json); the catalogue refresh
+        // waits for that. Otherwise it runs now, as before.
+        StorePriority.runUpdatesFirst(ctx, fleet) { body.post { if (isAdded) checkAll(ctx, list) } }
     }
 
     /** Filter chips. With two dozen libs the answer to "too much scrolling" is
