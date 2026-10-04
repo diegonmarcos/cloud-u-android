@@ -402,10 +402,14 @@ final class TermuxInstaller {
                     showLibMissingDialog(activity, whenDone, e.getMessage());
 
                 } catch (final BootstrapFailure e) {
-                    showBootstrapErrorDialog(activity, whenDone, e.getMessage());
+                    showBootstrapErrorDialog(activity, whenDone, BootstrapStaging.bound(e.getMessage()));
 
-                } catch (final Exception e) {
-                    showBootstrapErrorDialog(activity, whenDone, Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)));
+                } catch (final Throwable e) {
+                    // #863: a capped trace, and the markdown itself capped, so reporting a failure cannot OOM.
+                    String markdown;
+                    try { markdown = BootstrapStaging.bound(Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e))); }
+                    catch (OutOfMemoryError oom) { markdown = String.valueOf(e); }
+                    showBootstrapErrorDialog(activity, whenDone, markdown);
 
                 } finally {
                     activity.runOnUiThread(() -> {
@@ -422,6 +426,9 @@ final class TermuxInstaller {
 
     /** #747: held by every bootstrap install, the activity's and the debug API's alike, so two can never extract into one $PREFIX. */
     private static final Object INSTALL_LOCK = new Object();
+
+    /** #863 where the previous $PREFIX is parked during the staging -> usr swap. */
+    private static final File PREFIX_OLD_DIR = new File(TERMUX_FILES_DIR_PATH, "usr-old");
 
     /** A bootstrap step that failed for a stated reason; the message is the markdown the error dialog shows. */
     static final class BootstrapFailure extends Exception {
@@ -458,30 +465,33 @@ final class TermuxInstaller {
     private static void installBootstrap(Context context, LibBootstrapManifest libManifest) throws Exception {
         Logger.logInfo(LOG_TAG, "Installing " + TermuxConstants.TERMUX_APP_NAME + " bootstrap packages.");
 
+        // #863: everything is extracted into a staging dir wiped clean first; $PREFIX is
+        // only replaced by the final swap, and a failure wipes staging again, so any
+        // interrupted or failed attempt leaves a state the next one can simply redo.
+        try {
+            extractAndSwap(context, libManifest);
+        } catch (Throwable t) {
+            try { BootstrapStaging.wipe(TERMUX_STAGING_PREFIX_DIR.toPath()); }
+            catch (Throwable w) { Logger.logWarn(LOG_TAG, "Could not wipe staging after a failed extract: " + w); }
+            throw t;
+        }
+    }
+
+    private static void extractAndSwap(Context context, LibBootstrapManifest libManifest) throws Exception {
         Error error;
 
-        // Delete prefix staging directory or any file at its destination
-        error = FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
-        if (error != null) {
-            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
-        }
-
-        // Delete prefix directory or any file at its destination
-        error = FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
-        if (error != null) {
-            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+        // #863 wipe the staging dir completely (read-only Nix dirs too) and any leftover usr-old
+        try {
+            BootstrapStaging.wipe(TERMUX_STAGING_PREFIX_DIR.toPath());
+            BootstrapStaging.wipe(PREFIX_OLD_DIR.toPath());
+        } catch (IOException e) {
+            throw new BootstrapFailure(BootstrapStaging.bound("Could not wipe the bootstrap staging directory: " + e));
         }
 
         // Create prefix staging directory if it does not already exist and set required permissions
         error = TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);
         if (error != null) {
-            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
-        }
-
-        // Create prefix directory if it does not already exist and set required permissions
-        error = TermuxFileUtils.isTermuxPrefixDirectoryAccessible(true, true);
-        if (error != null) {
-            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+            throw new BootstrapFailure(BootstrapStaging.bound(Error.getErrorMarkdownString(error)));
         }
 
         // #628 -- the zip is extracted (once) out of the installed
@@ -514,7 +524,7 @@ final class TermuxInstaller {
 
                         error = ensureDirectoryExists(new File(newPath).getParentFile());
                         if (error != null) {
-                            throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+                            throw new BootstrapFailure(BootstrapStaging.bound(Error.getErrorMarkdownString(error)));
                         }
                     }
                 } else if (zipEntry.getName().equals("EXECUTABLES.txt")) {
@@ -530,7 +540,7 @@ final class TermuxInstaller {
 
                     error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
                     if (error != null) {
-                        throw new BootstrapFailure(Error.getErrorMarkdownString(error));
+                        throw new BootstrapFailure(BootstrapStaging.bound(Error.getErrorMarkdownString(error)));
                     }
 
                     if (!isDirectory) {
@@ -565,14 +575,14 @@ final class TermuxInstaller {
         if (symlinks.isEmpty())
             throw new RuntimeException("No SYMLINKS.txt encountered");
         for (Pair<String, String> symlink : symlinks) {
-            Os.symlink(symlink.first, symlink.second);
+            // #863: idempotent -- a same link is kept, anything else at the path replaced (was Os.symlink: EEXIST)
+            BootstrapStaging.placeSymlink(symlink.first, new File(symlink.second).toPath());
         }
 
         Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");
 
-        if (!TERMUX_STAGING_PREFIX_DIR.renameTo(TERMUX_PREFIX_DIR)) {
-            throw new RuntimeException("Moving termux prefix staging to prefix directory failed");
-        }
+        // #863: rename-based swap; the old $PREFIX stays until the new one is fully in place
+        BootstrapStaging.swap(TERMUX_STAGING_PREFIX_DIR.toPath(), TERMUX_PREFIX_DIR.toPath(), PREFIX_OLD_DIR.toPath());
 
         Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
 
