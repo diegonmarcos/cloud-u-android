@@ -42,6 +42,9 @@ in
     unpackPhase = "tar -xzf $src";
     nativeBuildInputs = [ pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+    # #846 upstream ships it unstripped and stdenv's default strip is debug-only (-S):
+    # strip ALL symbols, ~47 MB unpacked / ~7.8 MB of the zip per ABI. Backtraces lose names.
+    stripAllList = [ "bin" ];
     installPhase = ''
       install -Dm755 ${lib.optionalString (goose ? extracted_dir) (fill goose.extracted_dir + "/")}${goose.extracted_bin} $out/bin/goose
     '';
