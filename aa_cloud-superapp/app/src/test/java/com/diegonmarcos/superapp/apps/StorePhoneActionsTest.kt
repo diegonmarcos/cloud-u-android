@@ -155,8 +155,10 @@ class StorePhoneActionsTest {
         val unpaired = actions(pkg, shellReady = false).of(Kind.STOP)!!
         assertNotNull("Stop without a shell channel must say why", unpaired.disabledReason)
         assertNull(actions(pkg, shellReady = true).of(Kind.STOP)!!.disabledReason)
-        assertNotNull("Stop on SuperApp itself would kill the store",
-            PhoneAppActions.of(ctx, ctx.packageName, null, true, sources).of(Kind.STOP)!!.disabledReason)
+        // #859 Stop on SuperApp itself is live, even with no shell channel:
+        // SelfStop ends its own tasks and process, no shell needed.
+        assertNull("Stop on SuperApp itself must not be refused",
+            PhoneAppActions.of(ctx, ctx.packageName, null, false, sources).of(Kind.STOP)!!.disabledReason)
     }
 
     @Test
