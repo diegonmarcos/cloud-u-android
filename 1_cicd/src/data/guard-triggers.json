@@ -15,7 +15,8 @@
     "one-pdf-engine-guard.yml": "scans every app and lib for an in-process PDF renderer (26k files traced)",
     "sync-submodules.yml": "keeps submodule pointers current; it is not a guard over any path",
     "update-ack-guard.yml": "scans every app's update routes (10k files traced)",
-    "licence-inventory-guard.yml": "#805: the subjects it must catch are a new top-level directory, binary or vendored LICENSE anywhere in the tree; a filter would be 'everything'"
+    "licence-inventory-guard.yml": "#805: the subjects it must catch are a new top-level directory, binary or vendored LICENSE anywhere in the tree; a filter would be 'everything'",
+    "commit-msg-guard.yml": "#670: checks commit messages, which every push carries whatever paths it touches"
   },
   "filtered": {
     "analytics-retry-guard.yml": {

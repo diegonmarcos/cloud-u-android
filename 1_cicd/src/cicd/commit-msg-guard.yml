@@ -1,0 +1,64 @@
+name: "commit-message guard — a published commit carries a task brief, never the owner's words"
+
+# #670. This repository is public. Commit messages carried the owner's own
+# words, quoted, into public history. The standing rule: a commit message is an
+# INTERPRETED task brief in neutral engineering prose; the owner may be
+# paraphrased in the third person, never quoted.
+#
+# The guard fails a message containing profanity, '!!!' or '???', an all-caps
+# run ending in '!'/'?' or inside quotation marks, a column-0 '> ' blockquote,
+# or 'verbatim:' followed by quoted text. It scans EVERY commit the push or
+# pull request introduces, not only the tip: a stacked push would otherwise
+# carry one through under a clean last commit.
+#
+# Only new commits are checked. Rewriting the existing history is the owner's
+# decision (ruleset main-no-rewrite), tracked in #670, and is not done here.
+#
+# The tester runs first and plants each shape; a guard never seen failing is
+# worth nothing.
+#
+# NO PATH FILTER: what this checks is the commit message, which any push to any
+# path carries.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  commit-msg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: The guard still fails on every shape it claims to catch
+        run: bash 1_cicd/src/scripts/test/commit-msg-guard.test.sh
+
+      - name: No commit in this push or pull request quotes the owner
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = pull_request ]; then
+            range="$PR_BASE..$PR_HEAD"
+          elif [ "$EVENT" = push ] && [ -n "${BEFORE:-}" ] \
+               && ! [[ "$BEFORE" =~ ^0+$ ]] \
+               && git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
+               && git merge-base --is-ancestor "$BEFORE" "$AFTER"; then
+            range="$BEFORE..$AFTER"
+          else
+            # New branch, forced update or manual run: check the tip commit.
+            range="$AFTER~1..$AFTER"
+          fi
+          echo "checking $range"
+          python3 1_cicd/src/scripts/cloud-android-commit-msg-guard.py --range "$range"
