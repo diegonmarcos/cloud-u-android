@@ -21,9 +21,15 @@ into the zip would pass all of them and die on the phone at exit 127 -- the
     only thing TermuxInstaller chmods for store paths), and its ELF
     interpreter / shebang interpreter must pass the same check.
 
-Not checked: DT_NEEDED libraries (nix's closure is complete by construction;
-the ceiling is a hand-deleted .so), and anything under $HOME, which the
-login creates at run time.
+#846 -- and the LINKAGE of every ELF the zip ships under nix/store: its
+PT_INTERP and each DT_NEEDED must resolve the way glibc's loader resolves them
+(sonames already loaded, then DT_RPATH / DT_RUNPATH with $ORIGIN, then the
+loader's own lib dir), to a file in the zip. nix's closure is complete by
+construction, but the bake now CUTS outputs (-doc/-man/-dev) the closure drags
+in by reference; this is what proves the cut took no library a binary loads.
+Every shebang script in EXECUTABLES.txt under nix/store whose interpreter is
+a /nix/store path must also find it in the zip. Not checked: dlopen() by computed name, and
+anything under $HOME, which the login creates at run time.
 
 Pure functions over a Rootfs, so test/test-login-closure.sh drives every
 verdict with synthetic zips and no network.
@@ -207,6 +213,160 @@ def runnable(ns: Namespace, rel, why, problems, seen):
         runnable(ns, target, f"{why} -> interpreter {interp}", problems, seen)
 
 
+PT_LOAD, PT_DYNAMIC = 1, 2
+DT_NEEDED, DT_STRTAB, DT_SONAME, DT_RPATH, DT_RUNPATH = 1, 5, 14, 15, 29
+
+
+def elf_linkage(data: bytes):
+    """(interp, needed, rpath, runpath) of a whole ELF image; None if not a parseable ELF."""
+    if data[:4] != b"\x7fELF" or len(data) < 64:
+        return None
+    end = "<" if data[5] == 1 else ">"
+    wide = data[4] == 2
+    try:
+        if wide:
+            phoff = struct.unpack_from(end + "Q", data, 0x20)[0]
+            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x36)
+            ph_fmt = end + "IIQQQQQQ"  # type flags offset vaddr paddr filesz memsz align
+            dyn_fmt, dyn_size = end + "qQ", 16
+        else:
+            phoff = struct.unpack_from(end + "I", data, 0x1C)[0]
+            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x2A)
+            ph_fmt = end + "IIIIIIII"  # type offset vaddr paddr filesz memsz flags align
+            dyn_fmt, dyn_size = end + "iI", 8
+        loads, interp, dynamic = [], None, None
+        for i in range(phnum):
+            f = struct.unpack_from(ph_fmt, data, phoff + i * phentsize)
+            if wide:
+                p_type, p_offset, p_vaddr, p_filesz = f[0], f[2], f[3], f[5]
+            else:
+                p_type, p_offset, p_vaddr, p_filesz = f[0], f[1], f[2], f[4]
+            if p_type == PT_LOAD:
+                loads.append((p_vaddr, p_offset, p_filesz))
+            elif p_type == PT_INTERP:
+                interp = data[p_offset:p_offset + p_filesz].rstrip(b"\0").decode()
+            elif p_type == PT_DYNAMIC:
+                dynamic = (p_offset, p_filesz)
+        if dynamic is None:
+            return interp, [], [], []
+        entries, strtab = [], None
+        for off in range(dynamic[0], dynamic[0] + dynamic[1], dyn_size):
+            tag, val = struct.unpack_from(dyn_fmt, data, off)
+            if tag == 0:
+                break
+            if tag == DT_STRTAB:
+                strtab = val
+            entries.append((tag, val))
+        base = next((o + strtab - v for v, o, n in loads if v <= strtab < v + n), None) \
+            if strtab is not None else None
+        if base is None:
+            return interp, [], [], []
+
+        def string(at):
+            return data[base + at:data.index(b"\0", base + at)].decode()
+
+        pick = lambda t: [string(v) for tag, v in entries if tag == t]
+        split = lambda xs: [d for x in xs for d in x.split(":") if d]
+        return interp, pick(DT_NEEDED), split(pick(DT_RPATH)), split(pick(DT_RUNPATH))
+    except (struct.error, ValueError, UnicodeDecodeError):
+        return None
+
+
+def linkage_problems(ns: Namespace) -> list:
+    """#846 -- every nix/store ELF loads: interpreter and DT_NEEDED resolve in the zip."""
+    fs, problems, info = ns.fs, [], {}
+
+    def guest_of(rel):
+        best = max(((dst, src) for dst, src in ns.binds if rel == src or rel.startswith(src + "/")),
+                   key=lambda b: len(b[1]), default=None)
+        if best is None:
+            return ns.prefix + "/" + rel
+        return posixpath.join(best[0], rel[len(best[1]):].lstrip("/"))
+
+    def link_info(rel):
+        if rel not in info:
+            info[rel] = elf_linkage(fs.zf.read(rel)) if fs.head(rel, 4) == b"\x7fELF" else None
+        return info[rel]
+
+    def find(name, dirs, origin):
+        for d in dirs:
+            d = d.replace("$ORIGIN", origin).replace("${ORIGIN}", origin)
+            try:
+                target = ns.resolve(posixpath.join(d, name))
+            except LookupError:
+                continue
+            if target in fs.files:
+                return target
+        return None
+
+    elves = [r for r in sorted(fs.files) if r.startswith("nix/store/") and fs.head(r, 4) == b"\x7fELF"]
+    loader_dirs = set()
+    for rel in elves:
+        li = link_info(rel)
+        if li and li[0]:
+            try:
+                target = ns.resolve(li[0])
+            except LookupError as e:
+                problems.append(f"linkage: {rel} needs interpreter {li[0]}, which does not resolve ({e})")
+                continue
+            if target is not None:
+                loader_dirs.add(posixpath.dirname(li[0]))
+
+    def load(root):
+        """glibc's breadth-first load of root: [] when every DT_NEEDED is found."""
+        li = link_info(root)
+        defaults = [posixpath.dirname(li[0])] if li[0] else sorted(loader_dirs)
+        loaded, queue, missing = set(), [(root, [])], []
+        while queue:
+            rel, parent_rpath = queue.pop(0)
+            li = link_info(rel)
+            if not li:
+                continue
+            _, needed, rpath, runpath = li
+            origin = posixpath.dirname(guest_of(rel))
+            own = [d.replace("$ORIGIN", origin).replace("${ORIGIN}", origin) for d in rpath]
+            chain = [] if runpath else own + parent_rpath
+            for name in needed:
+                if name in loaded:
+                    continue
+                target = (ns.resolve(name) if name.startswith("/") and ns.rel_of(name) else None) \
+                    if "/" in name else find(name, chain + runpath + defaults, origin)
+                if target is None or target not in fs.files:
+                    missing.append(f"{name} (needed by {rel})")
+                    continue
+                loaded.add(name)
+                queue.append((target, chain))
+        return missing
+
+    for rel in elves:
+        li = link_info(rel)
+        if not li or not li[1]:
+            continue
+        for m in load(rel):
+            problems.append(f"linkage: {rel}: DT_NEEDED {m} resolves to nothing in the zip")
+
+    for rel in sorted(fs.executables):
+        if not rel.startswith("nix/store/") or rel not in fs.files:
+            continue
+        head = fs.head(rel, 256)
+        if head[:2] != b"#!":
+            continue
+        words = head[2:].split(b"\n", 1)[0].split()
+        if not words:
+            continue
+        interp = words[0].decode("utf-8", "replace")
+        if not interp.startswith("/nix/store/"):
+            continue  # a FHS path (/usr/bin/perl in a sample hook): not what a store cut can break
+        try:
+            target = ns.resolve(interp)
+        except LookupError as e:
+            problems.append(f"linkage: {rel} names interpreter {interp}, which does not resolve ({e})")
+            continue
+        if target not in fs.files:
+            problems.append(f"linkage: {rel} names interpreter {interp}, which is not a file")
+    return problems
+
+
 def is_executable_content(ns: Namespace, rel):
     head = ns.fs.head(rel, 4)
     return head[:4] == b"\x7fELF" or head[:2] == b"#!"
@@ -274,7 +434,7 @@ def verify(fs: Rootfs, app_id, profile_link, commands, closure) -> list:
             problems.append(f"PATH command {cmd!r}: {literal} is not a file")
             continue
         runnable(ns, target, f"PATH command {cmd!r}", problems, seen)
-    return problems
+    return problems + linkage_problems(ns)
 
 
 def declared_commands(build_json: str, closure: dict) -> list:
@@ -326,7 +486,8 @@ def main(argv) -> int:
               "log in on the phone", file=sys.stderr)
         return 1
     print(f"OK: {zip_path}: login closure resolves ({len(closure['scan'])} scripts scanned, "
-          f"{len(commands)} PATH commands, every executable chmod-ed with its interpreter; "
+          f"{len(commands)} PATH commands, every executable chmod-ed with its interpreter, "
+          f"every nix/store ELF's DT_NEEDED found; "
           f"{os.path.getsize(zip_path)} B <= ceiling {closure['size_ceiling_bytes']} B)")
     return 0
 

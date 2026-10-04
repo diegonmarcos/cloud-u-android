@@ -94,15 +94,30 @@ link = tools["profile_link"]
 fallback = tools["fallback_init_script"]
 shell = tools["login_shell_attr"]
 
-def elf(interp=None):
+def elf(interp=None, needed=(), runpath=None):
+    """A minimal ELF64: PT_INTERP when given, and (#846) a PT_DYNAMIC with
+    DT_NEEDED / DT_RUNPATH entries over a PT_LOAD that maps the whole file."""
+    strtab = b"\0"
+    def s_at(text):
+        nonlocal strtab
+        at = len(strtab); strtab += text.encode() + b"\0"; return at
+    dyn = [(1, s_at(n)) for n in needed] + ([(29, s_at(runpath))] if runpath else [])
+    phnum = 1 + bool(interp) + bool(dyn)
+    blob_at = 64 + 56 * phnum
+    istr = interp.encode() + b"\0" if interp else b""
+    str_at = blob_at + len(istr)
+    dyn_at = str_at + len(strtab)
+    dyn_bytes = b"".join(struct.pack("<qQ", t, v) for t, v in dyn + [(5, str_at), (0, 0)]) if dyn else b""
+    total = dyn_at + len(dyn_bytes)
+    phs = []
     if interp:
-        s = interp.encode() + b"\0"
-        ph = struct.pack("<IIQQQQQQ", 3, 4, 120, 0, 0, len(s), len(s), 1)
-    else:
-        s, ph = b"", struct.pack("<IIQQQQQQ", 1, 5, 0, 0, 0, 0, 0, 0x1000)
+        phs.append(struct.pack("<IIQQQQQQ", 3, 4, blob_at, blob_at, blob_at, len(istr), len(istr), 1))
+    phs.append(struct.pack("<IIQQQQQQ", 1, 5, 0, 0, 0, total, total, 0x1000))
+    if dyn:
+        phs.append(struct.pack("<IIQQQQQQ", 2, 6, dyn_at, dyn_at, dyn_at, len(dyn_bytes), len(dyn_bytes), 8))
     hdr = b"\x7fELF" + bytes([2, 1, 1, 0]) + bytes(8) + struct.pack(
-        "<HHIQQQIHHHHHH", 2, 183, 1, 0, 64, 0, 0, 64, 56, 1, 64, 0, 0)
-    return hdr + ph + s
+        "<HHIQQQIHHHHHH", 2, 183, 1, 0, 64, 0, 0, 64, 56, phnum, 64, 0, 0)
+    return hdr + b"".join(phs) + istr + (strtab if dyn else b"") + dyn_bytes
 
 LD = "nix/store/gggg-glibc/lib/ld.so"
 BASE_SH = "nix/store/aaaa-bash/bin/bash"
@@ -123,7 +138,11 @@ files = {
                             f'usershell="/{link}/bin/{shell}"\n'
                             'timeout 5 "$usershell" -c exit && exec "$usershell"\nexec -l bash\n'),
     fallback: f'export PATH="/{link}/bin:$PATH"\n',
-    f"{TOOLS}/coreutils": elf("/" + LD),
+    f"{TOOLS}/coreutils": elf("/" + LD, needed=["libacl.so.1", "libc.so.6"],
+                              runpath="/nix/store/aclx-acl/lib"),
+    # #846 the libraries coreutils loads: one through its RUNPATH, libc from the loader's dir
+    "nix/store/aclx-acl/lib/libacl.so.1": elf(needed=["libc.so.6"]),
+    "nix/store/gggg-glibc/lib/libc.so.6": elf(),
 }
 for script in closure["scan"]:
     files.setdefault(script, "# synthetic\n")
@@ -156,6 +175,8 @@ for m in mutations:
     elif m == "dangling-profile": links[link] = "/nix/store/0000-missing-profile"
     elif m == "engine-not-chmod": executables.remove(closure["run"][0])
     elif m == "no-toolset-tool":  del links[f"{GEN}/bin/{toolset_last}"]
+    elif m == "no-needed-lib":    del files["nix/store/aclx-acl/lib/libacl.so.1"]
+    elif m == "no-loader-lib":    del files["nix/store/gggg-glibc/lib/libc.so.6"]
     elif m == "exec-renamed":     files["bin/login"] = files["bin/login"].replace("/bin/proot-static", "/bin/proot")
     else: sys.exit(f"unknown mutation {m}")
 
@@ -207,6 +228,8 @@ mutation dangling-profile "0000-missing-profile is not in the zip" "the default 
 mutation engine-not-chmod "run: $ENGINE"                       "the store engine the login executes never chmod-ed"
 TOOLSET_LAST="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["toolset"]["binaries"][-1])' "$DIR/../ab_cloud-terminal-store/store.json")"
 mutation no-toolset-tool  "PATH command '$TOOLSET_LAST'"       "#737: a tool store.json::toolset promises on both terminals ('$TOOLSET_LAST') is missing from the shipped profile"
+mutation no-needed-lib    "DT_NEEDED libacl.so.1"              "#846: a library an ELF loads through its RUNPATH was cut from the zip (a -dev/-doc/-man cut that took a .so)"
+mutation no-loader-lib    "DT_NEEDED libc.so.6"                "#846: a library found only in the ELF loader's own dir was cut"
 mutation exec-renamed     "binds nothing"                      "bin/login's proot exec line not recognised (the gate must not pass blind)"
 
 # ── #665 GUARD 4 — the size ceiling, mutation-proved on the declaration ──

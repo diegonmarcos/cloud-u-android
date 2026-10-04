@@ -573,6 +573,20 @@ NIX_ENV = {**os.environ, "NIXPKGS_ALLOW_UNFREE": "1"}
 # #771 -- the two system files both terminals bake, at the paths this zip's /etc is bound
 # from (bin/login: files/usr/etc -> /etc). nixpkgs' git reads /etc/gitconfig (sysconfdir=/etc);
 # nixpkgs' glibc reads /etc/ld-nix.so.preload, not ld.so.preload (dont-use-system-ld-so-preload).
+# #846 -- outputs the closure drags in BY REFERENCE (a binary that embeds its doc dir, a
+# .pc/cmake file that names its -dev) but nothing on the phone runs or loads: headers,
+# pkg-config, man pages, HTML docs. Measured on the #847 bake (x86_64): 21 store paths,
+# ~4.2 MB of the zip. Cut from the baked zip -- input bootstrap entries included -- and
+# PROVEN harmless by verify_login_closure.py, which fails the bake if any shipped ELF's
+# interpreter or DT_NEEDED, any /nix/store shebang, or any login/PATH path resolves into
+# one. Matched on the output-name suffix, never a store hash, which moves with every pin.
+CUT_OUTPUT = re.compile(r"^nix/store/[0-9a-z]{32}-[^/]+-(doc|man|dev)(/|$)")
+
+
+def cut_output(rel: str) -> bool:
+    return bool(CUT_OUTPUT.match(rel.lstrip("/")))
+
+
 GITCONFIG_ENTRY = "etc/gitconfig"
 PRELOAD_ENTRY = "etc/ld-nix.so.preload"
 
@@ -883,8 +897,11 @@ def main() -> int:
                             if os.access(full, os.X_OK):
                                 new_executables.append(rel)
 
+            cut = [p for p in closure if cut_output(p)]
             for store_path in closure:
-                add_tree(store_path)
+                if not cut_output(store_path):
+                    add_tree(store_path)
+            print(f"#846 cut: {len(cut)} -doc/-man/-dev store paths left out of the zip", file=sys.stderr)
 
             # the profile generation itself becomes the DEFAULT profile
             new_symlinks.append(f"{generation}←{profile_link}")
@@ -970,6 +987,11 @@ def main() -> int:
             new_files[PRELOAD_ENTRY] = f"/{profile_link}/{preload}\n".encode()
             new_files[dns_resolv_conf] = dns_resolv_body.encode()
 
+            # #846 the input bootstrap's own entries under a cut output go too.
+            symlinks_txt = "".join(l for l in symlinks_txt.splitlines(True)
+                                   if not cut_output(l.rstrip("\n").split("←")[-1]))
+            executables_txt = "".join(l for l in executables_txt.splitlines(True)
+                                      if not cut_output(l.rstrip("\n")))
             if not symlinks_txt.endswith("\n"):
                 symlinks_txt += "\n"
             symlinks_txt += "\n".join(new_symlinks) + "\n"
@@ -983,7 +1005,7 @@ def main() -> int:
             with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zout:
                 for info in zin.infolist():
                     name = info.filename
-                    if name == DROPPED_ENTRY:
+                    if name == DROPPED_ENTRY or cut_output(name):
                         continue
                     if name == "usr/lib/login-inner":
                         zout.writestr(info, login_inner)
