@@ -282,6 +282,16 @@ class StoreCloudFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         context?.let { c -> runCatching { StoreAuto.onPending(c.applicationContext, 0) } }
+        // #858 back in front: resolve handed-over installs and show a prompt
+        // that is still pending again, then repaint the rows.
+        context?.applicationContext?.let { c ->
+            thread(name = "store-install-watch") {
+                // Repaint only when a handover was resolved: the first resume
+                // must not jump ahead of #857's updates-first refresh.
+                if (runCatching { StoreInstallWatch.onForeground(c, fleet) }.getOrDefault(false))
+                    view?.post { if (isAdded && ::body.isInitialized) checkAll(c, current()) }
+            }
+        }
     }
 
     override fun onDestroyView() {
@@ -1002,7 +1012,8 @@ class StoreCloudFragment : Fragment() {
                 // drew ⬆ / ⬇ for it, and the tap runs the chain.
                 stg.cached != null || verb == StoreStages.CLEAR -> {
                     b.visibility = View.VISIBLE
-                    b.text = FleetActions.label(b.context, verb)
+                    b.text = if (verb == StoreStages.INSTALL && stg.failedAt == StoreStages.INSTALL)
+                        StoreInstallWatch.load(b.context).retryLabel else FleetActions.label(b.context, verb)
                     b.setBackgroundColor(if (verb == StoreStages.INSTALL) 0xFF7C3AED.toInt() else 0xFF4A4A55.toInt())
                 }
             }

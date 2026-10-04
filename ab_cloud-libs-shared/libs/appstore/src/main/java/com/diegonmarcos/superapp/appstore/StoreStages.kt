@@ -110,6 +110,9 @@ object StoreStages {
             }
             INSTALL -> return Stage("installing", "installing from cache…", emptyList(), cachedFor(ctx, app))
         }
+        // #858 a handover that was aborted, abandoned or never answered turns
+        // into the Install-stage note read below: the row offers Retry.
+        runCatching { StoreInstallWatch.sweep(ctx, app) }
         // #780 PRECEDENCE: busy → ACTIONABLE cache → remote → installed. A
         // cache whose build is already on the device (landed) or that the
         // remote has moved past is NOT actionable, and it must never stand in
@@ -318,8 +321,14 @@ object StoreStages {
             }
             ApkCache.clearNote(ctx, app.pkg)
             UpdateProgress.stage(UpdateProgress.STAGE_INSTALLING)
-            installer(ctx, app, v)?.let { msg ->
+            val before = installedKey(ctx, app)
+            val msg = installer(ctx, app, v)
+            if (msg != null) {
                 if (ApkCache.noteOf(ctx, app.pkg) == null) ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, msg)
+            } else if (installedKey(ctx, app) == before) {
+                // #858 handed to Android's prompt and not landed yet: watched
+                // until it lands, fails, is abandoned or times out.
+                StoreInstallWatch.record(ctx, app.pkg, before)
             }
         } catch (t: Throwable) {
             ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, t.message ?: t.javaClass.simpleName)
@@ -380,6 +389,10 @@ object StoreStages {
     var room: (Context) -> Long = { c -> ApkCache.room(c) }
 
     private const val HOST = "the host — its own updater runs after the batch"
+
+    /** #858 the installed build as one comparable value ("" = not installed). */
+    internal fun installedKey(ctx: Context, app: Fleet.App): String =
+        installedCode(ctx, app)?.let { "${it.first}/${it.second}" } ?: ""
 
     internal fun installedCode(ctx: Context, app: Fleet.App): Pair<Long, Long>? = pkgs(app).firstNotNullOfOrNull { p ->
         runCatching {
