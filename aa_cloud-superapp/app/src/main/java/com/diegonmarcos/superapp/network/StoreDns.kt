@@ -132,7 +132,11 @@ object StoreDns {
         ProxySelector.setDefault(object : ProxySelector() {
             override fun select(uri: URI): List<Proxy> {
                 val host = uri.host
-                if (uri.scheme == "https" && host != null && isStoreHost(host)) {
+                // Android's system resolver answering = DIRECT, decided BEFORE any
+                // preset is read: the SuperApp's own self-update (same hosts)
+                // never depends on FleetDns while the system resolver works.
+                if (uri.scheme == "https" && host != null && isStoreHost(host) &&
+                    !runCatching { InetAddress.getAllByName(host).isNotEmpty() }.getOrDefault(false)) {
                     val via = runCatching { route(app, host) }.getOrNull()
                     if (via != null) {
                         pending[host.lowercase()] = via

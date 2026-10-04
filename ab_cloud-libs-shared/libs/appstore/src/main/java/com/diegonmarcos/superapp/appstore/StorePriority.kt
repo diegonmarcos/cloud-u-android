@@ -27,12 +27,11 @@ object StorePriority {
         val network: String,
         val first: String,
         val after: List<String>,
-        val maxWaitMs: Long,
     )
 
     /** What applies when the asset is missing or unreadable: updates first. */
     val DEFAULT = Decl(true, HIGHEST, true, "unmetered", "download_all_updates",
-        listOf("catalogue_refresh", "icons", "details"), 900_000L)
+        listOf("catalogue_refresh", "icons", "details"))
 
     fun parse(o: JSONObject): Decl {
         val u = o.getJSONObject("updates_first")
@@ -45,7 +44,6 @@ object StorePriority {
             network = w.optString("network", "unmetered"),
             first = u.optString("first", "download_all_updates"),
             after = if (after == null) DEFAULT.after else List(after.length()) { after.getString(it) },
-            maxWaitMs = u.optLong("max_wait_s", 900L) * 1000L,
         )
     }
 
@@ -71,34 +69,23 @@ object StorePriority {
     }.getOrDefault(false)
 
     /**
-     * Run the Store page's own work ([then], on a background thread) AFTER the
-     * updates when [updatesFirst] holds: the auto chain is started at once at
-     * max thread priority, and [then] waits until its download phase is over
-     * (or [Decl.maxWaitMs]). Otherwise [then] runs straight away. Returns true
-     * when the updates went first.
+     * #861 Start the auto chain on its own max-priority thread when
+     * [updatesFirst] holds, and RETURN. Fire and forget: updates get their
+     * priority in the download queue only. Nothing the Store page shows awaits,
+     * joins or gates on this chain — #857 held the catalogue check until the
+     * chain's download phase was over, so a failing or hung chain (#860 DNS)
+     * left the page on "Checking…" forever. Returns true when it was started.
      */
-    fun runUpdatesFirst(ctx: Context, fleet: List<Fleet.App>, then: () -> Unit): Boolean {
+    fun startUpdatesAsync(ctx: Context, fleet: List<Fleet.App>): Boolean {
         val app = ctx.applicationContext
         val d = load(app)
-        if (!updatesFirst(d, autoOn(app), unmetered(app))) { then(); return false }
-        Log.i(TAG, "Wi-Fi + Auto-update: downloading every pending update before ${d.after}")
-        val chain = thread(name = "store-updates-first", priority = Thread.MAX_PRIORITY) {
+        if (!updatesFirst(d, autoOn(app), unmetered(app))) return false
+        Log.i(TAG, "Wi-Fi + Auto-update: downloading every pending update at max priority, beside the page")
+        thread(name = "store-updates-first", priority = Thread.MAX_PRIORITY) {
             runCatching { StoreAuto.run(app, fleet, StoreAuto.TRIGGER_STORE_REFRESH) }
                 .onFailure { Log.w(TAG, "updates-first chain failed: ${it.message}") }
-        }
-        thread(name = "store-after-updates") {
-            val until = System.currentTimeMillis() + d.maxWaitMs
-            while (System.currentTimeMillis() < until) {
-                val running = StoreAuto.isRunning()
-                // Wait while the chain is still starting, or refreshing / downloading.
-                if ((running && downloading(app)) || (!running && chain.isAlive)) Thread.sleep(250) else break
-            }
-            then()
         }
         return true
     }
 
-    /** The chain is still refreshing its queue or downloading it. */
-    private fun downloading(ctx: Context): Boolean =
-        StoreAuto.phaseNow(ctx).let { it == StoreAuto.REFRESH || it == StoreAuto.DOWNLOAD }
 }

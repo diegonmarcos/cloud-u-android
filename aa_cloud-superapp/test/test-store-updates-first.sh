@@ -5,10 +5,12 @@
 #
 # The rule is DECLARED in libs:appstore/assets/appstore-priority.json and
 # evaluated by StorePriority; the Store page (StoreCloudFragment.renderFleet)
-# must reach its catalogue refresh (checkAll) only through
-# StorePriority.runUpdatesFirst, which starts the StoreAuto chain and holds the
-# refresh until the chain's download phase is over.
+# starts the StoreAuto chain through StorePriority.startUpdatesAsync and then
+# runs its catalogue check (checkAll) AT ONCE: #861, the check never awaits,
+# joins or gates on the update chain (it held the Store on "Checking..." forever).
 #
+# #861 proven red by mutation: the #857 wait loop restored, checkAll moved into a
+# callback of the chain, or a sleep/join/await on the chain in the check path.
 # Proven red by mutation: priority "normal", network "metered", `first` dropped,
 # or a bare checkAll(ctx, list) back in renderFleet each fail a check below.
 #
@@ -65,21 +67,28 @@ if printf '%s' "$PRI" | grep -q 'appstore-priority.json' &&
   ok "StorePriority.updatesFirst reads the asset and requires auto-update, unmetered and highest"
 else bad "StorePriority.updatesFirst does not gate on auto-update + unmetered + highest"; fi
 
-RUN="$(printf '%s' "$PRI" | sed -n '/fun runUpdatesFirst(/,/^    }/p')"
-CHAIN_L="$(printf '%s' "$RUN" | grep -n 'StoreAuto.run(' | head -1 | cut -d: -f1)"
-THEN_L="$(printf '%s' "$RUN" | grep -n '^ *then()$' | tail -1 | cut -d: -f1)"
-if [ -n "$CHAIN_L" ] && [ -n "$THEN_L" ] && [ "$CHAIN_L" -lt "$THEN_L" ] &&
-   printf '%s' "$RUN" | grep -q 'MAX_PRIORITY' && printf '%s' "$RUN" | grep -q 'downloading('; then
-  ok "runUpdatesFirst starts the auto chain at max priority and holds the page's work until downloads finish"
-else bad "runUpdatesFirst does not run the update chain before the page's work"; fi
+RUN="$(printf '%s' "$PRI" | sed -n '/fun startUpdatesAsync(/,/^    }/p')"
+if printf '%s' "$RUN" | grep -q 'StoreAuto.run(' && printf '%s' "$RUN" | grep -q 'MAX_PRIORITY' &&
+   printf '%s' "$RUN" | grep -q 'thread('; then
+  ok "startUpdatesAsync runs the auto chain on its own max-priority thread"
+else bad "startUpdatesAsync does not run the update chain async at max priority"; fi
 
-# ── 3. the Store page's catalogue refresh goes through the gate ─────────────
+# ── 3. #861 the check path never awaits, joins or gates on the chain ───────
+BLOCK='Thread\.sleep|\.join\(|\.get\(\)|await|CountDownLatch|runBlocking|while *\(|isRunning\(|phaseNow\(|maxWait|max_wait'
+if ! printf '%s' "$RUN" | grep -Eq "$BLOCK" &&
+   ! printf '%s' "$RUN" | grep -Eq 'then *:|\(\) -> Unit' &&
+   ! python3 -c 'import json,sys; sys.exit(0 if "max_wait_s" in json.load(open(sys.argv[1]))["updates_first"] else 1)' "$DECL"; then
+  ok "#861 startUpdatesAsync takes no continuation and never waits: nothing is gated on the chain"
+else bad "#861 the update chain is waited on / gates work again (Store stuck on Checking)"; fi
+
 FRAG="$(strip "$SRC/StoreCloudFragment.kt")"
 RF="$(printf '%s' "$FRAG" | sed -n '/private fun renderFleet(/,/^    }/p')"
-if printf '%s' "$RF" | grep -q 'StorePriority.runUpdatesFirst(' &&
-   ! printf '%s' "$RF" | grep -E '^ *checkAll\(ctx, list\) *$' >/dev/null; then
-  ok "renderFleet's catalogue refresh runs only after StorePriority's updates-first gate"
-else bad "renderFleet refreshes the catalogue without waiting for the updates"; fi
+START_L="$(printf '%s' "$RF" | grep -n 'StorePriority.startUpdatesAsync(ctx, fleet) *$' | head -1 | cut -d: -f1)"
+CHECK_L="$(printf '%s' "$RF" | grep -nE '^ *checkAll\(ctx, list\) *$' | head -1 | cut -d: -f1)"
+if [ -n "$START_L" ] && [ -n "$CHECK_L" ] && [ "$START_L" -lt "$CHECK_L" ] &&
+   ! printf '%s' "$RF" | grep -Eq "$BLOCK|runUpdatesFirst"; then
+  ok "#861 renderFleet starts the updates async, then runs the catalogue check at once"
+else bad "#861 renderFleet's catalogue check awaits or is gated on the update chain"; fi
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
