@@ -126,8 +126,13 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #831 a download that cannot resolve its host names the resolver in
         // effect, read from the same state the DNS page shows (#794).
         val dnsCtx = applicationContext
+        // #860 ...and a Store download host resolves the way the active preset
+        // says; when nothing answers, the failure names the resolvers it tried.
+        Thread({ com.diegonmarcos.superapp.network.StoreDns.install(dnsCtx) }, "store-dns-install").start()
         com.diegonmarcos.superapp.updater.source.DownloadFailure.activeResolver = {
-            com.diegonmarcos.superapp.network.FleetDns.resolverSummary(dnsCtx)
+            val tried = com.diegonmarcos.superapp.network.StoreDns.lastFailure
+            val net = runCatching { com.diegonmarcos.superapp.network.FleetDns.resolverSummary(dnsCtx) }.getOrNull()
+            if (tried == null) net else "tried $tried" + (net?.let { "; network: $it" } ?: "")
         }
         // Capture process-start time before anything else so About →
         // Battery & Usage can report the real uptime.
