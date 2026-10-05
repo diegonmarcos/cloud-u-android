@@ -204,6 +204,12 @@
    "what": "C3 WatchTower Android app",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ac_cloud-account": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Account app (#867, the Account page split out of cloud-superapp)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-agenda": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",

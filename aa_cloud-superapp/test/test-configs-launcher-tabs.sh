@@ -226,8 +226,9 @@ grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES"
   && ok "the presets tab routes to its own fragment" \
   || bad "presets has no route — the tab would fall through to the generic page"
 
-grep -qF 'pageId == "profile"   -> ProfileFragment.newInstance()' "$PAGES" \
-  && ok "the identity page still routes to ProfileFragment" \
+# #867 through the Cloud Account hand-off, which embeds ProfileFragment until the app is installed.
+grep -qF 'pageId == "profile"   -> com.diegonmarcos.superapp.apps.AccountHandoff.page()' "$PAGES" \
+  && ok "the identity page still routes to ProfileFragment (via the Cloud Account hand-off)" \
   || bad "profile lost its route — the split stole the owner's identity page"
 
 echo

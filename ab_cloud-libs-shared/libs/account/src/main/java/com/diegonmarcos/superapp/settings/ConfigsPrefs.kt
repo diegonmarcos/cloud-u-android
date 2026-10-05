@@ -15,6 +15,7 @@ import androidx.security.crypto.MasterKey
  * schema beyond "valid JSON".
  */
 class ConfigsPrefs(context: Context) {
+    private val appContext: Context = context.applicationContext ?: context
     private val prefs by lazy {
         val key = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -28,8 +29,13 @@ class ConfigsPrefs(context: Context) {
         )
     }
 
-    var json: String
+    /** #867 This app's own blob, without the read-through to Cloud Account. */
+    val localJson: String
         get() = prefs.getString(K_JSON, "") ?: ""
+
+    /** The blob; while this app's own is empty and the host allows it, Cloud Account's (AccountData.configsOrRemote). */
+    var json: String
+        get() = com.diegonmarcos.superapp.profile.AccountData.configsOrRemote(appContext, localJson)
         set(v) { prefs.edit().putString(K_JSON, v).apply() }
 
     /**

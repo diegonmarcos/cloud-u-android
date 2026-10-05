@@ -74,6 +74,12 @@ object AccountHost {
         fun apply(ctx: Context, name: String, conf: String): String
     }
 
+    /**
+     * #867 Whether an empty imported-configs blob reads through to the Cloud Account app. SuperApp
+     * turns it on; Cloud Account is the owner and keeps the default (off).
+     */
+    @Volatile var readThrough: Boolean = false
+
     val DEFAULT_PALETTE: KitPalette = KitPalette.fromArgb(
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),
         textPrimary = 0xFFE6E6E6.toInt(), textSecondary = 0xFF9AA0A6.toInt(),

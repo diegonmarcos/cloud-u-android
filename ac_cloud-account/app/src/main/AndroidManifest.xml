@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- #867 Cloud Account: the Account page as its own APK. INTERNET (sign-in,
+         vault fetch, profile sync) and the install engine's permissions come
+         through the manifest merge from libs:account's dependencies. What the
+         Fleet tab reads on top is declared here. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The Fleet tab reads the installed version of every constellation package. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudAccount"
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- SuperApp opens the page: com.diegonmarcos.cloudaccount.OPEN. -->
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloudaccount.OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- #867 The data Cloud Account owns (imported configs, profile, S/R/L files), read by
+             SuperApp's one-shot copy. CONSTELLATION_DATA is the fleet's signature permission:
+             only an APK signed with the fleet key gets in, and the provider re-checks the caller
+             (call() is not permission-checked by the framework). Read-only. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.profile.AccountData$Provider"
+            android:authorities="${applicationId}.accountdata"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+    </application>
+</manifest>

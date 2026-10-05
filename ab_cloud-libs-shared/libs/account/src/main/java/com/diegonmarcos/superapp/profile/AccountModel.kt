@@ -55,6 +55,9 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     fun runtime(): AccountStore.Doc? = doc(Slot.R)
     fun savedLocal(): AccountStore.Doc? = doc(Slot.L)
 
+    /** #867 A slot file was written behind the model's back (AccountData.migrate): drop what it cached. */
+    fun invalidate() { synchronized(docs) { docs.clear(); leafCache.clear() }; serverView = null; version.intValue++ }
+
     private fun changed(line: String) { synchronized(docs) { leafCache.clear() }; last = line; version.intValue++ }
 
     // ── declaration ──────────────────────────────────────────────────────

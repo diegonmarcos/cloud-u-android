@@ -1,0 +1,189 @@
+package com.diegonmarcos.superapp.profile
+
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.content.Context
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.database.Cursor
+import android.net.Uri
+import android.os.Binder
+import android.os.Bundle
+import android.os.Process
+import com.diegonmarcos.superapp.core.FleetConfig
+import com.diegonmarcos.superapp.profile.AccountStore.Slot
+import com.diegonmarcos.superapp.settings.ConfigsPrefs
+import org.json.JSONObject
+
+/**
+ * #867 What the Cloud Account app owns, as it leaves the app and as another host takes it in.
+ *
+ * Cloud Account is the home of three stores: the imported configs (`import_configs`, one JSON
+ * blob), the profile (`profile_prefs`) and the S/R/L account files. SuperApp used to hold them;
+ * once Cloud Account is installed SuperApp COPIES them over once ([migrate]) and, while its own
+ * copy is empty, reads through to Cloud Account ([configsOrRemote]).
+ *
+ * [Provider] is the way out: `<package>.accountdata`, exported behind CONSTELLATION_DATA (the
+ * fleet's signature permission, as FleetConfigProvider is) and re-checked in call(), because the
+ * framework does not permission-check call() by itself. One method, [METHOD_EXPORT]; everything
+ * else a ContentProvider can do is refused. It only ever READS: nothing a caller sends is written.
+ *
+ * Limits, on purpose: the copy is one-way (Cloud Account -> SuperApp) and never overwrites a
+ * store the receiver already holds, so a SuperApp that kept working before Cloud Account arrived
+ * loses nothing; after the copy the two evolve apart (only the empty-configs read-through stays
+ * live). The profile picture/banner URIs are copied as text; the pictures themselves are not.
+ */
+object AccountData {
+    const val PKG = "com.diegonmarcos.cloudaccount"
+    const val AUTHORITY = "$PKG.accountdata"
+    const val METHOD_EXPORT = "export"
+
+    const val KEY_OK = "ok"
+    const val KEY_ERROR = "error"
+    const val KEY_CONFIGS = "configs_json"
+    /** `{"<pref key>": {"t": "s|b|i|l|f", "v": …}}` — the profile_prefs file, typed. */
+    const val KEY_PROFILE = "profile"
+    /** slot S / R / L: the file's own JSON text. */
+    fun slotKey(s: Slot) = "slot_${s.name}"
+
+    private const val PROFILE_FILE = "profile_prefs"
+    private const val MIGRATION_FILE = "account_data_migration"
+    private const val K_DONE = "done"
+    private const val TAG = "AccountData"
+
+    // ── what leaves ──────────────────────────────────────────────────────
+
+    /** The export bundle for this app's three stores. A store with nothing in it is simply absent. */
+    fun export(ctx: Context): Bundle = Bundle().apply {
+        putBoolean(KEY_OK, true)
+        runCatching { ConfigsPrefs(ctx).json }.getOrNull()?.takeIf { it.isNotBlank() }?.let { putString(KEY_CONFIGS, it) }
+        runCatching { profileJson(ctx.getSharedPreferences(PROFILE_FILE, Context.MODE_PRIVATE).all) }.getOrNull()
+            ?.takeIf { it.length() > 0 }?.let { putString(KEY_PROFILE, it.toString()) }
+        val store = AccountModel.get(ctx).store
+        for (s in Slot.values()) runCatching { store.export(s) }.getOrNull()?.let { putString(slotKey(s), it) }
+    }
+
+    fun profileJson(all: Map<String, *>): JSONObject = JSONObject().also { o ->
+        for ((k, v) in all) {
+            val (t, value) = when (v) {
+                is String -> "s" to v
+                is Boolean -> "b" to v
+                is Int -> "i" to v
+                is Long -> "l" to v
+                is Float -> "f" to v.toDouble()
+                else -> continue
+            }
+            o.put(k, JSONObject().put("t", t).put("v", value))
+        }
+    }
+
+    // ── what arrives ─────────────────────────────────────────────────────
+
+    /** True once the copy has run to the end, whether or not it had anything to copy. */
+    fun migrated(ctx: Context): Boolean =
+        ctx.getSharedPreferences(MIGRATION_FILE, Context.MODE_PRIVATE).getBoolean(K_DONE, false)
+
+    fun accountInstalled(ctx: Context): Boolean = runCatching {
+        ctx.packageManager.getApplicationInfo(PKG, 0).enabled
+    }.getOrDefault(false)
+
+    /** Asks Cloud Account for [METHOD_EXPORT]; null when it is not installed, refuses, or fails. */
+    fun fetch(ctx: Context): Bundle? {
+        if (ctx.packageName == PKG || !accountInstalled(ctx)) return null
+        val r = runCatching {
+            ctx.contentResolver.call(Uri.parse("content://$AUTHORITY"), METHOD_EXPORT, null, null)
+        }.getOrNull()
+        return r?.takeIf { it.getBoolean(KEY_OK) }
+    }
+
+    /**
+     * The one-shot copy: runs when Cloud Account is installed and has not run to the end yet.
+     * Each store is filled only if this app's own is EMPTY. Returns what was copied (for the log
+     * and the tests); an empty list also marks the migration done, since there was nothing to take.
+     * A failed call leaves it undone, so the next start tries again.
+     */
+    fun migrate(ctx: Context): List<String> {
+        if (migrated(ctx)) return emptyList()
+        val b = fetch(ctx) ?: return emptyList()
+        val copied = apply(ctx, b)
+        ctx.getSharedPreferences(MIGRATION_FILE, Context.MODE_PRIVATE).edit().putBoolean(K_DONE, true).apply()
+        android.util.Log.i(TAG, "migrated from Cloud Account: $copied")
+        return copied
+    }
+
+    /** Takes [b] into this app's stores where they are empty. Never overwrites. */
+    fun apply(ctx: Context, b: Bundle): List<String> {
+        val copied = ArrayList<String>()
+        b.getString(KEY_CONFIGS)?.takeIf { it.isNotBlank() }?.let { json ->
+            val prefs = ConfigsPrefs(ctx)
+            if (prefs.localJson.isBlank()) { prefs.json = json; copied += "import_configs" }
+        }
+        b.getString(KEY_PROFILE)?.let { if (applyProfile(ctx.getSharedPreferences(PROFILE_FILE, Context.MODE_PRIVATE), it)) copied += PROFILE_FILE }
+        val model = AccountModel.get(ctx)
+        for (s in Slot.values()) {
+            val text = b.getString(slotKey(s)) ?: continue
+            if (model.store.read(s) != null) continue
+            val doc = runCatching { JSONObject(text) }.getOrNull() ?: continue
+            val m = doc.optJSONObject("_meta") ?: continue
+            val body = doc.optJSONObject("body") ?: continue
+            model.store.write(s, body, m.optString("source"), m.optString("at"), doc.optJSONObject("apps"))
+            copied += "slot ${s.name}"
+        }
+        if (copied.any { it.startsWith("slot") }) model.invalidate()
+        return copied
+    }
+
+    /** Fills [sp] from the typed export when it holds no profile of its own (only schema/install keys). */
+    fun applyProfile(sp: SharedPreferences, text: String): Boolean {
+        val src = runCatching { JSONObject(text) }.getOrNull() ?: return false
+        // "Empty" = nothing the user typed: the install id/secret and schema version are generated on first read.
+        val generated = setOf("schema_version", "install_id", "install_secret")
+        if (sp.all.keys.any { it !in generated }) return false
+        val ed = sp.edit()
+        for (k in src.keys()) {
+            val e = src.optJSONObject(k) ?: continue
+            when (e.optString("t")) {
+                "s" -> ed.putString(k, e.optString("v"))
+                "b" -> ed.putBoolean(k, e.optBoolean("v"))
+                "i" -> ed.putInt(k, e.optInt("v"))
+                "l" -> ed.putLong(k, e.optLong("v"))
+                "f" -> ed.putFloat(k, e.optDouble("v").toFloat())
+            }
+        }
+        return ed.commit()
+    }
+
+    /**
+     * Read-through for the imported configs: this app's own blob, else Cloud Account's.
+     * [fetched] is tried at most once per process, so a blank blob costs one provider call.
+     */
+    @Volatile private var triedRemote = false
+    fun configsOrRemote(ctx: Context, local: String): String {
+        if (local.isNotBlank() || triedRemote || !AccountHost.readThrough) return local
+        triedRemote = true
+        return fetch(ctx)?.getString(KEY_CONFIGS).orEmpty()
+    }
+
+    // ── the provider ─────────────────────────────────────────────────────
+
+    class Provider : ContentProvider() {
+        override fun onCreate(): Boolean = true
+
+        override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+            val ctx = context ?: return error("no context")
+            if (Binder.getCallingUid() != Process.myUid() &&
+                ctx.checkCallingPermission(FleetConfig.PERMISSION) != PackageManager.PERMISSION_GRANTED)
+                return error("caller is not a fleet app")
+            if (method != METHOD_EXPORT) return error("unknown method $method")
+            return runCatching { export(ctx) }.getOrElse { error("${it.javaClass.simpleName}: ${it.message.orEmpty().take(160)}") }
+        }
+
+        private fun error(why: String) = Bundle().apply { putBoolean(KEY_OK, false); putString(KEY_ERROR, why) }
+
+        override fun query(uri: Uri, p: Array<out String>?, s: String?, a: Array<out String>?, o: String?): Cursor? = null
+        override fun getType(uri: Uri): String? = null
+        override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+        override fun delete(uri: Uri, s: String?, a: Array<out String>?) = 0
+        override fun update(uri: Uri, v: ContentValues?, s: String?, a: Array<out String>?) = 0
+    }
+}

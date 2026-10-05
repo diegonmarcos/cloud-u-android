@@ -83,6 +83,14 @@
     "ac_cloud-chat"
    ]
   },
+  "account_data_migration": {
+   "kind": "prefs",
+   "class": "device",
+   "doc": "#867 whether this app has already copied the imported configs, profile and S/R/L account files over from the Cloud Account app. It records this phone's progress, never configuration.",
+   "used_by": [
+    "lib-account"
+   ]
+  },
   "account_migrate": {
    "kind": "prefs",
    "class": "device",
@@ -1789,6 +1797,27 @@
    "libs": [
     "lib-core",
     "lib-devtools"
+   ],
+   "items": []
+  },
+  "account": {
+   "package": "com.diegonmarcos.cloudaccount",
+   "module": "ac_cloud-account",
+   "schema_version": 1,
+   "libs": [
+    "lib-account",
+    "lib-appstore",
+    "lib-auth",
+    "lib-core",
+    "lib-databackend",
+    "lib-devtools",
+    "lib-fleetconfig-model",
+    "lib-mail",
+    "lib-net",
+    "lib-shizuku-adb-debug-tools",
+    "lib-text-tools",
+    "lib-ui-kit",
+    "lib-updater"
    ],
    "items": []
   },

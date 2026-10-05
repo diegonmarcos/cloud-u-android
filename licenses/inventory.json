@@ -10,7 +10,7 @@
    "GPL-3.0": 3
   },
   "dir": {
-   "LicenseRef-NoLicenseGranted": 42,
+   "LicenseRef-NoLicenseGranted": 43,
    "GPL-3.0-only": 6,
    "MIT": 3,
    "Apache-2.0": 2,
@@ -227,6 +227,24 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
     "ab_cloud-libs-shared/libs/devtools"
+   ]
+  },
+  "ac_cloud-account": {
+   "app_licence": "LicenseRef-NoLicenseGranted",
+   "links_shared_modules": [
+    "ab_cloud-libs-shared/libs/account",
+    "ab_cloud-libs-shared/libs/appstore",
+    "ab_cloud-libs-shared/libs/auth",
+    "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/databackend",
+    "ab_cloud-libs-shared/libs/devtools",
+    "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/mail",
+    "ab_cloud-libs-shared/libs/net",
+    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
+    "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/ui-kit",
+    "ab_cloud-libs-shared/libs/updater"
    ]
   },
   "ac_cloud-agenda": {
@@ -2221,6 +2239,14 @@
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
   },
+  "dir:ac_cloud-account": {
+   "kind": "dir",
+   "declared_in": [
+    "(tree)"
+   ],
+   "licence": "LicenseRef-NoLicenseGranted",
+   "licence_source": "licenses/curated.json"
+  },
   "dir:ac_cloud-agenda": {
    "kind": "dir",
    "declared_in": [
@@ -2488,6 +2514,7 @@
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/mounts/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
@@ -2567,6 +2594,7 @@
     "ac_c3-morpheus/app/build.gradle",
     "ac_c3-watchdog/app/build.gradle",
     "ac_c3-watchtower/app/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-agenda/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
@@ -2803,6 +2831,7 @@
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -2878,6 +2907,7 @@
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -2981,6 +3011,7 @@
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -3142,6 +3173,7 @@
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -3265,6 +3297,7 @@
     "ac_c3-morpheus/app/build.gradle",
     "ac_c3-watchdog/app/build.gradle",
     "ac_c3-watchtower/app/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-agenda/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
@@ -3399,7 +3432,8 @@
   "maven:androidx.fragment:fragment-compose": {
    "kind": "maven",
    "declared_in": [
-    "aa_cloud-superapp/app/build.gradle"
+    "aa_cloud-superapp/app/build.gradle",
+    "ac_cloud-account/app/build.gradle"
    ],
    "version": "1.8.5",
    "scope": "shipped",
@@ -3428,6 +3462,7 @@
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
@@ -3991,6 +4026,7 @@
     "aa_cloud-superapp/app/build.gradle",
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/kde-connect/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-agenda/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
@@ -4087,6 +4123,7 @@
     "aa_cloud-superapp/app/build.gradle",
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/kde-connect/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-agenda/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
@@ -4207,6 +4244,7 @@
     "ab_cloud-libs-shared/libs/battery/build.gradle",
     "ab_cloud-libs-shared/libs/maps/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-keyboard/app/build.gradle",
@@ -4819,6 +4857,7 @@
     "ab_cloud-libs-shared/libs/launcher-apptabs/build.gradle",
     "ab_cloud-libs-shared/libs/mail/build.gradle",
     "ab_cloud-libs-shared/libs/maps/build.gradle",
+    "ac_cloud-account/app/build.gradle",
     "ac_cloud-agenda/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",

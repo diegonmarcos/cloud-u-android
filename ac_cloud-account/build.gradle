@@ -1,0 +1,10 @@
+// Root build.gradle — plugin versions only.
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+    id 'com.android.library'     version '8.7.3' apply false
+    id 'org.jetbrains.kotlin.android'            version '2.3.20' apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.20' apply false
+    // Compose (#565): the shell is Compose; the account pages it hosts are
+    // libs:account's Fragments, embedded through fragment-compose.
+    id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
+}

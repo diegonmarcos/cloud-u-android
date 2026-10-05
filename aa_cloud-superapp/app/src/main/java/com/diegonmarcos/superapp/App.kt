@@ -144,7 +144,15 @@ class App : Application(), WorkManagerConfiguration.Provider {
             mesh = com.diegonmarcos.superapp.network.AccountMesh
             classify = com.diegonmarcos.superapp.settings.ImportConfigsFragment::classify
             refusal = com.diegonmarcos.superapp.settings.ImportConfigsFragment::refusal
+            // #867 Cloud Account owns the imported configs once installed; an empty blob here reads through to it.
+            readThrough = true
         }
+        // #867 first run with Cloud Account installed: copy its configs, profile and S/R/L files over once
+        // (never over anything this app already holds). Off the main thread: it is a provider call.
+        Thread({
+            runCatching { com.diegonmarcos.superapp.profile.AccountData.migrate(applicationContext) }
+                .onFailure { android.util.Log.w("App", "account copy failed", it) }
+        }, "account-migrate").start()
         // #831 a download that cannot resolve its host names the resolver in
         // effect, read from the same state the DNS page shows (#794).
         val dnsCtx = applicationContext

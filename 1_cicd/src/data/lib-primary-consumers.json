@@ -1,6 +1,7 @@
 {
   "_doc": "#836: which app ships PER PUSH when a shared lib under ab_cloud-libs-shared/libs/ changes. Every other app that compiles the lib is not started by that push: its ship workflow carries the lib as a deferred input (hashed by the publish gate, not watched by GitHub), and fleet-refresh.yml ships it on its schedule when the lib moved since that app's last published build. A lib compiled by exactly one app needs no entry (its sole consumer watches it). A lib compiled by two or more MUST be listed -- an app dir, or null for refresh-only -- and the workflow generator refuses to generate otherwise, so a new shared lib cannot silently fan out again. core and devtools are null on purpose: they are compiled into ~31 apps and any single pick would be arbitrary; the lib-APK builder (ship-cloud-libs) still runs for them per push.",
   "primary": {
+    "account": "ac_cloud-account",
     "analytics": "aa_cloud-superapp",
     "appstore": "ac_cloud-store",
     "auth": "aa_cloud-superapp",
@@ -9,12 +10,15 @@
     "databackend": "ac_cloud-contacts",
     "decisions": "ac_cloud-calc",
     "devtools": null,
+    "fleetconfig-model": "aa_cloud-superapp",
     "health": "aa_cloud-superapp",
+    "mail": "aa_cloud-superapp",
     "media": "ac_cloud-keyboard",
     "ml-l-image": "ac_cloud-camera",
     "ml-l-sound": "ac_cloud-camera",
     "ml-l-text-mlkit": "ab_cloud-libs-shared/keyboard-engines",
     "ml-l-voice-vosk": "ab_cloud-libs-shared/keyboard-engines",
+    "net": "aa_cloud-superapp",
     "ops": "aa_cloud-superapp",
     "search-page": "ac_cloud-search",
     "shizuku-adb-debug-tools": "aa_cloud-superapp",

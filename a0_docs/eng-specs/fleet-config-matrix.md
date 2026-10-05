@@ -19,6 +19,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 7 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
@@ -47,7 +48,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **163** | **35** | **82%** |
+| **fleet** | | **170** | **35** | **82%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -166,6 +167,31 @@ Module `ac_c3-watchtower`; libs: lib-core, lib-devtools.
 | `watchtower_cache` | prefs | device | no | TTL cache of GitHub workflow-runs responses per repo (<owner>/<repo>/runs.ts/.body). |
 
 Coverage: 1 covered, 0 gaps.
+
+## cloud-account — `com.diegonmarcos.cloudaccount`
+
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `account_data_migration` | prefs | device | no | #867 whether this app has already copied the imported configs, profile and S/R/L account files over from the Cloud Account app. It records this phone's progress, never configuration. |
+| `account_migrate` | prefs | device | no | #783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration. |
+| `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
+| `apps_mesh` | prefs | config | yes | #793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates. |
+| `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `import_configs` | encrypted | secret | yes | EncryptedSharedPreferences holding the imported configs JSON blob including auth.authelia_token and email; mostly credentials. |
+| `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
+| `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
+| `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
+| `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
+| `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
+| `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
+
+Coverage: 7 covered, 0 gaps.
 
 ## cloud-agenda — `com.diegonmarcos.cloudagenda`
 

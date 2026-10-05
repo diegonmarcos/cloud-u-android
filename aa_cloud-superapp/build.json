@@ -4677,6 +4677,8 @@
             "id": "profile",
             "label": "Account",
             "icon": "ic_settings",
+            "action": "extapp:cloud-account",
+            "_doc_867": "#867 Account is its own app (ac_cloud-account, com.diegonmarcos.cloudaccount). This entry opens it: its action extapp:cloud-account is the tile's target. Not is_action, so the tile keeps its place under Watchdog > Setup instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-account].install_apk_url is offered. The page itself stays, hidden, for page: routes; AccountHandoff shows Open Cloud Account on it once the app is installed and the page itself (libs:account) until then.",
             "group": "Watchdog",
             "subgroup": "Setup"
           },
@@ -7775,6 +7777,15 @@
         "hub_package": "com.diegonmarcos.cloudstore",
         "install_package": "com.diegonmarcos.cloudstore",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Store.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#867 Cloud Account (ac_cloud-account, com.diegonmarcos.cloudaccount): the Account page split out of this app. The Configs Account entry launches it through extapp:cloud-account; when it is absent, install_apk_url is offered, so the first install needs no store. install_apk_url mirrors ac_cloud-account/build.json::release.gh_release.asset_name (arm64 rolling-latest; x86_64 is Cloud-Account-x86_64.apk). folder=sys_settings is the taxonomy half of the same record.",
+        "id": "cloud-account",
+        "folder": "sys_settings",
+        "hub_package": "com.diegonmarcos.cloudaccount",
+        "install_package": "com.diegonmarcos.cloudaccount",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Account.apk",
         "forks": {}
       },
       {

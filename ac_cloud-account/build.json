@@ -1,0 +1,207 @@
+{
+  "name": "cloud-account",
+  "description": "Diego's Cloud Account — the Account page (Profile, Connect sign-in lines, Fleet cockpit, Infos, Drift, business card) as its own APK (#867). Hosts libs:account, the same code SuperApp's Configs > Account used to embed. Owns the imported configs, the profile and the S/R/L account files; SuperApp copies them over once and reads through to them while this app is installed.",
+  "category": "android",
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "android": {
+    "application_id": "com.diegonmarcos.cloudaccount",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "_doc": "On-device DevControlServer diagnostics → cloud sink.",
+    "log_sink_url": "https://api.diegonmarcos.com/pub/analytics/openobserve",
+    "log_sink_stream": "cloud-account"
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. Every lib is shared BY REFERENCE from ab_cloud-libs-shared/libs, the same directories cloud-superapp builds, so the account code exists once.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:account"
+      ]
+    },
+    "libs:core": {
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:shizuku-adb-debug-tools": {
+      "dir": "../ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:updater": {
+      "dir": "../ab_cloud-libs-shared/libs/updater",
+      "type": "library",
+      "depends_on": [
+        "libs:core",
+        "libs:shizuku-adb-debug-tools"
+      ]
+    },
+    "libs:appstore": {
+      "dir": "../ab_cloud-libs-shared/libs/appstore",
+      "type": "library",
+      "depends_on": [
+        "libs:core",
+        "libs:updater",
+        "libs:shizuku-adb-debug-tools"
+      ]
+    },
+    "libs:databackend": {
+      "dir": "../ab_cloud-libs-shared/libs/databackend",
+      "type": "library"
+    },
+    "libs:fleetconfig-model": {
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
+    "libs:mail": {
+      "dir": "../ab_cloud-libs-shared/libs/mail",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:text-tools": {
+      "dir": "../ab_cloud-libs-shared/libs/text-tools",
+      "type": "library"
+    },
+    "libs:net": {
+      "dir": "../ab_cloud-libs-shared/libs/net",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:ui-kit": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library"
+    },
+    "libs:auth": {
+      "dir": "../ab_cloud-libs-shared/libs/auth",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
+      ]
+    },
+    "libs:account": {
+      "dir": "../ab_cloud-libs-shared/libs/account",
+      "type": "library",
+      "depends_on": [
+        "libs:core",
+        "libs:appstore",
+        "libs:updater",
+        "libs:databackend",
+        "libs:fleetconfig-model",
+        "libs:mail",
+        "libs:text-tools",
+        "libs:net",
+        "libs:devtools",
+        "libs:ui-kit",
+        "libs:auth"
+      ]
+    }
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-Account.apk",
+      "release": "Cloud-Account-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Cloud-Account.apk",
+        "gh_asset": "Cloud-Account.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "Cloud-Account-x86_64.apk",
+        "gh_asset": "Cloud-Account-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ],
+    "auto_update": {
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. A background pass cannot show the system install dialog (Android 10+ blocks background activity starts), so each install it starts leaves a tap-to-install notification holding a PackageInstaller session until the user answers it. Unbounded, one pass over the 40-entry fleet opens 40 and the installer hits Android's 50-session cap - 'Too many active sessions for UID'. The remainder is picked up by the next pass. User-initiated 'Update all' is NOT capped: it runs in the foreground where the dialog appears and sessions resolve at once.",
+      "max_installs_per_pass": 3
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-account",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Account.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Cloud-Account.apk"
+    }
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep"
+      ]
+    }
+  }
+}

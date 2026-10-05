@@ -13,9 +13,10 @@
         "libs": 31,
         "rootfs": 0,
         "ship": 1,
-        "refresh": 33
+        "refresh": 34
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 33 -> 34: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "libs/devtools (one source file)",
@@ -29,9 +30,10 @@
         "libs": 32,
         "rootfs": 0,
         "ship": 1,
-        "refresh": 33
+        "refresh": 34
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 33 -> 34: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "libs/appstore (#831's lib)",
@@ -44,9 +46,10 @@
         "libs": 2,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 1
+        "refresh": 2
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 1 -> 2: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "libs/updater (700ab854 fired 12 ships)",
@@ -59,9 +62,10 @@
         "libs": 3,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 11
+        "refresh": 12
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 11 -> 12: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "libs/bottomnav (7 consumers)",
@@ -206,9 +210,10 @@
         "libs": 9,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 6
+        "refresh": 7
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 6 -> 7: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "fleet-config policy engine (libs/fleetconfig, one source file)",
@@ -235,9 +240,10 @@
         "libs": 2,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 0
+        "refresh": 1
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 0 -> 1: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "fleet-config manifest (one app's store)",
@@ -250,9 +256,10 @@
         "libs": 2,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 0
+        "refresh": 1
       },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does."
+      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
+      "_doc_refresh_867": "#867 0 -> 1: cloud-account, the new Account app (it links this through libs:account)."
     },
     {
       "id": "debug port table (one new package)",

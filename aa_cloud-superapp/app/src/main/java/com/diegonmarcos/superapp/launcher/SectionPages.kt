@@ -7,7 +7,6 @@ import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
 import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
 import com.diegonmarcos.superapp.network.WireGuardFragment
-import com.diegonmarcos.superapp.profile.ProfileFragment
 import com.diegonmarcos.superapp.apps.RecentAppsFragment
 
 import androidx.fragment.app.Fragment
@@ -70,7 +69,8 @@ object SectionPages {
         sectionId == "c3"    && pageId == "dagu"        -> OpsPages.fragmentForDagu()
         sectionId == "wg"    && pageId == "status"      -> C3MeshFragment.newInstance()
         sectionId == "feed"  && pageId == "all"         -> RssFeedFragment.newInstance()
-        sectionId == "config" && pageId == "profile"   -> ProfileFragment.newInstance()
+        // #867 Account is its own app: a button that opens Cloud Account once it is installed, else the page itself.
+        sectionId == "config" && pageId == "profile"   -> com.diegonmarcos.superapp.apps.AccountHandoff.page()
         // Launcher's three tabs. The `launcher` id names the strip
         // (build.json::ui.sections[config].pages[launcher].tabs), so each screen
         // needed an id of its own — nothing any of them stores moved with the
