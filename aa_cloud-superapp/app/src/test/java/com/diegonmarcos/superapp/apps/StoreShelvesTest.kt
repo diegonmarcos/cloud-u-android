@@ -81,10 +81,14 @@ class StoreShelvesTest {
         val phoneTab = pages[store.tabs[1]]
         assertNotNull("tab ${store.tabs[0]} is not a page of ${section.id}", cloudTab)
         assertNotNull("tab ${store.tabs[1]} is not a page of ${section.id}", phoneTab)
-        assertTrue("the fleet tab builds ${cloudTab!!.factory()::class.simpleName}",
-            cloudTab.factory() is StoreCloudFragment)
-        assertTrue("the phone tab builds ${phoneTab!!.factory()::class.simpleName}",
-            phoneTab.factory() is StorePhoneFragment)
+        // #865 each tab builds the Cloud Store hand-off, which embeds the tab's own
+        // fragment while Cloud Store is not installed.
+        fun builds(f: androidx.fragment.app.Fragment): Class<*>? =
+            CloudStoreHandoff.pageIdOf(f)?.let { CloudStoreHandoff.EMBEDDED[it] } ?: f::class.java
+        assertEquals("the fleet tab builds the wrong fragment",
+            StoreCloudFragment::class.java, builds(cloudTab!!.factory()))
+        assertEquals("the phone tab builds the wrong fragment",
+            StorePhoneFragment::class.java, builds(phoneTab!!.factory()))
         assertTrue("the fleet tab's title lost its display word: '${cloudTab.label}'",
             cloudTab.label.contains("Constellation"))
         assertEquals("the store's own id must not carry the old name", false,

@@ -2485,7 +2485,6 @@
    "module": "ac_cloud-store",
    "schema_version": 1,
    "libs": [
-    "lib-analytics",
     "lib-appstore",
     "lib-core",
     "lib-devtools",

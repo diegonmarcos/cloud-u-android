@@ -92,7 +92,7 @@ fn "$PAGE" renderMesh | grep -qF 'StoreMesh.render' && bad "Store's renderMesh s
 HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
 { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*AppsMeshFragment\(\)' "$PAGES" ||
   { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*CloudStoreHandoff\.page\(pageId\)' "$PAGES" &&
-    grep -qE '"apps-mesh" +-> .*AndroidFragment<[A-Za-z.]*AppsMeshFragment>' "$HANDOFF"; }; } \
+    grep -qE '"apps-mesh" +to +[A-Za-z.]*AppsMeshFragment::class\.java' "$HANDOFF"; }; } \
   && ok "config/apps-mesh routes to AppsMeshFragment" || bad "config/apps-mesh does not route to AppsMeshFragment"
 callers="$(grep -rlF 'StoreMesh.render(' "$LIBS" "$APP/app/src/main" --include=*.kt | xargs -r -n1 sh -c 'python3 - "$0" <<EOF
 import re,sys

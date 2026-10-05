@@ -69,6 +69,19 @@ object CloudStoreHandoff {
         arguments = Bundle().apply { putString(ARG_PAGE, pageId) }
     }
 
+    /**
+     * Store page id -> the fragment SuperApp embeds for it while Cloud Store is
+     * not installed. One map, read by the page, its JVM test and the shell testers.
+     */
+    val EMBEDDED: Map<String, Class<out Fragment>> = mapOf(
+        "store-cloud" to com.diegonmarcos.superapp.appstore.StoreCloudFragment::class.java,
+        "store-phone" to com.diegonmarcos.superapp.appstore.StorePhoneFragment::class.java,
+        "apps-mesh"   to com.diegonmarcos.superapp.appstore.AppsMeshFragment::class.java,
+    )
+
+    /** The Store page id a [Page] was built for. */
+    fun pageIdOf(f: Fragment): String? = (f as? Page)?.arguments?.getString(ARG_PAGE)
+
     private const val ARG_PAGE = "page"
 
     class Page : Fragment() {
@@ -91,13 +104,10 @@ object CloudStoreHandoff {
                     if (installed) androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
                         androidx.compose.material3.Surface { OpenCloudStore(tab) }
                     }
-                    else when (pageId) {
-                        // Not installed: the Store page itself, exactly as before.
-                        // Each page named, so the store testers can follow page -> fragment.
-                        "store-cloud" -> androidx.fragment.compose.AndroidFragment<com.diegonmarcos.superapp.appstore.StoreCloudFragment>(Modifier.fillMaxSize())
-                        "store-phone" -> androidx.fragment.compose.AndroidFragment<com.diegonmarcos.superapp.appstore.StorePhoneFragment>(Modifier.fillMaxSize())
-                        "apps-mesh"   -> androidx.fragment.compose.AndroidFragment<com.diegonmarcos.superapp.appstore.AppsMeshFragment>(Modifier.fillMaxSize())
-                        else          -> Text("Unknown Store page: $pageId")
+                    // Not installed: the Store page itself, exactly as before.
+                    else EMBEDDED[pageId]?.let {
+                        androidx.fragment.compose.AndroidFragment(clazz = it, modifier = Modifier.fillMaxSize())
+                    } ?: Text("Unknown Store page: $pageId")
                     }
                 }
             }

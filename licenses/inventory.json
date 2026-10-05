@@ -431,10 +431,8 @@
   "ac_cloud-store": {
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
-    "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/appstore",
     "ab_cloud-libs-shared/libs/core",
-    "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
     "ab_cloud-libs-shared/libs/updater"
@@ -2400,6 +2398,14 @@
    "licence_source": "licenses/curated.json"
   },
   "dir:ac_cloud-search": {
+   "kind": "dir",
+   "declared_in": [
+    "(tree)"
+   ],
+   "licence": "LicenseRef-NoLicenseGranted",
+   "licence_source": "licenses/curated.json"
+  },
+  "dir:ac_cloud-store": {
    "kind": "dir",
    "declared_in": [
     "(tree)"

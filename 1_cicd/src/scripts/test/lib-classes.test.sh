@@ -66,9 +66,9 @@ mutate "the mesh outgrows its budget"           "$DATA" "$(J "d['libs']['devtool
     "L3 devtools:"
 mutate "an app newly compiles in a logic lib"   "$WRITER_BJ" \
     "$(J "d['modules']['libs:webserver']={'dir':'../ab_cloud-libs-shared/libs/webserver'}")" \
-    "L4 backlog 40 > baseline 39"
+    "L4 backlog 42 > baseline 41"
 mutate "a migration lands without lowering the baseline" "$DATA" "$(J "d['backlog_baseline']+=1")" \
-    "L4 backlog 39 < baseline 40"
+    "L4 backlog 41 < baseline 42"
 
 echo
 [ "$FAILURES" -eq 0 ] && echo "lib-classes.test: OK" || { echo "lib-classes.test: $FAILURES FAILED"; exit 1; }

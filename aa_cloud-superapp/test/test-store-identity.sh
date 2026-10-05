@@ -74,7 +74,7 @@ handoff = src("/apps/CloudStoreHandoff.kt")
 def routed(cls):
     direct = re.findall(r'sectionId == "([^"]+)"\s*&&\s*pageId == "([^"]+)"\s*->\s*[\w.]*\b' + cls + r"\(\)", routes)
     via = [(sec, pg) for sec, pg in re.findall(r'sectionId == "([^"]+)"\s*&&\s*pageId == "([^"]+)"\s*->\s*[\w.]*CloudStoreHandoff\.page\(pageId\)', routes)
-           if re.search(r'"' + re.escape(pg) + r'"\s*->\s*[\w.]*AndroidFragment<[\w.]*\b' + cls + r'>', handoff)]
+           if re.search(r'"' + re.escape(pg) + r'"\s+to\s+[\w.]*\b' + cls + r'::class\.java', handoff)]
     return direct + via
 cloud, phone = routed("StoreCloudFragment"), routed("StorePhoneFragment")
 if len(cloud) == 1 and len(phone) == 1 and cloud[0][0] == phone[0][0]:

@@ -4,6 +4,7 @@
     {
       "id": "libs/core (one source file)",
       "_doc_libs": "#825 29 -> 30: Cloud-Lib-Fleetconfig, the fleet-config policy engine, compiles libs:core (IFleetConfigEngine). It is the price of taking the policy out of the 32 apps.",
+      "_doc_refresh": "#865 32 -> 33: cloud-store is a new app and compiles libs:core like every app.",
       "files": [
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
@@ -12,12 +13,13 @@
         "libs": 30,
         "rootfs": 0,
         "ship": 1,
-        "refresh": 32
+        "refresh": 33
       }
     },
     {
       "id": "libs/devtools (one source file)",
       "_doc_libs": "#825 30 -> 31: Cloud-Lib-Fleetconfig (through libs:core).",
+      "_doc_refresh": "#865 32 -> 33: cloud-store (through libs:core).",
       "files": [
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
@@ -26,11 +28,12 @@
         "libs": 31,
         "rootfs": 0,
         "ship": 1,
-        "refresh": 32
+        "refresh": 33
       }
     },
     {
       "id": "libs/appstore (#831's lib)",
+      "_doc_refresh": "#865 0 -> 1: cloud-store is now the primary consumer and ships per push; cloud-superapp, the other host, is refreshed by fleet-refresh.yml.",
       "files": [
         "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/LibDownloader.kt"
       ],
@@ -39,11 +42,12 @@
         "libs": 1,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 0
+        "refresh": 1
       }
     },
     {
       "id": "libs/updater (700ab854 fired 12 ships)",
+      "_doc_refresh": "#865 10 -> 11: cloud-store, the installer app, compiles the install engine in-process.",
       "files": [
         "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Updater.kt"
       ],
@@ -52,7 +56,7 @@
         "libs": 2,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 10
+        "refresh": 11
       }
     },
     {
