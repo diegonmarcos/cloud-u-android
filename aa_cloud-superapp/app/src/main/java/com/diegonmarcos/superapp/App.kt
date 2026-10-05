@@ -122,6 +122,11 @@ class App : Application(), WorkManagerConfiguration.Provider {
             periodicCheckAllowed = { ctx ->
                 com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).toggle("fleet_check")
             }
+            // #865 Cloud Store runs the unattended fleet pass once it is
+            // installed, and updates SuperApp with the rest of the fleet. Read
+            // on every check, so installing or removing Cloud Store moves the
+            // pass without a restart (the worker stands down in doWork).
+            runsFleetPass = { ctx -> !com.diegonmarcos.superapp.apps.CloudStoreHandoff.installed(ctx) }
         }
         // #831 a download that cannot resolve its host names the resolver in
         // effect, read from the same state the DNS page shows (#794).

@@ -9,9 +9,10 @@
     38300,
     38389
   ],
-  "_doc_full_table_for": "Packages whose gradle root bakes the whole table instead of its own slice: the SuperApp's Apps Mesh probe (libs:appstore StoreMesh/AppsMesh) pings every fleet member's assigned port.",
+  "_doc_full_table_for": "Packages whose gradle root bakes the whole table instead of its own slice: the SuperApp's and Cloud Store's (#865) Apps Mesh probe (libs:appstore StoreMesh/AppsMesh) pings every fleet member's assigned port.",
   "full_table_for": [
-    "com.diegonmarcos.superapp"
+    "com.diegonmarcos.superapp",
+    "com.diegonmarcos.cloudstore"
   ],
   "ports": {
     "com.diegonmarcos.superapp": 38140,
@@ -98,6 +99,7 @@
     "com.diegonmarcos.cloudlib.rootfstermux": 38221,
     "com.diegonmarcos.cloudlib.mllsoundyamnet": 38222,
     "com.diegonmarcos.cloudlib.searchpage": 38223,
-    "com.diegonmarcos.cloudlib.fleetconfig": 38224
+    "com.diegonmarcos.cloudlib.fleetconfig": 38224,
+    "com.diegonmarcos.cloudstore": 38225
   }
 }

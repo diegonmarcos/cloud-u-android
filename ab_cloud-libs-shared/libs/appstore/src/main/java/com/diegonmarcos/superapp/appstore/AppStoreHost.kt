@@ -66,4 +66,15 @@ object AppStoreHost {
      * Empty = the host has no DNS page, and no button is drawn.
      */
     @Volatile var dnsPageExtras: Map<String, String> = emptyMap()
+
+    /**
+     * #865 Whether THIS app runs the unattended fleet pass (the periodic check,
+     * the Wi-Fi trigger and the auto-update chain). Exactly one app on a phone
+     * may: two passes race the same downloads and install sessions. Cloud
+     * Store always does; SuperApp does only until Cloud Store is installed,
+     * then hands it over. Manual actions on a Store page are not gated.
+     *
+     * Defaults to true so a host that sets nothing keeps its pass.
+     */
+    @Volatile var runsFleetPass: (android.content.Context) -> Boolean = { true }
 }

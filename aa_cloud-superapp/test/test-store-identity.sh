@@ -68,8 +68,14 @@ sections = build["ui"]["sections"]
 
 print("== T1: the store's tab ids are whatever SectionPages routes to its two fragments ==")
 routes = src("/launcher/SectionPages.kt")
+# #865 a Store page may be routed through CloudStoreHandoff.page(pageId), which
+# embeds the fragment by page id while Cloud Store is not installed.
+handoff = src("/apps/CloudStoreHandoff.kt")
 def routed(cls):
-    return re.findall(r'sectionId == "([^"]+)"\s*&&\s*pageId == "([^"]+)"\s*->\s*[\w.]*\b' + cls + r"\(\)", routes)
+    direct = re.findall(r'sectionId == "([^"]+)"\s*&&\s*pageId == "([^"]+)"\s*->\s*[\w.]*\b' + cls + r"\(\)", routes)
+    via = [(sec, pg) for sec, pg in re.findall(r'sectionId == "([^"]+)"\s*&&\s*pageId == "([^"]+)"\s*->\s*[\w.]*CloudStoreHandoff\.page\(pageId\)', routes)
+           if re.search(r'"' + re.escape(pg) + r'"\s*->\s*[\w.]*AndroidFragment<[\w.]*\b' + cls + r'>', handoff)]
+    return direct + via
 cloud, phone = routed("StoreCloudFragment"), routed("StorePhoneFragment")
 if len(cloud) == 1 and len(phone) == 1 and cloud[0][0] == phone[0][0]:
     ok("one route each: %s/%s -> StoreCloudFragment, %s/%s -> StorePhoneFragment" % (cloud[0] + phone[0]))

@@ -60,7 +60,9 @@ has "$(cd "$APP/.." && pwd)/ab_cloud-libs-shared/libs/appstore/src/main/java/com
 # store-cloud + store-phone), routed by SectionPages like every other page —
 # there is no action branch left to assert. test-store-identity.sh owns the
 # full identity check; this line only keeps the old wiring claim honest.
-has "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt" 'pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()' "SectionPages routes Store ▸ Cloud Constellation"
+# #865 through the Cloud Store hand-off, which embeds the fragment until Cloud Store is installed.
+has "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt" 'pageId == "store-cloud"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)' "SectionPages routes Store ▸ Cloud Constellation (via the Cloud Store hand-off)"
+has "$APP/app/src/main/java/com/diegonmarcos/superapp/apps/CloudStoreHandoff.kt" '"store-cloud" -> androidx.fragment.compose.AndroidFragment<com.diegonmarcos.superapp.appstore.StoreCloudFragment>' "the hand-off embeds StoreCloudFragment for store-cloud"
 has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" "ConstellationWorker.start(this)" "App.onCreate starts the fleet worker"
 jq -e '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store")' "$APP/build.json" >/dev/null 2>&1 \
   && ok "build.json config.pages has the Store entry" || bad "Store page not in build.json ui.sections"

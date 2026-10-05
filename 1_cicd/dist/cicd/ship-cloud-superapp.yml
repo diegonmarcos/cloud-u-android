@@ -86,6 +86,7 @@ on:
       # file. fleet-refresh.yml ships the app when one of the libs moved
       # since its last published build.
       #   input: "1_cicd/src/cicd/ship-cloud-superapp.yml"
+      #   input: "ab_cloud-libs-shared/libs/appstore/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/databackend/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
@@ -102,7 +103,6 @@ on:
       - "aa_cloud-superapp/**"
       - "ab_cloud-libs-shared/build.json"
       - "ab_cloud-libs-shared/libs/analytics/**"
-      - "ab_cloud-libs-shared/libs/appstore/**"
       - "ab_cloud-libs-shared/libs/auth/**"
       - "ab_cloud-libs-shared/libs/battery/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"

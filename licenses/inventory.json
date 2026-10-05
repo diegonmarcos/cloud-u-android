@@ -428,6 +428,18 @@
     "ac_cloud-search/core"
    ]
   },
+  "ac_cloud-store": {
+   "app_licence": "LicenseRef-NoLicenseGranted",
+   "links_shared_modules": [
+    "ab_cloud-libs-shared/libs/analytics",
+    "ab_cloud-libs-shared/libs/appstore",
+    "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/databackend",
+    "ab_cloud-libs-shared/libs/devtools",
+    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
+    "ab_cloud-libs-shared/libs/updater"
+   ]
+  },
   "ac_cloud-termux": {
    "app_licence": "GPL-3.0-only",
    "links_shared_modules": [
@@ -3377,6 +3389,17 @@
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "matrix"
+  },
+  "maven:androidx.fragment:fragment-compose": {
+   "kind": "maven",
+   "declared_in": [
+    "aa_cloud-superapp/app/build.gradle"
+   ],
+   "version": "1.8.5",
+   "scope": "shipped",
+   "licence": "Apache-2.0",
+   "licence_source": "curated.maven_group_licences[androidx]",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
   },
   "maven:androidx.fragment:fragment-ktx": {
    "kind": "maven",

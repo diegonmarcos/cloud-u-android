@@ -344,6 +344,12 @@
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0",
    "note": "NOTICE.md present"
   },
+  "ac_cloud-store": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Store app (#865, the Store split out of cloud-superapp)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-termux": {
    "licence": "GPL-3.0-only",
    "kind": "upstream-fork",

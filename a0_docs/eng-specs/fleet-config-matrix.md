@@ -42,11 +42,12 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 0 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
+| cloud-store | `com.diegonmarcos.cloudstore` | 4 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 8 | 7 | 53% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **162** | **35** | **82%** |
+| **fleet** | | **166** | **35** | **82%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -687,6 +688,25 @@ Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-text-
 | `filesDir/chat-sessions.json` | content | AI chat history (never carries the token); stays on the phone that held the conversation |
 
 Coverage: 2 covered, 0 gaps.
+
+## cloud-store — `com.diegonmarcos.cloudstore`
+
+Module `ac_cloud-store`; libs: lib-analytics, lib-appstore, lib-core, lib-devtools, lib-shizuku-adb-debug-tools, lib-updater.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
+| `apps_mesh` | prefs | config | yes | #793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates. |
+| `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
+| `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
+| `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
+| `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
+
+Coverage: 4 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 

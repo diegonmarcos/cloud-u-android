@@ -89,11 +89,13 @@ object SectionPages {
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
-        sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()
-        sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.appstore.StorePhoneFragment()
+        // #865 each Store page is wrapped: once Cloud Store is installed it shows
+        // a button that opens Cloud Store on the same tab, else the page itself.
+        sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
+        sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
         // #733 the Store's Apps Mesh page, reached from Configs ▸ Mesh too —
         // the same AppsMesh.page, hosted on its own (no copy).
-        sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.appstore.AppsMeshFragment()
+        sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // #740 Configs ▸ Mesh ▸ DNS — the fleet resolver, applied at the Cloud Mesh VPN.
         sectionId == "config" && pageId == "dns"            -> com.diegonmarcos.superapp.network.DnsFragment.newInstance()

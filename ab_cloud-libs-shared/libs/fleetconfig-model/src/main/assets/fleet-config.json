@@ -2480,6 +2480,20 @@
     }
    ]
   },
+  "store": {
+   "package": "com.diegonmarcos.cloudstore",
+   "module": "ac_cloud-store",
+   "schema_version": 1,
+   "libs": [
+    "lib-analytics",
+    "lib-appstore",
+    "lib-core",
+    "lib-devtools",
+    "lib-shizuku-adb-debug-tools",
+    "lib-updater"
+   ],
+   "items": []
+  },
   "termux": {
    "package": "cld.termux",
    "module": "ac_cloud-termux",

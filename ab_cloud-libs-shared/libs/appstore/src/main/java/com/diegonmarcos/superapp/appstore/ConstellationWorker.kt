@@ -50,6 +50,13 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         }
         if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(applicationContext))
             return@withContext Result.success()
+        // #865 another app owns the fleet pass on this phone (SuperApp hands it to
+        // Cloud Store once Cloud Store is installed). Two passes would race the
+        // same downloads and install sessions, so this one stands down.
+        if (!AppStoreHost.runsFleetPass(applicationContext)) {
+            Log.i(TAG, "fleet pass owned by another app on this phone - standing down")
+            return@withContext Result.success()
+        }
         // #804 the pass below IS the persisted auto chain (Fleet.autoChain);
         // attach is idempotent and makes that true in any process WorkManager wakes.
         StoreAuto.attach(applicationContext) { c, t -> kick(c, t) }
@@ -165,6 +172,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             runCatching {
                 if (!InstallIdentity.isManaged(context)) return
                 if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
+                if (!AppStoreHost.runsFleetPass(context)) return   // #865
                 val req = OneTimeWorkRequestBuilder<ConstellationWorker>()
                     .setConstraints(constraints())
                     .setInputData(triggerData(trigger))
@@ -184,6 +192,17 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                            "— NOT the managed primary install; not scheduling the constellation check")
                 WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
                 WorkManager.getInstance(context).cancelUniqueWork("$WORK_NAME-now")
+                return
+            }
+            // #865 another app on this phone owns the fleet pass (SuperApp hands it
+            // to Cloud Store once that is installed). Cancel everything this app
+            // had queued and attach no Wi-Fi trigger: two passes would race the
+            // same downloads and install sessions.
+            if (!AppStoreHost.runsFleetPass(context)) {
+                Log.i(TAG, "fleet pass owned by another app on this phone - not scheduling")
+                WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                WorkManager.getInstance(context).cancelUniqueWork("$WORK_NAME-now")
+                WorkManager.getInstance(context).cancelUniqueWork("$WORK_NAME-kick")
                 return
             }
             // #804 the persisted chain becomes THE unattended pass, and joining
@@ -243,6 +262,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                 return
             }
             if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
+            if (!AppStoreHost.runsFleetPass(context)) return   // #865
             val req = OneTimeWorkRequestBuilder<ConstellationWorker>()
                 .setConstraints(constraints())
                 .setInputData(triggerData(StoreAuto.TRIGGER_APP_START))
