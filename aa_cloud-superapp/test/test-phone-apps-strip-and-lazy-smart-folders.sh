@@ -672,7 +672,10 @@ HOP="$(body storeHop)"
 # The tab id is READ from build.json (the store page's first tab — its fleet
 # tab, where libs live), never written here, so renaming it there without
 # repointing the hop fails this line (#563).
-STORE_FLEET_TAB="$(jq -r '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store") | .tabs[0] // empty' "$APP/build.json")"
+# #865 the Store tile opens Cloud Store; the fleet page stays, hidden, for page:
+# links like this one (CloudStoreHandoff shows Open Cloud Store on it once the
+# app is installed). So the tab is the hidden page StoreCloudFragment is routed to.
+STORE_FLEET_TAB="$(jq -r '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store-cloud" and .hidden==true) | .id // empty' "$APP/build.json")"
 if [ -n "$STORE_FLEET_TAB" ] && printf '%s\n' "$HOP" | grep -qF "openSectionPage(\"config\", \"$STORE_FLEET_TAB\""; then
     ok "opening the lib's store is the in-app Configs ▸ Store fleet tab ($STORE_FLEET_TAB)"
 else

@@ -84,16 +84,22 @@ else:
     print("RESULT: %d passed, %d failed" % (PASS, FAIL)); sys.exit(1)
 SEC, CLOUD_TAB = cloud[0]; PHONE_TAB = phone[0][1]
 
-print("== T2: ONE owner page declares both tabs — that entry IS the declaration ==")
+print("== T2: ONE Store entry, and it launches Cloud Store (#865) ==")
 sec = next((s for s in sections if s.get("id") == SEC), None)
 pages = (sec or {}).get("pages", [])
-owners = [p for p in pages if CLOUD_TAB in p.get("tabs", []) and PHONE_TAB in p.get("tabs", [])]
-if len(owners) == 1: ok("%s/%s owns tabs %s" % (SEC, owners[0]["id"], owners[0]["tabs"]))
-else: bad("expected one page in %s declaring tabs [%s, %s], got %d" % (SEC, CLOUD_TAB, PHONE_TAB, len(owners)))
+STORE_APP = "extapp:cloud-store"
+owners = [p for p in pages if p.get("action") == STORE_APP]
+if len(owners) == 1: ok("%s/%s launches Cloud Store (%s)" % (SEC, owners[0]["id"], STORE_APP))
+else: bad("expected one page in %s whose action is %s, got %d" % (SEC, STORE_APP, len(owners)))
 owner = owners[0] if owners else {}
 STORE_ID, STORE_LABEL = owner.get("id", ""), owner.get("label", "")
-if owner.get("tabs", [None])[0] == CLOUD_TAB: ok("the fleet tab (%s) is the one the page lands on" % CLOUD_TAB)
-else: bad("the fleet tab %s is not the first tab — the page would open on %s" % (CLOUD_TAB, owner.get("tabs")))
+if not owner.get("tabs") and owner.get("is_action") is not True:
+    ok("it opens the app from its usual place (no tabs of its own, not moved to the Actions row)")
+else: bad("the Store entry still carries tabs, or is_action moved it to the Actions row: %s" % {k: owner.get(k) for k in ("is_action", "tabs")})
+ext = [e for e in build["ui"].get("external_apps", []) if e.get("id") == STORE_APP.split(":", 1)[1]]
+if len(ext) == 1 and ext[0].get("hub_package") == "com.diegonmarcos.cloudstore" and ext[0].get("install_apk_url", "").endswith("/Cloud-Store.apk"):
+    ok("extapp:cloud-store resolves to com.diegonmarcos.cloudstore and offers Cloud-Store.apk when absent")
+else: bad("ui.external_apps has no usable cloud-store entry: %s" % ext)
 tab = {p["id"]: p for p in pages if p.get("id") in (CLOUD_TAB, PHONE_TAB)}
 for t in (CLOUD_TAB, PHONE_TAB):
     if t in tab and tab[t].get("hidden") is True: ok("tab %s is declared, hidden from the Configs grid" % t)
@@ -130,7 +136,7 @@ if not stale: ok("no page/tab id or target routes to the old store")
 else: bad("build.json still routes by the old name: " + "; ".join(stale[:8]))
 
 print("== T5: every tile/page that routes INTO the store carries the store's title ==")
-into = {"page:%s/%s" % (SEC, x) for x in (STORE_ID, CLOUD_TAB, PHONE_TAB)}
+into = {"page:%s/%s" % (SEC, x) for x in (STORE_ID, CLOUD_TAB, PHONE_TAB)} | {STORE_APP}
 entries = []
 def collect(o, path):
     if isinstance(o, dict):

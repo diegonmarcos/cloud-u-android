@@ -64,45 +64,21 @@ print('OK')
 PY
 )" "Launcher groups presets, controls, onehand, notify as four consecutive visible pages"
 
-echo "== T2: every tab STILL declared in this section is a real hidden page, not its owner =="
-# The generic rule, which #649 left standing for the two pages that are still
-# strip (store) after Launcher stopped being one — #723 deleted the AI strip. It is asserted over
-# whatever `tabs` the file declares rather than over a hand list, so it neither
-# went vacuous nor needed editing when four of its subjects became direct tiles —
-# and it reports WHICH owners it actually checked, because a rule that silently
-# has nothing left to check is a green that verified nothing.
-check "$(python3 - "$BJ" <<'PY'
-import json, sys
-pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
-             if s['id'] == 'config')['pages']
-by_id = {p['id']: p for p in pages}
-owners, problems = [], []
-for owner in pages:
-    if owner.get('tabs'): owners.append(owner['id'])
-    for tab in owner.get('tabs', []):
-        if tab == owner['id']:
-            problems.append('%s lists itself as a tab (infinite render)' % tab)
-        elif tab not in by_id:
-            problems.append('tab %r has no page behind it' % tab)
-        elif not by_id[tab].get('hidden'):
-            problems.append('tab %r is still a standalone Configs entry' % tab)
-if not owners:
-    problems.append('NO page in this section declares tabs any more — this check '
-                    'has no subject left and must be deleted, not left passing')
-print('; '.join(problems) or 'OK')
-PY
-)" "the tab owner left in Configs (store) names real hidden pages of the same section"
-# Assert the subject set separately and by name: a silent
-# change from {store} to {} is this check losing all its coverage.
+echo "== T2: no Configs page is a tab strip any more =="
+# #865 deleted the generic tab-owner rule: its last subject, Store, became a
+# tile that opens Cloud Store (extapp:cloud-store), so the rule had nothing left
+# to check - exactly what it said should happen to it. What remains true, and
+# is asserted here, is that Configs declares no strip at all; a new one must
+# bring its own check.
 OWNERS=$(python3 -c "
 import json
 pages = next(s for s in json.load(open('$BJ'))['ui']['sections']
              if s['id'] == 'config')['pages']
 print(','.join(p['id'] for p in pages if p.get('tabs')))
 ")
-[ "$OWNERS" = "store" ] \
-  && ok "T2's subject is exactly store — Launcher (#649) and AI (#723) are no longer strips" \
-  || bad "the Configs tab owners are now [$OWNERS], not [store] — T2 checks a different set than it claims"
+[ -z "$OWNERS" ] \
+  && ok "no Configs page declares tabs (Store opens Cloud Store since #865)" \
+  || bad "Configs declares tab strips again: [$OWNERS] - give them a check of their own"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'

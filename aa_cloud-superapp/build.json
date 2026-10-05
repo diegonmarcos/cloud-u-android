@@ -2960,7 +2960,7 @@
                 "_doc": "The Configs row's way into Configs ▸ Store (#563). Its label must equal the store page's label — test-store-identity.sh derives both and fails if they drift.",
                 "label": "Store",
                 "icon": "ic_refresh",
-                "target": "page:config/store"
+                "target": "extapp:cloud-store"
               },
               {
                 "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
@@ -4688,10 +4688,8 @@
             "id": "store",
             "label": "Store",
             "icon": "ic_refresh",
-            "tabs": [
-              "store-cloud",
-              "store-phone"
-            ],
+            "action": "extapp:cloud-store",
+          "_doc_865": "#865 the Store is its own app (ac_cloud-store, com.diegonmarcos.cloudstore). This entry opens it: its action extapp:cloud-store is the tile's target. Not is_action, so the tile keeps its place under Watchdog ▸ Setup instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-store].install_apk_url is offered. The two tab pages below stay, hidden, for page: links (the update notification, Update All); CloudStoreHandoff shows Open Cloud Store on them once the app is installed.",
             "group": "Watchdog",
             "subgroup": "Setup"
           },
@@ -7766,6 +7764,15 @@
         "forks": {}
       },
       {
+        "_doc": "#865 Cloud Store (ac_cloud-store, com.diegonmarcos.cloudstore): the Store split out of this app. The Configs Store entry and the two Store tiles launch it through extapp:cloud-store; when it is absent, install_apk_url is offered, so the first install needs no store. install_apk_url mirrors ac_cloud-store/build.json::release.gh_release.asset_name (arm64 rolling-latest; x86_64 is Cloud-Store-x86_64.apk). folder=sys_stores is the taxonomy half of the same record.",
+        "id": "cloud-store",
+        "folder": "sys_stores",
+        "hub_package": "com.diegonmarcos.cloudstore",
+        "install_package": "com.diegonmarcos.cloudstore",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Store.apk",
+        "forks": {}
+      },
+      {
         "_doc": "Cloud Drive (ac_cloud-drive, com.diegonmarcos.clouddrive) — the phone's storage surface as its own icon. It was ui.sections[drive], four tabs deep inside this app; task 302/304 lifted it out, and its Files tab is now a full native local file manager over shared storage rather than a list of remote back ends. Nothing in the SuperApp renders Drive any more: the Data Apps tile and the left handle's `down` sector both launch this package.",
         "id": "cloud-drive",
         "folder": "prod_storage",
@@ -9450,7 +9457,7 @@
         "id": "store",
         "label": "Store",
         "icon": "ic_refresh",
-        "target": "page:config/store"
+        "target": "extapp:cloud-store"
       },
       {
         "id": "recent-apps",

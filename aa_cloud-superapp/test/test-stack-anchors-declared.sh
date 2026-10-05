@@ -192,14 +192,27 @@ tabbed = {(s.get("id"), tab)
           for s in build.get("ui", {}).get("sections", [])
           for p in s.get("pages", [])
           for tab in (p.get("tabs") or [])}
-reachable = refs | tabbed
+# #865 a THIRD way in: a `page:` route the app's own Kotlin opens - the update
+# notification, Update All and the lib-row hop all land on config/store-cloud,
+# which lost its tab when the Store tile started opening Cloud Store instead.
+# Only string literals in main source count; a route that exists only in a
+# comment reaches nothing.
+code_refs = set()
+src_root = os.path.join(app, "app", "src", "main", "java")
+for dp, _, fs in os.walk(src_root):
+    for f in fs:
+        if not f.endswith(".kt"): continue
+        for line in open(os.path.join(dp, f), encoding="utf-8", errors="replace"):
+            code = line.split("//", 1)[0]
+            code_refs |= set(re.findall(r'"page:([a-z0-9_-]+)/([a-z0-9_-]+)(?:#[a-z0-9/_-]+)?"', code))
+reachable = refs | tabbed | code_refs
 for section, page in sorted(hidden):
     if (section, page) not in reachable:
         emit("T8", "page %s/%s is hidden and nothing points at it — no tile "
                    "targets it and no page lists it as a tab, so it is "
                    "unreachable" % (section, page))
-emit("INFO", "%d page: targets, %d tab references, %d hidden pages, all reachable"
-             % (len(refs), len(tabbed), len(hidden)))
+emit("INFO", "%d page: targets, %d tab references, %d code routes, %d hidden pages, all reachable"
+             % (len(refs), len(tabbed), len(code_refs), len(hidden)))
 
 print("\n".join(lines))
 PY

@@ -71,16 +71,19 @@ class StoreShelvesTest {
 
     @Test
     fun `the Store page resolves to its two tabs and each builds its own fragment`() {
+        // #865 the Store entry launches Cloud Store (extapp:cloud-store); its two
+        // pages stay, hidden, for page: links (the update notification, Update All).
         val config = Sections.all().firstNotNullOfOrNull { sec ->
-            sec.allPages.firstOrNull { it.label == "Store" && it.tabs.size == 2 }?.let { sec to it }
+            sec.allPages.firstOrNull { it.label == "Store" && it.action == "extapp:cloud-store" }?.let { sec to it }
         }
-        assertNotNull("no page titled Store with two tabs in the resolved sections", config)
+        assertNotNull("no Store entry launching extapp:cloud-store in the resolved sections", config)
         val (section, store) = config!!
+        assertTrue("the Store entry moved to the Actions row", !store.isAction)
         val pages = SectionPages.pagesFor(section.id, includeHidden = true).associateBy { it.id }
-        val cloudTab = pages[store.tabs[0]]
-        val phoneTab = pages[store.tabs[1]]
-        assertNotNull("tab ${store.tabs[0]} is not a page of ${section.id}", cloudTab)
-        assertNotNull("tab ${store.tabs[1]} is not a page of ${section.id}", phoneTab)
+        val cloudTab = pages["store-cloud"]
+        val phoneTab = pages["store-phone"]
+        assertNotNull("store-cloud is not a page of ${section.id}", cloudTab)
+        assertNotNull("store-phone is not a page of ${section.id}", phoneTab)
         // #865 each tab builds the Cloud Store hand-off, which embeds the tab's own
         // fragment while Cloud Store is not installed.
         fun builds(f: androidx.fragment.app.Fragment): Class<*>? =
@@ -92,6 +95,6 @@ class StoreShelvesTest {
         assertTrue("the fleet tab's title lost its display word: '${cloudTab.label}'",
             cloudTab.label.contains("Constellation"))
         assertEquals("the store's own id must not carry the old name", false,
-            (store.id + store.tabs.joinToString()).contains("constellation", ignoreCase = true))
+            (store.id + cloudTab.id + phoneTab!!.id).contains("constellation", ignoreCase = true))
     }
 }

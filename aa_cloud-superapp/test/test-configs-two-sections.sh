@@ -102,8 +102,9 @@ else:
     if store.get('group') != 'Watchdog' or store.get('subgroup') != 'Setup':
         problems.append('store is under %r/%r, not Watchdog ▸ Setup'
                         % (store.get('group'), store.get('subgroup')))
-    if store.get('tabs') != ['store-cloud', 'store-phone']:
-        problems.append('store tabs = %r' % (store.get('tabs'),))
+    # #865 the Store is its own app: the tile opens it and owns no tabs.
+    if store.get('action') != 'extapp:cloud-store' or store.get('tabs'):
+        problems.append('store action = %r, tabs = %r' % (store.get('action'), store.get('tabs')))
 if by_id.get('store-cloud', {}).get('label') != 'Cloud Constellation':
     problems.append('the Cloud Constellation tab lost its label: %r'
                     % (by_id.get('store-cloud', {}).get('label'),))
@@ -111,7 +112,7 @@ if any(p['label'] == 'Constellation' for p in pages):
     problems.append('a page is labelled Constellation again — #563 renamed it Store')
 print('; '.join(problems) or 'OK')
 PY
-)" "Store sits in Watchdog ▸ Setup and owns the Cloud Constellation tab; no page named Constellation"
+)" "Store sits in Watchdog ▸ Setup and opens Cloud Store; the Cloud Constellation page keeps its label; no page named Constellation"
 
 echo "== T4: no heading, subheading or page name is a Kotlin literal on the grid path =="
 # The whole point of the declaration: a literal would make the build.json edit
