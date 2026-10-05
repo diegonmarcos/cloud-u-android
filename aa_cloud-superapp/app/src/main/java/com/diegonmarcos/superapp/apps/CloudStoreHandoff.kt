@@ -101,13 +101,18 @@ object CloudStoreHandoff {
             val installed = installed(requireContext())
             return androidx.compose.ui.platform.ComposeView(requireContext()).apply {
                 setContent {
-                    if (installed) androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
-                        androidx.compose.material3.Surface { OpenCloudStore(tab) }
-                    }
-                    // Not installed: the Store page itself, exactly as before.
-                    else EMBEDDED[pageId]?.let {
-                        androidx.fragment.compose.AndroidFragment(clazz = it, modifier = Modifier.fillMaxSize())
-                    } ?: Text("Unknown Store page: $pageId")
+                    val embedded = EMBEDDED[pageId]
+                    if (installed) {
+                        androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
+                            androidx.compose.material3.Surface { OpenCloudStore(tab) }
+                        }
+                    } else if (embedded != null) {
+                        // Not installed: the Store page itself, exactly as before.
+                        @Suppress("UNCHECKED_CAST")
+                        val cls = embedded as Class<Fragment>
+                        androidx.fragment.compose.AndroidFragment(clazz = cls, modifier = Modifier.fillMaxSize())
+                    } else {
+                        Text("Unknown Store page: $pageId")
                     }
                 }
             }
