@@ -725,11 +725,11 @@ class DevControlFragment : Fragment() {
 
         section(ctx, column, "Profile") {
             val prof = ProfilePrefs(ctxAny())
-            row(ctx, it, "Name",     prof.name.ifBlank { BuildConfig.UI_PROFILE_NAME })
-            row(ctx, it, "Email",    prof.email.ifBlank { BuildConfig.UI_PROFILE_EMAIL })
-            row(ctx, it, "Company",  prof.company.ifBlank { BuildConfig.UI_PROFILE_COMPANY })
-            row(ctx, it, "Location", prof.location.ifBlank { BuildConfig.UI_PROFILE_LOCATION })
-            val site = prof.website.ifBlank { BuildConfig.UI_PROFILE_WEBSITE }
+            row(ctx, it, "Name",     prof.name.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_NAME })
+            row(ctx, it, "Email",    prof.email.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_EMAIL })
+            row(ctx, it, "Company",  prof.company.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_COMPANY })
+            row(ctx, it, "Location", prof.location.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_LOCATION })
+            val site = prof.website.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_WEBSITE }
             if (site.isNotBlank()) row(ctx, it, "Website", site)
             // Repos — data-driven from build.json::ui.profile_default.repos.
             it.addView(small(ctx, "Repos:"))

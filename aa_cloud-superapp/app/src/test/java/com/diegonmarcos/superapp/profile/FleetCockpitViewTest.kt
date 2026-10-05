@@ -74,14 +74,14 @@ class FleetCockpitViewTest {
         val layout = VaultCockpit.layout
         assertTrue("the baked layout must declare sections", layout.sections.isNotEmpty())
         val (page, _) = build(layout)
-        val hero = page.findViewById<View>(R.id.cockpit_hero)
+        val hero = page.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_hero)
         assertNotNull("no hero on the page", hero)
         assertEquals("the hero is the first thing on the page", hero, page.getChildAt(0))
-        val orb = page.findViewById<View>(R.id.cockpit_device_orb)
+        val orb = page.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_device_orb)
         assertTrue("the hero orb is not a circle", (orb.background as? GradientDrawable)?.shape == GradientDrawable.OVAL)
-        assertNotNull(page.findViewById<TextView>(R.id.cockpit_hero_light))
+        assertNotNull(page.findViewById<TextView>(com.diegonmarcos.superapp.account.R.id.cockpit_hero_light))
 
-        val cards = all(page).filter { it.id == R.id.cockpit_card }
+        val cards = all(page).filter { it.id == com.diegonmarcos.superapp.account.R.id.cockpit_card }
         assertEquals(layout.sections.map { it.id }, cards.map { it.tag })
         assertEquals("the cards follow the hero, in declared order",
             listOf(hero) + cards, (0 until page.childCount).map { page.getChildAt(it) })
@@ -91,15 +91,15 @@ class FleetCockpitViewTest {
         val (page, cards) = build(VaultCockpit.layout)
         cards.forEachIndexed { i, card ->
             val state = states[i % states.size]
-            val light = card.root.findViewById<TextView>(R.id.cockpit_card_light)
+            val light = card.root.findViewById<TextView>(com.diegonmarcos.superapp.account.R.id.cockpit_card_light)
             assertEquals(StatusLight.text(ctx, state), light.text.toString())
             assertEquals("card ${card.tag} colour", StatusLight.colour(ctx, state), light.currentTextColor)
             assertEquals(StatusLight.description(ctx, card.label, state), light.contentDescription.toString())
-            val badge = card.root.findViewById<View>(R.id.cockpit_card_badge)
+            val badge = card.root.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_card_badge)
             assertTrue("${card.tag}'s badge is not a circle", (badge.background as? GradientDrawable)?.shape == GradientDrawable.OVAL)
         }
         // The four shared states, and only those, are what a cockpit light can say.
-        val painted = all(page).filter { it.id == R.id.cockpit_card_light }.map { (it as TextView).text.toString() }
+        val painted = all(page).filter { it.id == com.diegonmarcos.superapp.account.R.id.cockpit_card_light }.map { (it as TextView).text.toString() }
         val vocabulary = StatusLight.State.values().map { StatusLight.text(ctx, it) }.toSet()
         assertTrue("a light says something StatusLight does not: $painted", painted.all { it in vocabulary })
     }
@@ -107,7 +107,7 @@ class FleetCockpitViewTest {
     @Test fun `the header toggles the body, which starts visible so no Apply is hidden`() {
         val (_, cards) = build(VaultCockpit.layout)
         val card = cards.first()
-        val body = card.root.findViewById<View>(R.id.cockpit_card_body)
+        val body = card.root.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_card_body)
         assertEquals(View.VISIBLE, body.visibility)
         val header = card.root.getChildAt(0)
         assertTrue("the header is the tap target", header.isClickable)
@@ -129,10 +129,10 @@ class FleetCockpitViewTest {
         for (tv in labelViews) {
             var p = tv.parent
             var inCard = false
-            while (p is View) { if (p.id == R.id.cockpit_card) inCard = true; p = p.parent }
+            while (p is View) { if (p.id == com.diegonmarcos.superapp.account.R.id.cockpit_card) inCard = true; p = p.parent }
             assertTrue("'${tv.text}' is drawn outside a cockpit card — the old headline idiom", inCard)
             // A label is not a light: the light is the one that carries the shared vocabulary.
-            assertTrue(tv.id != R.id.cockpit_card_light)
+            assertTrue(tv.id != com.diegonmarcos.superapp.account.R.id.cockpit_card_light)
         }
         // And the card whose label it is: tag and label agree.
         cards.forEach { c -> assertEquals(layout.sections.first { it.id == c.tag }.label, c.label) }
@@ -142,7 +142,7 @@ class FleetCockpitViewTest {
         // The lights are the point: the same state painted on two lights is the same colour,
         // and the hero's light and a card's light for the same state cannot differ.
         val (page, cards) = build(VaultCockpit.layout)
-        val heroLight = page.findViewById<TextView>(R.id.cockpit_hero_light)
+        val heroLight = page.findViewById<TextView>(com.diegonmarcos.superapp.account.R.id.cockpit_hero_light)
         FleetCockpitView.paint(heroLight, StatusLight.State.ON, "x")
         FleetCockpitView.paint(cards.first().light, StatusLight.State.ON, "y")
         assertEquals(heroLight.currentTextColor, cards.first().light.currentTextColor)

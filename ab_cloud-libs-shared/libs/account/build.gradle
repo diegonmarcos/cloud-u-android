@@ -1,0 +1,169 @@
+// libs:account (#867) — the Account page: Profile, Connect (sign-in lines), Fleet cockpit, Infos,
+// Drift, the business card and the QR gallery, plus the vault/git/SSH plumbing behind them.
+//
+// Lifted out of aa_cloud-superapp's profile package so the SuperApp (Configs ▸ Profile) and the
+// Cloud Account app host ONE code path, the way libs:auth is the one sign-in. What the launcher
+// owns — its theme palette, tab chrome, icon table, tile router, haptics and the mesh tunnel's
+// prefs — is NOT reached for from here: the host hands it over once, in Application.onCreate,
+// through AccountHost (same shape as libs:appstore's AppStoreHost).
+//
+// The Kotlin package stays com.diegonmarcos.superapp.profile (and settings / core / ui for the
+// four helpers that came with it): nothing that already imports these classes changes.
+//
+// BUILD-TIME DATA. The Account screens are declared in build.json::ui.profile / ui.vault_connect /
+// ui.profile_default / ui.profile_sync / engines.gh and baked into THIS module's BuildConfig, the
+// way libs:auth bakes its own declaration. Consumer-wins-with-fallback (libs:mail precedent): the
+// consuming app's build.json when it declares `ui.profile`, else cloud-superapp's — the home of the
+// declaration. VERSION_* are read through PackageManager at runtime (a library has no app version).
+// CONSTELLATION_FLEET_B64 is libs:appstore's.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+if (buildJson.ui?.profile == null) {
+    buildJson = new groovy.json.JsonSlurper().parse(file("${projectDir}/../../../aa_cloud-superapp/build.json"))
+}
+
+// `_doc*` keys are prose for the reader of build.json, not data the phone needs.
+def stripDocs
+stripDocs = { obj ->
+    if (obj instanceof Map) {
+        return obj.findAll { k, v -> !k.toString().startsWith('_doc') }
+                  .collectEntries { k, v -> [(k): stripDocs(v)] }
+    }
+    if (obj instanceof List) return obj.collect { stripDocs(it) }
+    return obj
+}
+def b64 = { Object tree -> groovy.json.JsonOutput.toJson(tree).bytes.encodeBase64().toString() }
+
+// The Fleet tab's cockpit layout (sections, labels, vault-section mapping, ai token targets).
+def vaultConnect     = buildJson.ui.vault_connect ?: [:]
+def vaultCockpitB64  = b64(stripDocs(vaultConnect.cockpit ?: [:]))
+
+// Profile defaults — first-run seed for ProfilePrefs.
+def profileDefault   = buildJson.ui.profile_default ?: [:]
+def profileSyncUrl   = (buildJson.ui.profile_sync?.url ?: '').toString()
+// #614 tabs, #778 drift, #626 infos, #695 connect: each baked whole, DATA not Kotlin.
+def profileUi        = buildJson.ui.profile ?: [:]
+def profileTabsB64    = b64(profileUi.tabs ?: [])
+def profileDriftB64   = b64(profileUi.drift ?: [:])
+def profileInfosB64   = b64(profileUi.infos ?: [:])
+def profileConnectB64 = b64(profileUi.connect ?: [:])
+
+// #713 THE gh ENGINE the Account page's GitHub ▸ WebAuth binds (build.json::engines.gh): its package
+// comes from the constellation manifest; an id the manifest lacks is a hard error, because the way
+// would bind a package no Store row installs.
+def ghEngineDecl = buildJson.engines?.gh
+if (ghEngineDecl == null) {
+    throw new GradleException("build.json::engines.gh is not declared — GitHub ▸ WebAuth would bind nothing (#713)")
+}
+def fleetFile = [
+    file("${rootDir}/data/constellation-fleet.json"),
+    file("${projectDir}/../../../aa_cloud-superapp/data/constellation-fleet.json"),
+].find { it.exists() }
+if (fleetFile == null) throw new GradleException("libs:account: no constellation-fleet.json under ${rootDir}/data or aa_cloud-superapp/data")
+def ghEngineFleet = (new groovy.json.JsonSlurper().parse(fleetFile).apps ?: []).find { it.id == ghEngineDecl.fleet }
+if (ghEngineFleet == null) {
+    throw new GradleException(
+        "build.json::engines.gh.fleet '${ghEngineDecl.fleet}' is not in data/constellation-fleet.json — " +
+        "GitHub ▸ WebAuth would bind a package no Store row installs (#713)")
+}
+def ghEnginePackage = ghEngineFleet.package.toString()
+def ghEngineAction  = ghEngineDecl.action.toString().replace('{package}', ghEnginePackage)
+def ghEngineMinContract = ghEngineDecl.min_contract as int
+def ghEnginePollMs  = ghEngineDecl.login_poll_ms as long
+def ghEngineMaxMs   = ghEngineDecl.login_max_ms as long
+if (ghEngineMinContract < 1 || ghEnginePollMs <= 0 || ghEngineMaxMs < ghEnginePollMs) {
+    throw new GradleException("build.json::engines.gh needs min_contract >= 1 and 0 < login_poll_ms <= login_max_ms (#713)")
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.account'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "UI_VAULT_CONNECT_COCKPIT_B64", "\"${vaultCockpitB64}\""
+        buildConfigField "String", "UI_PROFILE_NAME",       "\"${(profileDefault.name ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_EMAIL",      "\"${(profileDefault.email ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_PHONE",      "\"${(profileDefault.phone ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_BIRTH",      "\"${(profileDefault.birth ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_SYNC_URL",   "\"${profileSyncUrl}\""
+        buildConfigField "String", "UI_PROFILE_COMPANY",    "\"${(profileDefault.company ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_LOCATION",   "\"${(profileDefault.location ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_WEBSITE",    "\"${(profileDefault.website ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_TITLES",     "\"${(profileDefault.titles ?: '').toString()}\""
+        buildConfigField "String", "UI_PROFILE_TABS_B64",   "\"${profileTabsB64}\""
+        buildConfigField "String", "UI_PROFILE_DRIFT_B64",  "\"${profileDriftB64}\""
+        buildConfigField "String", "UI_PROFILE_INFOS_B64",  "\"${profileInfosB64}\""
+        buildConfigField "String", "UI_PROFILE_CONNECT_B64", "\"${profileConnectB64}\""
+        buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""
+        buildConfigField "String", "GH_ENGINE_ACTION",       "\"${ghEngineAction}\""
+        buildConfigField "int",    "GH_ENGINE_MIN_CONTRACT", "${ghEngineMinContract}"
+        buildConfigField "long",   "GH_ENGINE_POLL_MS",      "${ghEnginePollMs}L"
+        buildConfigField "long",   "GH_ENGINE_LOGIN_MAX_MS", "${ghEngineMaxMs}L"
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation project(':libs:core')
+    implementation project(':libs:databackend')       // DataBackendClient: the gh engine binding
+    implementation project(':libs:fleetconfig-model') // FleetPolicy: the manifest + policy the Fleet tab plans with
+    implementation project(':libs:appstore')          // StoreStages, AppInventory, CONSTELLATION_FLEET_B64
+    implementation project(':libs:updater')           // Fleet
+    implementation project(':libs:mail')              // JmapPrefs
+    implementation project(':libs:text-tools')        // TextToolsClient
+    implementation project(':libs:net')               // com.wireguard.config.Config: the mesh rows parse the vault's .conf
+    implementation project(':libs:devtools')          // AppDebugServer
+    // `api`: AccountHost's signatures expose KitPalette, and the host builds Compose views with it.
+    api project(':libs:ui-kit')
+    implementation project(':libs:auth')
+
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.fragment:fragment-ktx:1.8.5'
+    implementation 'androidx.activity:activity-ktx:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.7'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    // EncryptedSharedPreferences for ConfigsPrefs. Same alpha pin libs:mail uses for JmapPrefs.
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    // ZXing core — pure Java QR encoder for the Virtual Business Card (encode only).
+    implementation 'com.google.zxing:core:3.5.3'
+
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+
+    // JGit: GitHub over SSH speaks only the git wire protocol, so the "Import GH SSH" tile has to
+    // clone. 6.10.x (7 targets Java 17 bytecode; 6.10 targets 11, and minSdk 26 desugars). The
+    // ssh.jsch half rides on com.github.mwiede:jsch (the constellation's one SSH stack); the
+    // abandoned com.jcraft:jsch:0.1.55 is excluded: it collides class-for-class with the fork and
+    // predates rsa-sha2/ed25519, so it cannot authenticate to github.com.
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.10.1.202505221210-r'
+    implementation('org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:6.10.1.202505221210-r') {
+        exclude group: 'com.jcraft', module: 'jsch'
+    }
+    implementation 'com.github.mwiede:jsch:0.2.17'
+}

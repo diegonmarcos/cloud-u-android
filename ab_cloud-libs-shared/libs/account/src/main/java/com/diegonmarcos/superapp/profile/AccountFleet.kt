@@ -3,7 +3,7 @@ package com.diegonmarcos.superapp.profile
 import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
 
 import android.content.Context
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.appstore.BuildConfig
 import com.diegonmarcos.superapp.appstore.StoreStages
 import com.diegonmarcos.superapp.core.FleetConfig
 import com.diegonmarcos.superapp.updater.Fleet

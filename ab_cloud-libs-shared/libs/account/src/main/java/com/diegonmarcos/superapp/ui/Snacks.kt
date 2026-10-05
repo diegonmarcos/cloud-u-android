@@ -1,5 +1,5 @@
 package com.diegonmarcos.superapp.ui
-import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.account.R
 
 import android.view.View
 import androidx.annotation.StringRes

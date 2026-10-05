@@ -11,8 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
-import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.account.R
 import com.diegonmarcos.superapp.ui.StatusLight
 
 /**
@@ -34,7 +33,7 @@ import com.diegonmarcos.superapp.ui.StatusLight
  *
  * ── What it deliberately does NOT do ──────────────────────────────────────
  * No colour is written here: every fill and every ink comes from
- * [LauncherPalette] (so the three themes restyle it) and every light from the
+ * [AccountHost.palette] (so the three themes restyle it) and every light from the
  * shared [StatusLight] (so "configured" is the same green as everywhere else
  * in this app — a private copy would be one of them being wrong). No
  * animation, no ticker, no handler: the page is drawn once and repainted only
@@ -71,7 +70,7 @@ object FleetCockpitView {
     )
 
     fun hero(ctx: Context, title: String, subtitle: String, iconRes: Int): Hero {
-        val p = LauncherPalette.of(ctx)
+        val p = AccountColors.of(ctx)
         val titleView = TextView(ctx).apply {
             text = title
             textSize = 22f
@@ -122,7 +121,7 @@ object FleetCockpitView {
      * tap for TalkBack, which otherwise offers an anonymous click.
      */
     fun card(ctx: Context, label: String, tag: String, iconRes: Int, toggleAction: String): Card {
-        val p = LauncherPalette.of(ctx)
+        val p = AccountColors.of(ctx)
         val badgeView = badge(ctx, iconRes, CARD_BADGE_DP, p.surfaceSelected, p.textPrimary).apply { id = R.id.cockpit_card_badge }
         val labelView = TextView(ctx).apply {
             text = label
@@ -190,7 +189,7 @@ object FleetCockpitView {
 
     /** A pill button in the palette's accent, for the actions inside a card. */
     fun pill(ctx: Context, label: String, onClick: () -> Unit): TextView {
-        val p = LauncherPalette.of(ctx)
+        val p = AccountColors.of(ctx)
         return TextView(ctx).apply {
             text = label
             textSize = 13f

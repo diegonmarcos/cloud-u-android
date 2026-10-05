@@ -33,7 +33,7 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 FRAGMENT="app/src/main/java/com/diegonmarcos/superapp/settings/ImportConfigsFragment.kt"
 # #587 the classifier is the fleet's (libs:auth); reached from the app root like every other path here.
 CLASSIFIER="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/VaultFile.kt"
-JOURNEY="app/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
+JOURNEY="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
 TEST="app/src/test/java/com/diegonmarcos/superapp/profile/VaultFileImportTest.kt"
 FIXTURE="app/src/test/resources/vault-bundle-sops-encrypted.json"
 EN="app/src/main/res/values/strings.xml"

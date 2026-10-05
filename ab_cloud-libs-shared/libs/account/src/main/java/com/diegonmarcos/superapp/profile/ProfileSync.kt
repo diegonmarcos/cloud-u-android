@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import android.util.Log
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.account.BuildConfig
 import com.diegonmarcos.superapp.core.ProfileSyncClient
 import org.json.JSONObject
 
@@ -55,7 +55,7 @@ object ProfileSync {
             endpoint = endpoint,
             installId = prefs.installId,
             secret = prefs.installSecret,
-            payload = document(prefs),
+            payload = document(context, prefs),
         )
     }
 
@@ -171,11 +171,12 @@ object ProfileSync {
      * (network.WireGuardPrefs) live in other stores this file never reads, and
      * their key names are not in the allowlist.
      */
-    private fun document(prefs: ProfilePrefs): JSONObject = JSONObject().apply {
+    private fun document(ctx: android.content.Context, prefs: ProfilePrefs): JSONObject = JSONObject().apply {
         put("schema", SCHEMA)
         put("install_id", prefs.installId)
-        put("app_version_code", BuildConfig.VERSION_CODE)
-        put("app_version_name", BuildConfig.VERSION_NAME)
+        val pi = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull()
+        put("app_version_code", pi?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it).toInt() } ?: 0)
+        put("app_version_name", pi?.versionName.orEmpty())
         put("updated_at", java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
             .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
             .format(java.util.Date()))

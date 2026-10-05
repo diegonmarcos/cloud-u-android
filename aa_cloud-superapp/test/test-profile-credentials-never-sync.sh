@@ -32,7 +32,7 @@ hasnt() { grep -qF "$2" "$ROOT/$1" 2>/dev/null && bad "$3 ($1)" || ok "$3"; }
 codeof()     { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$ROOT/$1"; }
 hasnt_code() { codeof "$1" | grep -qF "$2" && bad "$3 ($1)" || ok "$3"; }
 
-PROFILE_DIR="app/src/main/java/com/diegonmarcos/superapp/profile"
+PROFILE_DIR="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile"
 FRAGMENT="$PROFILE_DIR/ProfileFragment.kt"
 SYNC="$PROFILE_DIR/ProfileSync.kt"
 # The Mesh capabilities MOVED here rather than being deleted; the test
@@ -43,7 +43,7 @@ SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragmen
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
 AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 PREFS="$PROFILE_DIR/ProfilePrefs.kt"
-CONFIGS_PREFS="app/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
+CONFIGS_PREFS="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
 WG_PREFS="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 CONTRACT="docs/profile-sync-contract.md"
 
@@ -216,7 +216,7 @@ echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored 
 # nothing gained a store on the way across.
 # Tab identity is asserted in T11, which owns the four-tab shape (#778).
 # The existing pill idiom, not a second tab mechanism.
-has "$FRAGMENT" "AppTabsStyle.apply"          "reuses the launcher's pill chrome"
+has "$FRAGMENT" "AccountHost.styleTabs"        "reuses the launcher's pill chrome (through AccountHost.styleTabs: AppTabsStyle.apply + equalise, wired in App.kt)"
 # ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
 # fragments into a fixed pool of pane host ids, and this screen rebuilds itself
 # with detach/attach after every pick, link, clear, erase and import — the
@@ -315,8 +315,8 @@ done
 hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"
 # The strip is DATA: ids, order and labels come from the baked build.json array.
 has "$FRAGMENT" "AccountModel.tabs()"              "the strip is built from the declared tabs"
-has "app/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt" "UI_PROFILE_TABS_B64" "the tabs come from the baked build.json blob"
-has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
+has "../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt" "UI_PROFILE_TABS_B64" "the tabs come from the baked build.json blob"
+has "../ab_cloud-libs-shared/libs/account/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
 # AI is not a tab; and #723 deleted the Configs AI page, so the cockpit card no
 # longer links anywhere — Account applies the AI tokens itself.
 hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
@@ -400,7 +400,7 @@ rm -rf "$SCRATCH"; trap - EXIT
 echo "-- T11-infos: the Profiles read-out is the DECLARED copy, not a hand-listed set (#695 → #778) --"
 # The mask rule and its proof live in test-account-four-tabs.sh; this block pins
 # that #626's hand-listed sections stay gone and the read-out is the declared file itself.
-AT_FILE="app/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
+AT_FILE="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
 PROF_FN=$(awk '/^fun ProfilesTab\(/{f=1} f{print} f&&/^}$/{exit}' "$ROOT/$AT_FILE")
 grep -qF 'val shown = m.shown()' <<<"$PROF_FN" && ok "T11-infos: Profiles reads the declared copy (L, else S)" || bad "T11-infos: Profiles does not read the declared copy"
 grep -qF 'InfoMask.declared.schemaRows(section, shown?.opt(section.id))' <<<"$PROF_FN" && ok "T11-infos: every row comes from the declared copy, through the mask, per declared field" || bad "T11-infos: rows are not drawn from the declared copy"
@@ -559,7 +559,7 @@ echo "== T12: the pill SIZING is shared, and nothing is duplicated =="
 has "$TABSTYLE" "fun equalise"       "the sizing pass lives in the shared helper"
 has "$TABSTYLE" "MIN_CHARS"          "its floor moved with it"
 has "$TABSTYLE" "MODE_SCROLLABLE"    "and its honest last resort"
-has "$FRAGMENT" "AppTabsStyle.equalise" "Profile's strip is sized, not just painted"
+has "app/src/main/java/com/diegonmarcos/superapp/App.kt" "AppTabsStyle.equalise" "Profile's strip is sized, not just painted (App.kt hands AccountHost.styleTabs the equalise pass)"
 has "$SECTABS"  "AppTabsStyle.equalise" "the launcher's strip uses the same one"
 # ONE copy. A second would drift, and the drift would be invisible until a
 # label got long enough to clip on one strip and not the other.

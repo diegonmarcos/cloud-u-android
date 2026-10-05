@@ -11,6 +11,7 @@
   "backlog_baseline": 41,
   "libs": {
     "analytics":               { "class": "logic",    "why": "Telemetry sink queue, compiled into 15 apps; low churn. An engine would need the in-app queue to survive an absent engine APK." },
+    "account":                 { "class": "gui",      "why": "#867 the Account page (Profile, Connect, Fleet cockpit, Drift, business card), hosted by cloud-superapp now and by the Cloud Account app next; the host supplies its theme and routing through AccountHost." },
     "appstore":                { "class": "gui",      "why": "The Constellation store screens, hosted by cloud-superapp and (#865) cloud-store." },
     "auth":                    { "class": "logic",    "why": "#587 sign-in and token handling shared by SuperApp and Drive." },
     "battery":                 { "class": "logic",    "why": "Battery/charging policy over the adb channel, with a settings screen; SuperApp only." },

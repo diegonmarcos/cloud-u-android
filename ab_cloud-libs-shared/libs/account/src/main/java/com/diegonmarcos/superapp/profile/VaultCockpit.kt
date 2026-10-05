@@ -2,10 +2,9 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import android.util.Base64
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.account.BuildConfig
 import com.diegonmarcos.superapp.appstore.AppInventory
 import com.diegonmarcos.superapp.mail.JmapPrefs
-import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import com.diegonmarcos.superapp.ui.StatusLight
@@ -293,9 +292,6 @@ object VaultCockpit {
     /** What this device's tunnel is right now, for the comparison column. */
     data class TunnelState(val name: String, val address: String, val peerKeys: Set<String>)
 
-    fun tunnelState(prefs: WireGuardPrefs) = TunnelState(
-        prefs.tunnelName, prefs.interfaceAddress, prefs.peers().map { it.publicKey }.toSet())
-
     fun meshRows(bundle: JSONObject, device: Device, current: TunnelState): List<Row> =
         meshProfiles(bundle, device).map { (name, conf) ->
             val cfg = runCatching { Config.parse(BufferedReader(StringReader(conf))) }.getOrNull()
@@ -307,19 +303,7 @@ object VaultCockpit {
                 if (same) State.MATCH else State.DIFFERS)
         }
 
-    /** The vault's conf goes through the SAME parser the .conf import uses; a
-     *  text the WireGuard parser rejects writes nothing. Returns the report line. */
-    fun applyMesh(prefs: WireGuardPrefs, name: String, conf: String): String {
-        val cfg = try {
-            Config.parse(BufferedReader(StringReader(conf)))
-        } catch (t: Throwable) {
-            return "✗ $name rejected by the WireGuard parser: ${t.message}"
-        }
-        prefs.tunnelName = name.take(15)
-        prefs.hydrateFromConfig(cfg)
-        prefs.configProvider = WireGuardPrefs.PROVIDER_CUSTOM
-        return "✓ $name applied: ${cfg.peers.size} peers, key from the vault"
-    }
+    // The mesh tunnel's own state and apply live with the host (AccountHost.mesh): the tunnel's prefs are the host's.
 
     // ── mail ─────────────────────────────────────────────────────────────
 

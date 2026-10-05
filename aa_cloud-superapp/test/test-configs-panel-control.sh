@@ -54,8 +54,10 @@ KT_LCF="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfig
 NCDIR="$APP/app/src/main/java/com/diegonmarcos/superapp/notificationcenter"
 BADGEDECL="$NCDIR/BadgeDeclaration.kt"
 BADGESVC="$NCDIR/BadgeServices.kt"
-STATUS="$APP/app/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
-COLORS="$APP/app/src/main/res/values/colors.xml"
+STATUS="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
+# #867 the status-light colours and words moved to libs:account with StatusLight; the rest stayed here.
+ACCRES="$APP/../ab_cloud-libs-shared/libs/account/src/main/res"
+COLORS="$(mktemp)"; trap 'rm -f "$COLORS"' EXIT; cat "$APP/app/src/main/res/values/colors.xml" "$ACCRES/values/colors.xml" > "$COLORS"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
 THEME_BG="$APP/app/src/main/res/drawable/bg_gradient_black_purple.xml"
 LIBS="$(cd "$APP/../ab_cloud-libs-shared" && pwd)"
@@ -777,7 +779,7 @@ for f in "$APP"/app/src/main/res/values*/strings.xml; do
            control_group_tools control_group_tools_sub \
            control_group_ui control_group_ui_sub \
            control_group_battery control_group_battery_sub; do
-    grep -q "name=\"$k\"" "$f" || a11y_fail="$a11y_fail $(basename "$(dirname "$f")")-misses:$k"
+    grep -q "name=\"$k\"" "$f" "$ACCRES/$(basename "$(dirname "$f")")/strings.xml" 2>/dev/null || a11y_fail="$a11y_fail $(basename "$(dirname "$f")")-misses:$k"
   done
 done
 [ -z "$a11y_fail" ] \

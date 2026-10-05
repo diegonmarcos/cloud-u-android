@@ -239,7 +239,8 @@
         "libs:launcher-zoomies",
         "libs:bottomnav",
         "libs:auth",
-        "libs:ui-kit"
+        "libs:ui-kit",
+        "libs:account"
       ],
       "comment": "Launcher / shell. Hosts navigation to each feature module."
     },
@@ -307,6 +308,10 @@
     "libs:appstore": {
       "dir": "../ab_cloud-libs-shared/libs/appstore",
       "_doc": "The Store (#563; formerly the Constellation store): fleet list, install/update actions, background pass. Split from the app so store, launcher and updater are separable - libs:updater is the engine, this is the storefront. UI, so it cannot go out-of-process like libs:net; the win is the boundary."
+    },
+    "libs:account": {
+      "dir": "../ab_cloud-libs-shared/libs/account",
+      "_doc": "#867 Account (the Profile page: Connect, Fleet cockpit, Infos, Drift, business card) as a library, so SuperApp and the Cloud Account app host one code path. The host supplies its palette, tab chrome, icons, router, haptics and mesh tunnel through AccountHost."
     },
     "libs:mail": {
       "dir": "../ab_cloud-libs-shared/libs/mail",

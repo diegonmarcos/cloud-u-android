@@ -128,6 +128,23 @@ class App : Application(), WorkManagerConfiguration.Provider {
             // pass without a restart (the worker stands down in doWork).
             runsFleetPass = { ctx -> !com.diegonmarcos.superapp.apps.CloudStoreHandoff.installed(ctx) }
         }
+        // #867 Account is a library now (libs:account); what it cannot reach in the launcher is supplied here.
+        com.diegonmarcos.superapp.profile.AccountHost.apply {
+            palette = { ctx -> com.diegonmarcos.superapp.ui.LauncherPalette.kit(ctx) }
+            styleTabs = { tabs ->
+                com.diegonmarcos.superapp.launcher.AppTabsStyle.apply(tabs)
+                com.diegonmarcos.superapp.launcher.AppTabsStyle.equalise(tabs)
+            }
+            iconFor = { ctx, name -> com.diegonmarcos.superapp.launcher.Sections.iconResFor(ctx, name) }
+            route = { activity, route ->
+                (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
+                    ?.also { it.onTileClicked(route) } != null
+            }
+            tap = { view -> com.diegonmarcos.superapp.ui.Haptics.tap(view) }
+            mesh = com.diegonmarcos.superapp.network.AccountMesh
+            classify = com.diegonmarcos.superapp.settings.ImportConfigsFragment::classify
+            refusal = com.diegonmarcos.superapp.settings.ImportConfigsFragment::refusal
+        }
         // #831 a download that cannot resolve its host names the resolver in
         // effect, read from the same state the DNS page shows (#794).
         val dnsCtx = applicationContext

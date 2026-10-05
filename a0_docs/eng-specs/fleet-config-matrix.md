@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 38 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 36 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
@@ -47,7 +47,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **165** | **35** | **82%** |
+| **fleet** | | **163** | **35** | **82%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -55,7 +55,6 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `account_migrate` | prefs | device | no | #783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration. |
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
 | `advisory_feed` | prefs | device | no | Single 'last' poll timestamp throttling the ntfy advisory feed; sync cursor. |
 | `app_tabs` | prefs | config | yes | User-arranged launcher app-tab entries (JSON list under 'entries'). |
@@ -81,7 +80,6 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `gitea_feed_cache` | prefs | device | no | 15-minute TTL cache of Gitea commit feed responses (GiteaFeed PREFS constant), pure cache. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `home_swipe_prefs` | prefs | config | yes | User's chosen action for swipe up/left/right/down on the launcher home. |
-| `import_configs` | encrypted | secret | yes | EncryptedSharedPreferences holding the imported configs JSON blob including auth.authelia_token and email; mostly credentials. |
 | `kdeconnect_clipboard` | prefs | content | no | Clipboard history exchanged with the peer. |
 | `kdeconnect_device_overrides` | prefs | config | yes | Per-device host/port/label overrides for paired KDE Connect peers. |
 | `kdeconnect_identity` | prefs | device | no | This install's KDE Connect device_id; identity. |
@@ -101,7 +99,6 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `onehand_prefs` | prefs | config (keys: debug_visible→device, spurious_nones_pruned_v1→device) | yes | One-hand launcher enable, trigger and per-handle slot assignments. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `phone_notif_store` | prefs | device | no | Local buffer (max 50) of captured phone notifications; transient local history not meant to move. |
-| `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `recent_cloud_tiles` | prefs | device | no | Most-recently-opened cloud tile list (max 12), usage history. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
@@ -109,7 +106,6 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
-| `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 | `wd_keepalive` | prefs | config | yes | Wireless-debugging keepalive switch (`enabled`), the owner's choice in Configs ▸ Controls. |
 | `wd_keepalive_status` | prefs | device | no | Wireless-debugging keepalive worker status (ready, last tick/reconnect/failure times). |
 | `wireguard_prefs` | prefs | config (keys: if_privkey→secret) | yes | WireGuard tunnel config: name, address, DNS, port, MTU, peers_json, provider, tunnel_enabled; private key is a credential. |
@@ -127,7 +123,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 38 covered, 0 gaps.
+Coverage: 36 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 

@@ -9,6 +9,7 @@
     38389
   ],
   "ports": {
+    "com.diegonmarcos.cloudlib.account": 38226,
     "com.diegonmarcos.cloudlib.analytics": 38173,
     "com.diegonmarcos.cloudlib.appstore": 38174,
     "com.diegonmarcos.cloudlib.auth": 38175,

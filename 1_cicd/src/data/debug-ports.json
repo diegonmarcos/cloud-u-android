@@ -100,6 +100,7 @@
     "com.diegonmarcos.cloudlib.mllsoundyamnet": 38222,
     "com.diegonmarcos.cloudlib.searchpage": 38223,
     "com.diegonmarcos.cloudlib.fleetconfig": 38224,
-    "com.diegonmarcos.cloudstore": 38225
+    "com.diegonmarcos.cloudstore": 38225,
+    "com.diegonmarcos.cloudlib.account": 38226
   }
 }

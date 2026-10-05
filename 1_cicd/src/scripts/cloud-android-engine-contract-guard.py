@@ -131,10 +131,25 @@ def engine_service(module_dir):
     return "declares no service with the engine CONTRACT meta-data"
 
 
+def client_sources(app_dir):
+    """The app's own source, then the source of each shared lib its build.json links by `dir` (#867: the
+    Account page, and the gh client with it, is libs:account now; the app still ships that client)."""
+    yield from sources(main_dir(app_dir))
+    try:
+        mods = json.load(open(os.path.join(app_dir, "build.json"), encoding="utf-8")).get("modules", {})
+    except (OSError, ValueError):
+        return
+    for name, spec in mods.items():
+        if isinstance(spec, dict) and spec.get("dir") and not name.startswith("_"):
+            lib = os.path.normpath(os.path.join(app_dir, spec["dir"], "src", "main"))
+            if os.path.isdir(lib):
+                yield from sources(lib)
+
+
 def client_calls(app_dir, key):
     """(file, method names its ask(...) calls name, the CONTRACT key it reads) for the engine `key`."""
     marker = "BuildConfig.%s_ENGINE_ACTION" % key.upper().replace("-", "_")
-    for path in sources(main_dir(app_dir)):
+    for path in client_sources(app_dir):
         text = code(path)
         if marker not in text:
             continue

@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.diegonmarcos.cloudlib.auth.ProfileJourney
-import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.StatusLight
 
 /**
@@ -58,7 +57,7 @@ object ProfileJourneyView {
         icons: Map<ProfileJourney.Step, Int>,
         toggleAction: String,
     ): Journey {
-        val p = LauncherPalette.of(ctx)
+        val p = AccountColors.of(ctx)
         val hero = FleetCockpitView.hero(ctx, heroTitle, heroSubtitle, heroIcon)
         val rail = TextView(ctx).apply {
             textSize = 12f
@@ -118,7 +117,7 @@ object ProfileJourneyView {
      * the same shape-first rule the shared light follows.
      */
     fun choice(ctx: Context, text: String, selected: Boolean, onClick: () -> Unit): TextView {
-        val p = LauncherPalette.of(ctx)
+        val p = AccountColors.of(ctx)
         return TextView(ctx).apply {
             this.text = (if (selected) "● " else "○ ") + text
             textSize = 14f

@@ -194,15 +194,6 @@
          supplies the "all". -->
     <string name="notif_mark_group_read">Marcar leídas</string>
 
-    <!-- ── Configs ▸ Launcher ▸ Controls ──────────────────────────────────── -->
-    <string name="status_light_on">Activado</string>
-    <string name="status_light_off">Desactivado</string>
-    <string name="status_light_unknown">Desconocido</string>
-    <!-- Never shortened to "Desconocido": the owner can wait out an unknown,
-         and waiting out this one would never end. -->
-    <string name="status_light_unverifiable">No verificable</string>
-    <string name="status_light_description">%1$s: %2$s</string>
-
     <string name="control_title">Control</string>
     <string name="control_caption">Lo que se cambia con la frecuencia suficiente para merecer una pantalla, dispuesto como una cuadrícula de iconos y agrupado por LO QUE VIENES A BUSCAR: el teléfono, la red, las herramientas, la interfaz.\n\nTOCA un icono para cambiarlo. MANTÉN PULSADO para abrir la pantalla de ajustes que hay detrás — y todos los iconos responden a una pulsación larga, incluidos los que no tienen adónde ir, que lo dicen en lugar de no hacer nada.\n\nUn icono encendido se invierte: se rellena con el color de primer plano del tema y dibuja su símbolo con el del fondo, así que encendido y apagado son los mismos dos colores intercambiados y ninguno puede volverse invisible con un tema u otro. Solo lo que de verdad se puede mover cambia al tocarlo. Un icono que Android no deja cambiar a esta aplicación abre en su lugar la pantalla del sistema que lo controla, y un icono que espera un permiso indica cuál en su etiqueta.\n\nDevoradores de batería no es una quinta categoría — son LOS MISMOS iconos otra vez, reunidos para poder apagar en un solo sitio todo lo que consume batería. Un icono cambiado ahí queda cambiado en su propio grupo en el mismo instante, porque solo hay uno.\n\nLa luz bajo un icono es lo que ha respondido el DISPOSITIVO justo ahora, nunca cómo está puesto el icono: %1$s, %2$s, o %3$s cuando no ha querido responder o todavía no se le ha preguntado. %4$s marca los iconos en los que no se puede leer más que la preferencia que esta aplicación guardó. Las luces se refrescan cada %5$d segundos mientras esta página está abierta y se detienen del todo cuando no lo está, así que pasan a desconocido antes que a obsoleto.</string>
     <string name="control_none_declared">No hay ningún control declarado — build.json::ui.control_panel está vacío o no llegó a esta compilación.</string>
@@ -298,116 +289,9 @@
     <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
     <string name="vault_connect_header">Configuración del vault</string>
     <string name="vault_connect_caption">Descarga la configuración consolidada del vault: malla, correo, IA, git, sobre mí y autocompletado. Usa dos factores. Con el token de Authelia guardado arriba, el servidor envía un código de un solo uso a la dirección de tu cuenta, y con el token y ese código se descarga el paquete. Lo recibido se muestra en la pestaña Importado y NO se aplica a ninguna app. Solo queda en memoria hasta que se cierra la app, así que no se guarda nada en el almacenamiento del dispositivo.</string>
-    <string name="vault_connect_code_hint">código del correo del vault</string>
-    <string name="connect_vault_pill">Configs del vault</string>
-    <string name="connect_vault_title">Configs del vault</string>
-    <string name="connect_vault_go">Descargar</string>
-    <string name="connect_vault_resend">Enviar el código otra vez</string>
-    <string name="connect_vault_caption">Se está enviando un código de un solo uso a tu dirección. Escríbelo aquí para descargar tus configs del vault; llenan %1$s y %2$s. Credencial: %3$s</string>
-    <string name="journey_signed_in_vault">Configs del vault descargadas con %1$s</string>
     <string name="vault_connect_fetch">2 · Descargar configuración</string>
-    <string name="vault_connect_no_bearer">Primero guarda arriba un token de Authelia con su correo de cuenta.</string>
-    <string name="vault_connect_no_code">Introduce el código del correo.</string>
-    <string name="vault_connect_sent">✓ Código enviado. Revisa tu correo y pulsa Descargar.</string>
-    <string name="vault_connect_fetched">✓ %1$d valores descargados en %2$d secciones — léelos en %3$s.</string>
-    <string name="vault_connect_code_rejected">El servidor rechazó el código: es incorrecto, ha caducado o ya se usó. Pide uno nuevo.</string>
-    <string name="vault_connect_server_not_ready">El endpoint del vault aún no está desplegado o configurado en el servidor. El problema no es tu token.</string>
     <string name="vault_tab_imported">Flota</string>
     <string name="vault_cockpit_device_identity">%1$s · malla %2$s · %3$s — derivado de la declaración de la bóveda, nada escrito aquí.</string>
-    <string name="infos_apps_device">%1$s · %2$d apps declaradas · %3$d en este teléfono</string>
-    <string name="infos_apps_row_installed">✓ %1$s · %2$s · %3$s</string>
-    <string name="infos_apps_row_missing">✗ %1$s · %2$s · %3$s</string>
-    <string name="infos_apps_no_store">ninguna tienda registrada</string>
-    <string name="infos_apps_none">Esta exportación de la bóveda aún no trae una lista de apps declarada.</string>
-    <string name="infos_apps_open_store">Abrir Store ▸ Apps del teléfono (Declaradas)</string>
-    <string name="vault_connect_browser">Iniciar sesión con el navegador (OWebAuth)</string>
-    <string name="vault_connect_browser_caption">Inicia sesión en Authelia abajo. La cookie de sesión de %1$s se guarda en memoria para las dos llamadas a la bóveda y muere con la app; nada se escribe en disco. Vuelve a iniciar sesión para renovarla.</string>
-    <string name="vault_connect_use_session">Usar esta sesión</string>
-    <string name="vault_connect_auth_bearer">bearer guardado para %1$s</string>
-    <string name="vault_connect_auth_cookie">sesión del navegador (solo en memoria)</string>
-    <string name="vault_connect_auth_none">ninguna — guarda un bearer arriba o inicia sesión con el navegador</string>
     <string name="vault_connect_schema_unknown">Esta exportación de la bóveda es el esquema %1$d; esta versión conoce %2$s. Actualiza la app antes de aplicar nada.</string>
-    <!-- #573 Configs ▸ Perfil ▸ Conectar — EL RECORRIDO: iniciar sesión → quién → qué dispositivo → obtener todo. -->
-    <string name="journey_hero_title_empty">Tu identidad en la flota</string>
-    <string name="journey_hero_subtitle_empty">Cuatro pasos: inicia sesión, di quién eres, elige este dispositivo, obtén todo.</string>
-    <string name="journey_hero_subtitle">%1$s · %2$s</string>
-    <string name="journey_hero_step">Paso %1$d de 4 · %2$s</string>
-    <string name="journey_hero_done">Todo aplicado en este dispositivo.</string>
-    <string name="journey_card_toggle">Abrir o cerrar este paso</string>
-    <string name="journey_step_sign_in">1 · Iniciar sesión</string>
-    <string name="journey_step_who">2 · Quién</string>
-    <string name="journey_step_device">3 · Qué dispositivo</string>
-    <string name="journey_step_get">4 · Obtener todo</string>
-    <string name="journey_ask_sign_in">demuestra quién eres</string>
-    <string name="journey_ask_who">elige la dirección con la que actúas</string>
-    <string name="journey_ask_device">elige qué dispositivo es este</string>
-    <string name="journey_ask_get">aplica tu configuración a este dispositivo</string>
-    <string name="journey_lock_sign_in_first">Inicia sesión primero.</string>
-    <string name="journey_lock_identity_only">%1$s demostró %2$s y no concede nada más: inicia sesión con un proveedor que conceda tu configuración para cargar tus identidades y dispositivos.</string>
-    <string name="journey_lock_no_registry">Sesión iniciada, pero tu configuración no se ha descargado en esta sesión: usa el bearer guardado en el paso 1.</string>
-    <string name="journey_lock_pick_identity">Elige quién eres primero.</string>
-    <string name="journey_lock_pick_peer">Elige el dispositivo primero.</string>
-    <string name="journey_lock_refetch">Inicia sesión de nuevo para volver a descargar tu configuración antes de aplicar.</string>
-    <string name="journey_signed_in_as">Sesión iniciada como %1$s vía %2$s</string>
-    <string name="journey_bearer_stored">Bearer guardado para %1$s</string>
-    <string name="journey_not_signed_in">Sin sesión: elige un proveedor abajo.</string>
-    <string name="journey_use_stored_bearer">Usar el bearer guardado (%1$s)</string>
-    <string name="journey_mail_code">¿Authelia te envió un código por correo?</string>
-    <string name="journey_mail_code_title">Authelia · código por correo</string>
-    <string name="journey_mail_code_go">Copiar y abrir Authelia</string>
-    <string name="journey_who_user_line">%1$s · %2$d identidades · %3$d dispositivos</string>
-    <string name="journey_who_caption">Con cuál de tus direcciones actúa este dispositivo. La principal es a la que pertenecen tu perfil, el código por correo y el bearer.</string>
-    <string name="journey_identity_row">%1$s · %2$s</string>
-    <string name="journey_primary_tag">principal</string>
-    <string name="journey_who_summary">%1$s · %2$s</string>
-    <string name="journey_device_caption">Cuál de tus dispositivos es este. Decide la identidad WireGuard que recibes y el dispositivo con el que compara la cabina de Flota.</string>
-    <string name="journey_device_row">%1$s · %2$s · %3$s · %4$s</string>
-    <string name="journey_profiles_n">%1$d perfiles</string>
-    <string name="journey_profiles_pending">perfiles pendientes</string>
-    <string name="journey_device_summary">%1$s · %2$s · %3$s</string>
-    <string name="journey_applied">Aplicado %1$s · bóveda %2$s</string>
-    <string name="journey_vault_fetched">descargada</string>
-    <string name="journey_vault_not_fetched">no descargada</string>
-    <!-- #614 pestaña Repos -->
-    <string name="journey_import_file_caption">Desde un archivo: la exportación DESCIFRADA de la bóveda — lo que imprime sops -d, el mismo documento que devuelve la descarga del servidor. El archivo cifrado del repositorio se rechaza, y lo dice: este teléfono no tiene clave age.</string>
-    <string name="journey_fetched">✓ Autenticado · %1$d bytes · tu configuración está aquí; sigue con el paso 2</string>
-    <string name="journey_fetched_snack">Configuración descargada</string>
-    <string name="journey_identity_only_done">%1$s demostró %2$s</string>
-
-    <!-- #695 Configs ▸ Account: Connect lines, Infos read-out, Cloud Constellation Setup items -->
-    <string name="connect_caption">Inicia sesión en cualquiera de las dos líneas. Al descargar tu configuración de la bóveda se llena %1$s; %2$s la aplica después a la máquina que elijas abajo.</string>
     <string name="connect_file_blob">✗ Esto es el blob de credenciales en formato de pegado (secciones %1$s), no la exportación del vault: no llena Infos y no se guardó nada. Guárdalo desde Configs ▸ Importar, o elige aquí la exportación descifrada del vault.</string>
-    <string name="connect_way_ssh">Clave SSH</string>
-    <string name="connect_way_pat">Token (PAT)</string>
-    <string name="connect_way_not_offered">%1$s — la política de inicio de sesión de tu cuenta no ofrece esta vía.</string>
-    <string name="connect_way_unwired">%1$s — aún no disponible en esta app: %2$s</string>
-    <string name="connect_line_held">En esta línea: %1$s</string>
-    <string name="connect_line_idle">Nada guardado en esta línea todavía.</string>
-    <string name="connect_held_session">sesión del navegador (solo en memoria)</string>
-    <string name="connect_held_bearer">bearer de %1$s</string>
-    <string name="connect_held_github">token de GitHub (de la bóveda)</string>
-    <string name="connect_held_ssh">clave SSH (de la bóveda)</string>
-    <string name="connect_pat_title">GitHub · token</string>
-    <string name="connect_pat_caption">Pega un token de GitHub que pueda leer %1$s. Lee UN archivo, %2$s, por la API de contenidos de GitHub, solo para esta petición: la caja se vacía en cuanto se lee y el token nunca se guarda, registra ni vuelve a mostrarse.</string>
-    <string name="connect_pat_hint">github_pat_… o ghp_…</string>
-    <string name="connect_pat_go">Descargar la configuración</string>
-    <string name="connect_pat_empty">Pega primero un token.</string>
-    <string name="connect_pat_auth_hint">El token no puede leer %1$s: ha caducado o no tiene acceso de lectura (Contents: read) a ese repositorio privado.</string>
-    <string name="connect_fetching">… descargando %1$s</string>
-    <string name="infos_row_masked">•••• oculto (%1$d caracteres)</string>
-    <string name="infos_row_collapsed">%1$d entradas (contadas, no listadas)</string>
-    <string name="infos_row_pending">pendiente · %1$s</string>
-    <string name="journey_get_on_setup">Aquí se obtiene; se aplica en %1$s, elemento a elemento.</string>
-    <string name="connect_gh_caption">WebAuth ejecuta el propio inicio de sesión de GitHub CLI (gh auth login) en el motor gh, Cloud-Lib-Gh: copia el código que muestra, apruébalo en la página de GitHub que se abre en cloud-browser, y la exportación de la bóveda se lee una vez con el token que gh obtiene. Aquí no se guarda nada.</string>
-    <string name="connect_gh_missing">El motor gh (%1$s) no está en este teléfono: instala Cloud-Lib-Gh desde Tienda ▸ Cloud Constellation ▸ Libs y vuelve a pulsar WebAuth.</string>
-    <string name="connect_gh_old">El motor gh (%1$s) es demasiado antiguo para esta versión: responde al contrato %2$d y esta página necesita %3$d. Actualiza Cloud-Lib-Gh desde Tienda ▸ Cloud Constellation ▸ Libs.</string>
-    <string name="connect_gh_no_host">GitHub WebAuth nombra el escalón \"%1$s\" de la cadena git, que no declara host: no hay dónde iniciar sesión.</string>
-    <string name="connect_gh_starting">… pidiendo a gh un código de inicio de sesión</string>
-    <string name="connect_gh_failed">El inicio de sesión de gh no terminó: %1$s</string>
-    <string name="connect_gh_no_token">gh inició sesión pero no tiene token para %1$s, así que no puede leer la exportación de la bóveda. Usa SSH / PAT.</string>
-    <string name="connect_gh_code_clip">Código de inicio de sesión de GitHub</string>
-    <string name="connect_gh_prompt">Código %1$s (copiado) — introdúcelo en %2$s, abierto en cloud-browser. gh termina solo cuando GitHub lo aprueba.</string>
-    <string name="connect_gh_no_browser">cloud-browser (%1$s) no pudo abrir %2$s — instálalo o actualízalo desde la Tienda y vuelve a intentarlo. El código está en el portapapeles.</string>
-    <string name="infos_schema_summary">%1$d campos · %2$d rellenos · %3$d vacíos · %4$d ocultos</string>
-    <string name="infos_row_empty">vacío</string>
 </resources>

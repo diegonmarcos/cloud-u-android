@@ -385,6 +385,30 @@
       }
     },
     {
+      "id": "libs:account",
+      "scope": "in",
+      "wave": 1,
+      "ui": "views",
+      "size": "L",
+      "notes": "#867 the Account page (formerly aa_cloud-superapp profile/), moved out of the SuperApp so the Cloud Account app hosts the same code. The counts below left aa_cloud-superapp with it (view_screens 31 -> 29, view_ui_files 56 -> 51); the Profiles, Runtime and Drift tabs are already Compose (AccountTabs.kt).",
+      "screens_left": [
+        "ProfileFragment",
+        "BusinessCardFragment"
+      ],
+      "consumers": [
+        "superapp"
+      ],
+      "risks": [
+        "Robolectric tests FleetCockpitViewTest / ProfileJourneyTest assert on the built View tree (cockpit_* ids) — keep the ids when porting"
+      ],
+      "baseline": {
+        "view_screens": 2,
+        "layout_xml": 0,
+        "view_ui_files": 5,
+        "custom_views": 0
+      }
+    },
+    {
       "id": "libs:appstore",
       "scope": "in",
       "wave": 1,
@@ -659,9 +683,9 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 31,
+        "view_screens": 29,
         "layout_xml": 22,
-        "view_ui_files": 56,
+        "view_ui_files": 51,
         "custom_views": 9
       },
       "done": [

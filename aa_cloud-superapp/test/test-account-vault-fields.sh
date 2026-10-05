@@ -97,7 +97,7 @@ none=$(jq '[.ui.vault_connect.cockpit.vault_fields | to_entries[] | select(.key 
 ok "map: $held fields held live by an app, $none input-only or used by no phone app (each with its why)"
 
 echo "== the app reads the map (Kotlin) =="
-PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
+PKG="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile"
 grep -qF 'o.optJSONObject("vault_fields")' "$PKG/VaultCockpit.kt" && ok "VaultCockpit parses vault_fields" || bad "vault_fields is not parsed"
 grep -qF 'VaultCockpit.layout.vaultFields)' "$PKG/AccountRuntime.kt" && ok "every reading is counted against it" || bad "AccountRuntime ignores vault_fields"
 grep -qF 'e.optString("unread_why")' "$PKG/VaultCockpit.kt" && ok "#810 VaultCockpit parses unread_why" || bad "unread_why is not parsed"

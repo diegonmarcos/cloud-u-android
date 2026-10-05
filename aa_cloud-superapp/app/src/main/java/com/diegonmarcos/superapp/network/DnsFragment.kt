@@ -217,7 +217,7 @@ class DnsFragment : Fragment() {
                 append("\nWithout the mesh: ${idleLabel(ctx, live.idle)}")
                 append("\nLast successful lookup: ${last.ifEmpty { "none yet" }}")
             }
-            status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else ContextCompat.getColor(ctx, R.color.status_light_off))
+            status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else com.diegonmarcos.superapp.ui.StatusLight.colour(ctx, com.diegonmarcos.superapp.ui.StatusLight.State.OFF))
             status.setBackgroundColor(if (v.ok) 0x33000000 else 0x55DC2626)
             consentButton.visibility = if (v.needsConsent) View.VISIBLE else View.GONE
         }

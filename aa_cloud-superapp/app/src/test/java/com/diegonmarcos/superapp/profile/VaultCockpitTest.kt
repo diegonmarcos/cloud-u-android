@@ -75,12 +75,12 @@ class VaultCockpitTest {
         val b = bundle()
         val galaxy = VaultCockpit.devices(b).first { it.id == "galaxy" }
         val prefs = WireGuardPrefs(ctx)
-        val before = VaultCockpit.meshRows(b, galaxy, VaultCockpit.tunnelState(prefs))
+        val before = VaultCockpit.meshRows(b, galaxy, com.diegonmarcos.superapp.network.AccountMesh.tunnelState(prefs))
         assertTrue(before.isNotEmpty())
         assertTrue("nothing applied yet", before.all { it.state == VaultCockpit.State.DIFFERS })
 
         val (name, conf) = VaultCockpit.meshProfiles(b, galaxy).entries.first()
-        val line = VaultCockpit.applyMesh(prefs, name, conf)
+        val line = com.diegonmarcos.superapp.network.AccountMesh.applyMesh(prefs, name, conf)
         assertTrue(line, line.startsWith("✓"))
 
         // Read back from the store, compare with what the parser derives from the
@@ -93,7 +93,7 @@ class VaultCockpitTest {
         assertEquals(wantKeys, prefs.peers().map { it.publicKey }.toSet())
         assertEquals(WireGuardPrefs.PROVIDER_CUSTOM, prefs.configProvider)
 
-        val after = VaultCockpit.meshRows(b, galaxy, VaultCockpit.tunnelState(prefs))
+        val after = VaultCockpit.meshRows(b, galaxy, com.diegonmarcos.superapp.network.AccountMesh.tunnelState(prefs))
         assertEquals(VaultCockpit.State.MATCH, after.first { it.label == name }.state)
         assertTrue(after.filter { it.label != name }.all { it.state == VaultCockpit.State.DIFFERS })
     }
@@ -101,7 +101,7 @@ class VaultCockpitTest {
     @Test fun `a conf the parser rejects writes nothing`() {
         val prefs = WireGuardPrefs(ctx)
         val addressBefore = prefs.interfaceAddress
-        val line = VaultCockpit.applyMesh(prefs, "broken", "[Interface]\nAddress = not-an-address\n")
+        val line = com.diegonmarcos.superapp.network.AccountMesh.applyMesh(prefs, "broken", "[Interface]\nAddress = not-an-address\n")
         assertTrue(line, line.startsWith("✗"))
         assertEquals(addressBefore, prefs.interfaceAddress)
     }

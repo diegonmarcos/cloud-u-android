@@ -141,7 +141,7 @@ class InfoMask(paths: List<String>, values: List<String>, private val collapseOv
         private val baked: JSONObject? by lazy {
             runCatching {
                 JSONObject(String(android.util.Base64.decode(
-                    com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP)))
+                    com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP)))
             }.getOrNull()
         }
 

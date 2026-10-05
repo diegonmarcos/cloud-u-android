@@ -87,7 +87,7 @@ class AccountTabsComposeTest : KitPageHarness() {
         compose.waitForIdle()
         for (gone in listOf("Your config", "per peer", "Erase my profile", "What is stored and where", "contact card — auto-saved"))
             compose.onAllNodesWithText(gone, substring = true, ignoreCase = true).assertCountEquals(0)
-        val strings = com.diegonmarcos.superapp.R.string::class.java.fields.map { it.name }.toSet()
+        val strings = com.diegonmarcos.superapp.account.R.string::class.java.fields.map { it.name }.toSet()
         assertTrue("R.string is readable", "account_runtime_title" in strings)
         for (name in listOf("setup_config_header", "setup_config_none", "setup_person_header", "journey_apply"))
             assertTrue("string $name is deleted, not hidden", name !in strings)

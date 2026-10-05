@@ -39,7 +39,7 @@ FEED=ab_cloud-libs-shared/libs/feed
 SABJ=aa_cloud-superapp/build.json
 SAMF=aa_cloud-superapp/app/src/main/AndroidManifest.xml
 SAFEED=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/rss/RemoteFeed.kt
-SAGH=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/profile/GhEngine.kt
+SAGH=ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/GhEngine.kt
 SAWF=.github/workflows/ship-cloud-superapp.yml
 # Cloud News binds the news engine and names its methods as string literals
 NEWS=ab_cloud-libs-shared/libs/news

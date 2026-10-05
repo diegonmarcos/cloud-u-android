@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.MasterKey
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.account.BuildConfig
 import com.diegonmarcos.superapp.profile.AccountStore.Slot
 import org.json.JSONArray
 import org.json.JSONObject

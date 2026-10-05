@@ -49,7 +49,8 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 BJ="$APP/build.json"
 GR="$APP/app/build.gradle"
-PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
+ARES="$APP/../ab_cloud-libs-shared/libs/account/src/main/res"   # #867 the journey strings moved with the page
+PKG="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile"
 PF="$PKG/ProfileFragment.kt"
 PV="$PKG/ProfileJourneyView.kt"
 AM="$PKG/AccountModel.kt"
@@ -199,14 +200,14 @@ grep -q 'auth_t3_planted_unused' "$T3M/strings.xml" || bad "T3-mutation: the pla
 grep -qx 'auth_t3_planted_unused' <<<"$(lib_dead "$T3M/strings.xml" "$LSRC")" && ok "T3-mutation: a string no lib source names → reported dead" \
     || bad "T3-mutation: a planted unused lib string was NOT reported dead"
 rm -rf "$T3M"
-for loc in "$RES"/values*/strings.xml; do
+for loc in "$ARES"/values*/strings.xml; do
     for s in $USED; do
         grep -q "name=\"$s\"" "$loc" || bad "T3: $s missing from ${loc#$APP/}"
     done
 done
-DEAD=$(grep -oE 'name="(journey|sign_in)_[a-z_]+"' "$RES/values/strings.xml" | sed 's/name="//; s/"//' | sort -u | comm -23 - <(echo "$USED"))
+DEAD=$(grep -oE 'name="(journey|sign_in)_[a-z_]+"' "$ARES/values/strings.xml" | sed 's/name="//; s/"//' | sort -u | comm -23 - <(echo "$USED"))
 [ -z "$DEAD" ] && ok "T3: no dead journey string" || bad "T3: declared but unused: $(echo "$DEAD" | tr '\n' ' ')"
-[ "$FAIL" = 0 ] && ok "T3: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
+[ "$FAIL" = 0 ] && ok "T3: all present in $(ls "$ARES"/values*/strings.xml | wc -l) locale files"
 
 # ── T4 as a function, so T8 can run it on a mutated copy ──
 t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when Connect opens with the journey

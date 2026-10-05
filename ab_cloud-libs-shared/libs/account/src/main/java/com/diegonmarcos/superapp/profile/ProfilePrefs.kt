@@ -1,5 +1,5 @@
 package com.diegonmarcos.superapp.profile
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.account.BuildConfig
 
 import android.content.Context
 import android.content.SharedPreferences

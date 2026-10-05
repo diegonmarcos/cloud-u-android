@@ -32,14 +32,15 @@ ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 BJ="$APP/build.json"
-GR="$APP/app/build.gradle"
-PF="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
+GR="$APP/../ab_cloud-libs-shared/libs/account/build.gradle"   # #867 baked by libs:account
+PF="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
 # #587 the vault route and the sign-in live in the fleet's libs:auth; the endpoints in the ONE shared declaration.
 LIB="$APP/../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth"
 SHARED="$APP/../ab_cloud-libs-shared/build.json"
 VC="$LIB/VaultConnect.kt"
-CP="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/VaultCockpit.kt"
-RES="$APP/app/src/main/res"
+CP="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/VaultCockpit.kt"
+RES="$APP/../ab_cloud-libs-shared/libs/account/src/main/res"   # #867 strings/ids moved with the page
+APPRES="$APP/app/src/main/res"
 
 # Code only — whole-line comments dropped, so prose about what must not
 # happen does not read as it happening.
@@ -87,9 +88,9 @@ done
 [ "$FAIL" = 0 ] && ok "T2: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
 echo "== T3: the cockpit's apps are Account ▸ Runtime / Drift's apps (#778), and they are data =="
-AR="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountRuntime.kt"
-AT="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
-AM="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt"
+AR="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountRuntime.kt"
+AT="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"
+AM="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt"
 # #783 Runtime draws Drift's apps (m.apps): the cockpit layout first, then every fleet app's settings.
 grep -qF 'VaultCockpit.layout.sections.map { section ->' "$AR" && grep -qF 'for (section in m.apps) {' "$AT" \
     && ok "T3: Runtime reads, and draws, every app of the baked layout" || bad "T3: Runtime does not iterate ui.vault_connect.cockpit.sections"
@@ -141,14 +142,15 @@ done
 # which the Drift tab calls only from a click and the debug API only from its sync op.
 [ "$(grep -c 'AccountRuntime.push(' "$AM")" = 1 ] && grep -qF 'fun pushServerToRuntime(' "$AM" \
     && ok "T4: AccountRuntime.push has one caller, the model's server → runtime" || bad "T4: AccountRuntime.push is called from more than the model's push"
-grep -q . <<<"$(grep -rn 'AccountRuntime.push(' "$APP/app/src/main/java" | grep -v 'AccountModel.kt')" && bad "T4: something else pushes into an app" || ok "T4: nothing else pushes into an app"
+grep -q . <<<"$(grep -rn 'AccountRuntime.push(' "$APP/app/src/main/java" "$APP/../ab_cloud-libs-shared/libs/account/src/main/java" | grep -v 'AccountModel.kt')" && bad "T4: something else pushes into an app" || ok "T4: nothing else pushes into an app"
 PUSHES=$(grep -n 'm.pushServerToRuntime(' "$AT" | cut -d: -f1)
 [ -n "$PUSHES" ] && ok "T4: $(echo "$PUSHES" | wc -l) push call sites on Drift" || bad "T4: Drift never pushes"
 for ln in $PUSHES; do
     grep -qE 'onClick = \{|ActionButton\(' <<<"$(sed -n "$((ln-1)),${ln}p" "$AT")" && ok "T4: the push at AccountTabs.kt:$ln is behind a tap" || bad "T4: the push at AccountTabs.kt:$ln is not behind a tap"
 done
 grep -qF 'ConfigAutoImport' "$PF" && bad "T4: the per-peer config apply survives #781" || ok "T4: no per-peer config apply on the page (#781)"
-grep -q 'fun applyMesh' "$CP" && grep -q 'Config.parse' "$CP" \
+MESH="$APP/app/src/main/java/com/diegonmarcos/superapp/network/AccountMesh.kt"   # #867 the mesh apply is the host's (AccountHost.mesh)
+grep -q 'fun applyMesh' "$MESH" && grep -q 'Config.parse' "$MESH" \
     && ok "T4: the mesh apply goes through the WireGuard parser" || bad "T4: mesh apply does not parse"
 
 echo "== T5: the code and the browser session are never stored =="
@@ -186,7 +188,7 @@ grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' <<<"$(codeof "$PF"; codeof "$
                                                                    || ok "T7: no installer in the Account (the apps topic links into the Store)"
 
 echo "== T8: the cockpit chrome (#570 reopened; since #778 it draws the Connect journey — the Setup cockpit page is gone) =="
-FV="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/FleetCockpitView.kt"
+FV="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/FleetCockpitView.kt"
 FT="$APP/app/src/test/java/com/diegonmarcos/superapp/profile/FleetCockpitViewTest.kt"
 IDS="$RES/values/ids.xml"
 [ -f "$FV" ] && ok "T8: FleetCockpitView.kt exists" || bad "T8: no FleetCockpitView.kt — the chrome was not split out"
@@ -216,11 +218,11 @@ grep -q 'GradientDrawable.OVAL' "$FV" && ok "T8: badges are OVAL (the homescreen
 for id in $DECLARED; do
     icon=$(jq -r --arg id "$id" '.ui.vault_connect.cockpit.sections[] | select(.id == $id) | .icon // ""' "$BJ")
     [ -n "$icon" ] || { bad "T8: section '$id' declares no icon"; continue; }
-    [ -f "$RES/drawable/$icon.xml" ] && ok "T8: '$id' badge icon $icon is a drawable" || bad "T8: '$id' declares icon '$icon' but res/drawable has no $icon.xml"
+    [ -f "$APPRES/drawable/$icon.xml" ] && ok "T8: '$id' badge icon $icon is a drawable" || bad "T8: '$id' declares icon '$icon' but app res/drawable has no $icon.xml"
 done
 jq -e '.ui.vault_connect.cockpit.device_icons._default' "$BJ" >/dev/null && ok "T8: a default device icon is declared" || bad "T8: no device_icons._default"
 for icon in $(jq -r '.ui.vault_connect.cockpit.device_icons[]' "$BJ"); do
-    [ -f "$RES/drawable/$icon.xml" ] && ok "T8: device icon $icon is a drawable" || bad "T8: device icon '$icon' has no drawable"
+    [ -f "$APPRES/drawable/$icon.xml" ] && ok "T8: device icon $icon is a drawable" || bad "T8: device icon '$icon' has no drawable"
 done
 grep -qE '"ic_[a-z_]+"' <<<"$(codeof "$FV" "$PF")" && bad "T8: an icon name is a Kotlin literal on the cockpit" || ok "T8: icon names live only in build.json"
 # #781 the keyboard is read now; what cannot be read is an app that reports nothing (cloud-drive's token).

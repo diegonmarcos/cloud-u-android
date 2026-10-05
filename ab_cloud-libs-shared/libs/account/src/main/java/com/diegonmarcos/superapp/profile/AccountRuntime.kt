@@ -3,7 +3,6 @@ package com.diegonmarcos.superapp.profile
 import android.content.Context
 import android.os.SystemClock
 import com.diegonmarcos.superapp.mail.JmapPrefs
-import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import org.json.JSONArray
@@ -228,7 +227,7 @@ object AccountRuntime {
     }
 
     private fun device(ctx: Context, declared: JSONObject?): Pair<VaultCockpit.Device, Boolean>? =
-        declared?.let { deviceFor(VaultCockpit.devices(it), VaultCockpit.selectedDevice(ctx), WgState.prefs(ctx).interfaceAddress) }
+        declared?.let { deviceFor(VaultCockpit.devices(it), VaultCockpit.selectedDevice(ctx), AccountHost.mesh?.interfaceAddress(ctx).orEmpty()) }
 
     private fun deviceLabel(d: Pair<VaultCockpit.Device, Boolean>) = d.first.label + if (d.second) " (from the live tunnel)" else ""
 
@@ -271,8 +270,7 @@ object AccountRuntime {
                 ), readOnly = domain.keys)
             }
             "mesh" -> {
-                val wg = WgState.prefs(ctx)
-                val tunnel = VaultCockpit.tunnelState(wg)
+                val tunnel = AccountHost.mesh?.state(ctx) ?: VaultCockpit.TunnelState("", "", emptySet())
                 // #782 the live tunnel is shown whether or not a device is picked.
                 val live = listOf(tunnelRow(tunnel))
                 val picked = device(ctx, declared)
@@ -385,7 +383,7 @@ object AccountRuntime {
             }
             "mesh" -> {
                 val name = path.split(AccountDrift.SEP).let { if (it[0] == "peers") "${it[1]}/${it.last()}" else it.last() }
-                VaultCockpit.applyMesh(WgState.prefs(ctx), name, value.toString())
+                AccountHost.mesh?.apply(ctx, name, value.toString()) ?: "✗ $name: the mesh tunnel is not available in this app"
             }
             else -> "✗ ${section.label}: this app takes nothing pushed"
         }

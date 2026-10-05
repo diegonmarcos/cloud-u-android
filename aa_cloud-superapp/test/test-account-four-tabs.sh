@@ -44,7 +44,7 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 BJ="$APP/build.json"
 SHARED="$APP/../ab_cloud-libs-shared/build.json"
-PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
+PKG="$APP/../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile"
 PF="$PKG/ProfileFragment.kt"
 IM="$PKG/InfoMask.kt"
 CP="$PKG/VaultCockpit.kt"
@@ -56,7 +56,7 @@ AD="$PKG/AccountDrift.kt"     # the three-file engine
 AR="$PKG/AccountRuntime.kt"   # per-app live readers / pushers
 AU="$PKG/AccountUpload.kt"    # L → server commit
 ADA="$PKG/AccountDebugApi.kt" # /api/account/*
-RES="$APP/app/src/main/res"
+RES="$APP/../ab_cloud-libs-shared/libs/account/src/main/res"   # #867 the Account strings moved with the page
 for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$GE" "$AT" "$AM" "$AD" "$AR" "$AU" "$ADA" "$RES/values/strings.xml"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
@@ -97,7 +97,7 @@ PYA
 }
 echo "== A: Connect is three declared lines in order, each way dispatched on its kind =="
 msg=$(lines_ok "$BJ" "$SHARED") && ok "A: three lines in order (Authelia, GitHub, Import File), kinds as declared, every unhandled kind carries its reason" || bad "A: $msg"
-grep -q 'UI_PROFILE_CONNECT_B64' "$APP/app/build.gradle" && grep -q 'BuildConfig.UI_PROFILE_CONNECT_B64' "$PF" \
+grep -q 'UI_PROFILE_CONNECT_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.gradle" && grep -q 'BuildConfig.UI_PROFILE_CONNECT_B64' "$PF" \
     && ok "A: the lines are baked and read off the declaration" || bad "A: UI_PROFILE_CONNECT_B64 is not baked or not read"
 grep -q 'for (line in connectLines())' "$PF" && grep -q 'buildWay(ctx, s, way, policy, cell, extras, status)' "$PF" \
     && ok "A: step 1 iterates the declared lines and ways" || bad "A: step 1 does not iterate connectLines()"
@@ -153,10 +153,10 @@ file_ok() {   # $1 = ProfileFragment.kt, $2 = ImportConfigsFragment.kt; prints t
     grep -qF 'vaultFilePicker.launch(' <<<"$bw" || { echo "the file way does not open the picker"; return 1; }
     grep -q 'OpenDocument()) { uri ->' <<<"$(grep -A1 'private val vaultFilePicker' "$1")" || { echo "the picker is not the system document picker"; return 1; }
     [ -n "$iv" ] || { echo "importVaultFile is gone"; return 1; }
-    grep -qF 'ImportConfigsFragment.classify(text)' <<<"$iv" || { echo "the file is not read through ImportConfigsFragment.classify"; return 1; }
+    grep -qF 'AccountHost.classify(text)' <<<"$iv" || { echo "the file is not read through AccountHost.classify (ImportConfigsFragment.classify)"; return 1; }
     grep -qF 'VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)' <<<"$iv" || { echo "the export does not land through landVault"; return 1; }
     grep -qE 'VaultConnect\.Imported|VaultFile\.classify\(' <<<"$iv" && { echo "importVaultFile writes the import or classifies itself — a second importer"; return 1; }
-    grep -qF 'else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v)' <<<"$iv" || { echo "a non-export file is not refused with its reason"; return 1; }
+    grep -qF 'else -> refuse(AccountHost.refusal(ctx, v)' <<<"$iv" || { echo "a non-export file is not refused with its reason"; return 1; }
     grep -qF 'view?.snack(text)' <<<"$iv" || { echo "a refusal is not also a snack (loud)"; return 1; }
     grep -qF 'fun classify(text: String): VaultFile.Verdict =' "$2" || { echo "ImportConfigsFragment.classify is not shared"; return 1; }
     local rf; rf=$(awk '/fun refusal\(ctx: Context, v: VaultFile.Verdict\): String\? = when \(v\) \{/{f=1} f{print} f&&/^        }$/{exit}' "$2")
@@ -169,7 +169,7 @@ file_ok() {   # $1 = ProfileFragment.kt, $2 = ImportConfigsFragment.kt; prints t
 echo "== A2: Import File reads through the existing classifier and lands like a sign-in =="
 msg=$(file_ok "$PF" "$ICF") && ok "A2: picker → ImportConfigsFragment.classify → landVault; every other verdict refused with its reason" || bad "A2: $msg"
 for loc in values values-es; do
-    grep -q 'name="connect_file_blob">✗' "$RES/$loc/strings.xml" && ok "A2: the blob refusal is worded in $loc" || bad "A2: connect_file_blob missing or not a refusal in $loc"
+    grep -q 'name="connect_file_blob">✗' "$APP/app/src/main/res/$loc/strings.xml" && ok "A2: the blob refusal is worded in $loc" || bad "A2: connect_file_blob missing or not a refusal in $loc"
 done
 echo "-- A2-mutation: a second importer, a lost landing, a silent refusal, a missing verdict sentence --"
 f2mut() {   # $1 = file (pf|icf), $2 = sed expression; 0 iff file_ok goes red; 2 iff nothing changed
@@ -179,7 +179,7 @@ f2mut() {   # $1 = file (pf|icf), $2 = sed expression; 0 iff file_ok goes red; 2
     ! file_ok "$TMP/pf.kt" "$TMP/icf.kt" >/dev/null
 }
 for m in 'pf|s/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)/is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> { VaultConnect.Imported.bundle = v.bundle }/' \
-         'pf|s/ImportConfigsFragment.classify(text)/com.diegonmarcos.cloudlib.auth.VaultFile.classify(text, emptySet(), emptySet())/' \
+         'pf|s/AccountHost.classify(text)/com.diegonmarcos.cloudlib.auth.VaultFile.classify(text, emptySet(), emptySet())/' \
          'pf|s/fun refuse(text: String) { show(status, RED, text); view?.snack(text) }/fun refuse(text: String) { }/' \
          'pf|s/if (way.kind == KIND_VAULT_FILE) {/if (false) {/' \
          'icf|/is VaultFile.Verdict.Encrypted -> ctx.getString(R.string.import_encrypted/d'; do
@@ -337,7 +337,7 @@ tabs_ok() {   # $1 = build.json, $2 = ProfileFragment.kt; prints the first broke
     return 0
 }
 msg=$(tabs_ok "$BJ" "$PF") && ok "T: four declared tabs in order, each label off the declaration, each id one column" || bad "T: $msg"
-grep -q 'UI_PROFILE_TABS_B64' "$APP/app/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_TABS_B64' "$AM" \
+grep -q 'UI_PROFILE_TABS_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_TABS_B64' "$AM" \
     && ok "T: the strip is baked and read off the declaration (AccountModel.tabs)" || bad "T: UI_PROFILE_TABS_B64 is not baked or not read"
 for t in profiles runtime drift; do
     grep -qF "AccountTags.tab(\"$t\")" "$AT" && ok "T: the $t tab carries its test tag (account:$t)" || bad "T: the $t tab has no test tag"
@@ -388,7 +388,7 @@ if [ -n "$LOCALPY" ]; then
 else
     echo "  UNVERIFIABLE: cloud-vault is not beside this repo — the upload path was not compared with local.py's"
 fi
-grep -q 'UI_PROFILE_DRIFT_B64' "$APP/app/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_DRIFT_B64' "$AM" \
+grep -q 'UI_PROFILE_DRIFT_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_DRIFT_B64' "$AM" \
     && ok "D: the drift declaration is baked and read" || bad "D: UI_PROFILE_DRIFT_B64 is not baked or not read"
 engine_ok() {   # $1 = AccountDrift.kt, $2 = AccountModel.kt, $3 = AccountUpload.kt; prints the first broken rule
     grep -qF 'if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null' "$2" || { echo "a comparison with R is not limited to what R observed"; return 1; }
@@ -645,7 +645,7 @@ schema_code_ok() {   # $1 = InfoMask.kt, $2 = AccountTabs.kt
     return 0
 }
 msg=$(schema_code_ok "$IM" "$AT") && ok "F: ProfilesTab iterates the declared schema; every field is a row, filled or empty; extras still drawn" || bad "F: $msg"
-grep -q 'UI_PROFILE_INFOS_B64' "$APP/app/build.gradle" && grep -qF 'parseSchema(baked?.optJSONObject("schema"))' "$IM" \
+grep -q 'UI_PROFILE_INFOS_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.gradle" && grep -qF 'parseSchema(baked?.optJSONObject("schema"))' "$IM" \
     && ok "F: the schema is baked with the mask and read off it" || bad "F: the schema is not baked or not read"
 out=$(schema_rows_cover "$BJ" "") && ok "F: with nothing fetched, every declared field still draws (as empty) — $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") fields in $(jq '.ui.profile.infos.schema.sections | length' "$BJ") sections" || bad "F: fields without a row: $(echo $out)"
 out=$(schema_rows_cover "$BJ" "$TMP/fixture.json") && ok "F: over the synthetic bundle every declared field draws" || bad "F: fields without a row: $(echo $out)"
@@ -810,7 +810,7 @@ setup_gone() {   # $1 = ProfileFragment.kt, $2 = build.json; prints what survive
         grep -qF "$g" <<<"$rr" && { echo "Runtime still renders $g"; return 1; }
         grep -qF "$g" <<<"$(codeof "$1")" && { echo "$g survives in ProfileFragment"; return 1; }
     done
-    grep -qF 'name="setup_config_header"' "$APP/app/src/main/res/values/strings.xml" && { echo "the 'Your config' string survives"; return 1; }
+    grep -qF 'name="setup_config_header"' "$RES/values/strings.xml" && { echo "the 'Your config' string survives"; return 1; }
     [ -f "$PKG/ConfigAutoImport.kt" ] && { echo "ConfigAutoImport.kt survives"; return 1; }
     return 0
 }

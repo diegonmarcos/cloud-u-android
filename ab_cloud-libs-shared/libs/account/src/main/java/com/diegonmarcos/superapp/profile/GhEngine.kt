@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.account.BuildConfig
 import com.diegonmarcos.superapp.core.DataBackendClient
 import org.json.JSONObject
 

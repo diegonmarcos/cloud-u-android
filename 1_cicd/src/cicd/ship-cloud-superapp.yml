@@ -102,6 +102,7 @@ on:
       # republishes and an unrelated edit elsewhere in that file does not.
       - "aa_cloud-superapp/**"
       - "ab_cloud-libs-shared/build.json"
+      - "ab_cloud-libs-shared/libs/account/**"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/auth/**"
       - "ab_cloud-libs-shared/libs/battery/**"

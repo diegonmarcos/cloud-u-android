@@ -88,7 +88,7 @@
    "class": "device",
    "doc": "#783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration.",
    "used_by": [
-    "aa_cloud-superapp"
+    "lib-account"
    ]
   },
   "acode_auth_secure": {
@@ -892,7 +892,7 @@
    "class": "secret",
    "doc": "EncryptedSharedPreferences holding the imported configs JSON blob including auth.authelia_token and email; mostly credentials.",
    "used_by": [
-    "aa_cloud-superapp"
+    "lib-account"
    ]
   },
   "kdeconnect_clipboard": {
@@ -1217,9 +1217,9 @@
    "class": "config",
    "doc": "Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity.",
    "used_by": [
-    "aa_cloud-superapp",
     "ac_cloud-nav",
-    "ac_cloud-wallet"
+    "ac_cloud-wallet",
+    "lib-account"
    ],
    "keys": {
     "banner_uri": "device",
@@ -1455,7 +1455,7 @@
    "class": "device",
    "doc": "Only holds this phone's device_id used in the vault cockpit.",
    "used_by": [
-    "aa_cloud-superapp"
+    "lib-account"
    ]
   },
   "voice_shutter": {

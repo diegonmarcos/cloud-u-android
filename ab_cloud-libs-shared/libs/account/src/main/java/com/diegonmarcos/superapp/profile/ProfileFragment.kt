@@ -22,11 +22,8 @@ import com.diegonmarcos.cloudlib.auth.SignInResult
 import com.diegonmarcos.cloudlib.auth.SignInWays
 import com.diegonmarcos.cloudlib.auth.UserRegistry
 import com.diegonmarcos.cloudlib.auth.VaultConnect
-import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.launcher.AppTabsStyle
-import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.account.R
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
-import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.snack
 import com.diegonmarcos.superapp.uikit.kitComposeView
 import com.google.android.material.tabs.TabLayout
@@ -172,7 +169,7 @@ class ProfileFragment : Fragment() {
         renderJourney(ctx, connect)
 
         // ── PROFILES · RUNTIME · DRIFT (#778, Compose on libs:ui-kit) ─────
-        val palette = LauncherPalette.kit(ctx)
+        val palette = AccountHost.palette(ctx)
         profiles.addView(ctx.kitComposeView(palette) { ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t) }, { openRoute(it) }) })
         renderRuntime(ctx, runtime)
         drift.addView(ctx.kitComposeView(palette) { DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) } })
@@ -302,7 +299,7 @@ class ProfileFragment : Fragment() {
         val reg = s.registry
         val layout = VaultCockpit.layout
         val icons = ProfileJourney.Step.values().associateWith { step ->
-            Sections.iconResFor(ctx, layout.journeyIcons[step.name.lowercase()].orEmpty())
+            AccountHost.iconFor(ctx, layout.journeyIcons[step.name.lowercase()].orEmpty())
         }
         val chosen = s.chosenIdentity
         val peer = s.chosenPeer
@@ -343,7 +340,7 @@ class ProfileFragment : Fragment() {
     /** build.json::ui.profile.connect (UI_PROFILE_CONNECT_B64); a broken bake is no JSON. */
     private fun connectDecl(): org.json.JSONObject = runCatching {
         org.json.JSONObject(String(android.util.Base64.decode(
-            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_CONNECT_B64, android.util.Base64.NO_WRAP)))
+            com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_CONNECT_B64, android.util.Base64.NO_WRAP)))
     }.getOrDefault(org.json.JSONObject())
 
     /** The declared lines, in order; an unparseable blob yields none rather than invented ones. */
@@ -618,7 +615,7 @@ class ProfileFragment : Fragment() {
      * applying is Drift's server → runtime, the card's fields are Profiles' `about` topic).
      */
     private fun renderRuntime(ctx: android.content.Context, into: LinearLayout) {
-        into.addView(ctx.kitComposeView(LauncherPalette.kit(ctx)) { RuntimeTab(AccountModel.get(ctx)) })
+        into.addView(ctx.kitComposeView(AccountHost.palette(ctx)) { RuntimeTab(AccountModel.get(ctx)) })
     }
 
     /** CreateDocument for Profiles' and Drift's exports; [pendingExport] is the text the picked file receives. */
@@ -638,7 +635,8 @@ class ProfileFragment : Fragment() {
 
     /** A declared launcher route (the apps topic's Store link) handed to the host. */
     private fun openRoute(route: String) {
-        (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)?.onTileClicked(route)
+        val a = activity ?: return
+        if (!AccountHost.route(a, route)) view?.snack(getString(R.string.account_route_unavailable))
     }
 
     private fun statusView(ctx: android.content.Context): TextView = TextView(ctx).apply {
@@ -721,8 +719,7 @@ class ProfileFragment : Fragment() {
             // private method of SectionTabsFragment, so nothing else could
             // reach it. It is the real work: one slot per tab, the font
             // stepping down before any label is allowed to clip.
-            AppTabsStyle.apply(this)
-            AppTabsStyle.equalise(this)
+            AccountHost.styleTabs(this)
             getTabAt(selectedTab)?.select()
         }
     }
@@ -1219,9 +1216,9 @@ class ProfileFragment : Fragment() {
         when {
             text == null -> refuse(getString(R.string.import_file_no_stream, name))
             text.isEmpty() -> refuse(getString(R.string.import_file_empty, name))
-            else -> when (val v = com.diegonmarcos.superapp.settings.ImportConfigsFragment.classify(text)) {
+            else -> when (val v = AccountHost.classify(text)) {
                 is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle -> landVault(status, v.bundle, via = fileVia)
-                else -> refuse(com.diegonmarcos.superapp.settings.ImportConfigsFragment.refusal(ctx, v).orEmpty())
+                else -> refuse(AccountHost.refusal(ctx, v).orEmpty())
             }
         }
     }

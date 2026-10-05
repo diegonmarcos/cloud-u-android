@@ -1,6 +1,5 @@
 package com.diegonmarcos.superapp.profile
-import com.diegonmarcos.superapp.ui.Haptics
-import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.account.R
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -181,7 +180,7 @@ class BusinessCardFragment : Fragment() {
                 )
             })
             frame.setOnClickListener {
-                Haptics.tap(it)
+                AccountHost.tap(it)
                 showQrGallery()
             }
             qrCard.addView(frame)

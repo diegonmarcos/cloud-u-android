@@ -185,7 +185,7 @@ class ProfileJourneyTest {
     private fun cards(root: View): List<View> {
         val out = mutableListOf<View>()
         fun walk(v: View) {
-            if (v.id == R.id.cockpit_card) out += v
+            if (v.id == com.diegonmarcos.superapp.account.R.id.cockpit_card) out += v
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
         }
         walk(root); return out
@@ -193,7 +193,7 @@ class ProfileJourneyTest {
 
     @Test fun `the journey is a hero then exactly four cards, in step order, tagged step colon name`() {
         val j = build()
-        val hero = j.root.findViewById<View>(R.id.cockpit_hero)
+        val hero = j.root.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_hero)
         assertTrue("the hero is the first child", j.root.getChildAt(0) === hero)
         val found = cards(j.root)
         assertEquals(Step.values().size, found.size)
