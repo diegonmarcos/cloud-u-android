@@ -212,7 +212,7 @@
   {
     "name": "umami",
     "service": "umami",
-    "vm": "oci-E2-f_1",
+    "vm": "oci-A1-f_0",
     "public_url": "analytics.diegonmarcos.com",
     "auth": "two_factor",
     "private_dns": "umami.app:3006",

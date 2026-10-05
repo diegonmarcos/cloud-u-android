@@ -252,7 +252,7 @@
   {
     "name": "umami-db",
     "service": "umami",
-    "vm": "oci-E2-f_1",
+    "vm": "oci-A1-f_0",
     "private_dns": "umami-db.app:5442",
     "port": 5442,
     "protocol": "tcp",
@@ -262,7 +262,7 @@
   {
     "name": "umami-setup",
     "service": "umami",
-    "vm": "oci-E2-f_1",
+    "vm": "oci-A1-f_0",
     "private_dns": "umami-setup.app",
     "port": null,
     "protocol": "tcp",
