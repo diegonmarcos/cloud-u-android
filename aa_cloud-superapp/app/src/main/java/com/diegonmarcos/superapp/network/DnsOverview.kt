@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.network
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import com.diegonmarcos.superapp.appstore.StoreMesh
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.devtools.FleetPeers
@@ -42,6 +43,11 @@ object DnsOverview {
                 "owning the VPN slot has no VPN permission), every member's resolution path with its flags and " +
                 "terminal bridge state, every known DNS server with role, protocol, presets, reachability now and " +
                 "which one is answering"))) { op, _ -> if (op == "dns/overview") collect(app).toString() else null }
+        // #874 the same state a terminal serves for its bridge, for this app's own.
+        AppDebugServer.route("sysdns", listOf(AppDebugServer.Op("state", "",
+            "#874 this app's DNS bridge (libs:sysdns FleetDnsBridge): listening port, query counters, the route that answered last and the routes a failed lookup tried"))) { op, _ ->
+            if (op == "state") FleetDnsBridge.stateJson() else null
+        }
     }
 
     // ── per app ──────────────────────────────────────────────────────────
@@ -197,7 +203,9 @@ object DnsOverview {
         val a = FleetDns.readAndroid(ctx)
         val self = JSONObject().put("network", if (a.onVpn) "vpn" else "direct").put("upstreams", JSONArray(a.activeServers))
             .put("private_dns", JSONObject().put("active", a.privateDnsActive ?: JSONObject.NULL).put("server", a.privateDnsServer ?: JSONObject.NULL))
-        return others + Member(ctx.packageName, label(ctx.packageName), own, self, null, 0)
+        // #874 this app resolves through its own bridge too; its state is read in-process.
+        val bridge = runCatching { JSONObject(FleetDnsBridge.stateJson()) }.getOrNull()
+        return others + Member(ctx.packageName, label(ctx.packageName), own, self, bridge, 0)
     }
 
     /** The whole overview. Blocks for a sweep and a probe round (a few seconds): off the main thread. */

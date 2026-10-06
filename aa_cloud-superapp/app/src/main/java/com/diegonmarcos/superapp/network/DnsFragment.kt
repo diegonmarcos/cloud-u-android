@@ -22,7 +22,7 @@ import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.firewall.FirewallController
 import com.wireguard.android.backend.Tunnel
-import java.net.InetAddress
+import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import java.text.DateFormat
 import java.util.Date
 
@@ -269,8 +269,9 @@ class DnsFragment : Fragment() {
             val fleet = FleetDns.fleetResolvers(ctx)
             val plan = runCatching { FleetDns.promised(decl, prefs.preset, prefs.fallbacks, prefs.chosen, fleet, up) }
             listOf(decl.testPublic, decl.testMesh).filter { it.isNotEmpty() }.map { name ->
-                val sys = runCatching { InetAddress.getAllByName(name).joinToString(", ") { it.hostAddress ?: "" } }
-                    .getOrElse { "FAILED (${it.javaClass.simpleName})" }
+                // #874 the same lookup the Store's downloader makes: through the bridge.
+                val sys = runCatching { FleetDnsBridge.resolve(name).joinToString(", ") { it.hostAddress ?: "" } + " via ${FleetDnsBridge.lastRoute}" }
+                    .getOrElse { "FAILED (${it.javaClass.simpleName}: ${it.message})" }
                 val routed = plan.fold({ servers ->
                     val ups = FleetDns.upstreamsFor(decl, name, up, servers, fleet)
                     if (ups.isEmpty()) null else ups.firstNotNullOfOrNull { s ->
@@ -281,11 +282,11 @@ class DnsFragment : Fragment() {
             }
         }) { rows ->
             results.text = rows.joinToString("\n\n") { (name, sys, routed) ->
-                "$name\n  system resolver: $sys" + (routed?.let { "\n  fleet plan: $it" } ?: "")
+                "$name\n  ${FleetDnsBridge.label}: $sys" + (routed?.let { "\n  fleet plan: $it" } ?: "")
             }
             rows.firstOrNull { (_, sys, routed) -> routed?.startsWith("FAILED") == false || (routed == null && !sys.startsWith("FAILED")) }
                 ?.let { (name, sys, routed) ->
-                    prefs.lastLookup = "$name → ${routed ?: "$sys (system)"} at ${DateFormat.getTimeInstance().format(Date())}"
+                    prefs.lastLookup = "$name → ${routed ?: "$sys (bridge)"} at ${DateFormat.getTimeInstance().format(Date())}"
                 }
             refreshStatus(ctx)
         }

@@ -2,9 +2,8 @@ package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import com.diegonmarcos.superapp.updater.source.DownloadFailure
+import com.diegonmarcos.superapp.updater.source.MeshMirror
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -17,44 +16,34 @@ import java.net.Socket
 import java.net.SocketAddress
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
-import javax.net.SocketFactory
 
 /**
- * #860 The Store's downloads resolve THE WAY THE ACTIVE PRESET SAYS.
+ * #860/#866/#874 The Store's downloads resolve THROUGH THE FLEET'S DNS BRIDGE.
  *
- * The downloader (libs:updater) opens plain HttpURLConnections on the process
- * default, so with the VPN slot carrying a list the preset no longer names
- * (a stale public tunnel's resolvers), every Store source failed with
- * "cannot resolve github.com" while Android's own resolver — what Mirror means —
- * answered. The lib stays untouched: a ProxySelector, consulted by every
- * HttpURLConnection, walks the preset's [plan] for the download hosts. The
- * system resolver answering = DIRECT, unchanged. Otherwise the first route that
- * resolves carries the connection through a loopback CONNECT tunnel bound to
- * that route (TLS stays end to end, the hostname is still verified). No route =
- * DIRECT, so the lookup fails as before and [lastFailure] names every resolver
- * that was actually tried.
+ * The downloader (libs:updater) opens plain HttpURLConnections, which resolve
+ * on the process default; the DNS page's Test resolved beside it, and the two
+ * disagreed on one phone ("cannot resolve github.com" under a page that said
+ * github.com → 140.82.121.4). The lib stays untouched: a ProxySelector,
+ * consulted by every HttpURLConnection, asks [resolve] — the host's one
+ * resolver, libs:sysdns FleetDnsBridge, which walks the active preset — for
+ * every download host (the release, ghcr and mesh legs, and the Store's own
+ * check, which HEADs the same hosts) and carries the connection through a
+ * loopback tunnel to the address it answered (TLS stays end to end, the
+ * hostname is still verified; a plain-http mesh request is relayed as sent).
+ * No answer = DIRECT, so the lookup fails as before and [lastFailure] names
+ * every route the bridge tried. Nothing here resolves by itself.
  *
- * Mirror Android: the system resolver, then the same resolver on each
- * underlying (non-VPN) network, then ONLY the preset's own servers. Never a
- * fixed public list, never another preset's servers. Public/Private presets ARE
- * what the VPN carries, so their single route is the system resolver, labelled
- * with the preset.
- *
- * #866 Lives in libs:appstore so SuperApp and Cloud Store walk ONE path. What
- * only a host knows comes through the hooks below: SuperApp answers [presetOf]
- * from its DNS page (FleetDns) and [query] from FleetDns.query; Cloud Store has
- * no DNS page, so it keeps the defaults (Mirror: the system resolver, then
- * Android's resolver on each underlying network).
+ * Lives in libs:appstore so SuperApp and Cloud Store walk ONE path; the host
+ * sets [resolve] to its bridge (SuperApp's reads the DNS page's preset; Cloud
+ * Store's keeps the bridge's Mirror default).
  */
 object StoreDns {
-    /** The host's active preset, Android-free. [mirror] = "Mirror Android". */
-    class Preset(val label: String, val mirror: Boolean, val servers: List<String> = emptyList(), val fallback: List<String> = emptyList())
-
-    /** The preset in force. Default: Mirror with no servers of its own. */
-    @Volatile var presetOf: (Context) -> Preset = { Preset("Mirror Android", true) }
-    /** One plain-DNS A query: server, host, timeout ms. Throws or returns a non-address on a miss. */
-    @Volatile var query: (String, String, Int) -> String = { _, _, _ -> throw UnsupportedOperationException("no DNS query hook") }
-    @Volatile var timeoutMs: Int = 2500
+    /** The host's resolver: every address for a name, or throws. Unset = DIRECT. */
+    @Volatile var resolve: (String) -> List<InetAddress> = { throw UnsupportedOperationException("no DNS bridge wired") }
+    /** What the host's resolver is called, for the failure wording ("bridge 127.0.0.1:2053"). */
+    @Volatile var resolverLabel: () -> String = { "no DNS bridge" }
+    /** The routes the host's last failed lookup walked, or null. */
+    @Volatile var tried: () -> String? = { null }
     /** The host's one-line summary of what Android resolves with, or null. */
     @Volatile var networkSummary: (Context) -> String? = { ctx ->
         val cm = ctx.getSystemService(ConnectivityManager::class.java)
@@ -62,108 +51,39 @@ object StoreDns {
             ?.ifEmpty { "no DNS servers on the active network" }
     }
 
-    /** A planned route, Android-free so the order is testable. */
-    data class Step(val label: String, val kind: String, val servers: List<String> = emptyList(), val network: Int = -1)
-
-    const val SYSTEM = "system"
-    const val UNDERLYING = "underlying"
-    const val PRESET_SERVERS = "preset-servers"
-
-    fun plan(p: Preset, underlying: List<String>): List<Step> = when {
-        p.mirror -> buildList {
-            add(Step("Android system resolver (${p.label})", SYSTEM))
-            underlying.forEachIndexed { i, n -> add(Step("Android resolver on $n", UNDERLYING, network = i)) }
-            val own = (p.servers + p.fallback).distinct()
-            if (own.isNotEmpty()) add(Step("${p.label} fallback ${own.joinToString(", ")}", PRESET_SERVERS, own))
-        }
-        else -> listOf(Step("${p.label} via VPN (Android system resolver)", SYSTEM))
-    }
-
-    /** The hosts the Store downloads from; everything else is never touched. */
+    /** The hosts the Store downloads from (plus the mesh leg's origins); everything else is never touched. */
     private val STORE_HOSTS = listOf("github.com", "githubusercontent.com", "ghcr.io")
     fun isStoreHost(host: String): Boolean {
         val h = host.trimEnd('.').lowercase()
-        return STORE_HOSTS.any { h == it || h.endsWith(".$it") }
+        return STORE_HOSTS.any { h == it || h.endsWith(".$it") } ||
+            MeshMirror.bases.any { runCatching { URI(it).host.equals(h, ignoreCase = true) }.getOrDefault(false) }
     }
 
     /** "cannot resolve X" names this: the routes the last failed lookup went through. */
     @Volatile var lastFailure: String? = null
         private set
 
-    /** The first route of [steps] whose resolver answers [host], or null with [lastFailure] set. */
-    fun <T> pick(host: String, steps: List<Pair<Step, T>>, resolves: (Step, T) -> Boolean): Pair<Step, T>? {
-        val hit = steps.firstOrNull { (s, t) -> runCatching { resolves(s, t) }.getOrDefault(false) }
-        lastFailure = if (hit == null) steps.joinToString(" → ") { it.first.label }.ifEmpty { null } else null
-        return hit
-    }
-
     // ── live wiring ──────────────────────────────────────────────────────
 
-    private class Via(val addrs: List<InetAddress>, val sockets: SocketFactory)
-
-    private fun underlyingNetworks(ctx: Context): List<Pair<String, Network>> {
-        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return emptyList()
-        @Suppress("DEPRECATION")
-        return cm.allNetworks.mapNotNull { n ->
-            val c = cm.getNetworkCapabilities(n) ?: return@mapNotNull null
-            if (c.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                !c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@mapNotNull null
-            when {
-                c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-                c.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "mobile data"
-                c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-                else -> "network"
-            } to n
-        }
-    }
-
-    /** Resolve [host] along the preset's plan: null = DIRECT (system answered, or nothing did). */
-    private fun route(ctx: Context, host: String): Via? {
-        val p = presetOf(ctx)
-        val nets = if (p.mirror) underlyingNetworks(ctx) else emptyList()
-        var via: Via? = null
-        val hit = pick(host, plan(p, nets.map { it.first }).map { it to Unit }) { s, _ ->
-            when (s.kind) {
-                SYSTEM -> InetAddress.getAllByName(host).isNotEmpty()
-                UNDERLYING -> nets[s.network].second.let { n ->
-                    n.getAllByName(host).toList().takeIf { it.isNotEmpty() }?.also { via = Via(it, n.socketFactory) } != null
-                }
-                PRESET_SERVERS -> s.servers.firstNotNullOfOrNull { srv ->
-                    runCatching { query(srv, host, timeoutMs) }.getOrNull()
-                        ?.takeIf { a -> a.split('.').size == 4 && a.split('.').all { it.toIntOrNull() != null } }
-                }?.let { a ->
-                    via = Via(listOf(InetAddress.getByName(a)), nets.firstOrNull()?.second?.socketFactory ?: SocketFactory.getDefault())
-                } != null
-                else -> false
-            }
-        }
-        return if (hit == null || hit.first.kind == SYSTEM) null else via
-    }
-
-    private val pending = ConcurrentHashMap<String, Via>()
+    private val pending = ConcurrentHashMap<String, List<InetAddress>>()
     @Volatile private var port = 0
 
     /**
-     * Both halves of #860/#866 for a host, off the main thread: the proxy
-     * selector, and the failure wording that names the resolvers tried.
+     * Both halves for a host, off the main thread: the proxy selector, and the
+     * failure wording that names the bridge and the routes it tried.
      */
     fun start(ctx: Context) {
         val app = ctx.applicationContext
         Thread({ install(app) }, "store-dns-install").start()
         DownloadFailure.activeResolver = {
             val net = runCatching { networkSummary(app) }.getOrNull()
-            // No route walked = the lookup went DIRECT to the system resolver,
-            // so NAME it as the plan does. Falling back to the network summary
-            // alone read "unknown" on a Mirror phone whose DNS page answered.
-            val used = lastFailure?.let { "tried $it" }
-                ?: runCatching { plan(presetOf(app), emptyList()).first().label }.getOrDefault("Android system resolver")
+            val used = lastFailure?.let { "${resolverLabel()} tried $it" } ?: resolverLabel()
             used + (net?.let { n -> "; network: $n" } ?: "")
         }
     }
 
     /** Install once, at the app's start. Any failure leaves the default selector in place. */
     fun install(ctx: Context) = runCatching {
-        val app = ctx.applicationContext
         val server = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
         port = server.localPort
         Thread({ while (true) runCatching { server.accept() }.getOrNull()?.let { s -> Thread({ tunnel(s) }, "store-dns-tunnel").start() } },
@@ -172,14 +92,11 @@ object StoreDns {
         ProxySelector.setDefault(object : ProxySelector() {
             override fun select(uri: URI): List<Proxy> {
                 val host = uri.host
-                // Android's system resolver answering = DIRECT, decided BEFORE any
-                // preset is read: the SuperApp's own self-update (same hosts)
-                // never depends on FleetDns while the system resolver works.
-                if (uri.scheme == "https" && host != null && isStoreHost(host) &&
-                    !runCatching { InetAddress.getAllByName(host).isNotEmpty() }.getOrDefault(false)) {
-                    val via = runCatching { route(app, host) }.getOrNull()
-                    if (via != null) {
-                        pending[host.lowercase()] = via
+                if ((uri.scheme == "https" || uri.scheme == "http") && host != null && isStoreHost(host)) {
+                    val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())
+                    lastFailure = if (addrs.isEmpty()) tried() else null
+                    if (addrs.isNotEmpty()) {
+                        pending[host.lowercase()] = addrs
                         return listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress(InetAddress.getByName("127.0.0.1"), port)))
                     }
                 }
@@ -191,20 +108,27 @@ object StoreDns {
         })
     }.onFailure { android.util.Log.w("StoreDns", "download resolver not installed", it) }
 
-    /** One CONNECT: dial the route's address on its network, then splice. */
+    private val CONNECT = Regex("^CONNECT ([^: ]+):(\\d+) ")
+    private val ABSOLUTE = Regex("^[A-Z]+ http:/{2}([^/: ]+)(?::(\\d+))?/")
+
+    /** One request: dial the bridge's address for its host, then splice (a CONNECT after its 200, a plain-http request as sent). */
     private fun tunnel(client: Socket) = runCatching {
         client.use { c ->
             val inp = c.getInputStream()
-            val line = readLine(inp)
-            while (readLine(inp).isNotEmpty()) Unit
-            val target = Regex("^CONNECT ([^: ]+):(\\d+) ").find(line)
-            val via = target?.let { pending[it.groupValues[1].lowercase()] }
-            if (target == null || via == null) { c.getOutputStream().write("HTTP/1.1 502 Bad Gateway\r\n\r\n".toByteArray()); return@use }
-            val up = via.addrs.firstNotNullOfOrNull { a ->
-                runCatching { via.sockets.createSocket().apply { connect(InetSocketAddress(a, target.groupValues[2].toInt()), 15_000) } }.getOrNull()
+            val head = ArrayList<String>()
+            while (true) { val l = readLine(inp); if (l.isEmpty()) break; head += l }
+            val line = head.firstOrNull().orEmpty()
+            val connect = CONNECT.find(line)
+            val target = connect ?: ABSOLUTE.find(line)
+            val addrs = target?.let { pending[it.groupValues[1].lowercase()] }
+            if (target == null || addrs == null) { c.getOutputStream().write("HTTP/1.1 502 Bad Gateway\r\n\r\n".toByteArray()); return@use }
+            val p = target.groupValues[2].toIntOrNull() ?: 80
+            val up = addrs.firstNotNullOfOrNull { a ->
+                runCatching { Socket().apply { connect(InetSocketAddress(a, p), 15_000) } }.getOrNull()
             } ?: run { c.getOutputStream().write("HTTP/1.1 502 Bad Gateway\r\n\r\n".toByteArray()); return@use }
             up.use { u ->
-                c.getOutputStream().apply { write("HTTP/1.1 200 Connection established\r\n\r\n".toByteArray()); flush() }
+                if (connect != null) c.getOutputStream().apply { write("HTTP/1.1 200 Connection established\r\n\r\n".toByteArray()); flush() }
+                else u.getOutputStream().apply { write((head.joinToString("\r\n") + "\r\n\r\n").toByteArray()); flush() }
                 val back = Thread({ pipe(u.getInputStream(), c.getOutputStream()) }, "store-dns-back").apply { start() }
                 pipe(inp, u.getOutputStream())
                 runCatching { u.shutdownOutput() }

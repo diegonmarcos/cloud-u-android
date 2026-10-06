@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Base64
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.net.AidlBackend
@@ -272,6 +273,21 @@ object FleetDns {
             meshDownConfig(decl, meshDownServers(decl, p.preset, p.fallbacks, fleet), fleet, self, sink)
         }
         return WgState.backend(ctx).setIdleTunnel(decl.meshDownTunnel, config, raiseNow)
+    }
+
+    /**
+     * #874 The bridge's routes for [name]: the servers [promised] right now,
+     * split for mesh names ([upstreamsFor]), each asked directly after Android's
+     * resolver (which carries the same list while the VPN is in effect, DoT
+     * upgraded); nothing promised = Mirror: Android's resolver on each
+     * underlying network, then the uid's default.
+     */
+    fun bridgeRoutes(ctx: Context, name: String): List<FleetDnsBridge.Route> {
+        val p = Prefs(ctx); val up = meshUp(ctx); val fleet = fleetResolvers(ctx)
+        val label = effective(decl, p.preset).label
+        val servers = upstreamsFor(decl, name, up, promised(decl, p.preset, p.fallbacks, p.chosen, fleet, up), fleet)
+        return if (servers.isEmpty()) FleetDnsBridge.mirror(label)
+        else listOf(FleetDnsBridge.Route("Android system resolver ($label)")) + servers.map { FleetDnsBridge.Route("$label $it", listOf(it)) }
     }
 
     // ── #794 is the choice in effect? ────────────────────────────────────

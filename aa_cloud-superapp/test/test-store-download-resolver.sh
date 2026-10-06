@@ -11,12 +11,14 @@
 # and nothing was walked when the system lookup went straight to the socket.
 #
 #   R1  the three-rung ladder stays: release, ghcr, mesh — the mesh leg last
-#   R2  StoreDns names the plan's resolver when no route was walked, never null
-#       (the "unknown" wording stays reserved for a host without the hook)
+#   R2  StoreDns names the resolver that was asked, never null (the "unknown"
+#       wording stays reserved for a host without the hook). #874: that
+#       resolver is the fleet DNS bridge, and a miss lists the routes it tried
 #   R3  the mesh leg reports "mesh down" from the tunnel's own state instead of
 #       a DNS failure on the declared name, and SuperApp hands it that state
-#   R4  the public legs still resolve DIRECT through the system resolver —
-#       no OkHttp Dns, no DoH, no loopback bridge in the lib's download path
+#   R4  the public legs resolve through the ONE bridge of the process (#874,
+#       test-store-download-via-bridge.sh) — no OkHttp Dns, no DoH, no second
+#       resolver in the lib's download path
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
@@ -25,6 +27,7 @@ FLEET="$LIBS/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt"
 SRC="$LIBS/updater/src/main/java/com/diegonmarcos/superapp/updater/source"
 STOREDNS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreDns.kt"
 MAIN="$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt"
+MAIN_FLEETDNS="$APP/app/src/main/java/com/diegonmarcos/superapp/network/FleetDns.kt"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -40,19 +43,20 @@ grep -q 'declined += "${source.name} → ${com.diegonmarcos.superapp.updater.sou
 grep -q '"DNS: cannot resolve ${host(t) ?: "the download host"} (active resolver: ${resolver?.takeIf { it.isNotBlank() } ?: "unknown"})"' "$SRC/DownloadFailure.kt" \
   && ok "the DNS wording keeps the host and the active resolver" || bad "DownloadFailure's DNS wording changed"
 
-echo "== R2: StoreDns names the resolver the plan promises when no route was walked =="
+echo "== R2: StoreDns names the resolver that was asked =="
 hook="$(awk '/DownloadFailure.activeResolver = \{/,/^        \}/' "$STOREDNS")"
-printf '%s\n' "$hook" | grep -q 'plan(presetOf(app), emptyList()).first().label' \
-  && ok "the hook falls back to the plan's first step (Android system resolver (<preset>))" \
-  || bad "the hook does not name the plan's resolver: a DIRECT lookup reads as unknown again"
+printf '%s\n' "$hook" | grep -q '?: resolverLabel()' \
+  && ok "the hook falls back to the resolver's own name (bridge 127.0.0.1:<port>)" \
+  || bad "the hook does not name the resolver: a lookup that walked nothing reads as unknown again"
 printf '%s\n' "$hook" | grep -q '?: net$' \
   && bad "the hook still ends on the bare network summary, which is null without an active network" \
   || ok "the hook never yields null for a wired host"
-printf '%s\n' "$hook" | grep -q 'lastFailure?.let { "tried $it" }' \
-  && ok "a walked plan still lists the routes tried" || bad "the routes tried are no longer named"
-grep -q 'add(Step("Android system resolver (${p.label})", SYSTEM))' "$STOREDNS" \
-  && ok "Mirror's first step is the Android system resolver, labelled with the preset" \
-  || bad "Mirror's plan no longer starts at the Android system resolver"
+printf '%s\n' "$hook" | grep -q 'lastFailure?.let { "${resolverLabel()} tried $it" }' \
+  && ok "a miss still lists the routes tried" || bad "the routes tried are no longer named"
+grep -q 'fun mirror(preset: String? = null): List<Route>' "$LIBS/sysdns/src/main/java/com/diegonmarcos/cloudlib/sysdns/FleetDnsBridge.kt" \
+  && grep -q 'FleetDnsBridge.mirror(label)' "$MAIN_FLEETDNS" \
+  && ok "Mirror's routes are Android's resolver, labelled with the preset" \
+  || bad "Mirror's plan no longer names the Android system resolver with the preset"
 
 echo "== R3: the mesh leg says 'mesh down' from the tunnel's state =="
 grep -q '@Volatile var meshUp: (Context) -> Boolean? = { null }' "$SRC/ApkSource.kt" \
@@ -67,13 +71,13 @@ grep -q 'MeshMirror.meshUp = { c -> com.diegonmarcos.superapp.network.FleetDns.m
 grep -q 'StoreDns.start(dnsCtx)' "$MAIN" \
   && ok "SuperApp still starts StoreDns (the resolver-naming hook)" || bad "StoreDns.start is gone from App.onCreate"
 
-echo "== R4: the public legs resolve DIRECT through the system resolver =="
+echo "== R4: the public legs resolve through the one bridge, with no resolver of the lib's own =="
 grep -q 'URL(current).openConnection() as HttpURLConnection' "$SRC/Download.kt" \
-  && ok "Download opens plain HttpURLConnections (system resolver)" || bad "Download no longer uses HttpURLConnection"
+  && ok "Download opens plain HttpURLConnections (the selector routes them)" || bad "Download no longer uses HttpURLConnection"
 grep -rqE 'okhttp|OkHttp|dns-over-https|DnsResolver|127\.0\.0\.1:2053' "$SRC" "$FLEET" \
-  && bad "a custom resolver crept into the lib's download path" || ok "no custom Dns / DoH / bridge in the download path"
-grep -q 'SYSTEM -> InetAddress.getAllByName(host).isNotEmpty()' "$STOREDNS" \
-  && ok "StoreDns's SYSTEM step is InetAddress (Android's resolver)" || bad "StoreDns's SYSTEM step is not InetAddress"
+  && bad "a custom resolver crept into the lib's download path" || ok "no custom Dns / DoH / port literal in the download path"
+grep -q 'val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())' "$STOREDNS" \
+  && ok "StoreDns resolves a download host through the host's bridge (resolve hook)" || bad "StoreDns does not resolve through the bridge"
 
 echo "== RESULT(#860/#866 store download resolver): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

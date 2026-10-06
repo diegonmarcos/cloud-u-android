@@ -160,22 +160,25 @@ class App : Application(), WorkManagerConfiguration.Provider {
             runCatching { com.diegonmarcos.superapp.profile.AccountData.migrate(applicationContext) }
                 .onFailure { android.util.Log.w("App", "account copy failed", it) }
         }, "account-migrate").start()
-        // #831/#860/#866 a Store download host resolves the way the active preset
-        // says, and a failure names the resolvers tried (libs:appstore StoreDns,
-        // shared with Cloud Store); the preset and the lookup come from FleetDns.
+        // #874 ONE resolver for this process: the fleet DNS bridge (libs:sysdns),
+        // whose routes are the DNS page's preset read by FleetDns. The Store's
+        // downloads and check (libs:appstore StoreDns, shared with Cloud Store),
+        // the DNS page's Test and /api/net/dns all go through it, so a failure
+        // names the bridge and every route it tried.
         val dnsCtx = applicationContext
-        com.diegonmarcos.superapp.appstore.StoreDns.apply {
-            presetOf = { c ->
-                val p = com.diegonmarcos.superapp.network.FleetDns.effective(
-                    com.diegonmarcos.superapp.network.FleetDns.decl,
-                    com.diegonmarcos.superapp.network.FleetDns.Prefs(c).preset)
-                com.diegonmarcos.superapp.appstore.StoreDns.Preset(p.label, p.kind == com.diegonmarcos.superapp.network.FleetDns.KIND_MIRROR, p.servers, p.fallback)
-            }
-            query = com.diegonmarcos.superapp.network.FleetDns::query
+        com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.apply {
+            routes = { name -> com.diegonmarcos.superapp.network.FleetDns.bridgeRoutes(dnsCtx, name) }
             timeoutMs = com.diegonmarcos.superapp.network.FleetDns.decl.timeoutMs
+            start(dnsCtx, com.diegonmarcos.cloudlib.sysdns.BuildConfig.BRIDGE_PORT)
+        }
+        com.diegonmarcos.superapp.appstore.StoreDns.apply {
+            resolve = com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge::resolve
+            resolverLabel = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.label }
+            tried = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.lastFailure }
             networkSummary = com.diegonmarcos.superapp.network.FleetDns::resolverSummary
         }
         com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)
+        com.diegonmarcos.superapp.devtools.AppDebugServer.dnsVia = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.label }
         // The mesh leg's "down" is the tunnel's state, which only this app reads.
         com.diegonmarcos.superapp.updater.source.MeshMirror.meshUp = { c -> com.diegonmarcos.superapp.network.FleetDns.meshUp(c) }
         // Capture process-start time before anything else so About →

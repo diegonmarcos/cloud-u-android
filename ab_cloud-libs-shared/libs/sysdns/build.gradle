@@ -7,6 +7,9 @@
 //   SystemDnsBridge  (src/bridge/java, Java)  127.0.0.1:<bridge_port> DNS server for terminal
 //                    shells under proot; the terminal forks compile this one directory by
 //                    reference (AGP 4, no Kotlin), so it is kept out of src/main/java.
+//   FleetDnsBridge   (src/main/java, Kotlin) #874 that bridge grown an upstream that walks the
+//                    DNS preset (the host's routes), serving the app's OWN lookups too through
+//                    resolve(): SuperApp and Cloud Store start it, the Store's downloads use it.
 //
 // NO APK OF ITS OWN: lib-apks/build.json::lib_apks.exclude says why. It installs nothing; it is
 // compiled into the engines and apps that depend on it, and lib-apks' settings.gradle includes

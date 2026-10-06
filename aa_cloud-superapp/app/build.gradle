@@ -976,6 +976,7 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:appstore')
     implementation project(':libs:devtools')
+    implementation project(':libs:sysdns')     // #874 FleetDnsBridge: the one resolver of this process
     // The static HTTP engine behind Configs ▸ About ▸ WEBSERVER. Dependency-free
     // by design, so linking it costs this app one socket implementation and
     // nothing else — and the planned standalone Cloud WebServer APK can take

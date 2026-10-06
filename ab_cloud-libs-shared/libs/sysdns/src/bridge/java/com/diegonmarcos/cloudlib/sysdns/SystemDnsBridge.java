@@ -140,18 +140,9 @@ public final class SystemDnsBridge implements Closeable {
                 byte[] q = new byte[in.readUnsignedShort()];
                 in.readFully(q);
                 if (q.length < 12) break;
-                asked();
-                final byte[][] slot = new byte[1][];
-                final CountDownLatch done = new CountDownLatch(1);
-                resolve(q, new Answer() {
-                    @Override public void reply(byte[] a) { slot[0] = a; done.countDown(); }
-                });
-                if (!done.await(ANSWER_TIMEOUT_S, TimeUnit.SECONDS)) {
-                    slot[0] = servfail(q);
-                    error("sysdns: no answer within " + ANSWER_TIMEOUT_S + "s; replying SERVFAIL");
-                }
-                out.writeShort(slot[0].length);
-                out.write(slot[0]);
+                byte[] a = query(q, ANSWER_TIMEOUT_S * 1000);
+                out.writeShort(a.length);
+                out.write(a);
                 out.flush();
             }
         } catch (IOException | InterruptedException ignored) {
@@ -159,6 +150,25 @@ public final class SystemDnsBridge implements Closeable {
         } finally {
             try { c.close(); } catch (IOException ignored) { }
         }
+    }
+
+    /**
+     * #874 One query, answered: the path a TCP client's query takes, and the one an app's OWN code
+     * takes through {@code FleetDnsBridge.resolve} — so an in-process lookup is counted, routed and
+     * answered exactly as a shell's. SERVFAIL (never null) when nothing answers within [timeoutMs].
+     */
+    public byte[] query(byte[] q, long timeoutMs) throws InterruptedException {
+        asked();
+        final byte[][] slot = new byte[1][];
+        final CountDownLatch done = new CountDownLatch(1);
+        resolve(q, new Answer() {
+            @Override public void reply(byte[] a) { slot[0] = a; done.countDown(); }
+        });
+        if (!done.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+            error("sysdns: no answer within " + timeoutMs + "ms; replying SERVFAIL");
+            return servfail(q);
+        }
+        return slot[0];
     }
 
     /**

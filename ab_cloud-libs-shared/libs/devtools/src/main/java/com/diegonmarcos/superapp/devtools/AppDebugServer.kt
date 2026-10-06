@@ -531,6 +531,9 @@ object AppDebugServer {
      * put in the tunnel, while "Mirror Android" leaves them empty and Private
      * DNS answers instead. Nothing here picks a resolver; it reports Android's.
      */
+    /** #874 What this app's own code resolves through, when it is a bridge ("bridge 127.0.0.1:2053"); null = Android's resolver directly. */
+    @Volatile var dnsVia: () -> String? = { null }
+
     private fun dnsFields(ctx: Context): String {
         val cm = ctx.getSystemService(ConnectivityManager::class.java)
         val net = runCatching { cm?.activeNetwork }.getOrNull()
@@ -543,13 +546,15 @@ object AppDebugServer {
             servers = lp?.dnsServers?.mapNotNull { it.hostAddress }.orEmpty(),
             privateActive = if (p28) lp?.isPrivateDnsActive else null,
             privateServer = if (p28) lp?.privateDnsServerName else null,
+            via = runCatching { dnsVia() }.getOrNull(),
         )
     }
 
-    internal fun dnsFields(network: String?, servers: List<String>, privateActive: Boolean?, privateServer: String?): String =
-        """"resolver":"android","network":${jsonStr(network)},""" +
+    internal fun dnsFields(network: String?, servers: List<String>, privateActive: Boolean?, privateServer: String?, via: String? = null): String =
+        """"resolver":"${if (via == null) "android" else "bridge"}","network":${jsonStr(network)},""" +
             """"upstreams":[${servers.joinToString(",") { jsonStr(it) }}],""" +
-            """"private_dns":{"active":$privateActive,"server":${jsonStr(privateServer)}}"""
+            """"private_dns":{"active":$privateActive,"server":${jsonStr(privateServer)}}""" +
+            (via?.let { ""","via":${jsonStr(it)}""" } ?: "")
 
     /** #741 Android's answer for [host] as this uid gets it — the lookup every OkHttp,
      *  HttpURLConnection and WebView request here makes, and the one libs:sysdns'

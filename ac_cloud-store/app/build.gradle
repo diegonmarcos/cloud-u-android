@@ -222,6 +222,7 @@ dependencies {
     // (api), so the install engine comes with it.
     implementation project(':libs:appstore')
     implementation project(':libs:updater')
+    implementation project(':libs:sysdns')     // #874 FleetDnsBridge: the one resolver of this process
     // #868 the bottom island + NavDecl: the Store's four pages are ui.sections.
     implementation project(':libs:bottomnav')
 

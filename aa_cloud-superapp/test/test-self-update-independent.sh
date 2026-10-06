@@ -5,13 +5,15 @@
 # must not import, call or wait on the Store's catalogue refresh, the
 # updates-first gate (StorePriority / StoreAuto / libs:appstore) or any custom
 # DNS (FleetDns, StoreDns, a ProxySelector, an OkHttp Dns, DnsResolver): it
-# resolves with Android's system resolver, plain InetAddress via
-# HttpURLConnection. StoreDns (#860) must answer DIRECT from the system
-# resolver before it reads any preset.
+# opens plain HttpURLConnections. #874: those go through the process's one DNS
+# bridge (libs:sysdns FleetDnsBridge, whose Mirror default ends on Android's
+# system resolver) via StoreDns's selector — which must fall through to DIRECT
+# (Android's resolver) whenever the bridge answers nothing or is not wired, and
+# must never import FleetDns itself, so a self-update never waits on the DNS page.
 #
 # Proven red by mutation: an `import ...appstore.StorePriority` or a
-# FleetDns call planted in UpdateChecker, or StoreDns.select reading the
-# preset before the system lookup, each fail a check below.
+# FleetDns call planted in UpdateChecker, or StoreDns.select returning a
+# proxy for a host the bridge could not resolve, each fail a check below.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -44,11 +46,12 @@ else bad "UpdateWorker no longer self-updates through UpdateChecker"; fi
 
 if [ ! -f "$SD" ]; then bad "StoreDns not found at $SD"; else
   SEL="$(strip "$SD" | sed -n '/override fun select(/,/^            }/p')"
-  SYS_L="$(printf '%s' "$SEL" | grep -n 'InetAddress.getAllByName(host)' | head -1 | cut -d: -f1)"
-  ROUTE_L="$(printf '%s' "$SEL" | grep -n 'route(app, host)' | head -1 | cut -d: -f1)"
-  if [ -n "$SYS_L" ] && [ -n "$ROUTE_L" ] && [ "$SYS_L" -lt "$ROUTE_L" ]; then
-    ok "StoreDns answers DIRECT from Android's system resolver before reading any preset"
-  else bad "StoreDns reads the preset before the system resolver (self-update would depend on FleetDns)"; fi
+  if printf '%s' "$SEL" | grep -q 'val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())' &&
+     printf '%s' "$SEL" | grep -q 'if (addrs.isNotEmpty()) {' &&
+     printf '%s' "$SEL" | grep -q 'return previous?.select(uri) ?: listOf(Proxy.NO_PROXY)'; then
+    ok "StoreDns proxies only a host the bridge resolved; otherwise DIRECT (Android's resolver), bridge wired or not"
+  else bad "StoreDns.select no longer falls through to DIRECT when the bridge answers nothing (self-update would depend on it)"; fi
+  if strip "$SD" | grep -q 'FleetDns\b'; then bad "StoreDns reads FleetDns itself"; else ok "StoreDns never reads FleetDns: the host hands it a resolver"; fi
 fi
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.appstore.AppStoreHost
 import com.diegonmarcos.superapp.appstore.ConstellationWorker
 import com.diegonmarcos.superapp.appstore.FeedViewer
 import com.diegonmarcos.superapp.appstore.FleetBearer
+import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import com.diegonmarcos.superapp.appstore.StoreDns
 import com.diegonmarcos.superapp.apps.StoreShelves
 import com.diegonmarcos.superapp.appstore.StoreDebugApi
@@ -34,10 +35,18 @@ class App : Application() {
             // over the one taxonomy SuperApp's build.json declares).
             classify = StoreShelves::of
         }
-        // #860/#866 downloads resolve through the same StoreDns path as SuperApp. Cloud
-        // Store has no DNS page, so the lib's defaults apply: the system resolver, then
-        // Android's resolver on each underlying network.
+        // #860/#866/#874 downloads resolve through the same StoreDns path as SuperApp:
+        // this process's fleet DNS bridge. Cloud Store has no DNS page, so the bridge's
+        // default plan applies: Mirror — Android's resolver on each underlying network,
+        // then the uid's default.
+        FleetDnsBridge.start(this, com.diegonmarcos.cloudlib.sysdns.BuildConfig.BRIDGE_PORT)
+        StoreDns.apply {
+            resolve = FleetDnsBridge::resolve
+            resolverLabel = { FleetDnsBridge.label }
+            tried = { FleetDnsBridge.lastFailure }
+        }
         StoreDns.start(this)
+        com.diegonmarcos.superapp.devtools.AppDebugServer.dnsVia = { FleetDnsBridge.label }
         // #866 the fleet bearer for the Commits / CI-CD feeds: SuperApp's token over its
         // CONSTELLATION_DATA provider when SuperApp is installed, else the token typed
         // into this app's Settings tab. Read per request; never logged.
