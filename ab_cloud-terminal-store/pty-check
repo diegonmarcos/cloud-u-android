@@ -44,12 +44,17 @@ start=$EPOCHREALTIME
 elapsed() { local -i t=$(( (EPOCHREALTIME - start) * 10 )); print -rn -- "$(( t / 10 )).$(( t % 10 ))" }
 # The last three non-empty lines of what the pty printed, control bytes shown as dots.
 tail3() { print -rn -- "${out//$'\r'/}" | tr -c '[:print:]\n' . | grep -v '^$' | tail -n 3 | tr '\n' '|' | cut -c1-300 }
-ok()   { print -r -- "ok   $name ($(elapsed)s)"; exit 0 }
+# The verdict is printed BEFORE the pty is torn down and is the exit status no matter what the
+# teardown does: hanging up a claude TUI under proot raced the shell's own exit (a run printed
+# `ok claude-tui` and still exited non-zero), so the signals the hang-up can raise are ignored,
+# the pty is closed here, and the status is the verdict's, not the trap's.
+finish() { trap '' HUP PIPE TERM; unfunction TRAPEXIT 2>/dev/null; zpty -d 2>/dev/null; exit $1 }
+ok()   { print -r -- "ok   $name ($(elapsed)s)"; finish 0 }
 fail() {
     print -r -- "FAIL $name: $1 | $(tail3)"
     # PTY_CHECK_DEBUG=1 dumps everything the pty printed (control bytes as dots) to stderr.
     [[ -n ${PTY_CHECK_DEBUG:-} ]] && print -rn -- "${out//$'\r'/}" | tr -c '[:print:]\n' . >&2
-    exit 1
+    finish 1
 }
 TRAPEXIT() { zpty -d 2>/dev/null; return 0 }
 

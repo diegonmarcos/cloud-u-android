@@ -567,7 +567,24 @@ unit)
     echo "── unit tests [$APP_NAME]: $* ──"
     # No `|| true`. The exit status IS the gate; a failing test returns 1 and
     # that 1 is what this script returns.
-    ( cd "$APP_DIR" && "$@" )
+    # One thing is retried: Robolectric downloads its android-all jar from Maven Central the
+    # first time a run needs it, and a dropped connection there ("Failed to fetch maven
+    # artifact", Connection reset) fails the test class that asked for it -- the network, not
+    # the code under test. That exact signature is rerun (the jar is then cached or fetched
+    # again); every other failure, and a fetch that keeps failing, stays red.
+    unit_log="$(mktemp)"; attempt=1
+    while :; do
+        { r=0; ( cd "$APP_DIR" && "$@" ) || r=$?; echo "$r" > "$unit_log.rc"; } 2>&1 | tee "$unit_log"
+        rc="$(cat "$unit_log.rc")"
+        [ "$rc" -ne 0 ] || break
+        if [ "$attempt" -lt 3 ] && grep -q 'Failed to fetch maven artifact' "$unit_log"; then
+            err "$APP_NAME: Robolectric could not download its android-all jar (attempt $attempt of 3); retrying"
+            attempt=$((attempt + 1)); sleep 10; continue
+        fi
+        break
+    done
+    rm -f "$unit_log" "$unit_log.rc"
+    exit "$rc"
     ;;
 
 # ── lint: assertions that cannot fail ─────────────────────────────────────
