@@ -50,8 +50,8 @@ f=0
 f+=chk(bool(d),"block present")
 if d:
     p=d.get("providers") or []
-    f+=chk(p[:2]==["moe.shizuku.privileged.api","com.diegonmarcos.superapp"],
-           "providers order is DATA: shizuku then superapp")
+    f+=chk(p[:2]==["com.diegonmarcos.superapp","moe.shizuku.privileged.api"],
+           "providers order is DATA: superapp (primary) then shizuku (fallback)")
     r=d.get("rish") or {}
     f+=chk(r.get("application_id")==appid,"rish.application_id == %s"%appid)
     f+=chk(r.get("rootfs_bin")=="/usr/local/bin" and r.get("rootfs_lib")=="/usr/local/lib",

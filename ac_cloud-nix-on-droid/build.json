@@ -38,7 +38,9 @@
         "dns_bridge": {
           "source": "../ab_cloud-libs-shared/libs/sysdns/data/sysdns.json",
           "resolv_conf": "usr/lib/cloud-dns/resolv.conf",
-          "nameservers": ["127.0.0.1"]
+          "nameservers": [
+            "127.0.0.1"
+          ]
         },
         "url_base": "https://nix-on-droid.unboiled.info",
         "release": "bootstrap-release-24.05",
@@ -60,8 +62,8 @@
             "../ab_cloud-terminal-store/render-store.py",
             "../ab_cloud-terminal-store/login-init.sh",
             "../ab_cloud-terminal-store/login-exec",
-        "../ab_cloud-terminal-store/pty-check",
-        "../ab_cloud-terminal-store/pty-selftest.json",
+            "../ab_cloud-terminal-store/pty-check",
+            "../ab_cloud-terminal-store/pty-selftest.json",
             "app/src/main/cpp/rootfs-extras.nix",
             "../ac_cloud-termux/rootfs/rootfs.json",
             "../ab_cloud-terminal-store/noexec-shebang.c",
@@ -146,35 +148,90 @@
           "_doc_gitMinimal": "#665, from #664's measurement -- this attr was `git` and is now `gitMinimal`. It is still THE canonical git (same source, same version, `bin/git`, full push over HTTPS via git-remote-http); `binaries` and `provides` still say `git`, so nothing on PATH changes and #644's build-time gate is satisfied unchanged. What moves is the closure. MEASURED on the live artifact, not estimated: the shipped rootfs is the companion APK's assets/bootstrap.zip (393,621,704 B, 21,281 entries, 387,858,100 B compressed over 202 store paths), and nixpkgs `git` drags python3-3.14.7 (73,582,754 B compressed, 19.0% of the whole rootfs) plus perl-5.42.3 and 40 perl modules (17,436,391 B, 4.5%) plus the git-2.55.0-doc output (4,967,911 B) into it. At this pin `gitMinimal = git.override { withManual = false; pythonSupport = false; perlSupport = false; ... }`, and NO_PYTHON=1 / NO_PERL=1 remove exactly seven subcommands: git-p4 (python) and git-send-email, git-instaweb, git-cvsimport, git-cvsexportcommit, git-archimport, git-cvsserver (perl). Every one of those seven was grepped for across this whole repository and appears nowhere, so the saving is 95,987,056 compressed bytes -- 24.7% of the rootfs -- for no tool anything calls. ALSO DROPPED, and the one real behaviour change: gitMinimal sets withpcre2 = false, so `git grep -P` and `git log --perl-regexp` lose PCRE. Both were grepped for repo-wide with zero hits, and pcre2-10.48 stays in the closure for gnugrep regardless, so standalone `grep -P` is unaffected. Do not 'simplify' this back to `git`: that re-adds 96 MB to a payload every phone downloads in full.",
           "_doc_coreutils": "#640 -- coreutils is here for ONE path that is not a user-facing tool: /usr/bin/env. The bootstrap zip ships usr/bin/ EMPTY (verified across all 4056 central-directory entries of the pinned aarch64 zip: no usr/bin/env entry, no */bin/env anywhere, no SYMLINKS.txt line for it), and the only thing that has ever created it is upstream's first-login wizard -- which default_packages exists precisely to skip (etc/static/UNINTIALISED is dropped). #638 stopped the terminal DYING on that absence; it could not make `#!/usr/bin/env sh`, the commonest shebang there is, work. bake_default_packages.py::env_symlink_line emits a SYMLINKS.txt line for usr/bin/env pointing at profile_link + /bin/env, i.e. at THIS attr, and hard-fails the build if that target is not a real zip entry listed in EXECUTABLES.txt. Do not remove coreutils from attrs believing it is a convenience package: the bake step will fail loudly, which is the point.",
           "provides": {
-            "gitMinimal": ["git"],
-            "nodejs_22": ["node", "npm", "npx"],
-            "claude-code": ["claude"],
-            "coreutils": ["env", "ls", "cat"],
-            "fish": ["fish"],
-            "bashInteractive": ["bash"],
-            "findutils": ["find", "xargs"],
-            "gnugrep": ["grep"],
-            "gnused": ["sed"],
-            "gawk": ["awk"],
-            "less": ["less"],
-            "zsh": ["zsh"],
-            "gh": ["gh"],
-            "curl": ["curl"],
-            "jq": ["jq"],
-            "ripgrep": ["rg"],
-            "fd": ["fd"],
-            "openssh": ["ssh"],
-            "sops": ["sops"],
-            "age": ["age"],
-            "which": ["which"],
-            "goose": ["goose"],
-            "hermes": ["hermes"],
+            "gitMinimal": [
+              "git"
+            ],
+            "nodejs_22": [
+              "node",
+              "npm",
+              "npx"
+            ],
+            "claude-code": [
+              "claude"
+            ],
+            "coreutils": [
+              "env",
+              "ls",
+              "cat"
+            ],
+            "fish": [
+              "fish"
+            ],
+            "bashInteractive": [
+              "bash"
+            ],
+            "findutils": [
+              "find",
+              "xargs"
+            ],
+            "gnugrep": [
+              "grep"
+            ],
+            "gnused": [
+              "sed"
+            ],
+            "gawk": [
+              "awk"
+            ],
+            "less": [
+              "less"
+            ],
+            "zsh": [
+              "zsh"
+            ],
+            "gh": [
+              "gh"
+            ],
+            "curl": [
+              "curl"
+            ],
+            "jq": [
+              "jq"
+            ],
+            "ripgrep": [
+              "rg"
+            ],
+            "fd": [
+              "fd"
+            ],
+            "openssh": [
+              "ssh"
+            ],
+            "sops": [
+              "sops"
+            ],
+            "age": [
+              "age"
+            ],
+            "which": [
+              "which"
+            ],
+            "goose": [
+              "goose"
+            ],
+            "hermes": [
+              "hermes"
+            ],
             "noexec-shebang": []
           },
           "extras": {
             "_doc": "#771 -- profile entries no nixpkgs attr can supply, built by `expr` (a function of the pinned nixpkgs for the target system) and installed into the SAME profile as `attrs`, one `nix profile install --expr` per entry of `attrs` here. goose and hermes are the termux terminal's own (ac_cloud-termux/rootfs/rootfs.json is their one declaration: version, url, arch names); at this nixpkgs pin goose-cli is another release and hermes-agent is not packaged. `pins` is the one thing that file does not carry and a fixed-output fetch needs: the content hash, keyed by the version it was taken for, so a rootfs.json bump without a re-pin fails evaluation by name. goose's per-arch hashes are GitHub's own release-asset digests (re-measured by download); hermes' is PyPI's sha256 of the py3-none-any wheel. noexec-shebang is ab_cloud-terminal-store/noexec-shebang.c, preloaded through etc/ld-nix.so.preload from `preload` under profile_link; their names are provided[] like any attr's, and B2 counts them.",
             "expr": "app/src/main/cpp/rootfs-extras.nix",
-            "attrs": ["goose", "hermes", "noexec-shebang"],
+            "attrs": [
+              "goose",
+              "hermes",
+              "noexec-shebang"
+            ],
             "preload": "lib/libcloud-noexec-shebang.so",
             "pins": {
               "goose": {
@@ -193,7 +250,20 @@
           "profile_link": "nix/var/nix/profiles/per-user/nix-on-droid/profile",
           "fallback_init_script": "usr/lib/cloud-agent-tools-init.sh",
           "_doc_binaries": "#737 -- this terminal's tools BEYOND store.json::toolset (which every consumer prepends: render-store.py::tools_of). Repeating a toolset name here is refused at render time.",
-          "binaries": ["env", "ls", "cat", "bash", "find", "xargs", "grep", "sed", "awk", "less", "goose", "hermes"]
+          "binaries": [
+            "env",
+            "ls",
+            "cat",
+            "bash",
+            "find",
+            "xargs",
+            "grep",
+            "sed",
+            "awk",
+            "less",
+            "goose",
+            "hermes"
+          ]
         }
       }
     }
@@ -210,10 +280,10 @@
   "shizuku_client": {
     "_doc": "ONE declarative block that makes this terminal a Shizuku client and puts `rish` inside its proot rootfs. Read at BUILD time by libs/shizuku-adb-debug-tools/build.gradle (consumer-wins-with-fallback, base64 -> BuildConfig.SHIZUKU_CLIENT_B64, the same way that lib bakes shizuku_diagnostics) and at ENTER time by rootfs/enter.sh, which renders the binds and the rish env from the SAME data. Adding a third terminal = one copy of this block in its build.json; no Kotlin edit, no hardcoded package name or path anywhere else (Pillar: DATA-DRIVEN). The runtime shell ladder (ShellChannels) and rish both try `providers` IN THIS ORDER, first that answers wins.",
     "providers": [
-      "moe.shizuku.privileged.api",
-      "com.diegonmarcos.superapp"
+      "com.diegonmarcos.superapp",
+      "moe.shizuku.privileged.api"
     ],
-    "_doc_providers": "Where adb-shell (uid 2000) privilege comes from, in order. 1) moe.shizuku.privileged.api: the Shizuku app's own binder, used when it is installed+granted (this app requests it on first launch / from the Settings toggle, and so appears in Shizuku's Application management list). 2) com.diegonmarcos.superapp: the fleet SuperApp, which ships its own Shizuku-compatible provider and is already granted adb privilege; its loopback DevControlServer route (superapp_bridge) runs `sh -c <cmd>` at uid 2000. app_process CANNOT run inside this proot (no /system, /apex or /linkerconfig are bound), so Shizuku's stock rish does not work here; rish reaches privilege through whichever provider exposes a loopback exec endpoint, which today is the SuperApp.",
+    "_doc_providers": "Order is the ladder: cloud-superapp's own Shizuku-compatible provider FIRST (the fleet's privilege plane, granted and reachable over loopback from inside proot), stock Shizuku as the fallback. The user's rule, 2026-10-06.",
     "rish": {
       "rootfs_bin": "/usr/local/bin",
       "rootfs_lib": "/usr/local/lib",
@@ -251,7 +321,10 @@
         "gradle_task": ":rootfs-lib:assembleRelease",
         "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",
         "asset": "Cloud-Lib-Rootfs-Nixdroid.apk",
-        "assets": { "arm64": "Cloud-Lib-Rootfs-Nixdroid.apk", "x86_64": "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk" },
+        "assets": {
+          "arm64": "Cloud-Lib-Rootfs-Nixdroid.apk",
+          "x86_64": "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk"
+        },
         "module_dir": "rootfs-lib",
         "_doc_module_dir_796": "#796 -- the gate's inputs are DERIVED, not listed: forks.nixdroid.bootstrap.artifact.identity_files (reached through fleet-lib.json's declared_in/at pointer, the same content address the fleet row's version_name is built from) plus this wrapper module, whose gradle and manifest are bytes of the lib APK. The paths_from list this replaces gated on the whole of ab_cloud-terminal-store/, so an edit to pty-selftest.py republished ~400 MB that had not changed; the engine now refuses a paths_from outright, because a second declaration of the same inputs is one that can drift.",
         "package": "com.diegonmarcos.cloudlib.rootfsnixdroid"
