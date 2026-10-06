@@ -718,12 +718,21 @@ def phone_pty_gate(proot: str, generation: str, login_shell: str, store_dir: str
                        "PATH": base_path, **(env_extra or {})}
                 failed = []
                 for check in checks:
-                    r = subprocess.run([proot, *PTY_PROOT_FLAGS, *binds, "-b", f"{store}:/{store_dir}",
-                                        os.path.join(generation, "bin", login_shell), "-l", "-c", check],
-                                       env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=600)
-                    if r.returncode != 0:
+                    # A check that PRINTED its `ok` verdict yet exited non-zero is the proot's
+                    # pty hang-up racing the shell's own exit (ship 37483578657 and 37529288589,
+                    # x86_64 leg, the same check green in the runs around them), not a verdict:
+                    # run it once more, and fail with the exit status named if it does it again.
+                    # A check that printed anything else fails at once.
+                    for attempt in (1, 2):
+                        r = subprocess.run([proot, *PTY_PROOT_FLAGS, *binds, "-b", f"{store}:/{store_dir}",
+                                            os.path.join(generation, "bin", login_shell), "-l", "-c", check],
+                                           env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                           timeout=600)
                         last = (r.stdout + r.stderr).strip().splitlines()[-1:] or ["(no output)"]
-                        failed.append(f"{check} => {last[0][:300]}")
+                        if r.returncode == 0 or not last[0].startswith("ok "):
+                            break
+                    if r.returncode != 0:
+                        failed.append(f"{check} => exit {r.returncode}: {last[0][:300]}")
                 return failed
 
         got = failures()
