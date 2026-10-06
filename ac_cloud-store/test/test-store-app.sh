@@ -113,7 +113,7 @@ check() {
   printf '%s' "$ap" | grep -q 'StoreDns.start(this)' && ok "Cloud Store resolves downloads through StoreDns" || bad "Cloud Store does not start StoreDns"
   printf '%s' "$sa" | grep -q 'StoreDns.start(' && ok "SuperApp resolves downloads through the same StoreDns" || bad "SuperApp does not start StoreDns"
   local sd; sd="$(strip "$L/StoreDns.kt")"
-  printf '%s' "$sd" | grep -q 'DownloadFailure.activeResolver *=' && printf '%s' "$sd" | grep -Eq 'var presetOf:' && ok "StoreDns names the resolvers tried and takes the preset from the host" || bad "StoreDns lost the failure wording or the preset hook"
+  printf '%s' "$sd" | grep -q 'DownloadFailure.activeResolver *=' && printf '%s' "$sd" | grep -Eq 'var resolve:' && ok "StoreDns names the resolvers tried and takes the preset from the host" || bad "StoreDns lost the failure wording or the preset hook"
   printf '%s' "$ap" | grep -q 'FeedViewer.fleetBearer *=.*FleetBearer.resolve(this)' && ok "Cloud Store feeds read the bearer through FleetBearer.resolve" || bad "Cloud Store feeds do not read FleetBearer.resolve"
   local fb; fb="$(strip "$L/FleetBearer.kt")"
   printf '%s' "$fb" | grep -q 'fun resolve(ctx: Context): String = fromAccount(ctx).ifEmpty { fromSuperApp(ctx) }.ifEmpty { Own(ctx).token' && ok "bearer: Cloud Account first, then SuperApp, own entry as the fallback" || bad "FleetBearer.resolve order is not Account, SuperApp, own"
