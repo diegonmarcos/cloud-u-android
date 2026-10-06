@@ -188,6 +188,11 @@ def uiLauncherPresetsB64  = uiLauncherPresetsJson.bytes.encodeBase64().toString(
 // resolver silently fell back to "no preset".
 if (!(buildJson.ui.dns?.presets)) throw new GradleException("build.json::ui.dns.presets is missing — network/FleetDns.kt is built from it")
 def uiDnsB64 = groovy.json.JsonOutput.toJson(stripDocs(buildJson.ui.dns)).bytes.encodeBase64().toString()
+// Configs ▸ Cloud Mesh (#877): the tab strip's pages, each page's controls with their defaults and the
+// readout's thresholds — read by network/mesh/MeshDecl.kt. Missing is a build failure: an empty block
+// would ship a Cloud Mesh page with no tabs.
+if (!(buildJson.ui.mesh_page?.pages)) throw new GradleException("build.json::ui.mesh_page.pages is missing — network/mesh/MeshDecl.kt is built from it")
+def uiMeshPageB64 = groovy.json.JsonOutput.toJson(stripDocs(buildJson.ui.mesh_page)).bytes.encodeBase64().toString()
 // Configs → Launcher → Screensaver picker + Others toggles/sliders.
 def uiScreensaversJson   = groovy.json.JsonOutput.toJson(buildJson.ui.screensavers ?: [])
 def uiScreensaversB64    = uiScreensaversJson.bytes.encodeBase64().toString()
@@ -794,6 +799,7 @@ android {
         buildConfigField "String", "UI_LAUNCHER_MODES_B64", "\"${uiLauncherModesB64}\""
         buildConfigField "String", "UI_LAUNCHER_PRESETS_B64", "\"${uiLauncherPresetsB64}\""
         buildConfigField "String", "UI_DNS_B64", "\"${uiDnsB64}\""
+        buildConfigField "String", "UI_MESH_PAGE_B64", "\"${uiMeshPageB64}\""
         buildConfigField "String", "UI_SCREENSAVERS_B64",      "\"${uiScreensaversB64}\""
         buildConfigField "String", "UI_LAUNCHER_SETTINGS_B64", "\"${uiLauncherSettingsB64}\""
         buildConfigField "String", "UI_CONTROL_PANEL_B64", "\"${uiControlPanelB64}\""
@@ -1084,6 +1090,8 @@ dependencies {
     // tab chrome, icons, router, haptics and the mesh tunnel through AccountHost. It owns ConfigsPrefs, the
     // StatusLight and the snack helper the pages here share, and the JGit/jsch/zxing stack behind it.
     implementation project(':libs:account')
+    // #877 Cloud Mesh ▸ Profiles ▸ Show as QR: the same encoder libs:account draws its cards with.
+    implementation 'com.google.zxing:core:3.5.3'
     // #865 AndroidFragment: CloudStoreHandoff embeds the Store page in Compose until Cloud Store is installed.
     implementation 'androidx.fragment:fragment-compose:1.8.5'
     implementation platform('androidx.compose:compose-bom:2025.01.00')

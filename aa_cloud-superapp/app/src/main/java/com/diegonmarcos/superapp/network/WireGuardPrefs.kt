@@ -183,6 +183,15 @@ class WireGuardPrefs(context: Context) {
         return cfg
     }
 
+    /**
+     * #877 Package names kept OUTSIDE the tunnel: the engine builds its VpnService with each one
+     * disallowed (Interface.ExcludedApplications -> GoBackend), so their traffic never enters the mesh.
+     * Applied at the next connect, like every tunnel field. Not touched by a profile import.
+     */
+    var excludedApps: List<String>
+        get() = (sp.getString(K_EXCLUDED_APPS, "") ?: "").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        set(value) { sp.edit().putString(K_EXCLUDED_APPS, value.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString(",")).apply() }
+
     /** Last user-driven Connect/Disconnect state — restored on app
      *  restart so the toggle reflects the actual tunnel state. */
     var tunnelEnabled: Boolean
@@ -243,6 +252,7 @@ class WireGuardPrefs(context: Context) {
         if (dns.isNotBlank())                   ifBuilder.parseDnsServers(dns)
         if (interfaceListenPort.isNotBlank())   ifBuilder.parseListenPort(interfaceListenPort)
         if (interfaceMtu.isNotBlank())          ifBuilder.parseMtu(interfaceMtu)
+        excludedApps.takeIf { it.isNotEmpty() }?.let { ifBuilder.excludeApplications(it) }
 
         val cfg = Config.Builder().setInterface(ifBuilder.build())
         for (p in peers()) {
@@ -357,6 +367,7 @@ class WireGuardPrefs(context: Context) {
         private const val K_PROVIDER       = "config_provider"
         private const val K_PROFILES_JSON  = "profiles_json"
         private const val K_ACTIVE_PROFILE = "active_profile"
+        private const val K_EXCLUDED_APPS  = "excluded_apps"
 
         /** The PrivateKey value a stored or exported profile carries in place of the key. */
         const val PROVIDED_BY_DEVICE = "<PROVIDED_BY_DEVICE>"

@@ -88,7 +88,13 @@ object WireGuardProfiles {
      *  profiles (vault-derived) followed by the public-VPN import-templates.
      *  Empty if the blobs are missing or malformed — the caller shows "no
      *  profiles in this build" rather than exporting something half-formed. */
-    val all: List<Profile> by lazy { parseProfiles(root) + parseProfiles(externalRoot) }
+    val all: List<Profile> by lazy { mesh + external }
+
+    /** The fleet-mesh profiles (vault-derived). */
+    val mesh: List<Profile> by lazy { parseProfiles(root) }
+
+    /** The public-VPN import templates (#614). */
+    val external: List<Profile> by lazy { parseProfiles(externalRoot) }
 
     private fun parseProfiles(from: JSONObject): List<Profile> {
         val array = from.optJSONArray("profiles") ?: return emptyList()

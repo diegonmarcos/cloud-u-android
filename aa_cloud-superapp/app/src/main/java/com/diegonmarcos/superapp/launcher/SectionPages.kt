@@ -2,7 +2,6 @@ package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
 import com.diegonmarcos.superapp.settings.LauncherPresetsFragment
-import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
 import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
@@ -67,7 +66,8 @@ object SectionPages {
         sectionId == "chat"  -> ChatPages.fragmentFor(pageId)
         sectionId == "c3"    && pageId == "health"      -> C3HealthFragment.newInstance()
         sectionId == "c3"    && pageId == "dagu"        -> OpsPages.fragmentForDagu()
-        sectionId == "wg"    && pageId == "status"      -> C3MeshFragment.newInstance()
+        // #877 the hidden wg/status page is the Cloud Mesh page opened on its Status tab.
+        sectionId == "wg"    && pageId == "status"      -> WireGuardFragment.newInstance("status")
         sectionId == "feed"  && pageId == "all"         -> RssFeedFragment.newInstance()
         // #867 Account is its own app: a button that opens Cloud Account once it is installed, else the page itself.
         sectionId == "config" && pageId == "profile"   -> com.diegonmarcos.superapp.apps.AccountHandoff.page()

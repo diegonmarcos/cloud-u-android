@@ -683,12 +683,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 29,
+        "view_screens": 28,
         "layout_xml": 22,
-        "view_ui_files": 50,
+        "view_ui_files": 49,
         "custom_views": 9
       },
       "done": [
+        "network/WireGuardFragment (Configs \u25b8 Cloud Mesh: page:config/wg, page:wg/config, the hidden wg/status) \u2014 KitComposeFragment hosting network/mesh/MeshScreen: libs:bottomnav PageTabs over the six pages ui.mesh_page declares, every size from MeshDensity, #877; DnsFragment stays Views",
         "settings/LauncherPresetsFragment (Configs ▸ Launcher ▸ Presets) — KitComposeFragment, #773",
         "launcher/SectionFragment, launcher/DetailPlaceholderFragment, launcher/PlaceholderDrawerFragment — KitComposeFragment + KitEmptyState; fragment_section_placeholder.xml and fragment_placeholder_drawer.xml deleted, #773",
         "settings/ImportConfigsFragment (Configs ▸ Import) — KitComposeFragment; fragment_import_configs.xml deleted; VaultFileImportTest ported to compose testing, #773",

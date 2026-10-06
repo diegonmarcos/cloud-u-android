@@ -38,6 +38,10 @@ SYNC="$PROFILE_DIR/ProfileSync.kt"
 # The Mesh capabilities MOVED here rather than being deleted; the test
 # follows them, which is the only way "merged, not dropped" is provable.
 WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt"
+# #877 the screen is Compose now: the host fragment keeps the pickers and the export; the page is network/mesh/.
+MESHDIR="app/src/main/java/com/diegonmarcos/superapp/network/mesh"
+MESH_WIDGETS="$MESHDIR/MeshWidgets.kt"; MESH_CTRL="$MESHDIR/MeshControlsPage.kt"; MESH_PROFILES="$MESHDIR/MeshProfilesPage.kt"
+MESH_STORE="$MESHDIR/MeshStore.kt"; MESH_PORT="$MESHDIR/AndroidMeshPort.kt"; MESH_STATUS="$MESHDIR/MeshStatusPage.kt"; MESH_MODEL="$MESHDIR/MeshModel.kt"
 PAGETABS="../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
 SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
@@ -56,8 +60,8 @@ has "$AUTH_UI"  'private fun BearerDialog'              "Authelia bearer entry (
 has "$AUTH_UI"  'auth_way_bearer'                       "the bearer route is a step-1 pill"
 has "$FRAGMENT" 'SignInWays(host = signInHost'          "step 1 hosts the shared surface"
 has "$AUTH_UI"  'autoCorrectEnabled = false'            "the token box is kept out of the keyboard's learned words"
-has "$WGFRAG" 'label(ctx, "Private key (base64, 32 bytes)")' "WireGuard private key field"
-has "$WGFRAG" "TYPE_TEXT_VARIATION_PASSWORD"           "the private-key box is password-masked"
+has "$MESH_CTRL" '"secret" ->' "WireGuard private key field (Controls tab, kind secret)"
+has "$MESH_WIDGETS" "PasswordVisualTransformation"      "the private-key box is password-masked"
 has "$FRAGMENT" "IME_FLAG_NO_PERSONALIZED_LEARNING"    "kept out of the keyboard's learned words"
 has "$FRAGMENT" "IMPORTANT_FOR_AUTOFILL_NO"            "kept out of autofill"
 
@@ -67,7 +71,7 @@ echo "== T2: each credential reuses its EXISTING store, no parallel copy =="
 # store would mean two values that can disagree, and a private key duplicated
 # into a second place is strictly worse than one held in one place.
 has "$FRAGMENT" "setAutheliaCredential(who, storeBearer)"   "bearer writes ConfigsPrefs, paired with the address it proved"
-has "$WGFRAG" "prefs.interfacePrivateKey"    "WG key writes WireGuardPrefs"
+has "$MESH_PORT" "prefs.interfacePrivateKey = t"    "WG key writes WireGuardPrefs"
 has "$CONFIGS_PREFS" "EncryptedSharedPreferences.create"     "ConfigsPrefs is encrypted at rest"
 has "$CONFIGS_PREFS" 'K_AUTHELIA_TOKEN = "authelia_token"'   "bearer at the existing auth.authelia_token path"
 has "$WG_PREFS" 'K_IF_PRIVKEY     = "if_privkey"'            "WG key is the tunnel's own stored field"
@@ -134,7 +138,7 @@ echo "== T7: the Cloud provider preset carries no private key =="
 # The private key is per-device by definition: two devices sharing one are a
 # single peer to the hub and knock each other off the mesh. So the preset must
 # fill everything EXCEPT that, and the seed data must not contain one either.
-has "$WGFRAG" 'sectionHeader(ctx, "Provider")'  "Provider selector exists"
+has "$MESH_PROFILES" 'control("provider")'  "Provider selector exists (Profiles tab)"
 has "$WG_PREFS" "fun applyCloudPreset"          "the preset is applied from one place"
 # The preset is derived from build.json via BuildConfig — not a literal here,
 # so it follows the fleet when the hub moves.
@@ -148,7 +152,7 @@ else
 fi
 # Switching provider must not silently eat a config the user entered.
 has "$WG_PREFS"  "fun matchesCloudPreset"  "drift from the preset is detectable"
-has "$WGFRAG"  "confirmCloudPreset"      "Cloud asks before overwriting a custom config"
+has "$MESH_STORE"  "confirmCloudPreset"      "Cloud asks before overwriting a custom config"
 # The seeded WireGuard data itself must carry no private key. Scoped to the
 # wireguard_default block: ui.import_schema.wg documents the IMPORT format and
 # legitimately names *_private_key fields, which a whole-file grep would hit.
@@ -230,7 +234,7 @@ has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a 
 # Connect IS the journey (#573); Mesh Data carries the tunnel key.
 has "$FRAGMENT" 'renderJourney(ctx, connect)'                           "the journey is the top of Connect (#695)"
 has "$FRAGMENT" 'journey_use_stored_bearer'                             "the stored bearer is a step-1 pill on Connect"
-has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
+has "$MESH_PROFILES" 'ChoiceLine('   "Provider is on the WireGuard screen"
 hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
 # #626 the section HEADER is the declaration's label now, not a Kotlin literal:
 # #781 the contact card FORM is deleted from Runtime: its fields are Profiles' `about` topic.
@@ -537,20 +541,20 @@ TALLY=$(echo "$MATRIX" | awk '/^TALLY /{print $2" "$3}')
 PASS=$((PASS + ${TALLY% *})); FAIL=$((FAIL + ${TALLY#* }))
 
 echo "-- T11d: the status readout admits what it cannot see --"
-has "$WGFRAG" "CANNOT TELL"        "status has a third, cannot-tell state"
-has "$WGFRAG" "isEngineInstalled"  "cannot-tell is decided by the engine being absent"
-has "$WGFRAG" "CONNECTED"          "status can say connected"
-has "$WGFRAG" "NOT CONNECTED"      "status can say not connected"
+has "app/src/main/res/values/strings.xml" ">CANNOT TELL<"    "status has a third, cannot-tell state"
+has "$MESH_PORT" "isEngineInstalled"  "cannot-tell is decided by the engine being absent"
+has "app/src/main/res/values/strings.xml" ">CONNECTED<"      "status can say connected"
+has "app/src/main/res/values/strings.xml" ">NOT CONNECTED<"  "status can say not connected"
 # A DOWN reading with no engine is not evidence — it must not be reported as
 # "not connected", which is the lie that sends someone chasing a working mesh.
-if awk '/private fun tunnelStatusView/,/^    }$/' "$ROOT/$WGFRAG" | grep -qF 'if (enginePresent)'; then
-    ok "state is only read when the engine can actually answer"
+if grep -qF '!engine -> Health.UNKNOWN' "$ROOT/$MESH_MODEL" && grep -qF 'Light.UNKNOWN' "$ROOT/$MESH_MODEL"; then
+    ok "state is only read as down when the engine can actually answer"
 else
-    bad "tunnelStatusView() must not trust getState() without the engine"
+    bad "the mesh reducer must not trust getState() without the engine"
 fi
 # No claim to see a tunnel this app does not own.
-hasnt_code "$WGFRAG" "wg show"        "no pretence of reading the OS tunnel table"
-hasnt_code "$WGFRAG" "latest-handshake" "no pretence of reading wg state files"
+hasnt_code "$MESH_PORT" "wg show"        "no pretence of reading the OS tunnel table"
+hasnt_code "$MESH_PORT" "latest-handshake" "no pretence of reading wg state files"
 
 echo "== T12: the pill SIZING is shared, and nothing is duplicated =="
 # apply() paints the chrome; equalise() measures it. Profile got the first and
@@ -579,14 +583,13 @@ hasnt_code "$FRAGMENT" "providerSelector"  "Profile no longer has a Provider dro
 hasnt_code "$FRAGMENT" "meshStatusView"    "Profile no longer renders tunnel status"
 hasnt_code "$FRAGMENT" "generateInterfaceKeyPair" "Profile no longer mints tunnel keys"
 # ...and the WireGuard screen must have gained every one of them.
-has "$WGFRAG" "providerSelector"     "WireGuard gained the Provider dropdown"
+has "$MESH_PROFILES" "ChoiceLine"     "WireGuard gained the Provider choice"
 has "$WGFRAG" "profileFolderPicker"  "WireGuard gained the 4-profile export"
-has "$WGFRAG" "tunnelStatusView"     "WireGuard gained the honest status"
-has "$WGFRAG" "PROVIDER_TEXT"        "WireGuard gained the provider explainer"
+has "$MESH_STATUS" "fun MeshStatusPage"  "WireGuard gained the honest status"
+has "app/src/main/res/values/strings.xml" "mesh_provider_text"        "WireGuard gained the provider explainer"
 # Its own plaintext key box was the one privacy regression in the merge.
-if awk '/label\(ctx, "Private key/,/^        \}\)$/' "$ROOT/$WGFRAG" \
-     | grep -qF "TYPE_TEXT_VARIATION_PASSWORD"; then
-    ok "the WireGuard private-key box is masked"
+if grep -qF "PasswordVisualTransformation" "$ROOT/$MESH_WIDGETS" && grep -qF 'if (secret) "" else value' "$ROOT/$MESH_WIDGETS"; then
+    ok "the WireGuard private-key box is masked and never prefilled"
 else
     bad "the WireGuard private-key box must not render the key in plaintext"
 fi
