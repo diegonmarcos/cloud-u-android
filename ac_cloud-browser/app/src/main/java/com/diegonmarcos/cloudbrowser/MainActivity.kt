@@ -27,9 +27,9 @@ import com.diegonmarcos.superapp.updater.Updater
  * Change those four URLs in build.json; no other app is affected.
  *
  * #868 The bottom bar is libs:bottomnav's island, fed by NavDecl from build.json::ui: Browser is
- * the host fragment, Search and Configs open the Search add-on's page and the browser settings
- * OVER it (the host's own overlays), and the pill follows the host: it goes back to Browser the
- * moment the last overlay closes.
+ * the host fragment's page, Tabs its tab switcher (#886), Search and Configs open the Search add-on's
+ * page and the browser settings OVER it (the host's own overlays), and the pill follows the host: it
+ * goes back to Browser (or Tabs, when the switcher is showing) the moment the last overlay closes.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -43,9 +43,19 @@ class MainActivity : AppCompatActivity() {
         FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
         supportFragmentManager.addFragmentOnAttachListener { _, f ->
-            if (f is BrowserHostFragment) f.onOverlaysClosed = { bottomNav.selectedId = decl.section("browser")?.id }
+            // The pill follows the host: Tabs while the tab switcher is what is showing, else Browser.
+            if (f is BrowserHostFragment) f.onOverlaysClosed = {
+                bottomNav.selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
+            }
         }
         buildBottomNav()
+        // While the keyboard is up the island would sit between it and the page, taking the room the
+        // address suggestions need; it comes back the moment the keyboard goes.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+            val ime = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+            bottomNav.visibility = if (ime) android.view.View.GONE else android.view.View.VISIBLE
+            androidx.core.view.ViewCompat.onApplyWindowInsets(v, insets)
+        }
 
         if (savedInstanceState == null) {
             val openUrl = intent?.dataString?.takeIf { it.isNotBlank() }
@@ -83,6 +93,9 @@ class MainActivity : AppCompatActivity() {
         val host = supportFragmentManager.findFragmentById(R.id.fragment_container) as? BrowserHostFragment ?: return
         host.dismissOverlays()
         when (id) {
+            // The page (or a new tab when none is open) / the tab switcher: the host's own screens.
+            "browser" -> host.openBrowser()
+            "tabs" -> host.openTabs()
             "search" -> {
                 host.openSearch()
                 // No Search page installed: the host only says so, nothing opened, the pill stays.

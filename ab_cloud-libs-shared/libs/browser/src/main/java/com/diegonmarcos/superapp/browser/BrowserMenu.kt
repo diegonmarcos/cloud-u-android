@@ -16,6 +16,8 @@ data class BrowserMenuItem(
     val checked: String? = null,
     /** may /api/browser/menu/act run it (non-destructive page actions only). */
     val api: Boolean = false,
+    /** #886 a `settings`-section row that belongs INSIDE one Configs section (its id) instead of at the page's foot. */
+    val settingsSection: String? = null,
 )
 
 data class BrowserMenuSection(val id: String, val label: String)
@@ -86,6 +88,7 @@ class BrowserMenu(
                     requires = it.optJSONArray("requires").let { a -> if (a == null) emptyList() else (0 until a.length()).map { i -> a.optString(i) } },
                     checked = it.optString("checked").ifBlank { null },
                     api = it.optBoolean("api", false),
+                    settingsSection = it.optString("settings_section").ifBlank { null },
                 )
             }
             val whys = HashMap<String, String>()

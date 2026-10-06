@@ -109,7 +109,7 @@ check(has("BrowserTab", "tabs[from].pinned == tabs[to].pinned"),
       "2: a drag cannot lift an unpinned tab above a pinned one")
 
 # ── 3. groups: named, collapsible, reachable ─────────────────────────
-check(has("BrowserHostFragment", "promptForGroup", "prefs.setGroup("),
+check(has("BrowserHostFragment", "promptForGroup", "prefs.setGroupById("),
       "3: a tab can be put in a named group from the UI")
 check(has("BrowserHostFragment", "onToggleGroup", "setGroupCollapsed"),
       "3: tapping a group header collapses it")
@@ -134,12 +134,16 @@ check(not leaks,
       "found: %r" % (leaks,))
 
 # ── 6. suggestion dropdown, drawing on local sources ─────────────────
-check(has("BrowserHostFragment", "AutoCompleteTextView", "showDropDown()"),
-      "6: the address field has a dropdown")
-check(has("BrowserHostFragment", "BrowserSuggest.suggest(", "prefs.all(), history.all()"),
+# #886 the dropdown is a Compose panel laid out IN the page area (a child of the frame holding the
+# WebView), not an AutoCompleteTextView's PopupWindow, which landed on top of the bar and the keyboard.
+check(has("BrowserHostFragment", "BrowserSuggestOverlay(suggestState", "FrameLayout(ctx).apply"),
+      "6: the address field has a dropdown, drawn inside the page frame")
+check(not has("BrowserHostFragment", "AutoCompleteTextView") and not has("BrowserHostFragment", "showDropDown("),
+      "6: no PopupWindow dropdown is left to overlap the bar or the keyboard")
+check(has("BrowserHostFragment", "BrowserSuggest.sections(", "prefs.all(), history.all()"),
       "6: it is fed from open tabs and local history")
-check(has("BrowserHostFragment", "val urlBar = suggestField(ctx, url)"),
-      "6: the DETAIL-mode address bar is that field (not a plain EditText)")
+check(has("BrowserHostFragment", "addressField = urlBar", "refreshSuggestions(suggestState"),
+      "6: the DETAIL-mode address bar drives that panel")
 check(has("BrowserSuggest", "Source.TAB", "Source.HISTORY", "Source.SEARCH"),
       "6: those are the only three sources there are")
 

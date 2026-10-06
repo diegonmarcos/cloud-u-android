@@ -12,6 +12,8 @@ data class BrowserSearchEngine(
     val id: String,
     val label: String,
     val template: String,
+    /** #886 the engine's query-suggestion feed (https, `{q}`), or null when it has none; see [BrowserRemoteSuggest]. */
+    val suggest: String? = null,
 ) {
     companion object {
         const val QUERY = "{q}"

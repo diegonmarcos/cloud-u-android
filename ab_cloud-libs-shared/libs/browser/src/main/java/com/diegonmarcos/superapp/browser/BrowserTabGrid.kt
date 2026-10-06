@@ -37,6 +37,14 @@ class BrowserTabGrid(
     private val onMenu: (BrowserTab, View) -> Unit,
     private val onToggleGroup: (String) -> Unit,
     private val onReorder: (List<String>) -> Unit,
+    /** #886 a tab was dropped onto another tab: (dragged key, target key) — the host groups them. */
+    private val onDropOnTab: (String, String) -> Unit = { _, _ -> },
+    /** #886 a tab was dropped onto a group's header: (dragged key, group). */
+    private val onDropOnGroup: (String, String) -> Unit = { _, _ -> },
+    /** #886 the ✎ on a group header: rename / recolour / ungroup. */
+    private val onEditGroup: (String) -> Unit = {},
+    /** #886 each group's colour (ARGB). */
+    private val groupColors: () -> Map<String, Int> = { emptyMap() },
 ) : RecyclerView(context) {
 
     private val adapter0 = Adapter()
@@ -75,12 +83,63 @@ class BrowserTabGrid(
                 super.getMovementFlags(rv, vh)
             }
 
+        /** The key of the tab being dragged, kept from pick-up to drop (its adapter position moves). */
+        private var dragKey: String? = null
+        private var hover: BrowserTabGroups.Slot? = null
+        private var hoverView: View? = null
+
+        override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+            super.onSelectedChanged(vh, actionState)
+            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && vh != null) {
+                dragKey = (adapter0.rowAt(vh.bindingAdapterPosition) as? BrowserGridRow.TabCard)?.tab?.key
+            }
+        }
+
+        // Reordering (a swap while dragging) is for tabs of one NAMED group; a loose tab dragged over
+        // another is a regroup, decided on drop from [hover], so no swap may happen under it.
         override fun canDropOver(
             rv: RecyclerView,
             cur: RecyclerView.ViewHolder,
             target: RecyclerView.ViewHolder,
-        ): Boolean =
-            adapter0.canMove(cur.bindingAdapterPosition, target.bindingAdapterPosition)
+        ): Boolean {
+            val a = (adapter0.rowAt(cur.bindingAdapterPosition) as? BrowserGridRow.TabCard)?.tab ?: return false
+            return a.group.isNotBlank() && adapter0.canMove(cur.bindingAdapterPosition, target.bindingAdapterPosition)
+        }
+
+        override fun onChildDraw(
+            c: android.graphics.Canvas, rv: RecyclerView, vh: RecyclerView.ViewHolder,
+            dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean,
+        ) {
+            super.onChildDraw(c, rv, vh, dX, dY, actionState, isCurrentlyActive)
+            val key = dragKey ?: return
+            if (actionState != ItemTouchHelper.ACTION_STATE_DRAG || !isCurrentlyActive) return
+            val cx = (vh.itemView.left + dX + vh.itemView.width / 2f).toInt()
+            val cy = (vh.itemView.top + dY + vh.itemView.height / 2f).toInt()
+            val slots = ArrayList<BrowserTabGroups.Slot>()
+            val views = HashMap<BrowserTabGroups.Slot, View>()
+            for (i in 0 until rv.childCount) {
+                val v = rv.getChildAt(i)
+                val row = adapter0.rowAt(rv.getChildAdapterPosition(v)) ?: continue
+                val slot = when (row) {
+                    is BrowserGridRow.TabCard -> BrowserTabGroups.Slot(row.tab.key, null, v.left, v.top, v.right, v.bottom)
+                    is BrowserGridRow.GroupHeader -> BrowserTabGroups.Slot(null, row.group, v.left, v.top, v.right, v.bottom)
+                }
+                slots.add(slot); views[slot] = v
+            }
+            val hit = BrowserTabGroups.hit(slots, cx, cy, key)
+            if (hit != hover) {
+                setHighlight(hoverView, false)
+                hover = hit; hoverView = hit?.let { views[it] }
+                setHighlight(hoverView, true)
+            }
+        }
+
+        /** The drop target lights up: a thick ring on a card, a scale-up on a header. */
+        private fun setHighlight(v: View?, on: Boolean) {
+            v ?: return
+            (v.background as? GradientDrawable)?.setStroke(if (on) dp(context, 3) else 1, if (on) 0xFFFFD166.toInt() else 0x55B794F4)
+            v.scaleX = if (on) 1.04f else 1f; v.scaleY = if (on) 1.04f else 1f
+        }
 
         override fun onMove(
             rv: RecyclerView,
@@ -93,9 +152,22 @@ class BrowserTabGrid(
 
         override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
             super.clearView(rv, vh)
-            // Persist on drop, not on every intermediate onMove — the
-            // order that has to survive a restart is the one he let go of.
-            onReorder(adapter0.visibleTabUrls())
+            val key = dragKey; val target = hover
+            setHighlight(hoverView, false)
+            dragKey = null; hover = null; hoverView = null
+            // #886 dropped ON a tab or a group header: regroup (the host redraws). Otherwise it was a
+            // plain move, and the order that has to survive a restart is the one he let go of — persist
+            // on drop, not on every intermediate onMove.
+            val dragGroup = key?.let { adapter0.tabByKey(it)?.group }.orEmpty()
+            val targetGroup = target?.tabKey?.let { adapter0.tabByKey(it)?.group } ?: target?.group
+            when {
+                // Same named group: a reorder (already applied by onMove), not a regroup.
+                key == null || (targetGroup != null && targetGroup.isNotBlank() && targetGroup == dragGroup) ->
+                    onReorder(adapter0.visibleTabUrls())
+                target?.tabKey != null -> post { onDropOnTab(key, target.tabKey) }
+                target?.group != null -> post { onDropOnGroup(key, target.group) }
+                else -> onReorder(adapter0.visibleTabUrls())
+            }
         }
     }
 
@@ -111,8 +183,11 @@ class BrowserTabGrid(
             rows.clear(); rows.addAll(next); notifyDataSetChanged()
         }
 
+        /** The drawn tabs' keys in drawn order (the name is from when tabs were keyed by url). */
         fun visibleTabUrls(): List<String> =
-            BrowserGridRows.visibleTabs(rows).map { it.url }
+            BrowserGridRows.visibleTabs(rows).map { it.key }
+
+        fun tabByKey(key: String): BrowserTab? = BrowserGridRows.visibleTabs(rows).firstOrNull { it.key == key }
 
         /** Adapter position → index within the drawn tab list. */
         private fun tabIndex(pos: Int): Int {
@@ -165,9 +240,19 @@ class BrowserTabGrid(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         setPadding(dp(ctx, 10), dp(ctx, 14), dp(ctx, 10), dp(ctx, 6))
         addView(TextView(ctx).apply {
+            id = ID_HEADER_DOT
+            text = "● "
+        })
+        addView(TextView(ctx).apply {
             id = ID_HEADER_TEXT
             setTextColor(0xFFE9D8FD.toInt())
             typeface = Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        addView(TextView(ctx).apply {
+            id = ID_HEADER_EDIT
+            text = "  ✎  "
+            setTextColor(0xCCFFFFFF.toInt())
         })
     }
 
@@ -175,6 +260,8 @@ class BrowserTabGrid(
         val label = v.findViewById<TextView>(ID_HEADER_TEXT)
         val chevron = if (row.collapsed) "▸" else "▾"
         label.text = "$chevron  ${row.group}  (${row.count})"
+        v.findViewById<TextView>(ID_HEADER_DOT).setTextColor(BrowserTabGroups.colorOf(groupColors(), row.group))
+        v.findViewById<TextView>(ID_HEADER_EDIT).setOnClickListener { onEditGroup(row.group) }
         v.setOnClickListener { onToggleGroup(row.group) }
     }
 
@@ -202,6 +289,11 @@ class BrowserTabGrid(
                     FrameLayout.LayoutParams.MATCH_PARENT)
             })
 
+            // #886 a thin bar in the group's colour across the top of a grouped tab's card.
+            addView(View(ctx).apply {
+                id = ID_GROUP_BAR
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(ctx, 5), Gravity.TOP)
+            })
             addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -260,6 +352,12 @@ class BrowserTabGrid(
             visibility = if (tab.pinned) View.VISIBLE else View.GONE
         }
         v.findViewById<TextView>(ID_TITLE).text = tab.title.ifBlank { tab.url }
+        v.findViewById<View>(ID_GROUP_BAR).apply {
+            visibility = if (tab.group.isBlank()) View.GONE else View.VISIBLE
+            setBackgroundColor(BrowserTabGroups.colorOf(groupColors(), tab.group))
+        }
+        (v.background as? GradientDrawable)?.setStroke(1, 0x55B794F4)
+        v.scaleX = 1f; v.scaleY = 1f
 
         // A pinned tab has NO close affordance. BrowserTabPrefs.remove
         // would refuse it anyway, but drawing a ✕ that does nothing is
@@ -282,6 +380,9 @@ class BrowserTabGrid(
         val ID_MENU        = View.generateViewId()
         val ID_PIN         = View.generateViewId()
         val ID_HEADER_TEXT = View.generateViewId()
+        val ID_HEADER_DOT  = View.generateViewId()
+        val ID_HEADER_EDIT = View.generateViewId()
+        val ID_GROUP_BAR   = View.generateViewId()
 
         fun dp(ctx: Context, v: Int): Int =
             (v * ctx.resources.displayMetrics.density).toInt()

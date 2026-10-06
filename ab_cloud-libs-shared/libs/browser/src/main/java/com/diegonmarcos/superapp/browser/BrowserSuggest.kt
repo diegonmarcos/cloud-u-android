@@ -13,13 +13,18 @@ package com.diegonmarcos.superapp.browser
  * me back to the thing I already visited" — is answered entirely from
  * local data. Not shipping it is why there is no toggle to get wrong.
  *
+ * #886 THE REMOTE QUERY SUGGESTIONS ARE NOT IN THIS FILE. [sections] is handed whatever the
+ * engine's suggestion feed answered ([BrowserRemoteSuggest], its own file, gated by the
+ * `search_suggestions` setting) as a plain list of strings, so this object still contains no
+ * network client and a test can hold it to that.
+ *
  * Pure: ranking is asserted in a JVM unit test.
  */
 object BrowserSuggest {
 
     enum class Source { TAB, HISTORY, SEARCH }
 
-    data class Suggestion(val url: String, val label: String, val source: Source)
+    data class Suggestion(val url: String, val label: String, val source: Source, val subtitle: String = "")
 
     /**
      * Ranked suggestions for [query].
@@ -65,5 +70,77 @@ object BrowserSuggest {
             label = "Search ${engine.label} for “$q”",
             source = Source.SEARCH,
         )
+    }
+
+    /**
+     * #886 the dropdown's two LABELLED sections.
+     *  - [Sections.search]: the default engine's own section: a "Search <engine> for q" row first, then
+     *    the engine's query suggestions ([remote], already fetched or empty), each opening a search.
+     *  - [Sections.history]: pages he has been to that match, open tabs first, then history ranked by
+     *    [score] (how well it matches, then how recent), each with title and URL.
+     * A private tab is never offered, as in [suggest].
+     */
+    data class Sections(val search: List<Suggestion>, val history: List<Suggestion>) {
+        val isEmpty: Boolean get() = search.isEmpty() && history.isEmpty()
+        val flat: List<Suggestion> get() = search + history
+    }
+
+    fun sections(
+        query: String,
+        tabs: List<BrowserTab>,
+        history: List<BrowserVisit>,
+        engine: BrowserSearchEngine,
+        remote: List<String> = emptyList(),
+        now: Long = System.currentTimeMillis(),
+        searchLimit: Int = 6,
+        historyLimit: Int = 8,
+    ): Sections {
+        val q = query.trim()
+        if (q.isEmpty()) return Sections(emptyList(), emptyList())
+        val needle = q.lowercase()
+
+        val search = ArrayList<Suggestion>()
+        search.add(Suggestion(BrowserSearch.searchUrl(q, engine), "Search ${engine.label} for “$q”", Source.SEARCH, q))
+        for (r in remote) {
+            val t = r.trim()
+            if (t.isEmpty() || t.equals(q, ignoreCase = true) || search.any { it.label == t }) continue
+            if (search.size >= searchLimit) break
+            search.add(Suggestion(BrowserSearch.searchUrl(t, engine), t, Source.SEARCH, t))
+        }
+
+        val out = LinkedHashMap<String, Pair<Double, Suggestion>>()
+        for (t in BrowserTabOrder.sort(tabs.filter { BrowserSitePolicy.shouldRecord(it) })) {
+            val m = matchScore(needle, t.url, t.title) ?: continue
+            out.getOrPut(t.url) { (m + 1000.0) to Suggestion(t.url, t.title.ifBlank { t.url }, Source.TAB, t.url) }
+        }
+        for (v in history) {
+            val m = matchScore(needle, v.url, v.title) ?: continue
+            out.getOrPut(v.url) { (m + recency(v.ts, now)) to Suggestion(v.url, v.title.ifBlank { v.url }, Source.HISTORY, v.url) }
+        }
+        val ranked = out.values.sortedByDescending { it.first }.take(historyLimit).map { it.second }
+        return Sections(search, ranked)
+    }
+
+    /**
+     * How well [needle] (lower-case) matches a page: the host starting with it beats a title word
+     * starting with it, which beats a substring of the url, which beats one of the title. Null = no match.
+     */
+    fun matchScore(needle: String, url: String, title: String): Double? {
+        val u = url.lowercase().removePrefix("https://").removePrefix("http://").removePrefix("www.")
+        val t = title.lowercase()
+        return when {
+            u.startsWith(needle) -> 100.0
+            t.startsWith(needle) -> 90.0
+            t.split(' ', '-', '_', '|', '/', '.').any { it.isNotEmpty() && it.startsWith(needle) } -> 70.0
+            u.contains(needle) -> 50.0
+            t.contains(needle) -> 40.0
+            else -> null
+        }
+    }
+
+    /** 0..30: a visit from this minute is worth 30, one from a month ago about 1. */
+    fun recency(ts: Long, now: Long): Double {
+        val days = ((now - ts).coerceAtLeast(0L)) / 86_400_000.0
+        return 30.0 / (1.0 + days)
     }
 }

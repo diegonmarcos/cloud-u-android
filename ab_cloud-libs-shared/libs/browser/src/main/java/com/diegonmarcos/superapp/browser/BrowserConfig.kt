@@ -47,6 +47,8 @@ data class BrowserConfig(
     val clearData: List<Pair<String, String>> = emptyList(),
     /** #802 the add-ons; their menu rows are already merged into [menu]. */
     val addons: BrowserAddons = BrowserAddons.EMPTY,
+    /** #886 Configs' topic sections, in order: id → title. A setting's `section` names one of these ids. */
+    val settingsSections: List<Pair<String, String>> = emptyList(),
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -109,7 +111,7 @@ data class BrowserConfig(
                     val id = e.optString("id").trim()
                     val tpl = e.optString("template").trim()
                     if (id.isEmpty() || !tpl.contains(BrowserSearchEngine.QUERY)) continue
-                    engines.add(BrowserSearchEngine(id, e.optString("label", id), tpl))
+                    engines.add(BrowserSearchEngine(id, e.optString("label", id), tpl, e.optString("suggest").trim().ifEmpty { null }))
                 }
             }
 
@@ -127,7 +129,8 @@ data class BrowserConfig(
                 defaultEngineId = defaultId,
                 settings = BrowserSettingsCatalogue.parse(
                     o.optJSONArray("settings"), finalEngines.map { it.id }, defaultId,
-                    addonIds = addons.all.map { it.id }, addonDefaults = addons.all.filter { it.defaultEnabled }.map { it.id }.toSet()),
+                    addonIds = addons.all.map { it.id }, addonDefaults = addons.all.filter { it.defaultEnabled }.map { it.id }.toSet(),
+                    engineLabels = finalEngines.associate { it.id to it.label }),
                 menu = menu,
                 addons = addons,
                 userAgents = o.optJSONObject("user_agents").strings(),
@@ -136,6 +139,11 @@ data class BrowserConfig(
                 }.toMap(),
                 readerCss = o.optString("reader_css"),
                 sitePerms = BrowserSitePolicy.parsePerms(o.optJSONArray("site_permissions")),
+                settingsSections = o.optJSONArray("settings_sections").let { a ->
+                    if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
+                        a.optJSONObject(i)?.let { it.optString("id") to it.optString("label", it.optString("id")) }
+                    }.filter { it.first.isNotEmpty() }
+                },
                 clearData = o.optJSONArray("clear_data").let { a ->
                     if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
                         a.optJSONObject(i)?.let { it.optString("id") to it.optString("label", it.optString("id")) }

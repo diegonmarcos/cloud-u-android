@@ -110,7 +110,7 @@
         "https://qwant.com",
         "http://localhost:8000"
       ],
-      "_doc_search_engines": "Address-bar engines. {q} is where the URL-encoded query goes, so an engine whose query parameter is not last still works. default_engine is the SHIPPED default; BrowserSettings persists the user's own pick and BrowserConfig.engine() resolves an unknown or unset id back to this one.",
+      "_doc_search_engines": "Address-bar engines. {q} is where the URL-encoded query goes, so an engine whose query parameter is not last still works. default_engine is the SHIPPED default; BrowserSettings persists the user's own pick and BrowserConfig.engine() resolves an unknown or unset id back to this one. suggest (optional) is the engine's query-suggestion feed (https, {q}, OpenSearch JSON), asked only while the search_suggestions setting is on (BrowserRemoteSuggest); an engine without one simply offers its search row.",
       "default_engine": "duckduckgo",
       "search_engines": [
         {
@@ -121,12 +121,14 @@
         {
           "id": "duckduckgo",
           "label": "DuckDuckGo",
-          "template": "https://duckduckgo.com/?q={q}"
+          "template": "https://duckduckgo.com/?q={q}",
+          "suggest": "https://duckduckgo.com/ac/?q={q}&type=list"
         },
         {
           "id": "google",
           "label": "Google",
-          "template": "https://www.google.com/search?q={q}"
+          "template": "https://www.google.com/search?q={q}",
+          "suggest": "https://suggestqueries.google.com/complete/search?client=firefox&q={q}"
         }
       ],
       "_doc_settings": "#802 THE SETTINGS CATALOGUE: every user setting, declared once. libs:browser BrowserSettingsCatalogue parses it (baked inside UI_BROWSER_CONFIG_B64 with the rest of this block), BrowserSettings stores the user's choice in the `browser_settings` prefs (declared in the fleet manifest, so FleetConfig moves every key to a new phone), /api/browser/settings* serve and set it, and ./build.sh catalogue renders docs/settings-catalogue.md from it. type: bool|int|string|enum|set; class: config (migrates) | device (stays). values_from: search_engines takes the enum and its default from search_engines/default_engine above. A key is only declared once something reads it (test-browser-settings-catalogue.sh holds that).",
@@ -253,6 +255,24 @@
           "section": "add-ons",
           "class": "config",
           "doc": "The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled."
+        },
+        {
+          "key": "search_suggestions",
+          "type": "bool",
+          "default": true,
+          "label": "Search suggestions",
+          "section": "search",
+          "class": "config",
+          "doc": "While you type in the address bar, ask the default search engine for query suggestions (what you type is sent to it). Off = only the search row and your own history."
+        },
+        {
+          "key": "tab_strip",
+          "type": "bool",
+          "default": true,
+          "label": "Tab strip",
+          "section": "tabs",
+          "class": "config",
+          "doc": "A row of small tab icons under the address bar: the tabs of the current group, and a + that opens a new tab in the same group."
         }
       ],
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
@@ -921,9 +941,10 @@
         }
       ]
     },
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment (its tab grid, address bar and overlays are the lib's own UI, so the section has no pages), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
     "bottom_nav": [
       "browser",
+      "tabs",
       "search",
       "configs"
     ],
@@ -932,6 +953,12 @@
         "id": "browser",
         "label": "Browser",
         "icon": "browser",
+        "pages": []
+      },
+      {
+        "id": "tabs",
+        "label": "Tabs",
+        "icon": "tabs",
         "pages": []
       },
       {

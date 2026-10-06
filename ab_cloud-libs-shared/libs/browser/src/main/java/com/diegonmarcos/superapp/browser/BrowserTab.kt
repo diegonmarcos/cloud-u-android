@@ -26,7 +26,19 @@ data class BrowserTab(
     val group: String = "",
     /** #802 a private tab: never recorded in history, previews or suggestions. */
     val isPrivate: Boolean = false,
+    /**
+     * #886 STABLE IDENTITY. A tab used to be keyed by the URL it was opened with, so the moment it
+     * navigated its stored key was a lie (the root cause of "an older page comes back", see
+     * [BrowserTabStore.commit]). Blank = a tab stored before ids existed; [key] then falls back to
+     * the url, and the store stamps a real id on the first read.
+     */
+    val id: String = "",
+    /** #886 the favicon's file under cacheDir/favicons (the tab strip draws it); "" = none yet. */
+    val iconPath: String = "",
 ) {
+    /** What identifies this tab: its [id], or a derived one for a tab that predates ids. */
+    val key: String get() = id.ifBlank { BrowserTabStore.legacyId(url, ts) }
+
     companion object {
         const val UNSET_ORDER: Int = Int.MAX_VALUE
     }
@@ -130,7 +142,7 @@ object BrowserSeed {
         return configUrls
             .mapIndexed { i, url -> i to url.trim() }
             .filter { (_, url) -> url.isNotEmpty() && url !in openUrls }
-            .map { (i, url) -> BrowserTab(url, url, now + i, pinned = true, order = i) }
+            .map { (i, url) -> BrowserTab(url, url, now + i, pinned = true, order = i, id = BrowserTabStore.newId()) }
     }
 }
 

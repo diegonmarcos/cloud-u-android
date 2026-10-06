@@ -17,6 +17,8 @@ data class BrowserSetting(
     /** config (migrates with the fleet Account) | device (stays on this phone) */
     val cls: String = "config",
     val doc: String = "",
+    /** #886 how each enum value reads on the Configs page (value → words); missing = the value, prettified. */
+    val valueLabels: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -89,6 +91,7 @@ class BrowserSettingsCatalogue(val settings: List<BrowserSetting>) {
         fun parse(
             arr: JSONArray?, engineIds: List<String>, defaultEngine: String,
             addonIds: List<String> = emptyList(), addonDefaults: Set<String> = emptySet(),
+            engineLabels: Map<String, String> = emptyMap(),
         ): BrowserSettingsCatalogue {
             if (arr == null) return EMPTY
             val out = ArrayList<BrowserSetting>()
@@ -116,6 +119,9 @@ class BrowserSettingsCatalogue(val settings: List<BrowserSetting>) {
                     max = if (o.has("max")) o.optInt("max") else null,
                     label = o.optString("label", key), section = o.optString("section", "general"),
                     cls = o.optString("class", "config"), doc = o.optString("doc"),
+                    valueLabels = if (fromEngines) engineLabels else o.optJSONObject("value_labels").let { m ->
+                        if (m == null) emptyMap() else m.keys().asSequence().associateWith { k -> m.optString(k) }
+                    },
                 ))
             }
             return BrowserSettingsCatalogue(out)

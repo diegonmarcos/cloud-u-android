@@ -33,7 +33,7 @@ def check(root, ok):
         ok(i in calls and calls[i] in clear, "clear box `%s` makes its call (%s)" % (i, calls.get(i)))
     # the private guard sits BEFORE history.record in onPageFinished
     pf = frag[frag.find("override fun onPageFinished"):]
-    g, r = pf.find("BrowserSitePolicy.shouldRecord(currentTab())"), pf.find("history.record(")
+    g, r = pf.find("BrowserSitePolicy.shouldRecord(prefs.byId(tabKey))"), pf.find("history.record(")
     ok(0 <= g < r, "a private tab returns before history.record")
     ok("tabs.filter { BrowserSitePolicy.shouldRecord(it) }" in sug, "suggestions skip private tabs")
     ok("LOAD_NO_CACHE" in frag, "a private tab keeps no HTTP cache")
@@ -57,7 +57,7 @@ PRIV = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superap
 FRAG = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt"
 main("privacy wiring", check, [
     ("the cache box stops clearing", PRIV, "clearCache(true)", "settings.toString()", "`cache` makes its call"),
-    ("private visits reach history", FRAG, "if (!BrowserSitePolicy.shouldRecord(currentTab())) {", "if (false) {", "before history.record"),
+    ("private visits reach history", FRAG, "if (!BrowserSitePolicy.shouldRecord(prefs.byId(tabKey))) {", "if (false) {", "before history.record"),
     ("a site permission the manifest lacks", "ac_cloud-browser/app/src/main/AndroidManifest.xml", 'android:name="android.permission.CAMERA"', 'android:name="android.permission.NOCAM"', "CAMERA"),
     ("privacy/clear without confirm", "ac_cloud-browser/app/src/main/java/com/diegonmarcos/cloudbrowser/debugapi/BrowserDebugApi.kt", 'q["confirm"] != "1" -> JSONObject().put("ok", false).put("error", "add confirm=1")', 'false -> JSONObject()', "confirm=1"),
     ("a clear box with no branch", "ac_cloud-browser/build.json", '"id": "storage"', '"id": "storage_all"', "storage_all"),

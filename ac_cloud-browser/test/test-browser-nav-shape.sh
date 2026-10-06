@@ -1,6 +1,6 @@
 #!/bin/sh
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ #868 cloud-browser's nav is the fleet's: an island over the lib's own web UI
+# ║ #868 cloud-browser's nav is the fleet's: an island over the lib's own web UI (#886: Tabs is a destination)
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
@@ -25,6 +25,7 @@ APP = os.environ["APP_DIR"]
 CFG = json.loads(r'''{
  "bottom": [
   "browser",
+  "tabs",
   "search",
   "configs"
  ],
@@ -44,6 +45,9 @@ CFG = json.loads(r'''{
    "viewItems",
    "openSearch()",
    "openSettings()",
+   "host.openTabs()",
+   "host.openBrowser()",
+   "isTabsOpen",
    "onOverlaysClosed",
    "dismissOverlays()"
   ],
@@ -54,6 +58,9 @@ CFG = json.loads(r'''{
    "fun openSearch()",
    "fun openSettings()",
    "fun dismissOverlays()",
+   "fun openTabs()",
+   "fun openBrowser()",
+   "val isTabsOpen",
    "var onOverlaysClosed"
   ]
  },
@@ -82,6 +89,14 @@ CFG = json.loads(r'''{
   [
    "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt",
    "var onOverlaysClosed"
+  ],
+  [
+   "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt",
+   "fun openTabs()"
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
+   "host.openTabs()"
   ]
  ]
 }''')
