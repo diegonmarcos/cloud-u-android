@@ -67,6 +67,38 @@ has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" "ConstellationWork
 jq -e '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store")' "$APP/build.json" >/dev/null 2>&1 \
   && ok "build.json config.pages has the Store entry" || bad "Store page not in build.json ui.sections"
 
+echo "== T6: #894 every route to a Store page opens Cloud Store when installed (routing layer) =="
+NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
+HO="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/CloudStoreHandoff.kt"
+t6() {  # t6 <nav> <handoff>: prints one FAIL line per defect
+  grep -qF 'CloudStoreHandoff.intercept(host.navContext(), sectionId, pageId)) return' "$1" \
+    || echo "FAIL openSectionPage does not hand Store routes to Cloud Store first"
+  awk '/fun openSectionPage\(sectionId: String, pageId: String, args/{f=1} f&&/intercept\(/{print "in"; exit} f&&/Sections.tabOwnerOf/{exit}' "$1" | grep -q in \
+    || echo "FAIL the intercept runs after the page was already resolved"
+  grep -qF '!installed -> Route.EMBEDDED' "$2" || echo "FAIL absent Cloud Store no longer falls back to the embedded Store"
+  grep -qF 'open() -> Route.OPENED_CLOUD_STORE' "$2" || echo "FAIL an installed Cloud Store is not opened"
+  grep -qF 'else -> Route.PLACEHOLDER' "$2" || echo "FAIL a failed open no longer falls back to the placeholder"
+  grep -qF 'if (sectionId == "config") TAB_OF_PAGE[pageId] else null' "$2" || echo "FAIL tabFor does not map the three Store pages"
+}
+out="$(t6 "$NAV" "$HO")"
+[ -z "$out" ] && ok "Store routes: installed -> Cloud Store on its tab; open fails -> placeholder; absent -> embedded" \
+  || { printf '%s\n' "$out" | sed 's/^/    /'; bad "T6 Store routing"; }
+MW="$(mktemp -d)"
+t6mut() {  # t6mut <title> <nav|ho> <old> <new>
+  cp "$NAV" "$MW/n.kt"; cp "$HO" "$MW/h.kt"
+  local f; case "$2" in nav) f="$MW/n.kt";; ho) f="$MW/h.kt";; esac
+  python3 - "$f" "$3" "$4" <<'EOF2' || { bad "T6 mutation '$1' did not apply"; return; }
+import sys; p, old, new = sys.argv[1:4]; s = open(p).read()
+assert old in s, old; open(p, "w").write(s.replace(old, new, 1))
+EOF2
+  [ -n "$(t6 "$MW/n.kt" "$MW/h.kt")" ] && ok "T6 mutant '$1' goes red" || bad "T6 mutant '$1' stayed GREEN"
+}
+t6mut "routing layer skips the intercept" nav 'CloudStoreHandoff.intercept(host.navContext(), sectionId, pageId)) return' 'CloudStoreHandoff.intercept(host.navContext(), sectionId, pageId) && false) return'
+t6mut "absent still tries Cloud Store"    ho '!installed -> Route.EMBEDDED' 'installed -> Route.EMBEDDED'
+t6mut "failed open shows nothing"         ho 'else -> Route.PLACEHOLDER' 'else -> Route.EMBEDDED'
+t6mut "mesh tab lost"                     ho 'if (sectionId == "config") TAB_OF_PAGE[pageId] else null' 'null'
+rm -rf "$MW"
+
 echo "== T5: LIVE — every app image resolves a GHCR digest (AppStore can see them) =="
 if command -v curl >/dev/null && [ -f "$FLEET" ]; then
   reg="ghcr.io"

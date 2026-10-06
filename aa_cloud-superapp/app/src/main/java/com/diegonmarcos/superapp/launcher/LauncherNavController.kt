@@ -216,6 +216,8 @@ class LauncherNavController(private val host: NavHost) {
         section.tabs && section.pages.count { it.action.isBlank() } >= 2
 
     fun openSectionPage(sectionId: String, pageId: String, args: Bundle? = null) {
+        // #894 Cloud Store installed: a Store page opens Cloud Store itself (placeholder only if it will not start).
+        if (com.diegonmarcos.superapp.apps.CloudStoreHandoff.intercept(host.navContext(), sectionId, pageId)) return
         // A page MERGED INTO another page's tab strip keeps its own id as a
         // navigation target. Configs ▸ One-Hand is Launcher's second tab now,
         // and `page:config/onehand` is spoken by more places than could be

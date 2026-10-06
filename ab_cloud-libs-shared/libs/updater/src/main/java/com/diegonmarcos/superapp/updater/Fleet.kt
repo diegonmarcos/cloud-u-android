@@ -978,11 +978,13 @@ object Fleet {
         // fleet popped one toast per app. That is exactly the "progress
         // appearing" that auto-update:ON is supposed to mean the absence of.
         AutoUpdatePrefs.setUnattendedPass(ctx, true)
+        PassLedgerStore.begin(ctx)   // #894 one summary per pass
         return try {
             chain?.invoke(ctx, apps, owner) ?: runBatch(ctx, apps, Mode.AUTO, limit, owner)
         } finally {
             UpdateProgress.quiet = false
             AutoUpdatePrefs.setUnattendedPass(ctx, false)
+            PassLedgerStore.end(ctx)
         }
     }
 
@@ -1288,6 +1290,8 @@ object Fleet {
                              else VersionOrder.landed(candidateCode, nowCode)
                 if (landed) {
                     acted++
+                    PassLedgerStore.record(ctx, PassLedger.Outcome.INSTALLED, app.pkg, (candidateCode ?: 0L).toString())
+                    PassLedgerStore.clearFailure(ctx, app.pkg)
                     // #774 STAGE 3, CLEAR. The session path is reaped by
                     // PackageInstallerReceiver on success; a shell install has
                     // no receiver, so its cached APK used to stay forever. Same
@@ -1297,6 +1301,7 @@ object Fleet {
                                "[${i + 1}/${staged.size}] via $used")
                 } else {
                     pending++
+                    PassLedgerStore.record(ctx, PassLedger.Outcome.NEEDS_TAP, app.pkg, (candidateCode ?: 0L).toString())
                     Log.w(TAG, "NOT installed: ${app.kind} ${app.id} (${app.pkg}) " +
                                "[${i + 1}/${staged.size}] committed via $used but the device " +
                                "still reports ${nowCode ?: "no build"} (candidate " +
@@ -1307,6 +1312,7 @@ object Fleet {
                 // The APK stays in the cache, so a retry reuses it - the whole
                 // reason downloads are content-addressed.
                 Log.w(TAG, "installAll commit ${app.label}: ${t.message}")
+                PassLedgerStore.record(ctx, PassLedger.Outcome.FAILED, app.pkg, "0", t.message.orEmpty())
             }
         }
         // Clear the batch context; the async install commits still drive the

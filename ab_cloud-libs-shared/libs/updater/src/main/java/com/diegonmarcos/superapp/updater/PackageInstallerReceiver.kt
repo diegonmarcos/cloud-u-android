@@ -119,6 +119,13 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             if (!isUninstall && gateKey.isNotEmpty()) InstallGate.open(gateKey)
         }
         val verb = if (isUninstall) "Uninstall" else "Install"
+        // #894 which build this result is about, read BEFORE a success reaps the APK. A result
+        // belonging to an unattended pass is filed under the pass's ONE summary alert (PassLedger)
+        // and raises nothing of its own; one outside a pass raises a failure once, never a success.
+        val build = if (isUninstall) "0" else (intent.getStringExtra(EXTRA_APK_PATH)
+            ?.let { runCatching { com.diegonmarcos.superapp.updater.apk.ApkIntegrity.identify(context, java.io.File(it))?.versionCode }.getOrNull() } ?: 0L).toString()
+        fun filed(outcome: PassLedger.Outcome, reason: String = ""): Boolean =
+            !isUninstall && gateKey.isNotEmpty() && PassLedgerStore.record(context, outcome, gateKey, build, reason)
         Log.i(TAG, "status=$status msg=$message pkg=$pkg op=${if (isUninstall) "uninstall" else "install"}")
 
         // Install results arrive asynchronously, and the last few can land
@@ -153,12 +160,14 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                             pkg = gateKey,
                             apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty(),
                         ))
+                    val inPass = filed(PassLedger.Outcome.FAILED, "confirmation offered no screen")
                     surface(context, "$verb needs confirmation, but none was offered",
                         "$subject could not be ${verb.lowercase()}ed: the system asked for " +
                         "your confirmation and then supplied no screen to ask it on. Nothing " +
                         "was installed. The downloaded file is kept — try the row's Direct " +
                         "button, which uses the ordinary system installer.",
-                        severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
+                        severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey",
+                        quiet = inPass || !isNew(context, gateKey, build, "no confirmation screen"))
                     return
                 }
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -181,6 +190,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // clears it; a confirmation that is merely hoped for costs the
                 // entire download.
                 val shown = notifyConfirm(context, confirm, subject)
+                val inPass = filed(PassLedger.Outcome.NEEDS_TAP)
                 if (isForeground(context)) {
                     // The dialog is going up NOW and this install has not
                     // finished. Keep the gate SHUT: the next commit must wait
@@ -220,7 +230,8 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                             "$subject was not installed: Android needs one tap to confirm, and " +
                             "the notification carrying it is blocked because notifications are " +
                             "off for this app. Allow notifications, or open the app and retry.",
-                            severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
+                            severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey",
+                            quiet = inPass || !isNew(context, gateKey, build, "notifications off"))
                         return
                     }
                 }
@@ -259,8 +270,13 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // system installer was up). MainActivity auto-dismisses on Done.
                 // Uninstall never raised the overlay, so leave it alone.
                 if (!isUninstall && !unattended) UpdateProgress.update(UpdateProgress.State.Done)
+                val inPass = filed(PassLedger.Outcome.INSTALLED)
+                if (!isUninstall && gateKey.isNotEmpty()) PassLedgerStore.clearFailure(context, gateKey)
+                // A success is never an alert of its own: the pass summary counts it, a manual
+                // install already shows its progress and a toast.
                 surface(context, "${verb}ed ✓", "$appName ${verb.lowercase()}ed successfully.",
-                    severity = NotificationStore.Sev.INFO, key = "${verb.lowercase()}:$gateKey")
+                    severity = NotificationStore.Sev.INFO, key = "${verb.lowercase()}:$gateKey",
+                    quiet = inPass, raise = false)
             }
             else -> {
                 releaseGate()   // terminal (failure/abort): unblock the queue
@@ -317,8 +333,10 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 Log.w(TAG, "install failed pkg=$gateKey status=$status legacy=$legacy " +
                     "(${legacyName ?: "none"}) other=$other msg=${message.ifEmpty { "-" }} " +
                     "extras=${intent.extras?.keySet()?.joinToString(",") ?: "-"}")
+                val inPass = filed(PassLedger.Outcome.FAILED, label)
                 surface(context, "$verb failed: $label", message.ifEmpty { label },
-                    severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey")
+                    severity = NotificationStore.Sev.ERROR, key = "${verb.lowercase()}:$gateKey",
+                    quiet = inPass || (!isUninstall && !isNew(context, gateKey, build, label)))
             }
         }
     }
@@ -421,8 +439,16 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     nm.getNotificationChannel(NOTIF_CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE)
         }.getOrDefault(false)
 
+    /** #894 True the first time this exact failure (package, build, reason) is seen. */
+    private fun isNew(context: Context, pkg: String, build: String, reason: String): Boolean =
+        pkg.isEmpty() || PassLedgerStore.firstTimeFailure(context, pkg, build, reason)
+
+    /** [quiet]: already filed under the pass summary, or the same failure as last time - say nothing.
+     *  [raise]=false: in-app feed and toast only, no fleet alert (successes). */
     private fun surface(context: Context, short: String, full: String,
-                        severity: String = NotificationStore.Sev.INFO, key: String = short) {
+                        severity: String = NotificationStore.Sev.INFO, key: String = short,
+                        quiet: Boolean = false, raise: Boolean = true) {
+        if (quiet) return
         // Mirror into the in-app feed so the launcher badge AND the
         // Cloud-SuperApp Notifications panel reflect the same event.
         // Without this push the framework notification (and its badge)
@@ -453,6 +479,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             Toast.makeText(context, short, Toast.LENGTH_LONG).show()
         } catch (_: Throwable) { /* off-Looper thread — skip toast */ }
 
+        if (!raise) return
         // #777: the result is a fleet ALERT — it lands in the SuperApp's Alerts
         // group (or this app's own notification if there is no SuperApp), one
         // per app: a retry's result replaces the failure it answers.
@@ -460,7 +487,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             title = short,
             text = full,
             severity = severity,
-            deepLink = STORE_LINK,
+            deepLink = UpdaterHost.alertLink,
             dedupeKey = "updater:$key",
         ))
     }
@@ -470,9 +497,6 @@ class PackageInstallerReceiver : BroadcastReceiver() {
          *  (long-press menu) from an install/update and message accordingly. */
         const val EXTRA_OP = "com.diegonmarcos.superapp.updater.OP"
         const val OP_UNINSTALL = "uninstall"
-
-        /** Where a result alert's tap lands: the SuperApp's Store ▸ Cloud. */
-        private const val STORE_LINK = "page:config/store-cloud"
 
         /** Absolute path of the cached APK, deleted on confirmed success. */
         const val EXTRA_APK_PATH = "apk_path"

@@ -240,6 +240,20 @@ object StoreAuto {
     fun pass(ctx: Context, apps: List<Fleet.App>, owner: String): Fleet.Pass {
         val s = run(ctx, apps, owner.substringAfter(':', TRIGGER_PERIODIC), selfAfter = !owner.startsWith(UPDATER_OWNER))
         val work = s.queue.filter { it.kind != HOST }
+        // #894 what the pass did, filed under the pass's ONE summary alert (Fleet.autoPass opens and closes it).
+        val byId = apps.associateBy { it.id }
+        for (i in work) {
+            val pkg = byId[i.id]?.pkg ?: continue
+            val build = i.digest.ifEmpty { i.version }
+            when (i.status) {
+                INSTALLED -> com.diegonmarcos.superapp.updater.PassLedgerStore.record(ctx,
+                    com.diegonmarcos.superapp.updater.PassLedger.Outcome.INSTALLED, pkg, build)
+                PENDING -> com.diegonmarcos.superapp.updater.PassLedgerStore.record(ctx,
+                    com.diegonmarcos.superapp.updater.PassLedger.Outcome.NEEDS_TAP, pkg, build)
+                FAILED, HELD -> com.diegonmarcos.superapp.updater.PassLedgerStore.record(ctx,
+                    com.diegonmarcos.superapp.updater.PassLedger.Outcome.FAILED, pkg, build, i.error.orEmpty())
+            }
+        }
         val waiting = work.count { it.status == PENDING || it.status == DOWNLOADED || it.status == INSTALLING }
         return Fleet.Pass(
             acted = s.count(INSTALLED),

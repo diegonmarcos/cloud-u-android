@@ -31,6 +31,11 @@ class App : Application() {
             // shows the error without the "open DNS settings" button.
             dnsPageExtras = emptyMap()
             runsFleetPass = { true }
+            com.diegonmarcos.superapp.updater.UpdaterHost.apply {
+                // #894 the pass summary and result alerts open Cloud Store itself, on the fleet tab.
+                alertLink = "intent:#Intent;action=com.diegonmarcos.cloudstore.OPEN;package=com.diegonmarcos.cloudstore;S.tab=cloud;end"
+                storeName = "Cloud Store"
+            }
             // #866 the same shelves as SuperApp's Store pages (libs:appstore StoreShelves,
             // over the one taxonomy SuperApp's build.json declares).
             classify = StoreShelves::of

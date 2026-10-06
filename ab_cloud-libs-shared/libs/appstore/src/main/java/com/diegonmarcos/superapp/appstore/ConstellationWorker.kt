@@ -112,35 +112,16 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
                         Fleet.status(applicationContext, it) is Fleet.State.UpdateAvailable
                 },
             )
-            if (pass.acted > 0)
-                alert(applicationContext, KEY_INSTALLED,
-                    "${pass.acted} constellation update${if (pass.acted == 1) "" else "s"} installed",
-                    "Tap to open the Store")
-            // "Cannot install unattended" has to be visible to the USER, not
-            // just to logcat — otherwise a phone with no privileged channel is
-            // indistinguishable from a phone with nothing to update.
-            if (!pass.silent && pass.considered > 0)
-                alert(applicationContext, KEY_NO_CHANNEL,
-                    "Auto-update needs confirmation",
-                    "${pass.considered} update(s) waiting. No privileged install " +
-                    "channel, so each one asks first.")
-            else
-                FleetAlerts.withdraw(applicationContext, KEY_NO_CHANNEL)
+            // #894 no alert of its own here: Fleet.autoPass raised the pass's ONE summary
+            // ("N updated, M need a tap - Open <store>", PassLedger) and replaces it as
+            // late install results arrive. The two per-pass alerts that used to follow
+            // ("N installed", "needs confirmation") said the same thing a second time.
+            FleetAlerts.withdraw(applicationContext, KEY_INSTALLED)
+            FleetAlerts.withdraw(applicationContext, KEY_NO_CHANNEL)
         } catch (t: Throwable) {
             Log.w(TAG, "fleet auto-update failed: ${t.message}")
         }
         Result.success()
-    }
-
-    /** #777: a Store alert is a fleet alert — it goes to the SuperApp's
-     *  Alerts group, keyed so the next pass replaces it instead of stacking a
-     *  second one. The tap target is still the HOST's (a library cannot name
-     *  the app's screens): its launch extras' shortcut_action, which is the
-     *  FleetAlerts `page:` grammar — Store ▸ Cloud in the SuperApp. */
-    private fun alert(ctx: Context, key: String, title: String, text: String) {
-        FleetAlerts.raise(ctx, FleetAlerts.Alert(
-            title = title, text = text, severity = FleetAlerts.INFO,
-            deepLink = AppStoreHost.launchExtras["shortcut_action"].orEmpty(), dedupeKey = key))
     }
 
     companion object {

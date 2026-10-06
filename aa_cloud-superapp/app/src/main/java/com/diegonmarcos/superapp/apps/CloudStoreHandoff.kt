@@ -48,6 +48,37 @@ object CloudStoreHandoff {
     /** Store page id (SectionPages) → Cloud Store tab. */
     val TAB_OF_PAGE = mapOf("store-cloud" to "cloud", "store-phone" to "phone", "apps-mesh" to "mesh")
 
+    /** What a route to a Store page does (#894). */
+    enum class Route {
+        /** Cloud Store is installed and opened on the matching tab: the route is consumed. */
+        OPENED_CLOUD_STORE,
+        /** Cloud Store is installed but will not start: the page shows the hand-off placeholder. */
+        PLACEHOLDER,
+        /** Cloud Store is absent (or not a Store page): the embedded Store, as before. */
+        EMBEDDED,
+    }
+
+    /** The Cloud Store tab for a navigation target, null when it is not a Store page. */
+    fun tabFor(sectionId: String, pageId: String): String? =
+        if (sectionId == "config") TAB_OF_PAGE[pageId] else null
+
+    /** Pure routing decision; [open] is only called when [installed]. */
+    fun decide(installed: Boolean, open: () -> Boolean): Route = when {
+        !installed -> Route.EMBEDDED
+        open() -> Route.OPENED_CLOUD_STORE
+        else -> Route.PLACEHOLDER
+    }
+
+    /**
+     * #894 Routing layer (LauncherNavController.openSectionPage): every route to
+     * a Store page - notification, shortcut, tile - opens Cloud Store directly
+     * when it is installed. True when the route was consumed.
+     */
+    fun intercept(ctx: Context, sectionId: String, pageId: String): Boolean {
+        val tab = tabFor(sectionId, pageId) ?: return false
+        return decide(installed(ctx)) { open(ctx, tab) } == Route.OPENED_CLOUD_STORE
+    }
+
     fun installed(ctx: Context): Boolean = runCatching {
         ctx.packageManager.getApplicationInfo(PKG, 0).enabled
     }.getOrDefault(false)   // NameNotFoundException = not installed
