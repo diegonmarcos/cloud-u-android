@@ -57,15 +57,6 @@ object BrowserPageActions {
     fun textTools(ctx: Context): TextToolsClient =
         tools ?: synchronized(this) { tools ?: TextToolsClient(ctx.applicationContext).also { tools = it } }
 
-    /** Translate [text] OFF the main thread (the client blocks), answer on the main thread. */
-    fun translate(wv: WebView, text: String, done: (String?, String?) -> Unit) {
-        val client = textTools(wv.context)
-        Thread {
-            val r = runCatching { client.translate(text) }.getOrNull()
-            wv.post { done(r?.text, r?.error ?: if (r == null) "translate failed" else null) }
-        }.start()
-    }
-
     /** Can Android make this app the default browser right now (and it is not already)? */
     fun canRequestDefault(ctx: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false

@@ -419,6 +419,92 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
+    // ── #886 Translate page in place, and Summarise by topics ────────────────────────────────
+
+    private val translateState = androidx.compose.runtime.mutableStateOf<PageTranslator.State>(PageTranslator.State.Idle)
+    private var translateEngineLabel = ""
+
+    private fun unwrapJs(raw: String?): String? = runCatching {
+        org.json.JSONTokener(raw ?: return null).nextValue() as? String
+    }.getOrNull()
+
+    /** The translator's window onto the live page and onto threads. */
+    private val translateIo = object : PageTranslator.Io {
+        override fun collect(maxChars: Int, done: (String?) -> Unit) {
+            val wv = webView ?: return done(null)
+            wv.evaluateJavascript(BrowserPageActions.script(requireContext(), "translate_collect", maxChars)) { done(unwrapJs(it)) }
+        }
+        override fun apply(mapJson: String, done: (String?) -> Unit) {
+            val wv = webView ?: return done(null)
+            wv.evaluateJavascript(BrowserPageActions.script(requireContext(), "translate_apply").replace("__MAP__", mapJson)) { done(unwrapJs(it)) }
+        }
+        override fun restore(done: (String?) -> Unit) {
+            val wv = webView ?: return done(null)
+            wv.evaluateJavascript(BrowserPageActions.script(requireContext(), "translate_restore")) { done(unwrapJs(it)) }
+        }
+        override fun background(work: () -> Unit) { Thread(work).start() }
+        override fun main(work: () -> Unit) { ui.post { if (isAdded) work() } }
+    }
+    private val translator = PageTranslator(translateIo) { st -> translateState.value = st }
+
+    private val translateMore = Runnable { translator.more() }
+
+    private fun textToolsPort() = TextToolsClientPort(BrowserPageActions.textTools(requireContext()))
+
+    private fun engineSetting(): String =
+        browserSettings.string("translate_engine")?.takeIf { it in PageTranslate.ENGINES } ?: PageTranslate.ON_DEVICE
+
+    private fun engineName(engine: String) = if (engine == PageTranslate.OPENROUTER) "OpenRouter (LLM)" else "On-device ML"
+
+    private fun targetTag() = PageTranslate.targetTag(browserSettings.string("translate_target"), java.util.Locale.getDefault().language)
+
+    /** Translate page, toggled: on = start (the chosen engine, the chosen language); on again = the originals back. */
+    private fun toggleTranslate(): JSONObject {
+        val ok = { JSONObject().put("ok", true).put("id", "translate") }
+        if (translator.active) { translator.restore(); return ok().put("translated", false) }
+        val engine = engineSetting()
+        val tag = targetTag()
+        translateEngineLabel = engineName(engine)
+        translator.start(PageTranslate.backend(engine, textToolsPort()), tag)
+        return ok().put("translated", true).put("engine", engine).put("target", tag)
+    }
+
+    private fun showTopics(wv: WebView) {
+        val st = TopicsState()
+        val engine = engineSetting()
+        val cap = config.addons["ai"]?.config?.optJSONObject("summarize")?.optInt("input_cap_chars", 12000) ?: 12000
+        st.engine = engineName(engine)
+        overlay { close ->
+            BrowserTopicsPanel(st,
+                onCopy = {
+                    val clip = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    clip?.setPrimaryClip(android.content.ClipData.newPlainText("topics", PageTopics.asText(st.topics)))
+                    toast("Copied")
+                }, onClose = close)
+        }
+        BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "page_topics", cap)) { r ->
+            val page = PageTopics.parsePage(r?.toString())
+            if (page == null) { st.loading = false; st.error = "There is no readable text on this page."; return@run }
+            if (engine != PageTranslate.OPENROUTER) {
+                st.topics = PageTopics.outline(page); st.note = PageTopics.ON_DEVICE_NOTE; st.loading = false
+                return@run
+            }
+            val port = textToolsPort()
+            Thread {
+                val res = if (port.installed()) port.summariseWith(PageTopics.llmInput(page, cap),
+                    PageTopics.prompt(PageTranslate.languageName(targetTag()))) else com.diegonmarcos.superapp.texttools.TextTools.Result.failed(com.diegonmarcos.superapp.texttools.TextTools.NOT_INSTALLED)
+                val label = port.providerLabel()
+                ui.post {
+                    if (!isAdded) return@post
+                    if (res.ok) { st.topics = PageTopics.parseTopics(res.text); if (!label.isNullOrBlank()) st.engine = "OpenRouter (LLM) · $label" }
+                    else { st.error = res.error.orEmpty(); st.topics = PageTopics.outline(page)
+                        st.note = "The model could not answer, so this is the page's own outline instead." }
+                    st.loading = false
+                }
+            }.start()
+        }
+    }
+
     // ── DETAIL mode (WebView) ────────────────────────────────────────
 
     /** Swap the active tab to [url] and draw it. */
@@ -491,6 +577,7 @@ class BrowserHostFragment : Fragment() {
 
     private fun showDetail(tab: BrowserTab) {
         teardownWebView()   // saves the tab being left (its back stack) and frees its WebView
+        translator.abandon()
         mode = Mode.DETAIL(tab.key)
         val tabKey = tab.key
         val url = tab.url
@@ -592,7 +679,7 @@ class BrowserHostFragment : Fragment() {
                 override fun onPageStarted(view: WebView?, startedUrl: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, startedUrl, favicon)
                     // A real navigation leaves reader view; the reader's own render does not.
-                    if (readerPending) readerPending = false else readerOn = false
+                    if (readerPending) readerPending = false else { readerOn = false; translator.abandon() }
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
                 }
@@ -652,6 +739,10 @@ class BrowserHostFragment : Fragment() {
             }
             // #886 the tab comes back where it was: its saved back stack when WebView can restore it,
             // else the page it last COMMITTED (never the url it was first opened with).
+            // New text arrives as the reader scrolls: translate it too while a translation is on.
+            setOnScrollChangeListener { _, _, _, _, _ ->
+                if (translator.active) { ui.removeCallbacks(translateMore); ui.postDelayed(translateMore, 700) }
+            }
             if (tab.isPrivate || !BrowserWebState.restore(ctx, this, tabKey)) loadUrl(url)
         }
         // The page area: the WebView, and over it the suggestions panel, which is a CHILD of this frame
@@ -663,6 +754,15 @@ class BrowserHostFragment : Fragment() {
                 BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
             }.apply {
                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            })
+            addView(ctx.kitComposeView(palette()) {
+                BrowserTranslateChip(translateState.value, translateEngineLabel, onTap = {
+                    if (translateState.value is PageTranslator.State.Failed && !translator.active) translateState.value = PageTranslator.State.Idle
+                    else translator.restore()
+                })
+            }.apply {
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                    android.view.Gravity.TOP or android.view.Gravity.END)
             })
         }
         column.addView(content)
@@ -1177,6 +1277,7 @@ class BrowserHostFragment : Fragment() {
             "can_go_back" to (page && wv!!.canGoBack()),
             "can_go_forward" to (page && wv!!.canGoForward()),
             "reader_on" to readerOn,
+            "translated" to translator.active,
             "desktop_mode" to desktopMode,
             "pinned" to (currentTab()?.pinned == true),
             "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
@@ -1226,13 +1327,16 @@ class BrowserHostFragment : Fragment() {
     }
 
     private fun showSettings() {
-        val extra = config.menu.grouped(facts()).firstOrNull { it.first.id == SETTINGS_SECTION }
-            ?.second.orEmpty().filter { it.item.id != "settings" }.map { it.sheet() }
+        val rows = config.menu.grouped(facts()).firstOrNull { it.first.id == SETTINGS_SECTION }
+            ?.second.orEmpty().filter { it.item.id != "settings" }
+        val inSection = rows.filter { it.item.settingsSection != null }.groupBy({ it.item.settingsSection!! }, { it.sheet() })
+        val extra = rows.filter { it.item.settingsSection == null }.map { it.sheet() }
         overlay { close ->
             BrowserSettingsScreen(
                 config.settings, value = { browserSettings.value(it) },
                 onSet = { k, v -> browserSettings.put(k, v) },
                 extra = extra, onExtra = { id -> close(); runAction(id) }, onClose = close,
+                sections = config.settingsSections, extraIn = inSection,
             )
         }
     }
@@ -1408,16 +1512,8 @@ class BrowserHostFragment : Fragment() {
                 else done(browserSettings.set("text_zoom", v)?.let { ok().put("ok", false).put("error", it) }
                     ?: ok().put("text_zoom", browserSettings.int("text_zoom")))
             }
-            "translate" -> {
-                wv ?: return needPage()
-                BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "page_text", 4000)) { r ->
-                    val text = r?.optString("text").orEmpty()
-                    BrowserPageActions.translate(wv, text) { out, err ->
-                        if (out != null) showTextPanel("Translation", out)
-                        done(if (out != null) ok().put("length", out.length) else ok().put("ok", false).put("error", err))
-                    }
-                }
-            }
+            "translate" -> { wv ?: return needPage(); done(toggleTranslate()) }
+            "summarize_topics" -> { wv ?: return needPage(); showTopics(wv); done(ok().put("started", true)) }
             "history" -> { showHistory(); done(ok()) }
             "bookmarks" -> { showBookmarks(); done(ok()) }
             "downloads" -> { showDownloads(); done(ok()) }

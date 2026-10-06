@@ -5,18 +5,20 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 
 | key | type | default | allowed | section | class | what it does |
 |---|---|---|---|---|---|---|
-| `search_engine_id` | enum | duckduckgo | qwant, duckduckgo, google | general | config | Where a typed query that is not a URL goes. |
-| `homepage` | string | "" |  | general | config | What an empty New tab opens. Empty = nothing (the dialog just closes). |
-| `restore_tabs_on_start` | bool | false |  | general | config | Launch into the last active tab instead of the tab grid. |
-| `desktop_mode` | bool | false |  | page | config | Desktop user agent + wide viewport for every page. |
-| `text_zoom` | int | 100 | 50..200 | page | config | WebSettings.textZoom, in percent. |
+| `search_engine_id` | enum | duckduckgo | qwant, duckduckgo, google | search | config | Where a typed query that is not a URL goes. |
+| `homepage` | string | "" |  | search | config | What an empty New tab opens. Empty = nothing (the dialog just closes). |
+| `restore_tabs_on_start` | bool | false |  | tabs | config | Launch into the last active tab instead of the tab grid. |
+| `desktop_mode` | bool | false |  | appearance | config | Desktop user agent + wide viewport for every page. |
+| `text_zoom` | int | 100 | 50..200 | appearance | config | WebSettings.textZoom, in percent. |
 | `javascript` | bool | true |  | privacy | config | Run page scripts. Off breaks most sites; per-site shields come later. |
 | `load_images` | bool | true |  | privacy | config | Off saves data on metered networks. |
 | `block_third_party_cookies` | bool | false |  | privacy | config | CookieManager.setAcceptThirdPartyCookies(false) on every page. |
-| `download_dir` | string | "" |  | general | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
+| `download_dir` | string | "" |  | data | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
 | `private_by_default` | bool | false |  | privacy | config | A new tab opens private: no history, no preview, no HTTP cache. Cookies are shared with normal tabs (Android WebView keeps them per process). |
 | `autofill_enabled` | bool | true |  | privacy | config | Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered. |
-| `summarize_route` | enum | "model" | model, on_device | add-ons | config | #823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences). |
-| `addons_enabled` | set | scraper, search, ai, vault | scraper, search, ai, vault | add-ons | config | The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled. |
+| `summarize_route` | enum | "model" | model, on_device | translate | config | #823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences). |
+| `addons_enabled` | set | scraper, search, ai, vault | scraper, search, ai, vault | advanced | config | The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled. |
 | `search_suggestions` | bool | true |  | search | config | While you type in the address bar, ask the default search engine for query suggestions (what you type is sent to it). Off = only the search row and your own history. |
 | `tab_strip` | bool | true |  | tabs | config | A row of small tab icons under the address bar: the tabs of the current group, and a + that opens a new tab in the same group. |
+| `translate_engine` | enum | "on_device" | on_device, openrouter | translate | config | Which engine Translate page uses, in place on the page. On-device ML = the fleet's translation library in Cloud Writer / Cloud Keyboard (offline, private). OpenRouter = the model chosen in that app's AI routing (needs the network; the key stays in that app). Summarise by topics needs OpenRouter. |
+| `translate_target` | enum | "device" | device, en, es, pt, fr, de, it, nl, pl, ru, ja, zh | translate | config | The language Translate page and Summarise by topics write in. |

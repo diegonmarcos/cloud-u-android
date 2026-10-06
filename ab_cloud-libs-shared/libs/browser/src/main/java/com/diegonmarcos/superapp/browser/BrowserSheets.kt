@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
-import com.diegonmarcos.superapp.uikit.KitSelectableTile
 import com.diegonmarcos.superapp.uikit.KitSettingsRow
 import com.diegonmarcos.superapp.uikit.KitSwitchRow
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -113,9 +115,16 @@ fun BrowserFindBar(count: Int?, onQuery: (String) -> Unit, onNext: (Boolean) -> 
 }
 
 /**
- * Settings, drawn from the catalogue: a switch per bool, a pick list per enum, a slider per
- * int, a field per string. Nothing here names a setting — add one to build.json and it appears.
+ * Settings, drawn from the catalogue: a switch per bool, chips per enum, a slider per int, a field per
+ * string. Nothing here names a setting — add one to build.json and it appears.
+ *
+ * #886 BY TOPIC: [sections] (build.json::ui.browser.settings_sections) is the order and the title of
+ * each topic; a setting lands in the one its `section` names, and a section nobody declared still
+ * shows (titled from its id) after the declared ones. [extraIn] puts a menu row (a screen) at the end
+ * of its topic, [extra] at the page's foot. Dense on purpose: one line per switch, chips instead of a
+ * list per choice, a sticky-free single scroll, all of it libs:ui-kit's rows.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BrowserSettingsScreen(
     catalogue: BrowserSettingsCatalogue,
@@ -124,29 +133,35 @@ fun BrowserSettingsScreen(
     extra: List<SheetRow>,
     onExtra: (String) -> Unit,
     onClose: () -> Unit,
+    sections: List<Pair<String, String>> = emptyList(),
+    extraIn: Map<String, List<SheetRow>> = emptyMap(),
 ) {
     val p = LocalKitPalette.current
     var tick by remember { mutableStateOf(0) }
+    val order = BrowserSettingsLayout.order(catalogue.settings, sections, extraIn.keys)
     Column(
-        Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(16.dp)
+        Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp)
             .testTag("browser:settings"),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClose) { Text("← Back") }
-            Text("Settings", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+            Text("Configs", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
         }
-        catalogue.settings.groupBy { it.section }.forEach { (section, settings) ->
-            KitSectionHeader(section.replaceFirstChar { it.uppercase() }, "", Modifier.padding(top = 12.dp))
-            settings.forEach { s ->
+        order.forEach { (id, title) ->
+            KitSectionHeader(title, "", Modifier.padding(top = 8.dp).testTag("browser:settings:section:$id"))
+            catalogue.settings.filter { it.section == id }.forEach { s ->
                 val v = tick.let { value(s.key) }   // reading tick re-reads the store after a write
                 val set = { x: Any -> onSet(s.key, x); tick += 1 }
                 when (s.type) {
                     "bool" -> KitSwitchRow(s.label, s.doc, v == true, { set(it) }, Modifier.testTag("browser:setting:${s.key}"))
                     "enum" -> {
-                        var open by remember { mutableStateOf(false) }
-                        KitSettingsRow(s.label, v?.toString().orEmpty(), Modifier.testTag("browser:setting:${s.key}"), onClick = { open = !open })
-                        if (open) s.values.forEach { opt ->
-                            KitSelectableTile(opt, "", selected = v == opt, onClick = { set(opt); open = false })
+                        KitSettingsRow(s.label, s.doc.take(90), Modifier.testTag("browser:setting:${s.key}"))
+                        FlowRow(Modifier.padding(start = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            s.values.forEach { opt ->
+                                FilterChip(selected = v == opt, onClick = { set(opt) },
+                                    label = { Text(BrowserSettingsLayout.optionLabel(s, opt)) },
+                                    modifier = Modifier.testTag("browser:setting:${s.key}:$opt"))
+                            }
                         }
                     }
                     "int" -> {
@@ -157,12 +172,15 @@ fun BrowserSettingsScreen(
                     }
                     "string" -> {
                         var t by remember(v) { mutableStateOf(v?.toString().orEmpty()) }
-                        Text(s.label, color = p.textPrimary)
                         OutlinedTextField(t, { t = it }, Modifier.fillMaxWidth().testTag("browser:setting:${s.key}"),
-                            singleLine = true, supportingText = { Text(s.doc) })
-                        TextButton({ set(t) }) { Text("Save") }
+                            singleLine = true, label = { Text(s.label) }, supportingText = { Text(s.doc) },
+                            trailingIcon = { TextButton({ set(t) }) { Text("Save") } })
                     }
                 }
+            }
+            extraIn[id].orEmpty().forEach { r ->
+                KitSettingsRow(r.label, if (r.enabled) "" else r.why.orEmpty(), Modifier.testTag("browser:menu:${r.id}"),
+                    onClick = if (r.enabled) ({ onExtra(r.id) }) else null)
             }
         }
         if (extra.isNotEmpty()) {
@@ -173,6 +191,25 @@ fun BrowserSettingsScreen(
             }
         }
     }
+}
+
+/** #886 the topic order and option wording of the Configs page, pure so it is JVM-tested. */
+object BrowserSettingsLayout {
+
+    /** (id, title) of every topic to draw: declared ones first (when they hold something), then any other. */
+    fun order(settings: List<BrowserSetting>, declared: List<Pair<String, String>>, extraSections: Set<String>): List<Pair<String, String>> {
+        val used = settings.map { it.section }.toSet() + extraSections
+        val known = declared.filter { it.first in used }
+        val rest = settings.map { it.section }.filter { s -> declared.none { it.first == s } }.distinct()
+            .map { it to it.replaceFirstChar { c -> c.uppercase() } }
+        val restExtra = extraSections.filter { s -> declared.none { it.first == s } && rest.none { it.first == s } }
+            .map { it to it.replaceFirstChar { c -> c.uppercase() } }
+        return known + rest + restExtra
+    }
+
+    /** `on_device` → `On device`; an engine id → its label is not known here, so it is shown as written. */
+    fun optionLabel(s: BrowserSetting, opt: String): String =
+        s.valueLabels[opt] ?: if (opt.isEmpty()) "Default" else opt.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
 
 /** A titled, scrollable block of text over a scrim (translation, tab groups). */

@@ -138,7 +138,7 @@
           "type": "enum",
           "values_from": "search_engines",
           "label": "Search engine",
-          "section": "general",
+          "section": "search",
           "class": "config",
           "doc": "Where a typed query that is not a URL goes."
         },
@@ -147,7 +147,7 @@
           "type": "string",
           "default": "",
           "label": "Homepage",
-          "section": "general",
+          "section": "search",
           "class": "config",
           "doc": "What an empty New tab opens. Empty = nothing (the dialog just closes)."
         },
@@ -156,7 +156,7 @@
           "type": "bool",
           "default": false,
           "label": "Reopen last tab on launch",
-          "section": "general",
+          "section": "tabs",
           "class": "config",
           "doc": "Launch into the last active tab instead of the tab grid."
         },
@@ -165,7 +165,7 @@
           "type": "bool",
           "default": false,
           "label": "Desktop site",
-          "section": "page",
+          "section": "appearance",
           "class": "config",
           "doc": "Desktop user agent + wide viewport for every page."
         },
@@ -176,7 +176,7 @@
           "min": 50,
           "max": 200,
           "label": "Text size (%)",
-          "section": "page",
+          "section": "appearance",
           "class": "config",
           "doc": "WebSettings.textZoom, in percent."
         },
@@ -212,7 +212,7 @@
           "type": "string",
           "default": "",
           "label": "Download folder",
-          "section": "general",
+          "section": "data",
           "class": "device",
           "doc": "Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone."
         },
@@ -243,7 +243,7 @@
           ],
           "default": "model",
           "label": "Summarize with",
-          "section": "add-ons",
+          "section": "translate",
           "class": "config",
           "doc": "#823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences)."
         },
@@ -252,7 +252,7 @@
           "type": "set",
           "values_from": "addons",
           "label": "Enabled add-ons",
-          "section": "add-ons",
+          "section": "advanced",
           "class": "config",
           "doc": "The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled."
         },
@@ -273,6 +273,60 @@
           "section": "tabs",
           "class": "config",
           "doc": "A row of small tab icons under the address bar: the tabs of the current group, and a + that opens a new tab in the same group."
+        },
+        {
+          "key": "translate_engine",
+          "type": "enum",
+          "values": [
+            "on_device",
+            "openrouter"
+          ],
+          "default": "on_device",
+          "label": "Translate with",
+          "section": "translate",
+          "class": "config",
+          "value_labels": {
+            "on_device": "On-device ML",
+            "openrouter": "OpenRouter (LLM)"
+          },
+          "doc": "Which engine Translate page uses, in place on the page. On-device ML = the fleet's translation library in Cloud Writer / Cloud Keyboard (offline, private). OpenRouter = the model chosen in that app's AI routing (needs the network; the key stays in that app). Summarise by topics needs OpenRouter."
+        },
+        {
+          "key": "translate_target",
+          "type": "enum",
+          "values": [
+            "device",
+            "en",
+            "es",
+            "pt",
+            "fr",
+            "de",
+            "it",
+            "nl",
+            "pl",
+            "ru",
+            "ja",
+            "zh"
+          ],
+          "default": "device",
+          "label": "Translate into",
+          "section": "translate",
+          "class": "config",
+          "value_labels": {
+            "device": "Phone language",
+            "en": "English",
+            "es": "Spanish",
+            "pt": "Portuguese",
+            "fr": "French",
+            "de": "German",
+            "it": "Italian",
+            "nl": "Dutch",
+            "pl": "Polish",
+            "ru": "Russian",
+            "ja": "Japanese",
+            "zh": "Chinese"
+          },
+          "doc": "The language Translate page and Summarise by topics write in."
         }
       ],
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
@@ -486,6 +540,16 @@
             "requires": [
               "page",
               "text_tools"
+            ],
+            "kind": "toggle",
+            "checked": "translated"
+          },
+          {
+            "id": "summarize_topics",
+            "section": "page",
+            "label": "Summarise page by topics",
+            "requires": [
+              "page"
             ]
           },
           {
@@ -569,7 +633,8 @@
             "id": "profile",
             "section": "settings",
             "label": "Profile (autofill)",
-            "kind": "screen"
+            "kind": "screen",
+            "settings_section": "privacy"
           },
           {
             "id": "default_browser",
@@ -577,7 +642,8 @@
             "label": "Set as default browser",
             "requires": [
               "can_be_default"
-            ]
+            ],
+            "settings_section": "advanced"
           }
         ]
       },
@@ -939,6 +1005,37 @@
             }
           ]
         }
+      ],
+      "_doc_settings_sections": "#886 Configs is organised BY TOPIC: each setting's `section` is one of these ids, drawn in this order under this title (BrowserSettingsLayout); a topic with nothing in it is not drawn. Menu rows of the settings section may carry settings_section to sit at the end of a topic.",
+      "settings_sections": [
+        {
+          "id": "search",
+          "label": "Search"
+        },
+        {
+          "id": "privacy",
+          "label": "Privacy & security"
+        },
+        {
+          "id": "tabs",
+          "label": "Tabs & groups"
+        },
+        {
+          "id": "translate",
+          "label": "Translate & summary"
+        },
+        {
+          "id": "appearance",
+          "label": "Appearance"
+        },
+        {
+          "id": "data",
+          "label": "Data & storage"
+        },
+        {
+          "id": "advanced",
+          "label": "Advanced"
+        }
       ]
     },
     "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
@@ -1023,7 +1120,8 @@
       "dir": "test",
       "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs. A missing tool does not make a tester fail - it makes the tester answer from the tool's absence. These testers use python3 for whole-string and JSON comparisons; naming it converts a silent green into a loud red.",
       "requires": [
-        "python3"
+        "python3",
+        "node"
       ]
     },
     "unit": {
