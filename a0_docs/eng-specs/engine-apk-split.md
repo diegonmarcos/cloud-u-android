@@ -62,7 +62,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | net | contract + client of net-wg | 2.57 / – / – / 6.67 | superapp | – | stays (client half, already split) |
 | net-wg | engine (WireGuard) | 19.80 / 8.49 / – / 6.70 | nothing (own APK) | – | done |
 | **news** | engine | 2.33 / – / – / 5.76 | nothing (news binds it by handshake) | – | **MOVE 5** (stage 4); closes F2 and F3 for news |
-| ops | GUI | 3.49 / – / – / 8.69 | superapp, c3 | – | stays |
+| ops | GUI + Dagu client | 3.49 / – / – / 8.69 | superapp, c3 | per page open / Run tap | **MOVE 8** (#871): the HTTPS calls to Dagu and the parse of its payloads leave for `Cloud-Lib-Ops-Engine.apk`; the Dagu page, the encrypted bearer storage and the thin client stay in `libs:ops` |
 | rclone | mixed: static `rclone` + `RcloneScreen` | 179.58 / 78.33 / – / 54.39 | drive (29.05 MB compressed) | per job, progress stream | **blocked as an IPC engine**: jobs read and write the shared store. The viable split is binary-only — Drive execs `librclone.so` out of the sibling lib APK in Drive's own uid (the rootfs precedent, `CloudRootfs.trustedLibSourceDir`) — and it needs an on-device check that an app may exec another package's extracted native lib |
 | search | GUI + launcher search | 2.51 / – / – / 6.19 | superapp | per keystroke | stays |
 | shizuku-adb-debug-tools | privileged channel | 11.02 / 2.13 / – / 12.52 | superapp (+ appstore, battery, updater) | – | blocked: the Shizuku grant is per package |
@@ -323,7 +323,7 @@ file, not a tree, so the move-6 mechanism does not apply.
 | rclone | jobs read and write the shared store, plus `RcloneScreen` (Compose). The binary-only split (Drive execs `librclone.so` from the lib APK in its own uid) still needs an on-device check that an app may exec another package's extracted native lib |
 
 GUI modules (appstore, bottomnav, browser, chat, cropper, file-editor, fin, gesture,
-keyboard, launcher-*, mail, maps, ops, panoramaviewer, scrollbar, wallet) are out of scope
+keyboard, launcher-*, mail, maps, panoramaviewer, scrollbar, wallet) are out of scope
 by the requirement.
 
 ## Move 7 — analytics: the POST leaves fifteen apps, the queue stays (#871)
@@ -353,3 +353,32 @@ shipped `SinkQueue`.
 **Not verified on a device.** The bind, the handshake and a delivery to the live Umami/Matomo are
 proven by static testers, the engine's JVM suite and the APK build only.
 
+## Move 8 — ops: the Dagu calls leave the SuperApp and C3, the page stays (#871)
+
+`libs:ops` is the Dagu page (a Fragment, hosted by the SuperApp and C3) plus the REST client behind
+it. The page draws in the host and keeps the user's bearer in the host's encrypted storage, so it
+stays; the client is request/response with no UI and no per-package grant, which is the shape moves 6
+and 7 already proved. Classified `gui` (not `contract`: the lib-classes guard holds a contract to
+drawing nothing, and this module draws the page); it leaves the migration backlog because the
+logic that was compiled in is now the engine.
+
+| piece | where | what it does |
+|---|---|---|
+| client | `libs/ops` (kept) | `IOpsEngine.aidl` (one call: `call(method, request)` + `methods()`), `OpsLink` (handshake through PackageManager before any bind, bound only for the length of one call), `DaguClient` (the typed surface the page was written against: `listDags`, `startDag`), `DaguPrefs` (server URL and bearer, encrypted, in the app). Consumer wiring is unchanged: the module name is the same |
+| engine | `libs/ops-engine` (new) | `OpsEngineService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `dagu_list`, `dagu_start`; `methodNames()` equals `dispatch()`), `DaguTransport` (the Dagu REST v1 calls and the parse of both payload shapes Dagu has served, pinned by `DaguTransportTest`) |
+| bearer | per call | the caller sends the server URL and the bearer in each request; the engine keeps neither and logs neither |
+| hosts | `OPS_HOSTS` | the engine calls only over https and only to the host of the fleet's declared `c3/dagu` `dagu_default_server`; a different server typed into the login form is refused with a sentence the page shows, because the engine's INTERNET must not be pointable at any host by a sibling app |
+| declaration | `libs/ops/engine-client.json`, fleet row `lib-ops-engine`, debug port 38229 | shared-client declaration; `build.gradle` resolves the package from the fleet manifest and merges `<queries>` into both consumers |
+| degradation | `OpsLink` | an absent, too-old or failing engine answers `{"ok":false,"error":...}`; `DaguClient` raises it as the `IOException` the page already shows, naming what to install (Store ▸ Cloud Constellation ▸ Libs). Never a crash |
+
+No GHA client existed in `libs:ops` (the `gha` page is still a stub), so none moved.
+
+**What a change now rebuilds.** An edit to the Dagu calls or the parse: `Cloud-Lib-Ops-Engine.apk` only
+(rebuild-scenarios: 0 apps, 1 lib). An edit to the page, the prefs or the client: the two consumers.
+
+**Checks.** `test-engine-services.sh` E8 requires the ops engine (+4 mutations); the contract guard
+covers `libs/ops/engine-client.json` with K1, K4, K6, K7, K8 cases; `lib-classes` moves `ops` to
+`gui` and `ops-engine` to `engine` (backlog 29 to 27).
+
+**Not verified on a device.** The bind, the handshake and a call to the live Dagu are proven by static
+testers, the engine's JVM suite and the APK build only.

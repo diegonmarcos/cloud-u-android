@@ -58,6 +58,14 @@ AN=ab_cloud-libs-shared/libs/analytics
 SINK=ab_cloud-libs-shared/libs/analytics-sink
 ANCLIENT=$AN/src/main/java/com/diegonmarcos/superapp/analytics/SinkLink.kt
 SINKSVC=$SINK/src/main/java/com/diegonmarcos/superapp/analytics/sink/AnalyticsSinkService.kt
+# #871 the ops engine: a SHARED client (libs:ops, engine-client.json) the SuperApp and C3 compile, binding an engine neither compiles
+OPS=ab_cloud-libs-shared/libs/ops
+OPSENGINE=ab_cloud-libs-shared/libs/ops-engine
+OPSCLIENT=$OPS/src/main/java/com/diegonmarcos/superapp/ops/OpsLink.kt
+OPSSVC=$OPSENGINE/src/main/java/com/diegonmarcos/superapp/ops/engine/OpsEngineService.kt
+for f in "$ROOT/$OPS/engine-client.json" "$ROOT/$OPSCLIENT" "$ROOT/$OPSSVC"; do
+    [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
+done
 for f in "$ROOT/$AN/engine-client.json" "$ROOT/$ANCLIENT" "$ROOT/$SINKSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
@@ -81,6 +89,7 @@ stage() {
     cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
     cp -r "$ROOT/$IMG" "$WORK/t/$IMG"; cp -r "$ROOT/$IMGENGINE" "$WORK/t/$IMGENGINE"
     cp -r "$ROOT/$AN" "$WORK/t/$AN"; cp -r "$ROOT/$SINK" "$WORK/t/$SINK"
+    cp -r "$ROOT/$OPS" "$WORK/t/$OPS"; cp -r "$ROOT/$OPSENGINE" "$WORK/t/$OPSENGINE"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -214,11 +223,30 @@ stage; js "$AN/engine-client.json" 'd["engines"]["analytics"]["fleet"] = "lib-an
 landed "$AN/engine-client.json" 'lib-analytics-sink-renamed' && red "K1 #871 the analytics client names a Store row that does not exist" "K1"
 stage; js "$DRIVEBJ" 'd["modules"]["libs:analytics-sink"] = {"dir": "../ab_cloud-libs-shared/libs/analytics-sink", "type": "library"}'
 landed "$DRIVEBJ" '"libs:analytics-sink"' && red "K6 #871 an app declares the sink engine's module (it would compile the POST back in)" "K6"
+stage; sub "$OPSSVC" 'const val DAGU_START = "dagu_start"' 'const val DAGU_START = "dagu_start2"'
+landed "$OPSSVC" '"dagu_start2"' && red "K4 #871 the ops engine renames a method the SuperApp's and C3's client still calls" "K4"
+stage; python3 - "$WORK/t/$OPSCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "        if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$OPSCLIENT" \
+    && red "K7 #871 the ops client binds without a contract floor" "K7"
+stage; sub "$OPS/src/main/AndroidManifest.xml" '<package android:name="${opsEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${opsEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$OPS/src/main/AndroidManifest.xml" \
+    && red "K8 #871 the ops client stops querying its engine for every consumer" "K8"
+stage; js "$OPS/engine-client.json" 'd["engines"]["ops"]["fleet"] = "lib-ops-engine-renamed"'
+landed "$OPS/engine-client.json" 'lib-ops-engine-renamed' && red "K1 #871 the ops client names a Store row that does not exist" "K1"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:ops-engine"] = {"dir": "../ab_cloud-libs-shared/libs/ops-engine", "type": "library"}'
+landed "$DRIVEBJ" '"libs:ops-engine"' && red "K6 #871 an app declares the ops engine's module (it would compile the Dagu calls back in)" "K6"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$IMG/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$AN/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+js "$OPS/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo

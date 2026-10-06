@@ -39,7 +39,8 @@
 #       move 6), calc (Cloud Calc, #767) and ml-l-sound-yamnet (the sound identification
 #       Cloud Calc and Cloud Camera reach through libs:ml-l-sound, #798) and
 #       fleetconfig (#825: every fleet app's FleetConfigProvider binds it) and analytics-sink (#871:
-#       the POST of every app's analytics events, reached through libs:analytics). An engine whose contract meta-data
+#       the POST of every app's analytics events, reached through libs:analytics) and ops-engine (#871: the
+#       Dagu calls of the SuperApp's and C3's Dagu page, reached through libs:ops). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
@@ -55,7 +56,7 @@ GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
                 "$LIBS/news/src/main/AndroidManifest.xml" "$LIBS/calc/src/main/AndroidManifest.xml" \
                 "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" \
-                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" "$LIBS/analytics-sink/src/main/AndroidManifest.xml" \
+                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" "$LIBS/analytics-sink/src/main/AndroidManifest.xml" "$LIBS/ops-engine/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -185,7 +186,7 @@ for module in modules:
                 no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
                    "the moment the browser is up")
 
-for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink", "ops-engine"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -212,7 +213,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp -r "$LIBS/ops-engine" "$MUT/libs/ops-engine"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -383,6 +384,33 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     python3 -c 'import sys; sys.exit(0 if "project(%s:libs:core%s)" % (chr(39), chr(39)) not in open(sys.argv[1]).read() else 1)' "$MUT/libs/analytics-sink/build.gradle" \
         && _applied "$LIBS/analytics-sink/build.gradle" "$MUT/libs/analytics-sink/build.gradle" "implementation project(':libs:analytics')" \
         && _red "E5 #871 the sink engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
+
+M_OPSMF="$MUT/libs/ops-engine/src/main/AndroidManifest.xml"
+M_OPSSVC="$MUT/libs/ops-engine/src/main/java/com/diegonmarcos/superapp/ops/engine/OpsEngineService.kt"
+R_OPSSVC="$LIBS/ops-engine/src/main/java/com/diegonmarcos/superapp/ops/engine/OpsEngineService.kt"
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_OPSMF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/ops-engine/src/main/AndroidManifest.xml" "$M_OPSMF" 'engine.VERSION' \
+        && _red "E8 #871 the ops engine the SuperApp's and C3's Dagu page calls through stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_OPSSVC" '        DAGU_START -> DaguTransport.start(JSONObject(request))
+' ''
+    python3 -c 'import sys; sys.exit(0 if "DAGU_START -> DaguTransport" not in open(sys.argv[1]).read() else 1)' "$M_OPSSVC" \
+        && _applied "$R_OPSSVC" "$M_OPSSVC" 'DAGU_LIST -> DaguTransport' \
+        && _red "E4 #871 the ops engine lists dagu_start but its dispatch no longer answers it (the Run button would fail)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_OPSMF" 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' ''
+    _applied "$LIBS/ops-engine/src/main/AndroidManifest.xml" "$M_OPSMF" 'android:exported="true"' \
+        && _red "E1 #871 the ops engine is exported without the signature guard (any app could drive its INTERNET with a bearer)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$MUT/libs/ops-engine/build.gradle" "    implementation project(':libs:core')
+" ''
+    python3 -c 'import sys; sys.exit(0 if "project(%s:libs:core%s)" % (chr(39), chr(39)) not in open(sys.argv[1]).read() else 1)' "$MUT/libs/ops-engine/build.gradle" \
+        && _applied "$LIBS/ops-engine/build.gradle" "$MUT/libs/ops-engine/build.gradle" "implementation project(':libs:ops')" \
+        && _red "E5 #871 the ops engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
 [ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }

@@ -23,6 +23,26 @@ def c3Section = buildJson.ui.sections?.find { it.id == 'c3' } ?: buildJson.ui.ca
 def daguPage = c3Section?.pages?.find { it.id == 'dagu' }
 def daguServer = daguPage?.dagu_default_server ?: ''
 
+// #871 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.ops
+if (engineDecl == null) throw new GradleException("libs:ops: engine-client.json::engines.ops is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:ops: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:ops: engine-client.json::engines.ops.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def opsEnginePackage = engineFleet.package.toString()
+def opsAction        = engineDecl.action.toString().replace('{package}', opsEnginePackage)
+def opsMinContract   = engineDecl.min_contract as int
+if (opsMinContract < 1) throw new GradleException("libs:ops: engines.ops.min_contract must be >= 1")
+
 android {
     namespace 'com.diegonmarcos.superapp.ops'
     compileSdk 36
@@ -31,9 +51,17 @@ android {
         minSdk 26
         consumerProguardFiles 'consumer-rules.pro'
         buildConfigField "String", "DAGU_DEFAULT_SERVER", "\"${daguServer}\""
+        // #871 the ops engine that makes the HTTPS calls to Dagu (Cloud-Lib-Ops-Engine.apk).
+        buildConfigField "String", "OPS_ENGINE_PACKAGE",      "\"${opsEnginePackage}\""
+        buildConfigField "String", "OPS_ENGINE_ACTION",       "\"${opsAction}\""
+        buildConfigField "int",    "OPS_ENGINE_MIN_CONTRACT", "${opsMinContract}"
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [opsEnginePackage: opsEnginePackage]
     }
     buildFeatures {
         buildConfig = true
+        aidl = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

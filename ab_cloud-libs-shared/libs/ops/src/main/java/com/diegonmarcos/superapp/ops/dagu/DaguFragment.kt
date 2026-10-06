@@ -86,7 +86,7 @@ class DaguFragment : Fragment() {
             status.text = "Testing…"
             saveBtn.isEnabled = false
             Thread {
-                val result = runCatching { DaguClient(url, token).listDags() }
+                val result = runCatching { DaguClient(ctx, url, token).listDags() }
                 root.post {
                     result.onSuccess {
                         prefs.serverUrl = url
@@ -147,7 +147,7 @@ class DaguFragment : Fragment() {
         list.addView(TextView(ctx).apply {
             text = "Loading…"; setTextColor(0xAAFFFFFF.toInt()); textSize = 13f
         })
-        val client = DaguClient(prefs.serverUrl, prefs.bearerToken)
+        val client = DaguClient(ctx, prefs.serverUrl, prefs.bearerToken)
         Thread {
             val result = runCatching { client.listDags() }
             root.post {
@@ -250,7 +250,7 @@ class DaguFragment : Fragment() {
             // Disable immediately so a double-tap cannot queue two runs.
             btn.isEnabled = false
             btn.text = "Starting…"
-            val client = DaguClient(prefs.serverUrl, prefs.bearerToken)
+            val client = DaguClient(ctx, prefs.serverUrl, prefs.bearerToken)
             Thread {
                 val result = runCatching { client.startDag(d.fileName) }
                 root.post {

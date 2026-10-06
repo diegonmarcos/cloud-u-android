@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:ops-engine — the OPS ENGINE (#871), shipped only as Cloud-Lib-Ops-Engine.apk. Apps compile
+     libs:ops (the contract half) and hand this service one Dagu request per call; it makes the
+     HTTPS call from THIS process, with the bearer the caller sent for that call and nothing stored. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The call is this engine's whole job; apps keep their own INTERNET. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.superapp.ops.engine.OpsEngineService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

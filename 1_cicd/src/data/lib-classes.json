@@ -8,7 +8,7 @@
     "pinned": "Non-GUI, but bound to the consuming process by an OS boundary no IPC fixes; the reason is required.",
     "logic": "Non-GUI logic still compiled into its apps: the migration backlog. Each one is a candidate engine."
   },
-  "backlog_baseline": 29,
+  "backlog_baseline": 27,
   "libs": {
     "analytics":               { "class": "contract", "why": "#871 engine-apk-split move 7: the contract half of the analytics sink -- the IAnalyticsSink wire, the SinkLink client, and what is per app and must survive an absent engine (the bounded per-sink queue, the consent flag, the visitor id, the site ids baked from the consuming app's build.json). The HTTP POST and the Umami/Matomo wire formats are the engine's (libs:analytics-sink). Stays dependency-free (no libs:core, no libs:databackend) because the upstream forks compile it with no shared-module graph, so the wire is its own one-method AIDL.", "budget_lines": 460 },
     "analytics-sink":          { "class": "engine",   "why": "#871 Cloud-Lib-Analytics-Sink: the HTTP POST of an analytics event to Umami and Matomo, in its own process; every app compiles libs:analytics (the contract) and none compiles this." },
@@ -59,7 +59,8 @@
     "net":                     { "class": "contract", "why": "Typed INetBackend + Tunnel state/config types; the engine is libs:net-wg.", "budget_lines": 3200 },
     "net-wg":                  { "class": "engine",   "why": "Cloud-Lib-Net-Wg (libwg-go.so moved out of every app)." },
     "news":                    { "class": "engine",   "why": "Cloud-Lib-News; cloud-news binds it." },
-    "ops":                     { "class": "logic",    "why": "Dagu/GHA trigger client (SuperApp, C3)." },
+    "ops":                     { "class": "gui",      "why": "The Dagu page (DaguFragment: DAG list, Run buttons, bearer login) hosted by cloud-superapp and C3. #871 engine-apk-split move 8: its HTTPS calls to Dagu and the parse of its two payload shapes left for libs:ops-engine; what stays is the page, DaguPrefs' encrypted server URL and bearer, and the thin client (the IOpsEngine wire, OpsLink's handshake-and-bind, the typed DaguClient). Classified gui, not contract: a contract draws nothing, and this one draws the page. An absent engine shows the sentence that says what to install."},
+    "ops-engine":              { "class": "engine",   "why": "#871 Cloud-Lib-Ops-Engine: the HTTPS calls to Dagu (list the DAGs, start one), in their own process and only to the fleet's declared Dagu host; the SuperApp and C3 compile libs:ops (the contract) and neither compiles this." },
     "panoramaviewer":          { "class": "gui",      "why": "Upstream panorama viewer, media-center only." },
     "rclone":                  { "class": "logic",    "why": "Drive's rclone engine client, compiled in." },
     "scrollbar":               { "class": "gui",      "why": "Upstream fast-scrollbar, media-center only." },

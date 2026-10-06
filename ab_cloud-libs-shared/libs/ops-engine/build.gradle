@@ -1,0 +1,72 @@
+// libs:ops-engine — the OPS ENGINE (#871, engine-apk-split move 8): the HTTPS calls to Dagu
+// (list the DAGs, start one), shipped only as Cloud-Lib-Ops-Engine.apk. The SuperApp and C3 compile
+// libs:ops (the contract half: IOpsEngine.aidl, the OpsLink client, the Dagu page and the bearer
+// storage) and neither compiles this module, so a change to how Dagu is called republishes this APK
+// and no app. Do not add this module to an app's module map or ship watch list: the engine contract
+// guard's K6 fails it.
+//
+// An app with no engine installed loses nothing but the calls: each answers an error the page shows
+// ("install it from Store"), never a crash.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// The only hosts this engine will call: the Dagu server the fleet declares (the c3/dagu page's
+// dagu_default_server, read from the same place libs:ops reads it). A request is built by a CLIENT
+// in another app; without this a sibling app could point the engine's INTERNET, carrying a bearer,
+// at any host.
+def opsHome = new File(projectDir, '../../build.json')
+if (!opsHome.isFile()) throw new GradleException("libs:ops-engine: no build.json at ${opsHome}")
+def ui = new groovy.json.JsonSlurper().parse(opsHome).ui
+def c3 = ui?.sections?.find { it.id == 'c3' } ?: ui?.carried_c3
+def daguServer = c3?.pages?.find { it.id == 'dagu' }?.dagu_default_server
+def opsHosts = [daguServer].findAll { it }.collect { new URI(it.toString()).host }.unique()
+if (opsHosts.isEmpty()) throw new GradleException("libs:ops-engine: ${opsHome}::ui c3/dagu declares no dagu_default_server")
+
+android {
+    namespace 'com.diegonmarcos.superapp.ops.engine'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "OPS_HOSTS", "\"${opsHosts.join(',')}\""
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
+    implementation project(':libs:core')
+    // The wire (IOpsEngine) this service implements.
+    implementation project(':libs:ops')
+
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
+}
