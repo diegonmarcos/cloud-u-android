@@ -48,7 +48,9 @@ object BrowserWebState {
         try {
             p.unmarshall(bytes, 0, bytes.size); p.setDataPosition(0)
             val b = p.readBundle(WebView::class.java.classLoader) ?: return false
-            wv.restoreState(b) != null
+            val list = wv.restoreState(b) ?: return false
+            // #893 a state whose current entry is a POST result would replay it from the cache (ERR_CACHE_MISS): refuse it.
+            !BrowserNavPolicy.isFormPostResult(list.currentItem?.url)
         } finally { p.recycle() }
     }.getOrDefault(false)
 

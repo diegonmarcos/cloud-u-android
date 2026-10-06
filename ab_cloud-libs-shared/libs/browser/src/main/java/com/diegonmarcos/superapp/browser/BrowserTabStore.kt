@@ -77,6 +77,7 @@ object BrowserTabStore {
     fun shouldCommit(url: String?): Boolean {
         val u = url?.trim().orEmpty()
         if (u.isEmpty()) return false
+        if (BrowserNavPolicy.isFormPostResult(u)) return false   // #893 a POST result cannot be reloaded (ERR_CACHE_MISS)
         val low = u.lowercase()
         return low.startsWith("http://") || low.startsWith("https://") || low.startsWith("file://")
     }

@@ -34,6 +34,7 @@ def check(root, ok):
     ok("tabs" in ui.get("bottom_nav", []) and any(s.get("id") == "tabs" for s in ui.get("sections", [])), "T1 Tabs is a section and an island item")
     ok('"tabs" -> host.openTabs()' in main_ and '"browser" -> host.openBrowser()' in main_, "T1 MainActivity routes the island to the host's doors")
     ok('if (f.isTabsOpen) "tabs" else "browser"' in main_, "T1 the pill shows Tabs while the switcher is on screen")
+    ok('text = " ← Tabs "' not in frag, "T1 the redundant Tabs button at the top left of the bar is gone (#893)")
     ok("fun openTabs()" in frag and "showGrid()" in frag[frag.find("fun openTabs()"):frag.find("fun openTabs()") + 160], "T1 openTabs shows the grid")
     ok("fun openBrowser()" in frag and "showDetail(t)" in frag[frag.find("fun openBrowser()"):frag.find("fun openBrowser()") + 400], "T1 openBrowser returns to the active tab")
     ok(os.path.exists(os.path.join(root, "ac_cloud-browser/app/src/main/res/drawable/ic_nav_tabs.xml")), "T1 the Tabs icon exists")
@@ -64,7 +65,8 @@ def check(root, ok):
 FRAG = LIB + "/BrowserHostFragment.kt"
 GRID = LIB + "/BrowserTabGrid.kt"
 main("tabs and groups", check, [
-    ("Tabs leaves the island", "ac_cloud-browser/build.json", '"bottom_nav": [\n      "browser",\n      "tabs",', '"bottom_nav": [\n      "browser",', "T1 Tabs is a section"),
+    ("Tabs leaves the island", "ac_cloud-browser/build.json", '"bottom_nav": [\n      "tabs",', '"bottom_nav": [\n      "browser",', "T1 Tabs is a section"),
+    ("the Tabs button returns to the bar", LIB + "/BrowserHostFragment.kt", "        // Address bar: a plain field.", "        bar.addView(TextView(ctx).apply { text = \" ← Tabs \" })\n        // Address bar: a plain field.", "Tabs button at the top left"),
     ("the island stops opening the switcher", APP + "/MainActivity.kt", '"tabs" -> host.openTabs()', '"tabs" -> Unit', "routes the island"),
     ("the pill stays on Browser", APP + "/MainActivity.kt", 'if (f.isTabsOpen) "tabs" else "browser"', '"browser"', "shows Tabs"),
     ("the grid stops hit-testing", GRID, "BrowserTabGroups.hit(slots, cx, cy, key)", "null", "hit-tests"),

@@ -195,7 +195,7 @@ class BrowserHostFragment : Fragment() {
 
     private fun onBusChange(change: String) {
         when {
-            change == BrowserBus.SETTINGS -> webView?.let { applySettings(it); it.reload() }
+            change == BrowserBus.SETTINGS -> webView?.let { applySettings(it); if (!BrowserNavPolicy.isFormPostResult(it.url)) it.reload() }
             change == BrowserBus.TABS -> if (mode is Mode.GRID) showGrid()
             change.startsWith(BrowserBus.OPEN) -> navigateTo(change.removePrefix(BrowserBus.OPEN))
         }
@@ -662,13 +662,6 @@ class BrowserHostFragment : Fragment() {
             setBackgroundColor(0xCC1A0033.toInt())
             val pad = dp(8); setPadding(pad, pad, pad, pad)
         }
-        bar.addView(TextView(ctx).apply {
-            text = " ← Tabs "
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-            setOnClickListener { showGrid() }
-        })
-
         // Address bar: a plain field. Its suggestions are the Compose panel over the page (below), so
         // there is no PopupWindow to land on top of the bar or the keyboard.
         val urlBar = android.widget.EditText(ctx).apply {
@@ -738,6 +731,10 @@ class BrowserHostFragment : Fragment() {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.setGeolocationEnabled(true)
+            // #893 sign-in (Google, OAuth) opens a child window and posts back through window.opener.
+            settings.setSupportMultipleWindows(true)
+            settings.javaScriptCanOpenWindowsAutomatically = true
+            android.webkit.CookieManager.getInstance().setAcceptCookie(true)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
                 else View.IMPORTANT_FOR_AUTOFILL_YES
@@ -758,6 +755,13 @@ class BrowserHostFragment : Fragment() {
                 /** #887 inside a saved copy, a link to a page the copy holds opens the saved page, not the network. */
                 override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                     val target = request?.url?.toString() ?: return false
+                    // #893 web pages (accounts.google.com included) load as they are; an app link (intent:, market:)
+                    // never leaves the browser: its fallback url loads, else nothing happens.
+                    when (val d = BrowserNavPolicy.decide(target)) {
+                        is BrowserNavPolicy.Decision.Redirect -> { view?.loadUrl(d.url); return true }
+                        BrowserNavPolicy.Decision.Block -> return true
+                        BrowserNavPolicy.Decision.Load -> Unit
+                    }
                     if (request.isForMainFrame && offlineSites.isOffline(view?.url)) {
                         val local = offlineSites.resolve(target)
                         if (local != null) { view?.loadUrl(local); return true }
@@ -794,6 +798,12 @@ class BrowserHostFragment : Fragment() {
                 toast("Downloading ${d.file}")
             }
             webChromeClient = object : WebChromeClient() {
+                /** #893 window.open / target=_blank: a child window the opener can post back to (sign-in popups). */
+                override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
+                    val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                    return openPopup(transport, resultMsg)
+                }
+
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     val u = view?.url ?: return
                     if (BrowserTabStore.shouldCommit(u)) prefs.commit(tabKey, u, title ?: u)
@@ -854,6 +864,41 @@ class BrowserHostFragment : Fragment() {
         onOverlaysClosed?.invoke()
         rootContainer.removeAllViews()
         rootContainer.addView(column)
+    }
+
+    /** #893 the child window of a window.open, over the page; closing it (window.close, back) returns to the opener. */
+    private fun openPopup(transport: WebView.WebViewTransport, msg: android.os.Message): Boolean {
+        val ctx = context ?: return false
+        val child = WebView(ctx)
+        child.settings.javaScriptEnabled = true
+        child.settings.domStorageEnabled = true
+        child.settings.setSupportMultipleWindows(true)
+        child.settings.javaScriptCanOpenWindowsAutomatically = true
+        applyViewMode(child)
+        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(child, browserSettings.bool("block_third_party_cookies") != true)
+        val dialog = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar)
+        child.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean =
+                BrowserNavPolicy.decide(request?.url?.toString()) != BrowserNavPolicy.Decision.Load
+        }
+        child.webChromeClient = object : WebChromeClient() {
+            override fun onCloseWindow(window: WebView?) { dialog.dismiss() }
+            override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
+                val t = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                return openPopup(t, resultMsg)
+            }
+        }
+        dialog.setContentView(child)
+        dialog.setOnDismissListener { runCatching { child.stopLoading(); child.destroy() } }
+        dialog.setOnKeyListener { _, key, ev ->
+            if (key == android.view.KeyEvent.KEYCODE_BACK && ev.action == android.view.KeyEvent.ACTION_UP) {
+                if (child.canGoBack()) child.goBack() else dialog.dismiss(); true
+            } else false
+        }
+        dialog.show()
+        transport.webView = child
+        msg.sendToTarget()
+        return true
     }
 
     private fun refreshStripFor(tab: BrowserTab) {
@@ -964,9 +1009,8 @@ class BrowserHostFragment : Fragment() {
         browserSettings.bool("javascript")?.let { s.javaScriptEnabled = it }
         browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
         browserSettings.int("text_zoom")?.let { s.textZoom = it }
-        browserSettings.bool("block_third_party_cookies")?.let {
-            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, !it)
-        }
+        // #893 third-party cookies are ON unless the user blocks them (WebView's own default is off, which breaks sign-in).
+        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)
         applyViewMode(wv)
         applyShields(wv, url)
         // #887 file access only for a page of an offline copy (targetSdk 30+ has it off by default).
@@ -1303,12 +1347,13 @@ class BrowserHostFragment : Fragment() {
     private fun applyViewMode(wv: WebView) {
         val s = wv.settings
         if (desktopMode) {
-            config.userAgents["desktop"]?.let { s.userAgentString = it }
+            s.userAgentString = BrowserNavPolicy.cleanUserAgent(config.userAgents["desktop"] ?: s.userAgentString)
             s.useWideViewPort = true
             s.loadWithOverviewMode = true
             wv.setInitialScale(1)
         } else {
-            config.userAgents["mobile"]?.let { s.userAgentString = it }
+            // #893 never `; wv)` / `Version/x.x`: Google refuses sign-in to that (disallowed_useragent).
+            s.userAgentString = BrowserNavPolicy.cleanUserAgent(config.userAgents["mobile"] ?: s.userAgentString)
             s.useWideViewPort = false
             s.loadWithOverviewMode = false
             wv.setInitialScale(0)

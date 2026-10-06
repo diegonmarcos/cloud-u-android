@@ -1111,22 +1111,22 @@
     },
     "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
     "bottom_nav": [
-      "browser",
       "tabs",
+      "browser",
       "search",
       "configs"
     ],
     "sections": [
       {
-        "id": "browser",
-        "label": "Browser",
-        "icon": "browser",
-        "pages": []
-      },
-      {
         "id": "tabs",
         "label": "Tabs",
         "icon": "tabs",
+        "pages": []
+      },
+      {
+        "id": "browser",
+        "label": "Browser",
+        "icon": "browser",
         "pages": []
       },
       {
