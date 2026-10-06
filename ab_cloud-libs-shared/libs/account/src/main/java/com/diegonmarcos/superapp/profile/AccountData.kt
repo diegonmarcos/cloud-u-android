@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Process
 import com.diegonmarcos.superapp.core.FleetConfig
 import com.diegonmarcos.superapp.profile.AccountStore.Slot
+import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import org.json.JSONObject
 
@@ -25,8 +26,9 @@ import org.json.JSONObject
  *
  * [Provider] is the way out: `<package>.accountdata`, exported behind CONSTELLATION_DATA (the
  * fleet's signature permission, as FleetConfigProvider is) and re-checked in call(), because the
- * framework does not permission-check call() by itself. One method, [METHOD_EXPORT]; everything
- * else a ContentProvider can do is refused. It only ever READS: nothing a caller sends is written.
+ * framework does not permission-check call() by itself. Two methods, [METHOD_EXPORT] and (#874)
+ * [METHOD_SECRET]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
+ * caller sends is written.
  *
  * Limits, on purpose: the copy is one-way (Cloud Account -> SuperApp) and never overwrites a
  * store the receiver already holds, so a SuperApp that kept working before Cloud Account arrived
@@ -37,6 +39,11 @@ object AccountData {
     const val PKG = "com.diegonmarcos.cloudaccount"
     const val AUTHORITY = "$PKG.accountdata"
     const val METHOD_EXPORT = "export"
+    /** #874 one connection value (`arg` = its `section.key` path), only to a package the Secrets section granted it. */
+    const val METHOD_SECRET = "secret"
+    const val KEY_VALUE = "value"
+    /** #874 the grant that lets another package take [METHOD_EXPORT] (SuperApp's one-shot copy). */
+    const val GRANT_EXPORT = "account.export"
 
     const val KEY_OK = "ok"
     const val KEY_ERROR = "error"
@@ -97,6 +104,16 @@ object AccountData {
     }
 
     /**
+     * #874 A connection value (`fleet.bearer`, `auth.authelia_token`, …) from Cloud Account, or "" when it is not
+     * installed, refuses (no grant) or holds none. The value is the caller's to use, never to log or keep.
+     */
+    fun secret(ctx: Context, path: String): String {
+        if (ctx.packageName == PKG || !accountInstalled(ctx)) return ""
+        val r = runCatching { ctx.contentResolver.call(Uri.parse("content://$AUTHORITY"), METHOD_SECRET, path, null) }.getOrNull()
+        return if (r?.getBoolean(KEY_OK) == true) r.getString(KEY_VALUE).orEmpty() else ""
+    }
+
+    /**
      * The one-shot copy: runs when Cloud Account is installed and has not run to the end yet.
      * Each store is filled only if this app's own is EMPTY. Returns what was copied (for the log
      * and the tests); an empty list also marks the migration done, since there was nothing to take.
@@ -133,6 +150,23 @@ object AccountData {
         return copied
     }
 
+    /** #874 Whole-bundle import: writes the typed profile over this app's, key by key (a key the bundle lacks stays). */
+    fun restoreProfile(ctx: Context, typed: JSONObject): Boolean {
+        val sp = ctx.getSharedPreferences(PROFILE_FILE, Context.MODE_PRIVATE)
+        val ed = sp.edit()
+        for (k in typed.keys()) {
+            val e = typed.optJSONObject(k) ?: continue
+            when (e.optString("t")) {
+                "s" -> ed.putString(k, e.optString("v"))
+                "b" -> ed.putBoolean(k, e.optBoolean("v"))
+                "i" -> ed.putInt(k, e.optInt("v"))
+                "l" -> ed.putLong(k, e.optLong("v"))
+                "f" -> ed.putFloat(k, e.optDouble("v").toFloat())
+            }
+        }
+        return ed.commit()
+    }
+
     /** Fills [sp] from the typed export when it holds no profile of its own (only schema/install keys). */
     fun applyProfile(sp: SharedPreferences, text: String): Boolean {
         val src = runCatching { JSONObject(text) }.getOrNull() ?: return false
@@ -166,6 +200,10 @@ object AccountData {
 
     // ── the provider ─────────────────────────────────────────────────────
 
+    /** The calling package; a JVM test hands in another one (Binder cannot be spoofed under Robolectric). */
+    @Volatile var callerResolver: (Context) -> String =
+        { c -> c.packageManager.getPackagesForUid(Binder.getCallingUid())?.firstOrNull() ?: c.packageName }
+
     class Provider : ContentProvider() {
         override fun onCreate(): Boolean = true
 
@@ -174,8 +212,26 @@ object AccountData {
             if (Binder.getCallingUid() != Process.myUid() &&
                 ctx.checkCallingPermission(FleetConfig.PERMISSION) != PackageManager.PERMISSION_GRANTED)
                 return error("caller is not a fleet app")
-            if (method != METHOD_EXPORT) return error("unknown method $method")
-            return runCatching { export(ctx) }.getOrElse { error("${it.javaClass.simpleName}: ${it.message.orEmpty().take(160)}") }
+            return when (method) {
+                METHOD_EXPORT -> {
+                    // #874 the whole export carries every connection: only a package the Secrets section granted `account.export`.
+                    val who = caller(ctx)
+                    if (who != ctx.packageName && !AccountVault(ctx).grants.allow(who, GRANT_EXPORT)) error("no grant for $who")
+                    else runCatching { export(ctx) }.getOrElse { error("${it.javaClass.simpleName}: ${it.message.orEmpty().take(160)}") }
+                }
+                METHOD_SECRET -> secretFor(ctx, caller(ctx), arg)
+                else -> error("unknown method $method")
+            }
+        }
+
+        private fun caller(ctx: Context): String = callerResolver(ctx)
+
+        private fun secretFor(ctx: Context, caller: String, path: String?): Bundle {
+            if (path.isNullOrBlank()) return error("no key")
+            val vault = AccountVault(ctx)
+            if (caller != ctx.packageName && !vault.grants.allow(caller, path)) return error("no grant for $caller")
+            val v = vault.connection(path) ?: return Bundle().apply { putBoolean(KEY_OK, true); putString(KEY_VALUE, "") }
+            return Bundle().apply { putBoolean(KEY_OK, true); putString(KEY_VALUE, v.toString()) }
         }
 
         private fun error(why: String) = Bundle().apply { putBoolean(KEY_OK, false); putString(KEY_ERROR, why) }

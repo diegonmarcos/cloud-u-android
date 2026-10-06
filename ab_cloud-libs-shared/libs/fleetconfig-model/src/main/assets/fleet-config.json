@@ -914,10 +914,17 @@
   "import_configs": {
    "kind": "encrypted",
    "class": "secret",
-   "doc": "EncryptedSharedPreferences holding the imported configs JSON blob including auth.authelia_token and email; mostly credentials.",
+   "doc": "EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials.",
    "used_by": [
     "lib-account"
-   ]
+   ],
+   "keys": {
+    "configs_json": "secret",
+    "data_json": "secret",
+    "app_configs_json": "secret",
+    "grants_json": "device",
+    "grants_seeded": "device"
+   }
   },
   "kdeconnect_clipboard": {
    "kind": "prefs",
@@ -1589,23 +1596,37 @@
   }
  },
  "bundle": {
-  "_doc": "#873 THE BUNDLE ROUTES: where each value of Cloud Account's imported configs (import_configs: the vault export's wg / mail / auth sections) lands in the fleet, as declared stores. Fleet Setup (libs:account SetupPlan) reads this, finds every app that declares the store (used_by its module or one of its libs) and applies the key through that app's `<package>.fleetsetup` provider. A value the declared copy's `settings` subtree names itself (settings > app > file > key) needs no route. Edit here, never a copy in code; fleet-config-guard checks every route names a declared store and a key that store may migrate.",
+  "_doc": "#873/#874 THE BUNDLE ROUTES: where each Connections value of Cloud Account's vault (the imported configs blob, `section.key` paths) lands in the fleet, as declared stores. Fleet Setup (libs:account SetupPlan) finds every app that declares the store (used_by its module or one of its libs) and applies the key through that app's `<package>.fleetsetup` provider. A target with `pull` names the app Cloud Account reads the value FROM, once, when its vault holds none (AccountMigrate: the stores SuperApp kept). A value the declared copy's `settings` subtree or the Configs section names itself (app > store > file > key) needs no route. Edit here, never a copy in code; fleet-setup-guard checks every route names a declared store, a key it may migrate and a pull app that declares the store.",
   "mail.jmap_url": [
    {
     "store": "mail_jmap_prefs",
-    "key": "server"
+    "key": "server",
+    "pull": "aa_cloud-superapp"
    }
   ],
   "mail.username": [
    {
     "store": "mail_jmap_prefs",
-    "key": "email"
+    "key": "email",
+    "pull": "aa_cloud-superapp"
    }
   ],
   "mail.password": [
    {
     "store": "mail_jmap_prefs",
-    "key": "password"
+    "key": "password",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "fleet.bearer": [
+   {
+    "store": "dagu_prefs",
+    "key": "bearer_token",
+    "pull": "aa_cloud-superapp"
+   },
+   {
+    "store": "store_fleet_bearer",
+    "key": "token"
    }
   ],
   "auth.authelia_token": [
@@ -1618,10 +1639,95 @@
     "key": "token"
    }
   ],
+  "dagu.server_url": [
+   {
+    "store": "dagu_prefs",
+    "key": "server_url",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "dagu.user_label": [
+   {
+    "store": "dagu_prefs",
+    "key": "user_label",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "dns.preset": [
+   {
+    "store": "fleet_dns_prefs",
+    "key": "preset",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "dns.fallbacks": [
+   {
+    "store": "fleet_dns_prefs",
+    "key": "fallbacks",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
   "wg.wg0_private_key": [
    {
     "store": "wireguard_prefs",
-    "key": "if_privkey"
+    "key": "if_privkey",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.tunnel_name": [
+   {
+    "store": "wireguard_prefs",
+    "key": "tunnel_name",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.if_address": [
+   {
+    "store": "wireguard_prefs",
+    "key": "if_address",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.if_dns": [
+   {
+    "store": "wireguard_prefs",
+    "key": "if_dns",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.if_listen_port": [
+   {
+    "store": "wireguard_prefs",
+    "key": "if_listen_port",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.if_mtu": [
+   {
+    "store": "wireguard_prefs",
+    "key": "if_mtu",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.peers_json": [
+   {
+    "store": "wireguard_prefs",
+    "key": "peers_json",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.config_provider": [
+   {
+    "store": "wireguard_prefs",
+    "key": "config_provider",
+    "pull": "aa_cloud-superapp"
+   }
+  ],
+  "wg.tunnel_enabled": [
+   {
+    "store": "wireguard_prefs",
+    "key": "tunnel_enabled",
+    "pull": "aa_cloud-superapp"
    }
   ]
  },

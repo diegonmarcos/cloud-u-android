@@ -29,6 +29,18 @@ object FleetBearer {
         ctx.packageManager.getApplicationInfo(SUPERAPP_PKG, 0).enabled
     }.getOrDefault(false)
 
+    const val ACCOUNT_PKG = "com.diegonmarcos.cloudaccount"
+    const val ACCOUNT_AUTHORITY = "$ACCOUNT_PKG.accountdata"
+
+    /** #874 Cloud Account's fleet bearer (its Connections `fleet.bearer`, behind a grant), or "" when it is not installed, refuses or holds none. */
+    fun fromAccount(ctx: Context): String {
+        if (ctx.packageName == ACCOUNT_PKG) return ""
+        val ok = runCatching { ctx.packageManager.getApplicationInfo(ACCOUNT_PKG, 0).enabled }.getOrDefault(false)
+        if (!ok) return ""
+        val r = runCatching { ctx.contentResolver.call(Uri.parse("content://$ACCOUNT_AUTHORITY"), "secret", "fleet.bearer", null) }.getOrNull()
+        return if (r?.getBoolean(KEY_OK) == true) r.getString("value").orEmpty().trim() else ""
+    }
+
     /** SuperApp's token, or "" when it is not installed, refuses, holds none or fails. */
     fun fromSuperApp(ctx: Context): String {
         if (ctx.packageName == SUPERAPP_PKG || !superAppInstalled(ctx)) return ""
@@ -42,13 +54,14 @@ object FleetBearer {
     enum class Source { SUPERAPP, OWN, NONE }
 
     fun source(ctx: Context): Source = when {
-        fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP
+        // #874 the fleet's bearer, whichever of Cloud Account / SuperApp supplied it (the Store line says "the fleet's").
+        fromAccount(ctx).isNotEmpty() || fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP
         Own(ctx).token.isNotBlank() -> Source.OWN
         else -> Source.NONE
     }
 
     /** SuperApp's token when it is installed and holds one, else this app's own. */
-    fun resolve(ctx: Context): String = fromSuperApp(ctx).ifEmpty { Own(ctx).token.trim() }
+    fun resolve(ctx: Context): String = fromAccount(ctx).ifEmpty { fromSuperApp(ctx) }.ifEmpty { Own(ctx).token.trim() }
 
     /** This app's own entry: encrypted, degrading to plain prefs like DaguPrefs does. */
     class Own(context: Context) {

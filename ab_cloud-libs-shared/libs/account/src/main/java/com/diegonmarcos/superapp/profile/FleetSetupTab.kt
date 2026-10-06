@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.account.R
+import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
@@ -54,7 +55,7 @@ fun FleetSetupTab(model: AccountModel) {
     var busy by remember { mutableStateOf(false) }
     val outcomes = remember { mutableStateMapOf<String, FleetSetup.AppOutcome>() }
     val plan = remember(tick, model.version.intValue) {
-        runCatching { FleetSetup.plan(ctx, ConfigsPrefs(ctx).json, model.shown()) }.getOrNull()
+        runCatching { FleetSetup.plan(ctx, ConfigsPrefs(ctx).json, model.shown(), AccountVault(ctx).appConfigs()) }.getOrNull()
     }
     val apps = remember { runCatching { AccountFleet.manifest(ctx).apps.values.toList() }.getOrDefault(emptyList()) }
     val labels = remember { AccountFleet.fleetApps().associate { it.id to it.label } }

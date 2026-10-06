@@ -17,6 +17,7 @@ import androidx.security.crypto.MasterKey
 class ConfigsPrefs(context: Context) {
     private val appContext: Context = context.applicationContext ?: context
     private val prefs by lazy {
+        factory?.let { return@lazy it(context) }
         val key = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
@@ -164,10 +165,26 @@ class ConfigsPrefs(context: Context) {
         json = root.toString()
     }
 
+    /**
+     * #874 THE ACCOUNT VAULT'S OTHER SECTIONS live in this same encrypted file (`import_configs`, one
+     * keystore key), next to the connections blob above: no second silo. [text]/[putText] read and write
+     * one of them as JSON text (`data_json`, `app_configs_json`, `grants_json`); [AccountVault] is the
+     * typed face. Never logged.
+     */
+    fun text(key: String): String = prefs.getString(key, "") ?: ""
+    fun putText(key: String, value: String) { prefs.edit().putString(key, value).apply() }
+
     fun clear() { prefs.edit().clear().apply() }
 
     companion object {
+        /** The JVM suite's seam: plain prefs where the Android Keystore does not exist. null on a phone. */
+        @Volatile var factory: ((Context) -> android.content.SharedPreferences)? = null
+
         private const val K_JSON = "configs_json"
+        /** #874 the sections beside the connections blob (K_JSON): Data, Configs, Secrets (grants). */
+        const val K_DATA = "data_json"
+        const val K_APP_CONFIGS = "app_configs_json"
+        const val K_GRANTS = "grants_json"
         private const val SECTION_AUTH = "auth"
         private const val K_AUTHELIA_TOKEN = "authelia_token"
         private const val K_AUTHELIA_EMAIL = "authelia_email"

@@ -3,10 +3,11 @@ package com.diegonmarcos.cloudaccount
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
-import com.diegonmarcos.superapp.appstore.StoreImport
 import android.util.Log
 import com.diegonmarcos.superapp.profile.AccountDebugApi
 import com.diegonmarcos.superapp.profile.AccountHost
+import com.diegonmarcos.superapp.profile.AccountMigrate
+import com.diegonmarcos.superapp.settings.AccountVault
 
 /**
  * #867 Cloud Account: hosts libs:account as its own app.
@@ -23,6 +24,13 @@ class App : Application() {
         AccountHost.apply {
             route = { activity, route -> open(activity, route) }
             readThrough = false
+        }
+        // #874 the vault's Secrets section is enforced by this app's setup provider (`<package>.fleetsetup`) and by
+        // AccountData.Provider: install the grant-aware authorizer and seed the defaults the fleet relied on, once.
+        runCatching { AccountVault.install(this) }.onFailure { Log.w(TAG, "vault grants not installed: ${it.javaClass.simpleName}") }
+        // #874 take in what SuperApp kept (Dagu bearer, DNS preset, WireGuard tunnel, mail login), only where the vault is empty.
+        kotlin.concurrent.thread(name = "account-migrate") {
+            runCatching { AccountMigrate.run(this) }.onFailure { Log.w(TAG, "migration from SuperApp failed: ${it.javaClass.simpleName}") }
         }
         // /api/account/... on the fleet debug server, as in SuperApp.
         runCatching { AccountDebugApi.register(this) }
@@ -46,8 +54,6 @@ class App : Application() {
             val store = route.startsWith("extapp:cloud-store") || route.removePrefix("page:").startsWith(STORE_PAGE)
             val intent = if (store && pm.getLaunchIntentForPackage(STORE) != null)
                 Intent("$STORE.OPEN").setPackage(STORE).putExtra("tab", if (route.endsWith("store-phone")) "phone" else "cloud")
-                    // #570 Fleet ▸ Apps ▸ Apply list to Store: the declared inventory crosses to Cloud Store's Phone page.
-                    .putExtra(StoreImport.EXTRA_IMPORT, StoreImport.takePending())
             else pm.getLaunchIntentForPackage(SUPERAPP)
             if (intent == null) false else { activity.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }
         }.getOrDefault(false)

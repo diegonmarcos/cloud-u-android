@@ -5,7 +5,8 @@
 #  1. Cloud Account hosts libs:account's ProfileFragment (no copy of the account
 #     code in this app), owns the data (read-through off) and exports it ONLY
 #     through a provider that is exported behind the fleet's signature permission.
-#  2. The provider is read-only, re-checks its caller, and answers one method; the
+#  2. The provider is read-only, re-checks its caller, and answers two methods (the export
+#     and, #874, one granted secret), each behind a grant; the
 #     copy into another host never overwrites a store that host already holds, and
 #     is marked done only after the provider answered.
 #  3. SuperApp opens Cloud Account from its Account entry (extapp:cloud-account, a
@@ -73,7 +74,8 @@ PY
   # 2. the provider: read-only, caller re-checked, one method; the copy never overwrites
   local ad; ad="$(strip "$AD")"
   printf '%s' "$ad" | grep -q 'checkCallingPermission(FleetConfig.PERMISSION)' && ok "provider re-checks the caller (call() is not permission-checked by the framework)" || bad "provider does not re-check its caller"
-  printf '%s' "$ad" | grep -q 'if (method != METHOD_EXPORT) return error' && ok "provider answers one method" || bad "provider answers more than the export"
+  printf '%s' "$ad" | grep -q 'METHOD_EXPORT -> {' && printf '%s' "$ad" | grep -q 'METHOD_SECRET -> secretFor(' && printf '%s' "$ad" | grep -q 'else -> error("unknown method $method")' && ok "provider answers the export and one secret, nothing else" || bad "provider answers more (or less) than the export and one secret"
+  printf '%s' "$ad" | grep -q '!AccountVault(ctx).grants.allow(who, GRANT_EXPORT)' && printf '%s' "$ad" | grep -q 'caller != ctx.packageName && !vault.grants.allow(caller, path)' && ok "both methods are behind the Secrets grants (#874)" || bad "a provider method is not behind a grant"
   printf '%s' "$ad" | sed -n '/class Provider/,$p' | grep -Eq 'ConfigsPrefs|\.json *=|store\.write|\.edit\(|AccountData\.apply|apply\(ctx' && bad "provider writes or reads outside the export" || ok "provider does not write"
   printf '%s' "$ad" | grep -q 'if (prefs.localJson.isBlank())' && ok "configs copied only into an empty blob" || bad "configs copy can overwrite"
   printf '%s' "$ad" | grep -q 'if (model.store.read(s) != null) continue' && ok "slots copied only into an empty slot" || bad "slot copy can overwrite"
@@ -133,8 +135,32 @@ PY
   printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
   printf '%s' "$ma" | grep -q 'ARG_EXTERNAL_STRIP to true' && printf '%s' "$ma" | grep -q 'selectTab(' && printf '%s' "$ma" | grep -q 'onTabShown' && ok "the island drives ProfileFragment's tab and follows it back" || bad "the island and ProfileFragment's tab are not wired both ways"
   local pf; pf="$(strip "$L/profile/ProfileFragment.kt")"
-  printf '%s' "$pf" | grep -q 'ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' && printf '%s' "$pf" | grep -q 'fun selectTab(id: String)' && [ "$(printf '%s' "$pf" | grep -c 'onTabShown?.invoke')" -ge 2 ] && ok "ProfileFragment hides its strip for a host that draws the tabs, and reports the tab on screen" || bad "ProfileFragment lost the external-strip contract"
+  printf '%s' "$pf" | grep -q 'val external = arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true' && printf '%s' "$pf" | grep -q '} else visibility = View.GONE' && printf '%s' "$pf" | grep -q 'fun selectTab(id: String)' && [ "$(printf '%s' "$pf" | grep -c 'onTabShown?.invoke')" -ge 2 ] && ok "ProfileFragment hides its strip for a host that draws the tabs, and reports the tab on screen" || bad "ProfileFragment lost the external-strip contract"
   printf '%s' "$pf" | grep -q 'PageTabsView(ctx)' && ! printf '%s' "$pf" | grep -q 'AccountHost.styleTabs' && ok "the in-fragment strip is libs:bottomnav's PageTabsView (no host styling hook)" || bad "ProfileFragment's strip is not PageTabsView, or still goes through AccountHost.styleTabs"
+
+  # 6. #873/#874 the vault, the pages, the setup contract
+  local VT="$L/settings/AccountVault.kt" PL="$L/profile/SetupPlan.kt" FS="$L/profile/FleetSetup.kt" MG="$L/profile/AccountMigrate.kt"
+  for f in "$VT" "$PL" "$FS" "$MG" "$L/profile/AccountVaultTabs.kt" "$L/profile/FleetSetupTab.kt"; do [ -f "$f" ] || { bad "missing $f"; return 99; }; done
+  python3 - "$A/build.json" "$L/profile/ProfileFragment.kt" <<'PY' && ok "every page build.json declares under a section is a ProfileFragment page that reports that section" || bad "a declared page has no ProfileFragment column (or reports another section)"
+import json, re, sys
+ui = json.load(open(sys.argv[1], encoding='utf-8'))['ui']
+pf = open(sys.argv[2], encoding='utf-8').read()
+want = {}
+for sec in ui['sections']:
+    for pg in sec.get('pages') or []:
+        if pg['id'] != sec['id']:
+            want[pg['id']] = sec['id']
+consts = dict(re.findall(r'const val (PAGE_\w+) = "(\w+)"', pf))
+mapped = {consts[k]: v for k, v in re.findall(r'(PAGE_\w+) to "(\w+)"', pf) if k in consts}
+sys.exit(0 if want and want == mapped and len(want) >= 5 else 1)
+PY
+  local vt; vt="$(strip "$VT")"
+  printf '%s' "$vt" | grep -q 'AES/GCM/NoPadding' && printf '%s' "$vt" | grep -q 'PBKDF2WithHmacSHA256' && printf '%s' "$vt" | grep -q 'if (v > AccountVault.VERSION) throw Refused' && [ "$(printf '%s' "$vt" | grep -o 'updateAAD(aad(' | wc -l)" -ge 2 ] && ok "the bundle is AES-GCM under a PBKDF2 key, versioned, its header authenticated" || bad "the bundle cipher lost a property (GCM, PBKDF2, the version gate, the AAD)"
+  printf '%s' "$vt" | grep -q 'class SecretGrants' && printf '%s' "$vt" | grep -q 'fun revoke(' && printf '%s' "$vt" | grep -q '!secret || caller == c.packageName || grants.allow(caller, "$store.$key")' && ok "Secrets: per-package grants, revocable, enforced by the setup authorizer" || bad "the grants are not revocable or not enforced by the setup authorizer"
+  if grep -En 'Log\.[a-z]\(|println\(|printStackTrace' "$VT" "$PL" "$FS" "$MG" "$L/profile/AccountVaultTabs.kt" "$L/profile/FleetSetupTab.kt" >/dev/null 2>&1; then bad "a vault or setup file logs (values must never be logged)"; else ok "no vault or setup file logs"; fi
+  strip "$AP" | grep -q 'AccountVault.install(this)' && strip "$AP" | grep -q 'AccountMigrate.run(this)' && ok "App installs the grant-aware authorizer and takes in what SuperApp kept" || bad "App.kt does not install the vault authorizer or run the migration"
+  local FB="$P/cloud/FleetBearerProvider.kt"
+  [ -f "$FB" ] && strip "$FB" | grep -q 'AccountData.secret(ctx, "fleet.bearer")' && ok "SuperApp's fleet bearer reads through Cloud Account first" || bad "SuperApp's FleetBearerProvider does not read the fleet bearer through Cloud Account"
   return $fails
 }
 
@@ -161,7 +187,23 @@ M=0
 D=lib/profile/AccountData.kt
 mutate "provider drops the permission" acc/app/src/main/AndroidManifest.xml 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />' '/>' || M=$((M+1))
 mutate "provider caller check removed" "$D" 'ctx.checkCallingPermission(FleetConfig.PERMISSION) != PackageManager.PERMISSION_GRANTED' 'false' || M=$((M+1))
-mutate "provider answers any method" "$D" 'if (method != METHOD_EXPORT) return error' 'if (false) return error' || M=$((M+1))
+mutate "provider answers any method" "$D" 'else -> error("unknown method $method")' 'else -> Bundle()' || M=$((M+1))
+mutate "export without a grant" "$D" '!AccountVault(ctx).grants.allow(who, GRANT_EXPORT)' 'false' || M=$((M+1))
+mutate "secret without a grant" "$D" 'caller != ctx.packageName && !vault.grants.allow(caller, path)' 'false' || M=$((M+1))
+mutate "grants no longer revocable" lib/settings/AccountVault.kt 'fun revoke(' 'fun revokeX(' || M=$((M+1))
+mutate "setup authorizer lets a secret through" lib/settings/AccountVault.kt '!secret || caller == c.packageName || grants.allow(caller, "$store.$key")' 'true' || M=$((M+1))
+mutate "bundle loses its version gate" lib/settings/AccountVault.kt 'if (v > AccountVault.VERSION) throw Refused' 'if (false) throw Refused' || M=$((M+1))
+mutate "bundle loses its authenticated header" lib/settings/AccountVault.kt 'updateAAD(aad(AccountVault.VERSION))' '' || M=$((M+1))
+mutate "a vault file logs a value" lib/settings/AccountVault.kt 'fun connections(): JSONObject = parse(prefs.json)' 'fun connections(): JSONObject = parse(prefs.json).also { android.util.Log.d("x", it.toString()) }' || M=$((M+1))
+mutate "App stops installing the authorizer" acc/app/src/main/java/com/diegonmarcos/cloudaccount/App.kt 'AccountVault.install(this)' 'Unit' || M=$((M+1))
+mutate "a page loses its section" lib/profile/ProfileFragment.kt 'PAGE_SECRETS to "runtime"' 'PAGE_SECRETS to "drift"' || M=$((M+1))
+mutate "a declared page leaves the declaration" acc/build.json '          {
+            "id": "secrets",
+            "label": "Secrets",
+            "icon": "runtime"
+          },
+' '' || M=$((M+1))
+mutate "FleetBearerProvider stops reading through" super/cloud/FleetBearerProvider.kt 'AccountData.secret(ctx, "fleet.bearer")' '""' || M=$((M+1))
 mutate "configs copy overwrites" "$D" 'if (prefs.localJson.isBlank())' 'if (true)' || M=$((M+1))
 mutate "slot copy overwrites" "$D" 'if (model.store.read(s) != null) continue' '' || M=$((M+1))
 mutate "profile copy overwrites" "$D" 'if (sp.all.keys.any { it !in generated }) return false' '' || M=$((M+1))
@@ -179,8 +221,8 @@ mutate "fragment is not told to hide its strip" acc/app/src/main/java/com/diegon
 mutate "a tab leaves the declaration" acc/build.json '"runtime",
       "drift"' '"runtime"' || M=$((M+1))
 mutate "gradle stops baking the sections" acc/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
-mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(index)?.let { onTabShown?.invoke(it) }' '' || M=$((M+1))
-mutate "the fragment keeps its strip visible" lib/profile/ProfileFragment.kt 'if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' '' || M=$((M+1))
+mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(index)?.let { onTabShown?.invoke(sectionOf(it)) }' '' || M=$((M+1))
+mutate "the fragment keeps its strip visible" lib/profile/ProfileFragment.kt '} else visibility = View.GONE' '}' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

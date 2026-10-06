@@ -157,9 +157,10 @@ class ProfileFragment : Fragment() {
         val profiles = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val runtime = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val drift = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        // #873 Cloud Account's own pages (build.json ui.sections[].pages[]): the host app declares them, this app draws them.
-        val fleetsetup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        listOf(connect, profiles, runtime, drift, fleetsetup).forEach(page::addView)
+        // #873 Cloud Account's own pages (build.json::ui.sections[].pages[]): the host app declares them, this app draws them.
+        fun hidden() = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        val fleetsetup = hidden(); val connections = hidden(); val data = hidden(); val configs = hidden(); val secrets = hidden()
+        listOf(connect, profiles, runtime, drift, connections, data, configs, secrets, fleetsetup).forEach(page::addView)
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -174,9 +175,13 @@ class ProfileFragment : Fragment() {
         // the declaration; an id with no column here draws no tab rather than an invented one.
         val columns = mapOf("connect" to connect, "profiles" to profiles, "runtime" to runtime, "drift" to drift)
         val own = ctx.packageName == AccountData.PKG
-        val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } } +
-            (if (own) listOf(Tab(getString(R.string.fleetsetup_title), fleetsetup)) else emptyList())
-        tabIds = AccountModel.tabs().filter { columns.containsKey(it.id) }.map { it.id } + (if (own) listOf(PAGE_FLEETSETUP) else emptyList())
+        // #873/#874 Cloud Account's own pages, in the order build.json::ui.sections[].pages[] declares them.
+        val ownPages = if (!own) emptyList() else listOf(
+            Triple(PAGE_CONNECTIONS, R.string.vault_connections_title, connections), Triple(PAGE_DATA, R.string.vault_data_title, data),
+            Triple(PAGE_CONFIGS, R.string.vault_configs_title, configs), Triple(PAGE_SECRETS, R.string.vault_secrets_title, secrets),
+            Triple(PAGE_FLEETSETUP, R.string.fleetsetup_title, fleetsetup))
+        val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } } + ownPages.map { Tab(getString(it.second), it.third) }
+        tabIds = AccountModel.tabs().filter { columns.containsKey(it.id) }.map { it.id } + ownPages.map { it.first }
         connectTab = tabs.indexOfFirst { it.column === connect }
         profilesTab = tabs.indexOfFirst { it.column === profiles }
         runtimeTab = tabs.indexOfFirst { it.column === runtime }
@@ -203,7 +208,13 @@ class ProfileFragment : Fragment() {
         profiles.addView(ctx.kitComposeView(palette) { ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t) }, { openRoute(it) }) })
         renderRuntime(ctx, runtime)
         drift.addView(ctx.kitComposeView(palette) { DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) } })
-        if (own) fleetsetup.addView(ctx.kitComposeView(palette) { FleetSetupTab(model) })
+        if (own) {
+            connections.addView(ctx.kitComposeView(palette) { ConnectionsTab({ done -> pendingBundle = done; bundlePicker.launch(arrayOf("*/*")) }, { n, t -> export(n, t) }) })
+            data.addView(ctx.kitComposeView(palette) { DataTab() })
+            configs.addView(ctx.kitComposeView(palette) { ConfigsTab() })
+            secrets.addView(ctx.kitComposeView(palette) { SecretsTab() })
+            fleetsetup.addView(ctx.kitComposeView(palette) { FleetSetupTab(model) })
+        }
 
         return root
     }
@@ -664,6 +675,19 @@ class ProfileFragment : Fragment() {
 
     private fun export(name: String, text: String) { pendingExport = text; exportPicker.launch(name) }
 
+    /** #874 The whole-bundle import: the picked file's text goes to [pendingBundle] (the Connections page asks for the passphrase). */
+    private var pendingBundle: ((String) -> Unit)? = null
+    private val bundlePicker =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+            val done = pendingBundle; pendingBundle = null
+            if (uri == null || done == null) return@registerForActivityResult
+            val app = requireContext().applicationContext
+            kotlin.concurrent.thread(name = "account-bundle") {
+                val text = runCatching { app.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull().orEmpty()
+                view?.post { done(text) }
+            }
+        }
+
     /** A declared launcher route (the apps topic's Store link) handed to the host. */
     private fun openRoute(route: String) {
         val a = activity ?: return
@@ -725,6 +749,7 @@ class ProfileFragment : Fragment() {
             }
         }
         show(selectedTab)
+        val external = arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true
         return PageTabsView(ctx).apply {
             strip = this
             // The shared pill strip: it owns the chrome AND the sizing (one slot per tab, the font
@@ -735,16 +760,31 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             )
             val view = this
+            // #873/#874 With the host's island drawing the SECTIONS, this strip is only the section's own PAGES
+            // (ui.sections[].pages[]: Connections / Data / Configs / Secrets / Fleet Setup): hidden while the
+            // section has one page, the section's pages while it has more.
+            fun fitToSection(index: Int) {
+                if (!external) return
+                if (arguments?.getBoolean(ARG_EXTERNAL_PAGES) == true) { visibility = View.GONE; return }
+                val id = tabIds.getOrNull(index) ?: return
+                val mine = tabIds.indices.filter { sectionOf(tabIds[it]) == sectionOf(id) }
+                if (mine.size > 1) {
+                    pages = mine.map { NavPage(tabIds[it], tabs[it].title) }
+                    selectedId = id
+                    visibility = View.VISIBLE
+                } else visibility = View.GONE
+            }
             pickTab = pick@{ index ->
                 if (tabs.getOrNull(index) == null) return@pick
                 selectedTab = index
-                view.selectedId = view.pages.getOrNull(index)?.id
+                fitToSection(index)
+                view.selectedId = tabIds.getOrNull(index)
                 show(index)
                 tabIds.getOrNull(index)?.let { onTabShown?.invoke(sectionOf(it)) }
             }
-            onSelect = { page -> pickTab?.invoke(view.pages.indexOfFirst { it.id == page.id }) }
-            selectedId = pages.getOrNull(selectedTab)?.id
-            if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE
+            onSelect = { page -> pickTab?.invoke(tabIds.indexOf(page.id)) }
+            selectedId = tabIds.getOrNull(selectedTab)
+            if (external) fitToSection(selectedTab)
             tabIds.getOrNull(selectedTab)?.let { onTabShown?.invoke(sectionOf(it)) }
         }
     }
@@ -1494,8 +1534,16 @@ class ProfileFragment : Fragment() {
 
         /** #873 a page of Cloud Account's, not a section: ui.sections[runtime].pages[fleetsetup]. [selectTab] speaks it; [onTabShown] reports its section. */
         const val PAGE_FLEETSETUP = "fleetsetup"
-        private val PAGE_SECTION = mapOf(PAGE_FLEETSETUP to "runtime")
+        const val PAGE_CONNECTIONS = "connections"
+        const val PAGE_DATA = "data"
+        const val PAGE_CONFIGS = "configs"
+        const val PAGE_SECRETS = "secrets"
+        private val PAGE_SECTION = mapOf(PAGE_CONNECTIONS to "connect", PAGE_DATA to "profiles", PAGE_CONFIGS to "runtime",
+            PAGE_SECRETS to "runtime", PAGE_FLEETSETUP to "runtime")
         private fun sectionOf(id: String) = PAGE_SECTION[id] ?: id
+
+        /** #874 Fragment argument (Boolean): the host draws the sections' PAGES too (PageTabs over ui.sections[].pages[], calling [selectTab]), so this fragment draws no strip at all. */
+        const val ARG_EXTERNAL_PAGES = "external_pages"
 
         /** #868 Fragment argument (Boolean): the host draws the tabs, so the fragment hides its own strip. */
         const val ARG_EXTERNAL_STRIP = "external_strip"

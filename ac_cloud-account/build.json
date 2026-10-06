@@ -223,13 +223,35 @@
         "id": "connect",
         "label": "Connect",
         "icon": "connect",
-        "pages": []
+        "pages": [
+          {
+            "id": "connect",
+            "label": "Connect",
+            "icon": "connect"
+          },
+          {
+            "id": "connections",
+            "label": "Connections",
+            "icon": "connect"
+          }
+        ]
       },
       {
         "id": "profiles",
         "label": "Profiles",
         "icon": "profiles",
-        "pages": []
+        "pages": [
+          {
+            "id": "profiles",
+            "label": "Profiles",
+            "icon": "profiles"
+          },
+          {
+            "id": "data",
+            "label": "Data",
+            "icon": "profiles"
+          }
+        ]
       },
       {
         "id": "runtime",
@@ -239,6 +261,16 @@
           {
             "id": "runtime",
             "label": "Runtime",
+            "icon": "runtime"
+          },
+          {
+            "id": "configs",
+            "label": "Configs",
+            "icon": "runtime"
+          },
+          {
+            "id": "secrets",
+            "label": "Secrets",
             "icon": "runtime"
           },
           {
@@ -256,6 +288,6 @@
       }
     ],
     "default_section": "profiles",
-    "_doc_pages": "#873 the page Cloud Account adds under the Runtime section (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws it: selectTab(<page id>) opens it and onTabShown reports its SECTION, so the island never disagrees with the page."
+    "_doc_pages": "#873/#874 the pages Cloud Account adds under the four sections (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Connections (every endpoint, token and profile the vault holds, with the encrypted bundle export/import and the take-in from SuperApp), Data (profile, identities, S/R/L), Configs (every app's declared settings by store), Secrets (per-app grants, revocable), Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws them: selectTab(<page id>) opens one and onTabShown reports its SECTION (PAGE_SECTION), so the island never disagrees with the page."
   }
 }

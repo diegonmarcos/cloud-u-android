@@ -29,14 +29,34 @@ object AccountDebugApi {
             Op("populate", "from=runtime|server", "populate the local copy (unsaved)"),
             Op("edit", "path=&value=", "set one unmasked field of the local copy (unsaved)"),
             Op("save", "", "write the local copy"),
-            Op("apply", "app=mesh|mail", "#573 apply the whole declared section as a unit — what the Runtime card's Apply all taps"),
             Op("sync", "dir=push|pull|discard&path=|app=|all=1", "server→runtime, runtime→declared, or discard L"),
             Op("upload", "dry=1", "commit the saved local copy with the gh engine's token (dry=1: the plan only)"),
             Op("erase", "confirm=1", "GDPR: erase the contact card on this device and ask the profile-sync server to drop its copy"),
             // #783 the whole fleet and the new phone
             Op("fleet", "", "per fleet app: contract coverage (covered stores, named gaps, %) from the manifest"),
+            // #873/#874 the vault and the fleet setup: counts, key names and ✓/✗ lines; never a value
+            Op("vault", "", "the four sections' sizes (connections, data, configs, secrets) and the per-package grants (patterns only)"),
+            Op("setup", "dry=1|run=1&app=", "dry=1: per app the keys Fleet Setup would push (names, never values) and what no declared store takes; run=1: describe -> apply -> read back, one ✓/✗ line per app (app= retries one)"),
             Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
+    }
+
+    private fun vault(ctx: Context): JSONObject {
+        val v = com.diegonmarcos.superapp.settings.AccountVault(ctx)
+        return JSONObject().put("sections", v.summary())
+            .put("grants", JSONObject().also { o -> v.grants.all().forEach { (pkg, keys) -> o.put(pkg, JSONArray(keys)) } })
+    }
+
+    private fun setup(ctx: Context, q: Map<String, String>, m: AccountModel): JSONObject {
+        val v = com.diegonmarcos.superapp.settings.AccountVault(ctx)
+        val plan = FleetSetup.plan(ctx, com.diegonmarcos.superapp.settings.ConfigsPrefs(ctx).json, m.shown(), v.appConfigs())
+        val unmapped = JSONArray(plan.unmapped.map { JSONObject().put("source", it.source).put("why", it.why) })
+        if (q["run"] != "1") return JSONObject().put("keys", plan.itemCount).put("unmapped", unmapped)
+            .put("apps", JSONArray(plan.apps.map { a -> JSONObject().put("id", a.app.id).put("installed", FleetSetup.installed(ctx, a.app.pkg))
+                .put("keys", JSONArray(a.items.map { it.store + "." + it.key })) }))
+        val only = q["app"]?.takeIf { it.isNotBlank() }?.let { setOf(it) }
+        val out = FleetSetup.run(plan, { FleetSetup.installed(ctx, it) }, FleetSetup.transport(ctx), only)
+        return JSONObject().put("lines", JSONArray(out.map { it.line() })).put("ok", out.all { it.ok })
     }
 
     fun handle(ctx: Context, op: String, q: Map<String, String>): JSONObject? {
@@ -45,6 +65,8 @@ object AccountDebugApi {
             "", "tabs" -> JSONObject()
                 .put("tabs", JSONArray(AccountModel.tabs().map { JSONObject().put("id", it.id).put("label", it.label) }))
                 .put("pairs", JSONArray(AccountModel.pairs().map { JSONObject().put("id", it.id).put("a", it.a.name).put("b", it.b.name) }))
+            "vault" -> vault(ctx)
+            "setup" -> setup(ctx, q, m)
             "profiles" -> profiles(m)
             "runtime" -> m.runtime()?.let { r -> JSONObject().put("meta", r.meta.json().put("intact", r.intact))
                 .put("apps", r.apps ?: JSONObject()).put("totals", totals(r.apps)).put("unmapped", unmapped()) }
@@ -58,7 +80,6 @@ object AccountDebugApi {
                 done(if (path.isBlank() || InfoMask.declared.hides(path, value)) "✗ not an editable field (blank or masked)" else m.edit(path, value), m)
             }
             "save" -> done(m.save(), m)
-            "apply" -> done(m.applySection(q["app"].orEmpty()), m)
             "sync" -> {
                 val paths = target(m, q, if (q["dir"] == "push") AccountStore.Slot.S else AccountStore.Slot.L)
                 done(when (q["dir"]) {
