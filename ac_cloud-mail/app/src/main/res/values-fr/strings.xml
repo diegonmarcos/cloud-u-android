@@ -1172,4 +1172,12 @@
     <string name="rss_empty">Ce flux n\'a pas encore d\'articles</string>
     <string name="rss_open_failed">Impossible d\'ouvrir cet article</string>
     <string name="rss_invalid_url">Cela ne ressemble pas à une adresse web</string>
+    <string name="nav_bar_mail">Courrier</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Accueil</string>
+    <string name="nav_bar_rss">Actualités</string>
+    <string name="nav_bar_video">Vidéo</string>
+    <string name="nav_chat_not_installed">Telegram n\'est pas installé</string>
+    <string name="nav_video_not_installed">WhatsApp Business n\'est pas installé</string>
+    <string name="nav_launch_not_installed">Cette application n\'est pas installée</string>
 </resources>

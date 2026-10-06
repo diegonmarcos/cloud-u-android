@@ -1170,4 +1170,12 @@
     <string name="rss_empty">Este feed ainda não tem artigos</string>
     <string name="rss_open_failed">Não foi possível abrir este artigo</string>
     <string name="rss_invalid_url">Isso não parece um endereço web</string>
+    <string name="nav_bar_mail">Correio</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Início</string>
+    <string name="nav_bar_rss">Notícias</string>
+    <string name="nav_bar_video">Vídeo</string>
+    <string name="nav_chat_not_installed">O Telegram não está instalado</string>
+    <string name="nav_video_not_installed">O WhatsApp Business não está instalado</string>
+    <string name="nav_launch_not_installed">Esse app não está instalado</string>
 </resources>

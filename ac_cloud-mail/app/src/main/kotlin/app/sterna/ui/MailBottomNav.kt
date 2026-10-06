@@ -67,7 +67,9 @@ private fun onItemTap(
             val route = item.route ?: return
             // Re-tapping the screen already on top is a no-op, not a second copy on the back stack.
             if (route == currentRoute) return
-            nav.navigate(route)
+            // Settled-only, like every other navigation action here: a double tap mid-slide lands once.
+            val top = nav.currentBackStackEntry
+            top?.navigateOnce { nav.navigate(route) }
         }
         BottomNavAction.LAUNCH -> item.packageName?.let {
             leaveOnce { launchInstalledApp(context, it, missingMessage) }

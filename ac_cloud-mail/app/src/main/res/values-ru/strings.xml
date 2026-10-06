@@ -1183,4 +1183,12 @@
     <string name="rss_empty">В этой ленте ещё нет статей</string>
     <string name="rss_open_failed">Не удалось открыть эту статью</string>
     <string name="rss_invalid_url">Это не похоже на веб-адрес</string>
+    <string name="nav_bar_mail">Почта</string>
+    <string name="nav_bar_chat">Чат</string>
+    <string name="nav_bar_home">Главная</string>
+    <string name="nav_bar_rss">Новости</string>
+    <string name="nav_bar_video">Видео</string>
+    <string name="nav_chat_not_installed">Telegram не установлен</string>
+    <string name="nav_video_not_installed">WhatsApp Business не установлен</string>
+    <string name="nav_launch_not_installed">Это приложение не установлено</string>
 </resources>

@@ -1163,4 +1163,12 @@
     <string name="rss_empty">Deze feed heeft nog geen artikelen</string>
     <string name="rss_open_failed">Kon dit artikel niet openen</string>
     <string name="rss_invalid_url">Dat ziet er niet uit als een webadres</string>
+    <string name="nav_bar_mail">Mail</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Start</string>
+    <string name="nav_bar_rss">Nieuws</string>
+    <string name="nav_bar_video">Video</string>
+    <string name="nav_chat_not_installed">Telegram is niet geïnstalleerd</string>
+    <string name="nav_video_not_installed">WhatsApp Business is niet geïnstalleerd</string>
+    <string name="nav_launch_not_installed">Die app is niet geïnstalleerd</string>
 </resources>

@@ -44,7 +44,7 @@ has "$G" 'mailUi\["sections"\]' "the sections come from build.json::ui, not a li
 echo "== N4: derived, fed =="
 BN="$UI/BottomNav.kt"; MB="$UI/MailBottomNav.kt"
 has "$BN" 'NavDecl.fromBuildConfig(' "BottomNav.kt reads the declaration through NavDecl"
-code "$BN" | grep -q 'BottomNavItem(id = "' && bad "BottomNav.kt still carries a literal item table" || ok "no literal BottomNavItem table in Kotlin"
+grep -q 'BottomNavItem(id = "' <<<"$(code "$BN")" && bad "BottomNav.kt still carries a literal item table" || ok "no literal BottomNavItem table in Kotlin"
 has "$MB" 'mailNav.bottomSections()' "the island entries come from the declared bottom sections"
 has "$MB" 'BottomNavHost(' "the bar is still the shared BottomNavHost"
 
