@@ -7,7 +7,7 @@ name: "Ship → cloud-store web (Kotlin/Wasm build + attach to GH Release + port
 #
 # The app's Kotlin/Wasm page: ac_cloud-store/web is its own gradle root, and the
 # shared libs' pure-Compose sources (src/commonMain/kotlin, the lib list is
-# ab_cloud-libs-shared/build.json::web.libs) arrive through the
+# ab_cloud-libs-shared/web/web.json::libs) arrive through the
 # ab_cloud-libs-shared/web composite. It ships ALONE: the APK workflow excludes
 # ac_cloud-store/web from what it watches and hashes, and this one watches only the
 # directories listed below, so a web edit never republishes an APK and an APK edit
@@ -23,6 +23,7 @@ on:
       - "ac_cloud-store/web/**"
       - "1_cicd/src/cicd/ship-cloud-store-wasm.yml"
       - "1_cicd/src/templates/ship-wasm.yml.in"
+      - "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**"
       - "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**"
       - "ab_cloud-libs-shared/web/**"
       - "ac_cloud-store/test/test-store-web.sh"
@@ -63,6 +64,7 @@ jobs:
           1_cicd/src/cicd/ship-cloud-store-wasm.yml
           1_cicd/src/templates/ship-wasm.yml.in
           aa_cloud-superapp/data/constellation-fleet.json
+          ab_cloud-libs-shared/libs/bottomnav/src/commonMain
           ab_cloud-libs-shared/libs/ui-kit/src/commonMain
           ab_cloud-libs-shared/web
           ac_cloud-store/test/test-store-web.sh
@@ -157,6 +159,7 @@ jobs:
           1_cicd/src/cicd/ship-cloud-store-wasm.yml
           1_cicd/src/templates/ship-wasm.yml.in
           aa_cloud-superapp/data/constellation-fleet.json
+          ab_cloud-libs-shared/libs/bottomnav/src/commonMain
           ab_cloud-libs-shared/libs/ui-kit/src/commonMain
           ab_cloud-libs-shared/web
           ac_cloud-store/test/test-store-web.sh

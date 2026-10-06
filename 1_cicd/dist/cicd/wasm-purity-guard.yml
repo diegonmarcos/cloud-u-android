@@ -25,7 +25,6 @@ on:
       - "1_cicd/src/data/wasm-migration.json"
       - "1_cicd/src/scripts/cloud-android-wasm-purity-guard.py"
       - "1_cicd/src/scripts/test/wasm-purity-guard.test.sh"
-      - "ab_cloud-libs-shared/build.json"
       - "ab_cloud-libs-shared/libs/*/build.gradle"
       - "ab_cloud-libs-shared/libs/*/src/commonMain/**"
       - "ab_cloud-libs-shared/libs/ui-kit/src/main/**"

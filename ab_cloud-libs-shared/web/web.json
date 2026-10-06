@@ -1,0 +1,7 @@
+{
+  "_doc": "#876 THE lib list of the shared wasm web root (ab_cloud-libs-shared/web, module fleet-ui). `libs` names the shared libs whose src/commonMain/kotlin is compiled to Kotlin/Wasm; a lib joins only once that directory is free of android.* (guard: cloud-android-wasm-purity-guard.py). It lives HERE and not in ab_cloud-libs-shared/build.json because SuperApp and every engine APK watch that file for firestack.artifact: editing the list there would ship all of them for a change only the wasm page consumes. Read by fleet-ui/build.gradle.kts, the wasm-purity guard and the ship-wasm workflow generator.",
+  "libs": [
+    "ui-kit",
+    "bottomnav"
+  ]
+}

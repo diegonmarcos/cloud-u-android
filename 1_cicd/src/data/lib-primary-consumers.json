@@ -1,6 +1,6 @@
 {
   "_doc": "#836: which app ships PER PUSH when a shared lib under ab_cloud-libs-shared/libs/ changes. Every other app that compiles the lib is not started by that push: its ship workflow carries the lib as a deferred input (hashed by the publish gate, not watched by GitHub), and fleet-refresh.yml ships it on its schedule when the lib moved since that app's last published build. A lib compiled by exactly one app needs no entry (its sole consumer watches it). A lib compiled by two or more MUST be listed -- an app dir, or null for refresh-only -- and the workflow generator refuses to generate otherwise, so a new shared lib cannot silently fan out again. core and devtools are null on purpose: they are compiled into ~31 apps and any single pick would be arbitrary; the lib-APK builder (ship-cloud-libs) still runs for them per push.",
-  "_doc_web": "#876: the shared web root (ab_cloud-libs-shared/web, the wasm compile of every lib named in ab_cloud-libs-shared/build.json::web.libs) is not a lib; its primary consumer is the page that ships it. Held by rebuild-isolation.json::explicit_inputs, which is what makes ship-cloud-store-wasm.yml watch it.",
+  "_doc_web": "#876: the shared web root (ab_cloud-libs-shared/web, the wasm compile of every lib named in ab_cloud-libs-shared/web/web.json::libs) is not a lib; its primary consumer is the page that ships it. Held by rebuild-isolation.json::explicit_inputs, which is what makes ship-cloud-store-wasm.yml watch it.",
   "web": {
     "ab_cloud-libs-shared/web": "ac_cloud-store/web"
   },

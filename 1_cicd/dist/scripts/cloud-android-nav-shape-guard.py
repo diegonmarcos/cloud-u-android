@@ -271,7 +271,8 @@ def main(argv):
     # N0
     lib = os.path.join(root, spec["lib"])
     for fname, symbol in sorted(spec["lib_symbols"].items()):
-        hits = [p for p in walk(os.path.join(lib, "src", "main"), (".kt",)) if os.path.basename(p) == fname]
+        # #876: the declaration and the strip live in src/commonMain (shared with the wasm page), the View hosts in src/main.
+        hits = [p for sub in ("main", "commonMain") for p in walk(os.path.join(lib, "src", sub), (".kt",)) if os.path.basename(p) == fname]
         if not hits:
             bad.append(f"N0 {spec['lib']}: {fname} is gone — the nav declaration and strips live there")
         elif not any(symbol in read(p) for p in hits):

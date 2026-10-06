@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.ScrollView
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,9 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.res.painterResource
 import androidx.core.view.WindowInsetsCompat
-
-/** One item as a View-based host declares it: a stable id, its label, and a drawable resource. */
-public data class BottomNavViewItem(val id: String, val label: String, @DrawableRes val icon: Int)
 
 /**
  * [BottomNavIsland] for an app whose shell is still an XML layout (superapp, cloud-me,
@@ -212,19 +208,6 @@ public class BottomNavIslandView @JvmOverloads constructor(
         val clearance = insetsOverride ?: WindowInsets(0, 0, 0, (dispatchedBottom - roomBelow).coerceAtLeast(0))
         BottomNavIslandImpl(entries, selectedId, tap, Modifier, collapsed, clearance) { modify(it.id) }
     }
-}
-
-/**
- * THE collapse rule of the fleet, one declaration (#673). A downward delta collapses the island to
- * icons, an upward one restores the labels, and no movement changes nothing. Both drivers call
- * this: [BottomNavCollapse] with its nested-scroll delta in a Compose shell, and
- * [BottomNavIslandView.collapseOnScrollIn] with its measured scroll delta in a View shell. A
- * second copy of this `if` is how the two host styles would end up collapsing on different rules.
- */
-internal fun collapseFor(collapsed: Boolean, delta: Float): Boolean = when {
-    delta > 0f -> true
-    delta < 0f -> false
-    else -> collapsed
 }
 
 /**

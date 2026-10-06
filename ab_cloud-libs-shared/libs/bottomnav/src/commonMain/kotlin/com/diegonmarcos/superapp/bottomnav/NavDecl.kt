@@ -1,8 +1,7 @@
 package com.diegonmarcos.superapp.bottomnav
 
-import android.util.Base64
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * THE navigation declaration of the fleet (#868): `build.json::ui` as an app reads it at runtime.
@@ -70,8 +69,8 @@ public class NavDecl(
     public fun default(): NavSection? =
         index[defaultSection] ?: bottomSections().firstOrNull() ?: sections.firstOrNull()
 
-    /** The island's items for a View host ([BottomNavIslandView]): [icon] maps a declared icon
-     *  name to a drawable resource, so the lib carries no app's icon vocabulary. */
+    /** The island's items for a View host (Android's [BottomNavIslandView]): [icon] maps a declared
+     *  icon name to a drawable resource, so the lib carries no app's icon vocabulary. */
     public fun viewItems(icon: (String) -> Int): List<BottomNavViewItem> =
         bottomSections().map { BottomNavViewItem(it.id, it.label, icon(it.icon)) }
 
@@ -82,21 +81,28 @@ public class NavDecl(
          * From the three BuildConfig fields. [uiBottomNav] is the JSON array text of ui.bottom_nav
          * (a bare comma list is accepted too); [uiSectionsB64] is base64 of ui.sections.
          */
-        @JvmStatic
-        @JvmOverloads
+        @OptIn(ExperimentalEncodingApi::class)
         public fun fromBuildConfig(
             uiSectionsB64: String,
             uiBottomNav: String = "",
             uiDefaultSection: String = "",
         ): NavDecl = runCatching {
-            val json = String(Base64.decode(uiSectionsB64, Base64.DEFAULT), Charsets.UTF_8)
-            parse(JSONArray(json), uiBottomNav, uiDefaultSection)
+            // Android's decoder skipped whitespace and tolerated missing padding; so does this.
+            val b64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
+            val json = b64.decode(uiSectionsB64.filterNot { it.isWhitespace() }).decodeToString()
+            parse(json, uiBottomNav, uiDefaultSection)
         }.getOrDefault(EMPTY)
 
-        /** From already-decoded JSON. [bottomNav] is JSON array text or a comma list. */
-        @JvmStatic
-        public fun parse(sections: JSONArray, bottomNav: String = "", defaultSection: String = ""): NavDecl {
-            val parsed = (0 until sections.length()).mapNotNull { sections.optJSONObject(it)?.let(::section) }
+        /**
+         * From the sections array. [sections] is its JSON text, or an object whose `toString()` is
+         * that text: Android callers keep passing the `org.json.JSONArray` they already hold, and
+         * this common code never names the type. [bottomNav] is JSON array text or a comma list.
+         * Throws on anything that is not a JSON array; [fromBuildConfig] turns that into [EMPTY].
+         */
+        public fun parse(sections: Any, bottomNav: String = "", defaultSection: String = ""): NavDecl {
+            val array = MiniJson.parse(sections.toString()) as? List<*>
+                ?: throw IllegalArgumentException("ui.sections is not a JSON array")
+            val parsed = array.mapNotNull { (it as? Map<*, *>)?.let(::section) }
             val bar = bottomIds(bottomNav).ifEmpty { parsed.map { it.id } }.take(MAX_BOTTOM)
             return NavDecl(bar, parsed, defaultSection)
         }
@@ -105,11 +111,10 @@ public class NavDecl(
             val t = text.trim()
             if (t.isEmpty()) return emptyList()
             if (t.startsWith("[")) return runCatching {
-                val a = JSONArray(t)
-                (0 until a.length()).mapNotNull {
-                    when (val v = a.opt(it)) {
-                        is String -> v
-                        is JSONObject -> v.optString("id").ifBlank { null }
+                (MiniJson.parse(t) as List<*>).mapNotNull {
+                    when (it) {
+                        is String -> it
+                        is Map<*, *> -> (it["id"] as? String)?.ifBlank { null }
                         else -> null
                     }
                 }
@@ -117,17 +122,19 @@ public class NavDecl(
             return t.split(',').map { it.trim() }.filter { it.isNotEmpty() }
         }
 
-        private fun section(o: JSONObject): NavSection? {
-            val id = o.optString("id").ifBlank { return null }
-            return NavSection(id, o.optString("label", id), o.optString("icon"), pages(o.optJSONArray("pages")))
+        private fun Map<*, *>.text(key: String, fallback: String = ""): String = (this[key] as? String) ?: fallback
+
+        private fun section(o: Map<*, *>): NavSection? {
+            val id = o.text("id").ifBlank { return null }
+            return NavSection(id, o.text("label", id), o.text("icon"), pages(o["pages"]))
         }
 
-        private fun pages(a: JSONArray?): List<NavPage> =
-            if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
-                val o = a.optJSONObject(i) ?: return@mapNotNull null
-                val id = o.optString("id").ifBlank { return@mapNotNull null }
-                NavPage(id, o.optString("label", id), o.optString("icon"), o.optString("action"), pages(o.optJSONArray("pages")))
-            }
+        private fun pages(a: Any?): List<NavPage> =
+            (a as? List<*>)?.mapNotNull { e ->
+                val o = e as? Map<*, *> ?: return@mapNotNull null
+                val id = o.text("id").ifBlank { return@mapNotNull null }
+                NavPage(id, o.text("label", id), o.text("icon"), o.text("action"), pages(o["pages"]))
+            } ?: emptyList()
     }
 }
 
@@ -149,3 +156,6 @@ private fun flatten(pages: List<NavPage>): List<NavPage> = pages.flatMap { listO
 public fun NavDecl.islandEntries(
     icon: @androidx.compose.runtime.Composable (String) -> androidx.compose.ui.graphics.painter.Painter,
 ): List<BottomNavEntry> = bottomSections().map { BottomNavEntry(it.id, it.label, icon(it.icon)) }
+
+/** One item as a View-based host declares it: a stable id, its label, and a drawable resource id. */
+public data class BottomNavViewItem(val id: String, val label: String, val icon: Int)

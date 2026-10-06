@@ -526,7 +526,8 @@ class BottomNavIslandTest {
 
     @Test
     fun `the nav is a Compose port and not a wrapped View`() {
-        val files = File("src/main/kotlin").walk().filter { it.isFile && it.extension == "kt" }.toList()
+        // #876: the drawing code lives in src/commonMain/kotlin (shared with the wasm page), the View hosts in src/main.
+        val files = listOf("src/main/kotlin", "src/commonMain/kotlin").flatMap { dir -> File(dir).walk().filter { it.isFile && it.extension == "kt" }.toList() }
         val src = files.joinToString("\n") { it.readText() }
         assertTrue("sources not found from ${File(".").absolutePath}", src.contains("fun BottomNavIsland("))
         val wrap = Regex("""AndroidView\s*\(|import androidx\.compose\.ui\.viewinterop|import android\.view\.|import android\.widget\.(?!Toast\b)""")

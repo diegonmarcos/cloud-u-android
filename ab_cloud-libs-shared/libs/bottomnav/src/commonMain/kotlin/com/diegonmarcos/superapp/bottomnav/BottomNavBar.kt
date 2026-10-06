@@ -1,8 +1,5 @@
 package com.diegonmarcos.superapp.bottomnav
 
-import android.content.Context
-import android.os.PowerManager
-import android.provider.Settings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -47,13 +44,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -175,33 +167,31 @@ private fun IslandContent(
     itemModifier: (BottomNavEntry) -> Modifier,
 ) {
     val density = LocalDensity.current
-    val res = LocalContext.current.resources
-    val widthFraction = res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1)
+    val tokens = navTokens()
+    val widthFraction = tokens.widthFraction
     // Read, never consumed: getBottom is a plain snapshot read that recomposes when the inset
     // changes. It is the Compose form of a non-consuming insets listener.
-    val margin = dimensionResource(R.dimen.bottom_nav_island_bottom_margin)
+    val margin = tokens.islandBottomMargin
     val liveClearance = if (insets == null) Modifier.windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
     else Modifier.padding(bottom = with(density) { insets.getBottom(this).toDp() })
-    val view = LocalView.current
-    val pillInset = dimensionResource(R.dimen.bottom_nav_pill_inset)
-    val pad = dimensionResource(R.dimen.bottom_nav_item_vertical_pad)
-    val gap = dimensionResource(R.dimen.bottom_nav_icon_label_gap)
-    val iconSize = dimensionResource(R.dimen.bottom_nav_icon_size)
-    // An sp dimen comes back in px with the font scale applied. px -> sp undoes exactly that.
+    val haptics = navHaptics()
+    val pillInset = tokens.pillInset
+    val pad = tokens.itemVerticalPad
+    val gap = tokens.iconLabelGap
+    val iconSize = tokens.iconSize
     // Every attribute spelled out, so nothing is inherited from an app's typography.
     val labelStyle = TextStyle(
-        fontSize = with(density) { res.getDimension(R.dimen.bottom_nav_label_text_size).toSp() },
+        fontSize = tokens.labelTextSize,
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontStyle = FontStyle.Normal,
     )
-    val scheme = FleetChrome.islandScheme()
     // #532 the collapse animates. remember(collapsed) re-reads Power Saving at every transition, so
     // a battery saver switched on while the shell is open holds the very next collapse still.
     val motion = rememberBarMotion(collapsed)
     val labelShown by animateFloatAsState(
         targetValue = if (collapsed) 0f else 1f,
-        animationSpec = if (motion) tween(integerResource(R.integer.bottom_nav_collapse_ms)) else snap(),
+        animationSpec = if (motion) tween(tokens.collapseMs) else snap(),
         label = "bottomnav_label_shown",
     )
 
@@ -211,20 +201,20 @@ private fun IslandContent(
                 .fillMaxWidth(widthFraction)
                 .testTag(TAG_ISLAND)
                 .clip(bottomNavPillShape)
-                .background(colorResource(R.color.bottom_nav_island_fill))
-                .padding(horizontal = dimensionResource(R.dimen.bottom_nav_end_inset)),
+                .background(tokens.islandFill)
+                .padding(horizontal = tokens.endInset),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             entries.forEach { entry ->
                 val selected = entry.id == selectedId
-                val ink = if (selected) scheme.inverseOnSurface else scheme.onSurfaceVariant
+                val ink = if (selected) tokens.pillInk else tokens.idleInk
                 Column(
                     Modifier
                         .weight(1f)
                         .padding(vertical = pillInset)
                         .testTag(itemTag(entry.id))
                         .clip(bottomNavPillShape)
-                        .background(if (selected) scheme.inverseSurface else Color.Transparent)
+                        .background(if (selected) tokens.pillFill else Color.Transparent)
                         .then(itemModifier(entry))
                         .selectable(
                             selected = selected,
@@ -233,7 +223,7 @@ private fun IslandContent(
                             role = Role.Tab,
                             onClick = {
                                 // SuperApp's section-change haptic rhythm, on a tap that moves the pill.
-                                if (!selected) FleetHaptics.geminiPattern(view)
+                                if (!selected) haptics.sectionChange()
                                 onSelect(entry)
                             },
                         )
@@ -291,17 +281,17 @@ private fun IslandContent(
 internal fun barMotionEnabled(animatorDurationScale: Float, powerSaveMode: Boolean): Boolean =
     animatorDurationScale != 0f && !powerSaveMode
 
-@Composable
-private fun rememberBarMotion(key: Any?): Boolean {
-    val context = LocalContext.current
-    return remember(key) {
-        barMotionEnabled(
-            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f),
-            runCatching {
-                (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
-            }.getOrDefault(false),
-        )
-    }
+/**
+ * THE collapse rule of the fleet, one declaration (#673). A downward delta collapses the island to
+ * icons, an upward one restores the labels, and no movement changes nothing. Both drivers call
+ * this: [BottomNavCollapse] with its nested-scroll delta in a Compose shell, and
+ * [BottomNavIslandView.collapseOnScrollIn] with its measured scroll delta in a View shell. A
+ * second copy of this `if` is how the two host styles would end up collapsing on different rules.
+ */
+internal fun collapseFor(collapsed: Boolean, delta: Float): Boolean = when {
+    delta > 0f -> true
+    delta < 0f -> false
+    else -> collapsed
 }
 
 /**

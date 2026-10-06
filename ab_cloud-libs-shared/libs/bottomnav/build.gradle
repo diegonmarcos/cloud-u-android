@@ -49,6 +49,10 @@ android {
         compose = true
     }
 
+    // #876: the pure-Compose sources live in src/commonMain/kotlin so the wasm web root
+    // (ab_cloud-libs-shared/web) compiles the very same files; the Android build adds them here.
+    sourceSets.main.kotlin.srcDirs += 'src/commonMain/kotlin'
+
     // Robolectric resolves this module's own R.dimen / R.color / R.fraction, which is how the
     // geometry test reads the tokens back instead of restating them.
     testOptions {

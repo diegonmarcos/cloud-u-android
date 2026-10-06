@@ -1,7 +1,7 @@
 // #876 wasm web root: a Kotlin Multiplatform composite root that compiles the pure-Compose
 // sources of the shared Android libs (src/commonMain/kotlin) to Kotlin/Wasm. Apps consume it
 // through includeBuild("../../ab_cloud-libs-shared/web") from their own <app>/web root.
-// The lib list is NOT here: fleet-ui/build.gradle.kts reads ../../build.json::web.libs.
+// The lib list is NOT here: fleet-ui/build.gradle.kts reads ../web.json::libs.
 pluginManagement {
     repositories {
         google()

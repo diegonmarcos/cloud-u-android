@@ -26,16 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -108,21 +104,21 @@ private fun PageTabsContent(
     insets: WindowInsets?,
 ) {
     if (pages.isEmpty()) return
-    val context = LocalContext.current
-    val res = context.resources
+    val tokens = navTokens()
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
 
-    val stripPad = res.getDimension(R.dimen.page_tabs_strip_padding)
-    val topBase = res.getDimension(R.dimen.page_tabs_top_inset)
-    val bottomGap = res.getDimension(R.dimen.page_tabs_bottom_inset)
-    val padH = res.getDimension(R.dimen.page_tabs_pill_pad_h)
-    val margin = res.getDimension(R.dimen.page_tabs_pill_margin)
-    val startPx = res.getDimension(R.dimen.page_tabs_text_size)
-    val minPx = res.getDimension(R.dimen.page_tabs_text_min_size)
-    val dividerPad = res.getDimension(R.dimen.page_tabs_divider_pad)
-    val spacing = integerResource(R.integer.page_tabs_letter_spacing_milli) / 1000f
-    val minChars = integerResource(R.integer.page_tabs_min_chars)
+    // The strip's geometry is laid out in pixels, as it always was; the tokens are dp / sp.
+    val stripPad = with(density) { tokens.tabsStripPadding.toPx() }
+    val topBase = with(density) { tokens.tabsTopInset.toPx() }
+    val bottomGap = with(density) { tokens.tabsBottomInset.toPx() }
+    val padH = with(density) { tokens.tabsPillPadH.toPx() }
+    val margin = with(density) { tokens.tabsPillMargin.toPx() }
+    val startPx = with(density) { tokens.tabsTextSize.toPx() }
+    val minPx = with(density) { tokens.tabsTextMinSize.toPx() }
+    val dividerPad = with(density) { tokens.tabsDividerPad.toPx() }
+    val spacing = tokens.tabsLetterSpacingMilli / 1000f
+    val minChars = tokens.tabsMinChars
 
     val live = insets ?: WindowInsets.statusBars.union(WindowInsets.displayCutout)
     val liveTop = if (underTopChrome) live.getTop(density) else 0
@@ -172,14 +168,14 @@ private fun PageTabsContent(
                     Text(
                         "|",
                         Modifier.padding(horizontal = with(density) { dividerPad.toDp() }),
-                        style = styleAt(plan.textPx, colorResource(R.color.page_tabs_idle_text)),
+                        style = styleAt(plan.textPx, tokens.tabsIdleText),
                         softWrap = false,
                     )
                 }
                 val on = page.id == selectedId
                 val slotModifier = if (plan.scrollable) Modifier else Modifier.width(with(density) { slot.toDp() })
                 Box(slotModifier, contentAlignment = Alignment.Center) {
-                    Pill(page, labels[i], on, plan, margin, padH, { px, c -> styleAt(px, c) }, onSelect, onReselect)
+                    Pill(page, labels[i], on, plan, margin, padH, tokens, { px, c -> styleAt(px, c) }, onSelect, onReselect)
                 }
             }
         }
@@ -194,19 +190,19 @@ private fun Pill(
     plan: PillPlan,
     marginPx: Float,
     padHPx: Float,
+    tokens: NavTokens,
     style: (Float, Color) -> TextStyle,
     onSelect: (NavPage) -> Unit,
     onReselect: (NavPage) -> Unit,
 ) {
     val density = LocalDensity.current
-    val res = LocalContext.current.resources
-    val radius = with(density) { res.getDimension(R.dimen.page_tabs_pill_radius).toDp() }
-    val stroke = with(density) { res.getDimension(R.dimen.page_tabs_pill_stroke).toDp() }
-    val padV = with(density) { res.getDimension(R.dimen.page_tabs_pill_pad_v).toDp() }
+    val radius = tokens.tabsPillRadius
+    val stroke = tokens.tabsPillStroke
+    val padV = tokens.tabsPillPadV
     val shape = RoundedCornerShape(radius)
-    val fill = colorResource(if (on) R.color.page_tabs_selected_fill else R.color.page_tabs_idle_fill)
-    val line = colorResource(if (on) R.color.page_tabs_selected_stroke else R.color.page_tabs_idle_stroke)
-    val ink = colorResource(if (on) R.color.page_tabs_selected_text else R.color.page_tabs_idle_text)
+    val fill = if (on) tokens.tabsSelectedFill else tokens.tabsIdleFill
+    val line = if (on) tokens.tabsSelectedStroke else tokens.tabsIdleStroke
+    val ink = if (on) tokens.tabsSelectedText else tokens.tabsIdleText
     Box(
         Modifier
             .padding(with(density) { marginPx.toDp() })
@@ -234,16 +230,13 @@ private fun Pill(
 }
 
 /** The pill's type: what `AppTabsStyle.makePill` gives the label, at [px] (already scaled). */
-@Suppress("DEPRECATION")
 private fun pillStyle(density: Density, px: Float, spacing: Float, color: Color): TextStyle = TextStyle(
     color = color,
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.Bold,
     fontSize = with(density) { px.toSp() },
     letterSpacing = spacing.em,
-    // A TextView keeps the font's ascent/descent padding; matching it keeps the pill height equal.
-    platformStyle = PlatformTextStyle(includeFontPadding = true),
-)
+).withPlatformFontPadding() // a TextView keeps the font's ascent/descent padding; matching it keeps the pill height equal
 
 /** How the strip lays its pills out. [pillPx] is the pill's width including its own padding. */
 internal data class PillPlan(val textPx: Float, val pillPx: Float, val scrollable: Boolean)

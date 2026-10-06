@@ -16,7 +16,7 @@ Every input is 1_cicd/src/data/wasm-migration.json (forbidden patterns, baseline
       that must be written into the baseline in the same commit, so it cannot slide back.
       A lib with commonMain and no entry has an implicit baseline of 0.
   W3  a lib with src/commonMain is compiled by the web root: named in
-      ab_cloud-libs-shared/build.json::web.libs (and every web.libs entry has a commonMain)
+      ab_cloud-libs-shared/web/web.json::libs (and every web.libs entry has a commonMain)
   W4  the lib's Android build.gradle adds src/commonMain/kotlin to its main source set (otherwise
       the Android build silently stops compiling the file)
 
@@ -27,7 +27,7 @@ import json, os, re, sys
 
 DATA = "1_cicd/src/data/wasm-migration.json"
 LIBS = "ab_cloud-libs-shared/libs"
-SHARED_BUILD = "ab_cloud-libs-shared/build.json"
+SHARED_BUILD = "ab_cloud-libs-shared/web/web.json"
 GRADLE_LINE = re.compile(r"sourceSets\.main\.kotlin\.srcDirs\s*\+=\s*['\"]src/commonMain/kotlin['\"]")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 STRING = re.compile(r'"""(?:.|\n)*?"""|"(?:\\.|[^"\\\n])*"')
@@ -107,13 +107,13 @@ def main(root):
     if want_total is not None and want_total != total:
         fail("W2", "total commonMain lines are %d, baseline.total %d -- the per-lib baselines and the total move together in %s" % (total, want_total, DATA))
 
-    web = (json.load(open(os.path.join(root, SHARED_BUILD))).get("web") or {}).get("libs") or []
+    web = json.load(open(os.path.join(root, SHARED_BUILD))).get("libs") or []
     for lib in sorted(scan):
         if lib not in web:
-            fail("W3", "%s has src/commonMain but is not in %s::web.libs -- the wasm build would never compile it" % (lib, SHARED_BUILD))
+            fail("W3", "%s has src/commonMain but is not in %s::libs -- the wasm build would never compile it" % (lib, SHARED_BUILD))
     for lib in web:
         if lib not in scan:
-            fail("W3", "%s::web.libs names %s, which has no src/commonMain" % (SHARED_BUILD, lib))
+            fail("W3", "%s::libs names %s, which has no src/commonMain" % (SHARED_BUILD, lib))
 
     for lib in sorted(scan):
         g = os.path.join(libs_dir, lib, "build.gradle")

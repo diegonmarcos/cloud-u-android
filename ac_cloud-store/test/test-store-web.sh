@@ -9,7 +9,11 @@
 #     fleet manifest the Android store reads too;
 #  3. it fits the budget declared in build.json::web.size_budget_mb (an accidental
 #     dependency is a megabyte count before it is a complaint);
-#  4. it names no Android: the app's own JS glue carries no `android.` platform name and no
+#  4. it carries the fleet's nav (#876 part 2): composeResources/ holds store-nav.json, the
+#     build.json::ui the Android shell bakes, and the app's wasm module holds the strings of the
+#     shared island and tab strip (libs:bottomnav's test tags: bottomnav_island, bottomnav_item_,
+#     pagetabs_strip) - a page whose shell silently stopped being the fleet's island goes red;
+#  5. it names no Android: the app's own JS glue carries no `android.` platform name and no
 #     androidx.(activity|fragment|core|lifecycle|navigation|appcompat) (a shared lib that
 #     leaked an Android type into commonMain shows up here even if the purity guard missed
 #     it). Compose's own androidx.compose.* package names are the library, not Android.
@@ -50,6 +54,13 @@ check() {
   [ "$nw" -ge 2 ] || { echo "FAIL  $nw WebAssembly module(s); the page needs its own and skiko's"; n=$((n + 1)); }
   find "$dist/composeResources" -name constellation-fleet.json 2>/dev/null | grep -q . \
     || { echo "FAIL  composeResources/ carries no constellation-fleet.json"; n=$((n + 1)); }
+  find "$dist/composeResources" -name store-nav.json 2>/dev/null | head -1 | xargs grep -q '"bottom_nav"' 2>/dev/null \
+    || { echo "FAIL  composeResources/ carries no store-nav.json with a bottom_nav"; n=$((n + 1)); }
+  # Kotlin/Wasm keeps string literals in the module's data, not in the JS glue: look in both.
+  for t in bottomnav_island bottomnav_item_ pagetabs_strip; do
+    grep -qa -e "$t" "$dist"/*.wasm "$dist"/cloud-store.js 2>/dev/null \
+      || { echo "FAIL  the island string '$t' is in neither the wasm modules nor the glue"; n=$((n + 1)); }
+  done
   local kb limit
   kb="$(du -sk "$dist" | cut -f1)"; limit=$((budget * 1024))
   [ "$kb" -le "$limit" ] || { echo "FAIL  dist is ${kb} KB, over the ${budget} MB budget"; n=$((n + 1)); }
@@ -59,7 +70,7 @@ check() {
       echo "FAIL  $(basename "$js") names android: $(grep -oE '.{0,20}(android\.[A-Za-z]|androidx\.(activity|fragment|core|lifecycle|navigation|appcompat)).{0,20}' "$js" | head -1)"; n=$((n + 1))
     fi
   done
-  [ "$n" -eq 0 ] && echo "PASS  dist is a page, carries the fleet, fits ${budget} MB, names no android"
+  [ "$n" -eq 0 ] && echo "PASS  dist is a page, carries the fleet and its nav, holds the island, fits ${budget} MB, names no android"
   return "$n"
 }
 
@@ -80,8 +91,9 @@ stage() {
   rm -rf "$W/d"; mkdir -p "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files"
   printf '<html><script src="cloud-store.js"></script></html>' > "$W/d/index.html"
   printf 'var app = "androidx.compose.ui.window";' > "$W/d/cloud-store.js"
-  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0' > "$W/d/bbbb2222.wasm"
+  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip' > "$W/d/bbbb2222.wasm"
   printf '{"apps":[]}' > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/constellation-fleet.json"
+  printf '{"sections":[],"bottom_nav":[],"default_section":""}' > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"
 }
 mutant() {  # mutant <label> <shell-edit-of-$W/d> <expected-substring>
   stage
@@ -99,6 +111,10 @@ mutant "no script"                      'rm "$W/d/cloud-store.js"'              
 mutant "only one wasm module"           'rm "$W/d/bbbb2222.wasm"'                                         "1 WebAssembly module(s)"
 mutant "a wasm that is not wasm"        'printf "<html>404</html>" > "$W/d/bbbb2222.wasm"'                "not a WebAssembly module"
 mutant "no fleet manifest"              'rm -r "$W/d/composeResources"'                                   "no constellation-fleet.json"
+mutant "no nav declaration"             'rm "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "no store-nav.json with a bottom_nav"
+mutant "a nav declaration with no bar"  'printf "{}" > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "no store-nav.json with a bottom_nav"
+mutant "no island in the page"          'printf "\0asm\1\0\0\0" > "$W/d/bbbb2222.wasm"'                  "the island string 'bottomnav_island'"
+mutant "no page-tab strip in the page"  'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_" > "$W/d/bbbb2222.wasm"' "the island string 'pagetabs_strip'"
 mutant "over the size budget"           'head -c $(( (BUDGET_MB + 1) * 1048576 )) /dev/zero > "$W/d/cloud-store.js.map"' "over the ${BUDGET_MB} MB budget"
 mutant "android.* in the glue"          'printf "var c = \"android.content.Context\";" > "$W/d/cloud-store.js"' "cloud-store.js names android"
 mutant "androidx.fragment in the glue"  'printf "var c = \"androidx.fragment.app.Fragment\";" > "$W/d/cloud-store.js"' "cloud-store.js names android"

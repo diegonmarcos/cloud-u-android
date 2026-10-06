@@ -18,7 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 GUARD="$ROOT/1_cicd/src/scripts/cloud-android-nav-shape-guard.py"
 DATA=1_cicd/src/data/nav-shape.json
 LIB=ab_cloud-libs-shared/libs/bottomnav
-for f in "$GUARD" "$ROOT/$DATA" "$ROOT/$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"; do
+for f in "$GUARD" "$ROOT/$DATA" "$ROOT/$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 export PYTHONDONTWRITEBYTECODE=1
@@ -118,6 +118,8 @@ else fail "the unbroken synthetic fleet is red (rc=$rc)"; printf '%s\n' "$out" |
 
 mutate "the lib loses PageTabsView.kt's class"  "$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabsView.kt" \
     "s=s.replace('class PageTabsView','class Gone')" "N0 $LIB: PageTabsView.kt no longer declares"
+mutate "the lib loses PageTabs.kt's function (#876: it lives in commonMain)" "$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt" \
+    "s=s.replace('fun PageTabs(','fun Gone(')" "N0 $LIB: PageTabs.kt no longer declares"
 mutate "six ids on the bar"                      "$FIX/build.json" "$(J "d['ui']['bottom_nav']=list('abcdef')")" "N1 $FIX: ui.bottom_nav has 6 ids"
 mutate "a bar id that is no section"             "$FIX/build.json" "$(J "d['ui']['bottom_nav']=['a','zzz']")" "N1 $FIX: ui.bottom_nav id 'zzz'"
 mutate "a default outside the bar"               "$FIX/build.json" "$(J "d['ui']['default_section']='nope'")" "N1 $FIX: ui.default_section 'nope'"

@@ -328,7 +328,7 @@ class FleetParityTest {
             assertEquals("item $id sits differently inside its island", ia.top - a.top, ib.top - b.top, 0.5f)
         }
         // And both hosts end in the one composable: there is no second drawing path to drift.
-        val hostSrc = java.io.File("src/main/kotlin/com/diegonmarcos/superapp/bottomnav").walk().filter { it.extension == "kt" }
+        val hostSrc = listOf("src/main/kotlin", "src/commonMain/kotlin").flatMap { java.io.File(it).walk().filter { f -> f.extension == "kt" }.toList() }
             .associate { it.name to it.readText() }
         assertTrue(hostSrc.getValue("BottomNavIslandView.kt").contains("BottomNavIslandImpl("))
         assertTrue(hostSrc.getValue("BottomNavBar.kt").contains("BottomNavIslandImpl("))

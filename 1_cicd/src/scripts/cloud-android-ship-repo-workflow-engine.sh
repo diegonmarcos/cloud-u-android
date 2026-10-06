@@ -182,13 +182,13 @@ PYRENDER
 # ALONE (a web edit must not republish an APK, an APK edit must not rebuild the
 # page), so the app's APK workflow excludes <app>/<web.dir> (see the trigger sync
 # below) and this one watches only: the web dir, the shared web root, the
-# src/commonMain of each lib ab_cloud-libs-shared/build.json::web.libs names, the
+# src/commonMain of each lib ab_cloud-libs-shared/web/web.json::libs names, the
 # page's tester and its own generated file + template. Every one of those must be
 # declared in rebuild-isolation.json::explicit_inputs for the web dir, which is how
 # the isolation guard keeps a widened trigger from going unnoticed.
 #
 # REFUSES to render a `web` block missing a field, a template placeholder with no
-# value, or a web.libs entry with no src/commonMain/kotlin (a lib joins the page
+# value, or a web.json libs entry with no src/commonMain/kotlin (a lib joins the page
 # only once its commonMain exists; cloud-android-wasm-purity-guard.py then holds it).
 log_step "render wasm ship workflows selected by build.json::web"
 python3 - "$CLOUD_ANDROID_ROOT" <<'PYWASM' || exit 1
@@ -197,15 +197,12 @@ import glob, json, os, re, sys
 root = sys.argv[1]
 bad = []
 template = os.path.join(root, "1_cicd/src/templates/ship-wasm.yml.in")
-shared = json.load(open(os.path.join(root, "ab_cloud-libs-shared/build.json")))
-web_libs = (shared.get("web") or {}).get("libs") or []
+web_libs = json.load(open(os.path.join(root, "ab_cloud-libs-shared/web/web.json"))).get("libs") or []
 
 for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
     config = json.load(open(build_json))
     web = config.get("web")
-    # ab_cloud-libs-shared/build.json::web is the lib LIST of the shared web root (`libs`),
-    # not an app's page: it renders nothing.
-    if not isinstance(web, dict) or "libs" in web:
+    if not isinstance(web, dict):
         continue
     app = os.path.basename(os.path.dirname(build_json))
     if not os.path.isfile(template):
@@ -223,7 +220,7 @@ for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
     paths = ["ab_cloud-libs-shared/web/**"]
     for lib in web_libs:
         if not os.path.isdir(os.path.join(root, "ab_cloud-libs-shared/libs", lib, "src/commonMain/kotlin")):
-            bad.append("ab_cloud-libs-shared/build.json: web.libs names %r, which has no src/commonMain/kotlin" % lib)
+            bad.append("ab_cloud-libs-shared/web/web.json: libs names %r, which has no src/commonMain/kotlin" % lib)
         paths.append("ab_cloud-libs-shared/libs/%s/src/commonMain/**" % lib)
     tests = ((config.get("tests") or {}).get("shell") or {}).get("dir")
     if tests and web.get("tester") and os.path.isfile(os.path.join(root, app, tests, web["tester"])):

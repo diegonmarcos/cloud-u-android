@@ -17,13 +17,14 @@
     "ab_cloud-libs-shared/keyboard-engines": ["ab_cloud-keyboard-libs/**"],
     "ac_cloud-store/web": [
       "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
       "ac_cloud-store/test/test-store-web.sh",
       "1_cicd/src/cicd/ship-cloud-store-wasm.yml",
       "1_cicd/src/templates/ship-wasm.yml.in"
     ]
   },
-  "_doc_explicit_inputs": "Non-lib inputs an app watches on purpose. #876: the wasm pages (ac_cloud-store/web, workflow ship-cloud-store-wasm.yml) ship alone and watch the shared web root, the src/commonMain of each lib in ab_cloud-libs-shared/build.json::web.libs, their tester and their own workflow + template; the APK workflow excludes the web dir. ab_cloud-libs-shared/build.json carries firestack.artifact (the prebuilt netstack aar pin SuperApp links): advancing the pin IS a change to what ships and touches no app dir.",
+  "_doc_explicit_inputs": "Non-lib inputs an app watches on purpose. #876: the wasm pages (ac_cloud-store/web, workflow ship-cloud-store-wasm.yml) ship alone and watch the shared web root, the src/commonMain of each lib in ab_cloud-libs-shared/web/web.json::libs, their tester and their own workflow + template; the APK workflow excludes the web dir. ab_cloud-libs-shared/build.json carries firestack.artifact (the prebuilt netstack aar pin SuperApp links): advancing the pin IS a change to what ships and touches no app dir.",
   "own_extra_globs": ["1_cicd/src/scripts/cloud-*-engine.sh", "1_cicd/src/scripts/cloud-*-fork-engine.sh"],
   "_doc_own_extra_globs": "An app's fork/source engine script is the app's own code (single consumer), so it counts as owned."
 }

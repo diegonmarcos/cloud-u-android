@@ -1,3 +1,5 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 // Cloud Store, web edition: the constellation fleet as a dense tile grid, drawn with the shared
@@ -10,10 +12,28 @@ plugins {
 }
 
 // The fleet manifest is the one data file the Android store and this page both read; it is
-// copied (never forked) into the compose resources at build time.
+// copied (never forked) into the compose resources at build time. So is the store's nav
+// declaration: build.json::ui (bottom_nav, sections, default_section) is what the Android shell
+// bakes into BuildConfig, and the island and the tab strips here read the same three fields.
 val fleetResources = layout.buildDirectory.dir("generated/fleet-res")
+val navJson = layout.buildDirectory.file("generated/store-nav/store-nav.json")
+val genNav by tasks.registering {
+    val source = rootProject.file("../build.json")
+    inputs.file(source)
+    outputs.file(navJson)
+    doLast {
+        val ui = (JsonSlurper().parse(source) as Map<*, *>)["ui"] as Map<*, *>
+        val out = linkedMapOf(
+            "sections" to ui["sections"],
+            "bottom_nav" to ui["bottom_nav"],
+            "default_section" to ui["default_section"],
+        )
+        navJson.get().asFile.apply { parentFile.mkdirs() }.writeText(JsonOutput.toJson(out))
+    }
+}
 val copyFleet by tasks.registering(Copy::class) {
     from(rootProject.file("../../aa_cloud-superapp/data/constellation-fleet.json"))
+    from(genNav)
     into(fleetResources.map { it.dir("files") })
 }
 

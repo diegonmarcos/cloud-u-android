@@ -7,7 +7,7 @@ name: "Ship → @APP_NAME@ web (Kotlin/Wasm build + attach to GH Release + porta
 #
 # The app's Kotlin/Wasm page: @APP_DIR@/@WEB_DIR@ is its own gradle root, and the
 # shared libs' pure-Compose sources (src/commonMain/kotlin, the lib list is
-# ab_cloud-libs-shared/build.json::web.libs) arrive through the
+# ab_cloud-libs-shared/web/web.json::libs) arrive through the
 # ab_cloud-libs-shared/web composite. It ships ALONE: the APK workflow excludes
 # @APP_DIR@/@WEB_DIR@ from what it watches and hashes, and this one watches only the
 # directories listed below, so a web edit never republishes an APK and an APK edit
