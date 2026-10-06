@@ -1,0 +1,80 @@
+// libs:decisions-link — the CONTRACT half of the fleet's decisions engine (#881, Jev wave 0): the
+// IDecisionsEngine wire, the DecisionsLink client (handshake before any bind, bound only for the length
+// of one call) and the typed Verdict an app reads. Every app that asks a decision model something
+// compiles this and none compiles libs:decisions-engine, which holds the OpenRouter token (read from the
+// Account vault in ITS process), the budget, the consent and the cache and ships as
+// Cloud-Lib-Decisions-Engine.apk. NO CREDENTIAL IS IN THIS INTERFACE: the app names a use, a state and
+// questions, and gets answers or "no opinion" back; the decisions-use guard fails the build otherwise.
+//
+// It stays dependency-free (no libs:core, no libs:decisions) so the upstream forks can compile it with no
+// shared-module graph, the libs:analytics rule. It installs nothing (lib-apks build.json::lib_apks.exclude).
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// #881 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.decisions
+if (engineDecl == null) throw new GradleException("libs:decisions-link: engine-client.json::engines.decisions is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:decisions-link: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:decisions-link: engine-client.json::engines.decisions.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def decisionsEnginePackage = engineFleet.package.toString()
+def decisionsAction        = engineDecl.action.toString().replace('{package}', decisionsEnginePackage)
+def decisionsMinContract   = engineDecl.min_contract as int
+if (decisionsMinContract < 1) throw new GradleException("libs:decisions-link: engines.decisions.min_contract must be >= 1")
+
+android {
+    namespace 'com.diegonmarcos.superapp.decisions.link'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        // #881 the decisions engine that holds the token and makes the call (Cloud-Lib-Decisions-Engine.apk).
+        buildConfigField "String", "DECISIONS_ENGINE_PACKAGE",      "\"${decisionsEnginePackage}\""
+        buildConfigField "String", "DECISIONS_ENGINE_ACTION",       "\"${decisionsAction}\""
+        buildConfigField "int",    "DECISIONS_ENGINE_MIN_CONTRACT", "${decisionsMinContract}"
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [decisionsEnginePackage: decisionsEnginePackage]
+    }
+    buildFeatures {
+        buildConfig = true
+        aidl = true
+    }
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
+}

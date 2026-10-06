@@ -66,6 +66,14 @@ OPSSVC=$OPSENGINE/src/main/java/com/diegonmarcos/superapp/ops/engine/OpsEngineSe
 for f in "$ROOT/$OPS/engine-client.json" "$ROOT/$OPSCLIENT" "$ROOT/$OPSSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
+# #881 the decisions engine: a SHARED client (libs:decisions-link, engine-client.json) that apps compile once one asks a decision model
+DEC=ab_cloud-libs-shared/libs/decisions-link
+DECENGINE=ab_cloud-libs-shared/libs/decisions-engine
+DECCLIENT=$DEC/src/main/java/com/diegonmarcos/superapp/decisions/link/DecisionsLink.kt
+DECSVC=$DECENGINE/src/main/java/com/diegonmarcos/superapp/decisions/engine/DecisionsEngineService.kt
+for f in "$ROOT/$DEC/engine-client.json" "$ROOT/$DECCLIENT" "$ROOT/$DECSVC"; do
+    [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
+done
 for f in "$ROOT/$AN/engine-client.json" "$ROOT/$ANCLIENT" "$ROOT/$SINKSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
@@ -90,6 +98,7 @@ stage() {
     cp -r "$ROOT/$IMG" "$WORK/t/$IMG"; cp -r "$ROOT/$IMGENGINE" "$WORK/t/$IMGENGINE"
     cp -r "$ROOT/$AN" "$WORK/t/$AN"; cp -r "$ROOT/$SINK" "$WORK/t/$SINK"
     cp -r "$ROOT/$OPS" "$WORK/t/$OPS"; cp -r "$ROOT/$OPSENGINE" "$WORK/t/$OPSENGINE"
+    cp -r "$ROOT/$DEC" "$WORK/t/$DEC"; cp -r "$ROOT/$DECENGINE" "$WORK/t/$DECENGINE"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -241,12 +250,33 @@ stage; js "$OPS/engine-client.json" 'd["engines"]["ops"]["fleet"] = "lib-ops-eng
 landed "$OPS/engine-client.json" 'lib-ops-engine-renamed' && red "K1 #871 the ops client names a Store row that does not exist" "K1"
 stage; js "$DRIVEBJ" 'd["modules"]["libs:ops-engine"] = {"dir": "../ab_cloud-libs-shared/libs/ops-engine", "type": "library"}'
 landed "$DRIVEBJ" '"libs:ops-engine"' && red "K6 #871 an app declares the ops engine's module (it would compile the Dagu calls back in)" "K6"
+stage; sub "$DECSVC" 'const val CONSENT = "consent"' 'const val CONSENT = "consent2"'
+landed "$DECSVC" '"consent2"' && red "K4 #881 the decisions engine renames a method the client still calls" "K4"
+stage; python3 - "$WORK/t/$DECCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "            if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$DECCLIENT" \
+    && red "K7 #881 the decisions client binds without a contract floor" "K7"
+stage; sub "$DEC/src/main/AndroidManifest.xml" '<package android:name="${decisionsEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${decisionsEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$DEC/src/main/AndroidManifest.xml" \
+    && red "K8 #881 the decisions client stops querying its engine for every consumer" "K8"
+stage; js "$DEC/engine-client.json" 'd["engines"]["decisions"]["fleet"] = "lib-decisions-engine-renamed"'
+landed "$DEC/engine-client.json" 'lib-decisions-engine-renamed' && red "K1 #881 the decisions client names a Store row that does not exist" "K1"
+stage; js "$DEC/engine-client.json" 'd["engines"]["decisions"]["min_contract"] = 2'
+landed "$DEC/engine-client.json" '"min_contract": 2' && red "K3 #881 the decisions client needs a contract the engine does not declare" "K3"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:decisions-engine"] = {"dir": "../ab_cloud-libs-shared/libs/decisions-engine", "type": "library"}'
+landed "$DRIVEBJ" '"libs:decisions-engine"' && red "K6 #881 an app declares the decisions engine's module (it would compile the token and the budget back in)" "K6"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$IMG/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$AN/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$OPS/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+js "$DEC/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo

@@ -372,6 +372,28 @@
       "expect": { "apps": 1, "libs": 0, "rootfs": 0, "ship": 2, "refresh": 15 }
     },
     {
+      "id": "#881 engine lib: libs/decisions-engine (the decisions engine, token and budget in its own process)",
+      "files": ["ab_cloud-libs-shared/libs/decisions-engine/src/main/java/com/diegonmarcos/superapp/decisions/engine/DecisionsEngineService.kt"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
+      "id": "#881 engine declaration: libs/decisions-engine's decisions.json (every use, threshold, cap and consent default)",
+      "_doc": "The declaration lives beside the engine, not in fleet-config.json: that manifest is baked into the SuperApp and every app, so a threshold edit there would ship the SuperApp and refresh 33 apps. Here a wave's new use rebuilds one lib APK.",
+      "files": ["ab_cloud-libs-shared/libs/decisions-engine/src/main/assets/decisions.json"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
+      "id": "#881 engine logic: the decisions engine's own core package (its PIT harness is libs/decisions-core)",
+      "files": ["ab_cloud-libs-shared/libs/decisions-engine/src/main/java/com/diegonmarcos/superapp/decisions/core/Engine.kt"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
+      "id": "#881 contract: libs/decisions-link (no app compiles it yet; wave 1 is its first consumer)",
+      "_doc": "A contract ships no APK of its own and the publish gate hashes an engine's own directory only (#870), so a client edit republishes nothing until an app compiles it; a wire change ships the engine through its CONTRACT bump in the engine's own manifest.",
+      "files": ["ab_cloud-libs-shared/libs/decisions-link/src/main/java/com/diegonmarcos/superapp/decisions/link/DecisionsLink.kt"],
+      "expect": { "apps": 0, "libs": 0, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
       "id": "#871 engine lib: libs/ops-engine (the Dagu calls that left the SuperApp and C3)",
       "files": ["ab_cloud-libs-shared/libs/ops-engine/src/main/java/com/diegonmarcos/superapp/ops/engine/DaguTransport.kt"],
       "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }

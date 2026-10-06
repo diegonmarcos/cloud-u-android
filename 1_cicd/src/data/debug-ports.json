@@ -104,6 +104,7 @@
     "com.diegonmarcos.cloudlib.account": 38226,
     "com.diegonmarcos.cloudaccount": 38227,
     "com.diegonmarcos.cloudlib.analyticssink": 38228,
-    "com.diegonmarcos.cloudlib.opsengine": 38229
+    "com.diegonmarcos.cloudlib.opsengine": 38229,
+    "com.diegonmarcos.cloudlib.decisionsengine": 38230
   }
 }

@@ -183,3 +183,29 @@ changes), then advisory, then — for the gating class only — the confirm-not-
 guard (Android: engine-contract + a `decisions-use` guard that every `decide(use…)` call names a
 declared use with a class and a fallback test; hosts: `test-jev-gate.py`) fails the build when a new
 use appears without a declaration.
+
+## 7. Wave 0 as built (#881, 2026-10-06)
+
+Plumbing only; no call site uses it yet.
+
+**Android.** `libs/decisions-link` (the contract apps compile: wire, `DecisionsLink.decide`, `Verdict`),
+`libs/decisions-engine` (`Cloud-Lib-Decisions-Engine.apk`: token in its own process, ledger, cache, breaker,
+consent, journal, `/api/decisions` status|journal|probe returning names and marks only; its logic is the
+`decisions/core` package of its own directory) and `libs/decisions-core` (the plain-JVM harness that runs
+that package's suite and PIT-gates it). Uses are declared in the engine's
+`src/main/assets/decisions.json`, not in fleet-config.json (section 2.1 named that file; it is baked into the
+SuperApp and every app, so tuning there would rebuild the fleet; the shape is the one specified). The
+`decisions-use` guard enforces: no credential in the wire, every use validates, every call site names a
+declared use from an app it lists and a fallback test, and no new reader of the OpenRouter key (calc,
+search, browser and writer are the baseline; each wave removes the ones it moves). Mail may never be in
+that list.
+
+**Hosts.** `_shared/jev-gate.nix` packages the gate once (`writePython3Bin` entry over
+`share/jev-gate/`); `jev-gate decide --use <name>` takes `{state, questions}` on stdin and prints a verdict or
+`{ok:false, reason}`; `budget.daily_cost_cap` and each use's `max_calls_per_hour` are enforced in a shared
+ledger and an exhausted budget answers like `no_key`; `jev-gate serve` is the sidecar (`POST /decide/<use>`,
+`GET /health`), declared as `infra-ai_jev-sidecar` on oci-apps, WireGuard-only, one `OPENROUTER_API_KEY`,
+journal on stdout for the log-shipper. Still owed in cloud-infra: the topology row (and so
+`build-jev-sidecar.json`) and the sops secret; until then the service is declared and tested but not deployed.
+Dagu, `journal-ntfy.sh` and the post-hoc scripts do not call it yet.
+

@@ -1,0 +1,21 @@
+{
+  "_doc": "#881 THE DECLARATION the decisions-use guard (1_cicd/src/scripts/cloud-android-decisions-use-guard.py) reads. Everything it knows about where the fleet's decision-model plumbing lives is here, nothing is named in the script. D1 the wire carries no credential; D2 every declared use validates; D3 every DecisionsLink.decide/outcome call site names a declared use with a string literal, from an app that use lists; D4 a use with a call site names the test that proves its fallback (the app's own path runs when there is no verdict); D5 no app or lib outside key_readers reads the OpenRouter key (the ratchet: a new reader fails, a reader that stops can be removed from the list); D6 the declaration is not vacuous.",
+  "declaration": "ab_cloud-libs-shared/libs/decisions-engine/src/main/assets/decisions.json",
+  "link": "ab_cloud-libs-shared/libs/decisions-link",
+  "engine_package": "com.diegonmarcos.cloudlib.decisionsengine",
+  "fleet": "aa_cloud-superapp/data/constellation-fleet.json",
+  "credential_words": ["token", "apikey", "api_key", "secret", "credential", "bearer", "authorization", "password", "passwd", "privatekey"],
+  "credential_identifier": "(?i)(token|api_?key|\\bkey\\b|secret|credential|bearer|authoriz|passw|private_?key)",
+  "link_forbidden_dependencies": ["libs:text-tools", "libs:account", "libs:keyboard"],
+  "app_roots": "a[ac]_*",
+  "lib_root": "ab_cloud-libs-shared/libs",
+  "skip_dirs": ["build", "node_modules", ".git", "z_archive", "test", "androidTest"],
+  "key_call": "revealAiKey(",
+  "_doc_key_readers": "The code that may call revealAiKey( today. text-tools DEFINES it; account serves it; keyboard serves it; the image engine and the decisions engine read the token in their own process; calc, search, browser and writer are the apps that predate the engine and still hold the key (waves #882-#884 move them to DecisionsLink one by one, and each one that moves is deleted from this list: the list can only shrink). Mail is deliberately not here: it may choose a model and may never hold, read, store or send the key that pays for it (ac_cloud-mail/test/test-mail-text-tools.sh K1).",
+  "key_readers": {
+    "apps": ["ac_cloud-browser", "ac_cloud-calc", "ac_cloud-search", "ac_cloud-writer"],
+    "libs": ["account", "decisions-engine", "keyboard", "ml-l-image-mlkit", "text-tools"]
+  },
+  "classes": ["user_facing", "background", "gating"],
+  "sensitive_content": ["mail", "git"]
+}

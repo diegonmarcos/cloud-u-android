@@ -1,0 +1,60 @@
+// libs:decisions-core — the PIT HARNESS of the decisions engine's logic (#881, Jev wave 0). The logic
+// itself lives in libs:decisions-engine's own source tree (src/main/java/.../decisions/core): the policy
+// parse and its validation, state redaction, the spend ledger (fleet daily USD cap, per-app quota,
+// per-use hourly limit), the answer cache, the circuit breaker, the per-app per-use consent, the
+// journal, and the one orchestration that applies them in order around libs:decisions' Decisions API
+// call. It has no Android in it, so THIS module compiles those very files as plain JVM Kotlin, runs
+// their suite (src/test) without Android and mutation-tests them with PIT (gate 80).
+//
+// WHY THE SOURCES ARE NOT HERE. The publish gate hashes a lib APK's OWN directory only (#870: one lib
+// per lib change, no dependency closure). Logic kept in a sibling module would change without
+// republishing Cloud-Lib-Decisions-Engine.apk, so a fix to the budget would never reach a phone. The
+// engine owns the files; this module is how they are tested. It ships nothing and no app compiles it
+// (lib-apks build.json::lib_apks.exclude); the engine reaches it through a testImplementation edge so
+// the shelf's settings include it.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'info.solidsoft.pitest'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+// The engine's logic, compiled here as plain JVM (the engine compiles the same files for Android).
+sourceSets {
+    main {
+        kotlin {
+            srcDirs = ['../decisions-engine/src/main/java/com/diegonmarcos/superapp/decisions/core']
+        }
+    }
+}
+
+dependencies {
+    // The one Decisions API call (POST, failure reasons, cost) every route of the fleet shares.
+    implementation project(':libs:decisions')
+    // Android's own org.json at runtime; the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+pitest {
+    pitestVersion = '1.22.1'
+    targetClasses = ['com.diegonmarcos.superapp.decisions.core.*']
+    excludedMethods = ['equals', 'hashCode', 'toString', 'copy', 'copy$default', 'component*']
+    avoidCallsTo = ['kotlin.jvm.internal']
+    threads = 2
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+    mutationThreshold = 80
+}
+
+tasks.named('test') { finalizedBy 'pitest' }

@@ -6776,7 +6776,10 @@
     "ac_cloud-calc/sound/build.gradle",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-search/core/build.gradle",
-    "ac_cloud-writer/core/build.gradle"
+    "ac_cloud-writer/core/build.gradle",
+    "ab_cloud-libs-shared/libs/decisions-core/build.gradle",
+    "ab_cloud-libs-shared/libs/decisions-engine/build.gradle",
+    "ab_cloud-libs-shared/libs/decisions-link/build.gradle"
    ],
    "version": "20240303",
    "scope": "test",

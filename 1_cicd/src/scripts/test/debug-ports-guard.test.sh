@@ -77,6 +77,33 @@ mutate "a port outside the range" "$PORTS" \
 mutate "the fallback shrinks below the member count" "$PORTS" \
     "$J; d['fallback']=[38380,38389]; $W" \
     "P3 only 10 fallback ports"
+# #881: retired packages keep their number but are not members; only a package with a fleet row can fall back
+stage; python3 - "$WORK/t/$PORTS" <<'PYTHON'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p))
+free = [n for n in range(d["range"][0], d["fallback"][0]) if n not in d["ports"].values()]
+for i, n in enumerate(free[:70]):
+    d["ports"]["com.example.retired%d" % i] = n
+json.dump(d, open(p, "w"), indent=2)
+PYTHON
+out="$(python3 "$WORK/t/$GUARD_COPY_DIR/cloud-android-debug-ports-guard.py" "$WORK/t")"; rc=$?
+# (the full-table roots' slices are then stale, P5, which is not what this case is about: only P3 is judged)
+if ! grep -q "^FAIL P3" <<<"$out" && grep -q "161 ports" <<<"$out"; then ok "seventy more RETIRED numbers do not count against the fallback (P3 counts live members)"
+else fail "retired numbers exhausted the fallback (rc=$rc)"; printf '%s\n' "$out" | tail -3; fi
+stage; python3 - "$WORK/t/$PORTS" "$WORK/t/$FLEET" <<'PYTHON'
+import json, sys
+pp, fp = sys.argv[1], sys.argv[2]
+d = json.load(open(pp)); f = json.load(open(fp))
+free = [n for n in range(d["range"][0], d["fallback"][0]) if n not in d["ports"].values()]
+for i, n in enumerate(free[:70]):
+    pkg = "com.example.live%d" % i
+    d["ports"][pkg] = n
+    f["apps"].append({"id": "zz-live%d" % i, "package": pkg})
+json.dump(d, open(pp, "w"), indent=2); json.dump(f, open(fp, "w"))
+PYTHON
+out="$(python3 "$WORK/t/$GUARD_COPY_DIR/cloud-android-debug-ports-guard.py" "$WORK/t")"; rc=$?
+if [ "$rc" -eq 1 ] && grep -qF -- "P3 only 90 fallback ports" <<<"$out"; then ok "seventy more LIVE members exhaust the fallback (P3 live members)"
+else fail "live members beyond the fallback stayed green (rc=$rc)"; printf '%s\n' "$out" | tail -3; fi
 mutate "a package is assigned a port inside the fallback sub-range" "$PORTS" \
     "$J; P['com.diegonmarcos.superapp']=38300; $W" \
     "P2 com.diegonmarcos.superapp :38300 is inside the fallback sub-range"

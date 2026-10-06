@@ -1,0 +1,10 @@
+{
+  "_doc": "THE ENGINE THIS CONTRACT MODULE'S CLIENT BINDS (#881, Jev wave 0). Same shape as libs:ops' and libs:analytics' declaration, here because the client lives here: every app that asks a decision model something compiles libs:decisions-link (the wire, the handshake, the typed Verdict) and none compiles the engine that holds the OpenRouter token, the budget, the consent and the cache. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which build.gradle resolves the package (an unknown id fails the build) into BuildConfig and the merged <queries>; `action` finds the service ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method DecisionsLink calls, read through PackageManager BEFORE binding. With the engine absent every call answers no opinion and the app does exactly what it does today.",
+  "engines": {
+    "decisions": {
+      "fleet": "lib-decisions-engine",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  }
+}

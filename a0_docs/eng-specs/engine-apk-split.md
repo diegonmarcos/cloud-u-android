@@ -382,3 +382,46 @@ covers `libs/ops/engine-client.json` with K1, K4, K6, K7, K8 cases; `lib-classes
 
 **Not verified on a device.** The bind, the handshake and a call to the live Dagu are proven by static
 testers, the engine's JVM suite and the APK build only.
+
+## Move 9 — decisions: one engine holds the key, the budget and the consent (#881)
+
+Not a split of something an app compiled: Jev (TypeSafe's decision model on OpenRouter's Decisions API)
+was reached three times over, by copy-paste, each caller holding the OpenRouter token it revealed through
+text-tools (Calc, Search, Browser, and Writer's route). Wave 0 of the Jev rollout builds the engine those
+callers will move to; no call site changes behaviour in this move (waves #882-#884 move them). Design:
+`jev-fleet-usage.md` section 2.
+
+| piece | where | what it does |
+|---|---|---|
+| contract | `libs/decisions-link` (new, `contract`, excluded from the APK shelf) | `IDecisionsEngine.aidl` (`call(method, request)` + `methods()`; **no credential anywhere in it**), `DecisionsLink.decide(ctx, use, state, questions)` returning a typed `Verdict` or null (handshake before any bind, bound only for the call), `engine-client.json`, a `<queries>` entry. Dependency-free like `libs:analytics` |
+| engine | `libs/decisions-engine` (new, `engine`, `Cloud-Lib-Decisions-Engine.apk`, package `com.diegonmarcos.cloudlib.decisionsengine`, debug port 38230) | `DecisionsEngineService` (exported, `CONSTELLATION_DATA`, CONTRACT 1, methods `decide`, `status`, `consent`); the caller is the binder's calling uid, never the request. Holds the token in this process (text-tools, `revealAiKey("openrouter")`), reads the declaration, keeps its state in `filesDir/decisions/` (ledger, answer cache, consent, journal; never state or token) |
+| logic | `libs/decisions-engine/src/main/java/.../decisions/core` (own directory), tested through `libs/decisions-core` (new, `engine`, plain JVM, PIT gate 80, ships nothing) | policy parse and validation, redaction, the spend ledger, the answer cache, the circuit breaker, consent, the journal and the one orchestration, in the order that makes every refusal "no opinion". The files sit in the engine's own directory because the publish gate hashes a lib APK's own directory only (#870): logic in a sibling module would change without republishing the engine. `decisions-core` compiles those same files as plain JVM so the suite runs without Android and PIT can mutate them |
+| declaration | `libs/decisions-engine/src/main/assets/decisions.json` | endpoint, pinned model, budget, suppression, breaker, redaction and `uses.<use>.{enabled, threshold, allowed, class, ttl_s, max_calls_per_hour, consent, content, apps}`, the shape the host gate declares in `jev-gate.json::uses` |
+| guard | `cloud-android-decisions-use-guard.py` + `test/decisions-use-guard.test.sh` | D1 no credential on the wire, D2 every use validates, D3 every `DecisionsLink.decide` names a declared use from an app it lists, D4 a called use names its fallback test, D5 no new reader of the OpenRouter key, D6 not vacuous |
+
+What the engine enforces, in order: declared and enabled; the caller is in the use's `apps`; the questions
+are well formed and inside `allowed`; consent (off by default, and always for mail and git content; only the
+SuperApp may record a grant); the state is redacted (bodies dropped, secret-looking keys masked, patterns
+applied) and is refused, not truncated, over 8 000 characters; a cached answer is served first; nothing is
+sent offline, on a metered network or in battery saver; a breaker opens after repeated failures; the token
+is read; then the fleet's daily USD cap, the per-app daily quota and the use's hourly limit; then the call.
+Classes: `user_facing` may pre-select, `background` must declare `ttl_s` (cached, never re-asked),
+`gating` answers `advice_only`.
+
+**Where the declaration lives, and why not fleet-config.json.** The design named fleet-config.json. That
+manifest is baked into the SuperApp and every app (a push ships the SuperApp and refreshes 33 apps), so each
+threshold tweak of each later wave would have rebuilt the fleet. The declaration sits beside the engine:
+a wave's new use rebuilds one lib APK. The shape is unchanged.
+
+**What a change now rebuilds.** An edit to the logic, the declaration, the service or the contract:
+`Cloud-Lib-Decisions-Engine.apk` only (rebuild-scenarios: 0 apps, 1 lib). Registering the engine itself
+(Store row, debug port) rebuilt the SuperApp and Cloud Store once, as move 8 did.
+
+**Debug port table.** The ports guard (P3) counted every number ever reserved (91, 43 of them retired
+packages) against the 90 fallback ports, so any new engine would have needed a fleet-wide slice change.
+It now counts live members (packages with a fleet row).
+
+**Not verified on a device.** The bind, the handshake, the token read through text-tools and a call to the
+live Decisions API are proven by static testers, the JVM suites and the APK build only; `/api/decisions/probe`
+on a debug build is the end-to-end check.
+

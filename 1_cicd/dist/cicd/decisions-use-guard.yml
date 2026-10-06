@@ -1,0 +1,36 @@
+name: "decisions-use guard — the fleet asks the decision model through one engine, and every question is declared"
+
+# #881 (Jev wave 0). Jev only reorders, pre-selects, re-ranks or suggests; the app's own path is the
+# fallback; no app holds the key. The decisions engine (libs:decisions-engine) holds the OpenRouter token
+# and the per-use declarations (its decisions.json); apps compile libs:decisions-link and call
+# DecisionsLink.decide(ctx, "<use>", state, questions). This holds, from the sources alone: the wire
+# carries no credential (D1), every declared use validates (D2), every call site names a declared use from
+# an app that use lists (D3) and a test that proves the fallback (D4), and no module outside the ratchet
+# list reads the OpenRouter key (D5).
+#
+# EVERY PUSH, NO PATH FILTER: the call that breaks a rule can be in any app's source; see
+# 1_cicd/src/data/guard-triggers.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decisions-use:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it breaks each rule on a copy of the real files and requires the guard to
+      # fail naming it, then requires a pass on the unbroken copy. A gate whose red path is unproven reads
+      # as enforcement and enforces nothing.
+      - name: The guard still fails when a rule breaks
+        run: bash 1_cicd/src/scripts/test/decisions-use-guard.test.sh
+
+      - name: Every decision call is declared, and the wire carries no key
+        run: python3 1_cicd/src/scripts/cloud-android-decisions-use-guard.py .

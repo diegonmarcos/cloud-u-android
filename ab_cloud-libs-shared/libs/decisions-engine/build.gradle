@@ -1,0 +1,71 @@
+// libs:decisions-engine — the DECISIONS ENGINE (#881, Jev wave 0), shipped only as
+// Cloud-Lib-Decisions-Engine.apk: the one place the fleet asks TypeSafe's Jev decision model (through
+// OpenRouter's Decisions API) anything. It holds the OpenRouter token IN ITS OWN PROCESS (read from the
+// Account vault through text-tools, never across the binder), the endpoint, the pinned model, the per-use
+// declarations (src/main/assets/decisions.json), the answer cache, the spend ledger, the consent flags
+// and the journal. Every app that wants a decision compiles libs:decisions-link (the contract half) and
+// none compiles this module, so a change to what is asked, how often or at what price republishes this APK
+// and no app. Do not add this module to an app's module map or ship watch list: the engine contract
+// guard's K6 fails it.
+//
+// The engine's logic is the `decisions/core` package of THIS directory (policy, redaction, ledger, cache, breaker,
+// consent, journal, orchestration), on purpose: the publish gate hashes a lib APK's own directory only, so logic
+// kept in a sibling module would change without republishing this APK. libs:decisions-core is its plain-JVM
+// test harness (suite + PIT), reached through the testImplementation edge below.
+//
+// An app with no engine installed loses nothing: every call answers "no opinion" and the app does what it
+// does today.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.decisions.engine'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core; devtools
+    // (the debug server the /api/decisions route registers on) rides on core.
+    implementation project(':libs:core')
+    // The one Decisions API call the engine's logic (src/main/java/.../decisions/core) makes.
+    implementation project(':libs:decisions')
+    // The wire (IDecisionsEngine) this service implements.
+    implementation project(':libs:decisions-link')
+    // The fleet Account's OpenRouter token, over the ITextTools binder (a contract lib).
+    implementation project(':libs:text-tools')
+
+    // The PIT harness that runs this module's own logic as plain JVM (its suite, mutation-tested at 80). The
+    // edge exists so the shelf's settings include the module; nothing of it ships.
+    testImplementation project(':libs:decisions-core')
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
+}

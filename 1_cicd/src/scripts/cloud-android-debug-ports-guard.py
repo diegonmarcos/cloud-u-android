@@ -16,7 +16,8 @@ whose slice changed and nothing else.
 HOLDS
   P1  every constellation-fleet.json `apps` row with a package has a port
   P2  ports are unique, inside `range`, and outside `fallback` (which is inside `range`)
-  P3  `fallback` can absorb every owned member falling back at once
+  P3  `fallback` can absorb every LIVE member (a package with a fleet row) falling back at once;
+      retired packages keep their number reserved but run nothing, so they are not counted
   P4  the source still binds the table: AppDebugServer binds portOf(pkg) first
       and falls back over fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST, ...);
       devtools' build.gradle bakes the root's debug-api.json; the Apps Mesh
@@ -73,10 +74,15 @@ def violations(root):
             out.append(f"P2 port {p} is given to both {owner[p]} and {pkg}")
         owner.setdefault(p, pkg)
 
+    # The members that can fall back are the packages a fleet row installs. A retired package keeps its
+    # number reserved (never reused) but runs nothing, so it does not compete for a fallback port: counting
+    # the 40+ retired lib packages made every NEW engine APK (#871 ops-engine, #881 decisions-engine) the
+    # one that tipped the table over the fallback and demanded a fleet-wide slice change.
+    live = sum(1 for pkg in ports if pkg in {r.get("package") for r in fleet})
     free = fb_last - fb_first + 1
-    if free < len(ports):
-        out.append(f"P3 only {free} fallback ports in {fb_first}..{fb_last} for {len(ports)} owned: "
-                   f"a fleet-wide fallback would exhaust the range again")
+    if free < live:
+        out.append(f"P3 only {free} fallback ports in {fb_first}..{fb_last} for {live} live members "
+                   f"({len(ports)} numbers reserved): a fleet-wide fallback would exhaust the range again")
 
     server = open(os.path.join(root, SERVER)).read()
     bind = re.search(r"private fun bindOwn\(.*?\n    }\n", server, re.S)

@@ -8,6 +8,7 @@
     "fleet-alerts-guard.yml": "#777: scans every app and lib tree for a direct notify(); the commit it must catch can be any source file anywhere",
     "fleet-config-guard.yml": "#783: scans every app and lib tree for a store (SharedPreferences, encrypted, DataStore, Room) the migration manifest does not declare; the commit it must catch can be any source file anywhere",
     "fleet-setup-guard.yml": "#873: reads every app's build.json and settings, the fleet-config.json declarations and the setup provider; the commit it must catch can be any app's module list or any store declaration",
+    "decisions-use-guard.yml": "#881: scans every app and lib tree for a DecisionsLink call site and for a new reader of the OpenRouter key; the commit it must catch can be any source file anywhere",
     "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
     "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
     "generated-up-to-date.yml": "its inputs are every source the generator reads, including every build.json and app directory; see the NO PATH FILTER note in the workflow",

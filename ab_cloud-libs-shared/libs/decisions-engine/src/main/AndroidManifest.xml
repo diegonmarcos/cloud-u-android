@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:decisions-engine — the DECISIONS ENGINE (#881), shipped only as Cloud-Lib-Decisions-Engine.apk.
+     Apps compile libs:decisions-link (the contract half) and hand this service one decision request per
+     call; it asks the model from THIS process, with the Account's token it read here. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The call is this engine's whole job; apps keep none of it. ACCESS_NETWORK_STATE: nothing is sent
+         offline, on a metered network or in battery saver. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.superapp.decisions.engine.DecisionsEngineService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+
+        <!-- Registers /api/decisions on the fleet's debug server (names and ✓/✗ only) before anything
+             else runs in this process; not a real provider, not exported. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.decisions.engine.DecisionsDebugInit"
+            android:authorities="${applicationId}.decisionsdebug"
+            android:exported="false" />
+    </application>
+</manifest>

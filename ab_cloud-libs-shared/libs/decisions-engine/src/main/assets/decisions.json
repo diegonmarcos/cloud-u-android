@@ -1,0 +1,105 @@
+{
+ "_doc": "#881 Jev wave 0: THE ONE DECLARATION of the fleet's decisions engine (libs:decisions-engine, Cloud-Lib-Decisions-Engine.apk), baked into that APK as an asset and read by that engine only. It lives beside the engine, not in fleet-config.json: that manifest is baked into the SuperApp and every app, so tuning a threshold there would ship the SuperApp and refresh 33 apps, while here a wave's new use rebuilds one lib APK. The engine's state (the ledger, the answer cache, consent and the journal) is in its filesDir/decisions/, per phone by design, so a new phone starts at the declared defaults. Jev is TypeSafe's decision model on OpenRouter's Decisions API: it scores options the caller already has and never generates or computes. The engine holds the OpenRouter token in its own process (read from the Account vault through text-tools, never across the binder) and answers `decide(use, state, questions)` for apps that hold no key. A Jev answer only reorders, pre-selects or suggests; every refusal or failure is {ok:false, reason} and the caller keeps today's behaviour; a site's static deny list runs before it calls. `uses` is the same shape the host gate declares in _shared/jev-gate/jev-gate.json::uses (enabled, threshold, allowed, class, ttl_s, max_calls_per_hour) plus `apps` (the packages allowed to call it; the engine reads the caller from the binder), `consent` and `content`. class: user_facing may pre-select or re-rank; background must declare ttl_s (cached, never re-asked); gating answers advice_only. consent: required = off until the user grants it to the app (any use whose content is in sensitive_content is required, whatever it says); implicit = on. Only the apps in consent_setters may record a grant. `allowed` closes the option keys a choice question of the use may offer. budget: the fleet's daily USD cap (UTC day), a per-app daily call quota and est_call_usd charged when an answer carries no usage.cost. suppress: nothing is sent while offline, on a metered network or in battery saver (cached answers are still served). breaker: after `failures` consecutive failures nothing is sent for open_s seconds, then one trial. redact: drop_keys are removed from the state, the value of a key matching secret_key is masked, every string goes through patterns (Java regex, replacement `$1` = group 1), and a state over max_chars is refused, never truncated. A new use lands with its wave (#882 advisory, #883 user-facing, #884 gating) declared here, and the decisions-use guard fails the build when a decide(use) call names one that is not.",
+ "contract": 1,
+ "endpoint": "https://openrouter.ai/api/alpha/decisions",
+ "model": "typesafe/jev-1.13",
+ "provider": "openrouter",
+ "timeout_ms": 8000,
+ "budget": {
+  "daily_usd_cap": 0.5,
+  "per_app_daily_calls": 200,
+  "est_call_usd": 0.0005
+ },
+ "suppress": {
+  "metered": true,
+  "offline": true,
+  "battery_saver": true
+ },
+ "breaker": {
+  "failures": 3,
+  "open_s": 600
+ },
+ "redact": {
+  "max_chars": 8000,
+  "mask": "[REDACTED]",
+  "drop_keys": [
+   "body",
+   "html",
+   "raw",
+   "attachment",
+   "attachments"
+  ],
+  "secret_key": "(?i)(api[_-]?key|token|secret|passw(or)?d|credential|private[_-]?key|authorization)",
+  "patterns": [
+   {
+    "re": "-----BEGIN [A-Z ]*PRIVATE KEY-----[\\s\\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "AGE-SECRET-KEY-[0-9A-Z]+",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "ENC\\[AES256_GCM,[^\\]]*\\]",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "\\bsk-(or|ant|proj)?-?[A-Za-z0-9_-]{16,}",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "\\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|\\bgithub_pat_[A-Za-z0-9_]{20,}",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "\\b(AKIA|ASIA)[0-9A-Z]{16}\\b",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "\\bxox[abprs]-[A-Za-z0-9-]{10,}",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "\\beyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+    "sub": "[REDACTED]"
+   },
+   {
+    "re": "(?i)(authorization\\s*:\\s*(bearer|basic|token)\\s+)\\S+",
+    "sub": "$1[REDACTED]"
+   },
+   {
+    "re": "(?i)\\b([A-Z0-9_]*(api[_-]?key|token|secret|passw(or)?d|private[_-]?key|credential)[A-Z0-9_]*[\"']?\\s*[:=]\\s*[\"']?)[^\\s\"']{4,}",
+    "sub": "$1[REDACTED]"
+   },
+   {
+    "re": "(://[^/\\s:@]+:)[^@\\s]+@",
+    "sub": "$1[REDACTED]@"
+   }
+  ]
+ },
+ "sensitive_content": [
+  "mail",
+  "git"
+ ],
+ "consent_setters": [
+  "com.diegonmarcos.superapp"
+ ],
+ "cache_max": 128,
+ "journal_max": 500,
+ "uses": {
+  "probe": {
+   "_doc": "#881 wave 0: the plumbing's own end-to-end check, called only by the engine's /api/decisions/probe debug route (so only on a debug build) to prove token, endpoint, budget and cache work. Its question is a fixed arithmetic statement; no user data is in it. Waves #882-#884 declare their uses beside it.",
+   "enabled": true,
+   "class": "background",
+   "threshold": 0.75,
+   "allowed": [],
+   "ttl_s": 3600,
+   "max_calls_per_hour": 6,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.cloudlib.decisionsengine"
+   ]
+  }
+ }
+}
