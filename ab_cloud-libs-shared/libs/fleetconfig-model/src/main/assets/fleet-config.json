@@ -190,6 +190,14 @@
         "unattended_pass": "device"
       }
     },
+    "pass_ledger": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting.",
+      "used_by": [
+        "lib-updater"
+      ]
+    },
     "badge_customization": {
       "kind": "prefs",
       "class": "config",
