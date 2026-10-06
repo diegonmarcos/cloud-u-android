@@ -98,7 +98,7 @@ class StoreSharedControlsTest {
         tab!!.performClick()
         assertMeshPage(root, hasStore = true, storeButtonLook, storeChipLook)
 
-        // ── the same page hosted by Configs ▸ Watchdog ▸ Mesh ──
+        // ── the same page hosted by Configs ▸ Setup ▸ Network ──
         assertMeshPage(host(AppsMeshFragment()), hasStore = false, storeButtonLook, storeChipLook)
     }
 

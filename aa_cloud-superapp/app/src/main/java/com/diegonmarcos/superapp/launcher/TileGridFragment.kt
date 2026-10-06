@@ -39,7 +39,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
 
     /** [group] = optional heading this tile sits under, [subgroup] an optional
      *  second heading below it — the two levels Configs declares (#649:
-     *  Launcher; Watchdog ▸ Setup / Observability). Blank means ungrouped,
+     *  Launcher; Setup ▸ Apps / Observability). Blank means ungrouped,
      *  which is how every section but Configs builds.
      *
      *  Both are the DECLARED words from build.json (`group` / `subgroup` on a

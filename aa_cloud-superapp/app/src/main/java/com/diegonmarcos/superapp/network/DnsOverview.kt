@@ -16,7 +16,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
 /**
- * #794 Configs ▸ Watchdog ▸ Mesh ▸ DNS ▸ Bridges and DNS servers, and
+ * #794 Configs ▸ Setup ▸ Network ▸ DNS ▸ Bridges and DNS servers, and
  * GET /api/net/dns/overview on this app's debug API. ONE collector: the page
  * renders [collect]'s JSON as text, so the screen and a screen-locked curl
  * cannot disagree.

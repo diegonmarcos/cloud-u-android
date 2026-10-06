@@ -4642,7 +4642,7 @@
         "label": "Configs",
         "icon": "ic_settings",
         "module": null,
-        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Watchdog\", \"Setup\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Watchdog \u25b8 Setup + Watchdog \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723: Watchdog now has THREE sub-sections in this order — Setup (Account · Permissions · Store), Mesh (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #733: Mesh is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
+        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Setup\", \"Apps\", \"Network\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Setup \u25b8 Apps + Setup \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723 (#878 relabelled: group Watchdog is now Setup, subgroups Setup/Mesh are Apps/Network): the Setup group has THREE sub-sections in this order — Apps (Account · Permissions · Store), Network (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #733: Network is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
         "_doc_retired_pages": "#697. A config page id that no longer exists, mapped to the pages its content lives on now. The page set is guarded: test-configs-two-sections.sh T9 holds the ids as they stood before #649 regrouped this section and fails if any of them is missing from `pages` without being named here, or if a page named here is still declared, or if one of its successors is not. So a page cannot be dropped by a regroup — removing one is a declared act with a declared destination. `launcher` is the only entry: #649 dissolved the page that wore four tabs and made those four tabs direct pages under the Launcher heading. Read by the tester only; the app routes by `pages` and never needs to know what was retired.",
         "retired_pages": { "launcher": ["presets", "controls", "onehand", "notify"] },
         "_doc_removed_pages": "#723. A config page id that was DELETED rather than moved, with the reason. Distinct from retired_pages on purpose: a retired page names the visible pages its content lives on now, and these have none in Configs — the owner removed the AI page outright because AI tokens are managed in Account (the vault cockpit AI card applies them), so the five-tab AI strip and every tab under it went with it, and the Account card's link to the page was removed rather than left pointing at nothing. Guarded by test-configs-two-sections.sh T9 (the id may not be declared, must have existed, must carry a reason) and T12 (no route, page: target or Kotlin branch may still name it). Read by the tester only.",
@@ -4685,16 +4685,16 @@
             "label": "Account",
             "icon": "ic_settings",
             "action": "extapp:cloud-account",
-            "_doc_867": "#867 Account is its own app (ac_cloud-account, com.diegonmarcos.cloudaccount). This entry opens it: its action extapp:cloud-account is the tile's target. Not is_action, so the tile keeps its place under Watchdog > Setup instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-account].install_apk_url is offered. The page itself stays, hidden, for page: routes; AccountHandoff shows Open Cloud Account on it once the app is installed and the page itself (libs:account) until then.",
-            "group": "Watchdog",
-            "subgroup": "Setup"
+            "_doc_867": "#867 Account is its own app (ac_cloud-account, com.diegonmarcos.cloudaccount). This entry opens it: its action extapp:cloud-account is the tile's target. Not is_action, so the tile keeps its place under Setup > Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-account].install_apk_url is offered. The page itself stays, hidden, for page: routes; AccountHandoff shows Open Cloud Account on it once the app is installed and the page itself (libs:account) until then.",
+            "group": "Setup",
+            "subgroup": "Apps"
           },
           {
             "id": "perms",
             "label": "Permissions",
             "icon": "ic_settings",
-            "group": "Watchdog",
-            "subgroup": "Setup"
+            "group": "Setup",
+            "subgroup": "Apps"
           },
           {
             "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Home/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
@@ -4703,9 +4703,9 @@
             "label": "Store",
             "icon": "ic_refresh",
             "action": "extapp:cloud-store",
-          "_doc_865": "#865 the Store is its own app (ac_cloud-store, com.diegonmarcos.cloudstore). This entry opens it: its action extapp:cloud-store is the tile's target. Not is_action, so the tile keeps its place under Watchdog ▸ Setup instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-store].install_apk_url is offered. The two tab pages below stay, hidden, for page: links (the update notification, Update All); CloudStoreHandoff shows Open Cloud Store on them once the app is installed.",
-            "group": "Watchdog",
-            "subgroup": "Setup"
+          "_doc_865": "#865 the Store is its own app (ac_cloud-store, com.diegonmarcos.cloudstore). This entry opens it: its action extapp:cloud-store is the tile's target. Not is_action, so the tile keeps its place under Setup ▸ Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-store].install_apk_url is offered. The two tab pages below stay, hidden, for page: links (the update notification, Update All); CloudStoreHandoff shows Open Cloud Store on them once the app is installed.",
+            "group": "Setup",
+            "subgroup": "Apps"
           },
           {
             "_doc": "WireGuard is a CHILD of Configs. It lives in its own module-backed section (sections[wg], module libs:net) but is surfaced here as a real config page so it appears in the Configs grid + Home-Apps Configs row in order. action=section:wg opens that section; sections[wg].parent=config makes Back from it return to Configs (MainActivity.navigateUpToParent).",
@@ -4714,38 +4714,38 @@
             "label": "Cloud Mesh",
             "icon": "ic_wg",
             "action": "section:wg",
-            "group": "Watchdog",
-            "subgroup": "Mesh"
+            "group": "Setup",
+            "subgroup": "Network"
           },
           {
             "_doc": "#740 DNS — the fleet's resolver, chosen once and applied at the SuperApp VPN (ui.dns is its declaration; network/DnsFragment.kt draws it). Sits right after Cloud Mesh because it is that tunnel's DNS that carries the choice.",
             "id": "dns",
             "label": "DNS",
             "icon": "ic_world",
-            "group": "Watchdog",
-            "subgroup": "Mesh"
+            "group": "Setup",
+            "subgroup": "Network"
           },
           {
-            "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Watchdog ▸ Setup into the new Watchdog ▸ Mesh sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption.",
+            "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Setup ▸ Apps into the new Setup ▸ Network sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption.",
             "id": "kde",
             "label": "Peer Control",
             "icon": "ic_kde",
-            "group": "Watchdog",
-            "subgroup": "Mesh"
+            "group": "Setup",
+            "subgroup": "Network"
           },
           {
             "_doc": "#733 APPS MESH — the second way into the ONE page Store ▸ Apps Mesh draws (libs:appstore AppsMesh.page; SectionPages routes this id to AppsMeshFragment, which only hosts it). Every fleet member, the engines each binds, the per-member actions (API · Start · Stop · Open · Details), the missing-membership report and Export. Its label must equal libs:appstore assets/appstore-controls.json pages.mesh.label, the Store entry's caption — test-apps-mesh.sh holds them equal, because one page under two names is two pages to the person reading them.",
             "id": "apps-mesh",
             "label": "Apps Mesh",
             "icon": "ic_mode_apps",
-            "group": "Watchdog",
-            "subgroup": "Mesh"
+            "group": "Setup",
+            "subgroup": "Network"
           },
           {
             "id": "about",
             "label": "About",
             "icon": "ic_settings",
-            "group": "Watchdog",
+            "group": "Setup",
             "subgroup": "Observability"
           },
           {
@@ -6379,7 +6379,7 @@
         }
       ]
     },
-    "_doc_dns": "#740 FLEET DNS — the ONE declaration behind Configs ▸ Watchdog ▸ Mesh ▸ DNS (network/FleetDns.kt reads it baked as BuildConfig.UI_DNS_B64; no resolver address is a Kotlin literal). Fleet apps and engines resolve through the Android system resolver, so the setting is applied ONCE, at the SuperApp's VPN: the chosen preset becomes the DNS server list of the Cloud Mesh tunnel (WireGuardPrefs.toTunnelConfig → VpnService.Builder.addDnsServer in the net-wg engine), and every app routed by that VPN inherits it. CODE OVER BRIEF: firestack (FirestackTunnelService) is compiled but NOT the active engine — FirewallController drives the interim drain engine, its WG proxy registration and protect() are still TODO — so firestack's own DNS layer (DoH/DoT, per-domain split) is not reachable yet; this block is shaped so it can feed that layer the day it is. `kind` decides the mapping: mirror = no servers on the VPN (Android uses the underlying network's resolver and its Private DNS); public = `servers` then `fallback`, in order; private = the fleet resolver, which is the Cloud Mesh page's DNS field (wireguard_default.interface_dns on a fresh install — hickory-dns on the hub), followed ONLY when `fallback_allowed` by the presets the user orders from `fallback_choices`. `encryption: dot_opportunistic` is honest about where encryption happens: Android's resolver upgrades to DNS-over-TLS against these IPs when Private DNS is Automatic, which the page checks and can set. A preset with `available: false` is drawn disabled with its `unavailable_reason` and can never be chosen or used as a fallback. `mesh_zones` are hickory-dns's own zones (cloud-u-containers infra-net_hickory-dns build.json dns.zones): when the mesh is up those names route to the fleet resolver whatever the preset (FleetDns.upstreamsFor — the page's test lookup uses it); the VPN carries one ordered list, so for the system resolver that split holds only under the private presets until firestack's DNS layer is active. `test_names` are what the page's Test lookup resolves.",
+    "_doc_dns": "#740 FLEET DNS — the ONE declaration behind Configs ▸ Setup ▸ Network ▸ DNS (network/FleetDns.kt reads it baked as BuildConfig.UI_DNS_B64; no resolver address is a Kotlin literal). Fleet apps and engines resolve through the Android system resolver, so the setting is applied ONCE, at the SuperApp's VPN: the chosen preset becomes the DNS server list of the Cloud Mesh tunnel (WireGuardPrefs.toTunnelConfig → VpnService.Builder.addDnsServer in the net-wg engine), and every app routed by that VPN inherits it. CODE OVER BRIEF: firestack (FirestackTunnelService) is compiled but NOT the active engine — FirewallController drives the interim drain engine, its WG proxy registration and protect() are still TODO — so firestack's own DNS layer (DoH/DoT, per-domain split) is not reachable yet; this block is shaped so it can feed that layer the day it is. `kind` decides the mapping: mirror = no servers on the VPN (Android uses the underlying network's resolver and its Private DNS); public = `servers` then `fallback`, in order; private = the fleet resolver, which is the Cloud Mesh page's DNS field (wireguard_default.interface_dns on a fresh install — hickory-dns on the hub), followed ONLY when `fallback_allowed` by the presets the user orders from `fallback_choices`. `encryption: dot_opportunistic` is honest about where encryption happens: Android's resolver upgrades to DNS-over-TLS against these IPs when Private DNS is Automatic, which the page checks and can set. A preset with `available: false` is drawn disabled with its `unavailable_reason` and can never be chosen or used as a fallback. `mesh_zones` are hickory-dns's own zones (cloud-u-containers infra-net_hickory-dns build.json dns.zones): when the mesh is up those names route to the fleet resolver whatever the preset (FleetDns.upstreamsFor — the page's test lookup uses it); the VPN carries one ordered list, so for the system resolver that split holds only under the private presets until firestack's DNS layer is active. `test_names` are what the page's Test lookup resolves.",
     "dns": {
       "default_preset": "private_only",
       "mesh_zones": ["app", "db", "diegonmarcos.com"],

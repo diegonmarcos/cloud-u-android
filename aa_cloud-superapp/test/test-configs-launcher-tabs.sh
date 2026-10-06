@@ -195,7 +195,7 @@ done
 
 echo "== T10: the Presets page is 'presets', never 'profile' (#339, #574, #649) =="
 # `profile` is the owner's identity page (name, email, WireGuard export), which
-# #626 relabelled Account and #649 filed under Watchdog ▸ Setup. `presets` is
+# #626 relabelled Account and #649 filed under Setup ▸ Apps. `presets` is
 # what you PICK on the launcher. One section cannot hold two pages under one id,
 # so the Launcher member had to take a second name. Naming them apart is the
 # whole reason the split works, which is why it is asserted rather than trusted —
@@ -220,7 +220,7 @@ elif pages['profile'].get('group') == pages['presets'].get('group'):
 else:
     print('OK')
 PY
-)" "profile (Watchdog ▸ Setup) and presets (Launcher) are two visible pages under two headings"
+)" "profile (Setup ▸ Apps) and presets (Launcher) are two visible pages under two headings"
 
 grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES" \
   && ok "the presets tab routes to its own fragment" \

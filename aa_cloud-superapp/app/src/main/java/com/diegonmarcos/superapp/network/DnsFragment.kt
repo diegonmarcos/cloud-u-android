@@ -27,7 +27,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * #740 Configs ▸ Watchdog ▸ Mesh ▸ DNS. Three blocks, every word of the
+ * #740 Configs ▸ Setup ▸ Network ▸ DNS. Three blocks, every word of the
  * choices from `build.json::ui.dns` through [FleetDns.decl]:
  *  1. Android Private DNS — a replica of Android's own menu showing what the
  *     phone is set to and what the active network really uses; changed through

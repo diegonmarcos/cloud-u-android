@@ -451,7 +451,7 @@ object Sections {
 
         /** Heading this page's tile sits under in its section's grid, and
          *  [subgroup] the heading below that — the TWO declared levels of the
-         *  Configs grid (#649: Launcher; Watchdog ▸ Setup / Observability).
+         *  Configs grid (#649: Launcher; Setup ▸ Apps / Observability).
          *
          *  The WORDS live here, never in Kotlin, exactly as [label] does for a
          *  page name — [LauncherNavController.sectionGrid] passes them through
@@ -1060,7 +1060,7 @@ object Sections {
      * The (group, subgroup) headings [page] is LISTED under outside the grid —
      * the tablet rail ([SectionMenuFragment]) and the drawer's expansion of a
      * section ([HomeDrawerFragment]). Both used to walk `section.pages` flat,
-     * so #649's Launcher / Watchdog ▸ Setup / Observability reached the phone
+     * so #649's Launcher / Setup ▸ Apps / Observability reached the phone
      * grid and nowhere else: an unfolded screen showed Configs as one list of
      * fourteen rows with no structure at all.
      *

@@ -9,7 +9,7 @@ import android.widget.ScrollView
 import androidx.fragment.app.Fragment
 
 /**
- * #733 Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh (page id `apps-mesh`). The SAME
+ * #733 Configs ▸ Setup ▸ Network ▸ Apps Mesh (page id `apps-mesh`). The SAME
  * page Store ▸ Apps Mesh draws — both call [AppsMesh.page] — hosted on its own.
  * There is no Store row to open from here, so `store` is not offered.
  */

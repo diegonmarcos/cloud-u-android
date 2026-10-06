@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #733 Configs ▸ Watchdog ▸ Mesh and the Apps Mesh page.
+# #733 Configs ▸ Setup ▸ Network and the Apps Mesh page.
 #
 #   C1  captions: the wg page reads Cloud Mesh (id unchanged), the Store's mesh
 #       entry and the Configs apps-mesh page both read Apps Mesh — the SAME
@@ -67,7 +67,7 @@ import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')['pages']
 by = {p['id']: p for p in pages}
 store_caption = json.load(open(sys.argv[2]))['pages']['mesh']['label']
-mesh = [p['id'] for p in pages if p.get('subgroup') == 'Mesh' and not p.get('hidden')]
+mesh = [p['id'] for p in pages if p.get('subgroup') == 'Network' and not p.get('hidden')]
 print('WG', by.get('wg', {}).get('label'), by.get('wg', {}).get('action'))
 print('APPS', by.get('apps-mesh', {}).get('label'), '|', store_caption)
 print('ORDER', ','.join(mesh))
@@ -78,8 +78,8 @@ echo "$out" | grep -qx 'WG Cloud Mesh section:wg' && ok "the wg page reads Cloud
   || bad "the wg page is not 'Cloud Mesh' opening section:wg"
 echo "$out" | grep -qx 'APPS Apps Mesh | Apps Mesh' && ok "Configs apps-mesh and Store's mesh entry both read Apps Mesh" \
   || bad "the two entry points to the Apps Mesh page do not both read 'Apps Mesh'"
-echo "$out" | grep -qx 'ORDER wg,dns,kde,apps-mesh' && ok "Watchdog ▸ Mesh = Cloud Mesh · DNS (#740) · Peer Control · Apps Mesh" \
-  || bad "Watchdog ▸ Mesh is not wg, dns, kde, apps-mesh in that order"
+echo "$out" | grep -qx 'ORDER wg,dns,kde,apps-mesh' && ok "Setup ▸ Network = Cloud Mesh · DNS (#740) · Peer Control · Apps Mesh" \
+  || bad "Setup ▸ Network is not wg, dns, kde, apps-mesh in that order"
 
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.page(this, col)' && ok "AppsMeshFragment hosts AppsMesh.page" \

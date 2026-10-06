@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# #740 Configs ▸ Watchdog ▸ Mesh ▸ DNS — the fleet resolver, chosen once and
+# #740 Configs ▸ Setup ▸ Network ▸ DNS — the fleet resolver, chosen once and
 # applied at the SuperApp's VPN.
 #
-#   D1  the page: config/dns sits right after Cloud Mesh in Watchdog ▸ Mesh and
+#   D1  the page: config/dns sits right after Cloud Mesh in Setup ▸ Network and
 #       SectionPages routes it to DnsFragment
 #   D2  the declaration (build.json::ui.dns) is complete: a usable default, one
 #       Mirror, public presets with a primary AND a fallback list, a Private-only
@@ -62,15 +62,15 @@ echo "== D1: the page =="
 out="$(python3 - "$BJ" <<'EOF'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')['pages']
-mesh = [p['id'] for p in pages if p.get('group') == 'Watchdog' and p.get('subgroup') == 'Mesh' and not p.get('hidden')]
+mesh = [p['id'] for p in pages if p.get('group') == 'Setup' and p.get('subgroup') == 'Network' and not p.get('hidden')]
 dns = next((p for p in pages if p['id'] == 'dns'), {})
 print('MESH', ','.join(mesh))
 print('LABEL', dns.get('label'), dns.get('hidden', False))
 EOF
 )"
 echo "$out" | sed 's/^/    /'
-echo "$out" | grep -q '^MESH wg,dns,' && ok "DNS is the tile right after Cloud Mesh in Watchdog ▸ Mesh" \
-  || bad "config/dns is not declared directly after wg in Watchdog ▸ Mesh"
+echo "$out" | grep -q '^MESH wg,dns,' && ok "DNS is the tile right after Cloud Mesh in Setup ▸ Network" \
+  || bad "config/dns is not declared directly after wg in Setup ▸ Network"
 echo "$out" | grep -qx 'LABEL DNS False' && ok "the page reads DNS and is a visible tile" \
   || bad "config/dns is missing, hidden or not labelled DNS"
 grep -qE 'pageId == "dns" +-> com\.diegonmarcos\.superapp\.network\.DnsFragment\.newInstance\(\)' "$PAGES" \

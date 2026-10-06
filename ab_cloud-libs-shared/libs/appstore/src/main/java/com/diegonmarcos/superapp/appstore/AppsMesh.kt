@@ -24,7 +24,7 @@ import org.json.JSONObject
 
 /**
  * #733 APPS MESH — the ONE page behind two entry points: Store ▸ Apps Mesh
- * (StoreCloudFragment.renderMesh) and Configs ▸ Watchdog ▸ Mesh ▸ Apps Mesh
+ * (StoreCloudFragment.renderMesh) and Configs ▸ Setup ▸ Network ▸ Apps Mesh
  * ([AppsMeshFragment], page id `apps-mesh`). Both call [page]; neither draws a
  * copy, so the two cannot drift.
  *

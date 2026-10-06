@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tester: #649/#723 — Configs is TWO declared sections, Launcher and Watchdog,
-# and Watchdog has THREE subsections, Setup, Mesh and Observability. #723 moved
+# Tester: #649/#723 — Configs is TWO declared sections, Launcher and Setup,
+# and Setup has THREE subsections, Apps, Network and Observability (#878 relabelled; was Watchdog ▸ Setup/Mesh). #723 moved
 # WireGuard and KDE (now labelled Peer Control) out of Setup into Mesh and deleted
 # the AI page outright. Actions is untouched.
 #
@@ -44,7 +44,7 @@ for f in "$BJ" "$SECTIONS" "$NAV" "$GRID" "$PAGES"; do
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: the two sections and the three Watchdog subsections, in declaration order =="
+echo "== T1: the two sections and the three Setup subsections, in declaration order =="
 # Both the NAMES and the ORDER, read off the file the grid reads. Groups are runs
 # of consecutive entries, so this doubles as the consecutiveness check: a member
 # parked elsewhere in the array shows up here as a repeated heading.
@@ -57,11 +57,11 @@ for p in pages:
     if p.get('hidden') or p.get('is_action'): continue
     key = (p.get('group', ''), p.get('subgroup', ''))
     if key != last: shape.append(key); last = key
-want = [('Launcher', ''), ('Watchdog', 'Setup'), ('Watchdog', 'Mesh'),
-        ('Watchdog', 'Observability')]
+want = [('Launcher', ''), ('Setup', 'Apps'), ('Setup', 'Network'),
+        ('Setup', 'Observability')]
 print('OK' if shape == want else 'heading runs = %r' % (shape,))
 PY
-)" "Launcher, then Watchdog ▸ Setup, ▸ Mesh, ▸ Observability — each appearing ONCE"
+)" "Launcher, then Setup ▸ Apps, ▸ Network, ▸ Observability — each appearing ONCE"
 
 echo "== T2: each heading holds exactly the pages the owner named =="
 check "$(python3 - "$BJ" <<'PY'
@@ -74,15 +74,15 @@ def members(g, s=''):
             and p.get('group', '') == g and p.get('subgroup', '') == s]
 want = {
     ('Launcher', ''):                  ['Presets', 'Controls', 'One-Hand', 'Notify'],
-    ('Watchdog', 'Setup'):             ['Account', 'Permissions', 'Store'],
-    ('Watchdog', 'Mesh'):              ['Cloud Mesh', 'DNS', 'Peer Control', 'Apps Mesh'],
-    ('Watchdog', 'Observability'):     ['About'],
+    ('Setup', 'Apps'):             ['Account', 'Permissions', 'Store'],
+    ('Setup', 'Network'):              ['Cloud Mesh', 'DNS', 'Peer Control', 'Apps Mesh'],
+    ('Setup', 'Observability'):     ['About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Launcher = Presets/Controls/One-Hand/Notify; Setup = Account/Permissions/Store; Mesh = Cloud Mesh/DNS/Peer Control/Apps Mesh (#733, #740); Observability = About"
+)" "Launcher = Presets/Controls/One-Hand/Notify; Apps = Account/Permissions/Store; Network = Cloud Mesh/DNS/Peer Control/Apps Mesh (#733, #740); Observability = About"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -99,8 +99,8 @@ problems = []
 store = by_id.get('store')
 if store is None:                             problems.append('no `store` page')
 else:
-    if store.get('group') != 'Watchdog' or store.get('subgroup') != 'Setup':
-        problems.append('store is under %r/%r, not Watchdog ▸ Setup'
+    if store.get('group') != 'Setup' or store.get('subgroup') != 'Apps':
+        problems.append('store is under %r/%r, not Setup ▸ Apps'
                         % (store.get('group'), store.get('subgroup')))
     # #865 the Store is its own app: the tile opens it and owns no tabs.
     if store.get('action') != 'extapp:cloud-store' or store.get('tabs'):
@@ -112,7 +112,7 @@ if any(p['label'] == 'Constellation' for p in pages):
     problems.append('a page is labelled Constellation again — #563 renamed it Store')
 print('; '.join(problems) or 'OK')
 PY
-)" "Store sits in Watchdog ▸ Setup and opens Cloud Store; the Cloud Constellation page keeps its label; no page named Constellation"
+)" "Store sits in Setup ▸ Apps and opens Cloud Store; the Cloud Constellation page keeps its label; no page named Constellation"
 
 echo "== T4: no heading, subheading or page name is a Kotlin literal on the grid path =="
 # The whole point of the declaration: a literal would make the build.json edit
@@ -265,7 +265,7 @@ grep -qF 'subgroup = if (p.isAction) "" else p.subgroup' "$NAV" \
   || bad "subgroup never reaches TileGridFragment — Setup/Observability would not draw"
 grep -qF 'grid.addView(subgroupHeader(s))' "$GRID" \
   && ok "TileGridFragment draws a subgroup header" \
-  || bad "no subgroup header is drawn — both Watchdog subsections would run together"
+  || bad "no subgroup header is drawn — the Setup subsections would run together"
 grep -qF 'subs.getOrNull(i + span).orEmpty() == s' "$GRID" \
   && ok "a grid row never straddles a subgroup boundary" \
   || bad "the row span ignores subgroup — Observability's tile would share Setup's last row"
@@ -346,7 +346,7 @@ echo "== T10: the rail and the drawer list Configs under the SAME declared headi
 # #649 reached the phone grid only. On a two-pane screen Configs renders through
 # SectionMenuFragment (the rail), and the drawer expands `section:config` in
 # HomeDrawerFragment; both walked section.pages flat, so an unfolded screen
-# showed fourteen rows with no Launcher, Watchdog, Setup or Observability.
+# showed fourteen rows with no Launcher, Setup, Apps or Observability.
 MENU="$KT/launcher/SectionMenuFragment.kt"
 DRAWER="$KT/launcher/HomeDrawerFragment.kt"
 for f in "$MENU" "$DRAWER"; do
@@ -356,10 +356,10 @@ for f in "$MENU" "$DRAWER"; do
     || bad "$n does not read the declared heading — it lists Configs flat"
   grep -qE 'g\.uppercase\(\)\)\.setEnabled\(false\)' "$f" \
     && ok "$n prints the group heading as a disabled row" \
-    || bad "$n never prints the group heading (Launcher / Watchdog)"
+    || bad "$n never prints the group heading (Launcher / Setup)"
   grep -qE '\$s"\)\.setEnabled\(false\)' "$f" \
     && ok "$n prints the subgroup heading as a disabled row" \
-    || bad "$n never prints the subgroup heading (Setup / Observability)"
+    || bad "$n never prints the subgroup heading (Apps / Observability)"
 done
 grep -qF 'section.pages.none { it.group.isNotBlank() || it.subgroup.isNotBlank() } -> "" to ""' "$SECTIONS" \
   && ok "a section that declares no heading gets none in its menus (every section but Configs is unchanged)" \
@@ -396,9 +396,9 @@ for g, s, label, icon in tiles:
     out.append('%s[%s]' % (label, icon))
 want = ['H:LAUNCHER',
         'Presets[ic_p_sol_personal]', 'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
-        'H:WATCHDOG',
-        'S:SETUP',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
-        'S:MESH',          'Cloud Mesh[ic_wg]', 'DNS[ic_world]', 'Peer Control[ic_kde]', 'Apps Mesh[ic_mode_apps]',
+        'H:SETUP',
+        'S:APPS',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
+        'S:NETWORK',          'Cloud Mesh[ic_wg]', 'DNS[ic_world]', 'Peer Control[ic_kde]', 'Apps Mesh[ic_mode_apps]',
         'S:OBSERVABILITY', 'About[ic_settings]',
         'H:ACTIONS',
         'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
@@ -408,7 +408,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] WATCHDOG ▸ SETUP[Account,Permissions,Store] ▸ MESH[Cloud Mesh,DNS,Peer Control,Apps Mesh] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] SETUP ▸ APPS[Account,Permissions,Store] ▸ NETWORK[Cloud Mesh,DNS,Peer Control,Apps Mesh] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

@@ -384,7 +384,7 @@ class LauncherNavController(private val host: NavHost) {
                 iconRes = p.iconName?.let { Sections.iconResFor(ctx, it) } ?: 0,
                 // The heading comes from the PAGE (#649) — `group`/`subgroup` in
                 // build.json — so a section can declare two levels (Configs:
-                // Launcher; Watchdog ▸ Setup / Observability) without a word of
+                // Launcher; Setup ▸ Apps / Observability) without a word of
                 // it living here. A page that declares none falls back to the
                 // one default heading, which is every other section.
                 group = if (p.isAction) GROUP_ACTIONS else p.group.ifBlank { GROUP_PAGES },
