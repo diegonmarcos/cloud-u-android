@@ -66,6 +66,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -148,6 +150,14 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
     var dialog by remember { mutableStateOf<FilesDialog?>(null) }
     var searching by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    // #875 Copy path: the clipboard gets PathFormatter's text; the snack is the declared confirmation and never echoes it.
+    val copyPath: (List<Location>) -> Unit = { locs ->
+        if (locs.isNotEmpty()) {
+            actions.copyText(PathFormatter.forLocations(locs))
+            Declarations.files.rowAction(COPY_PATH)?.snack?.takeIf { it.isNotBlank() }?.let { msg -> scope.launch { snackbar.showSnackbar(msg) } }
+        }
+    }
 
     LaunchedEffect(Unit) { controller.messages.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(ui.a.location.key, ui.b.location.key) { controller.ensureLoaded(ui.a.location); controller.ensureLoaded(ui.b.location) }
@@ -214,6 +224,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                         Pane(id, ui, controller, listings, prefs, isActive = ui.active == id, modifier = m,
                             onOpenPlaces = { dialog = FilesDialog.Places(id, pickDestination = false, move = false) },
                             onOpenEntry = { e, siblings -> openEntry(id, e, siblings) },
+                            onCopyPath = { loc -> copyPath(listOf(loc)) },
                             onMenu = { e, action -> dialog = when (action) {
                                 EntryAction.RENAME -> FilesDialog.Rename(e)
                                 EntryAction.PROPERTIES -> { controller.openProperties(e); null }
@@ -225,6 +236,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                                 EntryAction.OPEN_OTHER_PANE -> { controller.open(ui.otherId, e.location); controller.activate(ui.otherId); null }
                                 EntryAction.BOOKMARK -> { (e.location as? Location.Local)?.let { controller.prefs.toggleBookmark(it.path) }; null }
                                 EntryAction.CONVERT_PDF -> FilesDialog.ConvertPdf(e)
+                                EntryAction.COPY_PATH -> { copyPath(listOf(e.location)); null }
                             } })
                     }
                     when {
@@ -249,6 +261,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                 onRename = { entries -> dialog = if (entries.size == 1) FilesDialog.Rename(entries.first()) else FilesDialog.BulkRename(ui.active, entries.mapNotNull { it.localFile }, active.location) },
                 onShare = { paths -> actions.share(paths) },
                 onProperties = { e -> controller.openProperties(e) },
+                onCopyPath = { entries -> copyPath(entries.map { it.location }) },
                 onPickDestination = { move -> dialog = FilesDialog.Places(ui.active, pickDestination = true, move = move) })
         }
         jobs.forEach { job ->
@@ -275,7 +288,9 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
 
 // ── one pane ─────────────────────────────────────────────────────────────
 
-private enum class EntryAction { RENAME, PROPERTIES, DELETE, SHARE, OPEN_WITH, EDIT, EXTRACT_HERE, OPEN_OTHER_PANE, BOOKMARK, CONVERT_PDF }
+private enum class EntryAction { RENAME, PROPERTIES, DELETE, SHARE, OPEN_WITH, EDIT, EXTRACT_HERE, OPEN_OTHER_PANE, BOOKMARK, CONVERT_PDF, COPY_PATH }
+
+private const val COPY_PATH = "copy_path"
 
 private data class TreeRow(val entry: FileOps.Entry, val depth: Int)
 
@@ -290,6 +305,7 @@ private fun Pane(
     modifier: Modifier,
     onOpenPlaces: () -> Unit,
     onOpenEntry: (FileOps.Entry, List<FileOps.Entry>) -> Unit,
+    onCopyPath: (Location) -> Unit,
     onMenu: (FileOps.Entry, EntryAction) -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -315,7 +331,7 @@ private fun Pane(
             },
     ) {
         TabStrip(id, pane, controller, onOpenPlaces)
-        Breadcrumbs(id, loc, controller)
+        Breadcrumbs(id, loc, controller, onCopyPath)
         PaneToolbar(id, pane, controller, prefs)
         val rootLabel = (loc as? Location.Local)?.let { Places.rootLabel(ctx, it.path) }
         if (listing?.usage != null && rootLabel != null) StorageBar(listing.usage)
@@ -396,9 +412,10 @@ private fun TabStrip(id: PaneId, pane: PaneState, controller: FilesController, o
 }
 
 @Composable
-private fun Breadcrumbs(id: PaneId, loc: Location, controller: FilesController) {
+private fun Breadcrumbs(id: PaneId, loc: Location, controller: FilesController, onCopyPath: (Location) -> Unit) {
     val ctx = LocalContext.current
     val crumbs = remember(loc) { loc.crumbs() }
+    val copyDeclared = remember { Declarations.files.rowAction(COPY_PATH) != null }
     val listState = rememberLazyListState()
     LaunchedEffect(crumbs.size) { if (crumbs.isNotEmpty()) listState.animateScrollToItem(crumbs.lastIndex) }
     LazyRow(Modifier.fillMaxWidth().testTag(DriveTags.FILES_BREADCRUMBS).padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.gap), state = listState, verticalAlignment = Alignment.CenterVertically) {
@@ -407,7 +424,7 @@ private fun Breadcrumbs(id: PaneId, loc: Location, controller: FilesController) 
             val label = (crumb as? Location.Local)?.let { Places.rootLabel(ctx, it.path) } ?: crumb.name
             Text(
                 label,
-                Modifier.clip(bottomNavPillShape).clickable(enabled = !last) { controller.open(id, crumb) }.padding(horizontal = DriveMetrics.gapWide, vertical = DriveMetrics.tight),
+                Modifier.clip(bottomNavPillShape).combinedClickable(onClick = { if (!last) controller.open(id, crumb) }, onLongClick = if (copyDeclared) ({ onCopyPath(crumb) }) else null).padding(horizontal = DriveMetrics.gapWide, vertical = DriveMetrics.tight),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (last) FontWeight.Bold else FontWeight.Normal,
                 color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -555,6 +572,7 @@ private fun EntryRow(
                 if (entry.isDirectory) item(R.string.files_copy_to_other, EntryAction.OPEN_OTHER_PANE)
                 if (local != null && entry.isDirectory) item(R.string.files_bookmark_add, EntryAction.BOOKMARK)
                 item(R.string.files_properties, EntryAction.PROPERTIES)
+                Declarations.files.rowAction(COPY_PATH)?.let { a -> DropdownMenuItem(text = { Text(a.label) }, leadingIcon = { Icon(IconCatalog.vectorOrDefault(a.icon), null, Modifier.size(DriveMetrics.icon)) }, onClick = { menu = false; onMenu(EntryAction.COPY_PATH) }) }
                 if (local != null && !entry.isDirectory) item(R.string.files_share, EntryAction.SHARE)
                 if (local != null) item(R.string.files_rename, EntryAction.RENAME)
                 if (local != null) item(R.string.chrome_delete, EntryAction.DELETE)
@@ -569,7 +587,7 @@ private fun EntryRow(
 private fun SelectionBar(
     ui: FilesUiState, controller: FilesController,
     onDelete: () -> Unit, onZip: () -> Unit, onRename: (List<FileOps.Entry>) -> Unit, onShare: (List<String>) -> Unit,
-    onProperties: (FileOps.Entry) -> Unit, onPickDestination: (Boolean) -> Unit,
+    onProperties: (FileOps.Entry) -> Unit, onCopyPath: (List<FileOps.Entry>) -> Unit, onPickDestination: (Boolean) -> Unit,
 ) {
     val pane = ui.activePane
     val inArchive = pane.location.isArchive
@@ -604,6 +622,7 @@ private fun SelectionBar(
                     DropdownMenuItem(text = { Text(stringResource(R.string.files_share)) }, enabled = selected.any { !it.isDirectory }, onClick = { more = false; onShare(selected.filter { !it.isDirectory }.mapNotNull { (it.location as? Location.Local)?.path }) })
                 }
                 DropdownMenuItem(text = { Text(stringResource(R.string.files_properties)) }, enabled = selected.size == 1, onClick = { more = false; selected.firstOrNull()?.let(onProperties) })
+                Declarations.files.rowAction(COPY_PATH)?.let { a -> DropdownMenuItem(text = { Text(a.label) }, leadingIcon = { Icon(IconCatalog.vectorOrDefault(a.icon), null, Modifier.size(DriveMetrics.icon)) }, onClick = { more = false; onCopyPath(selected) }) }
                 DropdownMenuItem(text = { Text(stringResource(R.string.files_select_all)) }, onClick = { more = false; controller.update { s -> FilesReducer.selectAll(s, s.active, allKeys(s, controller)) } })
                 DropdownMenuItem(text = { Text(stringResource(R.string.files_invert)) }, onClick = { more = false; controller.update { s -> FilesReducer.invert(s, s.active, allKeys(s, controller)) } })
                 DropdownMenuItem(text = { Text(stringResource(R.string.files_clear_selection)) }, onClick = { more = false; controller.update { FilesReducer.clearSelection(it, it.active) } })

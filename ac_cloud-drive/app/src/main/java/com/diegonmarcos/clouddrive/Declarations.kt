@@ -257,7 +257,14 @@ object Declarations {
         val textExtensions: Set<String>,
         val defaultDualPane: Boolean,
         val tabsPerPaneMax: Int,
-    )
+        /** #875 the row/selection actions the screen offers, declared (label, icon, snack) instead of typed into Kotlin. */
+        val rowActions: List<RowActionDecl> = emptyList(),
+    ) {
+        fun rowAction(id: String): RowActionDecl? = rowActions.firstOrNull { it.id == id }
+    }
+
+    /** #875 [snack] is the confirmation shown after the action; it never carries the value acted on. */
+    data class RowActionDecl(val id: String, val label: String, val icon: String, val snack: String)
 
     /** #603 [routeTab]/[routePage] non-blank ⇒ the tile stays in the app and selects that declared tab and sub-page. */
     data class AppTileDecl(val label: String, val icon: String, val packageName: String, val fallbackUrl: String, val routeTab: String, val routePage: String)
@@ -430,6 +437,9 @@ object Declarations {
             textExtensions = o.strings("text_extensions").map { it.lowercase() }.toSet(),
             defaultDualPane = o.bool("default_dual_pane", true),
             tabsPerPaneMax = (o.int("tabs_per_pane_max") ?: 6).coerceAtLeast(1),
+            rowActions = objects(o["row_actions"]).mapNotNull { a ->
+                val id = a.str("id"); if (id.isBlank()) null else RowActionDecl(id, a.str("label", id), a.str("icon"), a.str("snack"))
+            },
         )
     }
 
@@ -518,7 +528,7 @@ object Declarations {
 
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */
     fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null, sync: SyncDecl? = null): Set<String> =
-        (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } +
+        (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } + files.rowActions.map { it.icon } +
             (volumes?.classes?.map { it.icon } ?: emptyList()) + (sync?.pages?.map { it.icon } ?: emptyList()) +
             (sync?.git?.let { g -> g.sections.map { it.icon } + g.personalGroups.map { it.icon } + g.loginWays.map { it.icon } + g.ways.map { it.icon } + g.remoteModes.map { it.icon } + g.ops.map { it.icon } } ?: emptyList())
             ).filter { it.isNotBlank() }.toSet()

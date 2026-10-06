@@ -176,6 +176,15 @@ class DeclarationsTest {
         assertTrue(files.tabsPerPaneMax >= 2)
     }
 
+    @Test fun filesDeclaresTheCopyPathRowAction() {
+        val files = Declarations.parseFiles(section("files"))
+        val a = files.rowAction("copy_path")!!
+        assertEquals("Copy path", a.label)
+        assertEquals("Path copied", a.snack)
+        assertTrue("the snack never carries the value", !a.snack.contains("/") && !a.snack.contains(":"))
+        assertTrue(IconCatalog.knows(a.icon))
+    }
+
     @Test fun filterRulesMatchAsDeclared() {
         val files = Declarations.parseFiles(section("files"))
         val images = files.filters.first { it.id == "images" }

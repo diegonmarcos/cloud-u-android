@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Commit
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
@@ -68,6 +69,7 @@ object IconCatalog {
 
     fun vector(name: String): ImageVector? = when (name) {
         "folder" -> Icons.Filled.Folder
+        "content_copy" -> Icons.Filled.ContentCopy
         "apps" -> Icons.Filled.Apps
         "sync" -> Icons.Filled.Sync
         "backup" -> Icons.Filled.Backup

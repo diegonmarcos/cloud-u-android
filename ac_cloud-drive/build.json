@@ -325,6 +325,15 @@
         "gitignore",
         "env"
       ],
+      "_doc_row_actions": "#875 the actions a Files row (overflow menu), the selection bar and the current-folder crumb (tap-hold) offer, declared like the sections and filters: label and icon are what the menu prints, snack is the confirmation after the action. copy_path puts the folder's path on the clipboard through files/PathFormatter (absolute path for a local volume, content URI for a SAF volume, remote:path for an rclone mount) and the snack never echoes the path or anything secret.",
+      "row_actions": [
+        {
+          "id": "copy_path",
+          "label": "Copy path",
+          "icon": "content_copy",
+          "snack": "Path copied"
+        }
+      ],
       "default_dual_pane": true,
       "tabs_per_pane_max": 6
     },
@@ -712,6 +721,11 @@
     "libs:devtools": {
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/, same as libs:core. Not listed in app.depends_on and not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which is what gives every app the constellation-wide debug API (127.0.0.1:38090+, own-process logcat) without per-app wiring that would drift.",
       "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
     },
     "libs:updater": {

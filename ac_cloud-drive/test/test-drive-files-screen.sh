@@ -134,13 +134,13 @@ if grep -qE 'FilesReducer\.back\(' "$TESTS/files/FilesStateTest.kt" && grep -qE 
 
 echo "── M mutation-proof ──"
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
-grep -v '^        Breadcrumbs(id, loc, controller)$' "$SCREEN" > "$TMP/no-crumbs.kt"
+grep -v '^        Breadcrumbs(id, loc, controller, onCopyPath)$' "$SCREEN" > "$TMP/no-crumbs.kt"
 cmp -s "$SCREEN" "$TMP/no-crumbs.kt" && fail "the crumbs mutation changed nothing (tester is stale)"
 f1 "$TMP/no-crumbs.kt" >/dev/null && fail "F1 passed a pane without breadcrumbs (tester is vacuous)" || pass "breadcrumbs dropped from Pane → F1 RED"
 python3 - "$SCREEN" "$TMP/swapped.kt" <<'PYTHON'
 import sys
 s = open(sys.argv[1], encoding="utf-8").read()
-s = s.replace("        TabStrip(id, pane, controller, onOpenPlaces)\n        Breadcrumbs(id, loc, controller)\n", "        Breadcrumbs(id, loc, controller)\n        TabStrip(id, pane, controller, onOpenPlaces)\n")
+s = s.replace("        TabStrip(id, pane, controller, onOpenPlaces)\n        Breadcrumbs(id, loc, controller, onCopyPath)\n", "        Breadcrumbs(id, loc, controller, onCopyPath)\n        TabStrip(id, pane, controller, onOpenPlaces)\n")
 open(sys.argv[2], "w", encoding="utf-8").write(s)
 PYTHON
 cmp -s "$SCREEN" "$TMP/swapped.kt" && fail "the swap mutation changed nothing (tester is stale)"
