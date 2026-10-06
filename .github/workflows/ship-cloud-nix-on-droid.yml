@@ -30,15 +30,18 @@ on:
       # edit must START a run (it is the only pipeline that executes
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
-      # #836 build inputs HASHED but NOT watched per push: each shared lib
-      # this app compiles but is not the primary consumer of
-      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow
-      # file. fleet-refresh.yml ships the app when one of the libs moved
-      # since its last published build.
+      # #870 build inputs HASHED but NOT watched per push: every engine lib
+      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static
+      # lib this app is not the primary consumer of
+      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared
+      # data manifests and this workflow file. fleet-refresh.yml (schedule
+      # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
+      #   input: "ab_cloud-terminal-store/**"
+      #   input: "ac_cloud-termux/rootfs/rootfs.json"
       # ── end MANAGED-PATHS-HEADER ──
       # #644 — the shared declarative link store is BAKED INTO this app's bootstrap
       # zip (usr/lib/cloud-store) and hashed into its content address, so an engine
@@ -51,9 +54,7 @@ on:
       # #771 goose's and hermes' one declaration (version, url) -- rootfs-extras.nix reads it,
       # and it is one of the bootstrap's identity_files.
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
-      - "ab_cloud-terminal-store/**"
       - "ac_cloud-nix-on-droid/**"
-      - "ac_cloud-termux/rootfs/rootfs.json"
 permissions:
   contents: write   # gh release upload
 

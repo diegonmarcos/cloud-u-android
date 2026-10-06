@@ -196,7 +196,7 @@ def builds(root, wf_dir, hit, files):
     return out
 
 
-def refreshed(wf_dir, files):
+def refreshed(wf_dir, files, root="."):
     """#836: the apps fleet-refresh.yml would ship for this change set — those
     whose DEFERRED shared-lib inputs (hashed, not push-watched; comment lines
     inside the managed fence) contain a changed file. The refresh diffs from
@@ -204,12 +204,12 @@ def refreshed(wf_dir, files):
     parent this is exactly its answer."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     sys.dont_write_bytecode = True
-    from cloud_android_workflow_paths import deferred_inputs
+    from cloud_android_workflow_paths import deferred_inputs, refresh_input
     out = []
     for wf in sorted(glob.glob(os.path.join(wf_dir, "ship-*.yml"))):
         text = open(wf).read()
         libs = [d.rstrip("*").rstrip("/") for d in deferred_inputs(text)
-                if d.startswith("ab_cloud-libs-shared/libs/")]
+                if refresh_input(root, d)]  # #870: cross-app source dirs only
         app = re.search(r"^  WORK_DIR: (\S+)$", text, re.M)
         if libs and "fleet-refresh-" in text and under(files, libs):
             out.append(app.group(1) if app else os.path.basename(wf))
@@ -224,7 +224,7 @@ def scenarios_table(root, wf_dir, path):
         hit = sorted(os.path.basename(w) for w in glob.glob(os.path.join(wf_dir, "*.yml"))
                      if fires(*triggers(w), files))
         b = builds(root, wf_dir, hit, files)
-        b["refresh"] = refreshed(wf_dir, files)
+        b["refresh"] = refreshed(wf_dir, files, root)
         rows.append({"id": sc["id"], "runs": len(hit), "ship": sum(h.startswith("ship") for h in hit),
                      "apps": len(b["apps"]), "libs": len(b["libs"]), "rootfs": len(b["rootfs"]),
                      "refresh": len(b["refresh"]), "built": b, "expect": sc.get("expect")})
@@ -274,7 +274,7 @@ def main(argv):
     ship = [h for h in hit if h.startswith("ship")]
     b = builds(root, wf_dir, hit, files) if want_builds else None
     if b is not None:
-        b["refresh"] = refreshed(wf_dir, files)
+        b["refresh"] = refreshed(wf_dir, files, root)
     if as_json:
         print(json.dumps({"files": len(files), "runs": len(hit), "ship": len(ship), "workflows": hit,
                           **({"built": b} if b else {})}))

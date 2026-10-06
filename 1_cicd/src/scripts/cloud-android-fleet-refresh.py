@@ -38,7 +38,7 @@ import glob, json, os, re, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True
-from cloud_android_workflow_paths import deferred_inputs  # noqa: E402
+from cloud_android_workflow_paths import deferred_inputs, refresh_input  # noqa: E402
 
 SHARED_LIBS = "ab_cloud-libs-shared/libs/"
 REFRESH_TYPE = re.compile(r"^    types: \[(fleet-refresh-[^\]]+)\]$", re.M)
@@ -54,7 +54,7 @@ def refreshable(root):
         app = re.search(r"^  WORK_DIR: (\S+)$", text, re.M)
         if not ev or not app:
             continue
-        libs = [d.rstrip("*").rstrip("/") for d in deferred_inputs(text) if d.startswith(SHARED_LIBS)]
+        libs = [d.rstrip("*").rstrip("/") for d in deferred_inputs(text) if refresh_input(root, d)]  # #870: cross-app source dirs only, never a lib or a manifest
         if libs:
             out.append((app.group(1), os.path.basename(wf), ev.group(1), libs))
     return out

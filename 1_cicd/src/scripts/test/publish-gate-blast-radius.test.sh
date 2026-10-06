@@ -140,9 +140,9 @@ fixture_selects() {
 }
 
 got="$(fixture_selects libs/alpha)"
-[ "$got" = "alpha beta" ] \
-    && ok "a change to libs/alpha selects alpha and its dependent beta, and nothing else" \
-    || fail "libs/alpha should select 'alpha beta', selected '$got'"
+[ "$got" = "alpha" ] \
+    && ok "a change to libs/alpha selects alpha ALONE, its dependent beta is not rebuilt (#870)" \
+    || fail "libs/alpha should select 'alpha' only, selected '$got'"
 
 got="$(fixture_selects libs/gamma)"
 [ "$got" = "gamma" ] \
@@ -195,14 +195,8 @@ for m in modules:
     deps[m] = [d for d in re.findall(r"""project\(['"]:libs:([A-Za-z0-9_.-]+)""", text)
                if d in modules]
 def closure(start):
-    seen, stack = set(), [start]
-    while stack:
-        cur = stack.pop()
-        if cur in seen:
-            continue
-        seen.add(cur)
-        stack.extend(deps[cur])
-    return seen
+    # #870: one lib per lib change -- the gate hashes the module's own dir only.
+    return {start}
 with open(os.path.join(work, 'expected-closures'), 'w') as fh:
     for m in modules:
         fh.write('%s %s\n' % (m, ' '.join(sorted(closure(m)))))
@@ -225,7 +219,7 @@ PYEOF
         fi
     done
     [ "$mismatch" -eq 0 ] \
-        && ok "every shipped APK's input set is exactly its own gradle dependency closure"
+        && ok "every shipped APK's input set is exactly its own module dir (#870: no dependency closure)"
 
     # The headline number, asserted against an independently derived
     # expectation rather than against "fewer than all". `selected < total` is
@@ -244,7 +238,7 @@ PYEOF
             <<<"$(bash "$BUILD_SH" module-paths "$module" 2>/dev/null)" && selected=$((selected + 1))
     done
     if [ "$selected" -eq "$expected" ]; then
-        ok "34a089d7's libs/updater change selects $selected of $total library APKs — exactly those that compile it"
+        ok "34a089d7's libs/updater change selects $selected of $total library APKs — updater alone (#870)"
     else
         fail "libs/updater selects $selected of $total, but $expected compile it — the over-trigger of 2026-09-09 is back"
     fi

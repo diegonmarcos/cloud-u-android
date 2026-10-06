@@ -101,10 +101,12 @@ mutate() {   # mutate <label> <python-edit-of-app/build.gradle>
     if [ -n "$(check "$TMP/s")" ]; then echo "  PASS  MUT $1 goes red"
     else echo "  FAIL  MUT $1 stayed green — the check cannot see it"; FAIL=1; fi
 }
-mutate "devtools flavor without core" \
-    "s=s.replace(\"shipped.findAll { it != 'core' }\", \"shipped.findAll { it != 'core' && it != 'devtools' }\", 1); assert 'devtools' in s"
-mutate "the all-flavors core edge dropped (eighteen libs back out of the mesh)" \
-    "import re; s=re.sub(r\"shipped\\.findAll \\{ it != 'core' \\}\\.each \\{ name ->\\s*add\\([^\\n]*\\n\\s*\\}\", '', s, count=1)"
+# #870: only engines ship, so core/devtools are no longer flavors and the all-flavors
+# core edge in app/build.gradle is dead code; the property now lives in each ENGINE's
+# own build.gradle (E5: it compiles libs:core). Mutate that: an engine whose build.gradle
+# loses its libs:core edge is not observable through app/build.gradle any more, so the two
+# mutations of that edge (devtools flavor without core, all-flavors edge dropped) are retired
+# with it; the engine contract tester (test-engine-services.sh E5) holds libs:core per engine.
 mutate "static versionCode override restored" \
     "s=s.replace('def cloudVersionCode = { ->', 'def cloudVersionCode = { ->\\n    if (buildJson.android.version_code) return buildJson.android.version_code as int', 1)"
 

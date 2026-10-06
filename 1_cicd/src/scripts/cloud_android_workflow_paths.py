@@ -122,11 +122,12 @@ def _split(region_lines):
 # publishes when they moved) and fleet-refresh.yml reads them to decide which
 # apps it ships on its schedule.
 DEFERRED_INTRO = [
-    "      # #836 build inputs HASHED but NOT watched per push: each shared lib",
-    "      # this app compiles but is not the primary consumer of",
-    "      # (1_cicd/src/data/lib-primary-consumers.json), and this workflow",
-    "      # file. fleet-refresh.yml ships the app when one of the libs moved",
-    "      # since its last published build.",
+    "      # #870 build inputs HASHED but NOT watched per push: every engine lib",
+    "      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static",
+    "      # lib this app is not the primary consumer of",
+    "      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared",
+    "      # data manifests and this workflow file. fleet-refresh.yml (schedule",
+    "      # only) ships the app for a moved static lib or cross-app dir.",
 ]
 DEFERRED_PREFIX = '      #   input: "'
 DEFERRED_RE = re.compile(r'^      #   input: "([^"]+)"\s*$', re.M)
@@ -166,3 +167,40 @@ def rewrite_paths_block(region_lines, final_entries, app, deferred=()):
     block = ["    paths:"] + [BEG] + header + [END] + keep
     block += ["      - \"%s\"" % e for e in final_entries]
     return block
+
+# ── #870: the rebuild-isolation rule, in ONE place ──────────────────────────
+# An app ships only on its own dir (+ its fork engine + explicit_inputs); a
+# shared lib that has a lib APK ships that APK only; shared manifests and other
+# apps' dirs are hashed, never watched; fleet-refresh ships on cross-app source
+# dirs only. Declaration: 1_cicd/src/data/rebuild-isolation.json.
+import fnmatch, json, os
+
+ISOLATION = "1_cicd/src/data/rebuild-isolation.json"
+
+
+def isolation(root):
+    return json.load(open(os.path.join(root, ISOLATION)))
+
+
+def lib_apk_modules(root):
+    """Shared libs that ship their own APK: a dir under libs/ with a build.gradle
+    that lib-apks/build.json::lib_apks.exclude does not name."""
+    libs = os.path.join(root, "ab_cloud-libs-shared/libs")
+    try:
+        excl = set(json.load(open(os.path.join(root, "ab_cloud-libs-shared/lib-apks/build.json")))["lib_apks"].get("exclude", {}))
+    except (OSError, ValueError, KeyError):
+        excl = set()
+    return {d for d in os.listdir(libs) if os.path.isfile(os.path.join(libs, d, "build.gradle"))} - excl
+
+
+def is_manifest(root, path):
+    return any(fnmatch.fnmatchcase(path, g) for g in isolation(root).get("manifests", []))
+
+
+def refresh_input(root, path):
+    """True when a DEFERRED input may make fleet-refresh ship the app: a source
+    dir of another app, not a lib, not a manifest, not a workflow file."""
+    p = path.rstrip("*").rstrip("/")
+    if p.startswith("ab_cloud-libs-shared/libs/"):
+        return p.rsplit("/", 1)[-1] not in lib_apk_modules(root)   # a moved ENGINE ships its lib APK, never an app
+    return not (p.startswith("1_cicd/") or is_manifest(root, path))

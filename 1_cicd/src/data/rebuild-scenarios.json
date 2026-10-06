@@ -1,71 +1,57 @@
 {
-  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB. #836: `refresh` is how many apps fleet-refresh.yml ships LATER for the change (their deferred shared-lib inputs moved; they are NOT started per push), held both ways like the rest. A shared lib edit now starts its declared primary consumer only (1_cicd/src/data/lib-primary-consumers.json) plus the one lib-APK builder run.",
+  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB. #836: `refresh` is how many apps fleet-refresh.yml ships LATER for the change (their deferred shared-lib inputs moved; they are NOT started per push), held both ways like the rest. A shared lib edit now starts its declared primary consumer only (1_cicd/src/data/lib-primary-consumers.json) plus the one lib-APK builder run. #870 (owner rule, see rebuild-isolation.json): only RUNTIME ENGINES ship a Cloud-Lib APK (discovered by the ENGINE CONTRACT manifest scan, cloud-android-lib-apks-engines.py), so an engine lib change = 1 lib APK, 0 apps; a static lib change = its primary consumer only (the rest are `refresh`, scheduled), 0 libs; a shared manifest change = 0 apps. cloud-android-rebuild-isolation-guard.py asserts this independently of the counts.",
   "scenarios": [
     {
       "id": "libs/core (one source file)",
-      "_doc_libs": "#825 29 -> 30: Cloud-Lib-Fleetconfig, the fleet-config policy engine, compiles libs:core (IFleetConfigEngine). It is the price of taking the policy out of the 32 apps.",
-      "_doc_refresh": "#865 32 -> 33: cloud-store is a new app and compiles libs:core like every app.",
       "files": [
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
       "expect": {
         "apps": 0,
-        "libs": 31,
+        "libs": 0,
         "rootfs": 0,
         "ship": 1,
         "refresh": 34
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 33 -> 34: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "libs/devtools (one source file)",
-      "_doc_libs": "#825 30 -> 31: Cloud-Lib-Fleetconfig (through libs:core).",
-      "_doc_refresh": "#865 32 -> 33: cloud-store (through libs:core).",
       "files": [
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
       "expect": {
         "apps": 0,
-        "libs": 32,
+        "libs": 0,
         "rootfs": 0,
         "ship": 1,
         "refresh": 34
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 33 -> 34: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "libs/appstore (#831's lib)",
-      "_doc_refresh": "#865 0 -> 1: cloud-store is now the primary consumer and ships per push; cloud-superapp, the other host, is refreshed by fleet-refresh.yml.",
       "files": [
         "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/LibDownloader.kt"
       ],
       "expect": {
         "apps": 1,
-        "libs": 2,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 2
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 1 -> 2: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "libs/updater (700ab854 fired 12 ships)",
-      "_doc_refresh": "#865 10 -> 11: cloud-store, the installer app, compiles the install engine in-process.",
       "files": [
         "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Updater.kt"
       ],
       "expect": {
         "apps": 1,
-        "libs": 3,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 12
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 11 -> 12: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "libs/bottomnav (7 consumers)",
@@ -74,7 +60,7 @@
       ],
       "expect": {
         "apps": 1,
-        "libs": 2,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 6
@@ -207,13 +193,11 @@
       ],
       "expect": {
         "apps": 1,
-        "libs": 9,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 7
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 6 -> 7: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "fleet-config policy engine (libs/fleetconfig, one source file)",
@@ -237,13 +221,11 @@
       ],
       "expect": {
         "apps": 1,
-        "libs": 2,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 1
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 0 -> 1: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "fleet-config manifest (one app's store)",
@@ -253,13 +235,11 @@
       ],
       "expect": {
         "apps": 1,
-        "libs": 2,
+        "libs": 0,
         "rootfs": 0,
         "ship": 2,
         "refresh": 1
-      },
-      "_doc_libs_account": "#867 +1: Cloud-Lib-Account (libs:account) compiles this, as every Account-hosting lib closure does.",
-      "_doc_refresh_867": "#867 0 -> 1: cloud-account, the new Account app (it links this through libs:account)."
+      }
     },
     {
       "id": "debug port table (one new package)",
@@ -321,11 +301,11 @@
         "ac_cloud-termux/rootfs/rootfs.json"
       ],
       "expect": {
-        "apps": 2,
+        "apps": 1,
         "libs": 0,
-        "rootfs": 2,
-        "ship": 2,
-        "refresh": 0
+        "rootfs": 1,
+        "ship": 1,
+        "refresh": 1
       }
     },
     {
@@ -347,11 +327,11 @@
         "ab_cloud-terminal-store/pty-selftest.py"
       ],
       "expect": {
-        "apps": 3,
+        "apps": 0,
         "libs": 0,
         "rootfs": 0,
-        "ship": 3,
-        "refresh": 0
+        "ship": 0,
+        "refresh": 3
       }
     },
     {
@@ -365,6 +345,49 @@
         "libs": 0,
         "rootfs": 0,
         "ship": 0,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "#870 engine lib: libs/gh",
+      "files": [
+        "ab_cloud-libs-shared/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
+      ],
+      "expect": {
+        "apps": 0,
+        "libs": 1,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "#870 static lib: libs/account (f89b4e580's lib)",
+      "files": [
+        "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountData.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 2,
+        "refresh": 1
+      }
+    },
+    {
+      "id": "#870 shared manifests only (f89b4e580's data files)",
+      "files": [
+        "aa_cloud-superapp/data/constellation-fleet.json",
+        "1_cicd/src/data/lib-classes.json",
+        "1_cicd/src/data/test-coverage.json",
+        "1_cicd/dist/data/test-coverage.json",
+        "licenses/inventory.json"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
         "refresh": 0
       }
     }

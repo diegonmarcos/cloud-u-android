@@ -1,0 +1,22 @@
+{
+  "_doc": "#870 THE REBUILD-ISOLATION RULE (owner): a change in a shared lib ships ONLY that lib's APK (apps bind lib APKs at runtime); an app ships only on changes under its own dir plus the explicit non-lib inputs below; a lib change never rebuilds another lib; a regenerated shared manifest never starts an app. Everything an app compiles but does not own is HASHED by the publish gate (so its next own-dir build carries it) and never WATCHED by GitHub. Held by cloud-android-rebuild-isolation-guard.py (every push) and rebuild-scenarios.json.",
+  "manifests": [
+    "aa_cloud-superapp/data/*",
+    "1_cicd/src/data/*",
+    "1_cicd/dist/data/*",
+    "licenses/*",
+    "**/debug-ports.json",
+    "**/debug-api.json",
+    "**/fleet-config.json",
+    "**/constellation-fleet.json",
+    "**/test-coverage.json"
+  ],
+  "_doc_manifests": "Shared generated/declared data. Hashed into an app that reads it, never watched, never a fleet-refresh reason (a baked-in copy goes stale until the app's next own-dir build; fresh data is a runtime fetch).",
+  "explicit_inputs": {
+    "aa_cloud-superapp": ["ab_cloud-libs-shared/build.json"],
+    "ab_cloud-libs-shared/keyboard-engines": ["ab_cloud-keyboard-libs/**"]
+  },
+  "_doc_explicit_inputs": "Non-lib inputs an app watches on purpose. ab_cloud-libs-shared/build.json carries firestack.artifact (the prebuilt netstack aar pin SuperApp links): advancing the pin IS a change to what ships and touches no app dir.",
+  "own_extra_globs": ["1_cicd/src/scripts/cloud-*-engine.sh", "1_cicd/src/scripts/cloud-*-fork-engine.sh"],
+  "_doc_own_extra_globs": "An app's fork/source engine script is the app's own code (single consumer), so it counts as owned."
+}

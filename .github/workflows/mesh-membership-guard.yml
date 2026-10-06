@@ -77,3 +77,14 @@ jobs:
       # stopped being per-root — which is this guard's every-push reason too.
       - name: What one change rebuilds does not widen (#796 rebuild fan-out ratchet)
         run: bash 1_cicd/src/scripts/test/rebuild-fanout.test.sh
+
+      # #870 (owner rule): a change rebuilds only what it owns. Engine lib -> its
+      # one Cloud-Lib APK and no app; static lib -> its primary consumer only;
+      # app dir -> that app; shared manifests -> no app. Every push, same reason
+      # as the ratchet above. Tester first (it breaks isolation on copies and
+      # requires red), then the real workflows and every rebuild scenario.
+      - name: The rebuild-isolation guard still fails on each way isolation breaks (#870)
+        run: bash 1_cicd/src/scripts/test/rebuild-isolation-guard.test.sh
+
+      - name: Every app ships on what it owns and every scenario is isolated (#870)
+        run: python3 1_cicd/src/scripts/cloud-android-rebuild-isolation-guard.py --scenarios 1_cicd/src/data/rebuild-scenarios.json

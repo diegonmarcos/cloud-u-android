@@ -122,10 +122,9 @@ _bj() { python3 -c "import json,sys;print(json.load(open('$SCRIPT_DIR/build.json
 # put on the release were rebuilds of source that had not moved, and the
 # constellation store offered every one of them to the phone as an update.
 #
-# The gate is per ASSET here, and each asset's inputs are its own module plus
-# the modules that module compiles against - so a touch to libs/updater
-# republishes Cloud-Lib-Updater.apk and Cloud-Lib-Appstore.apk, and leaves the
-# other 22 alone.
+# The gate is per ASSET here, and each asset's inputs are its own module ONLY
+# (#870) - so a touch to libs/updater republishes Cloud-Lib-Updater.apk and
+# leaves every other lib APK alone, its former dependents included.
 ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 GATE="$ROOT/1_cicd/dist/scripts/cloud-android-publish-gate.sh"
 IDENTITY_ENGINE="$ROOT/1_cicd/dist/scripts/cloud-android-source-identity.sh"
@@ -172,13 +171,11 @@ for name, path in modules.items():
                           re.findall(r"""project\(['"]:libs:([A-Za-z0-9_.-]+)""", text)
                           if d in modules}
 
-closure, pending = set(), [target]
-while pending:
-    current = pending.pop()
-    if current in closure or current not in modules:
-        continue
-    closure.add(current)
-    pending.extend(dependencies[current])
+# #870: ONE lib per lib change. The gate hashes the module's OWN dir only, not
+# the modules it compiles against: a change to libs/core ships Cloud-Lib-Core,
+# never every APK whose build.gradle mentions core (apps and libs bind lib APKs
+# at runtime). `dependencies` is still parsed so the closure stays inspectable.
+closure = {target} if target in modules else set()
 
 if not closure:
     sys.exit("FATAL: '%s' is not a module under %s" % (target, scan_roots))
