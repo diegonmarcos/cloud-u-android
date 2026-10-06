@@ -361,20 +361,16 @@ object DevControlServer {
                 "adb/status" -> { reply(writer, "200 OK", adbStatusJson(ctx), "application/json") }
                 "adb/netinfo" -> { reply(writer, "200 OK", adbNetInfoJson(ctx), "application/json") }
                 "adb/pair" -> {
-                    // Embedded adb client pairs with the local Wireless-Debugging
-                    // adbd. host = the IP shown in the pairing dialog (Android binds
-                    // the daemon to the Wi-Fi iface, not loopback — pass that IP,
-                    // e.g. 10.0.0.9; the device delivers it locally). port = the
-                    // PAIRING port, code = the 6-digit code.
-                    val host = query["host"] ?: "127.0.0.1"
-                    val port = query["port"]?.toIntOrNull()
-                    val code = query["code"]
-                    if (port == null || code.isNullOrBlank()) {
-                        reply(writer, "400 Bad Request", "need host=<ip>&port=<pairPort>&code=<6digits>\n")
-                    } else {
-                        val (ok, msg) = com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel.pair(ctx, host, port, code)
-                        reply(writer, "200 OK", """{"ok":$ok,"message":"${jsonEscape(msg)}"}""", "application/json")
-                    }
+                    // Shizuku-exact: no host, no port. AdbPairingService discovers
+                    // _adb-tls-pairing._tcp over mDNS (a typed port was how pairing
+                    // ended up against the CONNECT port → "Connection reset"), posts
+                    // the "Enter pairing code" notification, pairs in the foreground,
+                    // then connects + starts the plane. code= is optional: a script
+                    // can hand it over here instead of typing it into the shade.
+                    val r = runCatching { com.diegonmarcos.superapp.adbdebug.AdbPairingService.start(ctx, query["code"]) }
+                    val msg = if (r.isSuccess) "pairing notification posted — enter the code there (or pass code=)"
+                              else "could not start pairing service: ${r.exceptionOrNull()?.message}"
+                    reply(writer, "200 OK", """{"ok":${r.isSuccess},"message":"${jsonEscape(msg)}"}""", "application/json")
                 }
                 "adb/autoconnect" -> {
                     // mDNS auto-discovery of the local adbd connect service —
@@ -510,7 +506,7 @@ object DevControlServer {
             Spec("energy/reset",        "GET",  true,  "Clear the intra-app ledger + the watchdog sample store to start a fresh measurement window.", ""),
             Spec("energy/shizuku",      "GET",  true,  "EXACT per-app mAh via Shizuku (Tier 2) — runs `dumpsys batterystats --charged` in shell context (uid 2000) through the bound ShizukuUserService and parses the per-uid 'Estimated power use (mAh)' section. Returns available/granted/status + the per-app list, or apps=null while binding / when Shizuku isn't running. Ground truth the Tier-1 correlation calibrates against.", ""),
             Spec("adb/status",          "GET",  true,  "libs:shizuku-adb-debug-tools shell-channel ladder: per-channel ready/status for 'embedded-adb' (PRIMARY — our on-device adb client paired to localhost Wireless Debugging, the self-contained 'we ARE Shizuku' path), 'local-server' (our app_process server), and 'shizuku' (fallback); which is active, whether DUMP is held, and the data-driven bundle ids.", ""),
-            Spec("adb/pair",            "GET",  true,  "Embedded adb client: pair with the phone's OWN Wireless-Debugging adbd. host=the IP shown in the pairing dialog (Android binds the daemon to the Wi-Fi iface, not loopback — pass that IP e.g. 10.0.0.9; default 127.0.0.1). port=the PAIRING port, code=the 6-digit code. Self-contained bootstrap — no Shizuku app, no PC. Then call /api/adb/connect.", "host=<ip>&port=<pairPort>&code=<6digits>"),
+            Spec("adb/pair",            "GET",  true,  "Embedded adb client, the Shizuku way: starts AdbPairingService, which discovers the pairing port over mDNS (_adb-tls-pairing._tcp — never typed), posts the 'Enter pairing code' notification, pairs in a foreground service, then discovers _adb-tls-connect._tcp, connects and starts the privileged plane. code= optional (6 digits from 'Pair device with pairing code'); omitted, type it into the notification.", "code=<6digits>"),
             Spec("adb/connect",         "GET",  true,  "Embedded adb client: connect to the local adbd after pairing. host=IP from the main Wireless-debugging screen (default 127.0.0.1), port=the CONNECT port (distinct from the pairing port). On success the 'embedded-adb' channel goes ready and diagnostics run with zero third-party deps.", "host=<ip>&port=<connectPort>"),
             Spec("adb/autoconnect",     "GET",  true,  "Embedded adb client: auto-discover the local adbd via mDNS (_adb-tls-connect._tcp, advertised by Wireless Debugging) and connect — NO manual port. Needs the device already paired + Wireless Debugging ON. Also runs automatically on app start, so reconnect-after-update is hands-free.", ""),
             Spec("adb/server-command",  "GET",  true,  "Returns the exact one-liner to run ONCE per boot (via adb / Wireless Debugging) to start OUR self-contained shell-domain app_process server (AdbShellServer). This is the only privilege bootstrap; after it the app needs no third-party Shizuku app. {command,port,note}.", ""),

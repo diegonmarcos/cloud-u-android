@@ -27,4 +27,25 @@
          device's Wireless-Debugging IP collides with the WG mesh subnet). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- AdbPairingService — the Shizuku pairing flow: NsdManager discovery of
+         _adb-tls-pairing._tcp / _adb-tls-connect._tcp (INTERNET is all NSD
+         needs), a persistent notification with the "Enter pairing code"
+         RemoteInput, and the SPAKE2/TLS pairing itself held in the foreground
+         so Android cannot cut the socket mid-handshake. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application>
+        <service
+            android:name="com.diegonmarcos.superapp.adbdebug.AdbPairingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Pairs this app's embedded adb client with the phone's own Wireless debugging while the user types the pairing code into the notification" />
+        </service>
+    </application>
+
 </manifest>

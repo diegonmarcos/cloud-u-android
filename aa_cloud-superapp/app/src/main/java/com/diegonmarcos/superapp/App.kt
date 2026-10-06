@@ -61,6 +61,13 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // delayed or dropped on some OEMs, and the first successful connect right
         // after the one-time pairing must not wait for a reboot. Cheap when
         // already connected (autoConnect short-circuits).
+        // The Shizuku-style pairing service (libs:shizuku-adb-debug-tools) ends
+        // with the channel up; the plane (pm grant list) is this app's to arm.
+        com.diegonmarcos.superapp.adbdebug.AdbPairingService.onConnected = { c ->
+            androidx.work.WorkManager.getInstance(c).enqueueUniqueWork(
+                "privileged-plane", androidx.work.ExistingWorkPolicy.REPLACE,
+                androidx.work.OneTimeWorkRequestBuilder<com.diegonmarcos.superapp.system.PrivilegedPlaneWorker>().build())
+        }
         runCatching {
             androidx.work.WorkManager.getInstance(this).enqueueUniqueWork(
                 "privileged-plane", androidx.work.ExistingWorkPolicy.KEEP,

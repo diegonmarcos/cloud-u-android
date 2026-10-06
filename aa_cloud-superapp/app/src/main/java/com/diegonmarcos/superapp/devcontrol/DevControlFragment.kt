@@ -1718,10 +1718,10 @@ class DevControlFragment : Fragment() {
             val adbPort = DevControlPrefs(requireContext()).port
             val adbTok  = prefs.token
             it.addView(small(ctx, "Self-contained ADB (embedded libadb — no Shizuku app, no PC, works with WireGuard ON). Steps:"))
-            it.addView(small(ctx, "1) Tap 'Open Wireless Debugging' → turn it ON. 2) 'Pair device with pairing code' → note the 6-digit code + that dialog's port (=pairport). 3) Main screen → the IP:port there is the connectport."))
+            it.addView(small(ctx, "1) Tap 'Open Wireless Debugging' → turn it ON. 2) /api/adb/pair posts the pairing notification. 3) 'Pair device with pairing code' → type the 6-digit code into the notification (or pass code=). IP + ports are discovered over mDNS."))
             it.addView(small(ctx, "⚠ HOST GOTCHA: use your Wi-Fi LAN IP (e.g. 192.168.x.x), NOT the 10.x the dialog shows — that 10.x is the WireGuard tun0 and gets ECONNREFUSED. Find the real wlan0 IP with /api/adb/netinfo."))
             row(ctx, it, "0 NetInfo",  "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/netinfo   # find wlan0 IPv4")
-            row(ctx, it, "1 Pair",     "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/pair?host=<wlan-ip>&port=<pairport>&code=<6digits>'")
+            row(ctx, it, "1 Pair",     "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/pair'   # optional &code=<6digits>; port via mDNS")
             row(ctx, it, "2 Connect",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/connect?host=<wlan-ip>&port=<connectport>'")
             row(ctx, it, "3 Status",   "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/status   # embedded-adb ready=true")
             row(ctx, it, "4 Charger",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/diagnostics?bundle=charger'")

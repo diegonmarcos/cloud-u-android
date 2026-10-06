@@ -41,12 +41,16 @@ object AdbShellBootstrap {
      *
      * The token is embedded so only this app can talk to the server.
      */
-    fun serverCommand(ctx: Context): String {
+    fun serverCommand(ctx: Context): String = "adb shell \"${shellCommand(ctx)}\""
+
+    /** The same launch, as the shell line itself — what [AdbPairingService]
+     *  runs through the embedded adb stream once connected (our `start.sh`). */
+    fun shellCommand(ctx: Context): String {
         val pkg = ctx.packageName
         val tok = token(ctx)
-        return "adb shell \"CLASSPATH=\$(pm path $pkg | cut -d: -f2) " +
+        return "CLASSPATH=\$(pm path $pkg | cut -d: -f2) " +
             "nohup app_process /system/bin --nice-name=${niceName()} " +
-            "${serverClass()} $tok ${port()} </dev/null >/dev/null 2>&1 &\""
+            "${serverClass()} $tok ${port()} </dev/null >/dev/null 2>&1 &"
     }
 
     private const val PREFS   = "adb_shell"

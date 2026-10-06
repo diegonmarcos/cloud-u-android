@@ -24,6 +24,7 @@ import com.diegonmarcos.superapp.system.PermAskTracker
 import com.diegonmarcos.superapp.system.PrivilegedGrants
 import com.diegonmarcos.superapp.system.ScreenLocker
 import kotlinx.coroutines.launch
+import com.diegonmarcos.superapp.adbdebug.AdbPairingService
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.ShizukuShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
@@ -73,10 +74,6 @@ class PermissionsFragment : Fragment() {
     }
 
     private fun ctxAny(): Context = requireContext()
-
-    /** Reference to the pairing "IP" field so the self-created WiFi engines can
-     *  auto-fill the phone's own address on that network (group-owner IP). */
-    private var hostField: android.widget.EditText? = null
 
     companion object {
         fun newInstance() = PermissionsFragment()
@@ -139,17 +136,7 @@ class PermissionsFragment : Fragment() {
 
         // ── Privileged plane: pair once (ever), then it self-heals on every boot/launch ──
         col.addView(small(ctx, "Privileged plane — " + (plane?.let { "connected via ${it.name()}" } ?: "NOT connected") +
-            ". Pair ONCE: phone Settings → Developer options → Wireless debugging → 'Pair device with pairing code', copy IP:port + code here. After that every boot/launch reconnects and self-grants the list above."))
-        val hostIn = android.widget.EditText(ctx).apply { hint = "IP (e.g. 10.0.0.9)"; textSize = 11.5f; setPadding(dp(4), dp(2), dp(4), dp(2)) }
-        hostField = hostIn
-        val portIn = android.widget.EditText(ctx).apply { hint = "pair port"; inputType = android.text.InputType.TYPE_CLASS_NUMBER; textSize = 11.5f; setPadding(dp(4), dp(2), dp(4), dp(2)) }
-        val codeIn = android.widget.EditText(ctx).apply { hint = "6-digit code"; inputType = android.text.InputType.TYPE_CLASS_NUMBER; textSize = 11.5f; setPadding(dp(4), dp(2), dp(4), dp(2)) }
-        col.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(hostIn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
-            addView(portIn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(codeIn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        })
+            ". Pair ONCE, the Shizuku way: ② posts a notification, then phone Settings → Developer options → Wireless debugging → 'Pair device with pairing code' and type the 6-digit code INTO THE NOTIFICATION. IP and ports are discovered over mDNS — nothing to copy. After that every boot/launch reconnects and self-grants the list above."))
         // Step ⓪ (optional): no external WiFi to join? Spin up a device-local
         // hotspot so the radio is ON + attached to a network, which Wireless
         // Debugging (adb over WiFi, API 30+) needs. Local-only, not internet-
@@ -196,15 +183,14 @@ class PermissionsFragment : Fragment() {
         ))
         col.addView(permButtonRow(ctx,
             permButton(ctx, "② Pair", plane != null) {
-                val host = hostIn.text.toString().trim(); val port = portIn.text.toString().trim().toIntOrNull(); val code = codeIn.text.toString().trim()
-                if (host.isEmpty() || port == null || code.length < 6) { Toast.makeText(ctxAny(), "Need IP, pair port and 6-digit code", Toast.LENGTH_LONG).show(); return@permButton }
-                Thread {
-                    val (ok, msg) = EmbeddedAdbChannel.pair(ctxAny(), host, port, code)
-                    requireActivity().runOnUiThread {
-                        Toast.makeText(ctxAny(), (if (ok) "Paired: " else "Pair failed: ") + msg, Toast.LENGTH_LONG).show()
-                        if (ok) { armPlane(); rebuildFragment() }
-                    }
-                }.start()
+                // Shizuku-exact: the button only posts the pairing notification;
+                // AdbPairingService discovers the pairing port over mDNS, takes
+                // the code from the notification's RemoteInput, pairs, connects
+                // and arms the plane (App.kt hooks AdbPairingService.onConnected).
+                if (!grantedNotifWrite(ctxAny())) { requestNotificationsPermission(); Toast.makeText(ctxAny(), "Allow notifications first — the pairing code is typed into one", Toast.LENGTH_LONG).show(); return@permButton }
+                runCatching { AdbPairingService.start(ctxAny()) }
+                    .onSuccess { Toast.makeText(ctxAny(), "Pairing notification posted — open 'Pair device with pairing code' and type the code there", Toast.LENGTH_LONG).show() }
+                    .onFailure { Toast.makeText(ctxAny(), "Could not start pairing: ${it.message}", Toast.LENGTH_LONG).show() }
             },
             permButton(ctx, "③ Connect plane now", plane != null) { armPlane(); Toast.makeText(ctxAny(), "Connecting + self-granting in background…", Toast.LENGTH_SHORT).show() },
         ))
@@ -380,10 +366,9 @@ class PermissionsFragment : Fragment() {
                     is LocalHotspot.Status.Active -> {
                         // Local-only hotspot: the phone's AP address is conventionally
                         // 192.168.43.1 — auto-fill it so the pairing host is set.
-                        hostField?.setText("192.168.43.1")
                         enableWirelessDebuggingIfPermitted()
                         Toast.makeText(ctxAny(),
-                            "Local WiFi up — SSID: ${status.ssid} · pass: ${status.passphrase}. Now: Wireless debugging → Pair with code → type the code above → ③ Connect.", Toast.LENGTH_LONG).show()
+                            "Local WiFi up — SSID: ${status.ssid} · pass: ${status.passphrase}. Now: Wireless debugging → Pair with code → ② Pair → type the code into the notification.", Toast.LENGTH_LONG).show()
                     }
                     is LocalHotspot.Status.Failed -> Toast.makeText(ctxAny(),
                         "Couldn't create local WiFi (${status.reason}). Some devices (e.g. certain " +
@@ -438,10 +423,9 @@ class PermissionsFragment : Fragment() {
                         // Debugging dialog shows this same IP (192.168.49.1). Then
                         // enable Wireless Debugging (if we hold WRITE_SECURE_SETTINGS)
                         // and open the pairing page: only the 6-digit code is left.
-                        status.ownerIp?.let { hostField?.setText(it) }
                         enableWirelessDebuggingIfPermitted()
                         Toast.makeText(ctxAny(),
-                            "WiFi Direct up (host ${status.ownerIp ?: "?"} auto-filled). Now: Wireless debugging → Pair with code → type the 6-digit code above → ③ Connect.",
+                            "WiFi Direct up (host ${status.ownerIp ?: "?"}). Now: Wireless debugging → ② Pair → type the 6-digit code into the notification.",
                             Toast.LENGTH_LONG).show()
                         openWirelessDebuggingSettings()
                     }
