@@ -1,17 +1,18 @@
 package com.diegonmarcos.cloudnav
 
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.diegonmarcos.cloudnav.maps.MapsDb
 import com.diegonmarcos.cloudnav.maps.MapsDemo
 import com.diegonmarcos.cloudnav.maps.MapsExploredFragment
 import com.diegonmarcos.cloudnav.maps.MapsGeoLayers
-import org.hamcrest.Matchers.allOf
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import org.junit.Rule
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +32,11 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ExploredRenderTest {
+
+    // The island and the strip are Compose (#868): Espresso's withText cannot see them. They are
+    // driven by the lib's own tags, which also proves both render (a node that is not composed or
+    // not laid out fails the click).
+    @get:Rule val compose = createEmptyComposeRule()
 
     @Test fun explored_renders_native_pins_and_visited_fills() {
         val inst = InstrumentationRegistry.getInstrumentation()
@@ -57,8 +63,10 @@ class ExploredRenderTest {
 
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                onView(allOf(withText("Timeline"), isDisplayed())).perform(click())
-                onView(allOf(withText("Explored"), isDisplayed())).perform(click())
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_timeline").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("bottomnav_item_timeline").performClick()
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("explored")).fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag(PageTabsTags.tab("explored")).performClick()
 
                 fun explored(): MapsExploredFragment? = run {
                     var found: MapsExploredFragment? = null

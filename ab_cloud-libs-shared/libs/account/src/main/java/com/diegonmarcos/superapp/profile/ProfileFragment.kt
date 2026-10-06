@@ -26,7 +26,8 @@ import com.diegonmarcos.superapp.account.R
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
 import com.diegonmarcos.superapp.uikit.kitComposeView
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -86,7 +87,10 @@ class ProfileFragment : Fragment() {
     private fun tabLabel(index: Int): String = tabLabels.getOrNull(index).orEmpty()
 
     /** The strip itself, so the cockpit can send the owner to Connect. */
-    private var strip: TabLayout? = null
+    private var strip: PageTabsView? = null
+
+    /** Shows tab [index] and tells the host: the one door every selection goes through. */
+    private var pickTab: ((Int) -> Unit)? = null
 
     /** The declared tab ids, in strip order (the ids [selectTab] and [onTabShown] speak). */
     private var tabIds: List<String> = emptyList()
@@ -106,7 +110,7 @@ class ProfileFragment : Fragment() {
     /** Shows the declared tab [id]; an id with no column is ignored. */
     fun selectTab(id: String) {
         val i = tabIds.indexOf(id)
-        if (i >= 0) strip?.getTabAt(i)?.select()
+        if (i >= 0) pickTab?.invoke(i)
     }
 
 
@@ -130,7 +134,7 @@ class ProfileFragment : Fragment() {
         //
         // So the pages are plain columns built inline and toggled by
         // visibility — the same answer the RSS pages reached — and only the
-        // pill CHROME is shared, through [AppTabsStyle]. Nothing here touches
+        // pill CHROME is shared, through libs:bottomnav's PageTabsView. Nothing here touches
         // build.json, the host-id pool, or MAX_PANES.
         val page = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -625,7 +629,7 @@ class ProfileFragment : Fragment() {
     /** Step 4 on Connect: getting is the lines', APPLYING is Setup's (#695) — the step says so and goes there. */
     private fun buildGetStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
         body.addView(caption(ctx, getString(R.string.journey_get_on_setup, tabLabel(driftTab))))
-        body.addView(pickButton(ctx, tabLabel(driftTab)) { strip?.getTabAt(driftTab)?.select() })
+        body.addView(pickButton(ctx, tabLabel(driftTab)) { pickTab?.invoke(driftTab) })
         // #766 no second Import File here: it is Connect's third line.
     }
 
@@ -690,8 +694,8 @@ class ProfileFragment : Fragment() {
      *
      * Plain columns swapped by visibility — no child fragments, no pane
      * host ids, no build.json pages (see the note in [onCreateView]). It reuses
-     * [AppTabsStyle] so the pills read exactly like the launcher's section
-     * strips, which is the whole of what that idiom is worth here.
+     * libs:bottomnav's [PageTabsView] so the pills read exactly like the launcher's
+     * section strips, which is the whole of what that idiom is worth here.
      *
      * EVERY TAB HAS A COLUMN. #614's strip also carried "launch tabs" — a tab
      * with no column that navigated away and handed the selection straight back
@@ -709,41 +713,32 @@ class ProfileFragment : Fragment() {
     private fun tabStrip(
         ctx: android.content.Context,
         tabs: List<Tab>,
-    ): TabLayout {
+    ): PageTabsView {
         fun show(index: Int) {
             tabs.forEachIndexed { i, tab ->
                 tab.column.visibility = if (i == index) View.VISIBLE else View.GONE
             }
         }
         show(selectedTab)
-        return TabLayout(ctx).apply {
+        return PageTabsView(ctx).apply {
             strip = this
-            tabs.forEach { addTab(newTab().setText(it.title)) }
-            tabMode = TabLayout.MODE_FIXED
-            tabGravity = TabLayout.GRAVITY_FILL
+            // The shared pill strip: it owns the chrome AND the sizing (one slot per tab, the font
+            // stepping down before any label clips), so there is no host styling hook any more.
+            pages = tabs.mapIndexed { i, t -> NavPage(tabIds.getOrNull(i) ?: "tab$i", t.title) }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             )
-            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab) {
-                    tabs.getOrNull(tab.position) ?: return
-                    selectedTab = tab.position
-                    show(tab.position)
-                    tabIds.getOrNull(tab.position)?.let { onTabShown?.invoke(it) }
-                }
-                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-                override fun onTabReselected(tab: TabLayout.Tab) = Unit
-            })
-            // Styled AFTER the tabs exist — the helper builds a pill per tab.
-            // BOTH halves: apply() paints the chrome, equalise() MEASURES it.
-            // Calling only the first is what left this strip ragged while the
-            // launcher's sections looked right — the sizing pass used to be a
-            // private method of SectionTabsFragment, so nothing else could
-            // reach it. It is the real work: one slot per tab, the font
-            // stepping down before any label is allowed to clip.
-            AccountHost.styleTabs(this)
-            getTabAt(selectedTab)?.select()
+            val view = this
+            pickTab = pick@{ index ->
+                if (tabs.getOrNull(index) == null) return@pick
+                selectedTab = index
+                view.selectedId = view.pages.getOrNull(index)?.id
+                show(index)
+                tabIds.getOrNull(index)?.let { onTabShown?.invoke(it) }
+            }
+            onSelect = { page -> pickTab?.invoke(view.pages.indexOfFirst { it.id == page.id }) }
+            selectedId = pages.getOrNull(selectedTab)?.id
             if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE
             tabIds.getOrNull(selectedTab)?.let { onTabShown?.invoke(it) }
         }
@@ -1040,6 +1035,7 @@ class ProfileFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         strip = null
+        pickTab = null
         journey = null
         // The mailed code is never stored; it dies with the view that held it.
         mailCodeField = null

@@ -18,7 +18,6 @@ import com.bitwarden.core.util.persistentListOfNotNull
 import com.bitwarden.ui.platform.base.util.EventsEffect
 import com.bitwarden.ui.platform.base.util.navigateToTabOrRoot
 import com.bitwarden.ui.platform.components.navigation.model.NavigationItem
-import com.bitwarden.ui.platform.components.scaffold.BitwardenScaffold
 import com.bitwarden.ui.platform.components.scaffold.model.ScaffoldNavigationData
 import com.bitwarden.ui.platform.theme.RootTransitionProviders
 import com.bitwarden.ui.platform.util.toObjectNavigationRoute
@@ -165,7 +164,7 @@ private fun VaultUnlockedNavBarScaffold(
         VaultUnlockedNavBarTab.Generator,
         VaultUnlockedNavBarTab.Settings(state.notificationState.settingsTabNotificationCount),
     )
-    BitwardenScaffold(
+    FleetNavScaffold( // #868 fleet nav patch: the island replaces the M3 bottom bar
         contentWindowInsets = WindowInsets(0.dp),
         navigationData = ScaffoldNavigationData(
             navigationItems = navigationItems,

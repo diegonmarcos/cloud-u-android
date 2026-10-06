@@ -57,6 +57,7 @@ on:
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-vault.yml"
+      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       # ── end MANAGED-PATHS-HEADER ──

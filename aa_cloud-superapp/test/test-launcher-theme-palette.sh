@@ -261,57 +261,55 @@ echo "== T12: #477 nav geometry — one dimen each, read from a real declaration
 # assertion below reads the file on disk, never a hardcoded expectation.
 # The bottom-nav half of #477 (one symmetric item pad) is measured on the rendered island by
 # BottomNavGeometryTest M4 since #531. The tab-strip base dimen stays declared here.
-_STRIP_BASE_VIOLATION=$(python3 - "$RES_DIMENS" <<'PY'
+PAGETABS_DIR="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main"
+_STRIP_BASE_VIOLATION=$(python3 - "$PAGETABS_DIR/res/values/dimens.xml" <<'PY'
 import re, sys
 dims = open(sys.argv[1], encoding='utf-8').read()
-m = re.search(r'<dimen name="tab_strip_top_inset">([0-9.]+)dp</dimen>', dims)
+m = re.search(r'<dimen name="page_tabs_top_inset">([0-9.]+)dp</dimen>', dims)
 if not m:
-    print('tab_strip_top_inset is not declared as a literal dp in dimens.xml')
+    print('page_tabs_top_inset is not declared as a literal dp in libs:bottomnav dimens.xml')
 elif float(m.group(1)) <= 0:
-    print('tab_strip_top_inset is %sdp - a zero/negative inset re-introduces the defect' % m.group(1))
+    print('page_tabs_top_inset is %sdp - a zero/negative inset re-introduces the defect' % m.group(1))
 else:
     print('OK')
 PY
 )
-check "$_STRIP_BASE_VIOLATION" "tab_strip_top_inset is a real declared base"
-# The TOP half: #477 strip clearance reads a REAL inset, non-consuming. Since
-# #573 the listener lives in AppTabsStyle (ONE declaration for every strip —
-# section, Profile, Launcher, drawer), so that is the file read here; the
-# section strip must NOT have grown its own copy back (T12 below).
-_TOP_STRIP_VIOLATION=$(python3 - "$SRC/launcher/AppTabsStyle.kt" <<'PY'
+check "$_STRIP_BASE_VIOLATION" "page_tabs_top_inset is a real declared base"
+# The TOP half: #477 strip clearance reads a REAL inset, non-consuming. Since #868 the ONE
+# declaration for every strip (section, Profile, drawer, sheets) is libs:bottomnav's PageTabs,
+# so that is the file read here; the section strip must NOT grow a copy back (T12 below).
+_TOP_STRIP_VIOLATION=$(python3 - "$PAGETABS_DIR/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt" <<'PY'
 import re, sys
 text = open(sys.argv[1], encoding='utf-8').read()
 code = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
 code = re.sub(r'//[^\n]*', '', code)
 problems = []
-if 'setOnApplyWindowInsetsListener' not in code:
-    problems.append('the strip installs no insets listener — its clearance cannot track the real cutout inset')
-if 'WindowInsetsCompat.Type.statusBars()' not in code and 'WindowInsetsCompat.Type.displayCutout()' not in code:
-    problems.append('the listener reads no statusBars()/displayCutout() inset — clearance is a hardcoded dp, not the #407 rule')
-if 'R.dimen.tab_strip_top_inset' not in code:
-    problems.append('the strip does not read the declared @dimen/tab_strip_top_inset base')
-# Non-consuming: the listener must return insets so the toolbar island and
-# ShellActivity's own shell listener still see the window insets (#407 contract).
-if not re.search(r'\n\s+insets\s*\n', code):
-    problems.append('the listener returns nothing / consumes the insets — siblings are starved')
+if 'WindowInsets.statusBars' not in code or 'displayCutout' not in code:
+    problems.append('the strip reads no statusBars()/displayCutout() inset - clearance is a hardcoded dp, not the #407 rule')
+if 'R.dimen.page_tabs_top_inset' not in code:
+    problems.append('the strip does not read the declared page_tabs_top_inset base')
+if 'topBase + liveTop' not in code:
+    problems.append('the strip top is not base + live inset')
+# Non-consuming: the inset is only READ (WindowInsets.getTop), never handed to a consuming listener.
+if 'setOnApplyWindowInsetsListener' in code or 'consumeWindowInsets' in code:
+    problems.append('the strip consumes the insets - siblings are starved')
 print('; '.join(problems) or 'OK')
 PY
 )
 check "$_TOP_STRIP_VIOLATION" "tab strip clears the island: declared base + a live status/cutout inset, non-consuming"
-# The consuMED-direction is the hollow twin: the inset being read is the whole
-# point, so verify the CODE shape did not regress to a bare margin literal while
-# keeping this check able to fail (mutation: remove the listener -> T12 goes red).
-if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt" "$SRC/launcher/AppTabsStyle.kt"; then
-  bad "T12: a BARE literal topMargin on the strip — its clearance is a hardcoded dp again"
+# The hollow twin: the inset being read is the whole point, so verify the CODE shape did not
+# regress to a bare margin literal.
+if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt" "$PAGETABS_DIR/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"; then
+  bad "T12: a BARE literal topMargin on the strip - its clearance is a hardcoded dp again"
 else
-  ok "T12: no bare literal topMargin in the strip — its clearance comes from the inset"
+  ok "T12: no bare literal topMargin in the strip - its clearance comes from the inset"
 fi
-# #573: the geometry is AppTabsStyle's alone — a second listener in the section
-# strip would be the two-declarations drift #477 closed.
+# #573/#868: the geometry is PageTabs' alone - a second listener in the section strip would be
+# the two-declarations drift #477 closed.
 if awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$SRC/launcher/SectionTabsFragment.kt" | grep -q 'setOnApplyWindowInsetsListener'; then
-  bad "T12: SectionTabsFragment installs its own insets listener beside AppTabsStyle's"
+  bad "T12: SectionTabsFragment installs its own insets listener beside PageTabs'"
 else
-  ok "T12: the section strip takes its clearance from AppTabsStyle, not a listener of its own"
+  ok "T12: the section strip takes its clearance from PageTabs, not a listener of its own"
 fi
 
 echo

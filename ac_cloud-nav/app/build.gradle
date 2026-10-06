@@ -324,4 +324,7 @@ dependencies {
     // ExploredRenderTest: ActivityScenario (core) + view-driving (espresso).
     androidTestImplementation 'androidx.test:core:1.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    // ExploredRenderTest drives the Compose island / tab strip by their test tags.
+    androidTestImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
 }

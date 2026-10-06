@@ -138,6 +138,7 @@ dependencies {
     // `api`: AccountHost's signatures expose KitPalette, and the host builds Compose views with it.
     api project(':libs:ui-kit')
     implementation project(':libs:auth')
+    implementation project(':libs:bottomnav')         // #868 PageTabsView: Profile's own tab strip (the shared pill strip)
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

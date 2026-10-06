@@ -18,10 +18,14 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.rememberLeaveOnce
 
-/** Mail's five items as the island draws them. Labels are the accessible names in strings.xml. */
+/**
+ * Mail's five items as the island draws them, from the declaration ([mailNav], build.json::ui): the
+ * ids, order and icons are the declared sections'. Labels are the localised accessible names in
+ * strings.xml, keyed by section id, so a translated bar stays translated.
+ */
 @Composable
-internal fun mailEntries(): List<BottomNavEntry> = bottomNavItems.map {
-    BottomNavEntry(it.id, stringResource(itemDescription(it.id)), rememberVectorPainter(iconFor(it.id)))
+internal fun mailEntries(): List<BottomNavEntry> = mailNav.bottomSections().map {
+    BottomNavEntry(it.id, stringResource(itemDescription(it.id)), rememberVectorPainter(iconFor(it.icon)))
 }
 
 /**

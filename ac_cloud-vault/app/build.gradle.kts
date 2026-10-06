@@ -7,6 +7,7 @@ import com.google.gms.googleservices.GoogleServicesTask
 import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.FileInputStream
+import java.util.Base64 // #868 fleet nav patch
 import java.util.Properties
 
 plugins {
@@ -65,6 +66,16 @@ val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank()
     }.standardOutput.asText.get().trim())
     .take(8)
 
+// ── #868 FLEET NAV PATCH (isolated; keep out of upstream hunks) ─────────────────────────────
+// The nav declaration (build.json::ui) baked as BuildConfig for libs:bottomnav's NavDecl.
+val fleetUi = (groovy.json.JsonSlurper().parse(File(rootDir, "build.json")) as Map<*, *>)["ui"] as? Map<*, *>
+val uiBottomNav = ((fleetUi?.get("bottom_nav") as? List<*>) ?: emptyList<Any>()).joinToString(",")
+val uiSectionsB64: String = Base64.getEncoder().encodeToString(
+    groovy.json.JsonOutput.toJson(fleetUi?.get("sections") ?: emptyList<Any>()).toByteArray(),
+)
+val uiDefaultSection = (fleetUi?.get("default_section") as? String).orEmpty()
+// ── end fleet nav patch ─────────────────────────────────────────────────────────────────────
+
 configure<ApplicationExtension> {
     namespace = "com.x8bit.bitwarden"
     compileSdk {
@@ -83,6 +94,10 @@ configure<ApplicationExtension> {
         versionName = "${libs.versions.appVersionName.get()} (sha-$gitShortSha)"
         buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
         buildConfigField("String", "CLIENT_VERSION", "\"${libs.versions.appVersionName.get()}\"")
+        // #868 fleet nav patch: the declaration NavDecl.fromBuildConfig reads.
+        buildConfigField("String", "UI_BOTTOM_NAV", "\"$uiBottomNav\"")
+        buildConfigField("String", "UI_SECTIONS_B64", "\"$uiSectionsB64\"")
+        buildConfigField("String", "UI_DEFAULT_SECTION", "\"$uiDefaultSection\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -264,6 +279,8 @@ dependencies {
     // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
     // provider, receiver, <queries> and the signature permission into this APK.
     implementation(project(":libs:core"))
+    // #868 fleet nav patch: the shared bottom island (see FleetNavScaffold.kt).
+    implementation(project(":libs:bottomnav"))
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)

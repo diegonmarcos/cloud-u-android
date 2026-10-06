@@ -4,7 +4,7 @@
 #
 # The behaviour (the state machine and its layout tree, provider parsing, the
 # device-grant steps, the registry walk, the strip geometry) runs on the JVM:
-# ProfileJourneyTest, SignInTest, UserRegistryTest, AppTabsStyleTest. This file
+# ProfileJourneyTest, SignInTest, UserRegistryTest. This file
 # pins what a JVM test cannot see:
 #   T1  the provider list is DATA, and ONE: ab_cloud-libs-shared/build.json::auth.sign_in
 #       (#587 — the fleet's shared libs:auth, the SAME module cloud-drive links) declares

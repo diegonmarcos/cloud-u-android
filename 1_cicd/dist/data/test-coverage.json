@@ -17,7 +17,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 54,
+      "unit_test_sources": 53,
       "workflow": "ship-cloud-superapp.yml"
     },
     "ab_cloud-libs-shared/keyboard-engines": {
@@ -184,7 +184,7 @@
     },
     "ac_cloud-mail": {
       "first_test": "Has 13 shell testers and 774 JVM unit test classes, both executed. The only application in the fleet whose ship run proves anything beyond compilation.",
-      "shell_testers": 16,
+      "shell_testers": 17,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
@@ -301,7 +301,7 @@
     },
     "ac_cloud-vault": {
       "first_test": "634 JVM unit test classes have never executed. Same: declare tests.unit.task.",
-      "shell_testers": 0,
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -354,6 +354,6 @@
       "workflow": "ship-lib-calc-native.yml"
     }
   },
-  "with_executed_tests": 24,
-  "with_no_tests_at_all": 15
+  "with_executed_tests": 25,
+  "with_no_tests_at_all": 14
 }

@@ -73,7 +73,8 @@ import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.ui.ShellBottomNav
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.mail.MailHost
 import com.diegonmarcos.superapp.mail.MailPages
@@ -83,6 +84,8 @@ import com.diegonmarcos.superapp.launcher.BackHandler
 
 /** The tag the old update overlay was attached under (#812: removed). */
 private const val UPDATE_OVERLAY_TAG = "update_overlay"
+private const val DRAWER_TAB_HOME = "home"
+private const val DRAWER_TAB_SECTION = "section"
 
 /**
  * Top-level shell.
@@ -138,8 +141,7 @@ open class ShellActivity : AppCompatActivity(),
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var bottomNav: BottomNavIslandView
     private lateinit var toolbarFx: LauncherToolbarFx
-    private lateinit var drawerTabs: TabLayout
-    private lateinit var drawerPageTabs: TabLayout
+    private lateinit var drawerTabs: PageTabsView
 
     // The section alone is NOT enough to decide whether the stars belong on
     // screen. They are the last children of the root frame, so they float over
@@ -441,12 +443,6 @@ open class ShellActivity : AppCompatActivity(),
         recentTabEntries().firstOrNull { it.key == key }?.let { onAppTabPicked(it) }
     }
 
-    /** Re-entrancy guard: drawerTabs.selectTab() fires its selection
-     *  listener. When the selection change originated from goHome/goSection
-     *  itself we must not bounce back into it. The bottom nav needs no guard:
-     *  BottomNavIslandView.selectedId only moves the pill, it never calls back. */
-    private var suppressTabReentry:       Boolean = false
-
     /** Latest gesture/navigation-bar inset captured by the edge-to-edge
      *  listener — applyChrome adds it to the BottomNav clearance so
      *  content doesn't slide under the nav bar. */
@@ -553,7 +549,6 @@ open class ShellActivity : AppCompatActivity(),
             drawerLayout.setStatusBarBackground(null)
             bottomNav = findViewById(R.id.bottom_nav_island)
             drawerTabs = findViewById(R.id.drawer_tabs)
-            drawerPageTabs = findViewById(R.id.drawer_page_tabs)
 
             applyEdgeToEdgeInsets()
 
@@ -612,22 +607,10 @@ open class ShellActivity : AppCompatActivity(),
                 }
             }
 
-            drawerTabs.addTab(drawerTabs.newTab().setText(getString(R.string.drawer_tab_home)))
-            drawerTabs.addTab(drawerTabs.newTab().setText(currentLabel))
-            drawerTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab)   = onDrawerTabPicked(tab.position)
-                override fun onTabReselected(tab: TabLayout.Tab) = onDrawerTabPicked(tab.position)
-                override fun onTabUnselected(tab: TabLayout.Tab) {}
-            })
-
-            drawerPageTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab) {
-                    val pages = SectionPages.pagesFor(currentSection)
-                    pages.getOrNull(tab.position)?.let { showDrawerSectionPage(it) }
-                }
-                override fun onTabUnselected(tab: TabLayout.Tab) {}
-                override fun onTabReselected(tab: TabLayout.Tab) {}
-            })
+            drawerSectionLabel = currentLabel
+            setDrawerTabs(drawerSectionLabel, 0)
+            drawerTabs.onSelect   = { onDrawerTabPicked(if (it.id == DRAWER_TAB_HOME) 0 else 1) }
+            drawerTabs.onReselect = { onDrawerTabPicked(if (it.id == DRAWER_TAB_HOME) 0 else 1) }
 
             // Fill the bottom-nav island from build.json::ui.bottom_nav with
             // mode-aware icons (icon_apps/icon_admin swap the glyph).
@@ -987,8 +970,18 @@ open class ShellActivity : AppCompatActivity(),
 
     // ── drawer tab navigation ─────────────────────────────────────────────
 
+    /** The drawer's two-pill strip: [Home] [<current section>]. [index] is the selected one. */
+    private var drawerSectionLabel: String = ""
+
+    private fun setDrawerTabs(sectionLabel: String, index: Int) {
+        drawerTabs.pages = listOf(
+            NavPage(DRAWER_TAB_HOME, getString(R.string.drawer_tab_home)),
+            NavPage(DRAWER_TAB_SECTION, sectionLabel),
+        )
+        drawerTabs.selectedId = if (index == 0) DRAWER_TAB_HOME else DRAWER_TAB_SECTION
+    }
+
     private fun onDrawerTabPicked(position: Int) {
-        if (suppressTabReentry) return
         if (position == 0) goHome()
         else {
             // The 2nd tab acts as the current-section "home link". Re-tap
@@ -1325,12 +1318,9 @@ open class ShellActivity : AppCompatActivity(),
     }
 
     override fun syncDrawerTab(index: Int) {
-        if (index == 1) drawerTabs.getTabAt(1)?.text = currentLabel
-        if (drawerTabs.selectedTabPosition != index) {
-            suppressTabReentry = true
-            drawerTabs.getTabAt(index)?.let { drawerTabs.selectTab(it) }
-            suppressTabReentry = false
-        }
+        // PageTabsView.selectedId only moves the pill and never calls back, so no re-entry guard.
+        if (index == 1) drawerSectionLabel = currentLabel   // the second pill names the section last opened
+        setDrawerTabs(drawerSectionLabel, index)
         showDrawerPage(if (index == 0) DrawerPage.HOME else DrawerPage.SECTION)
     }
 
@@ -1546,7 +1536,6 @@ open class ShellActivity : AppCompatActivity(),
     private fun showDrawerPage(page: DrawerPage) {
         when (page) {
             DrawerPage.HOME -> {
-                drawerPageTabs.visibility = View.GONE
                 supportFragmentManager.beginTransaction()
                     .replace(R.id.drawer_content, HomeDrawerFragment.newInstance())
                     .commitAllowingStateLoss()
@@ -1559,7 +1548,6 @@ open class ShellActivity : AppCompatActivity(),
                 //     aggregator sections (Suite / Tools / Communication
                 //     / Infos), where the page list is empty by design.
                 // The chip-row above it is redundant in both cases.
-                drawerPageTabs.visibility = View.GONE
                 val sec = Sections.byId(currentSection)
                 val pages = SectionPages.pagesFor(currentSection)
                 val isAggregator = sec?.isAggregator == true
@@ -1573,17 +1561,6 @@ open class ShellActivity : AppCompatActivity(),
                     .commitAllowingStateLoss()
             }
         }
-    }
-
-    private fun bindPageTabs(pages: List<SectionPages.Page>) {
-        val needsRebuild = drawerPageTabs.tabCount != pages.size ||
-            (0 until drawerPageTabs.tabCount).any { i ->
-                drawerPageTabs.getTabAt(i)?.text != pages[i].label
-            }
-        if (!needsRebuild) return
-        drawerPageTabs.removeAllTabs()
-        for (p in pages) drawerPageTabs.addTab(drawerPageTabs.newTab().setText(p.label), false)
-        drawerPageTabs.getTabAt(0)?.let { drawerPageTabs.selectTab(it) }
     }
 
     private fun showDrawerSectionPage(page: SectionPages.Page) {

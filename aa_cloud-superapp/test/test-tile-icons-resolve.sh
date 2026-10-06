@@ -14,7 +14,7 @@
 #   Resources.getIdentifier(name, "drawable", pkg). There is no icon map, no
 #   allow-list, and no build-time validation — app/build.gradle's stripDocs
 #   only removes _doc* keys and passes `icon` through verbatim into
-#   BuildConfig.UI_SECTIONS_JSON_B64.
+#   BuildConfig.UI_SECTIONS_B64.
 #
 #   A name that resolves to NOTHING therefore does not fail the build, does not
 #   crash, and does not log: iconResFor falls through to the ic_link_tile

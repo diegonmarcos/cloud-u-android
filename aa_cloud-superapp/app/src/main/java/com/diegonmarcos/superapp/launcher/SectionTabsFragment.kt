@@ -11,7 +11,7 @@ import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.shell.Collapsible
 import com.diegonmarcos.superapp.system.ModePrefs
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 
 /**
  * A section's pages behind ONE tab strip — the launcher's tabbed sections
@@ -26,8 +26,8 @@ import com.google.android.material.tabs.TabLayout
  * Tablet ([MainActivity.isTwoPane]) — ONE PANE PER PAGE, all rendered at
  * once and side by side: Suite shows Cloud *and* Phone simultaneously. The
  * strip stays put so the chrome reads the same as the phone, and because
- * [TabLayout.MODE_FIXED] + [TabLayout.GRAVITY_FILL] give every tab 1/N of
- * the width against N equal-weight panes, tab *i* sits directly above the
+ * the shared pill strip (libs:bottomnav's [PageTabsView]) gives every tab
+ * 1/N of the width against N equal-weight panes, tab *i* sits directly above the
  * pane it names — the strip doubles as each pane's header. Selection then
  * only marks the ACTIVE pane (the one [Collapsible] and the Apps/Admin mode
  * sync follow), since nothing needs swapping.
@@ -94,11 +94,6 @@ class SectionTabsFragment : Fragment(), Collapsible {
      */
     private var selectedPageId = ""
 
-    /** The "|" between the tab groups, if this strip has both kinds of tab.
-     *  Held so the width arithmetic can pay for it — it sits inside the strip
-     *  but is not a tab, so its width is not the tabs' to divide. */
-    private var groupDivider: View? = null
-
     /**
      * [Collapsible] — a bottom-nav re-tap lands on this wrapper (it is the
      * visible top fragment), so forward it to the ACTIVE pane's child. Panes
@@ -138,44 +133,18 @@ class SectionTabsFragment : Fragment(), Collapsible {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
 
-        val tabs = TabLayout(ctx).apply {
-            pages.forEach { addTab(newTab().setText(it.label)) }
-            tabMode = TabLayout.MODE_FIXED
-            tabGravity = TabLayout.GRAVITY_FILL
+        // #868 the strip is libs:bottomnav's PageTabsView: the SAME pill strip every app draws
+        // (PageTabs is the pixel port of the AppTabsStyle this file used to call). It owns the
+        // top clearance (base + live status/cutout inset), the gap to the pane below, the equal
+        // pill widths and the "|" between the destination tabs and the launch tabs (Observability
+        // · Topology │ Watchdog · Morpheus): the divider is derived from the same blank/non-blank
+        // `action` split this file turns on, and a launch pill is a button wearing a tab, so it
+        // is never the strip's selection.
+        val tabs = PageTabsView(ctx).apply {
+            this.pages = pages.map(Sections::navPage)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            // #477 / #573. The strip's top clearance (its base above the toolbar
-            // island PLUS the live status-bar / display-cutout inset) and its
-            // gap to the pane below are AppTabsStyle's: one declaration in
-            // res/values/dimens.xml, applied to every strip in the app, so a
-            // page's strip and a section's can no longer sit at different
-            // heights. The listener used to be here alone.
-            // Liquid-glass pill chrome — the same helper the strip used before,
-            // so Suite / Infos / Labs still read as one consistent surface.
-            AppTabsStyle.apply(this)
-            // Sizing is the other half of the chrome; the divider is read
-            // lazily because addGroupDivider() runs after this block.
-            AppTabsStyle.equalise(this) { groupDivider }
         }
-
-        // The `|` the strip reads with: Observability · Topology │ Watchdog ·
-        // Morpheus. It marks a real split — the left group NAVIGATES inside the
-        // app, the right group LEAVES it — which is worth seeing at a glance
-        // rather than inferring from four undifferentiated pills.
-        //
-        // Its position is DERIVED from the same blank/non-blank `action` split
-        // this file and [LauncherNavController.isTabbed] already turn on, so it
-        // tracks the strip instead of pinning an index that would rot the
-        // moment a fifth tab appeared.
-        //
-        // And it is inserted into TabLayout's own strip rather than added as a
-        // tab whose label happens to be "|": tabCount stays 4, so nothing
-        // selectable, focusable, reachable by [startIndex], recordable by
-        // recordActiveTab, or counted towards [MAX_PANES] is brought into
-        // being by drawing it.
-        pages.indexOfFirst { it.action.isNotBlank() }
-            .takeIf { it > 0 }
-            ?.let { addGroupDivider(tabs, it) }
 
         val panes = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -204,95 +173,39 @@ class SectionTabsFragment : Fragment(), Collapsible {
             // Phone: one pane, so the selected tab is also the rendered page.
             pages.getOrNull(start)?.let { render(0, it.id) }
         }
-        tabs.getTabAt(start)?.select()
-        // Sync the mode for the landing tab explicitly. The listener below is
-        // attached AFTER this, and selecting tab 0 is a no-op anyway, so
-        // neither would fire onTabSelected for the page we start on.
+        pages.getOrNull(start)?.let { tabs.selectedId = it.id }
+        // Sync the mode for the landing tab explicitly: setting selectedId only moves the pill
+        // and never calls back, so nothing else would fire it for the page we start on.
         pages.getOrNull(start)?.let {
             selectedPageId = it.id
             (activity as? ShellActivity)?.nav?.syncModeForPage(it.id)
             (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, it.id)
         }
 
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                val page = pages.getOrNull(tab.position) ?: return
-                // Launch tab — a BUTTON wearing a tab. Dispatch its target
-                // through the same grammar a tile uses (so `extapp:` gets the
-                // existing installed→open, absent→offer-the-APK behaviour for
-                // free) and give the selection straight back to the tab the
-                // user was reading: leaving the app must not also leave the
-                // strip parked on an empty tab, which is what the user would
-                // come back to.
-                if (page.action.isNotBlank()) {
-                    (activity as? ShellActivity)?.dispatchTarget(page.action)
-                    tabs.getTabAt(lastContentTab)
-                        ?.takeIf { it != tab }
-                        ?.let { back -> tabs.post { back.select() } }
-                    return
-                }
-                lastContentTab = tab.position
-                selectedPageId = page.id
-                activePane = if (paneCount > 1) tab.position.coerceAtMost(paneCount - 1) else 0
-                // An Apps/Admin tab also SETS the global mode, so the Home
-                // grid, drawer and bottom-nav icon variants follow it. Fired
-                // on SELECTION, not at render time: with every pane on screen
-                // rendering both would call it twice and the last would win.
-                (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
-                (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
-                if (paneCount == 1) render(0, page.id)
+        tabs.onSelect = select@{ tapped ->
+            val position = pages.indexOfFirst { it.id == tapped.id }
+            val page = pages.getOrNull(position) ?: return@select
+            // Launch tab: dispatch its target through the same grammar a tile uses (so `extapp:`
+            // gets the existing installed→open, absent→offer-the-APK behaviour for free) and
+            // leave the strip where the user was reading — the pill never moves, so the strip is
+            // never parked on a tab with no pane behind it.
+            if (page.action.isNotBlank()) {
+                (activity as? ShellActivity)?.dispatchTarget(page.action)
+                return@select
             }
-            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-            override fun onTabReselected(tab: TabLayout.Tab) = Unit
-        })
+            tabs.selectedId = page.id
+            lastContentTab = position
+            selectedPageId = page.id
+            activePane = if (paneCount > 1) position.coerceAtMost(paneCount - 1) else 0
+            // An Apps/Admin tab also SETS the global mode, so the Home grid, drawer and
+            // bottom-nav icon variants follow it. Fired on SELECTION, not at render time: with
+            // every pane on screen rendering both would call it twice and the last would win.
+            (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
+            (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
+            if (paneCount == 1) render(0, page.id)
+        }
 
         return root
-    }
-
-    /**
-     * Put a literal "|" BETWEEN tab [position]-1 and tab [position].
-     *
-     * It is a CHARACTER, not a rule. The first attempt drew a 1dp View at
-     * [ViewGroup.LayoutParams.MATCH_PARENT] height, and a full-height line
-     * across the strip does not read as punctuation between two words — it
-     * reads as the row having been cut in half, which is what it looked like
-     * on the device. A "|" set in the tabs' own type is the separator the ask
-     * described, and it cannot be "too big" because it is exactly as tall as
-     * the letters beside it.
-     *
-     * TabLayout lays its tabs out in one internal LinearLayout — its only
-     * child — so a view dropped into that at the right index sits between the
-     * two groups and moves with them. Going through [TabLayout.addTab] would
-     * have made it a tab, which is precisely what it must not be.
-     */
-    private fun addGroupDivider(tabs: TabLayout, position: Int) {
-        val strip = tabs.getChildAt(0) as? LinearLayout ?: return
-        if (position > strip.childCount) return
-        val pad = (DIVIDER_PAD_DP * tabs.resources.displayMetrics.density).toInt()
-        val bar = android.widget.TextView(tabs.context).apply {
-            text = "|"
-            // The values [AppTabsStyle.makePill] gives every tab label — that
-            // is the Kotlin object in AppTabsStyle.kt, not a res/ style; there
-            // is no XML for this strip. They are only the STARTING point, and
-            // deliberately so: [AppTabsStyle.equalise] re-reads the type off a real
-            // label once the row has been measured and re-applies it here, so
-            // the separator follows the labels when they shrink to fit. These
-            // are what it looks like for the one frame before that runs.
-            typeface = android.graphics.Typeface.create(
-                android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
-            textSize = 12f
-            setTextColor(0xAAFFFFFFL.toInt())
-            setPadding(pad, 0, pad, 0)
-            isClickable = false
-            isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
-        }
-        strip.addView(bar, position)
-        groupDivider = bar
     }
 
     /** Which tab starts selected: where THIS strip was when the Activity was
@@ -341,10 +254,6 @@ class SectionTabsFragment : Fragment(), Collapsible {
     }
 
     companion object {
-        /** Breathing room either side of the "|" — typographic spacing, not
-         *  structure. Everything else about the separator is just the glyph. */
-        private const val DIVIDER_PAD_DP = 4f
-
         /** Panes we have stable host ids for — see `values/ids.xml`. */
         const val MAX_PANES = 4
 

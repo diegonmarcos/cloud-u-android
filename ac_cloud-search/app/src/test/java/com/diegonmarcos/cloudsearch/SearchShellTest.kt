@@ -103,7 +103,7 @@ class SearchShellTest {
 
     private fun launch() = compose.setContent { SearchShell(state) }
 
-    private fun waitFor(tag: String) = compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitFor(tag: String) = compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
 
     @Test fun everyVerticalAndSubpageIsReachableAndComposes() {
         launch()
@@ -119,7 +119,8 @@ class SearchShellTest {
                 compose.runOnIdle { state.showSubpage(v, sub) }
                 // Bounded wait, not an instant check: a heavy page (the payslip runs the whole PAP
                 // while composing) was not yet composed on one runner (run 37036021906) and was on
-                // the other. A page that never appears still fails here, after 10 s.
+                // the other (run 37403502266: arm64 timed out at 10 s while the same step passed on x86_64, with
+                // PIT running beside it). A page that never appears still fails here, after 60 s.
                 waitFor(Tags.page(cfg.subpage(sub)!!.kind))
                 assertEquals(sub, state.subpageOf(v))
             }

@@ -64,6 +64,10 @@ include(":libs:core")
 project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
 include(":libs:devtools")
 project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")
+// #868 FLEET NAV PATCH: the shared bottom island (BottomNavIsland + NavDecl). Drawn by
+// ui/platform/feature/vaultunlockednavbar/FleetNavScaffold.kt in place of the M3 bottom bar.
+include(":libs:bottomnav")
+project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")
 // Gradle 9 fails on a project directory that does not exist, and the implicit
 // ':libs' container defaults to <root>/libs, which Bitwarden does not have.
 // Point it at the shared root, exactly as media-center and camera do.

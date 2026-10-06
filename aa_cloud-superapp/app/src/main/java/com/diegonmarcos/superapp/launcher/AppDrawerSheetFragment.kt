@@ -121,21 +121,15 @@ class AppDrawerSheetFragment : Fragment() {
         // Re-opening the sheet always lands on the first tab (Cloud),
         // matching the user's One UI muscle memory.
         val tabs = HomeAppsTabs.loadFromBuildConfig()
-        val bodyTabs = com.google.android.material.tabs.TabLayout(ctx).apply {
-            tabMode = com.google.android.material.tabs.TabLayout.MODE_FIXED
-            setSelectedTabIndicatorColor(0xFFE9D8FD.toInt())
-            setTabTextColors(0x88FFFFFF.toInt(), 0xFFFFFFFFL.toInt())
+        // The shared pill strip (libs:bottomnav). Not under the toolbar island — this strip lives
+        // in a sheet — so it takes the base geometry without the live top inset.
+        val bodyTabs = com.diegonmarcos.superapp.bottomnav.PageTabsView(ctx).apply {
+            pages = tabs.map { com.diegonmarcos.superapp.bottomnav.NavPage(it.id, it.label) }
+            underTopChrome = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             )
-            for (tab in tabs) addTab(newTab().setText(tab.label))
-            // Pill-style chrome — matches the browser-tab chip strip below
-            // and the broader glassmorphism + lavender language. Applies
-            // AFTER addTab so it can iterate the populated tab list. Not under
-            // the toolbar island — this strip lives in a sheet — so it takes
-            // the shared top/bottom geometry without the live top inset.
-            AppTabsStyle.apply(this, underTopChrome = false)
         }
 
         val host = FrameLayout(ctx).apply {
@@ -148,7 +142,7 @@ class AppDrawerSheetFragment : Fragment() {
         }
 
         // ── Final mount order (top → bottom):
-        //   1. Cloud | Phone TabLayout — pick surface first.
+        //   1. Cloud | Phone PageTabsView — pick surface first.
         //   2. Search island — shared chrome.
         //   3. Body host — HomeGroupedFragment or PhoneAppsFragment.
         root.addView(bodyTabs)
@@ -165,29 +159,21 @@ class AppDrawerSheetFragment : Fragment() {
                 .commit()
         }
 
-        bodyTabs.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
-                Haptics.tap(bodyTabs)
-                showTab(tabs.getOrNull(tab.position)?.id ?: "cloud")
-            }
-            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
-            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
-        })
+        bodyTabs.onSelect = { page ->
+            bodyTabs.selectedId = page.id
+            Haptics.tap(bodyTabs)
+            showTab(page.id)
+        }
+        bodyTabs.selectedId = tabs.firstOrNull()?.id   // a restored sheet keeps its body, so the pill starts on the first tab
 
         if (s == null && childFragmentManager.findFragmentById(host.id) == null) {
-            // Land on the requested tab (default = first / Cloud). When it's
-            // not the first tab, drive it through TabLayout.select() so the
-            // chip highlight + body swap happen together via onTabSelected;
-            // the first tab needs an explicit showTab since select(0) is a
-            // no-op (already the default selection).
+            // Land on the requested tab (default = first / Cloud). Set the body directly and
+            // move the pill with it: selectedId never calls back, so the two cannot disagree.
             val requested = arguments?.getString(ARG_INITIAL_TAB)?.takeIf { it.isNotBlank() }
                 ?: tabs.firstOrNull()?.id ?: "cloud"
             val idx = tabs.indexOfFirst { it.id == requested }.coerceAtLeast(0)
-            // Set the body directly — don't rely on TabLayout.select() dispatching
-            // onTabSelected (it can be a no-op before layout, which left the drawer
-            // on Cloud when opened for Phone). Then sync the visual chip.
             showTab(tabs.getOrNull(idx)?.id ?: "cloud")
-            if (idx > 0) bodyTabs.getTabAt(idx)?.select()
+            bodyTabs.selectedId = tabs.getOrNull(idx)?.id
         }
         return root
     }

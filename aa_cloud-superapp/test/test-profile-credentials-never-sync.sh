@@ -38,7 +38,7 @@ SYNC="$PROFILE_DIR/ProfileSync.kt"
 # The Mesh capabilities MOVED here rather than being deleted; the test
 # follows them, which is the only way "merged, not dropped" is provable.
 WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt"
-TABSTYLE="app/src/main/java/com/diegonmarcos/superapp/launcher/AppTabsStyle.kt"
+PAGETABS="../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
 SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
 AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
@@ -216,7 +216,7 @@ echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored 
 # nothing gained a store on the way across.
 # Tab identity is asserted in T11, which owns the four-tab shape (#778).
 # The existing pill idiom, not a second tab mechanism.
-has "$FRAGMENT" "AccountHost.styleTabs"        "reuses the launcher's pill chrome (through AccountHost.styleTabs: AppTabsStyle.apply + equalise, wired in App.kt)"
+has "$FRAGMENT" "PageTabsView"                 "reuses the fleet's pill strip (libs:bottomnav PageTabsView, #868; the host styling hook is gone)"
 # ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
 # fragments into a fixed pool of pane host ids, and this screen rebuilds itself
 # with detach/attach after every pick, link, clear, erase and import — the
@@ -556,21 +556,20 @@ echo "== T12: the pill SIZING is shared, and nothing is duplicated =="
 # apply() paints the chrome; equalise() measures it. Profile got the first and
 # not the second, which is what "ragged pills" was — the sizing pass was a
 # private method of SectionTabsFragment, so no other strip could reach it.
-has "$TABSTYLE" "fun equalise"       "the sizing pass lives in the shared helper"
-has "$TABSTYLE" "MIN_CHARS"          "its floor moved with it"
-has "$TABSTYLE" "MODE_SCROLLABLE"    "and its honest last resort"
-has "app/src/main/java/com/diegonmarcos/superapp/App.kt" "AppTabsStyle.equalise" "Profile's strip is sized, not just painted (App.kt hands AccountHost.styleTabs the equalise pass)"
-has "$SECTABS"  "AppTabsStyle.equalise" "the launcher's strip uses the same one"
+has "$PAGETABS" "fun planPills"      "the sizing pass lives in the shared strip (libs:bottomnav)"
+has "$PAGETABS" "minChars"           "its floor moved with it"
+has "$PAGETABS" "scrollable"         "and its honest last resort"
+hasnt_code "app/src/main/java/com/diegonmarcos/superapp/App.kt" "styleTabs" "App.kt hands AccountHost no styling hook: the strip sizes itself"
+has "$SECTABS"  "PageTabsView"       "the launcher's strip uses the same one"
 # ONE copy. A second would drift, and the drift would be invisible until a
 # label got long enough to clip on one strip and not the other.
 hasnt_code "$SECTABS" "private fun applyEqualTabs" "no private copy left behind"
 hasnt_code "$SECTABS" "private fun findLabel"      "nor its label walker"
 hasnt_code "$SECTABS" "PILL_PAD_DP"                "nor makePill's own numbers"
-# The divider is read lazily: addGroupDivider() runs AFTER the TabLayout is
-# built, so passing it by value would always pass null and the "|" would be
-# left at its starting size on exactly the crowded strips that have one.
-has "$SECTABS" "AppTabsStyle.equalise(this) { groupDivider }" "the divider is passed lazily"
-has "$TABSTYLE" "divider: () -> View?"                        "and the helper takes it as a lambda"
+# The "|" between destination tabs and launch tabs is drawn by the strip itself now.
+hasnt_code "$SECTABS" "addGroupDivider"            "the group divider is the strip's, not a private view here"
+has "$PAGETABS" "val divider = pages.indexOfFirst" "the strip derives the divider from the launch pages"
+[ ! -e "app/src/main/java/com/diegonmarcos/superapp/launcher/AppTabsStyle.kt" ] && ok "AppTabsStyle.kt is deleted" || bad "AppTabsStyle.kt is back"
 
 echo "-- T12a: Profile no longer duplicates the WireGuard screen --"
 # The whole point of the merge: capability moved, so Profile must not still

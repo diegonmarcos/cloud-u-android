@@ -111,8 +111,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -2086,18 +2086,18 @@ private fun DrawerContent(
                 // reader cannot see from outside the sheet must not be able to greet them, weeks
                 // later, as a folder list with folders missing from it.
                 var folderTab by remember { mutableStateOf(FolderTab.ALL) }
-                TabRow(selectedTabIndex = folderTab.ordinal, modifier = Modifier.padding(horizontal = 12.dp)) {
-                    Tab(
-                        selected = folderTab == FolderTab.ALL,
-                        onClick = { folderTab = FolderTab.ALL },
-                        text = { DrawerLabel(stringResource(R.string.inbox_folders_tab_all)) },
-                    )
-                    Tab(
-                        selected = folderTab == FolderTab.UNREAD,
-                        onClick = { folderTab = FolderTab.UNREAD },
-                        text = { DrawerLabel(stringResource(R.string.inbox_folders_tab_unread)) },
-                    )
-                }
+                // The fleet's pill strip (libs:bottomnav PageTabs, #868). In a sheet: no live top inset.
+                val folderTabs = listOf(
+                    NavPage(FolderTab.ALL.name, stringResource(R.string.inbox_folders_tab_all)),
+                    NavPage(FolderTab.UNREAD.name, stringResource(R.string.inbox_folders_tab_unread)),
+                )
+                PageTabs(
+                    pages = folderTabs,
+                    selectedId = folderTab.name,
+                    onSelect = { folderTab = FolderTab.valueOf(it.id) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    underTopChrome = false,
+                )
                 // ONLY the drawn list narrows with the tab. The fold registry below and the badge
                 // arithmetic further down still resolve against the WHOLE account: a folded parent
                 // badges descendants the Unread tab is hiding, and it must still count them.

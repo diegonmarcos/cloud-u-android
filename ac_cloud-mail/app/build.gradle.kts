@@ -95,6 +95,19 @@ val mailFleetB64: String = run {
         .let { Base64.getEncoder().encodeToString(it) }
 }
 
+// #868 THE navigation declaration: build.json::ui (bottom_nav, sections, default_section), baked for
+// libs:bottomnav's NavDecl. Read from THIS app's build.json and nowhere else; a missing block is a
+// build failure, because an app with no declaration opens on a blank bar.
+@Suppress("UNCHECKED_CAST")
+val mailUi: Map<String, Any> = ((groovy.json.JsonSlurper()
+    .parse(rootProject.file("build.json")) as Map<String, Any>)["ui"] as Map<String, Any>?)
+    ?: error("build.json::ui is missing: it is cloud-mail's navigation declaration (bottom_nav, sections, default_section).")
+val mailUiBottomNav: String = (mailUi["bottom_nav"] as List<String>).joinToString(",")
+val mailUiDefaultSection: String = mailUi["default_section"] as String
+val mailUiSectionsB64: String = groovy.json.JsonOutput.toJson(mailUi["sections"])
+    .toByteArray(Charsets.UTF_8)
+    .let { Base64.getEncoder().encodeToString(it) }
+
 val mailAiRoutingB64: String = groovy.json.JsonOutput.toJson(mailAiRouting)
     .toByteArray(Charsets.UTF_8)
     // Base64, NOT java.util.Base64 — imported above and referred to by its simple
@@ -181,6 +194,10 @@ android {
         // constellation-fleet.json's `mail` entry, wrapped as {"apps":[…]} so Fleet.parse reads
         // it unchanged. Base64 for the same reason as the line above: the entry carries quotes.
         buildConfigField("String", "MAIL_FLEET_B64", "\"$mailFleetB64\"")
+        // #868 the nav declaration, read at runtime through libs:bottomnav's NavDecl.
+        buildConfigField("String", "UI_BOTTOM_NAV", "\"$mailUiBottomNav\"")
+        buildConfigField("String", "UI_SECTIONS_B64", "\"$mailUiSectionsB64\"")
+        buildConfigField("String", "UI_DEFAULT_SECTION", "\"$mailUiDefaultSection\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The launcher/settings/notification label. Substituted verbatim into the manifest,
         // so without -PtestApp the merged manifest still reads android:label="@string/app_name"

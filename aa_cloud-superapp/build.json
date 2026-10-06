@@ -3913,7 +3913,7 @@
         "module": "libs:ops",
         "supports_accounts": false,
         "tabs": true,
-        "_doc_tabs": "C3 IS its two halves, so it wears the same tab strip every other tabbed section wears (SectionTabsFragment + AppTabsStyle, driven purely by `tabs` + the visible `pages` below). Observability and Topology are the only two listed pages; the six detail pages under them are `hidden` — still routable as page:c3/<id>, and reached from the tile_row that leads each tab, exactly where they were reached from before. Two listed pages is also what makes this a strip rather than a rail: goSection only falls to SectionMenuFragment past SectionTabsFragment.MAX_PANES.",
+        "_doc_tabs": "C3 IS its two halves, so it wears the same tab strip every other tabbed section wears (SectionTabsFragment + libs:bottomnav PageTabsView, driven purely by `tabs` + the visible `pages` below). Observability and Topology are the only two listed pages; the six detail pages under them are `hidden` — still routable as page:c3/<id>, and reached from the tile_row that leads each tab, exactly where they were reached from before. Two listed pages is also what makes this a strip rather than a rail: goSection only falls to SectionMenuFragment past SectionTabsFragment.MAX_PANES.",
         "drawer_default_children": [
           "Topology",
           "Observability"

@@ -58,26 +58,23 @@
     }
   ],
   "exempt": {
-    "aa_cloud-superapp": "Batch B (reshape dialect, #868 nav plan): launcher/Sections.kt becomes NavDecl; SectionTabsFragment/AppTabsStyle move into the lib; ShellBottomNav.kt stays.",
     "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchtower": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
-    "ac_cloud-agenda": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-agenda": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-c3-webserver": "Exempt by class (#868 nav plan): server wrapper; it has no screens to navigate between.",
     "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",
     "ac_cloud-code": "Exempt by class (#868 nav plan): fork of an upstream code editor; navigation is the upstream's.",
-    "ac_cloud-contacts": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-contacts": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-dialer": "Exempt by class (#868 nav plan): fork of an upstream dialer; navigation is the upstream's.",
     "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
-    "ac_cloud-mail": "Batch A (declare only, #868 nav plan): nav keys declared; SternaApp's three BottomNavBar sites build the island from the declaration (its item table now lives in the app, #868 batch 0).",
     "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",
     "ac_cloud-media-center": "Exempt by class (#868 nav plan): fork of an upstream media centre; navigation is the upstream's.",
     "ac_cloud-myterminal": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
-    "ac_cloud-news": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-news": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-nix-on-droid": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
     "ac_cloud-notes": "Exempt by class (#868 nav plan): its UI is not ours to reshape; navigation stays the app's own.",
     "ac_cloud-office": "Exempt by class (#868 nav plan): its UI is not ours to reshape; navigation stays the app's own.",
-    "ac_cloud-termux": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
-    "ac_cloud-vault": "Batch E (fork, #868 nav plan): VaultUnlockedNavBarScreen.kt's NavigationBar becomes BottomNavIsland and libs:bottomnav joins the fork's modules."
+    "ac_cloud-termux": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal."
   }
 }

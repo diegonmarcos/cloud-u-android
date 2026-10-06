@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Drawer panel — 3-tier navigation:
+<!-- Drawer panel — 2-tier navigation:
        Row 1  Top tabs:        [Home]  [<currentSection>]
-       Row 2  Pages tabs:      [Menu] [Folders] [Settings] … (hidden on Home)
        Below  Content:         FragmentContainerView, swaps per page tap
      Width fixed to 280dp so long account/folder names don't blow up the
      drawer. Per the user model: each FOSS app exposes its own page set
@@ -16,26 +15,11 @@
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
+    <!-- Row 1 — [Home] [<currentSection>]: libs:bottomnav's pill strip (#868). -->
+    <com.diegonmarcos.superapp.bottomnav.PageTabsView
         android:id="@+id/drawer_tabs"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:tabGravity="fill"
-        app:tabMode="fixed" />
-
-    <!-- Row 2 — per-section pages. Visibility = GONE when on Home; VISIBLE
-         when on a section that has build.json::ui.sections[X].pages[]. -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/drawer_page_tabs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurfaceVariant"
-        android:visibility="gone"
-        app:tabMode="scrollable"
-        app:tabContentStart="8dp"
-        app:tabPaddingStart="12dp"
-        app:tabPaddingEnd="12dp"
-        app:tabTextAppearance="?attr/textAppearanceLabelMedium" />
+        android:layout_height="wrap_content" />
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/drawer_content"

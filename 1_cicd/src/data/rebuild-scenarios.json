@@ -54,7 +54,7 @@
       }
     },
     {
-      "id": "libs/bottomnav (14 consumers)",
+      "id": "libs/bottomnav (15 consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/bottomnav/src/main/java/com/diegonmarcos/superapp/bottomnav/BottomNav.kt"
       ],
@@ -63,7 +63,7 @@
         "libs": 0,
         "rootfs": 0,
         "ship": 2,
-        "refresh": 13
+        "refresh": 14
       }
     },
     {

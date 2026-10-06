@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.system.ModePrefs
@@ -12,7 +14,7 @@ import org.json.JSONArray
 
 /**
  * Runtime view of `build.json::ui.sections` — the single source of truth
- * for the navigation taxonomy. Baked into BuildConfig.UI_SECTIONS_JSON_B64
+ * for the navigation taxonomy. Baked into BuildConfig.UI_SECTIONS_B64
  * at gradle eval time, parsed lazily at first access.
  *
  * Adding / reordering sections, pages, or flipping `bottom_nav` is a
@@ -659,9 +661,20 @@ object Sections {
         }
     }
 
+    /**
+     * #868 THE navigation declaration, read through libs:bottomnav's [NavDecl]: ui.bottom_nav, the
+     * section ids and the page tree (id/label/icon/action, nested pages) exactly as every other app
+     * reads them. [all] below is the SuperApp-only EXTENSION of that same JSON: the facet / tile /
+     * stack / mode / mirror keys no other app has, so the fleet dialect stays one dialect and this
+     * file is only the thin wrapper that adds what only the launcher needs.
+     */
+    val nav: NavDecl by lazy {
+        NavDecl.parse(JSONArray(unbake(BuildConfig.UI_SECTIONS_B64)), BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
+
     fun all(): List<Section> {
         cached?.let { return it }
-        val json = unbake(BuildConfig.UI_SECTIONS_JSON_B64)
+        val json = unbake(BuildConfig.UI_SECTIONS_B64)
         val arr = JSONArray(json)
         val parsed = mutableListOf<Section>()
         for (i in 0 until arr.length()) {
@@ -1002,12 +1015,15 @@ object Sections {
     fun byId(id: String): Section? = all().firstOrNull { it.id == id }
 
     /** build.json::ui.bottom_nav — the section ids the bottom-nav island shows, left to right. */
-    fun bottomNavIds(): List<String> = BuildConfig.UI_BOTTOM_NAV.split(',').filter { it.isNotBlank() }
+    fun bottomNavIds(): List<String> = nav.bottomNav
 
     /** The island's sections in bar order. An id with no section is dropped, not drawn blank. */
     fun bottomNav(): List<Section> = bottomNavIds().mapNotNull { byId(it) }
 
     fun defaultSectionId(): String = BuildConfig.UI_DEFAULT_SECTION
+
+    /** A page as the shared strip ([com.diegonmarcos.superapp.bottomnav.PageTabsView]) draws it. */
+    fun navPage(p: Page): NavPage = NavPage(p.id, p.label, p.iconName.orEmpty(), p.action)
 
     /** Apps/Admin global toggle default — overridden by ModePrefs at runtime. */
     fun defaultMode(): String = BuildConfig.UI_DEFAULT_MODE

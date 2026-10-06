@@ -131,10 +131,6 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #867 Account is a library now (libs:account); what it cannot reach in the launcher is supplied here.
         com.diegonmarcos.superapp.profile.AccountHost.apply {
             palette = { ctx -> com.diegonmarcos.superapp.ui.LauncherPalette.kit(ctx) }
-            styleTabs = { tabs ->
-                com.diegonmarcos.superapp.launcher.AppTabsStyle.apply(tabs)
-                com.diegonmarcos.superapp.launcher.AppTabsStyle.equalise(tabs)
-            }
             iconFor = { ctx, name -> com.diegonmarcos.superapp.launcher.Sections.iconResFor(ctx, name) }
             route = { activity, route ->
                 (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)

@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.toArgb
 import com.diegonmarcos.cloudlib.auth.VaultConnect
 import com.diegonmarcos.cloudlib.auth.VaultFile
 import com.diegonmarcos.superapp.uikit.KitPalette
-import com.google.android.material.tabs.TabLayout
 
 /**
  * #867 What Account needs from whatever app is hosting it.
@@ -25,9 +24,6 @@ object AccountHost {
 
     /** The host's theme (SuperApp: LauncherPalette.kit). Default: a neutral dark set. */
     @Volatile var palette: (Context) -> KitPalette = { DEFAULT_PALETTE }
-
-    /** Styles a TabLayout like the host's own strips (SuperApp: AppTabsStyle.apply + equalise). */
-    @Volatile var styleTabs: (TabLayout) -> Unit = {}
 
     /** Drawable for a declared icon name, 0 when the host has none (SuperApp: Sections.iconResFor). */
     @Volatile var iconFor: (Context, String) -> Int = { _, _ -> 0 }

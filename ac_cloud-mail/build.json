@@ -18,6 +18,18 @@
     ],
     "_doc_excluded": "Upstream's own release plumbing, not app source: their Forgejo CI and self-hosted runner compose (we ship through cloud-mail-engine.sh), their marketing brochure, and the F-Droid listing copy — which names their product and their store entry, neither of which we publish to."
   },
+  "ui": {
+    "_doc": "#868 THE navigation declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island's five ids, ui.sections the section each one opens, ui.default_section where the app opens. Each section's FIRST page is what its island item does: a page with no `action` is a DESTINATION of SternaApp's NavHost and its id IS the route (inbox / home / rss); a page whose `action` is `launch:<package>` is a LAUNCH hand-off to another app (Telegram, WhatsApp Business) that leaves mail's selected pill where it was. The labels shown on the island are the localised nav_bar_* strings keyed by section id; Home stays the centre. Reordering bottom_nav reorders the bar and changes nothing else.",
+    "bottom_nav": ["mail", "chat", "home", "rss", "video"],
+    "default_section": "home",
+    "sections": [
+      {"id": "mail", "label": "Mail", "icon": "mail", "pages": [{"id": "inbox", "label": "Inbox"}]},
+      {"id": "chat", "label": "Chat", "icon": "chat", "pages": [{"id": "telegram", "label": "Telegram", "action": "launch:org.telegram.messenger"}]},
+      {"id": "home", "label": "Home", "icon": "home", "pages": [{"id": "home", "label": "Home"}]},
+      {"id": "rss", "label": "News", "icon": "rss", "pages": [{"id": "rss", "label": "News"}]},
+      {"id": "video", "label": "Video", "icon": "video", "pages": [{"id": "whatsapp", "label": "WhatsApp Business", "action": "launch:com.whatsapp.w4b"}]}
+    ]
+  },
   "tests": {
     "_doc": "What CI runs to prove this app works, and what it is allowed to fail on. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed, NEITHER test system ran in CI: the ship workflow called assembleRelease and nothing else, so every assertion under test/ and every JVM test under */src/test/ was decoration that compiled and never executed. A green run meant 'it compiled', while reports cited the assertions as proof they had passed.",
     "shell": {

@@ -1,5 +1,8 @@
 package app.sterna.ui
 
+import app.sterna.BuildConfig
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+
 /**
  * cloud-mail's five bottom-navigation items (#465), in display order, with Home in the centre.
  * This is the item TABLE of one app. The bar that draws it is the fleet-wide [com.diegonmarcos.superapp.bottomnav.BottomNavIsland]
@@ -11,8 +14,8 @@ package app.sterna.ui
  * the interim Telegram / WhatsApp Business link is declared, so swapping "Chat" for a real
  * in-app screen later is a change to this one table and nothing else.
  *
- * This table lived in libs:bottomnav while mail was the module's only consumer; it moved here
- * with #868 (nav batch 0) so the lib holds no app's menu.
+ * The table is DERIVED from build.json::ui (below). It lived in libs:bottomnav while mail was the
+ * module's only consumer; #868 moved it into the app so the lib holds no app's menu, and then into the declaration.
  */
 
 /** What a tap on a bottom-nav item does: move inside this app, or leave it for another app. */
@@ -30,14 +33,28 @@ public data class BottomNavItem(
     public val packageName: String? = null,
 )
 
-/** The five items, left to right. Order is load-bearing: Home is deliberately the centre item. */
-public val bottomNavItems: List<BottomNavItem> = listOf(
-    BottomNavItem(id = "mail", action = BottomNavAction.DESTINATION, route = "inbox"),
-    BottomNavItem(id = "chat", action = BottomNavAction.LAUNCH, packageName = "org.telegram.messenger"),
-    BottomNavItem(id = "home", action = BottomNavAction.DESTINATION, route = "home"),
-    BottomNavItem(id = "rss", action = BottomNavAction.DESTINATION, route = "rss"),
-    BottomNavItem(id = "video", action = BottomNavAction.LAUNCH, packageName = "com.whatsapp.w4b"),
-)
+/**
+ * The five items, left to right: build.json::ui (#868) read through libs:bottomnav's [NavDecl], so the
+ * order, the Home centre and every hand-off live in ONE declaration and this file holds none of them.
+ * A section's first page is what its item does: no `action` = a destination whose page id is the
+ * NavHost route; `launch:<package>` = a hand-off to that app.
+ */
+internal val mailNav: NavDecl by lazy {
+    NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+}
+
+public val bottomNavItems: List<BottomNavItem> by lazy {
+    mailNav.bottomSections().mapNotNull { section ->
+        val page = section.pages.firstOrNull() ?: return@mapNotNull null
+        if (page.action.startsWith(LAUNCH_PREFIX)) {
+            BottomNavItem(section.id, BottomNavAction.LAUNCH, packageName = page.action.removePrefix(LAUNCH_PREFIX))
+        } else {
+            BottomNavItem(section.id, BottomNavAction.DESTINATION, route = page.id)
+        }
+    }
+}
+
+private const val LAUNCH_PREFIX = "launch:"
 
 /** The destinations the bar owns: only these routes draw the bar. Everything else is a full-size
  *  screen (compose, read, settings) that the island would only get in the way of. One place, so

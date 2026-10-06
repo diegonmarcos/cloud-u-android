@@ -75,9 +75,48 @@
       "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly.",
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's bottom island + NavDecl, shared BY REFERENCE: FleetNavScaffold.kt draws the vault's four tabs with them instead of the M3 bottom bar. Linked from app/build.gradle.kts.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
     }
   },
   "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The ids are Bitwarden's four unlocked tabs (VaultUnlockedNavBarTab); the Send tab drops out at run time when the org disables Sends. Each tab's own sub-screens are Bitwarden's navigation graph, not page strips, so no section has pages.",
+    "bottom_nav": [
+      "vault",
+      "send",
+      "generator",
+      "settings"
+    ],
+    "sections": [
+      {
+        "id": "vault",
+        "label": "Vault",
+        "icon": "vault",
+        "pages": []
+      },
+      {
+        "id": "send",
+        "label": "Send",
+        "icon": "send",
+        "pages": []
+      },
+      {
+        "id": "generator",
+        "label": "Generator",
+        "icon": "generator",
+        "pages": []
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
+        "pages": []
+      }
+    ],
+    "default_section": "vault",
     "vault_url": "https://vault.diegonmarcos.com",
     "profile_default": {
       "name": "Diego Coelho Marcos",

@@ -134,7 +134,7 @@ PY
   printf '%s' "$ma" | grep -q 'ARG_EXTERNAL_STRIP to true' && printf '%s' "$ma" | grep -q 'selectTab(' && printf '%s' "$ma" | grep -q 'onTabShown' && ok "the island drives ProfileFragment's tab and follows it back" || bad "the island and ProfileFragment's tab are not wired both ways"
   local pf; pf="$(strip "$L/profile/ProfileFragment.kt")"
   printf '%s' "$pf" | grep -q 'ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' && printf '%s' "$pf" | grep -q 'fun selectTab(id: String)' && [ "$(printf '%s' "$pf" | grep -c 'onTabShown?.invoke')" -ge 2 ] && ok "ProfileFragment hides its strip for a host that draws the tabs, and reports the tab on screen" || bad "ProfileFragment lost the external-strip contract"
-  printf '%s' "$pf" | grep -q 'AccountHost.styleTabs(this)' && ok "the in-fragment strip still goes through AccountHost.styleTabs (SuperApp's host)" || bad "ProfileFragment no longer styles its strip through AccountHost.styleTabs"
+  printf '%s' "$pf" | grep -q 'PageTabsView(ctx)' && ! printf '%s' "$pf" | grep -q 'AccountHost.styleTabs' && ok "the in-fragment strip is libs:bottomnav's PageTabsView (no host styling hook)" || bad "ProfileFragment's strip is not PageTabsView, or still goes through AccountHost.styleTabs"
   return $fails
 }
 
@@ -179,7 +179,7 @@ mutate "fragment is not told to hide its strip" acc/app/src/main/java/com/diegon
 mutate "a tab leaves the declaration" acc/build.json '"runtime",
       "drift"' '"runtime"' || M=$((M+1))
 mutate "gradle stops baking the sections" acc/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
-mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(tab.position)?.let { onTabShown?.invoke(it) }' '' || M=$((M+1))
+mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(index)?.let { onTabShown?.invoke(it) }' '' || M=$((M+1))
 mutate "the fragment keeps its strip visible" lib/profile/ProfileFragment.kt 'if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' '' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="

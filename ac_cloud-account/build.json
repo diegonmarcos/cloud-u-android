@@ -120,7 +120,8 @@
         "libs:net",
         "libs:devtools",
         "libs:ui-kit",
-        "libs:auth"
+        "libs:auth",
+        "libs:bottomnav"
       ]
     },
     "libs:bottomnav": {

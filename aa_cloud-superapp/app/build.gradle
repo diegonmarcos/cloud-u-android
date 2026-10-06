@@ -194,7 +194,7 @@ def uiScreensaversB64    = uiScreensaversJson.bytes.encodeBase64().toString()
 def uiLauncherSettingsJson = groovy.json.JsonOutput.toJson(stripDocs(buildJson.ui.launcher_settings ?: [:]))
 def uiLauncherSettingsB64  = uiLauncherSettingsJson.bytes.encodeBase64().toString()
 // Configs → Launcher → Controls (was Panel → Control): the switch groups and their rows. Its own
-// blob rather than a ride on UI_SECTIONS_JSON_B64 because it is not part of the
+// blob rather than a ride on UI_SECTIONS_B64 because it is not part of the
 // navigation taxonomy — nothing in ui.sections needs it and it would only make
 // that constant (already 53 KB against javac's 65,535 cap) larger for readers
 // that never look at it.
@@ -761,7 +761,7 @@ android {
         }
         buildConfigField "String", "GIT_SHORT_SHA",         "\"${shortSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP",       "\"${buildTimestamp}\""
-        buildConfigField "String", "UI_SECTIONS_JSON_B64",  "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_SECTIONS_B64",       "\"${uiSectionsB64}\""
         // javac caps ONE string constant at 65,535 UTF-8 bytes (JVMS 4.4.7, CONSTANT_Utf8).
         // The fleet manifest's base64 crossed that on 2026-09-24 — 68,072 bytes at 72
         // entries, once the four #567 engine libraries registered — and every consumer's
