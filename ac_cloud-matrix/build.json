@@ -77,6 +77,7 @@
     },
     "gh_release": {
       "_doc": "Rolling GH release 'latest' (shared across the ea_cloud-* apps; each contributes a distinctly-named APK asset), overwritten every main push so https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-matrix.apk stays stable. Published by `build.sh gh-release-fork matrix` (ship-cloud-matrix.yml), which uploads dist/cloud-comms-matrix.apk with --clobber. Consumed by aa_cloud-superapp ui.external_apps[cloud-matrix].install_apk_url. The immutable timestamped per-build release (RSS notification) is separate and stays --latest=false.",
+      "_doc_publish_identity": "2026-10-06: the arm64 asset on 'latest' was the 2026-10-03 build while its .source sidecar carried the current identity (stamped at 13:37 by a run whose arm64 publish did not land), so the gate skipped every re-run and the fleet-setup contract (#873) never reached the arm64 APK. The gate hashes this directory, so this note is the source edit that moves the identity and republishes BOTH ABIs; a workflow_dispatch cannot (it carries no PUBLISH_GATE_FORCE and never stamps). If an asset is ever older than its sidecar again, that is the signal.",
       "enabled": true,
       "rolling_tag": "latest",
       "asset_name": "cloud-comms-matrix.apk",
