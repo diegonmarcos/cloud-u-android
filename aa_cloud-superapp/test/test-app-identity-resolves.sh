@@ -174,7 +174,7 @@ echo "== T5: every app the central list puts in an Inboxes section reaches the I
 # apps resolved on paper and arrived nowhere. These assertions are the rest of
 # the route, from the central list to the tab.
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
-TAXO="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
+TAXO="$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
 
 # T5a — a folder with NO match rule at all can never claim an app, so a section
 # built only out of such folders is a tab that can only ever be empty. The Misc

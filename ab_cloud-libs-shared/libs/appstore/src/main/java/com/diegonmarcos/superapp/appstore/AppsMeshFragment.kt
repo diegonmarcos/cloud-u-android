@@ -18,7 +18,7 @@ class AppsMeshFragment : Fragment() {
         val ctx = requireContext()
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val p = (14 * ctx.resources.displayMetrics.density).toInt(); setPadding(p, p, p, p)
+            val p = StoreDensity.dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
         }
         AppsMesh.page(this, col)
         return ScrollView(ctx).apply { addView(col) }

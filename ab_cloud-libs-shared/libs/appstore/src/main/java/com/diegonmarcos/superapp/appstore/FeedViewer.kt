@@ -305,9 +305,9 @@ object FeedViewer {
         val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF1C1C24.toInt())
-            setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8))
+            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)) }
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
             isClickable = e.link.isNotEmpty()
             if (e.link.isNotEmpty()) setOnClickListener { open(e.link) }
         }
@@ -325,14 +325,14 @@ object FeedViewer {
             // 7 characters is a readable sha and a short run number alike; the
             // field itself is declared, so this trims whatever it was handed.
             text = e.ref.take(7)
-            textSize = 11f; typeface = Typeface.MONOSPACE; setTextColor(colour)
-            setPadding(0, 0, dp(ctx, 8), 0)
+            textSize = StoreDensity.T_CAPTION; typeface = Typeface.MONOSPACE; setTextColor(colour)
+            setPadding(0, 0, dp(ctx, StoreDensity.S8), 0)
         })
         head.addView(TextView(ctx).apply {
             // Only the FIRST line of a commit message: the body belongs on the
             // page the row opens, not squeezed into a list.
             text = e.title.lineSequence().firstOrNull().orEmpty()
-            textSize = 13f; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
+            textSize = StoreDensity.T_BODY; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
             maxLines = 1; ellipsize = TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         })
@@ -348,10 +348,10 @@ object FeedViewer {
     }
 
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 11f; setTextColor(DIM); setPadding(0, dp(ctx, 2), 0, dp(ctx, 4))
+        text = t; textSize = StoreDensity.T_CAPTION; setTextColor(DIM); setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S4))
     }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 
     private const val OK = 0xFF48BB78.toInt()
     private const val BAD = 0xFFF56565.toInt()

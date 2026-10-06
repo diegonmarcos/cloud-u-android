@@ -513,6 +513,22 @@
     "bearer_token": "secret"
    }
   },
+  "store_fleet_bearer": {
+   "kind": "encrypted",
+   "class": "secret",
+   "doc": "#866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential.",
+   "used_by": [
+    "lib-appstore"
+   ]
+  },
+  "store_fleet_bearer_fallback": {
+   "kind": "prefs",
+   "class": "secret",
+   "doc": "Plain-prefs fallback of store_fleet_bearer (same key).",
+   "used_by": [
+    "lib-appstore"
+   ]
+  },
   "dagu_prefs_fallback": {
    "kind": "prefs",
    "class": "config",

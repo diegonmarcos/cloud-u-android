@@ -16,7 +16,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 U="${UPDATER_SRC:-$ROOT/ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater}"
-SD="${STORE_DNS:-$ROOT/aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/network/StoreDns.kt}"
+SD="${STORE_DNS:-$ROOT/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreDns.kt}"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -42,7 +42,7 @@ if printf '%s' "$W" | grep -q 'UpdateChecker(applicationContext).available()' &&
   ok "UpdateWorker checks and downloads the SuperApp through UpdateChecker"
 else bad "UpdateWorker no longer self-updates through UpdateChecker"; fi
 
-if [ -f "$SD" ]; then
+if [ ! -f "$SD" ]; then bad "StoreDns not found at $SD"; else
   SEL="$(strip "$SD" | sed -n '/override fun select(/,/^            }/p')"
   SYS_L="$(printf '%s' "$SEL" | grep -n 'InetAddress.getAllByName(host)' | head -1 | cut -d: -f1)"
   ROUTE_L="$(printf '%s' "$SEL" | grep -n 'route(app, host)' | head -1 | cut -d: -f1)"

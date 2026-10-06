@@ -40,7 +40,7 @@ folders = [f for f in ui["phone_folders"] if isinstance(f, dict)]
 store_files = {f: code(os.path.join(store_dir, f)) for f in os.listdir(store_dir) if f.endswith(".kt")}
 cloud = store_files.get("StoreCloudFragment.kt", "")
 phone = store_files.get("StorePhoneFragment.kt", "")
-shelves_kt = code(os.path.join(kt_dir, "apps/StoreShelves.kt"))
+shelves_kt = code(os.path.join(kt_dir, "../../../../../../../../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/apps/StoreShelves.kt"))
 if not (cloud and phone and shelves_kt): print("FATAL: store sources missing"); sys.exit(2)
 
 print("== T1: the store holds NO taxonomy of its own ==")

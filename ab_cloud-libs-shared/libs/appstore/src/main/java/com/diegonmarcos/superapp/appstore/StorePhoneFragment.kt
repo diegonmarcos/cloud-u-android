@@ -109,7 +109,7 @@ class StorePhoneFragment : Fragment() {
         val ctx = requireContext()
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 14); setPadding(p, p, p, p)
+            val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
         }
         // The SAME bar the Cloud tab draws. #571: Install all and Update all are
         // real verbs here now — they walk every row this store can serve itself
@@ -273,8 +273,8 @@ class StorePhoneFragment : Fragment() {
         for (r in shown) {
             val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
             if (here != null && here != heading) into.addView(TextView(ctx).apply {
-                text = here; textSize = 12f; setTextColor(cHead)
-                setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
+                text = here; textSize = StoreDensity.T_META; setTextColor(cHead)
+                setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
             })
             heading = here
             into.addView(row(ctx, r))
@@ -285,11 +285,11 @@ class StorePhoneFragment : Fragment() {
      *  sets [installedOnly] and re-renders the SAME rows (no re-probe). */
     private fun filterToggle(ctx: Context): View {
         fun pill(label: String, onlyInstalled: Boolean) = TextView(ctx).apply {
-            text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+            setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { setMargins(dp(ctx, 3), dp(ctx, 2), dp(ctx, 3), dp(ctx, 8)) }
+                .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S8)) }
             isClickable = true
             setOnClickListener { if (installedOnly != onlyInstalled) { installedOnly = onlyInstalled; styleFilter(); redraw() } }
         }
@@ -316,21 +316,21 @@ class StorePhoneFragment : Fragment() {
     private fun row(ctx: Context, r: Row) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(0xFF1C1C24.toInt())
-        setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 6), dp(ctx, 6))
+        setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)) }
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
         addView(TextView(ctx).apply {
-            text = r.label; textSize = 14f; typeface = Typeface.DEFAULT_BOLD
+            text = r.label; textSize = StoreDensity.T_TITLE; typeface = Typeface.DEFAULT_BOLD
             setTextColor(0xFFFFFFFF.toInt()); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
         })
         addView(TextView(ctx).apply {
-            text = r.pkg; textSize = 11f; typeface = Typeface.MONOSPACE; setTextColor(cDim)
+            text = r.pkg; textSize = StoreDensity.T_CAPTION; typeface = Typeface.MONOSPACE; setTextColor(cDim)
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         })
         // The state line: version / update / not installed / needs Play. Tagged
         // with the package so a test reads the rendered verdict, not this source.
         addView(TextView(ctx).apply {
-            tag = STATE_TAG_PREFIX + r.pkg; textSize = 11f
+            tag = STATE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
             stateViews[r.pkg] = this
             paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
         })
@@ -342,7 +342,7 @@ class StorePhoneFragment : Fragment() {
             val rec = e.record ?: return@let
             val here = SourceResolver.installed(ctx, r.pkg)?.second
             addView(TextView(ctx).apply {
-                tag = CACHE_TAG_PREFIX + r.pkg; textSize = 11f
+                tag = CACHE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
                 val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
                 text = if (here == rec.versionCode)
                     ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
@@ -352,7 +352,7 @@ class StorePhoneFragment : Fragment() {
         }
         val buttons = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(ctx, 4), 0, 0)
+            setPadding(0, dp(ctx, StoreDensity.S4), 0, 0)
         }
         r.actions.forEach { a -> buttons.addView(btn(ctx, a) { act(ctx, r, a) }) }
         addView(HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(buttons) })
@@ -588,28 +588,28 @@ class StorePhoneFragment : Fragment() {
     private fun toastLater(ctx: Context, msg: String) =
         view?.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
+        text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
     }
     /** Dimmed, not hidden, when it cannot work here: the reason is one tap away. */
     private fun btn(ctx: Context, a: PhoneAppActions.Action, onClick: () -> Unit) = TextView(ctx).apply {
-        text = a.label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = a.label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2A2A33.toInt())
         alpha = if (a.disabledReason == null) 1f else 0.4f
         contentDescription = a.disabledReason?.let { "${a.label}: $it" } ?: a.label
-        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(ctx, 4), 0) }
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(ctx, StoreDensity.S4), 0) }
         isClickable = true; setOnClickListener { onClick() }
     }
 
     private fun fileBtn(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
-        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, 3), dp(ctx, 2), dp(ctx, 3), dp(ctx, 8)) }
+            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S8)) }
         isClickable = true; setOnClickListener { onClick() }
     }
 

@@ -62,13 +62,13 @@ object StoreSourceTabs {
     private fun pill(ctx: Context, label: String, on: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         tag = TAG_PREFIX + label
         text = label
-        textSize = 12f
+        textSize = StoreDensity.T_META
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(0xFFFFFFFF.toInt())
         setBackgroundColor(if (on) SELECTED else IDLE)
-        val h = (10 * ctx.resources.displayMetrics.density).toInt()
-        val v = (7 * ctx.resources.displayMetrics.density).toInt()
+        val h = StoreDensity.dp(ctx, StoreDensity.S8)
+        val v = StoreDensity.dp(ctx, StoreDensity.S6)
         setPadding(h, v, h, v)
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT

@@ -423,7 +423,7 @@ object StoreMesh {
         val broken = if (live == null) emptyList()
             else links.filter { state(it, live) == State.ENGINE_MISSING || state(it, live) == State.ENGINE_OLD }
 
-        val summary = text(ctx, summaryLine(fleet, links, live, pending), 12f, DIM)
+        val summary = text(ctx, summaryLine(fleet, links, live, pending), StoreDensity.T_META, DIM)
         into.addView(summary)
 
         if (broken.isNotEmpty()) {
@@ -455,9 +455,9 @@ object StoreMesh {
                     orientation = LinearLayout.VERTICAL
                     tag = TAG_NODE + app.id
                     setBackgroundColor(0xFF1C1C24.toInt())
-                    setPadding(dp(ctx, 12), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7))
+                    setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6))
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)) }
+                        LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
                 }
                 fill(ctx, card, app, live, app.id in pending, links, byId, extras, onOpen)
                 into.addView(card); cards[app.id] = card
@@ -496,18 +496,18 @@ object StoreMesh {
             app.id in live.peers -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running"
             else -> BLUE to "${version.ifEmpty { "?" }} · installed, no debug API answered"
         }
-        card.addView(text(ctx, app.label + (if (app.kind == "lib") "  · lib" else ""), 14f, WHITE, bold = true))
-        card.addView(text(ctx, (if (probing && live != null) "⟳ " else "● ") + status, 11f, dot).apply {
+        card.addView(text(ctx, app.label + (if (app.kind == "lib") "  · lib" else ""), StoreDensity.T_TITLE, WHITE, bold = true))
+        card.addView(text(ctx, (if (probing && live != null) "⟳ " else "● ") + status, StoreDensity.T_CAPTION, dot).apply {
             tag = TAG_STATUS + app.id + if (probing) ":probing" else ""
         })
         if (live != null) for (l in out) card.addView(linkRow(ctx, l, live, label, byId, onOpen))
         if (inn.isNotEmpty())
             card.addView(text(ctx, "← bound by " + inn.joinToString(", ") { l ->
-                label(l.from) + (live?.let { " " + state(l, it).name } ?: "") }, 11f, DIM))
-        live?.shares?.get(app.id)?.let { card.addView(text(ctx, "⇄ serves " + it.joinToString(" · "), 11f, DIM)) }
+                label(l.from) + (live?.let { " " + state(l, it).name } ?: "") }, StoreDensity.T_CAPTION, DIM))
+        live?.shares?.get(app.id)?.let { card.addView(text(ctx, "⇄ serves " + it.joinToString(" · "), StoreDensity.T_CAPTION, DIM)) }
         if (live != null && version != null)
             card.addView(text(ctx, if (app.id in live.granted) "⇄ reads constellation data (CONSTELLATION_DATA granted)"
-                else "✕ CONSTELLATION_DATA not granted — reinstall from our release", 11f,
+                else "✕ CONSTELLATION_DATA not granted — reinstall from our release", StoreDensity.T_CAPTION,
                 if (app.id in live.granted) DIM else RED))
         extras?.invoke(app)?.let { v -> (v.parent as? android.view.ViewGroup)?.removeView(v); card.addView(v) }
     }
@@ -535,7 +535,7 @@ object StoreMesh {
             State.APP_ABSENT -> "→ ${l.name}: $engine (${label(l.from)} not installed)"
             else -> "✕ ${label(l.from)} → ${l.name}: ${fix(l, live, engine)}"
         }
-        return text(ctx, line, 12f, when (s) { State.OK -> GREEN; State.APP_ABSENT -> DIM; else -> RED }).apply {
+        return text(ctx, line, StoreDensity.T_META, when (s) { State.OK -> GREEN; State.APP_ABSENT -> DIM; else -> RED }).apply {
             tag = "$TAG_LINK${l.from}>${l.engine}:${s.name}"
             // A broken link opens the ENGINE's Store row — that is where the fix is.
             byId[l.engine]?.let { e -> isClickable = true; setOnClickListener { onOpen(e) } }
@@ -543,13 +543,13 @@ object StoreMesh {
     }
 
     private fun heading(ctx: Context, t: String, color: Int) =
-        text(ctx, t, 12f, color).apply { setPadding(0, dp(ctx, 10), 0, dp(ctx, 4)) }
+        text(ctx, t, StoreDensity.T_META, color).apply { setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4)) }
 
     private fun text(ctx: Context, t: String, size: Float, color: Int, bold: Boolean = false) = TextView(ctx).apply {
         text = t; textSize = size; setTextColor(color)
         if (bold) typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(ctx, 1), 0, dp(ctx, 1))
+        setPadding(0, dp(ctx, StoreDensity.S1), 0, dp(ctx, StoreDensity.S1))
     }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 }

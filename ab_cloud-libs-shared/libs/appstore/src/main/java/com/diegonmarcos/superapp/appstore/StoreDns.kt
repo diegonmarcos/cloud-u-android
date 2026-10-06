@@ -1,9 +1,10 @@
-package com.diegonmarcos.superapp.network
+package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import com.diegonmarcos.superapp.updater.source.DownloadFailure
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -23,7 +24,7 @@ import javax.net.SocketFactory
  *
  * The downloader (libs:updater) opens plain HttpURLConnections on the process
  * default, so with the VPN slot carrying a list the preset no longer names
- * (a stale public tunnel's 1.1.1.1/8.8.8.8), every Store source failed with
+ * (a stale public tunnel's resolvers), every Store source failed with
  * "cannot resolve github.com" while Android's own resolver — what Mirror means —
  * answered. The lib stays untouched: a ProxySelector, consulted by every
  * HttpURLConnection, walks the preset's [plan] for the download hosts. The
@@ -38,8 +39,29 @@ import javax.net.SocketFactory
  * fixed public list, never another preset's servers. Public/Private presets ARE
  * what the VPN carries, so their single route is the system resolver, labelled
  * with the preset.
+ *
+ * #866 Lives in libs:appstore so SuperApp and Cloud Store walk ONE path. What
+ * only a host knows comes through the hooks below: SuperApp answers [presetOf]
+ * from its DNS page (FleetDns) and [query] from FleetDns.query; Cloud Store has
+ * no DNS page, so it keeps the defaults (Mirror: the system resolver, then
+ * Android's resolver on each underlying network).
  */
 object StoreDns {
+    /** The host's active preset, Android-free. [mirror] = "Mirror Android". */
+    class Preset(val label: String, val mirror: Boolean, val servers: List<String> = emptyList(), val fallback: List<String> = emptyList())
+
+    /** The preset in force. Default: Mirror with no servers of its own. */
+    @Volatile var presetOf: (Context) -> Preset = { Preset("Mirror Android", true) }
+    /** One plain-DNS A query: server, host, timeout ms. Throws or returns a non-address on a miss. */
+    @Volatile var query: (String, String, Int) -> String = { _, _, _ -> throw UnsupportedOperationException("no DNS query hook") }
+    @Volatile var timeoutMs: Int = 2500
+    /** The host's one-line summary of what Android resolves with, or null. */
+    @Volatile var networkSummary: (Context) -> String? = { ctx ->
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        cm?.getLinkProperties(cm.activeNetwork)?.dnsServers?.joinToString(", ") { it.hostAddress.orEmpty() }
+            ?.ifEmpty { "no DNS servers on the active network" }
+    }
+
     /** A planned route, Android-free so the order is testable. */
     data class Step(val label: String, val kind: String, val servers: List<String> = emptyList(), val network: Int = -1)
 
@@ -47,8 +69,8 @@ object StoreDns {
     const val UNDERLYING = "underlying"
     const val PRESET_SERVERS = "preset-servers"
 
-    fun plan(p: FleetDns.Preset, underlying: List<String>): List<Step> = when (p.kind) {
-        FleetDns.KIND_MIRROR -> buildList {
+    fun plan(p: Preset, underlying: List<String>): List<Step> = when {
+        p.mirror -> buildList {
             add(Step("Android system resolver (${p.label})", SYSTEM))
             underlying.forEachIndexed { i, n -> add(Step("Android resolver on $n", UNDERLYING, network = i)) }
             val own = (p.servers + p.fallback).distinct()
@@ -97,8 +119,8 @@ object StoreDns {
 
     /** Resolve [host] along the preset's plan: null = DIRECT (system answered, or nothing did). */
     private fun route(ctx: Context, host: String): Via? {
-        val p = FleetDns.effective(FleetDns.decl, FleetDns.Prefs(ctx).preset)
-        val nets = if (p.kind == FleetDns.KIND_MIRROR) underlyingNetworks(ctx) else emptyList()
+        val p = presetOf(ctx)
+        val nets = if (p.mirror) underlyingNetworks(ctx) else emptyList()
         var via: Via? = null
         val hit = pick(host, plan(p, nets.map { it.first }).map { it to Unit }) { s, _ ->
             when (s.kind) {
@@ -107,7 +129,7 @@ object StoreDns {
                     n.getAllByName(host).toList().takeIf { it.isNotEmpty() }?.also { via = Via(it, n.socketFactory) } != null
                 }
                 PRESET_SERVERS -> s.servers.firstNotNullOfOrNull { srv ->
-                    runCatching { FleetDns.query(srv, host, FleetDns.decl.timeoutMs) }.getOrNull()
+                    runCatching { query(srv, host, timeoutMs) }.getOrNull()
                         ?.takeIf { a -> a.split('.').size == 4 && a.split('.').all { it.toIntOrNull() != null } }
                 }?.let { a ->
                     via = Via(listOf(InetAddress.getByName(a)), nets.firstOrNull()?.second?.socketFactory ?: SocketFactory.getDefault())
@@ -120,6 +142,19 @@ object StoreDns {
 
     private val pending = ConcurrentHashMap<String, Via>()
     @Volatile private var port = 0
+
+    /**
+     * Both halves of #860/#866 for a host, off the main thread: the proxy
+     * selector, and the failure wording that names the resolvers tried.
+     */
+    fun start(ctx: Context) {
+        val app = ctx.applicationContext
+        Thread({ install(app) }, "store-dns-install").start()
+        DownloadFailure.activeResolver = {
+            val net = runCatching { networkSummary(app) }.getOrNull()
+            lastFailure?.let { "tried $it" + (net?.let { n -> "; network: $n" } ?: "") } ?: net
+        }
+    }
 
     /** Install once, at the app's start. Any failure leaves the default selector in place. */
     fun install(ctx: Context) = runCatching {

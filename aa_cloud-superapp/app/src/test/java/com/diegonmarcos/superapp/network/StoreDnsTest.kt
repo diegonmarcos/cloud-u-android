@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.network
 
 import android.app.Application
+import com.diegonmarcos.superapp.appstore.StoreDns
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -20,8 +21,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class StoreDnsTest {
     private val d = FleetDns.decl
-    private val mirror = d.presets.first { it.kind == FleetDns.KIND_MIRROR }
-    private val own = (mirror.servers + mirror.fallback).toSet()
+    private val mirrorDecl = d.presets.first { it.kind == FleetDns.KIND_MIRROR }
+    private val mirror = StoreDns.Preset(mirrorDecl.label, true, mirrorDecl.servers, mirrorDecl.fallback)
+    private val own = (mirrorDecl.servers + mirrorDecl.fallback).toSet()
     private val publicServers = d.presets.filter { it.kind == FleetDns.KIND_PUBLIC }
         .flatMap { it.servers + it.fallback }.toSet() - own
 
@@ -37,7 +39,7 @@ class StoreDnsTest {
 
     @Test fun `a public preset is the VPN's list, read through the system resolver`() {
         d.presets.filter { it.kind == FleetDns.KIND_PUBLIC }.forEach { p ->
-            assertEquals(listOf(StoreDns.SYSTEM), StoreDns.plan(p, listOf("Wi-Fi")).map { it.kind })
+            assertEquals(listOf(StoreDns.SYSTEM), StoreDns.plan(StoreDns.Preset(p.label, false, p.servers, p.fallback), listOf("Wi-Fi")).map { it.kind })
         }
     }
 

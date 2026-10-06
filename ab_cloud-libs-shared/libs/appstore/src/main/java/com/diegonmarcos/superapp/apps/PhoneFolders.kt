@@ -1,5 +1,5 @@
 package com.diegonmarcos.superapp.apps
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.appstore.BuildConfig
 
 import android.util.Base64
 import org.json.JSONArray
@@ -106,7 +106,7 @@ object PhoneFolders {
      * no second edit to forget.
      */
     private fun constellationKeywordsByFolder(): Map<String, List<String>> {
-        val json = String(Base64.decode(BuildConfig.EXTERNAL_APPS_B64, Base64.NO_WRAP))
+        val json = String(Base64.decode(BuildConfig.UI_EXTERNAL_APPS_B64, Base64.NO_WRAP))
         val arr = JSONArray(json)
         val out = HashMap<String, MutableList<String>>()
         for (idx in 0 until arr.length()) {

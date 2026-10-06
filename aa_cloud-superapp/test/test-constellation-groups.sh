@@ -56,11 +56,14 @@ ML_COUNT="$(printf '%s\n' "$ML_MODULES" | grep -c .)"
   && ok "found $ML_COUNT library module(s) with an ML runtime dependency" \
   || bad "expected at least 2 ML runtime modules under libs/, found $ML_COUNT"
 for mod in $ML_MODULES; do
+  # #870: only engines ship a Cloud-Lib row; a static ML module (ml-l-text-mlkit, ml-l-voice-vosk)
+  # ships inside the keyboard companion and has no row to file.
+  jq -e --arg id "lib-$mod" 'any(.apps[]; .id == $id)' "$FLEET" >/dev/null || { ok "lib-$mod ships no Cloud-Lib row (static, #870)"; continue; }
   jq -e --arg id "lib-$mod" 'any(.apps[]; .id == $id and (.group == "libs-t-ml" or .group == "libs-l-ml"))' "$FLEET" >/dev/null \
     && ok "lib-$mod is in an ML group" \
     || bad "lib-$mod carries an ML runtime but is not in libs-t-ml or libs-l-ml"
 done
-jq -e 'all(.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk"); .package != "" and .asset != "") and ([.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk")] | length == 2)' "$FLEET" >/dev/null \
+jq -e 'all(.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk"); .package != "" and .asset != "") and ([.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk")] | length <= 2)' "$FLEET" >/dev/null \
   && ok "moved modules keep their real installable entries" \
   || bad "a moved ML module lost its package or asset"
 
@@ -424,7 +427,7 @@ printf '%s' "$TABBAR" | command grep -qF 'if (column.childCount > 0)' \
   && ok "the divider is drawn only BETWEEN lines, never above the first" \
   || bad "the divider is not conditional - a single-line bar would draw a stray rule"
 DIV="$(body_of 'private fun lineDivider(')"
-printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, [0-9]+\), 0, dp\(ctx, [0-9]+\)\)' \
+printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, StoreDensity\.S[0-9]+\), 0, dp\(ctx, StoreDensity\.S[0-9]+\)\)' \
   && ok "the divider carries real vertical space, not just a hairline" \
   || bad "the divider has no margins - a 1px rule with no space is still one block"
 

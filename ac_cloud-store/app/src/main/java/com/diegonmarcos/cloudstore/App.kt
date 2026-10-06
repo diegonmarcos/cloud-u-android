@@ -4,6 +4,10 @@ import android.app.Application
 import android.util.Log
 import com.diegonmarcos.superapp.appstore.AppStoreHost
 import com.diegonmarcos.superapp.appstore.ConstellationWorker
+import com.diegonmarcos.superapp.appstore.FeedViewer
+import com.diegonmarcos.superapp.appstore.FleetBearer
+import com.diegonmarcos.superapp.appstore.StoreDns
+import com.diegonmarcos.superapp.apps.StoreShelves
 import com.diegonmarcos.superapp.appstore.StoreDebugApi
 
 /**
@@ -26,7 +30,18 @@ class App : Application() {
             // shows the error without the "open DNS settings" button.
             dnsPageExtras = emptyMap()
             runsFleetPass = { true }
+            // #866 the same shelves as SuperApp's Store pages (libs:appstore StoreShelves,
+            // over the one taxonomy SuperApp's build.json declares).
+            classify = StoreShelves::of
         }
+        // #860/#866 downloads resolve through the same StoreDns path as SuperApp. Cloud
+        // Store has no DNS page, so the lib's defaults apply: the system resolver, then
+        // Android's resolver on each underlying network.
+        StoreDns.start(this)
+        // #866 the fleet bearer for the Commits / CI-CD feeds: SuperApp's token over its
+        // CONSTELLATION_DATA provider when SuperApp is installed, else the token typed
+        // into this app's Settings tab. Read per request; never logged.
+        FeedViewer.fleetBearer = { runCatching { FleetBearer.resolve(this) }.getOrDefault("") }
         // Periodic fleet check + the Wi-Fi trigger + the auto chain, which
         // updates every constellation app (SuperApp included) and this one last.
         runCatching { ConstellationWorker.start(this) }

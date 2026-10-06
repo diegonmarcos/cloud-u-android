@@ -32,14 +32,14 @@ object StoreImport {
         val ctx = host.requireContext()
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 16); setPadding(p, dp(ctx, 8), p, p)
+            val p = dp(ctx, StoreDensity.S12); setPadding(p, dp(ctx, StoreDensity.S8), p, p)
         }
         col.addView(text(ctx, ctx.getString(R.string.store_import_summary,
-            plan.installed.size, plan.ours.size + plan.store.size, plan.manual.size), 13f, bold = true))
+            plan.installed.size, plan.ours.size + plan.store.size, plan.manual.size), StoreDensity.T_BODY, bold = true))
 
         if (plan.ours.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_ours, plan.ours.size)))
-            plan.ours.forEach { col.addView(text(ctx, it.pkg, 11f, mono = true)) }
+            plan.ours.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
             col.addView(button(ctx, ctx.getString(R.string.store_import_install_ours, plan.ours.size)) {
                 val want = plan.ours.map { it.pkg }.toSet()
                 val apps = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
@@ -50,7 +50,7 @@ object StoreImport {
         }
         if (plan.direct.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_direct, plan.direct.size)))
-            plan.direct.forEach { col.addView(text(ctx, it.pkg, 11f, mono = true)) }
+            plan.direct.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
             col.addView(button(ctx, ctx.getString(R.string.store_import_install_direct, plan.direct.size)) {
                 val app = ctx.applicationContext
                 val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(app))
@@ -65,7 +65,7 @@ object StoreImport {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_store, plan.store.size)))
             for (link in plan.store) col.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                addView(text(ctx, link.entry.pkg, 11f, mono = true).apply {
+                addView(text(ctx, link.entry.pkg, StoreDensity.T_CAPTION, mono = true).apply {
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
                 addView(button(ctx, ctx.getString(R.string.store_import_open_in, link.label)) {
@@ -81,12 +81,12 @@ object StoreImport {
         if (plan.manual.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_manual, plan.manual.size)))
             plan.manual.forEach {
-                col.addView(text(ctx, it.pkg + "  ·  " + (it.origin ?: ctx.getString(R.string.store_import_no_origin)), 11f, mono = true))
+                col.addView(text(ctx, it.pkg + "  ·  " + (it.origin ?: ctx.getString(R.string.store_import_no_origin)), StoreDensity.T_CAPTION, mono = true))
             }
         }
         if (plan.installed.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_installed, plan.installed.size)))
-            plan.installed.forEach { col.addView(text(ctx, it.pkg, 11f, mono = true)) }
+            plan.installed.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
         }
         AlertDialog.Builder(host.requireActivity())
             .setTitle(R.string.store_import_title)
@@ -95,18 +95,18 @@ object StoreImport {
             .show()
     }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
-    private fun heading(ctx: Context, t: String) = text(ctx, t, 12f, bold = true).apply {
-        setTextColor(0xFFED8936.toInt()); setPadding(0, dp(ctx, 12), 0, dp(ctx, 4))
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
+    private fun heading(ctx: Context, t: String) = text(ctx, t, StoreDensity.T_META, bold = true).apply {
+        setTextColor(0xFFED8936.toInt()); setPadding(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S4))
     }
     private fun text(ctx: Context, t: String, size: Float, bold: Boolean = false, mono: Boolean = false) = TextView(ctx).apply {
         text = t; textSize = size
         typeface = when { mono -> Typeface.MONOSPACE; bold -> Typeface.DEFAULT_BOLD; else -> Typeface.DEFAULT }
     }
     private fun button(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
-        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         isClickable = true; setOnClickListener { onClick() }
     }
 }

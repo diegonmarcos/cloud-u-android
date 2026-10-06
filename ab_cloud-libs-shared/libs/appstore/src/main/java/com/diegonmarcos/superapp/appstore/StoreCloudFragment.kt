@@ -245,7 +245,7 @@ class StoreCloudFragment : Fragment() {
         val scroll = ScrollView(ctx)
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 14); setPadding(p, p, p, p)
+            val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
         }
         scroll.addView(col)
 
@@ -378,7 +378,7 @@ class StoreCloudFragment : Fragment() {
         val column = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.setMargins(0, 0, 0, dp(ctx, 8)); layoutParams = lp
+            lp.setMargins(0, 0, 0, dp(ctx, StoreDensity.S8)); layoutParams = lp
         }
         tabBtns.clear()
         // #671 A DIFFERENT CLASS OF CONTROL GETS A DIFFERENT CONTROL LANGUAGE.
@@ -442,8 +442,8 @@ class StoreCloudFragment : Fragment() {
      *  than a continuation of the first. */
     private fun lineDivider(ctx: Context) = View(ctx).apply {
         setBackgroundColor(0xFF2A2A33.toInt())
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 1))
-            .apply { setMargins(0, dp(ctx, 12), 0, dp(ctx, 8)) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, StoreDensity.S1))
+            .apply { setMargins(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S8)) }
     }
 
     /**
@@ -465,15 +465,15 @@ class StoreCloudFragment : Fragment() {
         setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         if (style.stretch) {
-            gravity = Gravity.CENTER; textSize = 13f
-            setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
+            gravity = Gravity.CENTER; textSize = StoreDensity.T_BODY
+            setPadding(dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S8))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         } else {
-            gravity = Gravity.CENTER_VERTICAL; textSize = 13f
-            setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8))
+            gravity = Gravity.CENTER_VERTICAL; textSize = StoreDensity.T_BODY
+            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                .apply { setMargins(0, 0, dp(ctx, 8), 0) }
+                .apply { setMargins(0, 0, dp(ctx, StoreDensity.S8), 0) }
         }
     }
 
@@ -556,7 +556,7 @@ class StoreCloudFragment : Fragment() {
         body.addView(progressPanel(ctx))
         if (list.isEmpty()) { body.addView(caption(ctx, "Nothing here yet.")); return }
         summaryView = TextView(ctx).apply {
-            textSize = 12f; setTextColor(cDim); setPadding(0, dp(ctx, 2), 0, dp(ctx, 6))
+            textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S6))
         }
         body.addView(summaryView)
         body.addView(filterBar(ctx, list))
@@ -577,7 +577,7 @@ class StoreCloudFragment : Fragment() {
         val bar = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(ctx, 6)) }
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(ctx, StoreDensity.S6)) }
         }
         filterChips.clear()
         // #793 the shared chip (StoreBar.chip), the same one Apps Mesh filters with.
@@ -646,16 +646,16 @@ class StoreCloudFragment : Fragment() {
     private fun progressPanel(ctx: Context): LinearLayout {
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(ctx, 6), 0, dp(ctx, 4))
+            setPadding(0, dp(ctx, StoreDensity.S6), 0, dp(ctx, StoreDensity.S4))
             visibility = View.GONE
             tag = StoreBar.PROGRESS_TAG
         }
         // #785 WHICH app: its launcher icon (when it is on the device — the
         // PackageManager already has it, so it costs one lookup) beside the line.
         val icon = ImageView(ctx).apply { visibility = View.GONE }
-        val label = TextView(ctx).apply { textSize = 12f; setTextColor(cUpd) }
+        val label = TextView(ctx).apply { textSize = StoreDensity.T_META; setTextColor(cUpd) }
         val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        head.addView(icon, LinearLayout.LayoutParams(dp(ctx, 18), dp(ctx, 18)).apply { marginEnd = dp(ctx, 6) })
+        head.addView(icon, LinearLayout.LayoutParams(dp(ctx, StoreDensity.GLYPH), dp(ctx, StoreDensity.GLYPH)).apply { marginEnd = dp(ctx, StoreDensity.S6) })
         head.addView(label, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         // Horizontal style = a real determinate bar; the default is the spinner,
         // which cannot show a percentage.
@@ -675,13 +675,13 @@ class StoreCloudFragment : Fragment() {
 
         row.addView(head)
         row.addView(bar, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 6)).apply {
-            topMargin = dp(ctx, 4)
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, StoreDensity.S6)).apply {
+            topMargin = dp(ctx, StoreDensity.S4)
         })
         row.addView(cancel, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(ctx, 6)
+            topMargin = dp(ctx, StoreDensity.S6)
             gravity = android.view.Gravity.END
         })
         progressRow = row; progressIcon = icon; progressLabel = label; progressBar = bar
@@ -765,46 +765,46 @@ class StoreCloudFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF1C1C24.toInt())
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.setMargins(0, dp(ctx, 2), 0, dp(ctx, 2)); layoutParams = lp
+            lp.setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)); layoutParams = lp
         }
 
         val head = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(ctx, 12), dp(ctx, 9), dp(ctx, 12), dp(ctx, 9))
+            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
             isClickable = true
         }
         val dot = TextView(ctx).apply {
-            text = "·"; textSize = 13f; setTextColor(cDim); setPadding(0, 0, dp(ctx, 8), 0)
+            text = "·"; textSize = StoreDensity.T_BODY; setTextColor(cDim); setPadding(0, 0, dp(ctx, StoreDensity.S8), 0)
         }
         val name = TextView(ctx).apply {
-            text = app.label; textSize = 14f; setTextColor(0xFFFFFFFF.toInt())
+            text = app.label; textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt())
             typeface = Typeface.DEFAULT_BOLD
             maxLines = 1; ellipsize = TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val meta = TextView(ctx).apply { text = "checking…"; textSize = 11f; setTextColor(cDim); maxLines = 1 }
+        val meta = TextView(ctx).apply { text = "checking…"; textSize = StoreDensity.T_CAPTION; setTextColor(cDim); maxLines = 1 }
         // The per-app action, on the collapsed row on purpose: updating ONE app
         // is the common case, and making it expand-then-tap would cost two taps
         // for the thing people do most. Hidden when the app is up to date, so
         // the column only ever shows actionable rows.
         val quick = TextView(ctx).apply {
-            textSize = 13f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            textSize = StoreDensity.T_BODY; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
             setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(ctx, 11), dp(ctx, 4), dp(ctx, 11), dp(ctx, 4))
+            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S4))
             visibility = View.GONE
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, 8), 0, 0, 0) }
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S8), 0, 0, 0) }
             setOnClickListener { next(ctx, app) }
         }
         val chev = TextView(ctx).apply {
             text = if (expanded.contains(app.id)) "⌄" else "›"
-            textSize = 15f; setTextColor(cDim); setPadding(dp(ctx, 10), 0, 0, 0)
+            textSize = StoreDensity.T_TITLE; setTextColor(cDim); setPadding(dp(ctx, StoreDensity.S8), 0, 0, 0)
         }
         head.addView(dot); head.addView(name); head.addView(meta); head.addView(quick); head.addView(chev)
 
         val detail = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, 12), 0, dp(ctx, 12), dp(ctx, 10))
+            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
             visibility = if (expanded.contains(app.id)) View.VISIBLE else View.GONE
         }
         detailBody(ctx, app, detail)
@@ -826,10 +826,10 @@ class StoreCloudFragment : Fragment() {
      *  failure is painted into it by [showError]. */
     private fun errorArea(ctx: Context) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(ctx, 12), 0, dp(ctx, 12), dp(ctx, 8))
+        setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
         visibility = View.GONE
         val text = TextView(ctx).apply {
-            textSize = 12f; setTextColor(cErr); setTextIsSelectable(false)
+            textSize = StoreDensity.T_META; setTextColor(cErr); setTextIsSelectable(false)
             maxLines = StoreRowError.FOLDED_LINES; ellipsize = TextUtils.TruncateAt.END
             setOnClickListener {
                 maxLines = if (maxLines == StoreRowError.FOLDED_LINES) Int.MAX_VALUE else StoreRowError.FOLDED_LINES
@@ -838,7 +838,7 @@ class StoreCloudFragment : Fragment() {
         addView(text)
         val dns = btn(ctx, StoreRowError.DNS_BUTTON, 0xFF4A4A55.toInt()) { openDnsPage(ctx) }.apply { visibility = View.GONE }
         addView(dns, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(ctx, 4) })
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(ctx, StoreDensity.S4) })
     }
 
     /** Paint [look] into [appId]'s row, or clear it (null). */
@@ -869,8 +869,8 @@ class StoreCloudFragment : Fragment() {
     /** Everything the old always-visible card carried, now behind the chevron. */
     private fun detailBody(ctx: Context, app: Fleet.App, into: LinearLayout) {
         fun linkChip(label: String, url: String) = TextView(ctx).apply {
-            text = label; textSize = 11f; setTextColor(cMiss)
-            setPadding(0, dp(ctx, 2), dp(ctx, 10), dp(ctx, 2)); isClickable = true
+            text = label; textSize = StoreDensity.T_CAPTION; setTextColor(cMiss)
+            setPadding(0, dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S2)); isClickable = true
             setOnClickListener { runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
         }
         val links = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
@@ -889,8 +889,8 @@ class StoreCloudFragment : Fragment() {
         else into.addView(mono(ctx, app.pkg + "  ·  " + app.image))
 
         val status = TextView(ctx).apply {
-            textSize = 12f; setTextColor(cDim); text = "checking…"
-            setPadding(0, dp(ctx, 3), 0, dp(ctx, 4))
+            textSize = StoreDensity.T_META; setTextColor(cDim); text = "checking…"
+            setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S4))
         }
         fullStatusViews[app.id] = status
         into.addView(status)
@@ -1235,23 +1235,23 @@ class StoreCloudFragment : Fragment() {
             val card = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 setBackgroundColor(0xFF1C1C24.toInt())
-                val ph = dp(ctx, 12); val pv = dp(ctx, 8)
+                val ph = dp(ctx, StoreDensity.S12); val pv = dp(ctx, StoreDensity.S8)
                 setPadding(ph, pv, ph, pv)
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                lp.setMargins(0, dp(ctx, 4), 0, dp(ctx, 4)); layoutParams = lp
+                lp.setMargins(0, dp(ctx, StoreDensity.S4), 0, dp(ctx, StoreDensity.S4)); layoutParams = lp
             }
             val pkg = Fleet.installedId(ctx, app)
             val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             row.addView(TextView(ctx).apply {
                 text = app.label + (if (app.kind == "lib") "  ·  lib" else "")
-                textSize = 15f; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
+                textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             card.addView(row)
             card.addView(mono(ctx, pkg ?: app.pkg))
 
             val trust = TextView(ctx).apply {
-                textSize = 12f; setPadding(0, dp(ctx, 3), 0, dp(ctx, 2))
+                textSize = StoreDensity.T_META; setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
             }
             when {
                 pkg == null -> { trust.setTextColor(cMiss); trust.text = "◯ not installed" }
@@ -1270,7 +1270,7 @@ class StoreCloudFragment : Fragment() {
                 val sub = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                 val tabs = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
-                    setPadding(0, dp(ctx, 6), 0, dp(ctx, 4))
+                    setPadding(0, dp(ctx, StoreDensity.S6), 0, dp(ctx, StoreDensity.S4))
                 }
                 val chips = ArrayList<TextView>()
                 fun paint() {
@@ -1284,11 +1284,11 @@ class StoreCloudFragment : Fragment() {
                 listOf("Android Perms", "Cloud Perms").forEachIndexed { i, label ->
                     val c = TextView(ctx).apply {
                         text = label
-                        textSize = 12f; gravity = Gravity.CENTER
+                        textSize = StoreDensity.T_META; gravity = Gravity.CENTER
                         setTextColor(0xFFFFFFFF.toInt())
-                        setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6))
+                        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
                         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                            .apply { setMargins(if (i == 0) 0 else dp(ctx, 4), 0, 0, 0) }
+                            .apply { setMargins(if (i == 0) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
                         setOnClickListener { permTab[pkg] = i; paint() }
                     }
                     chips.add(c); tabs.addView(c)
@@ -1321,9 +1321,9 @@ class StoreCloudFragment : Fragment() {
                 val granted = pm.checkPermission(p, pkg) == PackageManager.PERMISSION_GRANTED
                 into.addView(TextView(ctx).apply {
                     text = (if (granted) "✓  " else "·  ") + p.removePrefix("android.permission.")
-                    textSize = 11f
+                    textSize = StoreDensity.T_CAPTION
                     setTextColor(if (granted) cUp else cMiss)
-                    setPadding(0, dp(ctx, 1), 0, dp(ctx, 1))
+                    setPadding(0, dp(ctx, StoreDensity.S1), 0, dp(ctx, StoreDensity.S1))
                 })
             }
         }
@@ -1350,10 +1350,10 @@ class StoreCloudFragment : Fragment() {
         into.addView(TextView(ctx).apply {
             text = if (holds) "✓  Cloud data access — granted"
                    else "✕  Cloud data access — not granted"
-            textSize = 13f
+            textSize = StoreDensity.T_BODY
             setTextColor(if (holds) cUp else cBlk)
             typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(ctx, 2), 0, dp(ctx, 2))
+            setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
         })
         into.addView(mono(ctx, CONSTELLATION_PERM))
         into.addView(caption(ctx, when {
@@ -1390,9 +1390,9 @@ class StoreCloudFragment : Fragment() {
 
 
     // ── view helpers ─────────────────────────────────────────────────────────
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
+        text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
     }
 
     /** A run's heading - an ML row's application (Voice, Text, ...) or the
@@ -1401,8 +1401,8 @@ class StoreCloudFragment : Fragment() {
      *  heading with no edit here. */
     private fun applicationHeading(ctx: Context, heading: String) = TextView(ctx).apply {
         text = heading
-        textSize = 12f; setTextColor(cUpd)
-        setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
+        textSize = StoreDensity.T_META; setTextColor(cUpd)
+        setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
     }
 
     private companion object {
@@ -1419,7 +1419,7 @@ class StoreCloudFragment : Fragment() {
         const val MESH = "mesh"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE
+        text = t; textSize = StoreDensity.T_CAPTION; setTextColor(cDim); typeface = Typeface.MONOSPACE
     }
     /** #732 the `action` style in the verb's own colour — #793 drawn by the
      *  shared [StoreBar.button], the same component the Apps Mesh page uses. */

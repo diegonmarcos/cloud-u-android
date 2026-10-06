@@ -482,8 +482,8 @@ object AppsMesh {
         val root = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val sub = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         into.addView(root); into.addView(sub)
-        root.addView(text(ctx, exposure(decl, mesh), 11f, DIM))
-        val ageView = text(ctx, "", 11f, DIM).apply { tag = TAG_AGE }
+        root.addView(text(ctx, exposure(decl, mesh), StoreDensity.T_CAPTION, DIM))
+        val ageView = text(ctx, "", StoreDensity.T_CAPTION, DIM).apply { tag = TAG_AGE }
         val meshBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
 
         var drawn: StoreMesh.Drawn? = null
@@ -527,7 +527,7 @@ object AppsMesh {
         lateinit var detailsOf: (Fleet.App) -> Unit
         fun rowOf(app: Fleet.App): View = rows.getOrPut(app.id) {
             val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            val panel = text(ctx, "", 11f, DIM).apply {
+            val panel = text(ctx, "", StoreDensity.T_CAPTION, DIM).apply {
                 typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
                 tag = TAG_DOCS + app.id
             }
@@ -594,12 +594,12 @@ object AppsMesh {
         fun open(id: String, title: String = decl.label("root", id), build: (LinearLayout) -> Unit) {
             sub.removeAllViews(); sub.tag = TAG_SUB + id
             controls(ctx, decl, looks, sub, "sub", mapOf("back" to ::back))
-            sub.addView(text(ctx, title, 14f, BLUE, bold = true))
+            sub.addView(text(ctx, title, StoreDensity.T_TITLE, BLUE, bold = true))
             build(sub)
             root.visibility = View.GONE; sub.visibility = View.VISIBLE
         }
         fun gapsPage() = open("gaps") { page ->
-            val l = shown() ?: return@open page.addView(text(ctx, waitWord, 12f, DIM))
+            val l = shown() ?: return@open page.addView(text(ctx, waitWord, StoreDensity.T_META, DIM))
             fun report() = report(decl, fleet, links, l)
             controls(ctx, decl, looks, page, "gaps", mapOf(
                 "export" to { share(host, "Apps Mesh", "text/plain", report()) },
@@ -613,7 +613,7 @@ object AppsMesh {
         fun detailsPage(app: Fleet.App) = open("details", "${app.label} · ${decl.label("member", "details")}") { page ->
             var body = ""
             controls(ctx, decl, looks, page, "details", mapOf("copy" to { copy(ctx, body) }))
-            val out = text(ctx, "⟳", 12f, DIM).apply {
+            val out = text(ctx, "⟳", StoreDensity.T_META, DIM).apply {
                 typeface = Typeface.MONOSPACE; setTextIsSelectable(true); tag = TAG_DETAILS + app.id
             }
             page.addView(out)
@@ -627,7 +627,7 @@ object AppsMesh {
         }
         detailsOf = { app -> detailsPage(app) }
         fun endpointsPage() = open("endpoints") { page ->
-            val l = shown() ?: return@open page.addView(text(ctx, waitWord, 12f, DIM))
+            val l = shown() ?: return@open page.addView(text(ctx, waitWord, StoreDensity.T_META, DIM))
             allEndpoints(host, page, decl, looks, fleet, links, l, docs, docsAt, mesh) { saved() }
         }
 
@@ -653,9 +653,9 @@ object AppsMesh {
     private fun group(ctx: Context, decl: Decl, into: LinearLayout, scope: String, type: String): LinearLayout {
         val g = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL; tag = "$TAG_GROUP$scope:$type"
-            setPadding(0, dp(ctx, 4), 0, dp(ctx, 2))
+            setPadding(0, dp(ctx, StoreDensity.S4), 0, dp(ctx, StoreDensity.S2))
         }
-        g.addView(text(ctx, decl.group(type), 10f, DIM, bold = true))
+        g.addView(text(ctx, decl.group(type), StoreDensity.T_MICRO, DIM, bold = true))
         val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         g.addView(row); into.addView(g)
         return row
@@ -714,7 +714,7 @@ object AppsMesh {
     ) {
         val ctx = col.context
         val search = android.widget.EditText(ctx).apply {
-            hint = decl.word("search"); textSize = 13f; setSingleLine()
+            hint = decl.word("search"); textSize = StoreDensity.T_BODY; setSingleLine()
         }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         fun now() = withDocs(live, docs)
@@ -751,22 +751,22 @@ object AppsMesh {
             when {
                 port == null -> {}
                 eps == null -> body.addView(text(ctx, if (app.id in fetching) "⟳ " + decl.word("fetching")
-                    else "127.0.0.1:$port " + decl.word("no_answer"), 11f, DIM))
+                    else "127.0.0.1:$port " + decl.word("no_answer"), StoreDensity.T_CAPTION, DIM))
                 else -> for (e in hit) body.addView(text(ctx, buildString {
                     e.optString("group").takeIf { it.isNotEmpty() }?.let { append("[$it] ") }
                     append(e.optString("path"))
                     e.optString("params").takeIf { it.isNotEmpty() }?.let { append("  ($it)") }
                     e.optString("description").takeIf { it.isNotEmpty() }?.let { append("\n    $it") }
-                }, 11f, 0xFFE2E8F0.toInt()).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) })
+                }, StoreDensity.T_CAPTION, 0xFFE2E8F0.toInt()).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) })
             }
         }
         for (app in members) {
             val section = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; tag = TAG_DOCS + "all:" + app.id }
-            val head = text(ctx, app.label, 13f, BLUE, bold = true).apply {
+            val head = text(ctx, app.label, StoreDensity.T_BODY, BLUE, bold = true).apply {
                 isClickable = true
                 setOnClickListener { if (!open.remove(app.id)) open.add(app.id); fill(app) }
             }
-            val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(ctx, 8), 0, 0, dp(ctx, 6)) }
+            val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(ctx, StoreDensity.S8), 0, 0, dp(ctx, StoreDensity.S6)) }
             section.addView(head); section.addView(body); list.addView(section)
             heads[app.id] = head; bodies[app.id] = body
             if (app.id in live.reachable && app.id !in docs) fetching.add(app.id)
@@ -947,9 +947,9 @@ object AppsMesh {
     private const val BLUE = 0xFF63B3ED.toInt()
 
     private fun renderGaps(ctx: Context, decl: Decl, box: LinearLayout, gaps: List<Gap>) {
-        box.addView(text(ctx, "Missing membership (${gaps.size})", 13f, if (gaps.isEmpty()) GREEN else RED, bold = true))
-        if (gaps.isEmpty()) box.addView(text(ctx, decl.word("missing_none"), 12f, GREEN))
-        for (g in gaps) box.addView(text(ctx, "✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", 12f, RED).apply {
+        box.addView(text(ctx, "Missing membership (${gaps.size})", StoreDensity.T_BODY, if (gaps.isEmpty()) GREEN else RED, bold = true))
+        if (gaps.isEmpty()) box.addView(text(ctx, decl.word("missing_none"), StoreDensity.T_META, GREEN))
+        for (g in gaps) box.addView(text(ctx, "✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", StoreDensity.T_META, RED).apply {
             tag = "$TAG_GAP${g.app.id}:${g.kind.name}"
         })
     }
@@ -963,10 +963,10 @@ object AppsMesh {
     private fun text(ctx: Context, t: String, size: Float, color: Int, bold: Boolean = false) = TextView(ctx).apply {
         text = t; textSize = size; setTextColor(color)
         if (bold) typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(ctx, 2), 0, dp(ctx, 2))
+        setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
     }
 
     private fun toast(ctx: Context, m: String) = Toast.makeText(ctx, m, Toast.LENGTH_LONG).show()
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 }

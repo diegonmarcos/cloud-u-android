@@ -51,7 +51,7 @@ object ApkDetailSheet {
             isFillViewport = true
             addView(pane)
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 460))
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, StoreDensity.SHEET))
         })
         val dialog = BottomSheetDialog(ctx).apply { setContentView(root) }
 
@@ -266,8 +266,8 @@ object ApkDetailSheet {
     ) {
         val ctx: Context = activity
         val status = TextView(ctx).apply {
-            text = "Fetching…"; textSize = 12f; setTextColor(cDim)
-            setPadding(0, dp(ctx, 6), 0, 0)
+            text = "Fetching…"; textSize = StoreDensity.T_META; setTextColor(cDim)
+            setPadding(0, dp(ctx, StoreDensity.S6), 0, 0)
         }
         into.addView(status)
         thread(name = "apk-detail-verify-${app.id}") {
@@ -306,8 +306,8 @@ object ApkDetailSheet {
         into.addView(kv(ctx, "Available versionCode", "$candidateCode"))
         into.addView(TextView(ctx).apply {
             text = "$glyph — $msg"
-            textSize = 12f; setTextColor(color); typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(ctx, 6), 0, 0)
+            textSize = StoreDensity.T_META; setTextColor(color); typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, dp(ctx, StoreDensity.S6), 0, 0)
         })
     }
 
@@ -316,39 +316,39 @@ object ApkDetailSheet {
 
     private fun header(ctx: Context, app: Fleet.App) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 8))
+        setPadding(dp(ctx, StoreDensity.GLYPH), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.GLYPH), dp(ctx, StoreDensity.S8))
         addView(TextView(ctx).apply {
-            text = app.label; setTextColor(cText); textSize = 18f
+            text = app.label; setTextColor(cText); textSize = StoreDensity.T_HEAD
             setTypeface(typeface, Typeface.BOLD)
         })
-        addView(TextView(ctx).apply { text = app.pkg; setTextColor(cDim); textSize = 12f })
+        addView(TextView(ctx).apply { text = app.pkg; setTextColor(cDim); textSize = StoreDensity.T_META })
     }
 
     private fun card(ctx: Context) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         background = GradientDrawable().apply {
-            cornerRadius = dp(ctx, 14).toFloat()
+            cornerRadius = dp(ctx, StoreDensity.S12).toFloat()
             setColor(0xFF1C1C24.toInt())
-            setStroke(dp(ctx, 1), 0xFF322A44.toInt())
+            setStroke(dp(ctx, StoreDensity.S1), 0xFF322A44.toInt())
         }
-        setPadding(dp(ctx, 14), dp(ctx, 10), dp(ctx, 14), dp(ctx, 12))
+        setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S12))
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(dp(ctx, 14), dp(ctx, 10), dp(ctx, 14), 0) }
+        ).apply { setMargins(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), 0) }
     }
 
     private fun blockTitle(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text; setTextColor(0xFFB794F6.toInt()); textSize = 13f
-        setTypeface(typeface, Typeface.BOLD); setPadding(0, 0, 0, dp(ctx, 4))
+        this.text = text; setTextColor(0xFFB794F6.toInt()); textSize = StoreDensity.T_BODY
+        setTypeface(typeface, Typeface.BOLD); setPadding(0, 0, 0, dp(ctx, StoreDensity.S4))
     }
 
     private fun kv(ctx: Context, k: String, v: String) = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
-        setPadding(0, dp(ctx, 5), 0, 0)
-        addView(TextView(ctx).apply { text = k; setTextColor(cDim); textSize = 12f },
+        setPadding(0, dp(ctx, StoreDensity.S4), 0, 0)
+        addView(TextView(ctx).apply { text = k; setTextColor(cDim); textSize = StoreDensity.T_META },
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         addView(TextView(ctx).apply {
-            text = v; setTextColor(cText); textSize = 12f
+            text = v; setTextColor(cText); textSize = StoreDensity.T_META
             gravity = Gravity.END; setTextIsSelectable(true)
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.6f))
     }
@@ -356,17 +356,17 @@ object ApkDetailSheet {
     private fun action(ctx: Context, label: String, detail: String, onTap: () -> Unit) = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         isClickable = true; isFocusable = true
-        setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
+        setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
         setOnClickListener { onTap() }
-        addView(TextView(ctx).apply { text = label; setTextColor(0xFFB794F6.toInt()); textSize = 13f
+        addView(TextView(ctx).apply { text = label; setTextColor(0xFFB794F6.toInt()); textSize = StoreDensity.T_BODY
             typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        addView(TextView(ctx).apply { text = detail; setTextColor(cDim); textSize = 11f; gravity = Gravity.END })
+        addView(TextView(ctx).apply { text = detail; setTextColor(cDim); textSize = StoreDensity.T_CAPTION; gravity = Gravity.END })
     }
 
     private fun note(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text; setTextColor(cDim); textSize = 11f
-        setLineSpacing(dp(ctx, 2).toFloat(), 1f)
-        setPadding(dp(ctx, 18), dp(ctx, 12), dp(ctx, 18), dp(ctx, 16))
+        this.text = text; setTextColor(cDim); textSize = StoreDensity.T_CAPTION
+        setLineSpacing(dp(ctx, StoreDensity.S2).toFloat(), 1f)
+        setPadding(dp(ctx, StoreDensity.GLYPH), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.GLYPH), dp(ctx, StoreDensity.S12))
     }
 
     // The size format used to live here too, a second copy of the row's own
@@ -377,5 +377,5 @@ object ApkDetailSheet {
         if (ms <= 0L) "—"
         else java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date(ms))
 
-    private fun dp(ctx: Context, v: Int): Int = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 }

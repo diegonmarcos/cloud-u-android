@@ -163,10 +163,10 @@ object StoreBar {
 
     private fun onOff(ctx: Context, on: Boolean) = ctx.getString(if (on) R.string.store_on else R.string.store_off)
     private fun toast(ctx: Context, t: String) = Toast.makeText(ctx, t, Toast.LENGTH_SHORT).show()
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
     private fun row(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
+        text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
     }
 
     /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable. */
@@ -194,13 +194,13 @@ object StoreBar {
     fun page(ctx: Context, style: StoreControls.Style, icon: String, label: String, onClick: () -> Unit) = TextView(ctx).apply {
         setTag(R.id.store_control, PAGE)
         text = listOf(icon, label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
-        maxLines = 1; textSize = 12f; gravity = Gravity.CENTER_VERTICAL
+        maxLines = 1; textSize = StoreDensity.T_META; gravity = Gravity.CENTER_VERTICAL
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         setTextColor(style.text)
         background = StoreControls.background(ctx, style, false)
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)) }
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -208,13 +208,13 @@ object StoreBar {
      *  a row of them shares its width. Null [onClick] = drawn, dimmed, inert. */
     fun button(ctx: Context, style: StoreControls.Style, label: String, fill: Int?, onClick: (() -> Unit)?) = TextView(ctx).apply {
         setTag(R.id.store_control, BUTTON)
-        text = label; gravity = Gravity.CENTER; textSize = 12f
+        text = label; gravity = Gravity.CENTER; textSize = StoreDensity.T_META
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7))
+        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         setTextColor(style.text)
         background = StoreControls.background(ctx, style, false, if (onClick != null) fill else DISABLED)
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)) }
+            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
         isEnabled = onClick != null
         if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
     }
@@ -224,11 +224,11 @@ object StoreBar {
      *  its plain tag stays free for the page that draws it. */
     fun chip(ctx: Context, style: StoreControls.Style, label: String, first: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         setTag(R.id.store_control, style)
-        text = label; textSize = 11f; gravity = Gravity.CENTER; maxLines = 1
+        text = label; textSize = StoreDensity.T_CAPTION; gravity = Gravity.CENTER; maxLines = 1
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, 6), dp(ctx, 6), dp(ctx, 6), dp(ctx, 6))
+        setPadding(dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(if (first) 0 else dp(ctx, 4), 0, 0, 0) }
+            .apply { setMargins(if (first) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
         isClickable = true; setOnClickListener { onClick() }
     }
 

@@ -221,6 +221,13 @@
             android:authorities="${applicationId}.fleetalerts"
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+        <!-- #866 the fleet bearer, read-only, for Cloud Store's feeds. Signature
+             permission, re-checked in call(); the token is never logged. -->
+        <provider
+            android:name=".cloud.FleetBearerProvider"
+            android:authorities="${applicationId}.fleetbearer"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
         <!-- #777 swipe on one alert = that alert is done. Our own PendingIntent only. -->
         <receiver
             android:name=".notificationcenter.AlertsNotifier$DismissReceiver"

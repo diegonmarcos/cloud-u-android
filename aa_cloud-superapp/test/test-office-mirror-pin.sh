@@ -246,7 +246,7 @@ FOLDER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $
 # hub_package (a literal keyword is forbidden, test-app-identity-resolves T8b),
 # so the agreement is: the folder exists in ui.phone_folders, and the derivation
 # still reads hub_package.
-PF="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneFolders.kt"
+PF="$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/apps/PhoneFolders.kt"
 jq -e --arg f "$FOLDER" '[.ui.phone_folders[].id] | index($f)' "$SUP" >/dev/null 2>&1 \
   && grep -qF 'PACKAGE_FIELDS = listOf("hub_package"' "$PF" 2>/dev/null \
   && ok "phone_folders[$FOLDER] exists and PhoneFolders derives pkg:$HUB from hub_package" \

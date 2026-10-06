@@ -153,17 +153,22 @@ class App : Application(), WorkManagerConfiguration.Provider {
             runCatching { com.diegonmarcos.superapp.profile.AccountData.migrate(applicationContext) }
                 .onFailure { android.util.Log.w("App", "account copy failed", it) }
         }, "account-migrate").start()
-        // #831 a download that cannot resolve its host names the resolver in
-        // effect, read from the same state the DNS page shows (#794).
+        // #831/#860/#866 a Store download host resolves the way the active preset
+        // says, and a failure names the resolvers tried (libs:appstore StoreDns,
+        // shared with Cloud Store); the preset and the lookup come from FleetDns.
         val dnsCtx = applicationContext
-        // #860 ...and a Store download host resolves the way the active preset
-        // says; when nothing answers, the failure names the resolvers it tried.
-        Thread({ com.diegonmarcos.superapp.network.StoreDns.install(dnsCtx) }, "store-dns-install").start()
-        com.diegonmarcos.superapp.updater.source.DownloadFailure.activeResolver = {
-            val tried = com.diegonmarcos.superapp.network.StoreDns.lastFailure
-            val net = runCatching { com.diegonmarcos.superapp.network.FleetDns.resolverSummary(dnsCtx) }.getOrNull()
-            if (tried == null) net else "tried $tried" + (net?.let { "; network: $it" } ?: "")
+        com.diegonmarcos.superapp.appstore.StoreDns.apply {
+            presetOf = { c ->
+                val p = com.diegonmarcos.superapp.network.FleetDns.effective(
+                    com.diegonmarcos.superapp.network.FleetDns.decl,
+                    com.diegonmarcos.superapp.network.FleetDns.Prefs(c).preset)
+                com.diegonmarcos.superapp.appstore.StoreDns.Preset(p.label, p.kind == com.diegonmarcos.superapp.network.FleetDns.KIND_MIRROR, p.servers, p.fallback)
+            }
+            query = com.diegonmarcos.superapp.network.FleetDns::query
+            timeoutMs = com.diegonmarcos.superapp.network.FleetDns.decl.timeoutMs
+            networkSummary = com.diegonmarcos.superapp.network.FleetDns::resolverSummary
         }
+        com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)
         // Capture process-start time before anything else so About →
         // Battery & Usage can report the real uptime.
         AppProcessUptime.initOnce()

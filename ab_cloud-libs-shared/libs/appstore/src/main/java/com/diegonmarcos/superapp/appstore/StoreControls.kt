@@ -75,7 +75,7 @@ object StoreControls {
      *  action's own verb colour, which replaces the style's fill. */
     fun background(ctx: Context, style: Style, active: Boolean, fillOverride: Int? = null) = GradientDrawable().apply {
         val d = ctx.resources.displayMetrics.density
-        cornerRadius = style.radiusDp * d
+        cornerRadius = style.radiusDp * d * StoreDensity.SCALE
         setColor(fillOverride ?: (if (active) style.fillActive else style.fill) ?: 0)
         val stroke = if (active) style.strokeActive ?: style.stroke else style.stroke
         if (stroke != null) setStroke(d.toInt().coerceAtLeast(1), stroke)

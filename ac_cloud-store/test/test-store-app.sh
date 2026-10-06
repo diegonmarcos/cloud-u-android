@@ -13,6 +13,14 @@
 #  4. One package name: SuperApp's hand-off, this app's build.json and the
 #     fleet manifest row agree, and the OPEN action SuperApp sends is the one
 #     this manifest declares.
+#  5. (#866) Parity with SuperApp's Store pages: the shelves come from the ONE
+#     taxonomy (StoreShelves in libs:appstore, wired in both apps), the
+#     download resolver is the one StoreDns path in libs:appstore, and the fleet
+#     bearer reaches the feeds through SuperApp's read-only CONSTELLATION_DATA
+#     provider (own token entry as the fallback, never logged).
+#  6. (#869) Dense, data-first: ONE density declaration (StoreDensity in
+#     libs:appstore) is dense (scales below 1.0) and every Cloud Store screen and
+#     libs:appstore shelf reads it - no dp/sp literal anywhere else.
 #
 # Then it plants each mutation below in a scratch copy and requires the
 # checks to go red, so a check that cannot fail does not count as a check.
@@ -25,6 +33,9 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 STORE="$ROOT/ac_cloud-store"
 LIB="$ROOT/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore"
 SUPER="$ROOT/aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp"
+LIBAPPS="$ROOT/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/apps"
+LIBGRADLE="$ROOT/ab_cloud-libs-shared/libs/appstore/build.gradle"
+SUPERMF="$ROOT/aa_cloud-superapp/app/src/main/AndroidManifest.xml"
 FLEET="$ROOT/aa_cloud-superapp/data/constellation-fleet.json"
 
 strip() {
@@ -36,9 +47,9 @@ sys.stdout.write(re.sub(r'//[^\n]*', '', s))
 PY
 }
 
-# check <store-dir> <lib-dir> <superapp-dir> <fleet.json>  → prints PASS/FAIL lines, exit = #fails
+# check <store-dir> <lib-dir> <superapp-dir> <fleet.json> <lib-apps-dir> <lib-build.gradle> <superapp-manifest>  → PASS/FAIL lines, exit = #fails
 check() {
-  local S="$1" L="$2" P="$3" F="$4" fails=0
+  local S="$1" L="$2" P="$3" F="$4" LA="$5" LG="$6" PM="$7" fails=0
   ok()  { echo "  PASS: $1"; }
   bad() { echo "  FAIL: $1"; fails=$((fails+1)); }
   local MA="$S/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt"
@@ -90,11 +101,59 @@ check() {
   grep -q "\"package\":\"$appid\"" "$F" && ok "fleet manifest lists $appid (installable and updated by the Store)" || bad "fleet manifest has no row for $appid"
   action="$(strip "$HO" | sed -n 's/.*ACTION_OPEN = "\([^"]*\)".*/\1/p')"
   grep -q "<action android:name=\"$action\" */>" "$MF" && ok "manifest answers SuperApp's $action" || bad "manifest does not declare the action SuperApp sends ('$action')"
+
+  # 5. #866 parity with SuperApp's Store pages
+  local sa; sa="$(strip "$SA")"
+  [ -f "$LA/StoreShelves.kt" ] && [ -f "$LA/PhoneFolders.kt" ] && [ -f "$LA/PhoneTaxonomy.kt" ] && ok "the taxonomy and StoreShelves live in libs:appstore" || bad "taxonomy/StoreShelves missing from libs:appstore"
+  [ ! -e "$P/apps/PhoneFolders.kt" ] && [ ! -e "$P/apps/StoreShelves.kt" ] && ok "SuperApp holds no second copy of the taxonomy" || bad "a copy of the taxonomy/StoreShelves is back in SuperApp"
+  printf '%s' "$ap" | grep -q 'classify *= *StoreShelves::of' && ok "Cloud Store shelves by StoreShelves" || bad "Cloud Store does not set AppStoreHost.classify"
+  printf '%s' "$sa" | grep -q 'classify *= *com.diegonmarcos.superapp.apps.StoreShelves::of' && ok "SuperApp shelves by the same StoreShelves" || bad "SuperApp does not shelve by StoreShelves"
+  grep -q 'UI_PHONE_FOLDERS_B64' "$LG" && grep -q 'UI_PHONE_SECTIONS_B64' "$LG" && grep -q 'aa_cloud-superapp/build.json' "$LG" && ok "libs:appstore bakes the taxonomy (SuperApp's build.json as the fallback source)" || bad "libs:appstore does not bake the taxonomy for a host without one"
+  [ ! -e "$P/network/StoreDns.kt" ] && [ -f "$L/StoreDns.kt" ] && ok "StoreDns lives once, in libs:appstore" || bad "StoreDns is not a single copy in libs:appstore"
+  printf '%s' "$ap" | grep -q 'StoreDns.start(this)' && ok "Cloud Store resolves downloads through StoreDns" || bad "Cloud Store does not start StoreDns"
+  printf '%s' "$sa" | grep -q 'StoreDns.start(' && ok "SuperApp resolves downloads through the same StoreDns" || bad "SuperApp does not start StoreDns"
+  local sd; sd="$(strip "$L/StoreDns.kt")"
+  printf '%s' "$sd" | grep -q 'DownloadFailure.activeResolver *=' && printf '%s' "$sd" | grep -Eq 'var presetOf:' && ok "StoreDns names the resolvers tried and takes the preset from the host" || bad "StoreDns lost the failure wording or the preset hook"
+  printf '%s' "$ap" | grep -q 'FeedViewer.fleetBearer *=.*FleetBearer.resolve(this)' && ok "Cloud Store feeds read the bearer through FleetBearer.resolve" || bad "Cloud Store feeds do not read FleetBearer.resolve"
+  local fb; fb="$(strip "$L/FleetBearer.kt")"
+  printf '%s' "$fb" | grep -q 'fun resolve(ctx: Context): String = fromSuperApp(ctx).ifEmpty { Own(ctx).token' && ok "bearer: SuperApp's token first, own entry as the fallback" || bad "FleetBearer.resolve order is not SuperApp then own"
+  local pv; pv="$(strip "$P/cloud/FleetBearerProvider.kt")"
+  printf '%s' "$pv" | grep -q 'checkCallingPermission(FleetConfig.PERMISSION)' && printf '%s' "$pv" | grep -q 'method != FleetBearer.METHOD_BEARER' && ok "provider re-checks CONSTELLATION_DATA in call() and serves one method" || bad "provider does not re-check the permission or accepts other methods"
+  python3 - "$PM" <<'PY' && ok "manifest exports the provider behind CONSTELLATION_DATA" || bad "provider missing from the manifest or not signature-guarded"
+import re, sys
+m = re.search(r'<provider\b[^>]*FleetBearerProvider[^>]*>', open(sys.argv[1], encoding='utf-8').read(), re.S)
+sys.exit(0 if m and 'fleetbearer' in m.group(0) and 'permission.CONSTELLATION_DATA' in m.group(0) else 1)
+PY
+  if printf '%s%s' "$pv" "$fb" | grep -Eq 'Log\.|println|\.bearerToken *=|DaguPrefs\(ctx\)\.edit|\.clear\('; then bad "the bearer path logs or writes the token"; else ok "the bearer path never logs and the provider never writes"; fi
+  grep -q 'TAB_SETTINGS' "$MA" && grep -q 'FleetBearer.Own(' "$MA" && ok "Cloud Store has a token entry in its settings" || bad "Cloud Store has no token entry"
+  # 6. #869 density
+  local DN="$L/StoreDensity.kt"
+  [ -f "$DN" ] || { bad "StoreDensity.kt (the density declaration) is missing"; return $((fails+1)); }
+  python3 - "$DN" <<'PY' && ok "the density declaration exists and is dense (SCALE and TEXT_SCALE < 1)" || bad "StoreDensity does not declare SCALE/TEXT_SCALE below 1.0"
+import re, sys
+s = open(sys.argv[1], encoding='utf-8').read()
+v = [float(re.search(r'const val %s = ([0-9.]+)f' % n, s).group(1)) if re.search(r'const val %s = ([0-9.]+)f' % n, s) else 9 for n in ('SCALE', 'TEXT_SCALE')]
+sys.exit(0 if 'object StoreDensity' in s and all(0 < x < 1 for x in v) else 1)
+PY
+  local lit=0 f
+  for f in "$L"/*.kt "$LA"/*.kt "$MA"; do
+    [ "$(basename "$f")" = StoreDensity.kt ] && continue
+    if strip "$f" | grep -Eq 'dp\([^()]+(\(\))?, *[0-9]+\)|textSize *= *[0-9.]+f|, *[0-9]{2}f *[,)]|[0-9] *\* *[a-z]*\.?resources\.displayMetrics\.density|[1-9][0-9.]*\.(dp|sp)\b'; then
+      echo "    size literal in $(basename "$f")"; lit=$((lit+1)); fi
+  done
+  [ $lit -eq 0 ] && ok "no dp/sp literal outside the density declaration" || bad "$lit file(s) hold their own dp/sp literals"
+  local nodel=0
+  for f in "$L"/*.kt; do
+    grep -q 'private fun dp(' "$f" && ! grep -q 'private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)' "$f" && nodel=$((nodel+1))
+  done
+  [ $nodel -eq 0 ] && ok "every local dp() helper delegates to StoreDensity" || bad "$nodel dp() helper(s) scale on their own"
+  grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
+  grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   return $fails
 }
 
 echo "── real tree ──"
-check "$STORE" "$LIB" "$SUPER" "$FLEET"; REAL=$?
+check "$STORE" "$LIB" "$SUPER" "$FLEET" "$LIBAPPS" "$LIBGRADLE" "$SUPERMF"; REAL=$?
 
 # ── mutations: each must turn the checks red ──
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -102,6 +161,7 @@ mutate() {  # mutate <label> <relative-file-under-root-of-copy> <python-replace-
   local label="$1" which="$2" old="$3" new="$4" d="$TMP/m"
   rm -rf "$d"; mkdir -p "$d"
   cp -r "$STORE" "$d/store"; cp -r "$LIB" "$d/lib"; cp -r "$SUPER" "$d/super"; cp "$FLEET" "$d/fleet.json"
+  cp -r "$LIBAPPS" "$d/libapps"; cp "$LIBGRADLE" "$d/lib.gradle"; cp "$SUPERMF" "$d/super.xml"
   python3 - "$d/$which" "$old" "$new" <<'PY' || { echo "  MUTATION NOT APPLIED: $1"; return 1; }
 import sys
 p, old, new = sys.argv[1:4]
@@ -109,7 +169,7 @@ s = open(p, encoding='utf-8').read()
 if old not in s: sys.exit(1)
 open(p, 'w', encoding='utf-8').write(s.replace(old, new, 1))
 PY
-  if check "$d/store" "$d/lib" "$d/super" "$d/fleet.json" >/dev/null; then echo "  MUTATION SURVIVED: $label"; return 1; fi
+  if check "$d/store" "$d/lib" "$d/super" "$d/fleet.json" "$d/libapps" "$d/lib.gradle" "$d/super.xml" >/dev/null; then echo "  MUTATION SURVIVED: $label"; return 1; fi
   echo "  mutation caught: $label"; return 0
 }
 M=0
@@ -125,6 +185,29 @@ mutate "package name drifts" super/apps/CloudStoreHandoff.kt 'const val PKG = "c
 mutate "OPEN action dropped" store/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudstore.OPEN" />' '' || M=$((M+1))
 mutate "Cloud Store gives up the pass" store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt 'runsFleetPass = { true }' 'runsFleetPass = { false }' || M=$((M+1))
 mutate "Mesh tab dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<AppsMeshFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+A=store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt
+mutate "Cloud Store drops the shelves" "$A" 'classify = StoreShelves::of' '' || M=$((M+1))
+mutate "SuperApp drops the shelves" super/App.kt 'classify = com.diegonmarcos.superapp.apps.StoreShelves::of' '' || M=$((M+1))
+mutate "taxonomy no longer baked for Cloud Store" lib.gradle 'aa_cloud-superapp/build.json' 'build.json' || M=$((M+1))
+mutate "Cloud Store skips StoreDns" "$A" 'StoreDns.start(this)' '' || M=$((M+1))
+mutate "SuperApp skips StoreDns" super/App.kt 'com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)' '' || M=$((M+1))
+mutate "StoreDns loses the preset hook" lib/StoreDns.kt '@Volatile var presetOf:' '@Volatile var presetOfX:' || M=$((M+1))
+mutate "Cloud Store feeds lose the bearer" "$A" 'FleetBearer.resolve(this)' '""' || M=$((M+1))
+mutate "own token preferred over SuperApp's" lib/FleetBearer.kt 'fromSuperApp(ctx).ifEmpty { Own(ctx).token.trim() }' 'Own(ctx).token.trim().ifEmpty { fromSuperApp(ctx) }' || M=$((M+1))
+mutate "provider skips the permission re-check" super/cloud/FleetBearerProvider.kt 'checkCallingPermission(FleetConfig.PERMISSION)' 'checkCallingPermission("x")' || M=$((M+1))
+mutate "provider unguarded in the manifest" super.xml 'android:authorities="${applicationId}.fleetbearer"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' 'android:authorities="${applicationId}.fleetbearer"
+            android:exported="true"' || M=$((M+1))
+mutate "provider logs the token" super/cloud/FleetBearerProvider.kt 'return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' 'android.util.Log.i("x", token); return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' || M=$((M+1))
+mutate "Cloud Store loses the token entry" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FleetBearer.Own(' 'FleetBearer.Ownx(' || M=$((M+1))
+mutate "a dp literal back in the Cloud shelf" lib/StoreCloudFragment.kt 'val p = dp(ctx, StoreDensity.S12); setPadding' 'val p = dp(ctx, 14); setPadding' || M=$((M+1))
+mutate "a textSize literal back in the Phone shelf" lib/StorePhoneFragment.kt 'textSize = StoreDensity.T_META' 'textSize = 12f' || M=$((M+1))
+mutate "a text() size literal back in the mesh" lib/AppsMesh.kt 'text(ctx, "Missing membership (${gaps.size})", StoreDensity.T_BODY' 'text(ctx, "Missing membership (${gaps.size})", 13f' || M=$((M+1))
+mutate "density turned off" lib/StoreDensity.kt 'const val SCALE = 0.8f' 'const val SCALE = 1.0f' || M=$((M+1))
+mutate "declaration deleted" lib/StoreDensity.kt 'object StoreDensity' 'object Other' || M=$((M+1))
+mutate "Cloud Store hardcodes a dp" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'padding(top = StoreDensity.dpValue(StoreDensity.S8).dp)' 'padding(top = 8.dp)' || M=$((M+1))
+mutate "a helper scales on its own" lib/StoreBar.kt 'private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)' 'private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]
