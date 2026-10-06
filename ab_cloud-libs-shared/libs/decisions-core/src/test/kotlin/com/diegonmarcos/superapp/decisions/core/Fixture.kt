@@ -68,7 +68,7 @@ object Fixtures {
     val SAMPLES = listOf(
         join("key ", SECRET, " end"),
         join("-----BEGIN OPENSSH ", "PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----"),
-        join("AGE-SECRET", "-KEY-1ABCDEF0123456789"),
+        join("AGE-", "SECRET-KEY-1ABCDEF0123456789"),
         join("ENC[AES256", "_GCM,data:abc,iv:def]"),
         join("gh", "p_0123456789abcdefghijABCDEFGHIJ"),
         join("AK", "IAABCDEFGHIJKLMNOP"),
