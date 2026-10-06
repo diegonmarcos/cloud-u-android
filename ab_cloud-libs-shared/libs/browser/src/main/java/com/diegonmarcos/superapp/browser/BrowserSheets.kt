@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -343,5 +347,85 @@ fun BrowserScraperScreen(
             TextButton(onExport) { Text("Export CSV") }
         }
         Text(result, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+/**
+ * #893 Fav: the bookmarks in two views over the same data. List = icon + title + URL; grid = launcher-style tiles
+ * (favicon, else the first-letter tile; label below), dense. Both are grouped by folder. Tap opens;
+ * long-press opens the edit / move / delete dialog.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BrowserFavScreen(
+    sections: List<Pair<String, List<BrowserBookmark>>>,
+    view: String,
+    icon: (String) -> androidx.compose.ui.graphics.ImageBitmap?,
+    onToggleView: () -> Unit,
+    onOpen: (BrowserBookmark) -> Unit,
+    onDelete: (BrowserBookmark) -> Unit,
+    onEdit: (BrowserBookmark, String, String) -> Unit,
+    onClose: () -> Unit,
+) {
+    val p = LocalKitPalette.current
+    var acting by remember { mutableStateOf<BrowserBookmark?>(null) }
+    var title by remember { mutableStateOf("") }
+    var folder by remember { mutableStateOf("") }
+    val grid = view == BrowserFavourites.VIEW_GRID
+    fun tile(b: BrowserBookmark): @Composable () -> Unit = {
+        val img = icon(b.url)
+        Box(Modifier.size(44.dp).background(p.accent.copy(alpha = 0.25f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+            if (img != null) androidx.compose.foundation.Image(img, null, Modifier.size(28.dp))
+            else Text(BrowserFavourites.letter(b.title, b.url), color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+    Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(16.dp).testTag("browser:fav")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text("Favourites", color = p.textPrimary, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            TextButton(onToggleView, modifier = Modifier.testTag("browser:fav:view")) { Text(if (grid) "☰ List" else "▦ Grid") }
+        }
+        if (sections.isEmpty()) Text("No favourites yet: ☆ in the page menu adds this page.", color = p.textSecondary, modifier = Modifier.padding(16.dp))
+        sections.forEach { (f, items) ->
+            if (f.isNotEmpty()) Text("▸ $f  (${items.size})", color = p.accent, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+            if (grid) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items.forEach { b ->
+                        Column(Modifier.width(76.dp).padding(vertical = 6.dp)
+                            .pointerInput(b.url) { detectTapGestures(onTap = { onOpen(b) }, onLongPress = { acting = b; title = b.title; folder = b.folder }) }
+                            .testTag("browser:fav:tile"), horizontalAlignment = Alignment.CenterHorizontally) {
+                            tile(b)()
+                            Text(b.title, color = p.textPrimary, style = MaterialTheme.typography.labelSmall, maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                    }
+                }
+            } else items.forEach { b ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    .pointerInput(b.url) { detectTapGestures(onTap = { onOpen(b) }, onLongPress = { acting = b; title = b.title; folder = b.folder }) }
+                    .testTag("browser:fav:row"), verticalAlignment = Alignment.CenterVertically) {
+                    tile(b)()
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(b.title, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                        Text(b.url, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+    acting?.let { b ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { acting = null },
+            title = { Text("Edit favourite") },
+            text = {
+                Column {
+                    OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true)
+                    OutlinedTextField(folder, { folder = it }, label = { Text("Folder") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
+                    Text(b.url, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                }
+            },
+            confirmButton = { TextButton({ onEdit(b, title, folder); acting = null }) { Text("Save") } },
+            dismissButton = { Row { TextButton({ onDelete(b); acting = null }) { Text("Delete") }; TextButton({ acting = null }) { Text("Cancel") } } },
+        )
     }
 }

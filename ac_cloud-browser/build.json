@@ -362,6 +362,33 @@
           "doc": "Save site offline stops when the copy reaches this size."
         }
       ],
+      "_doc_favourites": "#893 THE FAVOURITES SEED (Fav = the bookmarks, one store). Not typed here: app/build.gradle EXPANDS `sources` at build time into `items` (title, url, group) from the fleet's own declaration, aa_cloud-superapp/data/services_public.json (every public edge endpoint) and services_private.json (the mesh-internal HTTP endpoints, shown and opened as declared, they answer on the mesh), and bakes the result inside UI_BROWSER_CONFIG_B64, so a seed change rebuilds only Cloud Browser. BrowserBookmarks.applySeed adds each entry ONCE (first run, and any entry a later `version` brings), never overwrites an edit and never re-adds what the user deleted. No credentials: only the url as declared.",
+      "favourites": {
+        "version": 1,
+        "sources": [
+          {
+            "group": "Public",
+            "file": "../aa_cloud-superapp/data/services_public.json",
+            "url_field": "public_url",
+            "scheme": "https"
+          },
+          {
+            "group": "Private (mesh)",
+            "file": "../aa_cloud-superapp/data/services_private.json",
+            "url_field": "private_dns",
+            "scheme": "http",
+            "protocols": ["http", "https"],
+            "require_port": true
+          }
+        ],
+        "extra": [
+          {
+            "title": "Linktree",
+            "url": "https://linktree.diegonmarcos.com",
+            "group": "Public"
+          }
+        ]
+      },
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
       "user_agents": {
         "mobile": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 CloudSuperApp/1.0",
@@ -1109,14 +1136,21 @@
         }
       ]
     },
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), favourites = the bookmarks as a list or icon grid over it (BrowserHostFragment.openFavourites, #893; island order Fav, Tabs, Browser, Search, Configs), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
     "bottom_nav": [
+      "favourites",
       "tabs",
       "browser",
       "search",
       "configs"
     ],
     "sections": [
+      {
+        "id": "favourites",
+        "label": "Fav",
+        "icon": "favourites",
+        "pages": []
+      },
       {
         "id": "tabs",
         "label": "Tabs",

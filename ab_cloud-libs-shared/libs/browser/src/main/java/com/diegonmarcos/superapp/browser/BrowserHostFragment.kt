@@ -17,9 +17,12 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.kitComposeView
@@ -83,6 +86,8 @@ class BrowserHostFragment : Fragment() {
     fun openSearch() = showSearchPage()
     fun openSettings() = showSettings()
     fun dismissOverlays() = closeOverlays()
+    /** #893 Fav is a destination of the nav island: the saved pages (list, open, remove). */
+    fun openFavourites() = showBookmarks()
 
     /** #886 Tabs is a destination of the nav island: the tab switcher, over nothing (the page is parked). */
     fun openTabs() { closeOverlays(); if (mode !is Mode.GRID) showGrid() else onOverlaysClosed?.invoke() }
@@ -139,6 +144,7 @@ class BrowserHostFragment : Fragment() {
         sitePerms = BrowserSitePermissions(ctx)
         config = BrowserConfig.parseBase64(arguments?.getString(ARG_CONFIG_B64))
         browserSettings = BrowserSettings(ctx, config.settings)
+        bookmarks.applySeed(config.favourites)   // #893 Fav ships with the app's declared links, once per entry
 
         // FIRST RUN ONLY, and only with what the app configured. A library
         // default of zero tabs means an app that supplies nothing gets
@@ -939,19 +945,18 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
-    /** Bookmarks under folder headers; ✕ on a header deletes the folder, ✎ renames it. */
+    /** #893 Fav: the bookmarks as a list or an icon grid (persisted); tap opens, long-press edits / moves / deletes. */
     private fun showBookmarks() {
-        val all = bookmarks.all()
-        val rows = (listOf("") + bookmarks.folders()).flatMap { f ->
-            val inF = all.filter { it.folder == f }
-            (if (f.isEmpty()) emptyList() else listOf(ListRow(f, f, "${inF.size} here", header = true))) +
-                inF.map { ListRow(it.url, it.title, it.url) }
-        }
         overlay { close ->
-            BrowserListScreen("Bookmarks", rows, empty = "No bookmarks yet: ☆ in the menu adds this page.",
-                onOpen = { if (!it.header) { close(); navigateTo(it.id) } },
-                onRemove = { r -> if (r.header) bookmarks.deleteFolder(r.id) else bookmarks.remove(r.id); close(); showBookmarks() },
-                onRename = { r, to -> bookmarks.moveFolder(r.id, to); close(); showBookmarks() },
+            var rev by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+            var view by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(bookmarks.viewMode()) }
+            BrowserFavScreen(
+                sections = rev.let { BrowserFavourites.sections(bookmarks.all()) }, view = view,
+                icon = { u -> faviconFile(u)?.let { f -> android.graphics.BitmapFactory.decodeFile(f.path)?.asImageBitmap() } },
+                onToggleView = { view = BrowserFavourites.toggled(view); bookmarks.setViewMode(view) },
+                onOpen = { close(); navigateTo(it.url) },
+                onDelete = { bookmarks.remove(it.url); rev++ },
+                onEdit = { b, title, folder -> bookmarks.edit(b.url, title, folder); rev++ },
                 onClose = close)
         }
     }

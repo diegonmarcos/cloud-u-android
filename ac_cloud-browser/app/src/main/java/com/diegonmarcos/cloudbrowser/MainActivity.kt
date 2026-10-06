@@ -96,6 +96,8 @@ class MainActivity : AppCompatActivity() {
             // The page (or a new tab when none is open) / the tab switcher: the host's own screens.
             "browser" -> host.openBrowser()
             "tabs" -> host.openTabs()
+            // Fav: the bookmarks (list or icon grid) over the page.
+            "favourites" -> host.openFavourites()
             "search" -> {
                 host.openSearch()
                 // No Search page installed: the host only says so, nothing opened, the pill stays.

@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
-#   S1 build.json::ui is ONE declaration: bottom_nav = tabs|browser|search|configs, default_section browser
+#   S1 build.json::ui is ONE declaration: bottom_nav = favourites|tabs|browser|search|configs, default_section browser
 #      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages).
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity draws the bar with BottomNavIslandView fed by NavDecl; activity_main.xml hosts
@@ -24,6 +24,7 @@ import json, os, re, sys
 APP = os.environ["APP_DIR"]
 CFG = json.loads(r'''{
  "bottom": [
+  "favourites",
   "tabs",
   "browser",
   "search",
@@ -46,6 +47,7 @@ CFG = json.loads(r'''{
    "openSearch()",
    "openSettings()",
    "host.openTabs()",
+   "host.openFavourites()",
    "host.openBrowser()",
    "isTabsOpen",
    "onOverlaysClosed",
@@ -59,6 +61,7 @@ CFG = json.loads(r'''{
    "fun openSettings()",
    "fun dismissOverlays()",
    "fun openTabs()",
+   "fun openFavourites()",
    "fun openBrowser()",
    "val isTabsOpen",
    "var onOverlaysClosed"

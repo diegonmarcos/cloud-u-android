@@ -70,9 +70,30 @@ class BrowserBookmarks(context: Context) {
     fun moveFolder(from: String, to: String) = save(BrowserBookmarkOps.moveFolder(all(), from, to))
     fun deleteFolder(folder: String) = save(BrowserBookmarkOps.deleteFolder(all(), folder))
 
+    /** #893 apply the app's seed once per entry; what was applied is remembered, so a deleted seed link stays deleted. */
+    fun applySeed(seed: FavSeed) {
+        if (seed.items.isEmpty()) return
+        val seen = sp.getStringSet(SEEN, emptySet()).orEmpty()
+        val (list, nowSeen) = BrowserFavourites.merge(all(), seed, seen, System.currentTimeMillis())
+        if (nowSeen == seen && sp.getInt(SEED_VERSION, 0) >= seed.version) return
+        sp.edit().putString(KEY, BrowserBookmarkOps.toJson(list).toString()).putStringSet(SEEN, nowSeen).putInt(SEED_VERSION, seed.version).apply()
+    }
+
+    /** #893 list | grid, persisted. */
+    fun viewMode(): String = BrowserFavourites.normView(sp.getString(VIEW, null))
+    fun setViewMode(v: String) { sp.edit().putString(VIEW, BrowserFavourites.normView(v)).apply() }
+
+    /** #893 long-press ▸ edit / move: the title and folder of the bookmark at [url]. */
+    fun edit(url: String, title: String, folder: String) {
+        val cur = all().firstOrNull { it.url == url } ?: return
+        save(all().map { if (it.url == url) cur.copy(title = title.ifBlank { url }, folder = BrowserBookmarkOps.normFolder(folder)) else it })
+    }
+
     private fun save(list: List<BrowserBookmark>) {
         sp.edit().putString(KEY, BrowserBookmarkOps.toJson(list).toString()).apply()
     }
 
-    private companion object { const val KEY = "bookmarks_json" }
+    private companion object {
+        const val KEY = "bookmarks_json"; const val SEEN = "seed_seen"; const val SEED_VERSION = "seed_version"; const val VIEW = "view"
+    }
 }

@@ -71,6 +71,27 @@ def fleetApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_clo
     a.requires_package = row.package.toString()
 }
 def vaultPackage = ((buildJson.ui.browser?.addons ?: []).find { it.id == 'vault' }?.requires_package ?: '').toString()
+// #893 the favourites seed is DERIVED from the fleet's own service declaration (never typed): each source
+// file's rows become {title,url,group} items; the sources are dropped from what is baked.
+def favDecl = buildJson.ui.browser?.favourites
+if (favDecl != null) {
+    def favItems = []
+    (favDecl.sources ?: []).each { src ->
+        def rows = new groovy.json.JsonSlurper().parse(new File(file('../build.json').parentFile, src.file).canonicalFile)
+        def protocols = (src.protocols ?: []) as List
+        rows.each { r ->
+            def raw = (r[src.url_field] ?: '').toString().trim()
+            if (!raw) return
+            if (protocols && !(protocols.contains((r.protocol ?: '').toString()))) return
+            if (src.require_port && r.port == null) return
+            def url = raw.contains('://') ? raw : "${src.scheme}://${raw}".toString()
+            favItems << [title: (r.name ?: raw).toString(), url: url, group: src.group.toString()]
+        }
+    }
+    (favDecl.extra ?: []).each { favItems << [title: it.title, url: it.url, group: it.group] }
+    favDecl.items = favItems.unique { it.url }
+    favDecl.remove('sources'); favDecl.remove('extra')
+}
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
 def uiBottomNav      = (buildJson.ui.bottom_nav ?: []).join(',')

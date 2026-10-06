@@ -49,6 +49,8 @@ data class BrowserConfig(
     val addons: BrowserAddons = BrowserAddons.EMPTY,
     /** #886 Configs' topic sections, in order: id → title. A setting's `section` names one of these ids. */
     val settingsSections: List<Pair<String, String>> = emptyList(),
+    /** #893 the favourites seeded on first run (and per new entry); expanded from build.json at build time. */
+    val favourites: FavSeed = FavSeed.EMPTY,
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -138,6 +140,7 @@ data class BrowserConfig(
                     parseColor(v)?.let { k to it }
                 }.toMap(),
                 readerCss = o.optString("reader_css"),
+                favourites = FavSeed.parse(o.optJSONObject("favourites")),
                 sitePerms = BrowserSitePolicy.parsePerms(o.optJSONArray("site_permissions")),
                 settingsSections = o.optJSONArray("settings_sections").let { a ->
                     if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
