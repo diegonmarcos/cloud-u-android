@@ -26,6 +26,46 @@
         "cmd": "device_config get activity_manager max_phantom_processes",
         "expect": "2147483647"
       }
+    },
+    {
+      "id": "cached_apps_freezer_off",
+      "title": "Cached-apps freezer off",
+      "why": "Android 11+ freezes (SIGSTOPs) every process of an app the moment it is cached — a Claude session in the terminal stops dead while another app is in front and resumes only when the terminal is back (the owner sees it as a hang). Applied at next boot (activity_manager_native_boot namespace).",
+      "apply": [
+        "device_config set_sync_disabled_for_tests persistent",
+        "device_config put activity_manager_native_boot use_freezer false"
+      ],
+      "verify": {
+        "cmd": "device_config get activity_manager_native_boot use_freezer",
+        "expect": "false"
+      }
+    },
+    {
+      "id": "terminals_doze_whitelist",
+      "title": "Terminals exempt from battery optimization",
+      "why": "Doze and Samsung app sleep stop the terminals' CPU and network when the screen is off; the shell-side allowlist is the same thing Settings → Battery → Unrestricted grants, done declaratively for both terminals and the SuperApp.",
+      "apply": [
+        "dumpsys deviceidle whitelist +cld.termux",
+        "dumpsys deviceidle whitelist +cld.termux.nix",
+        "dumpsys deviceidle whitelist +com.diegonmarcos.superapp"
+      ],
+      "verify": {
+        "cmd": "dumpsys deviceidle whitelist | grep -c -E \"cld.termux|com.diegonmarcos.superapp\"",
+        "expect": "3"
+      }
+    },
+    {
+      "id": "terminals_standby_active",
+      "title": "Terminals in the active standby bucket",
+      "why": "An app in a restricted standby bucket gets its jobs, alarms and network deferred; the terminals stay active so a session keeps its network while in the background.",
+      "apply": [
+        "am set-standby-bucket cld.termux active",
+        "am set-standby-bucket cld.termux.nix active"
+      ],
+      "verify": {
+        "cmd": "am get-standby-bucket cld.termux",
+        "expect": "10"
+      }
     }
   ]
 }
