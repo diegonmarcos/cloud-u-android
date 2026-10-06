@@ -56,8 +56,8 @@ mutate "a lib loses its class"                  "$DATA" "$(J "del d['libs']['web
     "L1 webserver: a shared lib with no class"
 mutate "a class names a lib that is not there"  "$DATA" "$(J "d['libs']['gone']={'class':'gui','why':'x'}")" \
     "L1 gone: classified in"
-mutate "a lib 15 apps compile is called an engine" "$DATA" "$(J "d['libs']['analytics']['class']='engine'")" \
-    "L2 analytics: an engine compiled into"
+mutate "a lib 13 apps compile is called an engine" "$DATA" "$(J "d['libs']['updater']['class']='engine'")" \
+    "L2 updater: an engine compiled into"
 mutate "a View library is called a contract"    "$DATA" "$(J "d['libs']['bottomnav'].update({'class':'contract','budget_lines':9999})")" \
     "L2 bottomnav: classified contract but renders UI"
 mutate "logic is called gui to leave the backlog" "$DATA" "$(J "d['libs']['webserver']['class']='gui'")" \
@@ -66,9 +66,9 @@ mutate "the mesh outgrows its budget"           "$DATA" "$(J "d['libs']['devtool
     "L3 devtools:"
 mutate "an app newly compiles in a logic lib"   "$WRITER_BJ" \
     "$(J "d['modules']['libs:webserver']={'dir':'../ab_cloud-libs-shared/libs/webserver'}")" \
-    "L4 backlog 45 > baseline 44"
+    "L4 backlog 30 > baseline 29"
 mutate "a migration lands without lowering the baseline" "$DATA" "$(J "d['backlog_baseline']+=1")" \
-    "L4 backlog 44 < baseline 45"
+    "L4 backlog 29 < baseline 30"
 
 echo
 [ "$FAILURES" -eq 0 ] && echo "lib-classes.test: OK" || { echo "lib-classes.test: $FAILURES FAILED"; exit 1; }

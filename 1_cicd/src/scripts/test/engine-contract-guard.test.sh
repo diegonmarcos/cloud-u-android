@@ -53,6 +53,14 @@ IMG=ab_cloud-libs-shared/libs/ml-l-image
 IMGENGINE=ab_cloud-libs-shared/libs/ml-l-image-mlkit
 IMGCLIENT=$IMG/src/main/java/com/diegonmarcos/superapp/image/ImageScanEngine.kt
 IMGSVC=$IMGENGINE/src/main/java/com/diegonmarcos/superapp/image/ImageScanBackendService.kt
+# #871 the analytics sink: a SHARED client (libs:analytics, engine-client.json) that every app compiles, binding an engine nothing compiles
+AN=ab_cloud-libs-shared/libs/analytics
+SINK=ab_cloud-libs-shared/libs/analytics-sink
+ANCLIENT=$AN/src/main/java/com/diegonmarcos/superapp/analytics/SinkLink.kt
+SINKSVC=$SINK/src/main/java/com/diegonmarcos/superapp/analytics/sink/AnalyticsSinkService.kt
+for f in "$ROOT/$AN/engine-client.json" "$ROOT/$ANCLIENT" "$ROOT/$SINKSVC"; do
+    [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
+done
 for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF" \
          "$ROOT/$DRIVEMF" "$ROOT/$DRIVEGRADLE" "$ROOT/$FEED/src/main/AndroidManifest.xml" "$ROOT/$SABJ" "$ROOT/$SAMF" \
          "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF" "$ROOT/$NEWS/src/main/AndroidManifest.xml" "$ROOT/$NEWSBJ" \
@@ -72,6 +80,7 @@ stage() {
         mkdir -p "$(dirname "$WORK/t/$f")"; cp "$ROOT/$f" "$WORK/t/$f"; done
     cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
     cp -r "$ROOT/$IMG" "$WORK/t/$IMG"; cp -r "$ROOT/$IMGENGINE" "$WORK/t/$IMGENGINE"
+    cp -r "$ROOT/$AN" "$WORK/t/$AN"; cp -r "$ROOT/$SINK" "$WORK/t/$SINK"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -187,10 +196,29 @@ class PlantedBridge(ctx: android.content.Context) {
 }
 KOTLIN
 [ -f "$WORK/t/$(dirname "$CLIENT")/PlantedBridge.kt" ] && red "K9 an app binds an engine by class name outside build.json::engines (how F2 hid)" "K9"
+stage; sub "$SINKSVC" 'const val MATOMO = "matomo"' 'const val MATOMO = "matomo2"'
+landed "$SINKSVC" '"matomo2"' && red "K4 #871 the sink engine renames a method every app's client still calls" "K4"
+stage; python3 - "$WORK/t/$ANCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "        if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$ANCLIENT" \
+    && red "K7 #871 the analytics client binds without a contract floor" "K7"
+stage; sub "$AN/src/main/AndroidManifest.xml" '<package android:name="${analyticsEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${analyticsEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$AN/src/main/AndroidManifest.xml" \
+    && red "K8 #871 the analytics client stops querying its engine for every consumer" "K8"
+stage; js "$AN/engine-client.json" 'd["engines"]["analytics"]["fleet"] = "lib-analytics-sink-renamed"'
+landed "$AN/engine-client.json" 'lib-analytics-sink-renamed' && red "K1 #871 the analytics client names a Store row that does not exist" "K1"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:analytics-sink"] = {"dir": "../ab_cloud-libs-shared/libs/analytics-sink", "type": "library"}'
+landed "$DRIVEBJ" '"libs:analytics-sink"' && red "K6 #871 an app declares the sink engine's module (it would compile the POST back in)" "K6"
 stage; js "$DRIVEBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$SABJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$NEWSBJ" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$IMG/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+js "$AN/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo

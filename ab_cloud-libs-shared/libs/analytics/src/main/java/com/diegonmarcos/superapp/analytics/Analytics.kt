@@ -4,10 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import org.json.JSONObject
-import java.io.OutputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
@@ -16,6 +12,9 @@ import kotlin.random.Random
  * One shared analytics sink for every constellation app, reporting to BOTH
  * self-hosted backends: Umami (privacy-first, JSON) and Matomo (full sessions,
  * form-encoded).
+ *
+ * #871 The HTTP POST to both backends runs in the sink engine (Cloud-Lib-Analytics-Sink.apk,
+ * [SinkLink]); this object keeps the per-app parts: queues, consent, visitor id, site ids.
  *
  * Why not the JS snippet the front pages use: that snippet only runs inside a
  * WebView, so it would see the handful of bundled HTML surfaces and none of the
@@ -60,6 +59,7 @@ object Analytics {
     private val flushScheduled = AtomicBoolean(false)
 
     @Volatile private var prefs: SharedPreferences? = null
+    @Volatile private var link: SinkLink? = null
     @Volatile private var consent = false
 
     /** Stable per-INSTALL id. Random, never a hardware/advertising identifier. */
@@ -82,6 +82,7 @@ object Analytics {
     fun init(context: Context) {
         if (prefs != null) return
         prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        link = SinkLink(context)
         // Defaults ON for this fleet: these are self-hosted apps on the owner's
         // own devices reporting to the owner's own Umami/Matomo, so opt-in would
         // mean collecting nothing from anyone who never opens settings. Flip the
@@ -130,72 +131,36 @@ object Analytics {
             // other's failed copy with no queue left holding it and no retry.
             umamiQueue.drain { (name, props) -> sendUmami(name, props) }
             matomoQueue.drain { (name, props) -> sendMatomo(name, props) }
+            // The engine is bound only for the length of a drain.
+            link?.release()
         }
     }
 
+    // #871 What an event looks like on the wire, and the POST itself, live in the sink engine
+    // (libs/analytics-sink). This side hands it the per-app facts it cannot know: which app,
+    // which sites, which visitor. The engine answers false for "keep it queued" - an absent or
+    // down engine is therefore the same as a down backend: nothing lost, nothing sent.
     private fun sendUmami(name: String, props: Map<String, String>): Boolean {
         val base = BuildConfig.AN_UMAMI_URL
         val site = BuildConfig.AN_UMAMI_SITE
         if (base.isEmpty() || site.isEmpty()) return true // not configured: not a failure
-        val screen = props["screen"] ?: name
-        val payload = JSONObject().apply {
-            put("website", site)
-            put("hostname", BuildConfig.AN_APP)
-            put("url", "/${BuildConfig.AN_APP}/$screen")
-            put("title", screen)
-            if (name != "pageview") put("name", name)
-            if (props.isNotEmpty()) put("data", JSONObject(props as Map<*, *>))
-        }
-        val body = JSONObject().apply {
-            put("type", "event")
-            put("payload", payload)
-        }.toString()
-        return post("$base/api/send", body, "application/json")
+        return link?.umami(request(base, site, name, props)) ?: false
     }
 
     private fun sendMatomo(name: String, props: Map<String, String>): Boolean {
         val base = BuildConfig.AN_MATOMO_URL
         val site = BuildConfig.AN_MATOMO_SITE
         if (base.isEmpty() || site.isEmpty()) return true
-        val screen = props["screen"] ?: name
-        val params = StringBuilder()
-            .append("idsite=").append(enc(site))
-            .append("&rec=1&apiv=1")
-            .append("&_id=").append(visitorId)
-            .append("&rand=").append(Random.nextInt(1_000_000))
-            .append("&action_name=").append(enc("${BuildConfig.AN_APP}/$screen"))
-            .append("&url=").append(enc("app://${BuildConfig.AN_APP}/$screen"))
-        if (name != "pageview") {
-            params.append("&e_c=").append(enc(BuildConfig.AN_APP))
-                .append("&e_a=").append(enc(name))
-        }
-        // Raw Tracking API (matomo.php), NOT the Tag Manager container — the
-        // container is the part that serves an empty body, and it needs a
-        // browser to execute it anyway.
-        return post("$base/matomo.php", params.toString(), "application/x-www-form-urlencoded")
+        return link?.matomo(request(base, site, name, props)) ?: false
     }
 
-    private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
-
-    private fun post(url: String, body: String, contentType: String): Boolean = try {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            doOutput = true
-            setRequestProperty("Content-Type", contentType)
-            setRequestProperty("User-Agent", userAgent)
-        }
-        conn.outputStream.use { os: OutputStream -> os.write(body.toByteArray()) }
-        val code = conn.responseCode
-        conn.disconnect()
-        code in 200..299
-    } catch (e: Exception) {
-        // LOG IT. A silent analytics client is undebuggable: this module shipped
-        // wired into 12 apps and reported nothing, and the swallowed exception
-        // meant the app produced no signal at all while the transport was broken
-        // upstream. Never crash the host app - but never fail invisibly either.
-        android.util.Log.w("cloud-analytics", "send failed: $url (${e.javaClass.simpleName}: ${e.message})")
-        false
+    private fun request(base: String, site: String, name: String, props: Map<String, String>) = JSONObject().apply {
+        put("app", BuildConfig.AN_APP)
+        put("base", base)
+        put("site", site)
+        put("name", name)
+        put("props", JSONObject(props as Map<*, *>))
+        put("visitor", visitorId)
+        put("ua", userAgent)
     }
 }

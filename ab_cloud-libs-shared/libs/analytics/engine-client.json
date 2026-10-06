@@ -1,0 +1,10 @@
+{
+  "_doc": "THE ENGINE THIS CONTRACT MODULE'S CLIENT BINDS (#871, engine-apk-split move 7). Same shape as an app's build.json::engines, declared here because the client lives here: every app that reports analytics compiles libs:analytics (the queue, the consent flag, the visitor id and this client) and none of them compiles the sink engine that does the HTTP POST. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which build.gradle resolves the package (an unknown id fails the build) into BuildConfig and the merged <queries>; `action` finds the service ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method SinkLink calls, read through PackageManager BEFORE binding. With the engine absent nothing is lost: the bounded per-sink queue keeps the events exactly as it does for a backend that is down.",
+  "engines": {
+    "analytics": {
+      "fleet": "lib-analytics-sink",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  }
+}

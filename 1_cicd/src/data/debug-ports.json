@@ -102,6 +102,7 @@
     "com.diegonmarcos.cloudlib.fleetconfig": 38224,
     "com.diegonmarcos.cloudstore": 38225,
     "com.diegonmarcos.cloudlib.account": 38226,
-    "com.diegonmarcos.cloudaccount": 38227
+    "com.diegonmarcos.cloudaccount": 38227,
+    "com.diegonmarcos.cloudlib.analyticssink": 38228
   }
 }

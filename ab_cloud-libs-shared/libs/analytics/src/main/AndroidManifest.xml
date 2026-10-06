@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Declared HERE, not per app: every consumer of libs:analytics posts to
-         analytics.diegonmarcos.com, so every one of them needs INTERNET or its
-         events fail silently. Manifest merge gives it to all of them and a new
-         consumer cannot forget. Same reasoning as libs:updater's permissions. -->
+    <!-- Declared HERE, not per app: a new consumer cannot forget it. #871 the POST itself now
+         runs in the sink engine (Cloud-Lib-Analytics-Sink.apk), which holds its own INTERNET;
+         this one stays so no consumer's merged permission set changes under it. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Binding the sink engine needs the constellation's signature permission. Most consumers get it
+         from libs:core; the upstream forks compile this module with no core, and without it the bind
+         is a SecurityException and every event would sit in the queue forever. -->
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
+    <!-- Merges into every consumer: on Android 11+ an unqueried package reads exactly like
+         "not installed" (engine-apk-split F2). Resolved from the fleet manifest by build.gradle. -->
+    <queries>
+        <package android:name="${analyticsEnginePackage}" />
+    </queries>
 
     <application>
         <!-- Runs before Application.onCreate(), so consumers get analytics with

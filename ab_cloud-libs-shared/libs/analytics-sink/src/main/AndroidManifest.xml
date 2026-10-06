@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:analytics-sink — the analytics SINK ENGINE (#871), shipped only as
+     Cloud-Lib-Analytics-Sink.apk. Apps compile libs:analytics (the contract half) and hand this
+     service one event per call; it POSTs it to Umami or Matomo from THIS process. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The POST is this engine's whole job; apps keep INTERNET only because their merged
+         manifest always had it from libs:analytics. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <!-- This process IS the sink: libs:analytics (linked only for the IAnalyticsSink wire) would
+             otherwise start its init provider here and report an app_open for the ENGINE every time
+             a consumer's bind cold-starts it, through the very service it is serving. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.analytics.AnalyticsInitProvider"
+            android:authorities="${applicationId}.analyticsinit"
+            tools:node="remove" />
+
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.superapp.analytics.sink.AnalyticsSinkService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

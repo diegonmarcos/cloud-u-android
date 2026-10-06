@@ -362,6 +362,16 @@
       }
     },
     {
+      "id": "#871 engine lib: libs/analytics-sink (the POST that left 15 apps)",
+      "files": ["ab_cloud-libs-shared/libs/analytics-sink/src/main/java/com/diegonmarcos/superapp/analytics/sink/SinkTransport.kt"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
+      "id": "#871 contract lib: libs/analytics (the client every app still compiles)",
+      "files": ["ab_cloud-libs-shared/libs/analytics/src/main/java/com/diegonmarcos/superapp/analytics/SinkLink.kt"],
+      "expect": { "apps": 1, "libs": 0, "rootfs": 0, "ship": 2, "refresh": 15 }
+    },
+    {
       "id": "#870 static lib: libs/account (f89b4e580's lib)",
       "files": [
         "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountData.kt"

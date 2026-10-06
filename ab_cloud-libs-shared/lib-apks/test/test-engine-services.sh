@@ -38,7 +38,8 @@
 #       Drive, Mail, Camera, Media Center and Office reach through libs:ml-l-image,
 #       move 6), calc (Cloud Calc, #767) and ml-l-sound-yamnet (the sound identification
 #       Cloud Calc and Cloud Camera reach through libs:ml-l-sound, #798) and
-#       fleetconfig (#825: every fleet app's FleetConfigProvider binds it). An engine whose contract meta-data
+#       fleetconfig (#825: every fleet app's FleetConfigProvider binds it) and analytics-sink (#871:
+#       the POST of every app's analytics events, reached through libs:analytics). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
 #
@@ -54,7 +55,7 @@ GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
                 "$LIBS/news/src/main/AndroidManifest.xml" "$LIBS/calc/src/main/AndroidManifest.xml" \
                 "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" \
-                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" \
+                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" "$LIBS/analytics-sink/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -184,7 +185,7 @@ for module in modules:
                 no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
                    "the moment the browser is up")
 
-for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -211,7 +212,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -355,6 +356,33 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     _sub "$M_SNDMF" 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' ''
     _applied "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" "$M_SNDMF" 'android:exported="true"' \
         && _red "E1 #798 the sound engine is exported without the signature guard" engines "$MUT/libs" "$MUT/build.json"; }
+
+M_SNKMF="$MUT/libs/analytics-sink/src/main/AndroidManifest.xml"
+M_SNKSVC="$MUT/libs/analytics-sink/src/main/java/com/diegonmarcos/superapp/analytics/sink/AnalyticsSinkService.kt"
+R_SNKSVC="$LIBS/analytics-sink/src/main/java/com/diegonmarcos/superapp/analytics/sink/AnalyticsSinkService.kt"
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNKMF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/analytics-sink/src/main/AndroidManifest.xml" "$M_SNKMF" 'engine.VERSION' \
+        && _red "E8 #871 the analytics sink engine fifteen apps report through stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNKSVC" '        MATOMO -> SinkTransport.send(SinkTransport.matomo(JSONObject(request)))
+' ''
+    python3 -c 'import sys; sys.exit(0 if "MATOMO -> SinkTransport" not in open(sys.argv[1]).read() else 1)' "$M_SNKSVC" \
+        && _applied "$R_SNKSVC" "$M_SNKSVC" 'UMAMI -> SinkTransport' \
+        && _red "E4 #871 the sink engine lists matomo but its dispatch no longer answers it (every app's second copy would fail)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_SNKMF" 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' ''
+    _applied "$LIBS/analytics-sink/src/main/AndroidManifest.xml" "$M_SNKMF" 'android:exported="true"' \
+        && _red "E1 #871 the sink engine is exported without the signature guard (any app could drive its INTERNET)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$MUT/libs/analytics-sink/build.gradle" "    implementation project(':libs:core')
+" ''
+    python3 -c 'import sys; sys.exit(0 if "project(%s:libs:core%s)" % (chr(39), chr(39)) not in open(sys.argv[1]).read() else 1)' "$MUT/libs/analytics-sink/build.gradle" \
+        && _applied "$LIBS/analytics-sink/build.gradle" "$MUT/libs/analytics-sink/build.gradle" "implementation project(':libs:analytics')" \
+        && _red "E5 #871 the sink engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
 
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
 [ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }

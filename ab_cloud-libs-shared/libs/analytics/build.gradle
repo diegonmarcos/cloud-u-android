@@ -46,6 +46,26 @@ def an = buildJson.analytics ?: [:]
 def umami  = an.umami  ?: [:]
 def matomo = an.matomo ?: [:]
 
+// #871 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here. NOT the consumer's build.json (that one carries the site ids below).
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.analytics
+if (engineDecl == null) throw new GradleException("libs:analytics: engine-client.json::engines.analytics is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:analytics: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:analytics: engine-client.json::engines.analytics.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def analyticsEnginePackage = engineFleet.package.toString()
+def sinkAction      = engineDecl.action.toString().replace('{package}', analyticsEnginePackage)
+def sinkMinContract = engineDecl.min_contract as int
+if (sinkMinContract < 1) throw new GradleException("libs:analytics: engines.analytics.min_contract must be >= 1")
+
 android {
     namespace 'com.diegonmarcos.superapp.analytics'
     compileSdk 36
@@ -70,9 +90,21 @@ android {
         buildConfigField "String",  "AN_UMAMI_SITE",    "\"${umami.site_id ?: ''}\""
         buildConfigField "String",  "AN_MATOMO_URL",    "\"${matomo.endpoint ?: ''}\""
         buildConfigField "String",  "AN_MATOMO_SITE",   "\"${matomo.site_id ?: ''}\""
+
+        // #871 the sink engine that does the HTTP POST (Cloud-Lib-Analytics-Sink.apk).
+        buildConfigField "String",  "ANALYTICS_ENGINE_PACKAGE",      "\"${analyticsEnginePackage}\""
+        buildConfigField "String",  "ANALYTICS_ENGINE_ACTION",       "\"${sinkAction}\""
+        buildConfigField "int",     "ANALYTICS_ENGINE_MIN_CONTRACT", "${sinkMinContract}"
+        // Resolved in THIS library's manifest (ProcessLibraryManifest merges with the library's own
+        // placeholders), so every consumer's merged manifest queries the engine: on Android 11+ an
+        // unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [analyticsEnginePackage: analyticsEnginePackage]
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        aidl = true
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -80,10 +112,10 @@ android {
 }
 
 dependencies {
-    // Deliberately NO :libs:core. This module is plain HttpURLConnection +
-    // org.json, so keeping it dependency-free lets ANY app consume it —
-    // including the upstream forks (mail, dialer, chat, matrix, media-center)
-    // that have no shared-module graph at all.
+    // Deliberately NO :libs:core. This module is the queue, the consent flag and a binder client
+    // (IAnalyticsSink is its own AIDL, not core's IDataBackend), so keeping it dependency-free
+    // lets ANY app consume it — including the upstream forks (mail, dialer, chat, matrix,
+    // media-center) that have no shared-module graph at all.
 }
 
 // jvmTarget must match the Java 17 compileOptions above, or the Kotlin and Java

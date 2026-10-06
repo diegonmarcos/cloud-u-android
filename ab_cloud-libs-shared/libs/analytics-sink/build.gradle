@@ -1,0 +1,69 @@
+// libs:analytics-sink — the ANALYTICS SINK ENGINE (#871, engine-apk-split move 7): the HTTP POST of
+// an analytics event to Umami and Matomo, shipped only as Cloud-Lib-Analytics-Sink.apk. Every
+// app that reports analytics compiles libs:analytics (the CONTRACT half: IAnalyticsSink.aidl, the
+// bounded per-sink queue, the consent flag, the visitor id and the client) and none compiles this
+// module, so a change to how an event is built or sent republishes this APK and no app. Do not add
+// this module to an app's module map or ship watch list: the engine contract guard's K6 fails it.
+//
+// An app with no engine installed loses nothing: its queue keeps the events (bounded, oldest
+// dropped) exactly as it does for a backend that is down, and sends them once the engine is there.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// The only hosts this engine will POST to: the endpoints of THIS harness's build.json::analytics
+// (the fleet's one Umami and one Matomo). A request is built by a CLIENT in another app; without
+// this a sibling app could point the engine's INTERNET at any host.
+def harnessJson = new File(rootDir, 'build.json')
+if (!harnessJson.isFile()) throw new GradleException("libs:analytics-sink: no build.json at ${rootDir}")
+def an = new groovy.json.JsonSlurper().parse(harnessJson).analytics ?: [:]
+def sinkHosts = [an.umami?.endpoint, an.matomo?.endpoint].findAll { it }.collect { new URI(it.toString()).host }.unique()
+if (sinkHosts.isEmpty()) throw new GradleException("libs:analytics-sink: ${harnessJson}::analytics declares no endpoint")
+
+android {
+    namespace 'com.diegonmarcos.superapp.analytics.sink'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "SINK_HOSTS", "\"${sinkHosts.join(',')}\""
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
+    implementation project(':libs:core')
+    // The wire (IAnalyticsSink) this service implements.
+    implementation project(':libs:analytics')
+
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
+}

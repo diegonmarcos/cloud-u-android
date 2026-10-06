@@ -28,7 +28,7 @@ before any module moved, and it records the decisions that move or keep each mod
 
 | module | kind | Cloud-Lib APK (total / so64 / assets / dex raw), MB | compiled into | calls | decision |
 |---|---|---|---|---|---|
-| analytics | engine (pings) | 0.92 / – / – / 2.58 | 13 apps + keyboard-engines | per screen/event | **stays** — tiny, chatty, and its job is to report *as* the host app |
+| analytics | engine (pings) | 0.92 / – / – / 2.58 | 13 apps + keyboard-engines | per screen/event | **MOVE 7** (#871): the HTTP POST and both wire formats leave for `Cloud-Lib-Analytics-Sink.apk`; the queue, consent, visitor id and site ids stay in `libs:analytics`, now the contract |
 | appstore | GUI | 15.66 / 2.13 / – / 19.95 | superapp | – | stays (GUI) |
 | auth | mixed: Compose `SignInWays` + secret plumbing | 8.96 / – / – / 22.42 | superapp, drive | per sign-in | **stays** — draws in the host's Compose tree, and its whole output is bearer/cookie/vault secrets the host stores; a split puts them on IPC for no size win |
 | battery | mixed | 12.82 / 2.13 / – / 15.74 | superapp | – | stays (GUI; usage-stats/Shizuku identity) |
@@ -293,7 +293,7 @@ first is an impossibility:
 | core | it IS the contract both sides link (`IDataBackend`, `DataBackendClient`, `CONSTELLATION_DATA`, the crash provider); an engine cannot carry the thing that lets it be reached |
 | devtools | the in-process debug API reads the host's own logcat and process state; Android filters logcat by uid, so another package sees nothing of the host |
 | updater | it installs the host's own update (and its companions) through `PackageInstaller`; an updater updated separately is one package whose breakage leaves every app with no in-app way back |
-| analytics | consent, the per-install visitor id and the site ids are per app (baked from each consumer's `build.json::analytics`), the launch event fires from a ContentProvider before `Application.onCreate`, the retry queue must keep events with no engine installed, and upstream forks consume it with no `libs:core` — only the ~40-line HTTP POST could cross, so a split moves no change surface |
+| analytics (until #871) | consent, the per-install visitor id and the site ids are per app (baked from each consumer's `build.json::analytics`), the launch event fires from a ContentProvider before `Application.onCreate`, the retry queue must keep events with no engine installed, and upstream forks consume it with no `libs:core` — so a split moves only the ~100-line POST. **Moved anyway as move 7**: those per-app parts are exactly what stays in the contract module, and the POST is the part that changes when a backend does |
 | webserver | a static server whose default document root is the host's own `getExternalFilesDir()/www`; another uid cannot read it |
 | watchdog | single consumer (C3 Watchdog), and it is that app's own surface: `WatchdogBridge` is a `JavascriptInterface` on the host's WebView, and `BridgeReceiver` is the door the terminal addresses by the app's package, with its state in the app's `filesDir` |
 | auth | draws `SignInWays` (Compose) in the host's tree and its whole output is credentials the host stores; a split puts them on IPC and in a second uid |
@@ -325,3 +325,31 @@ file, not a tree, so the move-6 mechanism does not apply.
 GUI modules (appstore, bottomnav, browser, chat, cropper, file-editor, fin, gesture,
 keyboard, launcher-*, mail, maps, ops, panoramaviewer, scrollbar, wallet) are out of scope
 by the requirement.
+
+## Move 7 — analytics: the POST leaves fifteen apps, the queue stays (#871)
+
+Chosen over git-sync, rclone, mounts, file-editor and auth because it is the only candidate whose
+API is already request/response with no UI, no shared-store tree and no per-package grant: one
+event in, one yes/no out. git-sync, mounts and rclone work on a directory tree in the caller's
+storage (class C above); file-editor and auth draw in the host (class A and gui). It is also
+the largest backlog item: 15 apps compiled it (backlog 44 to 29 edges).
+
+| piece | where | what it does |
+|---|---|---|
+| contract (client) | `libs/analytics` (kept, class `contract`) | `IAnalyticsSink.aidl` (its own one-method wire: `send(method, request)` + `methods()`), `SinkLink` (handshake through PackageManager before any bind, then the call; bound only for the length of a drain), and what is per app: the bounded per-sink `SinkQueue`, consent, visitor id, the site ids baked from the consumer's `build.json::analytics`. Still dependency-free (no `libs:core`, no `libs:databackend`) because the upstream forks compile it with no shared-module graph, so no consumer's wiring changed |
+| engine | `libs/analytics-sink` (new) | `AnalyticsSinkService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `umami`, `matomo`; `methodNames()` equals `dispatch()`), `SinkTransport` (the Umami JSON and Matomo form requests, byte-identical to the old in-app sender, pinned by `SinkTransportTest`). The engine POSTs only over https and only to the hosts of `lib-apks/build.json::analytics`, so a sibling app cannot point its INTERNET elsewhere |
+| declaration | `libs/analytics/engine-client.json`, fleet row `lib-analytics-sink`, debug port 38228 | shared-client declaration (the move-6 shape); `build.gradle` resolves the package from the fleet manifest and merges `<queries>` into every consumer |
+| degradation | `SinkLink.umami/matomo` | an absent, too-old or failing engine answers false and the event stays in its sink's queue, exactly as for a backend that is down; one log line per distinct reason, never a crash, never a block (the drain was already on the worker thread). Nothing is sent until the engine is installed: Store ▸ Cloud Constellation ▸ Libs |
+
+**What a change now rebuilds.** An edit to the POST or a wire format: `Cloud-Lib-Analytics-Sink.apk`
+only (rebuild-scenarios: 0 apps, 1 lib). An edit to the queue, consent or the client: the contract,
+which is the old behaviour. The first push after this move rebuilds the consumers once.
+
+**Checks.** `test-engine-services.sh` E8 requires the sink engine (+4 mutations); the contract
+guard covers the shared client with K1, K4, K6, K7, K8 cases for it; `lib-classes` moves `analytics` to
+`contract` (budget 460) and `analytics-sink` to `engine`; `analytics-retry.test.sh` still runs the
+shipped `SinkQueue`.
+
+**Not verified on a device.** The bind, the handshake and a delivery to the live Umami/Matomo are
+proven by static testers, the engine's JVM suite and the APK build only.
+
