@@ -261,7 +261,11 @@ echo "== T12: #477 nav geometry — one dimen each, read from a real declaration
 # assertion below reads the file on disk, never a hardcoded expectation.
 # The bottom-nav half of #477 (one symmetric item pad) is measured on the rendered island by
 # BottomNavGeometryTest M4 since #531. The tab-strip base dimen stays declared here.
+# #876: dimens and the R.* reader stay in src/main (NavPlatformAndroid.kt); the strip's geometry
+# is in commonMain (PageTabs.kt), which also compiles to Kotlin/Wasm and so names no R.*.
 PAGETABS_DIR="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main"
+PAGETABS_KT="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
+NAVPLAT_KT="$PAGETABS_DIR/kotlin/com/diegonmarcos/superapp/bottomnav/NavPlatformAndroid.kt"
 _STRIP_BASE_VIOLATION=$(python3 - "$PAGETABS_DIR/res/values/dimens.xml" <<'PY'
 import re, sys
 dims = open(sys.argv[1], encoding='utf-8').read()
@@ -278,16 +282,18 @@ check "$_STRIP_BASE_VIOLATION" "page_tabs_top_inset is a real declared base"
 # The TOP half: #477 strip clearance reads a REAL inset, non-consuming. Since #868 the ONE
 # declaration for every strip (section, Profile, drawer, sheets) is libs:bottomnav's PageTabs,
 # so that is the file read here; the section strip must NOT grow a copy back (T12 below).
-_TOP_STRIP_VIOLATION=$(python3 - "$PAGETABS_DIR/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt" <<'PY'
+_TOP_STRIP_VIOLATION=$(python3 - "$PAGETABS_KT" "$NAVPLAT_KT" <<'PY'
 import re, sys
-text = open(sys.argv[1], encoding='utf-8').read()
-code = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
-code = re.sub(r'//[^\n]*', '', code)
+def code_of(path):
+    text = open(path, encoding='utf-8').read()
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    return re.sub(r'//[^\n]*', '', text)
+code, plat = code_of(sys.argv[1]), code_of(sys.argv[2])
 problems = []
 if 'WindowInsets.statusBars' not in code or 'displayCutout' not in code:
     problems.append('the strip reads no statusBars()/displayCutout() inset - clearance is a hardcoded dp, not the #407 rule')
-if 'R.dimen.page_tabs_top_inset' not in code:
-    problems.append('the strip does not read the declared page_tabs_top_inset base')
+if 'tabsTopInset = dp(R.dimen.page_tabs_top_inset)' not in plat or 'tokens.tabsTopInset' not in code:
+    problems.append('the strip does not read the declared page_tabs_top_inset base (Android reads it into NavTokens, the strip reads the token)')
 if 'topBase + liveTop' not in code:
     problems.append('the strip top is not base + live inset')
 # Non-consuming: the inset is only READ (WindowInsets.getTop), never handed to a consuming listener.
@@ -299,7 +305,7 @@ PY
 check "$_TOP_STRIP_VIOLATION" "tab strip clears the island: declared base + a live status/cutout inset, non-consuming"
 # The hollow twin: the inset being read is the whole point, so verify the CODE shape did not
 # regress to a bare margin literal.
-if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt" "$PAGETABS_DIR/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"; then
+if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt" "$PAGETABS_KT"; then
   bad "T12: a BARE literal topMargin on the strip - its clearance is a hardcoded dp again"
 else
   ok "T12: no bare literal topMargin in the strip - its clearance comes from the inset"

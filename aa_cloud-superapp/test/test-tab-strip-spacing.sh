@@ -26,9 +26,12 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 LIB="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main"
 RES="$APP/app/src/main/res"
 SRC="$APP/app/src/main/java"
-PT="$LIB/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
+# #876: the strip's GEOMETRY is in commonMain (it also compiles to Kotlin/Wasm, where there is
+# no R.*); the Android token reader in src/main is the one place R.dimen.page_tabs_* is read.
+PT="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
+PLAT="$LIB/kotlin/com/diegonmarcos/superapp/bottomnav/NavPlatformAndroid.kt"
 STF="$SRC/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
-for f in "$LIB/res/values/dimens.xml" "$PT" "$STF"; do
+for f in "$LIB/res/values/dimens.xml" "$PT" "$PLAT" "$STF"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
 codeof() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$@"; }
@@ -43,10 +46,12 @@ done
 if grep -rq 'tab_strip_' "$RES" "$SRC"; then bad "T1: this app still declares or reads a tab_strip_* token"; else ok "T1: no tab_strip_* token left in this app"; fi
 
 # ── the checks as functions, so T4 can run them on mutated copies ──
-t2() {   # $1 = PageTabs.kt
-    local c; c=$(codeof "$1")
-    grep -q 'R.dimen.page_tabs_top_inset' <<<"$c" || return 1
-    grep -q 'R.dimen.page_tabs_bottom_inset' <<<"$c" || return 1
+t2() {   # $1 = PageTabs.kt, $2 = NavPlatformAndroid.kt
+    local c p; c=$(codeof "$1"); p=$(codeof "$2")
+    grep -q 'tabsTopInset = dp(R.dimen.page_tabs_top_inset)' <<<"$p" || return 1
+    grep -q 'tabsBottomInset = dp(R.dimen.page_tabs_bottom_inset)' <<<"$p" || return 1
+    grep -q 'val topBase = with(density) { tokens.tabsTopInset.toPx() }' <<<"$c" || return 1
+    grep -q 'val bottomGap = with(density) { tokens.tabsBottomInset.toPx() }' <<<"$c" || return 1
     grep -q 'top = with(density) { (topBase + liveTop).toDp() }' <<<"$c" || return 1
     grep -q 'bottom = with(density) { bottomGap.toDp() }' <<<"$c" || return 1
     grep -q 'WindowInsets.statusBars.union(WindowInsets.displayCutout)' <<<"$c" || return 1
@@ -65,7 +70,7 @@ t3() {   # $1 = source root; every strip site is a PageTabsView and owns no geom
 }
 
 echo "== T2: PageTabs applies both, plus the live inset, without consuming it =="
-t2 "$PT" && ok "T2: reads both dimens, pads top (base + live inset) and bottom, live inset only under the top chrome" || bad "T2: PageTabs does not own the whole geometry"
+t2 "$PT" "$PLAT" && ok "T2: reads both dimens, pads top (base + live inset) and bottom, live inset only under the top chrome" || bad "T2: PageTabs does not own the whole geometry"
 
 echo "== T3: every strip site is a PageTabsView =="
 SITES=$( (grep -rl 'PageTabsView(' "$SRC" --include=*.kt; grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout") | sed "s#$APP/##")
@@ -78,9 +83,11 @@ grep -q 'underTopChrome = false' "$SRC/com/diegonmarcos/superapp/launcher/AppDra
 echo "== T4: mutation =="
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
 grep -v 'bottom = with(density) { bottomGap.toDp() }' "$PT" > "$TMP/no-bottom.kt"
-t2 "$TMP/no-bottom.kt" && bad "T4: T2 passed without the bottom gap" || ok "T4: no bottom gap → RED"
+t2 "$TMP/no-bottom.kt" "$PLAT" && bad "T4: T2 passed without the bottom gap" || ok "T4: no bottom gap → RED"
 grep -v 'WindowInsets.statusBars.union(WindowInsets.displayCutout)' "$PT" > "$TMP/no-live.kt"
-t2 "$TMP/no-live.kt" && bad "T4: T2 passed without the live inset" || ok "T4: no live status/cutout inset → RED"
+t2 "$TMP/no-live.kt" "$PLAT" && bad "T4: T2 passed without the live inset" || ok "T4: no live status/cutout inset → RED"
+sed 's/tabsTopInset = dp(R.dimen.page_tabs_top_inset)/tabsTopInset = 8.dp/' "$PLAT" > "$TMP/literal-top.kt"
+t2 "$PT" "$TMP/literal-top.kt" && bad "T4: T2 passed with the top base as a literal dp" || ok "T4: top base no longer read from the declared dimen → RED"
 mkdir -p "$TMP/src"; for f in $(grep -rl 'PageTabsView(' "$SRC" --include=*.kt); do cp "$f" "$TMP/src/$(basename "$f")"; done
 printf '%s\n' 'private fun oldStrip(t: TabLayout) { ViewCompat.setOnApplyWindowInsetsListener(t) { _, i -> i } }' >> "$TMP/src/SectionTabsFragment.kt"
 grep -q 'setOnApplyWindowInsetsListener' "$TMP/src/SectionTabsFragment.kt" || bad "T4: the mutation did not land in the scratch copy"

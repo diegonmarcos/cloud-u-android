@@ -42,7 +42,7 @@ WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt
 MESHDIR="app/src/main/java/com/diegonmarcos/superapp/network/mesh"
 MESH_WIDGETS="$MESHDIR/MeshWidgets.kt"; MESH_CTRL="$MESHDIR/MeshControlsPage.kt"; MESH_PROFILES="$MESHDIR/MeshProfilesPage.kt"
 MESH_STORE="$MESHDIR/MeshStore.kt"; MESH_PORT="$MESHDIR/AndroidMeshPort.kt"; MESH_STATUS="$MESHDIR/MeshStatusPage.kt"; MESH_MODEL="$MESHDIR/MeshModel.kt"
-PAGETABS="../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
+PAGETABS="../ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt"
 SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
 AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
