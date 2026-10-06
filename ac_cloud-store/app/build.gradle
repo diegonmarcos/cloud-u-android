@@ -56,6 +56,7 @@ def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
 def uiBottomNav       = (buildJson.ui?.bottom_nav ?: []).join(',')
 def uiSectionsB64     = b64(buildJson.ui?.sections ?: [])
+def dnsHandoffAction = (buildJson.dns_handoff?.shortcut_action ?: '').toString()
 def uiDefaultSection  = (buildJson.ui?.default_section ?: '').toString()
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
 def profileName      = (profileDefault.name      ?: '').toString()
@@ -165,6 +166,7 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",        "\"${uiBottomNav}\""
         buildConfigField "String", "UI_SECTIONS_B64",      "\"${uiSectionsB64}\""
+        buildConfigField "String", "DNS_HANDOFF_ACTION",   "\"${dnsHandoffAction}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""

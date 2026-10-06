@@ -31,7 +31,7 @@ class App : Application() {
             // offers SuperApp's DNS page (the same extras SuperApp's App.kt
             // puts on its launcher), when SuperApp is installed.
             dnsPagePackage = "com.diegonmarcos.superapp"
-            dnsPageExtras = mapOf("shortcut_action" to "page:config/dns")
+            dnsPageExtras = mapOf("shortcut_action" to BuildConfig.DNS_HANDOFF_ACTION)
             runsFleetPass = { true }
             com.diegonmarcos.superapp.updater.UpdaterHost.apply {
                 // #894 the pass summary and result alerts open Cloud Store itself, on the fleet tab.

@@ -178,6 +178,11 @@
       ]
     }
   },
+  "dns_handoff": {
+    "_doc": "Cloud Store has no DNS page of its own: a failed Store row offers SuperApp's (page id dns, declared in aa_cloud-superapp/build.json). `package` is the app launched, `shortcut_action` the extra its launcher reads (ShellActivity.handleShortcutIntent). Baked into BuildConfig.DNS_HANDOFF_ACTION; kept here so the page id is not a literal this app's nav declaration would have to own.",
+    "package": "com.diegonmarcos.superapp",
+    "shortcut_action": "page:config/dns"
+  },
   "ui": {
     "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The four Store pages are sections without sub-pages; MainActivity hosts each page's own screen.",
     "bottom_nav": [
