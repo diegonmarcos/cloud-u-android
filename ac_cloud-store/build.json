@@ -35,7 +35,8 @@
         "libs:core",
         "libs:updater",
         "libs:appstore",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:sysdns"
       ]
     },
     "libs:core": {
@@ -44,6 +45,11 @@
     },
     "libs:devtools": {
       "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:sysdns": {
+      "_doc_dir": "#874 FleetDnsBridge: app/build.gradle links this module as the one resolver of this process (1f36254d4), so settings.gradle must include it — this map is the gradle graph's single source of truth, and a dependency missing here is 'Project with path :libs:sysdns could not be found' at configuration time (the same gap SuperApp had, f3ca976c7).",
+      "dir": "../ab_cloud-libs-shared/libs/sysdns",
       "type": "library"
     },
     "libs:fleetconfig-model": {
