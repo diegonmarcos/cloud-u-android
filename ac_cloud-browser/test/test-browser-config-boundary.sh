@@ -99,8 +99,8 @@ browser = browser or {}
 check(browser.get("default_pinned_tabs") == EXPECTED,
       "build.json pins exactly his four URLs, in his order",
       "got: %r" % (browser.get("default_pinned_tabs"),))
-check(browser.get("default_engine") == "qwant",
-      "build.json ships Qwant as the default engine",
+check(browser.get("default_engine") == "duckduckgo",
+      "build.json ships DuckDuckGo as the default engine",
       "got: %r" % (browser.get("default_engine"),))
 ids = [e.get("id") for e in browser.get("search_engines", [])]
 check("duckduckgo" in ids and "google" in ids,

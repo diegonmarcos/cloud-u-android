@@ -24,7 +24,7 @@ import com.google.android.material.color.MaterialColors
  * [BrowserHostFragment] has no host interface, but it is NOT self-configuring:
  * libs:browser is shared by reference and deliberately ships no default
  * tabs and no engine list of its own. This activity is where Cloud
- * Browser's own content — the four first-run pinned tabs, the Qwant
+ * Browser's own content — the four first-run pinned tabs, the DuckDuckGo
  * default — crosses from build.json::ui.browser into the shared host.
  * Change those four URLs in build.json; no other app is affected.
  *

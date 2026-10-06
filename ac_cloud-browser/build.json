@@ -106,7 +106,7 @@
         "http://localhost:8000"
       ],
       "_doc_search_engines": "Address-bar engines. {q} is where the URL-encoded query goes, so an engine whose query parameter is not last still works. default_engine is the SHIPPED default; BrowserSettings persists the user's own pick and BrowserConfig.engine() resolves an unknown or unset id back to this one.",
-      "default_engine": "qwant",
+      "default_engine": "duckduckgo",
       "search_engines": [
         {
           "id": "qwant",

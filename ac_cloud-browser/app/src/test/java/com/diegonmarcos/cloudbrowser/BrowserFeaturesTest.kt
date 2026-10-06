@@ -30,8 +30,8 @@ import java.io.File
  *    appear somewhere in a source file would prove a string literal;
  *    this proves they arrive pinned, in order, and only once.
  *  • The engine test asserts the URL a NON-URL query resolves to.
- *    Grepping for "qwant" would pass against a Google default, because
- *    item 4 pins qwant.com as a URL either way.
+ *    Grepping for "duckduckgo" would pass against a Qwant default, because
+ *    the engine list offers duckduckgo as an alternative either way.
  *  • The pin test asserts the refusal, not the flag.
  */
 class BrowserFeaturesTest {
@@ -134,31 +134,31 @@ class BrowserFeaturesTest {
     // ── item 7: the engine a QUERY actually reaches ──────────────────
 
     @Test
-    fun `a non-URL entry searches Qwant`() {
+    fun `a non-URL entry searches DuckDuckGo`() {
         val engine = shippedConfig().defaultEngine()
-        assertEquals("qwant", engine.id)
+        assertEquals("duckduckgo", engine.id)
         val resolved = BrowserSearch.resolve("cloud browser tabs", engine)
         assertTrue(
-            "a typed query must reach Qwant, got: $resolved",
-            resolved.startsWith("https://www.qwant.com/?q="),
+            "a typed query must reach DuckDuckGo, got: $resolved",
+            resolved.startsWith("https://duckduckgo.com/?q="),
         )
         assertTrue(resolved.contains("cloud+browser+tabs") ||
             resolved.contains("cloud%20browser%20tabs"))
-        // The negative that a grep for "qwant" cannot make.
+        // The negative that a grep for "duckduckgo" cannot make.
         assertFalse(resolved.contains("google"))
-        assertFalse(resolved.contains("duckduckgo"))
+        assertFalse(resolved.contains("qwant"))
     }
 
     @Test
     fun `the alternatives are offered and switchable`() {
         val cfg = shippedConfig()
         assertEquals(listOf("qwant", "duckduckgo", "google"), cfg.engines.map { it.id })
-        assertTrue(BrowserSearch.resolve("kotlin", cfg.engine("duckduckgo"))
-            .startsWith("https://duckduckgo.com/?q="))
+        assertTrue(BrowserSearch.resolve("kotlin", cfg.engine("qwant"))
+            .startsWith("https://www.qwant.com/?q="))
         // An unknown or dropped id falls back to the shipped default
         // rather than stranding him on a dead engine.
-        assertEquals("qwant", cfg.engine("bing").id)
-        assertEquals("qwant", cfg.engine(null).id)
+        assertEquals("duckduckgo", cfg.engine("bing").id)
+        assertEquals("duckduckgo", cfg.engine(null).id)
     }
 
     @Test
@@ -171,7 +171,7 @@ class BrowserFeaturesTest {
         assertEquals("http://192.168.1.4/x", BrowserSearch.resolve("192.168.1.4/x", engine))
         // …and something with a space is a query even though it has a dot.
         assertTrue(BrowserSearch.resolve("what is 2.5 kg", engine)
-            .startsWith("https://www.qwant.com/?q="))
+            .startsWith("https://duckduckgo.com/?q="))
     }
 
     // ── item 2: the pin REFUSES the close ────────────────────────────
@@ -287,7 +287,7 @@ class BrowserFeaturesTest {
         assertEquals(BrowserSuggest.Source.HISTORY, out[1].source)
         // The engine row is always last, so the dropdown is never a dead end.
         assertEquals(BrowserSuggest.Source.SEARCH, out.last().source)
-        assertTrue(out.last().url.startsWith("https://www.qwant.com/?q="))
+        assertTrue(out.last().url.startsWith("https://duckduckgo.com/?q="))
 
         // Nothing matches locally → still exactly one row, the search.
         val none = BrowserSuggest.suggest("zzzz", tabs, hist, engine)
