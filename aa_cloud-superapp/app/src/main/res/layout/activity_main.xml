@@ -271,6 +271,7 @@
                 android:contentDescription="@string/action_wallet"
                 android:visibility="gone">
                 <ImageView
+                    android:id="@+id/top_wallet_orb_icon"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_gravity="center"

@@ -546,8 +546,8 @@ open class ShellActivity : AppCompatActivity(),
             // Revolut-style Home-root corner orbs: the same two actions the
             // toolbar carried, in detached liquid-glass circles. Left IS the
             // hamburger; right launches the wallet's home app — target
-            // DECLARED in build.json::ui.top_orbs.right_extapp (the Wallet
-            // deck lives inside Cloud-Me now), read from UI_TOP_ORBS_B64,
+            // DECLARED in build.json::ui.top_orbs.right (a tile target: section:config,
+            // or extapp:<id> for an app), read from UI_TOP_ORBS_B64,
             // never hardcoded here. Visibility is toggled with atHomeRoot in
             // onPrepareOptionsMenu alongside the bar-dissolve.
             findViewById<android.view.View>(R.id.main_menu_orb)?.setOnClickListener {
@@ -556,8 +556,10 @@ open class ShellActivity : AppCompatActivity(),
             }
             findViewById<android.view.View>(R.id.top_wallet_orb)?.setOnClickListener {
                 Haptics.tap(it)
-                topOrbExtapp().takeIf { id -> id.isNotBlank() }?.let { id -> launchExternalApp(id) }
+                // #879 the same dispatcher a tile tap goes through: `section:` and `extapp:` alike.
+                topOrbTarget().takeIf { t -> t.isNotBlank() }?.let { t -> onTileClicked(t) }
             }
+            bindTopOrb()
             // Bind the central Dynamic Island label — "{INITIALS} · {Mode}".
             // Updated whenever onPrepareOptionsMenu fires (mode toggle,
             // back-stack change, drawer open) AND after a profile edit.
@@ -1686,16 +1688,26 @@ open class ShellActivity : AppCompatActivity(),
      * getLaunchIntentForPackage returns null for them and we fall through
      * to the hub switcher — exactly the intended behaviour.
      */
-    /** The right corner orb's app id — build.json::ui.top_orbs.right_extapp,
-     *  baked as UI_TOP_ORBS_B64. Blank (missing declaration) disables the
-     *  orb's tap rather than guessing an app: the target moved once already
-     *  (cloud-wallet → cloud-me when the Wallet deck moved into Cloud-Me),
-     *  and a hardcoded fallback here is how it would silently move back. */
-    private fun topOrbExtapp(): String = runCatching {
+    /** The right corner orb's TARGET - build.json::ui.top_orbs.right, a tile target in the one
+     *  grammar (`section:<id>`, `extapp:<id>`), baked as UI_TOP_ORBS_B64 and dispatched by
+     *  [onTileClicked] like any tile. Blank (missing declaration) disables the orb's tap rather
+     *  than guessing a destination: the target has moved twice already (cloud-wallet, cloud-me,
+     *  now the Configs section) and a hardcoded fallback here is how it would silently move back. */
+    private fun topOrbTarget(): String = runCatching {
         org.json.JSONObject(String(android.util.Base64.decode(
             BuildConfig.UI_TOP_ORBS_B64, android.util.Base64.NO_WRAP)))
-            .optString("right_extapp")
+            .optString("right")
     }.getOrDefault("")
+
+    /** The orb wears its target: a `section:` target's declared icon and label (content description);
+     *  an app target keeps the layout's own glyph and caption. */
+    private fun bindTopOrb() {
+        val section = topOrbTarget().takeIf { it.startsWith("section:") }
+            ?.let { Sections.byId(it.removePrefix("section:")) } ?: return
+        findViewById<android.view.View>(R.id.top_wallet_orb)?.contentDescription = section.label
+        findViewById<android.widget.ImageView>(R.id.top_wallet_orb_icon)
+            ?.setImageResource(Sections.iconResFor(this, section.iconName))
+    }
 
     private fun launchExternalApp(rawPayload: String) {
         val payload = rawPayload.substringBefore(StackAnchors.FRAGMENT)
