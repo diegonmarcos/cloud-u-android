@@ -240,7 +240,8 @@
         "libs:bottomnav",
         "libs:auth",
         "libs:ui-kit",
-        "libs:account"
+        "libs:account",
+        "libs:sysdns"
       ],
       "comment": "Launcher / shell. Hosts navigation to each feature module."
     },
@@ -288,6 +289,11 @@
     },
     "libs:devtools": {
       "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:sysdns": {
+      "_doc_dir": "#874 FleetDnsBridge: app/build.gradle links this module as the one resolver of this process (1f36254d4), so settings.gradle must include it — this map is the gradle graph's single source of truth, and a dependency missing here is 'Project with path :libs:sysdns could not be found' at configuration time.",
+      "dir": "../ab_cloud-libs-shared/libs/sysdns",
       "type": "library"
     },
     "libs:text-tools": {
@@ -3853,7 +3859,7 @@
         "drawer_default_children": [
           "WireGuard"
         ],
-        "_doc_merge": "SINGLE-PAGE section. Everything — tunnel config, Generate/Import/Export buttons, Connect status (live colour dot) AND the full wg-mesh topology table (data/mesh.json via the shared MeshView) — lives on ONE page rendered by WireGuardFragment. No page grid: a section with exactly one non-action page opens that page directly (LauncherNavController.goSection single-page rule). The old Mesh/Logs/+Import/Settings sub-pages were folded in; Import is now a button on the page. Back returns to Configs (parent=config).",
+        "_doc_merge": "SINGLE-PAGE section. One page, drawn by WireGuardFragment (#877: Compose, network/mesh/) as a libs:bottomnav PageTabs strip over the pages ui.mesh_page declares - Status, Peers, Profiles, Routes, Controls, Log. The old tunnel form, Generate/Import/Export buttons, Connect status and the wg-mesh topology (data/mesh.json, now Peers ▸ Fleet topology) are folded into those tabs. No page grid: a section with exactly one non-action page opens that page directly (LauncherNavController.goSection single-page rule). Back returns to Configs (parent=config).",
         "pages": [
           {
             "id": "config",
@@ -3865,7 +3871,7 @@
             "label": "Mesh",
             "icon": "ic_wg",
             "hidden": true,
-            "_doc": "Target of the two `WG mesh` tiles (Inboxes ▸ Infra RSS and Cloud ▸ C3). SectionPages.factoryFor has mapped wg/status to C3MeshFragment all along, but the page was never declared here, so pageFragment fell through to SectionFragment.forSection and the tiles opened the WireGuard config screen instead of the mesh. hidden: the section's own child list stays the single `config` page it has always shown."
+            "_doc": "Target of the two `WG mesh` tiles (Inboxes ▸ Infra RSS and Cloud ▸ C3). #877: SectionPages.factoryFor maps wg/status to WireGuardFragment.newInstance(\"status\"), the Cloud Mesh page opened on its Status tab (it was C3MeshFragment; the fleet topology now lives under Peers). hidden: the section's own child list stays the single `config` page it has always shown."
           }
         ]
       },
@@ -6433,6 +6439,329 @@
           "subtitle": "The fleet resolver first, then the fallbacks you order below.",
           "fallback_choices": ["public_open", "public_encrypted", "warp"],
           "default_fallbacks": ["public_open"] }
+      ]
+    },
+    "_doc_mesh_page": "#877 THE declaration of the Cloud Mesh page (network/WireGuardFragment.kt hosts it, network/mesh/* draws it): the tab strip's page ids and labels, each page's controls with their defaults, and the numbers the live readout uses. Baked as BuildConfig.UI_MESH_PAGE_B64; network/mesh/MeshDecl.kt parses it and test-mesh-page.sh holds it equal to the code in both directions. A control has EITHER an `engine` id - one of the calls MeshStore dispatches to, which are the EXISTING paths (WgState.backend setState/getState/getStatistics, WireGuardPrefs, AccountMesh, FleetDns) - OR an `unsupported` reason, which the page shows beside the control, disabled: a control the engine cannot honour is never silent and never a no-op (a `read.*` engine id reports a state the engine can read but not write, and must carry `unsupported` for the write). `default_from` names a seed in another declaration (dns.default_preset = ui.dns.default_preset; interface_mtu / tunnel_name / interface_address = ui.wireguard_default) so a default is stated once. `handshake.fresh_s` / `stale_s` bound the peer light: a handshake no older than fresh is FRESH, up to stale is AGING (both green), older than stale is STALE and none yet is NONE (both amber, the second says 'none'). A control's `group` is the heading it sits under on its page (string mesh_group_<id>). `nat64_marker` is the hextet that marks a /96 allowed-IP as the NAT64 prefix on the Routes page. Polling (`poll_ms`) runs only while the page is RESUMED; `latency_every_ticks` thins the latency probe to every Nth poll.",
+    "mesh_page": {
+      "default_page": "status",
+      "poll_ms": 1000,
+      "latency_every_ticks": 5,
+      "latency_timeout_ms": 1200,
+      "log_cap": 200,
+      "handshake": {
+        "fresh_s": 150,
+        "stale_s": 300
+      },
+      "nat64_marker": "ff9b",
+      "pages": [
+        {
+          "id": "status",
+          "label": "Status",
+          "icon": "ic_wg",
+          "rows": [
+            "state",
+            "interface",
+            "pubkey",
+            "endpoint",
+            "handshake",
+            "traffic",
+            "latency",
+            "dns",
+            "profile"
+          ],
+          "controls": []
+        },
+        {
+          "id": "peers",
+          "label": "Peers",
+          "icon": "ic_wg",
+          "controls": [
+            {
+              "id": "peer_sort",
+              "kind": "choice",
+              "label": "Sort",
+              "default": "config",
+              "choices": [
+                "config",
+                "handshake",
+                "traffic"
+              ],
+              "engine": "view.sort"
+            },
+            {
+              "id": "topology",
+              "kind": "switch",
+              "label": "Fleet topology",
+              "default": false,
+              "engine": "view.topology"
+            },
+            {
+              "id": "peer_add",
+              "kind": "action",
+              "label": "Add peer",
+              "engine": "prefs.peer.add"
+            },
+            {
+              "id": "peer_remove",
+              "kind": "action",
+              "label": "Remove peer",
+              "engine": "prefs.peer.remove"
+            },
+            {
+              "id": "peer_copy",
+              "kind": "action",
+              "label": "Copy peer config",
+              "engine": "clipboard.peer"
+            }
+          ]
+        },
+        {
+          "id": "profiles",
+          "label": "Profiles",
+          "icon": "ic_wg",
+          "controls": [
+            {
+              "id": "provider",
+              "kind": "choice",
+              "label": "Provider",
+              "default": "cloud",
+              "choices": [
+                "cloud",
+                "custom"
+              ],
+              "engine": "prefs.provider"
+            },
+            {
+              "id": "profile_select",
+              "kind": "action",
+              "label": "Select and apply",
+              "engine": "prefs.profile.activate"
+            },
+            {
+              "id": "profile_import_clipboard",
+              "kind": "action",
+              "label": "Re-import from clipboard",
+              "engine": "mesh.applyMesh"
+            },
+            {
+              "id": "profile_import_vault",
+              "kind": "action",
+              "label": "Re-import from vault",
+              "engine": "nav.account"
+            },
+            {
+              "id": "profile_diff",
+              "kind": "action",
+              "label": "Diff vs declared",
+              "engine": "view.diff"
+            },
+            {
+              "id": "profile_export_text",
+              "kind": "action",
+              "label": "Copy as text",
+              "engine": "clipboard.profile"
+            },
+            {
+              "id": "profile_export_qr",
+              "kind": "action",
+              "label": "Show as QR",
+              "engine": "view.qr"
+            },
+            {
+              "id": "profile_export_folder",
+              "kind": "action",
+              "label": "Export all to a folder",
+              "engine": "saf.exportProfiles"
+            },
+            {
+              "id": "conf_import",
+              "kind": "action",
+              "label": "Import .conf",
+              "engine": "saf.importConf"
+            },
+            {
+              "id": "conf_export",
+              "kind": "action",
+              "label": "Export this tunnel",
+              "engine": "saf.exportConf"
+            }
+          ]
+        },
+        {
+          "id": "routes",
+          "label": "Routes",
+          "icon": "ic_wg",
+          "controls": [
+            {
+              "id": "route_filter",
+              "kind": "choice",
+              "label": "Show",
+              "default": "all",
+              "choices": [
+                "all",
+                "default",
+                "subnet",
+                "host",
+                "nat64"
+              ],
+              "engine": "view.routeFilter"
+            },
+            {
+              "id": "excluded_apps",
+              "kind": "list",
+              "label": "Apps outside the tunnel",
+              "engine": "prefs.excludedApps"
+            }
+          ]
+        },
+        {
+          "id": "controls",
+          "label": "Controls",
+          "icon": "ic_wg",
+          "controls": [
+            {
+              "id": "connect",
+              "kind": "switch",
+              "group": "tunnel",
+              "label": "Connected",
+              "default": false,
+              "engine": "state.set"
+            },
+            {
+              "id": "reconnect",
+              "kind": "action",
+              "group": "tunnel",
+              "label": "Reconnect",
+              "engine": "state.reconnect"
+            },
+            {
+              "id": "auto_boot",
+              "kind": "switch",
+              "group": "start",
+              "label": "Connect on boot",
+              "default": false,
+              "unsupported": "The engine exposes up and down only, and this app has no boot trigger for it; Android's Always-on VPN (VPN settings) is the supported way to start a tunnel at boot."
+            },
+            {
+              "id": "auto_wifi",
+              "kind": "switch",
+              "group": "start",
+              "label": "Connect on Wi-Fi",
+              "default": false,
+              "unsupported": "Neither the engine nor this app watches the network type, so there is nothing to trigger a connect when Wi-Fi comes up."
+            },
+            {
+              "id": "auto_mobile",
+              "kind": "switch",
+              "group": "start",
+              "label": "Connect on mobile data",
+              "default": false,
+              "unsupported": "Neither the engine nor this app watches the network type, so there is nothing to trigger a connect on mobile data."
+            },
+            {
+              "id": "kill_switch",
+              "kind": "switch",
+              "group": "start",
+              "label": "Kill switch (block without VPN)",
+              "default": false,
+              "engine": "read.lockdown",
+              "unsupported": "Android's lockdown is a system setting of the VPN app, set in Settings > VPN; the engine can report it but not change it."
+            },
+            {
+              "id": "vpn_settings",
+              "kind": "action",
+              "group": "start",
+              "label": "Open Android VPN settings",
+              "engine": "nav.vpnSettings"
+            },
+            {
+              "id": "dns_preset",
+              "kind": "choice",
+              "group": "network",
+              "label": "DNS preset",
+              "default_from": "dns.default_preset",
+              "choices_from": "dns.presets",
+              "engine": "fleetdns.preset"
+            },
+            {
+              "id": "mtu",
+              "kind": "number",
+              "group": "network",
+              "label": "MTU",
+              "default_from": "interface_mtu",
+              "min": 1280,
+              "max": 1500,
+              "engine": "prefs.mtu"
+            },
+            {
+              "id": "keepalive",
+              "kind": "number",
+              "group": "network",
+              "label": "Persistent keepalive (s)",
+              "default": 25,
+              "min": 0,
+              "max": 65535,
+              "engine": "prefs.keepalive"
+            },
+            {
+              "id": "tunnel_name",
+              "kind": "text",
+              "group": "identity",
+              "label": "Tunnel name",
+              "default_from": "tunnel_name",
+              "engine": "prefs.tunnelName"
+            },
+            {
+              "id": "address",
+              "kind": "text",
+              "group": "identity",
+              "label": "Interface address",
+              "default_from": "interface_address",
+              "engine": "prefs.address"
+            },
+            {
+              "id": "listen_port",
+              "kind": "text",
+              "group": "identity",
+              "label": "Listen port",
+              "default": "",
+              "engine": "prefs.listenPort"
+            },
+            {
+              "id": "private_key",
+              "kind": "secret",
+              "group": "identity",
+              "label": "Private key",
+              "engine": "prefs.privateKey"
+            },
+            {
+              "id": "generate_key",
+              "kind": "action",
+              "group": "identity",
+              "label": "Generate keypair",
+              "engine": "prefs.generateKey"
+            }
+          ]
+        },
+        {
+          "id": "log",
+          "label": "Log",
+          "icon": "ic_wg",
+          "controls": [
+            {
+              "id": "log_copy",
+              "kind": "action",
+              "label": "Copy",
+              "engine": "clipboard.log"
+            },
+            {
+              "id": "log_clear",
+              "kind": "action",
+              "label": "Clear",
+              "engine": "log.clear"
+            }
+          ]
+        }
       ]
     },
     "_doc_wireguard_default": "Seeds the Configs/WireGuard form on first run. The phone is a single-tunnel mesh spoke (Android allows one active WG profile) carrying TWO peers / two meshes — gcp-proxy wg0 (10.0.0.0/24) and oci-analytics wg-public (10.1.0.0/24), mirrored from vault/.../wireguard/termux-public/config. The network-popup Mesh section probes each peer's hub (.1 of its allowed_ips) as a separate light. peer.public_key IS seeded — WireGuard PUBLIC keys are non-secret (the hubs' public identity, already in the public cloud repo). interface_private_key + peer.preshared_key are NOT seeded (the private key is the credential — Pillar 7): generate via the in-app Generate Keypair button, or import the merged .conf / paste manually. All values are FIRST-RUN defaults, user-editable at runtime via WireGuardFragment (Add/Remove Peer; persisted in WireGuardPrefs). ALIGNED WITH THE VAULT, which is the config that demonstrably works on phones — this block had drifted into handing out three defects at once: gcp-proxy on udp/51820 (a filterable port; the hub redirects udp/443 to it precisely so the tunnel survives carrier port filtering), MTU 1280 (below the 1380 the working profiles use), and 1.1.1.1/1.0.0.1 in the resolver list (a mesh-only-DNS policy violation — a public resolver in the list means mesh names resolve off-mesh, or not at all). It now matches ui.wireguard_profiles, which was already vault-aligned; the two must not disagree, since one seeds the form and the other is what the export writes. oci-analytics stays on :51821, which is its real listen port.",

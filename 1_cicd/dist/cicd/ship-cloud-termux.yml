@@ -40,6 +40,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       #   input: "ab_cloud-terminal-store/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-termux-fork-engine.sh"

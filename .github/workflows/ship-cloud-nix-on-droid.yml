@@ -40,6 +40,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
       #   input: "ab_cloud-terminal-store/**"
       #   input: "ac_cloud-termux/rootfs/rootfs.json"
