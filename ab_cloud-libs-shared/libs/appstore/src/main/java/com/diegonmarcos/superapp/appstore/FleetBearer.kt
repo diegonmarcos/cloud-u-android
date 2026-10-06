@@ -51,11 +51,12 @@ object FleetBearer {
     }
 
     /** Which source answered, for the settings line; never the token. */
-    enum class Source { SUPERAPP, OWN, NONE }
+    enum class Source { ACCOUNT, SUPERAPP, OWN, NONE }
 
     fun source(ctx: Context): Source = when {
-        // #874 the fleet's bearer, whichever of Cloud Account / SuperApp supplied it (the Store line says "the fleet's").
-        fromAccount(ctx).isNotEmpty() || fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP
+        // #874 the resolve() order, named: Cloud Account first, then SuperApp, then this app's own entry.
+        fromAccount(ctx).isNotEmpty() -> Source.ACCOUNT
+        fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP
         Own(ctx).token.isNotBlank() -> Source.OWN
         else -> Source.NONE
     }

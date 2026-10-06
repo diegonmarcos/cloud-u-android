@@ -116,7 +116,11 @@ check() {
   printf '%s' "$sd" | grep -q 'DownloadFailure.activeResolver *=' && printf '%s' "$sd" | grep -Eq 'var presetOf:' && ok "StoreDns names the resolvers tried and takes the preset from the host" || bad "StoreDns lost the failure wording or the preset hook"
   printf '%s' "$ap" | grep -q 'FeedViewer.fleetBearer *=.*FleetBearer.resolve(this)' && ok "Cloud Store feeds read the bearer through FleetBearer.resolve" || bad "Cloud Store feeds do not read FleetBearer.resolve"
   local fb; fb="$(strip "$L/FleetBearer.kt")"
-  printf '%s' "$fb" | grep -q 'fun resolve(ctx: Context): String = fromSuperApp(ctx).ifEmpty { Own(ctx).token' && ok "bearer: SuperApp's token first, own entry as the fallback" || bad "FleetBearer.resolve order is not SuperApp then own"
+  printf '%s' "$fb" | grep -q 'fun resolve(ctx: Context): String = fromAccount(ctx).ifEmpty { fromSuperApp(ctx) }.ifEmpty { Own(ctx).token' && ok "bearer: Cloud Account first, then SuperApp, own entry as the fallback" || bad "FleetBearer.resolve order is not Account, SuperApp, own"
+  # the settings line names the source that really answered (never "SuperApp" for a token Cloud Account supplied)
+  printf '%s' "$fb" | grep -q 'enum class Source { ACCOUNT, SUPERAPP, OWN, NONE }' && printf '%s' "$fb" | grep -q 'fromAccount(ctx).isNotEmpty() -> Source.ACCOUNT' && printf '%s' "$fb" | grep -q 'fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP' && ok "FleetBearer.source tells Cloud Account from SuperApp, in the resolve order" || bad "FleetBearer.source does not name Cloud Account / SuperApp separately"
+  local ma; ma="$(strip "$S/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt")"
+  printf '%s' "$ma" | grep -q 'Source.ACCOUNT -> "Supplied by Cloud Account' && printf '%s' "$ma" | grep -q 'Source.SUPERAPP -> "Supplied by Cloud SuperApp' && printf '%s' "$ma" | grep -q 'Source.OWN -> "Using the token entered below' && ok "the Store's bearer line names its real source (Account, SuperApp or its own entry)" || bad "the Store's bearer line does not name Cloud Account / SuperApp / its own entry"
   local pv; pv="$(strip "$P/cloud/FleetBearerProvider.kt")"
   printf '%s' "$pv" | grep -q 'checkCallingPermission(FleetConfig.PERMISSION)' && printf '%s' "$pv" | grep -q 'method != FleetBearer.METHOD_BEARER' && ok "provider re-checks CONSTELLATION_DATA in call() and serves one method" || bad "provider does not re-check the permission or accepts other methods"
   python3 - "$PM" <<'PY' && ok "manifest exports the provider behind CONSTELLATION_DATA" || bad "provider missing from the manifest or not signature-guarded"
@@ -217,7 +221,9 @@ mutate "Cloud Store skips StoreDns" "$A" 'StoreDns.start(this)' '' || M=$((M+1))
 mutate "SuperApp skips StoreDns" super/App.kt 'com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)' '' || M=$((M+1))
 mutate "StoreDns loses the preset hook" lib/StoreDns.kt '@Volatile var presetOf:' '@Volatile var presetOfX:' || M=$((M+1))
 mutate "Cloud Store feeds lose the bearer" "$A" 'FleetBearer.resolve(this)' '""' || M=$((M+1))
-mutate "own token preferred over SuperApp's" lib/FleetBearer.kt 'fromSuperApp(ctx).ifEmpty { Own(ctx).token.trim() }' 'Own(ctx).token.trim().ifEmpty { fromSuperApp(ctx) }' || M=$((M+1))
+mutate "own token preferred over the fleet's" lib/FleetBearer.kt 'fromAccount(ctx).ifEmpty { fromSuperApp(ctx) }.ifEmpty { Own(ctx).token.trim() }' 'Own(ctx).token.trim().ifEmpty { fromAccount(ctx) }.ifEmpty { fromSuperApp(ctx) }' || M=$((M+1))
+mutate "a token from Cloud Account labelled SuperApp" lib/FleetBearer.kt 'fromAccount(ctx).isNotEmpty() -> Source.ACCOUNT' 'fromAccount(ctx).isNotEmpty() -> Source.SUPERAPP' || M=$((M+1))
+mutate "the bearer line loses Cloud Account" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'Source.ACCOUNT -> "Supplied by Cloud Account' 'Source.ACCOUNT -> "Supplied by Cloud SuperApp' || M=$((M+1))
 mutate "provider skips the permission re-check" super/cloud/FleetBearerProvider.kt 'checkCallingPermission(FleetConfig.PERMISSION)' 'checkCallingPermission("x")' || M=$((M+1))
 mutate "provider unguarded in the manifest" super.xml 'android:authorities="${applicationId}.fleetbearer"
             android:exported="true"

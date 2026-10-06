@@ -58,6 +58,14 @@
   "com.google.ar": {
    "licence": "LicenseRef-Google-ARCore-Terms",
    "note": "proprietary; Google APIs ToS + ARCore Additional Terms (see ac_cloud-calc/NOTICE.md)"
+  },
+  "org.jetbrains.compose": {
+   "licence": "Apache-2.0",
+   "note": "Compose Multiplatform (Kotlin/Wasm web build)"
+  },
+  "com.diegonmarcos.fleet": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "note": "own code: the fleet-ui included build (ab_cloud-libs-shared/web), not a published dependency"
   }
  },
  "directories": {
@@ -613,6 +621,14 @@
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },
   "ac_cloud-vault/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ab_cloud-libs-shared/web/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-store/web/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   }

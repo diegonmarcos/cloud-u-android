@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         Column(Modifier.fillMaxSize().padding(StoreDensity.dpValue(StoreDensity.S12).dp)) {
             Text("Fleet token", fontSize = StoreDensity.T_TITLE.sp)
             Text(when (source) {
+                FleetBearer.Source.ACCOUNT -> "Supplied by Cloud Account; the entry below is not used."
                 FleetBearer.Source.SUPERAPP -> "Supplied by Cloud SuperApp; the entry below is not used."
                 FleetBearer.Source.OWN -> "Using the token entered below."
                 FleetBearer.Source.NONE -> "No token: the Commits and CI/CD feeds read their public sources."

@@ -271,7 +271,7 @@ fun RuntimeTab(m: AccountModel) {
                 a.optJSONArray("roster")?.let { ro -> for (i in 0 until ro.length()) Text(rosterLine(ro.optJSONObject(i)),
                     color = p.textPrimary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(AccountTags.runtimeRoster(section.id))) }
                 // #573 the whole declared section applied on ONE tap (mesh: all profiles, mail: all accounts).
-                if (section.runtime.applyAll) ActionButton(stringResource(R.string.account_apply_all), AccountTags.runtimeApplyAll(section.id), !reading) { applyAll(section.id) }
+                if (VaultCockpit.layout.sections.firstOrNull { it.id == section.id }?.runtime?.applyAll == true) ActionButton(stringResource(R.string.account_apply_all), AccountTags.runtimeApplyAll(section.id), !reading) { applyAll(section.id) }
                 if (observed.isNotEmpty()) Text(stringResource(R.string.account_runtime_fields, observed.size), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
                 for (path in observed) {
                     Text(path, color = p.textSecondary, style = MaterialTheme.typography.labelMedium)

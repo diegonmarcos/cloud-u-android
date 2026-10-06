@@ -21,8 +21,14 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       drawn by PageTabs / PageTabsView
   N6  every exemption names a real app and carries a reason; an exempt app does not
       already pass N1-N5 (it migrated: delete its exemption)
+  N7  parity: the island and the tab strips look the SAME in every app, because the look
+      is libs:bottomnav's alone. A held app's island/strip call sites pass no colour
+      scheme, palette, dimen, typography, elevation, size or inset; no source assigns
+      such a property on BottomNavIslandView / PageTabsView; the app declares no
+      island-ish colour/dimen/style resource of its own; and some source calls the
+      lib's FleetChrome.apply (the window Cloud SuperApp has)
 
-Rules N1-N5 hold for every app that is NOT exempt. The baseline is all-exempt, so
+Rules N1-N5 and N7 hold for every app that is NOT exempt. The baseline is all-exempt, so
 this is green today; each migration batch deletes its apps' entries.
 
 USAGE  cloud-android-nav-shape-guard.py [ROOT]
@@ -117,6 +123,68 @@ def needs_strip(sections):
     return any(multi(s.get("pages")) for s in sections if isinstance(s, dict))
 
 
+def top_level(text, open_idx):
+    """The text of the call whose `(` is at open_idx with everything nested (inner parens,
+    brackets, braces, strings) blanked: what is left is the call's own top-level arguments."""
+    out, depth, i, n = [], 0, open_idx, len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = i + 1
+            while j < n and text[j] not in '"\n':
+                j += 2 if text[j] == "\\" else 1
+            out.append(" " * (j + 1 - i)); i = j + 1
+            continue
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            if depth == 0:
+                break
+        out.append(c if depth == 1 and c not in "([{" else " ")
+        i += 1
+    return "".join(out)
+
+
+RES_NAME = re.compile(r"<(?:color|dimen|integer|fraction|style|attr|font|bool)\s+name=\"([^\"]+)\"")
+
+
+def check_parity(root, app, spec, code, bad):
+    """N7: nothing app-side can change how the island and the strips look."""
+    n7 = spec["n7"]
+    rel = lambda p: os.path.relpath(p, root)
+    calls = re.compile(r"\b(%s)\s*\(" % "|".join(re.escape(c) for c in n7["calls"]))
+    args = re.compile(r"(?<![\w.])(%s)\s*=(?!=)" % "|".join(re.escape(a) for a in n7["forbidden_args"]))
+    # `v.insets = x` and a bare `insets = x` (inside an `apply { }`), but not a declaration (`val insets = x`)
+    props = re.compile(r"(?:(?<=\.)|(?<![\w.])(?<!val )(?<!var ))(%s)\s*=(?!=)" % "|".join(re.escape(a) for a in n7["forbidden_props"]))
+    for p, text in code.items():
+        if not p.endswith(".kt"):
+            continue
+        for m in calls.finditer(text):
+            if re.search(r"\bfun\s+$", text[max(0, m.start() - 8):m.start()]):
+                continue  # a declaration, not a call
+            hit = args.search(top_level(text, m.end() - 1))
+            if hit:
+                bad.append(f"N7 {app}: {rel(p)}:{line_of(text, m.start())} passes `{hit.group(1)}` to {m.group(1)} — "
+                           f"the island and strips look is libs:bottomnav's alone (FleetChrome); an app passes entries, selection and callbacks")
+        if any(v in text for v in n7["view_hosts"]):
+            for m in props.finditer(text):
+                bad.append(f"N7 {app}: {rel(p)}:{line_of(text, m.start())} assigns `{m.group(1)}` on an island/strip view — "
+                           f"the property is gone on purpose; the look is libs:bottomnav's alone")
+    names = re.compile(n7["resource_names"])
+    for t in (os.path.join(root, app, "app", "src", "main", "res"), os.path.join(root, app, "src", "main", "res")):
+        for p in walk(t, (".xml",)):
+            if f"{os.sep}values" not in p:
+                continue
+            for m in RES_NAME.finditer(blank_comments(read(p), xml=True)):
+                if names.search(m.group(1)):
+                    bad.append(f"N7 {app}: {rel(p)} declares `{m.group(1)}` — an island/strip colour, dimen or style "
+                               f"of its own; libs:bottomnav's res/values is the one declaration")
+    if not any(n7["chrome_call"] in t for t in code.values()):
+        bad.append(f"N7 {app}: no source calls {n7['chrome_call']}…) — every app wears the window Cloud SuperApp has "
+                   f"(edge-to-edge, transparent bars); call the lib's FleetChrome from the main activity")
+
+
 def check_app(root, app, ui, spec, bad):
     sections = [s for s in (ui.get("sections") or []) if isinstance(s, dict)]
     ids = {s.get("id") for s in sections}
@@ -190,6 +258,9 @@ def check_app(root, app, ui, spec, bad):
     if needs_strip(sections) and not any(u in t for t in code.values() for u in spec["strip_users"]):
         bad.append(f"N5 {app}: a section has two or more pages but no source renders PageTabs/PageTabsView")
 
+    # N7
+    check_parity(root, app, spec, code, bad)
+
 
 def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
@@ -234,7 +305,7 @@ def main(argv):
 
     for b in bad:
         print("FAIL     " + b)
-    print(f"── {len(apps)} app(s): {checked} held to N1-N5, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
+    print(f"── {len(apps)} app(s): {checked} held to N1-N5 + N7, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
     return 1 if bad else 0
 
 

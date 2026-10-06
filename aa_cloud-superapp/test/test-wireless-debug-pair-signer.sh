@@ -47,25 +47,25 @@ code() { grep -vE '^[[:space:]]*(//|\*|/\*|#)' "$1"; }
 echo "== wireless debugging pair: BouncyCastle signer survives R8 =="
 
 # ── T1 ── provider INSTANCE on the signer + converter, never the name "BC"
-if code "$MANAGER" | grep -q 'setProvider("BC")'; then
+if grep -q 'setProvider("BC")' <<<"$(code "$MANAGER")"; then
   bad "T1 AdbManager pins provider \"BC\" by NAME — that resolves to Android's stub, which has no RSA signer"
-elif code "$MANAGER" | grep -A1 'JcaContentSignerBuilder(' | grep -q 'setProvider(bcProvider)' \
-  && code "$MANAGER" | grep -A1 'JcaX509CertificateConverter()' | grep -q 'setProvider(bcProvider)'; then
+elif grep -q 'setProvider(bcProvider)' <<<"$(code "$MANAGER" | grep -A1 'JcaContentSignerBuilder(')" \
+  && grep -q 'setProvider(bcProvider)' <<<"$(code "$MANAGER" | grep -A1 'JcaX509CertificateConverter()')"; then
   ok "T1 signer and cert converter take the BouncyCastleProvider instance"
 else
   bad "T1 signer/converter no longer pass the bcProvider instance"
 fi
 
 # ── T2 ── the keep rule lives with the dependency, as a consumer rule
-if code "$RULES" | grep -qE '^-keep class org\.bouncycastle\.\*\* \{ \*; \}'; then
+if grep -qE '^-keep class org\.bouncycastle\.\*\* \{ \*; \}' <<<"$(code "$RULES")"; then
   ok "T2 consumer-rules.pro keeps org.bouncycastle.** — R8 cannot strip the reflectively-loaded \$Mappings"
 else
   bad "T2 no '-keep class org.bouncycastle.** { *; }' in consumer-rules.pro — the shipping (minified) variant loses RSA signing again"
 fi
 
 # ── T3 ── no by-name provider lookup anywhere on the pairing path
-if grep -rn --include='*.kt' --include='*.java' -E 'getInstance\([^)]*,[[:space:]]*"BC"\)|Security\.getProvider\("BC"\)' \
-     "$LIB/src/main" | grep -q .; then
+if grep -q . <<<"$(grep -rn --include='*.kt' --include='*.java' -E 'getInstance\([^)]*,[[:space:]]*"BC"\)|Security\.getProvider\("BC"\)' \
+     "$LIB/src/main")"; then
   bad "T3 a by-name \"BC\" provider lookup exists on the adbdebug path"
 else
   ok "T3 no by-name \"BC\" provider lookup under shizuku-adb-debug-tools"

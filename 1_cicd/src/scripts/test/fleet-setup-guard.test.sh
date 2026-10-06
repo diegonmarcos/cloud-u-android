@@ -63,7 +63,7 @@ json.dump(c, open(sys.argv[2], "w"))
 PY
 }
 run() { python3 "$GUARD" --root "$1" --policy "${2:-$1/policy.json}" 2>&1; }
-red()   { local out; out="$(run "$1" "${3:-}")"; if [ $? -ne 0 ] && printf '%s' "$out" | grep -q "$2"; then ok "$4"; else fail "$4 (wanted red with: $2) :: $out"; fi; }
+red()   { local out; out="$(run "$1" "${3:-}")"; if [ $? -ne 0 ] && grep -q "$2" <<<"$out"; then ok "$4"; else fail "$4 (wanted red with: $2) :: $out"; fi; }
 green() { local out; out="$(run "$1" "${2:-}")"; if [ $? -eq 0 ]; then ok "$3"; else fail "$3 :: $out"; fi; }
 setpol() { python3 - "$1/policy.json" "$2" <<'PY'
 import json, sys

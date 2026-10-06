@@ -157,7 +157,7 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
 
     /** #573 Runtime ▸ app ▸ Apply all: the declared section [id] applied as a unit (S, else L). */
     fun applySection(id: String): String {
-        val section = apps.firstOrNull { it.id == id } ?: return "✗ $id: not a cockpit app".also { changed(it) }
+        val section = VaultCockpit.layout.sections.firstOrNull { it.id == id } ?: return "✗ $id: not a cockpit app".also { changed(it) }
         val (_, body) = migrationSource()
         if (body == null) return "✗ no server file and no local copy — fetch it on Connect".also { changed(it) }
         val line = AccountRuntime.applyAll(ctx, section, body)

@@ -43,6 +43,12 @@
   },
   "posters": [
     {
+      "path": "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbPairingService.kt",
+      "kind": "user_action",
+      "notify_calls": 2,
+      "why": "Wireless-debugging pairing (Shizuku's flow): the foreground service's code-entry notification (a RemoteInput the user types the pairing code into, which a deep link cannot carry) and its dismissible pass/fail result. Not an alert about the fleet."
+    },
+    {
       "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/HealthBadgeService.kt",
       "kind": "badge",
       "notify_calls": 1,

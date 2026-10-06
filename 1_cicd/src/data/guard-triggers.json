@@ -162,6 +162,7 @@
         "ab_cloud-libs-shared/build.json",
         "ab_cloud-libs-shared/libs/*/build.gradle",
         "ab_cloud-libs-shared/libs/*/src/commonMain/**",
+        "ab_cloud-libs-shared/libs/ui-kit/src/main/**",
         "ab_cloud-libs-shared/web/**"
       ]
     }
