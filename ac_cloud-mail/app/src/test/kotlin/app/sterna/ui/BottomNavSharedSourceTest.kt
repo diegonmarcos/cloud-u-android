@@ -20,19 +20,20 @@ import org.junit.Test
 class BottomNavSharedSourceTest {
 
     @Test
-    fun `SternaApp renders the SHARED bottom nav, not an app-local copy`() {
+    fun `SternaApp renders mail's bar, which draws the SHARED host`() {
         val sternaApp = codeLines("app/src/main/kotlin/app/sterna/ui/SternaApp.kt")
+        val mailBar = codeLines("app/src/main/kotlin/app/sterna/ui/MailBottomNav.kt")
         assertTrue(
-            "SternaApp must draw the bottom nav from the shared module " +
-                "(com.diegonmarcos.superapp.bottomnav.BottomNavBar). Pointed back at an " +
-                "app-local `app.sterna.ui.navigation.BottomNavBar`, this app silently reverts to " +
-                "a fifth private copy of the nav (#228/#261 defect).",
-            sternaApp.contains("import com.diegonmarcos.superapp.bottomnav.BottomNavBar"),
+            "MailBottomNav must draw the bar through the shared module " +
+                "(com.diegonmarcos.superapp.bottomnav.BottomNavHost). The item TABLE is mail's " +
+                "(#868 moved it here); the island that draws it must stay the one in libs:bottomnav.",
+            mailBar.contains("import com.diegonmarcos.superapp.bottomnav.BottomNavHost") &&
+                mailBar.any { it.startsWith("BottomNavHost(") },
         )
-        // The bar must actually be drawn on the destinations it owns, not merely imported.
+        // The bar must actually be drawn on the destinations it owns, not merely declared.
         assertTrue(
-            "SternaApp imports the shared BottomNavBar but no longer renders it on a destination " +
-                "it owns (inbox / home / rss). An import that never draws is a nav that is wired-nothing.",
+            "SternaApp no longer renders mail's BottomNavBar on a destination it owns " +
+                "(inbox / home / rss). A bar that never draws is a nav that is wired-nothing.",
             listOf("\"inbox\"", "\"home\"", "\"rss\"").all { route ->
                 sternaApp.any { it.startsWith("BottomNavBar(nav = nav, currentRoute = $route") }
             },

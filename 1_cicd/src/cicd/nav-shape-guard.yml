@@ -1,0 +1,61 @@
+name: "Nav shape guard — one navigation declaration per app, drawn by libs:bottomnav, and no second nav"
+
+# WHY THIS EXISTS (#868).
+# Every app grew its own bottom bar and its own tab strip: BottomNavigationView in one,
+# a TabRow in the next, a private BottomNav composable in a third, ids spelled out in
+# Kotlin that build.json never declared. The fleet now has ONE declaration
+# (build.json::ui.bottom_nav + ui.sections[].pages[]) read through libs:bottomnav's
+# NavDecl and drawn by its BottomNavIsland / PageTabs. This job holds an app to that
+# once it has migrated: bar ids a subset of the sections, the lib compiled in, no
+# hand-rolled nav widget, the declaration baked into BuildConfig, no undeclared id
+# literal, and PageTabs wherever a section has two pages or more.
+#
+# THE BASELINE IS ALL-EXEMPT. No app has migrated at the time of writing, so
+# 1_cicd/src/data/nav-shape.json lists every app with the reason it is not held yet,
+# and this job is green today. Each migration batch deletes its apps' entries; an
+# exempt app that already passes the rules is reported as stale, so an exemption
+# cannot outlive its reason.
+#
+# PATH FILTER. The guard reads every app's build.json and gradle scripts, the sources
+# of apps that are not exempt, and the libs:bottomnav sources; the list lives in
+# 1_cicd/src/data/guard-triggers.json, not here, so a new input is declared once.
+#
+# BOTH STEPS MATTER. The first proves the fleet holds its nav shape; the second proves
+# the guard would have said so if it did not. A guard only ever watched succeeding is
+# indistinguishable from one that returns 0 unconditionally.
+
+on:
+  push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "*/app/build.gradle"
+      - "*/app/build.gradle.kts"
+      - "*/app/src/main/**"
+      - "*/build.gradle"
+      - "*/build.gradle.kts"
+      - "*/build.json"
+      - "*/settings.gradle"
+      - "*/settings.gradle.kts"
+      - "*/src/main/**"
+      - "1_cicd/src/cicd/nav-shape-guard.yml"
+      - "1_cicd/src/data/nav-shape.json"
+      - "1_cicd/src/scripts/cloud-android-nav-shape-guard.py"
+      - "1_cicd/src/scripts/test/nav-shape-guard.test.sh"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nav-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every app declares one nav, drawn by libs:bottomnav
+        run: python3 1_cicd/src/scripts/cloud-android-nav-shape-guard.py
+      - name: The guard still fails on each way an app can grow a second nav
+        run: bash 1_cicd/src/scripts/test/nav-shape-guard.test.sh

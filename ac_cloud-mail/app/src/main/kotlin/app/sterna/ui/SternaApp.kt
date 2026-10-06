@@ -70,7 +70,6 @@ import app.sterna.ui.snoozed.SnoozedScreen
 import app.sterna.ui.search.SearchScreen
 import app.sterna.ui.onboarding.WelcomeScreen
 import app.sterna.ui.settings.SettingsScreen
-import com.diegonmarcos.superapp.bottomnav.BottomNavBar
 import app.sterna.ui.rss.RssScreen
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow

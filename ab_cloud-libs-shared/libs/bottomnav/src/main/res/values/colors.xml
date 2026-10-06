@@ -13,4 +13,12 @@
     <color name="glass_orb_fill">#FF1A0033</color>
     <color name="glass_orb_stroke">#55B794F4</color>
     <color name="glass_orb_ripple">#22B794F4</color>
+
+    <!-- #868 PageTabs pill colours, from superapp's AppTabsStyle.makePillBg / repaint. -->
+    <color name="page_tabs_selected_fill">#447C3AED</color>
+    <color name="page_tabs_selected_stroke">#66E9D8FD</color>
+    <color name="page_tabs_selected_text">#FFFFFFFF</color>
+    <color name="page_tabs_idle_fill">#22FFFFFF</color>
+    <color name="page_tabs_idle_stroke">#33FFFFFF</color>
+    <color name="page_tabs_idle_text">#AAFFFFFF</color>
 </resources>

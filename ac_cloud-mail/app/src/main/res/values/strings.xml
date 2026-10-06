@@ -1263,4 +1263,18 @@
     <string name="rss_empty">This feed has no articles yet</string>
     <string name="rss_open_failed">Could not open this article</string>
     <string name="rss_invalid_url">That does not look like a web address</string>
+
+    <!-- cloud-mail's five nav items (#465). Each string is the item's visible label AND its
+         accessible name. When the bar collapses to icons only (#532), it moves onto the icon. -->
+    <string name="nav_bar_mail">Mail</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Home</string>
+    <string name="nav_bar_rss">News</string>
+    <string name="nav_bar_video">Video</string>
+    <!-- The launch items are interim links to other apps (Diego: "for now"). The sentence is what
+         the bar says when the target app is not on the device — honest and specific, never a
+         silent no-op and never a claim that it is missing when it is present. -->
+    <string name="nav_chat_not_installed">Telegram is not installed</string>
+    <string name="nav_video_not_installed">WhatsApp Business is not installed</string>
+    <string name="nav_launch_not_installed">That app is not installed</string>
 </resources>

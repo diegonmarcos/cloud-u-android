@@ -10,7 +10,7 @@
 // BottomNavIslandView.collapseOnScrollIn, which #673 added because the View shells drove the
 // collapse from nowhere and so never showed it. It
 // is ported, not wrapped: there is no AndroidView here. Items are injected (BottomNavEntry), so
-// no app's menu is baked in. cloud-mail's five-item table (BottomNav.kt) is its first consumer.
+// no app's menu is baked in. cloud-mail owns its own five-item table (#868 moved it out of this module).
 // superapp consumes it since #531 through BottomNavIslandView, the Compose host an XML shell
 // drops into its layout. me / nav / notes still draw their own View navs until their pushes.
 //

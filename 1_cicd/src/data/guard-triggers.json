@@ -68,6 +68,24 @@
         "ac_cloud-notes/**"
       ]
     },
+    "nav-shape-guard.yml": {
+      "_doc": "#868: every app's build.json and gradle scripts (N1/N2/N4 bake), the sources of the apps that are NOT exempt (N3/N4/N5; none today, declared so the first migrated app is already covered), and libs:bottomnav's NavDecl/PageTabs/PageTabsView (N0).",
+      "paths": [
+        "1_cicd/src/data/nav-shape.json",
+        "1_cicd/src/scripts/cloud-android-nav-shape-guard.py",
+        "1_cicd/src/scripts/test/nav-shape-guard.test.sh",
+        "*/build.json",
+        "*/build.gradle",
+        "*/build.gradle.kts",
+        "*/settings.gradle",
+        "*/settings.gradle.kts",
+        "*/app/build.gradle",
+        "*/app/build.gradle.kts",
+        "*/app/src/main/**",
+        "*/src/main/**",
+        "ab_cloud-libs-shared/libs/bottomnav/**"
+      ]
+    },
     "phone-apps-page-guard.yml": {
       "_doc": "The SuperApp's Apps page sources phone-apps-page-guard.json names.",
       "paths": [

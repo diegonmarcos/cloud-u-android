@@ -1,9 +1,9 @@
-package com.diegonmarcos.superapp.bottomnav
+package app.sterna.ui
 
 /**
  * cloud-mail's five bottom-navigation items (#465), in display order, with Home in the centre.
- * This is the item TABLE of one app. The bar that draws it is the fleet-wide [BottomNavIsland]
- * (#565), which takes its items injected as [BottomNavEntry]. [BottomNavBar] maps this table
+ * This is the item TABLE of one app. The bar that draws it is the fleet-wide [com.diegonmarcos.superapp.bottomnav.BottomNavIsland]
+ * (#565), which takes its items injected as [com.diegonmarcos.superapp.bottomnav.BottomNavEntry]. [BottomNavBar] maps this table
  * onto it. Each item's accessible name (strings.xml nav_bar_*) is also its visible label.
  *
  * Two of the five LAUNCH other apps and are not destinations of mail's NavHost. Tapping them
@@ -11,8 +11,8 @@ package com.diegonmarcos.superapp.bottomnav
  * the interim Telegram / WhatsApp Business link is declared, so swapping "Chat" for a real
  * in-app screen later is a change to this one table and nothing else.
  *
- * This table lives in the shared module only because mail was the module's first consumer.
- * Moving it into ac_cloud-mail is part of push 2 (#565).
+ * This table lived in libs:bottomnav while mail was the module's only consumer; it moved here
+ * with #868 (nav batch 0) so the lib holds no app's menu.
  */
 
 /** What a tap on a bottom-nav item does: move inside this app, or leave it for another app. */

@@ -37,4 +37,22 @@
     <!-- #536. The island spans 80% of the width it is given (the screen, when it is
          placed full-width), which leaves 10% clear on each side. -->
     <fraction name="bottom_nav_width_fraction">80%</fraction>
+
+    <!-- #868 PageTabs: the pill tab strip, ported value for value from superapp's AppTabsStyle
+         (makePill / makePillBg / inset / equalise) and its tab_strip_* dimens. PageTabsTest reads
+         these back, so the render is measured against the declaration and never restated. -->
+    <dimen name="page_tabs_strip_padding">4dp</dimen>
+    <dimen name="page_tabs_top_inset">10dp</dimen>
+    <dimen name="page_tabs_bottom_inset">10dp</dimen>
+    <dimen name="page_tabs_pill_pad_h">14dp</dimen>
+    <dimen name="page_tabs_pill_pad_v">8dp</dimen>
+    <dimen name="page_tabs_pill_margin">3dp</dimen>
+    <dimen name="page_tabs_pill_radius">18dp</dimen>
+    <dimen name="page_tabs_pill_stroke">1dp</dimen>
+    <dimen name="page_tabs_text_size">12sp</dimen>
+    <dimen name="page_tabs_text_min_size">8sp</dimen>
+    <dimen name="page_tabs_divider_pad">4dp</dimen>
+    <!-- Letter spacing in thousandths of an em (0.08em), and the fewest letters of a label ever shown. -->
+    <integer name="page_tabs_letter_spacing_milli">80</integer>
+    <integer name="page_tabs_min_chars">7</integer>
 </resources>

@@ -1,0 +1,95 @@
+{
+  "_doc": "#868 THE nav-shape ledger. Every app's navigation is ONE declaration in build.json::ui (bottom_nav ids <= 5, sections[].pages[] with optional pages[] one strip lower, default_section) drawn by libs:bottomnav (BottomNavIsland/BottomNavIslandView for the bar, PageTabs/PageTabsView for the pill strips) and read through NavDecl. Read by 1_cicd/src/scripts/cloud-android-nav-shape-guard.py (nav-shape-guard.yml). THE BASELINE IS ALL-EXEMPT: no app has migrated yet, so every app below is exempt WITH THE REASON it is, and the guard is green today. Each migration batch removes its apps' entries in the same commit it lands, and from then on the app is held to N1-N5. Removing an entry is the only way to opt an app IN; adding one needs a reason a reviewer can disagree with.",
+  "_doc_rules": "N1 ui.bottom_nav is at most 5 ids, each a ui.sections id, and ui.default_section is one of them. N2 the app compiles libs:bottomnav (a project dependency in its gradle scripts, or build.json modules). N3 no hand-rolled nav widget in the app's sources (forbidden below), comments blanked first so prose about a widget is not the widget. N4 the app's build.gradle bakes UI_BOTTOM_NAV and UI_SECTIONS_B64, and no id literal in Kotlin (id_calls, 'page:<section>/<page>') names a section or page build.json does not declare. N5 a section with two or more pages (or a page with two or more sub-pages) is drawn by PageTabs/PageTabsView. N6 every exemption carries a reason, names a real app, and an exempt app that already passes N1-N5 is stale (it migrated: delete the exemption). N0 libs:bottomnav still ships NavDecl, PageTabs and PageTabsView.",
+  "lib": "ab_cloud-libs-shared/libs/bottomnav",
+  "lib_symbols": {
+    "NavDecl.kt": "class NavDecl",
+    "PageTabs.kt": "fun PageTabs(",
+    "PageTabsView.kt": "class PageTabsView"
+  },
+  "max_bottom": 5,
+  "min_reason_chars": 30,
+  "id_calls": [
+    "byId",
+    "section",
+    "goSection",
+    "openSection"
+  ],
+  "strip_users": [
+    "PageTabs(",
+    "PageTabsView"
+  ],
+  "forbidden": [
+    {
+      "id": "BottomNavigationView",
+      "re": "\\bBottomNavigationView\\b"
+    },
+    {
+      "id": "NavigationBar",
+      "re": "\\bNavigationBar\\s*[({]"
+    },
+    {
+      "id": "NavigationRail",
+      "re": "\\bNavigationRail\\s*[({]"
+    },
+    {
+      "id": "BottomAppBar",
+      "re": "\\bBottomAppBar\\b"
+    },
+    {
+      "id": "TabLayout",
+      "re": "\\bTabLayout\\b"
+    },
+    {
+      "id": "ScrollableTabRow",
+      "re": "\\bScrollableTabRow\\s*\\("
+    },
+    {
+      "id": "PrimaryTabRow",
+      "re": "\\bPrimaryTabRow\\s*\\("
+    },
+    {
+      "id": "TabRow",
+      "re": "(?<![A-Za-z])TabRow\\s*\\("
+    },
+    {
+      "id": "local BottomNav",
+      "re": "@Composable\\s+(?:(?:private|internal|public)\\s+)?fun\\s+BottomNav\\b"
+    }
+  ],
+  "exempt": {
+    "aa_cloud-superapp": "Batch B (reshape dialect, #868 nav plan): launcher/Sections.kt becomes NavDecl; SectionTabsFragment/AppTabsStyle move into the lib; ShellBottomNav.kt stays.",
+    "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
+    "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
+    "ac_c3-watchtower": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
+    "ac_cloud-account": "Batch A (declare only, #868 nav plan): ui.sections = AccountHost's four tabs; AccountHost.styleTabs moves to the shared styler; the island joins MainActivity.",
+    "ac_cloud-agenda": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-browser": "Batch C (own nav into the lib, #868 nav plan): the island carries Browser/Search/Configs.",
+    "ac_cloud-c3": "Batch B (reshape dialect, #868 nav plan): tabs become ui.bottom_nav + ui.sections; Declarations.kt becomes NavDecl.",
+    "ac_cloud-c3-webserver": "Exempt by class (#868 nav plan): server wrapper; it has no screens to navigate between.",
+    "ac_cloud-calc": "Batch B (reshape dialect, #868 nav plan): ui.sections are inverted (Calculator/Measure/Jev become the bar), its ten tabs become page strips, the mode chips a sub-strip.",
+    "ac_cloud-camera": "Batch C (own nav into the lib, #868 nav plan): ui/BottomTabLayout.kt is deleted for the island; the gallery ViewPager stays.",
+    "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",
+    "ac_cloud-code": "Exempt by class (#868 nav plan): fork of an upstream code editor; navigation is the upstream's.",
+    "ac_cloud-contacts": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-dialer": "Exempt by class (#868 nav plan): fork of an upstream dialer; navigation is the upstream's.",
+    "ac_cloud-drive": "Batch B (reshape dialect, #868 nav plan): configs/sync/volumes pages become ui.sections[].pages rendered by PageTabs.",
+    "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
+    "ac_cloud-mail": "Batch A (declare only, #868 nav plan): nav keys declared; SternaApp's three BottomNavBar sites build the island from the declaration (its item table now lives in the app, #868 batch 0).",
+    "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",
+    "ac_cloud-me": "Batch B (reshape dialect, #868 nav plan): SectionFragment strips become PageTabsView; Sections.kt becomes NavDecl; bottom_nav:true/order become ui.bottom_nav[].",
+    "ac_cloud-media-center": "Exempt by class (#868 nav plan): fork of an upstream media centre; navigation is the upstream's.",
+    "ac_cloud-myterminal": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
+    "ac_cloud-nav": "Batch C (own nav into the lib, #868 nav plan): activity_main.xml's BottomNavigationView becomes BottomNavIslandView; fragmentForTab reads ui.sections; libs/maps' TabLayout becomes PageTabsView.",
+    "ac_cloud-news": "Batch D (WebView apps, #868 nav plan): an island shell with sections from the web page's top routes, else it stays exempt as a single WebView page.",
+    "ac_cloud-nix-on-droid": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
+    "ac_cloud-notes": "Exempt by class (#868 nav plan): its UI is not ours to reshape; navigation stays the app's own.",
+    "ac_cloud-office": "Exempt by class (#868 nav plan): its UI is not ours to reshape; navigation stays the app's own.",
+    "ac_cloud-search": "Batch A (declare only, #868 nav plan): nav keys derived from the verticals; Glass.kt's BottomNav and SearchShell.kt's BottomNavIsland call are deleted.",
+    "ac_cloud-store": "Batch A (declare only, #868 nav plan): MainActivity's TabRow becomes the island plus ui.sections; TABS move into build.json.",
+    "ac_cloud-termux": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
+    "ac_cloud-vault": "Batch E (fork, #868 nav plan): VaultUnlockedNavBarScreen.kt's NavigationBar becomes BottomNavIsland and libs:bottomnav joins the fork's modules.",
+    "ac_cloud-wallet": "Batch A (declare only, #868 nav plan): build.json gains ui.bottom_nav/ui.sections; libs/wallet/WalletTabsUi.kt reads them through NavDecl.",
+    "ac_cloud-writer": "Batch C (own nav into the lib, #868 nav plan): WriterRoutes.kt reads ui.sections; the Scaffold in MainActivity hosts the island."
+  }
+}

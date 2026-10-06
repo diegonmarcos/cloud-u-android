@@ -55,7 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -78,8 +85,8 @@ import org.robolectric.annotation.GraphicsMode
  * #565: the six bottom-nav behaviours, MEASURED on the real island rendered under Robolectric.
  * These are geometry proofs, not descriptions (#498). Every expected number is read back from
  * this module's own resources (R.dimen / R.fraction / R.color) or from the live theme, never
- * restated here (#363). The items are cloud-mail's real shipped table, so the labels tested
- * for overflow are the labels that actually ship. mdpi keeps px == dp and every edge on a
+ * restated here (#363). The items are a fixture with the labels of cloud-mail's shipped table,
+ * so the labels tested for overflow are the labels that ship. mdpi keeps px == dp and every edge on a
  * whole pixel, so a pixel probe reads a pixel that is either fully covered or fully uncovered.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -107,8 +114,15 @@ class BottomNavIslandTest {
     private fun px(id: Int): Float = res.getDimension(id)
     private val fill get() = Color(res.getColor(R.color.bottom_nav_island_fill, null))
 
-    private val ids = bottomNavItems.map { it.id }
-    private val destinations = bottomNavItems.filter { it.action == BottomNavAction.DESTINATION }.map { it.id }
+    private val ids = FIXTURE.map { it.first }
+    private val destinations = FIXTURE.filter { it.third }.map { it.first }
+
+    /** Five items shaped like cloud-mail's table (mail owns the real one since #868): the lib
+     *  holds no app's menu, so the geometry is measured on a fixture of the same labels. */
+    @Composable
+    private fun fixtureEntries(): List<BottomNavEntry> = FIXTURE.map {
+        BottomNavEntry(it.first, it.second, rememberVectorPainter(ICONS.getValue(it.first)))
+    }
 
     private var selectedId by mutableStateOf<String?>(null)
     /** null = the island's own default insets (the live window's). */
@@ -134,9 +148,9 @@ class BottomNavIslandTest {
                 val mod = Modifier.align(Alignment.BottomCenter)
                 val onSelect: (BottomNavEntry) -> Unit = { selectedId = it.id }
                 if (insets == null) {
-                    BottomNavIsland(mailEntries(), selectedId, onSelect, mod, collapse.collapsed)
+                    BottomNavIsland(fixtureEntries(), selectedId, onSelect, mod, collapse.collapsed)
                 } else {
-                    BottomNavIsland(mailEntries(), selectedId, onSelect, mod, collapse.collapsed, insets)
+                    BottomNavIsland(fixtureEntries(), selectedId, onSelect, mod, collapse.collapsed, insets)
                 }
             }
         }
@@ -334,7 +348,7 @@ class BottomNavIslandTest {
         assertTrue("#532 the page itself still scrolled", list.firstVisibleItemIndex > 0)
         for (id in ids) {
             compose.onAllNodesWithTag(labelTag(id), useUnmergedTree = true).assertCountEquals(0)
-            val name = res.getString(itemDescription(id))
+            val name = FIXTURE.first { it.first == id }.second
             compose.onNodeWithTag(iconTag(id), useUnmergedTree = true).assert(hasContentDescription(name))
         }
         val iconsOnly = 2 * px(R.dimen.bottom_nav_pill_inset) + 2 * px(R.dimen.bottom_nav_item_vertical_pad) + px(R.dimen.bottom_nav_icon_size)
@@ -358,7 +372,7 @@ class BottomNavIslandTest {
         compose.setContent {
             hostView = LocalView.current
             Box(Modifier.fillMaxSize().background(page).testTag(ROOT)) {
-                BottomNavIsland(mailEntries(), null, {}, Modifier.align(Alignment.BottomCenter), driven, WindowInsets(0, 0, 0, 0))
+                BottomNavIsland(fixtureEntries(), null, {}, Modifier.align(Alignment.BottomCenter), driven, WindowInsets(0, 0, 0, 0))
             }
         }
         compose.waitForIdle()
@@ -445,14 +459,14 @@ class BottomNavIslandTest {
 
     // ── #534 mail's bar hosts its screen ABOVE the island ────────────────────────────────
 
-    /** Mail's real [BottomNavBar] as SternaApp draws it: the screen is its content. [INNER] is a
+    /** The fleet's [BottomNavHost] as cloud-mail's bar draws it: the screen is its content. [INNER] is a
      *  screen that pads itself for the system bars, the way every M3 Scaffold in the app does. */
     private fun showMailBar() {
         compose.setContent {
             hostView = LocalView.current
             list = rememberLazyListState()
             Box(Modifier.fillMaxSize().testTag(ROOT)) {
-                BottomNavBar(rememberNavController(), destinations[0]) {
+                BottomNavHost(fixtureEntries(), destinations[0], {}) {
                     LazyColumn(Modifier.fillMaxSize().testTag(LIST), state = list) {
                         items(200) { Spacer(Modifier.fillMaxWidth().height(40.dp)) }
                     }
@@ -537,6 +551,15 @@ class BottomNavIslandTest {
     }
 
     private companion object {
+        /** id, label, is-a-destination. Mail's five, in mail's order, Home in the centre. */
+        val FIXTURE = listOf(
+            Triple("mail", "Mail", true), Triple("chat", "Chat", false), Triple("home", "Home", true),
+            Triple("rss", "News", true), Triple("video", "Video", false),
+        )
+        val ICONS = mapOf(
+            "mail" to Icons.Filled.Mail, "chat" to Icons.Filled.ChatBubble, "home" to Icons.Filled.Home,
+            "rss" to Icons.Filled.RssFeed, "video" to Icons.Filled.Videocam,
+        )
         const val ROOT = "test_root"
         const val LIST = "test_list"
         const val INNER = "test_inner"
@@ -544,6 +567,6 @@ class BottomNavIslandTest {
         /** The declared View-interop surface: the only files allowed to touch the View toolkit
          *  (#673's scroll-collapse driver is a ViewTreeObserver listener). Adding a file here is
          *  a deliberate architectural decision, which is why it is a list and not a wildcard. */
-        val INTEROP = setOf("BottomNavIslandView.kt")
+        val INTEROP = setOf("BottomNavIslandView.kt", "PageTabsView.kt")
     }
 }

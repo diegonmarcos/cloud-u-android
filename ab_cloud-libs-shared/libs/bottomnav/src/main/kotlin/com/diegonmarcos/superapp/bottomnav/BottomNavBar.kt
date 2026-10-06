@@ -3,7 +3,6 @@ package com.diegonmarcos.superapp.bottomnav
 import android.content.Context
 import android.os.PowerManager
 import android.provider.Settings
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -25,12 +24,6 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,8 +39,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -58,12 +49,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.navigation.NavController
 import kotlin.math.roundToInt
 
 /**
@@ -270,31 +259,22 @@ public class BottomNavCollapse : NestedScrollConnection {
 @Composable
 public fun rememberBottomNavCollapse(): BottomNavCollapse = remember { BottomNavCollapse() }
 
-// ── cloud-mail's bar: its item table (BottomNav.kt) rendered through the shared island ──
-
-/** Mail's five items as the island draws them. Labels are the accessible names in strings.xml. */
-@Composable
-internal fun mailEntries(): List<BottomNavEntry> = bottomNavItems.map {
-    BottomNavEntry(it.id, stringResource(itemDescription(it.id)), rememberVectorPainter(iconFor(it.id)))
-}
+// ── the host: a screen ABOVE the island, scroll-collapsing it (#534) ──
 
 /**
- * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared island, with the screen's
+ * The fleet's Compose bottom-nav host: [entries] on the shared island, with the screen's
  * [content] laid out ABOVE it (#534). The content ends where the island's clearance begins, so
  * nothing the screen draws can hide under the bar. Scrolling the content collapses the island to
- * icons (#532). DESTINATION items navigate and move the selected pill. LAUNCH items hand off to
- * another app and leave the pill where it is.
+ * icons (#532). What a tap DOES is the app's: [onSelect] gets the tapped entry. cloud-mail's
+ * item table and its launch hand-offs live in cloud-mail (it was the first consumer, #565).
  */
 @Composable
-public fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    // The sanctioned hand-off guard: a double tap while leaving must not fire the launch twice.
-    val leaveOnce = rememberLeaveOnce()
-    // Resolved here, in the composable's scope, and handed to the tap handler already resolved.
-    val missing = bottomNavItems.associateWith { item -> context.getString(missingResource(item.id)) }
-    val selected = bottomNavItems.firstOrNull {
-        it.action == BottomNavAction.DESTINATION && it.route == currentRoute
-    }?.id
+public fun BottomNavHost(
+    entries: List<BottomNavEntry>,
+    selectedId: String?,
+    onSelect: (BottomNavEntry) -> Unit,
+    content: @Composable () -> Unit,
+) {
     val collapse = rememberBottomNavCollapse()
     val insets = bottomNavInsets()
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -309,86 +289,11 @@ public fun BottomNavBar(nav: NavController, currentRoute: String, content: @Comp
                 .testTag(TAG_CONTENT),
         ) { content() }
         BottomNavIsland(
-            entries = mailEntries(),
-            selectedId = selected,
-            onSelect = { entry ->
-                val item = bottomNavItems.first { it.id == entry.id }
-                onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
-            },
+            entries = entries,
+            selectedId = selectedId,
+            onSelect = onSelect,
             collapsed = collapse.collapsed,
             insets = insets,
         )
     }
-}
-
-/** One item tapped. A destination navigates, and a launch hands off without moving the selection. */
-private fun onItemTap(
-    context: android.content.Context,
-    nav: NavController,
-    item: BottomNavItem,
-    currentRoute: String,
-    leaveOnce: (() -> Boolean) -> Unit,
-    missingMessage: String,
-) {
-    when (item.action) {
-        BottomNavAction.DESTINATION -> {
-            val route = item.route ?: return
-            // Re-tapping the screen already on top is a no-op, not a second copy on the back stack.
-            if (route == currentRoute) return
-            nav.navigate(route)
-        }
-        BottomNavAction.LAUNCH -> item.packageName?.let {
-            leaveOnce { launchInstalledApp(context, it, missingMessage) }
-        }
-    }
-}
-
-/**
- * Launch [packageName]'s front-door activity, reporting whether it exists on this device. The
- * launch intent is resolved against the device, so a device without the app shows the specific,
- * honest [missingMessage] instead of a bar that pretends.
- */
-internal fun launchInstalledApp(
-    context: android.content.Context,
-    packageName: String,
-    missingMessage: String,
-): Boolean =
-    try {
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName)
-        if (intent == null) {
-            Toast.makeText(context, missingMessage, Toast.LENGTH_SHORT).show()
-            false
-        } else {
-            context.startActivity(intent)
-            true
-        }
-    } catch (_: Exception) {
-        false
-    }
-
-/** The "not installed" sentence a launch item shows when its app is absent. */
-internal fun missingResource(id: String): Int = when (id) {
-    "chat" -> R.string.nav_chat_not_installed
-    "video" -> R.string.nav_video_not_installed
-    else -> R.string.nav_launch_not_installed
-}
-
-/** A nav item's label, which is also its accessible name. */
-internal fun itemDescription(id: String): Int = when (id) {
-    "mail" -> R.string.nav_bar_mail
-    "chat" -> R.string.nav_bar_chat
-    "home" -> R.string.nav_bar_home
-    "rss" -> R.string.nav_bar_rss
-    "video" -> R.string.nav_bar_video
-    else -> R.string.nav_bar_home
-}
-
-/** The glyph for each of mail's items. The data model stays icon-free. */
-private fun iconFor(id: String): ImageVector = when (id) {
-    "mail" -> Icons.Filled.Mail
-    "chat" -> Icons.Filled.ChatBubble
-    "home" -> Icons.Filled.Home
-    "rss" -> Icons.Filled.RssFeed
-    "video" -> Icons.Filled.Videocam
-    else -> Icons.Filled.Home
 }
