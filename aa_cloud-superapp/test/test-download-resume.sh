@@ -65,9 +65,11 @@ has "$DL" 'fun discard(target: File)'                         "an explicit disca
 echo "== T2: no second download loop crept back =="
 # Exactly one file may contain the 64 kB copy loop. Three copies is how the
 # guarantees drifted apart last time (only one chased redirects, only two
-# throttled progress, none resumed).
+# throttled progress, none resumed). ApkIntegrity.kt hashes a file; StoreDns.kt's
+# pipe() relays the bytes of a local CONNECT tunnel between two sockets — neither
+# downloads anything, so neither is a second download engine.
 LOOPS=$(grep -rlF 'ByteArray(64 * 1024)' "$ROOT/$LIB/updater/src" "$ROOT/$LIB/appstore/src" 2>/dev/null \
-        | grep -v 'ApkIntegrity.kt' | wc -l)
+        | grep -v 'ApkIntegrity.kt\|StoreDns.kt' | wc -l)
 [ "$LOOPS" -eq 1 ] && ok "exactly one streaming copy loop (Download.kt)" \
                    || bad "found $LOOPS streaming copy loops — expected 1"
 hasnt_code "$SRC" 'target.outputStream()'                     "ReleaseSource no longer opens its own output stream"
