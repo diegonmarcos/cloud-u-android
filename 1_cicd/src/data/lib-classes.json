@@ -8,7 +8,7 @@
     "pinned": "Non-GUI, but bound to the consuming process by an OS boundary no IPC fixes; the reason is required.",
     "logic": "Non-GUI logic still compiled into its apps: the migration backlog. Each one is a candidate engine."
   },
-  "backlog_baseline": 27,
+  "backlog_baseline": 29,
   "libs": {
     "analytics":               { "class": "contract", "why": "#871 engine-apk-split move 7: the contract half of the analytics sink -- the IAnalyticsSink wire, the SinkLink client, and what is per app and must survive an absent engine (the bounded per-sink queue, the consent flag, the visitor id, the site ids baked from the consuming app's build.json). The HTTP POST and the Umami/Matomo wire formats are the engine's (libs:analytics-sink). Stays dependency-free (no libs:core, no libs:databackend) because the upstream forks compile it with no shared-module graph, so the wire is its own one-method AIDL.", "budget_lines": 460 },
     "analytics-sink":          { "class": "engine",   "why": "#871 Cloud-Lib-Analytics-Sink: the HTTP POST of an analytics event to Umami and Matomo, in its own process; every app compiles libs:analytics (the contract) and none compiles this." },
@@ -66,7 +66,7 @@
     "scrollbar":               { "class": "gui",      "why": "Upstream fast-scrollbar, media-center only." },
     "search":                  { "class": "gui",      "why": "SuperApp search surface." },
     "search-page":             { "class": "gui",      "why": "#823 Cloud Search's Search page (engine boxes + AI chat) in Compose, hosted and themed by cloud-search and cloud-browser; no store, token or network of its own." },
-    "shizuku-adb-debug-tools": { "class": "logic",    "why": "The embedded adb client (pairing, shell door): SuperApp's privileged plane, and the dialog-free install channel of SuperApp and (#865) Cloud Store. +1 backlog edge for cloud-store: an install session belongs to the app that opens it, so the store cannot reach it over IPC. (#867) Cloud Account +1: it links libs:appstore for the Fleet tab's inventory, which brings the channel with it." },
+    "shizuku-adb-debug-tools": { "class": "logic",    "why": "The embedded adb client (pairing, shell door): SuperApp's privileged plane, and the dialog-free install channel of SuperApp and (#865) Cloud Store. +1 backlog edge for cloud-store: an install session belongs to the app that opens it, so the store cannot reach it over IPC. (#867) Cloud Account +1: it links libs:appstore for the Fleet tab's inventory, which brings the channel with it. 2026-10-06 +2 (27 -> 29): the terminals (cloud-termux, cloud-nix-on-droid) now compile it as the fallback privileged channel behind SuperApp's own provider (615c8dfd0) -- the adb pairing door must run in the app that owns the pty, so the edge is by necessity, like the installer's." },
     "sound-tags":              { "class": "engine",   "why": "#798 the sound engine's own arithmetic (WAV decoding, resampling, windows, averaging, the model's label list), plain JVM and PIT-tested; compiled only into Cloud-Lib-Ml-L-Sound-Yamnet, so no app may compile it (L2)." },
     "sysdns":                  { "class": "pinned",   "why": "#741 SystemDnsBridge is a loopback resolver the terminal's own proot guest talks to, inside that app's process; ResolverProxy likewise for the gh/rclone/gix binaries." },
     "text-tools":              { "class": "contract", "why": "ITextTools binder contract + client; the AIDL method order is the wire format.", "budget_lines": 460 },
