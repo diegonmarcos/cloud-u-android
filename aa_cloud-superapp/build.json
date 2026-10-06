@@ -2968,6 +2968,13 @@
                 "target": "extapp:cloud-store"
               },
               {
+                "_doc": "Account (#867) — Cloud Account is its own app (ac_cloud-account), so this tile is extapp:, like Store and C3: it opens the app, or offers the install through ui.external_apps[id=cloud-account] when it is absent. Sits between Store and Configs by the owner's ordering of this row.",
+                "id": "cloud-account",
+                "label": "Account",
+                "icon": "ic_settings",
+                "target": "extapp:cloud-account"
+              },
+              {
                 "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
                 "label": "Configs",
                 "icon": "ic_settings",
