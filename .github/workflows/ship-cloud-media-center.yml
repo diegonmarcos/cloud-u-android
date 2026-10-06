@@ -75,6 +75,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-media-center-fork-engine.sh"

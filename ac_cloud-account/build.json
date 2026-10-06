@@ -235,7 +235,18 @@
         "id": "runtime",
         "label": "Runtime",
         "icon": "runtime",
-        "pages": []
+        "pages": [
+          {
+            "id": "runtime",
+            "label": "Runtime",
+            "icon": "runtime"
+          },
+          {
+            "id": "fleetsetup",
+            "label": "Fleet Setup",
+            "icon": "runtime"
+          }
+        ]
       },
       {
         "id": "drift",
@@ -244,6 +255,7 @@
         "pages": []
       }
     ],
-    "default_section": "profiles"
+    "default_section": "profiles",
+    "_doc_pages": "#873 the page Cloud Account adds under the Runtime section (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws it: selectTab(<page id>) opens it and onTabShown reports its SECTION, so the island never disagrees with the page."
   }
 }

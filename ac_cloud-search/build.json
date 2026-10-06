@@ -127,6 +127,11 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
     "libs:text-tools": {
       "_doc": "The ITextTools binder (a `contract` lib): the AI chat reads the OpenRouter token the fleet Account manages through TextToolsClient.revealAiKey(search.ai.account_provider) on use. This app keeps no copy of it - not in prefs, not in a file, not in the debug API.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools",

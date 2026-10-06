@@ -1578,7 +1578,52 @@
    "used_by": [
     "ac_cloud-vault"
    ]
+  },
+  "fleet_setup_status": {
+   "kind": "prefs",
+   "class": "device",
+   "doc": "#873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration.",
+   "used_by": [
+    "lib-fleetconfig-model"
+   ]
   }
+ },
+ "bundle": {
+  "_doc": "#873 THE BUNDLE ROUTES: where each value of Cloud Account's imported configs (import_configs: the vault export's wg / mail / auth sections) lands in the fleet, as declared stores. Fleet Setup (libs:account SetupPlan) reads this, finds every app that declares the store (used_by its module or one of its libs) and applies the key through that app's `<package>.fleetsetup` provider. A value the declared copy's `settings` subtree names itself (settings > app > file > key) needs no route. Edit here, never a copy in code; fleet-config-guard checks every route names a declared store and a key that store may migrate.",
+  "mail.jmap_url": [
+   {
+    "store": "mail_jmap_prefs",
+    "key": "server"
+   }
+  ],
+  "mail.username": [
+   {
+    "store": "mail_jmap_prefs",
+    "key": "email"
+   }
+  ],
+  "mail.password": [
+   {
+    "store": "mail_jmap_prefs",
+    "key": "password"
+   }
+  ],
+  "auth.authelia_token": [
+   {
+    "store": "dagu_prefs",
+    "key": "bearer_token"
+   },
+   {
+    "store": "store_fleet_bearer",
+    "key": "token"
+   }
+  ],
+  "wg.wg0_private_key": [
+   {
+    "store": "wireguard_prefs",
+    "key": "if_privkey"
+   }
+  ]
  },
  "resolve": {
   "\"location_${sessionId.value.hash().take(16)}\"@ac_cloud-matrix/features/location/impl/src/main/kotlin/io/element/android/features/location/impl/live/LiveLocationStore.kt": {
@@ -1676,6 +1721,10 @@
   "serializer@ac_cloud-media-center/app/src/main/kotlin/com/diegonmarcos/mediacenter/core/encryption/EncryptedDataStoreProvider.kt": {
    "store": "datastore:settings",
    "why": "EncryptedDataStoreProvider wraps the same 'settings' Preferences DataStore with an encrypting serializer; keys already covered"
+  },
+  "file@ab_cloud-libs-shared/libs/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/SetupStores.kt": {
+   "store": "-",
+   "why": "the setup contract's default handler: it opens exactly the files a describe lists, by their declared names (fleet-config.json) -- it keeps no store of its own."
   }
  },
  "apps": {
@@ -1694,6 +1743,7 @@
     "lib-datamanager",
     "lib-devtools",
     "lib-firewall",
+    "lib-fleetconfig-model",
     "lib-health",
     "lib-kde-connect",
     "lib-launcher-apptabs",
@@ -1777,7 +1827,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -1795,6 +1846,7 @@
    "libs": [
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-watchdog"
    ],
    "items": [
@@ -1812,7 +1864,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": []
   },
@@ -1845,6 +1898,7 @@
     "lib-analytics",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-updater"
    ],
    "items": [
@@ -1865,6 +1919,7 @@
     "lib-browser",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-updater"
    ],
    "items": [
@@ -1883,7 +1938,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -1903,6 +1959,7 @@
     "lib-bottomnav",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-ops",
     "lib-updater"
    ],
@@ -1917,6 +1974,7 @@
     "lib-core",
     "lib-decisions",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-ml-l-image",
     "lib-text-tools"
    ],
@@ -1970,6 +2028,7 @@
    "libs": [
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-ml-l-image"
    ],
    "items": [
@@ -2002,7 +2061,8 @@
    "libs": [
     "lib-analytics",
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2025,7 +2085,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2058,6 +2119,7 @@
     "lib-contacts",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-updater"
    ],
    "items": [
@@ -2089,7 +2151,8 @@
    "libs": [
     "lib-analytics",
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2130,6 +2193,7 @@
     "lib-core",
     "lib-devtools",
     "lib-file-editor",
+    "lib-fleetconfig-model",
     "lib-git-sync",
     "lib-ml-l-image",
     "lib-mounts",
@@ -2160,6 +2224,7 @@
     "lib-analytics",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-keyboard",
     "lib-media",
     "lib-text-tools",
@@ -2196,6 +2261,7 @@
     "lib-bottomnav",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-ml-l-image",
     "lib-openpgp-api",
     "lib-text-tools",
@@ -2229,7 +2295,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2262,6 +2329,7 @@
     "lib-core",
     "lib-devtools",
     "lib-fin",
+    "lib-fleetconfig-model",
     "lib-health",
     "lib-updater"
    ],
@@ -2301,7 +2369,8 @@
    "libs": [
     "lib-analytics",
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2340,6 +2409,7 @@
     "lib-analytics",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-maps",
     "lib-updater"
    ],
@@ -2360,6 +2430,7 @@
     "lib-analytics",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-updater"
    ],
    "items": [
@@ -2462,7 +2533,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2501,6 +2573,7 @@
     "lib-bottomnav",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-text-tools",
     "lib-ui-kit"
    ],
@@ -2533,6 +2606,7 @@
     "lib-appstore",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-shizuku-adb-debug-tools",
     "lib-updater"
    ],
@@ -2544,7 +2618,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2638,7 +2713,8 @@
    "schema_version": 1,
    "libs": [
     "lib-core",
-    "lib-devtools"
+    "lib-devtools",
+    "lib-fleetconfig-model"
    ],
    "items": [
     {
@@ -2658,6 +2734,7 @@
     "lib-bottomnav",
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-updater",
     "lib-wallet"
    ],
@@ -2670,6 +2747,7 @@
    "libs": [
     "lib-core",
     "lib-devtools",
+    "lib-fleetconfig-model",
     "lib-text-tools"
    ],
    "items": []

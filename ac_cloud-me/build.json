@@ -60,6 +60,10 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:fleetconfig-model": {
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
     "libs:updater": {
       "dir": "../ab_cloud-libs-shared/libs/updater",
       "type": "library"

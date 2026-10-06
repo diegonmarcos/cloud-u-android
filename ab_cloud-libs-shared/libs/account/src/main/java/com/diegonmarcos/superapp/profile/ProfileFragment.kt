@@ -104,7 +104,7 @@ class ProfileFragment : Fragment() {
     var onTabShown: ((String) -> Unit)? = null
         set(value) {
             field = value
-            tabIds.getOrNull(selectedTab)?.let { value?.invoke(it) }
+            tabIds.getOrNull(selectedTab)?.let { value?.invoke(sectionOf(it)) }
         }
 
     /** Shows the declared tab [id]; an id with no column is ignored. */
@@ -157,7 +157,9 @@ class ProfileFragment : Fragment() {
         val profiles = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val runtime = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val drift = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        listOf(connect, profiles, runtime, drift).forEach(page::addView)
+        // #873 Cloud Account's own pages (build.json ui.sections[].pages[]): the host app declares them, this app draws them.
+        val fleetsetup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        listOf(connect, profiles, runtime, drift, fleetsetup).forEach(page::addView)
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -171,8 +173,10 @@ class ProfileFragment : Fragment() {
         // render order, and this map is only the id → column lookup. The LABEL comes off
         // the declaration; an id with no column here draws no tab rather than an invented one.
         val columns = mapOf("connect" to connect, "profiles" to profiles, "runtime" to runtime, "drift" to drift)
-        val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } }
-        tabIds = AccountModel.tabs().filter { columns.containsKey(it.id) }.map { it.id }
+        val own = ctx.packageName == AccountData.PKG
+        val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } } +
+            (if (own) listOf(Tab(getString(R.string.fleetsetup_title), fleetsetup)) else emptyList())
+        tabIds = AccountModel.tabs().filter { columns.containsKey(it.id) }.map { it.id } + (if (own) listOf(PAGE_FLEETSETUP) else emptyList())
         connectTab = tabs.indexOfFirst { it.column === connect }
         profilesTab = tabs.indexOfFirst { it.column === profiles }
         runtimeTab = tabs.indexOfFirst { it.column === runtime }
@@ -199,6 +203,7 @@ class ProfileFragment : Fragment() {
         profiles.addView(ctx.kitComposeView(palette) { ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t) }, { openRoute(it) }) })
         renderRuntime(ctx, runtime)
         drift.addView(ctx.kitComposeView(palette) { DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) } })
+        if (own) fleetsetup.addView(ctx.kitComposeView(palette) { FleetSetupTab(model) })
 
         return root
     }
@@ -735,12 +740,12 @@ class ProfileFragment : Fragment() {
                 selectedTab = index
                 view.selectedId = view.pages.getOrNull(index)?.id
                 show(index)
-                tabIds.getOrNull(index)?.let { onTabShown?.invoke(it) }
+                tabIds.getOrNull(index)?.let { onTabShown?.invoke(sectionOf(it)) }
             }
             onSelect = { page -> pickTab?.invoke(view.pages.indexOfFirst { it.id == page.id }) }
             selectedId = pages.getOrNull(selectedTab)?.id
             if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE
-            tabIds.getOrNull(selectedTab)?.let { onTabShown?.invoke(it) }
+            tabIds.getOrNull(selectedTab)?.let { onTabShown?.invoke(sectionOf(it)) }
         }
     }
 
@@ -1486,6 +1491,11 @@ class ProfileFragment : Fragment() {
     }
 
     companion object {
+
+        /** #873 a page of Cloud Account's, not a section: ui.sections[runtime].pages[fleetsetup]. [selectTab] speaks it; [onTabShown] reports its section. */
+        const val PAGE_FLEETSETUP = "fleetsetup"
+        private val PAGE_SECTION = mapOf(PAGE_FLEETSETUP to "runtime")
+        private fun sectionOf(id: String) = PAGE_SECTION[id] ?: id
 
         /** #868 Fragment argument (Boolean): the host draws the tabs, so the fragment hides its own strip. */
         const val ARG_EXTERNAL_STRIP = "external_strip"

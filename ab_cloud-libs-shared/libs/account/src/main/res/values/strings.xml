@@ -162,4 +162,15 @@
     <string name="account_pat_title">GitHub token for this upload</string>
     <string name="account_pat_caption">gh holds no GitHub token. Paste one with contents:write on %1$s — it is used for this one commit and never stored.</string>
     <string name="account_route_unavailable">This app cannot open that link.</string>
+
+    <!-- #873/#874 Fleet Setup and the Account vault -->
+    <string name="fleetsetup_title">Fleet Setup</string>
+    <string name="fleetsetup_caption">Cloud Account pushes what it holds into each installed app through its setup endpoint: describe, apply, read back. One line per app, the failing key named.</string>
+    <string name="fleetsetup_summary">%1$d keys for %2$d apps · %3$d done · %4$d failed · %5$d not placed</string>
+    <string name="fleetsetup_run">Set up fleet</string>
+    <string name="fleetsetup_keys">%1$d keys</string>
+    <string name="fleetsetup_install">Install from Store</string>
+    <string name="fleetsetup_retry">Retry</string>
+    <string name="fleetsetup_apply">Apply</string>
+    <string name="fleetsetup_unmapped">%1$d values no declared store takes</string>
 </resources>

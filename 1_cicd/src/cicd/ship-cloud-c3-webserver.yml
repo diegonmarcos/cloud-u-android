@@ -63,6 +63,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-c3-webserver.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ac_cloud-c3-webserver/**"
 permissions:

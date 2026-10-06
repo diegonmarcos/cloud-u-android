@@ -60,6 +60,11 @@
       "type": "library",
       "_doc": "Not linked by the app module: libs:core's `api project(':libs:devtools')` resolves against THIS settings, so the include must exist or core fails configuration.",
       "dir": "../ab_cloud-libs-shared/libs/devtools"
+    },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
     }
   },
   "toolchain": {

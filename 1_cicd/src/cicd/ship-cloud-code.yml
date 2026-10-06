@@ -45,6 +45,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-code.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
       #   input: "ac_cloud-myterminal/build.json"
       #   input: "ac_cloud-myterminal/hub/src/main/AndroidManifest.xml"

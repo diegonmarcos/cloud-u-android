@@ -68,6 +68,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-terminal-store/**"
       # ── end MANAGED-PATHS-HEADER ──
       # #659: the Store tab is a UI over ab_cloud-terminal-store's cloud-store, and

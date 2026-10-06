@@ -1,0 +1,62 @@
+{
+  "_doc": "#873 FLEET SETUP policy, read by 1_cicd/src/scripts/cloud-android-fleet-setup-guard.py (fleet-setup-guard.yml, every push). Every app that fleet-config.json declares migrating (config/secret) stores for must link the setup provider (`<package>.fleetsetup`, libs:fleetconfig-model SetupProvider, merged in through libs:core) and every such store must have a handler: prefs / encrypted are served by the default; any other kind registers one (SetupStores.register) or is listed under `unserved` with the reason. The declarations themselves live in the manifest; this file only holds what the guard cannot derive: the exemptions and the stores awaiting a handler.",
+  "manifest": "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json",
+  "model_manifest": "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/AndroidManifest.xml",
+  "provider_source": "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/SetupProvider.kt",
+  "core_gradle": "ab_cloud-libs-shared/libs/core/build.gradle",
+  "provider_class": "com.diegonmarcos.superapp.fleetconfig.SetupProvider",
+  "authority": "${applicationId}.fleetsetup",
+  "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+  "default_kinds": [
+    "prefs",
+    "encrypted"
+  ],
+  "register_pattern": "SetupStores\\.register\\(\\s*\"([^\"]+)\"",
+  "lib_root": "ab_cloud-libs-shared/libs",
+  "register_roots": [
+    "ab_cloud-libs-shared/libs",
+    "ac_cloud-account",
+    "aa_cloud-superapp"
+  ],
+  "extensions": [
+    ".kt",
+    ".java"
+  ],
+  "prune_dirs": [
+    "build",
+    "node_modules",
+    ".git",
+    ".gradle",
+    "dist",
+    "www",
+    "test",
+    "androidTest"
+  ],
+  "min_reason_chars": 30,
+  "exempt": {},
+  "_doc_exempt": "{<app module dir>: <reason>}. Empty today: every fleet app links libs:core (forks, the IME and the single-WebView apps included), so each one answers. An app that cannot link it (no Gradle project, a build that cannot take a project dependency) goes here WITH the reason; an exemption for an app that links is stale and fails.",
+  "unserved": {
+    "ac_cloud-mail": {
+      "datastore:settings": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
+    },
+    "ac_cloud-matrix": {
+      "datastore:elementx_featureflag": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:elementx_preferences": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:elementx_rageshake": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:elementx_voice_player": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:pin_code_store": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:push_store_<userId>": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:session_<hash>_preferences": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
+      "datastore:vector_analytics": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
+    },
+    "ac_cloud-media-center": {
+      "datastore:settings": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
+    },
+    "ac_cloud-notes": {
+      "datastore:auth-sessions": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
+    },
+    "ac_cloud-vault": {
+      "room:PrivilegedAppDatabase": "a Room table: config inside a database is not yet covered by the migration contract (fleet-config.json kinds.room); no handler registered yet, describe reports served:false."
+    }
+  }
+}

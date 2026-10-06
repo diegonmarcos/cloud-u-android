@@ -35,6 +35,7 @@ on:
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/maps/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-nav/**"

@@ -50,6 +50,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/text-tools/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/search-page/**"

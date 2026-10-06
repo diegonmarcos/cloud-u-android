@@ -60,6 +60,11 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
     "libs:browser": {
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. browser was three byte-identical trees (superapp, browser, vault); nothing kept them in step, so a WebView fix had to be pasted three times or it silently reached one app.",

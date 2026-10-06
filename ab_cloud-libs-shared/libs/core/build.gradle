@@ -69,4 +69,11 @@ dependencies {
     // libs:core. Keep it that way — a devtools→core edge would break every
     // app's build at once.
     api project(':libs:devtools')
+
+    // #873 the setup contract (`<package>.fleetsetup`): every app answers describe / export /
+    // apply / status for the stores fleet-config.json declares for it. Rides on core for the
+    // devtools reason (no per-app gradle edit). fleetconfig-model depends on nothing here, so
+    // there is no cycle; it carries the baked fleet-config.json, hashed (never watched) by the
+    // rebuild-isolation rule for manifests.
+    api project(':libs:fleetconfig-model')
 }

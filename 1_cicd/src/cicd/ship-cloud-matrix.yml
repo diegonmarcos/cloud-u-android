@@ -34,6 +34,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-matrix.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-matrix-fork-engine.sh"
       - "ac_cloud-matrix/**"

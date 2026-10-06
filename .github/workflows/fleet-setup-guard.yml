@@ -1,0 +1,35 @@
+name: "fleet setup guard — every app answers the setup contract for every store it declares"
+
+# WHY (#873). Cloud Account performs the full fleet setup through ONE contract: every
+# fleet app serves `<package>.fleetsetup` (libs:fleetconfig-model SetupProvider, merged
+# in through libs:core: describe / export / apply / status) for the stores
+# fleet-config.json declares for it. An app that declares migrating stores and does not
+# link the provider, or a declared store nothing can read and write, is a setting Fleet
+# Setup silently cannot place. This guard fails on both, on a provider that is no longer
+# exported behind CONSTELLATION_DATA, and on a bundle route to a store that is not served.
+#
+# Its own workflow and every push, for the reason fleet-config-guard gives: the commit it
+# has to catch can touch any app's build.json or settings, or any store declaration.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fleet-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it breaks the contract a dozen ways and requires RED each
+      # time, then requires GREEN on the real fleet.
+      - name: The guard still fails when an app cannot answer the setup contract
+        run: bash 1_cicd/src/scripts/test/fleet-setup-guard.test.sh
+
+      - name: Every declared store is served or listed with its reason
+        run: python3 1_cicd/src/scripts/cloud-android-fleet-setup-guard.py .

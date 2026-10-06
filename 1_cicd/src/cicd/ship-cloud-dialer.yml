@@ -35,6 +35,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-dialer-fork-engine.sh"
       - "ac_cloud-dialer/**"

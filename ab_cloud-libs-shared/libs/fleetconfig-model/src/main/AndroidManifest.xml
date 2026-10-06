@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- libs:fleetconfig-model (#825): the fleet-config manifest and its migration policy. No
-     components: the engine (libs:fleetconfig) declares the service. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<!-- libs:fleetconfig-model (#825): the fleet-config manifest and its migration policy.
+     #873 the one component: the setup contract every fleet app serves (describe / export /
+     apply / status), merged into each app through libs:core. Exported behind the fleet's
+     signature permission, and the provider re-checks the caller (call() is not
+     permission-checked by the framework). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.diegonmarcos.superapp.fleetconfig.SetupProvider"
+            android:authorities="${applicationId}.fleetsetup"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+    </application>
+</manifest>

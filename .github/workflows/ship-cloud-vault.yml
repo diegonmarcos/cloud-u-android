@@ -60,6 +60,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ac_cloud-vault/**"
 permissions:

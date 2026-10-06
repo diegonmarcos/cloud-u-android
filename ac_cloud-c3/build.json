@@ -105,6 +105,11 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
     "libs:updater": {
       "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/. Also the reader of the constellation fleet manifest: since #276's fix it falls back to aa_cloud-superapp/data/constellation-fleet.json when an app carries no data/ dir of its own, and throws if neither exists — which is why this app needs no data/ dir for the fleet bake.",
       "dir": "../ab_cloud-libs-shared/libs/updater",

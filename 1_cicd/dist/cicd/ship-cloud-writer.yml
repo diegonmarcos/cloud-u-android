@@ -98,6 +98,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/decisions/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/text-tools/**"
       #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       # ── end MANAGED-PATHS-HEADER ──

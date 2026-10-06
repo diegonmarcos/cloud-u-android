@@ -56,6 +56,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-notes.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-notes-engine.sh"
       - "ac_cloud-notes/**"

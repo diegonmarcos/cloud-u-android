@@ -10,3 +10,6 @@ include ':libs:core', ':libs:devtools'
 project(':libs').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs')
 project(':libs:core').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/core')
 project(':libs:devtools').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/devtools')
+// #873 libs:core declares `api project(':libs:fleetconfig-model')` (the setup contract): the include is not optional.
+include ':libs:fleetconfig-model'
+project(':libs:fleetconfig-model').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/fleetconfig-model')

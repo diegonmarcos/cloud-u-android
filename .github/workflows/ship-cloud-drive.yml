@@ -53,6 +53,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/databackend/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
       #   input: "ab_cloud-libs-shared/libs/updater/**"
