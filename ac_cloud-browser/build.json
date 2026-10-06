@@ -327,6 +327,39 @@
             "zh": "Chinese"
           },
           "doc": "The language Translate page and Summarise by topics write in."
+        },
+        {
+          "key": "offline_depth",
+          "type": "int",
+          "default": 1,
+          "min": 0,
+          "max": 3,
+          "label": "Offline site depth",
+          "section": "data",
+          "class": "config",
+          "doc": "Save site offline follows same-site links this many levels from the page you are on (0 = only that page)."
+        },
+        {
+          "key": "offline_max_pages",
+          "type": "int",
+          "default": 25,
+          "min": 1,
+          "max": 200,
+          "label": "Offline site: max pages",
+          "section": "data",
+          "class": "config",
+          "doc": "Save site offline stops after this many pages."
+        },
+        {
+          "key": "offline_max_mb",
+          "type": "int",
+          "default": 50,
+          "min": 5,
+          "max": 500,
+          "label": "Offline site: max size (MB)",
+          "section": "data",
+          "class": "config",
+          "doc": "Save site offline stops when the copy reaches this size."
         }
       ],
       "_doc_user_agents": "#802 the user-agent strings desktop_mode switches between, declared here rather than in libs:browser (they used to be literals in BrowserHostFragment).",
@@ -509,6 +542,22 @@
             ]
           },
           {
+            "id": "save_page",
+            "section": "page",
+            "label": "Save this page offline",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "save_site",
+            "section": "page",
+            "label": "Save this site offline",
+            "requires": [
+              "page"
+            ]
+          },
+          {
             "id": "desktop",
             "section": "page",
             "label": "Desktop site",
@@ -603,6 +652,14 @@
             ]
           },
           {
+            "id": "clear_site_cookies",
+            "section": "privacy",
+            "label": "Clear cookies for this site",
+            "requires": [
+              "page"
+            ]
+          },
+          {
             "id": "history",
             "section": "library",
             "label": "History"
@@ -635,6 +692,20 @@
             "label": "Profile (autofill)",
             "kind": "screen",
             "settings_section": "privacy"
+          },
+          {
+            "id": "offline_manage",
+            "section": "settings",
+            "label": "Offline copies…",
+            "kind": "screen",
+            "settings_section": "data"
+          },
+          {
+            "id": "storage_manage",
+            "section": "settings",
+            "label": "Storage & cookies…",
+            "kind": "screen",
+            "settings_section": "data"
           },
           {
             "id": "default_browser",

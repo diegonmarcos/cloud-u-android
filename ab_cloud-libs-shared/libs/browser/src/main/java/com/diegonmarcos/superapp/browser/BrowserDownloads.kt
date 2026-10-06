@@ -80,5 +80,23 @@ class BrowserDownloads(context: Context) {
     /** Forget the index (the files stay in Downloads). */
     fun clear() = sp.edit().putString(KEY, "[]").apply()
 
+    /** #887 bytes of the finished downloads this browser started (DownloadManager's own sizes). */
+    fun bytes(): Long = all().sumOf { d ->
+        runCatching {
+            dm.query(DownloadManager.Query().setFilterById(d.id)).use { c ->
+                if (c.moveToFirst() && c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL)
+                    c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)).coerceAtLeast(0) else 0L
+            }
+        }.getOrDefault(0L)
+    }
+
+    /** #887 delete the files of every download this browser started (DownloadManager removes them), then the index. */
+    fun removeAllFiles(): Int {
+        val list = all()
+        list.forEach { runCatching { dm.remove(it.id) } }
+        clear()
+        return list.size
+    }
+
     private companion object { const val KEY = "downloads_json" }
 }

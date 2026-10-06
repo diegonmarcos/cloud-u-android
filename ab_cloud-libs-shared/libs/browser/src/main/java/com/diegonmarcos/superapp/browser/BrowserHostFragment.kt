@@ -505,6 +505,77 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
+    // ── #887 site data: offline copies, storage, cookies ─────────────────────────────────────
+
+    private val offlineSites by lazy { OfflineSites(requireContext()) }
+    private val saveState = SaveState()
+
+    /** Save the current page (one MHTML) or the whole site (same origin, within the Configs limits). */
+    private fun startSave(wv: WebView, wholeSite: Boolean, done: (JSONObject) -> Unit) {
+        val url = wv.url.orEmpty()
+        val ok = { JSONObject().put("ok", true).put("id", if (wholeSite) "save_site" else "save_page") }
+        if (SiteScope.origin(url).isEmpty()) return done(ok().put("ok", false).put("error", "only http(s) pages can be saved offline"))
+        if (!wholeSite) {
+            OfflinePageSaver.save(offlineSites, wv) { site, err ->
+                toast(if (site != null) "Saved for offline: ${SiteData.human(site.bytes)} (Configs ▸ Data & storage ▸ Offline copies)" else err.orEmpty())
+            }
+            return done(ok().put("started", true))
+        }
+        if (OfflineSiteJob.active != null) return done(ok().put("ok", false).put("error", "a site is already being saved"))
+        val limits = CrawlLimits.of(browserSettings.int("offline_depth"), browserSettings.int("offline_max_pages"), browserSettings.int("offline_max_mb"))
+        val settle = config.addons["scraper"]?.config?.optLong("settle_ms", 800) ?: 800L
+        saveState.title = SiteScope.origin(url).substringAfter("://")
+        saveState.progress = null
+        val job = OfflineSiteJob(requireContext(), offlineSites, url, wv.title.orEmpty(), limits, wv.settings.userAgentString, settle,
+            onProgress = { saveState.progress = it },
+            onDone = { site ->
+                OfflineSiteJob.active = null
+                toast(if (site != null) "Saved ${site.pages.size} page(s), ${SiteData.human(site.bytes)}" else "Nothing could be saved")
+            })
+        OfflineSiteJob.active = job
+        overlay(bottom = true) { close -> BrowserSavePanel(saveState, onStop = { job.cancel() }, onClose = close) }
+        job.start()
+        done(ok().put("started", true).put("max_pages", limits.maxPages).put("depth", limits.depth))
+    }
+
+    private fun showOffline() {
+        val sites = androidx.compose.runtime.mutableStateOf(offlineSites.list())
+        overlay { close ->
+            BrowserOfflineScreen(sites.value,
+                onOpen = { s -> close(); openOffline(s) },
+                onDelete = { s -> offlineSites.delete(s.id); sites.value = offlineSites.list() },
+                onDeleteAll = { offlineSites.deleteAll(); sites.value = offlineSites.list() },
+                onClose = close)
+        }
+    }
+
+    /** A saved copy opens as a tab on its first page's file; links inside it that the copy holds stay inside it. */
+    private fun openOffline(site: OfflineSite) {
+        val first = site.pages.firstOrNull() ?: return toast("This copy has no pages")
+        val url = offlineSites.fileUrl(first)
+        val tab = prefs.add(url, site.title.ifBlank { site.origin })
+        prefs.setActiveId(tab.key)
+        showDetail(tab)
+    }
+
+    private fun showStorage() {
+        val st = StorageState()
+        fun measure() {
+            st.items = null
+            Thread { val items = BrowserStorage.breakdown(requireContext()); ui.post { if (isAdded) st.items = items } }.start()
+        }
+        measure()
+        overlay { close ->
+            BrowserStorageScreen(st, onClear = { ids ->
+                BrowserStorage.clear(requireContext(), ids) { r ->
+                    toast(if (r.optBoolean("ok")) "Cleared" else r.optString("error"))
+                    if ("cookies" in ids || "dom" in ids) webView?.reload()
+                    measure()
+                }
+            }, onClose = close)
+        }
+    }
+
     // ── DETAIL mode (WebView) ────────────────────────────────────────
 
     /** Swap the active tab to [url] and draw it. */
@@ -684,6 +755,16 @@ class BrowserHostFragment : Fragment() {
                     view?.let { applySettings(it, startedUrl) }
                 }
 
+                /** #887 inside a saved copy, a link to a page the copy holds opens the saved page, not the network. */
+                override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                    val target = request?.url?.toString() ?: return false
+                    if (request.isForMainFrame && offlineSites.isOffline(view?.url)) {
+                        val local = offlineSites.resolve(target)
+                        if (local != null) { view?.loadUrl(local); return true }
+                    }
+                    return false
+                }
+
                 /** #886 fires once a navigation has COMMITTED (and for in-page routes): the url worth remembering. */
                 override fun doUpdateVisitedHistory(view: WebView?, visitedUrl: String?, isReload: Boolean) {
                     super.doUpdateVisitedHistory(view, visitedUrl, isReload)
@@ -696,6 +777,8 @@ class BrowserHostFragment : Fragment() {
                     if (readerOn) return
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
+                    // #887 an offline copy is not a visit.
+                    if (offlineSites.isOffline(u)) return
                     // #802 a private tab is never recorded: no history, no preview.
                     if (!BrowserSitePolicy.shouldRecord(prefs.byId(tabKey))) {
                         runCatching { java.net.URI(u) }.getOrNull()?.let { privateOrigins.add("${it.scheme}://${it.authority}") }
@@ -886,6 +969,8 @@ class BrowserHostFragment : Fragment() {
         }
         applyViewMode(wv)
         applyShields(wv, url)
+        // #887 file access only for a page of an offline copy (targetSdk 30+ has it off by default).
+        s.allowFileAccess = offlineSites.isOffline(url)
     }
 
     /** #802 per-site shields: a `deny` rule for javascript / images on this host turns it off here. */
@@ -1514,6 +1599,17 @@ class BrowserHostFragment : Fragment() {
             }
             "translate" -> { wv ?: return needPage(); done(toggleTranslate()) }
             "summarize_topics" -> { wv ?: return needPage(); showTopics(wv); done(ok().put("started", true)) }
+            "save_page" -> { wv ?: return needPage(); startSave(wv, false, done) }
+            "save_site" -> { wv ?: return needPage(); startSave(wv, true, done) }
+            "clear_site_cookies" -> {
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
+                BrowserStorage.clearSiteCookies(url) { n ->
+                    wv?.reload()
+                    done(ok().put("cleared", n).put("host", host).put("toast", "Cleared $n cookie(s) of $host"))
+                }
+            }
+            "offline_manage" -> { showOffline(); done(ok()) }
+            "storage_manage" -> { showStorage(); done(ok()) }
             "history" -> { showHistory(); done(ok()) }
             "bookmarks" -> { showBookmarks(); done(ok()) }
             "downloads" -> { showDownloads(); done(ok()) }

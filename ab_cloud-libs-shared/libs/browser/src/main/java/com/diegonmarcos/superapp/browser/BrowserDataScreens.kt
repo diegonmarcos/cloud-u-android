@@ -1,0 +1,140 @@
+package com.diegonmarcos.superapp.browser
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.uikit.KitConfirmDialog
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
+
+/** The storage breakdown the screen shows; null [items] = still measuring. */
+class StorageState { var items by mutableStateOf<List<SiteData.Item>?>(null) }
+
+/** The running site save the panel shows. */
+class SaveState {
+    var progress by mutableStateOf<SaveProgress?>(null)
+    var title by mutableStateOf("")
+}
+
+/**
+ * Configs ▸ Data & storage ▸ Storage & cookies: every item the browser keeps, its size, a box each,
+ * Clear selected and Clear everything — both behind a confirm that names what goes.
+ */
+@Composable
+fun BrowserStorageScreen(state: StorageState, onClear: (Set<String>) -> Unit, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    val items = state.items
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var confirm by remember { mutableStateOf<Set<String>?>(null) }
+    Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(12.dp).testTag("browser:storage")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text("Storage & cookies", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+        }
+        if (items == null) Text("Measuring…", color = p.textSecondary, modifier = Modifier.padding(16.dp))
+        items?.forEach { it ->
+            Row(Modifier.fillMaxWidth().clickable { picked = if (it.id in picked) picked - it.id else picked + it.id }.padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(it.id in picked, onCheckedChange = null, modifier = Modifier.padding(end = 8.dp).testTag("browser:storage:${it.id}"))
+                Column(Modifier.weight(1f)) {
+                    Text(it.label, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                    if (it.detail.isNotBlank()) Text(it.detail, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(it.bytes?.let(SiteData::human) ?: "—", color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
+            }
+            HorizontalDivider(color = p.hairline)
+        }
+        if (items != null) {
+            Text("Total ${SiteData.human(SiteData.total(items))}", color = p.textPrimary, style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp).testTag("browser:storage:total"))
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                TextButton({ confirm = picked }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:storage:clear")) { Text("Clear selected") }
+                TextButton({ confirm = SiteData.everything(items) }, modifier = Modifier.testTag("browser:storage:clear-all")) { Text("Clear everything") }
+            }
+        }
+        confirm?.let { ids ->
+            val list = items.orEmpty().filter { it.id in ids }
+            val all = items != null && ids == SiteData.everything(items)
+            KitConfirmDialog(
+                title = if (all) "Clear everything?" else "Clear ${list.size} item(s)?",
+                text = list.joinToString("\n") { "• ${it.label} (${it.bytes?.let(SiteData::human) ?: "—"})" } +
+                    "\n\nThis cannot be undone." + if ("cookies" in ids) " You will be signed out of every site." else "",
+                confirmLabel = "Clear", dismissLabel = "Cancel",
+                onConfirm = { confirm = null; onClear(ids); picked = emptySet() },
+                onDismiss = { confirm = null },
+            )
+        }
+    }
+}
+
+/** Configs ▸ Data & storage ▸ Offline copies: each copy with its size and date, open, delete one, delete all. */
+@Composable
+fun BrowserOfflineScreen(sites: List<OfflineSite>, onOpen: (OfflineSite) -> Unit, onDelete: (OfflineSite) -> Unit, onDeleteAll: () -> Unit, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    var confirmAll by remember { mutableStateOf(false) }
+    val date = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT) }
+    Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState()).padding(12.dp).testTag("browser:offline")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("← Back") }
+            Text("Offline copies", color = p.textPrimary, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            if (sites.isNotEmpty()) TextButton({ confirmAll = true }) { Text("Delete all") }
+        }
+        if (sites.isEmpty()) Text("Nothing saved yet. Page menu ▸ Save this page / Save this site offline.", color = p.textSecondary, modifier = Modifier.padding(16.dp))
+        sites.forEach { s ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).clickable { onOpen(s) }.padding(vertical = 8.dp).testTag("browser:offline:open")) {
+                    Text(s.title.ifBlank { s.origin }, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+                    Text("${s.origin} · ${s.pages.size} page(s) · ${SiteData.human(s.bytes)} · ${date.format(java.util.Date(s.ts))}",
+                        color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                    if (s.stopped.isNotBlank()) Text("Stopped: ${s.stopped}", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton({ onDelete(s) }, modifier = Modifier.testTag("browser:offline:delete")) { Text("✕") }
+            }
+            HorizontalDivider(color = p.hairline)
+        }
+        if (sites.isNotEmpty()) Text("Total ${SiteData.human(sites.sumOf { it.bytes })}", color = p.textSecondary, modifier = Modifier.padding(top = 8.dp))
+        if (confirmAll) KitConfirmDialog("Delete every offline copy?", "${sites.size} copies, ${SiteData.human(sites.sumOf { it.bytes })}. This cannot be undone.",
+            "Delete all", "Cancel", onConfirm = { confirmAll = false; onDeleteAll() }, onDismiss = { confirmAll = false })
+    }
+}
+
+/** The panel over the page while a site is being saved: progress against the limits, and Stop. */
+@Composable
+fun BrowserSavePanel(state: SaveState, onStop: () -> Unit, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    val pr = state.progress
+    Column(Modifier.fillMaxWidth().background(p.surface).padding(16.dp).testTag("browser:save")) {
+        Text(if (pr?.done == true) "Saved" else "Saving ${state.title}…", color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        if (pr != null) {
+            Text("${pr.pages} of at most ${pr.limits.maxPages} pages · ${SiteData.human(pr.bytes)} of ${SiteData.human(pr.limits.maxBytes)} · ${pr.pending} waiting",
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+            if (pr.current.isNotBlank()) Text(pr.current, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+            if (pr.done && pr.stopped.isNotBlank()) Text("Stopped: ${pr.stopped}", color = p.accent, style = MaterialTheme.typography.bodySmall)
+            if (pr.error.isNotBlank()) Text(pr.error, color = p.accent)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            if (pr?.done == true) TextButton(onClose) { Text("Close") } else TextButton(onStop) { Text("Stop") }
+        }
+    }
+}

@@ -22,3 +22,6 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | `tab_strip` | bool | true |  | tabs | config | A row of small tab icons under the address bar: the tabs of the current group, and a + that opens a new tab in the same group. |
 | `translate_engine` | enum | "on_device" | on_device, openrouter | translate | config | Which engine Translate page uses, in place on the page. On-device ML = the fleet's translation library in Cloud Writer / Cloud Keyboard (offline, private). OpenRouter = the model chosen in that app's AI routing (needs the network; the key stays in that app). Summarise by topics needs OpenRouter. |
 | `translate_target` | enum | "device" | device, en, es, pt, fr, de, it, nl, pl, ru, ja, zh | translate | config | The language Translate page and Summarise by topics write in. |
+| `offline_depth` | int | 1 | 0..3 | data | config | Save site offline follows same-site links this many levels from the page you are on (0 = only that page). |
+| `offline_max_pages` | int | 25 | 1..200 | data | config | Save site offline stops after this many pages. |
+| `offline_max_mb` | int | 50 | 5..500 | data | config | Save site offline stops when the copy reaches this size. |
