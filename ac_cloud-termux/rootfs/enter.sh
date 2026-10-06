@@ -73,7 +73,16 @@ if [ ! -r /proc/uptime ]; then
     printf '1000.00 1000.00\n' > "$HERE/fake/uptime"
     binds="$binds -b $HERE/fake/uptime:/proc/uptime"
 fi
-[ ! -d /storage/emulated/0 ] || binds="$binds -b /storage/emulated/0:/sdcard"
+# /storage/emulated/0 is MediaProvider FUSE: every lstat is an IPC round trip and
+# it stalls for minutes under load, which freezes the whole single-threaded proot
+# (git on CloudDrive hung every session for 5-60 min). Prefer the raw volume or the
+# pass-through FUSE when this app can read them; same files, 10-50x faster stats.
+sdcard=""
+for cand in /data/media/0 /mnt/pass_through/0/emulated/0 /mnt/androidwritable/0/emulated/0 /storage/emulated/0; do
+    [ -r "$cand/CloudDrive" ] && [ -w "$cand/CloudDrive" ] && { sdcard="$cand"; break; }
+done
+[ -n "$sdcard" ] || [ ! -d /storage/emulated/0 ] || sdcard=/storage/emulated/0
+[ -z "$sdcard" ] || binds="$binds -b $sdcard:/sdcard -b $sdcard:/storage/emulated/0"
 
 # #644 — the declarative link store, staged beside this file by build-rootfs.sh
 # and bound at the same path the nix terminal extracts its copy to. Guarded on
