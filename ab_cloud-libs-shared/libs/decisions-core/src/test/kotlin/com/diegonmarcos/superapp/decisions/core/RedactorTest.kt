@@ -13,7 +13,7 @@ class RedactorTest {
     private val r = Redactor(rules)
 
     @Test fun stringsGoThroughThePatterns() {
-        val out = r.clean("token sk-or-v1-0123456789abcdef x") as Redactor.Cleaned
+        val out = r.clean("token ${Fixtures.SHORT_SECRET} x")
         assertEquals("token [X] x", out.state)
         assertEquals(1, out.masked)
         assertEquals("Bearer [X]", r.clean("Bearer abc123").state)
@@ -53,7 +53,7 @@ class RedactorTest {
 
     @Test fun nestingIsWalkedAndNonStringsPassThrough() {
         val state = JSONObject()
-            .put("list", JSONArray().put("sk-or-v1-0123456789abcdef").put(3).put(true).put(JSONObject().put("Body", "x").put("s", "Bearer q")))
+            .put("list", JSONArray().put(Fixtures.SHORT_SECRET).put(3).put(true).put(JSONObject().put("Body", "x").put("s", "Bearer q")))
             .put("n", 1.5).put("b", false).put("z", JSONObject.NULL)
         val c = r.clean(state)
         val o = c.state as JSONObject
@@ -71,11 +71,11 @@ class RedactorTest {
     }
 
     @Test fun theCallersObjectIsNeverMutated() {
-        val state = JSONObject().put("Body", "x").put("token", "t").put("s", "sk-or-v1-0123456789abcdef")
+        val state = JSONObject().put("Body", "x").put("token", "t").put("s", Fixtures.SHORT_SECRET)
         r.clean(state)
         assertEquals("x", state.getString("Body"))
         assertEquals("t", state.getString("token"))
-        assertEquals("sk-or-v1-0123456789abcdef", state.getString("s"))
+        assertEquals(Fixtures.SHORT_SECRET, state.getString("s"))
     }
 
     @Test fun nullAndNumbersAreStates() {

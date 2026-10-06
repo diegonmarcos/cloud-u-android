@@ -41,19 +41,19 @@ class EngineTest {
     }
 
     @Test fun theTokenReachesThePostAndNothingElse() {
-        val rig = Rig(token = "tok-secret-1234")
+        val rig = Rig(token = Fixtures.TOKEN)
         val r = rig.decide("ui", JSONObject().put("marker", "state-marker-xyz"))
-        assertEquals(listOf<String?>("tok-secret-1234"), rig.http.tokens)
-        assertFalse(rig.http.sent.single().toString().contains("tok-secret-1234"))
-        assertFalse(r.toString().contains("tok-secret-1234"))
+        assertEquals(listOf<String?>(Fixtures.TOKEN), rig.http.tokens)
+        assertFalse(rig.http.sent.single().toString().contains(Fixtures.TOKEN))
+        assertFalse(r.toString().contains(Fixtures.TOKEN))
         rig.decide("ui", JSONObject().put("marker", "state-marker-xyz-2"), Fixtures.noulQ("other"))
         rig.decide("nope")
         for (line in rig.sink.lines) {
-            assertFalse(line, line.contains("tok-secret-1234"))
+            assertFalse(line, line.contains(Fixtures.TOKEN))
             assertFalse(line, line.contains("state-marker"))
             assertFalse(line, line.contains("Is it fine?"))
         }
-        assertFalse(rig.engine.status(Fixtures.APP).toString().contains("tok-secret-1234"))
+        assertFalse(rig.engine.status(Fixtures.APP).toString().contains(Fixtures.TOKEN))
     }
 
     @Test fun theStateIsRedactedBeforeItLeaves() {
@@ -453,7 +453,7 @@ class EngineTest {
         val r = rig.engine.decide(probeApp, Fixtures.request("probe", JSONObject().put("statement", "2+2=4"), Fixtures.noulQ("correct")))
         assertTrue(r.toString(), r.getBoolean("ok"))
         assertEquals("background", r.getString("class"))
-        assertEquals("tok-secret-1234", rig.http.tokens.single())
+        assertEquals(Fixtures.TOKEN, rig.http.tokens.single())
         assertEquals("https://openrouter.ai/api/alpha/decisions", rig.http.endpoints.single())
         assertEquals("typesafe/jev-1.13", rig.http.sent.single().getString("model"))
         assertTrue(rig.engine.decide(probeApp, Fixtures.request("probe", JSONObject().put("statement", "2+2=4"), Fixtures.noulQ("correct"))).getBoolean("cached"))

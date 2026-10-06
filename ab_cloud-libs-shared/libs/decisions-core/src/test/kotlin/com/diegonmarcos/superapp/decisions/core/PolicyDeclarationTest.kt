@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-class PolicyTest {
+class PolicyDeclarationTest {
 
     private fun policy(tweak: (JSONObject) -> Unit) = Policy.parse(Fixtures.block(tweak))
 
@@ -98,16 +98,7 @@ class PolicyTest {
 
     @Test fun theRealRedactionPatternsMaskWhatTheyAreMeantTo() {
         val r = Redactor(Policy.parse(Fixtures.realManifest()).redact)
-        val samples = listOf(
-            "key sk-or-v1-0123456789abcdef0123456789abcdef end",
-            "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
-            "AGE-SECRET-KEY-1ABCDEF0123456789",
-            "ENC[AES256_GCM,data:abc,iv:def]",
-            "ghp_0123456789abcdefghijABCDEFGHIJ",
-            "AKIAABCDEFGHIJKLMNOP",
-            "xoxb-1234567890-abcdef",
-            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop",
-        )
+        val samples = Fixtures.SAMPLES
         for (s in samples) assertTrue("masked: $s", r.redactString(s).contains("[REDACTED]") && !r.redactString(s).contains("0123456789abcdef0123456789abcdef"))
         assertEquals("Authorization: Bearer [REDACTED]", r.redactString("Authorization: Bearer abc.def.ghi"))
         assertEquals("OPENROUTER_API_KEY=[REDACTED]", r.redactString("OPENROUTER_API_KEY=supersecretvalue"))
