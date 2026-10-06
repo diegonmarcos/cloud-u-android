@@ -730,7 +730,7 @@ apps_ok() {   # $1 = AccountTabs.kt, $2 = build.json; prints the first broken ru
 }
 msg=$(union_ok "$IM") && ok "F2: Profiles draws the skeleton ∪ the fetch's schema ∪ every top-level bundle key — no section is dropped" || bad "F2: $msg"
 msg=$(apps_ok "$AT" "$BJ") && ok "F2: the apps section lists every declared app (name · package · store · installed here) and links to $(jq -r '[.ui.profile.infos.schema.sections[] | select(.render == "apps") | .route] | first' "$BJ")" || bad "F2: $msg"
-for need in apps peers; do
+for need in peers; do   # #570 apps left the staged list: it is in cloud-vault schema.json now
     jq -e --arg i "$need" '.ui.profile.infos.schema.sections[] | select(.id == $i and .staged == true and (.fields | length > 0))' "$BJ" >/dev/null \
         && ok "F2: the staged vault section '$need' is in the skeleton" || bad "F2: the staged vault section '$need' is missing from the skeleton"
 done

@@ -26,6 +26,7 @@
     <string name="infos_apps_row_missing">✗ %1$s · %2$s · %3$s</string>
     <string name="infos_apps_no_store">no store recorded</string>
     <string name="infos_apps_none">This vault export carries no declared app list yet.</string>
+    <string name="infos_apps_apply_store">Apply %1$s list to Store (%2$d missing)</string>
     <string name="infos_apps_open_store">Open Store ▸ Phone Apps (Declared)</string>
     <string name="vault_connect_browser">Sign in with browser (OWebAuth)</string>
     <string name="vault_connect_browser_caption">Sign in to Authelia below. The session cookie for %1$s is kept in memory for the two vault calls and dies with the app — nothing is written to disk. Sign in again to refresh it.</string>
@@ -147,6 +148,7 @@
     <string name="account_three_way">%1$d in sync · %2$d local edits · %3$d runtime drift · %4$d agreed · %5$d conflicts</string>
     <string name="account_pair_drift">%1$d differ</string>
     <string name="account_push_all">Apply server → runtime (all)</string>
+    <string name="account_apply_all">Apply all</string>
     <string name="account_migrate">New phone: install missing apps, then apply all</string>
     <string name="account_pull_all">Runtime → declared (all)</string>
     <string name="account_upload">Upload L → server</string>

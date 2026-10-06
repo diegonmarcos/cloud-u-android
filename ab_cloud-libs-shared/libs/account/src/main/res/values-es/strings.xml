@@ -52,6 +52,7 @@
     <string name="infos_apps_row_missing">✗ %1$s · %2$s · %3$s</string>
     <string name="infos_apps_no_store">ninguna tienda registrada</string>
     <string name="infos_apps_none">Esta exportación de la bóveda aún no trae una lista de apps declarada.</string>
+    <string name="infos_apps_apply_store">Aplicar la lista de %1$s en la Store (%2$d faltan)</string>
     <string name="infos_apps_open_store">Abrir Store ▸ Apps del teléfono (Declaradas)</string>
     <string name="vault_connect_browser">Iniciar sesión con el navegador (OWebAuth)</string>
     <string name="vault_connect_browser_caption">Inicia sesión en Authelia abajo. La cookie de sesión de %1$s se guarda en memoria para las dos llamadas a la bóveda y muere con la app; nada se escribe en disco. Vuelve a iniciar sesión para renovarla.</string>

@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudaccount
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import com.diegonmarcos.superapp.appstore.StoreImport
 import android.util.Log
 import com.diegonmarcos.superapp.profile.AccountDebugApi
 import com.diegonmarcos.superapp.profile.AccountHost
@@ -45,6 +46,8 @@ class App : Application() {
             val store = route.startsWith("extapp:cloud-store") || route.removePrefix("page:").startsWith(STORE_PAGE)
             val intent = if (store && pm.getLaunchIntentForPackage(STORE) != null)
                 Intent("$STORE.OPEN").setPackage(STORE).putExtra("tab", if (route.endsWith("store-phone")) "phone" else "cloud")
+                    // #570 Fleet ▸ Apps ▸ Apply list to Store: the declared inventory crosses to Cloud Store's Phone page.
+                    .putExtra(StoreImport.EXTRA_IMPORT, StoreImport.takePending())
             else pm.getLaunchIntentForPackage(SUPERAPP)
             if (intent == null) false else { activity.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }
         }.getOrDefault(false)

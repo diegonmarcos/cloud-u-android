@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.updater.UpdateProgress
 import kotlin.concurrent.thread
 
 /**
@@ -25,8 +26,26 @@ import kotlin.concurrent.thread
  *             app with no direct rung is never installed from here; its store
  *             does that, with the user in front of it.
  *   manual  → listed with whatever origin the file recorded. Nothing to press.
+ *
+ * #570 "Install all missing": ours + direct in ONE [BatchInstall] pass (every
+ * download before any install), store + manual skipped and counted as "need
+ * Play". It is the plan diffed against THIS phone, so a second tap finds
+ * nothing to do; nothing here removes a package.
+ *
+ * [pending] is the Account → Store hand-off: Fleet ▸ Apps ▸ "Apply list to
+ * Store" puts the vault's declared inventory (the same #565 JSON) here, the
+ * Phone page consumes it on resume and shows this plan — the file picker's
+ * path without the file. Across processes it rides the OPEN Intent's `import`
+ * extra ([EXTRA_IMPORT]) and lands here again.
  */
 object StoreImport {
+
+    const val EXTRA_IMPORT = "import"
+
+    /** A declared inventory (AppInventory JSON) waiting for the Phone page. Read once. */
+    @Volatile var pending: String? = null
+
+    fun takePending(): String? = pending.also { pending = null }
 
     fun show(host: Fragment, plan: AppInventory.Plan) {
         val ctx = host.requireContext()
@@ -37,6 +56,14 @@ object StoreImport {
         col.addView(text(ctx, ctx.getString(R.string.store_import_summary,
             plan.installed.size, plan.ours.size + plan.store.size, plan.manual.size), StoreDensity.T_BODY, bold = true))
 
+        val missing = plan.ours.size + plan.direct.size
+        val play = plan.store.size + plan.manual.size
+        if (missing > 0) col.addView(button(ctx, ctx.getString(R.string.store_import_install_missing, missing, play)) {
+            val app = ctx.applicationContext
+            val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(app))
+            Toast.makeText(ctx, ctx.getString(R.string.store_phone_install_all_start, missing, play), Toast.LENGTH_LONG).show()
+            thread(name = "store-import-missing") { installMissing(app, cfg, plan) }
+        })
         if (plan.ours.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_ours, plan.ours.size)))
             plan.ours.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
@@ -93,6 +120,29 @@ object StoreImport {
             .setView(ScrollView(ctx).apply { addView(col) })
             .setPositiveButton(R.string.store_close, null)
             .show()
+    }
+
+    /**
+     * Every app the plan says this store can install itself — fleet members by
+     * the fleet path, external ones by their declared ladder (vendor → F-Droid)
+     * — through the one two-phase engine. `store` and `manual` are not targets:
+     * a Play-only app keeps its "needs Play" hand-off. Blocking.
+     */
+    fun installMissing(app: Context, cfg: SourceResolver.Config, plan: AppInventory.Plan): List<BatchInstall.Outcome> {
+        val fleet = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))
+        val targets = plan.ours.mapNotNull { e -> fleet[e.pkg]?.let { BatchInstall.Target(e.pkg, it.label, it, null) } } +
+            plan.direct.map { e -> SourceResolver.resolve(cfg, e.pkg).let { BatchInstall.Target(e.pkg, it.label, null, it) } }
+        val outcomes = BatchInstall.run(app, targets, BatchInstall.engine(cfg)) { phase, t, i, n ->
+            UpdateProgress.beginBatch((if (phase == BatchInstall.Phase.DOWNLOAD) "\u2193 " else "") + t.label, i, n)
+        }
+        UpdateProgress.endBatch()
+        val failed = outcomes.filter { !it.installed }
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            failed.forEach { o -> Toast.makeText(app, app.getString(R.string.store_phone_failed, o.target.label,
+                o.message ?: app.getString(R.string.store_cache_kept)), Toast.LENGTH_LONG).show() }
+            Toast.makeText(app, app.getString(R.string.store_phone_batch_done, outcomes.size - failed.size, failed.size), Toast.LENGTH_LONG).show()
+        }
+        return outcomes
     }
 
     private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)

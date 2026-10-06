@@ -62,6 +62,9 @@ object AccountTags {
     fun runtimeStatus(id: String) = "runtime:status:$id"
     fun runtimeCounts(id: String) = "runtime:counts:$id"
     fun runtimeRoster(id: String) = "runtime:roster:$id"
+    fun applyApps(device: String) = "infos:apps:apply:$device"
+    /** #573 the card's one Apply all button (cockpit `runtime.apply_all`). */
+    fun runtimeApplyAll(id: String) = "runtime:apply_all:$id"
     fun exportFile(slot: Slot) = "drift:export:${slot.name}"
     const val EXPORT_REPORT = "drift:export:report"
     fun pair(id: String) = "drift:pair:$id"
@@ -200,6 +203,14 @@ private fun DeclaredApps(bundle: org.json.JSONObject?, route: String, openStore:
                 a.label, a.pkg, VaultCockpit.storeLabel(sources, a) ?: ctx.getString(R.string.infos_apps_no_store)),
                 color = if (here[i]) p.accent else p.textSecondary, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
         }
+        // #570 the declared set → the Store's import plan (StoreImport), the same path as a picked
+        // inventory file: the Phone page shows every missing app with its install rung and
+        // "Install all missing". Idempotent (diffed against this phone); the Store never uninstalls.
+        if (route.isNotBlank()) TextButton(modifier = Modifier.testTag(AccountTags.applyApps(id)), onClick = {
+            com.diegonmarcos.superapp.appstore.StoreImport.pending =
+                com.diegonmarcos.superapp.appstore.AppInventory.toJson(VaultCockpit.appsDeclared(bundle, id, fleet))
+            openStore(route)
+        }) { Text(ctx.getString(R.string.infos_apps_apply_store, id, here.count { !it })) }
     }
     if (listed == 0) Text(ctx.getString(R.string.infos_apps_none), color = p.textSecondary)
     if (route.isNotBlank()) TextButton(onClick = { openStore(route) }) { Text(ctx.getString(R.string.infos_apps_open_store)) }
@@ -219,12 +230,14 @@ fun RuntimeTab(m: AccountModel) {
     val scope = rememberCoroutineScope()
     var reading by remember { mutableStateOf(false) }
     fun refresh() { reading = true; scope.launch { withContext(Dispatchers.IO) { m.refreshRuntime() }; reading = false } }
+    fun applyAll(id: String) { reading = true; scope.launch { withContext(Dispatchers.IO) { m.applySection(id) }; reading = false } }
     LaunchedEffect(Unit) { refresh() }
     Column(Modifier.fillMaxWidth().testTag(AccountTags.tab("runtime")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val r = m.runtime()
         KitSectionHeader(stringResource(R.string.account_runtime_title),
             if (r == null) stringResource(R.string.account_runtime_none) else stringResource(R.string.account_runtime_meta, metaLine(r)))
         ActionButton(stringResource(if (reading) R.string.account_runtime_reading else R.string.account_runtime_refresh), AccountTags.REFRESH, !reading) { refresh() }
+        ResultLine(m)
         val values = AccountDrift.leaves(r?.body)
         val apps = r?.apps
         // #783 the cockpit's apps, then every fleet app the manifest declares — one card each.
@@ -257,6 +270,8 @@ fun RuntimeTab(m: AccountModel) {
                 // #782 the fleet roster (apps) / the live tunnel (mesh): listed with no device pick.
                 a.optJSONArray("roster")?.let { ro -> for (i in 0 until ro.length()) Text(rosterLine(ro.optJSONObject(i)),
                     color = p.textPrimary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(AccountTags.runtimeRoster(section.id))) }
+                // #573 the whole declared section applied on ONE tap (mesh: all profiles, mail: all accounts).
+                if (section.runtime.applyAll) ActionButton(stringResource(R.string.account_apply_all), AccountTags.runtimeApplyAll(section.id), !reading) { applyAll(section.id) }
                 if (observed.isNotEmpty()) Text(stringResource(R.string.account_runtime_fields, observed.size), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
                 for (path in observed) {
                     Text(path, color = p.textSecondary, style = MaterialTheme.typography.labelMedium)

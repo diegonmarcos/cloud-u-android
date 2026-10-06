@@ -145,6 +145,8 @@ class StorePhoneFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         reload()
+        // #570 Account ▸ Fleet ▸ Apps ▸ Apply list to Store: the declared inventory, same path as a picked file.
+        StoreImport.takePending()?.let { importText(it) }
     }
 
     private fun reload(then: (() -> Unit)? = null) {
@@ -188,8 +190,17 @@ class StorePhoneFragment : Fragment() {
     private fun importFrom(uri: Uri) {
         val app = requireContext().applicationContext
         thread(name = "store-import") {
+            val text = runCatching { app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }
+            view?.post { if (isAdded) text.onSuccess { importText(it) }
+                .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() } }
+        }
+    }
+
+    /** Diff an inventory (file or Account hand-off) against this phone, show the plan. Acts on nothing. */
+    private fun importText(text: String) {
+        val app = requireContext().applicationContext
+        thread(name = "store-import") {
             val result = runCatching {
-                val text = app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
                 val wanted = AppInventory.parse(text)
                 val pm = app.packageManager
                 val installed = wanted.map { it.pkg }.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.toSet()

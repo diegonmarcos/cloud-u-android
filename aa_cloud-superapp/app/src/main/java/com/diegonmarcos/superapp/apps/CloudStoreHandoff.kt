@@ -55,6 +55,8 @@ object CloudStoreHandoff {
     /** Opens Cloud Store on [tab]. False when it is not installed or will not start. */
     fun open(ctx: Context, tab: String): Boolean = runCatching {
         ctx.startActivity(Intent(ACTION_OPEN).setPackage(PKG).putExtra(EXTRA_TAB, tab)
+            // #570 Account ▸ Fleet ▸ Apps ▸ Apply list to Store, when Cloud Store (not the embedded page) is the Store.
+            .putExtra(com.diegonmarcos.superapp.appstore.StoreImport.EXTRA_IMPORT, com.diegonmarcos.superapp.appstore.StoreImport.takePending())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     }.getOrDefault(false)
