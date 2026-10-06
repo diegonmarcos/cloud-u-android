@@ -194,7 +194,7 @@ d = json.load(open(sys.argv[1]))["keyboard_ai"]
 # rejects anything else with a 400 that lists exactly these.
 CATEGORIES = {"programming", "roleplay", "marketing", "marketing/seo", "technology", "science",
               "translation", "legal", "finance", "health", "trivia", "academia"}
-BITS = {"fp4": 4, "int4": 4, "fp6": 6, "fp8": 8, "int8": 8, "fp16": 16, "bf16": 16, "fp32": 32}
+BITS = {"fp4": 4, "int4": 4, "mxfp4": 4, "nvfp4": 4, "fp6": 6, "fp8": 8, "int8": 8, "fp16": 16, "bf16": 16, "fp32": 32}
 INF = float("inf")
 def size_key(m): return m.get("params_b", INF)
 def quant_key(m): return min((BITS.get(q, INF) for q in m.get("quant", [])), default=INF)
