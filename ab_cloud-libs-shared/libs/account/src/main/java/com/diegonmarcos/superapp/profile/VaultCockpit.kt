@@ -70,7 +70,10 @@ object VaultCockpit {
     data class Runtime(val servedBy: String = SELF, val reports: Boolean = true,
                        val writable: Boolean = true, val fields: Boolean = true,
                        val why: String = "", val lists: Map<String, String> = emptyMap(),
-                       val store: String = "")
+                       val store: String = "",
+                       /** #573 `apply_all`: the Runtime card offers ONE button that applies the whole declared
+                        *  section as a unit (every mesh profile, every mail account) — [AccountRuntime.applyAll]. */
+                       val applyAll: Boolean = false)
 
     /** #781 One Profiles field's runtime mapping (cockpit `vault_fields`): the app ids that use it,
      *  whether they HOLD it live ([held]: Runtime reads it), and [why] when no app does or none holds it. */
@@ -91,6 +94,8 @@ object VaultCockpit {
         val agentAuth: AgentAuth? = null,
         /** #802 `derived_settings`: more app stores derived the same way (the browser's autofill profile). */
         val derivedSettings: List<AgentAuth> = emptyList(),
+        /** #573 `mesh_default_profile`: the profile name Apply all makes the active tunnel (config-v4-split). */
+        val meshDefault: String = "",
     ) {
         /** Every derivation, agent_auth first. */
         val derivations: List<AgentAuth> get() = listOfNotNull(agentAuth) + derivedSettings
@@ -128,7 +133,7 @@ object VaultCockpit {
                     Runtime(r?.optString("served_by")?.ifBlank { null } ?: SELF, r?.optBoolean("reports", true) ?: true,
                         r?.optBoolean("writable", true) ?: true, r?.optBoolean("fields", true) ?: true,
                         r?.optString("why").orEmpty(), lists.keys().asSequence().associateWith { lists.getString(it) },
-                        r?.optString("store").orEmpty())
+                        r?.optString("store").orEmpty(), r?.optBoolean("apply_all", false) ?: false)
                 })
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
@@ -149,6 +154,7 @@ object VaultCockpit {
             o.optJSONArray("derived_settings").let { a ->
                 if (a == null) emptyList() else (0 until a.length()).map { parseDerivation(a.getJSONObject(it)) }
             },
+            o.optString("mesh_default_profile"),
         )
     }
 
@@ -166,7 +172,10 @@ object VaultCockpit {
     // ── the device this phone is ─────────────────────────────────────────
 
     /** [type]: the entry's declared kind (notebook, phone, …), as the vault spells it. */
-    data class Device(val id: String, val label: String, val wgIp: String, val wgIpv6: String, val type: String = "")
+    /** [publicKey]: the entry's declared `wg_public_key` (the device's OWN identity, "" when the vault
+     *  does not carry it) — what every key an apply would use is checked against ([meshKey]). */
+    data class Device(val id: String, val label: String, val wgIp: String, val wgIpv6: String, val type: String = "",
+                      val publicKey: String = "")
 
     /**
      * Every device the vault's `electronics` section declares with a `wg_peer`
@@ -187,7 +196,7 @@ object VaultCockpit {
                 if (ip.isBlank()) return@forEach
                 // #766 the device's own label (the vault carries it since 11950b4), else the tunnel's client name.
                 out += Device(id, entry.optString("label").ifBlank { peer.optString("name") }.ifBlank { id }, ip, peer.optString("wg_ipv6"),
-                    (entry.opt("type") as? String).orEmpty())
+                    (entry.opt("type") as? String).orEmpty(), (entry.opt("wg_public_key") as? String).orEmpty().trim())
             }
         }
         // #573: the vault's peers section (`peers.<id>.wg0`, one entry per
@@ -278,6 +287,15 @@ object VaultCockpit {
         bundle.optJSONObject("mesh")?.optJSONObject("profiles")?.let { profiles ->
             profiles.keys().forEach { name -> (profiles.opt(name) as? String)?.let { candidates[name] = it } }
         }
+        // #573: `mesh.devices.<id>.profiles` files a second phone's four profiles under its own
+        // id (mesh/sources.json `devices`); the same rule applies — a profile is the device's by
+        // its Address line. Keyed `devices/<id>/<name>` so a name shared with mesh.profiles survives.
+        bundle.optJSONObject("mesh")?.optJSONObject("devices")?.let { devs ->
+            devs.keys().forEach { id ->
+                val profiles = devs.optJSONObject(id)?.optJSONObject("profiles") ?: return@forEach
+                profiles.keys().forEach { name -> (profiles.opt(name) as? String)?.let { candidates.putIfAbsent("devices/$id/$name", it) } }
+            }
+        }
         // #573: the peers section files each phone's profiles under its own id;
         // the same rule applies — a profile is the device's by its Address line.
         bundle.optJSONObject("peers")?.let { peers ->
@@ -302,6 +320,51 @@ object VaultCockpit {
                 "${current.name.ifBlank { "—" }} · ${current.address.ifBlank { "no address" }} · ${current.peerKeys.size} peers",
                 if (same) State.MATCH else State.DIFFERS)
         }
+
+    /** The PrivateKey value a profile text carries, or null for none / a `<PROVIDED_BY_DEVICE>` marker. */
+    fun privateKeyOf(conf: String): String? =
+        Regex("(?m)^\\s*PrivateKey\\s*=\\s*(\\S+)").find(conf)?.groupValues?.get(1)?.takeIf { !it.startsWith("<") }
+
+    /** Which private key Apply all may use for [device] — and when it may use none. */
+    sealed class MeshKey {
+        /** The vault's profiles carry the device's own key: store it as the phone's. */
+        data class FromVault(val privateKey: String) : MeshKey()
+        /** The profiles carry no key; the phone's own key IS the device's: keep it. */
+        object FromDevice : MeshKey()
+        /** No key may be used; [why] says exactly what is missing and the path that exists. */
+        data class Refused(val why: String) : MeshKey()
+    }
+
+    /**
+     * THE KEY RULE (#573, the A37 addendum): a WireGuard private key names ONE device, so the
+     * key an apply stores must be the chosen device's and never another peer's. [device].publicKey
+     * is the identity the vault declares for it; [profiles] are its declared profiles (their
+     * PrivateKey is either the real key or `<PROVIDED_BY_DEVICE>`); [phonePublicKey] is the public
+     * half of what the phone holds ("" for none); [derive] gives a private key's public half (null
+     * when the text is not a key). Nothing here invents a key source: when neither the bundle nor
+     * the phone holds the device's key, the answer names the Generate / import path that exists.
+     */
+    fun meshKey(device: Device, profiles: Map<String, String>, phonePublicKey: String, derive: (String) -> String?): MeshKey {
+        val carried = profiles.values.mapNotNull { privateKeyOf(it) }.distinct()
+        val declared = device.publicKey
+        if (carried.size > 1) return MeshKey.Refused("✗ ${device.label}: its profiles disagree on the private key — fix the vault; nothing written")
+        carried.singleOrNull()?.let { key ->
+            val pub = derive(key) ?: return MeshKey.Refused("✗ ${device.label}: the profiles' PrivateKey is not a valid key; nothing written")
+            if (declared.isNotBlank() && pub != declared)
+                return MeshKey.Refused("✗ ${device.label}: the key in the vault profiles is NOT this device's (declared public key ${declared.take(8)}…, profiles' ${pub.take(8)}…) — another peer's key is never reused; nothing written")
+            return MeshKey.FromVault(key)
+        }
+        if (phonePublicKey.isBlank())
+            return MeshKey.Refused("✗ ${device.label}: no private key — the bundle's profiles carry <PROVIDED_BY_DEVICE> and this phone holds none. Configs ▸ Mesh ▸ Generate keypair (or Import .conf / paste), then register the public key as ${device.label}'s peer; nothing written")
+        if (declared.isNotBlank() && phonePublicKey != declared)
+            return MeshKey.Refused("✗ ${device.label}: this phone's key is not ${device.label}'s (phone ${phonePublicKey.take(8)}…, declared ${declared.take(8)}…) — import ${device.label}'s key on Configs ▸ Mesh, or register the phone's public key as its peer; nothing written")
+        return MeshKey.FromDevice
+    }
+
+    /** The name in [profiles] Apply all activates: the layout's `mesh_default_profile` (config-v4-split),
+     *  matched on the profile's own name whatever prefix files it; else the first. */
+    fun meshActive(profiles: Map<String, String>, default: String): String? =
+        profiles.keys.firstOrNull { default.isNotBlank() && it.substringAfterLast('/') == default } ?: profiles.keys.firstOrNull()
 
     // The mesh tunnel's own state and apply live with the host (AccountHost.mesh): the tunnel's prefs are the host's.
 
@@ -350,6 +413,34 @@ object VaultCockpit {
             val pw = passwords?.opt(a.optString("pass_env"))
             MailDeclared(key, "$local@$domain", (pw as? String)?.takeIf { it.isNotBlank() }, host)
         }.toList()
+    }
+
+    /** `mail.endpoints` as hosts: JMAP is `domain`; IMAP and SMTP are the `l4_ports` SNI names
+     *  (the entries whose sni starts with imap / smtp), "" when the vault names none. */
+    data class MailEndpoints(val jmap: String, val imap: String, val smtp: String)
+
+    fun mailEndpoints(bundle: JSONObject): MailEndpoints {
+        val e = bundle.optJSONObject("mail")?.optJSONObject("endpoints") ?: return MailEndpoints("", "", "")
+        val ports = e.optJSONArray("l4_ports") ?: JSONArray()
+        fun sni(prefix: String) = (0 until ports.length()).map { ports.optJSONObject(it)?.optString("sni").orEmpty() }
+            .firstOrNull { it.startsWith(prefix) }.orEmpty()
+        return MailEndpoints(e.optString("domain"), sni("imap"), sni("smtp"))
+    }
+
+    /**
+     * #573 EVERY declared account into the mail store, with its password and the endpoints:
+     * [prefs] keeps the list ([JmapPrefs.saveAccounts]) and its active login stays the owner's
+     * ([owner]'s address when declared, else the first). The JMAP server URL is still not
+     * written (see [applyMail]). Returns the report, one line per account.
+     */
+    fun applyMailAll(prefs: JmapPrefs, accounts: List<MailDeclared>, endpoints: MailEndpoints, owner: String): String {
+        if (accounts.isEmpty()) return "✗ no declared mail account at a known domain"
+        val stored = accounts.map { JmapPrefs.Account(it.email, it.password.orEmpty(), endpoints.jmap, endpoints.imap, endpoints.smtp) }
+        val active = accounts.firstOrNull { it.email == owner } ?: accounts.first()
+        prefs.saveAccounts(stored, active.email)
+        return accounts.joinToString("\n") { d ->
+            "✓ ${d.email}" + (if (d.password == null) " (no password in the vault)" else "") + (if (d.email == active.email) " · active" else "")
+        } + "\n✓ endpoints jmap ${endpoints.jmap.ifBlank { "—" }} · imap ${endpoints.imap.ifBlank { "—" }} · smtp ${endpoints.smtp.ifBlank { "—" }}"
     }
 
     /** One item per declared account against [deviceEmail], the address the

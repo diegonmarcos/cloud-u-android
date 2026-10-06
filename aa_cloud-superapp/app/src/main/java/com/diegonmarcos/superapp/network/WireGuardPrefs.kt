@@ -134,6 +134,55 @@ class WireGuardPrefs(context: Context) {
         return pair.publicKey.toBase64()
     }
 
+    // ── the named profile set (#573 samsung-a37: four profiles, ONE active tunnel) ──
+
+    /**
+     * Every mesh profile the vault declared for THIS device, by name, as wg-quick
+     * text WITHOUT its PrivateKey line (the value is [PROVIDED_BY_DEVICE]). The
+     * device's private key lives in exactly one place, [interfacePrivateKey], and
+     * [activateProfile] splices it in at parse time — so storing four profiles
+     * never makes four copies of the credential, and a profile text can be shown
+     * or exported without ever carrying it. Android runs ONE tunnel, so a set is
+     * stored and one of its names is [activeProfile]; activating another name
+     * re-hydrates the single tunnel through [hydrateFromConfig], the ONE import path.
+     */
+    fun profiles(): Map<String, String> {
+        val raw = sp.getString(K_PROFILES_JSON, null) ?: return emptyMap()
+        return runCatching {
+            val o = JSONObject(raw)
+            o.keys().asSequence().associateWith { o.getString(it) }.toSortedMap()
+        }.getOrDefault(emptyMap())
+    }
+
+    fun saveProfiles(profiles: Map<String, String>) {
+        val o = JSONObject()
+        for ((name, conf) in profiles) o.put(name, stripPrivateKey(conf))
+        sp.edit().putString(K_PROFILES_JSON, o.toString()).apply()
+    }
+
+    /** The name of the stored profile the single tunnel currently is; "" before any Apply all. */
+    var activeProfile: String
+        get() = sp.getString(K_ACTIVE_PROFILE, "") ?: ""
+        set(value) { sp.edit().putString(K_ACTIVE_PROFILE, value).apply() }
+
+    /**
+     * Make the stored profile [name] THE tunnel: its text with this device's
+     * [interfacePrivateKey] spliced for [PROVIDED_BY_DEVICE], through the upstream
+     * parser and [hydrateFromConfig]. Throws when the name is not stored, when no
+     * key is held, or when the parser rejects the text — nothing is written then.
+     */
+    fun activateProfile(name: String): Config {
+        val conf = profiles()[name] ?: throw IllegalArgumentException("no stored profile named $name")
+        val key = interfacePrivateKey
+        if (key.isBlank()) throw IllegalStateException("no private key on this device — generate or import one first")
+        val cfg = Config.parse(java.io.BufferedReader(java.io.StringReader(conf.replace(PROVIDED_BY_DEVICE, key))))
+        tunnelName = name.substringAfterLast('/').take(15)
+        hydrateFromConfig(cfg)
+        configProvider = PROVIDER_CUSTOM
+        activeProfile = name
+        return cfg
+    }
+
     /** Last user-driven Connect/Disconnect state — restored on app
      *  restart so the toggle reflects the actual tunnel state. */
     var tunnelEnabled: Boolean
@@ -306,6 +355,19 @@ class WireGuardPrefs(context: Context) {
         private const val K_PEERS_JSON     = "peers_json"
         private const val K_TUNNEL_ENABLED = "tunnel_enabled"
         private const val K_PROVIDER       = "config_provider"
+        private const val K_PROFILES_JSON  = "profiles_json"
+        private const val K_ACTIVE_PROFILE = "active_profile"
+
+        /** The PrivateKey value a stored or exported profile carries in place of the key. */
+        const val PROVIDED_BY_DEVICE = "<PROVIDED_BY_DEVICE>"
+
+        /** [conf] with its PrivateKey value replaced by [PROVIDED_BY_DEVICE] (a text with none is unchanged). */
+        fun stripPrivateKey(conf: String): String =
+            conf.replace(Regex("(?m)^(\\s*PrivateKey\\s*=\\s*).*$"), "$1$PROVIDED_BY_DEVICE")
+
+        /** The PrivateKey value [conf] carries, or null when it carries none or a [PROVIDED_BY_DEVICE] marker. */
+        fun privateKeyOf(conf: String): String? =
+            Regex("(?m)^\\s*PrivateKey\\s*=\\s*(\\S+)").find(conf)?.groupValues?.get(1)?.takeIf { !it.startsWith("<") }
 
         /** Public half comes from the fleet preset baked out of build.json. */
         const val PROVIDER_CLOUD  = "cloud"

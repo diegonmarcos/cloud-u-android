@@ -299,7 +299,10 @@ object MeshMirror {
         // the fleet resolver the tunnel carries, so with the mesh down this leg
         // cannot answer and the row must say THAT — not "cannot resolve
         // git-proxy-api.app (active resolver: unknown)".
-        if (runCatching { meshUp(ctx) }.getOrNull() == false)
+        // A throwing hook means "not known" (null), never a swallowed failure:
+        // test-download-resume T4 bans the getOrNull() shape in this file.
+        val up: Boolean? = try { meshUp(ctx) } catch (_: Exception) { null }
+        if (up == false)
             throw java.io.IOException("mesh down: ${bases.joinToString(", ")} need the wg0 tunnel")
         // Digest FIRST, and it also picks the origin: the first base whose
         // sidecar answers is the one the bytes come from. Without a digest the

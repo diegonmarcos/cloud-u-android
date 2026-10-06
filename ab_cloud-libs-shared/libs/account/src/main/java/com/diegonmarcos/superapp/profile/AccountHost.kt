@@ -68,6 +68,18 @@ object AccountHost {
         fun state(ctx: Context): VaultCockpit.TunnelState
         /** Applies the mesh profile [conf] named [name]; returns the one-line report. */
         fun apply(ctx: Context, name: String, conf: String): String
+        /** The public half of the key THIS phone holds, "" when it holds none. */
+        fun publicKey(ctx: Context): String = ""
+        /**
+         * #573 Stores EVERY profile of [profiles] (name → wg-quick text) as the device's
+         * selectable set, makes [active] the one tunnel, stores [privateKey] as the device
+         * key when given (null = keep the phone's own), brings the tunnel up through the
+         * engine and reports its handshake. One report, ✓ or ✗ per line.
+         */
+        fun applyAll(ctx: Context, profiles: Map<String, String>, active: String, privateKey: String?): String =
+            "✗ this app's mesh cannot store a profile set"
+        /** The live tunnel in one line: up/down, active profile, last handshake — never a key. */
+        fun status(ctx: Context): String = ""
     }
 
     /**

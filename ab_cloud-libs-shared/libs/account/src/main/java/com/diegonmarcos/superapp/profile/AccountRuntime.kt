@@ -122,9 +122,24 @@ object AccountRuntime {
         tokens.mapKeys { (item, _) -> "ai${AccountDrift.SEP}tokens${AccountDrift.SEP}$item" }
 
     /** `mesh`: a profile name as [VaultCockpit.meshProfiles] gives it → its vault path (`peers` ones are `id/name`). */
-    fun meshPath(name: String): String =
-        if ('/' in name) "peers${AccountDrift.SEP}${name.substringBefore('/')}${AccountDrift.SEP}profiles${AccountDrift.SEP}${name.substringAfter('/')}"
-        else "mesh${AccountDrift.SEP}profiles${AccountDrift.SEP}$name"
+    fun meshPath(name: String): String {
+        val s = AccountDrift.SEP
+        val parts = name.split('/')
+        return when {
+            parts.size == 3 && parts[0] == "devices" -> "mesh${s}devices${s}${parts[1]}${s}profiles${s}${parts[2]}"
+            parts.size == 2 -> "peers${s}${parts[0]}${s}profiles${s}${parts[1]}"
+            else -> "mesh${s}profiles${s}$name"
+        }
+    }
+
+    /** The inverse of [meshPath]: a vault path back to the profile name [VaultCockpit.meshProfiles] gives. */
+    fun meshName(path: String): String = path.split(AccountDrift.SEP).let {
+        when {
+            it[0] == "peers" -> "${it[1]}/${it.last()}"
+            it.getOrNull(1) == "devices" -> "devices/${it[2]}/${it.last()}"
+            else -> it.last()
+        }
+    }
 
     /**
      * `mail`: the declared account the device's mail is about — the one whose `name` is the local part
@@ -281,7 +296,10 @@ object AccountRuntime {
                     // The tunnel IS the declared profile when address and peers agree; otherwise what it runs.
                     meshPath(name) to (if (rows[name]?.state == VaultCockpit.State.MATCH) conf else rows[name]?.device)
                 }
-                base.copy(detail = "${deviceLabel(picked)} · ${tunnel.name.ifBlank { "no tunnel" }}", values = values, roster = live,
+                // #573 the device is named on the card with its declared public key, so a wrong pick is visible.
+                val who = deviceLabel(picked) + (if (d.publicKey.isBlank()) " · no declared key" else " · key ${d.publicKey.take(8)}…")
+                val status = AccountHost.mesh?.status(ctx).orEmpty().ifBlank { tunnel.name.ifBlank { "no tunnel" } }
+                base.copy(detail = "$who · ${values.size} profiles · $status", values = values, roster = live,
                     readOnly = if (rt.writable) emptySet() else values.keys)
             }
             "ai" -> base.copy(values = aiPaths(VaultCockpit.layout.aiTokens).mapValues { (_, provider) ->
@@ -382,12 +400,48 @@ object AccountRuntime {
                 VaultCockpit.applyMail(JmapPrefs(ctx), account)
             }
             "mesh" -> {
-                val name = path.split(AccountDrift.SEP).let { if (it[0] == "peers") "${it[1]}/${it.last()}" else it.last() }
+                val name = meshName(path)
                 AccountHost.mesh?.apply(ctx, name, value.toString()) ?: "✗ $name: the mesh tunnel is not available in this app"
             }
             else -> "✗ ${section.label}: this app takes nothing pushed"
         }
     }
+
+    /**
+     * #573 APPLY ALL for one declared section (cockpit `runtime.apply_all`), as a unit:
+     *  - mesh: EVERY profile of the picked device (never inferred for a write — the pick is explicit),
+     *    the key the rule allows ([VaultCockpit.meshKey]), the layout's default made the active
+     *    tunnel, brought up through the host's engine, handshake reported;
+     *  - mail: EVERY declared account with its password and the endpoints into the mail store.
+     * Returns the report, ✓/✗ per line. BLOCKS (engine, binder): call on IO.
+     */
+    fun applyAll(ctx: Context, section: VaultCockpit.Section, server: JSONObject): String = when (section.apply) {
+        "mesh" -> {
+            val host = AccountHost.mesh ?: return "✗ the mesh tunnel is not available in this app"
+            val picked = VaultCockpit.selectedDevice(ctx)
+            val d = VaultCockpit.devices(server).firstOrNull { it.id == picked }
+                ?: return "✗ no device picked on Connect — choose which declared device this phone is first; nothing written"
+            val profiles = VaultCockpit.meshProfiles(server, d)
+            if (profiles.isEmpty()) return "✗ ${d.label}: the bundle carries no profile whose Address is ${d.wgIp} — nothing written"
+            when (val k = VaultCockpit.meshKey(d, profiles, host.publicKey(ctx), ::derivePublicKey)) {
+                is VaultCockpit.MeshKey.Refused -> k.why
+                is VaultCockpit.MeshKey.FromVault -> host.applyAll(ctx, profiles, VaultCockpit.meshActive(profiles, VaultCockpit.layout.meshDefault)!!, k.privateKey)
+                VaultCockpit.MeshKey.FromDevice -> host.applyAll(ctx, profiles, VaultCockpit.meshActive(profiles, VaultCockpit.layout.meshDefault)!!, null)
+            }.let { "${d.label} · ${profiles.size} profiles\n$it" }
+        }
+        "mail" -> {
+            val owner = ConfigsPrefs(ctx).autheliaEmail.ifBlank { ProfilePrefs(ctx).email.trim() }
+                .ifBlank { VaultCockpit.ownerEmail(server, VaultCockpit.layout) }
+            val accounts = VaultCockpit.mailAccounts(server, owner.substringAfter('@', ""))
+            VaultCockpit.applyMailAll(JmapPrefs(ctx), accounts, VaultCockpit.mailEndpoints(server), owner)
+        }
+        else -> "✗ ${section.label}: no apply-all for '${section.apply}'"
+    }
+
+    /** A base64 Curve25519 private key's public half through the upstream crypto, null when it is not one. */
+    fun derivePublicKey(privateKey: String): String? = runCatching {
+        com.wireguard.crypto.KeyPair(com.wireguard.crypto.Key.fromBase64(privateKey)).publicKey.toBase64()
+    }.getOrNull()
 
     /** The contact card's field [field] — the ProfilePrefs vocabulary; null for a field it has not. */
     fun profileField(p: ProfilePrefs, field: String): String? = when (field) {

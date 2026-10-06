@@ -29,6 +29,7 @@ object AccountDebugApi {
             Op("populate", "from=runtime|server", "populate the local copy (unsaved)"),
             Op("edit", "path=&value=", "set one unmasked field of the local copy (unsaved)"),
             Op("save", "", "write the local copy"),
+            Op("apply", "app=mesh|mail", "#573 apply the whole declared section as a unit — what the Runtime card's Apply all taps"),
             Op("sync", "dir=push|pull|discard&path=|app=|all=1", "server→runtime, runtime→declared, or discard L"),
             Op("upload", "dry=1", "commit the saved local copy with the gh engine's token (dry=1: the plan only)"),
             Op("erase", "confirm=1", "GDPR: erase the contact card on this device and ask the profile-sync server to drop its copy"),
@@ -57,6 +58,7 @@ object AccountDebugApi {
                 done(if (path.isBlank() || InfoMask.declared.hides(path, value)) "✗ not an editable field (blank or masked)" else m.edit(path, value), m)
             }
             "save" -> done(m.save(), m)
+            "apply" -> done(m.applySection(q["app"].orEmpty()), m)
             "sync" -> {
                 val paths = target(m, q, if (q["dir"] == "push") AccountStore.Slot.S else AccountStore.Slot.L)
                 done(when (q["dir"]) {

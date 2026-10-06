@@ -155,6 +155,17 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
         return lines.joinToString("\n").also { changed(it) }
     }
 
+    /** #573 Runtime ▸ app ▸ Apply all: the declared section [id] applied as a unit (S, else L). */
+    fun applySection(id: String): String {
+        val section = apps.firstOrNull { it.id == id } ?: return "✗ $id: not a cockpit app".also { changed(it) }
+        val (_, body) = migrationSource()
+        if (body == null) return "✗ no server file and no local copy — fetch it on Connect".also { changed(it) }
+        val line = AccountRuntime.applyAll(ctx, section, body)
+        if (line.lineSequence().any { it.startsWith("✓") }) com.diegonmarcos.cloudlib.auth.UserRegistry.markApplied(ctx, now())
+        refreshRuntime()
+        return line.also { changed(it) }
+    }
+
     // ── the new phone (#783) ─────────────────────────────────────────────
 
     /** The migration source: the server file, else the local copy. */
