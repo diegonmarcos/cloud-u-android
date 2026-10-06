@@ -73,8 +73,8 @@ PY
 
     # 3) launch hook: permission request + rish export
     AP="$repo/app/src/main/java/com/termux/app/TermuxApplication.java"
-    has "$AP" 'RishBridge.requestShizukuPermissionIfNeeded()' "[$name] requests Shizuku permission on launch"
-    has "$AP" 'RishBridge.export(' "[$name] exports rish on launch"
+    has "$AP" 'RishBridge.INSTANCE.requestShizukuPermissionIfNeeded()' "[$name] requests Shizuku permission on launch"
+    has "$AP" 'RishBridge.INSTANCE.export(' "[$name] exports rish on launch"
 
     # 4) the app links the shared lib
     has "$repo/settings.gradle" ':libs:shizuku-adb-debug-tools' "[$name] settings.gradle includes the lib"

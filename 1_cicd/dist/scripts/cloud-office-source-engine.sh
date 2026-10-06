@@ -357,6 +357,15 @@ adb("logcat", "-c")
 log_path = os.path.join(out, "logcat.txt")
 logcat = subprocess.Popen(["adb", "logcat", "-v", "threadtime"], stdout=open(log_path, "wb"), stderr=subprocess.DEVNULL)
 
+# A freshly booted emulator is starved of CPU for its first minute and the system
+# launcher can ANR in that window; its "isn't responding" dialog then stays over
+# the app for the whole run, so the screenshot shows the sample under a scrim
+# (ship run 37518868324: the page rendered, 0.0% of the screen was its colour).
+# Dialogs say nothing about this APK: hide them, and the app's own crashes are
+# still caught below by its fatal log lines and its process going away.
+sh("settings put global hide_error_dialogs 1", check=False)
+sh("am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS", check=False)
+
 print("runtime:", adb("install", "-r", "-g", apk).decode(errors="replace").strip())
 sh("appops set %s MANAGE_EXTERNAL_STORAGE allow" % pkg)
 sample = os.path.join(app_dir, rc["sample_document"])

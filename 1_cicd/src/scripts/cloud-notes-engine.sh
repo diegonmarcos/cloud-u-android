@@ -215,6 +215,14 @@ step_build_fork() {
 
   log "build-fork: gradle assemble (${FLAVOR}Release)"
   cd "$APP_ROOT/packages/frontend/apps/android/App"
+  # Upstream's gradle/gradle-daemon-jvm.properties pins the Gradle daemon to a
+  # JetBrains JDK 21 that Gradle then fetches from api.foojay.io; the runner's
+  # JDK 21 (setup-java) is another vendor, so every build went to the network
+  # and died when foojay answered HTTP 400. The daemon needs a JDK 21, not that
+  # vendor: drop the criteria and run on the JDK the workflow provisioned.
+  jv="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java.specification.version = //p')"
+  [ "$jv" = 21 ] || die "build-fork: the daemon needs JDK 21, java on PATH is '${jv:-unknown}'"
+  rm -f gradle/gradle-daemon-jvm.properties
   # --stacktrace: AGP 8 hides package-level failures in problems-report.html;
   # the fleet needs the CAUSE in the log, not in a file nobody reads.
   ./gradlew --no-daemon --stacktrace ":app:assemble${FLAVOR^}Release"

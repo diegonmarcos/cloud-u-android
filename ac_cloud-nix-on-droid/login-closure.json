@@ -27,6 +27,8 @@
     "usr/lib/.login-inner.new": "bin/login's in-place upgrade drop-in, created at run time, never shipped",
     "nix/store/*-fakeProcStat": "upstream's optional /proc/stat stand-in; the pinned bootstrap never shipped it and bin/login binds it only when it exists",
     "nix/store/*-fakeProcUptime": "upstream's optional /proc/uptime stand-in; the pinned bootstrap never shipped it and bin/login binds it only when it exists",
+    "rish/rish": "the rish launcher the terminal stages beside the login at launch (RishBridge.export, build.json::shizuku_client.binds); bin/login file-binds it onto /usr/local/bin/rish, so the baked zip never carries it",
+    "rish/rish.env": "the same staging: rish's env (application id, fleet token written 0600, bridge URL), bound onto /usr/local/etc/rish.env; a secret, so never in the zip",
     "nix/store/*-nix-on-droid-session-init.sh/*": "upstream's /etc/profile sources a generation only `nix-on-droid switch` builds; #641 guards it with -e and falls back to the baked PATH script"
   },
   "_doc_absent_by_design": "Referenced by the login but deliberately NOT shipped. Each must NOT resolve (shipping one is itself a defect), and each must still match something the scanned scripts reference: a stale exemption would silently excuse a future real one. Patterns are fnmatch over rootfs-relative paths, never store hashes, which move with every pin."
