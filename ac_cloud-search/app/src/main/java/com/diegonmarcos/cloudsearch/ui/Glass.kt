@@ -2,8 +2,6 @@ package com.diegonmarcos.cloudsearch.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -229,66 +226,6 @@ fun TopicHeader(title: String, desc: String) {
     Column {
         Text(title, color = g.text, style = Type.style(Type.topicTitle, FontWeight.Bold))
         if (desc.isNotBlank()) Text(desc, color = g.text2, style = Type.style(Type.topicDesc), modifier = Modifier.padding(bottom = Metrics.gap))
-    }
-}
-
-/** .sub-nav-container: underlined text tabs over a hairline. */
-@Composable
-fun SubNav(items: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
-    val g = LocalGlass.current
-    Column(Modifier.fillMaxWidth().padding(bottom = Metrics.cardPad)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Metrics.cardPad)) {
-            items.forEach { (id, label) ->
-                val on = id == selected
-                Column(
-                    Modifier.clickable { onSelect(id) }.testTag(Tags.subpage(id)).padding(top = Metrics.small),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(label, color = if (on) g.accent else g.text2, style = Type.style(Type.subNav, FontWeight.SemiBold),
-                        modifier = Modifier.padding(horizontal = Metrics.tiny, vertical = Metrics.small))
-                    Box(Modifier.height(Metrics.underline).fillMaxWidth().clip(RoundedCornerShape(Metrics.tiny)).background(if (on) g.accent else Color.Transparent))
-                }
-            }
-        }
-        Box(Modifier.fillMaxWidth().height(Metrics.hairline).background(g.divider))
-    }
-}
-
-/** One .bottom-nav entry. */
-data class NavEntry(val id: String, val label: String, val icon: String)
-
-/** .bottom-nav: the app's OWN glass pill; the active icon lifts and its label fades in. */
-@Composable
-fun BottomNav(entries: List<NavEntry>, selected: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
-    val g = LocalGlass.current
-    val shape = RoundedCornerShape(Metrics.navRadius)
-    Row(
-        modifier.fillMaxWidth().padding(horizontal = Metrics.gutter).height(Metrics.navHeight)
-            .clip(shape).background(g.nav).border(Metrics.hairline, g.glassBorder, shape)
-            .padding(horizontal = Metrics.gap),
-        horizontalArrangement = Arrangement.SpaceAround,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        entries.forEach { e ->
-            val on = e.id == selected
-            val lift by animateDpAsState(if (on) -Metrics.navLift else Metrics.zero, label = "lift")
-            val label by animateFloatAsState(if (on) 1f else 0f, label = "label")
-            Box(
-                Modifier.size(Metrics.navItem).clip(CircleShape)
-                    .clickable { onSelect(e.id) }.testTag(Tags.nav(e.id)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(Modifier.offset(y = lift)) {
-                    if (IconCatalog.gradient(e.icon)) AiIcon(IconCatalog.res(e.icon), Metrics.iconNav)
-                    else Ph(IconCatalog.res(e.icon), Metrics.iconNav, if (on) g.accent else g.text2)
-                }
-                Text(
-                    e.label, color = if (on) g.accent else g.text2, style = Type.style(Type.navLabel, FontWeight.Medium),
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Metrics.navLabelBottom)
-                        .graphicsLayer { alpha = label; translationY = (1f - label) * Metrics.gap.toPx() },
-                )
-            }
-        }
     }
 }
 

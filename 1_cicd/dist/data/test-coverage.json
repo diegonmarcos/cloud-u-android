@@ -85,7 +85,7 @@
     },
     "ac_cloud-browser": {
       "first_test": "COVERED NOW: app/src/test/BrowserFeaturesTest.kt asserts the behaviour of the seven tab features against the SHIPPED build.json::ui.browser - the four first-run tabs arrive pinned and in order, a second launch re-seeds nothing, a pinned tab REFUSES to close, a drag stamps an order that outlives recency, and a non-URL entry resolves to Qwant. test/test-browser-config-boundary.sh holds the #209 line: the shared libs:browser carries none of his URLs and its own default pins nothing, so no other consumer can inherit them. test/test-browser-features-wired.sh proves each feature is reachable from the UI rather than merely modelled. NOT COVERED: nothing instruments the WebView itself. No test loads a page, so a URL that 404s, a viewport that renders blank, or a drag that never fires on real hardware would all still ship green - those need the androidTest source set and a device, and this app has neither.",
-      "shell_testers": 13,
+      "shell_testers": 14,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
@@ -121,7 +121,7 @@
     },
     "ac_cloud-camera": {
       "first_test": "Minimal fork of GrapheneOS Camera: assert the patch series applies to the pinned upstream revision, so a silent patch-drop cannot ship an unpatched build.",
-      "shell_testers": 5,
+      "shell_testers": 6,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -229,7 +229,7 @@
     },
     "ac_cloud-nav": {
       "first_test": "Assert the Google/OSM module split in settings.gradle matches build.json::modules \u2014 a module in one and not the other builds an APK missing a map provider.",
-      "shell_testers": 0,
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -319,7 +319,7 @@
     },
     "ac_cloud-writer": {
       "first_test": "Has 6 shell testers, executed. Two prove the routing and the absence of a credential; two prove the four configuration pages exist AND are backed by this app's own store, which is the assertion task 209 lacked; two prove the Material 3 design system is in place and has not been undone \u2014 the toolchain restated in build.gradle still matches build.json, no screen draws outside the theme, no hardcoded hex palette or raw-pixel padding has crept back, the price table's cells are still single-line (task 214), and every home-screen card description exists in Spanish (task 221). The gap that remains is that NONE of this is a rendered screen: there is no instrumentation test and no JVM in the container that maintains this app, so a green run proves the APK compiles and the source has the right shape, never that the screen looks right. Only a device screenshot does that.",
-      "shell_testers": 8,
+      "shell_testers": 9,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
@@ -354,6 +354,6 @@
       "workflow": "ship-lib-calc-native.yml"
     }
   },
-  "with_executed_tests": 23,
-  "with_no_tests_at_all": 16
+  "with_executed_tests": 24,
+  "with_no_tests_at_all": 15
 }

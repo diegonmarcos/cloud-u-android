@@ -1,5 +1,8 @@
 package com.diegonmarcos.cloudc3
 
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.NavSection
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -10,22 +13,18 @@ import kotlinx.serialization.json.contentOrNull
 
 /**
  * #648 THE ONE reader of the build-time declarations. app/build.gradle bakes every
- * declarative list this app renders — build.json::ui (tabs, external_apps, and the
- * per-tab page lists) — into BuildConfig as base64 JSON; this file decodes each ONCE
- * into typed models and nothing else touches a BuildConfig blob.
+ * declarative list this app renders — build.json::ui (bottom_nav + sections +
+ * default_section, external_apps) — into BuildConfig; this file decodes each ONCE into
+ * typed models and nothing else touches a BuildConfig blob.
  *
- * The parse functions take the JSON TEXT, not BuildConfig, so the JVM suite
+ * #868 the navigation is libs:bottomnav's [NavDecl]: ui.bottom_nav picks the bar's
+ * sections, each section's `pages` are the strip PageTabsView draws over it. The
+ * external-apps parser takes the JSON TEXT, not BuildConfig, so the JVM suite
  * (DeclarationsTest) exercises the exact parser the phone runs against this
  * repository's own build.json — a declared icon name with no drawable, or a tab with no
  * page, fails there before it fails on a device.
  */
 object Declarations {
-
-    /** One bottom-nav tab. [id] is the shell's dispatch key and the ONLY tab id in the app. */
-    data class TabDecl(val id: String, val label: String, val icon: String)
-
-    /** One sub-page inside a content tab. */
-    data class PageDecl(val id: String, val label: String, val icon: String)
 
     /**
      * One Apps-tab tile: a SIBLING APK, not a page. [packageName] is resolved against the
@@ -59,13 +58,23 @@ object Declarations {
 
     // ── the baked declarations, decoded once ───────────────────────────────
 
-    val tabs: List<TabDecl> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
-    val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
+    /** THE navigation declaration (#868): ui.bottom_nav + ui.sections + ui.default_section. */
+    val nav: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
+
+    /** The bar's sections, in DECLARED ORDER — the order is load-bearing, it IS the nav order. */
+    val tabs: List<NavSection> get() = nav.bottomSections()
+    val defaultTab: String get() = nav.default()?.id.orEmpty()
+
+    /** A section's declared pages — the strip PageTabsView draws over it. */
+    fun pages(sectionId: String): List<NavPage> = nav.section(sectionId)?.pages.orEmpty()
+
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val externalApps: List<ExternalAppDecl> by lazy { parseExternalApps(decode(BuildConfig.UI_EXTERNAL_APPS_B64)) }
-    val topologyPages: List<PageDecl> by lazy { parsePages(decode(BuildConfig.UI_TOPOLOGY_B64)) }
-    val observPages: List<PageDecl> by lazy { parsePages(decode(BuildConfig.UI_OBSERV_B64)) }
-    val configsPages: List<PageDecl> by lazy { parsePages(decode(BuildConfig.UI_CONFIGS_B64)) }
+    val topologyPages: List<NavPage> get() = pages("topology")
+    val observPages: List<NavPage> get() = pages("observ")
+    val configsPages: List<NavPage> get() = pages("configs")
     val opsBaseUrl: String get() = BuildConfig.C3_OPS_BASE_URL
 
     // ── parsing ───────────────────────────────────────────────────────────
@@ -87,29 +96,6 @@ object Declarations {
     private fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
     /**
-     * ui.tabs, in DECLARED ORDER — the order is load-bearing, it IS the nav order, so this
-     * never sorts. A tab missing an id is dropped rather than rendered nameless; the tester
-     * asserts the parsed count equals the declared count, so a drop is a build failure.
-     */
-    fun parseTabs(text: String): List<TabDecl> = objects(element(text)).mapNotNull { o ->
-        val id = o.str("id")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-        TabDecl(id = id, label = o.str("label") ?: id, icon = o.str("icon") ?: "")
-    }
-
-    /** A tab's `{ "pages": [...] }` object, or a bare array — both shapes read the same. */
-    fun parsePages(text: String): List<PageDecl> {
-        val root = element(text)
-        val arr = when (root) {
-            is JsonObject -> root["pages"]
-            else -> root
-        }
-        return objects(arr).mapNotNull { o ->
-            val id = o.str("id")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            PageDecl(id = id, label = o.str("label") ?: id, icon = o.str("icon") ?: "")
-        }
-    }
-
-    /**
      * ui.external_apps. An entry with no package is DROPPED, because a tile that cannot name
      * the app it opens is exactly the "tab that opens nothing" the ac_c3-watchtower
      * application-id note warns about; the tester asserts the parsed count equals the
@@ -129,9 +115,7 @@ object Declarations {
     fun iconNames(): Set<String> =
         (tabs.map { it.icon } +
             externalApps.map { it.icon } +
-            topologyPages.map { it.icon } +
-            observPages.map { it.icon } +
-            configsPages.map { it.icon } +
+            nav.sections.flatMap { s -> s.allPages().map { it.icon } } +
             iconDefault)
             .filter { it.isNotBlank() }
             .toSet()

@@ -18,7 +18,7 @@
 # real fragment, and no placeholder body may exist for one to fall back into.
 #
 #   T1  ONE tab declaration: exactly the five tabs, in declared order, Home in the
-#       CENTRE, and ui.default_tab naming one that exists.
+#       CENTRE, and ui.default_section naming one that exists.
 #   T2  NO ORPHANS, BOTH DIRECTIONS: every declared tab has a branch in the shell's
 #       dispatch and every branch answers a declared id.
 #   T3  the declaration is the ONLY order: no Kotlin file holds a second list of tab
@@ -75,16 +75,20 @@ t1() {
     python3 - "$1" <<'PYTHON'
 import json, sys
 ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
-tabs = ui.get("tabs") or []
-ids, labels = [t.get("id") for t in tabs], [t.get("label") for t in tabs]
+secs = {s.get("id"): s for s in (ui.get("sections") or [])}
+ids = ui.get("bottom_nav") or []
+tabs = [secs.get(i) or {"id": i} for i in ids]
+labels = [t.get("label") for t in tabs]
 want = ["Topology", "Observ", "Home", "Apps", "Configs"]
 bad = []
-if len(tabs) != 5: bad.append("ui.tabs declares %d tabs, not five: %s" % (len(tabs), ids))
-if labels != want: bad.append("ui.tabs labels are %s, not %s in that order" % (labels, want))
+if len(ids) != 5: bad.append("ui.bottom_nav declares %d tabs, not five: %s" % (len(ids), ids))
+if labels != want: bad.append("ui.bottom_nav labels are %s, not %s in that order" % (labels, want))
+for i in ids:
+    if i not in secs: bad.append("ui.bottom_nav names %r, which is no ui.sections id" % i)
 if len(ids) == 5 and ids[2] != "home":
     bad.append("the CENTRE tab is %r, not home — every fleet five-tab shell puts Home centre" % ids[2])
-if ui.get("default_tab") not in ids:
-    bad.append("ui.default_tab %r is not a declared id %s" % (ui.get("default_tab"), ids))
+if ui.get("default_section") not in ids:
+    bad.append("ui.default_section %r is not a declared id %s" % (ui.get("default_section"), ids))
 if len(set(ids)) != len(ids): bad.append("two tabs share an id: %s" % ids)
 for t in tabs:
     for k in ("id", "label", "icon"):
@@ -98,7 +102,7 @@ PYTHON
 t2() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
-declared = [t["id"] for t in (json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("tabs") or [])]
+declared = list(json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("bottom_nav") or [])
 text = open(sys.argv[2], encoding="utf-8").read()
 m = re.search(r"val fragment = when \(tabId\) \{(.*?)\n        \}", text, re.S)
 if not m:
@@ -111,7 +115,7 @@ for tab in declared:
                    "an orphaned declaration, a tab that opens nothing" % tab)
 for br in branches:
     if br not in declared:
-        bad.append("the shell dispatches %r but ui.tabs does not declare it — "
+        bad.append("the shell dispatches %r but ui.bottom_nav does not declare it — "
                    "an orphaned SCREEN, reachable from nothing" % br)
 if len(set(branches)) != len(branches):
     bad.append("the shell has a duplicate branch: %s" % branches)
@@ -124,7 +128,7 @@ PYTHON
 t3() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, os, re, sys
-declared = [t["id"] for t in (json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("tabs") or [])]
+declared = list(json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("bottom_nav") or [])
 bad = []
 for dirpath, _d, files in os.walk(sys.argv[2]):
     for f in files:
@@ -136,7 +140,7 @@ for dirpath, _d, files in os.walk(sys.argv[2]):
         for lit in re.findall(r"(?:listOf|arrayOf|setOf)\s*\(([^)]*)\)", code, re.S):
             found = [t for t in declared if '"%s"' % t in lit]
             if len(found) >= 2:
-                bad.append("%s holds a second list of tab ids %s — reordering ui.tabs would no "
+                bad.append("%s holds a second list of tab ids %s — reordering ui.bottom_nav would no "
                            "longer reorder the nav" % (os.path.relpath(p, sys.argv[2]), found))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
@@ -153,11 +157,7 @@ t4() {
 import json, os, re, sys
 ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
 declared = set()
-declared.update(t.get("icon") for t in (ui.get("tabs") or []))
 declared.update(a.get("icon") for a in (ui.get("external_apps") or []))
-for key in ("topology", "observ", "configs"):
-    for p in ((ui.get(key) or {}).get("pages") or []):
-        declared.add(p.get("icon"))
 if ui.get("icon_default"): declared.add(ui["icon_default"])
 def walk_icons(node):
     if isinstance(node, dict):
@@ -170,6 +170,7 @@ def walk_icons(node):
         for item in node:
             walk_icons(item)
 walk_icons(ui.get("sections") or [])
+walk_icons(ui.get("carried_c3") or {})
 # Kotlin-side references: compile-time R.drawable ids and runtime getIdentifier names.
 for dirpath, _d, files_ in os.walk(sys.argv[3]):
     for f in files_:
@@ -250,7 +251,8 @@ bad = []
 #     dispatched page id must be declared. Read out of each pageFragment() when-block.
 for tab, cls in (("topology", "TopologyFragment"), ("observ", "ObservFragment"),
                  ("configs", "ConfigsFragment")):
-    declared = [p["id"] for p in ((ui.get(tab) or {}).get("pages") or [])]
+    sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
+    declared = [p["id"] for p in (sec.get("pages") or [])]
     m = re.search(r"class %s : PagedFragment\(\).*?when \(pageId\) \{(.*?)\n    \}" % cls,
                   tabsrc, re.S)
     if not m:
@@ -260,16 +262,16 @@ for tab, cls in (("topology", "TopologyFragment"), ("observ", "ObservFragment"),
     body = m.group(1)
     branches = re.findall(r'^\s*"([^"]+)"\s*->', body, re.M)
     if not declared:
-        bad.append("ui.%s declares NO pages, so the %s tab would open empty — a tab the nav "
+        bad.append("ui.sections[%s] declares NO pages, so the %s tab would open empty — a tab the nav "
                    "shows must have something in it" % (tab, tab))
     for pid in declared:
         if pid not in branches:
-            bad.append("ui.%s declares page %r but %s resolves no fragment for it — the tab "
+            bad.append("ui.sections[%s] declares page %r but %s resolves no fragment for it — the tab "
                        "would draw the stated-bug body, which is a PLACEHOLDER in a shipped tab"
                        % (tab, pid, cls))
     for br in branches:
         if br not in declared:
-            bad.append("%s resolves page %r which ui.%s does not declare — an orphaned page"
+            bad.append("%s resolves page %r which ui.sections[%s] does not declare — an orphaned page"
                        % (cls, br, tab))
 
 # (b) no placeholder body may EXIST for a declared page to fall back into.
@@ -290,10 +292,11 @@ for dirpath, _d, files in os.walk(srcdir):
 
 # (c) no escape-hatch flag in the declaration: `implemented`, `stub`, `wip`, `placeholder`
 for tab in ("topology", "observ", "configs"):
-    for p in ((ui.get(tab) or {}).get("pages") or []):
+    sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
+    for p in (sec.get("pages") or []):
         for k in p:
             if k.lower() in ("implemented", "stub", "wip", "placeholder", "not_built", "built"):
-                bad.append("ui.%s page %r declares %r — a flag that excuses an empty page is "
+                bad.append("ui.sections[%s] page %r declares %r — a flag that excuses an empty page is "
                            "how the empty APK shipped; there is no such flag" % (tab, p.get("id"), k))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
@@ -380,7 +383,7 @@ PYTHON
 }
 
 echo "── #648 cloud-c3: declared, implemented, and not drawing under the cutout ──"
-t1 "$BJ"                              && pass "T1 ui.tabs is the five declared tabs, in order, Home centre" || fail "T1 the tab declaration is wrong"
+t1 "$BJ"                              && pass "T1 ui.bottom_nav is the five declared tabs, in order, Home centre" || fail "T1 the tab declaration is wrong"
 t2 "$BJ" "$MAIN"                      && pass "T2 declaration <-> shell dispatch agree BOTH ways: no orphan either side" || fail "T2 declaration and dispatch disagree"
 t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" || fail "T3 a second list of tab ids exists"
 t4 "$BJ" "$DRAWABLE" "$SRC"           && pass "T4 every declared icon is a real drawable, and every drawable is declared" || fail "T4 an icon would draw blank, or a drawable is dead"
@@ -432,13 +435,13 @@ jqset() { python3 - "$1" "$2" <<'PY'
 import json,sys,collections
 p,expr=sys.argv[1],sys.argv[2]
 d=json.load(open(p),object_pairs_hook=collections.OrderedDict)
-exec(expr,{"d":d,"collections":collections})
+exec(expr,{"d":d,"collections":collections,"sec":lambda i:next(s for s in d["ui"]["sections"] if s["id"]==i)})
 json.dump(d,open(p,"w"),indent=2)
 PY
 }
 
-m_sixth_tab()   { jqset "$1$A/build.json" 'd["ui"]["tabs"].append(collections.OrderedDict([("id","extra"),("label","Extra"),("icon","ic_home")]))'; }
-m_home_offset() { jqset "$1$A/build.json" 't=d["ui"]["tabs"]; t[2],t[4]=t[4],t[2]'; }
+m_sixth_tab()   { jqset "$1$A/build.json" 'd["ui"]["sections"].append(collections.OrderedDict([("id","extra"),("label","Extra"),("icon","ic_home")])); d["ui"]["bottom_nav"].append("extra")'; }
+m_home_offset() { jqset "$1$A/build.json" 't=d["ui"]["bottom_nav"]; t[2],t[4]=t[4],t[2]'; }
 m_drop_branch() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
 import re,sys
 p=sys.argv[1]; s=open(p).read(); b=s
@@ -463,7 +466,7 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
-m_bad_icon()    { jqset "$1$A/build.json" 'd["ui"]["tabs"][0]["icon"]="ic_does_not_exist"'; }
+m_bad_icon()    { jqset "$1$A/build.json" 'd["ui"]["sections"][0]["icon"]="ic_does_not_exist"'; }
 m_dead_drawable() { cp "$1$A/app/src/main/res/drawable/ic_home.xml" "$1$A/app/src/main/res/drawable/ic_unused_ghost.xml"; }
 m_wrong_pkg()   { jqset "$1$A/build.json" 'd["ui"]["external_apps"][0]["package"]="com.diegonmarcos.c3watchdog"'; }
 m_add_label()   { jqset "$1$A/build.json" 'd["ui"]["external_apps"][0]["label"]="Watchdog"'; }
@@ -486,7 +489,7 @@ open(p,"w").write(s)
 PY
 }
 # T6: the three shapes of "a shipped tab is empty"
-m_declare_unbuilt() { jqset "$1$A/build.json" 'd["ui"]["observ"]["pages"].append(collections.OrderedDict([("id","workflows"),("label","Workflows"),("icon","ic_p_c3_workflows")]))'; }
+m_declare_unbuilt() { jqset "$1$A/build.json" 'sec("observ")["pages"].append(collections.OrderedDict([("id","workflows"),("label","Workflows"),("icon","ic_p_c3_workflows")]))'; }
 m_placeholder_body() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
@@ -496,8 +499,8 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
-m_escape_flag() { jqset "$1$A/build.json" 'd["ui"]["observ"]["pages"][0]["implemented"]=False'; }
-m_empty_tab()   { jqset "$1$A/build.json" 'd["ui"]["observ"]["pages"]=[]'; }
+m_escape_flag() { jqset "$1$A/build.json" 'sec("observ")["pages"][0]["implemented"]=False'; }
+m_empty_tab()   { jqset "$1$A/build.json" 'sec("observ")["pages"]=[]'; }
 # T7 / T8
 m_compose_screen() { printf 'package com.diegonmarcos.cloudc3.pages\nimport androidx.compose.runtime.Composable\n@Composable\nfun Reauthored() {}\n' > "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/Reauthored.kt"; }
 m_consume_insets() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'

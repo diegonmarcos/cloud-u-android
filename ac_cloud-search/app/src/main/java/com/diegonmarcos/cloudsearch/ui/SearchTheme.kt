@@ -105,13 +105,13 @@ fun namedColor(name: String): Color {
 object Metrics {
     val zero: Dp = 0.dp
     val hairline: Dp = 1.dp
-    val underline: Dp = 2.dp
     val tiny: Dp = 2.dp
     val small: Dp = 4.dp
     val gap: Dp = 8.dp
     val gutter: Dp = 16.dp
     val topOffset: Dp = 15.dp
     val iconBtn: Dp = 34.dp
+    val navRadius: Dp = 30.dp
     val islandPadH: Dp = 16.dp
     val islandPadV: Dp = 6.dp
     val islandMinWidth: Dp = 120.dp
@@ -126,12 +126,6 @@ object Metrics {
     val inputRadius: Dp = 10.dp
     val inputPadV: Dp = 8.dp
     val inputPadH: Dp = 12.dp
-    val navHeight: Dp = 60.dp
-    val navRadius: Dp = 30.dp
-    val navBottom: Dp = 20.dp
-    val navItem: Dp = 50.dp
-    val navLift: Dp = 6.dp
-    val navLabelBottom: Dp = 4.dp
     val sideMenuTop: Dp = 40.dp
     const val SIDE_MENU_FRACTION = 0.8f
     val profileWidth: Dp = 220.dp
@@ -164,7 +158,6 @@ object Metrics {
     val iconXs: Dp = 11.dp
     val iconSm: Dp = 14.dp
     val icon: Dp = 18.dp
-    val iconNav: Dp = 21.dp
     val iconLg: Dp = 30.dp
     val enter: Dp = 20.dp
     const val ENTER_MS = 400
@@ -176,14 +169,12 @@ object Metrics {
 object Type {
     val topicTitle: TextUnit = 16.sp
     val topicDesc: TextUnit = 10.4.sp
-    val subNav: TextUnit = 11.2.sp
     val chip: TextUnit = 10.4.sp
     val input: TextUnit = 12.sp
     val cardTitle: TextUnit = 12.8.sp
     val cardSubtitle: TextUnit = 10.4.sp
     val badge: TextUnit = 9.6.sp
     val island: TextUnit = 12.8.sp
-    val navLabel: TextUnit = 9.6.sp
     val menuTitle: TextUnit = 20.sp
     val menuItem: TextUnit = 13.6.sp
     val label: TextUnit = 9.sp

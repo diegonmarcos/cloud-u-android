@@ -34,7 +34,8 @@
       "depends_on": [
         "libs:core",
         "libs:updater",
-        "libs:appstore"
+        "libs:appstore",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -68,6 +69,10 @@
         "libs:updater",
         "libs:shizuku-adb-debug-tools"
       ]
+    },
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
     }
   },
   "release": {
@@ -150,5 +155,41 @@
         "grep"
       ]
     }
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The four Store pages are sections without sub-pages; MainActivity hosts each page's own screen.",
+    "bottom_nav": [
+      "cloud",
+      "phone",
+      "mesh",
+      "settings"
+    ],
+    "sections": [
+      {
+        "id": "cloud",
+        "label": "Cloud",
+        "icon": "cloud",
+        "pages": []
+      },
+      {
+        "id": "phone",
+        "label": "Phone",
+        "icon": "phone",
+        "pages": []
+      },
+      {
+        "id": "mesh",
+        "label": "Mesh",
+        "icon": "mesh",
+        "pages": []
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
+        "pages": []
+      }
+    ],
+    "default_section": "cloud"
   }
 }

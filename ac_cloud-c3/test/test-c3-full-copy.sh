@@ -8,7 +8,7 @@
 # reported the c3 page moved. Nothing objected, because nothing enumerated what the c3
 # surface IS and diffed the copy against the enumeration. This file is that enumeration:
 #
-#   T1  the carried DECLARATION is complete: ui.sections[c3] holds every page id the
+#   T1  the carried DECLARATION is complete: ui.carried_c3 holds every page id the
 #       SuperApp's c3 section declares (visible, action AND hidden), and both stacks;
 #       stack_observability carries the FIVE feed cards (by source), the NTFY centre
 #       (stream=channels) and its Index/More rows; stack_topology carries the two address
@@ -46,16 +46,15 @@ import json, sys
 app = sys.argv[1]
 ui = json.load(open(app + "/build.json", encoding="utf-8"))["ui"]
 bad = []
-secs = ui.get("sections") or []
-c3 = next((s for s in secs if s.get("id") == "c3"), None)
+c3 = ui.get("carried_c3")
 if c3 is None:
-    print("    ui.sections carries no c3 section — the ENTIRE SuperApp declaration block is gone"); sys.exit(1)
+    print("    ui.carried_c3 is missing — the ENTIRE SuperApp declaration block is gone"); sys.exit(1)
 page_ids = [p.get("id") for p in (c3.get("pages") or [])]
 want_pages = ["topology", "observability", "watchdog", "morpheus", "watchtower",
               "reports", "stack", "health", "workflows", "vms", "logs", "dagu", "gha"]
 for pid in want_pages:
     if pid not in page_ids:
-        bad.append("ui.sections[c3].pages lost %r — the SuperApp declares it (visible, action or hidden) "
+        bad.append("ui.carried_c3.pages lost %r — the SuperApp declares it (visible, action or hidden) "
                    "and a copy that drops a declaration is the half-copy this ticket reopened over" % pid)
 obs = c3.get("stack_observability") or []
 topo = c3.get("stack_topology") or []
@@ -89,9 +88,10 @@ for key in ("labels", "scopes", "taxon"):
         bad.append("ui.ntfy lost %r — part of the SuperApp catalog the cards resolve through" % key)
 # the six stub ids must NOT be declared as pages of this app's tabs (#648: no placeholder)
 for tab in ("topology", "observ", "configs"):
-    for p in ((ui.get(tab) or {}).get("pages") or []):
+    sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
+    for p in (sec.get("pages") or []):
         if p.get("id") in ("reports", "stack", "workflows", "vms", "logs", "gha"):
-            bad.append("ui.%s declares %r, a SuperApp sample-stub page with no fragment anywhere — "
+            bad.append("ui.sections[%s] declares %r, a SuperApp sample-stub page with no fragment anywhere — "
                        "declaring it here ships a placeholder" % (tab, p.get("id")))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
@@ -104,7 +104,7 @@ t2() {
 import json, re, sys
 app = sys.argv[1]
 ui = json.load(open(app + "/build.json", encoding="utf-8"))["ui"]
-c3 = next((s for s in (ui.get("sections") or []) if s.get("id") == "c3"), None) or {}
+c3 = ui.get("carried_c3") or {}
 panels = (c3.get("stack_observability") or []) + (c3.get("stack_topology") or [])
 src = open(app + "/app/src/main/java/com/diegonmarcos/cloudc3/cloud/C3StackFragment.kt",
            encoding="utf-8").read()
@@ -240,12 +240,13 @@ t5() {
 import json, re, sys
 app = sys.argv[1]
 ui = json.load(open(app + "/build.json", encoding="utf-8"))["ui"]
-c3 = next((s for s in (ui.get("sections") or []) if s.get("id") == "c3"), None) or {}
+c3 = ui.get("carried_c3") or {}
 bad = []
 main = open(app + "/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt", encoding="utf-8").read()
 main_code = re.sub(r"/\*.*?\*/", "", main, flags=re.S)
 main_code = re.sub(r"//[^\n]*", "", main_code)
-dispatched_pages = set(re.findall(r'"([a-z0-9_]+/[a-z0-9_-]+)"\s*->', main_code))
+dispatched_pages = {lit for grp in re.findall(r'((?:"[a-z0-9_]+/[a-z0-9_-]+"\s*,\s*)*"[a-z0-9_]+/[a-z0-9_-]+")\s*->', main_code)
+                    for lit in re.findall(r'"([^"]+)"', grp)}
 extapp_ids = {a.get("id") for a in (ui.get("external_apps") or [])}
 stub_pages = {"c3/reports", "c3/stack", "c3/workflows", "c3/vms", "c3/logs", "c3/gha"}
 for stack_key in ("stack_observability", "stack_topology"):
@@ -326,7 +327,7 @@ json.dump(d, open(p, "w"), indent=2)
 PY
 }
 
-m_drop_feed()   { pyjson "$1/build.json" 'c3=[s for s in d["ui"]["sections"] if s["id"]=="c3"][0]; c3["stack_observability"]=[p for p in c3["stack_observability"] if p.get("source")!="gitea_commits"]'; }
+m_drop_feed()   { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_observability"]=[p for p in c3["stack_observability"] if p.get("source")!="gitea_commits"]'; }
 m_drop_arm()    { python3 - "$1/app/src/main/java/com/diegonmarcos/cloudc3/cloud/C3StackFragment.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
@@ -345,8 +346,8 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
-m_dead_anchor() { pyjson "$1/build.json" 'c3=[s for s in d["ui"]["sections"] if s["id"]=="c3"][0]; c3["stack_topology"][0]["tiles"][0]["target"]="anchor:no-such-card"'; }
-m_orphan_page() { pyjson "$1/build.json" 'c3=[s for s in d["ui"]["sections"] if s["id"]=="c3"][0]; c3["stack_observability"][-1]["tiles"][0]["target"]="page:c3/nowhere"'; }
+m_dead_anchor() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_topology"][0]["tiles"][0]["target"]="anchor:no-such-card"'; }
+m_orphan_page() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_observability"][-1]["tiles"][0]["target"]="page:c3/nowhere"'; }
 m_drop_module() { pyjson "$1/build.json" 'del d["modules"]["libs:ops"]'; }
 
 mutate "a feed card is dropped from the declaration"        t1 m_drop_feed

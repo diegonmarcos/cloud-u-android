@@ -43,10 +43,18 @@ echo "== T3: the bar sections, in order, are Buro | Projects | Profile | Agenda 
 check "$(python3 - "$APP/build.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
-bar = sorted((s for s in d['ui']['sections'] if s.get('bottom_nav')), key=lambda s: s.get('order', 0))[:5]
-got = [s['label'] for s in bar]
+# #868 the bar is ui.bottom_nav (ids, in order), each one a ui.sections id.
+secs = {s['id']: s for s in d['ui']['sections']}
+ids = d['ui'].get('bottom_nav', [])
+got = [secs[i]['label'] for i in ids if i in secs]
 want = ['Buro', 'Projects', 'Profile', 'Agenda', 'Wallet']
 p = []
+if len(got) != len(ids):
+    p.append('ui.bottom_nav names an id that is not a ui.sections id')
+if any(k in s for s in secs.values() for k in ('bottom_nav', 'order', 'default')):
+    p.append('a section still carries bottom_nav/order/default - the bar is ui.bottom_nav')
+if d['ui'].get('default_section') not in ids:
+    p.append('ui.default_section is not one of ui.bottom_nav')
 if got != want:
     p.append('the bar reads %s, #504 asked for %s' % (' | '.join(got), ' | '.join(want)))
 mod = d.get('modules', {}).get('libs:bottomnav', {})

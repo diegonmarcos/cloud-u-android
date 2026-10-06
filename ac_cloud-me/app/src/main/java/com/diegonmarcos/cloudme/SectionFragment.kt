@@ -7,11 +7,12 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 import com.diegonmarcos.superapp.health.HealthFragment
-import com.google.android.material.tabs.TabLayout
 import org.json.JSONObject
 
 /**
@@ -38,16 +39,10 @@ class SectionFragment : Fragment() {
     /** The LEAF page on screen — a sub-page id when the tab is a container. */
     private var pageId: String? = null
 
-    /** One TabLayout per level of the chain to [pageId], outermost first.
+    /** One PageTabsView per level of the chain to [pageId], outermost first.
      *  Held as a column rather than as named fields so that adding a level in
      *  build.json needs no field here. */
     private var strips: LinearLayout? = null
-
-    /** TabLayout fires onTabSelected for programmatic selection and for the
-     *  first tab added, so every sync below would bounce straight back into
-     *  [showPage] — and on a config change that would replace the child
-     *  fragment the FragmentManager had just restored. */
-    private var syncing = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -75,7 +70,6 @@ class SectionFragment : Fragment() {
 
     override fun onViewCreated(view: View, s: Bundle?) {
         super.onViewCreated(view, s)
-        syncing = false
         showPage(pageId, replaceContent = s == null)
     }
 
@@ -84,38 +78,15 @@ class SectionFragment : Fragment() {
         outState.putString(STATE_PAGE, pageId)
     }
 
-    /** An empty strip. `primary` is the section's own; every strip below it
-     *  is unindicated, so the rows never read as competing copies of the same
-     *  control. */
-    private fun newStrip(ctx: android.content.Context, primary: Boolean): TabLayout =
-        TabLayout(ctx).apply {
-            setBackgroundColor(ContextCompat.getColor(ctx, R.color.me_bg))
-            setSelectedTabIndicatorColor(ContextCompat.getColor(
-                ctx, if (primary) R.color.me_primary else R.color.me_surface))
-            setTabTextColors(
-                ContextCompat.getColor(ctx, R.color.me_text_dim),
-                ContextCompat.getColor(ctx, R.color.me_primary),
-            )
+    /** An empty strip: libs:bottomnav's pill strip (#868), the same one every app draws. The
+     *  section's strip sits under the toolbar and the DrawerLayout already clears the system
+     *  bars for it, so none adds its own inset. */
+    private fun newStrip(ctx: android.content.Context): PageTabsView =
+        PageTabsView(ctx).apply {
+            underTopChrome = false
+            insets = WindowInsets(0, 0, 0, 0)
+            onSelect = { openTab(it.id) }
         }
-
-    /** Puts [pages] into [strip], leaving it alone when it already holds
-     *  them. Rebuilt rather than patched when they differ: a second container
-     *  tab would otherwise inherit the previous one's children for one frame. */
-    private fun fillStrip(strip: TabLayout, pages: List<Page>) {
-        val shown = (0 until strip.tabCount).map { strip.getTabAt(it)?.tag as? String }
-        if (pages.map { it.id } == shown) return
-        strip.clearOnTabSelectedListeners()
-        strip.removeAllTabs()
-        strip.tabMode = if (pages.size > 4) TabLayout.MODE_SCROLLABLE else TabLayout.MODE_FIXED
-        pages.forEach { p -> strip.addTab(strip.newTab().apply { text = p.label; tag = p.id }) }
-        strip.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                if (!syncing) (tab.tag as? String)?.let(::openTab)
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-            override fun onTabReselected(tab: TabLayout.Tab) = Unit
-        })
-    }
 
     /** A container tab has no content of its own; tapping one opens the child
      *  you were last on — which is what staying on the chain means — or its
@@ -135,33 +106,25 @@ class SectionFragment : Fragment() {
         val changed = pageId != page.id
         pageId = page.id
 
-        val wasSyncing = syncing
-        syncing = true
         syncStrips(section, section.path(page.id))
-        syncing = wasSyncing
 
         if (replaceContent || changed) {
             childFragmentManager.commit { replace(HOST_ID, contentFor(section, page)) }
         }
     }
 
-    /** Selects [index] without re-entering [showPage] through the listener. */
-    private fun syncStrip(strip: TabLayout, index: Int) {
-        if (index < 0 || strip.selectedTabPosition == index) return
-        strip.getTabAt(index)?.let { strip.selectTab(it, true) }
-    }
-
     /** Draws the strips [chain] implies: level 0 offers the section's own
      *  tabs, level n the children of the tab chosen at level n-1, and the
      *  chain says which tab is selected at each. Strips past the chain are
-     *  removed, so stepping out of a container takes its strip with it. */
+     *  removed, so stepping out of a container takes its strip with it.
+     *  Setting a strip's selection only moves the pill, so no re-entry guard. */
     private fun syncStrips(section: Section, chain: List<Page>) {
         val host = strips ?: return
         val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
         while (host.childCount > levels.size) host.removeViewAt(host.childCount - 1)
         levels.forEachIndexed { level, siblings ->
-            val strip = host.getChildAt(level) as? TabLayout
-                ?: newStrip(host.context, primary = level == 0).also {
+            val strip = host.getChildAt(level) as? PageTabsView
+                ?: newStrip(host.context).also {
                     host.addView(it, LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
@@ -169,8 +132,8 @@ class SectionFragment : Fragment() {
             // control rather than as a navigation aid. Configs is shaped that
             // way on purpose: a settings screen is a list you scroll.
             strip.visibility = if (siblings.size > 1) View.VISIBLE else View.GONE
-            fillStrip(strip, siblings)
-            syncStrip(strip, siblings.indexOfFirst { it.id == chain.getOrNull(level)?.id })
+            strip.pages = siblings
+            strip.selectedId = chain.getOrNull(level)?.id
         }
     }
 

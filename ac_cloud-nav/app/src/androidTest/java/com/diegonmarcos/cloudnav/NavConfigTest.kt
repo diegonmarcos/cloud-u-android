@@ -23,15 +23,23 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NavConfigTest {
 
-    @Test fun tabs_match_buildjson_order() {
+    @Test fun bottom_nav_matches_buildjson_order() {
         assertEquals(
             listOf("routes", "navigation", "places", "timeline", "configs"),
-            NavConfig.tabs.map { it.id },
+            NavConfig.decl.bottomSections().map { it.id },
         )
     }
 
-    @Test fun default_tab_is_routes() {
-        assertEquals("routes", NavConfig.defaultTab)
+    @Test fun default_section_is_routes() {
+        assertEquals("routes", NavConfig.decl.default()?.id)
+    }
+
+    @Test fun timeline_and_configs_carry_their_strips() {
+        assertEquals(listOf("explored", "daily", "stops"), NavConfig.decl.section("timeline")?.pages?.map { it.id })
+        assertEquals(
+            listOf("tracker", "apis", "update", "cache", "layers", "about"),
+            NavConfig.decl.section("configs")?.pages?.map { it.id },
+        )
     }
 
     @Test fun demo_range_covers_every_day_1987_to_1992() {

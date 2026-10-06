@@ -28,7 +28,8 @@
       "depends_on": [
         "libs:core",
         "core",
-        "libs:ui-kit"
+        "libs:ui-kit",
+        "libs:bottomnav"
       ]
     },
     "core": {
@@ -60,7 +61,74 @@
       "type": "library",
       "_doc": "#800 the fleet's shared Compose kit (a `gui` lib, lib-classes.json): the redesigned Writer draws its empty state and section headers with it, through ui.KitBridge, which hands the kit a palette taken from this app's own Material scheme so a theme switch recolours kit parts with the rest of the screen. Shared BY REFERENCE.",
       "dir": "../ab_cloud-libs-shared/libs/ui-kit"
+    },
+    "libs:bottomnav": {
+      "type": "library",
+      "_doc": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE: MainActivity's one NavBar is its BottomNavIsland and the Tools screen's strip is its PageTabs.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     }
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. documents = the document list, writer = the editor (the last document, else a new one), tools = the five tool pages as a PageTabs strip (each page opens its own activity of this app), settings = Configs. MainActivity's NavBar is the one island; the editor keeps its own format/tool bars and has none.",
+    "bottom_nav": [
+      "documents",
+      "writer",
+      "tools",
+      "settings"
+    ],
+    "sections": [
+      {
+        "id": "documents",
+        "label": "Documents",
+        "icon": "documents",
+        "pages": []
+      },
+      {
+        "id": "writer",
+        "label": "Writer",
+        "icon": "writer",
+        "pages": []
+      },
+      {
+        "id": "tools",
+        "label": "Tools",
+        "icon": "tools",
+        "pages": [
+          {
+            "id": "enhance",
+            "label": "Text Enhancements",
+            "icon": "enhance"
+          },
+          {
+            "id": "translation",
+            "label": "Translation",
+            "icon": "translation"
+          },
+          {
+            "id": "grammar",
+            "label": "Grammar",
+            "icon": "grammar"
+          },
+          {
+            "id": "ai_routing",
+            "label": "AI Routing",
+            "icon": "ai_routing"
+          },
+          {
+            "id": "routes",
+            "label": "Routes",
+            "icon": "routes"
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
+        "pages": []
+      }
+    ],
+    "default_section": "documents"
   },
   "writer_ai": {
     "_doc": "cloud-writer's OWN text-tool registry: providers, model lists, Enhance prompts, Resume prompts, translation languages. app/build.gradle bakes this whole block into BuildConfig.WRITER_AI_ROUTING_B64 and WriterRegistry.kt reads it at run time. Started as a field-for-field copy of ac_cloud-mail/build.json::mail_ai, which is itself a copy of ab_cloud-libs-shared/build.json::keyboard_ai, and is free to diverge from this point on - that divergence is the whole reason each application carries its own copy rather than sharing one. Task 209 was 'WHY I CANT EDIT NOTHING': two screens over one store still edit each other, so a shared registry cannot give an application settings of its own no matter how the screens are arranged.",

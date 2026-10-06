@@ -7,7 +7,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 
 /**
  * Maps → Timeline page — top-level wrapper that puts a `Daily | Stops |
@@ -28,17 +29,18 @@ import com.google.android.material.tabs.TabLayout
  *                 a pin for its full day-by-day visit history (see
  *                 [MapsExploredFragment]).
  *
- * Tab labels live in code rather than build.json because there's no
- * other consumer; promoting them to ui.maps_timeline_tabs is fine
- * later but doesn't pay for itself today.
+ * #868 The strip is libs:bottomnav's [PageTabsView]. Its pages are the host app's declared
+ * `ui.sections[timeline].pages` (ids explored | daily | stops), handed in through
+ * [newInstance]; a host that passes none gets [DEFAULT_PAGES].
  */
 class MapsTimelineTabsFragment : Fragment() {
 
     private var hostId: Int = 0
-    private lateinit var tabs: TabLayout
+    private lateinit var tabs: PageTabsView
+    private var pages: List<NavPage> = DEFAULT_PAGES
 
     /** One-shot day filter consumed by the next Stops-tab render — set by
-     *  [openStopsForDay], cleared once [showTab] reads it, so a later manual
+     *  [openStopsForDay], cleared once [showPage] reads it, so a later manual
      *  tap on the Stops tab header shows the unfiltered all-time list again. */
     private var pendingStopsDayMs: Long? = null
 
@@ -51,17 +53,12 @@ class MapsTimelineTabsFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        tabs = TabLayout(ctx).apply {
-            addTab(newTab().setText("Explored"))
-            addTab(newTab().setText("Daily"))
-            addTab(newTab().setText("Stops"))
-            tabMode = TabLayout.MODE_FIXED
-            tabGravity = TabLayout.GRAVITY_FILL
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-        }
+        pages = MapsPageStrip.fromArgs(arguments, DEFAULT_PAGES)
+        tabs = MapsPageStrip.create(ctx, pages, pages.first().id) { showPage(it.id) }
+        tabs.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
         val host = FrameLayout(ctx).apply {
             id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(
@@ -73,35 +70,45 @@ class MapsTimelineTabsFragment : Fragment() {
         root.addView(tabs)
         root.addView(host)
 
-        if (s == null) showTab(0)
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab)   { showTab(tab.position) }
-            override fun onTabReselected(tab: TabLayout.Tab) {}
-            override fun onTabUnselected(tab: TabLayout.Tab) {}
-        })
+        if (s == null) showPage(pages.first().id)
         return root
     }
 
-    /** Called by a Daily row's tap — switches to Stops (tab 2), scoped to [dayMs]. */
+    /** Called by a Daily row's tap — switches to Stops, scoped to [dayMs]. */
     fun openStopsForDay(dayMs: Long) {
         pendingStopsDayMs = dayMs
-        tabs.getTabAt(2)?.select() ?: showTab(2)  // select() no-ops if already on tab 2
+        tabs.selectedId = PAGE_STOPS
+        showPage(PAGE_STOPS)
     }
 
-    private fun showTab(position: Int) {
-        val frag: Fragment = when (position) {
-            1 -> MapsDailyFragment.newInstance()
-            2 -> {
+    private fun showPage(id: String) {
+        val frag: Fragment = when (id) {
+            PAGE_DAILY -> MapsDailyFragment.newInstance()
+            PAGE_STOPS -> {
                 val dayMs = pendingStopsDayMs
                 pendingStopsDayMs = null
                 MapsStopsFragment.newInstance(dayMs)
             }
-            else -> MapsExploredFragment.newInstance()  // 0 = Explored, default
+            else -> MapsExploredFragment.newInstance()  // explored, the default
         }
         childFragmentManager.beginTransaction()
             .replace(hostId, frag)
             .commitAllowingStateLoss()
     }
 
-    companion object { fun newInstance() = MapsTimelineTabsFragment() }
+    companion object {
+        const val PAGE_EXPLORED = "explored"
+        const val PAGE_DAILY = "daily"
+        const val PAGE_STOPS = "stops"
+
+        /** What a host that declares no pages shows: the three views, in order. */
+        val DEFAULT_PAGES = listOf(
+            NavPage(PAGE_EXPLORED, "Explored"),
+            NavPage(PAGE_DAILY, "Daily"),
+            NavPage(PAGE_STOPS, "Stops"),
+        )
+
+        fun newInstance(pages: List<NavPage> = DEFAULT_PAGES) =
+            MapsTimelineTabsFragment().apply { arguments = MapsPageStrip.toArgs(pages) }
+    }
 }

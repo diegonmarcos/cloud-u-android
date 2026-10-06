@@ -36,6 +36,9 @@ include(":libs:core")
 project(":libs:core").projectDir = file("../ab_cloud-libs-shared/libs/core")
 include(":libs:devtools")
 project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtools")
+// #868 the fleet's bottom island + page-tab strips + NavDecl: ui/ModeNav.kt is the mode switcher.
+include(":libs:bottomnav")
+project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")
 // Gradle 9 fails outright on a project directory that does not exist, and the
 // implicit ':libs' container resolves to <root>/libs which this app does not
 // have. Point it at the shared root, exactly as media-center does; the leaf

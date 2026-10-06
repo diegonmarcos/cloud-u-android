@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
 import com.diegonmarcos.cloudwallet.profile.BusinessCardFragment
+import androidx.compose.runtime.Composable
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.wallet.WalletFragment
@@ -48,11 +52,22 @@ class MainActivity : AppCompatActivity(), WalletHost {
 
     override fun onCheckForUpdates() { Updater.checkNow(this) }
 
+    /** #868 build.json::ui as baked into BuildConfig: the wallet's bar and its Events strip. */
+    override val nav: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
+
     override fun onOpenVcard() {
         supportFragmentManager.commit {
             add(R.id.fragment_container, BusinessCardFragment.newInstance(), "business_card")
             addToBackStack("business_card")
         }
+    }
+
+    /** #868 The Events section's pages as the fleet's page-tab strip, under the content's own top edge. */
+    @Composable
+    override fun PageStrip(pages: List<NavPage>, selectedId: String?, onSelect: (NavPage) -> Unit) {
+        PageTabs(pages = pages, selectedId = selectedId, onSelect = onSelect, underTopChrome = false)
     }
 
     private fun handleUpdateState(state: UpdateProgress.State) {

@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +53,10 @@ import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.SearchHost
 import com.diegonmarcos.cloudsearch.data.Services
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.searchpage.SearchChatState
 import com.diegonmarcos.superapp.searchpage.SearchPageTags
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +64,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Which of the mockup's menus is open over the shell (one at a time, like its closeAllMenus()). */
+/** build.json::ui as baked into BuildConfig (#868): the island's items and each vertical's sub-page strip. */
+val NAV: NavDecl by lazy {
+    NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+}
+
 enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
 
 /** Everything the shell remembers while it is up; the durable half lives in [Services.prefs]. */
@@ -113,8 +126,10 @@ object Tags {
     const val MODEL = SearchPageTags.MODEL
     const val WEB = SearchPageTags.WEB
     const val SAVED = "search_saved"
-    fun nav(id: String) = "search_nav_$id"
-    fun subpage(id: String) = "search_subpage_$id"
+    /** libs:bottomnav's island item tag (BottomNavBar.itemTag, internal to the lib). */
+    fun nav(id: String) = "bottomnav_item_$id"
+    /** A sub-page pill of the page-tab strip. */
+    fun subpage(id: String) = PageTabsTags.tab(id)
     fun page(kind: String) = "search_page_$kind"
     fun card(key: String) = "search_card_$key"
     fun output(calc: String, id: String) = "search_out_${calc}_$id"
@@ -143,12 +158,17 @@ fun SearchShell(state: SearchState) {
                     }
                     TopBar(state, v, Modifier.align(Alignment.TopCenter))
                     // The keyboard takes the bottom of the screen; the nav returns when it closes.
-                    if (!imeOpen()) BottomNav(
-                        entries = state.cfg.verticals.map { NavEntry(it.id, it.label, it.icon) },
-                        selected = if (state.saved) "" else state.vertical,
-                        onSelect = { state.open(it) },
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Metrics.navBottom),
-                    )
+                    // #868 the fleet's island, fed by build.json::ui. This box already clears the system
+                    // bars, so the island clears none of them a second time.
+                    if (!imeOpen()) MaterialTheme(colorScheme = if (state.dark) darkColorScheme() else lightColorScheme()) {
+                        BottomNavIsland(
+                            entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
+                            selectedId = if (state.saved) null else state.vertical,
+                            onSelect = { state.open(it.id) },
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            insets = WindowInsets(0, 0, 0, 0),
+                        )
+                    }
                 }
                 Scrim(state.menu != null) { state.menu = null }
                 SideMenu(state.menu == Menu.CATEGORIES, Tags.CATEGORIES) { Categories(state) }

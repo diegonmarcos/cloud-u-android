@@ -161,23 +161,27 @@ if os.path.isdir("data/files"):
         if name in pages and pages[name]:
             bad.append(f"section '{name}' collides with data/files/{name}/ in the asset root")
 
-# Exactly one landing section, and it has to be reachable from the bar.
-landing = [s for s in secs if s.get("default")]
-if len(landing) > 1:
-    bad.append(f"{len(landing)} sections declare default — only one can be the landing page")
-for s in landing:
-    if not s.get("bottom_nav"):
-        bad.append(f"section '{s['id']}' is the default but is not in the bottom bar")
+# #868 the bar is ui.bottom_nav: at most five ids, each a section, and the
+# landing section (ui.default_section) is one of them. No section carries the
+# old bottom_nav/order/default flags any more.
+bar_ids = ui.get("bottom_nav", [])
+by_id = {s["id"]: s for s in secs}
+for i in bar_ids:
+    if i not in by_id:
+        bad.append(f"ui.bottom_nav names '{i}' — no such section")
+if len(bar_ids) > 5:
+    bad.append(f"{len(bar_ids)} ui.bottom_nav ids — the island holds five")
+if ui.get("default_section") not in bar_ids:
+    bad.append(f"ui.default_section '{ui.get('default_section')}' is not in ui.bottom_nav")
+for s in secs:
+    for k in ("bottom_nav", "order", "default"):
+        if k in s:
+            bad.append(f"section '{s['id']}' still carries '{k}' — the bar is ui.bottom_nav")
+bar = [by_id[i] for i in bar_ids if i in by_id]
 
-bar = [s for s in secs if s.get("bottom_nav")]
-if len(bar) > 5:
-    bad.append(f"{len(bar)} bottom_nav sections — BottomNavigationView drops the sixth")
-
-# Sections.kt::Sections.bottom() is entries.filter{bottomNav}.sortedBy{order}.take(5)
-# — mirror that exactly, not just the membership, so a reordering (not just a
-# removal) of the bar is what this catches. Diego's #504 ask: Buro, Projects,
-# Profile, Agenda, Wallet, left to right.
-bar_order = [s.get("label") for s in sorted(bar, key=lambda s: s.get("order", 0))[:5]]
+# Mirror NavDecl.bottomSections() — the order is the declared order. Diego's
+# #504 ask: Buro, Projects, Profile, Agenda, Wallet, left to right.
+bar_order = [s.get("label") for s in bar][:5]
 EXPECTED_BAR_ORDER = ["Buro", "Projects", "Profile", "Agenda", "Wallet"]
 if bar_order != EXPECTED_BAR_ORDER:
     bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")

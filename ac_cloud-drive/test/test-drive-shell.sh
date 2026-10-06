@@ -13,10 +13,10 @@
 # that a caption was typed into a screen instead of the string table, or that
 # the StatusLight green here is not the green superapp promises. This file can.
 #
-#   D1  ui.tabs declared, unique, default_tab among them; the ids Kotlin dispatches
+#   D1  ui.bottom_nav declared, unique, default_section among them; the ids Kotlin dispatches
 #       (MainActivity `when (tabId)`) equal the declared ids in both directions.
-#   D2  ui.configs.pages ↔ ConfigsScreen's `when (id)`, both directions.
-#   D2s #609 ui.sync.pages ↔ SyncScreen's `when (id)`, both directions, and the
+#   D2  ui.sections[configs].pages ↔ ConfigsScreen's `when (id)`, both directions.
+#   D2s #609 ui.sections[sync].pages ↔ SyncScreen's `when (id)`, both directions, and the
 #       per-repository git periods (moved here from ui.configs at #609).
 #   D3  every declared icon name (tabs, pages, sections, places, filters, default) is
 #       a name in IconCatalog's `when`; the catalog has no dead name either.
@@ -97,10 +97,11 @@ d1() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
 bj = json.load(open(sys.argv[1])); main = open(sys.argv[2], encoding="utf-8").read()
-tabs = bj.get("ui", {}).get("tabs", [])
-ids = [t.get("id") for t in tabs]
-if not ids or len(set(ids)) != len(ids) or any(not i for i in ids): print("    ui.tabs missing, empty or not unique"); sys.exit(1)
-if bj["ui"].get("default_tab") not in ids: print("    ui.default_tab is not a declared tab"); sys.exit(1)
+secs = {s.get("id"): s for s in bj.get("ui", {}).get("sections", [])}
+ids = bj.get("ui", {}).get("bottom_nav", [])
+tabs = [secs.get(i, {}) for i in ids]
+if not ids or len(set(ids)) != len(ids) or any(not i for i in ids) or any(i not in secs for i in ids): print("    ui.bottom_nav missing, empty, not unique or naming a non-section"); sys.exit(1)
+if bj["ui"].get("default_section") not in ids: print("    ui.default_section is not a declared tab"); sys.exit(1)
 if any(not t.get("label") or not t.get("icon") for t in tabs): print("    a tab lacks label or icon"); sys.exit(1)
 m = re.search(r"when \(tabId\) \{(.*?)\n\s*\}", main, re.S)
 if not m: print("    MainActivity has no `when (tabId)` dispatch"); sys.exit(1)
@@ -115,7 +116,7 @@ d2() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
 bj = json.load(open(sys.argv[1])); src = open(sys.argv[2], encoding="utf-8").read()
-ids = [p.get("id") for p in bj["ui"]["configs"]["pages"]]
+ids = [p.get("id") for p in next(s for s in bj["ui"]["sections"] if s["id"] == "configs")["pages"]]
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
 if not m: print("    ConfigsScreen has no `when (id)` dispatch"); sys.exit(1)
 dispatched = re.findall(r'^\s*"([a-z_]+)" ->', m.group(1), re.M)
@@ -128,7 +129,7 @@ d2s() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
 bj = json.load(open(sys.argv[1])); src = open(sys.argv[2], encoding="utf-8").read()
-ids = [p.get("id") for p in bj["ui"]["sync"]["pages"]]
+ids = [p.get("id") for p in next(s for s in bj["ui"]["sections"] if s["id"] == "sync")["pages"]]
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
 if not m: print("    SyncScreen has no `when (id)` dispatch"); sys.exit(1)
 dispatched = re.findall(r'^\s*"([a-z_]+)" ->', m.group(1), re.M)
@@ -144,7 +145,7 @@ d3() {
 import json, re, sys
 bj = json.load(open(sys.argv[1])); cat = open(sys.argv[2], encoding="utf-8").read()
 ui = bj["ui"]
-declared = set(t["icon"] for t in ui["tabs"]) | set(p["icon"] for p in ui["configs"]["pages"]) | set(p["icon"] for p in ui["sync"]["pages"]) | set(x["icon"] for x in ui["files"]["sections"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
+declared = set(s["icon"] for s in ui["sections"]) | set(p["icon"] for s in ui["sections"] for p in s.get("pages", [])) | set(x["icon"] for x in ui["files"]["sections"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
 block = re.search(r"fun vector\(name: String\): ImageVector\? = when \(name\) \{(.*?)\n    \}", cat, re.S)
 if not block: print("    IconCatalog.vector has no `when (name)`"); sys.exit(1)
 known = set(re.findall(r'^\s*"([a-z_]+)" -> Icons\.', block.group(1), re.M))
@@ -155,33 +156,33 @@ PYTHON
 }
 
 echo "── D1 tabs: declared ↔ dispatched ──"
-d1 "$BJ" "$MAIN" && pass "ui.tabs are unique, labelled, iconed; MainActivity dispatches exactly them" || fail "tabs: declaration and dispatch disagree"
-if grep -qE 'BuildConfig\.UI_DEFAULT_TAB' "$DECL" && grep -qE 'Declarations\.defaultTab' "$SHELL_KT"; then pass "the default tab is the declared one"; else fail "default tab not read from the declaration"; fi
+d1 "$BJ" "$MAIN" && pass "ui.bottom_nav sections are unique, labelled, iconed; MainActivity dispatches exactly them" || fail "tabs: declaration and dispatch disagree"
+if grep -qE 'BuildConfig\.UI_DEFAULT_SECTION' "$DECL" && grep -qE 'Declarations\.defaultTab' "$SHELL_KT"; then pass "the default tab is the declared one"; else fail "default tab not read from the declaration"; fi
 
 echo "── D2 configs pages: declared ↔ dispatched ──"
-d2 "$BJ" "$CONFIGS" && pass "ui.configs.pages dispatch matches" || fail "configs pages: declaration and dispatch disagree"
+d2 "$BJ" "$CONFIGS" && pass "ui.sections[configs].pages dispatch matches" || fail "configs pages: declaration and dispatch disagree"
 
 echo "── D2s sync pages: declared ↔ dispatched (#609) ──"
-d2s "$BJ" "$SYNC_KT" && pass "ui.sync.pages dispatch matches; periods at or above the floor" || fail "sync pages: declaration and dispatch disagree"
+d2s "$BJ" "$SYNC_KT" && pass "ui.sections[sync].pages dispatch matches; periods at or above the floor" || fail "sync pages: declaration and dispatch disagree"
 
 echo "── D3 icons from declarations ──"
 d3 "$BJ" "$CATALOG" && pass "every declared icon name is in IconCatalog's vocabulary" || fail "an icon is declared that the catalog does not know"
-if grep -qE 'IconCatalog\.painter\(it\.icon\)' "$SHELL_KT" && grep -qE 'IconCatalog\.vectorOrDefault\(p\.icon\)' "$CONFIGS" && grep -qE 'IconCatalog\.vectorOrDefault\(p\.icon\)' "$SYNC_KT"; then pass "the shell and the strips render the declared icon names through the catalog"; else fail "a screen does not resolve its icons through IconCatalog"; fi
+if grep -qE 'IconCatalog\.painter\(it\)' "$SHELL_KT" && grep -qE 'PageTabs\(' "$CONFIGS" && grep -qE 'PageTabs\(' "$SYNC_KT"; then pass "the shell resolves the declared icon names through the catalog and the strips are libs:bottomnav's PageTabs over the declared pages"; else fail "a screen does not resolve its icons through IconCatalog, or a strip is not PageTabs"; fi
 if grep -rqE '"ic_[a-z_]+"' "$SRC"; then fail "a drawable name is typed in Kotlin"; else pass "no drawable-name literal in Kotlin"; fi
 
 echo "── D4 baked once, decoded once ──"
-for f in UI_TABS_B64 UI_CONFIGS_B64 UI_SYNC_B64 UI_FILES_B64 UI_ICON_DEFAULT UI_DEFAULT_TAB; do
+for f in UI_SECTIONS_B64 UI_BOTTOM_NAV UI_DEFAULT_SECTION UI_SYNC_B64 UI_FILES_B64 UI_ICON_DEFAULT; do
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
 done
-if grep -qE 'throw new GradleException\("build\.json::ui\.tabs must declare' "$GRADLE"; then pass "a missing ui.tabs fails the build"; else fail "build.gradle does not refuse a missing ui.tabs"; fi
-if grep -qE 'throw new GradleException\("build\.json::ui\.sync\.pages must declare' "$GRADLE"; then pass "a missing ui.sync.pages fails the build"; else fail "build.gradle does not refuse a missing ui.sync.pages"; fi
+if grep -qE 'throw new GradleException\("build\.json::ui\.bottom_nav / ui\.sections must declare' "$GRADLE"; then pass "a missing ui.bottom_nav / ui.sections fails the build"; else fail "build.gradle does not refuse a missing ui.bottom_nav / ui.sections"; fi
+if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[sync\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[sync].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[sync].pages"; fi
 OTHER_BLOBS="$(grep -rlE 'BuildConfig\.[A-Z_]+_B64' "$SRC" | grep -v 'Declarations.kt' | grep -v 'EngineActivity.kt' || true)"
 if [ -z "$OTHER_BLOBS" ]; then pass "no screen reads a BuildConfig blob directly"; else fail "BuildConfig blobs read outside Declarations/EngineActivity:"; printf '%s\n' "$OTHER_BLOBS" | sed 's/^/        /'; fi
 
 echo "── D5 the fleet island ──"
 if python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); m=b["modules"]; sys.exit(0 if "libs:bottomnav" in m and "libs:bottomnav" in m["app"]["depends_on"] and m["libs:bottomnav"].get("dir","").endswith("libs/bottomnav") else 1)' "$BJ"; then pass "libs:bottomnav declared and depended on"; else fail "libs:bottomnav missing from build.json modules / app.depends_on"; fi
 if grep -qE "implementation project\(':libs:bottomnav'\)" "$GRADLE"; then pass "libs:bottomnav linked"; else fail "libs:bottomnav not linked in app/build.gradle"; fi
-if grep -qE 'BottomNavIsland\(' "$SHELL_KT" && grep -qE 'entries = tabs\.map \{ BottomNavEntry\(it\.id, it\.label, IconCatalog\.painter\(it\.icon\)\) \}' "$SHELL_KT" && grep -qE 'rememberBottomNavCollapse\(\)' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, with scroll-collapse"; else fail "DriveShell does not draw BottomNavIsland from Declarations.tabs"; fi
+if grep -qE 'BottomNavIsland\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries \{ IconCatalog\.painter\(it\) \}' "$SHELL_KT" && grep -qE 'rememberBottomNavCollapse\(\)' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, with scroll-collapse"; else fail "DriveShell does not draw BottomNavIsland from Declarations.tabs"; fi
 if grep -qE 'setContent \{ DriveTheme \{ Root\(\) \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
 
 echo "── D6 the WebView shell is gone ──"
@@ -253,20 +254,22 @@ d11_structure() {
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 bad = 0
-tabs = [t["id"] for t in ui["tabs"]]
+tabs = ui["bottom_nav"]
 if tabs != ["files", "volumes", "home", "sync", "configs"]:
-    print("    ui.tabs is %s, not the #609 order files/volumes/home/sync/configs" % tabs); bad = 1
+    print("    ui.bottom_nav is %s, not the #609 order files/volumes/home/sync/configs" % tabs); bad = 1
 if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
-pages = [p["id"] for p in ui["configs"]["pages"]]
+cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]
+pages = [p["id"] for p in cfg_pages]
 if pages != ["backups", "general", "others"]:
     print("    ui.configs.pages is %s, not backups/general/others (#609 moved git/rclone/mounts to ui.sync)" % pages); bad = 1
-if any(not p.get("label") or not p.get("icon") for p in ui["configs"]["pages"]):
+if any(not p.get("label") or not p.get("icon") for p in cfg_pages):
     print("    a Configs sub-page lacks a label or an icon"); bad = 1
-sync_pages = [p["id"] for p in ui.get("sync", {}).get("pages", [])]
+sync_sec = next(s for s in ui["sections"] if s["id"] == "sync").get("pages", [])
+sync_pages = [p["id"] for p in sync_sec]
 if sync_pages != ["git", "rclone", "mounts"]:
-    print("    ui.sync.pages is %s, not git/rclone/mounts (#609)" % sync_pages); bad = 1
-if any(not p.get("label") or not p.get("icon") for p in ui.get("sync", {}).get("pages", [])):
+    print("    ui.sections[sync].pages is %s, not git/rclone/mounts (#609)" % sync_pages); bad = 1
+if any(not p.get("label") or not p.get("icon") for p in sync_sec):
     print("    a Sync sub-page lacks a label or an icon"); bad = 1
 sections = [x["id"] for x in ui["files"]["sections"]]
 if len(sections) != 2 or "emulated" not in sections:
@@ -302,14 +305,14 @@ python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync a
 import json, sys
 apps = json.load(open(sys.argv[1]))["apps"]
 ui = json.load(open(sys.argv[2]))["ui"]
-tabs = [t["id"] for t in ui["tabs"]]; pages = [p["id"] for p in ui["sync"]["pages"]]
+tabs = ui["bottom_nav"]; pages = [p["id"] for p in next(s for s in ui["sections"] if s["id"] == "sync")["pages"]]
 bad = 0
 for want in ("GitSync", "RSync"):
     tile = next((a for a in apps if a.get("label") == want), None)
     if tile is None: print("    no %s tile" % want); bad = 1; continue
     route = tile.get("route") or {}
     if route.get("tab") != "sync": print("    %s routes to tab %r, not the #609 Sync tab" % (want, route.get("tab"))); bad = 1
-    if route.get("page") not in pages: print("    %s routes to page %r, which ui.sync.pages does not declare" % (want, route.get("page"))); bad = 1
+    if route.get("page") not in pages: print("    %s routes to page %r, which ui.sections[sync].pages does not declare" % (want, route.get("page"))); bad = 1
     if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
 sys.exit(bad)
 PYTHON
@@ -326,10 +329,10 @@ import json, re, sys
 ui = json.load(open(sys.argv[1]))["ui"]; src = open(sys.argv[2], encoding="utf-8").read()
 bad = 0
 vol = ui.get("volumes") or {}
-classes = vol.get("classes") or []
+classes = next(s for s in ui["sections"] if s["id"] == "volumes").get("pages") or []
 ids = [c.get("id") for c in classes]
 if ids != ["constellation", "containers", "machines", "s3"]:
-    print("    ui.volumes.classes is %s, not the #604 order constellation/containers/machines/s3" % ids); bad = 1
+    print("    ui.sections[volumes].pages is %s, not the #604 order constellation/containers/machines/s3" % ids); bad = 1
 if any(not c.get("label") or not c.get("icon") for c in classes):
     print("    a volume class lacks a label or an icon"); bad = 1
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
@@ -354,9 +357,9 @@ d12_rsync() {
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]; apps = json.load(open(sys.argv[2]))["apps"]
 bad = 0
-page = next((p for p in ui["sync"]["pages"] if p.get("id") == "rclone"), None)
+page = next((p for p in next(s for s in ui["sections"] if s["id"] == "sync")["pages"] if p.get("id") == "rclone"), None)
 if page is None:
-    print("    ui.sync.pages has no `rclone` page: the id is the dispatch and must not change"); sys.exit(1)
+    print("    ui.sections[sync].pages has no `rclone` page: the id is the dispatch and must not change"); sys.exit(1)
 if page.get("label") != "Rsync":
     print("    the rclone sub-page is labelled %r, not 'Rsync' (#604)" % page.get("label")); bad = 1
 tile = next((a for a in apps if a.get("label") == "RSync"), None)
@@ -429,7 +432,7 @@ d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a cl
 for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
 done
-if grep -qE 'throw new GradleException\("build\.json::ui\.volumes\.classes must declare' "$GRADLE"; then pass "a missing ui.volumes.classes fails the build"; else fail "build.gradle does not refuse a missing ui.volumes.classes"; fi
+if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[volumes\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[volumes].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[volumes].pages"; fi
 if grep -qE 'connections: List<Declarations\.ConnectionDecl> = Declarations\.connections' "$SRC/sync/RcloneMountsScreens.kt"; then pass "Cloud-Containers is the SAME MountsSyncScreen, scoped — not a second mounts screen"; else fail "MountsSyncScreen is not scopeable: Volumes must reuse it, never copy it"; fi
 if grep -qE 'fun job\(rule: Declarations\.SyncRuleDecl\): RcloneJob' "$SRC/sync/SyncRules.kt" && ! grep -qE 'ProcessBuilder|exec\(' "$SRC/sync/SyncRules.kt"; then pass "a sync rule runs as ONE RcloneJob on the existing engine, never its own process"; else fail "SyncRules does not map a rule onto libs:rclone's job model"; fi
 
@@ -438,9 +441,10 @@ echo "── D13 the #613 regroup: two sections, three Personal subgroups, one a
 d13_sections() {
     python3 - "$1" <<'PYTHON'
 import json, sys
-vol = json.load(open(sys.argv[1]))["ui"]["volumes"]
+_ui = json.load(open(sys.argv[1]))["ui"]
+vol = _ui["volumes"]
 bad = 0
-classes = [c.get("id") for c in (vol.get("classes") or [])]
+classes = [c.get("id") for c in (next(s for s in _ui["sections"] if s["id"] == "volumes").get("pages") or [])]
 sections = vol.get("sections") or []
 ids = [s.get("id") for s in sections]
 if ids != ["constellation", "personal"]:
@@ -459,7 +463,7 @@ if (by.get("constellation") or {}).get("auth"):
 # NOTHING LOST: every declared class is claimed by exactly one section.
 claimed = [c for s in sections for c in (s.get("classes") or [])]
 if sorted(claimed) != sorted(classes):
-    print("    the sections' classes %s do not cover ui.volumes.classes %s (a class would be lost or double-listed)" % (sorted(claimed), sorted(classes))); bad = 1
+    print("    the sections' classes %s do not cover ui.sections[volumes].pages %s (a class would be lost or double-listed)" % (sorted(claimed), sorted(classes))); bad = 1
 # the auth deep-link is declared: a fleet id (resolved to a package at build time) or a package, plus a target and the extra it travels as.
 pa = vol.get("personal_auth") or {}
 if not (pa.get("fleet") or pa.get("package")):
@@ -478,8 +482,8 @@ if grep -qE 'actions\.openAuthProfile\(auth\.pkg, auth\.target, auth\.extra\)' "
 echo "== M mutation-proof =="
 
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["tabs"]=b["ui"]["tabs"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-files.json"
-d1 "$TMP/no-files.json" "$MAIN" >/dev/null && fail "D1 passed a declaration that dropped a tab (tester is vacuous)" || pass "a tab dropped from ui.tabs → D1 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["bottom_nav"]=b["ui"]["bottom_nav"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-files.json"
+d1 "$TMP/no-files.json" "$MAIN" >/dev/null && fail "D1 passed a declaration that dropped a tab (tester is vacuous)" || pass "a tab dropped from ui.bottom_nav → D1 RED"
 grep -v '"folder" -> Icons.Filled.Folder' "$CATALOG" > "$TMP/no-folder.kt"
 cmp -s "$CATALOG" "$TMP/no-folder.kt" && fail "the catalog mutation changed nothing (tester is stale)"
 d3 "$BJ" "$TMP/no-folder.kt" >/dev/null && fail "D3 passed a catalog without the folder glyph (tester is vacuous)" || pass "a glyph dropped from IconCatalog → D3 RED"
@@ -491,8 +495,8 @@ cmp -s "$SYNC_KT" "$TMP/sync.kt" && fail "the sync mutation changed nothing (tes
 d2s "$BJ" "$TMP/sync.kt" >/dev/null && fail "D2s passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in SyncScreen → D2s RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True) for r in d["repos"] if r.get("private")]; json.dump(d,open(sys.argv[2],"w"))' "$REPOS" "$TMP/seed-private.json"
 d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["volumes"]["classes"]=b["ui"]["volumes"]["classes"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
-d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.volumes.classes → D12 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s.update(pages=s["pages"][1:]) for s in b["ui"]["sections"] if s["id"]=="volumes"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
+d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.sections[volumes].pages → D12 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [a["route"].update(page="backups") for a in d["apps"] if a.get("label")=="RSync"]; json.dump(d,open(sys.argv[2],"w"))' "$APPS_JSON" "$TMP/rsync-backups.json"
 d12_rsync "$BJ" "$TMP/rsync-backups.json" >/dev/null && fail "D12 passed an RSync tile still routing to Backups (tester is vacuous)" || pass "Apps ▸ RSync routed back to Backups → D12 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"][0]["local_path"]="/somewhere-else"; json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/rule-moved.json"

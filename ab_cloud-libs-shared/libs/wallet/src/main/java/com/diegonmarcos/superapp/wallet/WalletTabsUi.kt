@@ -23,8 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.foundation.layout.WindowInsets
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -45,50 +46,61 @@ import java.util.Locale
 // ─── Top-level tabs ───────────────────────────────────────────────────────────
 
 /** Top-level wallet tabs. Events is a container with its own inner nav
- *  (Tickets / Bookings / Passes / Cal). */
-enum class WalletTab(val label: String) {
-    IDs("IDs"),
+ *  (Tickets / Bookings / Passes / Cal). [section] is the tab's id in build.json::ui.sections (#868). */
+enum class WalletTab(val label: String, val section: String) {
+    IDs("IDs", "ids"),
     /** Payment cards — the tab is called Pay because that is what you open it
      *  to do; the deck it holds is still the banking cards. */
-    Pay("Pay"),
+    Pay("Pay", "pay"),
     /** Vcards sits between the documents you carry and the events you go to:
      *  it is the public half of the same wallet — one personal card per social,
      *  mirroring the pages of front-diegonmarcos/b-Media/mySocials. Declared,
      *  not stored: it holds no WalletStore cards, so it is the one tab whose
      *  content the user cannot add to from the app. */
-    Vcards("Vcards"),
-    Tickets("Events"),
+    Vcards("Vcards", "vcards"),
+    Tickets("Events", "events"),
     /** Still a destination, no longer a pill: it is the gear at the right end
      *  of the strip. Kept in the enum because it is where [WalletFragment]
      *  routes to render WalletSystemConfigTab — a mode, not a menu entry. */
-    Config("Config"),
+    Config("Config", "config"),
 }
 
 /** Sub-tabs rendered inside the Events section. */
-enum class TicketsSubTab(val label: String) {
-    Events("Tickets"),
-    Bookings("Bookings"),
-    Passes("Passes"),
-    Calendar("Cal"),
+enum class TicketsSubTab(val label: String, val page: String) {
+    Events("Tickets", "tickets"),
+    Bookings("Bookings", "bookings"),
+    Passes("Passes", "passes"),
+    Calendar("Cal", "cal"),
 }
 
 // ─── Tab strips ───────────────────────────────────────────────────────────────
 
 /**
- * The wallet's bottom-nav items, left to right: IDs · Pay · Me · Vcards · Events (#533).
+ * The wallet's bottom-nav items are build.json::ui.bottom_nav (#868): IDs · Pay · Me · Vcards ·
+ * Events (#533), read through [NavDecl] ([WalletHost.nav]), never listed here.
  *
  * The strip that used to sit at the TOP is gone (#531): the wallet's top-level navigation is
  * the fleet's one bottom nav, libs:bottomnav's island, at the bottom like every other app.
- * [tab] is the destination; Me has none, because it LEAVES this app for cloud-me, the app that
- * owns the personal-administration surface the wallet deliberately does not. Config has no item
- * at all — it is [WalletConfigGear], floating in the content's corner.
+ * [walletTabOf] maps an item to its destination; Me has none, because it LEAVES this app for
+ * cloud-me, the app that owns the personal-administration surface the wallet deliberately does
+ * not. Config has an item in ui.sections but none in ui.bottom_nav: it is [WalletConfigGear],
+ * floating in the content's corner.
  */
-internal enum class WalletNavItem(val label: String, @DrawableRes val icon: Int, val tab: WalletTab?) {
-    IDs(WalletTab.IDs.label, R.drawable.ic_tab_ids, WalletTab.IDs),
-    Pay(WalletTab.Pay.label, R.drawable.ic_tab_pay, WalletTab.Pay),
-    Me("Me", R.drawable.ic_tab_me, null),
-    Vcards(WalletTab.Vcards.label, R.drawable.ic_tab_vcards, WalletTab.Vcards),
-    Events(WalletTab.Tickets.label, R.drawable.ic_tab_events, WalletTab.Tickets),
+internal fun walletTabOf(sectionId: String): WalletTab? = WalletTab.entries.firstOrNull { it.section == sectionId }
+
+/** The Events strip's page → sub-tab; the first one for an id the declaration does not name. */
+internal fun walletSubTabOf(pageId: String): TicketsSubTab =
+    TicketsSubTab.entries.firstOrNull { it.page == pageId } ?: TicketsSubTab.Events
+
+/** The declared icon name → the wallet's drawable. */
+@DrawableRes
+internal fun walletIcon(name: String): Int = when (name) {
+    "ids" -> R.drawable.ic_tab_ids
+    "pay" -> R.drawable.ic_tab_pay
+    "me" -> R.drawable.ic_tab_me
+    "vcards" -> R.drawable.ic_tab_vcards
+    "events" -> R.drawable.ic_tab_events
+    else -> R.drawable.ic_tab_config
 }
 
 /** The wallet is a dark surface with no View theme to borrow, so the island takes Material's
@@ -96,23 +108,24 @@ internal enum class WalletNavItem(val label: String, @DrawableRes val icon: Int,
 internal val walletNavScheme = darkColorScheme()
 
 /**
- * [WalletNavItem] on the shared island. A destination tap moves the pill; Me launches cloud-me
+ * [nav]'s bar on the shared island. A destination tap moves the pill; Me launches cloud-me
  * and the pill stays on the tab you are still on. Config lights no item.
  */
 @Composable
 internal fun WalletBottomNav(
+    nav: NavDecl,
     selected: WalletTab,
     onSelect: (WalletTab) -> Unit,
     onOpenMe: () -> Unit,
     modifier: Modifier = Modifier,
     collapsed: Boolean = false,
 ) {
-    val entries = WalletNavItem.entries.map { BottomNavEntry(it.name, it.label, painterResource(it.icon)) }
+    val entries = nav.islandEntries { painterResource(walletIcon(it)) }
     MaterialTheme(colorScheme = walletNavScheme) {
         BottomNavIsland(
             entries = entries,
-            selectedId = WalletNavItem.entries.firstOrNull { it.tab == selected }?.name,
-            onSelect = { entry -> WalletNavItem.valueOf(entry.id).tab?.let(onSelect) ?: onOpenMe() },
+            selectedId = nav.bottomSections().firstOrNull { walletTabOf(it.id) == selected }?.id,
+            onSelect = { entry -> walletTabOf(entry.id)?.let(onSelect) ?: onOpenMe() },
             modifier = modifier,
             collapsed = collapsed,
             // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system
@@ -151,38 +164,20 @@ internal fun WalletConfigGear(active: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Inner sub-tab strip inside the Tickets section. */
+/** Inner sub-tab strip inside the Events section: that section's `pages`, drawn by the host
+ *  ([WalletHost.PageStrip]) on the fleet's PageTabs. */
 @Composable
 internal fun TicketsSubTabStrip(
+    nav: NavDecl,
+    host: WalletHost?,
     selected: TicketsSubTab,
     onSelect: (TicketsSubTab) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-    ) {
-        TicketsSubTab.values().forEach { sub ->
-            val isActive = sub == selected
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isActive) Color(0x44FFFFFF) else Color(0x15FFFFFF))
-                    .clickable { onSelect(sub) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = sub.label,
-                    color = if (isActive) Color.White else Color(0xAAFFFFFF),
-                    fontSize = 12.sp,
-                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                )
-            }
-        }
-    }
+    host?.PageStrip(
+        pages = nav.section(WalletTab.Tickets.section)?.pages.orEmpty(),
+        selectedId = selected.page,
+        onSelect = { onSelect(walletSubTabOf(it.id)) },
+    )
 }
 
 // ─── Archive toggle ───────────────────────────────────────────────────────────

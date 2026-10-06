@@ -567,86 +567,80 @@
   },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
-    "_doc_sections": "#770 the three top-level sections, in display order: a segmented row at the top picks one, and the bottom nav shows the tabs whose `section` is its id. Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. test/test-calc-shell.sh fails on a section with no tab and on a tab naming no section.",
+    "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
+    "bottom_nav": ["calculator", "measure", "jev"],
+    "default_section": "calculator",
     "sections": [
       {
         "id": "calculator",
         "label": "Calculator",
-        "icon": "calculate"
+        "icon": "calculate",
+        "pages": [
+          {
+            "id": "calc",
+            "label": "Calc",
+            "icon": "calculate"
+          },
+          {
+            "id": "convert",
+            "label": "Convert",
+            "icon": "swap"
+          },
+          {
+            "id": "graph",
+            "label": "Graph",
+            "icon": "chart"
+          },
+          {
+            "id": "tools",
+            "label": "Tools",
+            "icon": "tools"
+          },
+          {
+            "id": "history",
+            "label": "History",
+            "icon": "history"
+          }
+        ]
       },
       {
         "id": "measure",
         "label": "Measure",
-        "icon": "speed"
+        "icon": "speed",
+        "pages": [
+          {
+            "id": "sensors",
+            "label": "Sound",
+            "icon": "mic"
+          },
+          {
+            "id": "clock",
+            "label": "Clock",
+            "icon": "clock"
+          },
+          {
+            "id": "camera",
+            "label": "Camera",
+            "icon": "camera"
+          }
+        ]
       },
       {
         "id": "jev",
         "label": "Jev",
-        "icon": "psychology"
-      }
-    ],
-    "_doc_tabs": "The bottom nav, in display order. A tab shows the modes whose `tab` is its id, in ui.modes order, as a chip strip; test/test-calc-shell.sh fails on a tab with no mode and on a mode naming no tab. #770 each tab names its `section` (ui.sections).",
-    "default_tab": "calc",
-    "tabs": [
-      {
-        "id": "calc",
-        "label": "Calc",
-        "icon": "calculate",
-        "section": "calculator"
-      },
-      {
-        "id": "convert",
-        "label": "Convert",
-        "icon": "swap",
-        "section": "calculator"
-      },
-      {
-        "id": "graph",
-        "label": "Graph",
-        "icon": "chart",
-        "section": "calculator"
-      },
-      {
-        "id": "tools",
-        "label": "Tools",
-        "icon": "tools",
-        "section": "calculator"
-      },
-      {
-        "id": "sensors",
-        "label": "Sound",
-        "icon": "mic",
-        "section": "measure"
-      },
-      {
-        "id": "clock",
-        "label": "Clock",
-        "icon": "clock",
-        "section": "measure"
-      },
-      {
-        "id": "camera",
-        "label": "Camera",
-        "icon": "camera",
-        "section": "measure"
-      },
-      {
-        "id": "history",
-        "label": "History",
-        "icon": "history",
-        "section": "calculator"
-      },
-      {
-        "id": "ask",
-        "label": "Ask",
-        "icon": "ask",
-        "section": "jev"
-      },
-      {
-        "id": "configs",
-        "label": "Configs",
-        "icon": "settings",
-        "section": "jev"
+        "icon": "psychology",
+        "pages": [
+          {
+            "id": "ask",
+            "label": "Ask",
+            "icon": "ask"
+          },
+          {
+            "id": "configs",
+            "label": "Configs",
+            "icon": "settings"
+          }
+        ]
       }
     ],
     "_doc_modes": "One entry per mode. `kind` picks the renderer: expression (input + autocomplete + keypad + result), catalog (engine items listed by category, tap to evaluate), converter (value + from/to units of an engine category), form (declared fields substituted into declared expressions), plot (y = f(x) sampled by the engine), meter (microphone level + spectrum; the permission is asked only when this mode opens), history (past results and the engine's own variables). `options` is the engine's eval options JSON (libs/calc EvalOptions: in_base, out_base, precision, angle, approx 0 exact/1 exact where possible/2 decimal, mixed_units, unicode). A key is a string inserted as typed, or {label, insert}; the labels AC, DEL and = are the three actions. #768 the Clock tab adds six kinds whose data is the mode's `clock` object: worldclock (`zones`, the cities shown until the user edits the list; any id of the device's tzdata), alarms (`snooze_choices`/`snooze_default` minutes, `ring_minutes` before a ring silences itself, `vibrate_default`), timers (`presets` in seconds), stopwatch, interval (`presets`: work/rest/long_rest seconds, `long_every` rounds, `rounds`), bedtime (`sleep_choices` minutes for the sleep timer, which stops other apps' playback by taking audio focus; `bedtime_default` for the nightly reminder, a quiet alarm). Clock state lives in SharedPreferences `cloud_clock`, every wakeup is an AlarmManager alarm re-planned from it on boot, update and time/zone change, and a foreground service keeps anything running visible and controllable with the app closed. #770 the Jev section adds five kinds whose data is build.json::jev, not the mode: jev (type a request; the routing decision with every option's probability, then the picked tool's result computed by this app's engines, or the top candidates to pick from when the model is unsure), jev_token (the OpenRouter token: the fleet Account's by default, a masked manual override in Keystore-backed storage, a Test button), jev_routing (the routing table - tools, questions, thresholds, fallback - shown and editable as the JSON the router itself reads, with reset to defaults), jev_models (the live decision-model catalogue and the per-use model choice) and jev_test (one prompt against one or several models side by side: the raw request with the token redacted, every option's probability, latency and cost). #772 the Sound tab adds four kinds whose data is build.json::sound, not the mode: sound_events (listen, then events named impulse/chirp/noise/tone/complex with their features, onsets, periodicity), sound_history (a running session: waterfall, level/frequency/wavelength over time, saved as CSV/WAV and exported through the system file picker), sound_generator (tones, sweeps, noise, dual tone, beats behind the safe-volume guard; no microphone) and sound_identify (the measurements, never the audio, sent to the sound model with build.json::jev.identify.sound's classes; every probability shown). The microphone is asked for only by a listening sound mode, through ui/SoundScreens.kt's MicGate. #772 the Camera tab adds five kinds whose data is build.json::camera: camera_measure (ARCore distance/path/area/height when ARCore is available, else a photo measured against a reference object of known size from `references`, with calibration), camera_level (inclinometer from the gravity sensor, `level`), camera_identify (a photo recognised by the shared image engine on the route Configs ▸ Image route picks; labels, boxes and the object count, every probability shown), camera_colour (tap a point: hex, RGB, HSL and the engine's colour name over `colour.sample_px`) and camera_text (OCR, numbers sent to `ocr.send_to_mode`); image_route (Configs) picks the route - on-device ML Kit or an OpenRouter decision model - and the model, per app. The camera is asked for only by a Camera mode that takes a photo, through ui/CameraScreens.kt's CameraGate.",

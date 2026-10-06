@@ -375,7 +375,7 @@ class VideoCapturer(private val mActivity: MainActivity) {
 
         // While recording, the gallery button turns into a shutter for stills
         mActivity.setThirdCircleIcon(R.drawable.camera_shutter, R.string.capture)
-        mActivity.tabLayout.visibility = View.INVISIBLE
+        mActivity.modeNav.visibility = View.INVISIBLE
         mActivity.timerView.setText(R.string.start_value_timer)
         mActivity.timerView.visibility = View.VISIBLE
 
@@ -421,7 +421,7 @@ class VideoCapturer(private val mActivity: MainActivity) {
 
         if (mActivity !is VideoCaptureActivity) {
             mActivity.cancelButtonView.visibility = View.VISIBLE
-            mActivity.tabLayout.visibility = View.VISIBLE
+            mActivity.modeNav.visibility = View.VISIBLE
         }
 
         mActivity.previewView.keepScreenOn = false

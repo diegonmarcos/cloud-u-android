@@ -15,6 +15,7 @@ import com.diegonmarcos.cloudcalc.ui.CalcState
 import com.diegonmarcos.cloudcalc.ui.CalcTags
 import com.diegonmarcos.cloudcalc.ui.CalcTheme
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,17 +97,21 @@ class CalcShellTest {
     @Test fun `every declared mode is reachable from the nav and composes`() {
         launch()
         Declarations.tabs.forEach { tab ->
-            // #770 a tab is in the bottom nav only while its section is selected.
-            compose.onNodeWithTag(CalcTags.section(tab.section)).performClick()
+            // #868 a page is in the top strip only while its section (a bottom-nav item) is selected.
+            compose.onNodeWithTag(BottomNavTags.item(tab.section)).performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(BottomNavTags.item(tab.id)).performClick()
+            // The pill is declared and composed; a strip that scrolls (five pages on a narrow
+            // screen) may park it off-screen, where a click has no pixel to land on, so the page
+            // is selected through the state the pills write.
+            compose.onNodeWithTag(PageTabsTags.tab(tab.id)).assertExists()
+            compose.runOnIdle { state.tab = tab.id }
             compose.waitForIdle()
             compose.onNodeWithTag(CalcTags.tab(tab.id)).assertExists()
             val modes = Declarations.modesOf(tab.id)
             if (modes.size > 1) {
-                // The strip is a LazyRow: a chip scrolled out of view is not composed, so the
+                // The sub-strip scrolls: a pill scrolled out of view may not be composed, so the
                 // first is clicked and the rest are selected through the state the chips write.
-                compose.onNodeWithTag(CalcTags.chip(modes.first().id)).performClick()
+                compose.onNodeWithTag(PageTabsTags.tab(modes.first().id)).performClick()
             }
             modes.forEach { m ->
                 compose.runOnIdle { state.modeByTab[tab.id] = m.id }
@@ -119,11 +124,11 @@ class CalcShellTest {
     @Test fun `each section shows only its own tabs and comes back to the last one`() {
         launch()
         Declarations.sections.forEach { sec ->
-            compose.onNodeWithTag(CalcTags.section(sec.id)).performClick()
+            compose.onNodeWithTag(BottomNavTags.item(sec.id)).performClick()
             compose.waitForIdle()
             assertEquals(sec.id, state.section)
             Declarations.tabs.forEach { t ->
-                val shown = compose.onAllNodesWithTag(BottomNavTags.item(t.id)).fetchSemanticsNodes().isNotEmpty()
+                val shown = compose.onAllNodesWithTag(PageTabsTags.tab(t.id)).fetchSemanticsNodes().isNotEmpty()
                 assertEquals("tab ${t.id} in section ${sec.id}", t.section == sec.id, shown)
             }
         }

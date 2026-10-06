@@ -8,17 +8,24 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.json.JSONArray
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 
 /**
  * #648 the declaration parser, run on the JVM against THIS repository's own build.json.
  *
  * The parse functions take JSON TEXT rather than BuildConfig precisely so this suite can
- * exercise the exact code the phone runs. A shell tester can compare two files; only this
+ * exercise the exact code the phone runs (#868: the navigation is libs:bottomnav's NavDecl,
+ * parsed here from the same ui.sections / ui.bottom_nav the gradle bake reads; org.json needs
+ * Robolectric). A shell tester can compare two files; only this
  * can prove the parser turns the declaration into the models the screens receive — so a
  * declaration that parses to something subtly different (a dropped tab, a blank label)
  * fails here rather than on a device.
  */
+@RunWith(RobolectricTestRunner::class)
 class DeclarationsTest {
 
     /** The repository's real build.json, found by walking up to the app directory. */
@@ -34,9 +41,19 @@ class DeclarationsTest {
 
     private fun uiText(key: String): String = ui()[key]!!.toString()
 
+    /** The nav exactly as the phone builds it: ui.sections + ui.bottom_nav + ui.default_section. */
+    private fun nav(): NavDecl = NavDecl.parse(
+        JSONArray(uiText("sections")),
+        ui()["bottom_nav"]!!.jsonArray.joinToString(",") { it.jsonPrimitive.content },
+        ui()["default_section"]!!.jsonPrimitive.content,
+    )
+
+    private fun pageIds(section: String): List<String> =
+        nav().section(section)!!.pages.map { it.id }
+
     @Test
     fun `the five declared tabs parse in declared order with Home centre`() {
-        val tabs = Declarations.parseTabs(uiText("tabs"))
+        val tabs = nav().bottomSections()
         assertEquals("every declared tab must parse; a dropped one is an invisible missing tab",
             5, tabs.size)
         assertEquals(listOf("Topology", "Observ", "Home", "Apps", "Configs"), tabs.map { it.label })
@@ -47,9 +64,10 @@ class DeclarationsTest {
 
     @Test
     fun `the declared default tab is one of the declared tabs`() {
-        val tabs = Declarations.parseTabs(uiText("tabs")).map { it.id }
-        val default = ui()["default_tab"]!!.jsonPrimitive.content
-        assertTrue("ui.default_tab '$default' is not among $tabs, so the app would open blank",
+        val tabs = nav().bottomNav
+        val default = nav().default()!!.id
+        assertEquals("home", default)
+        assertTrue("ui.default_section '$default' is not among $tabs, so the app would open blank",
             default in tabs)
     }
 
@@ -105,14 +123,12 @@ class DeclarationsTest {
         // DECLARED means IMPLEMENTED (#648): these are exactly the pages that have a
         // fragment today. The `topology`/`observability` pages ARE the SuperApp's two
         // stacks (feed cards, ntfy centre, container dashboards — C3StackFragment over
-        // ui.sections[c3].stack_*), carried whole per the owner's escalation; dagu and the
+        // ui.carried_c3.stack_*), carried whole per the owner's escalation; dagu and the
         // WG mesh arrived with them. The SuperApp's sample-stub page ids stay undeclared,
         // which is what keeps "no placeholder in a shipped tab" assertable.
-        assertEquals(listOf("topology", "public", "private"),
-            Declarations.parsePages(uiText("topology")).map { it.id })
-        assertEquals(listOf("observability", "health", "dagu", "mesh"),
-            Declarations.parsePages(uiText("observ")).map { it.id })
-        assertEquals(listOf("about"), Declarations.parsePages(uiText("configs")).map { it.id })
+        assertEquals(listOf("topology", "public", "private"), pageIds("topology"))
+        assertEquals(listOf("observability", "health", "dagu", "mesh"), pageIds("observ"))
+        assertEquals(listOf("about"), pageIds("configs"))
     }
 
     @Test
@@ -120,42 +136,33 @@ class DeclarationsTest {
         // The shell is Views and resolves icons with getIdentifier, so a name must be a real
         // resource name. "health" or "robot" (the old Compose keys) resolve to 0 and draw a
         // blank square, which is why the shell tester also checks the file exists.
-        val names = Declarations.iconNames()
+        val names = nav().sections.flatMap { s -> listOf(s.icon) + s.allPages().map { it.icon } }
         assertTrue("no declared icon may be blank", names.none { it.isBlank() })
         assertTrue("every declared icon must be a drawable name (ic_*): $names",
             names.all { it.startsWith("ic_") })
     }
 
     @Test
-    fun `parsePages reads the pages-object and the bare-array shape identically`() {
-        val wrapped = """{"pages":[{"id":"x","label":"X","icon":"stack"}]}"""
-        val bare = """[{"id":"x","label":"X","icon":"stack"}]"""
-        assertEquals(Declarations.parsePages(bare), Declarations.parsePages(wrapped))
-    }
-
-    @Test
     fun `a malformed or empty declaration parses to empty rather than throwing`() {
-        // A crash here would be a blank app; an empty list is a stated empty state.
-        assertEquals(emptyList<Declarations.TabDecl>(), Declarations.parseTabs(""))
-        assertEquals(emptyList<Declarations.TabDecl>(), Declarations.parseTabs("{not json"))
+        // A crash here would be a blank app; an empty declaration is a stated empty state.
+        assertEquals(emptyList<String>(), NavDecl.fromBuildConfig("!!!not base64!!!").bottomNav)
+        assertEquals(emptyList<String>(), NavDecl.fromBuildConfig("").sections.map { it.id })
         assertEquals("", Declarations.decode("!!!not base64!!!"))
     }
 
     @Test
-    fun `reordering the declaration reorders the parsed tabs and nothing else`() {
+    fun `reordering ui_bottom_nav reorders the bar and nothing else`() {
         // The property the bottom nav rests on: order is carried, never sorted.
-        val a = """[{"id":"one","label":"One","icon":"home"},{"id":"two","label":"Two","icon":"stack"}]"""
-        val b = """[{"id":"two","label":"Two","icon":"stack"},{"id":"one","label":"One","icon":"home"}]"""
-        assertEquals(listOf("one", "two"), Declarations.parseTabs(a).map { it.id })
-        assertEquals(listOf("two", "one"), Declarations.parseTabs(b).map { it.id })
-        assertEquals(Declarations.parseTabs(a).toSet(), Declarations.parseTabs(b).toSet())
+        val s = JSONArray("""[{"id":"one","label":"One","icon":"home"},{"id":"two","label":"Two","icon":"stack"}]""")
+        assertEquals(listOf("one", "two"), NavDecl.parse(s, "one,two").bottomSections().map { it.id })
+        assertEquals(listOf("two", "one"), NavDecl.parse(s, "two,one").bottomSections().map { it.id })
     }
 
     @Test
     fun `every icon name the declaration uses is a non-blank short name`() {
         val ui = ui()
         val names = mutableListOf<String>()
-        ui["tabs"]!!.jsonArray.forEach { names += it.jsonObject["icon"]!!.jsonPrimitive.content }
+        ui["sections"]!!.jsonArray.forEach { names += it.jsonObject["icon"]!!.jsonPrimitive.content }
         ui["external_apps"]!!.jsonArray.forEach { names += it.jsonObject["icon"]!!.jsonPrimitive.content }
         names += ui["icon_default"]!!.jsonPrimitive.content
         assertTrue("an icon name is a bare drawable name, never a path or an @reference",

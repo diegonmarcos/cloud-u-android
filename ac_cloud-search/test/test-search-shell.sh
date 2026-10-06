@@ -27,9 +27,11 @@
 #   S9  (#797) the Phosphor icon set is one list: app/tools/phosphor.json, the generated
 #       res/drawable/ph_*.xml (each carrying the generator's header) and every R.drawable.ph_* the
 #       Kotlin names agree, both ways.
-#   S10 (#797) Cloud Search draws its OWN chrome (the owner's mockup): neither the fleet bottom-nav
-#       island (libs:bottomnav) nor the fleet kit (libs:ui-kit) is in build.json's module graph or
-#       imported by any Kotlin source, and the shell draws Glass.kt's BottomNav from the verticals.
+#   S10 (#797, #868) Cloud Search draws its OWN chrome (the owner's mockup: glass theme, top bar), so
+#       the fleet kit (libs:ui-kit) is not linked or imported; its bottom nav and sub-page strips are
+#       the fleet's: libs:bottomnav is linked, Glass.kt draws no BottomNav/SubNav, SearchShell draws
+#       BottomNavIsland and the vertical pages PageTabs from the NavDecl build.json::ui bakes, the app
+#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION, and ui.sections is search.verticals.
 #   S11 (#803) the app icon is the mockup's central nav icon: res/drawable/ic_launcher_foreground.xml
 #       and ic_launcher_monochrome.xml are exactly what app/tools/phosphor2vd.py makes of
 #       phosphor.json::launcher (the Phosphor glyph, the .ai-nav-icon gradient from colors.xml), and
@@ -210,17 +212,43 @@ for p in kts:
 for d in sorted(named - on_disk):
     bad.append("S9 Kotlin draws R.drawable.%s, which phosphor.json does not generate" % d)
 
-# S10
+# S10 (#868: the app's chrome is its own glass theme and top bar, but its bottom nav and sub-page strips are the fleet's)
 deps = bj["modules"]["app"]["depends_on"]
-for lib in ("libs:bottomnav", "libs:ui-kit"):
-    if lib in deps or lib in bj["modules"]:
-        bad.append("S10 build.json links %s — Cloud Search draws its own chrome from the owner's mockup" % lib)
+if "libs:ui-kit" in deps or "libs:ui-kit" in bj["modules"]:
+    bad.append("S10 build.json links libs:ui-kit — Cloud Search draws its own chrome from the owner's mockup")
+if "libs:bottomnav" not in deps or "libs:bottomnav" not in bj["modules"]:
+    bad.append("S10 build.json does not link libs:bottomnav — the bottom nav and sub-page strips are the fleet's")
 for p in kts:
-    hit = re.search(r"import com\.diegonmarcos\.superapp\.(bottomnav|uikit)\.", code(p))
+    hit = re.search(r"import com\.diegonmarcos\.superapp\.uikit\.", code(p))
     if hit:
-        bad.append("S10 %s imports the fleet %s — the app's own Glass.kt draws its chrome" % (os.path.basename(p), hit.group(1)))
-if not re.search(r"\bBottomNav\(\s*entries = state\.cfg\.verticals\.map", shell):
-    bad.append("S10 SearchShell does not draw Glass.kt's BottomNav from the declared verticals")
+        bad.append("S10 %s imports the fleet uikit — the app's own Glass.kt draws its chrome" % os.path.basename(p))
+glass = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/Glass.kt"))
+if re.search(r"fun\s+(BottomNav|SubNav)\b", glass):
+    bad.append("S10 Glass.kt draws its own BottomNav/SubNav — the bar is libs:bottomnav's BottomNavIsland, the strip its PageTabs")
+if not re.search(r"BottomNavIsland\(\s*entries = NAV\.islandEntries", shell):
+    bad.append("S10 SearchShell does not draw BottomNavIsland from the baked NavDecl (NAV.islandEntries)")
+if "NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)" not in shell:
+    bad.append("S10 SearchShell's NAV is not NavDecl.fromBuildConfig of the three baked fields")
+if not re.search(r"PageTabs\(\s*pages = NAV\.section\(v\.id\)", code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))):
+    bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from NAV.section(v.id).pages")
+gradle = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
+for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION"):
+    if field not in gradle:
+        bad.append("S10 app/build.gradle does not bake %s" % field)
+# ui.sections is build.json::search.verticals, restated for NavDecl: same ids, order, icons, subpages
+ui, vs = bj.get("ui") or {}, bj["search"]["verticals"]
+secs = ui.get("sections") or []
+if ui.get("bottom_nav") != [v["id"] for v in vs] or [x.get("id") for x in secs] != [v["id"] for v in vs]:
+    bad.append("S10 ui.bottom_nav / ui.sections ids are not search.verticals' ids, in order")
+for x, v in zip(secs, vs):
+    if x.get("icon") != v.get("icon") or [q.get("id") for q in x.get("pages") or []] != v.get("subpages"):
+        bad.append("S10 ui.sections[%s] icon or pages differ from search.verticals[%s]" % (x.get("id"), v["id"]))
+    labels = {q["id"]: q["label"] for q in bj["search"]["subpages"]}
+    for q in x.get("pages") or []:
+        if q.get("label") != labels.get(q.get("id")):
+            bad.append("S10 ui.sections[%s] page %s label differs from search.subpages" % (x.get("id"), q.get("id")))
+if ui.get("default_section") != bj["search"]["default_vertical"]:
+    bad.append("S10 ui.default_section is not search.default_vertical")
 
 # S11
 res = os.path.join(app, "app", "src", "main", "res")
@@ -325,9 +353,15 @@ mutate phosphor-unlisted app/tools/phosphor.json 's.replace("\"warning\", ", "")
 mutate phosphor-listed-missing app/tools/phosphor.json 's.replace("\"wallet\",", "\"wallet\", \"rocket\",")' "S9 phosphor.json lists ph_rocket"
 mutate hand-drawn-icon app/src/main/res/drawable/ph_x.xml 's.replace("GENERATED by app/tools/phosphor2vd.py", "drawn by hand")' "S9 res/drawable/ph_x.xml was not written"
 mutate icon-not-generated "$J/ui/SearchShell.kt" 's.replace("R.drawable.ph_caret_down", "R.drawable.ph_caret_up")' "S9 Kotlin draws R.drawable.ph_caret_up"
-mutate fleet-nav-linked build.json 's.replace("\"libs:core\",\n        \"libs:text-tools\"", "\"libs:core\",\n        \"libs:bottomnav\",\n        \"libs:text-tools\"")' "S10 build.json links libs:bottomnav"
+mutate fleet-nav-unlinked build.json 's.replace("\"libs:text-tools\",\n        \"libs:bottomnav\",", "\"libs:text-tools\",")' "S10 build.json does not link libs:bottomnav"
+mutate fleet-kit-linked build.json 's.replace("\"libs:text-tools\",\n        \"libs:bottomnav\",", "\"libs:text-tools\",\n        \"libs:bottomnav\",\n        \"libs:ui-kit\",")' "S10 build.json links libs:ui-kit"
 mutate fleet-kit-imported "$J/ui/SearchTheme.kt" 's.replace("import com.diegonmarcos.cloudsearch.R\n", "import com.diegonmarcos.cloudsearch.R\nimport com.diegonmarcos.superapp.uikit.KitCard\n")' "S10 SearchTheme.kt imports the fleet uikit"
-mutate own-nav-dropped "$J/ui/SearchShell.kt" 's.replace("BottomNav(\n                        entries = state.cfg.verticals.map", "NavRail(\n                        entries = state.cfg.verticals.map")' "S10 SearchShell does not draw"
+mutate own-nav-back "$J/ui/Glass.kt" 's + "\n@androidx.compose.runtime.Composable\nfun BottomNav() {}\n"' "S10 Glass.kt draws its own BottomNav/SubNav"
+mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("BottomNavIsland(\n                            entries = NAV.islandEntries", "NavRail(\n                            entries = NAV.islandEntries")' "S10 SearchShell does not draw BottomNavIsland"
+mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(v.id)", "SubNav(\n                pages = NAV.section(v.id)")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
+mutate nav-not-baked app/build.gradle 's.replace("\"UI_SECTIONS_B64\"", "\"UI_SECTIONS\"")' "S10 app/build.gradle does not bake UI_SECTIONS_B64"
+mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"house\",\n      \"jobs\",", "\"bottom_nav\": [\n      \"jobs\",\n      \"house\",")' "S10 ui.bottom_nav / ui.sections ids are not search.verticals"
+mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n            \"label\": \"Calculators\",\n            \"icon\": \"\"\n          }\n        ]\n      },\n      {\n        \"id\": \"jobs\"", "\"id\": \"calculators\",\n            \"label\": \"Calculatorz\",\n            \"icon\": \"\"\n          }\n        ]\n      },\n      {\n        \"id\": \"jobs\"")' "S10 ui.sections[house] page calculators label"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
 mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"

@@ -33,6 +33,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
@@ -90,12 +91,8 @@ fun SyncScreen(
 
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(title = stringResource(R.string.sync_tab_title), subtitle = pages.firstOrNull { it.id == current }?.label)
-        Row(
-            Modifier.fillMaxWidth().testTag(DriveTags.SYNC_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gap),
-            horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
-        ) {
-            pages.forEach { p -> Pill(p.label, { current = p.id }, icon = IconCatalog.vectorOrDefault(p.icon), filled = current == p.id) }
-        }
+        // #868 the strip is libs:bottomnav's PageTabs over ui.sections[sync].pages.
+        PageTabs(pages = Declarations.navPages("sync"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "sync_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
                 "git" -> GitReposScreen(git, actions, nextRun)

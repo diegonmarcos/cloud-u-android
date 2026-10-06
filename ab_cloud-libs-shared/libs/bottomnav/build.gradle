@@ -25,11 +25,17 @@
 
 plugins {
     id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
-    // @Composable source needs the compose compiler. Resolved from the consuming app's root
-    // build (cloud-mail declares it `apply false` in its root, so the bare id works here).
-    id 'org.jetbrains.kotlin.plugin.compose'
 }
+// Conditional: an AGP 9 consumer (cloud-camera) self-registers the 'kotlin' extension and
+// hard-errors on a second apply ("Cannot add extension with name 'kotlin'"); AGP 8 consumers still
+// need it. Same pattern as libs/core/build.gradle and libs/analytics/build.gradle.
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+// @Composable source needs the compose compiler. Resolved from the consuming app's root build
+// (cloud-mail declares it `apply false` in its root, so the bare id works here; cloud-camera puts
+// it on its buildscript classpath).
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
     namespace 'com.diegonmarcos.superapp.bottomnav'

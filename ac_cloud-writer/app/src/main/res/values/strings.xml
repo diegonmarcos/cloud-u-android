@@ -75,6 +75,12 @@
          sentence would be a lie in this app.
          ══════════════════════════════════════════════════════════════════ -->
 
+    <!-- #868 the bottom island: one label per ui.sections id in build.json. -->
+    <string name="nav_documents">Documents</string>
+    <string name="nav_writer">Writer</string>
+    <string name="nav_tools">Tools</string>
+    <string name="nav_settings">Settings</string>
+
     <string name="settings_heading">Settings</string>
     <string name="settings_open">Open</string>
 

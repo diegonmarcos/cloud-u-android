@@ -40,6 +40,11 @@
       "_doc_dir": "Pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, MESH_MEMBER <queries>); not linked directly. Listed so its changes also trigger a rebuild.",
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/devtools"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE: ui/ModeNav.kt draws the camera mode switcher with them (the hand-rolled snapping TabLayout is gone).",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     }
   },
   "android": {
@@ -127,5 +132,59 @@
         "python3"
       ]
     }
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The camera's MODES are the nav: the island carries the three families and the photo family's `pages` are the flavours a vendor extension may or may not offer at run time (ModeNav shows only the usable ones). Every id is the lower-cased CameraMode name (qr_scan, auto, face_retouch, portrait, night, hdr, camera, video), so the flat order below is the swipe order. The gallery's ViewPager is content, not nav.",
+    "bottom_nav": [
+      "qr_scan",
+      "photo",
+      "video"
+    ],
+    "sections": [
+      {
+        "id": "qr_scan",
+        "label": "QR scan",
+        "icon": "qr_scan",
+        "pages": []
+      },
+      {
+        "id": "photo",
+        "label": "Camera",
+        "icon": "photo",
+        "pages": [
+          {
+            "id": "auto",
+            "label": "Auto"
+          },
+          {
+            "id": "face_retouch",
+            "label": "Face retouch"
+          },
+          {
+            "id": "portrait",
+            "label": "Portrait"
+          },
+          {
+            "id": "night",
+            "label": "Night"
+          },
+          {
+            "id": "hdr",
+            "label": "HDR"
+          },
+          {
+            "id": "camera",
+            "label": "Camera"
+          }
+        ]
+      },
+      {
+        "id": "video",
+        "label": "Video",
+        "icon": "video",
+        "pages": []
+      }
+    ],
+    "default_section": "photo"
   }
 }

@@ -27,12 +27,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.sync.MountsSyncScreen
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
@@ -197,11 +200,15 @@ private fun ClassStrip(
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     SectionHeader(label, count = classes.size)
-    Row(
-        Modifier.fillMaxWidth().testTag(DriveTags.VOLUMES_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gap),
-        horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
-    ) {
-        classes.forEach { c -> Pill(c.label, { onPick(c.id) }, icon = IconCatalog.vectorOrDefault(c.icon), filled = current == c.id) }
+    // #868 the class pills are libs:bottomnav's PageTabs (the class ids are ui.sections[volumes].pages).
+    Row(Modifier.fillMaxWidth().padding(end = DriveMetrics.padWide), verticalAlignment = Alignment.CenterVertically) {
+        PageTabs(
+            pages = classes.map { NavPage(it.id, it.label, it.icon) },
+            selectedId = current,
+            onSelect = { onPick(it.id) },
+            modifier = Modifier.weight(1f).testTag(DriveTags.VOLUMES_STRIP),
+            underTopChrome = false,
+        )
         trailing()
     }
 }

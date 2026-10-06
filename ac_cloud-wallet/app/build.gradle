@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // #868 the host draws the Events page strip (MainActivity.PageStrip), a Compose function.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -52,6 +54,10 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-wallet')
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 def uiPermissionsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
+// #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
+def uiBottomNav       = (buildJson.ui.bottom_nav ?: []).join(',')
+def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
+def uiDefaultSection  = (buildJson.ui.default_section ?: '').toString()
 def profileDefault   = buildJson.ui.profile_default ?: [:]
 def profileName      = (profileDefault.name      ?: '').toString()
 def profileEmail     = (profileDefault.email     ?: '').toString()
@@ -161,6 +167,9 @@ android {
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",        "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_SECTIONS_B64",      "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_INITIALS",  "\"${profileInitials}\""
@@ -180,7 +189,7 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures { buildConfig = true; compose = true }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/IDE.
     signingConfigs {
@@ -222,6 +231,11 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:wallet')
+    // #868 NavDecl: MainActivity bakes build.json::ui into WalletHost.nav (libs:wallet links the island itself).
+    implementation project(':libs:bottomnav')
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
     implementation project(':libs:updater')
     implementation 'com.google.zxing:core:3.5.3'
 

@@ -9,7 +9,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
 
 /**
- * #648 cloud-c3's bottom nav: libs:bottomnav's island fed from build.json::ui.tabs.
+ * #648 cloud-c3's bottom nav: libs:bottomnav's island fed from build.json::ui.bottom_nav (#868, through NavDecl).
  *
  * The five items come from the ONE tab declaration, in declared order, so reordering that
  * array reorders the bar and nothing else. An icon name in the declaration is resolved to a
@@ -28,10 +28,9 @@ object C3BottomNav {
      * resolve to 0 and draw nothing, so it is reported rather than silently blank —
      * the tester fails the build on it, and this keeps the runtime honest too.
      */
-    fun items(ctx: Context): List<BottomNavViewItem> = Declarations.tabs.map { tab ->
+    fun items(ctx: Context): List<BottomNavViewItem> = Declarations.nav.viewItems { name ->
         @Suppress("DiscouragedApi")
-        val icon = ctx.resources.getIdentifier(tab.icon, "drawable", ctx.packageName)
-        BottomNavViewItem(tab.id, tab.label, icon)
+        ctx.resources.getIdentifier(name, "drawable", ctx.packageName)
     }
 
     /** True when every declared tab icon resolves to a real drawable in this APK. */

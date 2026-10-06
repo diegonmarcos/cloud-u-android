@@ -80,6 +80,15 @@ class BrowserHostFragment : Fragment() {
     private var readerPending = false
     /** #802 the Compose surfaces drawn over the page; back closes the top one first. */
     private val overlays = ArrayList<View>()
+
+    /** #868 the host shell's island opens the host's own pages: the Search add-on's page, the settings, none. */
+    fun openSearch() = showSearchPage()
+    fun openSettings() = showSettings()
+    fun dismissOverlays() = closeOverlays()
+
+    /** #868 the host shell's nav island follows the screen: called whenever the last overlay (the
+     *  Search page, Settings, a sheet) is gone, so the island can put its pill back on the page. */
+    var onOverlaysClosed: (() -> Unit)? = null
     /** Compose state, so the find bar redraws its count when a search (screen or API) lands. */
     private val findCount = androidx.compose.runtime.mutableStateOf<Int?>(null)
 
@@ -233,6 +242,7 @@ class BrowserHostFragment : Fragment() {
         }
 
         overlays.clear()
+        onOverlaysClosed?.invoke()
         rootContainer.removeAllViews()
         rootContainer.addView(column)
     }
@@ -516,6 +526,7 @@ class BrowserHostFragment : Fragment() {
         column.addView(webView)
 
         overlays.clear()
+        onOverlaysClosed?.invoke()
         rootContainer.removeAllViews()
         rootContainer.addView(column)
     }
@@ -970,7 +981,7 @@ class BrowserHostFragment : Fragment() {
     private fun overlay(bottom: Boolean = false, side: Boolean = false, content: @Composable (close: () -> Unit) -> Unit): View? {
         val ctx = context ?: return null
         lateinit var v: View
-        val close = { rootContainer.removeView(v); overlays.remove(v); Unit }
+        val close = { rootContainer.removeView(v); overlays.remove(v); if (overlays.isEmpty()) onOverlaysClosed?.invoke(); Unit }
         v = ctx.kitComposeView(palette()) { content(close) }
         v.layoutParams = if (side) FrameLayout.LayoutParams(
             minOf((resources.displayMetrics.widthPixels * 0.88f).toInt(), dp(480)),
@@ -988,6 +999,7 @@ class BrowserHostFragment : Fragment() {
     private fun closeOverlays() {
         overlays.toList().forEach { rootContainer.removeView(it) }
         overlays.clear()
+        onOverlaysClosed?.invoke()
     }
 
     /** What the menu's `requires` and `checked` are resolved against, right now. */
@@ -1278,7 +1290,10 @@ class BrowserHostFragment : Fragment() {
         override fun handleOnBackPressed() {
             val wv = webView
             when {
-                overlays.isNotEmpty() -> { rootContainer.removeView(overlays.last()); overlays.removeAt(overlays.lastIndex) }
+                overlays.isNotEmpty() -> {
+                    rootContainer.removeView(overlays.last()); overlays.removeAt(overlays.lastIndex)
+                    if (overlays.isEmpty()) onOverlaysClosed?.invoke()
+                }
                 mode is Mode.DETAIL && wv?.canGoBack() == true -> wv.goBack()
                 mode !is Mode.GRID -> showGrid()
                 else -> { isEnabled = false; requireActivity().onBackPressedDispatcher.onBackPressed(); isEnabled = true }

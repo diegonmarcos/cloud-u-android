@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity(),
 
     /**
      * Swap the one container to a tab's page. THE ONE PLACE Kotlin names a tab id — the
-     * tester diffs this dispatch against build.json::ui.tabs in BOTH directions, so a
+     * tester diffs this dispatch against build.json::ui.bottom_nav in BOTH directions, so a
      * declared tab with no page and a page no declaration reaches are each a build
      * failure. There is deliberately no companion list of these ids.
      */
@@ -153,9 +153,9 @@ class MainActivity : AppCompatActivity(),
                 // ships carry no in-page anchors of their own.
                 val page = target.removePrefix("page:").substringBefore('#')
                 val fragment: Fragment? = when (page) {
-                    "c3/health" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_ALL)
-                    "c3/dagu"   -> com.diegonmarcos.superapp.ops.dagu.DaguFragment.newInstance()
-                    "wg/status" -> C3MeshFragment.newInstance()
+                    "c3/health", "observ/health" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_ALL)
+                    "c3/dagu", "observ/dagu" -> com.diegonmarcos.superapp.ops.dagu.DaguFragment.newInstance()
+                    "wg/status", "observ/mesh" -> C3MeshFragment.newInstance()
                     else        -> null
                 }
                 if (fragment != null) {

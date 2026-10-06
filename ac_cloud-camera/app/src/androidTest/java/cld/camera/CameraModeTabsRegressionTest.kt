@@ -42,10 +42,10 @@ class CameraModeTabsRegressionTest {
 
             scenario.onActivity { activity ->
                 activity.camConfig.switchMode(CameraMode.VIDEO)
-                assertEquals(CameraMode.VIDEO, activity.tabLayout.selectedTab?.tag)
+                assertEquals(CameraMode.VIDEO, activity.modeNav.selected)
 
                 activity.camConfig.switchMode(CameraMode.CAMERA)
-                assertEquals(CameraMode.CAMERA, activity.tabLayout.selectedTab?.tag)
+                assertEquals(CameraMode.CAMERA, activity.modeNav.selected)
             }
         }
     }
@@ -66,10 +66,10 @@ class CameraModeTabsRegressionTest {
             // reads false between frames -- exactly where a sample would land.
             val passes = AtomicInteger()
             val listener = ViewTreeObserver.OnGlobalLayoutListener { passes.incrementAndGet() }
-            scenario.onActivity { it.tabLayout.viewTreeObserver.addOnGlobalLayoutListener(listener) }
+            scenario.onActivity { it.modeNav.view.viewTreeObserver.addOnGlobalLayoutListener(listener) }
             Thread.sleep(WINDOW_MS)
             scenario.onActivity {
-                it.tabLayout.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+                it.modeNav.view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
             }
 
             // Rebinding the camera behind the mode change costs one pass. The livelock cost one per
@@ -112,12 +112,12 @@ class CameraModeTabsRegressionTest {
             awaitModeTabs(scenario)
 
             scenario.onActivity { activity ->
-                val tabs = activity.tabLayout
-                val next = tabs.getTabAt(tabs.selectedTabPosition + 1)
+                val nav = activity.modeNav
+                val next = nav.modeAt(nav.selectedIndex + 1)
                 assertNotNull("no mode to the left of ${activity.camConfig.currentMode}", next)
 
                 flingLeft(activity)
-                assertEquals(next!!.tag as CameraMode, activity.camConfig.currentMode)
+                assertEquals(next!!, activity.camConfig.currentMode)
             }
         }
 
@@ -143,7 +143,7 @@ class CameraModeTabsRegressionTest {
         Thread.sleep(TAB_BUILD_DWELL_MS)
 
         scenario.onActivity {
-            assertEquals("${it.javaClass.simpleName} built mode tabs", 0, it.tabLayout.tabCount)
+            assertEquals("${it.javaClass.simpleName} built mode tabs", 0, it.modeNav.tabCount)
         }
     }
 

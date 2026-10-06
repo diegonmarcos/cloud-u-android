@@ -12,10 +12,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.cloudc3.R
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.tabs.TabLayout
 
 /**
  * What a container icon opens on the C3 page.
@@ -68,13 +69,12 @@ object ContainerSheet {
         root.addView(header(ctx, label, containerName, vm))
 
         val pane = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val tabs = TabLayout(ctx).apply {
-            tabMode = TabLayout.MODE_FIXED
-            setBackgroundColor(0xFF140E1F.toInt())
-            setSelectedTabIndicatorColor(0xFFB794F6.toInt())
-            setTabTextColors(0xFF9B93AB.toInt(), 0xFFB794F6.toInt())
-            addTab(newTab().setText("Infos"))
-            addTab(newTab().setText("Actions"))
+        // #868 the sheet's two tabs are libs:bottomnav's pill strip, not a TabLayout. A sheet has
+        // no toolbar above it, so the strip adds no status-bar inset of its own.
+        val tabs = PageTabsView(ctx).apply {
+            underTopChrome = false
+            pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions"))
+            selectedId = "infos"
         }
         root.addView(tabs)
         root.addView(ScrollView(ctx).apply {
@@ -94,11 +94,10 @@ object ContainerSheet {
             if (index == 0) renderInfos(ctx, pane, containerName, vm, service, pub, priv)
             else renderActions(ctx, pane, dialog, containerName, vm, service, pub, priv, openUrl)
         }
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) = render(tab.position)
-            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-            override fun onTabReselected(tab: TabLayout.Tab) = Unit
-        })
+        tabs.onSelect = { page ->
+            tabs.selectedId = page.id
+            render(if (page.id == "actions") 1 else 0)
+        }
         render(0)
         dialog.show()
     }

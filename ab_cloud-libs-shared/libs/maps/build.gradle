@@ -92,16 +92,23 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    // #868 the page-tab strip (PageTabsView): the Timeline host's Explored | Daily | Stops row.
+    implementation project(':libs:bottomnav')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.activity:activity-ktx:1.9.3'
 
-    // Material — pulled in for com.google.android.material.tabs.TabLayout
-    // used by MapsTimelineTabsFragment (Daily | Stops tab host). Matches
-    // app/'s Material pin so version skew is impossible.
+    // Material components (themed views). Matches app/'s pin so version skew is impossible.
     implementation 'com.google.android.material:material:1.12.0'
+
+    // PageTabsView is a Compose host: its supertype and the WindowInsets / ColorScheme it
+    // exposes must be on this module's compile classpath.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     // RecyclerView — Daily/Stops render up to ~2200/~7000 rows (full 1987-1992
     // demo coverage); a LinearLayout-in-ScrollView inflates every row up front

@@ -115,6 +115,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontStyle
@@ -137,6 +138,10 @@ import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
 import com.diegonmarcos.cloudwriter.ui.WriterTheme
 import com.diegonmarcos.cloudwriter.ui.asValue
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.cloudwriter.ui.insertAtCaret
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
@@ -170,7 +175,7 @@ import java.util.concurrent.Executors
  */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { DOCS, EDITOR, CONFIGS }
+    private enum class Screen { DOCS, EDITOR, CONFIGS, TOOLS }
 
     /** A tool's answer waiting for the owner: the text and the range of the document it replaces. */
     private class ToolResult(val tool: WriterTool, val text: String, val note: String, val from: Int, val to: Int)
@@ -184,6 +189,10 @@ class MainActivity : AppCompatActivity() {
 
     private val screen: MutableState<Screen> = mutableStateOf(Screen.DOCS)
     private val configsReturn: MutableState<Screen> = mutableStateOf(Screen.DOCS)
+    /** #868 the document the Writer item reopens: the last one opened, until it is deleted. */
+    private var lastDocId: String? = null
+    /** #868 the Tools strip's selected page (a ui.sections[tools].pages id). */
+    private val toolsPage: MutableState<String> = mutableStateOf("")
     private val docs: MutableState<List<DocMeta>> = mutableStateOf(emptyList())
     private val query: MutableState<String> = mutableStateOf("")
     private val docId: MutableState<String?> = mutableStateOf(null)
@@ -257,6 +266,7 @@ class MainActivity : AppCompatActivity() {
     private fun open(id: String) {
         saveNow()
         docId.value = id
+        lastDocId = id
         field.value = TextFieldValue(store.read(id).orEmpty())
         report.value = null
         findOpen.value = false
@@ -277,7 +287,18 @@ class MainActivity : AppCompatActivity() {
                 reloadDocs()
             }
             Screen.CONFIGS -> screen.value = if (configsReturn.value == Screen.EDITOR && docId.value != null) Screen.EDITOR else Screen.DOCS
+            Screen.TOOLS -> screen.value = Screen.DOCS
             Screen.DOCS -> finish()
+        }
+    }
+
+    /** #868 an island item: the bar is on every screen but the editor, whose own bars take its place. */
+    private fun goSection(id: String) {
+        when (id) {
+            WriterNav.DOCUMENTS -> screen.value = Screen.DOCS
+            WriterNav.WRITER -> lastDocId?.takeIf { store.read(it) != null }?.let { open(it) } ?: newDoc()
+            WriterNav.TOOLS -> screen.value = Screen.TOOLS
+            WriterNav.SETTINGS -> openConfigs()
         }
     }
 
@@ -302,6 +323,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun delete(id: String) {
         store.delete(id)
+        if (lastDocId == id) lastDocId = null
         if (docId.value == id) {
             docId.value = null
             screen.value = Screen.DOCS
@@ -333,9 +355,32 @@ class MainActivity : AppCompatActivity() {
             Screen.DOCS -> DocsScreen()
             Screen.EDITOR -> EditorScreen()
             Screen.CONFIGS -> ConfigsScreen()
+            Screen.TOOLS -> ToolsScreen()
         }
         result.value?.let { ResultDialog(it) }
         confirmDelete.value?.let { DeleteDialog(it) }
+    }
+
+    /**
+     * #868 THE bar: libs:bottomnav's island, fed by build.json::ui through [WriterNav.decl]. One
+     * composable, handed to the bottomBar of every screen that shows it (Documents, Tools,
+     * Settings); [current] is the declared section the screen is.
+     */
+    @Composable
+    private fun NavBar(current: String) {
+        val entries = WriterNav.decl.bottomSections().map { s ->
+            BottomNavEntry(s.id, sectionLabel(s.id, s.label), rememberVectorPainter(WriterNav.icon(s.icon)))
+        }
+        BottomNavIsland(entries = entries, selectedId = current, onSelect = { e -> if (e.id != current) goSection(e.id) })
+    }
+
+    /** The localized label of a declared section; the declared English one for an id with no string. */
+    private fun sectionLabel(id: String, declared: String): String = when (id) {
+        WriterNav.DOCUMENTS -> getString(R.string.nav_documents)
+        WriterNav.WRITER -> getString(R.string.nav_writer)
+        WriterNav.TOOLS -> getString(R.string.nav_tools)
+        WriterNav.SETTINGS -> getString(R.string.nav_settings)
+        else -> declared
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -353,6 +398,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             },
+            bottomBar = { NavBar(WriterNav.DOCUMENTS) },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     text = { Text(stringResource(R.string.doc_new)) },
@@ -896,6 +942,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             },
+            bottomBar = { NavBar(WriterNav.SETTINGS) },
         ) { insets ->
             Column(
                 modifier = Modifier
@@ -914,7 +961,6 @@ class MainActivity : AppCompatActivity() {
                     WriterTheme.current(this@MainActivity),
                     WriterTheme.SYSTEM,
                 ) { WriterTheme.set(this@MainActivity, it) }
-                PagesSection()
                 ModelSection()
                 NoteText(stringResource(R.string.token_note))
                 Spacer(Modifier.height(BlockGap))
@@ -1082,12 +1128,21 @@ class MainActivity : AppCompatActivity() {
         val screen: Class<out Activity>,
     )
 
+    /**
+     * #868 The Tools section: its declared pages (build.json ui.sections[tools].pages) are a
+     * PageTabs strip (libs:bottomnav), and the selected page is the card that opens it. The five
+     * used to be a column of cards under Configs; they are the app's tool pages, so they have a
+     * section of their own. Which declared id a [Page] is comes from its activity, WriterNav.pageId.
+     */
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun PagesSection() {
-        Column(Modifier.fillMaxWidth()) {
-            SectionHeader(stringResource(R.string.settings_heading))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
+    private fun ToolsScreen() {
+        Scaffold(
+            topBar = { TopAppBar(title = { Text(stringResource(R.string.nav_tools)) }) },
+            bottomBar = { NavBar(WriterNav.TOOLS) },
+        ) { insets ->
+            Column(Modifier.fillMaxSize().padding(insets)) {
+                val tools = listOf(
                     Page(
                         R.string.settings_screen_enhance,
                         R.string.settings_screen_enhance_summary,
@@ -1118,13 +1173,26 @@ class MainActivity : AppCompatActivity() {
                         Icons.Filled.Hearing,
                         RoutesActivity::class.java,
                     ),
-                ).forEach { page ->
+                )
+                val declared: List<NavPage> = WriterNav.decl.section(WriterNav.TOOLS)?.pages.orEmpty().map { p ->
+                    tools.firstOrNull { WriterNav.pageId(it.screen) == p.id }?.let { p.copy(label = stringResource(it.label)) } ?: p
+                }
+                val selected = declared.firstOrNull { it.id == toolsPage.value } ?: declared.firstOrNull()
+                PageTabs(
+                    pages = declared,
+                    selectedId = selected?.id,
+                    onSelect = { toolsPage.value = it.id },
+                    underTopChrome = false,
+                )
+                Column(Modifier.fillMaxWidth().padding(horizontal = PageGutter)) {
+                    tools.filter { WriterNav.pageId(it.screen) == selected?.id }.forEach { page ->
                     FeatureCard(
                         icon = page.icon,
                         title = stringResource(page.label),
                         summary = stringResource(page.summary),
                         onClick = { startActivity(Intent(this@MainActivity, page.screen)) },
                     )
+                    }
                 }
             }
         }

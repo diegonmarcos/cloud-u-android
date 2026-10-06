@@ -12,10 +12,10 @@ class VideoOnlyActivity : MainActivity() {
 
         // Kept transparent rather than hidden: afterRecordingStops() puts the strip back to VISIBLE
         // for everything that is not a VideoCaptureActivity, so visibility would not stay hidden.
-        tabLayout.alpha = 0f
-        tabLayout.isClickable = false
-        tabLayout.isEnabled = false
-//        (tabLayout.layoutParams as ViewGroup.MarginLayoutParams).let {
+        modeNav.alpha = 0f
+        modeNav.isClickable = false
+        modeNav.isEnabled = false
+//        (modeNav.layoutParams as ViewGroup.MarginLayoutParams).let {
 //            it.setMargins(it.leftMargin, it.height, it.rightMargin, it.bottomMargin)
 //            it.height = 0
 //        }

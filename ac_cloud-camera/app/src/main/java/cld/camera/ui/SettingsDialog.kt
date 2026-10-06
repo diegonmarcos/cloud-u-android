@@ -663,7 +663,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
                 currentUnselectedColor = animator.animatedValue as Int
             }
             colorAnimation3.addUpdateListener { animator ->
-                mActivity.tabLayout.setTabTextColors(
+                mActivity.modeNav.setTabTextColors(
                     currentUnselectedColor,
                     animator.animatedValue as Int
                 )
@@ -673,7 +673,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
                 ValueAnimator.ofObject(ArgbEvaluator(), tabSelectedColor, Color.BLACK)
             colorAnimation4.duration = 300
             colorAnimation4.addUpdateListener { animator ->
-                mActivity.tabLayout.setSelectedTabIndicatorColor(animator.animatedValue as Int)
+                mActivity.modeNav.setSelectedTabIndicatorColor(animator.animatedValue as Int)
             }
 
             colorAnimation1.start()
@@ -710,7 +710,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
                 currentUnselectedTextColor = animator.animatedValue as Int
             }
             colorAnimation3.addUpdateListener { animator ->
-                mActivity.tabLayout.setTabTextColors(
+                mActivity.modeNav.setTabTextColors(
                     currentUnselectedTextColor,
                     animator.animatedValue as Int
                 )
@@ -719,7 +719,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
             val colorAnimation4 = ValueAnimator.ofObject(ArgbEvaluator(), Color.BLACK, tabSelectedColor)
             colorAnimation4.duration = 300
             colorAnimation4.addUpdateListener { animator ->
-                mActivity.tabLayout.setSelectedTabIndicatorColor(animator.animatedValue as Int)
+                mActivity.modeNav.setSelectedTabIndicatorColor(animator.animatedValue as Int)
             }
 
             colorAnimation1.start()

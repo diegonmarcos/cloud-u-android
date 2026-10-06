@@ -49,6 +49,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-account.yml"
       #   input: "ab_cloud-libs-shared/libs/appstore/**"
       #   input: "ab_cloud-libs-shared/libs/auth/**"
+      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/databackend/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"

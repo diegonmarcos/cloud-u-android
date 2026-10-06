@@ -44,7 +44,7 @@
     "_doc": "Pinned for reproducibility — all derived in flake.nix. Bump here, rebuild devShell.",
     "agp": "8.7.3",
     "gradle": "8.10.2",
-    "kotlin": "1.9.24",
+    "kotlin": "2.3.20",
     "jdk": "17"
   },
   "modules": {
@@ -54,7 +54,8 @@
       "depends_on": [
         "libs:core",
         "libs:maps",
-        "libs:updater"
+        "libs:updater",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -78,38 +79,93 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavIslandView; libs:maps' Timeline host and Configs draw their strips with PageTabsView.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
     }
   },
   "ui": {
-    "_doc_nav_tabs": "Bottom navigation tabs. Order = display order. id maps to a Fragment in MainActivity.fragmentForTab(); icon maps to R.drawable.ic_nav_<icon>.",
-    "nav_tabs": [
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Timeline = Explored/Daily/Stops, Configs = Tracker/APIs/Update/Cache/Layers/About. A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
+    "bottom_nav": [
+      "routes",
+      "navigation",
+      "places",
+      "timeline",
+      "configs"
+    ],
+    "sections": [
       {
         "id": "routes",
         "label": "Routes",
-        "icon": "routes"
+        "icon": "routes",
+        "pages": []
       },
       {
         "id": "navigation",
         "label": "Navigation",
-        "icon": "navigation"
+        "icon": "navigation",
+        "pages": []
       },
       {
         "id": "places",
         "label": "Places",
-        "icon": "places"
+        "icon": "places",
+        "pages": []
       },
       {
         "id": "timeline",
         "label": "Timeline",
-        "icon": "timeline"
+        "icon": "timeline",
+        "pages": [
+          {
+            "id": "explored",
+            "label": "Explored"
+          },
+          {
+            "id": "daily",
+            "label": "Daily"
+          },
+          {
+            "id": "stops",
+            "label": "Stops"
+          }
+        ]
       },
       {
         "id": "configs",
         "label": "Configs",
-        "icon": "configs"
+        "icon": "configs",
+        "pages": [
+          {
+            "id": "tracker",
+            "label": "Tracker"
+          },
+          {
+            "id": "apis",
+            "label": "APIs"
+          },
+          {
+            "id": "update",
+            "label": "Update"
+          },
+          {
+            "id": "cache",
+            "label": "Cache"
+          },
+          {
+            "id": "layers",
+            "label": "Layers"
+          },
+          {
+            "id": "about",
+            "label": "About"
+          }
+        ]
       }
     ],
-    "default_tab": "routes",
+    "default_section": "routes",
     "_doc_search_islands": "Small round 'island' shortcut chips rendered in a row beneath the top search bar (Google-Maps style). action is parsed by the active fragment.",
     "search_islands": [
       {
@@ -2350,6 +2406,15 @@
     "matomo": {
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
+    }
+  },
+  "tests": {
+    "_doc": "#868 what CI runs to prove the nav is the fleet's: test/test-nav-shape.sh pins the declaration, the island host and the strips (and mutates each to prove it bites). Read by cloud-android-test-engine.sh.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3"
+      ]
     }
   }
 }

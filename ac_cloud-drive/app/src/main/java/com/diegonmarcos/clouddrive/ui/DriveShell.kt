@@ -25,14 +25,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 
 /**
  * #579 the shell (cloud-drive-redesign.md §2): the tab content above the fleet's
- * bottom-nav island. The tabs are build.json::ui.tabs — id, label, icon — in declared
+ * bottom-nav island. The tabs are build.json::ui.bottom_nav (sections, #868) — id, label, icon — in declared
  * order; the selected one is saved across process death; the island collapses to icons
  * on scroll and reads its own bottom inset while the content consumes it once (the
  * libs:bottomnav BottomNavBar pattern, with this app's entries). Re-tapping the
@@ -52,7 +52,7 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     var reselectTick by rememberSaveable { mutableStateOf(0) }
     val collapse = rememberBottomNavCollapse()
     val insets = bottomNavInsets()
-    val entries = tabs.map { BottomNavEntry(it.id, it.label, IconCatalog.painter(it.icon)) }
+    val entries = Declarations.nav.islandEntries { IconCatalog.painter(it) }
     LaunchedEffect(select) {
         if (select != null && tabs.any { it.id == select }) selected = select
         if (select != null) onSelected()

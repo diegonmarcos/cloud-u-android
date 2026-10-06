@@ -75,6 +75,22 @@
     }
   },
   "ui": {
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl; libs:wallet reads it through WalletHost.nav). ui.bottom_nav is the island, in order: IDs, Pay, Me, Vcards, Events. ui.sections[] is what each item opens (Me LAUNCHES cloud-me, so it has no pages; Config is the corner gear, a section but not a bar item). A section's pages are its PageTabs strip: Events holds Tickets, Bookings, Passes, Cal. ui.default_section is where the wallet opens. WalletTab/TicketsSubTab (libs/wallet WalletTabsUi.kt) map the ids to their screens.",
+    "bottom_nav": ["ids", "pay", "me", "vcards", "events"],
+    "default_section": "pay",
+    "sections": [
+      {"id": "ids", "label": "IDs", "icon": "ids", "pages": []},
+      {"id": "pay", "label": "Pay", "icon": "pay", "pages": []},
+      {"id": "me", "label": "Me", "icon": "me", "pages": []},
+      {"id": "vcards", "label": "Vcards", "icon": "vcards", "pages": []},
+      {"id": "events", "label": "Events", "icon": "events", "pages": [
+        {"id": "tickets", "label": "Tickets", "icon": ""},
+        {"id": "bookings", "label": "Bookings", "icon": ""},
+        {"id": "passes", "label": "Passes", "icon": ""},
+        {"id": "cal", "label": "Cal", "icon": ""}
+      ]},
+      {"id": "config", "label": "Config", "icon": "config", "pages": []}
+    ],
     "profile_default": {
       "name": "Diego Coelho Marcos",
       "email": "me@diegonmarcos.com",

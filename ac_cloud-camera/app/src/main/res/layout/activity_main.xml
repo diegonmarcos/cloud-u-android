@@ -542,24 +542,28 @@
 
         </LinearLayout>
 
-        <cld.camera.ui.BottomTabLayout
+        <!-- #868 the mode switcher: the photo flavours as a page strip above libs:bottomnav's island
+             (QR scan | Camera | Video). cld.camera.ui.ModeNav drives both; this id is what
+             three_buttons and the preview's reposition math are anchored to. -->
+        <LinearLayout
             android:id="@+id/camera_mode_tabs"
             android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
-            android:layout_height="30dp"
-            app:tabPaddingStart="16dp"
-            app:tabPaddingEnd="16dp"
-            app:tabRippleColor="@android:color/transparent"
-            app:tabIndicatorFullWidth="false"
-            app:tabMode="auto"
-            app:tabIndicator="@drawable/mode_indicator"
-            android:overScrollMode="never"
-            app:tabIndicatorHeight="30dp"
-            app:tabTextColor="@android:color/white"
-            app:tabSelectedTextColor="?attr/colorOnPrimary"
-            android:background="@android:color/transparent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
             android:layout_marginTop="12dp"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="4dp">
+
+            <com.diegonmarcos.superapp.bottomnav.PageTabsView
+                android:id="@+id/camera_mode_strip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+                android:id="@+id/camera_mode_island"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
 
         <FrameLayout
             android:layout_height="26dp"

@@ -291,10 +291,10 @@ class VideoCapturerRegressionTest {
                 scenario.onActivity { activity ->
                     // Prove the fling reaches a mode it could switch to, so the assertions below
                     // cannot pass merely because there was nowhere to go.
-                    val tabs = activity.tabLayout
+                    val nav = activity.modeNav
                     assertNotNull(
                         "no mode to the right of ${activity.camConfig.currentMode}",
-                        tabs.getTabAt(tabs.selectedTabPosition - 1)
+                        nav.modeAt(nav.selectedIndex - 1)
                     )
 
                     flingRight(activity)
@@ -350,7 +350,7 @@ class VideoCapturerRegressionTest {
     fun tappingAModeTabDuringTheDeferredStart_leavesTheModeAlone() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             waitUntil(scenario, "camera is bound") { it.camConfig.camera != null }
-            waitUntil(scenario, "mode tabs are built") { it.tabLayout.tabCount > 0 }
+            waitUntil(scenario, "mode tabs are built") { it.modeNav.tabCount > 0 }
 
             scenario.onActivity { it.camConfig.switchMode(CameraMode.VIDEO) }
             waitUntil(scenario, "video use case is bound") { it.camConfig.videoCapture != null }
@@ -367,14 +367,14 @@ class VideoCapturerRegressionTest {
                     activity.videoCapturer.startRecording()
                     assertTrue(activity.videoCapturer.isRecording)
 
-                    val cameraTab = activity.tabLayout.getTabForMode(CameraMode.CAMERA)
-                    assertNotNull("no CAMERA tab to tap", cameraTab)
+                    val cameraMode = activity.modeNav.modes.firstOrNull { it == CameraMode.CAMERA }
+                    assertNotNull("no CAMERA mode to tap", cameraMode)
 
-                    // What both of the strip's touch listeners do with a tap
-                    activity.finalizeMode(cameraTab)
+                    // What the island / strip do with a tap: hand the mode to finalizeMode
+                    activity.finalizeMode(cameraMode)
 
                     mode = activity.camConfig.currentMode
-                    highlighted = activity.tabLayout.selectedTab?.tag as CameraMode?
+                    highlighted = activity.modeNav.selected
                 }
 
                 // Abandon the queued start rather than record for real: the damage is done or not

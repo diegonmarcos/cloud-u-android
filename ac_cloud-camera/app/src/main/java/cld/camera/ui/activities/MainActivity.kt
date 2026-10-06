@@ -72,6 +72,7 @@ import cld.camera.CamConfig
 import cld.camera.CameraMode
 import cld.camera.ITEM_TYPE_IMAGE
 import cld.camera.ITEM_TYPE_VIDEO
+import cld.camera.BuildConfig
 import cld.camera.R
 import cld.camera.analyzer.ScannedPayload
 import cld.camera.capturer.ImageCapturer
@@ -85,7 +86,7 @@ import cld.camera.ktx.applyPreviewRatio
 import cld.camera.notifier.SensorOrientationChangeNotifier
 import cld.camera.util.MediaCenter
 import cld.camera.util.isPackageInstalled
-import cld.camera.ui.BottomTabLayout
+import cld.camera.ui.ModeNav
 import cld.camera.ui.CountDownTimerUI
 import cld.camera.ui.CustomGrid
 import cld.camera.ui.QROverlay
@@ -104,7 +105,8 @@ import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.google.android.material.color.MaterialColors
 import com.google.zxing.BarcodeFormat
 import java.io.File
 import java.util.concurrent.Executors
@@ -156,7 +158,7 @@ open class MainActivity : AppCompatActivity(),
 
     lateinit var flipCameraCircle: View
     lateinit var cancelButtonView: ImageView
-    lateinit var tabLayout: BottomTabLayout
+    lateinit var modeNav: ModeNav
     lateinit var thirdCircle: ImageView
     lateinit var openMediaCenterVideo: ImageButton
     lateinit var openMediaCenterPhoto: ImageButton
@@ -734,17 +736,15 @@ open class MainActivity : AppCompatActivity(),
         bottomOverlay = binding.bottomOverlay
         scaleGestureDetector = ScaleGestureDetector(this, this)
 
-        tabLayout = binding.cameraModeTabs
-
-        tabLayout.setOnTouchListener { _, motionEvent ->
-            if (motionEvent.action == MotionEvent.ACTION_UP) {
-                val tab = tabLayout.getTabAtX(tabLayout.scrollX)
-                finalizeMode(tab)
-                return@setOnTouchListener true
-            }
-
-            return@setOnTouchListener false
-        }
+        // #868 the mode switcher: libs:bottomnav's island + page strip, declared in build.json::ui.
+        modeNav = ModeNav(
+            binding.cameraModeTabs, binding.cameraModeIsland, binding.cameraModeStrip,
+            NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION),
+        ) { mode -> finalizeMode(mode) }
+        modeNav.themed(
+            MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary),
+            MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnPrimary),
+        )
 
         timerView = binding.timer
         previewView.previewStreamState.observe(this) { state: StreamState ->
@@ -1103,11 +1103,11 @@ open class MainActivity : AppCompatActivity(),
 
         threeButtons.visibility = View.VISIBLE
 
-        tabLayout.viewTreeObserver.addOnPreDrawListener(
+        modeNav.view.viewTreeObserver.addOnPreDrawListener(
             object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
 
-                    tabLayout.viewTreeObserver
+                    modeNav.view.viewTreeObserver
                         .removeOnPreDrawListener(
                             this
                         )
@@ -1116,16 +1116,16 @@ open class MainActivity : AppCompatActivity(),
 
                     val extraHeight169 = previewContainer.height -
                             previewHeight169 -
-                            tabLayout.height -
+                            modeNav.view.height -
                             10 * resources.displayMetrics.density.toInt()
 
                     // When there's no extra space in 16:9 for even the bottom nav bar to be present without
                     // obscuring the preview or if there's sufficient space for the entire bottom UI to exist
                     val shouldSnapAboveBottomNav = extraHeight169 < bottomNavigationBarPadding
-                            || extraHeight169 >= (threeButtons.height + tabLayout.height + tabLayout.marginTop)
+                            || extraHeight169 >= (threeButtons.height + modeNav.view.height + modeNav.view.marginTop)
 
-                    tabLayout.layoutParams =
-                        (tabLayout.layoutParams as ViewGroup.MarginLayoutParams).let {
+                    modeNav.view.layoutParams =
+                        (modeNav.view.layoutParams as ViewGroup.MarginLayoutParams).let {
 
                             it.setMargins(
                                 it.leftMargin,
@@ -1147,26 +1147,21 @@ open class MainActivity : AppCompatActivity(),
             })
     }
 
-    fun finalizeMode(tab: TabLayout.Tab? = null) {
+    fun finalizeMode(picked: CameraMode? = null) {
 
-        // The strip is untouchable during a recording but not while its start sound still plays, and
-        // rebinding the camera there starts the queued recording on a dead recorder. The touch may
-        // already have dragged the strip, so put it back on the mode the camera is really in.
+        // The switcher is untouchable during a recording but not while its start sound still plays, and
+        // rebinding the camera there starts the queued recording on a dead recorder. Put the highlight
+        // back on the mode the camera is really in.
         if (videoCapturer.isRecording) {
-            tabLayout.getTabForMode(camConfig.currentMode)?.let {
-                tabLayout.selectTab(it)
-                tabLayout.centerTab(it)
-            }
+            modeNav.select(camConfig.currentMode)
             return
         }
 
-        val selectedTab = tab ?: tabLayout.selectedTab
-        if (selectedTab != null) {
-            val mode = selectedTab.tag as CameraMode
-            // The strip has to follow the touch even when the mode does not change, so do not
+        val mode = picked ?: modeNav.selected
+        if (mode != null) {
+            // The highlight has to follow the touch even when the mode does not change, so do not
             // leave this to switchMode(), which returns early for the mode it is already in.
-            tabLayout.selectTab(selectedTab)
-            tabLayout.centerTab(selectedTab)
+            modeNav.select(mode)
             camConfig.switchMode(mode)
             resetAutoSleep()
         }
@@ -1265,12 +1260,9 @@ open class MainActivity : AppCompatActivity(),
             val openButton = dialogBinding.openWith
             val copyButton = dialogBinding.copyQrText
             val shareButton = dialogBinding.shareQrText
-            val rawTabs = dialogBinding.encodingTabs
-
-            // The Binary/UTF-8 tabs exist only for a raw-string dump, which is
-            // exactly what a typed payload must not be. Hide them: the value is
-            // presented via its action, and the raw text stays copyable below.
-            rawTabs.visibility = View.GONE
+            // There is no Binary/UTF-8 switch: that was a raw-string dump, which is exactly what a
+            // typed payload must not be. The value is presented via its action, and the raw text
+            // stays copyable below.
 
             when (payload) {
                 is ScannedPayload.Url -> {
@@ -1662,10 +1654,10 @@ open class MainActivity : AppCompatActivity(),
         if (settingsDialog.isShowing) return
 
 
-        val i = tabLayout.selectedTabPosition - 1
+        val i = modeNav.selectedIndex - 1
 
         Log.i(TAG, "onSwipeRight $i")
-        tabLayout.getTabAt(i)?.let {
+        modeNav.modeAt(i)?.let {
             finalizeMode(it)
         }
     }
@@ -1684,8 +1676,8 @@ open class MainActivity : AppCompatActivity(),
         wasSwiping = true
         if (settingsDialog.isShowing) return
 
-        val i = tabLayout.selectedTabPosition + 1
-        tabLayout.getTabAt(i)?.let {
+        val i = modeNav.selectedIndex + 1
+        modeNav.modeAt(i)?.let {
             finalizeMode(it)
         }
     }

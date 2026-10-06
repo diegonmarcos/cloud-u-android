@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // Capture wall-clock start so we can emit gradle's config-phase elapsed time
@@ -55,13 +56,16 @@ def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'")
 // ── Shell config (data-driven) — baked as base64 JSON so Kotlin reads a
 //    single source of truth at runtime (FIRE RULE #6). ────────────────
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
-def uiNavTabsB64        = b64(buildJson.ui.nav_tabs ?: [])
+// #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens, its pages the
+// strip), ui.default_section. Read at runtime through libs:bottomnav's NavDecl.
+def uiBottomNav         = (buildJson.ui.bottom_nav ?: []).join(',')
+def uiSectionsB64       = b64(buildJson.ui.sections ?: [])
 def uiSearchIslandsB64  = b64(buildJson.ui.search_islands ?: [])
 def uiPlacesCatsB64     = b64(buildJson.ui.places_categories ?: [])
 def uiPoiDetailFieldsB64 = b64(buildJson.ui.poi_detail_fields ?: [])
 def uiSearchScopesB64   = b64(buildJson.ui.search_scopes ?: [])
 def defaultSearchScope  = (buildJson.ui.default_search_scope ?: 'city').toString()
-def defaultTab          = (buildJson.ui.default_tab ?: 'routes').toString()
+def uiDefaultSection    = (buildJson.ui.default_section ?: 'routes').toString()
 def uiCockpitModesB64   = b64(buildJson.ui.cockpit_modes ?: [])
 def defaultCockpitMode  = (buildJson.ui.default_cockpit_mode ?: 'car').toString()
 
@@ -199,13 +203,14 @@ android {
         buildConfigField "String", "GIT_SHORT_SHA",   "\"${shortSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
         // Shell config
-        buildConfigField "String", "UI_NAV_TABS_B64",       "\"${uiNavTabsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",         "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_SECTIONS_B64",       "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_SEARCH_ISLANDS_B64",  "\"${uiSearchIslandsB64}\""
         buildConfigField "String", "UI_PLACES_CATEGORIES_B64","\"${uiPlacesCatsB64}\""
         buildConfigField "String", "UI_POI_DETAIL_FIELDS_B64","\"${uiPoiDetailFieldsB64}\""
         buildConfigField "String", "UI_SEARCH_SCOPES_B64",    "\"${uiSearchScopesB64}\""
         buildConfigField "String", "UI_DEFAULT_SEARCH_SCOPE", "\"${defaultSearchScope}\""
-        buildConfigField "String", "UI_DEFAULT_TAB",         "\"${defaultTab}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION",    "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_COCKPIT_MODES_B64",   "\"${uiCockpitModesB64}\""
         buildConfigField "String", "UI_DEFAULT_COCKPIT_MODE","\"${defaultCockpitMode}\""
         // About page config
@@ -233,6 +238,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     // ONE shared Cloud-constellation key: build.sh::_resolve_signing resolves
@@ -281,6 +287,7 @@ dependencies {
     implementation project(':libs:maps')
     implementation project(':libs:updater')
     implementation project(':libs:devtools')
+    implementation project(':libs:bottomnav')   // #868 the island + page-tab strips + NavDecl
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
@@ -302,6 +309,15 @@ dependencies {
     // project's history). WebViewAssetLoader itself has been stable API
     // since 1.0.0, so nothing functional is lost by not using latest.
     implementation 'androidx.webkit:webkit:1.12.1'
+    // Kotlin 2 (#868: libs:bottomnav's compose compiler needs it) no longer sees libs:maps' private
+    // `implementation` MapLibre types from here; the app names MapLibreMap itself, so it links it too.
+    implementation 'org.maplibre.gl:android-sdk:11.7.0'
+    // #868 BottomNavIslandView / PageTabsView are Compose hosts: their supertypes and the
+    // WindowInsets / ColorScheme they expose must be on this module's compile classpath.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

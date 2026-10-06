@@ -48,6 +48,12 @@
          con la misma redacción que la clave equivalente del teclado. Cambiar
          un valor aquí no cambia nada en el teclado. -->
 
+    <!-- #868 la isla inferior: una etiqueta por id de ui.sections en build.json. -->
+    <string name="nav_documents">Documentos</string>
+    <string name="nav_writer">Escribir</string>
+    <string name="nav_tools">Herramientas</string>
+    <string name="nav_settings">Ajustes</string>
+
     <string name="settings_heading">Ajustes</string>
     <string name="settings_open">Abrir</string>
 

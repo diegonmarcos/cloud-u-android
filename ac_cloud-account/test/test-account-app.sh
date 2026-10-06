@@ -118,6 +118,23 @@ PY
   action="$(strip "$HO" | sed -n 's/.*ACTION_OPEN = "\([^"]*\)".*/\1/p')"
   [ "$action" = '$PKG.OPEN' ] && action="$appid.OPEN"
   grep -q "<action android:name=\"$action\" */>" "$MF" && ok "manifest answers SuperApp's $action" || bad "manifest does not declare the action SuperApp sends ('$action')"
+
+  # 5. #868 the fleet nav pattern: the account tabs are build.json::ui.sections, the bar is the shared island
+  python3 - "$A/build.json" "$B" <<'PY' && ok "ui.sections are the account tabs (same ids, same order as SuperApp's ui.profile.tabs); every one is on the island" || bad "build.json ui.sections/bottom_nav/default_section do not match ui.profile.tabs"
+import json, sys
+ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
+tabs = [t['id'] for t in json.load(open(sys.argv[2], encoding='utf-8'))['ui']['profile']['tabs']]
+ids = [s.get('id') for s in ui.get('sections') or []]
+sys.exit(0 if ids == tabs and ui.get('bottom_nav') == tabs and ui.get('default_section') in tabs else 1)
+PY
+  local bg; bg="$(cat "$A/app/build.gradle")"
+  printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
+  local ma; ma="$(strip "$MA")"
+  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
+  printf '%s' "$ma" | grep -q 'ARG_EXTERNAL_STRIP to true' && printf '%s' "$ma" | grep -q 'selectTab(' && printf '%s' "$ma" | grep -q 'onTabShown' && ok "the island drives ProfileFragment's tab and follows it back" || bad "the island and ProfileFragment's tab are not wired both ways"
+  local pf; pf="$(strip "$L/profile/ProfileFragment.kt")"
+  printf '%s' "$pf" | grep -q 'ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' && printf '%s' "$pf" | grep -q 'fun selectTab(id: String)' && [ "$(printf '%s' "$pf" | grep -c 'onTabShown?.invoke')" -ge 2 ] && ok "ProfileFragment hides its strip for a host that draws the tabs, and reports the tab on screen" || bad "ProfileFragment lost the external-strip contract"
+  printf '%s' "$pf" | grep -q 'AccountHost.styleTabs(this)' && ok "the in-fragment strip still goes through AccountHost.styleTabs (SuperApp's host)" || bad "ProfileFragment no longer styles its strip through AccountHost.styleTabs"
   return $fails
 }
 
@@ -156,6 +173,14 @@ mutate "Account entry loses its action" build.json '"action": "extapp:cloud-acco
 mutate "package name drifts" lib/profile/AccountData.kt 'const val PKG = "com.diegonmarcos.cloudaccount"' 'const val PKG = "com.diegonmarcos.account"' || M=$((M+1))
 mutate "OPEN action dropped" acc/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudaccount.OPEN" />' '' || M=$((M+1))
 mutate "page tab host dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'AndroidFragment<ProfileFragment>' 'AndroidFragment<androidx.fragment.app.Fragment>' || M=$((M+1))
+mutate "island replaced by the fragment's own strip" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'BottomNavHost(' 'Box(' || M=$((M+1))
+mutate "island no longer fed by NavDecl" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
+mutate "fragment is not told to hide its strip" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'ProfileFragment.ARG_EXTERNAL_STRIP to true' 'ProfileFragment.ARG_EXTERNAL_STRIP to false' || M=$((M+1))
+mutate "a tab leaves the declaration" acc/build.json '"runtime",
+      "drift"' '"runtime"' || M=$((M+1))
+mutate "gradle stops baking the sections" acc/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
+mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(tab.position)?.let { onTabShown?.invoke(it) }' '' || M=$((M+1))
+mutate "the fragment keeps its strip visible" lib/profile/ProfileFragment.kt 'if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE' '' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

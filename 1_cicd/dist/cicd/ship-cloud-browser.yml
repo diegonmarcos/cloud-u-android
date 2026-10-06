@@ -49,6 +49,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-browser.yml"
       #   input: "aa_cloud-superapp/data/constellation-fleet.json"
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
+      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/search-page/**"

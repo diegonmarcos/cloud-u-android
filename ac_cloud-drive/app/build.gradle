@@ -155,8 +155,8 @@ def resolvedDriveApps = []
 if (driveAppsFile.exists()) {
     new groovy.json.JsonSlurper().parse(driveAppsFile).apps.each { entry ->
         def out = [label: entry.label, icon: entry.icon]
-        // #603 an in-app tile: `route` names a declared tab and sub-page (ui.tabs /
-        // ui.configs.pages), so GitSync and RSync are shortcuts into the screens #567
+        // #603 an in-app tile: `route` names a declared section and sub-page (ui.bottom_nav /
+        // ui.sections[].pages), so GitSync and RSync are shortcuts into the screens #567
         // and #330 already built, not a second copy of either.
         if (entry.route) { out.route = [tab: (entry.route.tab ?: ''), page: (entry.route.page ?: '')] }
         if (entry.fleet) {
@@ -228,14 +228,17 @@ def syncRulesB64  = b64(syncRulesFile.exists()
 // the same carrier as every other list here and decoded ONCE by Declarations.kt.
 // A missing block is a hard error: a shell with no tabs is not an APK worth shipping.
 def uiDecl = buildJson.ui ?: [:]
-if (!(uiDecl.tabs instanceof List) || uiDecl.tabs.isEmpty()) {
-    throw new GradleException("build.json::ui.tabs must declare the shell's tabs (#579)")
+// #868 the nav is ui.bottom_nav + ui.sections + ui.default_section, read at runtime through
+// libs:bottomnav's NavDecl; the Configs / Sync / Volumes strips are those sections' `pages`.
+if (!(uiDecl.sections instanceof List) || uiDecl.sections.isEmpty() || !(uiDecl.bottom_nav instanceof List) || uiDecl.bottom_nav.isEmpty()) {
+    throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the shell's tabs (#579, #868)")
 }
-if (!(uiDecl.configs?.pages instanceof List) || uiDecl.configs.pages.isEmpty()) {
-    throw new GradleException("build.json::ui.configs.pages must declare the Configs strip (#603)")
+def navPages = { String id -> uiDecl.sections.find { it.id == id }?.pages }
+if (!(navPages('configs') instanceof List) || navPages('configs').isEmpty()) {
+    throw new GradleException("build.json::ui.sections[configs].pages must declare the Configs strip (#603)")
 }
-if (!(uiDecl.sync?.pages instanceof List) || uiDecl.sync.pages.isEmpty()) {
-    throw new GradleException("build.json::ui.sync.pages must declare the Sync strip (#609)")
+if (!(navPages('sync') instanceof List) || navPages('sync').isEmpty()) {
+    throw new GradleException("build.json::ui.sections[sync].pages must declare the Sync strip (#609)")
 }
 // #608 the Sync ▸ Git page is declared whole (ui.sync.git): its two sections, the personal
 // split, the login ways, the GitHub endpoint, the remote modes, the per-repository operations
@@ -255,12 +258,12 @@ if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
 if (!(uiDecl.files?.sections instanceof List) || uiDecl.files.sections.isEmpty()) {
     throw new GradleException("build.json::ui.files.sections must declare the Files navigator's sections (#603)")
 }
-if (!(uiDecl.volumes?.classes instanceof List) || uiDecl.volumes.classes.isEmpty()) {
-    throw new GradleException("build.json::ui.volumes.classes must declare the Volumes tab's classes (#604)")
+if (!(navPages('volumes') instanceof List) || navPages('volumes').isEmpty()) {
+    throw new GradleException("build.json::ui.sections[volumes].pages must declare the Volumes tab's classes (#604)")
 }
-def uiTabsB64     = b64(uiDecl.tabs)
-def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
-def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
+def uiSectionsB64    = b64(uiDecl.sections)
+def uiBottomNav      = uiDecl.bottom_nav.join(',')
+def uiDefaultSection = (uiDecl.default_section ?: uiDecl.bottom_nav[0]).toString()
 // #642 Sync ▸ Git hands every git OPERATION to cloud-terminal-nix, so the terminal's package
 // is resolved here from the SAME constellation manifest personal_auth above resolves against —
 // one package list for the whole fleet, never a second (#170/#380/#381). Every {package}
@@ -486,9 +489,9 @@ android {
         buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"
         buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED", "${gitSyncUnmetered}"
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
-        buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
-        buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
-        buildConfigField "String", "UI_CONFIGS_B64",  "\"${uiConfigsB64}\""
+        buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
         // #705 the gh engine: where it is, how to find its service, the contract this build needs.
         buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""

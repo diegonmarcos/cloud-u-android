@@ -10,5 +10,5 @@ import cld.camera.ui.activities.MainActivity
  */
 fun <A : MainActivity> awaitModeTabs(scenario: ActivityScenario<A>) {
     waitUntil(scenario, "camera is bound") { it.camConfig.camera != null }
-    waitUntil(scenario, "mode tabs are built") { it.tabLayout.tabCount > 0 }
+    waitUntil(scenario, "mode tabs are built") { it.modeNav.tabCount > 0 }
 }

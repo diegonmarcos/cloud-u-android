@@ -42,16 +42,19 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-calc')
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 
 // ── the declarations, baked ────────────────────────────────────────────────
-// ui.tabs and ui.modes are the ONLY tab/mode/key/form declarations; Declarations.kt is the
-// only decoder, and no screen reads a BuildConfig blob itself.
-if (!buildJson.ui?.tabs || !buildJson.ui?.modes)
-    throw new GradleException("build.json::ui.tabs / ui.modes missing — the app would draw an empty shell")
-if (!buildJson.ui?.sections)
-    throw new GradleException("build.json::ui.sections missing — the tabs would belong to no section (#770)")
-def uiSectionsB64 = b64(buildJson.ui.sections)
-def uiTabsB64     = b64(buildJson.ui.tabs)
-def uiModesB64    = b64(buildJson.ui.modes)
-def uiDefaultTab  = (buildJson.ui.default_tab ?: '').toString()
+// #868 ui.bottom_nav + ui.sections (+ their `pages`) + ui.default_section are THE navigation
+// declaration (libs:bottomnav's NavDecl); ui.modes is the ONLY mode/key/form declaration.
+// Declarations.kt is the only decoder, and no screen reads a BuildConfig blob itself.
+if (!buildJson.ui?.sections || !buildJson.ui?.modes)
+    throw new GradleException("build.json::ui.sections / ui.modes missing — the app would draw an empty shell")
+if (!buildJson.ui?.bottom_nav)
+    throw new GradleException("build.json::ui.bottom_nav missing — the island would draw nothing (#868)")
+if (buildJson.ui.sections.any { !(it.pages instanceof List) || it.pages.isEmpty() })
+    throw new GradleException("build.json::ui.sections[].pages missing — a section without pages shows nothing (#868)")
+def uiSectionsB64    = b64(buildJson.ui.sections)
+def uiBottomNav      = buildJson.ui.bottom_nav.join(',')
+def uiDefaultSection = (buildJson.ui.default_section ?: buildJson.ui.bottom_nav[0]).toString()
+def uiModesB64       = b64(buildJson.ui.modes)
 def debugGroup    = (buildJson.ui.debug_api?.group ?: 'calc').toString()
 def clockGroup    = (buildJson.ui.debug_api?.clock_group ?: '').toString()
 if (!clockGroup) throw new GradleException("build.json::ui.debug_api.clock_group missing — /api/clock/* would register under no name")
@@ -129,9 +132,9 @@ android {
         buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "UI_SECTIONS_B64", "\"${uiSectionsB64}\""
-        buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",   "\"${uiBottomNav}\""
         buildConfigField "String", "UI_MODES_B64",    "\"${uiModesB64}\""
-        buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "DEBUG_API_GROUP", "\"${debugGroup}\""
         buildConfigField "String", "DEBUG_API_CLOCK_GROUP", "\"${clockGroup}\""
         buildConfigField "String", "DEBUG_API_JEV_GROUP", "\"${jevGroup}\""
@@ -209,7 +212,7 @@ android {
 dependencies {
     implementation project(':libs:core')
     implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
-    // The fleet's bottom-nav island; this app supplies its own entries from ui.tabs.
+    // The fleet's bottom-nav island; this app supplies its own entries from ui.bottom_nav.
     implementation project(':libs:bottomnav')
     // The Clock section's rules (#768): plain JVM, mutation-tested on its own (clock/build.gradle).
     implementation project(':clock')

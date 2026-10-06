@@ -2,6 +2,7 @@ package com.diegonmarcos.cloudnav
 
 import android.util.Base64
 import org.json.JSONArray
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import org.json.JSONObject
 
 /**
@@ -9,7 +10,6 @@ import org.json.JSONObject
  * baked into BuildConfig as base64 JSON by app/build.gradle (FIRE RULE #6 —
  * never hardcode the tab / island / category lists in Kotlin).
  */
-data class NavTab(val id: String, val label: String, val icon: String)
 data class SearchIsland(val id: String, val label: String, val icon: String, val action: String)
 data class PlaceCategory(val id: String, val label: String, val icon: String, val query: String, val emoji: String)
 
@@ -38,12 +38,11 @@ object NavConfig {
     private fun decode(b64: String): String =
         try { String(Base64.decode(b64, Base64.DEFAULT)) } catch (t: Throwable) { "[]" }
 
-    val tabs: List<NavTab> by lazy {
-        val arr = JSONArray(decode(BuildConfig.UI_NAV_TABS_B64))
-        (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            NavTab(o.getString("id"), o.getString("label"), o.optString("icon", o.getString("id")))
-        }
+    /** #868 THE nav declaration: build.json::ui.bottom_nav + ui.sections + ui.default_section,
+     *  parsed by libs:bottomnav. The island's items are its bottom sections; a section's pages
+     *  are the strip its host fragment draws. */
+    val decl: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
 
     val islands: List<SearchIsland> by lazy {
@@ -94,8 +93,6 @@ object NavConfig {
     }
 
     val defaultScope: String get() = BuildConfig.UI_DEFAULT_SEARCH_SCOPE.ifBlank { "city" }
-
-    val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB.ifBlank { tabs.firstOrNull()?.id ?: "routes" }
 
     val cockpitModes: List<CockpitMode> by lazy {
         val arr = JSONArray(decode(BuildConfig.UI_COCKPIT_MODES_B64))

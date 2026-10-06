@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.cloudsearch.R
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.cloudsearch.core.Analysis
 import com.diegonmarcos.cloudsearch.core.Calculators
 import com.diegonmarcos.cloudsearch.core.FeedItem
@@ -104,10 +105,13 @@ fun LazyListScope.pageHeader(state: SearchState, v: SearchConfig.Vertical) {
     item(key = "header") {
         Column {
             TopicHeader(v.title, v.blurb)
-            if (v.subpages.size > 1) SubNav(
-                v.subpages.map { it to (state.cfg.subpage(it)?.label ?: it) },
-                state.subpageOf(v),
-            ) { state.showSubpage(v, it) }
+            // #868 the fleet's page-tab strip, from build.json::ui.sections[].pages.
+            if (v.subpages.size > 1) PageTabs(
+                pages = NAV.section(v.id)?.pages.orEmpty(),
+                selectedId = state.subpageOf(v),
+                onSelect = { state.showSubpage(v, it.id) },
+                underTopChrome = false,
+            )
         }
     }
 }

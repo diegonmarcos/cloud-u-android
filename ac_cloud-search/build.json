@@ -101,12 +101,13 @@
     }
   },
   "modules": {
-    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): Cloud Search is installed and updated by the Store (SuperApp ▸ Constellation), like Cloud Calc. #797: the app draws its OWN chrome from the owner's mockup (glass theme, top bar, its own bottom nav), so neither the fleet bottom-nav island (libs:bottomnav) nor the fleet kit (libs:ui-kit) is linked.",
+    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): Cloud Search is installed and updated by the Store (SuperApp ▸ Constellation), like Cloud Calc. #797: the app draws its OWN chrome from the owner's mockup (glass theme, top bar), so the fleet kit (libs:ui-kit) is not linked; #868: its bottom nav and sub-page strips are the fleet's (libs:bottomnav).",
     "app": {
       "type": "application",
       "depends_on": [
         "libs:core",
         "libs:text-tools",
+        "libs:bottomnav",
         "libs:search-page",
         "search-core"
       ]
@@ -134,6 +135,11 @@
     "libs:search-page": {
       "_doc": "#823 the Search page (the engine boxes and the AI chat) as a shared Compose lib, so Cloud Browser draws the same page. This app hosts it (data/SearchHost.kt: ChatFlow, the stores, Browser) and hands it its own glass theme and words (ui/AssistantPages.kt); the lib holds no colour, store, token or network of its own.",
       "dir": "../ab_cloud-libs-shared/libs/search-page",
+      "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's bottom island (BottomNavIsland) and page-tab strip (PageTabs), and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
     }
   },
@@ -1073,6 +1079,107 @@
       "group": "search"
     },
     "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state).",
-    "dark_default": true
+    "dark_default": true,
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens (one per search.verticals entry: same id, order, icon and subpages), ui.default_section where the app opens (= search.default_vertical). A section's pages are its PageTabs strip. test-search-shell.sh S10 holds the two declarations together.",
+    "bottom_nav": [
+      "house",
+      "jobs",
+      "search",
+      "groceries",
+      "things"
+    ],
+    "sections": [
+      {
+        "id": "house",
+        "label": "House",
+        "icon": "house",
+        "pages": [
+          {
+            "id": "listing",
+            "label": "Listing",
+            "icon": ""
+          },
+          {
+            "id": "analysis",
+            "label": "Analysis",
+            "icon": ""
+          },
+          {
+            "id": "feed",
+            "label": "Feed",
+            "icon": ""
+          },
+          {
+            "id": "calculators",
+            "label": "Calculators",
+            "icon": ""
+          }
+        ]
+      },
+      {
+        "id": "jobs",
+        "label": "Jobs",
+        "icon": "jobs",
+        "pages": [
+          {
+            "id": "listing",
+            "label": "Listing",
+            "icon": ""
+          },
+          {
+            "id": "analysis",
+            "label": "Analysis",
+            "icon": ""
+          },
+          {
+            "id": "feed",
+            "label": "Feed",
+            "icon": ""
+          },
+          {
+            "id": "calculators",
+            "label": "Calculators",
+            "icon": ""
+          }
+        ]
+      },
+      {
+        "id": "search",
+        "label": "Search",
+        "icon": "assistant",
+        "pages": [
+          {
+            "id": "assistant",
+            "label": "Assistant",
+            "icon": ""
+          }
+        ]
+      },
+      {
+        "id": "groceries",
+        "label": "Groceries",
+        "icon": "groceries",
+        "pages": [
+          {
+            "id": "listing",
+            "label": "Listing",
+            "icon": ""
+          }
+        ]
+      },
+      {
+        "id": "things",
+        "label": "Things",
+        "icon": "things",
+        "pages": [
+          {
+            "id": "listing",
+            "label": "Listing",
+            "icon": ""
+          }
+        ]
+      }
+    ],
+    "default_section": "search"
   }
 }

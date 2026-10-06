@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontFamily
@@ -122,7 +123,10 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
     }
     var cards by remember { mutableStateOf(orderedCards(WalletStore.all(ctx))) }
     var mode  by modeState
-    var tab   by remember { mutableStateOf(WalletTab.Pay) }
+    // #868 the bar and the Events strip are build.json::ui, as the host baked it; the wallet opens on
+    // ui.default_section.
+    val nav = remember(ctx) { (ctx as? WalletHost)?.nav ?: NavDecl.EMPTY }
+    var tab   by remember { mutableStateOf(nav.default()?.id?.let(::walletTabOf) ?: WalletTab.Pay) }
     var ticketsSub          by remember { mutableStateOf(TicketsSubTab.Events) }
     var ticketsShowArchive  by remember { mutableStateOf(false) }
     var calShowArchive      by remember { mutableStateOf(false) }
@@ -207,6 +211,8 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
                 // Tickets inner sub-tab strip. The top-level tabs are the bottom nav below (#531).
                 if (tab == WalletTab.Tickets) {
                     TicketsSubTabStrip(
+                        nav = nav,
+                        host = ctx as? WalletHost,
                         selected = ticketsSub,
                         onSelect = { next ->
                             if (next != ticketsSub) {
@@ -319,6 +325,7 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
             // #531/#533 the wallet's top-level tabs, on the fleet's one bottom nav, at the BOTTOM.
             if (!hideChrome) {
                 WalletBottomNav(
+                    nav = nav,
                     selected = tab,
                     collapsed = collapse.collapsed,
                     onOpenMe = onOpenMe,

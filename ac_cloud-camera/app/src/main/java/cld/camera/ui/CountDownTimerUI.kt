@@ -108,7 +108,7 @@ class CountDownTimerUI @JvmOverloads constructor(
         // length of the countdown.
         mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
         mActivity.flipCameraCircle.visibility = View.INVISIBLE
-        mActivity.tabLayout.visibility = View.INVISIBLE
+        mActivity.modeNav.visibility = View.INVISIBLE
         mActivity.cancelButtonView.visibility = View.INVISIBLE
         mActivity.cbText.visibility = View.INVISIBLE
         mActivity.cbCross.visibility = View.VISIBLE
@@ -135,7 +135,7 @@ class CountDownTimerUI @JvmOverloads constructor(
 
         if (mActivity !is CaptureActivity) {
             mActivity.cbText.visibility = View.VISIBLE
-            mActivity.tabLayout.visibility = View.VISIBLE
+            mActivity.modeNav.visibility = View.VISIBLE
             // Not VISIBLE: on the idle camera screen the circle is hidden now, and the
             // countdown ending is one of the places that used to bring it back.
             mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility

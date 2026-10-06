@@ -18,7 +18,8 @@ plugins {
 // pattern as libs/voice).
 def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 if (buildJson.ui == null) buildJson = new groovy.json.JsonSlurper().parse(file('../../build.json'))
-def c3Section = buildJson.ui.sections.find { it.id == 'c3' }
+// cloud-c3 carries the block as ui.carried_c3 (its ui.sections are its own nav, #868).
+def c3Section = buildJson.ui.sections?.find { it.id == 'c3' } ?: buildJson.ui.carried_c3
 def daguPage = c3Section?.pages?.find { it.id == 'dagu' }
 def daguServer = daguPage?.dagu_default_server ?: ''
 

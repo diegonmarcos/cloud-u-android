@@ -1,16 +1,19 @@
 package com.diegonmarcos.cloudcalc
 
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * build.json::ui, decoded once. app/build.gradle bakes ui.tabs and ui.modes into BuildConfig
- * as base64 JSON; this object is their only reader, so no tab id, mode id, key, form or
- * category is spelled anywhere in Kotlin. [parseTabs] / [parseModes] are pure so the JVM suite
- * runs them against this repository's own build.json.
+ * build.json::ui, decoded once. app/build.gradle bakes ui.bottom_nav + ui.sections (with their
+ * `pages`) + ui.default_section and ui.modes into BuildConfig; this object is their only reader,
+ * so no section id, page id, mode id, key, form or category is spelled anywhere in Kotlin. #868
+ * the navigation is libs:bottomnav's [NavDecl]: the sections are the island, a section's pages
+ * are the old "tabs". [parseNav] / [parseModes] are pure so the JVM suite runs them against this
+ * repository's own build.json.
  */
 object Declarations {
-    /** #770 a top-level section (Calculator, Measure, Jev): the bottom nav shows its tabs. */
+    /** #770/#868 a top-level section (Calculator, Measure, Jev): a bottom-nav item; its pages (tabs) are the top strip. */
     data class Section(val id: String, val label: String, val icon: String)
     data class Tab(val id: String, val label: String, val icon: String, val section: String)
 
@@ -59,10 +62,16 @@ object Declarations {
         val clock: String,
     )
 
-    val sections: List<Section> by lazy { parseSections(decode(BuildConfig.UI_SECTIONS_B64)) }
-    val tabs: List<Tab> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
+    val nav: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
+    /** The bar's sections, in `ui.bottom_nav` order. */
+    val sections: List<Section> by lazy { sectionsOf(nav) }
+    /** Every page of every section, in declared order (what #770 called ui.tabs). */
+    val tabs: List<Tab> by lazy { tabsIn(nav) }
     val modes: List<Mode> by lazy { parseModes(decode(BuildConfig.UI_MODES_B64)) }
-    val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
+    /** Where the app opens: the default section's first page. */
+    val defaultTab: String get() = nav.default()?.pages?.firstOrNull()?.id ?: tabs.first().id
 
     fun modesOf(tab: String): List<Mode> = modes.filter { it.tab == tab }
     fun tabsOf(section: String): List<Tab> = tabs.filter { it.section == section }
@@ -71,13 +80,14 @@ object Declarations {
 
     private fun decode(b64: String): String = String(java.util.Base64.getDecoder().decode(b64), Charsets.UTF_8)
 
-    fun parseSections(json: String): List<Section> = JSONArray(json).objects().map {
-        Section(it.getString("id"), it.getString("label"), it.optString("icon"))
-    }
+    fun sectionsOf(nav: NavDecl): List<Section> = nav.bottomSections().map { Section(it.id, it.label, it.icon) }
 
-    fun parseTabs(json: String): List<Tab> = JSONArray(json).objects().map {
-        Tab(it.getString("id"), it.getString("label"), it.optString("icon"), it.getString("section"))
-    }
+    fun tabsIn(nav: NavDecl): List<Tab> =
+        nav.sections.flatMap { s -> s.pages.map { Tab(it.id, it.label, it.icon, s.id) } }
+
+    /** [sections] is ui.sections' JSON, [bottomNav] ui.bottom_nav as a comma list. */
+    fun parseNav(sections: String, bottomNav: String, defaultSection: String): NavDecl =
+        NavDecl.parse(JSONArray(sections), bottomNav, defaultSection)
 
     fun parseModes(json: String): List<Mode> = JSONArray(json).objects().map { m ->
         Mode(

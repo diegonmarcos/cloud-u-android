@@ -41,6 +41,10 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 // the AI chat; core/Config.kt parses and validates it on the phone (and in the JVM suite).
 if (buildJson.search == null) throw new GradleException("build.json::search missing — the app would have nothing to search")
 def searchConfigB64 = b64(buildJson.search)
+// #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
+def uiBottomNav      = (buildJson.ui?.bottom_nav ?: []).join(',')
+def uiSectionsB64    = b64(buildJson.ui?.sections ?: [])
+def uiDefaultSection = (buildJson.ui?.default_section ?: '').toString()
 def debugGroup = (buildJson.ui?.debug_api?.group ?: '').toString()
 if (!debugGroup) throw new GradleException("build.json::ui.debug_api.group missing — /api/<group>/* would register under no name")
 def darkDefault = (buildJson.ui?.dark_default ?: false) as boolean
@@ -78,6 +82,9 @@ android {
         }
         buildConfigField "String",  "GIT_SHORT_SHA",     "\"${shortSha}\""
         buildConfigField "String",  "BUILD_TIMESTAMP",   "\"${buildTimestamp}\""
+        buildConfigField "String",  "UI_BOTTOM_NAV",     "\"${uiBottomNav}\""
+        buildConfigField "String",  "UI_SECTIONS_B64",   "\"${uiSectionsB64}\""
+        buildConfigField "String",  "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String",  "SEARCH_CONFIG_B64", "\"${searchConfigB64}\""
         buildConfigField "String",  "DEBUG_API_GROUP",   "\"${debugGroup}\""
         buildConfigField "boolean", "DARK_DEFAULT",      "${darkDefault}"
@@ -142,8 +149,10 @@ android {
 
 dependencies {
     implementation project(':libs:core')
-    // #797 no libs:bottomnav and no libs:ui-kit: Cloud Search draws its OWN chrome from the owner's
-    // mockup (ui/Glass.kt — glass theme, top bar, its own bottom nav; Phosphor icons in res/drawable).
+    // #797 no libs:ui-kit: Cloud Search draws its OWN chrome from the owner's mockup (ui/Glass.kt —
+    // glass theme, top bar; Phosphor icons in res/drawable). #868 its bottom nav and sub-page strips
+    // are the fleet's: libs:bottomnav (BottomNavIsland, PageTabs), declared by build.json::ui.
+    implementation project(':libs:bottomnav')
     // The fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // Everything computed or parsed: plain JVM, mutation-tested on its own (core/build.gradle).

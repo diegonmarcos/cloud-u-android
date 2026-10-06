@@ -33,7 +33,8 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:account"
+        "libs:account",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -121,6 +122,10 @@
         "libs:ui-kit",
         "libs:auth"
       ]
+    },
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
     }
   },
   "release": {
@@ -203,5 +208,41 @@
         "grep"
       ]
     }
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl). The four sections are libs:account's tabs (ids and order = aa_cloud-superapp/build.json::ui.profile.tabs); the island selects the tab ProfileFragment shows and ProfileFragment's own strip is hidden (ProfileFragment.ARG_EXTERNAL_STRIP).",
+    "bottom_nav": [
+      "connect",
+      "profiles",
+      "runtime",
+      "drift"
+    ],
+    "sections": [
+      {
+        "id": "connect",
+        "label": "Connect",
+        "icon": "connect",
+        "pages": []
+      },
+      {
+        "id": "profiles",
+        "label": "Profiles",
+        "icon": "profiles",
+        "pages": []
+      },
+      {
+        "id": "runtime",
+        "label": "Runtime",
+        "icon": "runtime",
+        "pages": []
+      },
+      {
+        "id": "drift",
+        "label": "Drift",
+        "icon": "drift",
+        "pages": []
+      }
+    ],
+    "default_section": "profiles"
   }
 }

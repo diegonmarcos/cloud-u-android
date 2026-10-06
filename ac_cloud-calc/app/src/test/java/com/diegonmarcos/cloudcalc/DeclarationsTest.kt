@@ -5,15 +5,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.io.File
 
 /**
  * The parser the phone runs, over THIS repository's build.json::ui (the test runs from app/), and
  * the per-mode declaration rules every renderer relies on.
  */
+@RunWith(RobolectricTestRunner::class)
 class DeclarationsTest {
     private val ui = JSONObject(File("../build.json").readText()).getJSONObject("ui")
-    private val tabs = Declarations.parseTabs(ui.getJSONArray("tabs").toString())
+    // #868 the navigation: ui.bottom_nav + ui.sections (with `pages`) + ui.default_section.
+    private val nav = Declarations.parseNav(
+        ui.getJSONArray("sections").toString(),
+        (0 until ui.getJSONArray("bottom_nav").length()).joinToString(",") { ui.getJSONArray("bottom_nav").getString(it) },
+        ui.getString("default_section"),
+    )
+    private val tabs = Declarations.tabsIn(nav)
     private val modes = Declarations.parseModes(ui.getJSONArray("modes").toString())
 
     @Test fun `the declaration parses and matches what gradle baked`() {
@@ -22,9 +31,11 @@ class DeclarationsTest {
         assertTrue(tabs.any { it.id == Declarations.defaultTab })
     }
 
-    @Test fun `sections parse, match what gradle baked, and every tab names one`() {
-        val sections = Declarations.parseSections(ui.getJSONArray("sections").toString())
+    @Test fun `sections parse, match what gradle baked, and every page sits in one`() {
+        val sections = Declarations.sectionsOf(nav)
         assertEquals(sections, Declarations.sections)
+        assertEquals("the island is the declared bottom_nav, at most five", listOf("calculator", "measure", "jev"), sections.map { it.id })
+        assertTrue(sections.size <= 5)
         assertEquals(sections.size, sections.map { it.id }.toSet().size)
         tabs.forEach { t -> assertTrue("tab ${t.id} names section ${t.section}", sections.any { it.id == t.section }) }
         sections.forEach { s -> assertTrue("section ${s.id} has no tab", tabs.any { it.section == s.id }) }

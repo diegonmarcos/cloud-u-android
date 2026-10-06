@@ -6,6 +6,8 @@ buildscript {
     dependencies {
         classpath(libs.kotlin.gradle.plugin)
         classpath(libs.ksp.gradle.plugin)
+        // #868 libs:bottomnav is Compose: its compose-compiler plugin resolves from this classpath.
+        classpath(libs.kotlin.compose.gradle.plugin)
     }
 }
 

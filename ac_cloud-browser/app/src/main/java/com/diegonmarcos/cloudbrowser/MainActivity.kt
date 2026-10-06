@@ -3,11 +3,18 @@ package com.diegonmarcos.cloudbrowser
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.commit
+import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
+import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
 import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
+import com.google.android.material.color.MaterialColors
 
 /**
  * Single-activity shell for Cloud Browser. Hosts [BrowserHostFragment] full-screen.
@@ -20,12 +27,26 @@ import com.diegonmarcos.superapp.updater.Updater
  * Browser's own content — the four first-run pinned tabs, the Qwant
  * default — crosses from build.json::ui.browser into the shared host.
  * Change those four URLs in build.json; no other app is affected.
+ *
+ * #868 The bottom bar is libs:bottomnav's island, fed by NavDecl from build.json::ui: Browser is
+ * the host fragment, Search and Configs open the Search add-on's page and the browser settings
+ * OVER it (the host's own overlays), and the pill follows the host: it goes back to Browser the
+ * moment the last overlay closes.
  */
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var bottomNav: BottomNavIslandView
+    private val decl: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportFragmentManager.addFragmentOnAttachListener { _, f ->
+            if (f is BrowserHostFragment) f.onOverlaysClosed = { bottomNav.selectedId = decl.section("browser")?.id }
+        }
+        buildBottomNav()
 
         if (savedInstanceState == null) {
             val openUrl = intent?.dataString?.takeIf { it.isNotBlank() }
@@ -41,6 +62,45 @@ class MainActivity : AppCompatActivity() {
         UpdateProgress.setListener { state ->
             runOnUiThread { handleUpdateState(state) }
         }
+    }
+
+    /**
+     * The island: ui.bottom_nav through [NavDecl], the icon of a section its `ic_nav_<icon>`
+     * drawable. A tap on Search / Configs asks the live host to draw that page over itself; a tap
+     * on Browser closes whatever is open. The dark theme's inverse pair colours the pill.
+     */
+    private fun buildBottomNav() {
+        bottomNav = ActivityCompat.requireViewById(this, R.id.bottom_nav)
+        fun attr(id: Int) = Color(MaterialColors.getColor(this, id, "CloudBrowserBottomNav"))
+        bottomNav.items = decl.viewItems { icon ->
+            @Suppress("DiscouragedApi")
+            resources.getIdentifier("ic_nav_$icon", "drawable", packageName)
+        }
+        bottomNav.colorScheme = darkColorScheme(
+            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
+            inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
+            onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
+        )
+        // The root LinearLayout (fitsSystemWindows) already pads for the system bars: the island adds none.
+        bottomNav.insets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+        bottomNav.selectedId = decl.default()?.id
+        bottomNav.onSelect = { id -> openSection(id) }
+        bottomNav.onReselect = { id -> if (id != decl.default()?.id) openSection(id) }
+    }
+
+    private fun openSection(id: String) {
+        val host = supportFragmentManager.findFragmentById(R.id.fragment_container) as? BrowserHostFragment ?: return
+        host.dismissOverlays()
+        when (id) {
+            "search" -> {
+                host.openSearch()
+                // No Search page installed: the host only says so, nothing opened, the pill stays.
+                if (BrowserSearchPageHost.page == null) return
+            }
+            "configs" -> host.openSettings()
+        }
+        // closeOverlays reset the pill to Browser; an overlay that opened puts it on its own item.
+        bottomNav.selectedId = id
     }
 
     override fun onNewIntent(intent: Intent) {

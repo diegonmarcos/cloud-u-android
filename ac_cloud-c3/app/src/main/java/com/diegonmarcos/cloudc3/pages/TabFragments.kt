@@ -13,6 +13,7 @@ import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
 import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
 import com.diegonmarcos.cloudc3.cloud.C3StackFragment
+import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.ops.dagu.DaguFragment
 
 /**
@@ -36,7 +37,7 @@ import com.diegonmarcos.superapp.ops.dagu.DaguFragment
  * standalone, exactly as this app already shipped them — nothing is deleted in a copy job.
  */
 class TopologyFragment : PagedFragment() {
-    override fun pages(): List<Declarations.PageDecl> = Declarations.topologyPages
+    override fun pages(): List<NavPage> = Declarations.topologyPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "topology" -> C3StackFragment.newInstance(C3StackFragment.STACK_TOPOLOGY)
         "public" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PUBLIC)
@@ -53,7 +54,7 @@ class TopologyFragment : PagedFragment() {
  * WG mesh is [C3MeshFragment] (its page:wg/status, the More row's target).
  */
 class ObservFragment : PagedFragment() {
-    override fun pages(): List<Declarations.PageDecl> = Declarations.observPages
+    override fun pages(): List<NavPage> = Declarations.observPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "observability" -> C3StackFragment.newInstance(C3StackFragment.STACK_OBSERVABILITY)
         "health" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_ALL)
@@ -65,7 +66,7 @@ class ObservFragment : PagedFragment() {
 
 /** CONFIGS — this app's own settings. About is real because everything it shows is baked. */
 class ConfigsFragment : PagedFragment() {
-    override fun pages(): List<Declarations.PageDecl> = Declarations.configsPages
+    override fun pages(): List<NavPage> = Declarations.configsPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "about" -> AboutFragment()
         else -> null

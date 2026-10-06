@@ -84,7 +84,7 @@ open class CaptureActivity : MainActivity() {
 
         // Redundant now that no tabs get built here (see shouldShowCameraModeTabs), but kept so a
         // regression in that override cannot hand the user a mode switcher mid-capture
-        tabLayout.visibility = View.INVISIBLE
+        modeNav.visibility = View.INVISIBLE
 
         // Remove the margin so that that the previewView can take some more space
         (previewView.layoutParams as MarginLayoutParams).let {

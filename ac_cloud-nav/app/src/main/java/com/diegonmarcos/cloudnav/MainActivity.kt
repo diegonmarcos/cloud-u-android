@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudnav
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -15,25 +16,28 @@ import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.cloudnav.places.PlacesFragment
 import com.diegonmarcos.cloudnav.routes.NavigationFragment
 import com.diegonmarcos.cloudnav.routes.RoutesFragment
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.google.android.material.color.MaterialColors
 
 /**
  * Cloud Nav shell — minimal Google-Maps-style chrome:
  *   • a content fragment container (each page draws its own search UI)
- *   • bottom nav: Routes · Navigation · Places · Timeline · Configs
+ *   • bottom nav island (libs:bottomnav): Routes · Navigation · Places · Timeline · Configs
  *
- * Tabs + default tab are data-driven from build.json::ui.* (decoded by
- * [NavConfig]). The shell deliberately owns NO search bar — Routes does
+ * Sections + default section are data-driven from build.json::ui.* (decoded
+ * by [NavConfig.decl], libs:bottomnav's NavDecl). The shell deliberately owns NO search bar — Routes does
  * multi-stop routing, Navigation a destination field, Places a simple POI
  * lookup with category islands. Each fragment renders the search UI it needs.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var content: View
-    private lateinit var bottomNav: BottomNavigationView
+    private lateinit var bottomNav: BottomNavIslandView
     private var currentTab: String = ""
     /** A geo: location handed in by another app, consumed by the Places tab on
-     *  its next creation (see [fragmentForTab]). */
+     *  its next creation (see [fragmentForSection]). */
     private var pendingGeo: GeoTarget? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,9 +60,9 @@ class MainActivity : AppCompatActivity() {
             // the Places map at the requested location; otherwise the default tab.
             val geo = geoTargetOf(intent)
             if (geo != null) { pendingGeo = geo; switchTo(TAB_PLACES) }
-            else switchTo(NavConfig.defaultTab)
+            else switchTo(defaultSection())
         } else {
-            currentTab = savedInstanceState.getString(KEY_TAB, NavConfig.defaultTab)
+            currentTab = savedInstanceState.getString(KEY_TAB, defaultSection())
             syncBottomNav(currentTab)
         }
     }
@@ -88,46 +92,47 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             content.updatePadding(top = bars.top)
-            bottomNav.updatePadding(bottom = bars.bottom)
             insets
         }
     }
 
+    /** The island is libs:bottomnav's, fed by NavDecl (#868). The app only says which fragment a
+     *  section opens, and lends the island the dark theme's inverse pair for its pill. */
     private fun buildBottomNav() {
-        val menu = bottomNav.menu
-        menu.clear()
-        NavConfig.tabs.forEachIndexed { i, tab ->
-            menu.add(0, i, i, tab.label).setIcon(Icons.nav(this, tab.icon))
-        }
-        bottomNav.setOnItemSelectedListener { item ->
-            val tab = NavConfig.tabs.getOrNull(item.itemId) ?: return@setOnItemSelectedListener false
-            if (tab.id != currentTab) switchTo(tab.id)
-            true
-        }
+        fun attr(id: Int) = Color(MaterialColors.getColor(this, id, "CloudNavBottomNav"))
+        bottomNav.items = NavConfig.decl.viewItems { Icons.nav(this, it) }
+        bottomNav.colorScheme = darkColorScheme(
+            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
+            inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
+            onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
+        )
+        bottomNav.collapseOnScrollIn(content as ViewGroup)
+        bottomNav.onSelect = { id -> if (id != currentTab) switchTo(id) }
     }
+
+    private fun defaultSection(): String = NavConfig.decl.default()?.id ?: "routes"
 
     private fun switchTo(tabId: String) {
         currentTab = tabId
         supportFragmentManager.beginTransaction()
-            .replace(R.id.content, fragmentForTab(tabId))
+            .replace(R.id.content, fragmentForSection(tabId))
             .commit()
         syncBottomNav(tabId)
     }
 
-    private fun fragmentForTab(id: String): Fragment = when (id) {
+    private fun fragmentForSection(id: String): Fragment = when (id) {
         "routes"     -> RoutesFragment()
         "navigation" -> NavigationFragment()
         // Consume a pending geo: location once, so a hand-off from another app
         // lands on the map at that point / runs that search.
         "places"     -> pendingGeo?.let { g -> pendingGeo = null; PlacesFragment.forGeo(g) } ?: PlacesFragment()
-        "timeline"   -> MapsTimelineTabsFragment()
+        "timeline"   -> MapsTimelineTabsFragment.newInstance(NavConfig.decl.section("timeline")?.pages.orEmpty())
         "configs"    -> ConfigsFragment()
         else         -> RoutesFragment()
     }
 
-    private fun syncBottomNav(tabId: String) {
-        val idx = NavConfig.tabs.indexOfFirst { it.id == tabId }
-        if (idx >= 0 && bottomNav.selectedItemId != idx) bottomNav.selectedItemId = idx
+    private fun syncBottomNav(sectionId: String) {
+        bottomNav.selectedId = sectionId
     }
 
     private companion object {

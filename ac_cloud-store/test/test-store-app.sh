@@ -149,6 +149,17 @@ PY
   [ $nodel -eq 0 ] && ok "every local dp() helper delegates to StoreDensity" || bad "$nodel dp() helper(s) scale on their own"
   grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
+  # 7. #868 the fleet nav pattern: the four pages are build.json::ui.sections, the bar is the shared island
+  python3 - "$S/build.json" "$MA" <<'PY' && ok "ui.bottom_nav is the four store pages, each a ui.sections id, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, mesh, settings"
+import json, sys
+ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
+ids = [s.get('id') for s in ui.get('sections') or []]
+sys.exit(0 if ui.get('bottom_nav') == ['cloud', 'phone', 'mesh', 'settings'] and ids == ui.get('bottom_nav') and ui.get('default_section') == 'cloud' else 1)
+PY
+  local bg; bg="$(cat "$S/app/build.gradle")"
+  printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
+  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
+  printf '%s' "$ma" | grep -Eq '(^|[^A-Za-z])TabRow *\(' && bad "MainActivity still draws its own TabRow" || ok "no hand-rolled tab row"
   return $fails
 }
 
@@ -185,6 +196,19 @@ mutate "package name drifts" super/apps/CloudStoreHandoff.kt 'const val PKG = "c
 mutate "OPEN action dropped" store/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudstore.OPEN" />' '' || M=$((M+1))
 mutate "Cloud Store gives up the pass" store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt 'runsFleetPass = { true }' 'runsFleetPass = { false }' || M=$((M+1))
 mutate "Mesh tab dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<AppsMeshFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "island replaced by a TabRow" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'BottomNavHost(' 'TabRow(' || M=$((M+1))
+mutate "island no longer fed by NavDecl" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
+mutate "a section leaves the bar" store/build.json '"bottom_nav": [
+      "cloud",
+      "phone",
+      "mesh",
+      "settings"
+    ]' '"bottom_nav": [
+      "cloud",
+      "phone",
+      "mesh"
+    ]' || M=$((M+1))
+mutate "gradle stops baking the sections" store/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
 A=store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt
 mutate "Cloud Store drops the shelves" "$A" 'classify = StoreShelves::of' '' || M=$((M+1))
 mutate "SuperApp drops the shelves" super/App.kt 'classify = com.diegonmarcos.superapp.apps.StoreShelves::of' '' || M=$((M+1))

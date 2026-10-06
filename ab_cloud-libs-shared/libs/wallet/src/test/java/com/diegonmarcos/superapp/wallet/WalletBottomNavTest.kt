@@ -3,6 +3,9 @@ package com.diegonmarcos.superapp.wallet
 import android.content.ComponentName
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import java.io.File
+import org.json.JSONObject
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
@@ -48,8 +51,8 @@ import com.diegonmarcos.superapp.bottomnav.R as NavR
  * #531/#533 — Cloud Wallet's top-level tabs are the fleet's bottom nav, MEASURED.
  *
  * Renders the real [WalletBottomNav] the way WalletScreen places it (at the bottom of the
- * screen) and reads back what it draws. Expected values come from [WalletNavItem] (the one item
- * table), [walletNavScheme] and libs:bottomnav's dimens — nothing is restated here.
+ * screen) and reads back what it draws. Expected values come from build.json::ui through
+ * [NavDecl] (the one item table), [walletNavScheme] and libs:bottomnav's dimens — nothing is restated here.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-xxhdpi")
@@ -70,6 +73,16 @@ class WalletBottomNavTest {
         }
     }).around(compose)
 
+    /** The declaration the wallet app bakes: ac_cloud-wallet/build.json::ui, read the way NavDecl reads it. */
+    private val nav: NavDecl = run {
+        val ui = JSONObject(File("../../../ac_cloud-wallet/build.json").readText()).getJSONObject("ui")
+        NavDecl.parse(ui.getJSONArray("sections"), ui.getJSONArray("bottom_nav").toString(), ui.getString("default_section"))
+    }
+
+    /** One bar item as the declaration lists it: [name] is the section id the island tags it with. */
+    private class Item(val name: String, val label: String, val tab: WalletTab?)
+    private val items = nav.bottomSections().map { Item(it.id, it.label, walletTabOf(it.id)) }
+
     private var tab by mutableStateOf(WalletTab.Pay)
     private var collapsed by mutableStateOf(false)
     private val picked = mutableListOf<WalletTab>()
@@ -84,6 +97,7 @@ class WalletBottomNavTest {
             host = LocalView.current
             Box(Modifier.fillMaxSize().testTag(ROOT)) {
                 WalletBottomNav(
+                    nav = nav,
                     selected = tab,
                     onSelect = { picked += it; tab = it },
                     onOpenMe = { meLaunches++ },
@@ -97,11 +111,11 @@ class WalletBottomNavTest {
 
     private fun bounds(tag: String): Rect =
         compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-    private fun cell(item: WalletNavItem) = bounds(BottomNavTags.item(item.name))
+    private fun cell(item: Item) = bounds(BottomNavTags.item(item.name))
     private fun paint(): Bitmap = compose.runOnUiThread {
         Bitmap.createBitmap(host.width, host.height, Bitmap.Config.ARGB_8888).also { host.draw(Canvas(it)) }
     }
-    private fun probe(bmp: Bitmap, item: WalletNavItem): Color {
+    private fun probe(bmp: Bitmap, item: Item): Color {
         val c = cell(item)
         return Color(bmp.getPixel((c.left + 3 * res.displayMetrics.density).toInt(), c.center.y.toInt()))
     }
@@ -111,16 +125,30 @@ class WalletBottomNavTest {
     private val fill get() = Color(res.getColor(NavR.color.bottom_nav_island_fill, null))
     private fun near(msg: String, expected: Float, actual: Float) =
         assertEquals("$msg: expected $expected px, measured $actual px", expected, actual, 1f)
-    private fun of(t: WalletTab) = WalletNavItem.entries.first { it.tab == t }
+    private fun of(t: WalletTab) = items.first { it.tab == t }
 
     @Test
     fun `the tabs are the item table, left to right, labelled by it`() {
         show(WalletTab.Pay)
-        val xs = WalletNavItem.entries.map { cell(it).left }
-        assertEquals("the items are not drawn in WalletNavItem order: $xs", xs.sorted(), xs)
-        for (item in WalletNavItem.entries) {
+        val xs = items.map { cell(it).left }
+        assertEquals("the items are not drawn in ui.bottom_nav order: $xs", xs.sorted(), xs)
+        for (item in items) {
             compose.onNodeWithTag(BottomNavTags.label(item.name), useUnmergedTree = true).assertTextEquals(item.label)
         }
+    }
+
+    @Test
+    fun `the bar is the declared bottom_nav, in order, and the wallet knows every one`() {
+        assertEquals(listOf("ids", "pay", "me", "vcards", "events"), items.map { it.name })
+        assertTrue("an item has no wallet destination and is not Me: ${items.filter { it.tab == null }.map { it.name }}",
+            items.filter { it.tab == null }.map { it.name } == listOf("me"))
+        assertEquals("the wallet opens on ui.default_section", WalletTab.Pay, nav.default()?.id?.let(::walletTabOf))
+    }
+
+    @Test
+    fun `the Events strip is the declared pages, each a sub-tab`() {
+        val pages = nav.section(WalletTab.Tickets.section)?.pages.orEmpty().map { it.id }
+        assertEquals(TicketsSubTab.entries.map { it.page }, pages)
     }
 
     @Test
@@ -146,7 +174,7 @@ class WalletBottomNavTest {
         show(WalletTab.Pay)
         assertTrue("the pill IS the island fill, the probe cannot tell them apart", !same(pill, fill))
         val bmp = paint()
-        for (item in WalletNavItem.entries) {
+        for (item in items) {
             val got = probe(bmp, item)
             if (item.tab == WalletTab.Pay) assertTrue("${item.name} painted $got, not the pill $pill", same(got, pill))
             else assertTrue("${item.name} painted $got, not the island fill $fill", same(got, fill))
@@ -156,13 +184,13 @@ class WalletBottomNavTest {
     @Test
     fun `a tab tap moves the pill, Me launches and the pill stays`() {
         show(WalletTab.Pay)
-        val target = WalletNavItem.entries.last { it.tab != null && it.tab != WalletTab.Pay }
+        val target = items.last { it.tab != null && it.tab != WalletTab.Pay }
         compose.onNodeWithTag(BottomNavTags.item(target.name), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertEquals("a tap on ${target.name} did not select its tab", listOf(target.tab), picked)
         assertTrue("the pill did not move to ${target.name}", same(probe(paint(), target), pill))
 
-        val me = WalletNavItem.entries.first { it.tab == null }
+        val me = items.first { it.tab == null }
         compose.onNodeWithTag(BottomNavTags.item(me.name), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertEquals("${me.name} did not launch", 1, meLaunches)
@@ -189,7 +217,7 @@ class WalletBottomNavTest {
         val expanded = bounds(BottomNavTags.ISLAND).height
         compose.runOnUiThread { collapsed = true }
         compose.waitForIdle()
-        for (item in WalletNavItem.entries) {
+        for (item in items) {
             compose.onAllNodesWithTag(BottomNavTags.label(item.name), useUnmergedTree = true).assertCountEquals(0)
         }
         val icons = bounds(BottomNavTags.ISLAND).height

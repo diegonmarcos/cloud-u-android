@@ -5,24 +5,12 @@ package com.diegonmarcos.cloudcalc.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,25 +24,27 @@ import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 
 /**
- * The shell: the section row (#770: Calculator, Measure, Jev — build.json::ui.sections), the
- * selected tab's modes, and the fleet's bottom-nav island showing that section's tabs. Tabs are
- * build.json::ui.tabs in declared order; a tab shows its modes (ui.modes whose `tab` is its id)
- * as a chip strip when it has more than one.
+ * The shell (#868, INVERTED from #770): the fleet's bottom-nav island carries the three sections
+ * (Calculator, Measure, Jev - build.json::ui.bottom_nav), the section's PAGES (what #770 called
+ * tabs, ui.sections[].pages) are the top PageTabs strip, and a page shows its modes (ui.modes
+ * whose `tab` is its id) as the sub-strip under it when it has more than one.
  */
 @Composable
 fun CalcShell(api: CalcApi, state: CalcState) {
     CompositionLocalProvider(LocalCalcApi provides api, LocalCalcState provides state) {
         val collapse = rememberBottomNavCollapse()
         val insets = bottomNavInsets()
-        val entries = Declarations.tabsOf(state.section).map { BottomNavEntry(it.id, it.label, rememberVectorPainter(IconCatalog.vector(it.icon))) }
+        val entries = Declarations.nav.islandEntries { rememberVectorPainter(IconCatalog.vector(it)) }
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag(CalcTags.SHELL)) {
-            SectionRow(state)
+            PageStrip(state)
             Box(
                 Modifier
                     .weight(1f)
@@ -66,8 +56,8 @@ fun CalcShell(api: CalcApi, state: CalcState) {
             }
             BottomNavIsland(
                 entries = entries,
-                selectedId = state.tab,
-                onSelect = { state.tab = it.id },
+                selectedId = state.section,
+                onSelect = { state.showSection(it.id) },
                 collapsed = collapse.collapsed,
                 insets = insets,
             )
@@ -75,27 +65,16 @@ fun CalcShell(api: CalcApi, state: CalcState) {
     }
 }
 
-/** #770 the three top-level sections (build.json::ui.sections) as one segmented row. */
+/** The selected section's pages (build.json::ui.sections[].pages) as the top pill strip. */
 @Composable
-private fun SectionRow(state: CalcState) {
-    val sections = Declarations.sections
-    SingleChoiceSegmentedButtonRow(
-        Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(horizontal = CalcMetrics.gutter, vertical = CalcMetrics.small),
-    ) {
-        sections.forEachIndexed { i, sec ->
-            SegmentedButton(
-                selected = sec.id == state.section,
-                onClick = { state.showSection(sec.id) },
-                shape = SegmentedButtonDefaults.itemShape(i, sections.size),
-                icon = { Icon(IconCatalog.vector(sec.icon), contentDescription = null) },
-                label = { Text(sec.label) },
-                modifier = Modifier.testTag(CalcTags.section(sec.id)),
-            )
-        }
-    }
+private fun PageStrip(state: CalcState) {
+    val pages = Declarations.nav.section(state.section)?.pages.orEmpty()
+    PageTabs(
+        pages = pages,
+        selectedId = state.tab,
+        onSelect = { state.tab = it.id },
+        modifier = Modifier.testTag(CalcTags.PAGES),
+    )
 }
 
 @Composable
@@ -109,20 +88,14 @@ private fun TabContent(tabId: String) {
     val selected = state.modeByTab[tabId]?.takeIf { id -> modes.any { it.id == id } } ?: modes.first().id
     Column(Modifier.fillMaxSize().testTag(CalcTags.tab(tabId))) {
         if (modes.size > 1) {
-            LazyRow(
-                Modifier.fillMaxWidth().testTag(CalcTags.STRIP),
-                contentPadding = PaddingValues(horizontal = CalcMetrics.gutter),
-                horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap),
-            ) {
-                items(modes, key = { it.id }) { m ->
-                    FilterChip(
-                        selected = m.id == selected,
-                        onClick = { state.modeByTab[tabId] = m.id },
-                        label = { Text(m.label) },
-                        modifier = Modifier.testTag(CalcTags.chip(m.id)),
-                    )
-                }
-            }
+            // The page's modes are its sub-strip: one PageTabs, one level lower than the pages.
+            PageTabs(
+                pages = modes.map { NavPage(it.id, it.label) },
+                selectedId = selected,
+                onSelect = { state.modeByTab[tabId] = it.id },
+                modifier = Modifier.testTag(CalcTags.STRIP),
+                underTopChrome = false,
+            )
         }
         val mode = modes.first { it.id == selected }
         key(mode.id) { ModeScreen(mode) }
@@ -133,11 +106,10 @@ private fun TabContent(tabId: String) {
 object CalcTags {
     const val SHELL = "calc_shell"
     const val STRIP = "calc_mode_strip"
+    const val PAGES = "calc_page_strip"
     const val INPUT = "calc_input"
     const val RESULT = "calc_result"
     fun tab(id: String) = "calc_tab_$id"
-    fun section(id: String) = "calc_section_$id"
-    fun chip(id: String) = "calc_chip_$id"
     fun mode(id: String) = "calc_mode_$id"
     fun key(label: String) = "calc_key_$label"
 

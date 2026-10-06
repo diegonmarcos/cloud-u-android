@@ -1,5 +1,7 @@
 package com.diegonmarcos.clouddrive
 
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavPage
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -12,9 +14,11 @@ import kotlinx.serialization.json.intOrNull
 
 /**
  * #579 THE ONE reader of the build-time declarations. app/build.gradle bakes every
- * declarative list this app renders — build.json::ui (tabs, configs pages, files
- * sections/places/filters), data/drive-*.json — into BuildConfig as base64 JSON; this file
- * decodes each ONCE into typed models and nothing else touches a BuildConfig blob.
+ * declarative list this app renders — build.json::ui (bottom_nav + sections + default_section,
+ * files sections/places/filters), data/drive-*.json — into BuildConfig as base64 JSON; this file
+ * decodes each ONCE into typed models and nothing else touches a BuildConfig blob. #868 the
+ * navigation (the island's tabs and the Configs / Sync / Volumes strips) is libs:bottomnav's
+ * [NavDecl]: a section's `pages` are the strip PageTabs draws.
  *
  * The parse functions take the JSON text, not BuildConfig, so the JVM suite
  * (DeclarationsTest) exercises the exact parser the phone runs against the
@@ -275,12 +279,16 @@ object Declarations {
 
     // ── the baked declarations, decoded once ───────────────────────────────
 
-    val tabs: List<TabDecl> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
-    val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
-    val configs: ConfigsDecl by lazy { parseConfigs(decode(BuildConfig.UI_CONFIGS_B64)) }
-    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64)) }
+    /** THE navigation declaration (#868): ui.bottom_nav + ui.sections + ui.default_section. */
+    val nav: NavDecl by lazy {
+        NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    }
+    val tabs: List<TabDecl> get() = tabsOf(nav)
+    val defaultTab: String get() = nav.default()?.id.orEmpty()
+    val configs: ConfigsDecl by lazy { ConfigsDecl(pagesOf(nav, "configs")) }
+    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64), pagesOf(nav, "sync")) }
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
-    val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64)) }
+    val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64), classesOf(nav)) }
     val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
     val syncRules: List<SyncRuleDecl> by lazy { parseSyncRules(decode(BuildConfig.SYNC_RULES_B64)) }
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
@@ -308,21 +316,23 @@ object Declarations {
     private fun JsonObject.strings(key: String): List<String> = (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList()
     private fun objects(e: JsonElement?): List<JsonObject> = (e as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
 
-    fun parseTabs(text: String): List<TabDecl> = objects(element(text)).mapNotNull { o ->
-        val id = o.str("id"); if (id.isBlank()) return@mapNotNull null
-        TabDecl(id, o.str("label", id), o.str("icon"))
-    }
+    /** The island's tabs, in `ui.bottom_nav` order — the order is load-bearing, it IS the nav order. */
+    fun tabsOf(nav: NavDecl): List<TabDecl> = nav.bottomSections().map { TabDecl(it.id, it.label, it.icon) }
 
-    fun parseConfigs(text: String): ConfigsDecl {
-        val o = element(text) as? JsonObject ?: return ConfigsDecl(emptyList())
-        val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
-        return ConfigsDecl(pages)
-    }
+    /** A section's declared pages — the strip PageTabs draws over it. */
+    fun pagesOf(nav: NavDecl, sectionId: String): List<PageDecl> =
+        nav.section(sectionId)?.pages.orEmpty().map { p: NavPage -> PageDecl(p.id, p.label, p.icon) }
 
-    /** #609 the Sync strip: Git/Rclone/Mounts, the mirror of parseConfigs. #608 carries the Git page too. */
-    fun parseSync(text: String): SyncDecl {
-        val o = element(text) as? JsonObject ?: return SyncDecl(emptyList(), emptyList(), EMPTY_GIT_PAGE)
-        val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
+    /** A section's declared pages as the lib's [NavPage]s — what PageTabs draws. */
+    fun navPages(sectionId: String): List<NavPage> = nav.section(sectionId)?.pages.orEmpty()
+
+    /** The four volume classes: ui.sections[volumes].pages. */
+    fun classesOf(nav: NavDecl): List<VolumeClassDecl> =
+        nav.section("volumes")?.pages.orEmpty().map { VolumeClassDecl(it.id, it.label, it.icon) }
+
+    /** #609 the Sync strip: Git/Rclone/Mounts ([pages], ui.sections[sync].pages). #608 carries the Git page too. */
+    fun parseSync(text: String, pages: List<PageDecl> = emptyList()): SyncDecl {
+        val o = element(text) as? JsonObject ?: return SyncDecl(pages, emptyList(), EMPTY_GIT_PAGE)
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()
         return SyncDecl(pages, periods, parseGitPage(o["git"]))
     }
@@ -423,11 +433,9 @@ object Declarations {
         )
     }
 
-    fun parseVolumes(text: String): VolumesDecl {
-        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptyList(), emptySet(), "", null, null)
-        val classes = objects(o["classes"]).mapNotNull { c ->
-            val id = c.str("id"); if (id.isBlank()) null else VolumeClassDecl(id, c.str("label", id), c.str("icon"))
-        }
+    /** [classes] are ui.sections[volumes].pages (#868). */
+    fun parseVolumes(text: String, classes: List<VolumeClassDecl> = emptyList()): VolumesDecl {
+        val o = element(text) as? JsonObject ?: return VolumesDecl(classes, emptyList(), emptyList(), emptySet(), "", null, null)
         val sections = objects(o["sections"]).mapNotNull { s ->
             val id = s.str("id"); if (id.isBlank()) null else VolumeSectionDecl(id, s.str("label", id), s.bool("auth"), s.strings("classes"))
         }

@@ -55,24 +55,23 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 
 // ── the declarations, baked ────────────────────────────────────────────────
 // ONE bake per declared list. Declarations.kt is the only decoder; no screen reads
-// a BuildConfig blob. ui.tabs is the single source of truth for the bottom nav.
-def uiTabsB64          = b64(buildJson.ui.tabs           ?: [])
-def uiDefaultTab       = (buildJson.ui.default_tab       ?: '').toString()
+// a BuildConfig blob. #868 ui.bottom_nav + ui.sections + ui.default_section are THE nav declaration
+// (libs:bottomnav's NavDecl reads all three).
+def uiSectionsB64      = b64(buildJson.ui.sections       ?: [])
+def uiBottomNav        = (buildJson.ui.bottom_nav        ?: []).join(',')
+def uiDefaultSection   = (buildJson.ui.default_section   ?: '').toString()
 def uiIconDefault      = (buildJson.ui.icon_default      ?: 'stack').toString()
 def uiExternalAppsB64  = b64(buildJson.ui.external_apps  ?: [])
-def uiTopologyB64      = b64(buildJson.ui.topology       ?: [:])
-def uiObservB64        = b64(buildJson.ui.observ         ?: [:])
-def uiConfigsB64       = b64(buildJson.ui.configs        ?: [:])
 def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 
-// #648 THE CARRIED C3 SECTION: ui.sections[id=c3] is the SuperApp's declaration block,
+// #648 THE CARRIED C3 SECTION: ui.carried_c3 (not nav: ui.sections is) is the SuperApp's declaration block,
 // verbatim. The two stacks it carries ARE the Topology / Observability pages, so they are
 // baked from that one copy rather than restated; ui.ntfy and ui.tile_columns travel the
 // same way the SuperApp bakes them (UI_NTFY_B64 / UI_TILE_COLUMNS), so NtfyCatalog,
 // NtfyScopes and IndexTiles read the identical shapes they read there.
-def c3Section = (buildJson.ui.sections ?: []).find { it.id == 'c3' }
-if (c3Section == null) throw new GradleException("build.json::ui.sections carries no c3 section — the Topology/Observability stacks would bake empty and the tabs would draw nothing")
-if (!c3Section.stack_topology || !c3Section.stack_observability) throw new GradleException("ui.sections[c3] is missing stack_topology / stack_observability — half the c3 surface would silently vanish")
+def c3Section = buildJson.ui.carried_c3
+if (c3Section == null) throw new GradleException("build.json::ui.carried_c3 is missing — the Topology/Observability stacks would bake empty and the tabs would draw nothing")
+if (!c3Section.stack_topology || !c3Section.stack_observability) throw new GradleException("ui.carried_c3 is missing stack_topology / stack_observability — half the c3 surface would silently vanish")
 def stackTopologyB64   = b64(c3Section.stack_topology)
 def stackObservB64     = b64(c3Section.stack_observability)
 def uiNtfyB64          = b64(buildJson.ui.ntfy ?: [:])
@@ -174,13 +173,11 @@ android {
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
         buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
-        buildConfigField "String", "UI_TABS_B64",           "\"${uiTabsB64}\""
-        buildConfigField "String", "UI_DEFAULT_TAB",        "\"${uiDefaultTab}\""
+        buildConfigField "String", "UI_SECTIONS_B64",       "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",         "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION",    "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_ICON_DEFAULT",       "\"${uiIconDefault}\""
         buildConfigField "String", "UI_EXTERNAL_APPS_B64",  "\"${uiExternalAppsB64}\""
-        buildConfigField "String", "UI_TOPOLOGY_B64",       "\"${uiTopologyB64}\""
-        buildConfigField "String", "UI_OBSERV_B64",         "\"${uiObservB64}\""
-        buildConfigField "String", "UI_CONFIGS_B64",        "\"${uiConfigsB64}\""
         buildConfigField "String", "C3_OPS_BASE_URL",       "\"${c3OpsBaseUrl}\""
         buildConfigField "String", "SERVICES_PUBLIC_B64",  "\"${servicesPublicB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64", "\"${servicesPrivateB64}\""
@@ -249,7 +246,7 @@ dependencies {
     implementation project(':libs:updater')
     // #648 the fleet's bottom-nav island: the five tabs are the same Compose pill
     // superapp, mail, wallet, me and drive draw. This app supplies its OWN entries
-    // from ui.tabs and does not use the module's cloud-mail item table.
+    // from ui.bottom_nav and does not use the module's cloud-mail item table.
     implementation project(':libs:bottomnav')
     // #648 the SuperApp's page:c3/dagu is libs:ops' DaguFragment, and DaguPrefs is the ONE
     // store of the Authelia bearer the feed cards' Re-run buttons and the container sheet's

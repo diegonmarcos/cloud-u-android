@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
@@ -23,7 +20,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.appstore.StoreDensity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
@@ -34,8 +41,9 @@ import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
- * #865 The three store pages SuperApp shows under Config, as tabs:
- * Cloud (the constellation fleet), Phone (installed apps), Mesh and Settings (#866).
+ * #865 The three store pages SuperApp shows under Config, as sections of the fleet island (#868):
+ * Cloud (the constellation fleet), Phone (installed apps), Mesh and Settings (#866). The four are
+ * build.json::ui.sections and ui.bottom_nav; [NAV] reads them, the island draws them.
  *
  * The pages are libs:appstore's Fragments, hosted with AndroidFragment. All
  * three stay composed and the hidden ones are sized to zero, so switching
@@ -66,19 +74,17 @@ class MainActivity : AppCompatActivity() {
 
     @androidx.compose.runtime.Composable
     private fun StoreShell() {
-        var selected by rememberSaveable { mutableStateOf(requested ?: TAB_CLOUD) }
+        var selected by rememberSaveable { mutableStateOf(requested ?: NAV.default()?.id ?: TAB_CLOUD) }
         // A tab named by a later Intent (SuperApp's Open button, a notification tap).
         androidx.compose.runtime.LaunchedEffect(requested) {
             requested?.let { selected = it; requested = null }
         }
-        Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            TabRow(selectedTabIndex = TABS.indexOfFirst { it.first == selected }.coerceAtLeast(0)) {
-                TABS.forEach { (id, label) ->
-                    Tab(selected = id == selected, onClick = { selected = id },
-                        modifier = Modifier.height(StoreDensity.dpValue(StoreDensity.TAP).dp),
-                        text = { Text(label, fontSize = StoreDensity.T_META.sp) })
-                }
-            }
+        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+            BottomNavHost(
+                entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
+                selectedId = selected,
+                onSelect = { selected = it.id },
+            ) {
             Box(Modifier.fillMaxSize()) {
                 val shown = Modifier.fillMaxSize()
                 val hidden = Modifier.size(0.dp)
@@ -86,6 +92,7 @@ class MainActivity : AppCompatActivity() {
                 AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE) shown else hidden)
                 AndroidFragment<AppsMeshFragment>(if (selected == TAB_MESH) shown else hidden)
                 if (selected == TAB_SETTINGS) SettingsPage()
+            }
             }
         }
     }
@@ -117,7 +124,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun tabFrom(i: Intent?): String? =
-        i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> TABS.any { it.first == t } }
+        i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
 
     companion object {
         /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE] or [TAB_MESH]. */
@@ -126,7 +133,17 @@ class MainActivity : AppCompatActivity() {
         const val TAB_PHONE = "phone"
         const val TAB_MESH  = "mesh"
         const val TAB_SETTINGS = "settings"
-        /** Tab id → label, in display order. */
-        val TABS = listOf(TAB_CLOUD to "Cloud", TAB_PHONE to "Phone", TAB_MESH to "Mesh", TAB_SETTINGS to "Settings")
+        /** build.json::ui as baked into BuildConfig: the island's items and the section ids. */
+        val NAV: NavDecl by lazy {
+            NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+        }
+
+        /** The declared icon name → the glyph the island draws. */
+        private fun iconFor(name: String): ImageVector = when (name) {
+            "cloud" -> Icons.Filled.Cloud
+            "phone" -> Icons.Filled.PhoneAndroid
+            "mesh" -> Icons.Filled.Hub
+            else -> Icons.Filled.Settings
+        }
     }
 }

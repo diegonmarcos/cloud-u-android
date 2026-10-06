@@ -3,6 +3,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.Properties
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -29,6 +30,13 @@ val debugImageGroup = ((appMetadataJson["debug_api"] as? Map<*, *>)?.get("image_
 // #798 the sound identification debug group, declared in the same place.
 val debugSoundGroup = ((appMetadataJson["debug_api"] as? Map<*, *>)?.get("sound_group") as? String)
     ?: error("build.json::debug_api.sound_group is required")
+// #868 the nav declaration (build.json::ui): the island's ids, the sections and their pages, the default.
+val uiBlock = appMetadataJson["ui"] as? Map<*, *>
+val uiBottomNav = ((uiBlock?.get("bottom_nav") as? List<*>) ?: emptyList<Any>()).joinToString(",")
+val uiSectionsB64: String = Base64.getEncoder().encodeToString(
+    groovy.json.JsonOutput.toJson(uiBlock?.get("sections") ?: emptyList<Any>()).toByteArray()
+)
+val uiDefaultSection = (uiBlock?.get("default_section") as? String).orEmpty()
 val voiceShutterTrigger =
     (voiceSection?.get("shutter_trigger_word") as? String).orEmpty().ifBlank { "capture" }
 val voiceShutterEnabledByDefault =
@@ -106,6 +114,9 @@ android {
         // is not acceptable.
         buildConfigField("String", "VOICE_SHUTTER_TRIGGER_WORD", "\"$voiceShutterTrigger\"")
         buildConfigField("Boolean", "VOICE_SHUTTER_ENABLED_BY_DEFAULT", voiceShutterEnabledByDefault.toString())
+        buildConfigField("String", "UI_BOTTOM_NAV", "\"$uiBottomNav\"")
+        buildConfigField("String", "UI_SECTIONS_B64", "\"$uiSectionsB64\"")
+        buildConfigField("String", "UI_DEFAULT_SECTION", "\"$uiDefaultSection\"")
         buildConfigField("String", "DEBUG_API_IMAGE_GROUP", "\"$debugImageGroup\"")
         buildConfigField("String", "DEBUG_API_SOUND_GROUP", "\"$debugSoundGroup\"")
     }
@@ -174,6 +185,15 @@ dependencies {
     // Fleet mesh member: libs:core (+ devtools via `api`) merges the fleet
     // provider, receiver, <queries> and the signature permission into this APK.
     implementation(project(":libs:core"))
+
+    // #868 the mode switcher is libs:bottomnav's island + page strip (ui/ModeNav.kt). Both are
+    // Compose hosts: their supertype and the WindowInsets / ColorScheme they expose must be on this
+    // module's compile classpath, though nothing here is written in Compose.
+    implementation(project(":libs:bottomnav"))
+    implementation(platform("androidx.compose:compose-bom:2025.01.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
 
     implementation(libs.bundles.camerax)
 

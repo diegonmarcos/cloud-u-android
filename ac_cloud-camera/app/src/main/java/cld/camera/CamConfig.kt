@@ -1959,36 +1959,19 @@ class CamConfig(private val mActivity: MainActivity) {
         }
     }
 
-    @SuppressLint("ClickableViewAccessibility")
     private fun buildTabs() {
-        val tabLayout = mActivity.tabLayout
+        val modeNav = mActivity.modeNav
         val availableModes = availableModes()
 
-        if (availableModes == tabLayout.getAllModes()) {
+        if (availableModes == modeNav.getAllModes()) {
             return
         }
 
         Log.i(TAG, "Refreshing tabs...")
 
-        tabLayout.removeAllTabs()
-
-        availableModes.forEach { mode ->
-            tabLayout.newTab().let { tab ->
-                tab.setText(mode.uiName)
-
-                tab.view.setOnTouchListener { _, e ->
-                    if (e.action == MotionEvent.ACTION_UP) {
-                        mActivity.finalizeMode(tab)
-                    }
-                    false
-                }
-                tab.tag = mode
-
-                // Highlight the mode the camera is really in, not the default one: the tabs are
-                // also rebuilt long after startup, once the extension probes report back.
-                tabLayout.addTab(tab, mode == currentMode)
-            }
-        }
+        // Highlight the mode the camera is really in, not the default one: the modes are also
+        // rebuilt long after startup, once the extension probes report back.
+        modeNav.setModes(availableModes, currentMode)
     }
 
     fun switchMode(mode: CameraMode) {
@@ -2001,10 +1984,7 @@ class CamConfig(private val mActivity: MainActivity) {
         // The strip highlights whatever the user last touched, but a mode can also change without
         // a touch: keep the highlight on the mode the camera is actually in.
         if (mActivity.shouldShowCameraModeTabs()) {
-            mActivity.tabLayout.getTabForMode(mode)?.let { tab ->
-                mActivity.tabLayout.selectTab(tab)
-                mActivity.tabLayout.centerTab(tab)
-            }
+            mActivity.modeNav.select(mode)
         }
 
         mActivity.cancelFocusTimer()

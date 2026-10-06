@@ -9,41 +9,59 @@ import com.diegonmarcos.clouddrive.ui.IconCatalog
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.json.JSONArray
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 
 /**
  * #579 the declarations, parsed by the EXACT parser the phone runs, against THIS
  * repository's build.json and data files (the module dir is the working directory of
  * a Gradle unit test, so ../build.json is the app's own). A declared icon name the
  * catalog does not know, a filter with no rule, a tab without an id, a data file that
- * lost its shape — all fail here before they fail on a device.
+ * lost its shape — all fail here before they fail on a device. #868 the navigation is
+ * libs:bottomnav's NavDecl, parsed from the same ui.sections / ui.bottom_nav the gradle bake
+ * reads (org.json needs Robolectric).
  */
+@RunWith(RobolectricTestRunner::class)
 class DeclarationsTest {
 
     private val root = File(System.getProperty("user.dir")).let { if (File(it, "build.json").isFile) it else it.parentFile }
     private val buildJson: JsonObject = Json { ignoreUnknownKeys = true }.parseToJsonElement(File(root, "build.json").readText()).jsonObject
     private val ui: JsonObject = buildJson["ui"]!!.jsonObject
     private fun section(key: String): String = ui[key].toString()
+    private fun nav(): NavDecl = NavDecl.parse(
+        JSONArray(section("sections")),
+        ui["bottom_nav"]!!.jsonArray.joinToString(",") { it.jsonPrimitive.content },
+        ui["default_section"]!!.jsonPrimitive.content,
+    )
+    private fun configs() = Declarations.ConfigsDecl(Declarations.pagesOf(nav(), "configs"))
+    private fun sync() = Declarations.parseSync(section("sync"), Declarations.pagesOf(nav(), "sync"))
+    private fun volumes() = Declarations.parseVolumes(section("volumes"), Declarations.classesOf(nav()))
 
     @Test fun tabsDeclareTheFiveKnownShellTabs() {
-        val tabs = Declarations.parseTabs(section("tabs"))
+        val tabs = Declarations.tabsOf(nav())
         // #609 Sync is a tab again (Apps is not: its grid moved into Home); Backups stays a Configs sub-page.
         assertEquals(listOf("files", "volumes", "home", "sync", "configs"), tabs.map { it.id })
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        assertTrue(tabs.map { it.id }.contains(ui["default_tab"].toString().trim('"')))
+        assertEquals("files", nav().default()?.id)
+        assertTrue(tabs.map { it.id }.contains(nav().default()?.id))
     }
 
     @Test fun everyDeclaredIconIsInTheCatalog() {
-        val tabs = Declarations.parseTabs(section("tabs"))
-        val configs = Declarations.parseConfigs(section("configs"))
+        val tabs = Declarations.tabsOf(nav())
+        val configs = configs()
         val files = Declarations.parseFiles(section("files"))
-        val volumes = Declarations.parseVolumes(section("volumes"))
-        val sync = Declarations.parseSync(section("sync"))
+        val volumes = volumes()
+        val sync = sync()
         val names = Declarations.iconNames(tabs, configs, files, volumes, sync)
         assertTrue(names.size >= 10)
         val unknown = names.filterNot { IconCatalog.knows(it) }
@@ -53,15 +71,15 @@ class DeclarationsTest {
     }
 
     @Test fun configsPages() {
-        val configs = Declarations.parseConfigs(section("configs"))
-        // #609 three sub-pages: Git/Rclone/Mounts moved OUT to ui.sync.pages. Backups came from
+        val configs = configs()
+        // #609 three sub-pages: Git/Rclone/Mounts moved OUT to ui.sections[sync].pages. Backups came from
         // its own tab at #603, General is #579's Configs page and Others is new.
         assertEquals(listOf("backups", "general", "others"), configs.pages.map { it.id })
         assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
     }
 
     @Test fun syncPagesAndPeriods() {
-        val sync = Declarations.parseSync(section("sync"))
+        val sync = sync()
         // #609 the three sub-pages moved back out of Configs, in declared order.
         assertEquals(listOf("git", "rclone", "mounts"), sync.pages.map { it.id })
         assertTrue(sync.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
@@ -71,7 +89,7 @@ class DeclarationsTest {
     }
 
     @Test fun volumesDeclaresTheFourClassesAndTheirRules() {
-        val volumes = Declarations.parseVolumes(section("volumes"))
+        val volumes = volumes()
         // #604 the four classes of volume, in declared order.
         assertEquals(listOf("constellation", "containers", "machines", "s3"), volumes.classes.map { it.id })
         assertTrue(volumes.classes.all { it.label.isNotBlank() && it.icon.isNotBlank() })
@@ -189,7 +207,7 @@ class DeclarationsTest {
         val apps = Declarations.parseApps(Json.parseToJsonElement(File(data, "drive-apps.json").readText()).jsonObject["apps"].toString())
         assertTrue(apps.size >= 5); assertTrue(apps.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         // #609 GitSync and RSync are IN-APP routes into declared Sync sub-pages, never packages.
-        val sync = Declarations.parseSync(section("sync"))
+        val sync = sync()
         val pageIds = sync.pages.map { it.id }
         listOf("GitSync", "RSync").forEach { label ->
             val tile = apps.single { it.label == label }
@@ -220,9 +238,9 @@ class DeclarationsTest {
     }
 
     @Test fun blankAndBrokenInputParseToEmpty() {
-        assertTrue(Declarations.parseTabs("").isEmpty())
-        assertTrue(Declarations.parseTabs("{not json").isEmpty())
-        assertTrue(Declarations.parseConfigs("").pages.isEmpty())
+        assertTrue(Declarations.tabsOf(NavDecl.fromBuildConfig("")).isEmpty())
+        assertTrue(Declarations.tabsOf(NavDecl.fromBuildConfig("!!!not base64!!!")).isEmpty())
+        assertTrue(Declarations.pagesOf(NavDecl.EMPTY, "configs").isEmpty())
         assertTrue(Declarations.parseSync("").pages.isEmpty())
         assertTrue(Declarations.parseFiles("").sections.isEmpty())
         assertEquals("name", Declarations.parseFiles("").defaultSort)

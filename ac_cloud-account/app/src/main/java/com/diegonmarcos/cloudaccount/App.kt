@@ -32,6 +32,8 @@ class App : Application() {
         private const val TAG = "CloudAccount"
         private const val SUPERAPP = "com.diegonmarcos.superapp"
         private const val STORE = "com.diegonmarcos.cloudstore"
+        /** SuperApp's Store page (a launcher route, not one of this app's ui.sections). */
+        private const val STORE_PAGE = "config/store"
 
         /**
          * Account links to launcher routes (`page:…`, `section:…`, `extapp:…`). With no launcher
@@ -40,7 +42,7 @@ class App : Application() {
          */
         fun open(activity: Activity, route: String): Boolean = runCatching {
             val pm = activity.packageManager
-            val store = route.startsWith("extapp:cloud-store") || route.startsWith("page:config/store")
+            val store = route.startsWith("extapp:cloud-store") || route.removePrefix("page:").startsWith(STORE_PAGE)
             val intent = if (store && pm.getLaunchIntentForPackage(STORE) != null)
                 Intent("$STORE.OPEN").setPackage(STORE).putExtra("tab", if (route.endsWith("store-phone")) "phone" else "cloud")
             else pm.getLaunchIntentForPackage(SUPERAPP)

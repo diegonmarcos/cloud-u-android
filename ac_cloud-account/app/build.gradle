@@ -53,6 +53,10 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-account')
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
+// #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
+def uiBottomNav       = (buildJson.ui?.bottom_nav ?: []).join(',')
+def uiSectionsB64     = b64(buildJson.ui?.sections ?: [])
+def uiDefaultSection  = (buildJson.ui?.default_section ?: '').toString()
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
 def profileName      = (profileDefault.name      ?: '').toString()
 def profileEmail     = (profileDefault.email     ?: '').toString()
@@ -159,6 +163,9 @@ android {
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",        "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_SECTIONS_B64",      "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_INITIALS",  "\"${profileInitials}\""
@@ -213,6 +220,8 @@ dependencies {
     // #867 the Account page: Connect, Profiles, Runtime, Drift. libs:account exposes libs:ui-kit (api);
     // its other modules come with it. libs:updater is the self-update (Updater.start) and the install engine.
     implementation project(':libs:account')
+    // #868 the bottom island + NavDecl: the four account tabs are ui.sections.
+    implementation project(':libs:bottomnav')
     implementation project(':libs:updater')
     implementation project(':libs:devtools')   // AppDebugServer: the /api/account/... routes
 
@@ -228,6 +237,7 @@ dependencies {
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.6.1'

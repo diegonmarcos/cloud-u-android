@@ -88,6 +88,27 @@ class ProfileFragment : Fragment() {
     /** The strip itself, so the cockpit can send the owner to Connect. */
     private var strip: TabLayout? = null
 
+    /** The declared tab ids, in strip order (the ids [selectTab] and [onTabShown] speak). */
+    private var tabIds: List<String> = emptyList()
+
+    /**
+     * #868 A host that draws the tabs itself (Cloud Account's bottom island) starts this fragment with
+     * [ARG_EXTERNAL_STRIP], which hides the fragment's own strip, drives it through [selectTab], and is
+     * told the tab on screen through [onTabShown] - on every change AND once when the host attaches, so
+     * a host's selection never starts out of step with the page.
+     */
+    var onTabShown: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            tabIds.getOrNull(selectedTab)?.let { value?.invoke(it) }
+        }
+
+    /** Shows the declared tab [id]; an id with no column is ignored. */
+    fun selectTab(id: String) {
+        val i = tabIds.indexOf(id)
+        if (i >= 0) strip?.getTabAt(i)?.select()
+    }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -147,6 +168,7 @@ class ProfileFragment : Fragment() {
         // the declaration; an id with no column here draws no tab rather than an invented one.
         val columns = mapOf("connect" to connect, "profiles" to profiles, "runtime" to runtime, "drift" to drift)
         val tabs = AccountModel.tabs().mapNotNull { t -> columns[t.id]?.let { Tab(t.label, it) } }
+        tabIds = AccountModel.tabs().filter { columns.containsKey(it.id) }.map { it.id }
         connectTab = tabs.indexOfFirst { it.column === connect }
         profilesTab = tabs.indexOfFirst { it.column === profiles }
         runtimeTab = tabs.indexOfFirst { it.column === runtime }
@@ -708,6 +730,7 @@ class ProfileFragment : Fragment() {
                     tabs.getOrNull(tab.position) ?: return
                     selectedTab = tab.position
                     show(tab.position)
+                    tabIds.getOrNull(tab.position)?.let { onTabShown?.invoke(it) }
                 }
                 override fun onTabUnselected(tab: TabLayout.Tab) = Unit
                 override fun onTabReselected(tab: TabLayout.Tab) = Unit
@@ -721,6 +744,8 @@ class ProfileFragment : Fragment() {
             // stepping down before any label is allowed to clip.
             AccountHost.styleTabs(this)
             getTabAt(selectedTab)?.select()
+            if (arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true) visibility = View.GONE
+            tabIds.getOrNull(selectedTab)?.let { onTabShown?.invoke(it) }
         }
     }
 
@@ -1465,6 +1490,9 @@ class ProfileFragment : Fragment() {
     }
 
     companion object {
+
+        /** #868 Fragment argument (Boolean): the host draws the tabs, so the fragment hides its own strip. */
+        const val ARG_EXTERNAL_STRIP = "external_strip"
 
         /** The one Connect way kind this page implements itself (build.json::
          *  ui.profile.connect): read the vault export out of the vault repo with

@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cloud Browser: single full-screen container for BrowserHostFragment.
-     The browser's own tab strip + URL bar live inside the fragment. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/fragment_container"
+<!-- Cloud Browser: the full-screen container for BrowserHostFragment above the fleet's bottom nav
+     island (libs:bottomnav, #868). The browser's own tab strip + URL bar live inside the fragment;
+     the island carries Browser | Search | Configs from build.json::ui. The root pads for the system
+     bars once, so the island is told to add no inset of its own. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:fitsSystemWindows="true"
-    android:background="#0B0414" />
+    android:background="#0B0414">
+
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

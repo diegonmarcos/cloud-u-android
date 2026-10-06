@@ -8,10 +8,12 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudnav.maps.MapsConfigFragment
-import com.google.android.material.tabs.TabLayout
+import com.diegonmarcos.cloudnav.NavConfig
+import com.diegonmarcos.cloudnav.maps.MapsPageStrip
+import com.diegonmarcos.superapp.bottomnav.PageTabsView
 
 /**
- * Configs tab. Six sub-pages via a TabLayout:
+ * Configs tab. Six sub-pages on a PageTabsView strip (#868: build.json ui.sections[configs].pages):
  *   • Tracker — GPS tracker controls + calibration + export
  *               ([MapsConfigFragment] section=tracker).
  *   • APIs    — Search / Reverse-geocoder / POI provider pickers + API keys
@@ -34,35 +36,23 @@ class ConfigsFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?,
     ): View {
         val col = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
-        val tabs = TabLayout(requireContext()).apply {
-            tabMode = TabLayout.MODE_SCROLLABLE
-            addTab(newTab().setText("Tracker"))
-            addTab(newTab().setText("APIs"))
-            addTab(newTab().setText("Update"))
-            addTab(newTab().setText("Cache"))
-            addTab(newTab().setText("Layers"))
-            addTab(newTab().setText("About"))
-        }
+        val pages = NavConfig.decl.section("configs")?.pages.orEmpty()
+        val tabs: PageTabsView = MapsPageStrip.create(requireContext(), pages, pages.firstOrNull()?.id) { show(it.id) }
         this.container = FrameLayout(requireContext()).apply { id = View.generateViewId() }
         col.addView(tabs, LinearLayout.LayoutParams(MATCH, WRAP))
         col.addView(this.container, LinearLayout.LayoutParams(MATCH, MATCH))
 
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) = show(tab.position)
-            override fun onTabUnselected(tab: TabLayout.Tab) {}
-            override fun onTabReselected(tab: TabLayout.Tab) {}
-        })
-        if (savedInstanceState == null) show(0)
+        if (savedInstanceState == null) show(pages.firstOrNull()?.id ?: PAGE_TRACKER)
         return col
     }
 
-    private fun show(position: Int) {
-        val frag: Fragment = when (position) {
-            0 -> MapsConfigFragment.newInstance(MapsConfigFragment.SECTION_TRACKER)
-            1 -> MapsConfigFragment.newInstance(MapsConfigFragment.SECTION_APIS)
-            2 -> UpdateConfigFragment()
-            3 -> CacheConfigFragment()
-            4 -> LayersConfigFragment()
+    private fun show(id: String) {
+        val frag: Fragment = when (id) {
+            PAGE_TRACKER -> MapsConfigFragment.newInstance(MapsConfigFragment.SECTION_TRACKER)
+            "apis" -> MapsConfigFragment.newInstance(MapsConfigFragment.SECTION_APIS)
+            "update" -> UpdateConfigFragment()
+            "cache" -> CacheConfigFragment()
+            "layers" -> LayersConfigFragment()
             else -> DevControlFragment()
         }
         childFragmentManager.beginTransaction()
@@ -71,6 +61,7 @@ class ConfigsFragment : Fragment() {
     }
 
     private companion object {
+        const val PAGE_TRACKER = "tracker"
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
     }

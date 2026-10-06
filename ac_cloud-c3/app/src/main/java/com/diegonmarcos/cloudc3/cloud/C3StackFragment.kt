@@ -516,7 +516,7 @@ class C3StackFragment : Fragment() {
                         ctx,
                         title    = r.name,
                         meta     = "${daguStatusLabel(r.status)} · ${GitHubFeed.ago(now - ts)}",
-                        url      = "page:c3/dagu",
+                        url      = "page:observ/dagu",
                         severity = daguSeverity(r.status),
                     ))
                 }

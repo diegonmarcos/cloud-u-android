@@ -41,13 +41,27 @@ rm -rf "$T"; mkdir -p "$T"
 (cd "$ROOT" && git ls-files -z | grep -zE '^a[ac]_[^/]+/(build\.json|build\.gradle(\.kts)?|app/build\.gradle(\.kts)?)$' \
     | xargs -0 cp --parents -t "$T")
 mkdir -p "$T/1_cicd/src/data" "$T/$LIB"; cp "$ROOT/$DATA" "$T/$DATA"; cp -r "$ROOT/$LIB/src" "$T/$LIB/src"
-python3 - "$T/$DATA" <<'PY'
-import json, sys
-p = sys.argv[1]; d = json.load(open(p)); del d["exempt"]["ac_cloud-wallet"]; json.dump(d, open(p, "w"))
+# (whichever app is still exempt AND has no ui.bottom_nav yet: every migration batch removes one, so none is named here)
+dropped="$(python3 - "$T" "$DATA" <<'PY'
+import json, os, sys
+t, data = sys.argv[1:3]
+p = os.path.join(t, data); d = json.load(open(p))
+for app in d["exempt"]:
+    try:
+        ui = json.load(open(os.path.join(t, app, "build.json"))).get("ui") or {}
+    except (OSError, ValueError):
+        continue
+    if not ui.get("bottom_nav"):
+        del d["exempt"][app]
+        with open(p, "w") as fh:
+            json.dump(d, fh)
+        print(app)
+        break
 PY
+)"
 out="$(python3 "$GUARD" "$T")"; rc=$?
-if [ "$rc" -eq 1 ] && grep -qF "N1 ac_cloud-wallet" <<<"$out"; then ok "dropping an unmigrated app's exemption goes red (N1 ac_cloud-wallet)"
-else fail "dropping wallet's exemption stayed green (rc=$rc)"; printf '%s\n' "$out" | tail -3; fi
+if [ -n "$dropped" ] && [ "$rc" -eq 1 ] && grep -qF "N1 $dropped" <<<"$out"; then ok "dropping an unmigrated app's exemption goes red (N1 $dropped)"
+else fail "dropping ${dropped:-any unmigrated app}'s exemption stayed green (rc=$rc)"; printf '%s\n' "$out" | tail -3; fi
 
 # ── (2) the synthetic fleet ─────────────────────────────────────────────────
 stage() {

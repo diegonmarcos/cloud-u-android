@@ -46,7 +46,8 @@
         "libs:text-tools",
         "libs:ui-kit",
         "libs:search-page",
-        "search-core"
+        "search-core",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -88,6 +89,10 @@
       "_doc_dir": "#802 I8 shared BY REFERENCE: cloud-search's plain-JVM core (its build.json::search reader and the OpenRouter chat protocol). The browser's search/chat routes use it; nothing is copied. Its own suite and PIT run in cloud-search's CI (this app's unit task is scoped to :app).",
       "dir": "../ac_cloud-search/core",
       "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "#868 the fleet's bottom island + NavDecl, shared BY REFERENCE: MainActivity's island carries Browser | Search | Configs. The web tabs, the address bar and every overlay stay libs:browser's own UI.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     }
   },
   "ui": {
@@ -225,7 +230,10 @@
         {
           "key": "summarize_route",
           "type": "enum",
-          "values": ["model", "on_device"],
+          "values": [
+            "model",
+            "on_device"
+          ],
           "default": "model",
           "label": "Summarize with",
           "section": "add-ons",
@@ -908,6 +916,33 @@
         }
       ]
     },
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment (its tab grid, address bar and overlays are the lib's own UI, so the section has no pages), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
+    "bottom_nav": [
+      "browser",
+      "search",
+      "configs"
+    ],
+    "sections": [
+      {
+        "id": "browser",
+        "label": "Browser",
+        "icon": "browser",
+        "pages": []
+      },
+      {
+        "id": "search",
+        "label": "Search",
+        "icon": "search",
+        "pages": []
+      },
+      {
+        "id": "configs",
+        "label": "Configs",
+        "icon": "configs",
+        "pages": []
+      }
+    ],
+    "default_section": "browser",
     "profile_default": {
       "name": "Diego Coelho Marcos",
       "email": "me@diegonmarcos.com",
