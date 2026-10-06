@@ -32,6 +32,10 @@ android {
         minSdk 26
     }
 
+    // #876: pure-Compose sources live in src/commonMain/kotlin so the wasm web root
+    // (ab_cloud-libs-shared/web) compiles the same files; Android just adds the dir.
+    sourceSets.main.kotlin.srcDirs += 'src/commonMain/kotlin'
+
     buildFeatures {
         compose = true
     }
