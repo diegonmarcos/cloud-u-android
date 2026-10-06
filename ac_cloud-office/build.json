@@ -258,6 +258,11 @@
         "_doc": "#743 — pulled in by core's `api project(':libs:devtools')` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER <queries>); android/app does not link it directly. Linked because that project path resolves against android/settings.gradle, which patch 0006 makes include it, and listed so a devtools change re-ships this app.",
         "dir": "../ab_cloud-libs-shared/libs/devtools",
         "materialize_to": "android/libs/devtools"
+      },
+      "fleetconfig-model": {
+        "_doc": "#873 — pulled in by core's `api project(':libs:fleetconfig-model')` (the setup contract every fleet app answers at <package>.fleetsetup); android/app does not link it directly. Linked because that project path resolves against android/settings.gradle, which patch 0007 makes include it, and listed so a change to the model re-ships this app.",
+        "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+        "materialize_to": "android/libs/fleetconfig-model"
       }
     },
     "build_json_to": "android/build.json",

@@ -30,8 +30,8 @@ public class TermuxApplication extends Application {
         // export `rish` + its env into the rootfs stage dir so a shell INSIDE proot
         // can run commands at adb-shell privilege through the fleet provider. Both
         // no-op when the block is absent; neither throws.
-        RishBridge.requestShizukuPermissionIfNeeded();
-        RishBridge.export(this, CloudRootfs.loginDir());
+        RishBridge.INSTANCE.requestShizukuPermissionIfNeeded();
+        RishBridge.INSTANCE.export(this, CloudRootfs.loginDir());
 
         // Set crash handler for the app
         TermuxCrashUtils.setCrashHandler(this);

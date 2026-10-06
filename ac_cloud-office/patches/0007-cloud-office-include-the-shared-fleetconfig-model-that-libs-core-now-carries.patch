@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Tue, 6 Oct 2026 19:30:00 +0000
+Subject: [PATCH] cloud-office: include the shared fleetconfig-model that
+ libs:core now carries
+
+libs:core declares `api project(':libs:fleetconfig-model')` since every
+fleet app answers the setup contract (the provider at <package>.fleetsetup
+lives in that module). The path resolves against THIS settings.gradle, so
+without an include the build stops at configuration: "Project with path
+':libs:fleetconfig-model' could not be found in project ':libs:core'".
+materialize places the shared module at android/libs/fleetconfig-model,
+next to core and devtools.
+---
+ android/settings.gradle | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/android/settings.gradle b/android/settings.gradle
+--- a/android/settings.gradle
++++ b/android/settings.gradle
+@@ -26,3 +26,9 @@
+ // container a real directory (Gradle 9 refuses one that does not exist).
+ project(':libs:core').projectDir = new File(settingsDir, 'libs/core')
+ project(':libs:devtools').projectDir = new File(settingsDir, 'libs/devtools')
++
++// libs:core `api`s the shared fleet-config model (the setup contract every fleet app
++// answers); like devtools, its Gradle path is core's to name and resolves against THIS
++// file. materialize places it at android/libs/fleetconfig-model.
++include ':libs:fleetconfig-model'
++project(':libs:fleetconfig-model').projectDir = new File(settingsDir, 'libs/fleetconfig-model')
+-- 
+2.43.0
+

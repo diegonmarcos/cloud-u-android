@@ -75,8 +75,8 @@ public class TermuxApplication extends Application {
         // binds them into the rootfs — a shell inside proot then runs commands at
         // adb-shell privilege through the fleet provider. Both no-op without the
         // block; neither throws.
-        com.diegonmarcos.superapp.adbdebug.RishBridge.requestShizukuPermissionIfNeeded();
-        com.diegonmarcos.superapp.adbdebug.RishBridge.export(
+        com.diegonmarcos.superapp.adbdebug.RishBridge.INSTANCE.requestShizukuPermissionIfNeeded();
+        com.diegonmarcos.superapp.adbdebug.RishBridge.INSTANCE.export(
             this, new java.io.File(getFilesDir(), "usr"));
 
         // Init app wide SharedProperties loaded from termux.properties

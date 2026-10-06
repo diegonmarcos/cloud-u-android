@@ -62,6 +62,11 @@
       "type": "library",
       "_doc_dir": "Pulled in by libs:core with an api dependency; declared because core references it by project path.",
       "dir": "../libs/devtools"
+    },
+    "libs:fleetconfig-model": {
+      "type": "library",
+      "_doc_dir": "#873 pulled in by libs:core with an api dependency (the setup contract every fleet app answers); declared because core references it by project path, and a missing declaration stops the build at configuration.",
+      "dir": "../libs/fleetconfig-model"
     }
   },
   "keyboard_media": {

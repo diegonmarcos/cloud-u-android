@@ -59,6 +59,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/media/**"
       #   input: "ab_cloud-libs-shared/libs/translate/**"
       #   input: "ab_cloud-libs-shared/libs/voice/**"

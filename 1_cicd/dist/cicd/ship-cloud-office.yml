@@ -44,6 +44,7 @@ on:
       #   input: "1_cicd/src/templates/ship-source-prebuilt-engine.yml.in"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
+      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
       #   input: "ab_cloud-libs-shared/libs/text-tools/**"
       # ── end MANAGED-PATHS-HEADER ──
