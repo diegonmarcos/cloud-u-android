@@ -29,11 +29,17 @@
 #   B4  a failure still reads "DNS: cannot resolve <host> (active resolver: …)",
 #       now naming the bridge and the routes it tried; /api/net/dns says
 #       "resolver":"bridge" with "via", and /api/sysdns/state is served
+#   B5  #875 one batch, one resolver, no intermittent miss (MEASURED 2026-10-06,
+#       mobile data, "Install all": cloud-calc and c3-morpheus downloaded while
+#       c3-watchdog and c3-watchtower failed every rung on the same github.com):
+#       a route is retried with backoff before the next one, upstream queries
+#       are capped, a positive answer is cached for its TTL (≥ 60 s) so one
+#       github.com lookup serves the batch, and the failure counts the tries
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
 LIBS="$ROOT/ab_cloud-libs-shared/libs"
-BRIDGE="$LIBS/sysdns/src/main/java/com/diegonmarcos/cloudlib/sysdns/FleetDnsBridge.kt"
+BRIDGE="${BRIDGE_KT:-$LIBS/sysdns/src/main/java/com/diegonmarcos/cloudlib/sysdns/FleetDnsBridge.kt}"
 SYSBRIDGE="$LIBS/sysdns/src/bridge/java/com/diegonmarcos/cloudlib/sysdns/SystemDnsBridge.java"
 STOREDNS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreDns.kt"
 SRC="$LIBS/updater/src/main/java/com/diegonmarcos/superapp/updater/source"
@@ -132,6 +138,40 @@ grep -q '"resolver":"${if (via == null) "android" else "bridge"}"' "$DEBUG" && g
 grep -q 'AppDebugServer.route("sysdns"' "$OVERVIEW" && grep -q 'JSONObject(FleetDnsBridge.stateJson())' "$OVERVIEW" \
   && ok "/api/sysdns/state is served and the DNS page's Bridges row for this app reads it" \
   || bad "the bridge's state is not on the debug API / the DNS page"
+
+echo "== B5: retry with backoff, a cap on in-flight queries, a TTL cache, the tries in the message =="
+grep -q 'const val TRIES_PER_ROUTE = 2' "$BRIDGE" && grep -q 'for (attempt in 1..TRIES_PER_ROUTE)' "$BRIDGE" \
+  && grep -q 'if (attempt > 1) Thread.sleep(BACKOFF_MS \* (attempt - 1))' "$BRIDGE" \
+  && ok "each route is asked TRIES_PER_ROUTE times with a growing backoff before the next route" \
+  || bad "a route gets one shot: a dropped UDP answer on mobile data is a miss"
+awk '/private fun walk\(/,/^    }$/' "$BRIDGE" | grep -q 'for (r in runCatching { routes(name) }' \
+  && awk '/for \(r in runCatching \{ routes\(name\) \}/,/^        }$/' "$BRIDGE" | grep -q 'for (attempt in 1..TRIES_PER_ROUTE)' \
+  && ok "the retry loop sits INSIDE the route loop: the first route is retried before the second is tried" \
+  || bad "the retries are not per route"
+grep -q 'private val inFlight = Semaphore(MAX_IN_FLIGHT, true)' "$BRIDGE" && grep -q 'const val MAX_IN_FLIGHT = 4' "$BRIDGE" \
+  && awk '/private fun ask\(/,/^    }$/' "$BRIDGE" | grep -q 'inFlight.acquire()' \
+  && awk '/private fun ask\(/,/^    }$/' "$BRIDGE" | grep -q 'finally { inFlight.release() }' \
+  && ok "every upstream attempt runs under a fair 4-wide semaphore, released in finally" \
+  || bad "upstream queries are not capped"
+grep -q 'const val MIN_TTL_MS = 60_000L' "$BRIDGE" \
+  && grep -q 'cache\[key\] = Cached(a, System.currentTimeMillis() + maxOf(DnsWire.ttl(a) \* 1000L, MIN_TTL_MS))' "$BRIDGE" \
+  && grep -q 'if (DnsWire.rcode(a) == 0 && DnsWire.addresses(a).isNotEmpty())' "$BRIDGE" \
+  && ok "a positive answer (NOERROR with addresses) is cached for max(TTL, 60 s); NXDOMAIN and misses are not" \
+  || bad "positive answers are not cached for their TTL"
+awk '/private fun walk\(/,/^    }$/' "$BRIDGE" | grep -q 'cache\[key\]?.let { c -> if (c.until > System.currentTimeMillis()) { cached++; return c.answer }' \
+  && grep -q 'val key = "$name/${DnsWire.qtype(q)}"' "$BRIDGE" \
+  && ok "the cache is consulted before any route, per (name, qtype), and an expired entry is dropped" \
+  || bad "the walk does not serve from the cache first"
+grep -q 'fun ttl(m: ByteArray): Long' "$BRIDGE" && grep -q 'fun qtype(m: ByteArray): Int' "$BRIDGE" \
+  && ok "DnsWire reads the answer's smallest TTL and the question's type" || bad "DnsWire cannot read a TTL / qtype"
+grep -q 'lastFailure = tried.joinToString(" → ") + " after $tries tries"' "$BRIDGE" \
+  && grep -q 'val used = lastFailure?.let { "${resolverLabel()} tried $it" } ?: resolverLabel()' "$STOREDNS" \
+  && ok "a miss reads 'bridge 127.0.0.1:<port> tried <route> → <route> after N tries' in the Store's row" \
+  || bad "the failure does not carry the attempt count"
+grep -q 'val budget = timeoutMs.toLong() \* TRIES_PER_ROUTE \* 4 + BACKOFF_MS \* TRIES_PER_ROUTE \* 4' "$BRIDGE" \
+  && ok "resolve() waits out the retried walk instead of giving up at one timeout" || bad "resolve()'s wait does not cover the retries"
+grep -q '",\\"tries\\":" + lastTries' "$BRIDGE" && grep -q '",\\"cached\\":" + cached' "$BRIDGE" \
+  && ok "/api/sysdns/state reports tries, cached hits and the cache size" || bad "the bridge's state does not show retries / cache"
 
 echo "== RESULT(#874 store download via the DNS bridge): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

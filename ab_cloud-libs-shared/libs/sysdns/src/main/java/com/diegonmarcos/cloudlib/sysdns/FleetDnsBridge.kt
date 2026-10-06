@@ -12,8 +12,10 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,6 +35,16 @@ import java.util.concurrent.TimeUnit
  * wins; a total miss names every route tried in [lastFailure], and the last
  * answering route is [lastRoute] — what the DNS page and /api/net/dns show.
  *
+ * #875 MEASURED 2026-10-06, mobile data, one "Install all": cloud-calc and
+ * c3-morpheus downloaded while c3-watchdog and c3-watchtower failed every
+ * rung on "cannot resolve github.com" — the same resolver, the same minute.
+ * N rungs × N apps asked at once, each lookup a single UDP shot with one
+ * timeout and no retry. So: a route is asked [TRIES_PER_ROUTE] times with a
+ * backoff before the next route; at most [MAX_IN_FLIGHT] upstream queries
+ * run at once; a positive answer is cached for its TTL, at least
+ * [MIN_TTL_MS], so one github.com answer serves the whole batch; and the
+ * failure says how many tries it took.
+ *
  * Nothing here names a server: [routes] is the host's; the default plan is
  * Mirror, for an app without a DNS page (Cloud Store).
  */
@@ -43,6 +55,14 @@ object FleetDnsBridge {
     /** The host's plan for a name, in order. Default: [mirror]. */
     @Volatile var routes: (name: String) -> List<Route> = { mirror() }
     @Volatile var timeoutMs = 2500
+    /** Each route is asked this many times (timeout / SERVFAIL / no answer) before the next route. */
+    const val TRIES_PER_ROUTE = 2
+    /** Backoff before a retry, × the attempt number. */
+    const val BACKOFF_MS = 300L
+    /** Upstream queries in flight at once, bridge-wide. */
+    const val MAX_IN_FLIGHT = 4
+    /** A positive answer is served from cache for its TTL, but at least this long. */
+    const val MIN_TTL_MS = 60_000L
 
     @Volatile private var app: Context? = null
     @Volatile private var bridge: SystemDnsBridge? = null
@@ -50,8 +70,14 @@ object FleetDnsBridge {
     /** The route that answered the last successful query, e.g. "Android resolver on Wi-Fi". */
     @Volatile var lastRoute: String? = null
         private set
-    /** The routes the last failed query walked, " → "-joined; null after a success. */
+    /** The routes the last failed query walked, " → "-joined, "after N tries"; null after a success. */
     @Volatile var lastFailure: String? = null
+        private set
+    /** Upstream attempts the last query took. */
+    @Volatile var lastTries = 0
+        private set
+    /** Queries answered from the TTL cache. */
+    @Volatile var cached = 0L
         private set
 
     /** Where the bridge listens: the configured port, or an ephemeral one when that was taken. */
@@ -95,19 +121,45 @@ object FleetDnsBridge {
     /** The bridge's upstream: off the serve thread, since a walk may wait out several timeouts. */
     private val upstream = SystemDnsBridge.Upstream { q, done -> walkers.execute { done.reply(walk(q)) } }
 
+    private class Cached(val answer: ByteArray, val until: Long)
+    /** (name, qtype) → the last positive answer, until its TTL runs out. */
+    private val cache = ConcurrentHashMap<String, Cached>()
+    private val inFlight = Semaphore(MAX_IN_FLIGHT, true)
+
     private fun walk(q: ByteArray): ByteArray? {
         val name = DnsWire.name(q)
+        val key = "$name/${DnsWire.qtype(q)}"
+        cache[key]?.let { c -> if (c.until > System.currentTimeMillis()) { cached++; return c.answer } else cache.remove(key) }
         val tried = ArrayList<String>()
+        var tries = 0
         for (r in runCatching { routes(name) }.getOrDefault(mirror())) {
             tried += r.label
-            val a = runCatching {
+            for (attempt in 1..TRIES_PER_ROUTE) {
+                if (attempt > 1) Thread.sleep(BACKOFF_MS * (attempt - 1))
+                tries++
+                val a = ask(q, r)
+                if (a != null && DnsWire.rcode(a) in DEFINITIVE) {
+                    lastRoute = r.label; lastFailure = null; lastTries = tries
+                    if (DnsWire.rcode(a) == 0 && DnsWire.addresses(a).isNotEmpty())
+                        cache[key] = Cached(a, System.currentTimeMillis() + maxOf(DnsWire.ttl(a) * 1000L, MIN_TTL_MS))
+                    return a
+                }
+            }
+        }
+        lastTries = tries
+        lastFailure = tried.joinToString(" → ") + " after $tries tries"
+        return null
+    }
+
+    /** One attempt at [r], under the in-flight cap: null = timeout, no route or no answer. */
+    private fun ask(q: ByteArray, r: Route): ByteArray? {
+        inFlight.acquire()
+        try {
+            return runCatching {
                 if (r.servers.isEmpty()) android(q, r.network)
                 else r.servers.firstNotNullOfOrNull { s -> runCatching { forward(q, s, r.network) }.getOrNull() }
             }.getOrNull()
-            if (a != null && DnsWire.rcode(a) in DEFINITIVE) { lastRoute = r.label; lastFailure = null; return a }
-        }
-        lastFailure = tried.joinToString(" → ")
-        return null
+        } finally { inFlight.release() }
     }
 
     /** Android's resolver, raw, on [network] (null = this uid's default). */
@@ -143,8 +195,10 @@ object FleetDnsBridge {
     fun resolve(host: String): List<InetAddress> {
         if (DnsWire.isLiteral(host)) return listOf(InetAddress.getByName(host))
         val b = bridge ?: throw IOException("DNS bridge not running: $bindError")
+        // The whole walk may take every route × TRIES_PER_ROUTE × the timeout, plus backoff and the cap's queue.
+        val budget = timeoutMs.toLong() * TRIES_PER_ROUTE * 4 + BACKOFF_MS * TRIES_PER_ROUTE * 4
         val found = listOf(DnsWire.A, DnsWire.AAAA).flatMap { type ->
-            DnsWire.addresses(b.query(DnsWire.query(host, type), timeoutMs.toLong() * 4))
+            DnsWire.addresses(b.query(DnsWire.query(host, type), budget))
         }
         if (found.isEmpty()) throw java.net.UnknownHostException("Unable to resolve host \"$host\": no answer via $label (tried ${lastFailure ?: lastRoute})")
         return found
@@ -154,7 +208,8 @@ object FleetDnsBridge {
     fun stateJson(): String {
         val base = bridge?.stateJson() ?: SystemDnsBridge.notListeningJson(0, bindError ?: "not started")
         return base.dropLast(1) + ",\"route\":" + SystemDnsBridge.quote(lastRoute) +
-            ",\"tried\":" + SystemDnsBridge.quote(lastFailure) + ",\"bind\":" + SystemDnsBridge.quote(bindError) + "}"
+            ",\"tried\":" + SystemDnsBridge.quote(lastFailure) + ",\"tries\":" + lastTries +
+            ",\"cached\":" + cached + ",\"cache_size\":" + cache.size + ",\"bind\":" + SystemDnsBridge.quote(bindError) + "}"
     }
 
     private val DEFINITIVE = setOf(0, 3)
@@ -180,6 +235,24 @@ object DnsWire {
     }
 
     fun rcode(m: ByteArray): Int = m[3].toInt() and 0x0F
+
+    /** The question's QTYPE, or 0 for a malformed message. */
+    fun qtype(m: ByteArray): Int = runCatching { u16(m, skipName(m, 12)) }.getOrDefault(0)
+
+    /** The smallest TTL over the answer records, in seconds; 0 when there is none. */
+    fun ttl(m: ByteArray): Long = runCatching {
+        if (m.size < 12) return 0L
+        var p = 12
+        repeat(u16(m, 4)) { p = skipName(m, p) + 4 }
+        var min = Long.MAX_VALUE
+        repeat(u16(m, 6)) {
+            p = skipName(m, p)
+            val ttl = (u16(m, p + 4).toLong() shl 16) or u16(m, p + 6).toLong()
+            val len = u16(m, p + 8); p += 10 + len
+            min = minOf(min, ttl)
+        }
+        if (min == Long.MAX_VALUE) 0L else min
+    }.getOrDefault(0L)
 
     /** The question's name, or "" for a malformed message. */
     fun name(m: ByteArray): String = runCatching {
