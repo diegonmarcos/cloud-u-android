@@ -68,6 +68,17 @@ public class TermuxApplication extends Application {
         // import fills and then restarts this app) into the file every login sources.
         AgentAuth.provision(this);
 
+        // Shizuku client (build.json::shizuku_client): request Shizuku's permission
+        // once (so this terminal appears in Shizuku ▸ Application management) and
+        // export `rish` + its env under $PREFIX so bin/login (patched by
+        // bake_default_packages.patch_bin_login_rish, mirroring the #758 DNS bind)
+        // binds them into the rootfs — a shell inside proot then runs commands at
+        // adb-shell privilege through the fleet provider. Both no-op without the
+        // block; neither throws.
+        com.diegonmarcos.superapp.adbdebug.RishBridge.requestShizukuPermissionIfNeeded();
+        com.diegonmarcos.superapp.adbdebug.RishBridge.export(
+            this, new java.io.File(getFilesDir(), "usr"));
+
         // Init app wide SharedProperties loaded from termux.properties
         TermuxAppSharedProperties properties = TermuxAppSharedProperties.init(context);
 

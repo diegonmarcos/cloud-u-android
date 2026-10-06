@@ -2,7 +2,9 @@ package com.termux.app;
 
 import android.app.Application;
 
+import com.diegonmarcos.superapp.adbdebug.RishBridge;
 import com.termux.cloud.AgentAuth;
+import com.termux.cloud.CloudRootfs;
 import com.termux.cloud.CloudTermuxProperties;
 import com.termux.shared.crash.TermuxCrashUtils;
 import com.termux.shared.settings.preferences.TermuxAppSharedPreferences;
@@ -22,6 +24,14 @@ public class TermuxApplication extends Application {
         // #790 the agent CLIs' credentials from the Account (the agent-auth store a FleetConfig
         // import fills and then restarts this app) into the file every login sources.
         AgentAuth.provision(this);
+
+        // Shizuku client (build.json::shizuku_client): request Shizuku's permission
+        // once (so this terminal appears in Shizuku ▸ Application management) and
+        // export `rish` + its env into the rootfs stage dir so a shell INSIDE proot
+        // can run commands at adb-shell privilege through the fleet provider. Both
+        // no-op when the block is absent; neither throws.
+        RishBridge.requestShizukuPermissionIfNeeded();
+        RishBridge.export(this, CloudRootfs.loginDir());
 
         // Set crash handler for the app
         TermuxCrashUtils.setCrashHandler(this);

@@ -6,10 +6,14 @@ include ':app', ':termux-shared', ':terminal-emulator', ':terminal-view', ':root
 // SuperApp and every sibling cannot see or reach this terminal. devtools is not
 // optional: core declares `api project(':libs:devtools')`, which resolves
 // against THIS settings file. Shared BY REFERENCE, never copied.
-include ':libs:core', ':libs:devtools'
+include ':libs:core', ':libs:devtools', ':libs:shizuku-adb-debug-tools'
 project(':libs').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs')
 project(':libs:core').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/core')
 project(':libs:devtools').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/devtools')
 // #873 libs:core declares `api project(':libs:fleetconfig-model')` (the setup contract): the include is not optional.
 include ':libs:fleetconfig-model'
 project(':libs:fleetconfig-model').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/fleetconfig-model')
+// #<shizuku-client> the Shizuku-client + rish-bridge lib, shared BY REFERENCE. It
+// reads THIS app's build.json::shizuku_client at build time (BuildConfig) and its
+// RishBridge/SuperappBridgeChannel run at launch + enter time.
+project(':libs:shizuku-adb-debug-tools').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/shizuku-adb-debug-tools')

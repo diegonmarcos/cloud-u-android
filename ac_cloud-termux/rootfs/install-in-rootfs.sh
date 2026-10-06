@@ -50,6 +50,16 @@ usermod -s "$DEFAULT_SHELL" root
 # with app code instead of rebuilding this ~400 MB image.
 mkdir -p /usr/lib/cloud-store
 
+# build.json::shizuku_client — the rish bridge mountpoints. proot file-binds onto
+# an EXISTING path, so the targets must be in the tree even though their bytes
+# arrive from outside (the app writes rish + rish.env into $HERE/rish; enter.sh
+# binds them here). Same reasoning as /usr/lib/cloud-store above: empty
+# placeholders keep the engine out of the ~400 MB image.
+mkdir -p /usr/local/bin /usr/local/etc
+: > /usr/local/bin/rish
+chmod 0755 /usr/local/bin/rish
+: > /usr/local/etc/rish.env
+
 apt-get clean
 rm -rf /var/lib/apt/lists/* /root/.npm /tmp/*
 

@@ -94,6 +94,16 @@ public final class CloudRootfs {
     }
 
     /**
+     * The directory enter.sh lives in and binds files relative to (where proot,
+     * enter.sh and the #644 cloud-store are staged). RishBridge.export writes the
+     * rish launcher + its env file into a {@code rish/} subdir here so enter.sh
+     * can bind them into the rootfs.
+     */
+    public static File loginDir() {
+        return stageDir();
+    }
+
+    /**
      * Cheap enough for the UI thread: opens the lib's ZipFile only to read its
      * small manifest entry (a few dozen bytes) — never the ~400 MB payload entry.
      */

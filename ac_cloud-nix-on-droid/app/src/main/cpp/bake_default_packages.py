@@ -564,6 +564,37 @@ def patch_bin_login_dns(bin_login: str, app_id: str, resolv_conf: str) -> str:
     return bin_login.replace(etc_bind, etc_bind + dns, 1)
 
 
+def shizuku_client_binds() -> list:
+    """build.json::shizuku_client.binds, read from THIS repo's build.json (the same
+    DATA the lib bakes into BuildConfig and enter.sh renders in the termux fork).
+    Returns [] when the block is absent. Data-driven: adding/moving a bind is a
+    build.json edit, never a Kotlin or bake-script one (Pillar: DATA-DRIVEN)."""
+    build_json = Path(__file__).resolve().parents[4] / "build.json"
+    client = json.loads(build_json.read_text()).get("shizuku_client") or {}
+    return client.get("binds") or []
+
+
+def patch_bin_login_rish(bin_login: str, app_id: str) -> str:
+    """Put `rish` into the rootfs, mirroring patch_bin_login_dns: bind each
+    shizuku_client.binds[] entry's app-written source ($PREFIX/<stage>) onto its
+    guest path, inserted right after the /etc bind of bin/login's proot exec.
+    RishBridge (libs:shizuku-adb-debug-tools) writes the sources into
+    /data/data/<app>/files/usr/<stage> on launch. No-op without the block."""
+    binds = shizuku_client_binds()
+    if not binds:
+        return bin_login
+    etc_bind = ETC_BIND_FMT.format(app_id=app_id)
+    if bin_login.count(etc_bind) != 1:
+        raise ValueError(f"expected exactly one /etc bind in bin/login's proot exec:\n  {etc_bind}")
+    rish = ""
+    for b in binds:
+        stage, guest = b.get("stage"), b.get("guest")
+        if not stage or not guest:
+            raise ValueError(f"shizuku_client.binds entry needs stage+guest: {b!r}")
+        rish += f"  -b /data/data/{app_id}/files/usr/{stage}:{guest} \\\n"
+    return bin_login.replace(etc_bind, etc_bind + rish, 1)
+
+
 # claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
 # not a nixpkgs restriction) -- nix's eval refuses it unless this is set, the
 # same override `nixos-rebuild`/`nix-env` users are told to add for it.
@@ -852,6 +883,14 @@ def main() -> int:
             try:
                 bin_login = patch_bin_login_dns(bin_login, app_id, dns_resolv_conf)
                 dns_resolv_body = resolv_conf_body([n for n in dns_nameservers.split(",") if n])
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+
+            # ── build.json::shizuku_client: bind `rish` into the rootfs so a shell
+            #    inside proot reaches adb-shell privilege through the fleet provider.
+            try:
+                bin_login = patch_bin_login_rish(bin_login, app_id)
             except ValueError as e:
                 print(f"FAIL: {e}", file=sys.stderr)
                 return 1

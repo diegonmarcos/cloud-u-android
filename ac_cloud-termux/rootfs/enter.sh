@@ -95,6 +95,22 @@ if [ -d "$HERE/cloud-store" ] && [ -d "$ROOTFS/usr/lib/cloud-store" ]; then
     store_entry="/bin/sh /usr/lib/cloud-store/login-exec"
 fi
 
+# build.json::shizuku_client — the rish bridge into the rootfs. RishBridge
+# (libs:shizuku-adb-debug-tools) writes `rish` + `rish.env` (RISH_APPLICATION_ID
+# + the fleet token) into $HERE/rish on launch; bind them so a shell INSIDE proot
+# runs commands at adb-shell (uid 2000) privilege through the fleet provider (the
+# SuperApp over loopback — app_process cannot run in here, no /system is bound).
+# Guarded on presence like cloud-store: a build without the block, or a session
+# before the app has written them, still logs in. install-in-rootfs.sh created the
+# mountpoints. The two guest paths below are the literals in
+# build.json::shizuku_client.binds[].guest — keep them in sync with that, not a copy.
+if [ -f "$HERE/rish/rish" ] && [ -f "$ROOTFS/usr/local/bin/rish" ]; then
+    binds="$binds -b $HERE/rish/rish:/usr/local/bin/rish"
+    if [ -f "$HERE/rish/rish.env" ] && [ -f "$ROOTFS/usr/local/etc/rish.env" ]; then
+        binds="$binds -b $HERE/rish/rish.env:/usr/local/etc/rish.env"
+    fi
+fi
+
 # #612/#736: ~/emulated and ~/cloud-drive-shared-store are SYMLINKS in $HOME to
 # /storage/emulated/0 and its CloudDrive store, and /storage/emulated/0 is bound
 # at the SAME path inside the root so one absolute target resolves for the guest

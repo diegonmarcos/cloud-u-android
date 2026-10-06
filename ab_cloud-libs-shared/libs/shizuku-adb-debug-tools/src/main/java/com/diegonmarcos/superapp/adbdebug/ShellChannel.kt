@@ -58,7 +58,27 @@ interface ShellChannel {
 
 /** The execution ladder. Order = preference. */
 object ShellChannels {
-    val all: List<ShellChannel> = listOf(EmbeddedAdbChannel, LocalShellChannel, ShizukuShellChannel)
+
+    /** Provider id (build.json::shizuku_client.providers[]) -> its channel. */
+    private val byProvider: Map<String, ShellChannel> = mapOf(
+        "moe.shizuku.privileged.api" to ShizukuShellChannel,
+        "com.diegonmarcos.superapp" to SuperappBridgeChannel,
+    )
+
+    /**
+     * The ladder. The self-contained channels (our embedded adb client, then our
+     * app_process server) always lead — they need no other app. After them come
+     * the external providers IN THE ORDER build.json::shizuku_client.providers
+     * declares them ([RishBridge.providers]), so the data picks whether Shizuku
+     * or the SuperApp bridge is tried first. An app with no block (the SuperApp
+     * itself) keeps the legacy ladder with Shizuku as the tail fallback.
+     */
+    val all: List<ShellChannel>
+        get() {
+            val self = listOf(EmbeddedAdbChannel, LocalShellChannel)
+            val declared = RishBridge.providers.mapNotNull { byProvider[it] }
+            return if (declared.isEmpty()) self + ShizukuShellChannel else self + declared
+        }
 
     /** First channel that's ready, or null when neither is available. */
     fun active(ctx: Context): ShellChannel? = all.firstOrNull { it.isReady(ctx) }

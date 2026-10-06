@@ -81,6 +81,8 @@ android {
         // signature permission into this APK; without them the SuperApp and
         // every sibling cannot see or reach this terminal.
         implementation project(":libs:core")
+        // Shizuku client + rish bridge, data-driven from build.json::shizuku_client.
+        implementation project(":libs:shizuku-adb-debug-tools")
         // core's androidx.core 1.13.1 brings concurrent-futures and with it
         // listenablefuture 1.0, whose one class guava 24.1-jre (above) already
         // carries: a duplicate-class build failure. The empty 9999 artifact is
