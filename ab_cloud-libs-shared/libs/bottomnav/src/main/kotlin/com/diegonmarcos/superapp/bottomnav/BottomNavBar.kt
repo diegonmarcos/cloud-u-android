@@ -21,13 +21,17 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,12 +49,16 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
@@ -109,6 +117,12 @@ internal fun labelTag(id: String) = "bottomnav_label_$id"
 @Composable
 public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 
+/**
+ * THE island. Its public contract is entries, the selection, the tap callback and (for a Compose
+ * shell that scrolls) [collapsed]: nothing else. The colours, the geometry, the typeface, the
+ * system-bar clearance, the press feedback and the haptics are all this module's, so an app cannot
+ * draw a different island. See [FleetChrome] for the colours and the window.
+ */
 @Composable
 public fun BottomNavIsland(
     entries: List<BottomNavEntry>,
@@ -116,26 +130,72 @@ public fun BottomNavIsland(
     onSelect: (BottomNavEntry) -> Unit,
     modifier: Modifier = Modifier,
     collapsed: Boolean = false,
-    insets: WindowInsets = bottomNavInsets(),
     /** Extra behaviour the HOST hangs on one item's capsule (superapp's long-press fan, #531).
      *  Applied inside the capsule's clip, before its click, so a gesture it consumes wins. The
      *  bar itself stays behaviour-free: an item still does nothing but select on a tap. */
     itemModifier: (BottomNavEntry) -> Modifier = { Modifier },
+) {
+    BottomNavIslandImpl(entries, selectedId, onSelect, modifier, collapsed, null, itemModifier)
+}
+
+/**
+ * The one composable every host renders: [BottomNavIsland] (Compose shells), [BottomNavHost] and
+ * [BottomNavIslandView] (View shells) all end here, so what they draw is the same tree.
+ *
+ * [insets] null = clear the live system bars and display cutout through windowInsetsPadding, which
+ * leaves out whatever an ancestor already consumed (#477: read, so nothing else loses them). A
+ * non-null value is the clearance a View host measured for itself, or a test's injected inset.
+ */
+@Composable
+internal fun BottomNavIslandImpl(
+    entries: List<BottomNavEntry>,
+    selectedId: String?,
+    onSelect: (BottomNavEntry) -> Unit,
+    modifier: Modifier,
+    collapsed: Boolean,
+    insets: WindowInsets?,
+    itemModifier: (BottomNavEntry) -> Modifier,
+) {
+    // An app's MaterialTheme must not reach the island: its text style (line height, family,
+    // spacing) would leak into the labels through LocalTextStyle, and its colours through the
+    // scheme. Both are replaced by the fleet's.
+    CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
+        IslandContent(entries, selectedId, onSelect, modifier, collapsed, insets, itemModifier)
+    }
+}
+
+@Composable
+private fun IslandContent(
+    entries: List<BottomNavEntry>,
+    selectedId: String?,
+    onSelect: (BottomNavEntry) -> Unit,
+    modifier: Modifier,
+    collapsed: Boolean,
+    insets: WindowInsets?,
+    itemModifier: (BottomNavEntry) -> Modifier,
 ) {
     val density = LocalDensity.current
     val res = LocalContext.current.resources
     val widthFraction = res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1)
     // Read, never consumed: getBottom is a plain snapshot read that recomposes when the inset
     // changes. It is the Compose form of a non-consuming insets listener.
-    val bottom = dimensionResource(R.dimen.bottom_nav_island_bottom_margin) +
-        with(density) { insets.getBottom(this).toDp() }
+    val margin = dimensionResource(R.dimen.bottom_nav_island_bottom_margin)
+    val liveClearance = if (insets == null) Modifier.windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
+    else Modifier.padding(bottom = with(density) { insets.getBottom(this).toDp() })
+    val view = LocalView.current
     val pillInset = dimensionResource(R.dimen.bottom_nav_pill_inset)
     val pad = dimensionResource(R.dimen.bottom_nav_item_vertical_pad)
     val gap = dimensionResource(R.dimen.bottom_nav_icon_label_gap)
     val iconSize = dimensionResource(R.dimen.bottom_nav_icon_size)
     // An sp dimen comes back in px with the font scale applied. px -> sp undoes exactly that.
-    val labelStyle = TextStyle(fontSize = with(density) { res.getDimension(R.dimen.bottom_nav_label_text_size).toSp() })
-    val scheme = MaterialTheme.colorScheme
+    // Every attribute spelled out, so nothing is inherited from an app's typography.
+    val labelStyle = TextStyle(
+        fontSize = with(density) { res.getDimension(R.dimen.bottom_nav_label_text_size).toSp() },
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontStyle = FontStyle.Normal,
+    )
+    val scheme = FleetChrome.islandScheme()
     // #532 the collapse animates. remember(collapsed) re-reads Power Saving at every transition, so
     // a battery saver switched on while the shell is open holds the very next collapse still.
     val motion = rememberBarMotion(collapsed)
@@ -145,7 +205,7 @@ public fun BottomNavIsland(
         label = "bottomnav_label_shown",
     )
 
-    Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
+    Box(modifier.fillMaxWidth().then(liveClearance).padding(bottom = margin), contentAlignment = Alignment.BottomCenter) {
         Row(
             Modifier
                 .fillMaxWidth(widthFraction)
@@ -166,7 +226,17 @@ public fun BottomNavIsland(
                         .clip(bottomNavPillShape)
                         .background(if (selected) scheme.inverseSurface else Color.Transparent)
                         .then(itemModifier(entry))
-                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(entry) })
+                        .selectable(
+                            selected = selected,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = FleetIndication,
+                            role = Role.Tab,
+                            onClick = {
+                                // SuperApp's section-change haptic rhythm, on a tap that moves the pill.
+                                if (!selected) FleetHaptics.geminiPattern(view)
+                                onSelect(entry)
+                            },
+                        )
                         .padding(vertical = pad),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Top,
@@ -273,11 +343,12 @@ public fun BottomNavHost(
     entries: List<BottomNavEntry>,
     selectedId: String?,
     onSelect: (BottomNavEntry) -> Unit,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val collapse = rememberBottomNavCollapse()
     val insets = bottomNavInsets()
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // The island below already clears the bottom system bar, so the content must not clear it
         // a second time: consumed for the content ONLY. The island still reads it (#477).
         Box(
@@ -288,12 +359,6 @@ public fun BottomNavHost(
                 .nestedScroll(collapse)
                 .testTag(TAG_CONTENT),
         ) { content() }
-        BottomNavIsland(
-            entries = entries,
-            selectedId = selectedId,
-            onSelect = onSelect,
-            collapsed = collapse.collapsed,
-            insets = insets,
-        )
+        BottomNavIsland(entries = entries, selectedId = selectedId, onSelect = onSelect, collapsed = collapse.collapsed)
     }
 }

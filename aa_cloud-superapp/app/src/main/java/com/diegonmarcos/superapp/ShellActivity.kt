@@ -72,6 +72,7 @@ import androidx.fragment.app.FragmentTransaction
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.ui.ShellBottomNav
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabsView
@@ -491,33 +492,7 @@ open class ShellActivity : AppCompatActivity(),
             // we pad the AppBar and BottomNav to keep them visible. The
             // theme already declares transparent system bars + light-icon
             // tinting so the bars stay readable.
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            // Force the status + navigation bars to fully transparent at
-            // runtime — Samsung One UI ignores the theme attributes
-            // (statusBarColor / enforceStatusBarContrast) on some builds
-            // and paints a blue-gray default tint over the supposedly-
-            // transparent surface. Setting these programmatically wins.
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                window.isStatusBarContrastEnforced = false
-                window.isNavigationBarContrastEnforced = false
-            }
-            // Draw INTO the display cutout (camera punch-hole) row so the
-            // launcher status strip's Line 0 OWNS the camera band — black bg
-            // with "Cloud"/"SuperApp" flanking the punch-hole — instead of
-            // being letterboxed BELOW it. SHORT_EDGES = top/bottom only
-            // (portrait), the standard mode for a top camera cutout. Set
-            // programmatically (not via theme) for the same reason as the
-            // colors above: Samsung One UI ignores the theme attribute.
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                window.attributes = window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        android.view.WindowManager.LayoutParams
-                            .LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-            }
-            applyWindowBlurIfSupported()
+            FleetChrome.apply(this)
 
             setContentView(R.layout.activity_main)
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
@@ -943,7 +918,7 @@ open class ShellActivity : AppCompatActivity(),
 
     private fun onBottomNavPicked(id: String) {
         bottomNav.selectedId = id
-        fireGeminiPattern()
+        // The island itself fires the section-change haptic rhythm on this tap (FleetHaptics).
         // "Home" fully resets to the home root (pop pages, close drawer) — same as
         // the system HOME button — not just a section switch.
         if (id == "home") resetToHome() else goSection(id, Sections.byId(id)?.label ?: id)
@@ -1452,23 +1427,6 @@ open class ShellActivity : AppCompatActivity(),
             supportFragmentManager.beginTransaction()
                 .replace(R.id.detail_container, DetailPlaceholderFragment.newInstance())
                 .commitAllowingStateLoss()
-        }
-    }
-
-    /** Glassmorphism: enable window background-blur on API 31+ so the
-     *  translucent island cards (toolbar + bottom nav) frost what's behind
-     *  them. On older Android the layout still renders as a translucent
-     *  rounded panel — just without the blur layer. */
-    private fun applyWindowBlurIfSupported() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            runCatching {
-                window.setBackgroundBlurRadius(40)
-                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                @Suppress("DEPRECATION")
-                window.attributes = window.attributes.apply {
-                    blurBehindRadius = 20
-                }
-            }
         }
     }
 

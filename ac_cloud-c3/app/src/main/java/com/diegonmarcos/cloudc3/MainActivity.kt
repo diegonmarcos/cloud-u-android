@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.FrameLayout
-import androidx.activity.enableEdgeToEdge
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -30,7 +30,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
  * THE TOP-OVERFLOW FIX (#407/#477). Content was drawing under the status bar and the
  * camera cutout. The fix reads the REAL inset and pads with it:
  *
- *  - [enableEdgeToEdge] means this window lays out behind the system bars, which is what
+ *  - [FleetChrome.apply] means this window lays out behind the system bars, which is what
  *    lets the island sit against the bottom edge.
  *  - the listener below takes systemBars UNION displayCutout, because on this device the
  *    cutout is taller than the status bar and either one alone leaves the other clipped
@@ -50,8 +50,8 @@ class MainActivity : AppCompatActivity(),
     private var currentTab: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
 
         content = findViewById(R.id.fragment_container)

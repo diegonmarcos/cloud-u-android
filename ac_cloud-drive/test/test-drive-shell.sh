@@ -23,7 +23,7 @@
 #   D4  the declarations are BAKED (build.gradle → UI_*_B64 from buildJson.ui with
 #       a hard error on a missing block) and decoded once (Declarations.kt).
 #   D5  libs:bottomnav is declared, depended on, linked, and DriveShell draws
-#       BottomNavIsland with the declared entries.
+#       BottomNavHost (the island, its collapse and its insets) with the declared entries.
 #   D6  the WebView shell is gone: no drive.html, no tailwind.js, no FilesBridge,
 #       no Material Views widget, no WebView and no JavascriptInterface at all; the
 #       one AppCompatActivity left is #577's native pdfium reader.
@@ -182,7 +182,7 @@ if [ -z "$OTHER_BLOBS" ]; then pass "no screen reads a BuildConfig blob directly
 echo "── D5 the fleet island ──"
 if python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); m=b["modules"]; sys.exit(0 if "libs:bottomnav" in m and "libs:bottomnav" in m["app"]["depends_on"] and m["libs:bottomnav"].get("dir","").endswith("libs/bottomnav") else 1)' "$BJ"; then pass "libs:bottomnav declared and depended on"; else fail "libs:bottomnav missing from build.json modules / app.depends_on"; fi
 if grep -qE "implementation project\(':libs:bottomnav'\)" "$GRADLE"; then pass "libs:bottomnav linked"; else fail "libs:bottomnav not linked in app/build.gradle"; fi
-if grep -qE 'BottomNavIsland\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries \{ IconCatalog\.painter\(it\) \}' "$SHELL_KT" && grep -qE 'rememberBottomNavCollapse\(\)' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, with scroll-collapse"; else fail "DriveShell does not draw BottomNavIsland from Declarations.tabs"; fi
+if grep -qE 'BottomNavHost\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries \{ IconCatalog\.painter\(it\) \}' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, on the fleet's host (which owns the scroll-collapse)"; else fail "DriveShell does not draw BottomNavIsland from Declarations.tabs"; fi
 if grep -qE 'setContent \{ DriveTheme \{ Root\(\) \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
 
 echo "── D6 the WebView shell is gone ──"

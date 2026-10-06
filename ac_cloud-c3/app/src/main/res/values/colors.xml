@@ -19,8 +19,6 @@
     <!-- Accent ON A CARD = superapp theme_cloud_accent, the variant that clears 4.5:1 over a
          13%-white card as well as over black. -->
     <color name="c3_accent_on_card">#FFC7AEFB</color>
-    <!-- Ink on an accent surface (the selected pill's label) = superapp tile_ink. -->
-    <color name="c3_on_accent">#FF14082B</color>
     <color name="c3_text">#FFFFFFFF</color>
     <color name="c3_text_secondary">#AAFFFFFF</color>
 

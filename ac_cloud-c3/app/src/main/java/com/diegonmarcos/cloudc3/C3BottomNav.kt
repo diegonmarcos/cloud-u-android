@@ -1,10 +1,6 @@
 package com.diegonmarcos.cloudc3
 
 import android.content.Context
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.core.content.ContextCompat
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
 
@@ -43,15 +39,6 @@ object C3BottomNav {
     fun configure(nav: BottomNavIslandView, onOpen: (String) -> Unit) {
         val ctx = nav.context
         nav.items = items(ctx)
-        nav.colorScheme = darkColorScheme(
-            inverseSurface = color(ctx, R.color.c3_accent),
-            inverseOnSurface = color(ctx, R.color.c3_on_accent),
-            onSurfaceVariant = color(ctx, R.color.c3_text_secondary),
-        )
-        // The island reads its OWN bottom inset (libs:bottomnav bottomNavInsets). The
-        // shell pads only the TOP, and consumes nothing, so the bar is lifted once and
-        // not twice — the #477 double-lift.
-        nav.insets = WindowInsets(0, 0, 0, 0)
         nav.onSelect = { id -> nav.selectedId = id; onOpen(id) }
         // Re-tapping the tab already shown rebuilds nothing; the pill is already there.
         nav.onReselect = {}
@@ -61,6 +48,4 @@ object C3BottomNav {
     fun sync(nav: BottomNavIslandView, tabId: String?) {
         nav.selectedId = tabId?.takeIf { id -> Declarations.tabs.any { it.id == id } }
     }
-
-    private fun color(ctx: Context, id: Int) = Color(ContextCompat.getColor(ctx, id))
 }

@@ -3,12 +3,11 @@ package com.diegonmarcos.superapp.bottomnav
 import android.content.Context
 import android.util.AttributeSet
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
 
 /**
@@ -24,8 +23,8 @@ import androidx.compose.ui.platform.AbstractComposeView
  *    the action and leaves [selectedId] where it was.
  *  - [underTopChrome] adds the live status-bar / cutout inset above the strip (a strip under the
  *    toolbar island); false for a strip in a sheet. [insets] null = the live window's.
- *  - [colorScheme] carries the host's View theme into the strip's text; null = the MaterialTheme
- *    around it.
+ *  - there is no colour, size or inset to configure: the strip is the fleet's, whatever theme the
+ *    host app wears.
  */
 public class PageTabsView @JvmOverloads constructor(
     context: Context,
@@ -35,23 +34,18 @@ public class PageTabsView @JvmOverloads constructor(
     public var pages: List<NavPage> by mutableStateOf(emptyList())
     public var selectedId: String? by mutableStateOf(null)
     public var underTopChrome: Boolean by mutableStateOf(true)
-    public var insets: WindowInsets? by mutableStateOf(null)
-    public var colorScheme: ColorScheme? by mutableStateOf(null)
+    /** Tests inject an inset; null = the live window's. Not part of the public contract. */
+    internal var insets: WindowInsets? by mutableStateOf(null)
     public var onSelect: (NavPage) -> Unit = {}
     public var onReselect: (NavPage) -> Unit = {}
 
     @Composable
     override fun Content() {
-        val scheme = colorScheme
-        if (scheme == null) Strip() else MaterialTheme(colorScheme = scheme) { Strip() }
-    }
-
-    @Composable
-    private fun Strip() {
-        PageTabs(
+        PageTabsImpl(
             pages = pages,
             selectedId = selectedId,
             onSelect = { onSelect(it) },
+            modifier = Modifier,
             onReselect = { onReselect(it) },
             underTopChrome = underTopChrome,
             insets = insets,

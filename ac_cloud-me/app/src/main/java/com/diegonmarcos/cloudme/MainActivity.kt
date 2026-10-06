@@ -14,6 +14,7 @@ import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
 
         drawer = findViewById(R.id.drawer_layout)

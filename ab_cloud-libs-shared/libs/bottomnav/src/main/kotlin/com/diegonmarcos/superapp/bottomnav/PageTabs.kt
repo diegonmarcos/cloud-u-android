@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.bottomnav
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,8 +18,10 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +76,36 @@ public fun PageTabs(
     modifier: Modifier = Modifier,
     onReselect: (NavPage) -> Unit = {},
     underTopChrome: Boolean = true,
-    insets: WindowInsets? = null,
+) {
+    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null)
+}
+
+/** The one composable [PageTabs] and [PageTabsView] both render. [insets] is for tests; null = the live window's. */
+@Composable
+internal fun PageTabsImpl(
+    pages: List<NavPage>,
+    selectedId: String?,
+    onSelect: (NavPage) -> Unit,
+    modifier: Modifier,
+    onReselect: (NavPage) -> Unit,
+    underTopChrome: Boolean,
+    insets: WindowInsets?,
+) {
+    // An app's MaterialTheme text style (line height, family) must not reach the pills.
+    CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
+        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets)
+    }
+}
+
+@Composable
+private fun PageTabsContent(
+    pages: List<NavPage>,
+    selectedId: String?,
+    onSelect: (NavPage) -> Unit,
+    modifier: Modifier,
+    onReselect: (NavPage) -> Unit,
+    underTopChrome: Boolean,
+    insets: WindowInsets?,
 ) {
     if (pages.isEmpty()) return
     val context = LocalContext.current
@@ -181,7 +213,9 @@ private fun Pill(
             .then(if (plan.pillPx > 0f) Modifier.width(with(density) { plan.pillPx.toDp() }) else Modifier)
             .background(fill, shape)
             .border(stroke, line, shape)
-            .clickable { if (on) onReselect(page) else onSelect(page) }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = FleetIndication) {
+                if (on) onReselect(page) else onSelect(page)
+            }
             .semantics { role = Role.Tab; selected = on }
             .padding(horizontal = with(density) { padHPx.toDp() }, vertical = padV)
             .testTag(PageTabsTags.tab(page.id)),

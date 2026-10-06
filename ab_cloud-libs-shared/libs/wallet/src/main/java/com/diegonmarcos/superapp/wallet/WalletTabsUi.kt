@@ -20,9 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.foundation.layout.WindowInsets
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.islandEntries
@@ -103,10 +100,6 @@ internal fun walletIcon(name: String): Int = when (name) {
     else -> R.drawable.ic_tab_config
 }
 
-/** The wallet is a dark surface with no View theme to borrow, so the island takes Material's
- *  dark scheme: its inverseSurface is the light pill the whole fleet shows on the dark bar. */
-internal val walletNavScheme = darkColorScheme()
-
 /**
  * [nav]'s bar on the shared island. A destination tap moves the pill; Me launches cloud-me
  * and the pill stays on the tab you are still on. Config lights no item.
@@ -121,19 +114,14 @@ internal fun WalletBottomNav(
     collapsed: Boolean = false,
 ) {
     val entries = nav.islandEntries { painterResource(walletIcon(it)) }
-    MaterialTheme(colorScheme = walletNavScheme) {
-        BottomNavIsland(
-            entries = entries,
-            selectedId = nav.bottomSections().firstOrNull { walletTabOf(it.id) == selected }?.id,
-            onSelect = { entry -> walletTabOf(entry.id)?.let(onSelect) ?: onOpenMe() },
-            modifier = modifier,
-            collapsed = collapsed,
-            // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system
-            // bars, and the island sits inside it. Reading the live inset again would lift the bar
-            // twice (#477).
-            insets = WindowInsets(0, 0, 0, 0),
-        )
-    }
+    // The island is the fleet's, in the fleet's colours: nothing about it is the wallet's to set.
+    BottomNavIsland(
+        entries = entries,
+        selectedId = nav.bottomSections().firstOrNull { walletTabOf(it.id) == selected }?.id,
+        onSelect = { entry -> walletTabOf(entry.id)?.let(onSelect) ?: onOpenMe() },
+        modifier = modifier,
+        collapsed = collapsed,
+    )
 }
 
 /**

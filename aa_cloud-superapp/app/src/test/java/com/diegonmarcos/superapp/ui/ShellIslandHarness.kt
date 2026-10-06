@@ -161,7 +161,18 @@ abstract class ShellIslandHarness {
         Bitmap.createBitmap(nav.width, nav.height, Bitmap.Config.ARGB_8888).also { nav.draw(Canvas(it)) }
     }
 
-    protected fun themeColor(attr: Int) = Color(MaterialColors.getColor(themed, attr, "test"))
+    /** The island's colour for the role [attr] names: the FLEET palette (libs:bottomnav FleetChrome), which is
+     *  what SuperApp's launcher theme resolves to and what every other app now shows too. */
+    protected fun themeColor(attr: Int): Color {
+        val p = com.diegonmarcos.superapp.bottomnav.FleetChrome.palette(themed)
+        return Color(
+            when (attr) {
+                com.google.android.material.R.attr.colorSurfaceInverse -> p.pill
+                com.google.android.material.R.attr.colorOnSurfaceInverse -> p.onPill
+                else -> p.idle
+            },
+        )
+    }
     protected val islandFill get() = Color(res.getColor(NavR.color.bottom_nav_island_fill, null))
 
     protected fun Bitmap.at(x: Float, y: Float) = Color(getPixel(x.toInt(), y.toInt()))

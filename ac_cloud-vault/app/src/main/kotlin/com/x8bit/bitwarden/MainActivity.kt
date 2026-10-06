@@ -28,6 +28,7 @@ import com.bitwarden.ui.platform.base.util.EventsEffect
 import com.bitwarden.ui.platform.theme.BitwardenTheme
 import com.bitwarden.ui.platform.util.setHorizonOSAppLayout
 import com.bitwarden.ui.platform.util.setupEdgeToEdge
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.bitwarden.ui.platform.util.validate
 import com.x8bit.bitwarden.data.autofill.accessibility.manager.AccessibilityCompletionManager
 import com.x8bit.bitwarden.data.autofill.manager.AutofillActivityManager
@@ -121,6 +122,8 @@ class MainActivity : AppCompatActivity() {
         // that handle this differently or when the activity restarts.
         AppCompatDelegate.setDefaultNightMode(settingsRepository.appTheme.osValue)
         setupEdgeToEdge(appThemeFlow = mainViewModel.stateFlow.map { it.theme })
+        // The fleet's window chrome, over the app's own bar-icon theming (which it leaves alone).
+        FleetChrome.apply(this)
         setContent {
             val navController = rememberBitwardenNavController(name = "MainActivity")
             SetupEventsEffect(navController = navController)

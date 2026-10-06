@@ -1,6 +1,6 @@
 {
   "_doc": "#868 THE nav-shape ledger. Every app's navigation is ONE declaration in build.json::ui (bottom_nav ids <= 5, sections[].pages[] with optional pages[] one strip lower, default_section) drawn by libs:bottomnav (BottomNavIsland/BottomNavIslandView for the bar, PageTabs/PageTabsView for the pill strips) and read through NavDecl. Read by 1_cicd/src/scripts/cloud-android-nav-shape-guard.py (nav-shape-guard.yml). THE BASELINE IS ALL-EXEMPT: no app has migrated yet, so every app below is exempt WITH THE REASON it is, and the guard is green today. Each migration batch removes its apps' entries in the same commit it lands, and from then on the app is held to N1-N5. Removing an entry is the only way to opt an app IN; adding one needs a reason a reviewer can disagree with.",
-  "_doc_rules": "N1 ui.bottom_nav is at most 5 ids, each a ui.sections id, and ui.default_section is one of them. N2 the app compiles libs:bottomnav (a project dependency in its gradle scripts, or build.json modules). N3 no hand-rolled nav widget in the app's sources (forbidden below), comments blanked first so prose about a widget is not the widget. N4 the app's build.gradle bakes UI_BOTTOM_NAV and UI_SECTIONS_B64, and no id literal in Kotlin (id_calls, 'page:<section>/<page>') names a section or page build.json does not declare. N5 a section with two or more pages (or a page with two or more sub-pages) is drawn by PageTabs/PageTabsView. N6 every exemption carries a reason, names a real app, and an exempt app that already passes N1-N5 is stale (it migrated: delete the exemption). N0 libs:bottomnav still ships NavDecl, PageTabs and PageTabsView.",
+  "_doc_rules": "N1 ui.bottom_nav is at most 5 ids, each a ui.sections id, and ui.default_section is one of them. N2 the app compiles libs:bottomnav (a project dependency in its gradle scripts, or build.json modules). N3 no hand-rolled nav widget in the app's sources (forbidden below), comments blanked first so prose about a widget is not the widget. N4 the app's build.gradle bakes UI_BOTTOM_NAV and UI_SECTIONS_B64, and no id literal in Kotlin (id_calls, 'page:<section>/<page>') names a section or page build.json does not declare. N5 a section with two or more pages (or a page with two or more sub-pages) is drawn by PageTabs/PageTabsView. N6 every exemption carries a reason, names a real app, and an exempt app that already passes N1-N5 is stale (it migrated: delete the exemption). N0 libs:bottomnav still ships NavDecl, PageTabs and PageTabsView. N7 (parity, #868 follow-up): the island and the strips look the SAME in every app because the look is libs:bottomnav's alone. In a held app's sources the island/strip call sites (n7.calls) pass none of n7.forbidden_args, no source assigns n7.forbidden_props on an island or strip view (n7.view_hosts), the app declares no resource named like n7.resource_names (an island colour, dimen or type of its own), and some source calls n7.chrome_call (the lib's window chrome).",
   "lib": "ab_cloud-libs-shared/libs/bottomnav",
   "lib_symbols": {
     "NavDecl.kt": "class NavDecl",
@@ -57,6 +57,15 @@
       "re": "@Composable\\s+(?:(?:private|internal|public)\\s+)?fun\\s+BottomNav\\b"
     }
   ],
+  "n7": {
+    "_doc": "N7 = nothing app-side can change how the fleet's island and tab strips look. forbidden_args: named arguments at the top level of an island/strip call. forbidden_props: properties that no longer exist on the View hosts and may not come back. resource_names: regex of res/values* names an app may not declare (island colours, dimens, typography). chrome_call: every held app's main code calls it (edge-to-edge, transparent bars: the same window as Cloud SuperApp).",
+    "calls": ["BottomNavIsland", "BottomNavHost", "PageTabs"],
+    "forbidden_args": ["colorScheme", "palette", "colors", "dimens", "typography", "textStyle", "elevation", "tonalElevation", "shadowElevation", "insets", "windowInsets", "iconSize", "labelSize", "fontSize", "fontFamily", "height", "containerColor", "contentColor", "indicatorColor", "shape", "backgroundColor"],
+    "forbidden_props": ["colorScheme", "palette", "dimens", "typography", "elevation", "insets", "iconSize", "labelSize"],
+    "view_hosts": ["BottomNavIslandView", "PageTabsView"],
+    "resource_names": "^(bottom_?nav|page_?tabs|nav_island|navbar_island|tab_strip|nav_pill)(_|$)",
+    "chrome_call": "FleetChrome.apply("
+  },
   "exempt": {
     "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",

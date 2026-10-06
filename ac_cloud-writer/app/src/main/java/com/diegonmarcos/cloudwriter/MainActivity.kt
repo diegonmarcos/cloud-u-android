@@ -138,7 +138,11 @@ import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
 import com.diegonmarcos.cloudwriter.ui.WriterTheme
 import com.diegonmarcos.cloudwriter.ui.asValue
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
@@ -214,6 +218,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         runner = WriterToolRunner(this)
         store = DocStore(ListenEngine.docsDir(this))
 
@@ -367,11 +372,16 @@ class MainActivity : AppCompatActivity() {
      * Settings); [current] is the declared section the screen is.
      */
     @Composable
-    private fun NavBar(current: String) {
+    private fun NavBar(current: String, collapse: BottomNavCollapse) {
         val entries = WriterNav.decl.bottomSections().map { s ->
             BottomNavEntry(s.id, sectionLabel(s.id, s.label), rememberVectorPainter(WriterNav.icon(s.icon)))
         }
-        BottomNavIsland(entries = entries, selectedId = current, onSelect = { e -> if (e.id != current) goSection(e.id) })
+        BottomNavIsland(
+            entries = entries,
+            selectedId = current,
+            onSelect = { e -> if (e.id != current) goSection(e.id) },
+            collapsed = collapse.collapsed,
+        )
     }
 
     /** The localized label of a declared section; the declared English one for an id with no string. */
@@ -386,6 +396,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun DocsScreen() {
+        val collapse = rememberBottomNavCollapse()
         Scaffold(
             topBar = {
                 LargeTopAppBar(
@@ -398,7 +409,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             },
-            bottomBar = { NavBar(WriterNav.DOCUMENTS) },
+            bottomBar = { NavBar(WriterNav.DOCUMENTS, collapse) },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     text = { Text(stringResource(R.string.doc_new)) },
@@ -408,7 +419,7 @@ class MainActivity : AppCompatActivity() {
             },
         ) { insets ->
             Column(
-                modifier = Modifier.fillMaxSize().padding(insets).padding(horizontal = PageGutter),
+                modifier = Modifier.fillMaxSize().padding(insets).nestedScroll(collapse).padding(horizontal = PageGutter),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
@@ -931,6 +942,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun ConfigsScreen() {
+        val collapse = rememberBottomNavCollapse()
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -942,12 +954,13 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             },
-            bottomBar = { NavBar(WriterNav.SETTINGS) },
+            bottomBar = { NavBar(WriterNav.SETTINGS, collapse) },
         ) { insets ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(insets)
+                    .nestedScroll(collapse)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = PageGutter),
                 verticalArrangement = Arrangement.spacedBy(BlockGap),
@@ -1137,11 +1150,12 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun ToolsScreen() {
+        val collapse = rememberBottomNavCollapse()
         Scaffold(
             topBar = { TopAppBar(title = { Text(stringResource(R.string.nav_tools)) }) },
-            bottomBar = { NavBar(WriterNav.TOOLS) },
+            bottomBar = { NavBar(WriterNav.TOOLS, collapse) },
         ) { insets ->
-            Column(Modifier.fillMaxSize().padding(insets)) {
+            Column(Modifier.fillMaxSize().padding(insets).nestedScroll(collapse)) {
                 val tools = listOf(
                     Page(
                         R.string.settings_screen_enhance,

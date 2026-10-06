@@ -6,6 +6,14 @@
          top is gone, so the island's visible boundary IS the edge of this fill. -->
     <color name="bottom_nav_island_fill">#FF140B26</color>
 
+    <!-- The island's pill and ink, the static Material 3 dark palette SuperApp's launcher theme
+         resolves to (colorSurfaceInverse / colorOnSurfaceInverse / colorOnSurfaceVariant); on
+         Android 12+ FleetChrome swaps in the dynamic dark palette the same attrs resolve to there.
+         The ONE declaration: no app defines an island colour of its own. -->
+    <color name="bottom_nav_pill_fill">#FFE6E0E9</color>
+    <color name="bottom_nav_pill_ink">#FF322F35</color>
+    <color name="bottom_nav_idle_ink">#FFCAC4D0</color>
+
     <!-- The glass orb: the round coin behind a top icon, declared ONCE (#534). Superapp's
          bg_liquid_glass_pill.xml (the Home hamburger and wallet orbs, and the drawer tabs)
          and cloud-mail's Home shortcut coins both resolve these, so a change to the orb's

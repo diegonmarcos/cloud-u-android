@@ -6,7 +6,7 @@
 # into it, how to avoid this when we change scales?"
 #
 # WHY IT HAPPENED, AND WHY A MARGIN IS THE WRONG ANSWER. This app OWNS the camera
-# row on purpose: ShellActivity sets LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES so
+# row on purpose: ShellActivity (through the lib's FleetChrome.apply) sets LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES so
 # the launcher status strip draws INTO the cutout instead of being letterboxed
 # below it, and activity_main.xml's DrawerLayout carries no fitsSystemWindows so
 # nothing pads that away. Both are deliberate and both must survive this fix.
@@ -34,13 +34,15 @@ KT="$APP/app/src/main/java/com/diegonmarcos/superapp"
 BUILD="$APP/build.json"
 STRIP="$KT/launcher/LauncherStatusStripView.kt"
 SHELL_ACT="$KT/ShellActivity.kt"
+# The window (SHORT_EDGES included) is libs:bottomnav's FleetChrome since the fleet shares SuperApp's chrome.
+FLEET_CHROME="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/FleetChrome.kt"
 DISPLAY="$KT/system/SystemDisplay.kt"
 LAYOUT="$APP/app/src/main/res/layout/activity_main.xml"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-for f in "$BUILD" "$STRIP" "$SHELL_ACT" "$DISPLAY" "$LAYOUT"; do
+for f in "$BUILD" "$STRIP" "$SHELL_ACT" "$DISPLAY" "$LAYOUT" "$FLEET_CHROME"; do
   [ -f "$f" ] || { echo "ERROR: missing $f" >&2; exit 2; }
 done
 
@@ -57,8 +59,8 @@ code() { sed -E 's,//.*,,' "$1" | grep -vE '^\s*(\*|/\*)'; }
 has()  { code "$1" | grep -E "$2" >/dev/null; }
 
 echo "== T1: the app still draws INTO the cutout on purpose =="
-if has "$SHELL_ACT" 'LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES'; then
-  ok "T1: SHORT_EDGES is still set — the strip's top band still owns the camera row"
+if has "$FLEET_CHROME" 'LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES' && has "$SHELL_ACT" 'FleetChrome\.apply\('; then
+  ok "T1: SHORT_EDGES is still set (FleetChrome.apply, called by ShellActivity) — the strip's top band still owns the camera row"
 else
   bad "T1: SHORT_EDGES is gone. That is the letterbox this app deliberately left behind (the strip's band is meant to flank the punch-hole); #407 asked for the clock to clear the camera, NOT for the launcher to stop reaching it"
 fi

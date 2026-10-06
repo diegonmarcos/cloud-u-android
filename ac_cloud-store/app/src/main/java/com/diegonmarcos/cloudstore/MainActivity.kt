@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.appstore.StoreDensity
@@ -37,7 +38,6 @@ import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
-import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.updater.Updater
 
@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         requested = tabFrom(intent)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -124,11 +125,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun tabFrom(i: Intent?): String? {
-        // #570 an inventory handed over by Account (Apply list to Store): the Phone page consumes it on resume.
-        i?.getStringExtra(StoreImport.EXTRA_IMPORT)?.let { StoreImport.pending = it }
-        return i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
-    }
+    private fun tabFrom(i: Intent?): String? =
+        i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
 
     companion object {
         /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE] or [TAB_MESH]. */

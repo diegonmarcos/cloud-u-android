@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
 import com.diegonmarcos.cloudwallet.profile.BusinessCardFragment
 import androidx.compose.runtime.Composable
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
@@ -25,6 +26,7 @@ class MainActivity : AppCompatActivity(), WalletHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
 
         if (savedInstanceState == null) {

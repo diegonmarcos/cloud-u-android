@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        FleetChrome.apply(this)
         // Only on a real launch. The activity is singleTask, so the intent that opened a
         // notification stays the activity's intent for good, and re-parsing it on every recreation
         // would re-navigate to that message on top of whatever the user is doing.

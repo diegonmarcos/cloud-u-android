@@ -4,17 +4,15 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
 import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
 import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
-import com.google.android.material.color.MaterialColors
 
 /**
  * Single-activity shell for Cloud Browser. Hosts [BrowserHostFragment] full-screen.
@@ -42,6 +40,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
         supportFragmentManager.addFragmentOnAttachListener { _, f ->
             if (f is BrowserHostFragment) f.onOverlaysClosed = { bottomNav.selectedId = decl.section("browser")?.id }
@@ -67,22 +66,14 @@ class MainActivity : AppCompatActivity() {
     /**
      * The island: ui.bottom_nav through [NavDecl], the icon of a section its `ic_nav_<icon>`
      * drawable. A tap on Search / Configs asks the live host to draw that page over itself; a tap
-     * on Browser closes whatever is open. The dark theme's inverse pair colours the pill.
+     * on Browser closes whatever is open. The island's look is the lib's.
      */
     private fun buildBottomNav() {
         bottomNav = ActivityCompat.requireViewById(this, R.id.bottom_nav)
-        fun attr(id: Int) = Color(MaterialColors.getColor(this, id, "CloudBrowserBottomNav"))
         bottomNav.items = decl.viewItems { icon ->
             @Suppress("DiscouragedApi")
             resources.getIdentifier("ic_nav_$icon", "drawable", packageName)
         }
-        bottomNav.colorScheme = darkColorScheme(
-            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
-            inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
-            onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
-        )
-        // The root LinearLayout (fitsSystemWindows) already pads for the system bars: the island adds none.
-        bottomNav.insets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         bottomNav.selectedId = decl.default()?.id
         bottomNav.onSelect = { id -> openSection(id) }
         bottomNav.onReselect = { id -> if (id != decl.default()?.id) openSection(id) }

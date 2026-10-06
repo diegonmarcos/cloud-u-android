@@ -9,8 +9,10 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -52,7 +54,7 @@ import com.diegonmarcos.superapp.bottomnav.R as NavR
  *
  * Renders the real [WalletBottomNav] the way WalletScreen places it (at the bottom of the
  * screen) and reads back what it draws. Expected values come from build.json::ui through
- * [NavDecl] (the one item table), [walletNavScheme] and libs:bottomnav's dimens — nothing is restated here.
+ * [NavDecl] (the one item table), libs:bottomnav (the fleet palette)'s dimens — nothing is restated here.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-xxhdpi")
@@ -95,7 +97,9 @@ class WalletBottomNavTest {
         tab = start
         compose.setContent {
             host = LocalView.current
-            Box(Modifier.fillMaxSize().testTag(ROOT)) {
+            // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system bars, so
+            // what the Compose island sees is consumed: it must clear them none a second time.
+            Box(Modifier.fillMaxSize().consumeWindowInsets(androidx.compose.foundation.layout.WindowInsets.systemBars).testTag(ROOT)) {
                 WalletBottomNav(
                     nav = nav,
                     selected = tab,
@@ -121,7 +125,7 @@ class WalletBottomNavTest {
     }
     private fun same(a: Color, b: Color) =
         maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue), abs(a.alpha - b.alpha)) <= 3f / 255f
-    private val pill get() = walletNavScheme.inverseSurface
+    private val pill get() = androidx.compose.ui.graphics.Color(com.diegonmarcos.superapp.bottomnav.FleetChrome.palette(RuntimeEnvironment.getApplication()).pill)
     private val fill get() = Color(res.getColor(NavR.color.bottom_nav_island_fill, null))
     private fun near(msg: String, expected: Float, actual: Float) =
         assertEquals("$msg: expected $expected px, measured $actual px", expected, actual, 1f)

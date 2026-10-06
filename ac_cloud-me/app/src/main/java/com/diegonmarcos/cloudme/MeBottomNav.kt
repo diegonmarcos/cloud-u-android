@@ -2,21 +2,16 @@ package com.diegonmarcos.cloudme
 
 import android.content.Context
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
-import com.google.android.material.color.MaterialColors
 
 /**
  * Cloud Me's bottom nav: libs:bottomnav's island fed from [Sections.bottom] (#531).
  *
  * The stock Material BottomNavigationView is gone; the bar is the fleet's one Compose island.
  * What stays Cloud Me's own is small: WHICH sections (the bar sections of build.json, in
- * `order`), what a tap on a launch section does (it leaves the app and the pill stays on the page
- * you are still on), the theme's inverse pair for the pill, and that DrawerLayout already
- * clears the system bars for its content. MainActivity and MeBottomNavTest both call [configure],
+ * `order`) and what a tap on a launch section does (it leaves the app and the pill stays on the
+ * page you are still on). The island's look and its system-bar clearance are the lib's. MainActivity and MeBottomNavTest both call [configure],
  * so the test measures the bar the app shows.
  *
  * [configure] takes the content host because the bar's scroll-collapse is driven from it (#673).
@@ -41,17 +36,7 @@ object MeBottomNav {
         onTarget: (String) -> Unit,
     ) {
         val ctx = nav.context
-        fun attr(id: Int) = Color(MaterialColors.getColor(ctx, id, "MeBottomNav"))
         nav.items = items(ctx)
-        nav.colorScheme = darkColorScheme(
-            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
-            inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
-            onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
-        )
-        // activity_main's DrawerLayout (fitsSystemWindows) already margins its content by the
-        // system-bar inset, and the island sits inside that content. Reading the live inset
-        // again would lift the bar twice (#477).
-        nav.insets = WindowInsets(0, 0, 0, 0)
         // #673 scroll-collapse, from the content host: scrolling a page collapses the bar to
         // icons. #532 shipped this as an island parameter and nothing in a View shell ever set
         // it, so the behaviour never reached Cloud Me at all. Required, not optional, so it

@@ -128,7 +128,8 @@ class BottomNavIslandTest {
     /** null = the island's own default insets (the live window's). */
     private var injected by mutableStateOf<WindowInsets?>(WindowInsets(0, 0, 0, 0))
     private var pill = Color.Unspecified
-    private val page = Color.White
+    // Mid grey: the pill is near-white under the dynamic palette, so a white page could not be told from it.
+    private val page = Color(0xFF808080)
     private lateinit var hostView: View
     private lateinit var list: LazyListState
 
@@ -136,7 +137,7 @@ class BottomNavIslandTest {
     private fun show(select: String?) {
         selectedId = select
         compose.setContent {
-            pill = MaterialTheme.colorScheme.inverseSurface
+            pill = FleetChrome.islandScheme().inverseSurface
             hostView = LocalView.current
             list = rememberLazyListState()
             val collapse = rememberBottomNavCollapse()
@@ -144,14 +145,9 @@ class BottomNavIslandTest {
                 LazyColumn(Modifier.fillMaxSize().nestedScroll(collapse).testTag(LIST), state = list) {
                     items(200) { Spacer(Modifier.fillMaxWidth().height(40.dp)) }
                 }
-                val insets = injected
                 val mod = Modifier.align(Alignment.BottomCenter)
                 val onSelect: (BottomNavEntry) -> Unit = { selectedId = it.id }
-                if (insets == null) {
-                    BottomNavIsland(fixtureEntries(), selectedId, onSelect, mod, collapse.collapsed)
-                } else {
-                    BottomNavIsland(fixtureEntries(), selectedId, onSelect, mod, collapse.collapsed, insets)
-                }
+                BottomNavIslandImpl(fixtureEntries(), selectedId, onSelect, mod, collapse.collapsed, injected) { Modifier }
             }
         }
         compose.waitForIdle()
@@ -372,7 +368,7 @@ class BottomNavIslandTest {
         compose.setContent {
             hostView = LocalView.current
             Box(Modifier.fillMaxSize().background(page).testTag(ROOT)) {
-                BottomNavIsland(fixtureEntries(), null, {}, Modifier.align(Alignment.BottomCenter), driven, WindowInsets(0, 0, 0, 0))
+                BottomNavIslandImpl(fixtureEntries(), null, {}, Modifier.align(Alignment.BottomCenter), driven, WindowInsets(0, 0, 0, 0)) { Modifier }
             }
         }
         compose.waitForIdle()
@@ -565,8 +561,9 @@ class BottomNavIslandTest {
         const val INNER = "test_inner"
 
         /** The declared View-interop surface: the only files allowed to touch the View toolkit
-         *  (#673's scroll-collapse driver is a ViewTreeObserver listener). Adding a file here is
+         *  (#673's scroll-collapse driver is a ViewTreeObserver listener; FleetChrome.kt is the
+         *  window chrome and the haptics, which are platform calls by nature). Adding a file here is
          *  a deliberate architectural decision, which is why it is a list and not a wildcard. */
-        val INTEROP = setOf("BottomNavIslandView.kt", "PageTabsView.kt")
+        val INTEROP = setOf("BottomNavIslandView.kt", "PageTabsView.kt", "FleetChrome.kt")
     }
 }

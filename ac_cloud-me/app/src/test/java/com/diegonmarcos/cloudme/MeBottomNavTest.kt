@@ -23,6 +23,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.google.android.material.color.MaterialColors
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
@@ -161,7 +162,7 @@ class MeBottomNavTest {
     }
     private fun same(a: Color, b: Color) =
         maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue), abs(a.alpha - b.alpha)) <= 3f / 255f
-    private val pill get() = Color(MaterialColors.getColor(themed, MR.attr.colorSurfaceInverse, "test"))
+    private val pill get() = Color(FleetChrome.palette(themed).pill)
     private val fill get() = Color(themed.resources.getColor(NavR.color.bottom_nav_island_fill, null))
 
     @Test
@@ -200,7 +201,7 @@ class MeBottomNavTest {
         val bmp = paint()
         for (s in bar) {
             val got = probe(bmp, s.id)
-            if (s.id == sel) assertTrue("${s.id} painted $got, not colorSurfaceInverse $pill", same(got, pill))
+            if (s.id == sel) assertTrue("${s.id} painted $got, not the fleet pill $pill", same(got, pill))
             else assertTrue("${s.id} painted $got, not the island fill $fill", same(got, fill))
         }
     }

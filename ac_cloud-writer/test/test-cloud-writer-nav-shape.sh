@@ -51,9 +51,9 @@ CFG = json.loads(r'''{
    "BottomNavIsland(",
    "PageTabs(",
    "WriterNav.decl",
-   "NavBar(WriterNav.DOCUMENTS)",
-   "NavBar(WriterNav.TOOLS)",
-   "NavBar(WriterNav.SETTINGS)",
+   "NavBar(WriterNav.DOCUMENTS, collapse)",
+   "NavBar(WriterNav.TOOLS, collapse)",
+   "NavBar(WriterNav.SETTINGS, collapse)",
    "TextEnhanceActivity::class.java",
    "TranslationActivity::class.java",
    "GrammarCheckActivity::class.java",
@@ -81,7 +81,7 @@ CFG = json.loads(r'''{
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
-   "NavBar(WriterNav.TOOLS)"
+   "NavBar(WriterNav.TOOLS, collapse)"
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/WriterNav.kt",

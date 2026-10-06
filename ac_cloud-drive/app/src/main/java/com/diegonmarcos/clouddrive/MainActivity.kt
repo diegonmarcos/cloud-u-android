@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -73,7 +74,7 @@ class MainActivity : ComponentActivity(), DriveActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        FleetChrome.apply(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.
             isAppearanceLightStatusBars = false

@@ -2,34 +2,26 @@
 
 package com.diegonmarcos.cloudcalc.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
-import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 
 /**
  * The shell (#868, INVERTED from #770): the fleet's bottom-nav island carries the three sections
@@ -40,27 +32,20 @@ import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 @Composable
 fun CalcShell(api: CalcApi, state: CalcState) {
     CompositionLocalProvider(LocalCalcApi provides api, LocalCalcState provides state) {
-        val collapse = rememberBottomNavCollapse()
-        val insets = bottomNavInsets()
         val entries = Declarations.nav.islandEntries { rememberVectorPainter(IconCatalog.vector(it)) }
-        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag(CalcTags.SHELL)) {
-            PageStrip(state)
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
-                    .nestedScroll(collapse),
-            ) {
-                key(state.tab) { TabContent(state.tab) }
+        // The fleet's own host: the page above the island, the scroll collapse, the inset handling.
+        BottomNavHost(
+            entries = entries,
+            selectedId = state.section,
+            onSelect = { state.showSection(it.id) },
+            modifier = Modifier.testTag(CalcTags.SHELL),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                PageStrip(state)
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    key(state.tab) { TabContent(state.tab) }
+                }
             }
-            BottomNavIsland(
-                entries = entries,
-                selectedId = state.section,
-                onSelect = { state.showSection(it.id) },
-                collapsed = collapse.collapsed,
-                insets = insets,
-            )
         }
     }
 }

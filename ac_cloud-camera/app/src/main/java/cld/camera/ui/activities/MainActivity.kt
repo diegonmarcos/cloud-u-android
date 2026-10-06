@@ -46,7 +46,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RelativeLayout
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.annotation.DrawableRes
@@ -105,8 +104,8 @@ import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.snackbar.Snackbar
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.google.android.material.color.MaterialColors
 import com.google.zxing.BarcodeFormat
 import java.io.File
 import java.util.concurrent.Executors
@@ -741,10 +740,6 @@ open class MainActivity : AppCompatActivity(),
             binding.cameraModeTabs, binding.cameraModeIsland, binding.cameraModeStrip,
             NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION),
         ) { mode -> finalizeMode(mode) }
-        modeNav.themed(
-            MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary),
-            MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnPrimary),
-        )
 
         timerView = binding.timer
         previewView.previewStreamState.observe(this) { state: StreamState ->
@@ -1022,7 +1017,7 @@ open class MainActivity : AppCompatActivity(),
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
-        enableEdgeToEdge()
+        FleetChrome.apply(this)
 
         cdTimer = binding.cTimer
         cdTimer.setMainActivity(this)

@@ -8,15 +8,15 @@ import android.view.ViewTreeObserver
 import android.widget.ScrollView
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.res.painterResource
+import androidx.core.view.WindowInsetsCompat
 
 /** One item as a View-based host declares it: a stable id, its label, and a drawable resource. */
 public data class BottomNavViewItem(val id: String, val label: String, @DrawableRes val icon: Int)
@@ -31,10 +31,12 @@ public data class BottomNavViewItem(val id: String, val label: String, @Drawable
  *    never calls back, so a shell syncing the bar to where it navigated needs no re-entry guard.
  *  - a tap on an unselected item calls [onSelect], a tap on the selected one [onReselect]. The
  *    host decides whether the pill moves, by setting [selectedId].
- *  - [insets] null = the live window's (#477). A shell that already pads its own root for the
- *    system bars passes zero, or the island would clear the bar twice.
- *  - [colorScheme] carries the host's View theme into the island's pill and ink, so a themed
- *    launcher keeps its own light capsule. null = whatever MaterialTheme is around it.
+ *  - the system-bar clearance is MEASURED, not configured (#477): the island is lifted by the live
+ *    bottom inset minus whatever room the host layout already leaves below it (a padded shell, a
+ *    fitsSystemWindows root, a bottom margin), so a host that pads for the bars and one that does
+ *    not both land the island the same distance above the gesture bar, and none lifts it twice.
+ *  - there is no colour scheme, size or inset to pass: [BottomNavIslandImpl] is the one island
+ *    every host renders, in [FleetChrome]'s colours.
  *  - [collapseOnScrollIn] drives [collapsed] from the host's own scrolling content (#673). Until
  *    it existed, [collapsed] was a property nothing in a View shell ever wrote, so #532's
  *    scroll-collapse reached the Compose hosts only.
@@ -47,8 +49,8 @@ public class BottomNavIslandView @JvmOverloads constructor(
     public var items: List<BottomNavViewItem> by mutableStateOf(emptyList())
     public var selectedId: String? by mutableStateOf(null)
     public var collapsed: Boolean by mutableStateOf(false)
-    public var insets: WindowInsets? by mutableStateOf(null)
-    public var colorScheme: ColorScheme? by mutableStateOf(null)
+    /** A test's injected clearance; null = the clearance this view measures for itself. Internal: no app sets it. */
+    internal var insetsOverride: WindowInsets? by mutableStateOf(null)
     public var itemModifier: (String) -> Modifier by mutableStateOf<(String) -> Modifier>({ Modifier })
     public var onSelect: (String) -> Unit = {}
     public var onReselect: (String) -> Unit = {}
@@ -127,6 +129,7 @@ public class BottomNavIslandView @JvmOverloads constructor(
      * few views that have scroll to report rather than on the whole tree.
      */
     private fun hookScrollables(root: View) {
+        if (root === this) return
         // A ScrollView is hooked on sight. canScrollVertically alone is a LAYOUT-dependent answer —
         // false until the view has been measured — so a page hooked at the moment it is added would
         // be missed; by type it cannot be. android.widget, so this costs no dependency, and it is
@@ -166,23 +169,48 @@ public class BottomNavIslandView @JvmOverloads constructor(
         override fun onViewDetachedFromWindow(v: View): Unit = detachCollapse()
     }
 
-    @Composable
-    override fun Content() {
-        val scheme = colorScheme
-        if (scheme == null) Island() else MaterialTheme(colorScheme = scheme) { Island() }
+    // ── the measured clearance ──────────────────────────────────────────────────────────
+
+    /** The bottom system-bar / cutout inset last dispatched to this view (0 when an ancestor consumed it). */
+    private var dispatchedBottom by mutableIntStateOf(0)
+
+    /** The room the host layout leaves between this view's bottom edge and the window's. */
+    private var roomBelow by mutableIntStateOf(0)
+
+    override fun onApplyWindowInsets(insets: android.view.WindowInsets): android.view.WindowInsets {
+        val compat = WindowInsetsCompat.toWindowInsetsCompat(insets, this)
+        val bars = compat.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+        dispatchedBottom = bars.bottom
+        return super.onApplyWindowInsets(insets)
+    }
+
+    private val measureRoom = ViewTreeObserver.OnGlobalLayoutListener {
+        val decor = rootView ?: return@OnGlobalLayoutListener
+        val at = IntArray(2)
+        getLocationInWindow(at)
+        roomBelow = (decor.height - (at[1] + height)).coerceAtLeast(0)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalLayoutListener(measureRoom)
+        // The fleet's scroll-collapse is not optional (#673): a host that never named its content gets
+        // its own parent, so the bar collapses on the same gesture in every View shell.
+        if (collapseContent == null) (parent as? ViewGroup)?.let { collapseOnScrollIn(it) }
+    }
+
+    override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalLayoutListener(measureRoom)
+        super.onDetachedFromWindow()
     }
 
     @Composable
-    private fun Island() {
+    override fun Content() {
         val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
         val tap: (BottomNavEntry) -> Unit = { if (it.id == selectedId) onReselect(it.id) else onSelect(it.id) }
         val modify = itemModifier
-        val fixed = insets
-        if (fixed == null) {
-            BottomNavIsland(entries, selectedId, tap, collapsed = collapsed, itemModifier = { modify(it.id) })
-        } else {
-            BottomNavIsland(entries, selectedId, tap, collapsed = collapsed, insets = fixed, itemModifier = { modify(it.id) })
-        }
+        val clearance = insetsOverride ?: WindowInsets(0, 0, 0, (dispatchedBottom - roomBelow).coerceAtLeast(0))
+        BottomNavIslandImpl(entries, selectedId, tap, Modifier, collapsed, clearance) { modify(it.id) }
     }
 }
 

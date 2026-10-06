@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
@@ -16,10 +15,8 @@ import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.cloudnav.places.PlacesFragment
 import com.diegonmarcos.cloudnav.routes.NavigationFragment
 import com.diegonmarcos.cloudnav.routes.RoutesFragment
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
-import com.google.android.material.color.MaterialColors
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 
 /**
  * Cloud Nav shell — minimal Google-Maps-style chrome:
@@ -42,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        FleetChrome.apply(this)
         setContentView(R.layout.activity_main)
 
         content = findViewById(R.id.content)
@@ -97,15 +94,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** The island is libs:bottomnav's, fed by NavDecl (#868). The app only says which fragment a
-     *  section opens, and lends the island the dark theme's inverse pair for its pill. */
+     *  section opens; the island's look is the lib's, the same in every app. */
     private fun buildBottomNav() {
-        fun attr(id: Int) = Color(MaterialColors.getColor(this, id, "CloudNavBottomNav"))
         bottomNav.items = NavConfig.decl.viewItems { Icons.nav(this, it) }
-        bottomNav.colorScheme = darkColorScheme(
-            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
-            inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
-            onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
-        )
         bottomNav.collapseOnScrollIn(content as ViewGroup)
         bottomNav.onSelect = { id -> if (id != currentTab) switchTo(id) }
     }

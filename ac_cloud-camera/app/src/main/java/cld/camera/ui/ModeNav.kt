@@ -2,9 +2,6 @@ package cld.camera.ui
 
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
 import cld.camera.CameraMode
 import cld.camera.R
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
@@ -67,14 +64,7 @@ class ModeNav(
     fun modeAt(index: Int): CameraMode? = available.getOrNull(index)
     fun getAllModes(): Set<CameraMode> = available.toSet()
 
-    private var pill = Color.Unspecified
-    private var onPill = Color.Unspecified
-    private var idle = Color.White
-
     init {
-        // The shell pads for the system bars with its own bottom margin (repositionTabLayout), so
-        // the island adds none of its own.
-        island.insets = WindowInsets(0, 0, 0, 0)
         island.onSelect = { id -> decl.section(id)?.let { pick(modeOfSection(it)) } }
         island.onReselect = {}
         strip.underTopChrome = false
@@ -106,34 +96,6 @@ class ModeNav(
         strip.pages = pages.map { p -> p.copy(label = labelOf(p)) }
         strip.selectedId = mode?.let { idOf(it) }
         strip.visibility = if (pages.size >= 2) View.VISIBLE else View.GONE
-    }
-
-    /** The self-illumination fade recolours the unselected / selected text (white pill-ink swap). */
-    fun setTabTextColors(unselected: Int, selectedText: Int) {
-        idle = Color(unselected)
-        onPill = Color(selectedText)
-        recolor()
-    }
-
-    fun setSelectedTabIndicatorColor(color: Int) {
-        pill = Color(color)
-        recolor()
-    }
-
-    /** The theme's own pair, before any fade has run: primary pill, on-primary ink, white idle text. */
-    fun themed(primary: Int, onPrimary: Int) {
-        pill = Color(primary)
-        onPill = Color(onPrimary)
-        recolor()
-    }
-
-    private fun recolor() {
-        if (pill == Color.Unspecified) return
-        island.colorScheme = darkColorScheme(
-            inverseSurface = pill,
-            inverseOnSurface = onPill,
-            onSurfaceVariant = idle,
-        )
     }
 
     // ── the declaration, read once ───────────────────────────────────────────────────────

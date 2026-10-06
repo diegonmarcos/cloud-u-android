@@ -5,18 +5,18 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.cloudcalc.clock.ClockEngine
 import com.diegonmarcos.cloudcalc.engine.CalcClient
 import com.diegonmarcos.cloudcalc.ui.CalcShell
 import com.diegonmarcos.cloudcalc.ui.CalcState
 import com.diegonmarcos.cloudcalc.ui.CalcTheme
 
-/** The one Activity: edge-to-edge, the island draws its own inset (the cloud-c3 shape). */
+/** The one Activity: edge-to-edge through the lib's FleetChrome, the island clears its own inset (the cloud-c3 shape). */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         val api = CalcClient(applicationContext)
         state = CalcState(getSharedPreferences(PREFS, Context.MODE_PRIVATE))
         state.show(intent?.getStringExtra(ClockEngine.EXTRA_MODE))

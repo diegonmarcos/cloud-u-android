@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
@@ -84,7 +83,6 @@ class SectionFragment : Fragment() {
     private fun newStrip(ctx: android.content.Context): PageTabsView =
         PageTabsView(ctx).apply {
             underTopChrome = false
-            insets = WindowInsets(0, 0, 0, 0)
             onSelect = { openTab(it.id) }
         }
 

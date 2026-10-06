@@ -47,7 +47,6 @@ import cld.camera.databinding.SettingsBinding
 import cld.camera.ui.activities.MainActivity
 import cld.camera.identify.IdentifyActivity
 import cld.camera.ui.activities.MoreSettings
-import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.radiobutton.MaterialRadioButton
 import java.util.Collections
@@ -97,9 +96,6 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
     private var moreSettingsButton: View
     // #798 Identify: the live viewfinder that names what it sees and hears.
     private var identifyButton: View
-
-    private val tabSelectedColor =
-        MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary)
 
     private fun getString(@StringRes id: Int) = mActivity.getString(id)
 
@@ -650,36 +646,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
                 mActivity.bottomOverlay.setBackgroundColor(color)
             }
 
-            val colorAnimation2 = ValueAnimator.ofObject(ArgbEvaluator(), Color.WHITE, Color.BLACK)
-            colorAnimation2.duration = 300
-
-            val selectedTextColor =
-                MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnPrimary)
-            val colorAnimation3 = ValueAnimator.ofObject(ArgbEvaluator(), selectedTextColor, Color.WHITE)
-            colorAnimation3.duration = 300
-
-            var currentUnselectedColor = Color.WHITE
-            colorAnimation2.addUpdateListener { animator ->
-                currentUnselectedColor = animator.animatedValue as Int
-            }
-            colorAnimation3.addUpdateListener { animator ->
-                mActivity.modeNav.setTabTextColors(
-                    currentUnselectedColor,
-                    animator.animatedValue as Int
-                )
-            }
-
-            val colorAnimation4 =
-                ValueAnimator.ofObject(ArgbEvaluator(), tabSelectedColor, Color.BLACK)
-            colorAnimation4.duration = 300
-            colorAnimation4.addUpdateListener { animator ->
-                mActivity.modeNav.setSelectedTabIndicatorColor(animator.animatedValue as Int)
-            }
-
             colorAnimation1.start()
-            colorAnimation2.start()
-            colorAnimation3.start()
-            colorAnimation4.start()
 
             setBrightness(1f)
 
@@ -697,35 +664,7 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
                 mActivity.bottomOverlay.setBackgroundColor(color)
             }
 
-            val colorAnimation2 = ValueAnimator.ofObject(ArgbEvaluator(), Color.BLACK, Color.WHITE)
-            colorAnimation2.duration = 300
-
-            val selectedTextColor =
-                MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnPrimary)
-            val colorAnimation3 = ValueAnimator.ofObject(ArgbEvaluator(), Color.WHITE, selectedTextColor)
-            colorAnimation3.duration = 300
-
-            var currentUnselectedTextColor = Color.BLACK
-            colorAnimation2.addUpdateListener { animator ->
-                currentUnselectedTextColor = animator.animatedValue as Int
-            }
-            colorAnimation3.addUpdateListener { animator ->
-                mActivity.modeNav.setTabTextColors(
-                    currentUnselectedTextColor,
-                    animator.animatedValue as Int
-                )
-            }
-
-            val colorAnimation4 = ValueAnimator.ofObject(ArgbEvaluator(), Color.BLACK, tabSelectedColor)
-            colorAnimation4.duration = 300
-            colorAnimation4.addUpdateListener { animator ->
-                mActivity.modeNav.setSelectedTabIndicatorColor(animator.animatedValue as Int)
-            }
-
             colorAnimation1.start()
-            colorAnimation2.start()
-            colorAnimation3.start()
-            colorAnimation4.start()
 
             setBrightness(WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE)
         }

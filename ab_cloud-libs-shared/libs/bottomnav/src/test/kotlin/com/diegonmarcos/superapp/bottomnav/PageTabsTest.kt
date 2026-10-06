@@ -87,8 +87,7 @@ class PageTabsTest {
         compose.setContent {
             hostView = LocalView.current
             Box(Modifier.fillMaxSize().testTag(ROOT)) {
-                PageTabs(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), onReselect = { retapped += it.id },
-                    underTopChrome = under, insets = injected)
+                PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected)
             }
         }
         compose.waitForIdle()

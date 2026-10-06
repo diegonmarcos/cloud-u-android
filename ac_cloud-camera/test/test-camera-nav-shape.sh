@@ -56,7 +56,6 @@ CFG = json.loads(r'''{
   "app/src/main/java/cld/camera/ui/activities/MainActivity.kt": [
    "ModeNav(",
    "NavDecl.fromBuildConfig",
-   "modeNav.themed",
    "finalizeMode(mode)"
   ],
   "app/src/main/java/cld/camera/ui/ModeNav.kt": [
