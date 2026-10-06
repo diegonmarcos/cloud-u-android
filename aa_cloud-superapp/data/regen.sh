@@ -89,13 +89,22 @@ regen_constellation() {
     # key set AbiUpdateTag matches Build.SUPPORTED_ABIS against for the tag —
     # two lookups keyed differently would be two rules again.
     # `asset` is left untouched: it is the fallback and the dedup key.
+    #
+    # #876: `wasm` is NOT an ABI. An app whose build.json declares a `web` block
+    # also ships its Kotlin/Wasm page, and `assets.wasm` names that release asset
+    # (web.gh_asset). The updater matches Build.SUPPORTED_ABIS against these keys,
+    # so a key that is no ABI is never picked for an install; the cloud-web portal
+    # (diegonmarcos.github.io a-Portals/cloud-web) lists exactly the rows that
+    # carry it and fetches that zip.
     local variant_assets='
-        [ (.release.variants // [])[]
+        (. as $bj
+         | [ (.release.variants // [])[]
           | . as $v
           | ($v.supported_abis // $v.abis // [$v.id])[]?
           | select(type == "string" and . != "")
           | { key: ., value: ($v.gh_asset // "") } ]
-        | map(select(.value != "")) | from_entries'
+        | map(select(.value != "")) | from_entries
+        | . + (if (($bj.web // {}).gh_asset // "") != "" then { wasm: $bj.web.gh_asset } else {} end))'
 
     # ── OUR declared version, one jq expression for all three emitters (#631) ──
     # The store's identity line must show the FLEET's version, and the only

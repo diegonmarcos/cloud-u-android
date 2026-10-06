@@ -3709,5 +3709,11 @@
         "refused"
       ]
     }
+  },
+  "web": {
+    "_doc": "#876 wasm web root (ab_cloud-libs-shared/web, module fleet-ui). `libs` lists the shared libs whose src/commonMain/kotlin is compiled to Kotlin/Wasm; a lib joins only once that directory is free of android.* (guard: cloud-android-wasm-purity-guard.py). Read by web/fleet-ui/build.gradle.kts.",
+    "libs": [
+      "ui-kit"
+    ]
   }
 }

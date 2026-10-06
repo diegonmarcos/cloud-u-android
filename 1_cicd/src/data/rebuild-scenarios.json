@@ -400,6 +400,32 @@
         "ship": 1,
         "refresh": 0
       }
+    },
+    {
+      "id": "ac_cloud-store/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-store/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudstore/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "libs/ui-kit commonMain (#876: wasm page + its static-lib consumer)",
+      "files": [
+        "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
+      ],
+      "expect": {
+        "apps": 2,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 3,
+        "refresh": 3
+      }
     }
   ]
 }

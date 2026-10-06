@@ -1,0 +1,18 @@
+[versions]
+# Kotlin matches the Android build (Kotlin 2.3.20). Compose Multiplatform 1.11.1 is the line the
+# JetBrains compatibility table pairs with Jetpack Compose 1.11.x on Kotlin 2.3.x (the plugin
+# tracks "latest CMP works with latest Kotlin"); verified by `wasmJsBrowserDistribution`.
+kotlin = "2.3.20"
+compose-multiplatform = "1.11.1"
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+
+[libraries]
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.10.0" }

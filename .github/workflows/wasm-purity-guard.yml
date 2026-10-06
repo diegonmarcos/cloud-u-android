@@ -1,0 +1,48 @@
+name: "Wasm purity guard — code that compiles to Kotlin/Wasm names no Android, and there is only ever more of it"
+
+# WHY THIS EXISTS (#876).
+# The web pages (ab_cloud-libs-shared/web -> <app>/web) compile the pure-Compose sources of
+# the shared Android libs (<lib>/src/commonMain/kotlin) to Kotlin/Wasm. The same files are
+# also compiled by the lib's Android build, so one stray `android.util.Log` in a commonMain
+# file breaks the web build only after someone ships it. This job reads those sources for
+# android.*, androidx.(activity|fragment|core|lifecycle|navigation|appcompat), java.io.File,
+# org.json, BuildConfig and R.*, and holds the amount of commonMain code to the baselines in
+# 1_cicd/src/data/wasm-migration.json: a count that goes DOWN is code that left the wasm-pure
+# surface, a count that goes UP must be written into the baseline in the same commit.
+#
+# PATH FILTER. The guard reads every lib's commonMain, every web root and the web.libs list;
+# the list lives in 1_cicd/src/data/guard-triggers.json, not here, so a new input is declared once.
+#
+# BOTH STEPS MATTER. The first proves the tree is pure; the second proves the guard would
+# have said so if it were not.
+
+on:
+  push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "*/web/**"
+      - "1_cicd/src/cicd/wasm-purity-guard.yml"
+      - "1_cicd/src/data/wasm-migration.json"
+      - "1_cicd/src/scripts/cloud-android-wasm-purity-guard.py"
+      - "1_cicd/src/scripts/test/wasm-purity-guard.test.sh"
+      - "ab_cloud-libs-shared/build.json"
+      - "ab_cloud-libs-shared/libs/*/build.gradle"
+      - "ab_cloud-libs-shared/libs/*/src/commonMain/**"
+      - "ab_cloud-libs-shared/web/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm-purity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: commonMain and the web roots name no Android, and the ratchet holds
+        run: python3 1_cicd/src/scripts/cloud-android-wasm-purity-guard.py
+      - name: The guard still fails on each way commonMain can stop being wasm-pure
+        run: bash 1_cicd/src/scripts/test/wasm-purity-guard.test.sh

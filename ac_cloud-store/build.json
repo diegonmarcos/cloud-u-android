@@ -150,9 +150,21 @@
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
     "shell": {
       "dir": "test",
+  "web": {
+    "_doc": "#876 the store as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-store-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-store-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`, then diegonmarcos.github.io is told (repository_dispatch cloud-web-refresh). portal_slug is the tile's apps/<slug>/ folder on the cloud-web portal; entry is the page inside it. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Store.wasm.zip",
+    "gh_asset": "Cloud-Store.wasm.zip",
+    "portal_slug": "cloud-store",
+    "entry": "index.html",
+    "tester": "test-store-web.sh",
+    "size_budget_mb": 20
+  },
       "requires": [
         "python3",
-        "grep"
+        "grep",
+        "jq"
       ]
     }
   },

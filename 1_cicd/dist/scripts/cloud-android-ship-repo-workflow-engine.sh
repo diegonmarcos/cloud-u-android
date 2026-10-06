@@ -175,6 +175,93 @@ for b in bad:
 sys.exit(1 if bad else 0)
 PYRENDER
 
+# ── cicd: render the wasm ship workflows (#876) ──────────────────────
+#
+# A SECOND, independent pass: an app whose build.json declares a `web` block ships a
+# Kotlin/Wasm page next to its APK, from 1_cicd/src/templates/ship-wasm.yml.in to
+# 1_cicd/src/cicd/ship-<name>-wasm.yml. It is a separate workflow because it ships
+# ALONE (a web edit must not republish an APK, an APK edit must not rebuild the
+# page), so the app's APK workflow excludes <app>/<web.dir> (see the trigger sync
+# below) and this one watches only: the web dir, the shared web root, the
+# src/commonMain of each lib ab_cloud-libs-shared/build.json::web.libs names, the
+# page's tester and its own generated file + template. Every one of those must be
+# declared in rebuild-isolation.json::explicit_inputs for the web dir, which is how
+# the isolation guard keeps a widened trigger from going unnoticed.
+#
+# REFUSES to render a `web` block missing a field, a template placeholder with no
+# value, or a web.libs entry with no src/commonMain/kotlin (a lib joins the page
+# only once its commonMain exists; cloud-android-wasm-purity-guard.py then holds it).
+log_step "render wasm ship workflows selected by build.json::web"
+python3 - "$CLOUD_ANDROID_ROOT" <<'PYWASM' || exit 1
+import glob, json, os, re, sys
+
+root = sys.argv[1]
+bad = []
+template = os.path.join(root, "1_cicd/src/templates/ship-wasm.yml.in")
+shared = json.load(open(os.path.join(root, "ab_cloud-libs-shared/build.json")))
+web_libs = (shared.get("web") or {}).get("libs") or []
+
+for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
+    config = json.load(open(build_json))
+    web = config.get("web")
+    # ab_cloud-libs-shared/build.json::web is the lib LIST of the shared web root (`libs`),
+    # not an app's page: it renders nothing.
+    if not isinstance(web, dict) or "libs" in web:
+        continue
+    app = os.path.basename(os.path.dirname(build_json))
+    if not os.path.isfile(template):
+        bad.append("%s/build.json declares web but 1_cicd/src/templates/ship-wasm.yml.in is missing" % app)
+        continue
+    missing = [k for k in ("dir", "host", "artifact", "gh_asset", "portal_slug", "entry") if not web.get(k)]
+    if not config.get("name"):
+        missing.append("name")
+    if missing:
+        bad.append("%s/build.json: web block needs %s" % (app, ", ".join(missing)))
+        continue
+    if not os.path.isdir(os.path.join(root, app, web["dir"])):
+        bad.append("%s/build.json: web.dir %r is not a directory" % (app, web["dir"]))
+        continue
+    paths = ["ab_cloud-libs-shared/web/**"]
+    for lib in web_libs:
+        if not os.path.isdir(os.path.join(root, "ab_cloud-libs-shared/libs", lib, "src/commonMain/kotlin")):
+            bad.append("ab_cloud-libs-shared/build.json: web.libs names %r, which has no src/commonMain/kotlin" % lib)
+        paths.append("ab_cloud-libs-shared/libs/%s/src/commonMain/**" % lib)
+    tests = ((config.get("tests") or {}).get("shell") or {}).get("dir")
+    if tests and web.get("tester") and os.path.isfile(os.path.join(root, app, tests, web["tester"])):
+        paths.append("%s/%s/%s" % (app, tests, web["tester"]))
+    wf = "1_cicd/src/cicd/ship-%s-wasm.yml" % config["name"]
+    paths += [wf, "1_cicd/src/templates/ship-wasm.yml.in"]
+    # What the publish gate HASHES: everything watched, as plain tree paths, plus the fleet manifest
+    # the build bakes into the page (shared manifests are hashed into what reads them, never watched).
+    hashed = ["%s/%s" % (app, web["dir"])] + [re.sub(r"/\*\*$", "", p) for p in paths] \
+             + ["aa_cloud-superapp/data/constellation-fleet.json"]
+    values = {
+        "APP_DIR": app,
+        "APP_NAME": config["name"],
+        "WEB_INPUT_PATHS": "\n".join("          %s" % p for p in sorted(set(hashed))),
+        "WEB_DIR": web["dir"],
+        "BUILD_HOST": web["host"],
+        "WASM_ASSET": web["gh_asset"],
+        "PORTAL_SLUG": web["portal_slug"],
+        "ENTRY": web["entry"],
+        "WEB_TRIGGER_PATHS": "\n".join('      - "%s"' % p for p in sorted(paths)),
+    }
+    text = open(template).read()
+    for key, value in values.items():
+        text = text.replace("@%s@" % key, value)
+    leftover = sorted(set(re.findall(r"@[A-Z_]+@", text)))
+    if leftover:
+        bad.append("ship-wasm.yml.in: template placeholders with no value: %s" % " ".join(leftover))
+        continue
+    out = os.path.join(root, wf)
+    if not os.path.exists(out) or open(out).read() != text:
+        open(out, "w").write(text)
+
+for b in bad:
+    print("  " + b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PYWASM
+
 # ── cicd: derive trigger paths from the data that declares them ─────
 #
 # on:push:paths was hand-maintained beside build.json, so it drifted silently
@@ -332,7 +419,10 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     # publish gate then sees an unmoved identity and skips every build and
     # publish step after it. That is the separate lightweight test-only
     # pipeline, obtained without a second workflow to keep in sync.
-    excluded = []
+    # #876: a build.json `web` block means <app>/<web.dir> ships by its own workflow
+    # (ship-<name>-wasm.yml), so the APK workflow must neither start on it nor hash it.
+    # cloud-android-source-identity.sh honours the same `!` entry.
+    excluded = ["!%s/%s/**" % (app, config["web"]["dir"])] if isinstance(config.get("web"), dict) and config["web"].get("dir") else []
 
     # Hand-written entries survive unless they are dead (a path a filter can
     # never match) or the workflow's own generated copy. Exclusions are derived
@@ -433,8 +523,8 @@ for (wf, name, text, lines, start, end, final, app, n_entries) in pending:
                 is_primary = lib not in engine_libs and (primary.get(lib) == app
                                                          or (lib not in primary and len(consumers.get(lib, ())) <= 1))
                 (watched if is_primary else deferred).append(e)
-            elif owned(app, name, e):
-                watched.append(e)
+            elif e.startswith("!") or owned(app, name, e):
+                watched.append(e)   # `!` = the #876 web-dir exclusion: GitHub applies it only after the positives above
             else:
                 deferred.append(e)
     block = rewrite_paths_block(lines[start + 1:end], watched, app, deferred)
