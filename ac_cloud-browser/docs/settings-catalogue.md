@@ -5,7 +5,7 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 
 | key | type | default | allowed | section | class | what it does |
 |---|---|---|---|---|---|---|
-| `search_engine_id` | enum | qwant | qwant, duckduckgo, google | general | config | Where a typed query that is not a URL goes. |
+| `search_engine_id` | enum | duckduckgo | qwant, duckduckgo, google | general | config | Where a typed query that is not a URL goes. |
 | `homepage` | string | "" |  | general | config | What an empty New tab opens. Empty = nothing (the dialog just closes). |
 | `restore_tabs_on_start` | bool | false |  | general | config | Launch into the last active tab instead of the tab grid. |
 | `desktop_mode` | bool | false |  | page | config | Desktop user agent + wide viewport for every page. |

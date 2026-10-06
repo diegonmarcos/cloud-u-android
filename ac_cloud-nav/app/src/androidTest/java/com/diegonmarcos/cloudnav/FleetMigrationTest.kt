@@ -98,14 +98,16 @@ class FleetMigrationTest {
         if (saved.length() > 0) call(FleetConfig.METHOD_IMPORT, JSONObject().put("stores", saved))
     }
 
-    @Test fun the_handshake_says_the_manifest_comes_from_the_caller() {
+    @Test fun the_handshake_says_the_manifest_comes_from_the_app_itself() {
         val h = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), FleetConfig.METHOD_HELLO, null, null)
         val r = JSONObject(h!!.getString(FleetConfig.KEY_JSON)!!)
         assertEquals(FleetConfig.CONTRACT, r.getInt(FleetConfig.KEY_CONTRACT))
-        assertEquals("caller", r.getString(FleetConfig.KEY_MANIFEST))
-        // And a call that brings no manifest is refused, not answered from a stale copy.
+        // #873 libs:fleetconfig-model bakes fleet-config.json into every app, so the app answers from
+        // its own copy; a caller's manifest (the calls above) still wins when one travels with the call.
+        assertEquals("self", r.getString(FleetConfig.KEY_MANIFEST))
+        // A call that brings no manifest is therefore answered from the app's own, not refused.
         val bare = ctx.contentResolver.call(Uri.parse("content://" + FleetConfig.authority(ctx.packageName)), FleetConfig.METHOD_EXPORT, null, null)
-        assertTrue("export without a manifest is refused", bare!!.getString(FleetConfig.KEY_ERROR)!!.startsWith("no manifest"))
+        assertFalse("export without a manifest is answered from the app's own", bare!!.getString(FleetConfig.KEY_ERROR).orEmpty().startsWith("no manifest"))
     }
 
     @Test fun a_configured_profile_survives_wipe_and_import_through_the_provider() {

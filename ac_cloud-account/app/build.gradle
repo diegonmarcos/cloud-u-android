@@ -236,6 +236,7 @@ dependencies {
     // #868 the bottom island + NavDecl: the four account tabs are ui.sections.
     implementation project(':libs:bottomnav')
     implementation project(':libs:updater')
+    implementation project(':libs:appstore')   // StoreImport: the inventory Apply-to-Store hands to Cloud Store (#570)
     implementation project(':libs:devtools')   // AppDebugServer: the /api/account/... routes
 
     implementation 'androidx.core:core-ktx:1.13.1'

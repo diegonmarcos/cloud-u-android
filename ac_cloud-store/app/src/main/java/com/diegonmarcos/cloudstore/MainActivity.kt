@@ -38,6 +38,7 @@ import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
+import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.updater.Updater
 
@@ -126,8 +127,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun tabFrom(i: Intent?): String? =
-        i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
+    private fun tabFrom(i: Intent?): String? {
+        // #570 an inventory handed over by Account (Apply list to Store): the Phone page consumes it on resume.
+        i?.getStringExtra(StoreImport.EXTRA_IMPORT)?.let { StoreImport.pending = it }
+        return i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
+    }
 
     companion object {
         /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE] or [TAB_MESH]. */

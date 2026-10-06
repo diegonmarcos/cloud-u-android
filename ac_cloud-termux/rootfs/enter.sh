@@ -128,7 +128,7 @@ fi
 # then not traversable, so a link to it would list nothing. Probe readability
 # and, when it fails, say why in one line instead of an empty listing.
 if ls /storage/emulated/0 >/dev/null 2>&1; then
-    binds="$binds -b /storage/emulated/0"
+    # The guest's /storage/emulated/0 is the sdcard bind above (same files, the fastest readable path).
     storage_link "$HOME/emulated" /storage/emulated/0
     mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
     [ ! -d /storage/emulated/0/CloudDrive ] || storage_link "$HOME/cloud-drive-shared-store" /storage/emulated/0/CloudDrive

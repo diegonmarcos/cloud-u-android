@@ -134,7 +134,7 @@ else
     done
     [ ! -e "$W/home/storage" ] && echo "ok   the upstream ~/storage tree is gone: ~/emulated is the one shared-storage entry" \
         || { echo "FAIL ~/storage is still there: a second entry for shared storage"; fail=1; }
-    sed 's|^    binds="$binds -b /storage/emulated/0"$|    :|' "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
+    sed 's|^\(\[ -z "$sdcard" \] \|\| binds="$binds -b $sdcard:/sdcard\) -b $sdcard:/storage/emulated/0"$|\1"|' "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
     if cmp -s "$STAGE/enter.sh" "$STAGE/enter-mutant.sh"; then
         echo "FAIL MUTATION DID NOT APPLY: enter.sh has no guest bind line to remove"; fail=1
     elif readable_ok "$(readable_listing "$STAGE/enter-mutant.sh")"; then

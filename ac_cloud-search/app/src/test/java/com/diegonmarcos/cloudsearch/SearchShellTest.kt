@@ -103,7 +103,13 @@ class SearchShellTest {
 
     private fun launch() = compose.setContent { SearchShell(state) }
 
-    private fun waitFor(tag: String) = compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+    // A timeout names the tag, the vertical and the subpage it was waiting on: run 37474747245 (arm64
+    // only, Release) reported nothing but "Condition still not satisfied after 60000 ms".
+    private fun waitFor(tag: String) = try {
+        compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+        throw AssertionError("no node tagged '$tag' within 60 s (vertical=${state.vertical})", e)
+    }
 
     @Test fun everyVerticalAndSubpageIsReachableAndComposes() {
         launch()

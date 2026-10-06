@@ -57,7 +57,8 @@ grep -q 'add(Step("Android system resolver (${p.label})", SYSTEM))' "$STOREDNS" 
 echo "== R3: the mesh leg says 'mesh down' from the tunnel's state =="
 grep -q '@Volatile var meshUp: (Context) -> Boolean? = { null }' "$SRC/ApkSource.kt" \
   && ok "MeshMirror.meshUp hook, unknown by default" || bad "MeshMirror has no meshUp hook"
-grep -q 'if (runCatching { meshUp(ctx) }.getOrNull() == false)' "$SRC/ApkSource.kt" \
+grep -q 'val up: Boolean? = try { meshUp(ctx) } catch (_: Exception) { null }' "$SRC/ApkSource.kt" \
+  && grep -q 'if (up == false)' "$SRC/ApkSource.kt" \
   && grep -q 'throw java.io.IOException("mesh down: ' "$SRC/ApkSource.kt" \
   && ok "a down mesh fails the leg as 'mesh down' before any lookup" \
   || bad "the mesh leg still resolves git-proxy-api.app with the mesh down"

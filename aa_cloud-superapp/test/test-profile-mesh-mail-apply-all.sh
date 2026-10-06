@@ -67,7 +67,7 @@ grep -qF '"apply": "mesh"' "$BJ" && grep -A1 -F '"apply": "mesh"' "$BJ" | grep -
 grep -A1 -F '"apply": "mail"' "$BJ" | grep -qF '"apply_all": true' && ok "mail card declares apply_all" || bad "mail card declares apply_all"
 has "$VC" 'optBoolean("apply_all", false)' "the Kotlin reads apply_all as data"
 has "$TABS" 'fun runtimeApplyAll(id: String) = "runtime:apply_all:$id"' "the button has a test tag"
-has "$TABS" 'if (section.runtime.applyAll) ActionButton(stringResource(R.string.account_apply_all), AccountTags.runtimeApplyAll(section.id)' "...drawn only for a card that declares it, as an ActionButton"
+has "$TABS" '?.runtime?.applyAll == true) ActionButton(stringResource(R.string.account_apply_all), AccountTags.runtimeApplyAll(section.id)' "...drawn only for a card that declares it, as an ActionButton"
 has "$TABS" 'm.applySection(id)' "the button calls the model"
 has "$MD" 'fun applySection(id: String): String' "the model has ONE apply-all function"
 has "$MD" 'AccountRuntime.applyAll(ctx, section, body)' "...dispatching to the runtime"

@@ -26,7 +26,7 @@ class BrowserSettingsCatalogueTest {
         assertEquals(false, cat["desktop_mode"]!!.default)
         // values_from: the engine list and its default are the app's, declared once.
         assertEquals(listOf("qwant", "duckduckgo", "google"), cat["search_engine_id"]!!.values)
-        assertEquals("qwant", cat["search_engine_id"]!!.default)
+        assertEquals("duckduckgo", cat["search_engine_id"]!!.default)
     }
 
     @Test

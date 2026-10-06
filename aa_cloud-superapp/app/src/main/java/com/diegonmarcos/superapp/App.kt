@@ -65,6 +65,13 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // delayed or dropped on some OEMs, and the first successful connect right
         // after the one-time pairing must not wait for a reboot. Cheap when
         // already connected (autoConnect short-circuits).
+        // The Shizuku-style pairing service (libs:shizuku-adb-debug-tools) ends
+        // with the channel up; the plane (pm grant list) is this app's to arm.
+        com.diegonmarcos.superapp.adbdebug.AdbPairingService.onConnected = { c ->
+            androidx.work.WorkManager.getInstance(c).enqueueUniqueWork(
+                "privileged-plane", androidx.work.ExistingWorkPolicy.REPLACE,
+                androidx.work.OneTimeWorkRequestBuilder<com.diegonmarcos.superapp.system.PrivilegedPlaneWorker>().build())
+        }
         runCatching {
             androidx.work.WorkManager.getInstance(this).enqueueUniqueWork(
                 "privileged-plane", androidx.work.ExistingWorkPolicy.KEEP,
@@ -169,6 +176,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
             networkSummary = com.diegonmarcos.superapp.network.FleetDns::resolverSummary
         }
         com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)
+        // The mesh leg's "down" is the tunnel's state, which only this app reads.
+        com.diegonmarcos.superapp.updater.source.MeshMirror.meshUp = { c -> com.diegonmarcos.superapp.network.FleetDns.meshUp(c) }
         // Capture process-start time before anything else so About →
         // Battery & Usage can report the real uptime.
         AppProcessUptime.initOnce()
