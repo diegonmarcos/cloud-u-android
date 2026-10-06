@@ -1,0 +1,31 @@
+{
+  "_doc": "Declarative device tuning the SuperApp applies through its OWN shell channel (uid 2000, the embedded adb client / libs:shizuku-adb-debug-tools ladder). Every entry is {id, title, why, apply[], verify{cmd, expect}}. The engine (app/.../system/DeviceTuning.kt) runs verify first, applies ONLY the entries whose verify output differs from expect, re-verifies, and records APPLIED / PENDING (no shell yet) / FAILED per entry. Nothing here is hardcoded in Kotlin — add an entry, ship, done. Baked into BuildConfig.DEVICE_TUNING_B64 by app/build.gradle (compact, _doc keys stripped).",
+  "_doc_phantom": "Android 12+ ships a 'phantom process killer': at most 32 child processes (forked by apps, not by zygote) may exist system-wide, and any background child using 'excessive CPU' is SIGKILLed. On this Android 14 phone that is what ends the Cloud Terminal proot sessions with '[Process completed (signal 9)]' — memory is NOT the cause. The fix Termux documents needs shell uid: disable the monitor and lift the cap. Both are persistent settings; device_config additionally needs sync disabled or Google's remote config overwrites max_phantom_processes.",
+  "entries": [
+    {
+      "id": "phantom_monitor_off",
+      "title": "Phantom monitor off",
+      "why": "Android 12+ kills background child processes (proot, sshd, tmux) on 'excessive CPU' and past 32 of them system-wide — the signal-9 behind terminal sessions dying. This turns the monitor off.",
+      "apply": [
+        "settings put global settings_enable_monitor_phantom_procs false"
+      ],
+      "verify": {
+        "cmd": "settings get global settings_enable_monitor_phantom_procs",
+        "expect": "false"
+      }
+    },
+    {
+      "id": "phantom_cap_unlimited",
+      "title": "Phantom process cap",
+      "why": "Belt and braces with the monitor switch: the system-wide cap of 32 phantom processes is lifted to MAX_INT, and device_config sync is pinned so Google's remote flags do not put the cap back.",
+      "apply": [
+        "device_config set_sync_disabled_for_tests persistent",
+        "device_config put activity_manager max_phantom_processes 2147483647"
+      ],
+      "verify": {
+        "cmd": "device_config get activity_manager max_phantom_processes",
+        "expect": "2147483647"
+      }
+    }
+  ]
+}

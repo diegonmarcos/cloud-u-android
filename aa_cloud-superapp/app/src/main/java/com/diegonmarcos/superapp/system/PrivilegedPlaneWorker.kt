@@ -42,6 +42,10 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
             if (ok) {
                 Log.i(TAG, "privileged plane up on attempt $attempt: $msg")
                 selfGrant(ctx)
+                // Data-driven device tuning (data/device-tuning.json) through the
+                // same channel: phantom-process killer off, etc. Verify-first,
+                // so the steady-state pass writes nothing.
+                DeviceTuning.run(ctx) { cmd -> EmbeddedAdbChannel.exec(ctx, cmd) }
                 return Result.success()
             }
             Log.i(TAG, "attempt $attempt/$ATTEMPTS: $msg")

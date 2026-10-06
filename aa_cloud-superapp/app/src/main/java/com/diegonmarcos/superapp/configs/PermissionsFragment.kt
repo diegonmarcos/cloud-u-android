@@ -21,6 +21,7 @@ import com.diegonmarcos.superapp.floatingnav.FloatingNavService
 import com.diegonmarcos.superapp.health.HealthConnectGateway
 import com.diegonmarcos.superapp.health.HealthMetrics
 import com.diegonmarcos.superapp.system.PermAskTracker
+import com.diegonmarcos.superapp.system.DeviceTuning
 import com.diegonmarcos.superapp.system.PrivilegedGrants
 import com.diegonmarcos.superapp.system.ScreenLocker
 import kotlinx.coroutines.launch
@@ -193,6 +194,28 @@ class PermissionsFragment : Fragment() {
                     .onFailure { Toast.makeText(ctxAny(), "Could not start pairing: ${it.message}", Toast.LENGTH_LONG).show() }
             },
             permButton(ctx, "③ Connect plane now", plane != null) { armPlane(); Toast.makeText(ctxAny(), "Connecting + self-granting in background…", Toast.LENGTH_SHORT).show() },
+        ))
+
+        // ── Device tuning ────────────────────────────────────────────────
+        // The shell-applied settings declared in data/device-tuning.json
+        // (phantom-process killer off, ...) — the rows are the declared entries,
+        // the light is the state DeviceTuning remembered from its last pass.
+        col.addView(sectionHead(ctx, "DEVICE TUNING — applied through this app's own shell (data/device-tuning.json)"))
+        val tuning = DeviceTuning.records(ctxAny()).associateBy { it.id }
+        for (e in DeviceTuning.entries()) {
+            val r = tuning[e.id]
+            val light = when (r?.state) {
+                DeviceTuning.State.APPLIED -> "✓ APPLIED"
+                DeviceTuning.State.FAILED -> "✗ FAILED"
+                else -> "◯ PENDING"
+            }
+            row(ctx, col, e.title, light + (r?.detail?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""))
+            col.addView(small(ctx, e.why))
+        }
+        col.addView(permButtonRow(ctx,
+            permButton(ctx, "Re-apply device tuning", tuning.values.all { it.state == DeviceTuning.State.APPLIED } && tuning.isNotEmpty()) {
+                armPlane(); Toast.makeText(ctxAny(), "Verifying + applying device tuning in background…", Toast.LENGTH_SHORT).show()
+            },
         ))
 
         // ── B. OPEN A SYSTEM PAGE ─────────────────────────────────────────

@@ -369,6 +369,13 @@ def svcPrivB64       = svcPrivJson.bytes.encodeBase64().toString()
 def cloudSvcFile     = file("../data/cloud_services.json")
 def cloudSvcJson     = leanJson(cloudSvcFile, "{}")
 def cloudSvcB64      = cloudSvcJson.bytes.encodeBase64().toString()
+// Device tuning (data/device-tuning.json): the shell-applied settings the
+// SuperApp keeps true on this phone (phantom-process killer off, ...). The
+// engine (system/DeviceTuning.kt) reads ONLY this blob — no command string
+// lives in Kotlin — so an entry added here ships without a code change.
+def deviceTuningFile = file("../data/device-tuning.json")
+def deviceTuningJson = leanJson(deviceTuningFile, '{"entries":[]}')
+def deviceTuningB64  = deviceTuningJson.bytes.encodeBase64().toString()
 // Constellation AppStore fleet registry — every constellation APK + its GHCR
 // image, auto-scanned from each app's own build.json by data/regen.sh. Run
 // on every build so committing a new ac_cloud-* app is enough by itself —
@@ -830,6 +837,7 @@ android {
         buildConfigField "int",    "UI_PHONE_GRID_COLUMNS",   "${phoneGridColumns}"
         buildConfigField "String", "UI_DYNAMIC_ISLAND_ACTION","\"${dynamicIslandAction}\""
         buildConfigField "String", "MESH_JSON_B64",         "\"${meshB64}\""
+        buildConfigField "String", "DEVICE_TUNING_B64",     "\"${deviceTuningB64}\""
         buildConfigField "String", "SERVICES_PUBLIC_B64",   "\"${svcPubB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64",  "\"${svcPrivB64}\""
         buildConfigField "String", "CLOUD_SERVICES_B64",    "\"${cloudSvcB64}\""
