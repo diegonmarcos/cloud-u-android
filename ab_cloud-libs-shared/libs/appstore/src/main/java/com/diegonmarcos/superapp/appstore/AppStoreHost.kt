@@ -68,6 +68,13 @@ object AppStoreHost {
     @Volatile var dnsPageExtras: Map<String, String> = emptyMap()
 
     /**
+     * The app whose launcher Activity takes [dnsPageExtras] when the DNS page
+     * lives in ANOTHER app: Cloud Store names SuperApp here, since it has no
+     * DNS page of its own. Null = [launchActivity] takes the extras.
+     */
+    @Volatile var dnsPagePackage: String? = null
+
+    /**
      * #865 Whether THIS app runs the unattended fleet pass (the periodic check,
      * the Wi-Fi trigger and the auto-update chain). Exactly one app on a phone
      * may: two passes race the same downloads and install sessions. Cloud

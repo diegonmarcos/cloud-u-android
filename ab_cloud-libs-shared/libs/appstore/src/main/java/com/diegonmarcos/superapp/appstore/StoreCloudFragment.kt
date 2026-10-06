@@ -816,15 +816,17 @@ class StoreCloudFragment : Fragment() {
         }
 
         dots[app.id] = dot; statusViews[app.id] = meta; quickBtns[app.id] = quick
-        errBoxes[app.id] = errorArea(ctx)
+        errBoxes[app.id] = errorArea(ctx, app)
         card.addView(head); card.addView(errBoxes[app.id]); card.addView(detail)
         return card
     }
 
     /** #831 The row's error area: the WHOLE reason (folded when long, tap to
-     *  expand) and, for a DNS failure, a button to the DNS page. Hidden until a
-     *  failure is painted into it by [showError]. */
-    private fun errorArea(ctx: Context) = LinearLayout(ctx).apply {
+     *  expand) and the ways out — Retry (the quick button's own next stage, which
+     *  paint() hides on a failed row), APK↗ (the direct download in the browser,
+     *  otherwise only behind the chevron) and, for a DNS failure, the DNS page.
+     *  Hidden until a failure is painted into it by [showError]. */
+    private fun errorArea(ctx: Context, app: Fleet.App) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
         visibility = View.GONE
@@ -836,8 +838,12 @@ class StoreCloudFragment : Fragment() {
             }
         }
         addView(text)
+        val retry = btn(ctx, StoreRowError.RETRY_BUTTON, cUpd) { next(ctx, app) }
+        val apk = btn(ctx, StoreRowError.APK_BUTTON, 0xFF4A4A55.toInt()) {
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(app.abiReleaseUrl.ifEmpty { app.releaseUrl }))) }
+        }.apply { visibility = if (app.releaseUrl.isNotEmpty()) View.VISIBLE else View.GONE }
         val dns = btn(ctx, StoreRowError.DNS_BUTTON, 0xFF4A4A55.toInt()) { openDnsPage(ctx) }.apply { visibility = View.GONE }
-        addView(dns, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+        addView(buttonRow(ctx, retry, apk, dns), LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(ctx, StoreDensity.S4) })
     }
 
@@ -851,19 +857,29 @@ class StoreCloudFragment : Fragment() {
             text = look.error + if (StoreRowError.foldable(look.error)) "  (tap to expand)" else ""
             maxLines = StoreRowError.FOLDED_LINES
         }
-        box.getChildAt(1).visibility =
-            if (look.dnsButton && AppStoreHost.dnsPageExtras.isNotEmpty()) View.VISIBLE else View.GONE
+        // the button row: Retry, APK↗, DNS — DNS only for a DNS failure with a page to open.
+        (box.getChildAt(1) as LinearLayout).getChildAt(2).visibility =
+            if (look.dnsButton && dnsPageIntent(box.context) != null) View.VISIBLE else View.GONE
         box.visibility = View.VISIBLE
     }
 
-    private fun openDnsPage(ctx: Context) {
-        val cls = AppStoreHost.launchActivity ?: return
-        runCatching {
-            startActivity(Intent(ctx, cls).apply {
-                AppStoreHost.dnsPageExtras.forEach { (k, v) -> putExtra(k, v) }
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            })
+    /** The Intent that opens the host's DNS page, or null when there is none to
+     *  open: [AppStoreHost.dnsPagePackage]'s launcher when the host names one
+     *  (Cloud Store → SuperApp) and it is installed, else [AppStoreHost.launchActivity]. */
+    private fun dnsPageIntent(ctx: Context): Intent? {
+        if (AppStoreHost.dnsPageExtras.isEmpty()) return null
+        val pkg = AppStoreHost.dnsPagePackage
+        val base = if (pkg != null) ctx.packageManager.getLaunchIntentForPackage(pkg)
+                   else AppStoreHost.launchActivity?.let { Intent(ctx, it) }
+        return base?.apply {
+            AppStoreHost.dnsPageExtras.forEach { (k, v) -> putExtra(k, v) }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
+    }
+
+    private fun openDnsPage(ctx: Context) {
+        val intent = dnsPageIntent(ctx) ?: return
+        runCatching { startActivity(intent) }
     }
 
     /** Everything the old always-visible card carried, now behind the chevron. */

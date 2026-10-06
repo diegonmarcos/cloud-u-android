@@ -12,13 +12,17 @@ import com.diegonmarcos.superapp.updater.source.DownloadFailure
  *    word, never the reason, so nothing is cut mid-sentence;
  *  · the full reason goes in the row's own error area, under the row, folded to
  *    [FOLDED_LINES] when long and expanded on tap — never truncated for good;
- *  · a DNS failure offers the DNS page as a BUTTON (#639), not as instructions.
+ *  · a DNS failure offers the DNS page as a BUTTON (#639), not as instructions;
+ *  · a failed row keeps its ways out IN the error area — Retry and the direct
+ *    APK link — since the quick button is hidden on a failed row.
  */
 object StoreRowError {
     const val GLYPH = "⚠"
     const val META = "failed — reason below"
     const val FOLDED_LINES = 3
     const val DNS_BUTTON = "Open DNS page"
+    const val RETRY_BUTTON = "↻ Retry"
+    const val APK_BUTTON = "APK↗"
 
     data class Look(val glyph: String, val meta: String, val error: String, val dnsButton: Boolean)
 

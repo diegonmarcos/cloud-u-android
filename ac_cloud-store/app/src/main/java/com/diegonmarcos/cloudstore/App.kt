@@ -28,8 +28,10 @@ class App : Application() {
             notificationIcon = R.drawable.ic_stat_notify
             launchExtras = mapOf(MainActivity.EXTRA_TAB to MainActivity.TAB_CLOUD)
             // No DNS page of its own: a row that fails on name resolution
-            // shows the error without the "open DNS settings" button.
-            dnsPageExtras = emptyMap()
+            // offers SuperApp's DNS page (the same extras SuperApp's App.kt
+            // puts on its launcher), when SuperApp is installed.
+            dnsPagePackage = "com.diegonmarcos.superapp"
+            dnsPageExtras = mapOf("shortcut_action" to "page:config/dns")
             runsFleetPass = { true }
             com.diegonmarcos.superapp.updater.UpdaterHost.apply {
                 // #894 the pass summary and result alerts open Cloud Store itself, on the fleet tab.
