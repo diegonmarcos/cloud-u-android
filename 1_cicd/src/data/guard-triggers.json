@@ -151,7 +151,6 @@
         "1_cicd/src/scripts/cloud_android_workflow_paths.py",
         "1_cicd/src/scripts/test/test-workflow-header-fence.test.sh"
       ]
-    }
     },
     "wasm-purity-guard.yml": {
       "_doc": "#876: reads every lib's src/commonMain and every web root's Kotlin, the web.libs list, each commonMain lib's build.gradle, and its own data file.",
@@ -165,5 +164,6 @@
         "ab_cloud-libs-shared/libs/*/src/commonMain/**",
         "ab_cloud-libs-shared/web/**"
       ]
+    }
   }
 }

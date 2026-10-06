@@ -68,7 +68,7 @@ jobs:
           ac_cloud-store/test/test-store-web.sh
           ac_cloud-store/web
           EOF
-          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "" --asset "Cloud-Store.wasm.zip" --paths-from "$inputs"
+          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$APP_DIR" "" --asset "Cloud-Store.wasm.zip" --paths-from "$inputs"
 
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
@@ -162,7 +162,7 @@ jobs:
           ac_cloud-store/test/test-store-web.sh
           ac_cloud-store/web
           EOF
-          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "" --asset "Cloud-Store.wasm.zip" --paths-from "$inputs"
+          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$APP_DIR" "" --asset "Cloud-Store.wasm.zip" --paths-from "$inputs"
 
       - name: Tell the portal (repository_dispatch cloud-web-refresh)
         if: steps.gate.outputs.skip != 'true'

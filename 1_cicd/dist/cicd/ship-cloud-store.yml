@@ -56,8 +56,8 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/appstore/**"
       - "ac_cloud-store/**"
-permissions:
       - "!ac_cloud-store/web/**"
+permissions:
   contents: write
   packages: write
 

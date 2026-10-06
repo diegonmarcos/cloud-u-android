@@ -58,7 +58,7 @@ jobs:
           cat > "$inputs" <<'EOF'
 @WEB_INPUT_PATHS@
           EOF
-          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "" --asset "@WASM_ASSET@" --paths-from "$inputs"
+          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$APP_DIR" "" --asset "@WASM_ASSET@" --paths-from "$inputs"
 
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
@@ -131,7 +131,7 @@ jobs:
           cat > "$inputs" <<'EOF'
 @WEB_INPUT_PATHS@
           EOF
-          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "" --asset "@WASM_ASSET@" --paths-from "$inputs"
+          sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$APP_DIR" "" --asset "@WASM_ASSET@" --paths-from "$inputs"
 
       - name: Tell the portal (repository_dispatch cloud-web-refresh)
         if: steps.gate.outputs.skip != 'true'
