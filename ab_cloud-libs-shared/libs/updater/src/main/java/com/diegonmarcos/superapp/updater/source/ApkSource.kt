@@ -243,6 +243,10 @@ object MeshMirror {
     /** The mirror origins, in order; a local stub in tests. */
     @Volatile var bases: List<String> = listOf(BASE, BASE_WG)
 
+    /** Whether the wg0 tunnel is up, from the host that owns it (SuperApp:
+     *  FleetDns.meshUp). null = not known here, and the leg is tried as before. */
+    @Volatile var meshUp: (Context) -> Boolean? = { null }
+
     private val RELEASE_DOWNLOAD =
         Regex("^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/?#]+)$")
 
@@ -291,6 +295,12 @@ object MeshMirror {
     /** The leg itself; [MeshMirrorSource] is only its place in Fleet's list. */
     fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? {
         if (app.releaseUrl.isBlank()) return null
+        // Both origins live on wg0 and the declared name resolves only through
+        // the fleet resolver the tunnel carries, so with the mesh down this leg
+        // cannot answer and the row must say THAT — not "cannot resolve
+        // git-proxy-api.app (active resolver: unknown)".
+        if (runCatching { meshUp(ctx) }.getOrNull() == false)
+            throw java.io.IOException("mesh down: ${bases.joinToString(", ")} need the wg0 tunnel")
         // Digest FIRST, and it also picks the origin: the first base whose
         // sidecar answers is the one the bytes come from. Without a digest the
         // bytes could not be trusted, so they are not worth fetching.

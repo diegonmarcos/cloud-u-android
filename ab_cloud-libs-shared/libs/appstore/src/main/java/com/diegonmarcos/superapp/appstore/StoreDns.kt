@@ -152,7 +152,12 @@ object StoreDns {
         Thread({ install(app) }, "store-dns-install").start()
         DownloadFailure.activeResolver = {
             val net = runCatching { networkSummary(app) }.getOrNull()
-            lastFailure?.let { "tried $it" + (net?.let { n -> "; network: $n" } ?: "") } ?: net
+            // No route walked = the lookup went DIRECT to the system resolver,
+            // so NAME it as the plan does. Falling back to the network summary
+            // alone read "unknown" on a Mirror phone whose DNS page answered.
+            val used = lastFailure?.let { "tried $it" }
+                ?: runCatching { plan(presetOf(app), emptyList()).first().label }.getOrDefault("Android system resolver")
+            used + (net?.let { n -> "; network: $n" } ?: "")
         }
     }
 

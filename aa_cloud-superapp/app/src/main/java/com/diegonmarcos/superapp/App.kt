@@ -165,6 +165,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
             networkSummary = com.diegonmarcos.superapp.network.FleetDns::resolverSummary
         }
         com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)
+        // The mesh leg's "down" is the tunnel's state, which only this app reads.
+        com.diegonmarcos.superapp.updater.source.MeshMirror.meshUp = { c -> com.diegonmarcos.superapp.network.FleetDns.meshUp(c) }
         // Capture process-start time before anything else so About →
         // Battery & Usage can report the real uptime.
         AppProcessUptime.initOnce()
