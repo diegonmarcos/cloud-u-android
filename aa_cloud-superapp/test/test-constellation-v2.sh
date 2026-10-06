@@ -47,9 +47,10 @@ echo "== T5: update notification deep-links to Store ▸ Cloud Constellation (no
 # #563: the target is the store's fleet tab; test-store-identity.sh proves
 # that tab id is the one build.json declares.
 has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" '"shortcut_action" to "page:config/store-cloud"' "host supplies shortcut_action deep-link"
-# #777: the worker no longer posts its own notification — it raises a fleet
-# alert (FleetAlerts) whose deep link is the host's shortcut_action.
-has "$CFG/ConstellationWorker.kt" 'AppStoreHost.launchExtras["shortcut_action"]' "alert deep-links through the host launch extras"
+# #777/#894: the worker posts no alert of its own; the pass raises ONE summary
+# fleet alert (PassLedger) whose deep link is the host's (UpdaterHost.alertLink).
+has "$UPD/PassLedger.kt" 'deepLink = UpdaterHost.alertLink' "the pass summary deep-links through the host's alertLink"
+grep -q 'FleetAlerts.raise' "$CFG/ConstellationWorker.kt" && bad "the worker raises an alert of its own again" || ok "the worker raises no alert of its own"
 grep -q '"open_action"' "$CFG/ConstellationWorker.kt" && bad "old open_action extra still present" || ok "old dead open_action extra removed"
 
 echo
