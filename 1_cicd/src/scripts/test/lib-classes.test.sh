@@ -20,6 +20,11 @@ for f in "$GUARD" "$ROOT/$DATA" "$ROOT/$WRITER_BJ"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 export PYTHONDONTWRITEBYTECODE=1
+# The L4 expectations are written against the baseline the data file holds
+# TODAY, never a number: the baseline moves with every engine migration and
+# every honest "+N" the owner records, and a literal here went stale the
+# first time it did (27 -> 29 on 2026-10-06 left this test red on main).
+BASELINE="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['backlog_baseline'])" "$ROOT/$DATA")"
 
 FAILURES=0
 ok()   { printf 'ok     %s\n' "$1"; }
@@ -66,9 +71,9 @@ mutate "the mesh outgrows its budget"           "$DATA" "$(J "d['libs']['devtool
     "L3 devtools:"
 mutate "an app newly compiles in a logic lib"   "$WRITER_BJ" \
     "$(J "d['modules']['libs:webserver']={'dir':'../ab_cloud-libs-shared/libs/webserver'}")" \
-    "L4 backlog 28 > baseline 27"
+    "L4 backlog $((BASELINE + 1)) > baseline $BASELINE"
 mutate "a migration lands without lowering the baseline" "$DATA" "$(J "d['backlog_baseline']+=1")" \
-    "L4 backlog 27 < baseline 28"
+    "L4 backlog $BASELINE < baseline $((BASELINE + 1))"
 
 echo
 [ "$FAILURES" -eq 0 ] && echo "lib-classes.test: OK" || { echo "lib-classes.test: $FAILURES FAILED"; exit 1; }
