@@ -10,6 +10,16 @@
     "db_engine": null
   },
   {
+    "name": "jev-sidecar",
+    "service": "jev-sidecar",
+    "vm": "oci-A1-f_0",
+    "private_dns": "jev-sidecar.app:3110",
+    "port": 3110,
+    "protocol": "http",
+    "category": "tools",
+    "db_engine": null
+  },
+  {
     "name": "cloud-vault-mcp",
     "service": "cloud-vault-mcp",
     "vm": "oci-A1-f_0",
