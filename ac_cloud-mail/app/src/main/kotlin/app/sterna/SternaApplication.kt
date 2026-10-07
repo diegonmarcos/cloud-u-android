@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import app.sterna.core.data.DataFactory
 import app.sterna.core.data.account.AccountStore
+import app.sterna.core.data.account.VaultMailImport
 import app.sterna.core.data.mail.BodyCachePurge
 import app.sterna.core.data.mail.LocalDraftScheduler
 import app.sterna.core.data.mail.MailRepository
@@ -231,6 +232,9 @@ class SternaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // The vault's mail section, when the fleet config contract left it in the account prefs
+        // (the migration / Fleet Setup restarted us for it): accounts in, keys out, once.
+        VaultMailImport.run(this, container.accountStore)
         // Arm the periodic self-update check. Idempotent, and it CANCELS itself when
         // the Auto-update toggle is off, so this one call is both the arm and the
         // disarm - there is no second place that has to remember to stop it.

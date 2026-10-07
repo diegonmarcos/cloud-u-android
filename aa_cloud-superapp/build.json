@@ -6957,6 +6957,15 @@
               "vault_profile": ["about", "profile"],
               "vault_addresses": ["about", "addresses"]
             }
+          },
+          {
+            "_doc": "#mail cloud-mail's accounts, from the declared profile: Account reads `settings › mail › sterna_account › vault_mail` as the vault's whole `mail` section (accounts, passwords, endpoints) as JSON text, and `vault_owner` as about.profile.email, the address that names the domain and the account made current (the same rules as VaultCockpit.mailAccounts / mailEndpoints / ownerEmail), so the new-phone migration and Fleet Setup import them over the #783 FleetConfig contract into the mail app's secret-class keys. On start the mail app (core/data VaultMailImport) adds every declared account through AccountStore.add — each password encrypted into its own pw_<id> slot by that API — makes the owner's current and REMOVES both keys: the section is in transit, never kept.",
+            "store": "sterna_account",
+            "apps": ["mail"],
+            "keys": {
+              "vault_mail": ["mail"],
+              "vault_owner": ["about", "profile", "email"]
+            }
           }
         ],
         "_doc_vault_fields": "#781 THE FIELD MAP: every field Profiles shows (ui.profile.infos.schema, `section › field`) → the app(s) that use it at runtime (`apps`, cockpit section ids) and whether those apps HOLD it live (`held`: Runtime reads it and Drift compares it) or only take it as input when applying (`held` false). A field no phone app uses has `apps` [] and a `why`, so Profiles and Runtime never disagree about what exists. test-account-vault-fields.sh holds this map EQUAL to the schema (both ways), every app id to a declared section, every held field's section to its app's `vault`, and every item of the cloud-vault sources beside it to a schema field. AccountRuntime counts each app's declared / reported / missing from it.",

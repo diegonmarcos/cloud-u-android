@@ -175,4 +175,35 @@ class AccountFleetTest {
         val none = AccountFleet.derive(JSONObject().put("about", JSONObject().put("addresses", JSONArray())), a) { 1 }!!
         assertFalse(none.has("settings"))
     }
+
+    @Test fun `mail the vault's mail section travels as JSON into cloud-mail's secret keys, and a pending mail becomes declared`() {
+        val a = VaultCockpit.layout.derivedSettings.firstOrNull { it.store == "sterna_account" }
+            ?: error("cockpit derived_settings declares no sterna_account block")
+        assertEquals(listOf("mail"), a.apps)
+        assertEquals(listOf("mail"), a.env["vault_mail"])
+        assertEquals(listOf("about", "profile", "email"), a.env["vault_owner"])
+        val app = m.apps.getValue("mail")
+        val store = m.storeOfFile(app.pkg, a.store) ?: error("${a.store} is not a store of mail")
+        for (k in a.env.keys) {
+            assertTrue("mail › $k migrates", m.migratesKey(store, k, "mail"))
+            assertTrue("mail › $k is masked", AccountFleet.isSecret(m, "settings${S}mail$S${a.store}$S$k"))
+        }
+        assertFalse("pw_<id> slots never migrate", m.migratesKey(store, "pw_x", "mail"))
+        val mail = JSONObject()
+            .put("accounts", JSONObject().put("yo", JSONObject().put("name", "yo").put("pass_env", "YO_PASSWORD")))
+            .put("passwords", JSONObject().put("YO_PASSWORD", "s3cret"))
+            .put("endpoints", JSONObject().put("domain", "jmap.example.test"))
+        val server = JSONObject().put("mail", mail)
+            .put("about", JSONObject().put("profile", JSONObject().put("email", "me@example.test")))
+            .put("settings", JSONObject().put("mail", JSONObject().put("pending", true)))
+        val d = VaultCockpit.layout.derivations.fold(server as JSONObject?) { b, x -> AccountFleet.derive(b, x) { 7 } }!!
+        val sub = d.getJSONObject("settings").getJSONObject("mail")
+        // The pending subtree became a declared one, at the app's schema, holding the section's text.
+        assertFalse(sub.has("pending"))
+        assertEquals(7, sub.getInt(AccountFleet.SCHEMA))
+        val st = sub.getJSONObject(a.store)
+        assertEquals(mail.toString(), st.getString("vault_mail"))
+        assertEquals("me@example.test", st.getString("vault_owner"))
+        assertEquals("jmap.example.test", JSONObject(st.getString("vault_mail")).getJSONObject("endpoints").getString("domain"))
+    }
 }
