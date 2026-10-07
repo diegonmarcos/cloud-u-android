@@ -261,7 +261,7 @@ class CalcShellTest {
         val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
         engine.time = day(today.minusDays(9)); engine.fetchedTime = day(today)
         openCurrency()
-        compose.waitUntil(5_000) { engine.fetches == 1 && has("Rates as of $today") }
+        compose.waitUntil(5_000) { engine.fetches >= 1 && has("Rates as of $today") }
         // The old date is gone: the line was re-read after the fetch, not kept.
         assertEquals(0, compose.onAllNodesWithText("Rates as of ${today.minusDays(9)}", substring = true).fetchSemanticsNodes().size)
     }

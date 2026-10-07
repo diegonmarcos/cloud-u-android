@@ -40,8 +40,9 @@ object Fx {
 
     /** Fetch when the rates are stale; the fetch's answer, or null when nothing was due. */
     fun refreshIfStale(api: CalcApi, nowMs: Long): String? {
-        if (!shouldRefresh(time(api.ratesInfo()), nowMs)) return null
-        return refresh(api, nowMs)
+        // One caller wins the attempt (the pager may compose two converters at once).
+        val due = synchronized(this) { shouldRefresh(time(api.ratesInfo()), nowMs).also { if (it) lastAttemptMs = nowMs } }
+        return if (due) api.fetchRates() else null
     }
 
     /** Fetch now (the daily job, the button): the engine replaces its files only on success. */
