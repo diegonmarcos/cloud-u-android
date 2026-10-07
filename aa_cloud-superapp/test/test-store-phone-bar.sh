@@ -111,12 +111,13 @@ if sorted(installs) == ["ExternalInstall.run(", "Fleet.installAll("] and "plan.o
     ok("the import installs only through Fleet.installAll (plan.ours) and ExternalInstall (plan.direct)")
 else: bad("the import reaches install paths %s" % installs)
 
-print("== T5: the Declared / Installed filter (#619) ==")
-# The toggle exists as two pills, wired to the two i18n'd labels.
+print("== T5: the Declared / Installed filter (#619, #896: the page's top tabs) ==")
+# #896 Installed | Declared are the page's TOP TABS, drawn by the Cloud page's own strip builder
+# (StoreTabs.bar) from the two i18n'd labels; the old pill toggle is gone.
 if 'R.string.store_phone_filter_declared' in phone and 'R.string.store_phone_filter_installed' in phone \
-        and re.search(r"private fun filterToggle\(", phone):
-    ok("Phone Apps draws a Declared / Installed toggle from two string resources")
-else: bad("Phone Apps has no Declared / Installed toggle")
+        and "StoreTabs.bar(" in phone and not re.search(r"private fun filterToggle\(", phone):
+    ok("Phone Apps draws Installed | Declared as its top tabs (StoreTabs.bar) from two string resources")
+else: bad("Phone Apps has no Declared / Installed top tabs")
 # DECLARED is the default — this is the mode Profile ▸ Store deep-links into,
 # and the full set on a fresh phone.
 if re.search(r"private var installedOnly\s*=\s*false", phone):

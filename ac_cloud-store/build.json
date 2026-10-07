@@ -200,11 +200,12 @@
     "shortcut_action": "page:config/dns"
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The four Store pages are sections without sub-pages; MainActivity hosts each page's own screen.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. #896: the island holds five (libs:bottomnav MAX_BOTTOM, nav-shape N1), so it is Cloud, Phone, Feed, Perms, Settings. Phone's first child pages are Installed and Declared and Feed's are Commits and CI-CD (ids = appstore-feeds.json feed ids): MainActivity draws them with PageTabs and StorePages tells the page below which is open, while an embedding host without a strip (SuperApp's Store) gets the same pages drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and the Apps Mesh page, which is declared but off the island: it is one chip on the Cloud page. Perms was the Cloud page's last tab; Commits and CI-CD were its feed chips.",
     "bottom_nav": [
       "cloud",
       "phone",
-      "mesh",
+      "feed",
+      "perms",
       "settings"
     ],
     "sections": [
@@ -218,6 +219,36 @@
         "id": "phone",
         "label": "Phone",
         "icon": "phone",
+        "pages": [
+          {
+            "id": "installed",
+            "label": "Installed"
+          },
+          {
+            "id": "declared",
+            "label": "Declared"
+          }
+        ]
+      },
+      {
+        "id": "feed",
+        "label": "Feed",
+        "icon": "feed",
+        "pages": [
+          {
+            "id": "commits",
+            "label": "Commits"
+          },
+          {
+            "id": "cicd",
+            "label": "CI-CD"
+          }
+        ]
+      },
+      {
+        "id": "perms",
+        "label": "Perms",
+        "icon": "perms",
         "pages": []
       },
       {

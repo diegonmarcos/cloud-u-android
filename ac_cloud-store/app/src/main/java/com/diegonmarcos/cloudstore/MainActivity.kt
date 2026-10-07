@@ -15,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -26,12 +27,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.appstore.StoreDensity
 import androidx.appcompat.app.AppCompatActivity
@@ -39,6 +43,9 @@ import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
+import com.diegonmarcos.superapp.appstore.StoreFeedFragment
+import com.diegonmarcos.superapp.appstore.StorePages
+import com.diegonmarcos.superapp.appstore.StorePermsFragment
 import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.updater.Updater
@@ -60,6 +67,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
+        // #896 this host draws the child-page strips (build.json::ui sections[].pages) with libs:bottomnav's PageTabs.
+        StorePages.hostDrawsStrip = true
         requested = tabFrom(intent)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -94,13 +103,29 @@ class MainActivity : AppCompatActivity() {
                 selectedId = selected,
                 onSelect = { selected = it.id },
             ) {
-            Box(Modifier.fillMaxSize()) {
+            val section = NAV.section(selected)
+            Column(Modifier.fillMaxSize()) {
+                // A section with child pages gets the fleet's strip (Phone: Installed | Declared, Feed:
+                // Commits | CI-CD); the page below reads the choice from StorePages.
+                if (section != null && section.pages.size > 1) {
+                    val ids = section.pages.map { it.id }
+                    var page by remember(section.id) {
+                        mutableStateOf(StorePages.page(section.id, StorePages.defaultPage(section.id, ids)))
+                    }
+                    androidx.compose.runtime.LaunchedEffect(section.id, page) { StorePages.select(section.id, page) }
+                    PageTabs(section.pages, page, onSelect = { page = it.id }, underTopChrome = false)
+                }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = Modifier.fillMaxSize()
                 val hidden = Modifier.size(0.dp)
                 AndroidFragment<StoreCloudFragment>(if (selected == TAB_CLOUD) shown else hidden)
                 AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE) shown else hidden)
+                // Feed and Perms are composed only while shown: the feeds read GitHub on open, and a hidden page should not.
+                if (selected == TAB_FEED) AndroidFragment<StoreFeedFragment>(shown)
+                if (selected == TAB_PERMS) AndroidFragment<StorePermsFragment>(shown)
                 AndroidFragment<AppsMeshFragment>(if (selected == TAB_MESH) shown else hidden)
                 if (selected == TAB_SETTINGS) SettingsPage()
+            }
             }
             }
         }
@@ -144,11 +169,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE] or [TAB_MESH]. */
+        /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE], [TAB_FEED], [TAB_PERMS] or [TAB_MESH]. */
         const val EXTRA_TAB = "tab"
         private const val REQ_NOTIFICATIONS = 894
         const val TAB_CLOUD = "cloud"
         const val TAB_PHONE = "phone"
+        const val TAB_FEED  = "feed"
+        const val TAB_PERMS = "perms"
+        /** Apps Mesh: a declared section, but off the island (the island holds five) - reached from the Cloud page. */
         const val TAB_MESH  = "mesh"
         const val TAB_SETTINGS = "settings"
         /** build.json::ui as baked into BuildConfig: the island's items and the section ids. */
@@ -161,6 +189,8 @@ class MainActivity : AppCompatActivity() {
             "cloud" -> Icons.Filled.Cloud
             "phone" -> Icons.Filled.PhoneAndroid
             "mesh" -> Icons.Filled.Hub
+            "feed" -> Icons.Filled.RssFeed
+            "perms" -> Icons.Filled.Security
             else -> Icons.Filled.Settings
         }
     }

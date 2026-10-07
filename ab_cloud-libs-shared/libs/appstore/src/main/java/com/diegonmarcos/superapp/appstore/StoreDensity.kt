@@ -16,9 +16,9 @@ import kotlin.math.roundToInt
  */
 object StoreDensity {
     /** Every dp value of the Store is multiplied by this (1.0 = the old, launcher-sized look). */
-    const val SCALE = 0.8f
+    const val SCALE = 0.7f
     /** Every sp value of the Store is multiplied by this. */
-    const val TEXT_SCALE = 0.85f
+    const val TEXT_SCALE = 0.78f
 
     // Spacing steps (dp, before SCALE): the six-step set every old pad collapses into.
     const val S1 = 1
@@ -33,6 +33,9 @@ object StoreDensity {
     const val SHEET = 380
     /** A tab's / control's touch height; the tap target stays usable. */
     const val TAP = 36
+    /** #896 the floor of every tappable control, in REAL dp (never multiplied by [SCALE]):
+     *  the density work shrinks type, padding and rows, not what a finger has to hit. */
+    const val MIN_TAP_DP = 40
 
     // Type ramp (sp, before TEXT_SCALE).
     const val T_MICRO = 10f * TEXT_SCALE
@@ -45,6 +48,9 @@ object StoreDensity {
     /** [step] dp (one of the steps / sizes above) in pixels, scaled once. */
     fun dp(ctx: Context, step: Int): Int =
         (step * SCALE * ctx.resources.displayMetrics.density).roundToInt().coerceAtLeast(1)
+
+    /** [MIN_TAP_DP] in pixels: set as `minHeight` on every tab, chip, page and action button. */
+    fun minTap(ctx: Context): Int = (MIN_TAP_DP * ctx.resources.displayMetrics.density).roundToInt()
 
     /** The same, for Compose (dp as a plain number). */
     fun dpValue(step: Int): Float = step * SCALE

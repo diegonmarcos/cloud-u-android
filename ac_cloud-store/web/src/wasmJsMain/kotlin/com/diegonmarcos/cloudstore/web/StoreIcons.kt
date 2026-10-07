@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
 /**
- * The glyphs of the store's four sections (ui.sections[].icon in ac_cloud-store/build.json), drawn
+ * The glyphs of the store's sections (ui.sections[].icon in ac_cloud-store/build.json), drawn
  * as plain path data so the page needs no icon artifact. The Android shell maps the same names to
- * Material icons (Cloud, PhoneAndroid, Hub, Settings); the shapes here are the same idea, not a
+ * Material icons (Cloud, PhoneAndroid, RssFeed, Security, Hub, Settings); the shapes here are the same idea, not a
  * pixel copy.
  */
 internal object StoreIcons {
@@ -33,6 +33,15 @@ internal object StoreIcons {
             "M20,19a2,2 0 1,1 -4,0a2,2 0 1,1 4,0zM11.4,6h1.2v3h-1.2zM6.4,16.6l2.6,-2.6l0.8,0.8l-2.6,2.6z" +
             "M17.6,16.6l-0.8,0.8l-2.6,-2.6l0.8,-0.8z",
     )
+    private val feed = glyph(
+        "feed",
+        "M6.18,17.82a2.18,2.18 0 1,1 -4.36,0a2.18,2.18 0 1,1 4.36,0zM4,4.44v2.83c7.03,0 12.73,5.7 12.73,12.73h2.83C19.56,11.27 12.73,4.44 4,4.44z" +
+            "M4,10.1v2.83c3.9,0 7.07,3.17 7.07,7.07h2.83c0,-5.47 -4.43,-9.9 -9.9,-9.9z",
+    )
+    private val perms = glyph(
+        "perms",
+        "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4zM12,11.99h7c-0.53,4.12 -3.28,7.79 -7,8.94V12H5V6.3l7,-3.11v8.8z",
+    )
     private val settings = glyph(
         "settings",
         "M19,12a7,7 0 1,1 -14,0a7,7 0 1,1 14,0zM15.5,12a3.5,3.5 0 1,0 -7,0a3.5,3.5 0 1,0 7,0z" +
@@ -43,6 +52,8 @@ internal object StoreIcons {
         "cloud" -> cloud
         "phone" -> phone
         "mesh" -> mesh
+        "feed" -> feed
+        "perms" -> perms
         else -> settings
     }
 }

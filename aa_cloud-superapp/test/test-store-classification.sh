@@ -241,8 +241,10 @@ else:
     #     so a test can hand it a feed list it invented.
     #     #732: each feed tab is the feed's own label dressed by its page
     #     declaration, so the strip maps the declared feeds, in order.
-    if "feeds.map { controls.page(it.id, it.label) }" in cloud: ok("the tab strip maps the declared feeds, each by its own label")
-    else: bad("StoreCloudFragment does not build its feed tabs from the declared feeds")
+    #     #896 the feeds are the Feed page's top tabs now (StoreFeedFragment), not Cloud chips.
+    feedfrag = open(os.path.join(store_dir, "StoreFeedFragment.kt")).read() if os.path.exists(os.path.join(store_dir, "StoreFeedFragment.kt")) else ""
+    if "feeds.map { StoreControls.Control(it.label" in feedfrag and "feeds.map" not in cloud: ok("the Feed page's tab strip maps the declared feeds, each by its own label, and the Cloud page draws none")
+    else: bad("StoreFeedFragment does not build its feed tabs from the declared feeds, or Cloud still draws feeds")
     if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
     else: bad("FeedViewer.parse is not separable from the asset")
     # (h) #668 THE PAGE SIZE IS DATA. It lives in the declared url's query, so

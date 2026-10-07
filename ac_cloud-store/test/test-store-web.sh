@@ -13,6 +13,9 @@
 #     build.json::ui the Android shell bakes, and the app's wasm module holds the strings of the
 #     shared island and tab strip (libs:bottomnav's test tags: bottomnav_island, bottomnav_item_,
 #     pagetabs_strip) - a page whose shell silently stopped being the fleet's island goes red;
+#     #896: that store-nav.json is build.json::ui as it stands - the same island (cloud, phone,
+#     feed, perms, settings) and the same child pages (Phone: installed|declared, Feed: the
+#     feeds) the Android shell draws, so the page cannot show a stale nav;
 #  5. it names no Android: the app's own JS glue carries no `android.` platform name and no
 #     androidx.(activity|fragment|core|lifecycle|navigation|appcompat) (a shared lib that
 #     leaked an Android type into commonMain shows up here even if the purity guard missed
@@ -56,6 +59,14 @@ check() {
     || { echo "FAIL  composeResources/ carries no constellation-fleet.json"; n=$((n + 1)); }
   find "$dist/composeResources" -name store-nav.json 2>/dev/null | head -1 | xargs grep -q '"bottom_nav"' 2>/dev/null \
     || { echo "FAIL  composeResources/ carries no store-nav.json with a bottom_nav"; n=$((n + 1)); }
+  # #896 the baked nav IS build.json::ui: the island's ids and every section's child page ids.
+  local navf want have
+  navf="$(find "$dist/composeResources" -name store-nav.json 2>/dev/null | head -1)"
+  if [ -n "$navf" ] && grep -q '"bottom_nav"' "$navf" 2>/dev/null; then
+    want="$(jq -c '[.ui.bottom_nav, [.ui.sections[] | [.id, [.pages[]?.id]]], .ui.default_section]' "$STORE/build.json")"
+    have="$(jq -c '[.bottom_nav, [.sections[] | [.id, [.pages[]?.id]]], .default_section]' "$navf" 2>/dev/null)"
+    [ "$want" = "$have" ] || { echo "FAIL  store-nav.json is not build.json::ui (island, sections or child pages differ)"; n=$((n + 1)); }
+  fi
   # Kotlin/Wasm keeps string literals in the module's data, not in the JS glue: look in both.
   for t in bottomnav_island bottomnav_item_ pagetabs_strip; do
     grep -qa -e "$t" "$dist"/*.wasm "$dist"/cloud-store.js 2>/dev/null \
@@ -93,7 +104,7 @@ stage() {
   printf 'var app = "androidx.compose.ui.window";' > "$W/d/cloud-store.js"
   printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip' > "$W/d/bbbb2222.wasm"
   printf '{"apps":[]}' > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/constellation-fleet.json"
-  printf '{"sections":[],"bottom_nav":[],"default_section":""}' > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"
+  jq -c '{sections: .ui.sections, bottom_nav: .ui.bottom_nav, default_section: .ui.default_section}' "$STORE/build.json" > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"
 }
 mutant() {  # mutant <label> <shell-edit-of-$W/d> <expected-substring>
   stage
@@ -113,6 +124,8 @@ mutant "a wasm that is not wasm"        'printf "<html>404</html>" > "$W/d/bbbb2
 mutant "no fleet manifest"              'rm -r "$W/d/composeResources"'                                   "no constellation-fleet.json"
 mutant "no nav declaration"             'rm "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "no store-nav.json with a bottom_nav"
 mutant "a nav declaration with no bar"  'printf "{}" > "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "no store-nav.json with a bottom_nav"
+mutant "a stale nav declaration (the old four-item island)" 'jq -c ".bottom_nav = [\"cloud\",\"phone\",\"mesh\",\"settings\"]" "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "store-nav.json is not build.json::ui"
+mutant "a nav declaration without Phone's child pages" 'jq -c "(.sections[] | select(.id == \"phone\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudstore.web.generated/files/store-nav.json"' "store-nav.json is not build.json::ui"
 mutant "no island in the page"          'printf "\0asm\1\0\0\0" > "$W/d/bbbb2222.wasm"'                  "the island string 'bottomnav_island'"
 mutant "no page-tab strip in the page"  'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_" > "$W/d/bbbb2222.wasm"' "the island string 'pagetabs_strip'"
 mutant "over the size budget"           'head -c $(( (BUDGET_MB + 1) * 1048576 )) /dev/zero > "$W/d/cloud-store.js.map"' "over the ${BUDGET_MB} MB budget"

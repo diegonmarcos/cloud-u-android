@@ -153,16 +153,31 @@ PY
   [ $nodel -eq 0 ] && ok "every local dp() helper delegates to StoreDensity" || bad "$nodel dp() helper(s) scale on their own"
   grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
-  # 7. #868 the fleet nav pattern: the four pages are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$MA" <<'PY' && ok "ui.bottom_nav is the four store pages, each a ui.sections id, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, mesh, settings"
-import json, sys
+  # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, perms, settings (five, each a ui.sections id), Phone's first pages are installed|declared, Feed's are the declared feeds, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
+import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
-ids = [s.get('id') for s in ui.get('sections') or []]
-sys.exit(0 if ui.get('bottom_nav') == ['cloud', 'phone', 'mesh', 'settings'] and ids == ui.get('bottom_nav') and ui.get('default_section') == 'cloud' else 1)
+secs = {s.get('id'): s for s in ui.get('sections') or []}
+feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) else None
+pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
+ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'perms', 'settings']
+      and set(ui['bottom_nav']) <= set(secs) and 'mesh' in secs
+      and pg('phone') == ['installed', 'declared']
+      and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
+      and ui.get('default_section') == 'cloud')
+sys.exit(0 if ok else 1)
 PY
   local bg; bg="$(cat "$S/app/build.gradle")"
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
+  # 8. #896 the Feed and Perms pages are hosted, the child-page strips are the fleet's PageTabs, and the Cloud page no longer carries the moved parts
+  printf '%s' "$ma" | grep -q 'AndroidFragment<StoreFeedFragment>' && printf '%s' "$ma" | grep -q 'AndroidFragment<StorePermsFragment>' && ok "MainActivity hosts the Feed and Perms pages" || bad "MainActivity does not host StoreFeedFragment and StorePermsFragment"
+  printf '%s' "$ma" | grep -q 'PageTabs(section.pages' && printf '%s' "$ma" | grep -q 'StorePages.hostDrawsStrip = true' && ok "MainActivity draws the declared child pages with PageTabs and tells the pages it does" || bad "MainActivity does not draw section.pages with PageTabs"
+  [ -f "$L/StoreFeedFragment.kt" ] && [ -f "$L/StorePermsFragment.kt" ] && [ -f "$L/StoreTabs.kt" ] && ok "the Feed, Perms and shared strip live once in libs:appstore" || bad "StoreFeedFragment/StorePermsFragment/StoreTabs missing from libs:appstore"
+  ! grep -qE 'renderPerms|renderFeed|FeedViewer' "$L/StoreCloudFragment.kt" && ok "the Cloud page draws neither feeds nor Perms" || bad "the Cloud page still carries the moved Feed/Perms parts"
+  grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreFeedFragment.kt" && ok "Cloud, Phone and Feed draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
+  # 9. #896 density: tappable controls keep a 40dp floor whatever the scale
+  grep -qE 'MIN_TAP_DP = (4[0-9]|[5-9][0-9])' "$L/StoreDensity.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreTabs.kt" && ok "tabs, chips, pages and action buttons keep the 40dp touch floor" || bad "a Store control lost its 40dp touch floor"
   printf '%s' "$ma" | grep -Eq '(^|[^A-Za-z])TabRow *\(' && bad "MainActivity still draws its own TabRow" || ok "no hand-rolled tab row"
   return $fails
 }
@@ -205,13 +220,20 @@ mutate "island no longer fed by NavDecl" store/app/src/main/java/com/diegonmarco
 mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "cloud",
       "phone",
-      "mesh",
+      "feed",
+      "perms",
       "settings"
     ]' '"bottom_nav": [
       "cloud",
       "phone",
-      "mesh"
+      "feed",
+      "perms"
     ]' || M=$((M+1))
+mutate "a control loses the touch floor" lib/StoreTabs.kt 'minHeight = StoreDensity.minTap(ctx)' '' || M=$((M+1))
+mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
+mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<StoreFeedFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "Perms page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<StorePermsFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "host stops drawing the page strip" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PageTabs(section.pages' 'PageTabx(section.pages' || M=$((M+1))
 mutate "gradle stops baking the sections" store/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
 A=store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt
 mutate "Cloud Store drops the shelves" "$A" 'classify = StoreShelves::of' '' || M=$((M+1))
@@ -234,7 +256,7 @@ mutate "Cloud Store loses the token entry" store/app/src/main/java/com/diegonmar
 mutate "a dp literal back in the Cloud shelf" lib/StoreCloudFragment.kt 'val p = dp(ctx, StoreDensity.S12); setPadding' 'val p = dp(ctx, 14); setPadding' || M=$((M+1))
 mutate "a textSize literal back in the Phone shelf" lib/StorePhoneFragment.kt 'textSize = StoreDensity.T_META' 'textSize = 12f' || M=$((M+1))
 mutate "a text() size literal back in the mesh" lib/AppsMesh.kt 'text(ctx, "Missing membership (${gaps.size})", StoreDensity.T_BODY' 'text(ctx, "Missing membership (${gaps.size})", 13f' || M=$((M+1))
-mutate "density turned off" lib/StoreDensity.kt 'const val SCALE = 0.8f' 'const val SCALE = 1.0f' || M=$((M+1))
+mutate "density turned off" lib/StoreDensity.kt 'const val SCALE = 0.7f' 'const val SCALE = 1.0f' || M=$((M+1))
 mutate "declaration deleted" lib/StoreDensity.kt 'object StoreDensity' 'object Other' || M=$((M+1))
 mutate "Cloud Store hardcodes a dp" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'padding(top = StoreDensity.dpValue(StoreDensity.S8).dp)' 'padding(top = 8.dp)' || M=$((M+1))
 mutate "a helper scales on its own" lib/StoreBar.kt 'private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)' 'private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()' || M=$((M+1))

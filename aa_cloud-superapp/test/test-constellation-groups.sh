@@ -313,8 +313,8 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # #732 each line's entries are now Controls carrying their declared look, so
 # the line list is two lists of Controls; the membership asserted is the same.
 command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupTab) }' "$PAGE" \
-  && command grep -qF 'feeds.map { controls.page(it.id, it.label) } + controls.page(MESH) + controls.page(PERMS)' "$PAGE" \
-  && ok "line 1 = declared groups, line 2 = declared feeds + the page's own Mesh (#728) and Perms" \
+  && command grep -qF 'listOf(controls.page(MESH))' "$PAGE" \
+  && ok "line 1 = declared groups, line 2 = the page's own Mesh (#728); the feeds and Perms are the Feed and Perms pages since #896" \
   || bad "the tab lines are not built from the two declarations"
 
 # (c) TWO strips inside one column, from ONE button builder - not a second
@@ -325,7 +325,11 @@ command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupT
 #     columns, so it stayed green with tabBar flipped back to HORIZONTAL - it was
 #     asserting that the file contains a vertical layout SOMEWHERE, which it
 #     always will. Caught by mutation, not by reading it.
-tabbar_body="$(awk '/private fun tabBar\(/{f=1} f{print} f && /^    }$/{exit}' "$PAGE")"
+# #896 the strip builder is StoreTabs.bar, shared with Phone and Feed; tabBar is its Cloud call.
+TABS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreTabs.kt"
+[ -f "$TABS" ] || { echo "ERROR: missing $TABS" >&2; exit 2; }
+command grep -qF 'StoreTabs.bar(' "$PAGE" && ok "tabBar draws through the shared StoreTabs.bar" || bad "tabBar does not use the shared strip builder"
+tabbar_body="$(awk '/fun bar\(/{f=1} f{print} f && /^    }$/{exit}' "$TABS")"
 [ -n "$tabbar_body" ] || bad "could not isolate tabBar's body - the assertion below would verify nothing"
 printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTICAL' \
   && ok "tabBar itself is a column that can hold more than one strip" \
@@ -333,14 +337,14 @@ printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTIC
 printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.HORIZONTAL' \
   && ok "and the strips inside it are horizontal" \
   || bad "tabBar builds no horizontal strip - the tabs would stack one per line"
-builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
+builders="$(command grep -c 'fun button(' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
-  || bad "expected 1 tabButton builder, found $builders - the two lines can drift apart"
+  || bad "expected 1 tab-button builder, found $builders - the two lines can drift apart"
 
 # (d) An EMPTY line draws NO strip. A row reserving height for controls that are
 #     not there is the affordance-that-cannot-act shape (#233).
-command grep -qE 'if \((labels|line)\.isEmpty\(\)\) continue' "$PAGE" \
+command grep -qE 'if \((labels|line)\.isEmpty\(\)\) continue' "$TABS" \
   && ok "a line with no tabs draws no strip at all" \
   || bad "an empty tab line would still draw a strip"
 
@@ -359,7 +363,7 @@ for label in $(jq -r '.groups[].label' "$FLEET" | tr ' ' '\036') \
     && bad "StoreCloudFragment hardcodes tab label \"$label\" instead of reading its declaration" \
     || ok "tab label \"$label\" is not written on the page"
 done
-# ... and the page's own two entries are named by the IDS their declaration is
+# ... and the page's own entry is named by the IDS their declaration is
 # keyed on, so the caption can change in data with no Kotlin edit.
 for id in $(jq -r '.pages | keys[]' "$CONTROLS_ASSET"); do
   jq -e --arg id "$id" '.feeds[] | select(.id == $id)' "$FEEDS_ASSET" >/dev/null && continue
@@ -377,10 +381,12 @@ echo "== T10: #671 the two lines are two CONTROL LANGUAGES, not two rows of the 
 body_of() { # body_of <fun signature fragment>
   awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"
 }
+tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
 TABBAR="$(body_of 'private fun tabBar(')"
-TABBTN="$(body_of 'private fun tabButton(')"
-PAINT="$(body_of 'private fun paintTabs()')"
-for pair in "tabBar:$TABBAR" "tabButton:$TABBTN"; do
+TABBTN="$(tabs_body_of 'fun button(')"
+PAINT="$(tabs_body_of 'fun paint(')"
+BARBODY="$(tabs_body_of 'fun bar(')"
+for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*}'s body - every assertion about it would verify nothing"
 done
 
@@ -390,17 +396,17 @@ done
 #     test-store-controls.sh's job; here, that tabBar sources the two lines'
 #     looks from those two DIFFERENT declarations rather than one.
 printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
-  && printf '%s' "$TABBAR" | command grep -qF 'controls.page(it.id, it.label)' \
-  && ! printf '%s' "$TABBAR" | command grep -qE 'feeds\.map \{[^}]*groupTab' \
+  && printf '%s' "$TABBAR" | command grep -qF 'controls.page(MESH)' \
+  && ! printf '%s' "$TABBAR" | command grep -qE 'controls\.page\([^)]*\)[^\n]*groupTab' \
   && ok "tabBar dresses line 1 and line 2 from two DIFFERENT style declarations" \
   || bad "tabBar dresses both lines from one style - identical pills are back"
 
 # (b) ONE builder still, and it is the thing that VARIES by style. A builder
 #     that ignores its style argument is the same defect wearing a parameter.
-builders="$(command grep -c 'private fun tabButton(' "$PAGE")"
+builders="$(command grep -c 'fun button(' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
-  || bad "expected 1 tabButton builder, found $builders - the two languages can drift apart"
+  || bad "expected 1 tab-button builder, found $builders - the two languages can drift apart"
 printf '%s' "$TABBTN" | command grep -qF 'if (style.stretch)' \
   && ok "the builder branches on the style it is handed" \
   || bad "tabButton takes a style and ignores it - both lines would draw the same"
@@ -420,14 +426,14 @@ printf '%s' "$PAINT" | command grep -qF 't.tag as StoreControls.Style' \
 
 # (d) REAL SEPARATION, and only BETWEEN lines. A page with one line must not
 #     draw a stray rule above it.
-printf '%s' "$TABBAR" | command grep -qF 'lineDivider(ctx)' \
+printf '%s' "$BARBODY" | command grep -qF 'divider(ctx)' \
   && ok "a divider separates the two lines" \
   || bad "nothing separates the two lines - they read as one block"
-printf '%s' "$TABBAR" | command grep -qF 'if (column.childCount > 0)' \
+printf '%s' "$BARBODY" | command grep -qF 'if (column.childCount > 0)' \
   && ok "the divider is drawn only BETWEEN lines, never above the first" \
   || bad "the divider is not conditional - a single-line bar would draw a stray rule"
-DIV="$(body_of 'private fun lineDivider(')"
-printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, StoreDensity\.S[0-9]+\), 0, dp\(ctx, StoreDensity\.S[0-9]+\)\)' \
+DIV="$(tabs_body_of 'fun divider(')"
+printf '%s' "$DIV" | command grep -qE 'setMargins\(0, StoreDensity\.dp\(ctx, StoreDensity\.S[0-9]+\), 0, StoreDensity\.dp\(ctx, StoreDensity\.S[0-9]+\)\)' \
   && ok "the divider carries real vertical space, not just a hairline" \
   || bad "the divider has no margins - a 1px rule with no space is still one block"
 
@@ -436,7 +442,7 @@ printf '%s' "$DIV" | command grep -qE 'setMargins\(0, dp\(ctx, StoreDensity\.S[0
 printf '%s' "$TABBAR" | command grep -qF 'tabs.map { StoreControls.Control(it.label' \
   && ok "line membership is still which declaration the tab came from" \
   || bad "the tab lines are no longer built from the two declarations"
-printf '%s' "$TABBAR" | command grep -qF 'if (line.isEmpty()) continue' \
+printf '%s' "$BARBODY" | command grep -qF 'if (line.isEmpty()) continue' \
   && ok "a line with no tabs still draws no strip at all" \
   || bad "an empty tab line would draw a strip (or its divider)"
 

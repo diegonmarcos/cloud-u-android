@@ -77,11 +77,11 @@ for id in $lib_pkgs; do
 done
 
 echo "== M4: Store ▸ Mesh is reachable =="
-grep -qF 'controls.page(MESH) + controls.page(PERMS)' "$PAGE" \
-  && ok "Mesh sits on the destination line beside Perms" || bad "Mesh is not on the tab bar"
+grep -qF 'listOf(controls.page(MESH))' "$PAGE" \
+  && ok "Mesh sits on the destination line (the one page left there since #896 moved Perms and the feeds)" || bad "Mesh is not on the tab bar"
 render_tab="$(awk '/private fun renderTab\(/{f=1} f{print} f && /^    }$/{exit}' "$PAGE")"
 [ -n "$render_tab" ] || bad "could not isolate renderTab - the next check would verify nothing"
-printf '%s' "$render_tab" | grep -qF 'tab == tabs.size + feeds.size -> renderMesh(ctx)' \
+printf '%s' "$render_tab" | grep -qF 'else -> renderMesh(ctx)' \
   && ok "renderTab draws the mesh at Mesh's index" || bad "renderTab never draws the mesh"
 
 echo

@@ -55,6 +55,7 @@ class StorePhoneFragment : Fragment() {
         val direct: Boolean get() = (fleetApp != null && !fleetApp.blocked) || (external?.needsPlay == false)
     }
 
+    private val controls by lazy { StoreControls.load(requireContext()) }
     private val cDim = 0x99FFFFFF.toInt()
     private val cHead = 0xFFED8936.toInt()
     private val cUp = 0xFF48BB78.toInt()
@@ -76,8 +77,11 @@ class StorePhoneFragment : Fragment() {
     // the SAME rows() output — so every view is a subset of Declared, by
     // construction, exactly as #619 required.
     private var sourceTab: SourceResolver.Kind? = null
-    private var declaredPill: TextView? = null
-    private var installedPill: TextView? = null
+    // #896 Installed | Declared are the page's top tabs now (the Cloud page's strip, [StoreTabs]); the
+    // bottom bar holds every other control, and the store-source strip is drawn into [sourceHost].
+    private val pageButtons = ArrayList<TextView>()
+    private var sourceHost: LinearLayout? = null
+    private var stopObserving: (() -> Unit)? = null
     private var cfg: SourceResolver.Config? = null
     private val states = HashMap<String, SourceResolver.Check>()
     private val stateViews = HashMap<String, TextView>()
@@ -107,37 +111,56 @@ class StorePhoneFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = requireContext()
+        // The page's TOP TABS: Installed | Declared, in build.json::ui phone.pages order. Drawn here by
+        // the Cloud page's own strip builder unless the host draws them (StorePages.hostDrawsStrip).
+        val strip = if (StorePages.hostDrawsStrip) null else StoreTabs.bar(ctx, listOf(listOf(
+            StoreControls.Control(ctx.getString(R.string.store_phone_filter_installed), "", controls.groupTab),
+            StoreControls.Control(ctx.getString(R.string.store_phone_filter_declared), "", controls.groupTab))),
+            pageButtons) { StorePages.select(SECTION, if (it == 0) PAGE_INSTALLED else PAGE_DECLARED) }
+        syncPage()
+        stopObserving = StorePages.observe(SECTION) { view?.post { syncPage(); redraw() } }
+
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
         }
-        // The SAME bar the Cloud tab draws. #571: Install all and Update all are
-        // real verbs here now — they walk every row this store can serve itself
-        // (fleet path, vendor APK, F-Droid) and report the rows that need Play.
-        col.addView(LinearLayout(ctx).apply {
+        col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
+        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        list = rowsView
+        col.addView(rowsView)
+
+        // The BOTTOM ACTION BAR: the SAME bar the Cloud tab draws. #571: Install all and Update all are
+        // real verbs here now - they walk every row this store can serve itself (fleet path, vendor
+        // APK, F-Droid) and report the rows that need Play. Then export / import / clear cache, and
+        // the store-source strip (which store the rows come from).
+        val bar = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        bar.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
-        col.addView(LinearLayout(ctx).apply {
+        bar.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) })
             addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
             // #625 the manual door onto the cache. The app owns eviction now, so
             // the user needs a way to say "drop it all" that does not mean
-            // Settings ▸ Clear cache — which no longer reaches these bytes, on
+            // Settings > Clear cache - which no longer reaches these bytes, on
             // purpose, because the OS doing that silently WAS the bug.
             // #666 the label states the measured count and megabytes; reload()
             // rewrites it from ApkCache.plan, so it is never an estimate.
             addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
                 .also { cacheBtn = it })
         })
-        col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
-        col.addView(filterToggle(ctx))
-        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        list = rowsView
-        col.addView(rowsView)
-        return ScrollView(ctx).apply { addView(col) }
+        sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        bar.addView(sourceHost)
+        return StorePages.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, bar)
+    }
+
+    /** [installedOnly] is the selected page, and the strip paints it. */
+    private fun syncPage() {
+        installedOnly = StorePages.page(SECTION, PAGE_DECLARED) == PAGE_INSTALLED
+        StoreTabs.paint(pageButtons, if (installedOnly) 0 else 1)
     }
 
     // Reloaded on every return: Remove and App info leave for a system
@@ -169,6 +192,7 @@ class StorePhoneFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        stopObserving?.invoke(); stopObserving = null; pageButtons.clear(); sourceHost = null
         list = null; cacheBtn = null; stateViews.clear(); super.onDestroyView()
     }
 
@@ -268,10 +292,13 @@ class StorePhoneFragment : Fragment() {
         // pretending otherwise would put them under whichever tab was listed
         // first.
         val kinds = cfg?.kinds.orEmpty()
-        if (kinds.isNotEmpty()) into.addView(
-            StoreSourceTabs.render(ctx, kinds, sourceTab) { k ->
-                if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
-            })
+        sourceHost?.let { host ->
+            host.removeAllViews()
+            if (kinds.isNotEmpty()) host.addView(
+                StoreSourceTabs.render(ctx, kinds, sourceTab) { k ->
+                    if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
+                })
+        }
         val tab = sourceTab
         val shown = rows
             .filter { tab == null || it.external?.inTab(tab) == true }
@@ -290,30 +317,6 @@ class StorePhoneFragment : Fragment() {
             heading = here
             into.addView(row(ctx, r))
         }
-    }
-
-    /** #619 the Declared / Installed segmented toggle. Two pills; tapping one
-     *  sets [installedOnly] and re-renders the SAME rows (no re-probe). */
-    private fun filterToggle(ctx: Context): View {
-        fun pill(label: String, onlyInstalled: Boolean) = TextView(ctx).apply {
-            text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-            setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S8)) }
-            isClickable = true
-            setOnClickListener { if (installedOnly != onlyInstalled) { installedOnly = onlyInstalled; styleFilter(); redraw() } }
-        }
-        val d = pill(ctx.getString(R.string.store_phone_filter_declared), false).also { declaredPill = it }
-        val i = pill(ctx.getString(R.string.store_phone_filter_installed), true).also { installedPill = it }
-        styleFilter()
-        return LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; addView(d); addView(i) }
-    }
-
-    /** The selected pill wears the installed-green; the other is dimmed. */
-    private fun styleFilter() {
-        declaredPill?.setBackgroundColor(if (!installedOnly) cUp else 0xFF2A2A33.toInt())
-        installedPill?.setBackgroundColor(if (installedOnly) cUp else 0xFF2A2A33.toInt())
     }
 
     /** Re-render the current rows under the current filter — no enumerate, no probe. */
@@ -612,6 +615,7 @@ class StorePhoneFragment : Fragment() {
         setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(ctx, StoreDensity.S4), 0) }
+        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -620,7 +624,8 @@ class StorePhoneFragment : Fragment() {
         setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
         setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S8)) }
+            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4)) }
+        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -631,6 +636,10 @@ class StorePhoneFragment : Fragment() {
          *  Absent when nothing for that package is in the cache — a test reads
          *  the rendered answer rather than this source. */
         const val CACHE_TAG_PREFIX = "store-phone-cache:"
+        /** The build.json::ui section id this page is, and its two child pages (#896). */
+        const val SECTION = "phone"
+        const val PAGE_INSTALLED = "installed"
+        const val PAGE_DECLARED = "declared"
         private const val UNSHELVED = "￿"
         private const val EXPORT_NAME = "cloud-sa-apps.json"
         // A .json picked from Downloads is as often octet-stream as json.

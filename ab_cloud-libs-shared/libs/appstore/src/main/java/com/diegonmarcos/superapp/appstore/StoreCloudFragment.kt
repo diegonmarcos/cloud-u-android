@@ -3,18 +3,15 @@ package com.diegonmarcos.superapp.appstore
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.text.TextUtils
 import android.util.Base64
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -50,11 +47,6 @@ import org.json.JSONObject
  * list is data-driven from BuildConfig.CONSTELLATION_FLEET_B64.
  */
 class StoreCloudFragment : Fragment() {
-
-    // Declared in libs:core's manifest at protectionLevel="signature" and merged
-    // into every constellation app. Kept as one constant so the UI and any future
-    // ContentProvider guard name the same string.
-    private val CONSTELLATION_PERM = "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
 
     private val fleet by lazy { Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64) }
 
@@ -172,12 +164,6 @@ class StoreCloudFragment : Fragment() {
         }.filter { it.rows.isNotEmpty() }
     }
 
-    // #642 the read-only feed tabs, one per entry in libs:appstore's own
-    // assets/appstore-feeds.json, sitting between the fleet groups and Perms.
-    // An unreadable declaration is NO feed tabs at all, so this page is exactly
-    // what it was before the feeds existed rather than a tab that cannot load.
-    private val feeds by lazy { FeedViewer.feeds(requireContext()) }
-
     // #732 how every tab, page entry and action button looks: assets/appstore-controls.json.
     private val controls by lazy { StoreControls.load(requireContext()) }
 
@@ -235,8 +221,6 @@ class StoreCloudFragment : Fragment() {
     private lateinit var body: LinearLayout
     private val tabBtns = ArrayList<TextView>()
     private var tab = 0
-    // Which per-app permission pane is open, keyed by package (0 = Android, 1 = Cloud).
-    private val permTab = HashMap<String, Int>()
 
     // amber, green, grey, red, orange, blue
     private val cUp = 0xFF48BB78.toInt(); private val cUpd = 0xFFED8936.toInt()
@@ -350,176 +334,38 @@ class StoreCloudFragment : Fragment() {
         return proceed
     }
 
-    // ── tabs: one per declared group, then Perms ─────────────────────────────
+    // ── tabs: one per declared group, then the Apps Mesh page ─────────────────
     /**
      * #660 — TWO LINES, because these are two different kinds of tab.
      *
-     * One line per KIND OF TAB, not one line for all of them. A declared group
-     * is a TYPE OF APK: Apps, Libs, Lite-ML, Tiny-ML partition the fleet, and
-     * picking one narrows what the page is showing you. Commits, CI-CD and
-     * Perms narrow nothing — the feeds are repo-wide (their declared endpoints
-     * carry no type at all) and Perms walks the WHOLE fleet. Sitting them in
-     * the per-type row states that they are peers of Apps and Libs, which is
-     * the one thing they are not.
+     * A declared group is a TYPE OF APK: Apps, Libs, Lite-ML, Tiny-ML partition the fleet, and
+     * picking one narrows what the page is showing you. Apps Mesh narrows nothing - it is a page
+     * of its own - so it sits on a second line wearing the `page` style rather than the segmented
+     * `tab` one (#671/#732). The Commits and CI-CD feeds and Perms used to be on that line; they
+     * are bottom-nav pages now (#896: Feed, Perms), so this line holds the one page left.
      *
-     * It was also simply out of room. Seven weight-1 tabs across one
-     * MATCH_PARENT row at 13sp with maxLines=1 ellipsize into stubs; the feeds
-     * took it from five to seven, which is what made a latent crowding problem
-     * a visible one.
-     *
-     * WHICH LINE A TAB SITS ON IS NOT WRITTEN HERE. It is which declaration the
-     * tab came from: `constellation.groups` is the per-type line,
-     * libs:appstore's own feed declaration plus [PERMS] is the line that is not
-     * a type. So a new group appears on the first line and a new feed on the
-     * second with no edit to this file — the same rule the tables follow.
-     *
-     * A line with NO tabs draws NO strip. An empty row that reserves height for
-     * controls that are not there is the affordance-that-cannot-act shape: it
-     * says "something goes here" about nothing.
+     * The strip itself is [StoreTabs.bar], the same builder Phone and Feed draw with. WHICH LINE A
+     * TAB SITS ON IS NOT WRITTEN HERE: it is which declaration the tab came from.
      */
-    private fun tabBar(ctx: Context): View {
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.setMargins(0, 0, 0, dp(ctx, StoreDensity.S8)); layoutParams = lp
-        }
-        tabBtns.clear()
-        // #671 A DIFFERENT CLASS OF CONTROL GETS A DIFFERENT CONTROL LANGUAGE.
-        //
-        // Two rows was necessary and not sufficient: identical pills on both
-        // rows still said "seven tabs that happened to wrap". The rows do not
-        // do the same KIND of thing, and that is measurable rather than a
-        // matter of taste. A line-1 tab SELECTS A SUBSET — each declared group
-        // filters the rows below it. A line-2 entry filters nothing: both feeds
-        // are repo-wide (their declared endpoints carry no type at all) and the
-        // Perms page walks the whole fleet. A filter and a destination drawn
-        // identically claim to be the same control, so:
-        //
-        //   TAB         line 1 — pills that stretch to fill the width, bold,
-        //               filled when active. A segmented control: pick exactly
-        //               one of a partition.
-        //   PAGE        line 2 — wrap-content chips, left-aligned. #671 drew
-        //               them as bare text, which read as captions; #732 made
-        //               them outlined chips with an icon and a chevron, the
-        //               look of something that opens a page (see below).
-        //
-        // Separated by real space and a hairline, so the eye sees two tables
-        // rather than one block. The rule is not "add margin" — the two lines
-        // read as different kinds of thing because they ARE.
-        //
-        // STILL ONE BUILDER. [tabButton] takes the style as an argument, so
-        // there is no second renderer and the two appearances cannot drift into
-        // two code paths. Line membership is still purely which declaration the
-        // tab came from, and tabBtns.size is still the running tab index, which
-        // is what keeps renderTab's group/feed/Perms mapping correct.
-        //
-        // #732 THE LOOK IS DATA NOW. Line 2's entries open pages, and drawn as
-        // bare text they read as captions, not as things to tap. Each entry
-        // wears the style its own declaration names in assets/appstore-controls
-        // .json (a `page` there: outlined chip, icon, chevron) and line 1 wears
-        // `group_tab_style`, so a third look (or a fourth line) is a data edit.
-        // `action` is the third style, worn by btn(); the three are kept
-        // visibly different by test-store-controls.sh.
-        val lines = listOf(
-            tabs.map { StoreControls.Control(it.label, "", controls.groupTab) },
-            feeds.map { controls.page(it.id, it.label) } + controls.page(MESH) + controls.page(PERMS))
-        for (line in lines) {
-            if (line.isEmpty()) continue
-            // Only BETWEEN lines, so a page with one line draws no stray rule.
-            if (column.childCount > 0) column.addView(lineDivider(ctx))
-            val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (control in line) {
-                val t = tabButton(ctx, tabBtns.size, control)
-                tabBtns.add(t); strip.addView(t)
-            }
-            // A wrapping line scrolls rather than clipping its last chip on a
-            // narrow phone; a stretched line fills the width by definition.
-            column.addView(if (line.all { it.style.stretch }) strip
-                else HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(strip) })
-        }
-        paintTabs()
-        return column
+    private fun tabBar(ctx: Context): View = StoreTabs.bar(ctx, listOf(
+        tabs.map { StoreControls.Control(it.label, "", controls.groupTab) },
+        listOf(controls.page(MESH))), tabBtns) { index ->
+        if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) }
     }
 
-    /** The hairline plus the real space that makes line 2 a second table rather
-     *  than a continuation of the first. */
-    private fun lineDivider(ctx: Context) = View(ctx).apply {
-        setBackgroundColor(0xFF2A2A33.toInt())
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, StoreDensity.S1))
-            .apply { setMargins(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S8)) }
-    }
-
-    /**
-     * THE ONE tab-button builder, for both lines. [index] is its position in the
-     * page's single tab ordering, captured here so a button in the second strip
-     * still selects itself; [control]'s style is carried as the view's tag so
-     * [paintTabs] stays one pass over one list.
-     *
-     * A stretching style (weight 1f) is a partition filling its bar; a wrapping
-     * one sits left at its own width, because a set of pages is not a partition.
-     * The icon leads and the chevron trails only when the style declares them.
-     */
-    private fun tabButton(ctx: Context, index: Int, control: StoreControls.Control) = TextView(ctx).apply {
-        val style = control.style
-        text = listOf(control.icon, control.label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
-        maxLines = 1
-        tag = style
-        isClickable = true
-        setOnClickListener { if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) } }
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        if (style.stretch) {
-            gravity = Gravity.CENTER; textSize = StoreDensity.T_BODY
-            setPadding(dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S8))
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        } else {
-            gravity = Gravity.CENTER_VERTICAL; textSize = StoreDensity.T_BODY
-            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                .apply { setMargins(0, 0, dp(ctx, StoreDensity.S8), 0) }
-        }
-    }
-
-    /** Selection reads per style too (#671): each button carries its declared
-     *  style as its tag, so this stays a single pass over one list and the
-     *  active look is whatever that style's `_active` fields say. */
-    private fun paintTabs() = tabBtns.forEachIndexed { i, t ->
-        val on = i == tab
-        val style = t.tag as StoreControls.Style
-        t.background = StoreControls.background(t.context, style, on)
-        t.setTextColor(if (on) style.textActive else style.text)
-    }
+    private fun paintTabs() = StoreTabs.paint(tabBtns, tab)
 
     private fun renderTab(ctx: Context) {
         body.removeAllViews()
         statusViews.clear(); actionRows.clear(); stageBtns.clear()
         fullStatusViews.clear(); dots.clear(); errBoxes.clear(); quickBtns.clear(); filterChips.clear()
-        // Past the last group are the declared feeds (#642), then Perms. Each
-        // blurb is data beside its group or its feed, so the caption naming the
-        // out-of-process engines moves with the engines.
+        // Past the last group is the Apps Mesh page. Each blurb is data beside its group, so the
+        // caption naming the out-of-process engines moves with the engines.
         val shown = tabs.getOrNull(tab)
-        val feed = feeds.getOrNull(tab - tabs.size)
         when {
             shown != null -> renderFleet(ctx, shown.rows, shown.blurb, shown.id == libConsumers.optString("group"))
-            feed != null -> renderFeed(ctx, feed)
-            tab == tabs.size + feeds.size -> renderMesh(ctx)
-            else -> renderPerms(ctx)
+            else -> renderMesh(ctx)
         }
-    }
-
-    /**
-     * #642 — one declared read-only feed: the repo's commits, or its CI-CD runs.
-     *
-     * Deliberately NOT given the header bar, the filter chips or the progress
-     * row the fleet tabs carry. Those act on a selection of installable rows and
-     * there are none here: a feed row's only action is to open the link the feed
-     * itself supplied. A Check all button on a page with nothing to check is the
-     * control that lies about what the screen can do.
-     */
-    private fun renderFeed(ctx: Context, feed: FeedViewer.Feed) {
-        val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        body.addView(host)
-        FeedViewer.render(ctx, host, feed, FeedViewer.opener(ctx))
     }
 
     /**
@@ -1285,185 +1131,6 @@ class StoreCloudFragment : Fragment() {
         }
     }
 
-    // ── Perms tab ────────────────────────────────────────────────────────────
-    // The constellation is a trusted environment because every APK is signed
-    // with the SAME key. That is what makes signature-level permissions usable
-    // between our apps: an app exposes a ContentProvider guarded by a
-    // `signature` permission, and only same-key packages can bind/read it.
-    //
-    // Each app card carries two panes:
-    //
-    //   Android Perms — the platform's own runtime grants (camera, location,
-    //     contacts…). Listed read-only, because only the system UI may change
-    //     them; "System settings ↗" hands off to exactly that screen.
-    //
-    //   Cloud Perms — CONSTELLATION_DATA, declared in libs:core (shared by
-    //     reference into every app, so it merges into all their manifests) at
-    //     protectionLevel="signature". Android grants it at install to every
-    //     APK carrying our key and refuses it to everyone else, so "all apps
-    //     talk freely to each other" is the DEFAULT, enforced by the OS.
-    //
-    // Neither pane renders a toggle, and that is the point: the Android grants
-    // aren't ours to flip, and the Cloud grant is already on by construction.
-    // A switch here could only misreport state it doesn't control.
-    private fun renderPerms(ctx: Context) {
-        body.addView(caption(ctx,
-            "One signing key across the constellation = signature-level trust. Each app " +
-            "opens on two panes: Android Perms (the OS's own runtime grants — read-only " +
-            "here, the system screen owns them) and Cloud Perms (our constellation " +
-            "permission, granted automatically to every app carrying the Cloud key, so " +
-            "they talk freely to each other by default)."))
-
-        val me = ctx.packageName
-        for (app in fleet) {
-            if (app.pkg == me) continue
-            val card = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                setBackgroundColor(0xFF1C1C24.toInt())
-                val ph = dp(ctx, StoreDensity.S12); val pv = dp(ctx, StoreDensity.S8)
-                setPadding(ph, pv, ph, pv)
-                val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                lp.setMargins(0, dp(ctx, StoreDensity.S4), 0, dp(ctx, StoreDensity.S4)); layoutParams = lp
-            }
-            val pkg = Fleet.installedId(ctx, app)
-            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            row.addView(TextView(ctx).apply {
-                text = app.label + (if (app.kind == "lib") "  ·  lib" else "")
-                textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            card.addView(row)
-            card.addView(mono(ctx, pkg ?: app.pkg))
-
-            val trust = TextView(ctx).apply {
-                textSize = StoreDensity.T_META; setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
-            }
-            when {
-                pkg == null -> { trust.setTextColor(cMiss); trust.text = "◯ not installed" }
-                sameSignature(ctx, pkg) -> { trust.setTextColor(cUp); trust.text = "🔑 same key  ·  eligible for signature-level data access" }
-                else -> { trust.setTextColor(cBlk); trust.text = "⚠ different signature  ·  NOT eligible — reinstall from our release" }
-            }
-            card.addView(trust)
-
-            if (pkg != null) {
-                // Per-app sub-tabs: these are two genuinely different systems, so
-                // they get separate panes instead of one mixed list. Android Perms
-                // = the OS's own runtime grants, which only the system UI can
-                // change. Cloud Perms = our constellation permission, which needs
-                // no control at all because it is granted by signature. Keyed by
-                // package so each card remembers which pane was open.
-                val sub = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                val tabs = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    setPadding(0, dp(ctx, StoreDensity.S6), 0, dp(ctx, StoreDensity.S4))
-                }
-                val chips = ArrayList<TextView>()
-                fun paint() {
-                    val sel = permTab[pkg] ?: 0
-                    chips.forEachIndexed { i, c ->
-                        c.setBackgroundColor(if (i == sel) 0xFF7C3AED.toInt() else 0xFF2A2A33.toInt())
-                    }
-                    sub.removeAllViews()
-                    if (sel == 0) renderAndroidPerms(ctx, sub, pkg) else renderCloudPerms(ctx, sub, pkg)
-                }
-                listOf("Android Perms", "Cloud Perms").forEachIndexed { i, label ->
-                    val c = TextView(ctx).apply {
-                        text = label
-                        textSize = StoreDensity.T_META; gravity = Gravity.CENTER
-                        setTextColor(0xFFFFFFFF.toInt())
-                        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                            .apply { setMargins(if (i == 0) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
-                        setOnClickListener { permTab[pkg] = i; paint() }
-                    }
-                    chips.add(c); tabs.addView(c)
-                }
-                card.addView(tabs)
-                card.addView(sub)
-                paint()
-            }
-            body.addView(card)
-        }
-    }
-
-    /** Android's own runtime permissions for [pkg]. Read-only by design: only
-     *  the system UI may change these, so we list what the package requests and
-     *  whether it currently holds it, then hand off to the system screen. */
-    private fun renderAndroidPerms(ctx: Context, into: LinearLayout, pkg: String) {
-        val pm = ctx.packageManager
-        val requested = runCatching {
-            pm.getPackageInfo(pkg, PackageManager.GET_PERMISSIONS).requestedPermissions?.toList()
-        }.getOrNull().orEmpty()
-            // Our constellation permission lives in the other pane; here we show
-            // the platform's own, which is what the system screen can act on.
-            .filter { it.startsWith("android.permission.") }
-            .sorted()
-
-        if (requested.isEmpty()) {
-            into.addView(caption(ctx, "Requests no Android permissions."))
-        } else {
-            for (p in requested) {
-                val granted = pm.checkPermission(p, pkg) == PackageManager.PERMISSION_GRANTED
-                into.addView(TextView(ctx).apply {
-                    text = (if (granted) "✓  " else "·  ") + p.removePrefix("android.permission.")
-                    textSize = StoreDensity.T_CAPTION
-                    setTextColor(if (granted) cUp else cMiss)
-                    setPadding(0, dp(ctx, StoreDensity.S1), 0, dp(ctx, StoreDensity.S1))
-                })
-            }
-        }
-        into.addView(buttonRow(ctx, btn(ctx, "System settings ↗", 0xFF2A2A33.toInt()) {
-            runCatching {
-                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.fromParts("package", pkg, null)))
-            }.onFailure { Toast.makeText(ctx, "No settings screen", Toast.LENGTH_SHORT).show() }
-        }))
-    }
-
-    /** The constellation's own permission. There is deliberately no switch here:
-     *  CONSTELLATION_DATA is protectionLevel="signature", so Android grants it at
-     *  install time to every APK carrying our signing key and refuses it to every
-     *  other APK. "All apps talk freely to each other" is therefore the DEFAULT
-     *  state, enforced by the OS itself — a toggle could only lie about it.
-     *  Declared once in libs:core, which every app now shares by reference, so it
-     *  manifest-merges into all of them. */
-    private fun renderCloudPerms(ctx: Context, into: LinearLayout, pkg: String) {
-        val pm = ctx.packageManager
-        val holds = pm.checkPermission(CONSTELLATION_PERM, pkg) == PackageManager.PERMISSION_GRANTED
-        val weHold = pm.checkPermission(CONSTELLATION_PERM, ctx.packageName) == PackageManager.PERMISSION_GRANTED
-
-        into.addView(TextView(ctx).apply {
-            text = if (holds) "✓  Cloud data access — granted"
-                   else "✕  Cloud data access — not granted"
-            textSize = StoreDensity.T_BODY
-            setTextColor(if (holds) cUp else cBlk)
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
-        })
-        into.addView(mono(ctx, CONSTELLATION_PERM))
-        into.addView(caption(ctx, when {
-            holds && weHold ->
-                "Two-way: this app and SuperApp can each read the other's constellation data. " +
-                "Granted automatically at install because both carry the Cloud signing key — " +
-                "no prompt, and no outside APK can obtain it."
-            holds ->
-                "This app holds it but SuperApp does not — reinstall SuperApp from our release."
-            sameSignature(ctx, pkg) ->
-                "Same signing key, but this build predates the constellation permission. " +
-                "Update it from the Apps tab; the grant lands on reinstall."
-            else ->
-                "Signed with a different key, so Android refuses this permission. " +
-                "Reinstall from our release to bring it into the constellation."
-        }))
-    }
-
-    /** True when [pkg] is signed with the same key as us — the whole basis of
-     *  `signature`-level permissions inside the constellation. */
-    @Suppress("DEPRECATION")
-    private fun sameSignature(ctx: Context, pkg: String): Boolean = runCatching {
-        ctx.packageManager.checkSignatures(ctx.packageName, pkg) == PackageManager.SIGNATURE_MATCH
-    }.getOrDefault(false)
-
     private fun openApp(ctx: Context, pkg: String) {
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg)
         if (i != null) startActivity(i) else Toast.makeText(ctx, "Not installed", Toast.LENGTH_SHORT).show()
@@ -1495,11 +1162,6 @@ class StoreCloudFragment : Fragment() {
         const val UNSHELVED = "￿"
         const val OTHER = "Other"
 
-
-        /** The two line-2 pages this fragment owns rather than reads from a
-         *  feed. These are their ids in assets/appstore-controls.json, which
-         *  also holds their captions and icons (#732) — no caption is written here. */
-        const val PERMS = "perms"
 
         /** #728 the mesh view — #733 the shared Apps Mesh page (see [renderMesh]). */
         const val MESH = "mesh"

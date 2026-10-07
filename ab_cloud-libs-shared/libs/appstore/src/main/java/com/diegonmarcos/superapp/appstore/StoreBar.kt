@@ -201,6 +201,7 @@ object StoreBar {
         background = StoreControls.background(ctx, style, false)
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
+        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -215,6 +216,7 @@ object StoreBar {
         background = StoreControls.background(ctx, style, false, if (onClick != null) fill else DISABLED)
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
+        minHeight = StoreDensity.minTap(ctx)
         isEnabled = onClick != null
         if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
     }
@@ -229,6 +231,7 @@ object StoreBar {
         setPadding(dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             .apply { setMargins(if (first) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
+        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 

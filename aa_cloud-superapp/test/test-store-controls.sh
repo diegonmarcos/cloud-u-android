@@ -3,7 +3,7 @@
 #
 #   C1  appstore-controls.json declares exactly three styles - tab, page,
 #       action - and no two share a SHAPE (fill/outline/chevron/stretch/rounding)
-#   C2  every line-2 entry (each declared feed + the page's own mesh and perms)
+#   C2  every line-2 entry (each declared feed + the page's own mesh)
 #       wears the `page` style, with an icon; captions have ONE declaration each
 #   C3  the page style is a page button: outlined, chevron, wraps; line 1 wears
 #       `tab` and btn() wears `action`
@@ -44,8 +44,9 @@ n="$(printf '%s\n' "$shapes" | grep -c .)"; u="$(printf '%s\n' "$shapes" | sort 
 echo "== C2: every line-2 entry is a page button =="
 # The line-2 ids are DERIVED: every declared feed, plus the ids the page owns
 # (its const vals). A pinned list here would not notice a fifth entry.
-owned="$(command grep -oE 'const val (MESH|PERMS) = "[a-z]+"' "$PAGE" | sed 's/.*"\(.*\)"/\1/')"
-ids="$(jq -r '.feeds[].id' "$FEEDS") $owned"
+owned="$(command grep -oE 'const val MESH = "[a-z]+"' "$PAGE" | sed 's/.*"\(.*\)"/\1/')"
+# #896 the feeds moved to the Feed page (tab style), so line 2 is what the Cloud page owns.
+ids="$owned"
 count=0
 for id in $ids; do
   count=$((count+1))
@@ -62,7 +63,7 @@ for id in $ids; do
     [ -n "$lbl" ] && ok "page '$id' declares its caption ($lbl)" || bad "page '$id' declares no caption"
   fi
 done
-[ "$count" -ge 4 ] && ok "$count line-2 entries checked (Commits, CI-CD, Mesh, Perms at least)" \
+[ "$count" -ge 1 ] && ok "$count line-2 entry checked (Apps Mesh; the feeds and Perms left for their own pages, #896)" \
   || bad "only $count line-2 entries derived - the checks above verified too little"
 
 echo "== C3: the page style looks like a page button =="
@@ -74,13 +75,15 @@ jq -e '.styles.page | .stroke != null and .fill == null and .chevron != "" and .
 
 echo "== C4: the Kotlin draws what is declared =="
 body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"; }
-TABBAR="$(body_of 'private fun tabBar(')"; TABBTN="$(body_of 'private fun tabButton(')"
-PAINT="$(body_of 'private fun paintTabs()')"; BTN="$(body_of 'private fun btn(')"
+TABS="$STORE/java/com/diegonmarcos/superapp/appstore/StoreTabs.kt"  # #896 the strip builder Cloud, Phone and Feed share
+tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
+TABBAR="$(body_of 'private fun tabBar(')"; TABBTN="$(tabs_body_of 'fun button(')"
+PAINT="$(tabs_body_of 'fun paint(')"; BTN="$(body_of 'private fun btn(')"
 for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT" "btn:$BTN"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*} - every assertion about it would verify nothing"
 done
-printf '%s' "$TABBAR" | grep -qF 'feeds.map { controls.page(it.id, it.label) } + controls.page(MESH) + controls.page(PERMS)' \
-  && ok "line 2 is every feed plus Mesh and Perms, each dressed by its page declaration" \
+printf '%s' "$TABBAR" | grep -qF 'listOf(controls.page(MESH))' \
+  && ok "line 2 is Apps Mesh, dressed by its page declaration" \
   || bad "tabBar does not dress line 2 from the page declarations"
 printf '%s' "$TABBTN" | grep -qF 'listOf(control.icon, control.label, style.chevron)' \
   && ok "tabButton draws icon, caption and chevron" || bad "tabButton drops the icon or the chevron"
