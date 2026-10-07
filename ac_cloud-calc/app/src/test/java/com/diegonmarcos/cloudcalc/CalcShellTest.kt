@@ -185,14 +185,14 @@ class CalcShellTest {
         compose.waitForIdle()
         fun top() = compose.onNodeWithTag(CalcTags.key("=")).getBoundsInRoot().top
         val rest = top()
-        val display = compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().height
+        val display = compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().let { it.bottom - it.top }
         listOf("2", "+", "2").forEach { compose.onNodeWithTag(CalcTags.key(it)).performClick(); compose.waitForIdle(); assertEquals(rest, top()) }
         compose.waitUntil(5_000) {
             compose.onAllNodesWithTag(CalcTags.RESULT).fetchSemanticsNodes().isNotEmpty() &&
                 runCatching { compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 4") }.isSuccess
         }
         assertEquals(rest, top())
-        assertEquals(display, compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().height)
+        assertEquals(display, compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().let { it.bottom - it.top })
         assertEquals(0, compose.onAllNodesWithTag(CalcTags.ASK_TOGGLE).fetchSemanticsNodes().size)
     }
 

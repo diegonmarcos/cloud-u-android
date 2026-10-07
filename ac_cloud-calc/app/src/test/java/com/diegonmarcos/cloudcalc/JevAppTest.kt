@@ -296,7 +296,7 @@ class JevAppTest {
         assertEquals(JevStore.model(app, JevFlow.SCORE_USE), d.model)
     }
 
-    @Test fun `the expression mode offers no follow-up box: nothing result-dependent may move its keypad`() {
+    @Test fun `the expression mode offers no follow-up box, so nothing result-dependent may move its keypad`() {
         http.reply = { _, body ->
             val id = body!!.getJSONObject("questions").keys().next()
             Http.Response(200, JSONObject().put("answers", JSONObject().put(id, JSONObject().put("type", "noul").put("noul", 0.8))).toString())
