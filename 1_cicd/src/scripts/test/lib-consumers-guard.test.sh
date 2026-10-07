@@ -52,4 +52,20 @@ d = json.load(open(p)); d["lib_apks"]["static_libs"]["battery"] = "x"; d["lib_ap
 PY
 has "describes ghost" && ok "a description for a lib that is gone fails" || fail "a stale description passed"
 
+cp "$ROOT/ab_cloud-libs-shared/lib-apks/build.json" "$WORK/ab_cloud-libs-shared/lib-apks/"
+# 5. an ML lib is listed with the non-ML ones (flag flipped): the data no longer matches the ml- rule
+python3 - "$WORK" <<'PY'
+import json, sys
+p = sys.argv[1] + "/aa_cloud-superapp/data/lib-consumers.json"
+d = json.load(open(p)); next(e for e in d["build_time"] if e["id"] == "ml-l-image")["ml"] = False; json.dump(d, open(p, "w"))
+PY
+python3 "$WORK/1_cicd/src/scripts/cloud-android-lib-consumers.py" write "$WORK" >/dev/null  # regenerate: green again
+chk >/dev/null && ok "regeneration heals a flipped ML flag" || fail "ML flag regeneration does not converge"
+python3 - "$WORK" <<'PY'
+import json, sys
+p = sys.argv[1] + "/aa_cloud-superapp/data/lib-consumers.json"
+d = json.load(open(p)); next(e for e in d["build_time"] if e["id"] == "ml-l-image")["ml"] = False; json.dump(d, open(p, "w"))
+PY
+has "lib-consumers.json does not match" && ok "an ML lib flagged as non-ML fails" || fail "an ML lib mixed into the non-ML list passed"
+
 [ "$FAILURES" -eq 0 ] && echo "all lib-consumers guard checks passed" || { echo "$FAILURES failed"; exit 1; }

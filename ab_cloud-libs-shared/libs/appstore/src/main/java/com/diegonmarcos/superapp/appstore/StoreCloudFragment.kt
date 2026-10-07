@@ -409,6 +409,7 @@ class StoreCloudFragment : Fragment() {
         }
         // The Libs tab has two sections: the installable engines (this list, with
         // who binds each) and, below it, the libs that only compile in (info rows).
+        libSplit = hasLibSections
         if (hasLibSections) body.addView(sectionHeading(ctx, "Runtime engines — installable APKs"))
         body.addView(summaryView)
         body.addView(filterBar(ctx, list))
@@ -455,6 +456,9 @@ class StoreCloudFragment : Fragment() {
         else -> true
     }
 
+    /** True on the page that carries the two lib sections: ML rows are then drawn apart from the rest. */
+    private var libSplit = false
+
     private fun renderList(ctx: Context, list: List<Fleet.App>) {
         listHost.removeAllViews()
         statusViews.clear(); actionRows.clear(); stageBtns.clear()
@@ -466,7 +470,14 @@ class StoreCloudFragment : Fragment() {
         // belong. Unshelved rows sort last; once a list has had headings they
         // get their own "Other" so they do not read as part of the run above.
         var heading: String? = null
-        for (app in shown) {
+        // Don't mix ML libs with the others: on the Libs page the ML engines (the ml- rule
+        // applicationOf already reads off the id) form their own run under their own header.
+        val (ml, plain) = if (libSplit) shown.partition { applicationOf(it.id) != null } else emptyList<Fleet.App>() to shown
+        for (app in plain + ml) {
+            if (ml.isNotEmpty() && app === ml.first()) {
+                listHost.addView(sectionHeading(ctx, "Machine-learning engines"))
+                heading = null
+            }
             val here = headingOf(app) ?: if (heading != null) OTHER else null
             if (here != null && here != heading) listHost.addView(applicationHeading(ctx, here))
             heading = here
@@ -801,8 +812,16 @@ class StoreCloudFragment : Fragment() {
         val libs = libConsumers.optJSONArray("build_time") ?: return
         body.addView(sectionHeading(ctx, "Build-time shared libs — compiled in, nothing to install"))
         body.addView(caption(ctx, "${libs.length()} libs. Each is compiled into the apps listed, so it ships inside their APKs."))
-        for (i in 0 until libs.length()) {
-            val lib = libs.getJSONObject(i)
+        // Don't mix ML libs with the others: the generator flags each lib (`ml`, the ml- id rule)
+        // and the two kinds are drawn as separate runs under their own headers.
+        val all = (0 until libs.length()).map { libs.getJSONObject(it) }
+        for ((title, group) in listOf("Shared libs" to all.filter { !it.optBoolean("ml") },
+                                      "Machine-learning libs" to all.filter { it.optBoolean("ml") })) {
+            if (group.isEmpty()) continue
+            val groupBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            body.addView(groupHeader(ctx, "lib_group_$title", title, group.size, groupBox))
+            body.addView(groupBox)
+            for (lib in group) {
             val compiledBy = appNames(lib.optJSONArray("compiled_by"))
             val engines = lib.optJSONArray("engines")?.let { e -> (0 until e.length()).map { e.getString(it) } }.orEmpty()
             val card = LinearLayout(ctx).apply {
@@ -826,13 +845,37 @@ class StoreCloudFragment : Fragment() {
                 setOnClickListener { maxLines = if (maxLines == 2) Int.MAX_VALUE else 2 }
             }
             card.addView(callers)
-            body.addView(card)
+            groupBox.addView(card)
+            }
         }
     }
 
+    /** A section or group separator: larger than a row title, with room above and below, so the
+     *  headers stay prominent while the rows under them stay compact. */
     private fun sectionHeading(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S4))
+        text = t; textSize = StoreDensity.T_TITLE * 1.4f; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
+        setPadding(0, dp(ctx, StoreDensity.S12 * 2), 0, dp(ctx, StoreDensity.S8))
+    }
+
+    /** Each lib group's collapsed state, per user, in this app's prefs (keyed by the group's title). */
+    private val groupPrefs by lazy { requireContext().getSharedPreferences("store_lib_groups", Context.MODE_PRIVATE) }
+    private fun isCollapsed(key: String) = runCatching { groupPrefs.getBoolean(key, false) }.getOrDefault(false)
+    private fun setCollapsed(key: String, v: Boolean) { runCatching { groupPrefs.edit().putBoolean(key, v).apply() } }
+
+    /** A collapsible group header: chevron, title and count. Tapping toggles [content] and remembers it. */
+    private fun groupHeader(ctx: Context, key: String, title: String, count: Int, content: View) = TextView(ctx).apply {
+        fun paintIt() {
+            val closed = content.visibility == View.GONE
+            text = "${if (closed) "›" else "⌄"}  $title ($count)"
+        }
+        textSize = StoreDensity.T_TITLE * 1.25f; setTextColor(cUpd); typeface = Typeface.DEFAULT_BOLD
+        setPadding(0, dp(ctx, StoreDensity.S12 * 2), 0, dp(ctx, StoreDensity.S8)); isClickable = true
+        content.visibility = if (isCollapsed(key)) View.GONE else View.VISIBLE
+        paintIt()
+        setOnClickListener {
+            content.visibility = if (content.visibility == View.GONE) View.VISIBLE else View.GONE
+            setCollapsed(key, content.visibility == View.GONE); paintIt()
+        }
     }
 
     /** The rows of the visible tab. Perms draws no batch actions, so it has none. */

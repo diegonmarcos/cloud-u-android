@@ -48,6 +48,8 @@ LIBS = "ab_cloud-libs-shared/libs"
 # a companion APK that compiles shared libs like an app does, though it is not under a[ac]_*
 EXTRA_APPS = ["ab_cloud-libs-shared/keyboard-engines"]
 A = "{http://schemas.android.com/apk/res/android}"
+# an ML lib states its application in its own id: ml-{t|l}-{domain}-{name} (the rule libs:appstore reads too)
+ML = __import__("re").compile(r"^ml-[tl]-[a-z0-9]+(-|$)")
 
 
 def _load(name, fname):
@@ -143,7 +145,7 @@ def generate(root):
 
     build_time = []
     for m in sorted(libs - engines):
-        entry = {"id": m, "description": static.get(m, ""),
+        entry = {"id": m, "ml": bool(ML.match(m)), "description": static.get(m, ""),
                  "compiled_by": sorted(a for a in apps if m in inputs[a]),
                  "engines": sorted(in_engine.get(m, []))}
         if primary.get(m):
@@ -159,6 +161,11 @@ def problems(root, gen):
     ids = {e["id"] for e in gen["build_time"]}
     out = ["lib_apks.static_libs has no description for %s" % m for m in sorted(ids - set(static))]
     out += ["lib_apks.static_libs describes %s, which is not a shared non-engine lib" % m for m in sorted(set(static) - ids)]
+    # ML libs never share a list with the others: flagged by the id rule, and none may be
+    # unflagged or flagged without the rule (the page splits on this flag)
+    out += ["%s: ml flag %s disagrees with the ml- id rule" % (e["id"], e["ml"]) for e in gen["build_time"] if e["ml"] != bool(ML.match(e["id"]))]
+    out += ["every build-time lib is %s: nothing to split" % ("ML" if all(e["ml"] for e in gen["build_time"]) else "non-ML")
+            for _ in [0] if len({e["ml"] for e in gen["build_time"]}) < 2]
     return out
 
 
