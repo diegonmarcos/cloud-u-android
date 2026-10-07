@@ -69,10 +69,10 @@ class CalcShellTest {
         override fun complete(prefix: String, max: Int) = """[{"name":"sqrt","title":"Square Root","kind":"function","category":"c"}]"""
         override fun items(kind: String, category: String, max: Int) =
             """[{"name":"m","title":"Meter","kind":"unit","category":"$category"},{"name":"ft","title":"Foot","kind":"unit","category":"$category"}]"""
-        var time = 1783296000L
-        var fetchedTime = 1783296000L
-        var fetchOk = true
-        var fetches = 0
+        @Volatile var time = 1783296000L
+        @Volatile var fetchedTime = 1783296000L
+        @Volatile var fetchOk = true
+        @Volatile var fetches = 0
         override fun ratesInfo() = """{"sources":[],"time":$time}"""
         override fun fetchRates(): String {
             fetches++
@@ -261,7 +261,10 @@ class CalcShellTest {
         val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
         engine.time = day(today.minusDays(9)); engine.fetchedTime = day(today)
         openCurrency()
-        compose.waitUntil(5_000) { engine.fetches >= 1 && has("Rates as of $today") }
+        try { compose.waitUntil(5_000) { has("Rates as of $today") } } catch (e: Throwable) {
+            throw AssertionError("fetches=${engine.fetches} time=${engine.time} want=$today tree=" + compose.onAllNodesWithText("Rates as of", substring = true).fetchSemanticsNodes().map { it.config.toString() }, e)
+        }
+        assertTrue(engine.fetches >= 1)
         // The old date is gone: the line was re-read after the fetch, not kept.
         assertEquals(0, compose.onAllNodesWithText("Rates as of ${today.minusDays(9)}", substring = true).fetchSemanticsNodes().size)
     }
