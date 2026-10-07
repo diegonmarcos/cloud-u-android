@@ -206,7 +206,7 @@ public class TermuxShellUtils {
             // This function may be called by a different package like a plugin, so we get version for Termux package via its context
             Context termuxPackageContext = TermuxUtils.getTermuxPackageContext(currentPackageContext);
             if (termuxPackageContext != null) {
-                TERMUX_VERSION_NAME = PackageUtils.getVersionNameForPackage(termuxPackageContext);
+                TERMUX_VERSION_NAME = DebianVersion.of(PackageUtils.getVersionNameForPackage(termuxPackageContext));
                 TERMUX_IS_DEBUGGABLE_BUILD = PackageUtils.isAppForPackageADebuggableBuild(termuxPackageContext) ? "1" : "0";
 
                 TERMUX_APP_PID = TermuxUtils.getTermuxAppPID(currentPackageContext);

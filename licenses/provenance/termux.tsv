@@ -262,6 +262,7 @@ ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/settings/propertie
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/settings/properties/SharedPropertiesParser.java	verbatim		18	0	txt
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/settings/properties/TermuxPropertyConstants.java	verbatim		343	0	txt
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/settings/properties/TermuxSharedProperties.java	verbatim		540	0	txt
+ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/shell/DebianVersion.java	new		0	18	txt
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/shell/ResultSender.java	verbatim		300	0	txt
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/shell/ShellEnvironmentClient.java	verbatim		39	0	txt
 ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/shell/ShellUtils.java	verbatim		41	0	txt
@@ -304,7 +305,9 @@ ac_cloud-termux/termux-shared/src/main/res/values/dimens.xml	verbatim		9	0	txt
 ac_cloud-termux/termux-shared/src/main/res/values/strings.xml	modified	termux-shared/src/main/res/values/strings.xml	82	3	txt
 ac_cloud-termux/termux-shared/src/main/res/values/themes.xml	verbatim		35	0	txt
 ac_cloud-termux/test/test-allow-external-apps.sh	new		0	112	txt
+ac_cloud-termux/test/test-debian-version.sh	new		0	45	txt
 ac_cloud-termux/test/test-home-survives-update.sh	new		0	85	txt
 ac_cloud-termux/test/test-rootfs-declared.sh	new		0	361	txt
 ac_cloud-termux/test/test-terminal-debug-api.sh	new		0	106	txt
+ac_cloud-termux/test/test-toolbelt-wipe.sh	new		0	90	txt
 ac_cloud-termux/test/test-wake-lock.sh	new		0	243	txt

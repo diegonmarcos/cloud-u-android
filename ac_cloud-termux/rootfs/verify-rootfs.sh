@@ -233,7 +233,7 @@ home_mutant() {  # $1 = sed expression applied to enter.sh, $2 = what it breaks
     plant_agent_files
 }
 home_mutant 's| -b "$HOME:/root"||' "an enter.sh that does not bind \$HOME as /root"
-home_mutant 's|^    rm -rf "$ROOTFS"$|    rm -rf "$ROOTFS" "$HOME/.claude"|' "an unpack that clears ~/.claude"
+home_mutant 's|^    wipe_rootfs$|    wipe_rootfs; rm -rf "$HOME/.claude"|' "an unpack that clears ~/.claude"
 
 echo "── #771: the app's own selftest, every check, against a noexec, foreign-owned shared store ──"
 # The phone's measured store: FUSE-mounted noexec, owned by a media uid that is not the

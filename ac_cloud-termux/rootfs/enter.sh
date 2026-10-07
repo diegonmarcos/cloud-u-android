@@ -40,11 +40,35 @@ unset LD_PRELOAD
 export PROOT_TMP_DIR="$HERE/tmp"
 mkdir -p "$PROOT_TMP_DIR"
 
+# wipe_rootfs begin
+# Clears the old unpacked root before a re-extract. It can never fail the session:
+# a previous agent session leaves nix/linux-store style files (0444 in 0555 dirs)
+# under the root, which a plain rm cannot remove, so every entry is made writable
+# first. The root's /tmp is scratch an update has no reason to touch (it is where
+# those stale trees live), so it is left alone. Nothing is printed per file; one
+# summary line says what could not be removed, and the caller carries on.
+wipe_rootfs() {
+    [ -d "$ROOTFS" ] || return 0
+    for e in "$ROOTFS"/* "$ROOTFS"/.[!.]* "$ROOTFS"/..?*; do
+        [ -e "$e" ] || [ -L "$e" ] || continue
+        [ "$e" != "$ROOTFS/tmp" ] || continue
+        [ -L "$e" ] || chmod -R u+rwx "$e" >/dev/null 2>&1 || true
+        rm -rf "$e" >/dev/null 2>&1 || true
+    done
+    left=0
+    for e in "$ROOTFS"/* "$ROOTFS"/.[!.]* "$ROOTFS"/..?*; do
+        { [ -e "$e" ] || [ -L "$e" ]; } && [ "$e" != "$ROOTFS/tmp" ] && left=$((left + 1))
+    done
+    [ "$left" -eq 0 ] || echo "cloud-rootfs: $left old entries in the root could not be removed; continuing" >&2
+    return 0
+}
+# wipe_rootfs end
+
 want="$(cat "$HERE/rootfs.sha256" 2>/dev/null)" || fallback "rootfs.sha256 is missing: the app has not staged the rootfs"
 if [ "$(cat "$STAMP" 2>/dev/null || true)" != "$want" ]; then
     [ -f "$HERE/rootfs.tar.zst" ] || fallback "rootfs.tar.zst is missing and no unpacked rootfs matches $want"
     echo "Unpacking the agent toolbelt (first start after install or update)..." >&2
-    rm -rf "$ROOTFS"
+    wipe_rootfs
     mkdir -p "$ROOTFS"
     # Android forbids hard links in app storage; --link2symlink emulates the
     # rootfs's (claude's bin/claude.exe is one) and proot resolves them later.
