@@ -584,6 +584,14 @@ unit)
         fi
         break
     done
+    # A red run must say WHY in the job's own annotations: the raw job log needs a token the
+    # owner's phone does not hold, and "Process completed with exit code 1" is not a reason.
+    # The Kotlin/Gradle error lines of the captured output are re-emitted as ::error:: lines.
+    if [ "$rc" -ne 0 ]; then
+        grep -nE '^e: |error:|> Task .* FAILED|What went wrong|Execution failed|Manifest merger|Unresolved reference|tests completed|Could not ' "$unit_log" \
+            | head -40 | tr -d '\r' | cut -c1-900 | sed 's/%/%25/g' \
+            | while IFS= read -r l; do echo "::error title=unit tests [$APP_NAME]::$l"; done
+    fi
     rm -f "$unit_log" "$unit_log.rc"
     exit "$rc"
     ;;
