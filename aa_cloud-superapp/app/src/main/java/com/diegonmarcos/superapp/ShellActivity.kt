@@ -703,7 +703,10 @@ open class ShellActivity : AppCompatActivity(),
             toolbarFx = LauncherToolbarFx(this, bottomNav) { onTileClicked(it) }
             toolbarFx.install()
 
-            Updater.start(applicationContext)
+            // #894 Cloud Store updates this app with the rest of the fleet: no self-update schedule here.
+            if (com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
+                Updater.cancel(applicationContext)
+            else Updater.start(applicationContext)
             Trace.i(TAG, "onCreate done")
         } catch (t: Throwable) {
             Trace.e(TAG, "onCreate FAILED", t)
@@ -1916,8 +1919,13 @@ open class ShellActivity : AppCompatActivity(),
         val anchor = findViewById<View>(R.id.fragment_container)
         when {
             actionType == "check_updates" -> {
-                Updater.checkNow(applicationContext)
-                anchor.snack(R.string.check_updates_started)
+                // #894 Cloud Store runs the checks; open it on the fleet tab instead of checking here.
+                if (com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
+                    routeTarget("page:config/store-cloud")
+                else {
+                    Updater.checkNow(applicationContext)
+                    anchor.snack(R.string.check_updates_started)
+                }
             }
             actionType == "import_configs" -> {
                 val frag = ImportConfigsFragment.newInstance()
@@ -1935,6 +1943,8 @@ open class ShellActivity : AppCompatActivity(),
             // this is a page: target, not an action with its own branch here.
             actionType == "update_all" -> {
                 routeTarget("page:config/store-cloud")
+                // #894 with Cloud Store installed that route opened Cloud Store; installs are its job.
+                if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
                 kotlin.concurrent.thread {
                     val fleet = com.diegonmarcos.superapp.updater.Fleet
                         .parse(BuildConfig.CONSTELLATION_FLEET_B64)

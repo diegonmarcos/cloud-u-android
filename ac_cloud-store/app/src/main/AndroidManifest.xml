@@ -19,6 +19,19 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- #894 Cloud Store's own shell channel. Wireless-debugging pairing runs in a foreground
+         service (the lib's AdbPairingService, declared below), which needs the notification, the
+         foreground-service and mDNS/network permissions; WRITE_SECURE_SETTINGS can only be held
+         through `pm grant` by the channel itself and lets each boot turn Wireless debugging back
+         on; BOOT_COMPLETED re-arms the channel, whose connection is process state. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -45,6 +58,26 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- #894 the pairing flow's foreground service (libs:shizuku-adb-debug-tools). The lib's own
+             manifest declares the same service; it is restated here so Cloud Store's manifest is the
+             record of what it runs, and the merger folds the two. -->
+        <service
+            android:name="com.diegonmarcos.superapp.adbdebug.AdbPairingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Pairs this app's embedded adb client with the phone's own Wireless debugging while the user types the pairing code into the notification" />
+        </service>
+
+        <receiver
+            android:name=".shell.ShellBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Same provider cloud-superapp declares: lets the Shizuku install
              channel bind when Shizuku is present. -->

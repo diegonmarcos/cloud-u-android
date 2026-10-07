@@ -284,7 +284,9 @@ class PermissionsFragment : Fragment() {
                        com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())) {
                 val now = !com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())
                 com.diegonmarcos.superapp.updater.AutoUpdatePrefs.setEnabled(ctxAny(), now)
-                com.diegonmarcos.superapp.updater.Updater.start(ctxAny())
+                // #894 Cloud Store owns installs when present: no self-update schedule from here.
+                if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(ctxAny()))
+                    com.diegonmarcos.superapp.updater.Updater.start(ctxAny())
                 ConstellationWorker.start(ctxAny())
                 Toast.makeText(ctxAny(), "Auto-update " + (if (now) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
                 rebuildFragment()

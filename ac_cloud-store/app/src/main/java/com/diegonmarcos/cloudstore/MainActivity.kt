@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -112,7 +113,9 @@ class MainActivity : AppCompatActivity() {
         val own = androidx.compose.runtime.remember { FleetBearer.Own(ctx) }
         var token by androidx.compose.runtime.remember { mutableStateOf(own.token) }
         var source by androidx.compose.runtime.remember { mutableStateOf(FleetBearer.source(ctx)) }
-        Column(Modifier.fillMaxSize().padding(StoreDensity.dpValue(StoreDensity.S12).dp)) {
+        Column(Modifier.fillMaxSize()
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(StoreDensity.dpValue(StoreDensity.S12).dp)) {
             Text("Fleet token", fontSize = StoreDensity.T_TITLE.sp)
             Text(when (source) {
                 FleetBearer.Source.ACCOUNT -> "Supplied by Cloud Account; the entry below is not used."
@@ -129,6 +132,8 @@ class MainActivity : AppCompatActivity() {
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth().padding(top = StoreDensity.dpValue(StoreDensity.S8).dp),
             )
+            // #894 the pairing flow for this app's own shell channel (silent installs).
+            com.diegonmarcos.cloudstore.shell.ShellChannelSection(ctx)
         }
     }
 

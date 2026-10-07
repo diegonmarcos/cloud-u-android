@@ -58,6 +58,10 @@ class App : Application() {
         // CONSTELLATION_DATA provider when SuperApp is installed, else the token typed
         // into this app's Settings tab. Read per request; never logged.
         FeedViewer.fleetBearer = { runCatching { FleetBearer.resolve(this) }.getOrDefault("") }
+        // #894 Cloud Store's OWN uid-2000 channel (embedded adb pairing, Shizuku as the fallback):
+        // Fleet.commit and the self-update install through it first, no prompt.
+        runCatching { com.diegonmarcos.cloudstore.shell.CloudStoreShell.install(this) }
+            .onFailure { Log.w(TAG, "shell channel not armed", it) }
         // Periodic fleet check + the Wi-Fi trigger + the auto chain, which
         // updates every constellation app (SuperApp included) and this one last.
         runCatching { ConstellationWorker.start(this) }

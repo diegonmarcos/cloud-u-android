@@ -207,6 +207,8 @@ class StoreCloudFragment : Fragment() {
     private var progressIcon: ImageView? = null
     private var progressLabel: TextView? = null
     private var progressBar: ProgressBar? = null
+    /** #894 the one writer of the bar's state: monotonic per item (see [ProgressBarModel]). */
+    private val barModel = ProgressBarModel()
     private var progressCancel: TextView? = null
 
     /**
@@ -707,23 +709,30 @@ class StoreCloudFragment : Fragment() {
      * failure to report, so the row goes; and the Done/Idle dip between two apps
      * of a batch keeps the row up instead of flickering it out per app.
      */
+    /** The only place the bar is written. Touches a property only when it changes: swapping the
+     *  indeterminate and determinate drawables is itself what shows as a flash. */
+    private fun drawBar(bar: ProgressBar, d: ProgressBarModel.Draw) {
+        if (bar.isIndeterminate != d.indeterminate) bar.isIndeterminate = d.indeterminate
+        if (!d.indeterminate && bar.progress != d.percent) bar.progress = d.percent
+    }
+
     private fun renderProgress(state: UpdateProgress.State, p: StoreStages.Progress?) {
         val row = progressRow ?: return
         val label = progressLabel ?: return
         val bar = progressBar ?: return
         if (state is UpdateProgress.State.Cancelled) {
+            barModel.reset()
             UpdateProgress.reset()
             progressCancel?.visibility = View.GONE
             row.visibility = View.GONE
             return
         }
-        if (p == null) { row.visibility = View.GONE; return }
+        if (p == null) { barModel.reset(); row.visibility = View.GONE; return }
         // #831 a failure's reason is long and this line is one slot above the
         // list: name the app and point at its row, where the reason is whole.
         label.text = if (p.failed) StoreRowError.banner(p.app) else p.text
         label.setTextColor(if (p.failed) cBlk else cUpd)
-        bar.isIndeterminate = !p.failed && p.percent < 0
-        bar.progress = if (p.failed) 0 else p.percent.coerceAtLeast(0)
+        drawBar(bar, barModel.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed))
         val icon = p.pkg.takeIf { it.isNotEmpty() }?.let { pkg ->
             runCatching { row.context.packageManager.getApplicationIcon(pkg) }.getOrNull()
         }
@@ -1196,7 +1205,7 @@ class StoreCloudFragment : Fragment() {
         if (StoreStages.progress() != null) return
         progressLabel?.text = "$title — ${b.summary.ifEmpty { "nothing to do" }}" + if (b.online) "" else " (offline)"
         progressLabel?.setTextColor(cUpd)
-        progressBar?.apply { isIndeterminate = false; progress = 100 }
+        progressBar?.let { drawBar(it, barModel.complete()) }
         progressCancel?.visibility = View.GONE
         progressIcon?.visibility = View.GONE
         row.setOnClickListener(null)

@@ -36,7 +36,9 @@
         "libs:updater",
         "libs:appstore",
         "libs:bottomnav",
-        "libs:sysdns"
+        "libs:sysdns",
+        "libs:shizuku-adb-debug-tools",
+        "libs:fleetconfig-model"
       ]
     },
     "libs:core": {
@@ -83,6 +85,20 @@
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    }
+  },
+  "shizuku_client": {
+    "_doc": "#894 Cloud Store's OWN privileged shell channel (owner decision 2026-10-07: the Store, not SuperApp, handles every fleet install and its own self-update). Read at build time by libs/shizuku-adb-debug-tools/build.gradle (BuildConfig.SHIZUKU_CLIENT_B64) exactly as cloud-termux's block is. The ladder ShellChannels walks is: the embedded wireless-adb client (paired once from Settings > Silent installs), our app_process server, then these providers in order. SuperApp's bridge is deliberately NOT listed: SuperApp stays out of the install pass, so this app must not depend on it for a channel.",
+    "providers": [
+      "moe.shizuku.privileged.api"
+    ]
+  },
+  "shizuku_diagnostics": {
+    "_doc": "Only the per-app local server identity. The lib reads the CONSUMER's block first and falls back to SuperApp's whole block when absent, and SuperApp's app_process server binds 38099: two apps on one port means whichever starts second silently fails to bind. Cloud Store has no diagnostic bundles of its own.",
+    "bundles": [],
+    "local_server": {
+      "port": 38098,
+      "nice_name": "cloudstore-adb"
     }
   },
   "release": {

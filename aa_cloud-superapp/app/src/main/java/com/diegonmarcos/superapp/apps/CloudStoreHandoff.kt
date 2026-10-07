@@ -79,6 +79,14 @@ object CloudStoreHandoff {
         return decide(installed(ctx)) { open(ctx, tab) } == Route.OPENED_CLOUD_STORE
     }
 
+    /**
+     * #894 Cloud Store owns every install and update on this phone once it is installed (owner
+     * decision 2026-10-07; it has its own shell channel). SuperApp then runs no fleet pass, no
+     * Update-all and no self-update check of its own: it hands the user to Cloud Store instead,
+     * and Cloud Store updates SuperApp with the rest of the fleet.
+     */
+    fun ownsInstalls(ctx: Context): Boolean = installed(ctx)
+
     fun installed(ctx: Context): Boolean = runCatching {
         ctx.packageManager.getApplicationInfo(PKG, 0).enabled
     }.getOrDefault(false)   // NameNotFoundException = not installed
