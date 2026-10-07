@@ -1127,6 +1127,15 @@
           "Currency"
         ],
         "rates": true,
+        "favourites": [
+          "USD",
+          "EUR",
+          "BRL",
+          "GBP",
+          "JPY",
+          "CNY"
+        ],
+        "_doc_favourites": "Pinned at the top of both pickers, the rows and columns of the cross-rate matrix under the converter, and the set kept fresh: the engine refreshes its rate files once a day in the background (a WorkManager job with a network constraint, RatesWorker) and on open when the date the rates carry is older than the latest ECB publication (about 16:00 CET on working days). The date shown is the ECB file's own date, read by the engine from the file it just replaced.",
         "default": {
           "value": "100",
           "category": "Currency",

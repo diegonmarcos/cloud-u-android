@@ -62,8 +62,9 @@ class CalcEngine(context: Context) {
         native { str(QalcNative.items(bytes(kind), bytes(category), max.coerceIn(1, MAX_ITEMS))) }
 
     fun ratesInfo(): String = native {
-        JSONObject().put("sources", JSONArray(str(QalcNative.ratesSources())))
-            .put("time", JSONObject(str(QalcNative.info())).optLong("rates_time"))
+        val sources = JSONArray(str(QalcNative.ratesSources()))
+        JSONObject().put("sources", sources)
+            .put("time", ratesTime(sources, JSONObject(str(QalcNative.info())).optLong("rates_time")))
             .toString()
     }
 
@@ -83,8 +84,12 @@ class CalcEngine(context: Context) {
         val reload = JSONObject(native { str(QalcNative.reloadRates()) })
         return JSONObject().put("ok", fetched.length() > 0 && reload.optBoolean("ok"))
             .put("fetched", fetched).put("failed", failed)
-            .put("time", reload.optLong("time")).toString()
+            .put("time", ratesTime(sources, reload.optLong("time"))).toString()
     }
+
+    /** The rates' own date (the ECB file's), never a cached or compiled-in stamp when the file is there. */
+    private fun ratesTime(sources: JSONArray, fallback: Long): Long =
+        RatesDate.of((0 until sources.length()).map { sources.getJSONObject(it).let { s -> s.getString("url") to s.getString("file") } }, fallback)
 
     private fun download(url: String, target: File) {
         val c = URL(url).openConnection() as HttpURLConnection

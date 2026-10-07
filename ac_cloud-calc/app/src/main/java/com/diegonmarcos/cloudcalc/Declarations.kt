@@ -53,6 +53,8 @@ object Declarations {
         val forms: List<Form>,
         val categories: List<String>,
         val rates: Boolean,
+        /** The currencies pinned first, shown in the matrix and kept fresh (build.json::ui.modes[currency].favourites). */
+        val favourites: List<String>,
         val defaults: Map<String, String>,
         val catalog: List<CatalogSource>,
         val plot: Plot?,
@@ -111,6 +113,7 @@ object Declarations {
             },
             categories = (m.optJSONArray("categories") ?: JSONArray()).strings(),
             rates = m.optBoolean("rates", false),
+            favourites = (m.optJSONArray("favourites") ?: JSONArray()).strings(),
             defaults = (m.optJSONObject("default") ?: JSONObject()).let { d ->
                 d.keys().asSequence().associateWith { d.get(it).toString() }
             },

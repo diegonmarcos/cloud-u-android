@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudcalc.Declarations
+import com.diegonmarcos.cloudcalc.Fx
 import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.decide.JevFlow
@@ -273,6 +274,8 @@ private fun ConverterMode(mode: Declarations.Mode) {
     var units by remember(mode.id) { mutableStateOf(listOf<Logic.Item>()) }
     var result by remember(mode.id) { mutableStateOf<Logic.Result?>(null) }
     var rates by remember(mode.id) { mutableStateOf("") }
+    /** The stamp the rates carry; the matrix recomputes when it moves. */
+    var ratesTime by remember(mode.id) { mutableStateOf(0L) }
 
     LaunchedEffect(category) {
         units = Logic.items(io { api.items("unit", category, 1000) })
@@ -285,7 +288,16 @@ private fun ConverterMode(mode: Declarations.Mode) {
         delay(DEBOUNCE_MS)
         result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
     }
-    if (mode.rates) LaunchedEffect(mode.id) { rates = ratesLine(io { api.ratesInfo() }) }
+    // On open: show the date the rates carry, and when it is older than the latest ECB publication fetch. The
+    // line is always re-read from the engine after a fetch, so it shows the fetched file's own date.
+    if (mode.rates) LaunchedEffect(mode.id) {
+        rates = ratesLine(io { api.ratesInfo() }.also { ratesTime = Fx.time(it) })
+        val fetched = io { Fx.refreshIfStale(api, System.currentTimeMillis()) } ?: return@LaunchedEffect
+        val info = io { api.ratesInfo() }
+        ratesTime = Fx.time(info)
+        rates = ratesLine(info) + failureNote(fetched)
+        result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
         if (mode.categories.size > 1) {
@@ -305,9 +317,9 @@ private fun ConverterMode(mode: Declarations.Mode) {
             }),
         )
         Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
-            UnitPicker(units, from, Modifier.weight(1f)) { from = it }
+            UnitPicker(units, from, mode.favourites, Modifier.weight(1f)) { from = it }
             TextButton(onClick = { val f = from; from = to; to = f }, modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.CONVERT_SWAP), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text("⇄") }
-            UnitPicker(units, to, Modifier.weight(1f)) { to = it }
+            UnitPicker(units, to, mode.favourites, Modifier.weight(1f)) { to = it }
         }
         ResultBlock(result)
         // = keeps the conversion in History (the keypad's = for a converter); compact, one row with the rates line.
@@ -323,39 +335,78 @@ private fun ConverterMode(mode: Declarations.Mode) {
             if (mode.rates) OutlinedButton(
                 onClick = {
                     scope.launch {
-                        rates = fetchedLine(io { api.fetchRates() })
+                        val fetched = io { Fx.refresh(api, System.currentTimeMillis()) }
+                        val info = io { api.ratesInfo() }
+                        ratesTime = Fx.time(info)
+                        rates = ratesLine(info) + failureNote(fetched)
                         result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
                     }
                 },
                 modifier = Modifier.height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap),
             ) { Text(stringResource(R.string.update_rates), style = MaterialTheme.typography.labelMedium) }
         }
+        if (mode.rates && mode.favourites.size > 1) RatesMatrix(mode, ratesTime, rates)
     }
 }
+
+/** Cross rates of the favourites: a row's one unit in each column's currency, dense, with the rates date. */
+@Composable
+private fun RatesMatrix(mode: Declarations.Mode, ratesTime: Long, ratesText: String) {
+    val api = LocalCalcApi.current
+    val codes = mode.favourites
+    var cells by remember(mode.id) { mutableStateOf(mapOf<Pair<String, String>, String>()) }
+    LaunchedEffect(ratesTime) {
+        cells = io {
+            codes.flatMap { r -> codes.map { c -> r to c } }.associateWith { (r, c) ->
+                if (r == c) "—" else Logic.result(api.eval(Logic.convert("1", r, c), mode.options)).let { if (it.ok) Fx.cell(it.text) else "?" }
+            }
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(top = CalcMetrics.gap).testTag(CalcTags.MATRIX)) {
+        Text(ratesText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.hairline)) {
+            Text("", Modifier.weight(1f))
+            codes.forEach { c -> Text(c, Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.End) }
+        }
+        codes.forEach { r ->
+            Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.hairline)) {
+                Text(r, Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                codes.forEach { c ->
+                    Text(cells[r to c].orEmpty(), Modifier.weight(1f).testTag(CalcTags.matrixCell(r, c)), style = MaterialTheme.typography.labelSmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+private fun failureNote(fetchJson: String): String = runCatching {
+    val o = org.json.JSONObject(fetchJson)
+    if (o.optBoolean("ok")) "" else " (update failed: " + o.optString("error").ifBlank { "no source answered" } + ")"
+}.getOrDefault("")
 
 private fun ratesLine(json: String): String = runCatching {
     val t = org.json.JSONObject(json).optLong("time")
     "Rates as of " + if (t > 0) java.time.Instant.ofEpochSecond(t).toString().take(10) else "unknown"
 }.getOrDefault(json)
 
-private fun fetchedLine(json: String): String = runCatching {
-    val o = org.json.JSONObject(json)
-    val t = o.optLong("time")
-    val failed = o.optJSONArray("failed")?.length() ?: 0
-    (if (o.optBoolean("ok")) "Rates updated" else o.optString("error").ifBlank { "Rates not updated" }) +
-        (if (t > 0) " — as of " + java.time.Instant.ofEpochSecond(t).toString().take(10) else "") +
-        (if (failed > 0) " ($failed source(s) failed)" else "")
-}.getOrDefault(json)
-
 @Composable
-private fun UnitPicker(units: List<Logic.Item>, selected: String, modifier: Modifier, onPick: (String) -> Unit) {
+private fun UnitPicker(units: List<Logic.Item>, selected: String, favourites: List<String>, modifier: Modifier, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text(selected.ifBlank { "—" }) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            units.forEach { u ->
-                DropdownMenuItem(text = { Text(u.title + " (" + u.name + ")") }, onClick = { onPick(u.name); open = false })
-            }
+            // The favourites first, in their declared order, then a rule, then the rest.
+            val (fav, rest) = Fx.pinned(units.map { it.name }, favourites)
+            val byName = units.associateBy { it.name }
+            @Composable fun item(name: String) = DropdownMenuItem(
+                text = { Text((byName[name]?.title ?: name) + " (" + name + ")", style = MaterialTheme.typography.bodySmall) },
+                onClick = { onPick(name); open = false },
+                modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.pickerItem(name)),
+            )
+            fav.forEach { item(it) }
+            if (fav.isNotEmpty()) HorizontalDivider()
+            rest.forEach { item(it) }
         }
     }
 }

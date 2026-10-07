@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
         // Opening the app is a foreground moment: re-plan, so a wakeup the system dropped (a
         // force-stop clears every alarm and sends no broadcast) is set again.
         ClockEngine.reschedule(applicationContext)
+        RatesWorker.schedule(applicationContext)
         setContent { CalcTheme { CalcShell(api, state) } }
     }
 

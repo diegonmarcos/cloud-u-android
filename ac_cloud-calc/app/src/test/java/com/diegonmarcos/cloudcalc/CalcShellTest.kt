@@ -8,6 +8,7 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.cloudcalc.engine.CalcApi
@@ -68,8 +69,16 @@ class CalcShellTest {
         override fun complete(prefix: String, max: Int) = """[{"name":"sqrt","title":"Square Root","kind":"function","category":"c"}]"""
         override fun items(kind: String, category: String, max: Int) =
             """[{"name":"m","title":"Meter","kind":"unit","category":"$category"},{"name":"ft","title":"Foot","kind":"unit","category":"$category"}]"""
-        override fun ratesInfo() = """{"sources":[],"time":1783296000}"""
-        override fun fetchRates() = """{"ok":true,"fetched":[],"failed":[],"time":1783296000}"""
+        var time = 1783296000L
+        var fetchedTime = 1783296000L
+        var fetchOk = true
+        var fetches = 0
+        override fun ratesInfo() = """{"sources":[],"time":$time}"""
+        override fun fetchRates(): String {
+            fetches++
+            if (fetchOk) time = fetchedTime
+            return if (fetchOk) """{"ok":true,"fetched":[],"failed":[],"time":$time}""" else """{"ok":false,"error":"offline","fetched":[],"failed":[],"time":$time}"""
+        }
     }
 
     private val engine = FakeEngine()
@@ -80,6 +89,7 @@ class CalcShellTest {
     private lateinit var savedAccount: (android.content.Context, String) -> Pair<String?, String>
 
     @org.junit.Before fun offline() {
+        com.diegonmarcos.cloudcalc.Fx.lastAttemptMs = 0L
         savedHttp = com.diegonmarcos.cloudcalc.decide.JevStore.http
         savedAccount = com.diegonmarcos.cloudcalc.decide.JevStore.account
         com.diegonmarcos.cloudcalc.decide.JevStore.http = object : com.diegonmarcos.superapp.decisions.Http {
@@ -237,6 +247,47 @@ class CalcShellTest {
         compose.waitForIdle()
         assertEquals(cur.id, state.history.first().mode)
         assertTrue(state.history.first().ts > 0)
+    }
+
+    private fun day(d: java.time.LocalDate) = d.atStartOfDay(java.time.ZoneOffset.UTC).toEpochSecond()
+    private fun openCurrency() {
+        launch()
+        val cur = Declarations.modes.first { it.id == "currency" }
+        compose.runOnIdle { state.tab = cur.tab; state.modeByTab[cur.tab] = cur.id }
+    }
+
+    @Test fun `opening Currency with stale rates fetches and shows the fetched rates' own date`() {
+        val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
+        engine.time = day(today.minusDays(9)); engine.fetchedTime = day(today)
+        openCurrency()
+        compose.waitUntil(5_000) { engine.fetches == 1 && runCatching { compose.onNodeWithText("Rates as of $today", substring = true).assertExists() }.isSuccess }
+        // The old date is gone: the line was re-read after the fetch, not kept.
+        assertEquals(0, compose.onAllNodesWithText("Rates as of ${today.minusDays(9)}", substring = true).fetchSemanticsNodes().size)
+    }
+
+    @Test fun `fresh rates are not fetched on open`() {
+        val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
+        engine.time = day(today)
+        openCurrency()
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithText("Rates as of $today", substring = true).assertExists() }.isSuccess }
+        compose.waitForIdle()
+        assertEquals(0, engine.fetches)
+    }
+
+    @Test fun `a failed refresh on open leaves the cached date and notes the failure`() {
+        val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
+        engine.time = day(today.minusDays(9)); engine.fetchOk = false
+        openCurrency()
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithText("update failed: offline", substring = true).assertExists() }.isSuccess }
+        compose.onNodeWithText("Rates as of ${today.minusDays(9)}", substring = true).assertExists()
+    }
+
+    @Test fun `the cross-rate matrix of the favourites sits under the converter`() {
+        openCurrency()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.matrixCell("USD", "EUR")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(CalcTags.matrixCell("USD", "EUR")).assertTextContains("42") }.isSuccess }
+        compose.onNodeWithTag(CalcTags.matrixCell("BRL", "BRL")).assertTextContains("—")
+        assertEquals(36, Declarations.modes.first { it.id == "currency" }.favourites.size.let { it * it })
     }
 
     @Test fun `a history tap sends the result back to its mode`() {
