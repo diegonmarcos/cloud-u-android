@@ -41,17 +41,19 @@
       }
     },
     {
-      "id": "terminals_doze_whitelist",
-      "title": "Terminals exempt from battery optimization",
-      "why": "Doze and Samsung app sleep stop the terminals' CPU and network when the screen is off; the shell-side allowlist is the same thing Settings → Battery → Unrestricted grants, done declaratively for both terminals and the SuperApp.",
+      "id": "fleet_doze_whitelist",
+      "title": "Fleet apps exempt from doze and background network restriction",
+      "why": "Doze (DOZE chain) and Android 15's background network restriction (APP_BACKGROUND chain) cut the network of every app that is not in the foreground: netpolicy showed the Store in procState CAC with effective=DOZE|APP_BACKGROUND, every download it ran after the user switched away failed at the resolver (\"network DNS none\"). The power-save allowlist (the same thing Settings → Battery → Unrestricted grants) lifts both chains: allowed=POWER_SAVE_ALLOWLIST|POWER_SAVE_EXCEPT_IDLE_ALLOWLIST, effective=NONE. Declared for every fleet app that works in the background.",
       "apply": [
         "dumpsys deviceidle whitelist +cld.termux",
         "dumpsys deviceidle whitelist +cld.termux.nix",
-        "dumpsys deviceidle whitelist +com.diegonmarcos.superapp"
+        "dumpsys deviceidle whitelist +com.diegonmarcos.superapp",
+        "dumpsys deviceidle whitelist +com.diegonmarcos.cloudstore",
+        "dumpsys deviceidle whitelist +com.diegonmarcos.cloudaccount"
       ],
       "verify": {
-        "cmd": "dumpsys deviceidle whitelist | grep -c -E \"cld.termux|com.diegonmarcos.superapp\"",
-        "expect": "3"
+        "cmd": "dumpsys deviceidle whitelist | grep -c -E \"cld.termux|com.diegonmarcos.(superapp|cloudstore|cloudaccount)\"",
+        "expect": "5"
       }
     },
     {
