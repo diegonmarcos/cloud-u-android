@@ -52,4 +52,32 @@ object BrowserFavourites {
     /** Folder → bookmarks, top level ("") first, the rest sorted: what both views draw. */
     fun sections(list: List<BrowserBookmark>): List<Pair<String, List<BrowserBookmark>>> =
         list.groupBy { it.folder }.toList().sortedWith(compareBy({ it.first.isNotEmpty() }, { it.first }))
+
+    // ── search (the Fav page's live filter and the address bar's Favorites section share these) ──
+
+    private fun tokens(q: String): List<String> = q.lowercase().split(' ', '\t').filter { it.isNotEmpty() }
+
+    /** Every whitespace-separated word of [q] occurs, case-insensitive, in the title or the address. An empty query matches all. */
+    fun matches(b: BrowserBookmark, q: String): Boolean {
+        val hay = (b.title + " " + b.url).lowercase()
+        return tokens(q).all { hay.contains(it) }
+    }
+
+    /** [sections] narrowed to the bookmarks that match [q]; a folder left with nothing is dropped. */
+    fun filter(sections: List<Pair<String, List<BrowserBookmark>>>, q: String): List<Pair<String, List<BrowserBookmark>>> =
+        if (tokens(q).isEmpty()) sections
+        else sections.mapNotNull { (f, items) -> items.filter { matches(it, q) }.takeIf { it.isNotEmpty() }?.let { f to it } }
+
+    /**
+     * The address bar's Favorites section: the matching bookmarks best match first (host or title start beats
+     * a substring, see [BrowserSuggest.matchScore]), ties keep the list's order, at most [limit]; a URL in
+     * [skip] (already shown above) is left out so a page is never offered twice.
+     */
+    fun suggest(list: List<BrowserBookmark>, q: String, limit: Int, skip: Set<String> = emptySet()): List<BrowserBookmark> {
+        val ts = tokens(q)
+        if (ts.isEmpty() || limit <= 0) return emptyList()
+        return list.filter { it.url !in skip && matches(it, q) }
+            .sortedByDescending { b -> ts.sumOf { BrowserSuggest.matchScore(it, b.url, b.title) ?: 10.0 } / ts.size }
+            .distinctBy { it.url }.take(limit)
+    }
 }

@@ -46,7 +46,7 @@ def check(root, ok):
     ok("bookmarks.applySeed(config.favourites)" in frag and "fun applySeed(" in bm, "F4 the seed is applied at start")
     ok("favourites = FavSeed.parse(" in cfg, "F4 the config parses the baked seed")
     fd = ui["browser"].get("favourites", {})
-    ok(all(s["file"].startswith("../aa_cloud-superapp/data/") for s in fd.get("sources", [])) and len(fd.get("sources", [])) >= 2, "F4 the seed comes from the fleet's service data")
+    ok(all(s["file"].startswith("../aa_cloud-superapp/data/") or s["file"] == "data/github_pages.json" for s in fd.get("sources", [])) and sum(s["file"].startswith("../aa_cloud-superapp/data/") for s in fd.get("sources", [])) >= 2, "F4 the seed comes from the fleet's service data (and the derived GitHub Pages list)")
     ok(not any("password" in json.dumps(fd).lower() for _ in [0]), "F4 no credentials in the seed")
     g = open(os.path.join(root, "ac_cloud-browser/app/build.gradle"), encoding="utf-8").read()
     ok("favDecl.items = favItems.unique" in g and "favDecl.remove('sources')" in g, "F4 gradle expands the sources into items")

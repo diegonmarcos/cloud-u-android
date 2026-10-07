@@ -22,7 +22,7 @@ package com.diegonmarcos.superapp.browser
  */
 object BrowserSuggest {
 
-    enum class Source { TAB, HISTORY, SEARCH }
+    enum class Source { TAB, HISTORY, SEARCH, FAV }
 
     data class Suggestion(val url: String, val label: String, val source: Source, val subtitle: String = "")
 
@@ -73,16 +73,18 @@ object BrowserSuggest {
     }
 
     /**
-     * #886 the dropdown's two LABELLED sections.
-     *  - [Sections.search]: the default engine's own section: a "Search <engine> for q" row first, then
-     *    the engine's query suggestions ([remote], already fetched or empty), each opening a search.
+     * The dropdown's three LABELLED sections, always in this order, each capped:
+     *  - [Sections.search]: Web search, the default engine's own section: a "Search <engine> for q" row
+     *    first, then the engine's query suggestions ([remote], already fetched or empty), each opening a search.
      *  - [Sections.history]: pages he has been to that match, open tabs first, then history ranked by
      *    [score] (how well it matches, then how recent), each with title and URL.
+     *  - [Sections.favourites]: matching Fav entries (the bookmarks, seeded sections such as GitHub Pages
+     *    included), best match first, never a URL the History section already shows.
      * A private tab is never offered, as in [suggest].
      */
-    data class Sections(val search: List<Suggestion>, val history: List<Suggestion>) {
-        val isEmpty: Boolean get() = search.isEmpty() && history.isEmpty()
-        val flat: List<Suggestion> get() = search + history
+    data class Sections(val search: List<Suggestion>, val history: List<Suggestion>, val favourites: List<Suggestion> = emptyList()) {
+        val isEmpty: Boolean get() = search.isEmpty() && history.isEmpty() && favourites.isEmpty()
+        val flat: List<Suggestion> get() = search + history + favourites
     }
 
     fun sections(
@@ -92,8 +94,10 @@ object BrowserSuggest {
         engine: BrowserSearchEngine,
         remote: List<String> = emptyList(),
         now: Long = System.currentTimeMillis(),
-        searchLimit: Int = 6,
-        historyLimit: Int = 8,
+        searchLimit: Int = SEARCH_LIMIT,
+        historyLimit: Int = HISTORY_LIMIT,
+        favourites: List<BrowserBookmark> = emptyList(),
+        favLimit: Int = FAV_LIMIT,
     ): Sections {
         val q = query.trim()
         if (q.isEmpty()) return Sections(emptyList(), emptyList())
@@ -118,8 +122,16 @@ object BrowserSuggest {
             out.getOrPut(v.url) { (m + recency(v.ts, now)) to Suggestion(v.url, v.title.ifBlank { v.url }, Source.HISTORY, v.url) }
         }
         val ranked = out.values.sortedByDescending { it.first }.take(historyLimit).map { it.second }
-        return Sections(search, ranked)
+        val shown = ranked.map { it.url }.toSet()
+        val favs = BrowserFavourites.suggest(favourites, q, favLimit, shown)
+            .map { Suggestion(it.url, it.title.ifBlank { it.url }, Source.FAV, it.url) }
+        return Sections(search, ranked, favs)
     }
+
+    /** Dense: five rows a section at most (the search section counts its own "Search ..." row). */
+    const val SEARCH_LIMIT = 5
+    const val HISTORY_LIMIT = 5
+    const val FAV_LIMIT = 5
 
     /**
      * How well [needle] (lower-case) matches a page: the host starting with it beats a title word

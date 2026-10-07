@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudbrowser
 
+import com.diegonmarcos.superapp.browser.BrowserBookmark
 import com.diegonmarcos.superapp.browser.BrowserRemoteSuggest
 import com.diegonmarcos.superapp.browser.BrowserSearchEngine
 import com.diegonmarcos.superapp.browser.BrowserSuggest
@@ -67,17 +68,67 @@ class BrowserSuggestSectionsTest {
         assertTrue(BrowserSuggest.sections("  ", emptyList(), emptyList(), ddg).isEmpty)
         val many = (1..40).map { visit("https://k.example/$it", "kotlin $it", it.toDouble()) }
         val s = BrowserSuggest.sections("kotlin", emptyList(), many, ddg, remote = (1..40).map { "kotlin $it" }, now = now)
-        assertEquals(8, s.history.size)
-        assertEquals(6, s.search.size)
+        assertEquals(BrowserSuggest.HISTORY_LIMIT, s.history.size)
+        assertEquals(BrowserSuggest.SEARCH_LIMIT, s.search.size)
+        assertEquals("dense: five rows a section", 5, s.history.size)
     }
 
     @Test
     fun `the panel draws a title only above a section that has rows`() {
         val s = BrowserSuggest.sections("zzz", emptyList(), emptyList(), ddg, now = now)
         val rows = SuggestRow.build(s, "DuckDuckGo")
-        assertEquals(listOf("DuckDuckGo"), rows.filterIsInstance<SuggestRow.Title>().map { it.text })
+        assertEquals(listOf("Web search · DuckDuckGo"), rows.filterIsInstance<SuggestRow.Title>().map { it.text })
         val withHist = SuggestRow.build(BrowserSuggest.sections("k", emptyList(), listOf(visit("https://k.example/", "k", 0.0)), ddg, now = now), "DuckDuckGo")
-        assertEquals(listOf("DuckDuckGo", "History"), withHist.filterIsInstance<SuggestRow.Title>().map { it.text })
+        assertEquals(listOf("Web search · DuckDuckGo", "History"), withHist.filterIsInstance<SuggestRow.Title>().map { it.text })
+    }
+
+    // ── #8xx the third section: Favorites ──
+
+    private fun fav(url: String, title: String, folder: String = "") = BrowserBookmark(url, title, folder, 1L)
+    private val favs = listOf(
+        fav("https://diegonmarcos.github.io/leafy/", "Leafy", "GitHub Pages"),
+        fav("https://diegonmarcos.github.io/linktree/", "Linktree", "GitHub Pages"),
+        fav("https://git.diegonmarcos.com", "Gitea", "Public"),
+        fav("https://notes.example/leaf-notes", "Notes"),
+    )
+
+    @Test
+    fun `three sections in order - web search, history, favorites - each with its own title`() {
+        val hist = listOf(visit("https://leaf.example/", "Leaf blower", 1.0))
+        val s = BrowserSuggest.sections("leaf", emptyList(), hist, ddg, remote = listOf("leaf spring"), now = now, favourites = favs)
+        assertEquals(listOf(BrowserSuggest.Source.SEARCH, BrowserSuggest.Source.HISTORY, BrowserSuggest.Source.FAV),
+            s.flat.map { it.source }.distinct())
+        assertEquals(listOf("Leafy", "Notes"), s.favourites.map { it.label })
+        val rows = SuggestRow.build(s, "DuckDuckGo")
+        assertEquals(listOf("Web search · DuckDuckGo", "History", "Favorites"), rows.filterIsInstance<SuggestRow.Title>().map { it.text })
+        val order = rows.map { r -> if (r is SuggestRow.Title) r.text else (r as SuggestRow.Item).s.source.name }
+        assertEquals(listOf("Web search · DuckDuckGo", "SEARCH", "SEARCH", "History", "HISTORY", "Favorites", "FAV", "FAV"), order)
+    }
+
+    @Test
+    fun `favorites include the github pages section and match by title or address`() {
+        assertEquals(listOf("https://diegonmarcos.github.io/leafy/", "https://diegonmarcos.github.io/linktree/"),
+            BrowserSuggest.sections("github.io", emptyList(), emptyList(), ddg, now = now, favourites = favs).favourites.map { it.url })
+        assertEquals(listOf("Gitea"), BrowserSuggest.sections("gitea", emptyList(), emptyList(), ddg, now = now, favourites = favs).favourites.map { it.label })
+    }
+
+    @Test
+    fun `favorites are capped, ranked best match first, and a page already in history is not repeated`() {
+        val many = (1..30).map { fav("https://p.example/$it", "page $it") } + fav("https://best.example/", "pagex start")
+        val s = BrowserSuggest.sections("page", emptyList(), emptyList(), ddg, now = now, favourites = many)
+        assertEquals(BrowserSuggest.FAV_LIMIT, s.favourites.size)
+        val hist = listOf(visit("https://diegonmarcos.github.io/leafy/", "Leafy", 0.0))
+        val both = BrowserSuggest.sections("leafy", emptyList(), hist, ddg, now = now, favourites = favs)
+        assertEquals(listOf("https://diegonmarcos.github.io/leafy/"), both.history.map { it.url })
+        assertTrue("shown once, in History", both.favourites.none { it.url == "https://diegonmarcos.github.io/leafy/" })
+    }
+
+    @Test
+    fun `no favorite match draws no Favorites title, and an empty box offers no favorites`() {
+        val s = BrowserSuggest.sections("zzz", emptyList(), emptyList(), ddg, now = now, favourites = favs)
+        assertTrue(s.favourites.isEmpty())
+        assertFalse(SuggestRow.build(s, "DuckDuckGo").any { it is SuggestRow.Title && it.text == "Favorites" })
+        assertTrue(BrowserSuggest.sections(" ", emptyList(), emptyList(), ddg, favourites = favs).isEmpty)
     }
 
     // ── the remote feed ──

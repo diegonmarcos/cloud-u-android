@@ -351,7 +351,7 @@ class BrowserHostFragment : Fragment() {
         }
 
     /**
-     * New tab, as a Compose screen: the field and the same two-section suggestions as the address bar
+     * New tab, as a Compose screen: the field and the same three-section suggestions as the address bar
      * (#886: the old AutoCompleteTextView-in-a-dialog dropdown overlapped its own field and the
      * keyboard). Accepts a URL or a search — same rule as the address bar. [joinTabKey]: the strip's +,
      * the new tab joins (or starts) that tab's group.
@@ -410,7 +410,7 @@ class BrowserHostFragment : Fragment() {
         state.query = q
         val e = engine()
         state.engineLabel = e.label
-        fun local(remote: List<String>) = BrowserSuggest.sections(q, prefs.all(), history.all(), e, remote)
+        fun local(remote: List<String>) = BrowserSuggest.sections(q, prefs.all(), history.all(), e, remote, favourites = bookmarks.all())
         state.sections = local(if (remoteFor == q) remoteRows else emptyList())
         pendingRemote?.let { ui.removeCallbacks(it) }
         if (BrowserRemoteSuggest.shouldAsk(browserSettings.bool("search_suggestions") == true, q, private_)) {

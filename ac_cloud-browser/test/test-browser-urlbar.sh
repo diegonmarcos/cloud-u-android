@@ -10,7 +10,8 @@
 #   U2 the panel is a Compose child of the frame under the bar (so it cannot cover it), its height capped
 #      by that frame (so it stays above the keyboard, which resizes the window: adjustResize, and the island
 #      steps aside), it scrolls, and a scrim tap, back and Go all dismiss it;
-#   U3 two LABELLED sections: the default engine (its search row + its suggestions) and History, ranked;
+#   U3 three LABELLED sections in order: Web search (the default engine's search row + its suggestions), History
+#      (ranked), Favorites (the matching Fav entries), each capped;
 #   U4 the engine's suggestion feed is its own file, gated by the `search_suggestions` setting, https only,
 #      never from a private tab, and BrowserSuggest / BrowserHistory still contain no network client.
 set -eu
@@ -46,7 +47,9 @@ def check(root, ok):
     ok('android:windowSoftInputMode="adjustResize"' in manifest, "U2 the window resizes with the keyboard")
     mainact = src.get(APP + "/MainActivity.kt", "")
     ok("WindowInsetsCompat.Type.ime()" in mainact and "bottomNav.visibility" in mainact, "U2 the island steps aside while the keyboard is up")
-    ok("Title(engineLabel)" in panel and 'Title("History")' in panel, "U3 two titled sections: the engine's and History")
+    ok("Title(searchTitle(engineLabel))" in panel and 'Title("History")' in panel and 'Title("Favorites")' in panel, "U3 three titled sections: Web search, History, Favorites")
+    ok(panel.find("Title(searchTitle") < panel.find('Title("History")') < panel.find('Title("Favorites")'), "U3 they come in that order")
+    ok("Web search" in panel and "searchLimit: Int = SEARCH_LIMIT" in sug and "historyLimit: Int = HISTORY_LIMIT" in sug and "favLimit: Int = FAV_LIMIT" in sug, "U3 each section is capped")
     ok("fun sections(" in sug and "Search ${engine.label} for" in sug, "U3 the first section opens with the engine's own search row")
     ok("fun matchScore(" in sug and "fun recency(" in sug and "sortedByDescending { it.first }" in sug, "U3 history is ranked by match, then recency")
     ok("v.title" in sug and "subtitle" in sug, "U3 history rows carry title and url")
@@ -75,7 +78,10 @@ main("url bar", check, [
     ("back leaves the panel up", FRAG, "suggestState.visible -> dismissSuggestions()", "false -> dismissSuggestions()", "back dismisses"),
     ("the window stops resizing", "ac_cloud-browser/app/src/main/AndroidManifest.xml", 'android:windowSoftInputMode="adjustResize"', "", "resizes with the keyboard"),
     ("the island covers the keyboard room", APP + "/MainActivity.kt", "bottomNav.visibility = if (ime)", "bottomNav.alpha = if (ime)", "steps aside"),
-    ("the History title goes", PANEL, 'add(Title("History"))', 'add(Title(""))', "two titled sections"),
+    ("the History title goes", PANEL, 'add(Title("History"))', 'add(Title(""))', "three titled sections"),
+    ("the Favorites section goes", PANEL, 'add(Title("Favorites"))', 'add(Title(""))', "three titled sections"),
+    ("Favorites jumps ahead of History", PANEL, 'if (sections.history.isNotEmpty()) { add(Title("History"))', 'if (sections.favourites.isNotEmpty()) { add(Title("Favorites")); sections.favourites.forEach { add(Item(it)) } }\n            if (sections.history.isNotEmpty()) { add(Title("History"))', "come in that order"),
+    ("the fav cap goes", LIB + "/BrowserSuggest.kt", "favLimit: Int = FAV_LIMIT", "favLimit: Int = 500", "each section is capped"),
     ("history is no longer ranked", LIB + "/BrowserSuggest.kt", "sortedByDescending { it.first }", "map { it }", "ranked by match"),
     ("the feed ignores the setting", FRAG, 'browserSettings.bool("search_suggestions") == true', "true", "only when the setting is on"),
     ("the feed allows plain http", LIB + "/BrowserRemoteSuggest.kt", 'it.startsWith("https://")', 'it.startsWith("http")', "https only"),

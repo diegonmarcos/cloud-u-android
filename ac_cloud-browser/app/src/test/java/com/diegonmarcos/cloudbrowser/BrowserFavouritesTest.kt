@@ -7,6 +7,7 @@ import com.diegonmarcos.superapp.browser.FavSeed
 import com.diegonmarcos.superapp.browser.FavSeedItem
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -77,5 +78,91 @@ class BrowserFavouritesTest {
         assertEquals(3, s.version)
         assertEquals(1, s.items.size)
         assertEquals(FavSeed.EMPTY, FavSeed.parse(null))
+    }
+
+    // ── the Fav page's live filter ──
+
+    private val l = listOf(
+        BrowserBookmark("https://git.diegonmarcos.com", "Gitea", "Public"),
+        BrowserBookmark("https://diegonmarcos.github.io/leafy/", "Leafy", "GitHub Pages"),
+        BrowserBookmark("https://diegonmarcos.github.io/cv_web/", "CV Web", "GitHub Pages"),
+        BrowserBookmark("http://kg-store:8001", "Knowledge graph", "Private (mesh)"),
+        BrowserBookmark("https://example.org/notes", "Top level", ""),
+    )
+
+    @Test
+    fun `the filter matches the title or the address, case-insensitive, and every word must hit`() {
+        assertTrue(BrowserFavourites.matches(l[0], "GITEA"))
+        assertTrue("address", BrowserFavourites.matches(l[0], "git.diego"))
+        assertTrue("title and address words together", BrowserFavourites.matches(l[1], "leafy github.io"))
+        assertFalse("one word misses", BrowserFavourites.matches(l[1], "leafy gitea"))
+        assertTrue("blank keeps everything", BrowserFavourites.matches(l[0], "   "))
+        assertFalse(BrowserFavourites.matches(l[0], "zzz"))
+    }
+
+    @Test
+    fun `filtering keeps the folder order, drops folders left empty and is the identity for a blank query`() {
+        val all = BrowserFavourites.sections(l)
+        assertEquals(all, BrowserFavourites.filter(all, ""))
+        val f = BrowserFavourites.filter(all, "github.io")
+        assertEquals(listOf("GitHub Pages"), f.map { it.first })
+        assertEquals(listOf("Leafy", "CV Web"), f.single().second.map { it.title })
+        assertEquals("both views draw the same list", emptyList<Any>(), BrowserFavourites.filter(all, "nothing like this"))
+        assertEquals(listOf("", "Public"), BrowserFavourites.filter(all, "o").map { it.first }.filter { it in setOf("", "Public") })
+    }
+
+    // ── the seed grows: version 2 brings the GitHub Pages group to people who already have version 1 ──
+
+    private val v1 = FavSeed(1, listOf(FavSeedItem("Gitea", "https://git.diegonmarcos.com", "Public")))
+    private val pages = listOf(
+        FavSeedItem("Leafy", "https://diegonmarcos.github.io/leafy/", "GitHub Pages"),
+        FavSeedItem("CV Web", "https://diegonmarcos.github.io/cv_web/", "GitHub Pages"),
+    )
+    private val v2 = FavSeed(2, v1.items + pages)
+
+    @Test
+    fun `an existing user gets the new group appended and nothing they own is touched`() {
+        var (list, seen) = BrowserFavourites.merge(emptyList(), v1, emptySet(), 1L)
+        list = BrowserBookmarkOps.add(list, BrowserBookmark("https://git.diegonmarcos.com", "My git", "mine", 2L))   // edited
+        list = BrowserBookmarkOps.add(list, BrowserBookmark("https://mine.example", "Mine", "", 3L))                 // own
+        val (next, nextSeen) = BrowserFavourites.merge(list, v2, seen, 9L)
+        assertEquals(list.size + 2, next.size)
+        assertEquals("edit kept", "My git", next.first { it.url == "https://git.diegonmarcos.com" }.title)
+        assertEquals("mine", next.first { it.url == "https://git.diegonmarcos.com" }.folder)
+        assertTrue("own link kept", next.any { it.url == "https://mine.example" })
+        assertEquals(listOf("GitHub Pages"), next.filter { it.url.contains("github.io") }.map { it.folder }.distinct())
+        assertEquals(v2.items.map { it.url }.toSet(), nextSeen)
+    }
+
+    @Test
+    fun `a page the user already starred is not duplicated, one they deleted from version 2 does not come back`() {
+        val starred = listOf(BrowserBookmark("https://diegonmarcos.github.io/leafy/", "Leafy mine", "web", 1L))
+        val (a, seenA) = BrowserFavourites.merge(starred, v2, setOf("https://git.diegonmarcos.com"), 5L)
+        assertEquals(1, a.count { it.url.endsWith("/leafy/") })
+        assertEquals("Leafy mine", a.first { it.url.endsWith("/leafy/") }.title)
+        val without = BrowserBookmarkOps.remove(a, "https://diegonmarcos.github.io/cv_web/")
+        val (b, _) = BrowserFavourites.merge(without, v2, seenA, 6L)
+        assertEquals("applying again is a no-op", without, b)
+    }
+
+    @Test
+    fun `merging the same version twice is idempotent`() {
+        val (l1, s1) = BrowserFavourites.merge(emptyList(), v2, emptySet(), 1L)
+        val (l2, s2) = BrowserFavourites.merge(l1, v2, s1, 2L)
+        assertEquals(l1, l2); assertEquals(s1, s2)
+    }
+
+    // ── the address bar's Favorites section ──
+
+    @Test
+    fun `suggestions rank a start-of-title match above a substring, cap, and skip what is already shown`() {
+        val fav = listOf(
+            BrowserBookmark("https://x.example/leaf-notes", "Notes", "", 1L),            // url substring
+            BrowserBookmark("https://diegonmarcos.github.io/leafy/", "Leafy", "GitHub Pages", 2L),  // title starts
+        )
+        assertEquals(listOf("Leafy", "Notes"), BrowserFavourites.suggest(fav, "leaf", 5).map { it.title })
+        assertEquals(listOf("Leafy"), BrowserFavourites.suggest(fav, "leaf", 1).map { it.title })
+        assertEquals(listOf("Notes"), BrowserFavourites.suggest(fav, "leaf", 5, skip = setOf("https://diegonmarcos.github.io/leafy/")).map { it.title })
+        assertTrue(BrowserFavourites.suggest(fav, "  ", 5).isEmpty())
     }
 }
