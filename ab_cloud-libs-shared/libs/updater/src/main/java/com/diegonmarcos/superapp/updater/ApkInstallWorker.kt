@@ -7,6 +7,7 @@ import com.diegonmarcos.superapp.updater.source.Download
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,6 +31,8 @@ class ApkInstallWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
 
+    override suspend fun getForegroundInfo(): ForegroundInfo = BatchForeground.foregroundInfo(applicationContext)
+
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val url   = inputData.getString(KEY_URL)
         val pkg   = inputData.getString(KEY_PKG)
@@ -42,6 +45,8 @@ class ApkInstallWorker(
             val apk = ApkCache.file(applicationContext, "companion-$pkg.apk")
             UpdateProgress.beginJob(UpdateProgress.Job(pkg, pkg, label, UpdateProgress.STAGE_DOWNLOADING))
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, -1))
+            // #903 download + install under a dataSync foreground job (refused = carry on).
+            runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
             var declared = 0L
             // The private copy of this loop is gone. It was the only one of the
             // three that chased redirects by hand and the only one that could

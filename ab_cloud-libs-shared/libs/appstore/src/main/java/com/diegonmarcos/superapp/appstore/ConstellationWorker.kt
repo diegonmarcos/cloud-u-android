@@ -13,7 +13,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.diegonmarcos.superapp.core.FleetAlerts
+import androidx.work.ForegroundInfo
 import com.diegonmarcos.superapp.updater.Advisory
+import com.diegonmarcos.superapp.updater.BatchForeground
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.InstallIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
@@ -34,6 +36,8 @@ import java.util.concurrent.TimeUnit
  */
 class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
     CoroutineWorker(appCtx, params) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo = BatchForeground.foregroundInfo(applicationContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         // IDENTITY GATE (#453). A work-profile, parallel-clone or Secure
@@ -60,6 +64,9 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         // #804 the pass below IS the persisted auto chain (Fleet.autoChain);
         // attach is idempotent and makes that true in any process WorkManager wakes.
         StoreAuto.attach(applicationContext) { c, t -> kick(c, t) }
+        // #903 the pass downloads and installs: run it as a dataSync foreground job
+        // so the OS (and Samsung's freezer) do not kill it; refused = carry on as before.
+        runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
         val trigger = inputData.getString(KEY_TRIGGER) ?: StoreAuto.TRIGGER_PERIODIC
         // The metered decision the UNMETERED constraint used to make, made here
         // instead (same place UpdateWorker makes it). Deliberately a different

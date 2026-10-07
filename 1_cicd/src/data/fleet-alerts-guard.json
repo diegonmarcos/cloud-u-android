@@ -215,6 +215,12 @@
       "kind": "upstream_fork",
       "notify_calls": 1,
       "why": "NOT MIGRATED (#777): upstream termux-shared plugin-error report (nix-on-droid)."
+    },
+    {
+      "path": "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/BatchForegroundService.kt",
+      "kind": "progress",
+      "notify_calls": 1,
+      "why": "#903 the dataSync foreground service a running Store batch holds: re-posts its own ongoing notification with the Store bar's progress line (StoreStages.progress().text), throttled to once a second. The batch's RESULTS go through FleetAlerts."
     }
   ]
 }

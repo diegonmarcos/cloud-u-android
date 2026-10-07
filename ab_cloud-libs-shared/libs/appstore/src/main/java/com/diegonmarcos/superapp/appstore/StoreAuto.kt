@@ -179,6 +179,8 @@ object StoreAuto {
             return live ?: load(ctx) ?: State(IDLE, trigger, System.currentTimeMillis())
         }
         try {
+            // #903 the chain holds the dataSync foreground service for its whole run.
+            com.diegonmarcos.superapp.updater.BatchForeground.begin(ctx)
             val prev = load(ctx)
             val now = System.currentTimeMillis()
             val s = when {
@@ -233,6 +235,7 @@ object StoreAuto {
             live = null
             running.set(false)
             UpdateProgress.republish()
+            com.diegonmarcos.superapp.updater.BatchForeground.end(ctx)
         }
     }
 

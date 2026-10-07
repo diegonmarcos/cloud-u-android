@@ -28,6 +28,7 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -88,5 +89,20 @@
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        <!-- #903 the dataSync foreground service a running batch (Download all /
+             Update all / the auto chain / one row's Install) holds, so Android
+             and Samsung's freezer leave the process and its network alone.
+             libs:updater declares it too; restated here so this manifest is the
+             record of what the app runs, and the merger folds the two. -->
+        <service
+            android:name="com.diegonmarcos.superapp.updater.BatchForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <!-- #903 WorkManager's own foreground service runs the download/install
+             workers' ForegroundInfo, so it needs the same type. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
     </application>
 </manifest>

@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
+import android.content.Intent
+import com.diegonmarcos.superapp.updater.BatchForeground
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
@@ -42,6 +44,15 @@ import java.util.concurrent.ConcurrentHashMap
 object StoreStages {
 
     private const val TAG = "StoreStages"
+
+    init {
+        // #903 the foreground service's notification IS the Store bar line.
+        BatchForeground.text = { progress()?.text }
+        BatchForeground.icon = { AppStoreHost.notificationIcon }
+        BatchForeground.launch = { ctx ->
+            AppStoreHost.launchActivity?.let { Intent(ctx, it).apply { AppStoreHost.launchExtras.forEach { (k, v) -> putExtra(k, v) } } }
+        }
+    }
 
     const val DOWNLOAD = "download"
     const val INSTALL = "install"
@@ -208,7 +219,7 @@ object StoreStages {
 
     /** Stage 1. Blocking — call off the main thread. Errors are already in the
      *  note ([Fleet.download] writes it); the returned stage shows them. */
-    fun download(ctx: Context, app: Fleet.App): Stage = named(app, UpdateProgress.STAGE_DOWNLOADING, "") {
+    fun download(ctx: Context, app: Fleet.App): Stage = named(ctx, app, UpdateProgress.STAGE_DOWNLOADING, "") {
         fetch(ctx, app)
         stage(ctx, app)
     }
@@ -244,7 +255,7 @@ object StoreStages {
      */
     fun install(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
         val cached = actionableFor(ctx, app, remote)
-        return named(app, if (cached != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
+        return named(ctx, app, if (cached != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
             versionOf(remote, cached)) {
             val e = cached
                 ?: fetch(ctx, app)?.let { ApkCache.entry(it.file) }?.takeIf { !ApkCache.landed(ctx, it, app.pkg) }
@@ -273,7 +284,7 @@ object StoreStages {
      * ponytail: one global job, like [UpdateProgress.state]; two rows running at
      * once share the bar, last one named wins.
      */
-    private fun named(app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage {
+    private fun named(ctx: Context, app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage = BatchForeground.hold(ctx) {
         val mine = UpdateProgress.job?.appId != app.id
         if (mine) UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
         else UpdateProgress.stage(stage)
@@ -282,7 +293,7 @@ object StoreStages {
             if (s.failedAt != null) UpdateProgress.update(UpdateProgress.State.Failed(s.text, app.id, app.pkg,
                 stage = UpdateProgress.job?.stage ?: stageOf(s.failedAt), app = app.label))
             else if (mine) UpdateProgress.update(UpdateProgress.State.Idle)
-            return s
+            return@hold s
         } finally {
             if (mine) UpdateProgress.endJob()
         }
@@ -412,7 +423,10 @@ object StoreStages {
      * #785 Decide first, act second, so the bar's "3 of 12 · next: Chat" counts
      * only what will actually be fetched, not the current apps passed on the way.
      */
-    fun downloadAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch {
+    fun downloadAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch =
+        BatchForeground.hold(ctx, !dryRun) { downloadAllRun(ctx, apps, online, dryRun) }
+
+    private fun downloadAllRun(ctx: Context, apps: List<Fleet.App>, online: Boolean, dryRun: Boolean): Batch {
         val todo = apps.filter { !it.blocked }
         val startRoom = room(ctx)
         var free = startRoom
@@ -478,7 +492,10 @@ object StoreStages {
      * ponytail: no batch lease and no session-headroom cap, same as tapping each
      * row's Install in turn; a refused session reports as failed at install.
      */
-    fun updateAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch {
+    fun updateAll(ctx: Context, apps: List<Fleet.App>, online: Boolean = isOnline(ctx), dryRun: Boolean = false): Batch =
+        BatchForeground.hold(ctx, !dryRun) { updateAllRun(ctx, apps, online, dryRun) }
+
+    private fun updateAllRun(ctx: Context, apps: List<Fleet.App>, online: Boolean, dryRun: Boolean): Batch {
         val todo = apps.filter { !it.blocked }
         val out = ArrayList<Outcome>()
         val go = ArrayList<Pair<Fleet.App, Fleet.State?>>()

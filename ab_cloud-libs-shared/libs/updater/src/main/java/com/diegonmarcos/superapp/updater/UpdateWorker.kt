@@ -8,6 +8,7 @@ import com.diegonmarcos.superapp.updater.source.UpdateChecker
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,6 +29,8 @@ class UpdateWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo = BatchForeground.foregroundInfo(applicationContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         // IDENTITY GATE (#453). Belt-and-suspenders under Updater.start: a
@@ -129,6 +132,8 @@ class UpdateWorker(
                 applicationContext.packageName,
                 applicationContext.applicationInfo.loadLabel(applicationContext.packageManager).toString(),
                 UpdateProgress.STAGE_DOWNLOADING))
+            // #903 download + install under a dataSync foreground job (refused = carry on).
+            runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
             val apk = UpdateChecker(applicationContext).download(available) {
                 isStopped || UpdateProgress.cancelRequested
             }
