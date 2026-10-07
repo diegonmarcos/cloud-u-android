@@ -45,7 +45,10 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
                 // Data-driven device tuning (data/device-tuning.json) through the
                 // same channel: phantom-process killer off, etc. Verify-first,
                 // so the steady-state pass writes nothing.
-                DeviceTuning.run(ctx) { cmd -> EmbeddedAdbChannel.exec(ctx, cmd) }
+                // #891 through the ACTIVE shell channel (the same ladder /api/adb/exec uses: our own server, then
+                // Shizuku), not the embedded-adb one alone -- on the owner's phone the embedded channel was
+                // unpaired while Shizuku answered, and every entry sat at PENDING with every value applied.
+                DeviceTuning.run(ctx) { cmd -> com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.exec(ctx, cmd) }
                 return Result.success()
             }
             Log.i(TAG, "attempt $attempt/$ATTEMPTS: $msg")
