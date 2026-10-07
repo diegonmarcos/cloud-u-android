@@ -161,4 +161,18 @@ jobs:
           if [ ${#xmls[@]} -eq 0 ]; then echo "NO test result XML found — treating as failure"; exit 1; fi
           fails=$(grep -hoE '(failures|errors)="[0-9]+"' "${xmls[@]}" | grep -oE '[0-9]+' | awk '{s+=$1} END{print s+0}')
           echo "instrumented failures+errors = $fails across ${#xmls[@]} result file(s)"
+          # Which ones, in the run's own annotations (the job log needs a token the owner's phone does not hold).
+          python3 - "${xmls[@]}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          n = 0
+          for f in sys.argv[1:]:
+              try: root = ET.parse(f).getroot()
+              except Exception as e: print(f"::error title=instrumented [cloud-nav]::{f}: unreadable ({e})"); continue
+              for tc in root.iter("testcase"):
+                  for bad in list(tc.findall("failure")) + list(tc.findall("error")):
+                      msg = (bad.get("message") or (bad.text or "").strip().splitlines()[0:1] or [""])[0] if isinstance(bad.get("message") or None, str) else ((bad.text or "").strip().splitlines() or [""])[0]
+                      print(f"::error title=instrumented [cloud-nav]::{tc.get('classname','')}.{tc.get('name','')}: {str(msg)[:300]}")
+                      n += 1
+                      if n >= 30: sys.exit(0)
+          PY
           [ "$fails" = "0" ] || { echo "::error::instrumented tests FAILED ($fails)"; exit 1; }
