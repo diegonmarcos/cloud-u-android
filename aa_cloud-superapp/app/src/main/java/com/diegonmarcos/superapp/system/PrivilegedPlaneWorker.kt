@@ -40,6 +40,11 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
         // a PC running /api/adb/server-command.
         Log.i(TAG, "shell ladder at start: ${com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.name() ?: "none"}" +
             " — own server self-bootstrap ${com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctx)}")
+        // #891 the tuning pass needs A shell, not the embedded one: run it now through whatever the
+        // ladder resolved (own server, Shizuku). A phone that never paired the embedded adb — the
+        // owner's — otherwise never gets its device tuning; the pass is verify-first and single-run.
+        if (com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx) != null)
+            DeviceTuning.run(ctx) { cmd -> com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.exec(ctx, cmd) }
 
         var last = ""
         for (attempt in 1..ATTEMPTS) {
