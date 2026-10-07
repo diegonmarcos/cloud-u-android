@@ -241,7 +241,7 @@ class CalcShellTest {
         val cur = Declarations.modes.first { it.id == "currency" }
         compose.runOnIdle { state.tab = cur.tab; state.modeByTab[cur.tab] = cur.id }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.CONVERT_EQ).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Rates as of", substring = true).assertExists()
+        assertTrue(has("Rates as of"))
         compose.onNodeWithTag(CalcTags.CONVERT_SWAP).performClick()
         compose.onNodeWithTag(CalcTags.CONVERT_EQ).performClick()
         compose.waitForIdle()
@@ -249,6 +249,7 @@ class CalcShellTest {
         assertTrue(state.history.first().ts > 0)
     }
 
+    private fun has(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     private fun day(d: java.time.LocalDate) = d.atStartOfDay(java.time.ZoneOffset.UTC).toEpochSecond()
     private fun openCurrency() {
         launch()
@@ -260,7 +261,7 @@ class CalcShellTest {
         val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
         engine.time = day(today.minusDays(9)); engine.fetchedTime = day(today)
         openCurrency()
-        compose.waitUntil(5_000) { engine.fetches == 1 && runCatching { compose.onNodeWithText("Rates as of $today", substring = true).assertExists() }.isSuccess }
+        compose.waitUntil(5_000) { engine.fetches == 1 && has("Rates as of $today") }
         // The old date is gone: the line was re-read after the fetch, not kept.
         assertEquals(0, compose.onAllNodesWithText("Rates as of ${today.minusDays(9)}", substring = true).fetchSemanticsNodes().size)
     }
@@ -269,7 +270,7 @@ class CalcShellTest {
         val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
         engine.time = day(today)
         openCurrency()
-        compose.waitUntil(5_000) { runCatching { compose.onNodeWithText("Rates as of $today", substring = true).assertExists() }.isSuccess }
+        compose.waitUntil(5_000) { has("Rates as of $today") }
         compose.waitForIdle()
         assertEquals(0, engine.fetches)
     }
@@ -278,8 +279,8 @@ class CalcShellTest {
         val today = com.diegonmarcos.cloudcalc.Fx.expectedDate(System.currentTimeMillis())
         engine.time = day(today.minusDays(9)); engine.fetchOk = false
         openCurrency()
-        compose.waitUntil(5_000) { runCatching { compose.onNodeWithText("update failed: offline", substring = true).assertExists() }.isSuccess }
-        compose.onNodeWithText("Rates as of ${today.minusDays(9)}", substring = true).assertExists()
+        compose.waitUntil(5_000) { has("update failed: offline") }
+        assertTrue(has("Rates as of ${today.minusDays(9)}"))
     }
 
     @Test fun `the cross-rate matrix of the favourites sits under the converter`() {
