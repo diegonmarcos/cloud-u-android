@@ -57,9 +57,17 @@ class AidlBackend(context: Context) : Backend {
      * directly any more. The engine exposes a tiny activity that calls it
      * and finishes; that activity is the app's entry point to consent.
      */
-    fun consentIntent(): Intent? =
-        if (!isEngineInstalled()) null
-        else Intent().setClassName(ENGINE_PKG, CONSENT_ACTIVITY)
+    fun consentIntent(): Intent? {
+        if (!isEngineInstalled()) return null
+        val intent = Intent().setClassName(ENGINE_PKG, CONSENT_ACTIVITY)
+        // The engine answers for itself when its wire has needsConsent (#904: the mesh tile read
+        // "consent not granted" with the tunnel up). Not bound yet, an older engine, or an error:
+        // the conservative intent, as before. Never binds here — the state read before it does.
+        val s = service ?: return intent
+        val knows = runCatching { s.methods().contains("needsConsent") }.getOrDefault(false)
+        val needs = if (knows) runCatching { s.needsConsent() }.getOrDefault(true) else true
+        return if (needs) intent else null
+    }
 
     @Synchronized
     fun bindBlocking(timeoutMs: Long = 4000): Boolean {

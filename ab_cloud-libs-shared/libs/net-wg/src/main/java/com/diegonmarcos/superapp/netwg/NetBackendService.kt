@@ -154,12 +154,17 @@ class NetBackendService : Service() {
         override fun getIdleStatus(): String = idleStatus()
 
         override fun methods(): Array<String> = methodNames()
+
+        /** Only the service's own package can ask Android; a client that asked for itself was told
+         *  "another app's VPN" whenever OUR tunnel was up. Unknown (an exception) reads as needed. */
+        override fun needsConsent(): Boolean =
+            runCatching { GoBackend.VpnService.prepare(this@NetBackendService) != null }.getOrDefault(true)
     }
 
     /** The wire INetBackend declares, by name (the engine tester holds this list to the AIDL file). */
     fun methodNames(): Array<String> = arrayOf(
         "getState", "setState", "getStatisticsRaw", "getVersion", "isAlwaysOn", "isLockdownEnabled",
-        "setIdleTunnel", "getIdleStatus")
+        "setIdleTunnel", "getIdleStatus", "needsConsent")
 
     override fun onBind(intent: Intent?): IBinder = binder
 

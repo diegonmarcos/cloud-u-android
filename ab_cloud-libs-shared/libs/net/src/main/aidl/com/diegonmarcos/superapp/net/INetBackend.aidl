@@ -61,4 +61,11 @@ interface INetBackend {
      * client treats as contract 0.
      */
     String[] methods();
+
+    /**
+     * Whether Android still wants the one-time VPN consent for the engine — VpnService.prepare()
+     * asked by the package that OWNS the service, which only the engine can do. Appended last;
+     * a client checks methods() before calling it and keeps the consent intent when it is absent.
+     */
+    boolean needsConsent();
 }
