@@ -549,6 +549,13 @@ regen_constellation() {
     jq -e '.apps | length > 0' "$HERE/constellation-fleet.json" >/dev/null \
         || { echo "ERROR: constellation-fleet.json is not valid JSON with apps" >&2; return 1; }
     echo "constellation apps: $(jq '.apps | length' "$HERE/constellation-fleet.json")"
+    # lib-consumers.json: which apps bind each engine at runtime and which compile each
+    # non-engine shared lib in, derived from every build.json / manifest by the script the
+    # guard re-runs, so the Store's Libs tab never reads a typed list. Its own file (not a
+    # key of the fleet file) so the fleet blob stays small.
+    python3 "$UNIX/1_cicd/src/scripts/cloud-android-lib-consumers.py" write "$UNIX" \
+        && jq -e '.build_time | length > 0' "$HERE/lib-consumers.json" >/dev/null \
+        || { echo "ERROR: lib-consumers.json did not generate" >&2; return 1; }
 }
 regen_constellation
 

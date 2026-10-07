@@ -40,6 +40,11 @@ def constellationFleetFile = [
 ].find { it.exists() }
 if (constellationFleetFile == null) throw new GradleException("libs:appstore: no constellation-fleet.json under ${rootDir}/data or aa_cloud-superapp/data — refusing to bake an empty fleet")
 def constellationFleetB64  = constellationFleetFile.text.bytes.encodeBase64().toString()
+// #878 who calls which lib (the Libs tab's two sections): data/lib-consumers.json, written by
+// data/regen.sh beside the fleet file it sits next to. An absent file bakes empty and the tab
+// draws no caller lines, so a build that lacks it still has its store.
+def libConsumersFile = new File(constellationFleetFile.parentFile, "lib-consumers.json")
+def libConsumersB64  = libConsumersFile.exists() ? libConsumersFile.text.bytes.encodeBase64().toString() : ""
 // #866 The Store groups its shelves by the launcher's own taxonomy
 // (ui.phone_folders / phone_sections / external_apps). The consuming app's
 // build.json is the source when it declares the taxonomy (SuperApp); an app
@@ -69,6 +74,7 @@ android {
         // readers' one CONSTELLATION_FLEET_B64 String is unchanged and the manifest can
         // keep growing. The fleet-manifest guard fails any bake that goes back to one literal.
         buildConfigField "String", "CONSTELLATION_FLEET_B64", bakeB64(constellationFleetB64)
+        buildConfigField "String", "LIB_CONSUMERS_B64",       bakeB64(libConsumersB64)
         buildConfigField "String", "UI_PHONE_FOLDERS_B64",  bakeB64(taxB64(taxonomyUi.phone_folders))
         buildConfigField "String", "UI_PHONE_SECTIONS_B64", bakeB64(taxB64(taxonomyUi.phone_sections))
         buildConfigField "String", "UI_EXTERNAL_APPS_B64",  bakeB64(taxB64(taxonomyUi.external_apps))

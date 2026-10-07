@@ -1,0 +1,35 @@
+name: "lib consumers guard — the Libs tab's caller lists still match every build.json"
+
+# The Store's Libs tab names, for every installable engine, the apps that bind it
+# and, for every shared lib that only compiles in, the apps that compile it. Both
+# lists are generated into aa_cloud-superapp/data/constellation-fleet.json
+# (lib_consumers) by data/regen.sh from every app's build.json, every client
+# module's engine-client.json and the manifests. This guard regenerates them from
+# those files and fails when the committed file differs, or when a non-engine
+# lib has no description in lib-apks/build.json::lib_apks.static_libs.
+#
+# EVERY PUSH, NO PATH FILTER: the commit that makes the list stale can be any
+# app's module map.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lib-consumers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it breaks the build.json files / the data file on a
+      # copy and requires the check to fail naming it.
+      - name: The guard still fails when the data and the build.json files disagree
+        run: bash 1_cicd/src/scripts/test/lib-consumers-guard.test.sh
+
+      - name: lib_consumers matches the build.json files
+        run: python3 1_cicd/src/scripts/cloud-android-lib-consumers.py check .
