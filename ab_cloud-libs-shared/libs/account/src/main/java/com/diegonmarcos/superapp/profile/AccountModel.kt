@@ -261,6 +261,27 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     }
 
     companion object {
+        /**
+         * #802 THE landing of a decrypted vault export, shared by the UI's import/connect
+         * ([ProfileFragment.landVault]) and `/api/account/import`: the schema gate, the Imported
+         * handle, the owner's peers, then S through [landServer]. Returns the unknown
+         * `schema_version` (nothing landed), or null once S holds the file.
+         */
+        fun landBundle(ctx: Context?, body: JSONObject, via: String): Int? {
+            com.diegonmarcos.cloudlib.auth.VaultConnect.unknownSchemaVersion(body, com.diegonmarcos.cloudlib.auth.VaultConnect.knownSchemaVersions)?.let { return it }
+            val imported = com.diegonmarcos.cloudlib.auth.VaultConnect.Imported
+            imported.last = com.diegonmarcos.cloudlib.auth.VaultConnect.sections(body)
+            val bundle = body.optJSONObject("bundle") ?: body
+            imported.bundle = bundle
+            imported.via = via
+            ctx ?: return null
+            // #766 the vault names the owner's peers too: who / which device answer on every line.
+            com.diegonmarcos.cloudlib.auth.UserRegistry.fromVault(bundle)?.let { com.diegonmarcos.cloudlib.auth.UserRegistry.adopt(ctx, it) }
+            // #778 the fetch IS the server file S, stored with its source; L starts as S when there is none.
+            get(ctx).landServer(bundle, via)
+            return null
+        }
+
         private fun decoded(b64: String): String =
             String(android.util.Base64.decode(b64, android.util.Base64.NO_WRAP))
 

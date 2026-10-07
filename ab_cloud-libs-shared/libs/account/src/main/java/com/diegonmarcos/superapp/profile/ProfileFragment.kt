@@ -1017,19 +1017,13 @@ class ProfileFragment : Fragment() {
      * is redrawn when the dialog closes (importDialog's dismiss), never under it.
      */
     private fun landVault(status: TextView, body: org.json.JSONObject, redrawNow: Boolean = true, via: String = ""): Boolean {
-        VaultConnect.unknownSchemaVersion(body, VaultConnect.knownSchemaVersions)?.let { v ->
+        // #802 ONE landing for the UI and /api/account/import: schema gate, Imported, peers, S.
+        AccountModel.landBundle(context, body, via)?.let { v ->
             show(status, RED, "✗ " + getString(R.string.vault_connect_schema_unknown, v,
                 VaultConnect.knownSchemaVersions.sorted().joinToString(", ")))
             return false
         }
-        val sections = VaultConnect.sections(body)
-        VaultConnect.Imported.last = sections
-        VaultConnect.Imported.bundle = body.optJSONObject("bundle") ?: body
-        VaultConnect.Imported.via = via
-        // #766 the vault names the owner's peers too: who / which device answer on every line.
-        context?.let { c -> VaultConnect.Imported.bundle?.let(UserRegistry::fromVault)?.let { UserRegistry.adopt(c, it) } }
-        // #778 the fetch IS the server file S, stored with its source; L starts as S when there is none.
-        context?.let { c -> VaultConnect.Imported.bundle?.let { AccountModel.get(c).landServer(it, via) } }
+        val sections = VaultConnect.Imported.last.orEmpty()
         failedSteps -= ProfileJourney.Step.SIGN_IN
         show(status, GREEN, getString(
             R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size, tabLabel(profilesTab)))

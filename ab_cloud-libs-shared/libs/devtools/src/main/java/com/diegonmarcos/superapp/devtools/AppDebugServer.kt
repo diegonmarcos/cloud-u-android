@@ -153,6 +153,9 @@ object AppDebugServer {
         val op: String,
         val params: String = "",
         val description: String = "",
+        /** #802 the most body bytes this op accepts from a fleet-authenticated caller (a vault
+         *  bundle is ~2 MB); every other request keeps [MAX_BODY_BYTES]. */
+        val maxBody: Int = MAX_BODY_BYTES,
     )
 
     /** Catalogs supplied via the documenting [route] overload, keyed like
@@ -330,21 +333,24 @@ object AppDebugServer {
                 bearerOf(h)?.let { bearer = it }
                 contentLengthOf(h)?.let { length = it }
             }
+            val op = canonicalOp(path)
+            val fleet = FleetToken.matches(ctx, bearer)
             // #802 a write carries its payload in the body (a profile import is
             // kilobytes, past any sane query string). Refused before reading,
-            // so an oversize claim never ties up the one accept thread.
-            if ((length ?: 0) > MAX_BODY_BYTES) {
-                reply(writer, "413 Payload Too Large", "body over $MAX_BODY_BYTES bytes\n")
+            // so an oversize claim never ties up the one accept thread. Only a
+            // fleet caller gets an op's own larger limit (Op.maxBody).
+            val limit = if (fleet) bodyLimit(op) else MAX_BODY_BYTES
+            if ((length ?: 0) > limit) {
+                reply(writer, "413 Payload Too Large", "body over $limit bytes\n")
                 return
             }
             val body = readBody(reader, length ?: 0)
 
-            val op = canonicalOp(path)
             // Everything but liveness is fleet-only. The loopback bind stopped
             // being a sufficient boundary the moment app data started riding
             // these routes next to the logs: loopback is device-wide on Android,
             // so any installed app with INTERNET could otherwise read all of it.
-            if (op !in OPEN_OPS && !FleetToken.matches(ctx, bearer)) {
+            if (op !in OPEN_OPS && !fleet) {
                 reply(writer, "401 Unauthorized", "unauthorized — Bearer <fleet token>\n")
                 return
             }
@@ -413,6 +419,10 @@ object AppDebugServer {
         }
         return sb.toString()
     }
+
+    /** The body ceiling of an app op: what its [Op.maxBody] declares, else [MAX_BODY_BYTES]. */
+    internal fun bodyLimit(op: String): Int =
+        routeDocs[op.substringBefore('/')]?.firstOrNull { it.op == op.substringAfter('/', "") }?.maxBody ?: MAX_BODY_BYTES
 
     /** The query a route sees: `_body` only ever comes from the body, never the
      *  query string, so a handler can trust where it came from. */
@@ -486,7 +496,7 @@ object AppDebugServer {
         append(""""scan":"each package has a fixed port (libs:devtools debug-ports.json); a member whose """)
         append("""port was held falls back into $FALLBACK_FIRST..$FALLBACK_LAST, where /api/system/ping answers """)
         append("""'pong <applicationId>' unauthenticated",""")
-        append(""""body":"a POST body (Content-Length, max $MAX_BODY_BYTES bytes, else 413) reaches an app route """)
+        append(""""body":"a POST body (Content-Length, max $MAX_BODY_BYTES bytes unless the op declares a larger max_body for a fleet caller, else 413) reaches an app route """)
         append("""as query param _body; _body in the query string is dropped",""")
         append(""""endpoints":[""")
         append("""{"path":"/api/docs","description":"this catalog"},""")
@@ -514,6 +524,7 @@ object AppDebugServer {
                 if (i > 0) append(',')
                 append("""{"path":"/api/${esc(group)}/${esc(o.op)}",""")
                 append(""""params":"${esc(o.params)}",""")
+                if (o.maxBody != MAX_BODY_BYTES) append(""""max_body":${o.maxBody},""")
                 append(""""description":"${esc(o.description)}"}""")
             }
             append("]}")

@@ -553,10 +553,12 @@ lines_ok "$TMP/g1.json" "$SHARED" >/dev/null && bad "G-mutation: A did not see t
 
 # ── V · every line fetches the vault configs and answers which device (#766) ──
 echo "== V: the Authelia line continues to the vault, every landing adopts the vault's registry, step 4 has no second Import File =="
-vault_leg_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
-    local ss lh al vd vf lv gs ha
+vault_leg_ok() {   # $1 = ProfileFragment.kt, $2 = AccountModel.kt (default $AM); prints the first broken rule
+    local ss lh al vd vf lv lb gs ha
     ss=$(fnof "$1" buildSignInStep | codeof); lh=$(fnof "$1" landed | codeof); al=$(fnof "$1" afterLanding | codeof)
     vd=$(fnof "$1" showVaultFetchDialog | codeof); vf=$(fnof "$1" vaultFetch | codeof); lv=$(fnof "$1" landVault | codeof)
+    # #802 the landing itself (schema gate, Imported, registry, S) is the model's, shared with /api/account/import
+    lb=$(awk '/fun landBundle\(/{f=1} f{print} f&&/^        }$/{exit}' "${2:-$AM}" | codeof)
     gs=$(fnof "$1" buildGetStep | codeof); ha=$(awk '/private val signInHost = object/{f=1} f{print} f&&/^    }$/{exit}' "$1" | codeof)
     grep -qF 'line.ways.any { it.kind in AUTHELIA_KINDS }' <<<"$ss" && grep -qF 'showVaultFetchDialog(line.label)' <<<"$ss" \
         || { echo "the Authelia line has no vault pill"; return 1; }
@@ -567,8 +569,9 @@ vault_leg_ok() {   # $1 = ProfileFragment.kt; prints the first broken rule
     grep -qE '^ *vaultStart\(status\)$' <<<"$vd" || { echo "opening the vault leg does not mail the code"; return 1; }
     grep -qF 'vaultFetch(status, it, via)' <<<"$vd" || { echo "the vault leg does not fetch"; return 1; }
     grep -qF 'landVault(status, o.body, redrawNow = false, via = via)' <<<"$vf" || { echo "the vault fetch does not land like every line"; return 1; }
-    grep -qF 'UserRegistry::fromVault' <<<"$lv" && grep -qF 'UserRegistry.adopt(c, it)' <<<"$lv" || { echo "a landing does not adopt the vault's registry"; return 1; }
-    grep -qF 'VaultConnect.Imported.via = via' <<<"$lv" || { echo "a landing does not record its way"; return 1; }
+    grep -qF 'AccountModel.landBundle(context, body, via)' <<<"$lv" || { echo "the fragment's landing is not the model's landBundle"; return 1; }
+    grep -qF 'UserRegistry.fromVault(bundle)' <<<"$lb" && grep -qF 'UserRegistry.adopt(ctx, it)' <<<"$lb" || { echo "a landing does not adopt the vault's registry"; return 1; }
+    grep -qF 'imported.via = via' <<<"$lb" || { echo "a landing does not record its way"; return 1; }
     grep -qE 'import_configs|journey_import_file' <<<"$gs" && { echo "step 4 still carries a second Import File"; return 1; }
     local n; n=$(codeof "$1" | grep -c 'landVault(status, ' ); [ "$n" -ge 4 ] || { echo "only $n landings"; return 1; }
     [ "$(codeof "$1" | grep 'landVault(status, ' | grep -vc 'via = ')" = 0 ] || { echo "a landing does not say which way fetched it"; return 1; }
@@ -592,14 +595,20 @@ for e in 's/showVaultFetchDialog(line.label)/Unit/' \
          's/        vaultLegVia?.let { vaultLegVia = null; if (isAdded) showVaultFetchDialog(it) }/        vaultLegVia = null/' \
          's/            view?.post { afterLanding() }/            view?.post { redraw() }/' \
          's/^                vaultStart(status)$/                Unit/' \
-         's/UserRegistry.adopt(c, it)/Unit/' \
-         's/        VaultConnect.Imported.via = via/        Unit/' \
+         's/AccountModel.landBundle(context, body, via)/null/' \
          's|        // #766 no second Import File here: it is Connect.s third line.|        body.addView(pickButton(ctx, "x") { (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)?.onTileClicked("action:import_configs") })|' \
          's/landVault(status, v.bundle, via = fileVia)/landVault(status, v.bundle)/' \
          's/                    if (landVault(status, o.body, redrawNow = false, via = via)) onLanded()/                    Unit/'; do
     sed "$e" "$PF" > "$TMP/v.kt"
     if cmp -s "$PF" "$TMP/v.kt"; then bad "V-mutation: did not apply — ${e:0:80}"
     elif vault_leg_ok "$TMP/v.kt" >/dev/null; then bad "V-mutation: NOT caught — ${e:0:80}"
+    else ok "V-mutation: caught — ${e:0:80}"; fi
+done
+for e in 's/UserRegistry.adopt(ctx, it)/Unit/' \
+         's/            imported.via = via/            Unit/'; do
+    sed "$e" "$AM" > "$TMP/v-am.kt"
+    if cmp -s "$AM" "$TMP/v-am.kt"; then bad "V-mutation: did not apply — ${e:0:80}"
+    elif vault_leg_ok "$PF" "$TMP/v-am.kt" >/dev/null; then bad "V-mutation: NOT caught — ${e:0:80}"
     else ok "V-mutation: caught — ${e:0:80}"; fi
 done
 
@@ -815,8 +824,8 @@ setup_gone() {   # $1 = ProfileFragment.kt, $2 = build.json; prints what survive
     return 0
 }
 msg=$(setup_gone "$PF" "$BJ") && ok "H: the Setup index, wizard, cockpit cards and repos are deleted; Runtime is per app and nothing else (#781)" || bad "H: $msg"
-grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$PF" landVault | codeof)" \
-    && ok "H: every Connect landing stores the fetched file as S, with the way that fetched it" || bad "H: a Connect landing does not store S"
+grep -qF 'AccountModel.landBundle(context, body, via)' <<<"$(fnof "$PF" landVault | codeof)" && grep -qF 'get(ctx).landServer(bundle, via)' <<<"$(codeof "$AM")" \
+    && ok "H: every Connect landing stores the fetched file as S, with the way that fetched it (AccountModel.landBundle, #802)" || bad "H: a Connect landing does not store S"
 echo "-- H-mutation: a reader dropped, a served_by dropped, the wake-wait dropped, the old index back, the landing not stored --"
 for e in 's/^            "drive" -> {/            "drive_x" -> {/' \
          's/            while (!client.isConnected() \&\& SystemClock.elapsedRealtime() < until) Thread.sleep(100)/            Unit/' \
@@ -835,9 +844,9 @@ setup_gone "$PF" "$TMP/h2.json" >/dev/null && bad "H-mutation: the wizard declar
 sed 's/^    private fun renderRuntime(/    private fun renderFleetIndex(ctx: android.content.Context, into: LinearLayout) = Unit\n    private fun renderRuntime(/' "$PF" > "$TMP/h3.kt"
 cmp -s "$PF" "$TMP/h3.kt" && bad "H-mutation: the index-back mutation did not apply" \
     || { setup_gone "$TMP/h3.kt" "$BJ" >/dev/null && bad "H-mutation: the Setup index back was NOT caught" || ok "H-mutation: the Setup index back → RED"; }
-sed 's/AccountModel.get(c).landServer(it, via)/Unit/' "$PF" > "$TMP/h4.kt"
+sed 's/AccountModel.landBundle(context, body, via)/null/' "$PF" > "$TMP/h4.kt"
 cmp -s "$PF" "$TMP/h4.kt" && bad "H-mutation: the landing mutation did not apply" \
-    || { grep -qF 'AccountModel.get(c).landServer(it, via)' <<<"$(fnof "$TMP/h4.kt" landVault | codeof)" && bad "H-mutation: a landing that stores nothing was NOT caught" || ok "H-mutation: a landing that stores nothing → RED"; }
+    || { grep -qF 'AccountModel.landBundle(context, body, via)' <<<"$(fnof "$TMP/h4.kt" landVault | codeof)" && bad "H-mutation: a landing that stores nothing was NOT caught" || ok "H-mutation: a landing that stores nothing → RED"; }
 
 echo
 echo "passed=$PASS failed=$FAIL"
