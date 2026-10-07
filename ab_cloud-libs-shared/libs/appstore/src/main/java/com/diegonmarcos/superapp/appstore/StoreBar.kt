@@ -204,7 +204,6 @@ object StoreBar {
         background = StoreControls.background(ctx, style, false)
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
-        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -219,7 +218,6 @@ object StoreBar {
         background = StoreControls.background(ctx, style, false, if (onClick != null) fill else DISABLED)
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
-        minHeight = StoreDensity.minTap(ctx)
         isEnabled = onClick != null
         if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
     }
@@ -234,7 +232,6 @@ object StoreBar {
         setPadding(dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             .apply { setMargins(if (first) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
-        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -287,7 +284,7 @@ object StorePage {
  * index across the lines is the page's one tab ordering, which is what [paint] and the
  * caller's `onSelect` speak.
  *
- * Touch height: every button is at least [StoreDensity.MIN_TAP_DP] tall whatever the density.
+ * No minimum height: a Store tab is as tall as its text and padding (data-dense; test-store-app.sh holds it).
  */
 object StoreTabs {
 
@@ -340,7 +337,6 @@ object StoreTabs {
         isClickable = true
         setOnClickListener { onClick() }
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        minHeight = StoreDensity.minTap(ctx)
         textSize = StoreDensity.T_BODY
         if (style.stretch) {
             gravity = Gravity.CENTER

@@ -178,8 +178,23 @@ PY
   grep -q 'object StoreTabs' "$L/StoreBar.kt" && ok "the shared strip builder (StoreTabs) lives once in libs:appstore" || bad "StoreTabs is missing from libs:appstore"
   ! grep -qE 'renderPerms|renderFeed|FeedViewer' "$L/StoreCloudFragment.kt" && ok "the Cloud page draws neither feeds nor Perms" || bad "the Cloud page still carries the moved Feed/Perms parts"
   grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && ok "Cloud and Phone draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
-  # 9. #896 density: tappable controls keep a 40dp floor whatever the scale
-  grep -qE 'MIN_TAP_DP = (4[0-9]|[5-9][0-9])' "$L/StoreDensity.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt" && [ "$(grep -c 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt")" -ge 4 ] && ok "tabs, chips, pages and action buttons keep the 40dp touch floor" || bad "a Store control lost its 40dp touch floor"
+  # 9. #896 density: the Store is data-dense, so NO Store tab, chip, page or action button may force a
+  # minimum height (a 40dp floor made them huge, 2026-10-07). A control is as tall as its text and padding.
+  local mh
+  mh="$(grep -nE 'minHeight|minimumHeight|setMinimumHeight|defaultMinSize|heightIn\(|MIN_TAP|minTap' "$L"/*.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/*.kt 2>/dev/null | grep -vE '^[^:]+:[0-9]+:\s*(//|\*|/\*)')"
+  [ -z "$mh" ] && ok "no Store tab, chip, page or action button sets a minimum height" || bad "a Store control forces a minimum height: $(printf '%s' "$mh" | head -3 | tr '\n' ' ')"
+  # ... and the strip's own vertical padding never grows past the pre-#896 step (S8).
+  python3 - "$L/StoreBar.kt" <<'PY' && ok "the tab strip's vertical padding is at most the pre-change step (S8)" || bad "the tab strip's vertical padding grew past S8 (or was not found)"
+import re, sys
+s = open(sys.argv[1], encoding='utf-8').read()
+body = s[s.index('fun button(ctx: Context, control'):]
+body = body[:body.index('\n    }\n')]
+v = []
+for line in re.findall(r'setPadding\([^\n]*', body):
+    d = [int(x) for x in re.findall(r'StoreDensity\.S(\d+)', line)]
+    v += d[1::2]  # top and bottom of (left, top, right, bottom)
+sys.exit(0 if v and max(v) <= 8 else 1)
+PY
   printf '%s' "$ma" | grep -Eq '(^|[^A-Za-z])TabRow *\(' && bad "MainActivity still draws its own TabRow" || ok "no hand-rolled tab row"
   return $fails
 }
@@ -231,8 +246,10 @@ mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "feed",
       "perms"
     ]' || M=$((M+1))
-mutate "a tab loses the touch floor" lib/StoreBar.kt '        minHeight = StoreDensity.minTap(ctx)
-        textSize = StoreDensity.T_BODY' '        textSize = StoreDensity.T_BODY' || M=$((M+1))
+mutate "a tab gets a minimum height back" lib/StoreBar.kt '        textSize = StoreDensity.T_BODY
+        if (style.stretch) {' '        textSize = StoreDensity.T_BODY; minHeight = 120
+        if (style.stretch) {'
+mutate "a button gets a minimum height back" lib/StoreBar.kt '        isEnabled = onClick != null' '        minHeight = 120; isEnabled = onClick != null' || M=$((M+1))
 mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
 mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FeedPage(pageOf(it))' 'Unit' || M=$((M+1))
 mutate "Perms page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PermsPage()' 'Unit' || M=$((M+1))

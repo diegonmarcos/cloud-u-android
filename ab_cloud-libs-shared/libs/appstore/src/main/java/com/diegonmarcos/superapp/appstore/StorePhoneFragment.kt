@@ -615,7 +615,6 @@ class StorePhoneFragment : Fragment() {
         setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(ctx, StoreDensity.S4), 0) }
-        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 
@@ -625,7 +624,6 @@ class StorePhoneFragment : Fragment() {
         setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4)) }
-        minHeight = StoreDensity.minTap(ctx)
         isClickable = true; setOnClickListener { onClick() }
     }
 

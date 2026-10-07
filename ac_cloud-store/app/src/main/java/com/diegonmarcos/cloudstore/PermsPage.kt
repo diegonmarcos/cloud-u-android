@@ -11,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -80,7 +79,7 @@ private fun PermsCard(ctx: Context, app: Fleet.App) {
         Row(Modifier.fillMaxWidth().padding(top = dpOf(StoreDensity.S6), bottom = dpOf(StoreDensity.S4)),
             horizontalArrangement = Arrangement.spacedBy(dpOf(StoreDensity.S4))) {
             listOf("Android Perms", "Cloud Perms").forEachIndexed { i, label ->
-                Text(label, Modifier.weight(1f).defaultMinSize(minHeight = MIN_TAP).clickable { pane = i }
+                Text(label, Modifier.weight(1f).clickable { pane = i }
                     .background(if (i == pane) ACTIVE else IDLE).padding(dpOf(StoreDensity.S8)),
                     color = Color.White, fontSize = StoreDensity.T_META.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
@@ -105,7 +104,7 @@ private fun AndroidPerms(ctx: Context, pkg: String) {
         Text((if (granted) "✓  " else "·  ") + p.removePrefix("android.permission."),
             color = if (granted) UP else MISSING, fontSize = StoreDensity.T_CAPTION.sp)
     }
-    Text("System settings ↗", Modifier.padding(top = dpOf(StoreDensity.S4)).defaultMinSize(minHeight = MIN_TAP)
+    Text("System settings ↗", Modifier.padding(top = dpOf(StoreDensity.S4))
         .background(IDLE).clickable {
             runCatching {
                 ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
@@ -146,7 +145,6 @@ private fun sameSignature(ctx: Context, pkg: String): Boolean = runCatching {
 private const val CONSTELLATION_PERM = "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
 
 private fun dpOf(step: Int): Dp = StoreDensity.dpValue(step).dp
-private val MIN_TAP = StoreDensity.MIN_TAP_DP.dp
 private val UP = Color(0xFF48BB78)
 private val MISSING = Color(0xFF63B3ED)
 private val BLOCKED = Color(0xFFF56565)
