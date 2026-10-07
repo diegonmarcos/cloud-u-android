@@ -12,8 +12,9 @@
     <string name="update_rates">Update exchange rates</string>
     <string name="plot_hint">y = f(x)</string>
     <string name="history">History</string>
-    <string name="clear">Clear</string>
-    <string name="history_empty">Results you keep with = appear here; tap one to reuse it.</string>
+    <string name="clear">Clear all</string>
+    <string name="delete">Delete</string>
+    <string name="history_empty">Every = you press is kept here with its time; tap an expression or a result to reuse it.</string>
     <string name="variables">Variables</string>
     <string name="variables_empty">Define one in Calc with name := value, e.g. r := 5 cm</string>
     <string name="mic_needed">The sound tools need the microphone. Audio is analysed and discarded; only a History session you save keeps it, in this app\'s own storage.</string>

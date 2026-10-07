@@ -49,6 +49,9 @@
 #       /api/<camera_group>/status and /api/<image_group>/recognize documented and answered, no
 #       `state` op; every reference object has a positive length and a unique id, and OCR
 #       numbers go to a declared expression mode.
+#   C14 the keypad never moves (owner bug): ExpressionMode keeps every text- or result-dependent view
+#       inside one fixed-height display (// DISPLAY BEGIN..END, CalcMetrics.displayHeight) above the
+#       keys, and ModeScreens.kt does not call AskAboutResult( (the "Ask about this result" element).
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -331,14 +334,37 @@ send_to = (cam.get("ocr") or {}).get("send_to_mode")
 if (modes_by_id.get(send_to) or {}).get("kind") != "expression":
     bad.append("C13 build.json::camera.ocr.send_to_mode %s is not an expression mode" % send_to)
 
+# C14 the keypad never moves: the calculator's result-dependent views sit in ONE fixed-height display
+# above it, never loose over the keys, and "Ask about this result" is not on a calculator screen.
+raw = open(os.path.join(src, "ui", "ModeScreens.kt"), encoding="utf-8").read()
+if re.search(r"\bAskAboutResult\(", code(os.path.join(src, "ui", "ModeScreens.kt"))):
+    bad.append("C14 ModeScreens.kt calls AskAboutResult( — an element that appears with a result shifts the calculator layout")
+em = re.search(r"private fun ExpressionMode\(.*?\n\}\n", raw, re.S)
+body = em.group(0) if em else ""
+b0, b1, k0 = body.find("// DISPLAY BEGIN"), body.find("// DISPLAY END"), body.find("mode.keys.forEach")
+if not body or min(b0, b1, k0) < 0 or not (b0 < b1 < k0):
+    bad.append("C14 ExpressionMode must hold // DISPLAY BEGIN ... // DISPLAY END above mode.keys.forEach")
+else:
+    box = body[b0:b1]
+    if "height(CalcMetrics.displayHeight)" not in box.split("\n", 2)[1]:
+        bad.append("C14 the display of ExpressionMode must open with a fixed height(CalcMetrics.displayHeight)")
+    c0 = body.find("Column(Modifier.fillMaxSize()")
+    loose = body[max(c0, 0):b0] + body[b1:k0]
+    for tok in ("ResultBlock(", "bases", "suggestions", "result", "AskAboutResult("):
+        if tok in "\n".join(l for l in loose.split("\n") if not re.match(r"\s*(//|\*)", l)):
+            bad.append("C14 ExpressionMode: %s sits outside the fixed display, above the keypad" % tok)
+theme = open(os.path.join(src, "ui", "CalcTheme.kt"), encoding="utf-8").read()
+if not re.search(r"val displayHeight: Dp = [1-9]\d*\.dp", theme):
+    bad.append("C14 CalcMetrics.displayHeight is not a positive fixed dp")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C13 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C13"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C14 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C14"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -425,5 +451,10 @@ mutate camera-op-state "$J/debugapi/CameraDebugApi.kt" 's.replace("\"status\" ->
 mutate reference-zero build.json 's.replace("\"mm\": 85.60", "\"mm\": 0")' "C13 reference card_long has no positive mm"
 mutate ocr-nowhere build.json 's.replace("\"send_to_mode\": \"standard\"", "\"send_to_mode\": \"units\"")' "C13 build.json::camera.ocr.send_to_mode units"
 
-echo "── C1-C13 + mutations: $FAILURES failure(s) ──"
+mutate ask-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        AskAboutResult(mode.id, text, text)")' "C14 ModeScreens.kt calls AskAboutResult("
+mutate result-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        ResultBlock(result)")' "C14 ExpressionMode: ResultBlock( sits outside the fixed display"
+mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace("height(CalcMetrics.displayHeight)", "wrapContentHeight()")' "C14 the display of ExpressionMode must open with a fixed height"
+mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayHeight: Dp = 320.dp", "val displayHeight: Dp = 0.dp")' "C14 CalcMetrics.displayHeight is not a positive fixed dp"
+
+echo "── C1-C14 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

@@ -296,7 +296,7 @@ class JevAppTest {
         assertEquals(JevStore.model(app, JevFlow.SCORE_USE), d.model)
     }
 
-    @Test fun `the expression mode offers the follow-up box under a result`() {
+    @Test fun `the expression mode offers no follow-up box: nothing result-dependent may move its keypad`() {
         http.reply = { _, body ->
             val id = body!!.getJSONObject("questions").keys().next()
             Http.Response(200, JSONObject().put("answers", JSONObject().put(id, JSONObject().put("type", "noul").put("noul", 0.8))).toString())
@@ -305,10 +305,8 @@ class JevAppTest {
         val mode = Declarations.modes.first { it.kind == "expression" }
         compose.runOnIdle { state.tab = mode.tab; state.modeByTab[mode.tab] = mode.id }
         listOf("2", "+", "2").forEach { compose.onNodeWithTag(CalcTags.key(it)).performClick() }
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.ASK_TOGGLE).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag(CalcTags.ASK_TOGGLE).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(CalcTags.ASK_BOX).assertExists()
+        assertEquals(0, compose.onAllNodesWithTag(CalcTags.ASK_TOGGLE).fetchSemanticsNodes().size)
     }
 
     @Test fun `the debug route answers the decision and the result without the token`() {

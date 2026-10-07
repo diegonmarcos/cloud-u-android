@@ -74,16 +74,18 @@ class LogicTest {
         assertEquals(1.0, p.ys[2]!!, 0.0)
     }
 
-    @Test fun `history is newest first, deduped at the head, capped, and round-trips`() {
-        val a = Logic.Entry("standard", "2+2", "4")
+    @Test fun `history is newest first, keeps every press, capped, and round-trips with its time`() {
+        val a = Logic.Entry("standard", "2+2", "4", ts = 1_700_000_000_000L)
         val b = Logic.Entry("standard", "3*3", "9")
-        var h = Logic.remember(emptyList(), a, 2)
-        h = Logic.remember(h, a, 2)
-        assertEquals(listOf(a), h)
-        h = Logic.remember(h, b, 2)
-        h = Logic.remember(h, Logic.Entry("cas", "x", "x"), 2)
-        assertEquals(2, h.size)
+        var h = Logic.remember(emptyList(), a, 3)
+        h = Logic.remember(h, a, 3)
+        assertEquals(listOf(a, a), h)
+        h = Logic.remember(h, b, 3)
+        h = Logic.remember(h, Logic.Entry("cas", "x", "x"), 3)
+        assertEquals(3, h.size)
         assertEquals(b, h[1])
+        assertFalse(Logic.encode(listOf(b)).contains("ts"))
+        assertEquals(1_700_000_000_000L, Logic.decode(Logic.encode(listOf(a))).single().ts)
         assertEquals(h, Logic.decode(Logic.encode(h)))
         // #770 a follow-up question rides with its entry; an entry without one stores no key.
         val asked = listOf(Logic.Entry("standard", "6*7", "42", """{"question":"Plausible?"}"""), a)

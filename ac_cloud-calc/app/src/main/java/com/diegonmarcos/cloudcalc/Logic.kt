@@ -80,20 +80,19 @@ object Logic {
     }
 
     /** A kept result; [decision] is a follow-up question's JSON (#770 Addendum A), "" when none was asked. */
-    data class Entry(val mode: String, val expr: String, val result: String, val decision: String = "")
+    data class Entry(val mode: String, val expr: String, val result: String, val decision: String = "", val ts: Long = 0L)
 
-    /** Newest first, a repeat of the newest entry is not stored twice, at most [max] kept. */
-    fun remember(history: List<Entry>, e: Entry, max: Int): List<Entry> =
-        (if (history.firstOrNull() == e) history else listOf(e) + history).take(max)
+    /** Newest first, every press kept (a timestamp tells two presses apart), at most [max] kept. */
+    fun remember(history: List<Entry>, e: Entry, max: Int): List<Entry> = (listOf(e) + history).take(max)
 
     fun encode(history: List<Entry>): String = JSONArray().apply {
         history.forEach { e ->
-            put(JSONObject().put("mode", e.mode).put("expr", e.expr).put("result", e.result).apply { if (e.decision.isNotEmpty()) put("decision", e.decision) })
+            put(JSONObject().put("mode", e.mode).put("expr", e.expr).put("result", e.result).apply { if (e.decision.isNotEmpty()) put("decision", e.decision); if (e.ts != 0L) put("ts", e.ts) })
         }
     }.toString()
 
     fun decode(json: String?): List<Entry> = runCatching {
         val a = JSONArray(json ?: "[]")
-        (0 until a.length()).map { a.getJSONObject(it).let { o -> Entry(o.getString("mode"), o.getString("expr"), o.getString("result"), o.optString("decision")) } }
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> Entry(o.getString("mode"), o.getString("expr"), o.getString("result"), o.optString("decision"), o.optLong("ts", 0L)) } }
     }.getOrDefault(emptyList())
 }

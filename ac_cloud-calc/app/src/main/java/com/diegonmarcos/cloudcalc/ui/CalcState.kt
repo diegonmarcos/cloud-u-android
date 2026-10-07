@@ -12,7 +12,7 @@ import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.engine.CalcApi
 
 /** What every tab shares: the selected tab and mode per tab, the history, and a pending insert. */
-class CalcState(private val prefs: SharedPreferences?) {
+class CalcState(private val prefs: SharedPreferences?, private val now: () -> Long = System::currentTimeMillis) {
     var tab by mutableStateOf(Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } } ?: Declarations.tabs.first().id)
     val modeByTab = mutableStateMapOf<String, String>()
     /** #770 the tab last shown in each section, so switching sections comes back to it. */
@@ -34,7 +34,16 @@ class CalcState(private val prefs: SharedPreferences?) {
     var pending by mutableStateOf<Pair<String, String>?>(null)
 
     fun remember(e: Logic.Entry, max: Int) {
-        val next = Logic.remember(history.toList(), e, max)
+        save(Logic.remember(history.toList(), e.copy(ts = if (e.ts != 0L) e.ts else now()), max))
+    }
+
+    /** Drop the entry at [index] (newest first); an index outside the list changes nothing. */
+    fun deleteHistory(index: Int) {
+        if (index !in history.indices) return
+        save(history.toList().filterIndexed { i, _ -> i != index })
+    }
+
+    private fun save(next: List<Logic.Entry>) {
         history.clear(); history.addAll(next)
         prefs?.edit()?.putString(KEY, Logic.encode(next))?.apply()
     }

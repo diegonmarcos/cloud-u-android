@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudcalc
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -155,7 +156,9 @@ class CalcShellTest {
         }
         compose.onNodeWithTag(CalcTags.key("=")).performClick()
         compose.waitForIdle()
-        assertEquals(Logic.Entry(mode.id, "2+2", "4"), state.history.first())
+        val kept = state.history.first()
+        assertEquals(Logic.Entry(mode.id, "2+2", "4").copy(ts = kept.ts), kept)
+        assertTrue(kept.ts > 0)
         assertTrue(synchronized(engine.evals) { "2+2" in engine.evals })
     }
 
@@ -173,6 +176,54 @@ class CalcShellTest {
         compose.waitForIdle()
         assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single().enabled)
         assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:$id"))
+    }
+
+    @Test fun `the keypad does not move while a result appears, changes and goes`() {
+        launch()
+        val mode = Declarations.modes.first { it.kind == "expression" }
+        compose.runOnIdle { state.tab = mode.tab; state.modeByTab[mode.tab] = mode.id }
+        compose.waitForIdle()
+        fun top() = compose.onNodeWithTag(CalcTags.key("=")).getBoundsInRoot().top
+        val rest = top()
+        val display = compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().height
+        listOf("2", "+", "2").forEach { compose.onNodeWithTag(CalcTags.key(it)).performClick(); compose.waitForIdle(); assertEquals(rest, top()) }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(CalcTags.RESULT).fetchSemanticsNodes().isNotEmpty() &&
+                runCatching { compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 4") }.isSuccess
+        }
+        assertEquals(rest, top())
+        assertEquals(display, compose.onNodeWithTag(CalcTags.DISPLAY).getBoundsInRoot().height)
+        assertEquals(0, compose.onAllNodesWithTag(CalcTags.ASK_TOGGLE).fetchSemanticsNodes().size)
+    }
+
+    @Test fun `history keeps each press with its time, reuses expression or result, deletes one, clears all`() {
+        val mode = Declarations.modes.first { it.kind == "expression" }
+        var t = 1_000L
+        val s = CalcState(null) { t++ }
+        s.remember(Logic.Entry(mode.id, "1+1", "2"), 10)
+        s.remember(Logic.Entry(mode.id, "1+1", "2"), 10)
+        s.remember(Logic.Entry(mode.id, "6*7", "42"), 10)
+        assertEquals(listOf(1_002L, 1_001L, 1_000L), s.history.map { it.ts })
+        s.deleteHistory(1)
+        assertEquals(listOf("6*7", "1+1"), s.history.map { it.expr })
+        s.deleteHistory(9)
+        assertEquals(2, s.history.size)
+        s.clearHistory()
+        assertTrue(s.history.isEmpty())
+        // The screen: a tap on the expression and a tap on the result each reuse theirs.
+        state.remember(Logic.Entry(mode.id, "6*7", "42"), 10)
+        launch()
+        val history = Declarations.modes.first { it.kind == "history" }
+        compose.runOnIdle { state.tab = history.tab; state.modeByTab[history.tab] = history.id }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.historyExpr(0)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("6*7")
+        compose.runOnIdle { state.tab = history.tab }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.historyDelete(0)).performClick()
+        compose.waitForIdle()
+        assertTrue(state.history.isEmpty())
     }
 
     @Test fun `a history tap sends the result back to its mode`() {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -54,6 +56,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.util.Date
 
 /** Engine calls block on a binder: always off the main thread. */
 private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
@@ -136,30 +140,33 @@ private fun ExpressionMode(mode: Declarations.Mode) {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
-        ChoiceRow(mode.angleChoices, options) { c -> overrides = overrides + (c.key to c.value) }
-        ChoiceRow(mode.baseChoices, options) { c -> overrides = overrides + (c.key to c.value) }
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            modifier = Modifier.fillMaxWidth().testTag(CalcTags.INPUT),
-            textStyle = MaterialTheme.typography.headlineSmall,
-            placeholder = { Text(stringResource(R.string.expression_hint)) },
-        )
-        if (suggestions.isNotEmpty()) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
-                items(suggestions) { s ->
-                    AssistChip(onClick = { text = Logic.complete(text, s.name) }, label = { Text(s.name) })
+        // DISPLAY BEGIN: every view that depends on the text or its result lives in this fixed-height box (test C14).
+        Column(Modifier.fillMaxWidth().height(CalcMetrics.displayHeight).verticalScroll(rememberScrollState()).testTag(CalcTags.DISPLAY)) {
+            ChoiceRow(mode.angleChoices, options) { c -> overrides = overrides + (c.key to c.value) }
+            ChoiceRow(mode.baseChoices, options) { c -> overrides = overrides + (c.key to c.value) }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth().testTag(CalcTags.INPUT),
+                textStyle = MaterialTheme.typography.headlineSmall,
+                placeholder = { Text(stringResource(R.string.expression_hint)) },
+            )
+            if (suggestions.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
+                    items(suggestions) { s ->
+                        AssistChip(onClick = { text = Logic.complete(text, s.name) }, label = { Text(s.name) })
+                    }
+                }
+            }
+            ResultBlock(result)
+            bases.forEach { (label, value) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(label, style = MaterialTheme.typography.labelLarge)
+                    Text(value, style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
-        ResultBlock(result)
-        result?.takeIf { it.ok && resultFor == text }?.let { r -> AskAboutResult(mode.id, text, r.text) }
-        bases.forEach { (label, value) ->
-            Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label, style = MaterialTheme.typography.labelLarge)
-                Text(value, style = MaterialTheme.typography.bodyLarge)
-            }
-        }
+        // DISPLAY END
         mode.keys.forEach { row ->
             Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
                 row.forEach { k ->
@@ -298,7 +305,6 @@ private fun ConverterMode(mode: Declarations.Mode) {
             TextButton(onClick = { state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }) {
                 Text(stringResource(R.string.keep))
             }
-            AskAboutResult(mode.id, Logic.convert(value, from, to), r.text)
         }
         if (mode.rates) {
             HorizontalDivider()
@@ -391,14 +397,6 @@ private fun FormBody(mode: Declarations.Mode, form: Declarations.Form) {
             )
         }
     }
-    val good = outputs.filter { it.second.ok }
-    if (good.isNotEmpty()) {
-        AskAboutResult(
-            mode.id,
-            form.label + ": " + form.fields.joinToString(", ") { f -> f.label + " " + snapshot[f.id].orEmpty() },
-            good.joinToString("; ") { (label, r) -> "$label = ${r.text}" },
-        )
-    }
 }
 
 // ── plot: Graph ─────────────────────────────────────────────────────────────────────────────
@@ -470,20 +468,28 @@ private fun HistoryMode(mode: Declarations.Mode) {
     val state = LocalCalcState.current
     var variables by remember(mode.id) { mutableStateOf(listOf<Logic.Item>()) }
     LaunchedEffect(mode.id) { variables = Logic.items(io { api.items("variable", "Temporary", 100) }) }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(CalcMetrics.gutter)) {
+    LazyColumn(Modifier.fillMaxSize().testTag(CalcTags.HISTORY_LIST), contentPadding = PaddingValues(CalcMetrics.gutter)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.history), style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { state.clearHistory() }) { Text(stringResource(R.string.clear)) }
+                TextButton(onClick = { state.clearHistory() }, modifier = Modifier.testTag(CalcTags.HISTORY_CLEAR)) { Text(stringResource(R.string.clear)) }
             }
         }
         if (state.history.isEmpty()) item { Text(stringResource(R.string.history_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        items(state.history.toList()) { e ->
-            Column(Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.padding(vertical = CalcMetrics.gap)) {
-                Text(e.expr, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("= " + e.result, style = MaterialTheme.typography.titleMedium)
-                // #770 a follow-up question kept with its result: every option's probability.
-                if (e.decision.isNotEmpty()) Text(JevFlow.summary(e.decision), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+        itemsIndexed(state.history.toList()) { i, e ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(vertical = CalcMetrics.gap)) {
+                    // Tap the expression to reuse it, the result to reuse that.
+                    Text(e.expr, Modifier.fillMaxWidth().clickable { state.send(e.mode, e.expr) }.testTag(CalcTags.historyExpr(i)),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("= " + e.result, Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.testTag(CalcTags.historyResult(i)),
+                        style = MaterialTheme.typography.titleMedium)
+                    if (e.ts != 0L) Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date(e.ts)),
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // #770 a follow-up question kept with its result: every option's probability.
+                    if (e.decision.isNotEmpty()) Text(JevFlow.summary(e.decision), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                }
+                TextButton(onClick = { state.deleteHistory(i) }, modifier = Modifier.testTag(CalcTags.historyDelete(i))) { Text(stringResource(R.string.delete)) }
             }
             HorizontalDivider()
         }
