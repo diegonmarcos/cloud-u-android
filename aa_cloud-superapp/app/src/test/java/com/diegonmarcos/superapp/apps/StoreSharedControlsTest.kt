@@ -92,13 +92,11 @@ class StoreSharedControlsTest {
         val storeButtonLook = look(barButtons.first())
         val storeChipLook = look(storeChips.first())
 
-        // ── Store ▸ Apps Mesh, opened the way a user opens it ──
-        val tab = views(root).filterIsInstance<TextView>().firstOrNull { it.text.toString().contains(meshLabel) }
-        assertNotNull("no '$meshLabel' tab on Store ▸ Cloud", tab)
-        tab!!.performClick()
-        assertMeshPage(root, hasStore = true, storeButtonLook, storeChipLook)
+        // ── Apps Mesh left the Cloud page (#896.3): it is Cloud Store's Access page, which hosts this same fragment ──
+        assertNull("Apps Mesh is still a tab on Store ▸ Cloud",
+            views(root).filterIsInstance<TextView>().firstOrNull { it.text.toString().contains(meshLabel) })
 
-        // ── the same page hosted by Configs ▸ Setup ▸ Network ──
+        // ── the page, hosted by Access (and by Configs ▸ Setup ▸ Network): AppsMeshFragment, no Store row ──
         assertMeshPage(host(AppsMeshFragment()), hasStore = false, storeButtonLook, storeChipLook)
     }
 
