@@ -16,7 +16,10 @@ BuildConfig.LIB_CONSUMERS_B64), so no list of callers is typed anywhere:
                    names the row (analytics, ops, decisions-link, ml-l-image, ml-l-sound); or
                 c) its manifest, or a compiled lib's, queries the row's package or holds
                    <package>.BIND_ENGINE (core's <queries> for the fleetconfig engine, the
-                   keyboard apps for Cloud-Keyboard-Libs).
+                   keyboard apps for Cloud-Keyboard-Libs); or
+                d) it compiles a shared lib whose main source names the engine's package
+                   (libs:net's AidlBackend.ENGINE_PKG for net-wg: a client that binds by
+                   class name).
   build_time  one entry per shared lib that is NOT an engine (not installable): id, a short
               description (lib_apks.static_libs in lib-apks/build.json), the apps that compile
               it in (the build.json::modules maps plus the gradle closure, the same answer the
@@ -99,6 +102,18 @@ def generate(root):
             if isinstance(spec, dict) and spec.get("fleet"):
                 client_of.setdefault(spec["fleet"], set()).add(mod)
 
+    def mentions(pkg, skip):
+        """Shared lib modules (not the engine's own) whose main source names [pkg] in a literal."""
+        out = set()
+        for m in libs:
+            if m == skip:
+                continue
+            for dp, _, fs in os.walk(os.path.join(root, LIBS, m, "src", "main")):
+                if any(f.endswith((".kt", ".java")) and '"%s"' % pkg in open(os.path.join(dp, f), errors="replace").read() for f in fs):
+                    out.add(m)
+                    break
+        return out
+
     runtime = {}
     for row in rows:
         rid, pkg = row["id"], row.get("package") or ""
@@ -107,7 +122,7 @@ def generate(root):
             decl = (jload(os.path.join(root, app, "build.json"), {}) or {}).get("engines", {})
             if any(isinstance(s, dict) and s.get("fleet") == rid for s in decl.values()):
                 callers.add(app)
-            if client_of.get(rid, set()) & set(inputs[app]):
+            if (client_of.get(rid, set()) | (mentions(pkg, rid[4:]) if pkg else set())) & set(inputs[app]):
                 callers.add(app)
             mans = [os.path.join(root, app, "app", "src", "main", "AndroidManifest.xml")]
             mans += [os.path.join(root, LIBS, m, "src", "main", "AndroidManifest.xml") for m in inputs[app]]

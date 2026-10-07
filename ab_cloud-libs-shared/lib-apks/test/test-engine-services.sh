@@ -147,15 +147,25 @@ for module in modules:
         listed = {resolve(t) for t in m.group(1).split(",") if t.strip()} if m else set()
         if not listed:
             no("E4 %s: methodNames() names no method" % module)
+        stub = re.search(r"object\s*:\s*(I\w+)\.Stub\(\)", text)
         d = re.search(r"fun\s+dispatch\(.*?\)\s*:\s*String\s*=\s*when\s*\(\s*method\s*\)\s*\{(.*?)\n    \}", text, re.S)
         answered = set()
-        if not d:
+        if not d and stub and not re.search(r"fun\s+dispatch\(", text):
+            # a typed multi-method wire (INetBackend): the AIDL file IS the dispatch table
+            aidl = [os.path.join(dp, stub.group(1) + ".aidl") for dp, _, fs in os.walk(libs) if stub.group(1) + ".aidl" in fs]
+            if len(aidl) != 1:
+                no("E4 %s: %s.aidl is not one file under the libs root" % (module, stub.group(1)))
+            else:
+                body = re.sub(r"/\*.*?\*/|//[^\n]*", "", open(aidl[0], encoding="utf-8").read(), flags=re.S)
+                answered = set(re.findall(r"\b(\w+)\s*\([^)]*\)\s*;", body)) - {"methods"}
+                listed = listed - {"methods"}
+        elif not d:
             no("E4 %s: dispatch() is not a `when (method)` this tester can read" % module)
         else:
             for label in re.findall(r"^\s{8}([A-Za-z_\"][^\n]*?)\s*->", d.group(1), re.M):
                 if label.strip() != "else":
                     answered |= {resolve(t) for t in label.split(",")}
-        if listed and d and listed != answered:
+        if listed and (d or answered) and listed != answered:
             no("E4 %s: methodNames() lists %s but dispatch answers %s" % (module, sorted(listed), sorted(answered)))
         unresolved = sorted(x for x in listed | answered if x.startswith("?"))
         if unresolved:
@@ -187,7 +197,7 @@ for module in modules:
                 no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
                    "the moment the browser is up")
 
-for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink", "ops-engine", "decisions-engine"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink", "ops-engine", "decisions-engine", "net-wg"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -214,7 +224,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp -r "$LIBS/ops-engine" "$MUT/libs/ops-engine"; cp -r "$LIBS/decisions-engine" "$MUT/libs/decisions-engine"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp -r "$LIBS/ops-engine" "$MUT/libs/ops-engine"; cp -r "$LIBS/decisions-engine" "$MUT/libs/decisions-engine"; cp -r "$LIBS/net-wg" "$MUT/libs/net-wg"; cp -r "$LIBS/net" "$MUT/libs/net"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -438,6 +448,11 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
         && _applied "$LIBS/decisions-engine/build.gradle" "$MUT/libs/decisions-engine/build.gradle" "implementation project(':libs:decisions-link')" \
         && _red "E5 #881 the decisions engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
 
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    NW="$MUT/libs/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt"
+    _sub "$NW" '"setIdleTunnel", "getIdleStatus")' '"setIdleTunnel")'
+    _applied "$LIBS/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt" "$NW" '"setIdleTunnel")' \
+        && _red "E4 a typed engine (net-wg) answers a method its methodNames() does not list" engines "$MUT/libs" "$MUT/build.json"; }
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
 [ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }
 [ "$HOLLOW" -eq 0 ] || FAILURES=$((FAILURES + HOLLOW))

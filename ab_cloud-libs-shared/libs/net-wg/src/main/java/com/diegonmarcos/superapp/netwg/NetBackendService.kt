@@ -152,7 +152,14 @@ class NetBackendService : Service() {
         }
 
         override fun getIdleStatus(): String = idleStatus()
+
+        override fun methods(): Array<String> = methodNames()
     }
+
+    /** The wire INetBackend declares, by name (the engine tester holds this list to the AIDL file). */
+    fun methodNames(): Array<String> = arrayOf(
+        "getState", "setState", "getStatisticsRaw", "getVersion", "isAlwaysOn", "isLockdownEnabled",
+        "setIdleTunnel", "getIdleStatus")
 
     override fun onBind(intent: Intent?): IBinder = binder
 

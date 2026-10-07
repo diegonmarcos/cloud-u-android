@@ -29,7 +29,16 @@
         <service
             android:name="com.diegonmarcos.superapp.netwg.NetBackendService"
             android:exported="true"
-            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <!-- The engine CONTRACT: how a client finds this service and the version it
+                 reads through PackageManager. Clients here bind by class name (AidlBackend). -->
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
 
         <activity
             android:name="com.diegonmarcos.superapp.netwg.VpnConsentActivity"

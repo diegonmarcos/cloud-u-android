@@ -53,4 +53,12 @@ interface INetBackend {
 
     /** "OFF", "UP", "STANDBY" (another tunnel holds the slot), or "DOWN: <why>". */
     String getIdleStatus();
+
+    /**
+     * The methods this engine answers: what the engine CONTRACT handshake and the
+     * engine tester read. Appended last so every older transaction code is unchanged;
+     * an engine that predates it answers an unknown-transaction error, which a
+     * client treats as contract 0.
+     */
+    String[] methods();
 }
