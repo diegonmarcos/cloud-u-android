@@ -1,0 +1,42 @@
+name: "store dns ladder guard — a dead DNS bridge must not fail the Store's downloads"
+
+# WHY THIS WORKFLOW EXISTS.
+# 2026-10-07, Cloud Store's fleet pass: morpheus, c3-watchdog and c3-watchtower
+# failed every leg on "cannot resolve github.com (active resolver: bridge
+# 127.0.0.1:2053)" while cloud-browser downloaded in the same pass. The bridge was
+# the Store's only resolver; when it did not answer the connection went DIRECT to
+# the resolver the bridge had just failed on. libs:appstore's DnsLadder walks the
+# bridge, the system resolver, DoH by IP and the mesh on every connection. The
+# guard EXECUTES that: it compiles the shipped DnsLadder.kt, downloads through the
+# real tunnel past a simulated dead bridge, then plants each regression and
+# demands red.
+
+on:
+  push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/store-dns-ladder-guard.yml"
+      - "1_cicd/src/scripts/test/store-dns-ladder.test.*"
+      - "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/DnsLadder.kt"
+    # ── end MANAGED-GUARD-TRIGGERS ──
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ladder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: A dead bridge falls back, and the test goes red without the fix
+        run: bash 1_cicd/src/scripts/test/store-dns-ladder.test.sh

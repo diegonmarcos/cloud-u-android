@@ -51,6 +51,7 @@ class App : Application() {
             resolve = FleetDnsBridge::resolve
             resolverLabel = { FleetDnsBridge.label }
             tried = { FleetDnsBridge.lastFailure }
+            forget = FleetDnsBridge::forget
         }
         StoreDns.start(this)
         com.diegonmarcos.superapp.devtools.AppDebugServer.dnsVia = { FleetDnsBridge.label }

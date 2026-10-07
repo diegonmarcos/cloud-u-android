@@ -175,6 +175,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
             resolve = com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge::resolve
             resolverLabel = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.label }
             tried = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.lastFailure }
+            forget = com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge::forget
+            meshResolve = { host -> com.diegonmarcos.superapp.network.FleetDns.meshResolve(dnsCtx, host) }
             networkSummary = com.diegonmarcos.superapp.network.FleetDns::resolverSummary
         }
         com.diegonmarcos.superapp.appstore.StoreDns.start(dnsCtx)

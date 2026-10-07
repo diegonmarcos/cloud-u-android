@@ -361,6 +361,22 @@ object FleetDns {
 
     fun fleetResolvers(ctx: Context): List<String> = splitServers(WgState.prefs(ctx).interfaceDns)
 
+    /** #899 The Store's last rung: the fleet resolvers over the mesh. Throws (naming why) when the tunnel is down. */
+    fun meshResolve(ctx: Context, host: String): List<InetAddress> {
+        if (!meshUp(ctx)) throw java.io.IOException("mesh down: the wg0 tunnel is not up")
+        val servers = fleetResolvers(ctx)
+        if (servers.isEmpty()) throw java.io.IOException("mesh up but no fleet resolver is configured")
+        var last: Exception? = null
+        for (s in servers) {
+            try {
+                val a = query(s, host, 2500)
+                if (a.split('.').size == 4 && a.split('.').all { it.toIntOrNull() != null }) return listOf(InetAddress.getByName(a))
+                last = java.io.IOException("$s answered $a")
+            } catch (e: Exception) { last = java.io.IOException("$s: ${e.message ?: e.javaClass.simpleName}") }
+        }
+        throw last ?: java.io.IOException("no fleet resolver answered")
+    }
+
     /** The engine's name as the phone shows it, for the consent message. */
     fun engineLabel(ctx: Context): String = runCatching {
         val pm = ctx.packageManager

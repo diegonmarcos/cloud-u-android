@@ -50,7 +50,8 @@
   "allow": {
     "aa_cloud-superapp/": "The SuperApp IS the fleet's DNS layer: its VPN, the WireGuard profiles' DNS lines and the Configs > Mesh > DNS presets (#740) are where upstream servers, including the mesh resolver for the split-DNS rule, are declared once for every app.",
     "ab_cloud-libs-shared/libs/firewall/": "firestack, the engine the SuperApp's VPN runs: its DNS transports (DoH, DoT, dns53) are how the menu's choice is applied.",
-    "ab_cloud-libs-shared/libs/sysdns/": "The shared shim (#741) that bridges bundled binaries and terminal shells to Android's resolver."
+    "ab_cloud-libs-shared/libs/sysdns/": "The shared shim (#741) that bridges bundled binaries and terminal shells to Android's resolver.",
+    "ab_cloud-libs-shared/libs/appstore/": "#899 (owner's rule, 2026-10-07): the Store's download hosts only (StoreDns.isStoreHost), and ONLY after the fleet bridge (which walks the DNS menu's preset) and Android's own resolver both declined. A direct DoH query by IP is the third rung of the Store's ladder (DnsLadder), never the first, and every rung asked is named in the failed row's error."
   },
   "_doc_probe": "#758 the on-device half of this guard. Static rules can only say no code here brings its own resolver; whether the menu's choice actually reaches an app is read on the phone, from that app's own process, through the debug API every app gets from libs:devtools (linked by libs:core). AppDebugServer serves GET /api/net/dns (the default network for the app's uid, VPN or not, its DNS servers = the menu's upstreams under the SuperApp's VPN, Private DNS state) and GET /api/net/resolve?host= (Android's answer for that uid). Each entry is a file and the texts it must keep holding; losing one fails the guard, so the probe cannot be deleted or quietly turned into a second resolver (it must resolve with InetAddress, which is Android's).",
   "probe": [

@@ -126,6 +126,9 @@ object FleetDnsBridge {
     private val cache = ConcurrentHashMap<String, Cached>()
     private val inFlight = Semaphore(MAX_IN_FLIGHT, true)
 
+    /** #899 Drop the cached answers for [name]: the address it gave did not connect, so the next lookup must ask again. */
+    fun forget(name: String) { cache.keys.removeAll { it.substringBeforeLast('/').equals(name.trimEnd('.'), ignoreCase = true) } }
+
     private fun walk(q: ByteArray): ByteArray? {
         val name = DnsWire.name(q)
         val key = "$name/${DnsWire.qtype(q)}"

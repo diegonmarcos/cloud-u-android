@@ -44,14 +44,14 @@ grep -q '"DNS: cannot resolve ${host(t) ?: "the download host"} (active resolver
   && ok "the DNS wording keeps the host and the active resolver" || bad "DownloadFailure's DNS wording changed"
 
 echo "== R2: StoreDns names the resolver that was asked =="
-hook="$(awk '/DownloadFailure.activeResolver = \{/,/^        \}/' "$STOREDNS")"
-printf '%s\n' "$hook" | grep -q '?: resolverLabel()' \
+hook="$(awk '/val named: \(String\?\) -> String\? = \{/,/^        \}/' "$STOREDNS")"
+printf '%s\n' "$hook" | grep -q '?: runCatching { resolverLabel() }.getOrDefault("bridge")' \
   && ok "the hook falls back to the resolver's own name (bridge 127.0.0.1:<port>)" \
   || bad "the hook does not name the resolver: a lookup that walked nothing reads as unknown again"
 printf '%s\n' "$hook" | grep -q '?: net$' \
   && bad "the hook still ends on the bare network summary, which is null without an active network" \
   || ok "the hook never yields null for a wired host"
-printf '%s\n' "$hook" | grep -q 'lastFailure?.let { "${resolverLabel()} tried $it" }' \
+printf '%s\n' "$hook" | grep -q 'relay.failureFor(host)?.let { "resolvers tried: $it" }' \
   && ok "a miss still lists the routes tried" || bad "the routes tried are no longer named"
 grep -q 'fun mirror(preset: String? = null): List<Route>' "$LIBS/sysdns/src/main/java/com/diegonmarcos/cloudlib/sysdns/FleetDnsBridge.kt" \
   && grep -q 'FleetDnsBridge.mirror(label)' "$MAIN_FLEETDNS" \
@@ -76,8 +76,8 @@ grep -q 'URL(current).openConnection() as HttpURLConnection' "$SRC/Download.kt" 
   && ok "Download opens plain HttpURLConnections (the selector routes them)" || bad "Download no longer uses HttpURLConnection"
 grep -rqE 'okhttp|OkHttp|dns-over-https|DnsResolver|127\.0\.0\.1:2053' "$SRC" "$FLEET" \
   && bad "a custom resolver crept into the lib's download path" || ok "no custom Dns / DoH / port literal in the download path"
-grep -q 'val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())' "$STOREDNS" \
-  && ok "StoreDns resolves a download host through the host's bridge (resolve hook)" || bad "StoreDns does not resolve through the bridge"
+grep -q 'bridge = { h -> try { resolve(h) }' "$STOREDNS" \
+  && ok "StoreDns's first rung is the host's bridge (resolve hook)" || bad "StoreDns does not resolve through the bridge"
 
 echo "== RESULT(#860/#866 store download resolver): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

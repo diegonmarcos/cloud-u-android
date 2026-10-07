@@ -78,6 +78,10 @@ if printf '%s' "$HOST" | grep -q 'var dnsPagePackage: String? = null'; then
 else bad "AppStoreHost has no dnsPagePackage"; fi
 SUPER_EXTRAS="$(grep -o 'dnsPageExtras = mapOf([^)]*)' "$SUPER_APP" | head -1)"
 STORE_EXTRAS="$(grep -o 'dnsPageExtras = mapOf([^)]*)' "$STORE_APP" | head -1)"
+# dac09da68: Cloud Store reads the extra from build.json dns_handoff (baked as
+# BuildConfig.DNS_HANDOFF_ACTION), so compare the value that constant carries.
+HANDOFF="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dns_handoff"]["shortcut_action"])' "$ROOT/ac_cloud-store/build.json" 2>/dev/null || true)"
+[ -n "$HANDOFF" ] && STORE_EXTRAS="${STORE_EXTRAS//BuildConfig.DNS_HANDOFF_ACTION/\"$HANDOFF\"}"
 if [ -n "$SUPER_EXTRAS" ] && [ "$SUPER_EXTRAS" = "$STORE_EXTRAS" ]; then
   ok "Cloud Store puts SuperApp's own DNS-page extras on the intent ($SUPER_EXTRAS)"
 else bad "Cloud Store's dnsPageExtras ('$STORE_EXTRAS') differ from SuperApp's ('$SUPER_EXTRAS')"; fi

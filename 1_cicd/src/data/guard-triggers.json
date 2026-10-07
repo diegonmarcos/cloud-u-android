@@ -29,6 +29,13 @@
         "ab_cloud-libs-shared/libs/analytics/**"
       ]
     },
+    "store-dns-ladder-guard.yml": {
+      "_doc": "Compiles libs:appstore's DnsLadder against its tester: a dead DNS bridge must not fail the Store's downloads.",
+      "paths": [
+        "1_cicd/src/scripts/test/store-dns-ladder.test.*",
+        "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/DnsLadder.kt"
+      ]
+    },
     "foreign-gate-guard.yml": {
       "_doc": "Builds its fixtures from scratch and runs the test engine and source identity against them.",
       "paths": [

@@ -88,24 +88,30 @@ grep -q 'bindError = "127.0.0.1:$port taken' "$BRIDGE" && grep -q 'SystemDnsBrid
   || bad "a taken bridge port leaves the process with no resolver"
 
 echo "== B2: the download path resolves only through the bridge =="
+LADDER="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/DnsLadder.kt"
+[ -f "$LADDER" ] || { echo "ERROR: missing $LADDER" >&2; exit 2; }
 grep -q '@Volatile var resolve: (String) -> List<InetAddress>' "$STOREDNS" \
-  && grep -q 'val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())' "$STOREDNS" \
-  && ok "StoreDns's selector asks the host's resolve() — never InetAddress — for a download host" \
+  && grep -q 'bridge = { h -> try { resolve(h) }' "$STOREDNS" \
+  && ok "StoreDns's FIRST rung is the host's resolve() (the bridge); #899 the ladder goes on from there" \
   || bad "StoreDns does not resolve through the host's bridge"
-grep -q '(uri.scheme == "https" || uri.scheme == "http") && host != null && isStoreHost(host)' "$STOREDNS" \
+grep -q '(uri.scheme == "https" || uri.scheme == "http") && host != null && accepts(host) && resolveFor(host)' "$LADDER" \
+  && grep -q 'DnsLadder.Relay(::isStoreHost, ::rungs)' "$STOREDNS" \
   && grep -q 'MeshMirror.bases.any' "$STOREDNS" \
   && ok "release, ghcr and the mesh leg's origins (https and the mesh's plain http) are all routed" \
   || bad "a download leg is not routed through the bridge"
 grep -q 'URL(current).openConnection() as HttpURLConnection' "$SRC/Download.kt" \
   && ok "Download opens HttpURLConnections, which consult the selector" || bad "Download no longer uses HttpURLConnection"
 bare="$(grep -rn 'InetAddress.getAllByName\|InetAddress.getByName' "$LIBS/updater/src/main" "$LIBS/appstore/src/main" \
-  | grep -v 'getByName("127.0.0.1")' || true)"
+  | grep -v 'getByName("127.0.0.1")' | grep -v 'DnsLadder.kt' || true)"
 [ -z "$bare" ] && ok "no bare InetAddress lookup under libs:updater / libs:appstore main" \
   || bad "a bare resolver call on the Store's path: $bare"
-grep -rqE 'okhttp3\.Dns|object *: *Dns|dns-over-https|DnsOverHttps' "$LIBS/updater/src/main" "$LIBS/appstore/src/main" \
-  && bad "a Dns of the lib's own crept into the download path" || ok "no custom Dns / DoH in the download path"
-grep -q 'DnsResolver\|DatagramSocket' "$STOREDNS" \
-  && bad "StoreDns resolves by itself" || ok "StoreDns is HTTP plumbing only: the bridge resolves"
+grep -rqE 'okhttp3\.Dns|object *: *Dns|DnsOverHttps' "$LIBS/updater/src/main" "$LIBS/appstore/src/main" \
+  && bad "an OkHttp Dns of the lib's own crept into the download path" || ok "no OkHttp Dns in the download path (#899's DoH is a ladder rung over HttpURLConnection)"
+grep -q 'DnsResolver\|DatagramSocket' "$STOREDNS" "$LADDER" \
+  && bad "the Store's ladder asks DNS over UDP by itself" || ok "the ladder never speaks plain DNS: the bridge does; DoH goes by IP over HTTPS"
+grep -q 'DnsLadder.ladder(' "$STOREDNS" && grep -q 'listOf(Rung(bridgeLabel, bridge), Rung("system", system)) +' "$LADDER" \
+  && grep -q 'doh.map { (label, endpoint) -> doh(label, endpoint) } + Rung("mesh", mesh)' "$LADDER" \
+  && ok "#899 the ladder is bridge → system → DoH by IP → mesh" || bad "the ladder's order is not bridge, system, DoH, mesh"
 
 echo "== B3: SuperApp and Cloud Store wire the one bridge =="
 grep -q 'routes = { name -> com.diegonmarcos.superapp.network.FleetDns.bridgeRoutes(dnsCtx, name) }' "$MAIN" \
@@ -129,8 +135,9 @@ grep -q "project(':libs:sysdns')" "$APP/app/build.gradle" && grep -q "project(':
 echo "== B4: the failure names the bridge; the debug API shows it =="
 grep -q '"DNS: cannot resolve ${host(t) ?: "the download host"} (active resolver: ${resolver?.takeIf { it.isNotBlank() } ?: "unknown"})"' "$SRC/DownloadFailure.kt" \
   && ok "the DNS wording keeps the host and the active resolver" || bad "DownloadFailure's DNS wording changed"
-grep -q 'val used = lastFailure?.let { "${resolverLabel()} tried $it" } ?: resolverLabel()' "$STOREDNS" \
-  && ok "the active resolver is the bridge, with the routes it tried" || bad "the failure does not name the bridge's routes"
+grep -q 'relay.failureFor(host)?.let { "resolvers tried: $it" }' "$STOREDNS" \
+  && grep -q 'val trail: String get() = attempts.joinToString(" → ") { "${it.rung}: ${it.detail}" }' "$LADDER" \
+  && ok "the active resolver names every rung asked and why it declined (the bridge's own routes ride in its detail)" || bad "the failure does not name every rung"
 grep -q '"resolver":"${if (via == null) "android" else "bridge"}"' "$DEBUG" && grep -q '@Volatile var dnsVia' "$DEBUG" \
   && grep -q 'AppDebugServer.dnsVia = { com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge.label }' "$MAIN" \
   && ok "/api/net/dns reports resolver=bridge with via=bridge 127.0.0.1:<port>" \
@@ -165,8 +172,8 @@ awk '/private fun walk\(/,/^    }$/' "$BRIDGE" | grep -q 'cache\[key\]?.let { c 
 grep -q 'fun ttl(m: ByteArray): Long' "$BRIDGE" && grep -q 'fun qtype(m: ByteArray): Int' "$BRIDGE" \
   && ok "DnsWire reads the answer's smallest TTL and the question's type" || bad "DnsWire cannot read a TTL / qtype"
 grep -q 'lastFailure = tried.joinToString(" → ") + " after $tries tries"' "$BRIDGE" \
-  && grep -q 'val used = lastFailure?.let { "${resolverLabel()} tried $it" } ?: resolverLabel()' "$STOREDNS" \
-  && ok "a miss reads 'bridge 127.0.0.1:<port> tried <route> → <route> after N tries' in the Store's row" \
+  && grep -q 'relay.failureFor(host)?.let { "resolvers tried: $it" }' "$STOREDNS" \
+  && ok "a bridge miss reads '<route> → <route> after N tries' inside the bridge rung of the Store's row" \
   || bad "the failure does not carry the attempt count"
 grep -q 'val budget = timeoutMs.toLong() \* TRIES_PER_ROUTE \* 4 + BACKOFF_MS \* TRIES_PER_ROUTE \* 4' "$BRIDGE" \
   && ok "resolve() waits out the retried walk instead of giving up at one timeout" || bad "resolve()'s wait does not cover the retries"

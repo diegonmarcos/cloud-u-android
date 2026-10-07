@@ -19,6 +19,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 U="${UPDATER_SRC:-$ROOT/ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater}"
 SD="${STORE_DNS:-$ROOT/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreDns.kt}"
+LD="${DNS_LADDER:-$ROOT/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/DnsLadder.kt}"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -44,14 +45,13 @@ if printf '%s' "$W" | grep -q 'UpdateChecker(applicationContext).available()' &&
   ok "UpdateWorker checks and downloads the SuperApp through UpdateChecker"
 else bad "UpdateWorker no longer self-updates through UpdateChecker"; fi
 
-if [ ! -f "$SD" ]; then bad "StoreDns not found at $SD"; else
-  SEL="$(strip "$SD" | sed -n '/override fun select(/,/^            }/p')"
-  if printf '%s' "$SEL" | grep -q 'val addrs = runCatching { resolve(host) }.getOrDefault(emptyList())' &&
-     printf '%s' "$SEL" | grep -q 'if (addrs.isNotEmpty()) {' &&
+if [ ! -f "$SD" ] || [ ! -f "$LD" ]; then bad "StoreDns / DnsLadder not found at $SD, $LD"; else
+  SEL="$(strip "$LD" | sed -n '/override fun select(/,/^                }/p')"
+  if printf '%s' "$SEL" | grep -q 'accepts(host) && resolveFor(host)' &&
      printf '%s' "$SEL" | grep -q 'return previous?.select(uri) ?: listOf(Proxy.NO_PROXY)'; then
-    ok "StoreDns proxies only a host the bridge resolved; otherwise DIRECT (Android's resolver), bridge wired or not"
-  else bad "StoreDns.select no longer falls through to DIRECT when the bridge answers nothing (self-update would depend on it)"; fi
-  if strip "$SD" | grep -q 'FleetDns\b'; then bad "StoreDns reads FleetDns itself"; else ok "StoreDns never reads FleetDns: the host hands it a resolver"; fi
+    ok "the selector proxies only a host the ladder resolved; otherwise DIRECT (Android's resolver), bridge wired or not"
+  else bad "the selector no longer falls through to DIRECT when no rung answers (self-update would depend on it)"; fi
+  if { strip "$SD"; strip "$LD"; } | grep -q 'FleetDns\b'; then bad "StoreDns reads FleetDns itself"; else ok "StoreDns never reads FleetDns: the host hands it a resolver"; fi
 fi
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -32,6 +32,9 @@ object DownloadFailure {
      */
     @Volatile var activeResolver: () -> String? = { null }
 
+    /** The same, for one host: concurrent legs must not read each other's failure. Defaults to [activeResolver]. */
+    @Volatile var activeResolverFor: (String?) -> String? = { activeResolver() }
+
     private fun chain(t: Throwable): Sequence<Throwable> = generateSequence(t) { c -> c.cause?.takeIf { it !== c } }.take(12)
 
     fun kind(t: Throwable): Kind {
@@ -56,7 +59,7 @@ object DownloadFailure {
     }
 
     /** One line for the row: the classified wording, or the raw message for anything else. */
-    fun describe(t: Throwable, resolver: String? = runCatching { activeResolver() }.getOrNull()): String = when (kind(t)) {
+    fun describe(t: Throwable, resolver: String? = runCatching { activeResolverFor(host(t)) }.getOrNull()): String = when (kind(t)) {
         Kind.DNS -> "DNS: cannot resolve ${host(t) ?: "the download host"} (active resolver: ${resolver?.takeIf { it.isNotBlank() } ?: "unknown"})"
         Kind.NOT_PUBLISHED -> chain(t).firstNotNullOf { c ->
             when (c) {
