@@ -43,6 +43,10 @@
 #       SearchHost.openUrl = Browser.open; SearchChatPage itself draws the engine boxes (Welcome, a
 #       box per engine) and the chat (Conversation + ChatBar); and SearchShellTest keeps the UI test
 #       that asserts both parts inside that one page.
+#   S13 (#903) Things is coarse, once, dense and honest: the manifest holds ACCESS_COARSE_LOCATION and
+#       neither the fine nor the background permission; ThingsPage asks for it once (the asked flag is
+#       set before the request, behind a check of that flag); Locator.kt stores and logs nothing; the
+#       Things pages inflate no minimum height; and the declared default radius is the owner's 20 km.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # Reads ac_cloud-search and, for S12, the one lib it hosts its Search page from
@@ -177,7 +181,7 @@ if re.search(r"SharedPreferences|getSharedPreferences|putString|writeText|FileOu
 api = code(os.path.join(src, "debugapi", "SearchDebugApi.kt"))
 if "BuildConfig.DEBUG_API_GROUP" not in api:
     bad.append("S7 SearchDebugApi does not register under build.json::ui.debug_api.group")
-for op in ("verticals", "query", "calc", "analysis", "feed"):
+for op in ("verticals", "query", "calc", "analysis", "feed", "things"):
     if not re.search(r'AppDebugServer\.Op\("%s"' % op, api) or not re.search(r'"%s" ->' % op, api):
         bad.append("S7 /api/<group>/%s is not both documented and answered" % op)
 if re.search(r'"state"', api):
@@ -302,14 +306,35 @@ if not re.search(r"@Test fun theSearchTabIsOnePageWithTheEnginesAndTheChat\(\)",
         or 'hasAnyAncestor(hasTestTag(Tags.page("assistant")))' not in ui_test:
     bad.append("S12 SearchShellTest lost theSearchTabIsOnePageWithTheEnginesAndTheChat, the UI test of the one page")
 
+# S13
+mf = open(os.path.join(app, "app", "src", "main", "AndroidManifest.xml"), encoding="utf-8").read()
+if "android.permission.ACCESS_COARSE_LOCATION" not in mf:
+    bad.append("S13 the manifest does not declare ACCESS_COARSE_LOCATION — Things could not place the search")
+for fine in ("ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION"):
+    if fine in mf:
+        bad.append("S13 the manifest declares %s — Things needs a coarse fix, once, in the foreground" % fine)
+things_ui = code(os.path.join(src, "ui", "ThingsPage.kt"))
+if not re.search(r"!prefs\.locationAsked[^\n]*\n\s*prefs\.locationAsked = true\n\s*ask\.launch\(Manifest\.permission\.ACCESS_COARSE_LOCATION\)", things_ui):
+    bad.append("S13 ThingsPage does not ask the location permission once (flag checked, set, then the request)")
+loc = code(os.path.join(src, "data", "Locator.kt"))
+if re.search(r"SharedPreferences|putString|putFloat|putLong|writeText|\bLog\.[a-z]\(|println\(", loc):
+    bad.append("S13 data/Locator.kt stores or logs the fix — it only centres the search")
+if "ACCESS_FINE" in loc:
+    bad.append("S13 data/Locator.kt names the fine permission")
+for p in (os.path.join(src, "ui", "ThingsPage.kt"),):
+    if re.search(r"minHeight|heightIn\(|defaultMinSize|sizeIn\(|requiredHeightIn", code(p)):
+        bad.append("S13 %s inflates a minimum height — the table is data-dense" % os.path.basename(p))
+if S["things"]["default_radius_km"] != 20:
+    bad.append("S13 build.json::search.things.default_radius_km is %s — the owner's default search area is 20 km" % S["things"]["default_radius_km"])
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── S1-S12 against the tree ──"
-if python3 "$CHECK" "$APP" "$LIB"; then echo "  PASS  S1-S12"; else FAILURES=$((FAILURES + 1)); fi
+echo "── S1-S13 against the tree ──"
+if python3 "$CHECK" "$APP" "$LIB"; then echo "  PASS  S1-S13"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -396,5 +421,15 @@ mutate engines-not-handed "$J/ui/AssistantPages.kt" 's.replace("engines = state.
 mutate result-not-in-browser "$J/data/SearchHost.kt" 's.replace("override fun openUrl(url: String) = Browser.open(", "override fun openUrl(url: String) = println(")' "S12 SearchHost does not open"
 mutate one-page-test-dropped app/src/test/java/com/diegonmarcos/cloudsearch/SearchShellTest.kt 's.replace("fun theSearchTabIsOnePageWithTheEnginesAndTheChat()", "fun theSearchTabComposes()")' "S12 SearchShellTest lost"
 
-echo "── S1-S12 + mutations: $FAILURES failure(s) ──"
+mutate fine-location app/src/main/AndroidManifest.xml 's.replace("ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION")' "S13 the manifest does not declare ACCESS_COARSE_LOCATION"
+mutate background-location app/src/main/AndroidManifest.xml 's.replace("<uses-feature", "<uses-permission android:name=\"android.permission.ACCESS_BACKGROUND_LOCATION\" />\n    <uses-feature")' "S13 the manifest declares ACCESS_BACKGROUND_LOCATION"
+mutate asked-every-time "$J/ui/ThingsPage.kt" 's.replace("            prefs.locationAsked = true\n            ask.launch(Manifest", "            ask.launch(Manifest")' "S13 ThingsPage does not ask the location permission once"
+mutate fix-stored "$J/data/Locator.kt" 's.replace("fun fix(ctx: Context): Fix? =", "fun leak(ctx: Context) = ctx.getSharedPreferences(\"x\", 0).edit().putString(\"fix\", \"\").apply()\n\n    fun fix(ctx: Context): Fix? =")' "S13 data/Locator.kt stores or logs the fix"
+mutate fix-logged "$J/data/Locator.kt" 's.replace("private const val WAIT_MS", "private fun dbg(f: Fix) = android.util.Log.d(\"loc\", f.toString())\n    private const val WAIT_MS")' "S13 data/Locator.kt stores or logs the fix"
+mutate height-inflated "$J/ui/ThingsPage.kt" 's.replace("private val KM_COL", "private val Tall = androidx.compose.ui.Modifier.heightIn(min = 120.dp)\nprivate val KM_COL")' "S13 ThingsPage.kt inflates a minimum height"
+mutate radius-default-moved build.json 's.replace("\"default_radius_km\": 20", "\"default_radius_km\": 25")' "S13 build.json::search.things.default_radius_km is 25"
+mutate things-without-renderer "$J/ui/SearchShell.kt" 's.replace("\"things\" -> ThingsPage(v)", "")' "S2 subpage kind things is declared"
+mutate things-debug-op-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"things\" -> things(Services.get(app), q).toString()", "")' "S7 /api/<group>/things"
+
+echo "── S1-S13 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

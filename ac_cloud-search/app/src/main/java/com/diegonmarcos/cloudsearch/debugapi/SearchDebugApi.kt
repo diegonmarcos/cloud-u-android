@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudsearch.debugapi
 import android.content.Context
 import com.diegonmarcos.cloudsearch.BuildConfig
 import com.diegonmarcos.cloudsearch.core.Calculators
+import com.diegonmarcos.cloudsearch.core.Things
 import com.diegonmarcos.cloudsearch.data.Services
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import org.json.JSONArray
@@ -24,6 +25,10 @@ import org.json.JSONObject
  *                                            with each series' status
  *   /api/search/feed?v=jobs                  the Feed page: the vertical's headlines and each
  *                                            feed's status
+ *   /api/search/things?q=laptop&city=Köln    #903 the Things comparison: stores of the item's kind
+ *                                            around lat/lon (or the typed city, or the selected
+ *                                            one), each with its price or why it has none, and
+ *                                            each source's status; radius= overrides the setting
  *
  * The group is build.json::ui.debug_api.group. No op is named `state` (GET /api/state's key), and
  * nothing here reads the AI token.
@@ -43,6 +48,7 @@ object SearchDebugApi {
                 AppDebugServer.Op("calc", "name=<calculator id>&<field>=<number>...", "a calculator's outputs and warnings (missing fields take their defaults)"),
                 AppDebugServer.Op("analysis", "v=<vertical id>&q=<term, jobs>&city=<city id, jobs>", "the Analysis page's numbers: jobs statistics or market series with their sources' status"),
                 AppDebugServer.Op("feed", "v=<vertical id>", "the Feed page's headlines and each feed's status"),
+                AppDebugServer.Op("things", "q=<item>&lat=<n>&lon=<n>|city=<typed city>&radius=<km, optional>", "the Things comparison: stores near the place with their price or why none, and each source's status"),
             ),
         ) { op, q ->
             when (op) {
@@ -51,6 +57,7 @@ object SearchDebugApi {
                 "calc" -> calc(Services.get(app), q).toString()
                 "analysis" -> analysis(Services.get(app), q).toString()
                 "feed" -> feed(Services.get(app), q).toString()
+                "things" -> things(Services.get(app), q).toString()
                 else -> null
             }
         }
@@ -106,5 +113,20 @@ object SearchDebugApi {
         val f = s.engine.feed(v.id)
         return JSONObject().put("ok", true).put("vertical", v.id).put("fetched", f.fetched).put("sources", s.engine.statusJson(f.statuses))
             .put("items", JSONArray(f.items.map { JSONObject().put("title", it.title).put("feed", it.feed).put("url", it.url ?: JSONObject.NULL).put("date", it.date ?: JSONObject.NULL) }))
+    }
+
+    fun things(s: Services, q: Map<String, String>): JSONObject {
+        val t = s.cfg.things ?: return JSONObject().put("ok", false).put("error", "build.json::search.things is not declared")
+        val radius = t.clampRadius(q["radius"]?.toIntOrNull() ?: s.prefs.radiusKm)
+        val lat = q["lat"]?.toDoubleOrNull()
+        val lon = q["lon"]?.toDoubleOrNull()
+        val area = when {
+            lat != null && lon != null -> Things.Area(lat, lon, radius, "")
+            !q["city"].isNullOrBlank() -> s.things.geocode(q["city"]!!, radius).first
+                ?: return JSONObject().put("ok", false).put("error", "no place called '${q["city"]}'")
+            else -> s.cfg.city(s.prefs.city).let { Things.Area(it.lat, it.lon, radius, it.label) }
+        }
+        val r = s.things.compare(area, q["q"].orEmpty())
+        return JSONObject(s.things.json(r).toString()).put("ok", true).put("sources", s.engine.statusJson(r.statuses))
     }
 }

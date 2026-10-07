@@ -456,12 +456,13 @@
     "cloud_search": {
       "kind": "prefs",
       "class": "config",
-      "doc": "Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). The last query per vertical (q:<vertical>) is device state.",
+      "doc": "Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). #903 Things: the search radius (things_radius_km), the typed fallback city (things_city) and whether to use the coarse location (things_use_location) are configuration; whether the location permission was already asked (things_location_asked) is device state, as the permission itself is per phone. The last query per vertical (q:<vertical>) is device state.",
       "used_by": [
         "ac_cloud-search"
       ],
       "keys": {
-        "q:*": "device"
+        "q:*": "device",
+        "things_location_asked": "device"
       }
     },
     "cloud_sound": {
@@ -2725,6 +2726,12 @@
           "path": "filesDir/chat-sessions.json",
           "class": "content",
           "doc": "AI chat history (never carries the token); stays on the phone that held the conversation"
+        },
+        {
+          "id": "things-cache",
+          "path": "filesDir/things",
+          "class": "device",
+          "doc": "cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources"
         }
       ]
     },

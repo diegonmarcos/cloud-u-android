@@ -65,9 +65,20 @@ class SearchShellTest {
     /** One job from the Bundesagentur, a refusal from everything else; records what was asked. */
     private class FakeHttp : Http {
         val asked = mutableListOf<String>()
+        val headersAsked = mutableListOf<Map<String, String>>()
         override fun get(url: String, headers: Map<String, String>, timeoutMs: Int): Http.Response {
-            synchronized(asked) { asked += url }
+            synchronized(asked) { asked += url; headersAsked += headers }
             return when {
+                // #903 Things: two stores (one of a chain the price service reads), a geocoded city, the service's answer.
+                "overpass" in url -> Http.Response(200,
+                    """{"elements":[
+                       {"type":"node","id":1,"lat":48.14,"lon":11.58,"tags":{"name":"OBI Mitte","brand":"OBI","shop":"doityourself","addr:street":"Hauptstr.","addr:housenumber":"1"}},
+                       {"type":"node","id":2,"lat":48.15,"lon":11.59,"tags":{"name":"Kleiner Baumarkt","shop":"doityourself"}}]}""")
+                "nominatim" in url -> Http.Response(200, """[{"lat":"48.1371","lon":"11.5753","name":"München","display_name":"München, Bayern, Deutschland"}]""")
+                "prices.openfoodfacts" in url -> Http.Response(200, """{"items":[]}""")
+                "/scrappers/prices" in url -> Http.Response(200,
+                    """{"results":[{"adapter":"obi","label":"OBI","status":"ok","price":24.49,"currency":"EUR","title":"Bohrmaschine X","url":"https://www.obi.de/p/1","fetched_at":1790000000000}],
+                       "adapters":[{"adapter":"obi","label":"OBI","enabled":true,"brands":["obi"],"why":""}]}""")
                 "arbeitsagentur" in url -> Http.Response(200,
                     """{"maxErgebnisse":1,"ergebnisliste":[{"referenznummer":"r-1","stellenangebotsTitel":"Kotlin Developer","firma":"ACME","arbeitszeitVollzeit":true}]}""")
                 // The Bundesbank's SDMX-JSON shape, two observations a year apart.
@@ -87,9 +98,13 @@ class SearchShellTest {
     private lateinit var services: Services
     private lateinit var state: SearchState
     private lateinit var savedReader: (android.content.Context, String) -> Account.Token
+    private val savedBearer = com.diegonmarcos.cloudsearch.data.FleetBearer.reader
+    private val savedLocator = com.diegonmarcos.cloudsearch.data.Locator.reader
 
     @Before fun offline() {
         services = Services(RuntimeEnvironment.getApplication(), http)
+        // Things asks the coarse-location permission once, through the system dialog: not under test here.
+        services.prefs.locationAsked = true
         Services.install(services)
         state = SearchState(services)
         savedReader = Account.reader
@@ -97,6 +112,8 @@ class SearchShellTest {
     }
 
     @After fun online() {
+        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = savedBearer
+        com.diegonmarcos.cloudsearch.data.Locator.reader = savedLocator
         Account.reader = savedReader
         Services.install(null)
     }
@@ -294,5 +311,104 @@ class SearchShellTest {
         assertTrue(feed.getBoolean("ok"))
         assertEquals("error", feed.getJSONArray("sources").getJSONObject(0).getString("state"))
         assertFalse(SearchDebugApi.feed(services, mapOf("v" to "search")).getBoolean("ok"))
+    }
+
+    // ── #903 Things ──────────────────────────────────────────────────────────────────────────────
+    private fun openThings(item: String) {
+        launch()
+        compose.onNodeWithTag(Tags.nav("things")).performClick()
+        waitFor(Tags.SEARCH_BOX)
+        compose.onNodeWithTag(Tags.SEARCH_BOX).performTextInput(item)
+        compose.onNodeWithTag(Tags.SEARCH_BOX).performImeAction()
+    }
+
+    @Test fun thingsComparesStoresWithTheirRealPriceOrWhyNone() {
+        services.prefs.useLocation = false
+        services.prefs.city = "munich" // the declared city the fake stores sit in
+        state.city = "munich"
+        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = { "tok-1" }
+        openThings("Bohrmaschine")
+        waitFor(Tags.thingsRow("node/1"))
+        // the chain store carries the price its own site published, with where it comes from; the other says why not
+        compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("€24.49", substring = true)
+        compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("online", substring = true)
+        compose.onNodeWithTag(Tags.thingsRow("node/2")).assertTextContains("no price", substring = true)
+        compose.onNodeWithTag(Tags.thingsRow("node/2")).assertTextContains("no price source for this chain", substring = true)
+        val rows = compose.onAllNodes(hasTestTag(Tags.THINGS_TABLE)).fetchSemanticsNodes()
+        assertEquals(1, rows.size)
+        val top = { t: String -> compose.onNodeWithTag(t).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue("cheapest first, the unpriced below", top(Tags.thingsRow("node/1")) < top(Tags.thingsRow("node/2")))
+        compose.onNodeWithTag(Tags.THINGS_STORES).assertTextContains("DIY and tools", substring = true)
+        // the default city and the declared 20 km radius, said on the page
+        compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("20 km", substring = true)
+        synchronized(http.asked) {
+            val i = http.asked.indexOfFirst { "/scrappers/prices" in it }
+            assertTrue(http.asked[i], "q=Bohrmaschine" in http.asked[i] && "brands=kleiner%20baumarkt%2Cobi" in http.asked[i])
+            assertEquals(mapOf("Authorization" to "Bearer tok-1"), http.headersAsked[i])
+        }
+    }
+
+    @Test fun thingsWithoutTheFleetSignInShowsNoStorePriceAndSaysSo() {
+        services.prefs.useLocation = false
+        services.prefs.city = "munich"
+        state.city = "munich"
+        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = { "" }
+        openThings("Bohrmaschine")
+        waitFor(Tags.thingsRow("node/1"))
+        compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("no price", substring = true)
+        compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("fleet sign-in", substring = true)
+        assertTrue(synchronized(http.asked) { http.asked.none { "/scrappers/prices" in it } })
+    }
+
+    @Test fun thingsCentresOnTheCoarseFixWhenAllowed() {
+        val app = RuntimeEnvironment.getApplication()
+        shadowOf(app).grantPermissions(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        com.diegonmarcos.cloudsearch.data.Locator.reader = { com.diegonmarcos.cloudsearch.data.Locator.Fix(48.1371, 11.5753) }
+        openThings("Bohrmaschine")
+        waitFor(Tags.thingsRow("node/1"))
+        compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("Near you", substring = true)
+        // the centre leaves the phone rounded to ~1 km
+        assertTrue(synchronized(http.asked) { http.asked.any { "overpass" in it && "48.14000%2C11.58000" in it } })
+        assertTrue(synchronized(http.asked) { http.asked.none { "48.1371" in it || "11.5753" in it } })
+    }
+
+    @Test fun thingsFallsBackToTheTypedCityAndNamesWhy() {
+        services.prefs.thingsCity = "München"
+        openThings("Bohrmaschine")
+        waitFor(Tags.thingsRow("node/1"))
+        compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("München", substring = true)
+        compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("typed city", substring = true)
+        compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("no location permission", substring = true)
+        assertTrue(synchronized(http.asked) { http.asked.any { "nominatim" in it && "K%C3%B6ln" !in it && "M%C3%BCnchen" in it } })
+    }
+
+    @Test fun thingsSettingsKeepTheCityAndClampTheRadius() {
+        launch()
+        compose.onNodeWithTag(Tags.PROFILE).performClick()
+        waitFor(Tags.THINGS_CITY)
+        compose.onNodeWithTag(Tags.THINGS_CITY).performTextInput(" Köln ")
+        compose.onNodeWithTag(Tags.THINGS_RADIUS).performTextInput("500")
+        val before = state.areaRev
+        compose.onNodeWithTag(Tags.THINGS_APPLY).performClick()
+        compose.runOnIdle {
+            assertEquals("Köln", services.prefs.thingsCity)
+            assertEquals(Decl.config.things!!.maxRadiusKm, services.prefs.radiusKm)
+            assertEquals(before + 1, state.areaRev)
+        }
+        compose.onNodeWithTag(Tags.option("radius_5")).performClick()
+        compose.runOnIdle { assertEquals(5, services.prefs.radiusKm) }
+        compose.onNodeWithTag(Tags.THINGS_USE_LOCATION).performClick()
+        compose.runOnIdle { assertFalse(services.prefs.useLocation) }
+    }
+
+    @Test fun theDebugRouteAnswersTheThingsComparison() {
+        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = { "tok-1" }
+        val j = SearchDebugApi.things(services, mapOf("q" to "Bohrmaschine", "lat" to "48.14", "lon" to "11.58", "radius" to "10"))
+        assertTrue(j.getBoolean("ok"))
+        assertEquals(10, j.getJSONObject("area").getInt("radius_km"))
+        assertEquals(2, j.getJSONArray("rows").length())
+        assertEquals(24.49, j.getJSONArray("rows").getJSONObject(0).getDouble("price"), 1e-9)
+        assertTrue(j.getJSONArray("rows").getJSONObject(1).isNull("price"))
+        assertTrue(SearchDebugApi.things(services, mapOf("q" to "x", "city" to "München")).getBoolean("ok"))
     }
 }

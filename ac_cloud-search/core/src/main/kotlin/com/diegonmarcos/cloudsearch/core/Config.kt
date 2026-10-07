@@ -28,6 +28,8 @@ data class SearchConfig(
     val calculators: Map<String, Calculator>,
     val social: Social,
     val ai: Ai,
+    /** #903 the Things page's declaration (stores, shelf prices, price service); null when the app declares none. */
+    val things: Things.Config? = null,
 ) {
     data class City(val id: String, val label: String, val lat: Double, val lon: Double, val radiusKm: Int, val aliases: List<String>)
     data class Subpage(val id: String, val label: String, val kind: String)
@@ -178,6 +180,7 @@ data class SearchConfig(
                         titleChars = a.getInt("title_chars"),
                     )
                 },
+                things = o.optJSONObject("things")?.let { Things.config(it) },
             )
             val problems = cfg.problems()
             require(problems.isEmpty()) { "build.json::search is inconsistent: " + problems.joinToString("; ") }
@@ -226,6 +229,10 @@ data class SearchConfig(
             if (s.kind == KIND_API && s.enabled && s.parser.isBlank()) bad += "source ${s.id} is enabled but names no parser"
             if (s.enabled && s.url.isBlank()) bad += "source ${s.id} is enabled but has no url"
             if ((s.kind == KIND_LINK || !s.enabled) && s.why.isBlank()) bad += "source ${s.id} is not fetched but does not say why"
+        }
+        things?.let { bad += Things.problems(it) }
+        for (v in verticals) {
+            if (v.subpages.any { subpage(it)?.kind == "things" } && things == null) bad += "vertical ${v.id} has a things page but build.json::search.things is not declared"
         }
         for (c in calculators.values) {
             if (c.outputs.isEmpty()) bad += "calculator ${c.id} declares no output"

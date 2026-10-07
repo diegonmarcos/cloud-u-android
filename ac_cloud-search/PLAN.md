@@ -61,11 +61,21 @@ have no public API and forbid automated access: links.
 
 ## Things
 
-No marketplace offers a public search API this app may use: Kleinanzeigen and Vinted forbid
-automated access, and eBay's Browse API needs developer OAuth credentials the fleet Account does not
-hold. All three are links until the Account carries an eBay key; nothing is shown that was not read.
+One page, **Compare** (#903): the stores around the person that sell the item's kind, and what each
+asks. Nothing is estimated; a store with no price says why.
+
+| Part | Source | Engine |
+|---|---|---|
+| Area | the coarse location fix (`ACCESS_COARSE_LOCATION`, asked once, never stored; the centre leaves the phone rounded to ~1 km), else the city typed in settings (Nominatim, keyless, cached), else the selected city; radius 20 km by default, set in settings | `data/ThingsArea.kt`, `data/Locator.kt` |
+| Stores | **OpenStreetMap** `shop=*` within the radius through the Overpass API (keyless, ODbL; two public instances tried in order), the item matched to shop types by `things.categories[].words`; cached per area, category and radius for a week | `ThingsEngine.compare`, `Things.overpassQuery/parseStores` |
+| Shelf price | **Open Prices** (ODbL): a price seen at that very OSM place (receipt or price tag), per unit, dated; mostly groceries and drugstore goods, so most other items have none | `Things.parseShelf` |
+| Online price | the chain's **own site**, read server-side by the fleet scraper (`scrappers-api` `GET /prices`, robots.txt-gated, schema.org JSON-LD offers, cached 30 min) behind the fleet bearer; OBI and Euronics today, the rest listed disabled with the verified reason (`user-data_scrappers-api/src/code/prices.json`). It is the chain's online price, not the branch shelf price, and the row says "online" | `Things.parseBackend`, `Things.compare` |
+| Table | store, km, price (source and date), cheapest first, the unpriced below with the reason; a row opens the price page or the store's website | `ui/ThingsPage.kt` |
+
+No marketplace offers a public search API this app may use: Kleinanzeigen, eBay and Vinted stay links
+(open on their own search below the table) until the Account carries an eBay key.
 
 ## Screen-locked checks
 
-`/api/search/verticals`, `/query?v=&q=&city=`, `/calc?name=&…`, `/analysis?v=` and `/feed?v=` run the
+`/api/search/verticals`, `/query?v=&q=&city=`, `/calc?name=&…`, `/analysis?v=`, `/feed?v=` and `/things?q=&lat=&lon=|city=&radius=` run the
 same engine and cache as the screens (libs:devtools debug API, group `search`).

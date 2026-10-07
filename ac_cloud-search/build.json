@@ -252,6 +252,11 @@
         "id": "assistant",
         "label": "Assistant",
         "kind": "assistant"
+      },
+      {
+        "id": "things",
+        "label": "Compare",
+        "kind": "things"
       }
     ],
     "verticals": [
@@ -420,12 +425,12 @@
       {
         "id": "things",
         "label": "Things",
-        "title": "Marketplace",
-        "blurb": "Buy and sell locally.",
+        "title": "Things",
+        "blurb": "Stores near you that sell it, and what each asks.",
         "icon": "things",
-        "placeholder": "Search electronics, furniture...",
+        "placeholder": "An item: laptop, drill, sofa...",
         "subpages": [
-          "listing"
+          "things"
         ],
         "sources": [
           "kleinanzeigen",
@@ -1076,7 +1081,360 @@
       "title_chars": 40
     },
     "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the mockup's Search, Groceries and Things). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
-    "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped."
+    "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped.",
+    "things": {
+      "_doc": "#903 The Things page (subpage kind `things`): the stores around the person that sell an item's kind, and what each asks for it. AREA: a coarse location fix (permission asked once) or the city typed in settings, default radius_km, adjustable in settings. STORES: OpenStreetMap shop=* through the Overpass API (keyless, ODbL; the public instances in overpass_urls are tried in order, because any one of them is sometimes overloaded) within the radius, cached per area/category for stores_ttl_hours; the item is matched to shop types by `categories[].words` (a word may sit inside a compound, 'bohr' in 'Bohrmaschine'); an item no category names falls back to `fallback`, and the page says so. PRICES, only what a source published: (1) Open Prices shelf prices seen at that very OSM place (receipt or price tag, dated; groceries and drugstore goods mostly), (2) the online price a chain's own site publishes, read server-side by scrappers-api GET /prices (robots.txt-gated, JSON-LD offers; needs the fleet bearer; see user-data_scrappers-api/src/code/prices.json for the chains and why the others are off). A store with neither shows no price and why; nothing is estimated.",
+      "default_radius_km": 20,
+      "min_radius_km": 1,
+      "max_radius_km": 100,
+      "radius_steps_km": [
+        5,
+        10,
+        20,
+        50
+      ],
+      "overpass_urls": [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
+      ],
+      "overpass_limit": 500,
+      "geocoder_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&q={q}",
+      "stores_ttl_hours": 168,
+      "max_stores": 60,
+      "max_rows": 60,
+      "shelf_prices": {
+        "url": "https://prices.openfoodfacts.org/api/v1/prices?lat={lat}&lon={lon}&radius_km={radius}&order_by=-date&size=100",
+        "max_age_days": 365
+      },
+      "price_service": {
+        "url": "https://api.diegonmarcos.com/scrappers/prices?q={q}&brands={brands}",
+        "ttl_minutes": 30
+      },
+      "categories": [
+        {
+          "id": "electronics",
+          "label": "Electronics",
+          "shops": [
+            "electronics",
+            "computer",
+            "mobile_phone",
+            "hifi",
+            "video_games",
+            "camera"
+          ],
+          "words": [
+            "laptop",
+            "notebook",
+            "handy",
+            "smartphone",
+            "telefon",
+            "fernseher",
+            "kopfh",
+            "headphone",
+            "kamera",
+            "camera",
+            "monitor",
+            "bildschirm",
+            "tablet",
+            "drucker",
+            "printer",
+            "router",
+            "lautsprecher",
+            "speaker",
+            "konsole",
+            "playstation",
+            "kabel",
+            "usb",
+            "ladeger",
+            "charger",
+            "akku",
+            "powerbank",
+            "maus",
+            "tastatur",
+            "keyboard",
+            "ssd",
+            "festplatte",
+            "smartwatch",
+            "computer"
+          ]
+        },
+        {
+          "id": "appliances",
+          "label": "Appliances",
+          "shops": [
+            "appliance",
+            "houseware",
+            "electrical"
+          ],
+          "words": [
+            "waschmaschine",
+            "kühlschrank",
+            "kuehlschrank",
+            "spülmaschine",
+            "herd",
+            "backofen",
+            "staubsauger",
+            "mikrowelle",
+            "toaster",
+            "kaffeemaschine",
+            "föhn",
+            "bügeleisen",
+            "washing machine",
+            "fridge",
+            "vacuum",
+            "dishwasher",
+            "oven",
+            "kettle",
+            "wasserkocher"
+          ]
+        },
+        {
+          "id": "diy",
+          "label": "DIY and tools",
+          "shops": [
+            "doityourself",
+            "hardware",
+            "garden_centre",
+            "trade",
+            "paint"
+          ],
+          "words": [
+            "bohr",
+            "schrauber",
+            "hammer",
+            "säge",
+            "werkzeug",
+            "tool",
+            "drill",
+            "schraube",
+            "farbe",
+            "pinsel",
+            "leiter",
+            "dübel",
+            "zange",
+            "schraubendreher",
+            "rasenmäher",
+            "saw",
+            "screw",
+            "ladder",
+            "paint",
+            "garten",
+            "akkuschrauber"
+          ]
+        },
+        {
+          "id": "furniture",
+          "label": "Furniture",
+          "shops": [
+            "furniture",
+            "interior_decoration",
+            "bed",
+            "kitchen",
+            "lighting",
+            "carpet",
+            "curtain"
+          ],
+          "words": [
+            "sofa",
+            "tisch",
+            "stuhl",
+            "regal",
+            "schrank",
+            "bett",
+            "matratze",
+            "lampe",
+            "schreibtisch",
+            "kommode",
+            "couch",
+            "table",
+            "chair",
+            "shelf",
+            "mattress",
+            "desk",
+            "teppich",
+            "vorhang",
+            "wardrobe"
+          ]
+        },
+        {
+          "id": "sports",
+          "label": "Sports and outdoor",
+          "shops": [
+            "sports",
+            "outdoor",
+            "bicycle",
+            "fishing",
+            "ski",
+            "scuba_diving"
+          ],
+          "words": [
+            "fahrrad",
+            "bike",
+            "zelt",
+            "tent",
+            "rucksack",
+            "schlafsack",
+            "laufschuh",
+            "yoga",
+            "hantel",
+            "wanderschuh",
+            "helm",
+            "fußball",
+            "football",
+            "sleeping bag",
+            "backpack"
+          ]
+        },
+        {
+          "id": "books",
+          "label": "Books and stationery",
+          "shops": [
+            "books",
+            "stationery",
+            "newsagent",
+            "art",
+            "craft"
+          ],
+          "words": [
+            "buch",
+            "book",
+            "roman",
+            "heft",
+            "stift",
+            "papier",
+            "notizbuch",
+            "kalender"
+          ]
+        },
+        {
+          "id": "toys",
+          "label": "Toys and baby",
+          "shops": [
+            "toys",
+            "baby_goods",
+            "games"
+          ],
+          "words": [
+            "spielzeug",
+            "lego",
+            "puzzle",
+            "puppe",
+            "toy",
+            "kinderwagen",
+            "spiel",
+            "stroller",
+            "windel"
+          ]
+        },
+        {
+          "id": "clothes",
+          "label": "Clothes and shoes",
+          "shops": [
+            "clothes",
+            "shoes",
+            "fashion_accessories",
+            "bag",
+            "boutique"
+          ],
+          "words": [
+            "jacke",
+            "jeans",
+            "hose",
+            "kleid",
+            "schuhe",
+            "pullover",
+            "shirt",
+            "sneaker",
+            "mantel",
+            "jacket",
+            "shoes",
+            "coat",
+            "dress",
+            "trousers",
+            "tasche"
+          ]
+        },
+        {
+          "id": "drugstore",
+          "label": "Drugstore and beauty",
+          "shops": [
+            "chemist",
+            "cosmetics",
+            "perfumery",
+            "beauty",
+            "medical_supply"
+          ],
+          "words": [
+            "shampoo",
+            "zahnpasta",
+            "zahnbürste",
+            "seife",
+            "creme",
+            "deo",
+            "parfum",
+            "tampon",
+            "soap",
+            "toothpaste",
+            "lotion",
+            "duschgel",
+            "sonnencreme",
+            "cream"
+          ]
+        },
+        {
+          "id": "groceries",
+          "label": "Food and drink",
+          "shops": [
+            "supermarket",
+            "convenience",
+            "greengrocer",
+            "bakery",
+            "butcher",
+            "deli",
+            "beverages"
+          ],
+          "words": [
+            "milch",
+            "brot",
+            "käse",
+            "butter",
+            "eier",
+            "nudeln",
+            "reis",
+            "joghurt",
+            "kaffee",
+            "schokolade",
+            "milk",
+            "bread",
+            "cheese",
+            "eggs",
+            "pasta",
+            "rice",
+            "coffee",
+            "wasser",
+            "bier",
+            "wein",
+            "apfel",
+            "vegetable",
+            "gemüse",
+            "obst",
+            "fruit"
+          ]
+        }
+      ],
+      "fallback": {
+        "id": "general",
+        "label": "General stores",
+        "shops": [
+          "department_store",
+          "mall",
+          "variety_store",
+          "general",
+          "wholesale"
+        ],
+        "words": []
+      }
+    }
   },
   "ui": {
     "_doc": "The shell: build.json::search drives every list; ui holds only the chrome's own settings.",
@@ -1178,8 +1536,8 @@
         "icon": "things",
         "pages": [
           {
-            "id": "listing",
-            "label": "Listing",
+            "id": "things",
+            "label": "Compare",
             "icon": ""
           }
         ]

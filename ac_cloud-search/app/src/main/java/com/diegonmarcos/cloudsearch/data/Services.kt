@@ -6,6 +6,7 @@ import com.diegonmarcos.cloudsearch.core.Cache
 import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.SearchEngine
+import com.diegonmarcos.cloudsearch.core.ThingsEngine
 import com.diegonmarcos.cloudsearch.core.UrlHttp
 import java.io.File
 
@@ -19,6 +20,8 @@ class Services(ctx: Context, val http: Http) {
     val app: Context = ctx.applicationContext
     val cfg: SearchConfig = Decl.config
     val engine = SearchEngine(cfg, http, Cache(File(ctx.filesDir, "results")), System::currentTimeMillis)
+    /** #903 the Things comparison: stores, shelf prices and the fleet price service, cached under filesDir/things. */
+    val things = ThingsEngine(cfg, http, Cache(File(ctx.filesDir, "things")), System::currentTimeMillis) { FleetBearer.token(app) }
     val saved = SavedStore(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
     val prefs = Prefs(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE), cfg)
     val sessions = SessionStore(File(ctx.filesDir, "chat-sessions.json"))

@@ -44,7 +44,7 @@ class ConfigTest {
         assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(0).put("subpages", JSONArray()) }.contains("has no subpage"))
         assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(0).put("calculators", JSONArray()) }.contains("calculators page but no calculator"))
         assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(0).put("feeds", JSONArray()) }.contains("feed page but no feed"))
-        assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(4).put("sources", JSONArray()) }.contains("listing but no source"))
+        assertTrue(problemsAfter { it.getJSONArray("verticals").getJSONObject(3).put("sources", JSONArray()) }.contains("listing but no source"))
         assertTrue(problemsAfter { it.getJSONArray("verticals").put(it.getJSONArray("verticals").getJSONObject(0)) }.contains("duplicate vertical ids"))
     }
 

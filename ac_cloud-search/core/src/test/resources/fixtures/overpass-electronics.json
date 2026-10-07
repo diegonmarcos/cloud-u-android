@@ -1,0 +1,16 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {"timestamp_osm_base": "2026-10-07T14:39:35Z", "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."},
+  "elements": [
+    {"type": "node", "id": 322490364, "lat": 52.5198615, "lon": 13.4147909,
+     "tags": {"addr:city": "Berlin", "addr:country": "DE", "addr:housenumber": "20", "addr:postcode": "10179", "addr:street": "Grunerstraße", "brand": "MediaMarkt", "name": "MediaMarkt", "shop": "electronics", "website": "https://www.mediamarkt.de/"}},
+    {"type": "way", "id": 9001, "center": {"lat": 52.5203, "lon": 13.4051},
+     "tags": {"brand": "Euronics", "name": "Euronics XXL Mitte", "shop": "electronics"}},
+    {"type": "node", "id": 9002, "lat": 52.5210, "lon": 13.4100, "tags": {"shop": "computer", "brand": "Cyberport"}},
+    {"type": "node", "id": 9003, "lat": 52.5190, "lon": 13.4000, "tags": {"shop": "electronics", "opening_hours": "Mo-Sa 10:00-20:00"}},
+    {"type": "node", "id": 9004, "lat": 52.7000, "lon": 13.9000, "tags": {"shop": "electronics", "name": "Far Away Elektro"}},
+    {"type": "node", "id": 9005, "lat": 52.5200, "lon": 13.4060, "tags": {"shop": "computer", "name": "Kleiner PC-Laden", "contact:website": "https://pc-laden.example/"}},
+    {"type": "relation", "id": 9006, "tags": {"shop": "electronics", "name": "No geometry"}}
+  ]
+}

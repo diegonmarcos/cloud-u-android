@@ -83,6 +83,9 @@ class SearchState(val services: Services) {
     private val subpages = mutableStateMapOf<String, String>()
     val filters = mutableStateMapOf<String, Filters>()
     val listings = mutableMapOf<String, ListingModel>()
+    private val thingsModels = mutableMapOf<String, ThingsModel>()
+    /** Bumped when the Things area (location use, typed city, radius) changes: the page asks again. */
+    var areaRev by mutableStateOf(0)
     val chat = SearchChatState(SearchHost(services))
 
     fun v(): SearchConfig.Vertical = cfg.vertical(vertical) ?: cfg.verticals.first()
@@ -90,12 +93,16 @@ class SearchState(val services: Services) {
     fun showSubpage(v: SearchConfig.Vertical, id: String) { subpages[v.id] = id }
     fun filtersOf(v: String): Filters = filters[v] ?: Filters()
     fun listing(v: String): ListingModel = listings.getOrPut(v) { ListingModel(services.prefs.lastQuery(v)) }
+    fun things(v: String): ThingsModel = thingsModels.getOrPut(v) { ThingsModel(services.prefs.lastQuery(v)) }
+
+    /** #903 the settings that place the Things search changed: every Things page asks again. */
+    fun areaChanged() { thingsModels.values.forEach { it.stale = true }; areaRev++ }
 
     /** The mockup's switchTopic(): a vertical opens on its first subpage, menus close. */
     fun open(id: String) { vertical = id; saved = false; menu = null; cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() } }
     fun toggle(m: Menu) { menu = if (menu == m) null else m }
     fun toggleDark() { dark = !dark; services.prefs.dark = dark }
-    fun pickCity(id: String) { city = id; services.prefs.city = id; listings.values.forEach { it.stale = true } }
+    fun pickCity(id: String) { city = id; services.prefs.city = id; listings.values.forEach { it.stale = true }; areaChanged() }
 }
 
 val LocalState = staticCompositionLocalOf<SearchState> { error("SearchShell provides the state") }
@@ -125,6 +132,15 @@ object Tags {
     const val MODEL = SearchPageTags.MODEL
     const val WEB = SearchPageTags.WEB
     const val SAVED = "search_saved"
+    const val THINGS_AREA = "search_things_area"
+    const val THINGS_SETTINGS = "search_things_settings"
+    const val THINGS_STORES = "search_things_stores"
+    const val THINGS_TABLE = "search_things_table"
+    const val THINGS_USE_LOCATION = "search_things_use_location"
+    const val THINGS_CITY = "search_things_city"
+    const val THINGS_RADIUS = "search_things_radius"
+    const val THINGS_APPLY = "search_things_apply"
+    fun thingsRow(osm: String) = "search_things_row_$osm"
     /** libs:bottomnav's island item tag (BottomNavBar.itemTag, internal to the lib). */
     fun nav(id: String) = "bottomnav_item_$id"
     /** A sub-page pill of the page-tab strip. */
@@ -208,6 +224,7 @@ private fun Page(v: SearchConfig.Vertical, kind: String) {
     Box(Modifier.fillMaxSize().testTag(Tags.page(kind))) {
         when (kind) {
             "listing" -> ListingPage(v)
+            "things" -> ThingsPage(v)
             "analysis" -> AnalysisPage(v)
             "feed" -> FeedPage(v)
             "calculators" -> CalculatorsPage(v)
@@ -353,6 +370,10 @@ private fun ProfileMenu(state: SearchState) {
         }
         ChipRow {
             state.cfg.cities.forEach { c -> Chip(c.label, Tags.city(c.id), selected = c.id == state.city) { state.pickCity(c.id) } }
+        }
+        if (state.cfg.things != null) {
+            Hairline(Modifier.padding(vertical = Metrics.small))
+            ThingsSettings(state)
         }
     }
 }

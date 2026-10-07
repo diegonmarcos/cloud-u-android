@@ -741,7 +741,7 @@ Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `cloud_search` | prefs | config (keys: q:*→device) | yes | Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). The last query per vertical (q:<vertical>) is device state. |
+| `cloud_search` | prefs | config (keys: q:*→device, things_location_asked→device) | yes | Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). #903 Things: the search radius (things_radius_km), the typed fallback city (things_city) and whether to use the coarse location (things_use_location) are configuration; whether the location permission was already asked (things_location_asked) is device state, as the permission itself is per phone. The last query per vertical (q:<vertical>) is device state. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -751,6 +751,7 @@ Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet
 | `filesDir/results` | device | cached search results, refetched from the sources |
 | `filesDir/catalog` | device | cached OpenRouter model catalog |
 | `filesDir/chat-sessions.json` | content | AI chat history (never carries the token); stays on the phone that held the conversation |
+| `filesDir/things` | device | cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources |
 
 Coverage: 2 covered, 0 gaps.
 

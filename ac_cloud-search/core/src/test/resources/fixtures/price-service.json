@@ -1,0 +1,104 @@
+{
+ "q": "bohrmaschine",
+ "results": [
+  {
+   "adapter": "obi",
+   "label": "OBI",
+   "fetched_at": 1791384889996,
+   "search_url": "https://www.obi.de/search/bohrmaschine/",
+   "status": "ok",
+   "detail": "",
+   "hits": 40,
+   "title": "CMI 600 W Bohrmaschine C-SBM-500 B",
+   "brand": "CMI",
+   "price": 24.49,
+   "currency": "EUR",
+   "url": "https://www.obi.de/p/1001049/cmi-600-w-bohrmaschine-c-sbm-500-b"
+  },
+  {
+   "adapter": "euronics",
+   "label": "Euronics",
+   "fetched_at": 1791384891440,
+   "search_url": "https://www.euronics.de/search?q=bohrmaschine",
+   "status": "ok",
+   "detail": "",
+   "hits": 2,
+   "title": "HP2071J Schlagbohrmaschine",
+   "brand": "",
+   "price": 212.99,
+   "currency": "EUR",
+   "url": "https://www.euronics.de/haus-und-haushalt/werkzeuge/elektrowerkzeuge/bohrmaschinen/hp2071j-schlagbohrmaschine-4061856801544"
+  }
+ ],
+ "adapters": [
+  {
+   "adapter": "obi",
+   "label": "OBI",
+   "enabled": true,
+   "brands": [
+    "obi"
+   ],
+   "why": "robots.txt allows the search path (checked per request); prices are the chain's ONLINE shop price from the page's JSON-LD ItemList, not a branch shelf price. The owner has not reviewed the site's terms of use."
+  },
+  {
+   "adapter": "euronics",
+   "label": "Euronics",
+   "enabled": true,
+   "brands": [
+    "euronics"
+   ],
+   "why": "robots.txt allows the search path (checked per request); prices are the chain's ONLINE shop price from the page's JSON-LD ItemList, not a branch shelf price. The owner has not reviewed the site's terms of use."
+  },
+  {
+   "adapter": "mediamarkt",
+   "label": "MediaMarkt",
+   "enabled": false,
+   "brands": [
+    "mediamarkt",
+    "media markt"
+   ],
+   "why": "Answers 403 to automated clients (verified 2026-10-07)."
+  },
+  {
+   "adapter": "saturn",
+   "label": "Saturn",
+   "enabled": false,
+   "brands": [
+    "saturn"
+   ],
+   "why": "Same shop platform as MediaMarkt; answers 403 to automated clients."
+  },
+  {
+   "adapter": "dm",
+   "label": "dm-drogerie markt",
+   "enabled": false,
+   "brands": [
+    "dm",
+    "dm-drogerie markt"
+   ],
+   "why": "robots.txt disallows scrappers-api (verified 2026-10-07)."
+  },
+  {
+   "adapter": "ikea",
+   "label": "IKEA",
+   "enabled": false,
+   "brands": [
+    "ikea"
+   ],
+   "why": "Search page carries no JSON-LD offers (prices are in a JS bundle); not read."
+  },
+  {
+   "adapter": "hornbach",
+   "label": "Hornbach",
+   "enabled": false,
+   "brands": [
+    "hornbach"
+   ],
+   "why": "Search page is rendered by JavaScript; no static offers to read."
+  }
+ ],
+ "_summary": {
+  "asked": 2,
+  "priced": 2
+ }
+}

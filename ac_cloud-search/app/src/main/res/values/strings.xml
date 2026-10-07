@@ -96,4 +96,34 @@
     <string name="chat_error">No answer: %1$s</string>
     <string name="ask_anything">Ask anything…</string>
     <string name="send">Send</string>
+
+    <!-- #903 Things: stores near you and what each asks -->
+    <string name="things_area_title">Things area</string>
+    <string name="things_use_location">Use my location (coarse, ~1 km)</string>
+    <string name="things_loc_granted">Location allowed. It only centres the search; it is never stored.</string>
+    <string name="things_loc_denied">Location not allowed (change it in system settings). The typed city is used.</string>
+    <string name="things_loc_unasked">Asked once, when you first open Things.</string>
+    <string name="things_city_hint">City, used when location is off</string>
+    <string name="things_radius_km">Radius (km)</string>
+    <string name="things_apply">Apply</string>
+    <string name="things_area_location">Near you</string>
+    <string name="things_area_line">%1$s · %2$d km · %3$s</string>
+    <string name="things_how_location">location</string>
+    <string name="things_how_typed">typed city</string>
+    <string name="things_how_city">default city</string>
+    <string name="things_why_permission">no location permission</string>
+    <string name="things_why_nofix">no location fix</string>
+    <string name="things_why_unknown_city">city "%1$s" not found</string>
+    <string name="things_stores_line">%1$s · %2$d stores found · %3$d shown</string>
+    <string name="things_fallback_line">No store type known for "%1$s": showing general stores.</string>
+    <string name="things_col_store">Store</string>
+    <string name="things_col_km">km</string>
+    <string name="things_col_price">Price</string>
+    <string name="things_src_shelf">shelf</string>
+    <string name="things_src_online">online</string>
+    <string name="things_no_price">no price</string>
+    <string name="things_open_link">Open the store\'s page</string>
+    <string name="things_no_stores">No store of that kind found in this area. Widen the radius in settings.</string>
+    <string name="things_blurb">Shelf = a price seen at that very store (Open Prices). Online = the chain\'s own site price, not that branch\'s shelf. A store with no price says why; nothing is estimated.</string>
+    <string name="things_area_failed">Could not place the search: %1$s</string>
 </resources>
