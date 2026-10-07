@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 38 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 40 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
@@ -24,8 +24,8 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
-| cloud-calc | `com.diegonmarcos.cloudcalc` | 10 | 0 | 100% |
-| cloud-camera | `cld.camera` | 7 | 0 | 100% |
+| cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
+| cloud-camera | `cld.camera` | 8 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 2 | 1 | 66% |
 | cloud-code | `com.diegonmarcos.code` | 5 | 2 | 71% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 0 | 100% |
@@ -35,27 +35,29 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-mail | `com.diegonmarcos.comms.mail` | 6 | 1 | 85% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
-| cloud-media-center | `com.diegonmarcos.mediacenter` | 1 | 1 | 50% |
+| cloud-media-center | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 10 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
-| cloud-terminal-nix | `cld.termux.nix` | 7 | 7 | 50% |
+| cloud-terminal-nix | `cld.termux.nix` | 9 | 7 | 56% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
-| cloud-office | `com.diegonmarcos.cloudoffice` | 0 | 0 | 100% |
+| cloud-office | `com.diegonmarcos.cloudoffice` | 2 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
 | cloud-store | `com.diegonmarcos.cloudstore` | 5 | 0 | 100% |
-| cloud-terminal-termux | `cld.termux` | 8 | 7 | 53% |
+| cloud-terminal-termux | `cld.termux` | 9 | 7 | 56% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **176** | **35** | **83%** |
+| **fleet** | | **188** | **35** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-datamanager, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `account_data_migration` | prefs | device | no | #867 whether this app has already copied the imported configs, profile and S/R/L account files over from the Cloud Account app. It records this phone's progress, never configuration. |
+| `account_migrate` | prefs | device | no | #783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration. |
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
 | `advisory_feed` | prefs | device | no | Single 'last' poll timestamp throttling the ntfy advisory feed; sync cursor. |
 | `app_tabs` | prefs | config | yes | User-arranged launcher app-tab entries (JSON list under 'entries'). |
@@ -83,6 +85,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `gitea_feed_cache` | prefs | device | no | 15-minute TTL cache of Gitea commit feed responses (GiteaFeed PREFS constant), pure cache. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `home_swipe_prefs` | prefs | config | yes | User's chosen action for swipe up/left/right/down on the launcher home. |
+| `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. |
 | `kdeconnect_clipboard` | prefs | content | no | Clipboard history exchanged with the peer. |
 | `kdeconnect_device_overrides` | prefs | config | yes | Per-device host/port/label overrides for paired KDE Connect peers. |
 | `kdeconnect_identity` | prefs | device | no | This install's KDE Connect device_id; identity. |
@@ -103,6 +106,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `phone_notif_store` | prefs | device | no | Local buffer (max 50) of captured phone notifications; transient local history not meant to move. |
+| `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `recent_cloud_tiles` | prefs | device | no | Most-recently-opened cloud tile list (max 12), usage history. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
@@ -113,6 +117,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
+| `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 | `wd_keepalive` | prefs | config | yes | Wireless-debugging keepalive switch (`enabled`), the owner's choice in Configs ▸ Controls. |
 | `wd_keepalive_status` | prefs | device | no | Wireless-debugging keepalive worker status (ready, last tick/reconnect/failure times). |
 | `wireguard_prefs` | prefs | config (keys: if_privkey→secret) | yes | WireGuard tunnel config: name, address, DNS, port, MTU, peers_json, provider, tunnel_enabled; private key is a credential. |
@@ -130,7 +135,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 38 covered, 0 gaps.
+Coverage: 40 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -179,7 +184,7 @@ Coverage: 1 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -209,7 +214,7 @@ Coverage: 9 covered, 0 gaps.
 
 ## cloud-agenda — `com.diegonmarcos.cloudagenda`
 
-Module `ac_cloud-agenda`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-agenda`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -233,7 +238,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-analytics, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-browser`; libs: lib-analytics, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-search-page, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -298,7 +303,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
-Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools.
+Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -309,6 +314,7 @@ Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtoo
 | `cloud_clock` | prefs | config (keys: scheduled→device) | yes | Clock engine data blob (alarms, timers, world-clock zones, stopwatch) as one JSON; alarms/timers/zones are user config; 'scheduled' is device alarm-scheduling state. |
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `cloud_sound` | prefs | config (keys: calibration_db→device) | yes | cloud-calc sound meter calibration_db, a4_hz, temperature_c user-set parameters. |
+| `cloud_sound_identification` | prefs | config | yes | #798 the chosen sound identification route (on-device YAMNet vs a remote decision model), per app; the declaration's default_route until the user picks one. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -322,16 +328,17 @@ Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtoo
 | `filesDir/sound/*.csv|*.wav` | content | Saved sound-measure sessions. |
 | `filesDir/camera/last.jpg` | device | Last captured measure photo. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-camera — `cld.camera`
 
-Module `ac_cloud-camera`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image.
+Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `camera_modes` | prefs | config | yes | cloud-camera per-mode prefs named after CameraMode: per-mode camera settings (resolution, flash, EIS...). |
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
+| `cloud_sound_identification` | prefs | config | yes | #798 the chosen sound identification route (on-device YAMNet vs a remote decision model), per app; the declaration's default_route until the user picks one. |
 | `commons` | prefs | config (keys: last_captured_item_date_string→device, last_captured_item_type→device, last_captured_item_uri→device, previous_saf_trees→device, storage_location→device) | yes | cloud-camera shared settings (grid, flash, quality, timers, scan, geotag, sounds, aspect ratio); last captured item and storage URIs are device. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -344,7 +351,7 @@ Module `ac_cloud-camera`; libs: lib-core, lib-devtools, lib-fleetconfig-model, l
 | `shared_prefs/{QR_SCAN,AUTO,FACE_RETOUCH,PORTRAIT,NIGHT,HDR,CAMERA,VIDEO}.xml` | config | Per-mode camera settings. |
 | `filesDir vosk-model-small-en-us-0.15 (not bundled)` | device | Optional offline voice model dir; engine not present, so nothing to move. |
 
-Coverage: 7 covered, 0 gaps.
+Coverage: 8 covered, 0 gaps.
 
 ## cloud-chat — `com.diegonmarcos.comms.chat`
 
@@ -369,7 +376,7 @@ Coverage: 2 covered, 1 gaps — file:app-managed server list in the app database
 
 ## cloud-code — `com.diegonmarcos.code`
 
-Module `ac_cloud-code`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-code`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-sysdns.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -391,7 +398,7 @@ Coverage: 5 covered, 2 gaps — file:filesDir or app storage: Acode settings (ww
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
-Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -434,7 +441,7 @@ Coverage: 3 covered, 0 gaps.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-devtools, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-mounts, lib-rclone, lib-sysdns, lib-updater.
+Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-mounts, lib-rclone, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -473,7 +480,7 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-core, lib-devtools, lib-fle
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device). |
+| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, app_shell_number_since_boot→device, bg_startup_tracing→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, current_session→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, last_notification_id→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, terminal_session_number_since_boot→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only). |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -490,7 +497,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-openpgp-api, lib-text-tools, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -526,7 +533,7 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `<default>` | prefs | device (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, translate_recent_pairs→device, vaultLastSyncTime→device) | no | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device). |
+| `<default>` | prefs | device (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, app_shell_number_since_boot→device, bg_startup_tracing→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, current_session→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, last_notification_id→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, terminal_session_number_since_boot→device, translate_recent_pairs→device, vaultLastSyncTime→device) | no | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only). |
 | `datastore:elementx_announcement` | datastore | device | no | Which in-app announcements were already shown. |
 | `datastore:elementx_crash` | datastore | device | no | Crash-report flag/text left for the next launch. |
 | `datastore:elementx_featureflag` | datastore | config | GAP | Developer feature-flag overrides chosen by the user (flag key -> bool). |
@@ -558,7 +565,7 @@ Coverage: 1 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -580,14 +587,19 @@ Coverage: 3 covered, 0 gaps.
 
 ## cloud-media-center — `com.diegonmarcos.mediacenter`
 
-Module `ac_cloud-media-center`; libs: none.
+Module `ac_cloud-media-center`; libs: lib-analytics, lib-core, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-panoramaviewer, lib-scrollbar.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
+| `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `encrypted_datastore_flags` | prefs | device | no | Migration-done flag for the encrypted DataStore. |
 | `encrypted_db_prefs` | prefs | device | no | Keystore-wrapped DB passphrase and encryption/migration flags; bound to this device's Keystore, cannot be moved. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `gallery_widget_prefs` | prefs | device | no | Per-appWidgetId widget media URI lists; widget ids and content URIs are tied to this install. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:InternalDatabase` | room | content | no | Media-center encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
 | `security_flags` | prefs | device | no | media-center flag whether DB is currently encrypted; install state. |
 | `ui_settings` | prefs | config | yes | media-center UI cell/grid size choices for albums and timeline. |
@@ -598,7 +610,7 @@ Module `ac_cloud-media-center`; libs: none.
 | `filesDir/<vault uuid>/{info file,<mediaId>.enc}` | content | Encrypted media vaults, Keystore-bound. |
 | `filesDir/<modelsDir>/<group>/ {visual_quant,textual_quant,mobile_sam,version-RFB-320,arcface}.onnx, vocab.json, merges.txt` | device | Downloaded on-device ML models; re-downloadable, selection is implicit by feature. |
 
-Coverage: 1 covered, 1 gaps — datastore:settings.
+Coverage: 4 covered, 1 gaps — datastore:settings.
 
 ## cloud-myterminal — `com.diegonmarcos.ide`
 
@@ -624,7 +636,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
-Module `ac_cloud-nav`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-maps, lib-updater.
+Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-maps, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -656,7 +668,7 @@ Coverage: 10 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
-Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -679,12 +691,17 @@ Coverage: 3 covered, 1 gaps — file:data/sources.json, topics.json (bundled) an
 
 ## cloud-terminal-nix — `cld.termux.nix`
 
-Module `ac_cloud-nix-on-droid`; libs: none.
+Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, app_shell_number_since_boot→device, bg_startup_tracing→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, current_session→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, last_notification_id→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, terminal_session_number_since_boot→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only). |
+| `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
 | `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
 | `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
 |---|---|---|
@@ -701,7 +718,7 @@ Module `ac_cloud-nix-on-droid`; libs: none.
 | `$HOME/.hermes/.env, exported keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys; sshd on port 8024)` | config | authorized_keys with the cloud-myterminal hub key; private keys secret. |
 
-Coverage: 7 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
+Coverage: 9 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
@@ -724,20 +741,24 @@ Coverage: 1 covered, 1 gaps — datastore:auth-sessions.
 
 ## cloud-office — `com.diegonmarcos.cloudoffice`
 
-Module `ac_cloud-office`; libs: none.
+Module `ac_cloud-office`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own; patches/tests only, no Android source tree (document-suite wrapper). |
 
-Coverage: 0 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## cloud-search — `com.diegonmarcos.cloudsearch`
 
-Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-ui-kit.
+Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-search-page, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -757,7 +778,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-appstore, lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-updater.
+Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -780,10 +801,12 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 
-Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, app_shell_number_since_boot→device, bg_startup_tracing→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, current_session→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, last_notification_id→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, terminal_session_number_since_boot→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only). |
+| `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server; install identity. |
 | `agent-auth` | prefs | secret | yes | #790 the agent CLIs' credentials in each terminal, keyed by the environment variable each CLI reads (CLAUDE_CODE_OAUTH_TOKEN for claude, OPENROUTER_API_KEY for goose and hermes). Configs ▸ Account imports it from the declared profile (settings › termux\|nix-on-droid › agent-auth, derived from ai › tokens by the cockpit's agent_auth map); AgentAuth.java writes it on every start to $HOME/<ab_cloud-terminal-store/store.json::agent_auth.env_file> (0600), which login-init.sh sources into every session. |
 | `cloud_wake_lock` | prefs | config (keys: battery_exemption_asked→device) | yes | #787 the terminal session wake lock: 'wanted' is the notification toggle (ON until the user turns it off; default build.json::wake_lock.default_on); battery_exemption_asked records that the one-time battery-optimization prompt was shown, so a new phone asks again. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
@@ -806,15 +829,15 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
 | `$HOME/cloud-drive-shared-store` | device | Link to shared storage CloudDrive; recreated by the app. |
 
-Coverage: 8 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
+Coverage: 9 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 
-Module `ac_cloud-vault`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device). |
+| `<default>` | prefs | config (keys: accountBiometricIntegrityValid→device, addActionCount→device, addSitePromptShown→device, app_shell_number_since_boot→device, bg_startup_tracing→device, biometricIntegritySource→device, browserAutofillDialogReshowTime→device, copyActionCount→device, crashLoggingEnabled→device, createActionCount→device, current_session→device, hasShownAccessibilityDisclaimer→device, hasUserLoggedInOrCreatedAccount→device, isVaultRegisteredForExport→device, last_notification_id→device, resumeScreen→device, shouldShowAddLoginCoachMark→device, shouldShowGeneratorCoachMark→device, showAutofillSettingBadge→device, showBrowserAutofillSettingBadge→device, showImportLoginsSettingBadge→device, showUnlockSettingBadge→device, terminal_session_number_since_boot→device, translate_recent_pairs→device, vaultLastSyncTime→device) | yes | The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only). |
 | `AppCenter` | prefs | device | no | Legacy Xamarin AppCenter prefs read once by LegacyAppCenterMigrator to carry old Bitwarden settings forward; migration source only. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -856,7 +879,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
-Module `ac_cloud-writer`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-text-tools.
+Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

@@ -120,9 +120,16 @@ def links_provider(repo, module):
     bj = os.path.join(appdir, "build.json")
     if os.path.isfile(bj):
         try:
-            mods = load(bj).get("modules", {})
+            b = load(bj)
         except ValueError:
             return False, "build.json is not JSON"
+        mods = dict(b.get("modules", {}))
+        # A fetched-tree app (Cloud Office) materializes the shared libs its patches include:
+        # build.modules names each by its own key, the shared dir says which lib it is.
+        for v in (b.get("build", {}).get("modules") or {}).values():
+            d = isinstance(v, dict) and v.get("dir", "")
+            if d and "/libs/" in d:
+                mods.setdefault("libs:" + d.rstrip("/").rsplit("/", 1)[1], v)
     by_json = "libs:core" in mods
     hand_core = hand_both = False
     for sf in settings_files(appdir):

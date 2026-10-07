@@ -29,7 +29,11 @@
 #   C9 a declared kind (prefs / encrypted / datastore / room) that is not how the
 #      code opens the store (the contract would export ciphertext, or nothing);
 #   C10 the human matrix (policy `matrix`) is not what the manifest renders —
-#      regenerate it with `--matrix`, never by hand.
+#      regenerate it with `--matrix`, never by hand;
+#   C11 an app's `libs` is not the set of shared libs its build compiles in
+#      (policy `lib_consumers`, generated from the gradle graph): the contract
+#      and the vault's settings section attribute a lib's stores to the apps
+#      listed here, so a stale list drops (or invents) that app's settings.
 #
 # Everything it knows lives in data: the scan vocabulary in
 # 1_cicd/src/data/fleet-config-guard.json, the declarations in the manifest.
@@ -206,6 +210,17 @@ def check(repo, cfg, manifest, roster):
     return bad
 
 
+def libs_drift(manifest, consumers):
+    """C11: apps[].libs against the build_time section of lib-consumers.json."""
+    built = collections.defaultdict(set)
+    for lib in consumers.get("build_time", []):
+        for mod in lib.get("compiled_by", []):
+            built[mod].add("lib-" + lib["id"])
+    return ["C11 apps[%r].libs is %s, the build compiles in %s — copy the build's list (%s is generated from the gradle graph)"
+            % (aid, sorted(a.get("libs", [])), sorted(built[a["module"]]), "lib-consumers.json")
+            for aid, a in sorted(manifest["apps"].items()) if sorted(a.get("libs", [])) != sorted(built[a["module"]])]
+
+
 def coverage(manifest, app):
     """(covered store names, gaps) — the same rule as libs:core FleetConfig.Manifest.coverage."""
     mods = set(app.get("libs", [])) | {app["module"]}
@@ -289,6 +304,10 @@ def main(argv):
         print("wrote " + cfg["matrix"])
         return 0
     bad = check(repo, cfg, manifest, roster)
+    consumers = os.path.join(repo, cfg["lib_consumers"])
+    if os.path.isfile(consumers):
+        with open(consumers, encoding="utf-8") as f:
+            bad += libs_drift(manifest, json.load(f))
     if os.path.isfile(os.path.join(repo, cfg["roster"])) and manifest.get("kinds"):
         current = open(doc, encoding="utf-8").read() if os.path.isfile(doc) else ""
         if current != matrix(manifest, roster):

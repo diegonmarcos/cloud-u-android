@@ -21,6 +21,7 @@
 #   M11 an encrypted store declared as plain prefs                  -> C9
 #   M12 a helper-opened store whose helper stopped passing its name -> C3
 #   M13 the human matrix edited by hand (or left stale)              -> C10
+#   M14 an app's libs drift from the libs its build compiles in    -> C11
 # Controls stay green: a comment naming getSharedPreferences, and two
 # companion objects in one file each declaring `FILE`.
 set -uo pipefail
@@ -146,6 +147,14 @@ expect "M12 a helper that no longer passes the name" 1 "$M" "C3 store 'demo_help
 M="$WORK/m13"; fixture "$M"; MATRIX_REL="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["matrix"])' "$POLICY")"
 printf '| a row someone typed |\n' >> "$M/$MATRIX_REL"
 expect "M13 a hand-edited matrix" 1 "$M" "C10"
+
+M="$WORK/m14"; fixture "$M"; CONSUMERS_REL="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["lib_consumers"])' "$POLICY")"
+mkdir -p "$M/$(dirname "$CONSUMERS_REL")"
+printf '{"build_time": [{"id": "demo", "compiled_by": ["ac_cloud-demo"]}]}\n' > "$M/$CONSUMERS_REL"
+expect "M14 an app's libs miss a lib its build compiles in" 1 "$M" "C11 apps['demo'].libs"
+mutate_manifest "$M" 'm["apps"]["demo"]["libs"] = ["lib-demo"]'
+python3 "$GUARD" "$M" "$POLICY" --matrix >/dev/null
+expect "M14 control: the same libs as the build is green" 0 "$M"
 
 if [ "$FAILURES" -ne 0 ]; then echo "fleet-config-guard.test: $FAILURES failure(s)"; exit 1; fi
 echo "fleet-config-guard.test: all green"

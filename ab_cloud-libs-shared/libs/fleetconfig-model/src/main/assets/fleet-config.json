@@ -23,9 +23,11 @@
     "<default>": {
       "kind": "prefs",
       "class": "config",
-      "doc": "The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys. Element X keeps only DI scaffolding here (device).",
+      "doc": "The app's default SharedPreferences (<package>_preferences): HeliBoard keyboard settings (libs:keyboard), translate settings (libs:translate), the vault's bwPreferencesStorage keys, and the terminals' settings (Termux TermuxAppSharedPreferences: fontsize, log_level, extra keys, soft keyboard, screen-on; the session cursor, notification id and per-boot counters are device). Element X keeps only DI scaffolding here (device). bg_startup_tracing is the WebView's own startup-tracing flag, written into any app that hosts a WebView (device). Device for apps whose current code reads none of it: mail (the FairEmail-era settings the Sterna clone, 8b7ca107d, never reads — migrating them would only plant dead keys), notes (an intro-shown marker only) and office (the asset-extraction commit marker only).",
       "used_by": [
         "ac_cloud-matrix",
+        "ac_cloud-nix-on-droid",
+        "ac_cloud-termux",
         "ac_cloud-vault",
         "lib-keyboard",
         "lib-translate"
@@ -34,14 +36,18 @@
         "accountBiometricIntegrityValid": "device",
         "addActionCount": "device",
         "addSitePromptShown": "device",
+        "app_shell_number_since_boot": "device",
+        "bg_startup_tracing": "device",
         "biometricIntegritySource": "device",
         "browserAutofillDialogReshowTime": "device",
         "copyActionCount": "device",
         "crashLoggingEnabled": "device",
         "createActionCount": "device",
+        "current_session": "device",
         "hasShownAccessibilityDisclaimer": "device",
         "hasUserLoggedInOrCreatedAccount": "device",
         "isVaultRegisteredForExport": "device",
+        "last_notification_id": "device",
         "resumeScreen": "device",
         "shouldShowAddLoginCoachMark": "device",
         "shouldShowGeneratorCoachMark": "device",
@@ -49,6 +55,7 @@
         "showBrowserAutofillSettingBadge": "device",
         "showImportLoginsSettingBadge": "device",
         "showUnlockSettingBadge": "device",
+        "terminal_session_number_since_boot": "device",
         "translate_recent_pairs": "device",
         "vaultLastSyncTime": "device"
       },
@@ -56,7 +63,10 @@
         "{pkg}_preferences"
       ],
       "class_by_app": {
-        "matrix": "device"
+        "mail": "device",
+        "matrix": "device",
+        "notes": "device",
+        "office": "device"
       }
     },
     "AppCenter": {
@@ -1147,10 +1157,13 @@
     "news_channel": {
       "kind": "prefs",
       "class": "config",
-      "doc": "Active channel per news source (the one the user picked).",
+      "doc": "Active channel per news source (the one the user picked). Device in Cloud News: since the engine split (9aa7c735a) the app no longer links libs:news, so a copy of this file in com.diegonmarcos.cloudnews is a pre-split leftover no code reads; the live choice is held by the Cloud-Lib-News engine in its own package.",
       "used_by": [
         "lib-news"
-      ]
+      ],
+      "class_by_app": {
+        "news": "device"
+      }
     },
     "news_config": {
       "kind": "prefs",
@@ -1194,18 +1207,24 @@
     "news_source": {
       "kind": "prefs",
       "class": "config",
-      "doc": "Active news source id the user picked (defaults to data/sources.json default_source).",
+      "doc": "Active news source id the user picked (defaults to data/sources.json default_source). Device in Cloud News: since the engine split (9aa7c735a) the app no longer links libs:news, so a copy of this file in com.diegonmarcos.cloudnews is a pre-split leftover no code reads; the live choice is held by the Cloud-Lib-News engine in its own package.",
       "used_by": [
         "lib-news"
-      ]
+      ],
+      "class_by_app": {
+        "news": "device"
+      }
     },
     "news_topics_overlay": {
       "kind": "prefs",
       "class": "config",
-      "doc": "The user's topic overlay on the baked topic list (added / hidden / reordered topics).",
+      "doc": "The user's topic overlay on the baked topic list (added / hidden / reordered topics). Device in Cloud News: since the engine split (9aa7c735a) the app no longer links libs:news, so a copy of this file in com.diegonmarcos.cloudnews is a pre-split leftover no code reads; the live choice is held by the Cloud-Lib-News engine in its own package.",
       "used_by": [
         "lib-news"
-      ]
+      ],
+      "class_by_app": {
+        "news": "device"
+      }
     },
     "notification_store": {
       "kind": "prefs",
@@ -1826,12 +1845,12 @@
       "why": "detekt lint rule, not a store"
     },
     "name@ac_cloud-nix-on-droid/termux-shared/src/main/java/com/termux/shared/settings/preferences/SharedPreferenceUtils.java": {
-      "store": "-",
-      "why": "Generic upstream termux helper taking the file name as a parameter; no fixed store of its own and no fork caller names a config store in the scanned set."
+      "store": "<default>",
+      "why": "Generic upstream termux helper taking the file name as a parameter; inside this app the one caller is TermuxAppSharedPreferences with TermuxConstants.TERMUX_DEFAULT_PREFERENCES_FILE_BASENAME_WITHOUT_EXTENSION = TERMUX_PACKAGE_NAME + \"_preferences\", i.e. the app's own {pkg}_preferences (the plugin-app prefs it can also open live in other packages this fleet does not build)."
     },
     "name@ac_cloud-termux/termux-shared/src/main/java/com/termux/shared/settings/preferences/SharedPreferenceUtils.java": {
-      "store": "-",
-      "why": "Generic upstream termux helper taking the file name as a parameter; no fixed store of its own."
+      "store": "<default>",
+      "why": "Generic upstream termux helper taking the file name as a parameter; inside this app the one caller is TermuxAppSharedPreferences with TermuxConstants.TERMUX_DEFAULT_PREFERENCES_FILE_BASENAME_WITHOUT_EXTENSION = TERMUX_PACKAGE_NAME + \"_preferences\", i.e. the app's own {pkg}_preferences (the plugin-app prefs it can also open live in other packages this fleet does not build)."
     },
     "prefName@ac_cloud-code/src/plugins/auth/src/android/EncryptedPreferenceManager.java": {
       "store": "acode_auth_secure",
@@ -1864,6 +1883,7 @@
       "module": "aa_cloud-superapp",
       "schema_version": 1,
       "libs": [
+        "lib-account",
         "lib-analytics",
         "lib-appstore",
         "lib-auth",
@@ -1871,6 +1891,7 @@
         "lib-bottomnav",
         "lib-chat",
         "lib-core",
+        "lib-databackend",
         "lib-datamanager",
         "lib-devtools",
         "lib-firewall",
@@ -1885,6 +1906,7 @@
         "lib-ops",
         "lib-search",
         "lib-shizuku-adb-debug-tools",
+        "lib-sysdns",
         "lib-text-tools",
         "lib-ui-kit",
         "lib-updater",
@@ -2008,6 +2030,7 @@
         "lib-account",
         "lib-appstore",
         "lib-auth",
+        "lib-bottomnav",
         "lib-core",
         "lib-databackend",
         "lib-devtools",
@@ -2028,6 +2051,7 @@
       "libs": [
         "lib-analytics",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-updater"
@@ -2047,10 +2071,14 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
+        "lib-bottomnav",
         "lib-browser",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-search-page",
+        "lib-text-tools",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": [
@@ -2103,10 +2131,12 @@
       "libs": [
         "lib-bottomnav",
         "lib-core",
+        "lib-databackend",
         "lib-decisions",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-ml-l-image",
+        "lib-ml-l-sound",
         "lib-text-tools"
       ],
       "items": [
@@ -2157,10 +2187,12 @@
       "module": "ac_cloud-camera",
       "schema_version": 1,
       "libs": [
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-ml-l-image"
+        "lib-ml-l-image",
+        "lib-ml-l-sound"
       ],
       "items": [
         {
@@ -2217,7 +2249,8 @@
       "libs": [
         "lib-core",
         "lib-devtools",
-        "lib-fleetconfig-model"
+        "lib-fleetconfig-model",
+        "lib-sysdns"
       ],
       "items": [
         {
@@ -2249,6 +2282,7 @@
         "lib-analytics",
         "lib-contacts",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-updater"
@@ -2322,7 +2356,10 @@
         "lib-auth",
         "lib-bottomnav",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
+        "lib-disk",
+        "lib-disk-scan",
         "lib-file-editor",
         "lib-fleetconfig-model",
         "lib-git-sync",
@@ -2394,7 +2431,6 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-ml-l-image",
-        "lib-openpgp-api",
         "lib-text-tools",
         "lib-updater"
       ],
@@ -2458,6 +2494,7 @@
         "lib-analytics",
         "lib-bottomnav",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
         "lib-fin",
         "lib-fleetconfig-model",
@@ -2477,7 +2514,17 @@
       "package": "com.diegonmarcos.mediacenter",
       "module": "ac_cloud-media-center",
       "schema_version": 1,
-      "libs": [],
+      "libs": [
+        "lib-analytics",
+        "lib-core",
+        "lib-cropper",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-gesture",
+        "lib-ml-l-image",
+        "lib-panoramaviewer",
+        "lib-scrollbar"
+      ],
       "items": [
         {
           "id": "vault-folders",
@@ -2538,6 +2585,7 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
@@ -2560,6 +2608,7 @@
       "libs": [
         "lib-analytics",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-updater"
@@ -2577,7 +2626,13 @@
       "package": "cld.termux.nix",
       "module": "ac_cloud-nix-on-droid",
       "schema_version": 1,
-      "libs": [],
+      "libs": [
+        "lib-core",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-shizuku-adb-debug-tools",
+        "lib-sysdns"
+      ],
       "items": [
         {
           "id": "nix-profile",
@@ -2686,7 +2741,13 @@
       "package": "com.diegonmarcos.cloudoffice",
       "module": "ac_cloud-office",
       "schema_version": 1,
-      "libs": [],
+      "libs": [
+        "lib-core",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-ml-l-image",
+        "lib-text-tools"
+      ],
       "items": [
         {
           "id": "none",
@@ -2705,8 +2766,8 @@
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-text-tools",
-        "lib-ui-kit"
+        "lib-search-page",
+        "lib-text-tools"
       ],
       "items": [
         {
@@ -2741,10 +2802,12 @@
       "schema_version": 1,
       "libs": [
         "lib-appstore",
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-shizuku-adb-debug-tools",
+        "lib-sysdns",
         "lib-updater"
       ],
       "items": []
@@ -2756,7 +2819,9 @@
       "libs": [
         "lib-core",
         "lib-devtools",
-        "lib-fleetconfig-model"
+        "lib-fleetconfig-model",
+        "lib-shizuku-adb-debug-tools",
+        "lib-sysdns"
       ],
       "items": [
         {
@@ -2849,6 +2914,7 @@
       "module": "ac_cloud-vault",
       "schema_version": 1,
       "libs": [
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model"
@@ -2882,10 +2948,13 @@
       "module": "ac_cloud-writer",
       "schema_version": 1,
       "libs": [
+        "lib-bottomnav",
         "lib-core",
+        "lib-decisions",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-text-tools"
+        "lib-text-tools",
+        "lib-ui-kit"
       ],
       "items": []
     }
