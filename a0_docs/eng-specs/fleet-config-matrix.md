@@ -109,6 +109,7 @@ Module `aa_cloud-superapp`; libs: lib-analytics, lib-appstore, lib-auth, lib-bat
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -198,6 +199,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-core, 
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -769,6 +771,7 @@ Module `ac_cloud-store`; libs: lib-appstore, lib-core, lib-devtools, lib-fleetco
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 

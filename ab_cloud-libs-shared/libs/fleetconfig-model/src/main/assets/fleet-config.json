@@ -1385,6 +1385,14 @@
         "lib-appstore"
       ]
     },
+    "store_lib_groups": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "sterna_account": {
       "kind": "prefs",
       "class": "config",
