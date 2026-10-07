@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -294,28 +297,38 @@ private fun ConverterMode(mode: Declarations.Mode) {
             value = value, onValueChange = { value = it },
             modifier = Modifier.fillMaxWidth().testTag(CalcTags.INPUT),
             label = { Text(stringResource(R.string.value)) },
-            textStyle = MaterialTheme.typography.headlineSmall,
+            textStyle = MaterialTheme.typography.titleMedium,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                result?.takeIf { it.ok }?.let { r -> state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }
+            }),
         )
         Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
             UnitPicker(units, from, Modifier.weight(1f)) { from = it }
-            TextButton(onClick = { val f = from; from = to; to = f }) { Text("⇄") }
+            TextButton(onClick = { val f = from; from = to; to = f }, modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.CONVERT_SWAP), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text("⇄") }
             UnitPicker(units, to, Modifier.weight(1f)) { to = it }
         }
         ResultBlock(result)
-        result?.takeIf { it.ok }?.let { r ->
-            TextButton(onClick = { state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }) {
-                Text(stringResource(R.string.keep))
+        // = keeps the conversion in History (the keypad's = for a converter); compact, one row with the rates line.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
+            if (mode.rates) Text(rates, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else Box(Modifier.weight(1f))
+            result?.takeIf { it.ok }?.let { r ->
+                FilledTonalButton(
+                    onClick = { state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) },
+                    modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.CONVERT_EQ), contentPadding = PaddingValues(horizontal = CalcMetrics.gap),
+                ) { Text("=") }
             }
-        }
-        if (mode.rates) {
-            HorizontalDivider()
-            Text(rates, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = {
-                scope.launch {
-                    rates = fetchedLine(io { api.fetchRates() })
-                    result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
-                }
-            }) { Text(stringResource(R.string.update_rates)) }
+            if (mode.rates) OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        rates = fetchedLine(io { api.fetchRates() })
+                        result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
+                    }
+                },
+                modifier = Modifier.height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap),
+            ) { Text(stringResource(R.string.update_rates), style = MaterialTheme.typography.labelMedium) }
         }
     }
 }
@@ -338,7 +351,7 @@ private fun fetchedLine(json: String): String = runCatching {
 private fun UnitPicker(units: List<Logic.Item>, selected: String, modifier: Modifier, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text(selected.ifBlank { "—" }) }
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text(selected.ifBlank { "—" }) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             units.forEach { u ->
                 DropdownMenuItem(text = { Text(u.title + " (" + u.name + ")") }, onClick = { onPick(u.name); open = false })

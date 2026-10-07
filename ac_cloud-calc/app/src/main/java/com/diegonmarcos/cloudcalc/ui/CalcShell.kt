@@ -95,6 +95,8 @@ object CalcTags {
     const val INPUT = "calc_input"
     const val RESULT = "calc_result"
     const val DISPLAY = "calc_display"
+    const val CONVERT_EQ = "calc_convert_eq"
+    const val CONVERT_SWAP = "calc_convert_swap"
     const val HISTORY_LIST = "calc_history_list"
     fun historyExpr(i: Int) = "calc_history_expr_$i"
     fun historyResult(i: Int) = "calc_history_result_$i"

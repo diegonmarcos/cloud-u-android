@@ -226,6 +226,19 @@ class CalcShellTest {
         assertTrue(state.history.isEmpty())
     }
 
+    @Test fun `the Currency converter shows its rates date, swaps, and = keeps the conversion in history`() {
+        launch()
+        val cur = Declarations.modes.first { it.id == "currency" }
+        compose.runOnIdle { state.tab = cur.tab; state.modeByTab[cur.tab] = cur.id }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.CONVERT_EQ).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Rates as of", substring = true).assertExists()
+        compose.onNodeWithTag(CalcTags.CONVERT_SWAP).performClick()
+        compose.onNodeWithTag(CalcTags.CONVERT_EQ).performClick()
+        compose.waitForIdle()
+        assertEquals(cur.id, state.history.first().mode)
+        assertTrue(state.history.first().ts > 0)
+    }
+
     @Test fun `a history tap sends the result back to its mode`() {
         val mode = Declarations.modes.first { it.kind == "expression" }
         state.remember(Logic.Entry(mode.id, "6*7", "42"), 10)

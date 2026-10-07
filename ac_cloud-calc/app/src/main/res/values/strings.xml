@@ -8,7 +8,6 @@
     <string name="expression_hint">Type an expression, e.g. 500 W * 2 h to kWh</string>
     <string name="loading">Loading…</string>
     <string name="value">Value</string>
-    <string name="keep">Keep in history</string>
     <string name="update_rates">Update exchange rates</string>
     <string name="plot_hint">y = f(x)</string>
     <string name="history">History</string>

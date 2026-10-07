@@ -47,6 +47,8 @@ object CalcMetrics {
     val gap: Dp = 8.dp
     val gutter: Dp = 12.dp
     val keyHeight: Dp = 52.dp
+    /** Data-dense controls (converter pickers, swap, =, update): never the 40dp Material default. */
+    val compactHeight: Dp = 30.dp
     val corner: Dp = 12.dp
     /** The calculator display takes whatever height the keypad leaves (never less than this), so nothing a result changes can move the keypad. */
     val displayMinHeight: Dp = 96.dp
