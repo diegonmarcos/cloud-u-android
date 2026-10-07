@@ -98,7 +98,7 @@ class SearchShellTest {
     private lateinit var services: Services
     private lateinit var state: SearchState
     private lateinit var savedReader: (android.content.Context, String) -> Account.Token
-    private val savedBearer = com.diegonmarcos.cloudsearch.data.FleetBearer.reader
+    private val savedFleetRead = com.diegonmarcos.cloudsearch.data.FleetBearer.reader
     private val savedLocator = com.diegonmarcos.cloudsearch.data.Locator.reader
 
     @Before fun offline() {
@@ -112,7 +112,7 @@ class SearchShellTest {
     }
 
     @After fun online() {
-        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = savedBearer
+        com.diegonmarcos.cloudsearch.data.FleetBearer.reader = savedFleetRead
         com.diegonmarcos.cloudsearch.data.Locator.reader = savedLocator
         Account.reader = savedReader
         Services.install(null)
