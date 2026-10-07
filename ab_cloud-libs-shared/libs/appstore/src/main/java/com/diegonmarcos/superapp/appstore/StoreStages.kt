@@ -350,7 +350,7 @@ object StoreStages {
 
     /** Stage 3. Deletes this app's cached APK(s) and any partial. On demand it
      *  is the user's call; the chain only calls it after [ApkCache.landed]. */
-    fun clear(ctx: Context, app: Fleet.App): Stage = named(app, UpdateProgress.STAGE_CLEARING, "") {
+    fun clear(ctx: Context, app: Fleet.App): Stage = named(ctx, app, UpdateProgress.STAGE_CLEARING, "") {
         ApkCache.entries(ctx).filter { e ->
             e.record?.pkg?.let { it in pkgs(app) } ?: e.file.name.startsWith("fleet-${app.id}-")
         }.forEach { ApkCache.drop(it.file) }

@@ -103,6 +103,9 @@ grep -q 'BatchForeground.hold(ctx, !dryRun) { downloadAllRun(ctx, apps, online, 
   && ok "downloadAll / updateAll hold it for the whole batch (never for a dry run)" || bad "a batch does not hold the service"
 grep -q 'private fun named(ctx: Context, app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage = BatchForeground.hold(ctx) {' "$STAGES" \
   && ok "a single verb (a row's Install, /api/store/<op>) holds it through StoreStages.named" || bad "a single install chain does not hold the service"
+# #889 aa3727925 gave named() a ctx and missed clear(): libs:appstore stopped compiling and no Store APK shipped.
+left=$(grep -nE '\bnamed\(' "$STAGES" | grep -v 'fun named(' | grep -vE 'named\(ctx, app, ' || true)
+[ -z "$left" ] && ok "every StoreStages.named call passes ctx (the hold needs it)" || bad "a named() call without ctx: $left"
 awk '/fun run\(ctx: Context, apps: List<Fleet.App>, trigger: String/,/^    }$/' "$AUTO" > /tmp/.store-auto-run.$$
 grep -q 'com.diegonmarcos.superapp.updater.BatchForeground.begin(ctx)' /tmp/.store-auto-run.$$ \
   && awk '/} finally {/,/^        }$/' /tmp/.store-auto-run.$$ | grep -q 'com.diegonmarcos.superapp.updater.BatchForeground.end(ctx)' \
