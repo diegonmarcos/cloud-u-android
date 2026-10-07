@@ -15,7 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.appstore.StoreDensity
@@ -43,9 +44,7 @@ import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
-import com.diegonmarcos.superapp.appstore.StoreFeedFragment
 import com.diegonmarcos.superapp.appstore.StorePages
-import com.diegonmarcos.superapp.appstore.StorePermsFragment
 import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.updater.Updater
@@ -63,6 +62,9 @@ class MainActivity : AppCompatActivity() {
 
     /** The tab an Intent asked for; read by the composition. */
     private var requested by mutableStateOf<String?>(null)
+
+    /** Section id -> the child page its strip last chose (Compose state, so the page below follows). */
+    private val pageChoice = mutableStateMapOf<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,29 +108,35 @@ class MainActivity : AppCompatActivity() {
             val section = NAV.section(selected)
             Column(Modifier.fillMaxSize()) {
                 // A section with child pages gets the fleet's strip (Phone: Installed | Declared, Feed:
-                // Commits | CI-CD); the page below reads the choice from StorePages.
+                // Commits | CI-CD); the page below reads the choice (Phone from StorePages, Feed from here).
                 if (section != null && section.pages.size > 1) {
-                    val ids = section.pages.map { it.id }
-                    var page by remember(section.id) {
-                        mutableStateOf(StorePages.page(section.id, StorePages.defaultPage(section.id, ids)))
-                    }
-                    androidx.compose.runtime.LaunchedEffect(section.id, page) { StorePages.select(section.id, page) }
-                    PageTabs(section.pages, page, onSelect = { page = it.id }, underTopChrome = false)
+                    PageTabs(section.pages, pageOf(section), onSelect = { choose(section.id, it.id) }, underTopChrome = false)
                 }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = Modifier.fillMaxSize()
                 val hidden = Modifier.size(0.dp)
                 AndroidFragment<StoreCloudFragment>(if (selected == TAB_CLOUD) shown else hidden)
                 AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE) shown else hidden)
-                // Feed and Perms are composed only while shown: the feeds read GitHub on open, and a hidden page should not.
-                if (selected == TAB_FEED) AndroidFragment<StoreFeedFragment>(shown)
-                if (selected == TAB_PERMS) AndroidFragment<StorePermsFragment>(shown)
                 AndroidFragment<AppsMeshFragment>(if (selected == TAB_MESH) shown else hidden)
+                // Feed and Perms are Compose pages composed only while shown: the feeds read GitHub on open.
+                if (selected == TAB_FEED) section?.let { FeedPage(pageOf(it)) }
+                if (selected == TAB_PERMS) PermsPage()
                 if (selected == TAB_SETTINGS) SettingsPage()
             }
             }
             }
         }
+    }
+
+    /** The open child page of [section]: the choice made on its strip, else the section's default. */
+    private fun pageOf(section: NavSection): String {
+        val ids = section.pages.map { it.id }
+        return pageChoice[section.id]?.takeIf { it in ids } ?: StorePages.defaultPage(section.id, ids)
+    }
+
+    private fun choose(section: String, page: String) {
+        pageChoice[section] = page
+        StorePages.select(section, page)
     }
 
     /** #866 The one setting: the fleet token for the feeds, used only when SuperApp is not supplying it. */

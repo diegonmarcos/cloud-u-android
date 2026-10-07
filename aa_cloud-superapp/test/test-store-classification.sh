@@ -241,10 +241,12 @@ else:
     #     so a test can hand it a feed list it invented.
     #     #732: each feed tab is the feed's own label dressed by its page
     #     declaration, so the strip maps the declared feeds, in order.
-    #     #896 the feeds are the Feed page's top tabs now (StoreFeedFragment), not Cloud chips.
-    feedfrag = open(os.path.join(store_dir, "StoreFeedFragment.kt")).read() if os.path.exists(os.path.join(store_dir, "StoreFeedFragment.kt")) else ""
-    if "feeds.map { StoreControls.Control(it.label" in feedfrag and "feeds.map" not in cloud: ok("the Feed page's tab strip maps the declared feeds, each by its own label, and the Cloud page draws none")
-    else: bad("StoreFeedFragment does not build its feed tabs from the declared feeds, or Cloud still draws feeds")
+    #     #896 the feeds are the Feed page's top tabs now: a Compose page in Cloud Store reads the SAME
+    #     declaration through FeedViewer.feeds, and the Cloud page draws none.
+    feedpage = os.path.join(store_dir, "../../../../../../../../../../ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt")
+    feedpage = open(feedpage).read() if os.path.exists(feedpage) else ""
+    if "FeedViewer.feeds(ctx)" in feedpage and "feeds.map" not in cloud and "FeedViewer" not in cloud: ok("the Feed page reads the declared feeds through FeedViewer, and the Cloud page draws none")
+    else: bad("the Feed page does not read the declared feeds, or Cloud still draws feeds")
     if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
     else: bad("FeedViewer.parse is not separable from the asset")
     # (h) #668 THE PAGE SIZE IS DATA. It lives in the declared url's query, so

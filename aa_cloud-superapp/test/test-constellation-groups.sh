@@ -325,11 +325,11 @@ command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupT
 #     columns, so it stayed green with tabBar flipped back to HORIZONTAL - it was
 #     asserting that the file contains a vertical layout SOMEWHERE, which it
 #     always will. Caught by mutation, not by reading it.
-# #896 the strip builder is StoreTabs.bar, shared with Phone and Feed; tabBar is its Cloud call.
-TABS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreTabs.kt"
+# #896 the strip builder is StoreTabs.bar, shared with Phone; tabBar is its Cloud call.
+TABS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreBar.kt"  # StoreTabs lives beside the bar
 [ -f "$TABS" ] || { echo "ERROR: missing $TABS" >&2; exit 2; }
 command grep -qF 'StoreTabs.bar(' "$PAGE" && ok "tabBar draws through the shared StoreTabs.bar" || bad "tabBar does not use the shared strip builder"
-tabbar_body="$(awk '/fun bar\(/{f=1} f{print} f && /^    }$/{exit}' "$TABS")"
+tabbar_body="$(awk '/fun bar\(ctx: Context, lines/{f=1} f{print} f && /^    }$/{exit}' "$TABS")"
 [ -n "$tabbar_body" ] || bad "could not isolate tabBar's body - the assertion below would verify nothing"
 printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTICAL' \
   && ok "tabBar itself is a column that can hold more than one strip" \
@@ -337,7 +337,7 @@ printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTIC
 printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.HORIZONTAL' \
   && ok "and the strips inside it are horizontal" \
   || bad "tabBar builds no horizontal strip - the tabs would stack one per line"
-builders="$(command grep -c 'fun button(' "$TABS")"
+builders="$(command grep -c 'fun button(ctx: Context, control' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
   || bad "expected 1 tab-button builder, found $builders - the two lines can drift apart"
@@ -383,8 +383,8 @@ body_of() { # body_of <fun signature fragment>
 }
 tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
 TABBAR="$(body_of 'private fun tabBar(')"
-TABBTN="$(tabs_body_of 'fun button(')"
-PAINT="$(tabs_body_of 'fun paint(')"
+TABBTN="$(tabs_body_of 'fun button(ctx: Context, control')"
+PAINT="$(tabs_body_of 'fun paint(buttons')"
 BARBODY="$(tabs_body_of 'fun bar(')"
 for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*}'s body - every assertion about it would verify nothing"
@@ -403,7 +403,7 @@ printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
 
 # (b) ONE builder still, and it is the thing that VARIES by style. A builder
 #     that ignores its style argument is the same defect wearing a parameter.
-builders="$(command grep -c 'fun button(' "$TABS")"
+builders="$(command grep -c 'fun button(ctx: Context, control' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
   || bad "expected 1 tab-button builder, found $builders - the two languages can drift apart"

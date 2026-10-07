@@ -140,7 +140,7 @@ v = [float(re.search(r'const val %s = ([0-9.]+)f' % n, s).group(1)) if re.search
 sys.exit(0 if 'object StoreDensity' in s and all(0 < x < 1 for x in v) else 1)
 PY
   local lit=0 f
-  for f in "$L"/*.kt "$LA"/*.kt "$MA"; do
+  for f in "$L"/*.kt "$LA"/*.kt "$MA" "$S"/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/PermsPage.kt; do
     [ "$(basename "$f")" = StoreDensity.kt ] && continue
     if strip "$f" | grep -Eq 'dp\([^()]+(\(\))?, *[0-9]+\)|textSize *= *[0-9.]+f|, *[0-9]{2}f *[,)]|[0-9] *\* *[a-z]*\.?resources\.displayMetrics\.density|[1-9][0-9.]*\.(dp|sp)\b'; then
       echo "    size literal in $(basename "$f")"; lit=$((lit+1)); fi
@@ -171,13 +171,15 @@ PY
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
   # 8. #896 the Feed and Perms pages are hosted, the child-page strips are the fleet's PageTabs, and the Cloud page no longer carries the moved parts
-  printf '%s' "$ma" | grep -q 'AndroidFragment<StoreFeedFragment>' && printf '%s' "$ma" | grep -q 'AndroidFragment<StorePermsFragment>' && ok "MainActivity hosts the Feed and Perms pages" || bad "MainActivity does not host StoreFeedFragment and StorePermsFragment"
+  printf '%s' "$ma" | grep -q 'FeedPage(pageOf(it))' && printf '%s' "$ma" | grep -q 'PermsPage()' && ok "MainActivity hosts the Feed and Perms pages" || bad "MainActivity does not host FeedPage and PermsPage"
   printf '%s' "$ma" | grep -q 'PageTabs(section.pages' && printf '%s' "$ma" | grep -q 'StorePages.hostDrawsStrip = true' && ok "MainActivity draws the declared child pages with PageTabs and tells the pages it does" || bad "MainActivity does not draw section.pages with PageTabs"
-  [ -f "$L/StoreFeedFragment.kt" ] && [ -f "$L/StorePermsFragment.kt" ] && [ -f "$L/StoreTabs.kt" ] && ok "the Feed, Perms and shared strip live once in libs:appstore" || bad "StoreFeedFragment/StorePermsFragment/StoreTabs missing from libs:appstore"
+  local CS="$S/app/src/main/java/com/diegonmarcos/cloudstore"
+  [ -f "$CS/FeedPage.kt" ] && [ -f "$CS/PermsPage.kt" ] && grep -q '@Composable' "$CS/FeedPage.kt" && grep -q '@Composable' "$CS/PermsPage.kt" && grep -q 'FeedViewer.load(' "$CS/FeedPage.kt" && ok "the Feed and Perms pages are Compose (the ratchet's rule) and read libs:appstore's FeedViewer declaration" || bad "FeedPage/PermsPage are missing, not Compose, or no longer read FeedViewer"
+  grep -q 'object StoreTabs' "$L/StoreBar.kt" && ok "the shared strip builder (StoreTabs) lives once in libs:appstore" || bad "StoreTabs is missing from libs:appstore"
   ! grep -qE 'renderPerms|renderFeed|FeedViewer' "$L/StoreCloudFragment.kt" && ok "the Cloud page draws neither feeds nor Perms" || bad "the Cloud page still carries the moved Feed/Perms parts"
-  grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreFeedFragment.kt" && ok "Cloud, Phone and Feed draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
+  grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && ok "Cloud and Phone draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
   # 9. #896 density: tappable controls keep a 40dp floor whatever the scale
-  grep -qE 'MIN_TAP_DP = (4[0-9]|[5-9][0-9])' "$L/StoreDensity.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreTabs.kt" && ok "tabs, chips, pages and action buttons keep the 40dp touch floor" || bad "a Store control lost its 40dp touch floor"
+  grep -qE 'MIN_TAP_DP = (4[0-9]|[5-9][0-9])' "$L/StoreDensity.kt" && grep -q 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt" && [ "$(grep -c 'minHeight = StoreDensity.minTap(ctx)' "$L/StoreBar.kt")" -ge 4 ] && ok "tabs, chips, pages and action buttons keep the 40dp touch floor" || bad "a Store control lost its 40dp touch floor"
   printf '%s' "$ma" | grep -Eq '(^|[^A-Za-z])TabRow *\(' && bad "MainActivity still draws its own TabRow" || ok "no hand-rolled tab row"
   return $fails
 }
@@ -229,10 +231,11 @@ mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "feed",
       "perms"
     ]' || M=$((M+1))
-mutate "a control loses the touch floor" lib/StoreTabs.kt 'minHeight = StoreDensity.minTap(ctx)' '' || M=$((M+1))
+mutate "a tab loses the touch floor" lib/StoreBar.kt '        minHeight = StoreDensity.minTap(ctx)
+        textSize = StoreDensity.T_BODY' '        textSize = StoreDensity.T_BODY' || M=$((M+1))
 mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
-mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<StoreFeedFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
-mutate "Perms page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<StorePermsFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FeedPage(pageOf(it))' 'Unit' || M=$((M+1))
+mutate "Perms page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PermsPage()' 'Unit' || M=$((M+1))
 mutate "host stops drawing the page strip" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PageTabs(section.pages' 'PageTabx(section.pages' || M=$((M+1))
 mutate "gradle stops baking the sections" store/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
 A=store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt

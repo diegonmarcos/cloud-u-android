@@ -344,7 +344,7 @@ class StoreCloudFragment : Fragment() {
      * `tab` one (#671/#732). The Commits and CI-CD feeds and Perms used to be on that line; they
      * are bottom-nav pages now (#896: Feed, Perms), so this line holds the one page left.
      *
-     * The strip itself is [StoreTabs.bar], the same builder Phone and Feed draw with. WHICH LINE A
+     * The strip itself is [StoreTabs.bar], the same builder Phone draws with. WHICH LINE A
      * TAB SITS ON IS NOT WRITTEN HERE: it is which declaration the tab came from.
      */
     private fun tabBar(ctx: Context): View = StoreTabs.bar(ctx, listOf(

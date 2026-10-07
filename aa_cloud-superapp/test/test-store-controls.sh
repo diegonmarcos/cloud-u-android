@@ -75,10 +75,10 @@ jq -e '.styles.page | .stroke != null and .fill == null and .chevron != "" and .
 
 echo "== C4: the Kotlin draws what is declared =="
 body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"; }
-TABS="$STORE/java/com/diegonmarcos/superapp/appstore/StoreTabs.kt"  # #896 the strip builder Cloud, Phone and Feed share
+TABS="$STORE/java/com/diegonmarcos/superapp/appstore/StoreBar.kt"  # #896 the strip builder (StoreTabs) Cloud and Phone share
 tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
-TABBAR="$(body_of 'private fun tabBar(')"; TABBTN="$(tabs_body_of 'fun button(')"
-PAINT="$(tabs_body_of 'fun paint(')"; BTN="$(body_of 'private fun btn(')"
+TABBAR="$(body_of 'private fun tabBar(')"; TABBTN="$(tabs_body_of 'fun button(ctx: Context, control')"
+PAINT="$(tabs_body_of 'fun paint(buttons')"; BTN="$(body_of 'private fun btn(')"
 for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT" "btn:$BTN"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*} - every assertion about it would verify nothing"
 done

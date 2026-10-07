@@ -154,7 +154,7 @@ class StorePhoneFragment : Fragment() {
         })
         sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         bar.addView(sourceHost)
-        return StorePages.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, bar)
+        return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, bar)
     }
 
     /** [installedOnly] is the selected page, and the strip paints it. */
