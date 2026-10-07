@@ -201,12 +201,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x build.sh
+          set -o pipefail
           if [ "${{ steps.variant.outputs.variant }}" = "release" ]; then
-            ./build.sh release
+            ./build.sh release 2>&1 | tee "$RUNNER_TEMP/gradle-build.log"
           else
-            ./build.sh build
+            ./build.sh build 2>&1 | tee "$RUNNER_TEMP/gradle-build.log"
           fi
           ls -la dist/
+
+      - name: Why the build failed (readable without a token)
+        if: failure() && steps.gate.outputs.skip != 'true'
+        run: sh 1_cicd/dist/scripts/cloud-android-annotate-build-failure.sh "$RUNNER_TEMP/gradle-build.log" "build [cloud-search]"
 
       - name: Upload APK as workflow artifact
         if: steps.gate.outputs.skip != 'true'

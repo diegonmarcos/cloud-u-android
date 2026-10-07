@@ -215,8 +215,13 @@ jobs:
           # runs here. GITHUB_TOKEN, never a PAT: the asset belongs to this repo.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./build.sh build-fork "$FORK"
+          set -o pipefail
+          ./build.sh build-fork "$FORK" 2>&1 | tee "$RUNNER_TEMP/gradle-build.log"
           ls -la dist/
+
+      - name: Why the build failed (readable without a token)
+        if: failure() && steps.gate.outputs.skip != 'true'
+        run: sh 1_cicd/dist/scripts/cloud-android-annotate-build-failure.sh "$RUNNER_TEMP/gradle-build.log" "build [nix-on-droid]"
 
       - name: Upload APK as workflow artifact
         if: steps.gate.outputs.skip != 'true'

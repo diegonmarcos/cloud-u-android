@@ -8,6 +8,9 @@
 # unchanged must go red.
 set -u
 unset JAVA_TOOL_OPTIONS
+# This tester COMPILES DebianVersion.java: without javac (the phone's shell) it has no verdict
+# to give — say so and stop, rather than let a missing tool read as "FAILED debian version".
+command -v javac >/dev/null 2>&1 || { echo "test-debian-version: UNCOVERED — javac not on PATH (this tester compiles the class under test)"; exit 0; }
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$DIR/termux-shared/src/main/java/com/termux/shared/shell/DebianVersion.java"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
