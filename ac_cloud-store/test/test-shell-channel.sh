@@ -76,7 +76,7 @@ ok(len(re.findall(r'\.progress\s*=', sf)) == 1, "the bar's percent has ONE write
 ok("barModel.step(" in sf and "barModel.reset()" in sf and "barModel.complete()" in sf, "every draw goes through ProgressBarModel", "a draw bypasses ProgressBarModel")
 pm = rd("ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ProgressBarModel.kt")
 ok("this.percent = maxOf(this.percent," in pm, "the percent never moves backwards within an item", "ProgressBarModel's percent can move backwards")
-ok("if (bytes > 0 || percent > 0)" in pm, "determinate starts at the first byte count", "ProgressBarModel's determinate trigger changed")
+ok("if (percent > 0 || (bytes > 0 && percent >= 0))" in pm, "determinate starts at the first byte count", "ProgressBarModel's determinate trigger changed")
 ok("if (item.isNotEmpty() && item != this.item)" in pm, "a state naming no item does not reset the bar", "an item-less state resets the bar")
 sys.exit(fails)
 PY
@@ -135,7 +135,7 @@ mutate "toggle restarts SuperApp's updater" $A/configs/PermissionsFragment.kt 'i
 mutate "a second writer of the indeterminate flag" $P/StoreCloudFragment.kt 'if (!d.indeterminate && bar.progress != d.percent) bar.progress = d.percent' 'bar.isIndeterminate = false; bar.progress = d.percent' || M=$((M+1))
 mutate "a draw bypasses the model" $P/StoreCloudFragment.kt 'drawBar(bar, barModel.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed))' 'drawBar(bar, ProgressBarModel.Draw(p.percent < 0, p.percent))' || M=$((M+1))
 mutate "percent can move backwards" $P/ProgressBarModel.kt 'this.percent = maxOf(this.percent, percent.coerceIn(0, 100))' 'this.percent = percent.coerceIn(0, 100)' || M=$((M+1))
-mutate "determinate before any byte" $P/ProgressBarModel.kt 'if (bytes > 0 || percent > 0)' 'if (true)' || M=$((M+1))
+mutate "determinate before any byte" $P/ProgressBarModel.kt 'if (percent > 0 || (bytes > 0 && percent >= 0))' 'if (true)' || M=$((M+1))
 mutate "an item-less state resets the bar" $P/ProgressBarModel.kt 'if (item.isNotEmpty() && item != this.item)' 'if (item != this.item)' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="

@@ -39,7 +39,9 @@ class ProgressBarModel {
     fun step(item: String, bytes: Long, percent: Int, failed: Boolean): Draw {
         if (failed) { reset(); return Draw(false, 0) }
         if (item.isNotEmpty() && item != this.item) { reset(); this.item = item }
-        if (bytes > 0 || percent > 0) {
+        // A byte count with no known total is still unknown, not a percentage: drawing 0% while
+        // bytes flow reads as a stalled transfer (the ambiguity StoreProgressBarTest holds).
+        if (percent > 0 || (bytes > 0 && percent >= 0)) {
             determinate = true
             this.percent = maxOf(this.percent, percent.coerceIn(0, 100))
         }

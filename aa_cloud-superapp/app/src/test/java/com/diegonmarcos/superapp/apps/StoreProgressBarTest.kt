@@ -121,6 +121,11 @@ class StoreProgressBarTest {
         idle()
         assertTrue(bar(root).label.text.toString(), "verifying" in bar(root).label.text && "downloading" !in bar(root).label.text)
 
+        // #894 the bar holds one state per item, so a NEW job is what starts it over: a finished job
+        // clears the row, and the next one begins indeterminate.
+        UpdateProgress.update(UpdateProgress.State.Done)
+        idle()
+        UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, UpdateProgress.STAGE_DOWNLOADING))
         // Control: an unknown size is said, never drawn as a percentage.
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 500_000, -1))
         idle()

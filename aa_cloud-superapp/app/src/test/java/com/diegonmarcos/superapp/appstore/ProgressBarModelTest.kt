@@ -15,6 +15,12 @@ class ProgressBarModelTest {
         assertEquals(indeterminate0, m.step("a", 0, -1, false))
     }
 
+    @Test fun `bytes with no known total stay indeterminate, never a made-up percentage`() {
+        val m = ProgressBarModel()
+        assertEquals(indeterminate0, m.step("a", 500_000, -1, false))
+        assertEquals(Draw(false, 5), m.step("a", 600_000, 5, false))
+    }
+
     @Test fun `first byte count makes it determinate`() =
         assertEquals(Draw(false, 7), ProgressBarModel().apply { step("a", 0, 0, false) }.step("a", 1000, 7, false))
 
