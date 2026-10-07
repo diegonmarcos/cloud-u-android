@@ -83,9 +83,10 @@ grep -q 'buildConfigField .int., .BRIDGE_PORT., "${sysdns.bridge_port as int}"' 
   && grep -q 'start(dnsCtx, com.diegonmarcos.cloudlib.sysdns.BuildConfig.BRIDGE_PORT)' "$MAIN" \
   && ok "the port is data/sysdns.json::bridge_port, baked, never a literal in the app" \
   || bad "the bridge port is not the config's"
-grep -q 'bindError = "127.0.0.1:$port taken' "$BRIDGE" && grep -q 'SystemDnsBridge(0, upstream, log)' "$BRIDGE" \
-  && ok "a taken port (a terminal's bridge) still leaves this process its own bridge, ephemeral" \
-  || bad "a taken bridge port leaves the process with no resolver"
+grep -q 'SystemDnsBridge(0, upstream, log)' "$BRIDGE" && ! grep -q 'SystemDnsBridge(port, upstream, log)' "$BRIDGE" \
+  && grep -q "is the terminals' shell port (#889)" "$BRIDGE" \
+  && ok "#889 this process answers in-process on an ephemeral port and never holds the terminals' shell port" \
+  || bad "the process binds the shells' port (then every shell lookup dies with this app cached or frozen)"
 
 echo "== B2: the download path resolves only through the bridge =="
 LADDER="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/DnsLadder.kt"

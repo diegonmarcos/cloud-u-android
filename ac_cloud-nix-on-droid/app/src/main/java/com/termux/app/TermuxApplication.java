@@ -115,8 +115,12 @@ public class TermuxApplication extends Application {
         }
     }
 
+    /** #889 while the shells' port is held elsewhere, one bind attempt this often until it is ours. */
+    private static final long DNS_BRIDGE_RETRY_MS = 3000;
+    private static Thread dnsBridgeRebind;
+
     private static synchronized void startDnsBridge() {
-        if (dnsBridge != null) return;
+        if (dnsBridge != null || dnsBridgeRebind != null) return;
         if (Build.VERSION.SDK_INT < 29) {
             // ponytail: no raw system resolver below Android 10 (DnsResolver is API 29); the shell
             // then has no DNS rather than a server of its own, as in the termux terminal.
@@ -124,13 +128,34 @@ public class TermuxApplication extends Application {
             Logger.logError(LOG_TAG, dnsBridgeWhyNot);
             return;
         }
+        if (bindDnsBridge()) return;
+        Logger.logWarn(LOG_TAG, dnsBridgeWhyNot);
+        // #889 the holder may be the other terminal (fine) or a process that is cached, frozen or
+        // gone -- then every lookup in this shell hangs. Keep trying; own the port when it frees.
+        dnsBridgeRebind = new Thread(() -> {
+            while (true) {
+                try { Thread.sleep(DNS_BRIDGE_RETRY_MS); } catch (InterruptedException e) { return; }
+                synchronized (TermuxApplication.class) {
+                    if (bindDnsBridge()) { dnsBridgeRebind = null; return; }
+                }
+            }
+        }, "sysdns-rebind");
+        dnsBridgeRebind.setDaemon(true);
+        dnsBridgeRebind.start();
+    }
+
+    /** One bind on the shells' port: true when this terminal now answers it. */
+    private static boolean bindDnsBridge() {
         try {
             dnsBridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
                 line -> Logger.logInfo(LOG_TAG, line));
+            dnsBridgeWhyNot = null;
+            return true;
         } catch (IOException e) {
             dnsBridgeWhyNot = "127.0.0.1:" + BuildConfig.CLOUD_DNS_BRIDGE_PORT
-                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS";
-            Logger.logWarn(LOG_TAG, dnsBridgeWhyNot);
+                + " is taken (" + e.getMessage() + "): another fleet terminal answers this shell's DNS;"
+                + " retrying every " + (DNS_BRIDGE_RETRY_MS / 1000) + " s to take it over when it frees (#889)";
+            return false;
         }
     }
 

@@ -105,12 +105,18 @@ object FleetDnsBridge {
         }
     }
 
-    /** Start once, at the app's start. [port] is data/sysdns.json::bridge_port (BuildConfig.BRIDGE_PORT). */
+    /**
+     * Start once, at the app's start. [port] is data/sysdns.json::bridge_port (BuildConfig.BRIDGE_PORT):
+     * the SHELLS' port, which only a terminal binds (#889). This bridge answers this process's own
+     * lookups on an ephemeral port. It once took [port] when it was first up, and then every shell
+     * on the phone depended on THIS app staying alive and unfrozen: the Store held it on 2026-10-07
+     * and each terminal lookup died whenever the Store was cached or frozen.
+     */
     fun start(ctx: Context, port: Int) {
         app = ctx.applicationContext
         val log = SystemDnsBridge.Log { Log.i(TAG, it) }
-        bridge = runCatching { SystemDnsBridge(port, upstream, log) }
-            .recoverCatching { e -> bindError = "127.0.0.1:$port taken ($e); answering in-process only"; SystemDnsBridge(0, upstream, log) }
+        bindError = "127.0.0.1:$port is the terminals' shell port (#889); answering in-process only"
+        bridge = runCatching { SystemDnsBridge(0, upstream, log) }
             .onFailure { Log.w(TAG, "DNS bridge not started", it) }
             .getOrNull()
     }
