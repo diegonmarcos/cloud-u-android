@@ -91,6 +91,10 @@ object ShellChannels {
         // reaches the shell through the SuperApp bridge and must not put ITS
         // APK + token on the shared port.
         if (RishBridge.providers.isEmpty()) AdbShellBootstrap.ensureServer(ctx, ladder)
-        return ladder.firstOrNull { it.isReady(ctx) }
+        // Our server is the one channel that can WEDGE: a uid-2000 app_process launched from the
+        // previous APK keeps its listening socket after an update while every exec dies in it, so
+        // isReady (a connect) stayed true and rish answered "no shell channel ready" with Shizuku up.
+        // The ladder asks it to execute before trusting it; ensureServer replaces a wedged one.
+        return ladder.firstOrNull { it.isReady(ctx) && (it !== LocalShellChannel || it.probe(ctx)) }
     }
 }

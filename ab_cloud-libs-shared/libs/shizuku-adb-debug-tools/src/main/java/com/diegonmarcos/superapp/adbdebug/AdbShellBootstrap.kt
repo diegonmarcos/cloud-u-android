@@ -69,14 +69,18 @@ object AdbShellBootstrap {
      * Logs one line per attempt; the result is kept for [bootstrapState].
      */
     fun ensureServer(ctx: Context, ladder: List<ShellChannel>): Boolean {
-        if (LocalShellChannel.isReady(ctx)) return true
+        val listening = LocalShellChannel.isReady(ctx)
+        if (listening && LocalShellChannel.probe(ctx)) return true
         val via = ladder.firstOrNull { it !== LocalShellChannel && it.isReady(ctx) } ?: return false
         val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val now = SystemClock.elapsedRealtime()
         val last = sp.getLong(K_BOOT_AT, -1L)
         if (last in 0..now && now - last < RETRY_MS) return false
         sp.edit().putLong(K_BOOT_AT, now).putString(K_BOOT_RESULT, "attempted via ${via.name()}: launching").apply()
-        val out = via.exec(ctx, shellCommand(ctx))?.trim().orEmpty()
+        // A listening server that does not answer is the previous APK's process (shell uid, it
+        // outlives the app): kill it first, by its nice-name, through the channel that still works.
+        val launch = (if (listening) "pkill -f 'superapp-ad[b]'; sleep 1; " else "") + shellCommand(ctx)
+        val out = via.exec(ctx, launch)?.trim().orEmpty()
         var up = false
         repeat(6) { if (!up) { Thread.sleep(500); up = LocalShellChannel.isReady(ctx) } }
         val result = "attempted via ${via.name()}: " +

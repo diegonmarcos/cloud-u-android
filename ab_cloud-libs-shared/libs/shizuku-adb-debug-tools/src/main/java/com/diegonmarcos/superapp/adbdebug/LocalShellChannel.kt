@@ -32,6 +32,19 @@ object LocalShellChannel : ShellChannel {
         }
     }.getOrNull()
 
+    /** [exec] of the probe line with a 2 s answer window: a wedged server accepts and never replies. */
+    override fun probe(ctx: Context): Boolean = runCatching {
+        Socket().use { s ->
+            s.connect(InetSocketAddress("127.0.0.1", AdbShellBootstrap.port()), 1000)
+            s.soTimeout = 2_000
+            val w = s.getOutputStream().bufferedWriter()
+            w.write(AdbShellBootstrap.token(ctx)); w.write("\n")
+            w.write(Base64.encodeToString("echo shell-ok".toByteArray(), Base64.NO_WRAP)); w.write("\n")
+            w.flush()
+            s.getInputStream().bufferedReader().readText().contains("shell-ok")
+        }
+    }.getOrDefault(false)
+
     override fun status(ctx: Context): String =
         if (isReady(ctx)) "Running — self-contained app_process server on 127.0.0.1:${AdbShellBootstrap.port()} (shell domain)"
         else "Not started — self-bootstrap ${AdbShellBootstrap.bootstrapState(ctx)}; or run /api/adb/server-command once per boot via adb/Wireless Debugging"
