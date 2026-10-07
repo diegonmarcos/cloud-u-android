@@ -152,7 +152,7 @@ class JevAppTest {
         assertTrue(evaluated("3 ft to cm"))
         // The run block is a Column of Texts; its own node carries no text, so find the line itself.
         compose.onNodeWithText("= 42").assertExists()
-        assertEquals(Logic.Entry("jev", "convert 3 ft to cm", "42"), state.history.first())
+        assertEquals(Logic.Entry("jev", "convert 3 ft to cm", "42"), state.history.first().copy(ts = 0L))
         // The account token went out as the bearer, and nowhere into a body.
         val (_, token, body) = http.sent.first()
         assertEquals(accountKey, token)

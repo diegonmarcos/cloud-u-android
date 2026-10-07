@@ -48,8 +48,8 @@ object CalcMetrics {
     val gutter: Dp = 12.dp
     val keyHeight: Dp = 52.dp
     val corner: Dp = 12.dp
-    /** The calculator display: fixed, so nothing a result changes can move the keypad below it. */
-    val displayHeight: Dp = 320.dp
+    /** The calculator display takes whatever height the keypad leaves (never less than this), so nothing a result changes can move the keypad. */
+    val displayMinHeight: Dp = 96.dp
     val plotHeight: Dp = 280.dp
     val spectrumHeight: Dp = 180.dp
     val stroke: Dp = 2.dp

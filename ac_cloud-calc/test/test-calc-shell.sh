@@ -50,7 +50,7 @@
 #       `state` op; every reference object has a positive length and a unique id, and OCR
 #       numbers go to a declared expression mode.
 #   C14 the keypad never moves (owner bug): ExpressionMode keeps every text- or result-dependent view
-#       inside one fixed-height display (// DISPLAY BEGIN..END, CalcMetrics.displayHeight) above the
+#       inside one weight(1f) display (// DISPLAY BEGIN..END) above the
 #       keys, and ModeScreens.kt does not call AskAboutResult( (the "Ask about this result" element).
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
@@ -346,16 +346,16 @@ if not body or min(b0, b1, k0) < 0 or not (b0 < b1 < k0):
     bad.append("C14 ExpressionMode must hold // DISPLAY BEGIN ... // DISPLAY END above mode.keys.forEach")
 else:
     box = body[b0:b1]
-    if "height(CalcMetrics.displayHeight)" not in box.split("\n", 2)[1]:
-        bad.append("C14 the display of ExpressionMode must open with a fixed height(CalcMetrics.displayHeight)")
+    if ".weight(1f)" not in box.split("\n", 2)[1]:
+        bad.append("C14 the display of ExpressionMode must open with weight(1f), so the keypad is anchored below it")
     c0 = body.find("Column(Modifier.fillMaxSize()")
     loose = body[max(c0, 0):b0] + body[b1:k0]
     for tok in ("ResultBlock(", "bases", "suggestions", "result", "AskAboutResult("):
         if tok in "\n".join(l for l in loose.split("\n") if not re.match(r"\s*(//|\*)", l)):
-            bad.append("C14 ExpressionMode: %s sits outside the fixed display, above the keypad" % tok)
+            bad.append("C14 ExpressionMode: %s sits outside the display, above the keypad" % tok)
 theme = open(os.path.join(src, "ui", "CalcTheme.kt"), encoding="utf-8").read()
-if not re.search(r"val displayHeight: Dp = [1-9]\d*\.dp", theme):
-    bad.append("C14 CalcMetrics.displayHeight is not a positive fixed dp")
+if not re.search(r"val displayMinHeight: Dp = [1-9]\d*\.dp", theme):
+    bad.append("C14 CalcMetrics.displayMinHeight is not a positive dp")
 
 for b in bad:
     print("  FAIL  " + b)
@@ -452,9 +452,9 @@ mutate reference-zero build.json 's.replace("\"mm\": 85.60", "\"mm\": 0")' "C13 
 mutate ocr-nowhere build.json 's.replace("\"send_to_mode\": \"standard\"", "\"send_to_mode\": \"units\"")' "C13 build.json::camera.ocr.send_to_mode units"
 
 mutate ask-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        AskAboutResult(mode.id, text, text)")' "C14 ModeScreens.kt calls AskAboutResult("
-mutate result-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        ResultBlock(result)")' "C14 ExpressionMode: ResultBlock( sits outside the fixed display"
-mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace("height(CalcMetrics.displayHeight)", "wrapContentHeight()")' "C14 the display of ExpressionMode must open with a fixed height"
-mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayHeight: Dp = 320.dp", "val displayHeight: Dp = 0.dp")' "C14 CalcMetrics.displayHeight is not a positive fixed dp"
+mutate result-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        ResultBlock(result)")' "C14 ExpressionMode: ResultBlock( sits outside the display"
+mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace(".weight(1f).heightIn(min = CalcMetrics.displayMinHeight)", ".wrapContentHeight()")' "C14 the display of ExpressionMode must open with weight(1f)"
+mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayMinHeight: Dp = 96.dp", "val displayMinHeight: Dp = 0.dp")' "C14 CalcMetrics.displayMinHeight is not a positive dp"
 
 echo "── C1-C14 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]

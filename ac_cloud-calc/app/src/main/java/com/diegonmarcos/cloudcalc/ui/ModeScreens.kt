@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -139,9 +140,9 @@ private fun ExpressionMode(mode: Declarations.Mode) {
         suggestions = if (word.length >= 2) Logic.items(io { api.complete(word, 8) }) else emptyList()
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
-        // DISPLAY BEGIN: every view that depends on the text or its result lives in this fixed-height box (test C14).
-        Column(Modifier.fillMaxWidth().height(CalcMetrics.displayHeight).verticalScroll(rememberScrollState()).testTag(CalcTags.DISPLAY)) {
+    Column(Modifier.fillMaxSize().padding(CalcMetrics.gutter)) {
+        // DISPLAY BEGIN: every view that depends on the text or its result lives in this one box, which takes the height the keypad leaves, so the keypad is anchored to the bottom and never moves (test C14).
+        Column(Modifier.fillMaxWidth().weight(1f).heightIn(min = CalcMetrics.displayMinHeight).verticalScroll(rememberScrollState()).testTag(CalcTags.DISPLAY)) {
             ChoiceRow(mode.angleChoices, options) { c -> overrides = overrides + (c.key to c.value) }
             ChoiceRow(mode.baseChoices, options) { c -> overrides = overrides + (c.key to c.value) }
             OutlinedTextField(
