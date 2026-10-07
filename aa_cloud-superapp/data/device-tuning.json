@@ -57,14 +57,14 @@
     {
       "id": "terminals_standby_active",
       "title": "Terminals in the active standby bucket",
-      "why": "An app in a restricted standby bucket gets its jobs, alarms and network deferred; the terminals stay active so a session keeps its network while in the background.",
+      "why": "An app in a restricted standby bucket gets its jobs, alarms and network deferred; the terminals stay active so a session keeps its network while in the background. A bucket of 5 (EXEMPTED, after the doze whitelist) or 10 (ACTIVE) both satisfy it.",
       "apply": [
         "am set-standby-bucket cld.termux active",
         "am set-standby-bucket cld.termux.nix active"
       ],
       "verify": {
-        "cmd": "am get-standby-bucket cld.termux",
-        "expect": "10"
+        "cmd": "b=$(am get-standby-bucket cld.termux); [ \"$b\" -le 10 ] && echo ok",
+        "expect": "ok"
       }
     }
   ]
