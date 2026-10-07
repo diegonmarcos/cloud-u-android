@@ -799,6 +799,8 @@ class BrowserHostFragment : Fragment() {
                     postDelayed({ capturePreview(this@apply, tabKey) }, 600)
                 }
             }
+            // Long-press on a link or image: a dense sheet; text and fields keep the system actions.
+            setOnLongClickListener { v -> onPageLongPress(v as WebView) }
             setDownloadListener { dlUrl, ua, disposition, mime, _ ->
                 val d = download(dlUrl, ua, disposition, mime)
                 toast("Downloading ${d.file}")
@@ -970,6 +972,77 @@ class BrowserHostFragment : Fragment() {
                 onClose = close)
         }
     }
+
+    // ── long-press on page content (BrowserContextMenu holds the rules) ──
+
+    private fun onPageLongPress(wv: WebView): Boolean {
+        val hit = wv.hitTestResult
+        val type = hit.type; val extra = hit.extra
+        when (type) {
+            BrowserContextMenu.SRC_ANCHOR, BrowserContextMenu.SRC_IMAGE_ANCHOR -> {
+                // The link behind the press (and its text) is only known asynchronously.
+                val h = android.os.Handler(android.os.Looper.getMainLooper()) { m ->
+                    val d = m.data
+                    showContext(BrowserContextMenu.target(type, extra, d?.getString("url"), d?.getString("title")))
+                    true
+                }
+                wv.requestFocusNodeHref(h.obtainMessage())
+                return true
+            }
+            BrowserContextMenu.IMAGE -> { showContext(BrowserContextMenu.target(type, extra)); return true }
+        }
+        return false
+    }
+
+    private fun showContext(t: BrowserContextMenu.Target?) {
+        if (t == null || !isAdded) return
+        val actions = BrowserContextMenu.actions(t, hasPrivate = true)
+        if (actions.isEmpty()) return
+        overlay { close ->
+            BrowserContextSheet(t.linkUrl ?: t.imageUrl.orEmpty(), actions, onPick = { a -> close(); runContext(a, t) }, onDismiss = close)
+        }
+    }
+
+    private fun runContext(a: BrowserContextMenu.Action, t: BrowserContextMenu.Target) {
+        val link = t.linkUrl.orEmpty(); val img = t.imageUrl.orEmpty()
+        val from = currentTab()
+        BrowserContextMenu.placement(a, from?.isPrivate == true)?.let { p ->
+            return openFromPage(if (a == BrowserContextMenu.Action.IMAGE_OPEN) img else link, p, from)
+        }
+        val ua = webView?.settings?.userAgentString
+        when (a) {
+            BrowserContextMenu.Action.COPY_LINK -> copyText("url", link, "Link copied")
+            BrowserContextMenu.Action.COPY_LINK_TEXT -> copyText("text", t.linkText, "Text copied")
+            BrowserContextMenu.Action.SHARE_LINK -> shareText(link)
+            BrowserContextMenu.Action.DOWNLOAD_LINK -> toast("Downloading ${download(link, ua, null, null).file}")
+            BrowserContextMenu.Action.ADD_FAV -> { bookmarks.add(link, t.linkText.ifBlank { link }, ""); toast("Added to Fav") }
+            BrowserContextMenu.Action.IMAGE_DOWNLOAD -> toast("Downloading ${download(img, ua, null, null).file}")
+            BrowserContextMenu.Action.IMAGE_COPY -> copyText("url", img, "Image address copied")
+            BrowserContextMenu.Action.IMAGE_SHARE -> shareText(img)
+            BrowserContextMenu.Action.IMAGE_SEARCH -> openFromPage(
+                BrowserContextMenu.imageSearchUrl(engine().id, img), BrowserContextMenu.Placement(true, false, from?.isPrivate == true), from)
+            else -> Unit
+        }
+    }
+
+    /** A NEW tab for [url] placed by [p]: in the opener's group when asked, and focused only when [p] says so. */
+    private fun openFromPage(url: String, p: BrowserContextMenu.Placement, from: BrowserTab?) {
+        val tab = prefs.addNew(url, url, isPrivate = p.isPrivate)
+        if (p.group && from != null) prefs.startOrJoinGroup(from.key, tab.key)
+        if (p.activate) { prefs.setActiveId(tab.key); showDetail(prefs.byId(tab.key) ?: tab) }
+        else { toast("Opened in background"); refreshStrip() }
+    }
+
+    private fun copyText(label: String, text: String, done: String) {
+        val clip = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        clip?.setPrimaryClip(android.content.ClipData.newPlainText(label, text))
+        toast(done)
+    }
+
+    private fun shareText(text: String) = startActivity(android.content.Intent.createChooser(
+        android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, text)
+        }, "Share"))
 
     /** A page download, with the page's cookies and agent, into the `download_dir` setting. */
     private fun download(url: String, ua: String?, disposition: String?, mime: String?): BrowserDownload =
