@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Security
@@ -41,7 +40,6 @@ import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.appstore.StoreDensity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
-import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
 import com.diegonmarcos.superapp.appstore.StorePages
@@ -117,10 +115,9 @@ class MainActivity : AppCompatActivity() {
                 val hidden = Modifier.size(0.dp)
                 AndroidFragment<StoreCloudFragment>(if (selected == TAB_CLOUD) shown else hidden)
                 AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE) shown else hidden)
-                AndroidFragment<AppsMeshFragment>(if (selected == TAB_MESH) shown else hidden)
-                // Feed and Perms are Compose pages composed only while shown: the feeds read GitHub on open.
+                // Feed and Access are composed only while shown: the feeds read GitHub on open, the mesh probes.
                 if (selected == TAB_FEED) section?.let { FeedPage(pageOf(it)) }
-                if (selected == TAB_PERMS) PermsPage()
+                if (selected == TAB_ACCESS) section?.let { AccessPage(pageOf(it)) }
                 if (selected == TAB_SETTINGS) SettingsPage()
             }
             }
@@ -173,19 +170,22 @@ class MainActivity : AppCompatActivity() {
     private fun tabFrom(i: Intent?): String? {
         // #570 an inventory handed over by Account (Apply list to Store): the Phone page consumes it on resume.
         i?.getStringExtra(StoreImport.EXTRA_IMPORT)?.let { StoreImport.pending = it }
-        return i?.getStringExtra(EXTRA_TAB)?.takeIf { t -> NAV.section(t) != null }
+        val tab = i?.getStringExtra(EXTRA_TAB)
+        // SuperApp's apps-mesh page used to open the Mesh tab; Apps Mesh is Access's first page now.
+        if (tab == LEGACY_MESH) { choose(TAB_ACCESS, PAGE_MESH); return TAB_ACCESS }
+        return tab?.takeIf { t -> NAV.section(t) != null }
     }
 
     companion object {
-        /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE], [TAB_FEED], [TAB_PERMS] or [TAB_MESH]. */
+        /** Intent extra naming the tab to open: [TAB_CLOUD], [TAB_PHONE], [TAB_FEED] or [TAB_ACCESS]. */
         const val EXTRA_TAB = "tab"
         private const val REQ_NOTIFICATIONS = 894
         const val TAB_CLOUD = "cloud"
         const val TAB_PHONE = "phone"
         const val TAB_FEED  = "feed"
-        const val TAB_PERMS = "perms"
-        /** Apps Mesh: a declared section, but off the island (the island holds five) - reached from the Cloud page. */
-        const val TAB_MESH  = "mesh"
+        const val TAB_ACCESS = "access"
+        /** The old Mesh tab: Apps Mesh is Access's first page now; an intent asking for `mesh` opens it. */
+        private const val LEGACY_MESH = "mesh"
         const val TAB_SETTINGS = "settings"
         /** build.json::ui as baked into BuildConfig: the island's items and the section ids. */
         val NAV: NavDecl by lazy {
@@ -196,9 +196,8 @@ class MainActivity : AppCompatActivity() {
         private fun iconFor(name: String): ImageVector = when (name) {
             "cloud" -> Icons.Filled.Cloud
             "phone" -> Icons.Filled.PhoneAndroid
-            "mesh" -> Icons.Filled.Hub
             "feed" -> Icons.Filled.RssFeed
-            "perms" -> Icons.Filled.Security
+            "access" -> Icons.Filled.Security
             else -> Icons.Filled.Settings
         }
     }

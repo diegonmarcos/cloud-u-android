@@ -63,7 +63,7 @@ check() {
 
   # 1. hosts the lib's pages, owns no store code, claims the pass
   local ma; ma="$(strip "$MA")"
-  for frag in StoreCloudFragment StorePhoneFragment AppsMeshFragment; do
+  for frag in StoreCloudFragment StorePhoneFragment; do
     printf '%s' "$ma" | grep -Eq -- "AndroidFragment<$frag>" && ok "Cloud Store shows $frag" || bad "Cloud Store does not show $frag"
   done
   grep -q "project(':libs:appstore')" "$S/app/build.gradle" && ok "app links :libs:appstore" || bad "app does not link :libs:appstore"
@@ -140,7 +140,7 @@ v = [float(re.search(r'const val %s = ([0-9.]+)f' % n, s).group(1)) if re.search
 sys.exit(0 if 'object StoreDensity' in s and all(0 < x < 1 for x in v) else 1)
 PY
   local lit=0 f
-  for f in "$L"/*.kt "$LA"/*.kt "$MA" "$S"/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/PermsPage.kt; do
+  for f in "$L"/*.kt "$LA"/*.kt "$MA" "$S"/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt; do
     [ "$(basename "$f")" = StoreDensity.kt ] && continue
     if strip "$f" | grep -Eq 'dp\([^()]+(\(\))?, *[0-9]+\)|textSize *= *[0-9.]+f|, *[0-9]{2}f *[,)]|[0-9] *\* *[a-z]*\.?resources\.displayMetrics\.density|[1-9][0-9.]*\.(dp|sp)\b'; then
       echo "    size literal in $(basename "$f")"; lit=$((lit+1)); fi
@@ -154,14 +154,15 @@ PY
   grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, perms, settings (five, each a ui.sections id), Phone's first pages are installed|declared, Feed's are the declared feeds, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access, settings (five, each a ui.sections id), Phone's pages are installed|declared, Feed's the declared feeds, Access's mesh|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
 import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 secs = {s.get('id'): s for s in ui.get('sections') or []}
 feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) else None
 pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
-ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'perms', 'settings']
-      and set(ui['bottom_nav']) <= set(secs) and 'mesh' in secs
+ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'access', 'settings']
+      and set(ui['bottom_nav']) <= set(secs) and 'mesh' not in secs and 'perms' not in secs
+      and pg('access') == ['mesh', 'android', 'cloud']
       and pg('phone') == ['installed', 'declared']
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
       and ui.get('default_section') == 'cloud')
@@ -171,13 +172,15 @@ PY
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
   # 8. #896 the Feed and Perms pages are hosted, the child-page strips are the fleet's PageTabs, and the Cloud page no longer carries the moved parts
-  printf '%s' "$ma" | grep -q 'FeedPage(pageOf(it))' && printf '%s' "$ma" | grep -q 'PermsPage()' && ok "MainActivity hosts the Feed and Perms pages" || bad "MainActivity does not host FeedPage and PermsPage"
+  printf '%s' "$ma" | grep -q 'FeedPage(pageOf(it))' && printf '%s' "$ma" | grep -q 'AccessPage(pageOf(it))' && ok "MainActivity hosts the Feed and Access pages" || bad "MainActivity does not host FeedPage and AccessPage"
   printf '%s' "$ma" | grep -q 'PageTabs(section.pages' && printf '%s' "$ma" | grep -q 'StorePages.hostDrawsStrip = true' && ok "MainActivity draws the declared child pages with PageTabs and tells the pages it does" || bad "MainActivity does not draw section.pages with PageTabs"
   local CS="$S/app/src/main/java/com/diegonmarcos/cloudstore"
-  [ -f "$CS/FeedPage.kt" ] && [ -f "$CS/PermsPage.kt" ] && grep -q '@Composable' "$CS/FeedPage.kt" && grep -q '@Composable' "$CS/PermsPage.kt" && grep -q 'FeedViewer.load(' "$CS/FeedPage.kt" && ok "the Feed and Perms pages are Compose (the ratchet's rule) and read libs:appstore's FeedViewer declaration" || bad "FeedPage/PermsPage are missing, not Compose, or no longer read FeedViewer"
+  [ -f "$CS/FeedPage.kt" ] && [ -f "$CS/AccessPage.kt" ] && grep -q '@Composable' "$CS/FeedPage.kt" && grep -q '@Composable' "$CS/AccessPage.kt" && grep -q 'AndroidFragment<AppsMeshFragment>' "$CS/AccessPage.kt" && grep -q 'FeedViewer.load(' "$CS/FeedPage.kt" && ok "the Feed and Access pages are Compose (the ratchet's rule), Access hosts Apps Mesh, and read libs:appstore's FeedViewer declaration" || bad "FeedPage/PermsPage are missing, not Compose, or no longer read FeedViewer"
   grep -q 'object StoreTabs' "$L/StoreBar.kt" && ok "the shared strip builder (StoreTabs) lives once in libs:appstore" || bad "StoreTabs is missing from libs:appstore"
   ! grep -qE 'renderPerms|renderFeed|FeedViewer' "$L/StoreCloudFragment.kt" && ok "the Cloud page draws neither feeds nor Perms" || bad "the Cloud page still carries the moved Feed/Perms parts"
   grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && ok "Cloud and Phone draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
+  # 8b. #896.3 Phone's action bar sits UNDER the top tabs inside the scrolling page, as Cloud's header does (no bottom frame)
+  grep -q 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })' "$L/StorePhoneFragment.kt" && ! grep -qE 'fun frame\(.*actions' "$L/StoreBar.kt" && ok "Phone's action bar is in its page under the tabs, like Cloud's (no bottom bar)" || bad "Phone's action bar left the spot under the tabs"
   # 9. #896 density: the Store is data-dense, so NO Store tab, chip, page or action button may force a
   # minimum height (a 40dp floor made them huge, 2026-10-07). A control is as tall as its text and padding.
   local mh
@@ -231,14 +234,14 @@ mutate "store page bypasses hand-off" super/launcher/SectionPages.kt 'pageId == 
 mutate "package name drifts" super/apps/CloudStoreHandoff.kt 'const val PKG = "com.diegonmarcos.cloudstore"' 'const val PKG = "com.diegonmarcos.store"' || M=$((M+1))
 mutate "OPEN action dropped" store/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudstore.OPEN" />' '' || M=$((M+1))
 mutate "Cloud Store gives up the pass" store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt 'runsFleetPass = { true }' 'runsFleetPass = { false }' || M=$((M+1))
-mutate "Mesh tab dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AndroidFragment<AppsMeshFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "Apps Mesh dropped from Access" store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt 'AndroidFragment<AppsMeshFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
 mutate "island replaced by a TabRow" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'BottomNavHost(' 'TabRow(' || M=$((M+1))
 mutate "island no longer fed by NavDecl" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
 mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "cloud",
       "phone",
       "feed",
-      "perms",
+      "access",
       "settings"
     ]' '"bottom_nav": [
       "cloud",
@@ -246,13 +249,14 @@ mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "feed",
       "perms"
     ]' || M=$((M+1))
+mutate "Phone's action bar goes to the bottom again" lib/StorePhoneFragment.kt 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })' 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, col)' || M=$((M+1))
 mutate "a tab gets a minimum height back" lib/StoreBar.kt '        textSize = StoreDensity.T_BODY
         if (style.stretch) {' '        textSize = StoreDensity.T_BODY; minHeight = 120
         if (style.stretch) {'
 mutate "a button gets a minimum height back" lib/StoreBar.kt '        isEnabled = onClick != null' '        minHeight = 120; isEnabled = onClick != null' || M=$((M+1))
 mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
 mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FeedPage(pageOf(it))' 'Unit' || M=$((M+1))
-mutate "Perms page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PermsPage()' 'Unit' || M=$((M+1))
+mutate "Access page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AccessPage(pageOf(it))' 'Unit' || M=$((M+1))
 mutate "host stops drawing the page strip" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'PageTabs(section.pages' 'PageTabx(section.pages' || M=$((M+1))
 mutate "gradle stops baking the sections" store/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
 A=store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt

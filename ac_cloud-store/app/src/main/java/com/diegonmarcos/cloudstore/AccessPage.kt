@@ -33,11 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.appstore.BuildConfig as StoreBuild
 import com.diegonmarcos.superapp.appstore.StoreDensity
+import com.diegonmarcos.superapp.appstore.AppsMeshFragment
+import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.updater.Fleet
 
 /**
- * Store > Perms: the fleet's permissions page, its own bottom-nav destination (it was the Cloud
- * page's last tab, drawn with Views; the logic is the same). The constellation is a trusted
+ * Store > Access: Apps Mesh, Android Perms and Cloud Perms, one bottom-nav destination whose
+ * top tabs (build.json::ui access.pages: mesh, android, cloud) MainActivity draws with PageTabs.
+ * Apps Mesh left the Cloud page; the permissions page that was here split in two - the OS's own
+ * runtime grants, and the constellation permission - one page each instead of two panes per app.
+ * (The logic is the old Perms tab's, drawn with Views before.) The constellation is a trusted
  * environment because every APK is signed with the SAME key, which is what makes signature-level
  * permissions usable between our apps. Each app card carries two panes: Android Perms (the OS's
  * own runtime grants, read-only here: only the system UI may change them) and Cloud Perms
@@ -45,25 +50,38 @@ import com.diegonmarcos.superapp.updater.Fleet
  * key). Neither pane renders a toggle: a switch could only misreport state it does not control.
  */
 @Composable
-fun PermsPage() {
+fun AccessPage(page: String) {
+    when (page) {
+        PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize())
+        PAGE_ANDROID -> PermsList(cloud = false)
+        else -> PermsList(cloud = true)
+    }
+}
+
+const val PAGE_MESH = "mesh"
+const val PAGE_ANDROID = "android"
+const val PAGE_CLOUD = "cloud"
+
+@Composable
+private fun PermsList(cloud: Boolean) {
     val ctx = LocalContext.current
     val fleet = remember { Fleet.parse(StoreBuild.CONSTELLATION_FLEET_B64) }
     val pad = StoreDensity.dpValue(StoreDensity.S12).dp
     LazyColumn(Modifier.fillMaxSize().padding(pad), verticalArrangement = Arrangement.spacedBy(dpOf(StoreDensity.S4))) {
         item {
-            Text("One signing key across the constellation = signature-level trust. Each app opens on two panes: " +
-                "Android Perms (the OS's own runtime grants — read-only here, the system screen owns them) and " +
-                "Cloud Perms (our constellation permission, granted automatically to every app carrying the Cloud " +
-                "key, so they talk freely to each other by default).", color = DIM, fontSize = StoreDensity.T_META.sp)
+            Text(if (cloud)
+                "Cloud Perms: our constellation permission, granted automatically to every app carrying the Cloud signing key, so they talk freely to each other by default."
+            else
+                "Android Perms: the OS's own runtime grants, read-only here - the system screen owns them.",
+                color = DIM, fontSize = StoreDensity.T_META.sp)
         }
-        items(fleet.filter { it.pkg != ctx.packageName }, key = { it.id }) { app -> PermsCard(ctx, app) }
+        items(fleet.filter { it.pkg != ctx.packageName }, key = { it.id }) { app -> PermsCard(ctx, app, cloud) }
     }
 }
 
 @Composable
-private fun PermsCard(ctx: Context, app: Fleet.App) {
+private fun PermsCard(ctx: Context, app: Fleet.App, cloud: Boolean) {
     val pkg = Fleet.installedId(ctx, app)
-    var pane by remember(app.id) { mutableStateOf(0) }   // 0 = Android, 1 = Cloud
     val h = dpOf(StoreDensity.S12); val v = dpOf(StoreDensity.S6)
     Column(Modifier.fillMaxWidth().background(CARD).padding(h, v)) {
         Text(app.label + (if (app.kind == "lib") "  ·  lib" else ""), color = Color.White,
@@ -75,16 +93,7 @@ private fun PermsCard(ctx: Context, app: Fleet.App) {
             else -> Text("⚠ different signature  ·  NOT eligible — reinstall from our release", color = BLOCKED, fontSize = StoreDensity.T_META.sp)
         }
         if (pkg == null) return@Column
-        // Per-app sub-tabs: two genuinely different systems, so two panes rather than one mixed list.
-        Row(Modifier.fillMaxWidth().padding(top = dpOf(StoreDensity.S6), bottom = dpOf(StoreDensity.S4)),
-            horizontalArrangement = Arrangement.spacedBy(dpOf(StoreDensity.S4))) {
-            listOf("Android Perms", "Cloud Perms").forEachIndexed { i, label ->
-                Text(label, Modifier.weight(1f).clickable { pane = i }
-                    .background(if (i == pane) ACTIVE else IDLE).padding(dpOf(StoreDensity.S8)),
-                    color = Color.White, fontSize = StoreDensity.T_META.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-        }
-        if (pane == 0) AndroidPerms(ctx, pkg) else CloudPerms(ctx, pkg)
+        if (cloud) CloudPerms(ctx, pkg) else AndroidPerms(ctx, pkg)
     }
 }
 
@@ -95,7 +104,7 @@ private fun AndroidPerms(ctx: Context, pkg: String) {
     val requested = runCatching {
         pm.getPackageInfo(pkg, PackageManager.GET_PERMISSIONS).requestedPermissions?.toList()
     }.getOrNull().orEmpty()
-        // Our constellation permission lives in the other pane; here the platform's own.
+        // Our constellation permission lives on the Cloud Perms page; here the platform's own.
         .filter { it.startsWith("android.permission.") }.sorted()
     if (requested.isEmpty()) {
         Text("Requests no Android permissions.", color = DIM, fontSize = StoreDensity.T_META.sp)
@@ -110,7 +119,7 @@ private fun AndroidPerms(ctx: Context, pkg: String) {
                 ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }.onFailure { Toast.makeText(ctx, "No settings screen", Toast.LENGTH_SHORT).show() }
-        }.padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S8)),
+        }.padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S4)),
         color = Color.White, fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_META.sp)
 }
 
@@ -150,5 +159,4 @@ private val MISSING = Color(0xFF63B3ED)
 private val BLOCKED = Color(0xFFF56565)
 private val DIM = Color(0x99FFFFFF)
 private val CARD = Color(0xFF1C1C24)
-private val ACTIVE = Color(0xFF7C3AED)
 private val IDLE = Color(0xFF2A2A33)

@@ -84,10 +84,12 @@ echo "$out" | grep -qx 'ORDER wg,dns,kde,apps-mesh' && ok "Setup ▸ Network = C
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.page(this, col)' && ok "AppsMeshFragment hosts AppsMesh.page" \
   || bad "AppsMeshFragment does not draw AppsMesh.page"
-fn "$PAGE" renderMesh | grep -qF 'AppsMesh.page(this, host)' && ok "Store's renderMesh hosts the same AppsMesh.page" \
-  || bad "Store's renderMesh does not draw AppsMesh.page — the two entry points show different pages"
-fn "$PAGE" renderMesh | grep -qF 'StoreMesh.render' && bad "Store's renderMesh still draws its own copy of the mesh" \
-  || ok "Store's renderMesh draws no copy of its own"
+# #896.3 the Store's entry point is Cloud Store's Access page, which hosts the SAME AppsMeshFragment (no copy).
+ACCESS="$ROOT/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt"
+grep -qF 'AndroidFragment<AppsMeshFragment>' "$ACCESS" && ok "Store's Access page hosts the same AppsMeshFragment (AppsMesh.page)" \
+  || bad "Store's Access page does not host AppsMeshFragment — the two entry points show different pages"
+{ grep -qF 'StoreMesh.render' "$PAGE" || grep -qF 'AppsMesh.page(' "$PAGE"; } && bad "the Cloud page still draws its own mesh" \
+  || ok "the Cloud page draws no mesh (it moved to Access)"
 # #865 directly, or through the Cloud Store hand-off that embeds it until Cloud Store is installed.
 HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
 { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*AppsMeshFragment\(\)' "$PAGES" ||

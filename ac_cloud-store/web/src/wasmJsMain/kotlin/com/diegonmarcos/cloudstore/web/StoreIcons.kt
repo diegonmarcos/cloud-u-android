@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 /**
  * The glyphs of the store's sections (ui.sections[].icon in ac_cloud-store/build.json), drawn
  * as plain path data so the page needs no icon artifact. The Android shell maps the same names to
- * Material icons (Cloud, PhoneAndroid, RssFeed, Security, Hub, Settings); the shapes here are the same idea, not a
+ * Material icons (Cloud, PhoneAndroid, RssFeed, Security, Settings); the shapes here are the same idea, not a
  * pixel copy.
  */
 internal object StoreIcons {
@@ -53,7 +53,7 @@ internal object StoreIcons {
         "phone" -> phone
         "mesh" -> mesh
         "feed" -> feed
-        "perms" -> perms
+        "access" -> perms
         else -> settings
     }
 }

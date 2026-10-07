@@ -200,12 +200,12 @@
     "shortcut_action": "page:config/dns"
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. #896: the island holds five (libs:bottomnav MAX_BOTTOM, nav-shape N1), so it is Cloud, Phone, Feed, Perms, Settings. Phone's first child pages are Installed and Declared and Feed's are Commits and CI-CD (ids = appstore-feeds.json feed ids): MainActivity draws them with PageTabs and StorePages tells the page below which is open, while an embedding host without a strip (SuperApp's Store) gets the same pages drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and the Apps Mesh page, which is declared but off the island: it is one chip on the Cloud page. Perms was the Cloud page's last tab; Commits and CI-CD were its feed chips.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The island holds five (libs:bottomnav MAX_BOTTOM, nav-shape N1): Cloud, Phone, Feed, Access, Settings. #896/#896.3 child pages: Phone = Installed | Declared, Feed = Commits | CI-CD (ids = appstore-feeds.json feed ids), Access = Apps Mesh | Android Perms | Cloud Perms. MainActivity draws them with PageTabs and StorePages tells the pages below which is open; a host with no strip (SuperApp's embedded Store) gets Phone's drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and nothing else: Apps Mesh and Perms moved to Access, Commits and CI-CD to Feed.",
     "bottom_nav": [
       "cloud",
       "phone",
       "feed",
-      "perms",
+      "access",
       "settings"
     ],
     "sections": [
@@ -246,16 +246,23 @@
         ]
       },
       {
-        "id": "perms",
-        "label": "Perms",
-        "icon": "perms",
-        "pages": []
-      },
-      {
-        "id": "mesh",
-        "label": "Mesh",
-        "icon": "mesh",
-        "pages": []
+        "id": "access",
+        "label": "Access",
+        "icon": "access",
+        "pages": [
+          {
+            "id": "mesh",
+            "label": "Apps Mesh"
+          },
+          {
+            "id": "android",
+            "label": "Android Perms"
+          },
+          {
+            "id": "cloud",
+            "label": "Cloud Perms"
+          }
+        ]
       },
       {
         "id": "settings",

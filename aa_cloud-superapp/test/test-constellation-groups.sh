@@ -16,6 +16,7 @@ ROOT="$(cd "$APP/.." && pwd)"
 FLEET="$APP/data/constellation-fleet.json"
 BUILD="$APP/build.json"
 LIBS="$ROOT/ab_cloud-libs-shared/libs"
+STORE_BJ="$ROOT/ac_cloud-store/build.json"
 PAGE="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
 ENGINE="$LIBS/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt"
 PASS=0; FAIL=0
@@ -313,8 +314,8 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # #732 each line's entries are now Controls carrying their declared look, so
 # the line list is two lists of Controls; the membership asserted is the same.
 command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupTab) }' "$PAGE" \
-  && command grep -qF 'listOf(controls.page(MESH))' "$PAGE" \
-  && ok "line 1 = declared groups, line 2 = the page's own Mesh (#728); the feeds and Perms are the Feed and Perms pages since #896" \
+  && ! command grep -qF 'controls.page(' "$PAGE" \
+  && ok "the Cloud page is ONE line, the declared groups; Mesh, the feeds and Perms are Access/Feed pages since #896/#896.3" \
   || bad "the tab lines are not built from the two declarations"
 
 # (c) TWO strips inside one column, from ONE button builder - not a second
@@ -366,10 +367,10 @@ done
 # ... and the page's own entry is named by the IDS their declaration is
 # keyed on, so the caption can change in data with no Kotlin edit.
 for id in $(jq -r '.pages | keys[]' "$CONTROLS_ASSET"); do
-  jq -e --arg id "$id" '.feeds[] | select(.id == $id)' "$FEEDS_ASSET" >/dev/null && continue
-  command grep -qE "const val [A-Z]+ = \"$id\"" "$PAGE" \
-    && ok "page-owned entry '$id' is named by its declared id" \
-    || bad "appstore-controls.json declares page '$id' that is neither a feed nor a const id on the page"
+  # #896.3 a declared page is Access's (its label is the Apps Mesh caption SuperApp must equal), never a Cloud chip.
+  jq -e --arg id "$id" '.ui.sections[] | select(.id == "access") | .pages[] | select(.id == $id)' "$STORE_BJ" >/dev/null \
+    && ok "declared page '$id' is a child page of Access" \
+    || bad "appstore-controls.json declares page '$id' that is no child page of Access"
 done
 
 echo "== T10: #671 the two lines are two CONTROL LANGUAGES, not two rows of the same pill =="
@@ -396,10 +397,10 @@ done
 #     test-store-controls.sh's job; here, that tabBar sources the two lines'
 #     looks from those two DIFFERENT declarations rather than one.
 printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
-  && printf '%s' "$TABBAR" | command grep -qF 'controls.page(MESH)' \
-  && ! printf '%s' "$TABBAR" | command grep -qE 'controls\.page\([^)]*\)[^\n]*groupTab' \
-  && ok "tabBar dresses line 1 and line 2 from two DIFFERENT style declarations" \
-  || bad "tabBar dresses both lines from one style - identical pills are back"
+  && printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
+  && ! printf '%s' "$TABBAR" | command grep -qF 'controls.page(' \
+  && ok "tabBar dresses its one line from the group-tab declaration (no page chips left on Cloud)" \
+  || bad "tabBar draws page chips again"
 
 # (b) ONE builder still, and it is the thing that VARIES by style. A builder
 #     that ignores its style argument is the same defect wearing a parameter.

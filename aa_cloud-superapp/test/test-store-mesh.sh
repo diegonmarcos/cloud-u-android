@@ -6,7 +6,7 @@
 #   M2  every link points at a fleet member (a dangling link has no Store row to fix)
 #   M3  StoreMesh reads nodes, groups and links off the manifest and names none
 #       of the members or packages the links involve
-#   M4  the page reaches it: Mesh is on the destination line and renderTab draws it
+#   M4  the page reaches it: Apps Mesh is Access's first child page and Access hosts AppsMeshFragment
 #
 # What it DRAWS (every member is a node, a missing engine is the red link with
 # its fix) is asserted by app/src/test/.../StoreMeshTest.kt on the baked fleet.
@@ -77,12 +77,11 @@ for id in $lib_pkgs; do
 done
 
 echo "== M4: Store ▸ Mesh is reachable =="
-grep -qF 'listOf(controls.page(MESH))' "$PAGE" \
-  && ok "Mesh sits on the destination line (the one page left there since #896 moved Perms and the feeds)" || bad "Mesh is not on the tab bar"
-render_tab="$(awk '/private fun renderTab\(/{f=1} f{print} f && /^    }$/{exit}' "$PAGE")"
-[ -n "$render_tab" ] || bad "could not isolate renderTab - the next check would verify nothing"
-printf '%s' "$render_tab" | grep -qF 'else -> renderMesh(ctx)' \
-  && ok "renderTab draws the mesh at Mesh's index" || bad "renderTab never draws the mesh"
+jq -e '.ui.sections[] | select(.id == "access") | .pages[0].id == "mesh"' "$ROOT/ac_cloud-store/build.json" >/dev/null \
+  && ok "Apps Mesh is the first child page of Access (#896.3)" || bad "Apps Mesh is not Access's first page"
+grep -qF 'AndroidFragment<AppsMeshFragment>' "$ROOT/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt" \
+  && ok "Access draws the mesh" || bad "Access never draws the mesh"
+! grep -qE 'renderMesh|controls.page\(MESH' "$PAGE" && ok "the Cloud page no longer carries the mesh" || bad "the Cloud page still carries the mesh"
 
 echo
 echo "== RESULT(#728 store mesh): $PASS passed, $FAIL failed =="

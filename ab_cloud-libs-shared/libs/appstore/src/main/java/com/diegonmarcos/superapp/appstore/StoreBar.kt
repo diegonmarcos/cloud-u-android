@@ -8,7 +8,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.HorizontalScrollView
 import android.view.ViewGroup
-import android.widget.ScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -244,32 +243,16 @@ object StoreBar {
     private const val DISABLED = 0xFF3A3A44.toInt()
 }
 
-/** The Store's page frame: the tab strip on top (when this page draws it), the content filling the
- *  middle, and the action bar at the bottom - the pattern the Cloud page wears. */
+/** The Store's page frame: the tab strip on top (when this page draws it) and the page's scrolling
+ *  content below it; a page's action bar is the first thing IN that content, under the tabs, as the
+ *  Cloud page's header is (#896.3). */
 object StorePage {
-    /** At most this share of the screen height goes to the bottom bar; a taller bar scrolls inside it. */
-    private const val MAX_BAR_PERCENT = 38
-
-    fun frame(ctx: Context, strip: View?, content: View, actions: View?): LinearLayout =
+    fun frame(ctx: Context, strip: View?, content: View): LinearLayout =
         LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = StoreDensity.dp(ctx, StoreDensity.S8)
             if (strip != null) { strip.setPadding(p, p, p, 0); addView(strip) }
             addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            if (actions != null) {
-                val cap = ctx.resources.displayMetrics.heightPixels * MAX_BAR_PERCENT / 100
-                val bar = ScrollView(ctx).apply {
-                    setBackgroundColor(0xFF14141A.toInt())
-                    addView(LinearLayout(ctx).apply {
-                        orientation = LinearLayout.VERTICAL; setPadding(p, p, p, p); addView(actions)
-                    })
-                    // A long bar scrolls inside its cap rather than eating the list.
-                    addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
-                        if (bottom - top > cap) { v.layoutParams.height = cap; v.requestLayout() }
-                    }
-                }
-                addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
         }
 }
 

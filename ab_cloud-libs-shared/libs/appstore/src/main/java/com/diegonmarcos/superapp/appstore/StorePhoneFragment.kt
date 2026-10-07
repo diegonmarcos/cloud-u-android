@@ -124,22 +124,16 @@ class StorePhoneFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
         }
-        col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
-        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        list = rowsView
-        col.addView(rowsView)
-
-        // The BOTTOM ACTION BAR: the SAME bar the Cloud tab draws. #571: Install all and Update all are
-        // real verbs here now - they walk every row this store can serve itself (fleet path, vendor
-        // APK, F-Droid) and report the rows that need Play. Then export / import / clear cache, and
-        // the store-source strip (which store the rows come from).
-        val bar = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        bar.addView(LinearLayout(ctx).apply {
+        // THE ACTION BAR sits right under the top tabs, exactly where the Cloud page's header does (#896.3):
+        // the SAME bar the Cloud tab draws. #571: Install all and Update all are real verbs here now - they
+        // walk every row this store can serve itself (fleet path, vendor APK, F-Droid) and report the rows
+        // that need Play. Then export / import / clear cache, and the store-source strip.
+        col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
-        bar.addView(LinearLayout(ctx).apply {
+        col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) })
             addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
@@ -153,8 +147,12 @@ class StorePhoneFragment : Fragment() {
                 .also { cacheBtn = it })
         })
         sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        bar.addView(sourceHost)
-        return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, bar)
+        col.addView(sourceHost)
+        col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
+        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        list = rowsView
+        col.addView(rowsView)
+        return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })
     }
 
     /** [installedOnly] is the selected page, and the strip paints it. */

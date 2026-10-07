@@ -334,22 +334,18 @@ class StoreCloudFragment : Fragment() {
         return proceed
     }
 
-    // ── tabs: one per declared group, then the Apps Mesh page ─────────────────
+    // ── tabs: one per declared group ──────────────────────────────────────────
     /**
-     * #660 — TWO LINES, because these are two different kinds of tab.
-     *
      * A declared group is a TYPE OF APK: Apps, Libs, Lite-ML, Tiny-ML partition the fleet, and
-     * picking one narrows what the page is showing you. Apps Mesh narrows nothing - it is a page
-     * of its own - so it sits on a second line wearing the `page` style rather than the segmented
-     * `tab` one (#671/#732). The Commits and CI-CD feeds and Perms used to be on that line; they
-     * are bottom-nav pages now (#896: Feed, Perms), so this line holds the one page left.
+     * picking one narrows what the page is showing you, so they are the segmented `tab` style (#671/#732).
+     * The Commits and CI-CD feeds, Perms and Apps Mesh used to be a second line of page chips; they
+     * are bottom-nav pages now (#896 Feed, #896.3 Access), so this page is one line.
      *
-     * The strip itself is [StoreTabs.bar], the same builder Phone draws with. WHICH LINE A
-     * TAB SITS ON IS NOT WRITTEN HERE: it is which declaration the tab came from.
+     * The strip itself is [StoreTabs.bar], the same builder Phone draws with. WHICH TABS EXIST is
+     * not written here: it is the declared groups.
      */
     private fun tabBar(ctx: Context): View = StoreTabs.bar(ctx, listOf(
-        tabs.map { StoreControls.Control(it.label, "", controls.groupTab) },
-        listOf(controls.page(MESH))), tabBtns) { index ->
+        tabs.map { StoreControls.Control(it.label, "", controls.groupTab) }), tabBtns) { index ->
         if (tab != index) { tab = index; filter = 0; paintTabs(); renderTab(ctx) }
     }
 
@@ -359,30 +355,14 @@ class StoreCloudFragment : Fragment() {
         body.removeAllViews()
         statusViews.clear(); actionRows.clear(); stageBtns.clear()
         fullStatusViews.clear(); dots.clear(); errBoxes.clear(); quickBtns.clear(); filterChips.clear()
-        // Past the last group is the Apps Mesh page. Each blurb is data beside its group, so the
-        // caption naming the out-of-process engines moves with the engines.
-        val shown = tabs.getOrNull(tab)
-        when {
-            shown != null -> renderFleet(ctx, shown.rows, shown.blurb, shown.id == libConsumers.optString("group"))
-            else -> renderMesh(ctx)
-        }
+        // Each blurb is data beside its group, so the caption naming the out-of-process engines moves
+        // with the engines. (#896.3: Apps Mesh left this page for Access, so every tab is a group.)
+        val shown = tabs.getOrNull(tab) ?: return
+        renderFleet(ctx, shown.rows, shown.blurb, shown.id == libConsumers.optString("group"))
     }
 
-    /**
-     * #728/#733 Store ▸ Apps Mesh — [AppsMesh.page], the one page Configs ▸
-     * Mesh ▸ Apps Mesh also draws (AppsMeshFragment). This host adds the one
-     * thing only it has: a member's Store row ([openDetail]). The page probes
-     * off the main thread and redraws only while its view is still attached,
-     * so leaving the tab drops a late probe rather than drawing into it.
-     */
-    private fun renderMesh(ctx: Context) {
-        val host = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        body.addView(host)
-        AppsMesh.page(this, host) { openDetail(ctx, it) }
-    }
-
-    /** A mesh node's Store detail: its group's tab, the row expanded and
-     *  scrolled into view. A member no tab holds has no row to open. */
+    /** A fleet app's detail (from the progress row): its group's tab, the row expanded and
+     *  scrolled into view. An app no tab holds has no row to open. */
     private fun openDetail(ctx: Context, app: Fleet.App) {
         val target = tabs.indexOfFirst { t -> t.rows.any { it.id == app.id } }
         if (target < 0) return
@@ -1206,8 +1186,6 @@ class StoreCloudFragment : Fragment() {
         const val OTHER = "Other"
 
 
-        /** #728 the mesh view — #733 the shared Apps Mesh page (see [renderMesh]). */
-        const val MESH = "mesh"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = StoreDensity.T_CAPTION; setTextColor(cDim); typeface = Typeface.MONOSPACE

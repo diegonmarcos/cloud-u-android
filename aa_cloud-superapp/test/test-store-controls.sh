@@ -44,9 +44,9 @@ n="$(printf '%s\n' "$shapes" | grep -c .)"; u="$(printf '%s\n' "$shapes" | sort 
 echo "== C2: every line-2 entry is a page button =="
 # The line-2 ids are DERIVED: every declared feed, plus the ids the page owns
 # (its const vals). A pinned list here would not notice a fifth entry.
-owned="$(command grep -oE 'const val MESH = "[a-z]+"' "$PAGE" | sed 's/.*"\(.*\)"/\1/')"
-# #896 the feeds moved to the Feed page (tab style), so line 2 is what the Cloud page owns.
-ids="$owned"
+# #896.3 the Cloud page has no line 2 any more (the feeds, Perms and Apps Mesh left it); what the asset still
+# declares as a `page` is Apps Mesh's caption, which SuperApp's apps-mesh page must equal.
+ids="$(jq -r '.pages | keys[]' "$DECL")"
 count=0
 for id in $ids; do
   count=$((count+1))
@@ -63,7 +63,8 @@ for id in $ids; do
     [ -n "$lbl" ] && ok "page '$id' declares its caption ($lbl)" || bad "page '$id' declares no caption"
   fi
 done
-[ "$count" -ge 1 ] && ok "$count line-2 entry checked (Apps Mesh; the feeds and Perms left for their own pages, #896)" \
+! grep -qF 'controls.page(' "$PAGE" && ok "the Cloud page draws no page chips" || bad "the Cloud page draws page chips again"
+[ "$count" -ge 1 ] && ok "$count declared page checked (Apps Mesh's caption)" \
   || bad "only $count line-2 entries derived - the checks above verified too little"
 
 echo "== C3: the page style looks like a page button =="
@@ -82,9 +83,9 @@ PAINT="$(tabs_body_of 'fun paint(buttons')"; BTN="$(body_of 'private fun btn(')"
 for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT" "btn:$BTN"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*} - every assertion about it would verify nothing"
 done
-printf '%s' "$TABBAR" | grep -qF 'listOf(controls.page(MESH))' \
-  && ok "line 2 is Apps Mesh, dressed by its page declaration" \
-  || bad "tabBar does not dress line 2 from the page declarations"
+printf '%s' "$TABBAR" | grep -qF 'controls.groupTab' \
+  && ok "the one line is dressed by the group-tab declaration" \
+  || bad "tabBar does not dress its line from the group-tab declaration"
 printf '%s' "$TABBTN" | grep -qF 'listOf(control.icon, control.label, style.chevron)' \
   && ok "tabButton draws icon, caption and chevron" || bad "tabButton drops the icon or the chevron"
 printf '%s' "$PAINT" | grep -qF 'StoreControls.background(t.context, style, on)' \
