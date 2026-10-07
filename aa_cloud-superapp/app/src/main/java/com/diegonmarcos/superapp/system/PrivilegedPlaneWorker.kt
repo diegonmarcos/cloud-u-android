@@ -34,6 +34,12 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
     override fun doWork(): Result {
         val ctx = applicationContext
         enableWirelessDebugging(ctx)
+        // First consultation of the ladder at start: resolves the active channel and,
+        // with our own server down but Shizuku (or the paired embedded adb) up,
+        // self-bootstraps it through that channel — the PRIMARY must not depend on
+        // a PC running /api/adb/server-command.
+        Log.i(TAG, "shell ladder at start: ${com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.name() ?: "none"}" +
+            " — own server self-bootstrap ${com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctx)}")
 
         var last = ""
         for (attempt in 1..ATTEMPTS) {

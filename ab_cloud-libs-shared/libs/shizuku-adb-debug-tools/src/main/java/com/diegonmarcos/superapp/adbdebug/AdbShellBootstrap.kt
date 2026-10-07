@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.adbdebug
 
 import android.content.Context
+import android.os.SystemClock
+import android.util.Log
 import java.util.UUID
 
 /**
@@ -48,11 +50,56 @@ object AdbShellBootstrap {
     fun shellCommand(ctx: Context): String {
         val pkg = ctx.packageName
         val tok = token(ctx)
-        return "CLASSPATH=\$(pm path $pkg | cut -d: -f2) " +
+        // `export …;` not `CLASSPATH=… nohup …`: every channel runs this through a
+        // plain `sh -c`, and a leading assignment breaks the moment anything
+        // (`timeout`, a wrapper) is put in front of it (rc 127).
+        return "export CLASSPATH=\$(pm path $pkg | cut -d: -f2); " +
             "nohup app_process /system/bin --nice-name=${niceName()} " +
             "${serverClass()} $tok ${port()} </dev/null >/dev/null 2>&1 &"
     }
 
+    /**
+     * Self-bootstrap of the PRIMARY through the fallback. Only a shell-domain
+     * process can launch our server, and today that was adb alone — so when
+     * the server is down but ANY other channel of the ladder is up (Shizuku,
+     * or the embedded adb once paired), run the same launch line through it.
+     * One attempt, then again only after the server has stayed down ≥
+     * [RETRY_MS]; the stamp is elapsedRealtime, which restarts at boot, so a
+     * stamp from the future is a previous boot and the attempt is due again.
+     * Logs one line per attempt; the result is kept for [bootstrapState].
+     */
+    fun ensureServer(ctx: Context, ladder: List<ShellChannel>): Boolean {
+        if (LocalShellChannel.isReady(ctx)) return true
+        val via = ladder.firstOrNull { it !== LocalShellChannel && it.isReady(ctx) } ?: return false
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = SystemClock.elapsedRealtime()
+        val last = sp.getLong(K_BOOT_AT, -1L)
+        if (last in 0..now && now - last < RETRY_MS) return false
+        sp.edit().putLong(K_BOOT_AT, now).putString(K_BOOT_RESULT, "attempted via ${via.name()}: launching").apply()
+        val out = via.exec(ctx, shellCommand(ctx))?.trim().orEmpty()
+        var up = false
+        repeat(6) { if (!up) { Thread.sleep(500); up = LocalShellChannel.isReady(ctx) } }
+        val result = "attempted via ${via.name()}: " +
+            if (up) "server up" else "server did not come up" + (if (out.isBlank()) "" else " (${out.take(80)})")
+        sp.edit().putString(K_BOOT_RESULT, result).apply()
+        Log.i(TAG, "self-bootstrap $result")
+        return up
+    }
+
+    /** One short string for /api/adb/status + the Permissions row: was the
+     *  self-bootstrap attempted this boot, through which channel, and how
+     *  did it end. No network — safe on the main thread. */
+    fun bootstrapState(ctx: Context): String {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val last = sp.getLong(K_BOOT_AT, -1L)
+        if (last < 0 || last > SystemClock.elapsedRealtime()) return "not attempted this boot (no other channel was ready)"
+        return sp.getString(K_BOOT_RESULT, null) ?: "not attempted this boot (no other channel was ready)"
+    }
+
+    private const val TAG     = "AdbShellBootstrap"
     private const val PREFS   = "adb_shell"
     private const val K_TOKEN = "token"
+    private const val K_BOOT_AT     = "bootstrap_at"      // elapsedRealtime ms of the last attempt
+    private const val K_BOOT_RESULT = "bootstrap_result"
+    private const val RETRY_MS = 60_000L
 }

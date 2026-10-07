@@ -106,6 +106,43 @@ SC="$LIB/src/main/java/com/diegonmarcos/superapp/adbdebug/ShellChannel.kt"
 has "$SC" 'RishBridge.providers' "the ladder orders channels by the DATA (provider order)"
 has "$SC" 'SuperappBridgeChannel' "the ladder includes the superapp bridge channel"
 
+echo "── own shell server: R8 keep + self-bootstrap through the fallback ──"
+# The PRIMARY channel is OUR app_process server (AdbShellServer). Two things
+# kept it from ever coming up: R8 stripped the class (nothing in the app
+# references it — app_process loads it by name), and only a PC running
+# /api/adb/server-command could launch it. Now: the keep rule is GENERATED from
+# the same build.json value the server-command bakes (one declaration), and the
+# ladder launches the server through whichever other channel is up, once per
+# boot (then only after it has stayed down >= 60 s), reporting the result.
+SUPERAPP="$ANDROID/aa_cloud-superapp"
+ADB="$LIB/src/main/java/com/diegonmarcos/superapp/adbdebug"
+cls=$(python3 -c "import json;print(json.load(open('$SUPERAPP/build.json'))['shizuku_diagnostics']['local_server']['class'])" 2>/dev/null)
+if [ -n "$cls" ]; then ok "build.json::local_server.class declares the server class"; else bad "build.json::local_server.class missing"; fi
+if [ -f "$ADB/${cls##*.}.kt" ] && grep -q "^object ${cls##*.}" "$ADB/${cls##*.}.kt" && grep -q "fun main(args: Array<String>)" "$ADB/${cls##*.}.kt"; then
+    ok "the declared class exists in the lib with a main(String[]) entry point"; else bad "declared class $cls has no object/main in the lib"; fi
+has "$LIB/build.gradle" "adbServer['class']" "lib build.gradle reads local_server.class ONCE"
+has "$LIB/build.gradle" 'ADB_SHELL_SERVER_CLASS", "\"${adbServerClass}' "the server-command bakes that value into BuildConfig"
+has "$LIB/build.gradle" '-keep class ${adbServerClass} { public static void main(java.lang.String[]); }' "the R8 keep rule is generated from the SAME value"
+has "$LIB/build.gradle" '-keep class ${adbServerClass}\$* { *; }' "nested classes of the server are kept too"
+has "$LIB/build.gradle" "consumerProguardFiles 'consumer-rules.pro', adbServerKeep" "the generated rule ships as a consumer rule"
+if grep -q "^-keep.*AdbShellServer" "$LIB/consumer-rules.pro"; then bad "consumer-rules.pro hardcodes the class (second declaration)"; else ok "consumer-rules.pro carries no second copy of the class name"; fi
+has "$ADB/AdbShellBootstrap.kt" 'BuildConfig.ADB_SHELL_SERVER_CLASS' "the launch line names the class from BuildConfig, not a literal"
+has "$ADB/AdbShellBootstrap.kt" 'export CLASSPATH=\$(pm path $pkg | cut -d: -f2); ' "launch line is split for a plain sh -c (export …; nohup …)"
+has "$ADB/AdbShellBootstrap.kt" 'nohup app_process /system/bin --nice-name=' "launch line detaches app_process with nohup"
+has "$ADB/AdbShellBootstrap.kt" 'fun ensureServer(ctx: Context, ladder: List<ShellChannel>)' "AdbShellBootstrap.ensureServer takes the ladder"
+has "$ADB/AdbShellBootstrap.kt" 'if (LocalShellChannel.isReady(ctx)) return true' "bootstrap is a no-op while the server is up"
+has "$ADB/AdbShellBootstrap.kt" 'it !== LocalShellChannel && it.isReady(ctx)' "bootstrap runs through the active NON-local channel"
+has "$ADB/AdbShellBootstrap.kt" 'via.exec(ctx, shellCommand(ctx))' "bootstrap runs the SAME launch line the server-command shows"
+has "$ADB/AdbShellBootstrap.kt" 'SystemClock.elapsedRealtime()' "once-per-boot guard keys on elapsedRealtime (restarts at boot)"
+has "$ADB/AdbShellBootstrap.kt" 'now - last < RETRY_MS) return false' "no retry storm: one attempt, again only after RETRY_MS"
+has "$ADB/AdbShellBootstrap.kt" 'RETRY_MS = 60_000L' "retry window is 60 s"
+has "$ADB/AdbShellBootstrap.kt" 'Log.i(TAG, "self-bootstrap $result")' "one log line per attempt"
+has "$ADB/AdbShellBootstrap.kt" 'fun bootstrapState(ctx: Context): String' "bootstrap result is exposed as one short string"
+has "$ADB/ShellChannel.kt" 'if (RishBridge.providers.isEmpty()) AdbShellBootstrap.ensureServer(ctx, ladder)' "the ladder's active() triggers the self-bootstrap — only in the app that owns the server (no shizuku_client block)"
+has "$ADB/LocalShellChannel.kt" 'self-bootstrap ${AdbShellBootstrap.bootstrapState(ctx)}' "/api/adb/status local-server row says attempted + result"
+has "$SUPERAPP/app/src/main/java/com/diegonmarcos/superapp/system/PrivilegedPlaneWorker.kt" 'ShellChannels.active(ctx)?.name()' "PrivilegedPlaneWorker consults the ladder at start"
+has "$SUPERAPP/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt" 'AdbShellBootstrap.bootstrapState(ctxAny())' "Permissions page row shows the same bootstrap string"
+
 echo
 if [ "$fails" -eq 0 ]; then
     echo "ALL GREEN — both terminals are Shizuku clients with rish, one declarative block, lib reads it"

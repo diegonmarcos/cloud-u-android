@@ -136,6 +136,9 @@ class PermissionsFragment : Fragment() {
         }
 
         // ── Privileged plane: pair once (ever), then it self-heals on every boot/launch ──
+        // Our OWN channel (local-server, the PRIMARY): the same self-bootstrap
+        // string /api/adb/status reports — prefs only, no socket on the main thread.
+        row(ctx, col, "Own shell server (local-server)", "self-bootstrap " + com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctxAny()))
         col.addView(small(ctx, "Privileged plane — " + (plane?.let { "connected via ${it.name()}" } ?: "NOT connected") +
             ". Pair ONCE, the Shizuku way: ② posts a notification, then phone Settings → Developer options → Wireless debugging → 'Pair device with pairing code' and type the 6-digit code INTO THE NOTIFICATION. IP and ports are discovered over mDNS — nothing to copy. After that every boot/launch reconnects and self-grants the list above."))
         // Step ⓪ (optional): no external WiFi to join? Spin up a device-local

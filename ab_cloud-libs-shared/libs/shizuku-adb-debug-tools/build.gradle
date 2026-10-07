@@ -30,6 +30,15 @@ def adbServerPort = (adbServer.port ?: 38099) as int
 // NB: adbServer['class'] (bracket) — Groovy's `.class` returns getClass().
 def adbServerClass = adbServer['class'] ?: 'com.diegonmarcos.superapp.adbdebug.AdbShellServer'
 def adbServerNice = adbServer.nice_name ?: 'superapp-adb'
+// R8 keep for the app_process entry point, generated from the SAME value the
+// server-command bakes (ONE declaration: build.json::local_server.class). The
+// release APK stripped AdbShellServer — nothing in the app references it, only
+// app_process does, by name — so the launch died with "could not find class"
+// (rc 134) and the PRIMARY channel could never come up.
+def adbServerKeep = new File(buildDir, 'generated/adb-server-keep.pro')
+adbServerKeep.parentFile.mkdirs()
+adbServerKeep.text = "-keep class ${adbServerClass} { public static void main(java.lang.String[]); }\n" +
+                     "-keep class ${adbServerClass}\$* { *; }\n"
 
 // Samsung SFC verdict config (model->max-watts cap map + thresholds).
 // Data-driven: baked into BuildConfig for the PURE SfcVerdict parser to read
@@ -61,7 +70,7 @@ android {
     compileSdk 36
     defaultConfig {
         minSdk 26
-        consumerProguardFiles 'consumer-rules.pro'
+        consumerProguardFiles 'consumer-rules.pro', adbServerKeep
         buildConfigField "String", "ADB_DIAG_BUNDLES_B64", "\"${adbBundlesB64}\""
         buildConfigField "int",    "ADB_SHELL_SERVER_PORT",  "${adbServerPort}"
         buildConfigField "String", "ADB_SHELL_SERVER_CLASS", "\"${adbServerClass}\""

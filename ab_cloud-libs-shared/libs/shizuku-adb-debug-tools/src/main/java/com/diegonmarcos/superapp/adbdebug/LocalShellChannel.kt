@@ -34,5 +34,5 @@ object LocalShellChannel : ShellChannel {
 
     override fun status(ctx: Context): String =
         if (isReady(ctx)) "Running — self-contained app_process server on 127.0.0.1:${AdbShellBootstrap.port()} (shell domain)"
-        else "Not started — run /api/adb/server-command once per boot via adb/Wireless Debugging"
+        else "Not started — self-bootstrap ${AdbShellBootstrap.bootstrapState(ctx)}; or run /api/adb/server-command once per boot via adb/Wireless Debugging"
 }

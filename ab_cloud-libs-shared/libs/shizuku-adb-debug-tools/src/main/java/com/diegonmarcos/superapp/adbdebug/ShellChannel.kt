@@ -80,6 +80,17 @@ object ShellChannels {
             return if (declared.isEmpty()) self + ShizukuShellChannel else self + declared
         }
 
-    /** First channel that's ready, or null when neither is available. */
-    fun active(ctx: Context): ShellChannel? = all.firstOrNull { it.isReady(ctx) }
+    /** First channel that's ready, or null when neither is available. Resolving
+     *  the ladder is also where OUR server gets self-bootstrapped through
+     *  whichever fallback is up ([AdbShellBootstrap.ensureServer]) — so the
+     *  PRIMARY wins as soon as it can. */
+    fun active(ctx: Context): ShellChannel? {
+        val ladder = all
+        // Only the app that OWNS the server launches it: the one with no
+        // shizuku_client block (the SuperApp). A terminal consuming this lib
+        // reaches the shell through the SuperApp bridge and must not put ITS
+        // APK + token on the shared port.
+        if (RishBridge.providers.isEmpty()) AdbShellBootstrap.ensureServer(ctx, ladder)
+        return ladder.firstOrNull { it.isReady(ctx) }
+    }
 }
