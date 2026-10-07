@@ -1028,7 +1028,7 @@ class AccountStore(context: Context) {
             .apply()
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "AccountStore"
         const val REFUSED_WRITE =
             "refusing to write the account list: it did not decode on the last read, so storing " +
