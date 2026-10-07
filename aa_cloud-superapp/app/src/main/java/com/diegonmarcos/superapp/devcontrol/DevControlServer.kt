@@ -414,6 +414,27 @@ object DevControlServer {
                         reply(writer, "200 OK", out)
                     }
                 }
+                "devcontrol/control" -> {
+                    // #904 one Control-panel switch from the fleet API: the same DeviceControls entry
+                    // the tile flips, its blocked reason honoured first, so a terminal brings the mesh
+                    // up (?id=mesh&on=1) without a tap. Without `on`: the live state, never a remembered boolean.
+                    val id = query["id"].orEmpty()
+                    val on = query["on"]
+                    val c = com.diegonmarcos.superapp.configs.DeviceControls.byId[id]
+                    val o = org.json.JSONObject().put("id", id)
+                    when {
+                        c == null -> o.put("ok", false).put("detail", "unknown control '$id'")
+                        on == null -> o.put("ok", true).put("state", c.read(ctx)).put("blocked", c.blocked(ctx))
+                        c.set == null -> o.put("ok", false).put("detail", "'$id' is not a switch")
+                        else -> {
+                            val why = c.blocked(ctx)
+                            if (why.isNotBlank()) o.put("ok", false).put("detail", why)
+                            else c.set.invoke(ctx, on == "1" || on == "true")
+                                .let { v -> o.put("ok", v.ok).put("detail", v.detail).put("state", c.read(ctx)) }
+                        }
+                    }
+                    reply(writer, "200 OK", o.toString(), "application/json")
+                }
                 "devcontrol/tuning" -> {
                     // Per-entry state of data/device-tuning.json as DeviceTuning
                     // last recorded it — read-only, so a terminal can check why it
@@ -518,6 +539,7 @@ object DevControlServer {
             Spec("adb/server-command",  "GET",  true,  "Returns the exact one-liner to run ONCE per boot (via adb / Wireless Debugging) to start OUR self-contained shell-domain app_process server (AdbShellServer). This is the only privilege bootstrap; after it the app needs no third-party Shizuku app. {command,port,note}.", ""),
             Spec("adb/diagnostics",     "GET",  true,  "Run a DATA-DRIVEN diagnostic bundle (build.json::shizuku_diagnostics.bundles[]) through the shell-channel ladder (local-server first, Shizuku fallback) and return {bundle,label,channel,ok,results:[{id,cmd,out}]}. Bundles: charger (dumpsys battery+usb, power_supply nodes, typec, charge props), battery, usb, thermal, pd. THE endpoint that surfaces the USB-PD/PPS negotiation behind 'why is the charger at 3W not 35W' when SELinux blocks /sys/class/power_supply/*.", "bundle=charger|battery|usb|thermal|pd (default charger)"),
             Spec("adb/exec",            "GET",  true,  "Generic 'adb shell' passthrough — runs `sh -c <cmd>` in shell context (uid 2000) through the active channel and returns raw stdout. Full adb-equivalent power; token-gated + loopback-only. Use for one-off commands not covered by a bundle.", "cmd=<shell command>"),
+            Spec("devcontrol/control",  "GET",  true,  "#904 Flip one Control-panel switch (the DeviceControls catalog, build.json::ui.control_panel ids): ?id=mesh&on=1|0 → {ok, detail, state}; without on → the live state and the blocked reason. The tile's own set/blocked run, so nothing the panel refuses is done here.", "id=<control id>&on=1|0"),
             Spec("devcontrol/tuning",   "GET",  true,  "Device tuning state — every entry of data/device-tuning.json (the Android 12+ phantom-process-killer fix the Cloud Terminal needs, …) with the state DeviceTuning recorded on its last pass through this app's own shell: APPLIED / PENDING (no shell yet) / FAILED (+ truncated output) + timestamp. Read-only; the pass itself runs after every successful plane connect (pairing, app start).", ""),
             Spec("adb/grant-dump",      "GET",  true,  "Self-grant android.permission.DUMP via `pm grant` through the active shell channel, so dumpsys also works IN-PROCESS. DUMP is signature|privileged|DEVELOPMENT, so pm grant from the shell domain is allowed. Returns {channel,ran,held,output}.", ""),
             Spec("adb/sfc",             "GET",  true,  "Samsung Super Fast Charging verdict — runs the data-driven `samsung-sfc` bundle (getprop model + dumpsys battery) through the shell-channel ladder and parses it into {tier,verdict,reasons[],device_max_watts,high_voltage_engaged,saved_max_current_ma,cable_suspect,sfc_setting_on}. Tiers: FAST_HV (negotiated) / SLOW_5V (charger-PPS or thermal suspect) / FULL_OR_TAPERING (full → healthy, not denied) / NOT_CHARGING. Answers 'why isn't my 100W cable fast-charging' WITHOUT a drained battery: surfaces the device watt-ceiling, whether the SFC toggle is on, and the peak current ever recorded. Parser is pure + JVM-tested against protocol fixtures (libs:shizuku-adb-debug-tools/SfcVerdict).", ""),
