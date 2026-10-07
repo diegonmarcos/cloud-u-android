@@ -552,8 +552,14 @@ object AppDebugServer {
         val vpn = runCatching { net?.let { cm?.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) } }
             .getOrNull() == true
         val p28 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+        // #889 netpolicy (doze / Android 15 background restriction) hides the default network from a
+        // blocked uid: activeNetwork is null exactly as with no network at all, and only the legacy
+        // NetworkInfo says BLOCKED. Reported apart, or the page reads it as "network DNS none".
+        @Suppress("DEPRECATION")
+        val blocked = net == null &&
+            runCatching { cm?.activeNetworkInfo?.detailedState == android.net.NetworkInfo.DetailedState.BLOCKED }.getOrNull() == true
         return dnsFields(
-            network = if (net == null) null else if (vpn) "vpn" else "direct",
+            network = if (blocked) "blocked" else if (net == null) null else if (vpn) "vpn" else "direct",
             servers = lp?.dnsServers?.mapNotNull { it.hostAddress }.orEmpty(),
             privateActive = if (p28) lp?.isPrivateDnsActive else null,
             privateServer = if (p28) lp?.privateDnsServerName else null,

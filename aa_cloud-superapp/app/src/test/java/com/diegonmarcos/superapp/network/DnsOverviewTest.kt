@@ -126,4 +126,13 @@ class DnsOverviewTest {
         assertEquals("strict Private DNS answers whatever the list", "dot.example", DnsOverview.answering(s, allUp, VPN, true, "dot.example"))
         assertEquals(null, DnsOverview.answering(s, s.map { DnsOverview.Probe(false, null, "") }, VPN, false, null))
     }
+
+    /** #889 the Store in CAC under netpolicy read "mirror: network DNS none" — a blocked uid must say blocked, not none. */
+    @Test fun aMemberNetpolicyCutOffReadsBlockedNotNone() {
+        val r = DnsOverview.paths(d, listOf(member("app.store", dns(DnsOverview.BLOCKED, emptyList()))), onVpn = false, active = NET)
+            .getJSONObject(0)
+        assertEquals("Android system resolver → no network: blocked for this uid by Android netpolicy", r.getString("path"))
+        assertEquals(1, flags(r).size)
+        assertTrue(flags(r).single(), flags(r).single().startsWith("network blocked by netpolicy"))
+    }
 }

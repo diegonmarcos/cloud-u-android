@@ -55,6 +55,9 @@ object DnsOverview {
     /** One member's answers; null = it did not answer that route. */
     class Member(val pkg: String, val label: String, val port: Int, val dns: JSONObject?, val bridge: JSONObject?, val bridgeCrashes: Int)
 
+    /** #889 libs:devtools /api/net/dns "network" for a uid netpolicy cut off (its activeNetwork is null, NetworkInfo BLOCKED). */
+    const val BLOCKED = "blocked"
+
     private val CRASH_SEPARATOR = Regex("\n\n─{5,}\n\n")
     private val BRIDGE_FRAMES = listOf("cloudlib.sysdns", "SystemDnsBridge")
 
@@ -79,6 +82,7 @@ object DnsOverview {
             val list = ups.joinToString(", ").ifEmpty { "none" }
             val resolver = when {
                 dns == null -> "?"
+                net == BLOCKED -> "no network: blocked for this uid by Android netpolicy"
                 net == "vpn" -> "VPN DNS $list"
                 else -> "mirror: network DNS $list"
             }
@@ -86,6 +90,8 @@ object DnsOverview {
             val flags = JSONArray()
             when {
                 dns == null -> flags.put("no /api/net/dns answer: the app predates #758 or has not adopted the fleet token")
+                net == BLOCKED -> flags.put("network blocked by netpolicy (doze / background restriction): every lookup fails " +
+                    "until the app is on the doze allowlist (device tuning) or works under a foreground service")
                 onVpn && net != "vpn" -> flags.put("outside the VPN: resolves with the network's DNS ($list), not the fleet preset")
                 ups.toSet() != active.toSet() ->
                     flags.put("resolves with $list, not ${active.joinToString(", ").ifEmpty { "none" }} as the SuperApp does")
