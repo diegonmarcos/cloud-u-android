@@ -211,4 +211,16 @@ interface ITextTools {
      * CONSTELLATION_DATA signature guard as revealAiKey applies, and neither side may log it.
      */
     String clipboardLists();
+
+    /**
+     * #781 The write half of clipboardLists: REPLACE the serving app's text clips with [json], the
+     * same {tabs, files} object (the vault's `autocomplete` section, reassembled by Account ▸ Apply
+     * all). Every list is parsed before anything is deleted, so a malformed body leaves the store
+     * as it was; file-backed clips are kept. Answers {count, ""} or {"", reason}.
+     *
+     * APPENDED LAST, for the reason clipboardLists gives. An older serving app has no transaction
+     * for it and the call fails, which the caller reports instead of claiming an apply. Same
+     * CONSTELLATION_DATA guard and the same never-log rule: the lists hold the owner's keys.
+     */
+    String[] importClipboardLists(in String json);
 }

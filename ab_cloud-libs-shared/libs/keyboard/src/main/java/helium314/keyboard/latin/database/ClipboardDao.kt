@@ -327,13 +327,30 @@ class ClipboardDao private constructor(private val db: Database) {
      * Throws on a missing or malformed manifest/tab file. Returns the number of entries inserted.
      */
     fun importFromDir(dir: File, context: Context): Int = synchronized(this) {
-        val manifest = org.json.JSONObject(File(dir, MANIFEST).readText())
-        val tabs = manifest.getJSONArray("tabs")
+        val tabs = org.json.JSONObject(File(dir, MANIFEST).readText()).getJSONArray("tabs")
+        val files = org.json.JSONObject()
+        for (i in 0 until tabs.length()) {
+            val file = tabs.getJSONObject(i).getString("file")
+            files.put(file, org.json.JSONArray(File(dir, file).readText()))
+        }
+        importJson(org.json.JSONObject().put("tabs", tabs).put("files", files), context)
+    }
+
+    /**
+     * #781 The write half of [exportJson]: replace the text clips with [export] ({tabs, files}, the
+     * shape exportJson answers and the vault's `autocomplete` section holds). Same rules as
+     * [importFromDir], which delegates here: every list parsed before anything is deleted, so a
+     * malformed one leaves the store untouched; file-backed clips are kept. Throws on a tab whose
+     * file is missing. Returns the number of entries inserted.
+     */
+    fun importJson(export: org.json.JSONObject, context: Context): Int = synchronized(this) {
+        val tabs = export.getJSONArray("tabs")
+        val files = export.getJSONObject("files")
         val parsed = mutableListOf<PendingClip>()
         for (i in 0 until tabs.length()) {
             val tab = tabs.getJSONObject(i)
             val listName = if (tab.isNull("listName")) null else tab.getString("listName")
-            val array = org.json.JSONArray(File(dir, tab.getString("file")).readText())
+            val array = files.getJSONArray(tab.getString("file"))
             for (j in 0 until array.length()) {
                 val obj = array.getJSONObject(j)
                 val text = obj.optString("text").takeIf { it.isNotEmpty() } ?: continue
@@ -345,7 +362,7 @@ class ClipboardDao private constructor(private val db: Database) {
             }
         }
         // everything parsed — safe to swap now
-        Log.i(TAG, "importFromDir: replacing ${cache.count { it.filename == null }} text clips with ${parsed.size}")
+        Log.i(TAG, "importJson: replacing ${cache.count { it.filename == null }} text clips with ${parsed.size}")
         delete(cache.filter { it.filename == null })
         parsed.forEach { insertNewEntry(it.timeStamp, it.listName, it.text, null, it.mimeTypes, context) }
         return parsed.size

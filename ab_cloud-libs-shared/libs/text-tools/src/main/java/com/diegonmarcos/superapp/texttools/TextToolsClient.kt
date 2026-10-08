@@ -280,6 +280,9 @@ class TextToolsClient(context: Context) {
     fun clipboardLists(): String? =
         boundOrRebind()?.let { runCatching { it.clipboardLists() }.getOrNull() }
 
+    /** #781 Replace the serving app's clipboard lists with [json] ([ITextTools.importClipboardLists]); text = count. */
+    fun importClipboardLists(json: String): TextTools.Result = call("importClipboardLists") { it.importClipboardLists(json) }
+
     private inline fun call(what: String, body: (ITextTools) -> Array<String>?): TextTools.Result {
         val t = boundOrRebind() ?: return TextTools.Result.failed(TextTools.NOT_INSTALLED)
         return runCatching { TextTools.Result.of(body(t)) }.getOrElse {

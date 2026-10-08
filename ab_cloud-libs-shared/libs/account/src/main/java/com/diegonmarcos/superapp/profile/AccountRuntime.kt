@@ -403,6 +403,8 @@ object AccountRuntime {
                 val name = meshName(path)
                 AccountHost.mesh?.apply(ctx, name, value.toString()) ?: "✗ $name: the mesh tunnel is not available in this app"
             }
+            // A list is only meaningful as part of the whole export; any keyboard field applies them all.
+            "keyboard" -> applyKeyboard(ctx, section, server)
             else -> "✗ ${section.label}: this app takes nothing pushed"
         }
     }
@@ -435,8 +437,40 @@ object AccountRuntime {
             val accounts = VaultCockpit.mailAccounts(server, owner.substringAfter('@', ""))
             VaultCockpit.applyMailAll(JmapPrefs(ctx), accounts, VaultCockpit.mailEndpoints(server), owner)
         }
+        // #781 the write half of the keyboard reader: the vault's autocomplete lists (history,
+        // pinned pages) REPLACE the keyboard's text clips. Until this branch existed the section
+        // was read-only — Runtime showed the drift and nothing could ever close it.
+        "keyboard" -> applyKeyboard(ctx, section, server)
         else -> "✗ ${section.label}: no apply-all for '${section.apply}'"
     }
+
+    /** #781 The whole declared autocomplete into the keyboard over ITextTools. BLOCKS (binder): call on IO. */
+    fun applyKeyboard(ctx: Context, section: VaultCockpit.Section, server: JSONObject): String {
+        val export = keyboardExport(server, section.runtime.lists)
+            ?: return "✗ the vault has no autocomplete manifest — nothing written"
+        val client = tools(ctx)
+        val until = SystemClock.elapsedRealtime() + KEYBOARD_BIND_MS
+        while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)
+        val r = client.importClipboardLists(export.toString())
+        return if (r.ok) "✓ ${r.text} clips in ${export.getJSONArray("tabs").length()} lists" else "✗ keyboard: ${r.error}"
+    }
+
+    /**
+     * #781 The vault's `autocomplete` section ([lists]: section key → export file name) as the
+     * keyboard's own {version, tabs, files} export — [keyboardValues] read backwards. Null when the
+     * section carries no manifest. A list the manifest names but the vault lacks makes the keyboard
+     * refuse the whole import (it parses everything before deleting anything), never half-apply it.
+     */
+    fun keyboardExport(server: JSONObject, lists: Map<String, String>): JSONObject? {
+        val ac = server.optJSONObject("autocomplete") ?: return null
+        val manifest = ac.optJSONObject("manifest") ?: return null
+        val tabs = manifest.optJSONArray("tabs") ?: return null
+        val files = JSONObject()
+        lists.forEach { (key, file) -> ac.optJSONArray(key)?.let { files.put(file, it) } }
+        return JSONObject().put("version", manifest.opt("version")).put("tabs", tabs).put("files", files)
+    }
+
+    private const val KEYBOARD_BIND_MS = 5_000L
 
     /** A base64 Curve25519 private key's public half through the upstream crypto, null when it is not one. */
     fun derivePublicKey(privateKey: String): String? = runCatching {

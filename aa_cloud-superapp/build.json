@@ -6843,7 +6843,7 @@
             "id": "keyboard",
             "label": "Keyboard · cloud-keyboard autocomplete",
             "apply": "keyboard",
-            "runtime": { "served_by": "text_tools", "lists": { "default": "default.json", "about_me": "About_Me.json", "agents": "Agents.json", "cloud_keys": "Cloud_Keys.json", "personal_data": "Personal_Data.json", "urls_pub": "URLs-Pub.json" } },
+            "runtime": { "served_by": "text_tools", "apply_all": true, "lists": { "default": "default.json", "about_me": "About_Me.json", "agents": "Agents.json", "cloud_keys": "Cloud_Keys.json", "personal_data": "Personal_Data.json", "urls_pub": "URLs-Pub.json" } },
             "vault": [
               "autocomplete"
             ],
