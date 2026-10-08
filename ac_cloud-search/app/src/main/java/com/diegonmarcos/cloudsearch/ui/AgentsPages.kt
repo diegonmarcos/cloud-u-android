@@ -78,7 +78,7 @@ object AgentTags {
     fun runRow(id: String) = "agents_run_row_$id"
 }
 
-fun stamp(ms: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.UK).format(Date(ms))
+fun stampFull(ms: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.UK).format(Date(ms))
 
 private val listPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom)
 
@@ -133,13 +133,13 @@ fun AgentsPage(state: SearchState) {
                         if (m.running == null) m.run(a.id, scope)
                     }
                     Mini(
-                        m.status.ifBlank { last?.let { stamp(it.endedAt) + " · " + it.status + " · " + it.drafts + " draft(s)" } ?: stringResource(R.string.agents_never_run) },
+                        m.status.ifBlank { last?.let { stampFull(it.endedAt) + " · " + it.status + " · " + it.drafts + " draft(s)" } ?: stringResource(R.string.agents_never_run) },
                         AgentTags.STATUS, Modifier.weight(1f),
                     )
                 }
                 if (report != null && report.items.isNotEmpty()) {
                     Hairline(Modifier.padding(vertical = Metrics.small))
-                    FieldLabel(stringResource(R.string.agents_review, report.items.size, stamp(report.createdAt)))
+                    FieldLabel(stringResource(R.string.agents_review, report.items.size, stampFull(report.createdAt)))
                     report.items.forEach { DraftRow(state, report, it) }
                 }
             }
@@ -209,7 +209,7 @@ private fun RunRow(label: String, r: RunRecord, expanded: Boolean, toggle: () ->
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Text(label, color = g.text, style = Type.style(Type.body, FontWeight.Bold))
             Badge(r.status, if (r.status == RunRecord.OK) g.positive else if (r.status == RunRecord.FAILED) g.negative else g.accent)
-            Text(stamp(r.startedAt), Modifier.weight(1f), color = g.text2, style = Type.style(Type.tiny), maxLines = 1)
+            Text(stampFull(r.startedAt), Modifier.weight(1f), color = g.text2, style = Type.style(Type.tiny), maxLines = 1)
             Text(BudgetLedger.usd(r.costUsd), color = g.text2, style = Type.style(Type.tiny))
         }
         Text(r.summary, color = g.text2, style = Type.style(Type.small))

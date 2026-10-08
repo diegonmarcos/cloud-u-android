@@ -172,6 +172,7 @@
     <string name="reports_empty">Nothing published yet. Agents publish their run reports here.</string>
     <string name="reports_no_items">This report has no items.</string>
     <string name="reports_counts">%1$d item(s) · %2$d waiting for you</string>
+    <string name="cloud_title">Cloud Search</string>
     <string name="cloud_none">Cloud Search is not declared in this build.</string>
     <string name="cloud_apps_placeholder">Search the fleet\'s apps</string>
     <string name="cloud_installed">Installed</string>

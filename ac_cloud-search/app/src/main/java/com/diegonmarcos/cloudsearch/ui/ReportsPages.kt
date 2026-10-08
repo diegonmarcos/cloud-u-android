@@ -47,7 +47,7 @@ fun ReportsSection(state: SearchState) {
                         Chip(stringResource(R.string.reports_delete), AgentTags.report("delete")) { svc.reports.delete(open.id); state.reportOpen = null; m.rev++ }
                     }
                     Text(open.title, color = g.text, style = Type.style(Type.cardTitle, FontWeight.Bold))
-                    Text(stamp(open.createdAt), color = g.text2, style = Type.style(Type.tiny))
+                    Text(stampFull(open.createdAt), color = g.text2, style = Type.style(Type.tiny))
                     Text(open.summary, color = g.text2, style = Type.style(Type.small))
                     if (open.items.isEmpty()) Text(stringResource(R.string.reports_no_items), color = g.text2, style = Type.style(Type.small))
                 }
@@ -59,7 +59,7 @@ fun ReportsSection(state: SearchState) {
                 GlassCard(Modifier.testTag(AgentTags.report("row_" + r.id)), onClick = { state.reportOpen = r.id }) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
                         Text(r.title, Modifier.weight(1f), color = g.text, style = Type.style(Type.cardTitle, FontWeight.Bold))
-                        Text(stamp(r.createdAt), color = g.text2, style = Type.style(Type.tiny))
+                        Text(stampFull(r.createdAt), color = g.text2, style = Type.style(Type.tiny))
                     }
                     Text(r.summary, color = g.text2, style = Type.style(Type.small), maxLines = 2)
                     val waiting = r.items.count { it.status == ReportItem.DRAFT }

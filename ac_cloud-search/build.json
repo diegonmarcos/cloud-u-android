@@ -1578,7 +1578,7 @@
     },
     "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state). #913: /api/search/agents (the agents, their last run, the budget), /api/search/runs (the run log with its audit lines), /api/search/reports and /api/search/report?id= (what agents published), /api/search/cloud?kind=apps|messages&q= (the Cloud Search section).",
     "dark_default": true,
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Web Search, Cloud Search, Chat, Agents, Reports), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Web Search's pages are the search.verticals it covers (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), Cloud Search's are Apps, Messages and Code, Chat is today's Search page (the assistant vertical), Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Web Search, Cloud Search, Chat, Agents, Reports; the first two read Web and Cloud on the island because two two-word labels do not fit five cells at 360 dp - the lib's label fitting never settles - and the top pill names them in full from res/values/strings.xml), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Web Search's pages are the search.verticals it covers (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), Cloud Search's are Apps, Messages and Code, Chat is today's Search page (the assistant vertical), Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
     "bottom_nav": [
       "web",
       "cloud",
@@ -1589,7 +1589,7 @@
     "sections": [
       {
         "id": "web",
-        "label": "Web Search",
+        "label": "Web",
         "icon": "globe",
         "pages": [
           {
@@ -1656,7 +1656,7 @@
       },
       {
         "id": "cloud",
-        "label": "Cloud Search",
+        "label": "Cloud",
         "icon": "cloud",
         "pages": [
           {

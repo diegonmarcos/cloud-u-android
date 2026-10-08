@@ -248,6 +248,7 @@ private fun TopBar(state: SearchState, v: SearchConfig.Vertical, modifier: Modif
             state.busy > 0 || state.chat.sending || state.agentsModel.running != null -> stringResource(R.string.island_busy)
             state.saved -> stringResource(R.string.saved_items)
             state.section == "web" || state.section == "chat" -> v.title
+            state.section == "cloud" -> stringResource(R.string.cloud_title)
             else -> section?.label ?: v.title
         }
         val icon = if (state.section == "web" || state.section == "chat") v.icon else section?.icon ?: v.icon
