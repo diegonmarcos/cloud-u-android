@@ -10,6 +10,19 @@
     <!-- The Fleet tab reads the installed version of every constellation package. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <!-- Account redesign (spec 2.4): Account's OWN uid-2000 channel, as Cloud Store has it (#894).
+         mDNS discovery of the phone's Wireless debugging, the pairing service held in the
+         foreground while the code is typed into its notification, the re-arm after a reboot, and
+         WRITE_SECURE_SETTINGS (granted to itself over the channel after the first connect) so
+         adb_wifi_enabled can be turned back on at boot without the user. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:name=".App"
@@ -37,6 +50,33 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Account redesign (spec 2.4): the embedded adb pairing flow (the lib declares it too;
+             stated here so the app's guard can see it) and the boot re-arm of the channel. -->
+        <service
+            android:name="com.diegonmarcos.superapp.adbdebug.AdbPairingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Pairs this app's embedded adb client with the phone's own Wireless debugging while the user types the pairing code into the notification" />
+        </service>
+        <receiver
+            android:name="com.diegonmarcos.superapp.adbdebug.HostShellBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <!-- The declared fallback provider (build.json::shizuku_client): the stock Shizuku app
+             hands its binder over this provider. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <!-- #867 The data Cloud Account owns (imported configs, profile, S/R/L files), read by
              SuperApp's one-shot copy. CONSTELLATION_DATA is the fleet's signature permission:

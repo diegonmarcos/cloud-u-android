@@ -48,6 +48,7 @@ object AccountDebugApi {
             Op("load", "device=", "fetch devices/<device|DEFAULT>.json into the working slot (refused if a secret-class key holds a literal)"),
             Op("setdefault", "device=", "copy devices/<device>.json over devices/DEFAULT.json, one commit"),
             Op("forge", "op=get|put&path=&forge=&dry=1", "get: the file's blob sha and size (never the content); put: dry=1 only — target, method, body keys"),
+            Op("runbook", "dry=1 | run=1&step=<id>&prompt=1", "Setup runbook (spec 4.6): dry=1 = every declared step's id + check state; run=1&step= runs one (shell, store implemented; prompt=1 lets store fall back to the system install prompt). Names and states only"),
             // #802 the engine's way in (linux-account phone import): the decrypted export as the POST body
             Op("import", "POST body = the decrypted vault export · device=<electronics id> (optional: the device this phone is, as the terminal picked it)", "land the bundle as S through the UI import's own gates (VaultFile.classify: sops/ENC refused, schema_version must be known) — the verdict and per-topic counts, never a value", maxBody = IMPORT_MAX_BODY),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
@@ -126,6 +127,12 @@ object AccountDebugApi {
             "load" -> DeviceVault(ctx).load(q["device"]?.trim().orEmpty())
             "setdefault" -> DeviceVault(ctx).setDefault(q["device"]?.trim().orEmpty())
             "forge" -> forge(ctx, q)
+            "runbook" -> SetupRunbook(ctx).let { r ->
+                when {
+                    q["run"] == "1" -> r.run(q["step"]?.trim().orEmpty(), allowPrompt = q["prompt"] == "1")
+                    else -> r.dry()
+                }
+            }
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
                 q["dry"] == "1" -> m.migratePlan()

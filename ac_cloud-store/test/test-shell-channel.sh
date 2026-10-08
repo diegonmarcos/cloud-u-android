@@ -56,7 +56,11 @@ ma = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivi
 ok("ShellChannelSection(ctx)" in ma, "Settings offers the pairing flow", "Settings does not offer the pairing flow")
 sec = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/ShellChannelSection.kt")
 ok("AdbPairingService.start(ctx)" in sec, "the Pair button starts the pairing service", "the Pair button does not start the pairing service")
-sh = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/CloudStoreShell.kt")
+# The host glue lives once in the lib (HostShell); the Store's CloudStoreShell must call it.
+cs = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/CloudStoreShell.kt")
+ok("HostShell.install(app)" in cs, "the Store arms the shared HostShell", "the Store no longer calls HostShell")
+ok("class ShellBootReceiver : HostShellBootReceiver()" in cs, "the Store's boot receiver re-arms through HostShell", "the Store's boot receiver is not HostShell's")
+sh = rd("ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt")
 ok("AdbPairingService.onConnected = " in sh and "WRITE_SECURE_SETTINGS" in sh, "a finished pairing grants WRITE_SECURE_SETTINGS", "a finished pairing is not followed up")
 ok("EmbeddedAdbChannel.autoConnect(ctx)" in sh, "the channel reconnects over mDNS without the user", "nothing reconnects the channel")
 fl = rd("ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt")
@@ -92,6 +96,7 @@ ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/ShellChannelSection.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/CloudStoreShell.kt
 ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt
+ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt
 aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/CloudStoreHandoff.kt
 aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt
 aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt
@@ -125,8 +130,11 @@ mutate "boot receiver dropped" $S/app/src/main/AndroidManifest.xml '.shell.Shell
 mutate "channel never armed" $K/App.kt 'CloudStoreShell.install(this)' 'Unit' || M=$((M+1))
 mutate "no pairing flow in Settings" $K/MainActivity.kt 'ShellChannelSection(ctx)' 'Unit' || M=$((M+1))
 mutate "Pair does not start the service" $K/shell/ShellChannelSection.kt 'AdbPairingService.start(ctx)' 'Unit' || M=$((M+1))
-mutate "pairing not followed up" $K/shell/CloudStoreShell.kt 'AdbPairingService.onConnected' 'AdbPairingService.onConnectedX' || M=$((M+1))
-mutate "no reconnect" $K/shell/CloudStoreShell.kt 'EmbeddedAdbChannel.autoConnect(ctx)' 'Pair(false, "")' || M=$((M+1))
+H=ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt
+mutate "Store build without HostShell" $K/shell/CloudStoreShell.kt 'fun install(app: Context) = HostShell.install(app)' 'fun install(app: Context) = Unit' || M=$((M+1))
+mutate "boot receiver bypasses HostShell" $K/shell/CloudStoreShell.kt 'class ShellBootReceiver : HostShellBootReceiver()' 'class ShellBootReceiver : android.content.BroadcastReceiver()' || M=$((M+1))
+mutate "pairing not followed up" $H 'AdbPairingService.onConnected' 'AdbPairingService.onConnectedX' || M=$((M+1))
+mutate "no reconnect" $H 'EmbeddedAdbChannel.autoConnect(ctx)' 'Pair(false, "")' || M=$((M+1))
 mutate "session install first" ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt 'listOf(ShellInstall, SessionInstall)' 'listOf(SessionInstall, ShellInstall)' || M=$((M+1))
 mutate "SuperApp schedules its own self-update" $A/ShellActivity.kt 'else Updater.start(applicationContext)' 'Updater.start(applicationContext)' || M=$((M+1))
 mutate "SuperApp's Update-all installs again" $A/ShellActivity.kt "// #894 Installs are Cloud Store's: this opens it (or the Install Cloud Store button).

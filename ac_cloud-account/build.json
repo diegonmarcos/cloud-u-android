@@ -34,7 +34,8 @@
       "depends_on": [
         "libs:core",
         "libs:account",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:shizuku-adb-debug-tools"
       ]
     },
     "libs:core": {
@@ -121,12 +122,27 @@
         "libs:devtools",
         "libs:ui-kit",
         "libs:auth",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:shizuku-adb-debug-tools"
       ]
     },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    }
+  },
+  "shizuku_client": {
+    "_doc": "Cloud Account's OWN privileged shell channel (account redesign, spec section 2.4: Account is the first app on an empty phone, so it pairs first and then installs Cloud Store through pm install). Declared as Cloud Store's: the embedded wireless-adb client leads, the stock Shizuku app is the one fallback provider. SuperApp's bridge is not listed: Account must work before SuperApp exists. Read by libs/shizuku-adb-debug-tools/build.gradle (BuildConfig.SHIZUKU_CLIENT_B64).",
+    "providers": [
+      "moe.shizuku.privileged.api"
+    ]
+  },
+  "shizuku_diagnostics": {
+    "_doc": "Only the per-app local server identity. Without this block the lib falls back to the shared block whose app_process server binds 38099 (SuperApp's); Cloud Store holds 38098. Two apps on one port means the second silently fails to bind, so Account takes 38097 (free in 1_cicd/src/data/debug-ports.json, which starts at 38139 for debug APIs).",
+    "bundles": [],
+    "local_server": {
+      "port": 38097,
+      "nice_name": "cloudaccount-adb"
     }
   },
   "release": {
@@ -319,6 +335,19 @@
         "branch": "main",
         "devices_dir": "C_A1-configs/devices",
         "secrets_file": "C_A1-configs/profile-secrets.json"
+      },
+      "runbook": {
+        "_doc": "Setup runbook (spec section 4.6): the eight step ids IN ORDER, read by libs:account SetupRunbook from BuildConfig.UI_ACCOUNT_B64. Removing an id disables that step by declaration. Implemented so far: shell (embedded adb pairing + WRITE_SECURE_SETTINGS self-grant), store (install Cloud Store from the fleet release over the shell channel). The others answer TODO until their slot lands.",
+        "steps": [
+          "connected",
+          "profile",
+          "shell",
+          "store",
+          "apps",
+          "configs",
+          "perms",
+          "verified"
+        ]
       }
     }
   }

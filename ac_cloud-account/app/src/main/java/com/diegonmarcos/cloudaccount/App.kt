@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.util.Log
+import com.diegonmarcos.superapp.adbdebug.HostShell
 import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.profile.AccountDebugApi
 import com.diegonmarcos.superapp.profile.AccountHost
@@ -33,6 +34,9 @@ class App : Application() {
         kotlin.concurrent.thread(name = "account-migrate") {
             runCatching { AccountMigrate.run(this) }.onFailure { Log.w(TAG, "migration from SuperApp failed: ${it.javaClass.simpleName}") }
         }
+        // Account's OWN uid-2000 channel (spec 2.4): embedded adb pairing, Shizuku as the fallback.
+        // Re-armed after every boot; the runbook's shell and store steps run over it.
+        runCatching { HostShell.install(this) }.onFailure { Log.w(TAG, "shell channel not armed", it) }
         // /api/account/... on the fleet debug server, as in SuperApp.
         runCatching { AccountDebugApi.register(this) }
             .onFailure { Log.w(TAG, "account debug API not registered", it) }

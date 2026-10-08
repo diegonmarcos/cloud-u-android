@@ -235,6 +235,8 @@ dependencies {
     implementation project(':libs:account')
     // #868 the bottom island + NavDecl: the four account tabs are ui.sections.
     implementation project(':libs:bottomnav')
+    // HostShell: Account's own uid-2000 channel (embedded adb pairing, Shizuku fallback), as Cloud Store has.
+    implementation project(':libs:shizuku-adb-debug-tools')
     implementation project(':libs:updater')
     implementation project(':libs:appstore')   // StoreImport: the inventory Apply-to-Store hands to Cloud Store (#570)
     implementation project(':libs:devtools')   // AppDebugServer: the /api/account/... routes
