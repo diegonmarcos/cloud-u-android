@@ -402,9 +402,9 @@
         "Robolectric tests FleetCockpitViewTest / ProfileJourneyTest assert on the built View tree (cockpit_* ids) — keep the ids when porting"
       ],
       "baseline": {
-        "view_screens": 2,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 5,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

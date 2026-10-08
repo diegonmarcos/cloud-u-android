@@ -1,12 +1,6 @@
 package com.diegonmarcos.superapp.profile
 
 import android.app.Application
-import android.view.ContextThemeWrapper
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.test.core.app.ApplicationProvider
-import com.diegonmarcos.superapp.R
 import com.diegonmarcos.cloudlib.auth.ProfileJourney
 import com.diegonmarcos.cloudlib.auth.ProfileJourney.Lock
 import com.diegonmarcos.cloudlib.auth.ProfileJourney.Phase
@@ -14,7 +8,6 @@ import com.diegonmarcos.cloudlib.auth.ProfileJourney.State
 import com.diegonmarcos.cloudlib.auth.ProfileJourney.Step
 import com.diegonmarcos.cloudlib.auth.SignIn
 import com.diegonmarcos.cloudlib.auth.UserRegistry
-import com.diegonmarcos.superapp.ui.StatusLight
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -27,16 +20,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #573 — Configs ▸ Profile ▸ Connect, THE JOURNEY: the state machine and its
- * layout tree.
+ * #573 — Configs ▸ Profile ▸ Connect, THE JOURNEY: the state machine (libs:auth
+ * ProfileJourney). Its View layout (ProfileJourneyView) was deleted with ProfileFragment
+ * (Cloud Account redesign, task 3), so only the state machine is exercised here.
  *
  * The registry fixture is built from a table and every expectation is a walk
  * of that table, never a typed count. The state machine is exercised as the
  * page would drive it — nothing, a stored bearer, a session, a registry, the
- * two picks, an apply — and the layout test builds the journey the way the
- * fragment does and reads the tree back through the cockpit ids and the
- * `step:*` tags, so "four cards, in order, lights from the shared component"
- * is measured on a view, not assumed from the code.
+ * two picks, an apply.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -81,7 +72,6 @@ class ProfileJourneyTest {
         }
         assertEquals(Step.SIGN_IN, ProfileJourney.next(s))
         assertEquals(1, ProfileJourney.stepNumber(s))
-        assertEquals(StatusLight.State.UNKNOWN, ProfileJourneyView.overall(s))
     }
 
     @Test fun `a stored bearer is a sign-in, but without a registry step 2 says the config was not fetched`() {
@@ -127,7 +117,6 @@ class ProfileJourneyTest {
         assertEquals(4, ProfileJourney.stepNumber(device))
         val applied = device.copy(appliedAt = "2026-09-25 18:00")
         assertTrue(ProfileJourney.allDone(applied))
-        assertEquals(StatusLight.State.ON, ProfileJourneyView.overall(applied))
         assertEquals(Phase.DONE, ProfileJourney.phase(applied, Step.GET))
     }
 
@@ -144,7 +133,6 @@ class ProfileJourneyTest {
         assertEquals(Phase.LOCKED, ProfileJourney.phase(s, Step.GET))
         val failed = s.copy(artifactInMemory = true, failed = setOf(Step.GET))
         assertEquals(Phase.FAILED, ProfileJourney.phase(failed, Step.GET))
-        assertEquals(StatusLight.State.OFF, ProfileJourneyView.light(Phase.FAILED))
         assertTrue(ProfileJourney.bodyOpen(Phase.FAILED))
     }
 
@@ -163,76 +151,4 @@ class ProfileJourneyTest {
         assertFalse(State().signedIn)
     }
 
-    @Test fun `every phase maps to a distinct shared light and only active or failed bodies are open`() {
-        val lights = Phase.values().map { ProfileJourneyView.light(it) }
-        assertEquals(Phase.values().size, lights.toSet().size)
-        assertEquals(StatusLight.State.ON, ProfileJourneyView.light(Phase.DONE))
-        assertEquals(StatusLight.State.UNVERIFIABLE, ProfileJourneyView.light(Phase.LOCKED))
-        assertEquals(setOf(Phase.ACTIVE, Phase.FAILED), Phase.values().filter { ProfileJourney.bodyOpen(it) }.toSet())
-    }
-
-    // ── the layout tree ──────────────────────────────────────────────────
-
-    private val ctx = ContextThemeWrapper(ApplicationProvider.getApplicationContext<Application>(), R.style.Theme_Superapp)
-
-    private fun build(): ProfileJourneyView.Journey = ProfileJourneyView.build(
-        ctx, "Tester Person", "sub", R.drawable.ic_link_tile,
-        Step.values().associateWith { "${it.ordinal + 1} · ${it.name}" },
-        Step.values().associateWith { R.drawable.ic_link_tile },
-        "toggle",
-    )
-
-    private fun cards(root: View): List<View> {
-        val out = mutableListOf<View>()
-        fun walk(v: View) {
-            if (v.id == com.diegonmarcos.superapp.account.R.id.cockpit_card) out += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(root); return out
-    }
-
-    @Test fun `the journey is a hero then exactly four cards, in step order, tagged step colon name`() {
-        val j = build()
-        val hero = j.root.findViewById<View>(com.diegonmarcos.superapp.account.R.id.cockpit_hero)
-        assertTrue("the hero is the first child", j.root.getChildAt(0) === hero)
-        val found = cards(j.root)
-        assertEquals(Step.values().size, found.size)
-        assertEquals(Step.values().map { ProfileJourney.tag(it) }, found.map { it.tag })
-        assertTrue("the rail sits in the hero's slot", j.hero.slot.getChildAt(0) === j.rail)
-    }
-
-    @Test fun `paint puts the shared light on every card and opens only the active step's body`() {
-        val j = build()
-        val s = State(storedBearerEmail = primaryEmail, registry = registry())   // step 2 active
-        ProfileJourneyView.paint(j, s, Step.values().associateWith { "summary ${it.name}" }, "Step 2 of 4")
-        for (step in Step.values()) {
-            val card = j.cards.getValue(step)
-            val phase = ProfileJourney.phase(s, step)
-            val light = ProfileJourneyView.light(phase)
-            assertEquals(step.name, StatusLight.text(ctx, light), card.light.text.toString())
-            assertEquals(step.name, StatusLight.colour(ctx, light), card.light.currentTextColor)
-            assertEquals(step.name, if (ProfileJourney.bodyOpen(phase)) View.VISIBLE else View.GONE, card.body.visibility)
-            assertEquals("summary ${step.name}", card.summary.text.toString())
-        }
-        assertEquals("Step 2 of 4", j.hero.summary.text.toString())
-        assertEquals(StatusLight.text(ctx, StatusLight.State.UNKNOWN), j.hero.light.text.toString())
-        // The rail names every step with its glyph, in order.
-        val rail = j.rail.text.toString()
-        var last = -1
-        for (step in Step.values()) {
-            val i = rail.indexOf(j.cards.getValue(step).label)
-            assertTrue("rail names ${step.name}", i > last); last = i
-        }
-        assertTrue(rail.contains(StatusLight.glyph(StatusLight.State.ON)))
-        assertTrue(rail.contains(StatusLight.glyph(StatusLight.State.UNVERIFIABLE)))
-    }
-
-    @Test fun `a choice row carries its state as a glyph, not only as ink`() {
-        val on = ProfileJourneyView.choice(ctx, "row", true) {}
-        val off = ProfileJourneyView.choice(ctx, "row", false) {}
-        assertTrue(on.text.startsWith("●"))
-        assertTrue(off.text.startsWith("○"))
-        assertEquals("row", on.contentDescription)
-        assertTrue(on.isClickable && off.isClickable)
-    }
 }

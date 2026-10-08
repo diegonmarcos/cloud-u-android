@@ -273,7 +273,7 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     companion object {
         /**
          * #802 THE landing of a decrypted vault export, shared by the UI's import/connect
-         * ([ProfileFragment.landVault]) and `/api/account/import`: the schema gate, the Imported
+         * ([ConnectWays.land]) and `/api/account/import`: the schema gate, the Imported
          * handle, the owner's peers, then S through [landServer]. Returns the unknown
          * `schema_version` (nothing landed), or null once S holds the file.
          */

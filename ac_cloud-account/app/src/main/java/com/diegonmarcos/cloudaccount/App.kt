@@ -26,6 +26,9 @@ class App : Application() {
         AccountHost.apply {
             route = { activity, route -> open(activity, route) }
             readThrough = false
+            // Redesign task 3: the debug API's `tabs` op answers this app's five islands and their pages.
+            nav = { navJson() }
+            autoBackupChanged = { AutoBackupWorker.schedule(it) }
         }
         // #874 the vault's Secrets section is enforced by this app's setup provider (`<package>.fleetsetup`) and by
         // AccountData.Provider: install the grant-aware authorizer and seed the defaults the fleet relied on, once.
@@ -40,10 +43,22 @@ class App : Application() {
         // /api/account/... on the fleet debug server, as in SuperApp.
         runCatching { AccountDebugApi.register(this) }
             .onFailure { Log.w(TAG, "account debug API not registered", it) }
+        // Settings ▸ Debug API off keeps the loopback server stopped (it is started by DebugInitProvider).
+        runCatching { com.diegonmarcos.superapp.profile.DebugApiSwitch.apply(this) }
+        // Settings ▸ Auto-backup: re-arm (or cancel) the daily job.
+        runCatching { AutoBackupWorker.schedule(this) }.onFailure { Log.w(TAG, "auto-backup not scheduled", it) }
     }
 
     companion object {
         private const val TAG = "CloudAccount"
+
+        /** build.json::ui.bottom_nav + ui.sections as baked: [{id, label, pages:[{id, label}]}]. */
+        fun navJson(): org.json.JSONArray = org.json.JSONArray().also { a ->
+            MainActivity.NAV.bottomSections().forEach { s ->
+                a.put(org.json.JSONObject().put("id", s.id).put("label", s.label)
+                    .put("pages", org.json.JSONArray(s.pages.map { p -> org.json.JSONObject().put("id", p.id).put("label", p.label) })))
+            }
+        }
         private const val SUPERAPP = "com.diegonmarcos.superapp"
         private const val STORE = "com.diegonmarcos.cloudstore"
         /** SuperApp's Store page (a launcher route, not one of this app's ui.sections). */

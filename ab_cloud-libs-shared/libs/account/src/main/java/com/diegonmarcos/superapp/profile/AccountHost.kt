@@ -88,6 +88,16 @@ object AccountHost {
      */
     @Volatile var readThrough: Boolean = false
 
+    /**
+     * Cloud Account redesign task 3: the host's declared navigation (build.json::ui), as
+     * `[{id, label, pages:[{id, label}]}]`, for the debug API's `tabs` op. Null when the host
+     * declares none (SuperApp hosts no Account island; the op then answers the legacy strip).
+     */
+    @Volatile var nav: (() -> org.json.JSONArray)? = null
+
+    /** The host re-arms its auto-backup job after Settings changed `backup.auto` (Cloud Account: WorkManager). */
+    @Volatile var autoBackupChanged: (Context) -> Unit = {}
+
     val DEFAULT_PALETTE: KitPalette = KitPalette.fromArgb(
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),
         textPrimary = 0xFFE6E6E6.toInt(), textSecondary = 0xFF9AA0A6.toInt(),

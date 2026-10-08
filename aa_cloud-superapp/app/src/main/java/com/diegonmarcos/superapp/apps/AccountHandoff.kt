@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.profile.AccountData
-import com.diegonmarcos.superapp.profile.ProfileFragment
 
 /**
  * #867 Account is its own app now: Cloud Account (ac_cloud-account), built from the same
@@ -34,12 +33,14 @@ import com.diegonmarcos.superapp.profile.ProfileFragment
  *
  * The Configs Account entry launches it (build.json: action extapp:cloud-account, with
  * ui.external_apps[id=cloud-account] offering the APK when it is absent). This hand-off covers
- * the page: route that stays (SectionPages, config/profile): with Cloud Account installed it is
- * a button that opens it, otherwise it is the Account page itself, embedded, exactly as before,
- * so Account works from the first install of SuperApp.
+ * the page route that stays (SectionPages, config/profile): with Cloud Account installed it is
+ * a button that opens it, otherwise one Install Cloud Account button (the same fleet install
+ * the Store hand-off uses). Cloud Account redesign task 3 deleted the embedded Account page
+ * (ProfileFragment) from libs:account, so there is no embedded fallback any more; task 8
+ * finishes the SuperApp side (the profile.* declarations).
  *
  * The data follows the same rule: [AccountData.migrate] copies Cloud Account's configs, profile
- * and S/R/L files into this app once, and the imported-configs blob reads through to it while
+ * and account files into this app once, and the imported-configs blob reads through to it while
  * this app's own is empty (AccountHost.readThrough, set in App.kt).
  */
 object AccountHandoff {
@@ -54,18 +55,22 @@ object AccountHandoff {
         true
     }.getOrDefault(false)   // not installed / refused
 
+    /** Opens Cloud Account, or starts its fleet install when it is absent. Returns the line to show. */
+    fun openOrInstall(ctx: Context): String? =
+        if (open(ctx)) null
+        else com.diegonmarcos.superapp.launcher.AppInstall.start(ctx, PKG, LABEL).message
+
+    private const val LABEL = "Cloud Account"
+
     /** The fragment SectionPages puts where the Account page was. */
     fun page(): Fragment = Page()
-
-    /** Which fragment the page shows for the current install state. Read by the JVM test. */
-    val EMBEDDED: Class<out Fragment> = ProfileFragment::class.java
 
     class Page : Fragment() {
         override fun onCreate(state: Bundle?) {
             super.onCreate(state)
-            // Cloud Account installed since this page was saved: the embedded child restored above
-            // would look for a container the button layout does not have, so it goes before any view.
-            if (installed(requireContext()) && childFragmentManager.fragments.isNotEmpty())
+            // A page saved by an older build restores the embedded Account child it held; that
+            // child no longer exists, so any restored child goes before the view is built.
+            if (childFragmentManager.fragments.isNotEmpty())
                 childFragmentManager.beginTransaction()
                     .apply { childFragmentManager.fragments.forEach(::remove) }.commitNow()
         }
@@ -74,18 +79,32 @@ object AccountHandoff {
             val installed = installed(requireContext())
             return androidx.compose.ui.platform.ComposeView(requireContext()).apply {
                 setContent {
-                    if (installed) {
-                        androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
-                            androidx.compose.material3.Surface { OpenCloudAccount() }
-                        }
-                    } else {
-                        // Not installed: the Account page itself, exactly as before.
-                        @Suppress("UNCHECKED_CAST")
-                        val cls = EMBEDDED as Class<Fragment>
-                        androidx.fragment.compose.AndroidFragment(clazz = cls, modifier = Modifier.fillMaxSize())
+                    androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
+                        androidx.compose.material3.Surface { if (installed) OpenCloudAccount() else InstallCloudAccount() }
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun InstallCloudAccount() {
+        val ctx = LocalContext.current
+        var message by remember { mutableStateOf<String?>(null) }
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "Account is its own app now: Cloud Account.\nSign-in, the device profile, backups and setup live there.",
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = {
+                message = com.diegonmarcos.superapp.launcher.AppInstall.start(ctx, PKG, LABEL).message
+            }) { Text("Install Cloud Account") }
+            message?.let { Text(it, Modifier.padding(top = 12.dp), textAlign = TextAlign.Center) }
         }
     }
 
@@ -99,7 +118,7 @@ object AccountHandoff {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "Account is its own app now: Cloud Account.\nSign-in, profile, the fleet cockpit and drift live there.",
+                "Account is its own app now: Cloud Account.\nSign-in, the device profile, backups and setup live there.",
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))

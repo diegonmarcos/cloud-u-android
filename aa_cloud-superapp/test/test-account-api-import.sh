@@ -26,7 +26,8 @@ codehasnt() { code "$1" | grep -qF -- "$2" && bad "$3 ($1)" || ok "$3"; }
 LIB="$ROOT/../ab_cloud-libs-shared/libs"
 DBG="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt"
 MD="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt"
-PF="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
+# Cloud Account redesign task 3: the UI import lives in ConnectWays (the ProfileFragment it replaced is deleted).
+PF="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/ConnectWays.kt"
 HOST="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountHost.kt"
 SRV="$LIB/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
 
@@ -40,7 +41,7 @@ has "$SRV" 'internal const val MAX_BODY_BYTES = 256 * 1024' "...which stays 256 
 has "$SRV" 'if (o.maxBody != MAX_BODY_BYTES) append(""""max_body":${o.maxBody},""")' "/api/docs shows a raised ceiling"
 
 echo "T2 the same gates as the Import File line"
-has "$PF" 'else -> when (val v = AccountHost.classify(text)) {' "the UI import classifies through AccountHost.classify"
+has "$PF" 'fun importFile(ctx: Context, text: String): Outcome = when (val v = AccountHost.classify(text)) {' "the UI import classifies through AccountHost.classify"
 has "$DBG" 'val v = AccountHost.classify(text)' "...and so does the route"
 has "$DBG" 'if (v !is com.diegonmarcos.cloudlib.auth.VaultFile.Verdict.Bundle)' "anything but the decrypted export is refused"
 has "$DBG" 'AccountHost.refusal(ctx, v).orEmpty())' "...with the host's own refusal sentence"
@@ -51,7 +52,7 @@ codehasnt "$DBG" 'VaultFile.classify(' "the route never calls the classifier dir
 echo "T3 one landing for the UI and the route"
 has "$MD" 'fun landBundle(ctx: Context?, body: JSONObject, via: String): Int?' "AccountModel.landBundle is the one landing"
 has "$MD" 'get(ctx).landServer(bundle, via)' "...writing S through landServer"
-has "$PF" 'AccountModel.landBundle(context, body, via)?.let { v ->' "the fragment's landVault calls it"
+has "$PF" 'AccountModel.landBundle(ctx, body, via)?.let { v ->' "the connect ways' land calls it"
 has "$DBG" 'AccountModel.landBundle(ctx, v.bundle, "api:import")' "the route calls it, source api:import"
 codehasnt "$PF" 'landServer(' "the fragment no longer writes S itself"
 codehasnt "$DBG" 'landServer(' "the route never writes S itself"

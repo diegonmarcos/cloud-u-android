@@ -36,7 +36,6 @@ import com.diegonmarcos.superapp.battery.EnergyWatchdog
 import com.diegonmarcos.superapp.battery.BatterySessionWorker
 import com.diegonmarcos.superapp.search.SearchOpener
 import com.diegonmarcos.superapp.network.WgState
-import com.diegonmarcos.superapp.profile.BusinessCardFragment
 
 import com.diegonmarcos.superapp.shell.SuppressVerticalSwipe
 import com.diegonmarcos.superapp.launcher.LauncherToolbarFx
@@ -620,9 +619,9 @@ open class ShellActivity : AppCompatActivity(),
                 Haptics.tap(bottomNav)
                 val cur = supportFragmentManager.findFragmentById(R.id.fragment_container)
                 when (cur) {
-                    is AppDrawerSheetFragment, is BusinessCardFragment -> {
-                        // Both are home-overlay fragments — popping
-                        // their back-stack entry restores the 3D cube
+                    is AppDrawerSheetFragment -> {
+                        // A home-overlay fragment — popping
+                        // its back-stack entry restores the 3D cube
                         // underneath. Use plain pop() so we don't tear
                         // through other back-stack entries.
                         supportFragmentManager.popBackStack()
@@ -2047,12 +2046,13 @@ open class ShellActivity : AppCompatActivity(),
     }
 
     override fun onDrawerBusinessCardOpen() {
-        // Close the drawer first so the card surface comes into view,
-        // then push BusinessCardFragment onto the content container.
+        // The business card lived in libs:account's Account page, which Cloud Account
+        // redesign task 3 deleted: the drawer's identity row now opens Cloud Account
+        // (or starts its install when it is absent).
         drawerLayout.closeDrawer(GravityCompat.START)
-        val frag = BusinessCardFragment.newInstance()
-        if (!isTwoPane()) applyChrome(frag)
-        pushContent(frag)
+        com.diegonmarcos.superapp.apps.AccountHandoff.openOrInstall(this)?.let { msg ->
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     /** Dynamic Island is now an [IslandWaveView] (purely decorative

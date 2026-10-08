@@ -2,8 +2,8 @@
 # #867 Cloud Account is the Account page, split out of cloud-superapp.
 #
 # What this holds, statically (no build, no device, no network):
-#  1. Cloud Account hosts libs:account's ProfileFragment (no copy of the account
-#     code in this app), owns the data (read-through off) and exports it ONLY
+#  1. Cloud Account hosts libs:account's pages (no copy of the account code in this
+#     app), owns the data (read-through off) and exports it ONLY
 #     through a provider that is exported behind the fleet's signature permission.
 #  2. The provider is read-only, re-checks its caller, and answers two methods (the export
 #     and, #874, one granted secret), each behind a grant; the
@@ -11,11 +11,17 @@
 #     is marked done only after the provider answered.
 #  3. SuperApp opens Cloud Account from its Account entry (extapp:cloud-account, a
 #     page that is NOT an action), has an external_apps row that resolves, keeps the
-#     page working through AccountHandoff until the app is installed, and wires the
+#     page as AccountHandoff (open Cloud Account, else install it), and wires the
 #     one-shot copy and the read-through.
 #  4. One package name: SuperApp's hand-off, the library, this app's build.json, the
 #     external_apps row and the fleet manifest row agree, and the OPEN action SuperApp
 #     sends is the one this manifest declares.
+#  5. (redesign task 3) the five islands: build.json::ui is the spec's section 3, the
+#     shell is the shared island + PageTabs fed by NavDecl, every declared (section,
+#     page) id is a branch of MainActivity's Page(), the debug API's tabs op answers the
+#     islands, and Account ▸ connect dispatches every declared way on its kind
+#     (ConnectWays.handler has a branch per declared kind, none left unwired).
+#  6. the vault, the grants, the setup contract.
 #
 # Then it plants each mutation below in a scratch copy and requires the checks to go
 # red, so a check that cannot fail does not count as a check.
@@ -55,7 +61,8 @@ check() {
   done
 
   # 1. hosts the lib's page, owns no account code, owns the data, exports it behind the signature permission
-  strip "$MA" | grep -Eq 'AndroidFragment<ProfileFragment>' && ok "Cloud Account shows ProfileFragment (the four tabs)" || bad "Cloud Account does not show ProfileFragment"
+  strip "$MA" | grep -q 'ProfileFragment' && bad "Cloud Account still names ProfileFragment (deleted by redesign task 3)" || ok "no ProfileFragment host left"
+  [ ! -e "$L/profile/ProfileFragment.kt" ] && ok "ProfileFragment is deleted from libs:account" || bad "ProfileFragment.kt still exists"
   grep -q "project(':libs:account')" "$A/app/build.gradle" && ok "app links :libs:account" || bad "app does not link :libs:account"
   if find "$A/app/src" -name '*.kt' | xargs grep -l "^package com.diegonmarcos.superapp.profile" 2>/dev/null | grep -q .; then
     bad "a copy of libs:account code lives in ac_cloud-account"; else ok "no copy of the account code in this app"; fi
@@ -105,7 +112,7 @@ ok = (len(r) == 1 and r[0]['hub_package'] == r[0]['install_package'] == a['andro
 sys.exit(0 if ok else 1)
 PY
   strip "$SP" | grep -q 'pageId == "profile" *-> *com.diegonmarcos.superapp.apps.AccountHandoff.page()' && ok "SuperApp's Account page goes through the hand-off" || bad "SuperApp's Account page bypasses the hand-off"
-  strip "$HO" | grep -q 'AndroidFragment(clazz = cls' && strip "$HO" | grep -q 'EMBEDDED: Class<out Fragment> = ProfileFragment::class.java' && ok "hand-off embeds the Account page until Cloud Account is installed" || bad "hand-off no longer embeds the Account page"
+  strip "$HO" | grep -q 'if (installed) OpenCloudAccount() else InstallCloudAccount()' && strip "$HO" | grep -q 'AppInstall.start(ctx, PKG, LABEL)' && ! strip "$HO" | grep -q 'ProfileFragment' && ok "hand-off opens Cloud Account, else offers its install (no embedded page)" || bad "hand-off does not open-or-install Cloud Account"
   local sa; sa="$(strip "$SA")"
   printf '%s' "$sa" | grep -q 'readThrough *= *true' && ok "SuperApp reads through to Cloud Account" || bad "SuperApp does not read through"
   printf '%s' "$sa" | grep -q 'AccountData.migrate(applicationContext)' && ok "SuperApp runs the one-shot copy at start" || bad "SuperApp never runs the copy"
@@ -121,39 +128,56 @@ PY
   [ "$action" = '$PKG.OPEN' ] && action="$appid.OPEN"
   grep -q "<action android:name=\"$action\" */>" "$MF" && ok "manifest answers SuperApp's $action" || bad "manifest does not declare the action SuperApp sends ('$action')"
 
-  # 5. #868 the fleet nav pattern: the account tabs are build.json::ui.sections, the bar is the shared island
-  python3 - "$A/build.json" "$B" <<'PY' && ok "ui.sections are the account tabs (same ids, same order as SuperApp's ui.profile.tabs); every one is on the island" || bad "build.json ui.sections/bottom_nav/default_section do not match ui.profile.tabs"
+  # 5. redesign task 3: five islands declared in build.json::ui, drawn by the shared island + strips
+  python3 - "$A/build.json" <<'PY' && ok "ui.bottom_nav = account, profiles, setup, secrets, settings; ui.sections are the spec's pages" || bad "build.json ui.bottom_nav/sections are not the spec's section 3"
 import json, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
-tabs = [t['id'] for t in json.load(open(sys.argv[2], encoding='utf-8'))['ui']['profile']['tabs']]
-ids = [s.get('id') for s in ui.get('sections') or []]
-sys.exit(0 if ids == tabs and ui.get('bottom_nav') == tabs and ui.get('default_section') in tabs else 1)
+want = {'account': ['profile', 'connect'], 'profiles': ['devices', 'working', 'diff'],
+        'setup': ['runbook', 'apps', 'configs', 'perms'], 'secrets': ['connections', 'secrets', 'grants'], 'settings': []}
+got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
+ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') in want
+      and isinstance(ui.get('account', {}).get('forges'), list)
+      and ui.get('account', {}).get('connect', {}).get('file', {}).get('kind') == 'vault_file')
+sys.exit(0 if ok else 1)
 PY
   local bg; bg="$(cat "$A/app/build.gradle")"
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   local ma; ma="$(strip "$MA")"
-  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && ok "MainActivity draws the island from the baked NavDecl" || bad "MainActivity does not feed the shared island from NavDecl"
-  printf '%s' "$ma" | grep -q 'ARG_EXTERNAL_STRIP to true' && printf '%s' "$ma" | grep -q 'selectTab(' && printf '%s' "$ma" | grep -q 'onTabShown' && ok "the island drives ProfileFragment's tab and follows it back" || bad "the island and ProfileFragment's tab are not wired both ways"
-  local pf; pf="$(strip "$L/profile/ProfileFragment.kt")"
-  printf '%s' "$pf" | grep -q 'val external = arguments?.getBoolean(ARG_EXTERNAL_STRIP) == true' && printf '%s' "$pf" | grep -q '} else visibility = View.GONE' && printf '%s' "$pf" | grep -q 'fun selectTab(id: String)' && [ "$(printf '%s' "$pf" | grep -c 'onTabShown?.invoke')" -ge 2 ] && ok "ProfileFragment hides its strip for a host that draws the tabs, and reports the tab on screen" || bad "ProfileFragment lost the external-strip contract"
-  printf '%s' "$pf" | grep -q 'PageTabsView(ctx)' && ! printf '%s' "$pf" | grep -q 'AccountHost.styleTabs' && ok "the in-fragment strip is libs:bottomnav's PageTabsView (no host styling hook)" || bad "ProfileFragment's strip is not PageTabsView, or still goes through AccountHost.styleTabs"
+  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && printf '%s' "$ma" | grep -q 'PageTabs(' && ok "MainActivity draws the island and the page strip from the baked NavDecl" || bad "MainActivity does not feed the shared island/strip from NavDecl"
+  python3 - "$A/build.json" "$MA" <<'PY' && ok "every declared section is a branch of MainActivity's Page() and every page branch names a declared page" || bad "MainActivity's Page() and build.json::ui.sections disagree"
+import json, re, sys
+ui = json.load(open(sys.argv[1], encoding='utf-8'))['ui']
+src = open(sys.argv[2], encoding='utf-8').read()
+body = src[src.index('private fun Page('):src.index('companion object')]
+secs = re.findall(r'^            "(\w+)" -> ', body, flags=re.M)
+pages = re.findall(r'^                "(\w+)" -> ', body, flags=re.M)
+decl = {s['id']: [p['id'] for p in s.get('pages') or []] for s in ui['sections']}
+# every declared section has its branch; a page branch names a declared page (an undeclared one
+# is dead code the island can never reach); a section's remaining pages fall to its `else`
+ok = set(secs) == set(decl) and bool(pages) and all(any(p in ps for ps in decl.values()) for p in pages)
+sys.exit(0 if ok else 1)
+PY
+  strip "$AP" | grep -q 'nav = { navJson() }' && strip "$AP" | grep -q 'MainActivity.NAV.bottomSections()' && strip "$L/profile/AccountDebugApi.kt" | grep -q 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' && ok "the debug API's tabs op answers the five islands and their pages" || bad "the tabs op does not answer the declared islands"
+  local CW="$L/profile/ConnectWays.kt" PG="$L/profile/AccountPages.kt"
+  for f in "$CW" "$PG"; do [ -f "$f" ] || { bad "missing $f"; return 99; }; done
+  python3 - "$A/build.json" "$CW" "$PG" <<'PY' && ok "Account ▸ connect: every declared way's kind has its own branch in ConnectWays.handler, and the page dispatches on handler(way.kind)" || bad "the connect dispatch is not by kind (a declared kind has no branch, or the page does not dispatch on it)"
+import json, re, sys
+acc = json.load(open(sys.argv[1], encoding='utf-8'))['ui']['account']
+kinds = [w for f in acc['forges'] for w in f.get('ways') or []] + [acc['connect']['file']['kind']]
+cw = open(sys.argv[2], encoding='utf-8').read(); pg = open(sys.argv[3], encoding='utf-8').read()
+m = re.search(r'fun handler\(kind: String\): Handler = when \(kind\) \{(.*?)\n    \}', cw, flags=re.S)
+if not m: sys.exit(1)
+consts = dict(re.findall(r'const val (\w+) = "(\w+)"', cw))
+branches = {consts.get(k, k) for k in re.findall(r'^\s+(\w+) -> Handler\.', m.group(1), flags=re.M)}
+ok = set(kinds) <= branches and 'when (val h = ConnectWays.handler(way.kind))' in pg
+sys.exit(0 if ok else 1)
+PY
+  strip "$CW" | grep -Eq 'Log\.[a-z]\(|println\(' && bad "ConnectWays logs (a token could reach the log)" || ok "ConnectWays never logs"
+  strip "$CW" | grep -q 'putConnection("forge.${f.id}.token", token)' && strip "$CW" | grep -q 'if (o.ok && file)' && ok "a pasted token is filed only after it read the vault" || bad "a token is filed before (or without) a successful read"
 
   # 6. #873/#874 the vault, the pages, the setup contract
   local VT="$L/settings/AccountVault.kt" PL="$L/profile/SetupPlan.kt" FS="$L/profile/FleetSetup.kt" MG="$L/profile/AccountMigrate.kt"
   for f in "$VT" "$PL" "$FS" "$MG" "$L/profile/AccountVaultTabs.kt" "$L/profile/FleetSetupTab.kt"; do [ -f "$f" ] || { bad "missing $f"; return 99; }; done
-  python3 - "$A/build.json" "$L/profile/ProfileFragment.kt" <<'PY' && ok "every page build.json declares under a section is a ProfileFragment page that reports that section" || bad "a declared page has no ProfileFragment column (or reports another section)"
-import json, re, sys
-ui = json.load(open(sys.argv[1], encoding='utf-8'))['ui']
-pf = open(sys.argv[2], encoding='utf-8').read()
-want = {}
-for sec in ui['sections']:
-    for pg in sec.get('pages') or []:
-        if pg['id'] != sec['id']:
-            want[pg['id']] = sec['id']
-consts = dict(re.findall(r'const val (PAGE_\w+) = "(\w+)"', pf))
-mapped = {consts[k]: v for k, v in re.findall(r'(PAGE_\w+) to "(\w+)"', pf) if k in consts}
-sys.exit(0 if want and want == mapped and len(want) >= 5 else 1)
-PY
   local vt; vt="$(strip "$VT")"
   printf '%s' "$vt" | grep -q 'AES/GCM/NoPadding' && printf '%s' "$vt" | grep -q 'PBKDF2WithHmacSHA256' && printf '%s' "$vt" | grep -q 'if (v > AccountVault.VERSION) throw Refused' && [ "$(printf '%s' "$vt" | grep -o 'updateAAD(aad(' | wc -l)" -ge 2 ] && ok "the bundle is AES-GCM under a PBKDF2 key, versioned, its header authenticated" || bad "the bundle cipher lost a property (GCM, PBKDF2, the version gate, the AAD)"
   printf '%s' "$vt" | grep -q 'class SecretGrants' && printf '%s' "$vt" | grep -q 'fun revoke(' && printf '%s' "$vt" | grep -q '!secret || caller == c.packageName || grants.allow(caller, "$store.$key")' && ok "Secrets: per-package grants, revocable, enforced by the setup authorizer" || bad "the grants are not revocable or not enforced by the setup authorizer"
@@ -196,13 +220,6 @@ mutate "bundle loses its version gate" lib/settings/AccountVault.kt 'if (v > Acc
 mutate "bundle loses its authenticated header" lib/settings/AccountVault.kt 'updateAAD(aad(AccountVault.VERSION))' '' || M=$((M+1))
 mutate "a vault file logs a value" lib/settings/AccountVault.kt 'fun connections(): JSONObject = parse(prefs.json)' 'fun connections(): JSONObject = parse(prefs.json).also { android.util.Log.d("x", it.toString()) }' || M=$((M+1))
 mutate "App stops installing the authorizer" acc/app/src/main/java/com/diegonmarcos/cloudaccount/App.kt 'AccountVault.install(this)' 'Unit' || M=$((M+1))
-mutate "a page loses its section" lib/profile/ProfileFragment.kt 'PAGE_SECRETS to "runtime"' 'PAGE_SECRETS to "drift"' || M=$((M+1))
-mutate "a declared page leaves the declaration" acc/build.json '          {
-            "id": "secrets",
-            "label": "Secrets",
-            "icon": "runtime"
-          },
-' '' || M=$((M+1))
 mutate "FleetBearerProvider stops reading through" super/cloud/FleetBearerProvider.kt 'AccountData.secret(ctx, "fleet.bearer")' '""' || M=$((M+1))
 mutate "configs copy overwrites" "$D" 'if (prefs.localJson.isBlank())' 'if (true)' || M=$((M+1))
 mutate "slot copy overwrites" "$D" 'if (model.store.read(s) != null) continue' '' || M=$((M+1))
@@ -214,15 +231,26 @@ mutate "SuperApp never copies" super/App.kt 'AccountData.migrate(applicationCont
 mutate "Account entry loses its action" build.json '"action": "extapp:cloud-account",' '' || M=$((M+1))
 mutate "package name drifts" lib/profile/AccountData.kt 'const val PKG = "com.diegonmarcos.cloudaccount"' 'const val PKG = "com.diegonmarcos.account"' || M=$((M+1))
 mutate "OPEN action dropped" acc/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudaccount.OPEN" />' '' || M=$((M+1))
-mutate "page tab host dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'AndroidFragment<ProfileFragment>' 'AndroidFragment<androidx.fragment.app.Fragment>' || M=$((M+1))
-mutate "island replaced by the fragment's own strip" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'BottomNavHost(' 'Box(' || M=$((M+1))
+mutate "island replaced by a plain box" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'BottomNavHost(' 'Box(' || M=$((M+1))
 mutate "island no longer fed by NavDecl" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
-mutate "fragment is not told to hide its strip" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'ProfileFragment.ARG_EXTERNAL_STRIP to true' 'ProfileFragment.ARG_EXTERNAL_STRIP to false' || M=$((M+1))
-mutate "a tab leaves the declaration" acc/build.json '"runtime",
-      "drift"' '"runtime"' || M=$((M+1))
+mutate "an island leaves build.json" acc/build.json '"secrets",
+      "settings"' '"settings"' || M=$((M+1))
+mutate "a page leaves build.json" acc/build.json '          {
+            "id": "connect",
+            "label": "Connect",
+            "icon": "account"
+          }' '' || M=$((M+1))
+mutate "connect dispatch replaced by a literal" lib/profile/ConnectWays.kt 'fun handler(kind: String): Handler = when (kind) {' 'fun handler(kind: String): Handler = Handler.File
+    private fun handlerOld(kind: String): Handler = when (kind) {' || M=$((M+1))
+mutate "a declared kind loses its branch" lib/profile/ConnectWays.kt '        GITEA_TOKEN -> Handler.GiteaToken
+' '' || M=$((M+1))
+mutate "the page stops dispatching on kind" lib/profile/AccountPages.kt 'when (val h = ConnectWays.handler(way.kind))' 'when (val h = ConnectWays.handler("vault_file"))' || M=$((M+1))
+mutate "a page id has no branch" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"diff" -> AccountPlaceholderPage' '"diffx" -> AccountPlaceholderPage' || M=$((M+1))
+mutate "tabs op stops answering the islands" lib/profile/AccountDebugApi.kt 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' 'Unit' || M=$((M+1))
+mutate "token filed before the read" lib/profile/ConnectWays.kt 'if (o.ok && file)' 'if (file)' || M=$((M+1))
+mutate "the strip is dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'PageTabs(' 'Column(' || M=$((M+1))
+mutate "hand-off embeds a page again" super/apps/AccountHandoff.kt 'if (installed) OpenCloudAccount() else InstallCloudAccount()' 'OpenCloudAccount()' || M=$((M+1))
 mutate "gradle stops baking the sections" acc/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
-mutate "the fragment stops reporting its tab" lib/profile/ProfileFragment.kt 'tabIds.getOrNull(index)?.let { onTabShown?.invoke(sectionOf(it)) }' '' || M=$((M+1))
-mutate "the fragment keeps its strip visible" lib/profile/ProfileFragment.kt '} else visibility = View.GONE' '}' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

@@ -24,7 +24,7 @@ object AccountDebugApi {
     fun register(ctx: Context) {
         val app = ctx.applicationContext
         AppDebugServer.route("account", listOf(
-            Op("tabs", "", "the declared tab strip and drift pairs"),
+            Op("tabs", "", "the host's declared islands and their pages (Cloud Account: ui.bottom_nav + ui.sections), the legacy tab strip and drift pairs"),
             Op("profiles", "", "the local declared copy (else the server file) per topic, through the mask"),
             Op("runtime", "", "the last runtime snapshot: per app its status, declared fields, observed paths, missing / not-read and counts; totals"),
             Op("drift", "", "file metadata, per-pair counts, per-app drifted paths, three-way classes"),
@@ -76,6 +76,7 @@ object AccountDebugApi {
         val m = AccountModel.get(ctx)
         return when (op) {
             "", "tabs" -> JSONObject()
+                .also { o -> AccountHost.nav?.invoke()?.let { o.put("islands", it) } }
                 .put("tabs", JSONArray(AccountModel.tabs().map { JSONObject().put("id", it.id).put("label", it.label) }))
                 .put("pairs", JSONArray(AccountModel.pairs().map { JSONObject().put("id", it.id).put("a", it.a.name).put("b", it.b.name) }))
             "vault" -> vault(ctx)
@@ -149,7 +150,7 @@ object AccountDebugApi {
 
     /**
      * #802 `POST /api/account/import` with the decrypted export as the body: the SAME gates as the
-     * Import File line ([ProfileFragment.importVaultFile] → [AccountHost.classify], then
+     * Import File way ([ConnectWays.importFile] → [AccountHost.classify], then
      * [AccountModel.landBundle]'s schema check and write of S). The answer is the verdict, the
      * refusal sentence when refused, and the Profiles topics as counts only (rows dropped):
      * nothing of the body is echoed.

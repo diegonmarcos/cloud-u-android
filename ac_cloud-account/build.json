@@ -1,6 +1,6 @@
 {
   "name": "cloud-account",
-  "description": "Diego's Cloud Account — the Account page (Profile, Connect sign-in lines, Fleet cockpit, Infos, Drift, business card) as its own APK (#867). Hosts libs:account, the same code SuperApp's Configs > Account used to embed. Owns the imported configs, the profile and the S/R/L account files; SuperApp copies them over once and reads through to them while this app is installed.",
+  "description": "Diego's Cloud Account — turns an empty phone into the owner's phone and keeps it that way: the account and its sign-in ways, the per-device profile backed up to and restored from the private vault repo, setup, and the fleet secrets (a0_docs/eng-specs/cloud-account-redesign.md). Hosts libs:account, the same code SuperApp links.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -227,28 +227,29 @@
     }
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl). The four sections are libs:account's tabs (ids and order = aa_cloud-superapp/build.json::ui.profile.tabs); the island selects the tab ProfileFragment shows and ProfileFragment's own strip is hidden (ProfileFragment.ARG_EXTERNAL_STRIP).",
+    "_doc": "Cloud Account redesign task 3 (a0_docs/eng-specs/cloud-account-redesign.md section 3): THE nav declaration (libs:bottomnav NavDecl). Five islands, each section's pages drawn as the PageTabs strip; MainActivity maps every (section, page) id to one composable. Pages a later task owns (Profiles 4, Setup 5/6, Secrets 7) draw a placeholder naming that task.",
     "bottom_nav": [
-      "connect",
+      "account",
       "profiles",
-      "runtime",
-      "drift"
+      "setup",
+      "secrets",
+      "settings"
     ],
     "sections": [
       {
-        "id": "connect",
-        "label": "Connect",
-        "icon": "connect",
+        "id": "account",
+        "label": "Account",
+        "icon": "account",
         "pages": [
+          {
+            "id": "profile",
+            "label": "Profile",
+            "icon": "account"
+          },
           {
             "id": "connect",
             "label": "Connect",
-            "icon": "connect"
-          },
-          {
-            "id": "connections",
-            "label": "Connections",
-            "icon": "connect"
+            "icon": "account"
           }
         ]
       },
@@ -258,53 +259,79 @@
         "icon": "profiles",
         "pages": [
           {
-            "id": "profiles",
-            "label": "Profiles",
+            "id": "devices",
+            "label": "Devices",
             "icon": "profiles"
           },
           {
-            "id": "data",
-            "label": "Data",
+            "id": "working",
+            "label": "Working",
+            "icon": "profiles"
+          },
+          {
+            "id": "diff",
+            "label": "Diff",
             "icon": "profiles"
           }
         ]
       },
       {
-        "id": "runtime",
-        "label": "Runtime",
-        "icon": "runtime",
+        "id": "setup",
+        "label": "Setup",
+        "icon": "setup",
         "pages": [
           {
-            "id": "runtime",
-            "label": "Runtime",
-            "icon": "runtime"
+            "id": "runbook",
+            "label": "Runbook",
+            "icon": "setup"
+          },
+          {
+            "id": "apps",
+            "label": "Apps",
+            "icon": "setup"
           },
           {
             "id": "configs",
             "label": "Configs",
-            "icon": "runtime"
+            "icon": "setup"
           },
           {
-            "id": "secrets",
-            "label": "Secrets",
-            "icon": "runtime"
-          },
-          {
-            "id": "fleetsetup",
-            "label": "Fleet Setup",
-            "icon": "runtime"
+            "id": "perms",
+            "label": "Perms",
+            "icon": "setup"
           }
         ]
       },
       {
-        "id": "drift",
-        "label": "Drift",
-        "icon": "drift",
+        "id": "secrets",
+        "label": "Secrets",
+        "icon": "secrets",
+        "pages": [
+          {
+            "id": "connections",
+            "label": "Connections",
+            "icon": "secrets"
+          },
+          {
+            "id": "secrets",
+            "label": "Secrets",
+            "icon": "secrets"
+          },
+          {
+            "id": "grants",
+            "label": "Grants",
+            "icon": "secrets"
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
         "pages": []
       }
     ],
-    "default_section": "profiles",
-    "_doc_pages": "#873/#874 the pages Cloud Account adds under the four sections (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Connections (every endpoint, token and profile the vault holds, with the encrypted bundle export/import and the take-in from SuperApp), Data (profile, identities, S/R/L), Configs (every app's declared settings by store), Secrets (per-app grants, revocable), Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws them: selectTab(<page id>) opens one and onTabShown reports its SECTION (PAGE_SECTION), so the island never disagrees with the page.",
+    "default_section": "account",
     "account": {
       "_doc": "Cloud Account redesign, task 2 (a0_docs/eng-specs/cloud-account-redesign.md sections 2, 5, 6). Read by libs:account's build.gradle into BuildConfig.UI_ACCOUNT_B64 (ForgeClient.Decl). forges: where the vault lives, each written through its contents API; auth 'bearer' sends `Authorization: Bearer <t>` (GitHub), 'token' sends `Authorization: token <t>` (Gitea). A forge's token is read from AccountVault Connections at forge.<id>.token, the primary forge id at forge.primary (default: the first forge with a repo). vault: the branch, the folder the app writes per-device profiles to (devices/<id>.json, DEFAULT.json; never an emit.py input), and the generated secrets file the connect fetch keeps reading.",
       "forges": [
@@ -348,6 +375,13 @@
           "perms",
           "verified"
         ]
+      },
+      "connect": {
+        "_doc": "Account ▸ connect (spec 4.2): the forge ways are ui.account.forges[].ways; this adds the offline way. libs:account ConnectWays.ways() reads both and dispatches every pill on its kind (ConnectWays.handler).",
+        "file": {
+          "kind": "vault_file",
+          "label": "Import file"
+        }
       }
     }
   }

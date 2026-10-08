@@ -247,7 +247,7 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.activity:activity-compose:1.9.3'
-    // AndroidFragment: hosts libs:account's ProfileFragment inside the Compose shell.
+    // fragment-compose: kept for AppCompat/Compose interop (the ProfileFragment host is gone, redesign task 3).
     implementation 'androidx.fragment:fragment-compose:1.8.5'
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.ui:ui'

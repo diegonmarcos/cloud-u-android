@@ -209,7 +209,11 @@
         "python3"
       ],
       "_doc_quarantine": "Filename → the REASON it may fail. Enumerated and visible, NOT a blanket tolerance: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason. Anything not named here is fatal.",
-      "quarantine": {}
+      "quarantine": {
+        "test-account-four-tabs.sh": "its subject, libs:account's View-based Account page (ProfileFragment, FleetCockpitView, ProfileJourneyView), was deleted by the Cloud Account redesign task 3 (a0_docs/eng-specs/cloud-account-redesign.md section 7); SuperApp's Config > Account is now the open-or-install hand-off and Cloud Account's test-account-app.sh pins the new connect dispatch. Task 8 ports what still applies (AccountTabs, the PAT/bearer rules) to ConnectWays/AccountPages and deletes this entry.",
+        "test-profile-vault-connect.sh": "its subject, libs:account's View-based Account page (ProfileFragment, FleetCockpitView, ProfileJourneyView), was deleted by the Cloud Account redesign task 3 (a0_docs/eng-specs/cloud-account-redesign.md section 7); SuperApp's Config > Account is now the open-or-install hand-off and Cloud Account's test-account-app.sh pins the new connect dispatch. Task 8 ports what still applies (AccountTabs, the PAT/bearer rules) to ConnectWays/AccountPages and deletes this entry.",
+        "test-profile-credentials-never-sync.sh": "its subject, libs:account's View-based Account page (ProfileFragment, FleetCockpitView, ProfileJourneyView), was deleted by the Cloud Account redesign task 3 (a0_docs/eng-specs/cloud-account-redesign.md section 7); SuperApp's Config > Account is now the open-or-install hand-off and Cloud Account's test-account-app.sh pins the new connect dispatch. Task 8 ports what still applies (AccountTabs, the PAT/bearer rules) to ConnectWays/AccountPages and deletes this entry."
+      }
     },
     "unit": {
       "_doc": "Robolectric suite under app/src/test/. #512: BottomNavSelectedPillTest inflates the REAL activity_main and asserts the RESOLVED bottom-nav (itemBackground id, measured pill bounds, rendered pixel) \u2014 the selected pill vanished for a whole release while every XML-text tester stayed green, so this widget is proven on the inflated view or not at all. One module only: the shared libs run their own suites in ab_cloud-libs-shared.",
