@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tester (#571, #779, #803): Cloud ▸ Apps ▸ AGI is exactly Search | Terminal | MyTerminal |
-# Code | B-LLM | S-LLM, SuperApp sits in Configs right before Store, and each launching tile
+# Tester (#571, #779, #803): Cloud ▸ Apps ▸ AGI is exactly Search | Code | B-LLM | S-LLM | MyTerminal |
+# Terminal, SuperApp sits in Configs right before Store, and each launching tile
 # LANDS on the app it is named for.
 #
 # THE FAILURE THIS EXISTS FOR. #499 pinned the Terminal tile's CAPTION and
@@ -66,7 +66,7 @@ tiles = agi[0]["tiles"]
 
 print("== T1: the AGI row is the six tiles the owner asked for, in order ==")
 got = [t.get("label") for t in tiles]
-want = ["Search", "Terminal", "MyTerminal", "Code", "B-LLM", "S-LLM"]
+want = ["Search", "Code", "B-LLM", "S-LLM", "MyTerminal", "Terminal"]
 check(got == want, "AGI captions are %s (want %s)" % (got, want))
 by = {t.get("label"): t for t in tiles}
 

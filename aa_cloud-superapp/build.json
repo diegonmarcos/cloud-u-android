@@ -2683,26 +2683,12 @@
             "title": "AGI",
             "tiles": [
               {
-                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, Terminal, MyTerminal, … GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
+                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, Code, B-LLM, S-LLM, MyTerminal, Terminal. GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
                 "id": "search",
                 "label": "Search",
                 "icon": "ic_cloud_search",
                 "tint": false,
                 "target": "extapp:cloud-search"
-              },
-              {
-                "_doc": "#563/#571 follow-up. Terminal now opens cloud-terminal-nix (ac_cloud-nix-on-droid, applicationId cld.termux.nix) through ui.external_apps[cloud-terminal-nix], relinked from cloud-terminal-termux (cld.termux). Prior history: until #571 this tile was app://com.termux.nix with a Play Store fallback — the UPSTREAM Nix-on-Droid id, which no fleet build installs — so the tap walked straight to a Play page for somebody else's app; #571 fixed that by pointing it at our Termux fork instead. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
-                "id": "ai-tmx",
-                "label": "Terminal",
-                "icon": "ic_terminal",
-                "target": "extapp:cloud-terminal-nix"
-              },
-              {
-                "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
-                "id": "drive",
-                "label": "MyTerminal",
-                "icon": "ic_code",
-                "target": "extapp:cloud-myterminal"
               },
               {
                 "_doc": "#599 follow-up to #571/#562: last surviving 'IDE' identity string in this file, renamed to match cloud-code (ac_cloud-code, applicationId com.diegonmarcos.code, our Acode build) opened through ui.external_apps[cloud-code]. The APK is often not installed yet, so GroupedTilesFragment draws this tile as the #249 placeholder (ic_app_not_installed + 'Not installed') and the tap installs it from the constellation Store's own release asset. icon ic_ide is kept as the resource filename (cloud-code's launcher foreground copied verbatim from ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml, the same way Writer/Camera/Drive carry theirs) — ic_code is already taken by the MyTerminal tile above, so only the id/label rebrand here, not the drawable filename.",
@@ -2857,6 +2843,20 @@
                     "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=shop-compare#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dshop-compare;end"
                   }
                 ]
+              },
+              {
+                "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
+                "id": "drive",
+                "label": "MyTerminal",
+                "icon": "ic_code",
+                "target": "extapp:cloud-myterminal"
+              },
+              {
+                "_doc": "#563/#571 follow-up. Terminal now opens cloud-terminal-nix (ac_cloud-nix-on-droid, applicationId cld.termux.nix) through ui.external_apps[cloud-terminal-nix], relinked from cloud-terminal-termux (cld.termux). Prior history: until #571 this tile was app://com.termux.nix with a Play Store fallback — the UPSTREAM Nix-on-Droid id, which no fleet build installs — so the tap walked straight to a Play page for somebody else's app; #571 fixed that by pointing it at our Termux fork instead. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
+                "id": "ai-tmx",
+                "label": "Terminal",
+                "icon": "ic_terminal",
+                "target": "extapp:cloud-terminal-nix"
               }
             ]
           },

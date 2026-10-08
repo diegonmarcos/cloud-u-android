@@ -45,11 +45,11 @@ read -r TP AGI_AT NAMES <<<"$ORDER"
   && ok "AGI is the group immediately after Tools Primary ($NAMES)" \
   || bad "AGI is at $AGI_AT, Tools Primary at $TP — expected AGI directly after ($NAMES)"
 
-echo "== A2: the two folders exist, in order, after the plain tiles =="
+echo "== A2: the two folders exist, in order (b-llm then s-llm), between Code and MyTerminal =="
 LAYOUT=$(q "print(','.join(t['id'] for t in agi['tiles']))")
 case "$LAYOUT" in
-  *,b-llm,s-llm) ok "AGI ends with b-llm then s-llm ($LAYOUT)" ;;
-  *) bad "AGI must end with b-llm then s-llm, got: $LAYOUT" ;;
+  search,code,b-llm,s-llm,drive,ai-tmx) ok "AGI is Search, Code, B-LLM, S-LLM, MyTerminal, Terminal ($LAYOUT)" ;;
+  *) bad "AGI must be search,code,b-llm,s-llm,drive,ai-tmx, got: $LAYOUT" ;;
 esac
 
 echo "== A3: a folder is a tile holding tiles, and carries NO target =="
