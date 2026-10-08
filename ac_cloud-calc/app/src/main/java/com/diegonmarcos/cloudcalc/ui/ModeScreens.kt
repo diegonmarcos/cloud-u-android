@@ -147,8 +147,8 @@ private fun ExpressionMode(mode: Declarations.Mode) {
         if (text.isBlank()) { answer = null; bases = emptyList(); return@LaunchedEffect }
         delay(DEBOUNCE_MS)
         val asked = text
-        answer = asked to Logic.result(io { api.eval(asked, options) })
-        bases = mode.showBases.map { c -> c.label to Logic.result(io { api.eval(asked, Logic.options(options, mapOf(c.key to c.value))) }).text }
+        answer = asked to Logic.result(io { api.eval(Logic.normalize(asked), options) })
+        bases = mode.showBases.map { c -> c.label to Logic.result(io { api.eval(Logic.normalize(asked), Logic.options(options, mapOf(c.key to c.value))) }).text }
     }
     LaunchedEffect(text, field.selection.start) {
         val word = Editor.wordBeforeCursor(current())

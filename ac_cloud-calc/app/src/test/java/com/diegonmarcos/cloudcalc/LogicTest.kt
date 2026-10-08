@@ -12,6 +12,17 @@ import java.io.File
 class LogicTest {
     private val k = { label: String, insert: String -> Declarations.Key(label, insert) }
 
+    @Test fun `division, multiplication and minus glyphs are normalised for the engine and plain text is untouched`() {
+        assertEquals("500/3", Logic.normalize("500÷3"))
+        assertEquals("500/3", Logic.normalize("500∕3"))
+        assertEquals("500/3", Logic.normalize("500／3"))
+        assertEquals("500/3", Logic.normalize("500⁄3"))
+        assertEquals("2*3*4", Logic.normalize("2×3·4"))
+        assertEquals("5-3", Logic.normalize("5−3"))
+        assertEquals("100/4/5 + 500/(2+3)", Logic.normalize("100÷4÷5 + 500/(2+3)"))
+        assertEquals("(7.5/2) m to ft", Logic.convert("7.5÷2", "m", "ft"))
+    }
+
     @Test fun `autocomplete replaces only the word being typed`() {
         assertEquals("sq", Logic.lastWord("2 + sq"))
         assertEquals("", Logic.lastWord("2 + 3"))

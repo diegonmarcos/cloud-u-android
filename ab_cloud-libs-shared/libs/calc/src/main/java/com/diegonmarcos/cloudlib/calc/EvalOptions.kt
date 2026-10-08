@@ -22,6 +22,11 @@ data class EvalOptions(
     val timeoutMs: Int = 5000,
 ) {
     companion object {
+        /** Operator glyphs a keyboard or paste may carry become what libqalculate parses: ÷ ∕ ／ ⁄ to /, × ✕ ⋅ · to *, − to -. */
+        fun normalize(expr: String): String = expr.map { c ->
+            when (c) { '÷', '∕', '／', '⁄' -> '/'; '×', '✕', '⋅', '·' -> '*'; '−' -> '-'; else -> c }
+        }.joinToString("")
+
         val BASES = setOf(2, 8, 10, 16)
         const val MAX_PRECISION = 100
         const val MAX_TIMEOUT_MS = 30_000

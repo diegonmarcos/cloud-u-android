@@ -46,7 +46,7 @@ class CalcEngine(context: Context) {
         if (expr.length > MAX_EXPR) return error("expression longer than $MAX_EXPR characters")
         val o = EvalOptions.parse(optionsJson)
         return native {
-            str(QalcNative.eval(bytes(expr), o.inBase, o.outBase, o.precision, o.angle, o.approx, o.mixedUnits, o.unicode, o.timeoutMs))
+            str(QalcNative.eval(bytes(EvalOptions.normalize(expr)), o.inBase, o.outBase, o.precision, o.angle, o.approx, o.mixedUnits, o.unicode, o.timeoutMs))
         }
     }
 

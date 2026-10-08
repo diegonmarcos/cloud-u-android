@@ -21,8 +21,22 @@ object Logic {
     fun fill(template: String, values: Map<String, String>): String =
         PLACEHOLDER.replace(template) { values[it.groupValues[1]]?.trim().orEmpty() }
 
+    /**
+     * What the engine parses: the pretty operator glyphs a keyboard, a paste or a reused entry may carry
+     * (÷ ∕ ／ ⁄ for division, × ✕ ⋅ · for multiplication, − for minus) become / * -. The text on screen is
+     * left as typed; only what is sent to the engine is normalised.
+     */
+    fun normalize(expr: String): String = buildString(expr.length) {
+        expr.forEach { c -> append(when (c) {
+            '÷', '∕', '／', '⁄' -> '/'
+            '×', '✕', '⋅', '·' -> '*'
+            '−' -> '-'
+            else -> c
+        }) }
+    }
+
     /** The converter's expression: libqalculate's own `to` conversion. */
-    fun convert(value: String, from: String, to: String): String = "(${value.trim()}) $from to $to"
+    fun convert(value: String, from: String, to: String): String = "(${normalize(value).trim()}) $from to $to"
 
     /** A mode's eval options with [overrides] applied (a chip pick, a base column). */
     fun options(base: String, overrides: Map<String, Int>): String =

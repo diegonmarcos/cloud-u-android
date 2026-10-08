@@ -37,4 +37,12 @@ class EvalOptionsTest {
         assertEquals(true, o.unicode)
         assertEquals(2, o.angle)
     }
+
+    @Test fun `operator glyphs reach libqalculate as plain operators`() {
+        assertEquals("500/3", EvalOptions.normalize("500\u00f7 3".replace(" ", "")))
+        assertEquals("500/3", EvalOptions.normalize("500\u22153"))
+        assertEquals("500/3", EvalOptions.normalize("500\uff0f3"))
+        assertEquals("2*3*4-1", EvalOptions.normalize("2\u00d73\u00b74\u22121"))
+        assertEquals("500/(2+3)", EvalOptions.normalize("500/(2+3)"))
+    }
 }

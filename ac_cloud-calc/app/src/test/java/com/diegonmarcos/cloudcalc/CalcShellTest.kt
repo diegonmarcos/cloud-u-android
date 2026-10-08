@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onNodeWithText
@@ -68,7 +69,8 @@ class CalcShellTest {
             // Like the engine: unless the mode asks for always-decimal (approx 2), a non-integer quotient prints as the exact fraction.
             val decimal = runCatching { JSONObject(options).optInt("approx", 1) }.getOrDefault(1) >= 2
             return JSONObject().put("ok", true).put("result", when (expr) {
-                "500/3" -> if (decimal) "166.6666667" else "500/3" "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
+                "500/3" -> if (decimal) "166.6666667" else "500/3"
+                "7.5/2" -> "3.75"; "-6/4" -> "-1.5"; "100/4/5" -> "5"; "500/(2+3)" -> "100" "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
         }
         override fun plot(expr: String, xmin: Double, xmax: Double, steps: Int) = """{"ok":true,"x":[0,1,2],"y":[0,1,4]}"""
         override fun complete(prefix: String, max: Int) = """[{"name":"sqrt","title":"Square Root","kind":"function","category":"c"}]"""
@@ -249,6 +251,31 @@ class CalcShellTest {
         // The History entry holds the decimal too, and the field now holds the number.
         assertEquals("166.6666667", state.history.first().result)
         assertEquals("500/3", state.history.first().expr)
+    }
+
+    @Test fun `every division path reaches the engine as a slash and reads as the number`() {
+        openStandard()
+        val cases = listOf("500/3" to "166.6666667", "500÷3" to "166.6666667", "500∕3" to "166.6666667", "500／3" to "166.6666667",
+            "7.5/2" to "3.75", "-6/4" to "-1.5", "100/4/5" to "5", "500/(2+3)" to "100", "500÷(2+3)" to "100")
+        cases.forEach { (typed, shown) ->
+            // The soft keyboard / a paste: the whole text replaced.
+            compose.onNodeWithTag(CalcTags.INPUT).performTextReplacement(typed)
+            compose.waitForIdle()
+            resultIs(shown)
+            val seen = synchronized(engine.evals) { engine.evals.toList() }
+            assertTrue("$typed reached the engine as ${Logic.normalize(typed)}", Logic.normalize(typed) in seen)
+            if (typed != Logic.normalize(typed)) assertFalse("$typed reached the engine unnormalised", typed in seen)
+        }
+        // The keypad's / key.
+        typeKeys("AC", "5", "0", "0", "/", "3")
+        resultIs("166.6666667")
+        // A reused history entry carrying the glyph.
+        val mode = Declarations.modes.first { it.kind == "expression" }
+        typeKeys("AC")
+        compose.runOnIdle { state.send(mode.id, "7.5÷2") }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("7.5÷2")
+        resultIs("3.75")
     }
 
     @Test fun `a history reuse lands at the cursor and the result follows the edited text`() {
