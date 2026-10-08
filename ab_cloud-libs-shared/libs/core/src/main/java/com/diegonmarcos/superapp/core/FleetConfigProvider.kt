@@ -66,8 +66,14 @@ class FleetConfigProvider : ContentProvider() {
             apply(ctx, out.optJSONObject("writes") ?: JSONObject(), r)
             // Restart once the reply is out, so singletons that cached the old values
             // cannot write them back over the import. Never for a no-op import.
-            if (extras?.getBoolean(FleetConfig.KEY_RESTART) == true && r.optInt("written") > 0)
-                Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, RESTART_DELAY_MS)
+            if (extras?.getBoolean(FleetConfig.KEY_RESTART) == true && r.optInt("written") > 0) {
+                // A host serving a foreground session is never killed under it: the owner's
+                // terminal (and the Claude session in its proot) died on 2026-10-08 when the
+                // migration wrote 3 values into cld.termux. The values are on disk; they apply
+                // at the next natural start, and the reply says so instead of restarting.
+                if (servingForeground(ctx)) r.put("restart", "deferred: this app is serving a foreground session; the values apply at its next start")
+                else Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, RESTART_DELAY_MS)
+            }
             ok(r)
         }.getOrElse { error("${it.javaClass.simpleName}: ${it.message.orEmpty().take(160)}") }
     }
@@ -128,6 +134,14 @@ class FleetConfigProvider : ContentProvider() {
 
     companion object {
         private const val RESTART_DELAY_MS = 600L
+
+        /** True while this process holds a foreground service or a visible activity (a terminal
+         *  session, a Store batch, the mesh): Android's own importance for our pid, nothing remembered. */
+        fun servingForeground(ctx: Context): Boolean = runCatching {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val me = am.runningAppProcesses?.firstOrNull { it.pid == Process.myPid() } ?: return false
+            me.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE
+        }.getOrDefault(false)
 
         /** The policy engine; a JVM test hands in an in-process one (the SuperApp's FleetConfigTest). */
         @Volatile var engine: (Context, String, Array<String>) -> JSONObject =
