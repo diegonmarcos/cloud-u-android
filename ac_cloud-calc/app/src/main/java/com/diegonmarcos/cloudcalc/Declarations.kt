@@ -62,6 +62,9 @@ object Declarations {
         val historyMax: Int,
         /** A Clock mode's `clock` object as JSON (#768); ClockDecl reads it, nothing else does. */
         val clock: String,
+        /** The mode-row icon name (IconCatalog) and its short label; blank = the page's icon and the label. */
+        val icon: String = "",
+        val short: String = "",
     )
 
     val nav: NavDecl by lazy {
@@ -128,6 +131,8 @@ object Declarations {
             },
             historyMax = m.optJSONObject("history")?.optInt("max_entries", 200) ?: 200,
             clock = (m.optJSONObject("clock") ?: JSONObject()).toString(),
+            icon = m.optString("icon"),
+            short = m.optString("short"),
         )
     }
 

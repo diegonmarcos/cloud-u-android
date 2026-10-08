@@ -2,7 +2,16 @@ package com.diegonmarcos.cloudcalc.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Functions
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.History
@@ -36,6 +45,15 @@ object IconCatalog {
         "camera" -> Icons.Filled.PhotoCamera
         "ask" -> Icons.Filled.QuestionAnswer
         "settings" -> Icons.Filled.Settings
+        "science" -> Icons.Filled.Science
+        "memory" -> Icons.Filled.Memory
+        "functions" -> Icons.Filled.Functions
+        "bolt" -> Icons.Filled.Bolt
+        "straighten" -> Icons.Filled.Straighten
+        "currency" -> Icons.Filled.CurrencyExchange
+        "event" -> Icons.Filled.Event
+        "payments" -> Icons.Filled.Payments
+        "graphic_eq" -> Icons.Filled.GraphicEq
         else -> fallback
     }
 }

@@ -2,7 +2,9 @@ package com.diegonmarcos.cloudcalc
 
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onNodeWithText
@@ -63,7 +65,7 @@ class CalcShellTest {
         override fun info() = """{"ok":true,"version":"fake"}"""
         override fun eval(expr: String, options: String): String {
             synchronized(evals) { evals += expr }
-            return JSONObject().put("ok", true).put("result", if (expr == "2+2") "4" else "42").put("messages", org.json.JSONArray()).toString()
+            return JSONObject().put("ok", true).put("result", when (expr) { "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
         }
         override fun plot(expr: String, xmin: Double, xmax: Double, steps: Int) = """{"ok":true,"x":[0,1,2],"y":[0,1,4]}"""
         override fun complete(prefix: String, max: Int) = """[{"name":"sqrt","title":"Square Root","kind":"function","category":"c"}]"""
@@ -186,6 +188,72 @@ class CalcShellTest {
         compose.waitForIdle()
         assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.load(app).alarms.single().enabled)
         assertFalse(com.diegonmarcos.cloudcalc.clock.ClockEngine.isScheduled(app, "alarm:$id"))
+    }
+
+    private fun typeKeys(vararg keys: String) = keys.forEach { compose.onNodeWithTag(CalcTags.key(it)).performClick(); compose.waitForIdle() }
+    private fun select(start: Int, end: Int = start) {
+        compose.onNodeWithTag(CalcTags.INPUT).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag(CalcTags.INPUT).performSemanticsAction(SemanticsActions.SetSelection) { it(start, end, true) }
+        compose.waitForIdle()
+    }
+    private fun resultIs(text: String) = compose.waitUntil(5_000) {
+        compose.onAllNodesWithTag(CalcTags.RESULT).fetchSemanticsNodes().isNotEmpty() &&
+            runCatching { compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= $text") }.isSuccess
+    }
+    private fun openStandard() {
+        launch()
+        val mode = Declarations.modes.first { it.kind == "expression" }
+        compose.runOnIdle { state.tab = mode.tab; state.modeByTab[mode.tab] = mode.id }
+        compose.waitForIdle()
+    }
+
+    @Test fun `a key inserts at the cursor, a selection is replaced, and an edit after a result is evaluated afresh`() {
+        openStandard()
+        typeKeys("6", "0", "0", "/", "3")
+        resultIs("200")
+        // The cursor to the very start: "(" goes there, not to the end.
+        select(0)
+        typeKeys("(")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("(600/3")
+        // DEL deletes before the cursor (here: nothing is left of the "("), then after the "(" it eats the "(".
+        select(1)
+        typeKeys("DEL")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("600/3")
+        resultIs("200")
+        // Select the 3 and type 4: the result is the value of 600/4, not an echo of the old text.
+        select(4, 5)
+        typeKeys("4")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("600/4")
+        resultIs("150")
+        // = keeps it, and the field holds the result; editing that again re-evaluates.
+        typeKeys("=")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("150")
+        assertEquals("150", state.history.first().result)
+    }
+
+    @Test fun `a history reuse lands at the cursor and the result follows the edited text`() {
+        openStandard()
+        val mode = Declarations.modes.first { it.kind == "expression" }
+        typeKeys("2", "+", "2")
+        resultIs("4")
+        select(0)
+        compose.runOnIdle { state.send(mode.id, "600/3") }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("600/32+2")
+    }
+
+    @Test fun `the mode row is icons with short labels and switching a mode keeps the keypad where it was`() {
+        openStandard()
+        val calc = Declarations.modes.first { it.kind == "expression" }
+        val rest = compose.onNodeWithTag(CalcTags.key("=")).getBoundsInRoot().top
+        val sci = Declarations.modes.first { it.id == "scientific" }
+        compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.PageTabsTags.tab(sci.id)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.mode(sci.id)).assertExists()
+        compose.onNodeWithText(sci.short).assertExists()
+        compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.PageTabsTags.tab(calc.id)).performClick()
+        compose.waitForIdle()
+        assertEquals(rest, compose.onNodeWithTag(CalcTags.key("=")).getBoundsInRoot().top)
     }
 
     @Test fun `the keypad does not move while a result appears, changes and goes`() {

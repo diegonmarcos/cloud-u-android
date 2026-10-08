@@ -8,20 +8,9 @@ import org.json.JSONObject
  * mode to its golden behaviour without a device or an engine.
  */
 object Logic {
-    /** A keypad press on [text]: AC clears, DEL drops one character, = leaves it, else types. */
-    fun press(text: String, key: Declarations.Key): String = when (key.action) {
-        Declarations.Action.CLEAR -> ""
-        Declarations.Action.DELETE -> text.dropLast(1)
-        Declarations.Action.EVALUATE -> text
-        null -> text + key.insert
-    }
-
     /** The token under the cursor at the end of [text], for autocomplete: letters/digits/_ only. */
     fun lastWord(text: String): String = text.takeLastWhile { it.isLetterOrDigit() || it == '_' }
         .let { if (it.firstOrNull()?.isLetter() == true) it else "" }
-
-    /** Replace the last word of [text] with the completion [name]. */
-    fun complete(text: String, name: String): String = text.dropLast(lastWord(text).length) + name
 
     private val PLACEHOLDER = Regex("""\{(\w+)\}""")
 

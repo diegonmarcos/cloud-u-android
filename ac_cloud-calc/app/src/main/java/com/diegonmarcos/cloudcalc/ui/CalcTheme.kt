@@ -47,6 +47,8 @@ object CalcMetrics {
     val gap: Dp = 8.dp
     val gutter: Dp = 12.dp
     val keyHeight: Dp = 52.dp
+    /** The mode row's icons: small, so the row stays about two lines of text tall. */
+    val modeIcon: Dp = 16.dp
     /** Data-dense controls (converter pickers, swap, =, update): never the 40dp Material default. */
     val compactHeight: Dp = 30.dp
     val corner: Dp = 12.dp

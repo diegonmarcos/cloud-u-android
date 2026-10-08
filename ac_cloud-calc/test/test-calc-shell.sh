@@ -138,6 +138,10 @@ for t in tabs + sections:
     if t.get("icon") not in icons:
         bad.append("C3 tab %s icon %r has no IconCatalog branch — it would draw the fallback" % (t["id"], t.get("icon")))
 
+for m_ in modes:
+    if m_.get("icon") and m_["icon"] not in icons:
+        bad.append("C3 mode %s icon %r has no IconCatalog branch — it would draw the fallback" % (m_["id"], m_["icon"]))
+
 # C4
 manifest = open(os.path.join(app, "app", "src", "main", "AndroidManifest.xml"), encoding="utf-8").read()
 if 'android.permission.RECORD_AUDIO' not in manifest:
@@ -398,6 +402,7 @@ mutate tab-without-mode build.json 's.replace("\"tab\": \"graph\"", "\"tab\": \"
 mutate mode-orphan-tab build.json 's.replace("\"tab\": \"history\"", "\"tab\": \"nowhere\"", 1)' "names tab nowhere"
 mutate kind-without-renderer "$J/ui/ModeScreens.kt" 's.replace("\"plot\" -> PlotMode(mode)", "")' "C2 kind plot is declared"
 mutate dead-renderer "$J/ui/ModeScreens.kt" 's.replace("\"history\" -> HistoryMode(mode)", "\"history\" -> HistoryMode(mode)\n            \"abacus\" -> HistoryMode(mode)")' "C2 ModeScreen renders kind abacus"
+mutate mode-icon-misspelt build.json 's.replace("\"icon\": \"science\"", "\"icon\": \"sciense\"")' "C3 mode scientific icon"
 mutate icon-misspelt build.json 's.replace("\"icon\": \"chart\"", "\"icon\": \"chrat\"")' "C3 tab graph icon"
 mutate mic-elsewhere "$J/ui/ModeScreens.kt" 's + "\nprivate fun nag(l: androidx.activity.result.ActivityResultLauncher<String>) = l.launch(android.Manifest.permission.RECORD_AUDIO)\n"' "C4 RECORD_AUDIO must be asked for"
 mutate mic-undeclared app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />", "")' "C4 the manifest does not declare"

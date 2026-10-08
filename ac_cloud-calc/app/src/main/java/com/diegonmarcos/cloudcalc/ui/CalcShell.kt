@@ -2,7 +2,21 @@
 
 package com.diegonmarcos.cloudcalc.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +33,6 @@ import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
-import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 
@@ -73,17 +86,37 @@ private fun TabContent(tabId: String) {
     val selected = state.modeByTab[tabId]?.takeIf { id -> modes.any { it.id == id } } ?: modes.first().id
     Column(Modifier.fillMaxSize().testTag(CalcTags.tab(tabId))) {
         if (modes.size > 1) {
-            // The page's modes are its sub-strip: one PageTabs, one level lower than the pages.
-            PageTabs(
-                pages = modes.map { NavPage(it.id, it.label) },
-                selectedId = selected,
-                onSelect = { state.modeByTab[tabId] = it.id },
-                modifier = Modifier.testTag(CalcTags.STRIP),
-                underTopChrome = false,
-            )
+            // The page's modes are a dense icon row: icon over a short label, no minimum height.
+            ModeIcons(modes, selected, Declarations.tabs.firstOrNull { it.id == tabId }?.icon.orEmpty()) { state.modeByTab[tabId] = it }
         }
         val mode = modes.first { it.id == selected }
         key(mode.id) { ModeScreen(mode) }
+    }
+}
+
+/** One mode per cell: [Declarations.Mode.icon] (else the page's [pageIcon]) over its short label; scrolls when it must. */
+@Composable
+private fun ModeIcons(modes: List<Declarations.Mode>, selectedId: String, pageIcon: String, onSelect: (String) -> Unit) {
+    LazyRow(
+        Modifier.fillMaxWidth().testTag(CalcTags.STRIP),
+        contentPadding = PaddingValues(horizontal = CalcMetrics.small),
+        horizontalArrangement = Arrangement.spacedBy(CalcMetrics.hairline),
+    ) {
+        items(modes, key = { it.id }) { m ->
+            val on = m.id == selectedId
+            val tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            Column(
+                Modifier.clip(RoundedCornerShape(CalcMetrics.small))
+                    .background(if (on) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                    .clickable { onSelect(m.id) }
+                    .padding(horizontal = CalcMetrics.gap, vertical = CalcMetrics.small)
+                    .testTag(PageTabsTags.tab(m.id)),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(IconCatalog.vector(m.icon.ifBlank { pageIcon }), contentDescription = m.label, tint = tint, modifier = Modifier.size(CalcMetrics.modeIcon))
+                Text(m.short.ifBlank { m.label }, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
+            }
+        }
     }
 }
 

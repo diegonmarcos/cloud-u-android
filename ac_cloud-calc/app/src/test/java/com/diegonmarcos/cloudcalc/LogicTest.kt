@@ -12,20 +12,10 @@ import java.io.File
 class LogicTest {
     private val k = { label: String, insert: String -> Declarations.Key(label, insert) }
 
-    @Test fun `keypad clears, deletes, types and leaves = to the screen`() {
-        assertEquals("", Logic.press("12+3", k("AC", "AC")))
-        assertEquals("12+", Logic.press("12+3", k("DEL", "DEL")))
-        assertEquals("", Logic.press("", k("DEL", "DEL")))
-        assertEquals("12+3", Logic.press("12+3", k("=", "=")))
-        assertEquals("sqrt(", Logic.press("", k("√", "sqrt(")))
-        assertEquals("5 xor ", Logic.press("5", k("XOR", " xor ")))
-    }
-
     @Test fun `autocomplete replaces only the word being typed`() {
         assertEquals("sq", Logic.lastWord("2 + sq"))
         assertEquals("", Logic.lastWord("2 + 3"))
         assertEquals("log10", Logic.lastWord("log10"))
-        assertEquals("2 + sqrt", Logic.complete("2 + sq", "sqrt"))
     }
 
     @Test fun `forms substitute every field, trimmed`() {

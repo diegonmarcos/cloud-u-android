@@ -50,9 +50,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudcalc.Declarations
+import com.diegonmarcos.cloudcalc.Edit
+import com.diegonmarcos.cloudcalc.Editor
 import com.diegonmarcos.cloudcalc.Fx
 import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.R
@@ -117,11 +121,16 @@ fun ModeScreen(mode: Declarations.Mode) {
 private fun ExpressionMode(mode: Declarations.Mode) {
     val api = LocalCalcApi.current
     val state = LocalCalcState.current
-    var text by rememberSaveable(mode.id) { mutableStateOf("") }
+    // ONE input value - text AND selection - that the soft keyboard and the keypad both edit.
+    var field by rememberSaveable(mode.id, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
+    val text = field.text
+    fun current() = Edit.of(field.text, field.selection.start, field.selection.end)
+    fun setEdit(e: Edit) { field = TextFieldValue(e.text, TextRange(e.start, e.end)) }
     var overrides by remember(mode.id) { mutableStateOf(mapOf<String, Int>()) }
-    var result by remember(mode.id) { mutableStateOf<Logic.Result?>(null) }
-    // The text [result] answers: a fast = must never keep a result computed for older text.
-    var resultFor by remember(mode.id) { mutableStateOf("") }
+    // What the engine answered, and the text it answered FOR: a result is shown only while the two agree,
+    // so the result line can never be an older text's value (or an echo of the expression) after an edit.
+    var answer by remember(mode.id) { mutableStateOf<Pair<String, Logic.Result>?>(null) }
+    val result = answer?.takeIf { it.first == text }?.second
     var bases by remember(mode.id) { mutableStateOf(listOf<Pair<String, String>>()) }
     var suggestions by remember(mode.id) { mutableStateOf(listOf<Logic.Item>()) }
     val options = Logic.options(mode.options, overrides)
@@ -129,18 +138,20 @@ private fun ExpressionMode(mode: Declarations.Mode) {
     LaunchedEffect(state.pending) {
         val p = state.pending
         if (p != null && p.first == mode.id) {
-            text += p.second
+            setEdit(Editor.reuse(current(), p.second))
             state.pending = null
         }
     }
 
     LaunchedEffect(text, options) {
-        if (text.isBlank()) { result = null; bases = emptyList(); suggestions = emptyList(); return@LaunchedEffect }
+        if (text.isBlank()) { answer = null; bases = emptyList(); return@LaunchedEffect }
         delay(DEBOUNCE_MS)
-        result = Logic.result(io { api.eval(text, options) })
-        resultFor = text
-        bases = mode.showBases.map { c -> c.label to Logic.result(io { api.eval(text, Logic.options(options, mapOf(c.key to c.value))) }).text }
-        val word = Logic.lastWord(text)
+        val asked = text
+        answer = asked to Logic.result(io { api.eval(asked, options) })
+        bases = mode.showBases.map { c -> c.label to Logic.result(io { api.eval(asked, Logic.options(options, mapOf(c.key to c.value))) }).text }
+    }
+    LaunchedEffect(text, field.selection.start) {
+        val word = Editor.wordBeforeCursor(current())
         suggestions = if (word.length >= 2) Logic.items(io { api.complete(word, 8) }) else emptyList()
     }
 
@@ -150,8 +161,8 @@ private fun ExpressionMode(mode: Declarations.Mode) {
             ChoiceRow(mode.angleChoices, options) { c -> overrides = overrides + (c.key to c.value) }
             ChoiceRow(mode.baseChoices, options) { c -> overrides = overrides + (c.key to c.value) }
             OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
+                value = field,
+                onValueChange = { field = it },
                 modifier = Modifier.fillMaxWidth().testTag(CalcTags.INPUT),
                 textStyle = MaterialTheme.typography.headlineSmall,
                 placeholder = { Text(stringResource(R.string.expression_hint)) },
@@ -159,7 +170,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
             if (suggestions.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
                     items(suggestions) { s ->
-                        AssistChip(onClick = { text = Logic.complete(text, s.name) }, label = { Text(s.name) })
+                        AssistChip(onClick = { setEdit(Editor.complete(current(), s.name)) }, label = { Text(s.name) })
                     }
                 }
             }
@@ -178,10 +189,10 @@ private fun ExpressionMode(mode: Declarations.Mode) {
                     val press: () -> Unit = {
                         val r = result
                         if (k.action != Declarations.Action.EVALUATE) {
-                            text = Logic.press(text, k)
-                        } else if (r != null && r.ok && resultFor == text) {
+                            setEdit(Editor.press(current(), k))
+                        } else if (r != null && r.ok) {
                             state.remember(Logic.Entry(mode.id, text, r.text), historyMax())
-                            text = r.text
+                            setEdit(Editor.replaceAll(r.text))
                         }
                     }
                     val m = Modifier.weight(1f).height(CalcMetrics.keyHeight).testTag(CalcTags.key(k.label))
@@ -272,7 +283,10 @@ private fun ConverterMode(mode: Declarations.Mode) {
     var from by rememberSaveable(mode.id) { mutableStateOf(mode.defaults["from"].orEmpty()) }
     var to by rememberSaveable(mode.id) { mutableStateOf(mode.defaults["to"].orEmpty()) }
     var units by remember(mode.id) { mutableStateOf(listOf<Logic.Item>()) }
-    var result by remember(mode.id) { mutableStateOf<Logic.Result?>(null) }
+    // The answer carries the conversion it answers; it is shown only while that is still the current one.
+    var answer by remember(mode.id) { mutableStateOf<Pair<String, Logic.Result>?>(null) }
+    val expr = Logic.convert(value, from, to)
+    val result = answer?.takeIf { it.first == expr }?.second
     var rates by remember(mode.id) { mutableStateOf("") }
     /** The stamp the rates carry; the matrix recomputes when it moves. */
     var ratesTime by remember(mode.id) { mutableStateOf(0L) }
@@ -284,9 +298,10 @@ private fun ConverterMode(mode: Declarations.Mode) {
         if (to !in names) to = names.getOrElse(1) { from }
     }
     LaunchedEffect(value, from, to) {
-        if (value.isBlank() || from.isBlank() || to.isBlank()) { result = null; return@LaunchedEffect }
+        if (value.isBlank() || from.isBlank() || to.isBlank()) { answer = null; return@LaunchedEffect }
         delay(DEBOUNCE_MS)
-        result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
+        val asked = Logic.convert(value, from, to)
+        answer = asked to Logic.result(io { api.eval(asked, mode.options) })
     }
     // On open: show the date the rates carry, and when it is older than the latest ECB publication fetch. The
     // line is always re-read from the engine after a fetch, so it shows the fetched file's own date.
@@ -296,7 +311,7 @@ private fun ConverterMode(mode: Declarations.Mode) {
         val info = io { api.ratesInfo() }
         ratesTime = Fx.time(info)
         rates = ratesLine(info) + failureNote(fetched)
-        result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
+        answer = Logic.convert(value, from, to).let { q -> q to Logic.result(io { api.eval(q, mode.options) }) }
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
@@ -339,7 +354,7 @@ private fun ConverterMode(mode: Declarations.Mode) {
                         val info = io { api.ratesInfo() }
                         ratesTime = Fx.time(info)
                         rates = ratesLine(info) + failureNote(fetched)
-                        result = Logic.result(io { api.eval(Logic.convert(value, from, to), mode.options) })
+                        answer = Logic.convert(value, from, to).let { q -> q to Logic.result(io { api.eval(q, mode.options) }) }
                     }
                 },
                 modifier = Modifier.height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap),

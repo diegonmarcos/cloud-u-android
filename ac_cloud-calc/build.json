@@ -653,6 +653,8 @@
       {
         "id": "standard",
         "label": "Standard",
+        "icon": "calculate",
+        "short": "Basic",
         "tab": "calc",
         "kind": "expression",
         "options": {
@@ -709,6 +711,8 @@
       {
         "id": "scientific",
         "label": "Scientific",
+        "icon": "science",
+        "short": "Sci",
         "tab": "calc",
         "kind": "expression",
         "options": {
@@ -842,6 +846,8 @@
       {
         "id": "programmer",
         "label": "Programmer",
+        "icon": "memory",
+        "short": "Prog",
         "tab": "calc",
         "kind": "expression",
         "options": {
@@ -955,6 +961,8 @@
       {
         "id": "cas",
         "label": "CAS",
+        "icon": "functions",
+        "short": "CAS",
         "tab": "calc",
         "kind": "expression",
         "options": {
@@ -1037,6 +1045,8 @@
       {
         "id": "physics",
         "label": "Physics & Constants",
+        "icon": "bolt",
+        "short": "Phys",
         "tab": "calc",
         "kind": "catalog",
         "options": {
@@ -1073,6 +1083,8 @@
       {
         "id": "units",
         "label": "Units",
+        "icon": "straighten",
+        "short": "Units",
         "tab": "convert",
         "kind": "converter",
         "options": {
@@ -1116,6 +1128,8 @@
       {
         "id": "currency",
         "label": "Currency",
+        "icon": "currency",
+        "short": "FX",
         "tab": "convert",
         "kind": "converter",
         "options": {
@@ -1146,6 +1160,8 @@
       {
         "id": "graphing",
         "label": "Graph",
+        "icon": "chart",
+        "short": "Graph",
         "tab": "graph",
         "kind": "plot",
         "plot": {
@@ -1158,6 +1174,8 @@
       {
         "id": "datetime",
         "label": "Date & Time",
+        "icon": "event",
+        "short": "Date",
         "tab": "tools",
         "kind": "form",
         "options": {
@@ -1239,6 +1257,8 @@
       {
         "id": "finance",
         "label": "Finance",
+        "icon": "payments",
+        "short": "Fin",
         "tab": "tools",
         "kind": "form",
         "options": {
@@ -1378,6 +1398,8 @@
       {
         "id": "acoustics",
         "label": "Acoustics",
+        "icon": "graphic_eq",
+        "short": "Sound",
         "tab": "tools",
         "kind": "form",
         "options": {
