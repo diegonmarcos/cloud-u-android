@@ -65,7 +65,10 @@ class CalcShellTest {
         override fun info() = """{"ok":true,"version":"fake"}"""
         override fun eval(expr: String, options: String): String {
             synchronized(evals) { evals += expr }
-            return JSONObject().put("ok", true).put("result", when (expr) { "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
+            // Like the engine: unless the mode asks for always-decimal (approx 2), a non-integer quotient prints as the exact fraction.
+            val decimal = runCatching { JSONObject(options).optInt("approx", 1) }.getOrDefault(1) >= 2
+            return JSONObject().put("ok", true).put("result", when (expr) {
+                "500/3" -> if (decimal) "166.6666667" else "500/3" "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
         }
         override fun plot(expr: String, xmin: Double, xmax: Double, steps: Int) = """{"ok":true,"x":[0,1,2],"y":[0,1,4]}"""
         override fun complete(prefix: String, max: Int) = """[{"name":"sqrt","title":"Square Root","kind":"function","category":"c"}]"""
@@ -229,6 +232,23 @@ class CalcShellTest {
         typeKeys("=")
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("150")
         assertEquals("150", state.history.first().result)
+    }
+
+    @Test fun `500 over 3 reads as a decimal in the calculators, never as the input echoed`() {
+        listOf("standard", "scientific", "programmer").forEach { id ->
+            assertEquals("$id must print always-decimal", 2, Logic.optionValue(Declarations.mode(id)!!.options, "approx", -1))
+        }
+        listOf("units", "currency", "physics").forEach { id ->
+            assertEquals("$id must print always-decimal", 2, Logic.optionValue(Declarations.mode(id)!!.options, "approx", -1))
+        }
+        openStandard()
+        typeKeys("5", "0", "0", "/", "3")
+        resultIs("166.6666667")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("500/3")
+        typeKeys("=")
+        // The History entry holds the decimal too, and the field now holds the number.
+        assertEquals("166.6666667", state.history.first().result)
+        assertEquals("500/3", state.history.first().expr)
     }
 
     @Test fun `a history reuse lands at the cursor and the result follows the edited text`() {

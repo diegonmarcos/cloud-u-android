@@ -658,8 +658,9 @@
         "tab": "calc",
         "kind": "expression",
         "options": {
-          "approx": 1
+          "approx": 2
         },
+        "_doc_options": "approx 2 = always decimal: 500/3 reads 166.6666667. With approx 1 (exact where possible) libqalculate prints the exact fraction 500/3, which looks like the input echoed back (owner bug 2026-10-08). Only CAS keeps exact results.",
         "keys": [
           [
             "AC",
@@ -851,7 +852,7 @@
         "tab": "calc",
         "kind": "expression",
         "options": {
-          "approx": 0,
+          "approx": 2,
           "in_base": 10
         },
         "base_choices": [
