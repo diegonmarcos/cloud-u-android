@@ -317,14 +317,25 @@ def _dig(blob, dotted):
 
 
 def _content_address(app_dir, artifact):
-    """sha256 over each identity file's sha256, first 12 hex. None if one is missing."""
+    """sha256 over each identity file's sha256, first 12 hex. None if one is missing.
+
+    A symlink counts by its TARGET PATH, the way git stores a 120000 blob — never by
+    the target's bytes. A checkout that cannot hold links (the owner's FUSE phone) has
+    the same target path as a plain file, so every checkout computes one address;
+    following the link gave the desktop and the phone two different "truths" for
+    lib-rootfs-nixdroid (patch_bootstrap_ids.py) and the manifest was stale on one
+    of them whatever either committed."""
     outer = hashlib.sha256()
     for rel in artifact["identity_files"]:
         target = os.path.join(app_dir, rel)
-        if not os.path.isfile(target):
+        if os.path.islink(target):
+            data = os.readlink(target).encode("utf-8")
+        elif os.path.isfile(target):
+            with open(target, "rb") as handle:
+                data = handle.read()
+        else:
             return None
-        with open(target, "rb") as handle:
-            outer.update(hashlib.sha256(handle.read()).digest())
+        outer.update(hashlib.sha256(data).digest())
     return outer.hexdigest()[:12]
 
 
@@ -824,6 +835,12 @@ def main():
 
     if failures:
         print("Fleet manifest guard — %d problem(s):\n" % len(failures))
+        # Under GitHub Actions each problem is also an annotation: the job log needs a token
+        # the owner's phone does not hold, and the reason (which lib, which two addresses) is
+        # what a fix needs.
+        if os.environ.get("GITHUB_ACTIONS"):
+            for line in failures:
+                print("::error title=fleet-manifest::" + line.replace("\n", " ")[:900])
         for line in failures:
             print("  " + line)
         print("\nSee task #276. :libs:updater bakes this manifest into")
