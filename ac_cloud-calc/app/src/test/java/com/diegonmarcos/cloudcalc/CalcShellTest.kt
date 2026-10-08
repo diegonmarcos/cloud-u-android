@@ -70,6 +70,7 @@ class CalcShellTest {
             val decimal = runCatching { JSONObject(options).optInt("approx", 1) }.getOrDefault(1) >= 2
             return JSONObject().put("ok", true).put("result", when (expr) {
                 "500/3" -> if (decimal) "166.6666667" else "500/3"
+                "(1) EUR to USD" -> "1.2 USD"; "(1) EUR to BRL" -> "6 BRL"; "(1) EUR to GBP" -> "0.85 GBP"; "(1) EUR to JPY" -> "170 JPY"; "(1) EUR to CNY" -> "8.5 CNY"
                 "7.5/2" -> "3.75"; "-6/4" -> "-1.5"; "100/4/5" -> "5"; "500/(2+3)" -> "100" "2+2" -> "4"; "600/3" -> "200"; "600/4" -> "150"; "(2+2" -> "-3"; else -> "42" }).put("messages", org.json.JSONArray()).toString()
         }
         override fun plot(expr: String, xmin: Double, xmax: Double, steps: Int) = """{"ok":true,"x":[0,1,2],"y":[0,1,4]}"""
@@ -403,12 +404,20 @@ class CalcShellTest {
         assertTrue(has("Rates as of ${today.minusDays(9)}"))
     }
 
-    @Test fun `the cross-rate matrix of the favourites sits under the converter`() {
+    @Test fun `the cross-rate matrix fills all 36 cells from one EUR table, consistent both ways, cut to 4 decimals`() {
         openCurrency()
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.matrixCell("USD", "EUR")).fetchSemanticsNodes().isNotEmpty() }
-        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(CalcTags.matrixCell("USD", "EUR")).assertTextContains("42") }.isSuccess }
-        compose.onNodeWithTag(CalcTags.matrixCell("BRL", "BRL")).assertTextContains("—")
-        assertEquals(36, Declarations.modes.first { it.id == "currency" }.favourites.size.let { it * it })
+        val codes = Declarations.modes.first { it.id == "currency" }.favourites
+        assertEquals(6, codes.size)
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(CalcTags.matrixCell("USD", "JPY")).assertTextContains("141.6666") }.isSuccess }
+        // Every cell has a number; the diagonal is 1.
+        codes.forEach { r -> codes.forEach { col ->
+            val text = compose.onNodeWithTag(CalcTags.matrixCell(r, col)).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString { it.text }
+            assertTrue("($r,$col) is empty or unresolved: '$text'", text.isNotBlank() && text != "?")
+            if (r == col) assertEquals("1", text)
+        } }
+        // Cut, not rounded: 1.2 / 0.85 = 1.41176...
+        compose.onNodeWithTag(CalcTags.matrixCell("GBP", "USD")).assertTextContains("1.4117")
+        compose.onNodeWithTag(CalcTags.matrixCell("BRL", "USD")).assertTextContains("0.2")
     }
 
     @Test fun `a history tap sends the result back to its mode`() {

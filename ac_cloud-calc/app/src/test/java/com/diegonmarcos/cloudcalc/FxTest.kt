@@ -44,10 +44,43 @@ class FxTest {
         assertEquals(listOf("AUD"), rest)
     }
 
-    @Test fun `a matrix cell is the number to four digits with no unit`() {
-        assertEquals("1.163", Fx.cell("1.16342 USD"))
-        assertEquals("170.2", Fx.cell("170.2345 JPY"))
-        assertEquals("0.006", Fx.cell("0.00600000 EUR"))
-        assertEquals("1200", Fx.cell("1,200.0 BRL"))
+    private val perEur = mapOf("EUR" to 1.0, "USD" to 1.2, "BRL" to 6.0, "GBP" to 0.85, "JPY" to 170.0, "CNY" to 8.5)
+    private val codes = listOf("USD", "EUR", "BRL", "GBP", "JPY", "CNY")
+
+    @Test fun `the matrix fills every cell from one EUR table, the diagonal is 1, a to b times b to a is 1`() {
+        val m = Fx.matrix(codes, perEur)
+        assertEquals(36, m.size)
+        codes.forEach { a -> codes.forEach { b ->
+            val ab = m[a to b]!!; val ba = m[b to a]!!
+            assertEquals("$a->$b x $b->$a", 1.0, ab * ba, 1e-9)
+            if (a == b) assertEquals(1.0, ab, 0.0)
+        } }
+        assertEquals(1.0 / 1.2, m["USD" to "EUR"]!!, 1e-12)
+        assertEquals(170.0 / 1.2, m["USD" to "JPY"]!!, 1e-9)
+        // Triangular consistency: BRL->JPY equals BRL->USD then USD->JPY.
+        assertEquals(m["BRL" to "JPY"]!!, m["BRL" to "USD"]!! * m["USD" to "JPY"]!!, 1e-9)
+    }
+
+    @Test fun `a currency missing from the table leaves only its own row and column empty`() {
+        val m = Fx.matrix(codes, perEur - "BRL")
+        assertEquals(null, m["BRL" to "USD"]); assertEquals(null, m["USD" to "BRL"])
+        assertEquals(1.0, m["BRL" to "BRL"]!!, 0.0)
+        assertEquals(170.0 / 1.2, m["USD" to "JPY"]!!, 1e-9)
+    }
+
+    @Test fun `numbers are cut to at most four decimals with trailing zeros stripped, never rounded`() {
+        assertEquals("1.4117", Fx.trunc(1.2 / 0.85))
+        assertEquals("0.2", Fx.trunc(0.2))
+        assertEquals("170", Fx.trunc(170.0))
+        assertEquals("0.8333", Fx.trunc(1.0 / 1.2))
+        assertEquals("0", Fx.trunc(0.00004))
+        assertEquals("-1.5", Fx.trunc(-1.5))
+        assertEquals("1.1634 USD", Fx.truncateNumbers("1.16349 USD"))
+        assertEquals("100.5 EUR", Fx.truncateNumbers("100.5000 EUR"))
+        assertEquals("2 JPY", Fx.truncateNumbers("2.00001 JPY"))
+        assertEquals("-0.9999", Fx.truncateNumbers("-0.99999"))
+        assertEquals("1234 JPY", Fx.truncateNumbers("1234 JPY"))
+        assertEquals(1.1634, Fx.numberIn("≈ 1.1634 USD")!!, 0.0)
+        assertEquals(1200.5, Fx.numberIn("1,200.5 BRL")!!, 0.0)
     }
 }

@@ -57,9 +57,31 @@ object Fx {
         return fav to codes.filter { it !in fav }
     }
 
-    /** The matrix cell text from the engine's answer: the number, no unit. */
-    fun cell(resultText: String): String {
-        val n = resultText.trim().split(Regex("\\s+")).firstOrNull().orEmpty().replace(",", "")
-        return n.toBigDecimalOrNull()?.round(java.math.MathContext(4))?.stripTrailingZeros()?.toPlainString() ?: n
+    /** The ECB table is EUR-based: every rate is units of the currency per 1 EUR. */
+    const val BASE = "EUR"
+    private val NUMBER = Regex("""-?\d+(\.\d+)?""")
+    private val DECIMAL = Regex("""-?\d+\.\d+""")
+
+    /** The first number of an engine answer ("1.1634 USD", "≈ 1.16 USD"), null when there is none. */
+    fun numberIn(text: String): Double? = NUMBER.find(text.replace(",", ""))?.value?.toDoubleOrNull()
+
+    /** [x] cut (not rounded) to at most 4 decimals, trailing zeros stripped. */
+    fun trunc(x: Double): String =
+        if (!x.isFinite()) "?" else java.math.BigDecimal(x.toString()).setScale(4, java.math.RoundingMode.DOWN).stripTrailingZeros().toPlainString().let { if (it == "-0") "0" else it }
+
+    /** Every decimal number in [text] cut to at most 4 decimals ("1.16349 USD" -> "1.1634 USD"). */
+    fun truncateNumbers(text: String): String = DECIMAL.replace(text) { m ->
+        java.math.BigDecimal(m.value).setScale(4, java.math.RoundingMode.DOWN).stripTrailingZeros().toPlainString().let { if (it == "-0") "0" else it }
     }
+
+    /**
+     * The cross rates of [codes] from ONE EUR-based table ([perEur]: units of each currency per 1 EUR):
+     * the cell (row r, column c) is how much of c one unit of r buys = perEur[c] / perEur[r]; the diagonal is 1.
+     * A currency missing from the table leaves its row and column null.
+     */
+    fun matrix(codes: List<String>, perEur: Map<String, Double>): Map<Pair<String, String>, Double?> =
+        codes.flatMap { r -> codes.map { c -> r to c } }.associateWith { (r, c) ->
+            val a = perEur[r]; val b = perEur[c]
+            if (r == c) 1.0 else if (a == null || b == null || a == 0.0) null else b / a
+        }
 }

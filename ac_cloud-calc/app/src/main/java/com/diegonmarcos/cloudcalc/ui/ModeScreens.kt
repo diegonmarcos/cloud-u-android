@@ -287,6 +287,8 @@ private fun ConverterMode(mode: Declarations.Mode) {
     var answer by remember(mode.id) { mutableStateOf<Pair<String, Logic.Result>?>(null) }
     val expr = Logic.convert(value, from, to)
     val result = answer?.takeIf { it.first == expr }?.second
+    // A currency amount reads to at most 4 decimals, cut (not rounded), zeros stripped - on screen and in History.
+    val shown = if (mode.rates) result?.copy(text = Fx.truncateNumbers(result.text)) else result
     var rates by remember(mode.id) { mutableStateOf("") }
     /** The stamp the rates carry; the matrix recomputes when it moves. */
     var ratesTime by remember(mode.id) { mutableStateOf(0L) }
@@ -328,7 +330,7 @@ private fun ConverterMode(mode: Declarations.Mode) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
-                result?.takeIf { it.ok }?.let { r -> state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }
+                shown?.takeIf { it.ok }?.let { r -> state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) }
             }),
         )
         Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
@@ -336,12 +338,12 @@ private fun ConverterMode(mode: Declarations.Mode) {
             TextButton(onClick = { val f = from; from = to; to = f }, modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.CONVERT_SWAP), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text("⇄") }
             UnitPicker(units, to, mode.favourites, Modifier.weight(1f)) { to = it }
         }
-        ResultBlock(result)
+        ResultBlock(shown)
         // = keeps the conversion in History (the keypad's = for a converter); compact, one row with the rates line.
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {
             if (mode.rates) Text(rates, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             else Box(Modifier.weight(1f))
-            result?.takeIf { it.ok }?.let { r ->
+            shown?.takeIf { it.ok }?.let { r ->
                 FilledTonalButton(
                     onClick = { state.remember(Logic.Entry(mode.id, Logic.convert(value, from, to), r.text), historyMax()) },
                     modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.CONVERT_EQ), contentPadding = PaddingValues(horizontal = CalcMetrics.gap),
@@ -371,11 +373,14 @@ private fun RatesMatrix(mode: Declarations.Mode, ratesTime: Long, ratesText: Str
     val codes = mode.favourites
     var cells by remember(mode.id) { mutableStateOf(mapOf<Pair<String, String>, String>()) }
     LaunchedEffect(ratesTime) {
-        cells = io {
-            codes.flatMap { r -> codes.map { c -> r to c } }.associateWith { (r, c) ->
-                if (r == c) "—" else Logic.result(api.eval(Logic.convert("1", r, c), mode.options)).let { if (it.ok) Fx.cell(it.text) else "?" }
-            }
+        // ONE table: what 1 EUR buys of each favourite, from the engine; every cell is a ratio of two of its entries.
+        val perEur = io {
+            codes.mapNotNull { c ->
+                if (c == Fx.BASE) Fx.BASE to 1.0
+                else Fx.numberIn(Logic.result(api.eval(Logic.convert("1", Fx.BASE, c), mode.options)).text)?.let { c to it }
+            }.toMap()
         }
+        cells = Fx.matrix(codes, perEur).mapValues { (_, v) -> v?.let { Fx.trunc(it) } ?: "?" }
     }
     Column(Modifier.fillMaxWidth().padding(top = CalcMetrics.gap).testTag(CalcTags.MATRIX)) {
         Text(ratesText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
