@@ -26,6 +26,13 @@ class BatteryBadgeDeclarationTest {
         assertTrue("restarted after an update", BadgeDeclaration.restartServices(BadgeServices.declared).contains(b.service))
     }
 
+    @Test fun `it sits in the Network shade group beside Mesh and Data`() {
+        val g = NotifyGroups.groupOf(BatteryBadgeService.BADGE_ID)!!
+        assertEquals("network", g.id)
+        assertEquals(NotifyGroups.groupOf(NetworkBadgeService.BADGE_ID), g)
+        assertEquals(NotifyGroups.groupOf(DataBadgeService.BADGE_ID), g)
+    }
+
     @Test fun `the owner can turn the badge off`() {
         val ctx = org.robolectric.RuntimeEnvironment.getApplication()
         val b = badge!!

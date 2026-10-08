@@ -49,8 +49,8 @@ elif not any(o['key'] == 'enabled' for o in p.get('customization', [])):
                                                 print('no owner off switch')
 elif not any(o['key'] == 'persistent' for o in p.get('customization', [])):
                                                 print('no pin switch')
-elif not any('battery_status' in g.get('members', []) for g in nc.get('groups', [])):
-                                                print('in no shade group')
+elif not any(g['id'] == 'network' and 'battery_status' in g.get('members', []) for g in nc.get('groups', [])):
+                                                print('not in the network shade group')
 elif p.get('channel') != 'battery_status' or 'CHANNEL_ID = "battery_status"' not in src:
                                                 print('declared channel is not the one the service posts on')
 elif not re.search(r'NotificationChannel\(CHANNEL_ID,\s*"Battery",\s*NotificationManager\.IMPORTANCE_LOW', src):

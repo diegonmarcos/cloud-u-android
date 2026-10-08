@@ -33,8 +33,8 @@ elif not p.get('service', '').endswith('.DataBadgeService'): print('no owning se
 elif 'notifications' not in p.get('requires', []): print('does not declare the notification grant')
 elif not any(o['key'] == 'enabled' for o in p.get('customization', [])): print('no owner off switch')
 elif not any(o['key'] == 'persistent' for o in p.get('customization', [])): print('no pin switch')
-elif g is None or g['label'] != 'Network' or g['members'] != ['network_mesh', 'network_data']:
-                                                print('group network is not [network_mesh, network_data]')
+elif g is None or g['label'] != 'Network' or g['members'] != ['network_mesh', 'network_data', 'battery_status']:
+                                                print('group network is not [network_mesh, network_data, battery_status]')
 elif p.get('channel') != 'network_data' or 'CHANNEL_ID = "network_data"' not in src: print('channel mismatch')
 elif not re.search(r'IMPORTANCE_LOW', src):     print('channel is not low importance')
 else:                                           print('OK')

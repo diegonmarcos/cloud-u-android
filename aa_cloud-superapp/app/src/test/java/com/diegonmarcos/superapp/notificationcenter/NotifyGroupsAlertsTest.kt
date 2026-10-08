@@ -75,10 +75,10 @@ class NotifyGroupsAlertsTest {
     @Test fun `exactly the declared groups, in the brief's order and membership`() {
         assertEquals(listOf("live", "actions", "media", "alerts", "store", "network"), NotifyGroups.declared.map { it.id })
         assertEquals("#812 the Store badge", listOf(StoreBadgeNotifier.BADGE_ID), group("store").members)
-        assertEquals(listOf("markets_prices", "health_activity", "weather_today", BatteryBadgeService.BADGE_ID), group("live").members)
+        assertEquals(listOf("markets_prices", "health_activity", "weather_today"), group("live").members)
         assertEquals(listOf("floating_nav_quick_actions", "kde_status"), group("actions").members)
         assertEquals(listOf("media_now_playing"), group("media").members)
-        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID), group("network").members)
+        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID), group("network").members)
         assertEquals(listOf(AlertsNotifier.BADGE_ID), group("alerts").members)
         assertEquals("only the alerts group is the alerts group", listOf("alerts"),
             NotifyGroups.declared.filter { it.alerts }.map { it.id })

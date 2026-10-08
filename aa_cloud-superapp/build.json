@@ -8768,7 +8768,7 @@
         {
           "id": "live",
           "label": "Markets · Health · Weather",
-          "members": ["markets_prices", "health_activity", "weather_today", "battery_status"]
+          "members": ["markets_prices", "health_activity", "weather_today"]
         },
         {
           "id": "actions",
@@ -8795,7 +8795,7 @@
         {
           "id": "network",
           "label": "Network",
-          "members": ["network_mesh", "network_data"]
+          "members": ["network_mesh", "network_data", "battery_status"]
         }
       ],
       "producers": [

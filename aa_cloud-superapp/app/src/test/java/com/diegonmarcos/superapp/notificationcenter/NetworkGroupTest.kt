@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/** The Mesh and Data badges: both declared, one shade group "Network", each with its own switches. */
+/** The Mesh, Data and Battery badges: all declared, one shade group "Network", each with its own switches. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class NetworkGroupTest {
@@ -43,12 +43,13 @@ class NetworkGroupTest {
         assertEquals("network", g.id)
         assertEquals("Network", g.label)
         assertEquals(g, NotifyGroups.groupOf(DataBadgeService.BADGE_ID))
-        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID), g.members)
+        assertEquals(g, NotifyGroups.groupOf(BatteryBadgeService.BADGE_ID))
+        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID), g.members)
     }
 
     @Test fun `attach puts both under one group key and posts one summary`() {
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        val keys = listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID).map { id ->
+        val keys = listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID).map { id ->
             NotifyGroups.attach(ctx, NotificationCompat.Builder(ctx, "t").setSmallIcon(android.R.drawable.sym_def_app_icon), id)
                 .build().group
         }
@@ -57,7 +58,7 @@ class NetworkGroupTest {
         val summaries = nm.activeNotifications.filter {
             it.notification.group == keys[0] && it.notification.flags and android.app.Notification.FLAG_GROUP_SUMMARY != 0
         }
-        assertEquals("exactly one summary for the pair", 1, summaries.size)
+        assertEquals("exactly one summary for the three", 1, summaries.size)
     }
 
     @Test fun `each badge has its own on-off switch`() {
@@ -69,6 +70,16 @@ class NetworkGroupTest {
         assertTrue("turning Data off leaves Mesh on", BadgeCustomization.isEnabled(ctx, mesh))
         assertTrue(BadgeServices.wanted(ctx, mesh.service))
         assertFalse(BadgeServices.wanted(ctx, data.service))
+    }
+
+    @Test fun `battery keeps its own channel and switches inside the group`() {
+        val bat = badge(BatteryBadgeService.BADGE_ID)!!
+        assertEquals(BatteryBadgeService.CHANNEL_ID, bat.channel)
+        assertTrue(bat.channel != badge(NetworkBadgeService.BADGE_ID)!!.channel && bat.channel != badge(DataBadgeService.BADGE_ID)!!.channel)
+        BadgeCustomization.set(ctx, bat, BadgeCustomization.KEY_ENABLED, false)
+        assertFalse(BadgeCustomization.isEnabled(ctx, bat))
+        assertTrue(BadgeCustomization.isEnabled(ctx, badge(NetworkBadgeService.BADGE_ID)!!))
+        assertTrue(BadgeCustomization.isEnabled(ctx, badge(DataBadgeService.BADGE_ID)!!))
     }
 
     @Test fun `the pin switch is per badge too`() {
