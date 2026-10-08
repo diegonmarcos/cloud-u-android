@@ -120,6 +120,17 @@ class SearchShellTest {
 
     private fun launch() = compose.setContent { SearchShell(state) }
 
+    /** #913 a vertical through the app's own nav: the assistant is the island's Chat; every other one a pill of Web Search's strip. */
+    private fun openVertical(id: String) {
+        if (id == state.chatVertical) compose.onNodeWithTag(Tags.nav("chat")).performClick()
+        else {
+            compose.onNodeWithTag(Tags.nav("web")).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(Tags.subpage(id)).performClick()
+        }
+        compose.waitForIdle()
+    }
+
     // A timeout names the tag, the vertical and the subpage it was waiting on: run 37474747245 (arm64
     // only, Release) reported nothing but "Condition still not satisfied after 60000 ms".
     private fun waitFor(tag: String) = try {
@@ -132,11 +143,12 @@ class SearchShellTest {
         launch()
         val cfg = Decl.config
         for (v in cfg.verticals) {
-            compose.onNodeWithTag(Tags.nav(v.id)).performClick()
-            compose.waitForIdle()
+            openVertical(v.id)
             assertEquals(v.id, state.vertical)
             // A vertical with one subpage draws no sub-nav (the mockup's Search, Groceries, Things).
-            assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(v.subpages.first())).fetchSemanticsNodes().isNotEmpty())
+            // (Things' one subpage shares its id with Web Search's Things pill, which is always there.)
+            if (v.subpages.first() !in cfg.verticals.map { it.id })
+                assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(v.subpages.first())).fetchSemanticsNodes().isNotEmpty())
             if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.last())).performClick()
             for (sub in v.subpages) {
                 compose.runOnIdle { state.showSubpage(v, sub) }
@@ -152,7 +164,7 @@ class SearchShellTest {
 
     @Test fun jobsListingShowsWhatTheSourceReturnedAndWhyTheOthersDidNot() {
         launch()
-        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
+        openVertical("jobs")
         waitFor(Tags.card("ba-jobsuche:r-1"))
         compose.onNodeWithTag(Tags.card("ba-jobsuche:r-1")).assertTextContains("Kotlin Developer", substring = true)
         waitFor(Tags.source("arbeitnow"))
@@ -162,7 +174,7 @@ class SearchShellTest {
 
     @Test fun payslipComputesOnScreen() {
         launch()
-        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
+        openVertical("jobs")
         compose.runOnIdle { state.showSubpage(state.v(), "calculators") }
         waitFor(Tags.output("payslip", "net"))
         // 5,000 € gross, class I, childless, 2.9 % extra rate: PayslipTest's hand-checked net.
@@ -172,7 +184,7 @@ class SearchShellTest {
 
     @Test fun chatWithoutATokenSaysWhyAndSendsNothing() {
         launch()
-        compose.onNodeWithTag(Tags.nav("search")).performClick()
+        openVertical("search")
         waitFor(Tags.CHAT_INPUT)
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("What is the Grundfreibetrag?")
         compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
@@ -202,13 +214,13 @@ class SearchShellTest {
         compose.onNodeWithTag(Tags.drawer("saved")).performClick()
         waitFor(Tags.SAVED)
         compose.onNodeWithTag(Tags.ISLAND).assertTextContains("Saved Items", substring = true)
-        compose.onNodeWithTag(Tags.nav("house")).performClick()
+        openVertical("house")
         compose.runOnIdle { assertFalse(state.saved); assertEquals("house", state.vertical) }
     }
 
     @Test fun extensiveFiltersApplyTheDeclaredOptions() {
         launch()
-        compose.onNodeWithTag(Tags.nav("jobs")).performClick()
+        openVertical("jobs")
         waitFor(Tags.MORE_FILTERS)
         compose.onNodeWithTag(Tags.MORE_FILTERS).performClick()
         waitFor(Tags.APPLY_FILTERS)
@@ -222,7 +234,7 @@ class SearchShellTest {
 
     @Test fun houseAnalysisShowsTheSeriesAndSaysWhatIsMissing() {
         launch()
-        compose.onNodeWithTag(Tags.nav("house")).performClick()
+        openVertical("house")
         compose.runOnIdle { state.showSubpage(state.v(), "analysis") }
         compose.waitUntil(10_000) { compose.onAllNodesWithText("4.01 %", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onAllNodesWithText("+0.30 pp vs 2025-08", substring = true).fetchSemanticsNodes().let { assertTrue(it.isNotEmpty()) }
@@ -240,7 +252,7 @@ class SearchShellTest {
         val cfg = Decl.config
         val app = RuntimeEnvironment.getApplication()
         val search = cfg.verticals.single { v -> v.subpages.any { cfg.subpage(it)?.kind == "assistant" } }
-        compose.onNodeWithTag(Tags.nav(search.id)).performClick()
+        openVertical(search.id)
         waitFor(Tags.page("assistant"))
         // One page: the assistant's is the only page composed, and no sub-nav offers another.
         for (kind in cfg.subpages.map { it.kind }.toSet())
@@ -316,7 +328,7 @@ class SearchShellTest {
     // ── #903 Things ──────────────────────────────────────────────────────────────────────────────
     private fun openThings(item: String) {
         launch()
-        compose.onNodeWithTag(Tags.nav("things")).performClick()
+        openVertical("things")
         waitFor(Tags.SEARCH_BOX)
         compose.onNodeWithTag(Tags.SEARCH_BOX).performTextInput(item)
         compose.onNodeWithTag(Tags.SEARCH_BOX).performImeAction()
@@ -410,5 +422,101 @@ class SearchShellTest {
         assertEquals(24.49, j.getJSONArray("rows").getJSONObject(0).getDouble("price"), 1e-9)
         assertTrue(j.getJSONArray("rows").getJSONObject(1).isNull("price"))
         assertTrue(SearchDebugApi.things(services, mapOf("q" to "x", "city" to "München")).getBoolean("ok"))
+    }
+
+    // ── #913 the island, Agents and Reports ──────────────────────────────────────────────────────
+    @Test fun theIslandHoldsTheFiveSectionsAndEachOpens() {
+        launch()
+        assertEquals(listOf("web", "cloud", "chat", "agents", "reports"), NAV_IDS)
+        for (id in NAV_IDS) {
+            compose.onNodeWithTag(Tags.nav(id)).performClick()
+            compose.waitForIdle()
+            assertEquals(id, state.section)
+        }
+        // Web Search's strip is its verticals, Chat is the assistant.
+        compose.onNodeWithTag(Tags.nav("web")).performClick()
+        waitFor(Tags.WEB_STRIP)
+        for (v in listOf("house", "jobs", "groceries", "things")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        compose.onNodeWithTag(Tags.nav("chat")).performClick()
+        waitFor(Tags.page("assistant"))
+        assertEquals(state.chatVertical, state.vertical)
+    }
+
+    private val NAV_IDS get() = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
+
+    private class FakeMail : com.diegonmarcos.cloudsearch.core.agents.MailSource {
+        override fun messages(from: String, subject: String, sinceMs: Long, limit: Int) = listOf(
+            com.diegonmarcos.cloudsearch.core.agents.MailHeader("m1", "acc", "Neue Angebote", "WG", "info@wg-gesucht.de", "2026-10-07T10:00:00Z", 1L, false),
+        )
+        override fun body(accountId: String, id: String) = com.diegonmarcos.cloudsearch.core.agents.MailBody(
+            "", """<a href="https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Mitte.11223344.html?x=1">Zimmer</a>""", false)
+    }
+
+    private class FakePages : com.diegonmarcos.cloudsearch.core.agents.PageSource {
+        override fun text(url: String, maxChars: Int) = com.diegonmarcos.cloudsearch.core.agents.PageText(true, url, "Helles Zimmer", "Ruhige WG sucht Mitbewohner.", false, "")
+    }
+
+    private fun installAgents(): com.diegonmarcos.cloudsearch.data.AgentService {
+        val a = com.diegonmarcos.cloudsearch.data.AgentService(
+            RuntimeEnvironment.getApplication(), http, services.cfg, services.cfg.agents!!, services.models, "p.mail", "p.browser",
+            mailOverride = FakeMail(), pagesOverride = FakePages(),
+            llmOverride = object : com.diegonmarcos.cloudsearch.core.agents.Llm {
+                override fun complete(req: com.diegonmarcos.cloudsearch.core.agents.LlmRequest) = com.diegonmarcos.cloudsearch.core.agents.LlmReply("Ich koche gern.", null, 10, 5, 0.0001)
+            },
+        )
+        a.prefs.setProfile("name", "Ada Test"); a.prefs.setProfile("about", "Ich arbeite als Entwicklerin.")
+        services.installAgents(a)
+        return a
+    }
+
+    @Test fun anAgentRunDraftsForReviewAndNothingIsSent() {
+        val a = installAgents()
+        launch()
+        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.run("house_search"))
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.run("house_search")).performClick()
+        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344"))
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.report("11223344")).assertTextContains("Ich koche gern.", substring = true)
+        // The review buttons: copy puts the message on the clipboard, open hands the listing to Cloud Browser.
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344")).performClick()
+        val app = RuntimeEnvironment.getApplication()
+        val clip = (app.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip
+        assertTrue(clip!!.getItemAt(0).text.toString().contains("Ada Test"))
+        val shadow = shadowOf(app)
+        while (shadow.nextStartedActivity != null) Unit
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.open("11223344")).performClick()
+        val opened = shadow.nextStartedActivity!!
+        assertEquals(Decl.config.agents!!.browser.openAction, opened.action)
+        assertEquals("https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Mitte.11223344.html", opened.getStringExtra("url"))
+        assertEquals("House search", opened.getStringExtra("group"))
+        // Nothing was posted anywhere, and nothing but a view of the page was started.
+        assertTrue(synchronized(http.asked) { http.asked.none { it == Decl.config.ai.chatUrl } })
+        assertEquals(1, a.runs.all().size)
+        assertEquals(1, a.reports.newestFirst().single().items.size)
+        // Reports lists it, newest first, and opens the detail.
+        compose.onNodeWithTag(Tags.nav("reports")).performClick()
+        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.report("row_" + a.reports.newestFirst().single().id))
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.report("row_" + a.reports.newestFirst().single().id)).performClick()
+        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344"))
+    }
+
+    @Test fun agentsSubSectionsAreReachable() {
+        installAgents()
+        launch()
+        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        for (p in listOf("runs", "templates", "settings", "agents")) {
+            compose.onNodeWithTag(Tags.subpage(p)).performClick()
+            waitFor(Tags.page("agents_$p"))
+        }
+    }
+
+    @Test fun cloudSearchSectionHasItsThreePages() {
+        installAgents()
+        launch()
+        compose.onNodeWithTag(Tags.nav("cloud")).performClick()
+        for (p in listOf("apps", "messages", "code")) {
+            compose.onNodeWithTag(Tags.subpage(p)).performClick()
+            waitFor(Tags.page("cloud_$p"))
+        }
     }
 }

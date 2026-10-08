@@ -26,6 +26,12 @@ class Services(ctx: Context, val http: Http) {
     val prefs = Prefs(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE), cfg)
     val sessions = SessionStore(File(ctx.filesDir, "chat-sessions.json"))
     val models = ModelCatalog(cfg, http, Cache(File(ctx.filesDir, "catalog")), System::currentTimeMillis)
+    /** #913 the Agents tab (draft-only agents, runs, reports); null when the app declares no agents. */
+    private var agentService: AgentService? = null
+    val agents: AgentService? get() = agentService ?: AgentService.from(this)?.also { agentService = it }
+
+    /** Tests hand in an AgentService built on fakes. */
+    fun installAgents(a: AgentService?) { agentService = a }
 
     companion object {
         const val PREFS = "cloud_search"

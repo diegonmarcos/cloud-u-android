@@ -1,0 +1,12 @@
+SYNTHETIC fixture: shaped like the plain-text part of a wg-gesucht.de search-alert mail. No real person, address or listing.
+
+Hallo Test,
+neue Angebote zu deiner Suche "Berlin WG-Zimmer bis 700 EUR":
+
+1) Helles Zimmer in Friedrichshain, 520 EUR
+   https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Friedrichshain.11223344.html?utm_source=alert&amp;utm_medium=email
+2) Wohnung Prenzlauer Berg, 900 EUR (siehe https://www.wg-gesucht.de/wohnungen-in-Berlin-Prenzlauer-Berg.7766554.html.)
+3) Zimmer Wedding <https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Wedding.4433221.html>, dann (https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Wedding.4433221.html)
+
+Abmelden: https://www.wg-gesucht.de/abmelden.html
+Nachricht: https://www.wg-gesucht.de/nachricht.html?id=4433221

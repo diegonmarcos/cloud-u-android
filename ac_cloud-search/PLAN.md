@@ -79,3 +79,41 @@ No marketplace offers a public search API this app may use: Kleinanzeigen, eBay 
 
 `/api/search/verticals`, `/query?v=&q=&city=`, `/calc?name=&…`, `/analysis?v=`, `/feed?v=` and `/things?q=&lat=&lon=|city=&radius=` run the
 same engine and cache as the screens (libs:devtools debug API, group `search`).
+
+## Navigation (#913)
+
+The island is Web Search · Cloud Search · Chat · Agents · Reports (`build.json::ui`):
+
+| Section | Pages (PageTabs) | What it is |
+|---|---|---|
+| Web Search | House · Jobs · Groceries · Things | the search verticals above, each with its own subpage strip; Things is the #903 price comparison |
+| Cloud Search | Apps · Messages · Code | Apps searches the fleet manifest and launches the app; Messages asks Cloud Mail through the read-only agent door; Code has no fleet engine yet, so it searches the owner's repositories on GitHub in Cloud Browser and opens Cloud Code |
+| Chat | Assistant | today's Search page (engine boxes + AI chat), moved as is |
+| Agents | Agents · Runs · Templates · Settings | draft-only agents |
+| Reports | list, then detail | what agents published, newest first |
+
+## Agents (#913): draft only
+
+An agent READS and DRAFTS; a person copies the draft and sends it. Nothing is posted, submitted or sent for
+the owner, and there is no button that does. Everything is declared in `build.json::search.agents`.
+
+**House search.** (1) Cloud Mail's agent door lists the mails from `wg-gesucht.de` of the look-back window;
+(2) each mail's body is read and the listing links extracted (host-checked, one per listing id, earlier runs'
+listings skipped); (3) Cloud Browser's agent door fetches each listing page's text (a read-only GET); (4) the
+owner's template is filled with their details and, inside the budget, one short model paragraph; (5) the drafts
+land in a report. Each draft has Copy message, Open listing in Cloud Browser, and the owner's own "I sent it" /
+Dismiss marks.
+
+* **Doors** (`docs/agents-engine-audit.md`): mail `content://<mail pkg>.agentmail/{messages,body}` and browser
+  `AGENT_OPEN` activity + `fetch_text` provider, all behind CONSTELLATION_DATA (signature). Read-only.
+* **Key**: OpenRouter's, read from the fleet Account per model call (`Account.token`), only into the
+  Authorization header. The model gets no tools; its text is cleaned (no links, addresses) before it is inserted.
+* **Budget**: US-dollar caps per run and per day (Settings). Each call is priced at its worst case first and not
+  made if it could pass a cap; the real cost (the provider's, else tokens x price) is recorded.
+* **Audit**: every run logs what it read (mail ids and subjects, URLs) and drafted; never a body, page text or
+  message. Runs page shows it.
+* **Reports** (`ReportStore`, filesDir/agents/reports.json): the local API agents publish through
+  (`ReportSink.publish`); the Reports page lists newest first and opens a detail with the drafts.
+* **Owner setup**: the OpenRouter key in the fleet Account (SuperApp > Profile), Cloud Mail with the wg-gesucht.de
+  alert mails delivered, Cloud Browser installed (both updated to the builds with the agent doors), your details
+  and template on Agents > Templates, a budget on Agents > Settings.

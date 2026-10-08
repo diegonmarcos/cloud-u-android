@@ -116,6 +116,9 @@ object Metrics {
     val islandPadV: Dp = 6.dp
     val islandMinWidth: Dp = 120.dp
     val contentTop: Dp = 70.dp
+    /** #913 a PageTabs strip sits at stripTop under the top bar; a vertical's page sits stripShift lower under the Web Search strip. */
+    val stripTop: Dp = 40.dp
+    val stripShift: Dp = 48.dp
     val contentBottom: Dp = 96.dp
     val cardRadius: Dp = 12.dp
     val cardPad: Dp = 10.dp

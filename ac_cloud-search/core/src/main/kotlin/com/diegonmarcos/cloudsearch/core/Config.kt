@@ -30,6 +30,10 @@ data class SearchConfig(
     val ai: Ai,
     /** #903 the Things page's declaration (stores, shelf prices, price service); null when the app declares none. */
     val things: Things.Config? = null,
+    /** #913 the Agents page's declaration (draft-only agents, their engines and defaults); null when the app declares none. */
+    val agents: com.diegonmarcos.cloudsearch.core.agents.AgentsConfig? = null,
+    /** #913 the Cloud Search section's declaration (Apps, Messages, Code); null when the app declares none. */
+    val cloud: CloudConfig? = null,
 ) {
     data class City(val id: String, val label: String, val lat: Double, val lon: Double, val radiusKm: Int, val aliases: List<String>)
     data class Subpage(val id: String, val label: String, val kind: String)
@@ -181,6 +185,8 @@ data class SearchConfig(
                     )
                 },
                 things = o.optJSONObject("things")?.let { Things.config(it) },
+                agents = o.optJSONObject("agents")?.let { com.diegonmarcos.cloudsearch.core.agents.AgentsConfig.parse(it) },
+                cloud = o.optJSONObject("cloud")?.let { CloudConfig.parse(it) },
             )
             val problems = cfg.problems()
             require(problems.isEmpty()) { "build.json::search is inconsistent: " + problems.joinToString("; ") }

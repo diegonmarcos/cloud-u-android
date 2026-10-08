@@ -58,6 +58,16 @@ def openWithRow = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find {
 if (openWithRow == null)
     throw new GradleException("build.json::open_with.fleet '${openWithId}' is not in the constellation fleet manifest ($fleetAppsFile)")
 def browserPackage = openWithRow.package.toString()
+// #913 Cloud Mail's package (the agent door's authority is <package>.<search.agents.engines.mail.authority_suffix>) and the
+// fleet's own app rows (Cloud Search ▸ Apps), both read from the constellation manifest.
+def fleetManifest = new groovy.json.JsonSlurper().parse(fleetAppsFile)
+def agentMailFleet = buildJson.search?.agents?.engines?.mail?.fleet
+if (!agentMailFleet) throw new GradleException("build.json::search.agents.engines.mail.fleet missing — the Agents tab would not know whose mail to read")
+def agentMailRow = fleetManifest.apps.find { it.id == agentMailFleet }
+if (agentMailRow == null)
+    throw new GradleException("build.json::search.agents.engines.mail.fleet '${agentMailFleet}' is not in the constellation fleet manifest ($fleetAppsFile)")
+def mailPackage = agentMailRow.package.toString()
+def fleetAppsB64 = b64(fleetManifest.apps.findAll { it.kind == 'app' }.collect { [id: it.id, label: it.label, package: it.package] })
 
 android {
     namespace 'com.diegonmarcos.cloudsearch'
@@ -89,7 +99,9 @@ android {
         buildConfigField "String",  "DEBUG_API_GROUP",   "\"${debugGroup}\""
         buildConfigField "boolean", "DARK_DEFAULT",      "${darkDefault}"
         buildConfigField "String",  "BROWSER_PACKAGE",   "\"${browserPackage}\""
-        manifestPlaceholders = [browserPackage: browserPackage]
+        buildConfigField "String",  "MAIL_PACKAGE",      "\"${mailPackage}\""
+        buildConfigField "String",  "FLEET_APPS_B64",    "\"${fleetAppsB64}\""
+        manifestPlaceholders = [browserPackage: browserPackage, mailPackage: mailPackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 

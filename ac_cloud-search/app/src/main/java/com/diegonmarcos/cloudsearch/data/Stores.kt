@@ -84,12 +84,15 @@ class SessionStore(private val file: File) {
 
 /** OpenRouter's live model catalogue, cached for search.ai.catalog_ttl_hours. */
 class ModelCatalog(private val cfg: SearchConfig, private val http: Http, private val cache: Cache, private val clock: () -> Long) {
-    fun models(): List<Chat.Model> {
+    /** The catalogue as OpenRouter sent it (cached), or null when it was never fetched. #913 prices read it too. */
+    fun raw(): String? {
         val key = "models|${cfg.ai.modelsUrl}"
         val hit = cache.get(key)
-        val body = if (hit != null && clock() - hit.at < cfg.ai.catalogTtlHours * 3_600_000L) hit.body
+        return if (hit != null && clock() - hit.at < cfg.ai.catalogTtlHours * 3_600_000L) hit.body
         else runCatching { http.get(cfg.ai.modelsUrl, emptyMap(), cfg.timeoutMs) }.getOrNull()
             ?.takeIf { it.code in 200..299 }?.body?.also { cache.put(key, it, clock()) } ?: hit?.body
-        return body?.let { runCatching { Chat.models(it, cfg.ai.nativeWebParam) }.getOrNull() }.orEmpty()
     }
+
+    fun models(): List<Chat.Model> =
+        raw()?.let { runCatching { Chat.models(it, cfg.ai.nativeWebParam) }.getOrNull() }.orEmpty()
 }

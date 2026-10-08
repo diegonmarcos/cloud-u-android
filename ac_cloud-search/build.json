@@ -1,6 +1,6 @@
 {
   "name": "cloud-search",
-  "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup: five verticals on the fleet's bottom-nav island - House (real estate), Jobs, Search (web engines + AI chat), Groceries and Things (marketplace). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup, on the fleet's bottom-nav island: Web Search (House, Jobs, Groceries, Things), Cloud Search (Apps, Messages, Code), Chat (web engines + AI chat), Agents (#913: draft-only agents that read your mail and pages and write drafts you send yourself) and Reports (what agents published). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -1436,7 +1436,7 @@
       }
     },
     "agents": {
-      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors and never submits, posts or sends anything: a person copies a draft and sends it. This block is the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh).",
+      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors (engines) and never submits, posts or sends anything: an agent produces a DRAFT and the person copies it and sends it themselves. Every agent must say mode draft_only or the declaration is refused. This block is also the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh and by the JVM suite).",
       "engines": {
         "mail": {
           "_doc": "Cloud Mail's query-only provider (ac_cloud-mail app.sterna.agentapi). Authority is <mail package>.<authority_suffix>; the package is the fleet row `fleet`.",
@@ -1480,6 +1480,94 @@
           "extra_group": "group",
           "extra_max_chars": "max_chars"
         }
+      },
+      "defaults": {
+        "_doc": "A run's starting values; Settings overrides model and the budgets. Budgets are US dollars: a model call that could pass the per-run or the per-day cap is not made. unknown_price_per_token prices a model the catalogue does not list a plain price for (a router), deliberately high.",
+        "model": "openai/gpt-4o-mini",
+        "budget_run_usd": 0.05,
+        "budget_day_usd": 0.5,
+        "max_listings": 8,
+        "max_mails": 30,
+        "lookback_days": 14,
+        "page_chars": 6000,
+        "personal_max_words": 70,
+        "max_tokens": 300,
+        "unknown_price_per_token": 6e-05
+      },
+      "profile_fields": [
+        {
+          "id": "name",
+          "label": "Your name",
+          "hint": "signs the message"
+        },
+        {
+          "id": "about",
+          "label": "About you",
+          "hint": "2-3 lines; the only facts the model may use about you"
+        },
+        {
+          "id": "move_in",
+          "label": "Move-in date",
+          "hint": "e.g. 01.12.2026"
+        },
+        {
+          "id": "phone",
+          "label": "Phone (optional)",
+          "hint": "left out when blank"
+        }
+      ],
+      "agents": [
+        {
+          "id": "house_search",
+          "label": "House search",
+          "mode": "draft_only",
+          "blurb": "Reads your wg-gesucht.de alert mails, opens each new listing, and drafts an application from your template. You copy it and send it yourself.",
+          "mail_from": "wg-gesucht.de",
+          "mail_subject": "",
+          "group": "House search",
+          "template": "wg_gesucht_room",
+          "uses_llm": true,
+          "report_kind": "house_search_digest",
+          "links": {
+            "_doc": "A link counts only when its host is one of hosts (or a subdomain) and its path ends in the listing's id (id_regex group 1); the query string is dropped; a listing is one id however many links name it. exclude_paths are account and messaging pages, never a listing.",
+            "hosts": [
+              "wg-gesucht.de"
+            ],
+            "id_regex": "(?:^|[./])(\\d{5,})\\.html$",
+            "exclude_paths": [
+              "/nachricht",
+              "/mein-wg-gesucht",
+              "/abmelden",
+              "/impressum",
+              "/agb",
+              "/datenschutz",
+              "/hilfe",
+              "/anmeldung",
+              "/registrieren",
+              "/anzeigen-erstellen"
+            ]
+          }
+        }
+      ],
+      "templates": [
+        {
+          "id": "wg_gesucht_room",
+          "agent": "house_search",
+          "label": "Room application (German)",
+          "body": "Hallo,\n\nich interessiere mich sehr für Ihr Angebot „{{listing_title}}“ ({{listing_url}}).\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nEinzug wäre ab {{move_in|nach Absprache}} möglich. Über eine Rückmeldung oder einen Besichtigungstermin würde ich mich sehr freuen.\n\nViele Grüße\n{{name}}\n{{phone|}}"
+        }
+      ]
+    },
+    "cloud": {
+      "_doc": "#913 the Cloud Search section (Apps, Messages, Code): the parts of the fleet this app can search honestly. Apps searches the constellation manifest (baked from aa_cloud-superapp/data/constellation-fleet.json, kind app) and opens the app; Messages searches Cloud Mail through the read-only agent door; Code has no search engine in the fleet yet, so it opens Cloud Code and searches the owner's repositories on GitHub in Cloud Browser.",
+      "messages": {
+        "limit": 40,
+        "lookback_days": 90
+      },
+      "code": {
+        "open_fleet": "code",
+        "owner": "diegonmarcos",
+        "search_url": "https://github.com/search?q={q}%20user%3A{owner}&type=code"
       }
     }
   },
@@ -1488,108 +1576,149 @@
     "debug_api": {
       "group": "search"
     },
-    "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state).",
+    "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state). #913: /api/search/agents (the agents, their last run, the budget), /api/search/runs (the run log with its audit lines), /api/search/reports and /api/search/report?id= (what agents published), /api/search/cloud?kind=apps|messages&q= (the Cloud Search section).",
     "dark_default": true,
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens (one per search.verticals entry: same id, order, icon and subpages), ui.default_section where the app opens (= search.default_vertical). A section's pages are its PageTabs strip. test-search-shell.sh S10 holds the two declarations together.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Web Search, Cloud Search, Chat, Agents, Reports), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Web Search's pages are the search.verticals it covers (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), Cloud Search's are Apps, Messages and Code, Chat is today's Search page (the assistant vertical), Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
     "bottom_nav": [
-      "house",
-      "jobs",
-      "search",
-      "groceries",
-      "things"
+      "web",
+      "cloud",
+      "chat",
+      "agents",
+      "reports"
     ],
     "sections": [
       {
-        "id": "house",
-        "label": "House",
-        "icon": "house",
+        "id": "web",
+        "label": "Web Search",
+        "icon": "globe",
         "pages": [
           {
-            "id": "listing",
-            "label": "Listing",
-            "icon": ""
+            "id": "house",
+            "label": "House",
+            "pages": [
+              {
+                "id": "listing",
+                "label": "Listing",
+                "icon": ""
+              },
+              {
+                "id": "analysis",
+                "label": "Analysis",
+                "icon": ""
+              },
+              {
+                "id": "feed",
+                "label": "Feed",
+                "icon": ""
+              },
+              {
+                "id": "calculators",
+                "label": "Calculators",
+                "icon": ""
+              }
+            ]
           },
           {
-            "id": "analysis",
-            "label": "Analysis",
-            "icon": ""
+            "id": "jobs",
+            "label": "Jobs",
+            "pages": [
+              {
+                "id": "listing",
+                "label": "Listing",
+                "icon": ""
+              },
+              {
+                "id": "analysis",
+                "label": "Analysis",
+                "icon": ""
+              },
+              {
+                "id": "feed",
+                "label": "Feed",
+                "icon": ""
+              },
+              {
+                "id": "calculators",
+                "label": "Calculators",
+                "icon": ""
+              }
+            ]
           },
           {
-            "id": "feed",
-            "label": "Feed",
-            "icon": ""
+            "id": "groceries",
+            "label": "Groceries"
           },
           {
-            "id": "calculators",
-            "label": "Calculators",
-            "icon": ""
+            "id": "things",
+            "label": "Things"
           }
         ]
       },
       {
-        "id": "jobs",
-        "label": "Jobs",
-        "icon": "jobs",
+        "id": "cloud",
+        "label": "Cloud Search",
+        "icon": "cloud",
         "pages": [
           {
-            "id": "listing",
-            "label": "Listing",
-            "icon": ""
+            "id": "apps",
+            "label": "Apps"
           },
           {
-            "id": "analysis",
-            "label": "Analysis",
-            "icon": ""
+            "id": "messages",
+            "label": "Messages"
           },
           {
-            "id": "feed",
-            "label": "Feed",
-            "icon": ""
-          },
-          {
-            "id": "calculators",
-            "label": "Calculators",
-            "icon": ""
+            "id": "code",
+            "label": "Code"
           }
         ]
       },
       {
-        "id": "search",
-        "label": "Search",
+        "id": "chat",
+        "label": "Chat",
         "icon": "assistant",
         "pages": [
           {
             "id": "assistant",
-            "label": "Assistant",
-            "icon": ""
+            "label": "Assistant"
           }
         ]
       },
       {
-        "id": "groceries",
-        "label": "Groceries",
-        "icon": "groceries",
+        "id": "agents",
+        "label": "Agents",
+        "icon": "agents",
         "pages": [
           {
-            "id": "listing",
-            "label": "Listing",
-            "icon": ""
+            "id": "agents",
+            "label": "Agents"
+          },
+          {
+            "id": "runs",
+            "label": "Runs"
+          },
+          {
+            "id": "templates",
+            "label": "Templates"
+          },
+          {
+            "id": "settings",
+            "label": "Settings"
           }
         ]
       },
       {
-        "id": "things",
-        "label": "Things",
-        "icon": "things",
+        "id": "reports",
+        "label": "Reports",
+        "icon": "reports",
         "pages": [
           {
-            "id": "things",
-            "label": "Compare",
-            "icon": ""
+            "id": "reports",
+            "label": "Reports"
           }
         ]
       }
     ],
-    "default_section": "search"
+    "default_section": "chat"
   }
 }

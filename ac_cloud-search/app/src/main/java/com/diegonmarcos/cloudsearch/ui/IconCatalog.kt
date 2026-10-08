@@ -21,6 +21,9 @@ object IconCatalog {
         "groceries" -> R.drawable.ph_shopping_cart
         "things" -> R.drawable.ph_package
         "globe" -> R.drawable.ph_globe
+        "cloud" -> R.drawable.ph_share_network
+        "agents" -> R.drawable.ph_robot
+        "reports" -> R.drawable.ph_list_dashes
         "bird" -> R.drawable.ph_bird
         "shield-check" -> R.drawable.ph_shield_check
         "magnifying-glass" -> R.drawable.ph_magnifying_glass

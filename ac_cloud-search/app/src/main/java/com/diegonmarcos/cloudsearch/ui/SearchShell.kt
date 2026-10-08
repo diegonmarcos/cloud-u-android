@@ -53,6 +53,7 @@ import com.diegonmarcos.cloudsearch.data.SearchHost
 import com.diegonmarcos.cloudsearch.data.Services
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
@@ -73,6 +74,15 @@ enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
 /** Everything the shell remembers while it is up; the durable half lives in [Services.prefs]. */
 class SearchState(val services: Services) {
     val cfg: SearchConfig = services.cfg
+    /** The vertical whose page is the assistant (Chat); every other vertical lives under Web Search. */
+    val chatVertical: String = cfg.verticals.first { v -> v.subpages.any { cfg.subpage(it)?.kind == "assistant" } }.id
+    /** #913 the island's selection: web, cloud, chat, agents or reports (ui.sections). */
+    var section by mutableStateOf(NAV.default()?.id ?: "chat")
+    var agentsPage by mutableStateOf(NAV.section("agents")?.pages?.firstOrNull()?.id ?: "agents")
+    var cloudPage by mutableStateOf(NAV.section("cloud")?.pages?.firstOrNull()?.id ?: "apps")
+    /** The report open in the Reports detail view, or null for the list. */
+    var reportOpen by mutableStateOf<String?>(null)
+    val agentsModel = AgentsModel(this)
     var vertical by mutableStateOf(cfg.defaultVertical)
     var dark by mutableStateOf(services.prefs.dark)
     var city by mutableStateOf(services.prefs.city)
@@ -98,8 +108,27 @@ class SearchState(val services: Services) {
     /** #903 the settings that place the Things search changed: every Things page asks again. */
     fun areaChanged() { thingsModels.values.forEach { it.stale = true }; areaRev++ }
 
+    /** The island section a vertical lives under: Chat for the assistant, Web Search for the rest. */
+    fun sectionOf(verticalId: String): String = if (verticalId == chatVertical) "chat" else "web"
+
     /** The mockup's switchTopic(): a vertical opens on its first subpage, menus close. */
-    fun open(id: String) { vertical = id; saved = false; menu = null; cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() } }
+    fun open(id: String) {
+        vertical = id; section = sectionOf(id); saved = false; menu = null
+        cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() }
+    }
+
+    /** A tap on an island item (ui.bottom_nav). Web Search keeps the vertical it was on; Chat is the assistant. */
+    fun openSection(id: String) {
+        saved = false; menu = null
+        when (id) {
+            "chat" -> { section = id; vertical = chatVertical }
+            "web" -> {
+                section = id
+                if (vertical == chatVertical) vertical = NAV.section("web")?.pages?.firstOrNull()?.id ?: cfg.verticals.first { it.id != chatVertical }.id
+            }
+            else -> section = id
+        }
+    }
     fun toggle(m: Menu) { menu = if (menu == m) null else m }
     fun toggleDark() { dark = !dark; services.prefs.dark = dark }
     fun pickCity(id: String) { city = id; services.prefs.city = id; listings.values.forEach { it.stale = true }; areaChanged() }
@@ -110,6 +139,7 @@ val LocalState = staticCompositionLocalOf<SearchState> { error("SearchShell prov
 /** The test tags the Robolectric smoke test drives the shell by. */
 object Tags {
     const val SHELL = "search_shell"
+    const val WEB_STRIP = "search_web_strip"
     const val MENU = "search_menu"
     const val ISLAND = "search_island"
     const val PROFILE = "search_profile"
@@ -168,9 +198,15 @@ fun SearchShell(state: SearchState) {
                 Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding().nestedScroll(collapse)) {
                     // The page under the chrome: it pads itself by contentTop / contentBottom.
                     if (state.saved) SavedPage()
-                    else {
-                        val sub = state.subpageOf(v)
-                        key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
+                    else when (state.section) {
+                        "cloud" -> CloudSection(state)
+                        "agents" -> AgentsSection(state)
+                        "reports" -> ReportsSection(state)
+                        "web" -> WebSection(state, v)
+                        else -> {
+                            val sub = state.subpageOf(v)
+                            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
+                        }
                     }
                     TopBar(state, v, Modifier.align(Alignment.TopCenter))
                     // The keyboard takes the bottom of the screen; the nav returns when it closes.
@@ -179,8 +215,8 @@ fun SearchShell(state: SearchState) {
                     if (!imeOpen()) {
                         BottomNavIsland(
                             entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
-                            selectedId = if (state.saved) null else state.vertical,
-                            onSelect = { state.open(it.id) },
+                            selectedId = if (state.saved) null else state.section,
+                            onSelect = { state.openSection(it.id) },
                             modifier = Modifier.align(Alignment.BottomCenter),
                             collapsed = collapse.collapsed,
                         )
@@ -207,14 +243,36 @@ private fun TopBar(state: SearchState, v: SearchConfig.Vertical, modifier: Modif
     ) {
         IconBtn(R.drawable.ph_list, stringResource(R.string.menu), Tags.MENU) { state.toggle(Menu.CATEGORIES) }
         Spacer(Modifier.weight(1f))
+        val section = NAV.section(state.section)
         val text = when {
-            state.busy > 0 || state.chat.sending -> stringResource(R.string.island_busy)
+            state.busy > 0 || state.chat.sending || state.agentsModel.running != null -> stringResource(R.string.island_busy)
             state.saved -> stringResource(R.string.saved_items)
-            else -> v.title
+            state.section == "web" || state.section == "chat" -> v.title
+            else -> section?.label ?: v.title
         }
-        Island(if (state.saved) IconCatalog.SAVED else v.icon, text, Modifier.testTag(Tags.ISLAND))
+        val icon = if (state.section == "web" || state.section == "chat") v.icon else section?.icon ?: v.icon
+        Island(if (state.saved) IconCatalog.SAVED else icon, text, Modifier.testTag(Tags.ISLAND))
         Spacer(Modifier.weight(1f))
         IconBtn(R.drawable.ph_user, stringResource(R.string.profile), Tags.PROFILE) { state.toggle(Menu.PROFILE) }
+    }
+}
+
+/** #913 Web Search: a strip of its verticals (ui.sections[web].pages) over the selected vertical's page. */
+@Composable
+private fun WebSection(state: SearchState, v: SearchConfig.Vertical) {
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().padding(top = Metrics.stripShift)) {
+            val sub = state.subpageOf(v)
+            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
+        }
+        Box(Modifier.align(Alignment.TopStart).padding(top = Metrics.stripTop).testTag(Tags.WEB_STRIP)) {
+            PageTabs(
+                pages = NAV.section("web")?.pages.orEmpty(),
+                selectedId = state.vertical,
+                onSelect = { state.open(it.id) },
+                underTopChrome = false,
+            )
+        }
     }
 }
 

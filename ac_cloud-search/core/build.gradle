@@ -30,6 +30,8 @@ dependencies {
 // The suite reads this app's own build.json (the declaration it ships), not a copy of it.
 tasks.withType(Test).configureEach {
     systemProperty 'cloudsearch.buildJson', rootProject.file('build.json').absolutePath
+    // #913 the repository root, so the suite can hold the engines' own constants equal to build.json::search.agents.engines.
+    systemProperty 'cloudsearch.repoRoot', rootProject.projectDir.parentFile.absolutePath
 }
 
 // MUTATION TESTING. PIT plants mutants in every hand-written class and runs the suite against each;
@@ -47,7 +49,8 @@ pitest {
     timestampedReports = false
     mutationThreshold = 70
     // PIT runs the suite in its own minion JVM, which does not inherit the test task's properties.
-    jvmArgs = ["-Dcloudsearch.buildJson=${rootProject.file('build.json').absolutePath}".toString()]
+    jvmArgs = ["-Dcloudsearch.buildJson=${rootProject.file('build.json').absolutePath}".toString(),
+               "-Dcloudsearch.repoRoot=${rootProject.projectDir.parentFile.absolutePath}".toString()]
 }
 
 // `gradle test` is what CI runs (build.json::tests.unit.task): the mutation run rides on it.

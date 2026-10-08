@@ -17,6 +17,15 @@
         <!-- Where results open (build.json::open_with, resolved from the fleet manifest): without
              this line cloud-browser is invisible on API 30+ and every link would go elsewhere. -->
         <package android:name="${browserPackage}" />
+        <!-- #913 the Agents tab reads Cloud Mail through its read-only agent door (a signature-guarded provider),
+             needs the package to be visible on API 30+. -->
+        <package android:name="${mailPackage}" />
+        <!-- #913 Cloud Search ▸ Apps shows which fleet apps are installed and launches them: every launcher app is visible
+             through this intent query, so no fleet package is listed here (and none is spelled twice). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <!-- #903 The fleet bearer for the Things price service is read from these two providers
              (data/FleetBearer.kt): on API 30+ an unqueried package's provider reads as absent. -->
         <package android:name="com.diegonmarcos.cloudaccount" />

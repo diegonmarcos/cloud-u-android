@@ -19,3 +19,6 @@ object Fixtures {
     fun text(name: String): String =
         (Fixtures::class.java.getResource("/fixtures/$name") ?: error("missing fixture $name")).readText(Charsets.UTF_8)
 }
+
+/** #913 the repository root (the engines' sources sit beside this app). */
+val repoRoot: File by lazy { File(System.getProperty("cloudsearch.repoRoot") ?: error("core/build.gradle sets cloudsearch.repoRoot")) }

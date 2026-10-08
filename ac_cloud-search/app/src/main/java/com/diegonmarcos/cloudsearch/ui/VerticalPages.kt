@@ -107,7 +107,7 @@ fun LazyListScope.pageHeader(state: SearchState, v: SearchConfig.Vertical) {
             TopicHeader(v.title, v.blurb)
             // #868 the fleet's page-tab strip, from build.json::ui.sections[].pages.
             if (v.subpages.size > 1) PageTabs(
-                pages = NAV.section(v.id)?.pages.orEmpty(),
+                pages = NAV.section(state.sectionOf(v.id))?.page(v.id)?.pages.orEmpty(),
                 selectedId = state.subpageOf(v),
                 onSelect = { state.showSubpage(v, it.id) },
                 underTopChrome = false,

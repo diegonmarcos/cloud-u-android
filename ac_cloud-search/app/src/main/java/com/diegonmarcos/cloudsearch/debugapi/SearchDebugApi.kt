@@ -49,6 +49,11 @@ object SearchDebugApi {
                 AppDebugServer.Op("analysis", "v=<vertical id>&q=<term, jobs>&city=<city id, jobs>", "the Analysis page's numbers: jobs statistics or market series with their sources' status"),
                 AppDebugServer.Op("feed", "v=<vertical id>", "the Feed page's headlines and each feed's status"),
                 AppDebugServer.Op("things", "q=<item>&lat=<n>&lon=<n>|city=<typed city>&radius=<km, optional>", "the Things comparison: stores near the place with their price or why none, and each source's status"),
+                AppDebugServer.Op("agents", "", "#913 the draft-only agents, their last run, the model and the budget (never the token)"),
+                AppDebugServer.Op("runs", "n=<count, default 10>", "#913 the run log with each run's audit lines"),
+                AppDebugServer.Op("reports", "", "#913 what agents published, newest first"),
+                AppDebugServer.Op("report", "id=<report id>", "#913 one report with its drafts"),
+                AppDebugServer.Op("cloud", "kind=apps|messages&q=<text>", "#913 the Cloud Search section: fleet apps, or Cloud Mail messages through the read-only agent door"),
             ),
         ) { op, q ->
             when (op) {
@@ -58,6 +63,11 @@ object SearchDebugApi {
                 "analysis" -> analysis(Services.get(app), q).toString()
                 "feed" -> feed(Services.get(app), q).toString()
                 "things" -> things(Services.get(app), q).toString()
+                "agents" -> agents(Services.get(app)).toString()
+                "runs" -> runs(Services.get(app), q).toString()
+                "reports" -> reports(Services.get(app)).toString()
+                "report" -> report(Services.get(app), q).toString()
+                "cloud" -> cloud(Services.get(app), q).toString()
                 else -> null
             }
         }
@@ -128,5 +138,58 @@ object SearchDebugApi {
         }
         val r = s.things.compare(area, q["q"].orEmpty())
         return JSONObject(s.things.json(r).toString()).put("ok", true).put("sources", s.engine.statusJson(r.statuses))
+    }
+
+    private fun noAgents() = JSONObject().put("ok", false).put("error", "build.json::search.agents is not declared")
+
+    /** #913 the agents with their last run, the model and the budget. The token is never part of the answer. */
+    fun agents(s: Services): JSONObject {
+        val svc = s.agents ?: return noAgents()
+        val last = svc.runs.all()
+        return JSONObject().put("ok", true).put("mode", "draft_only")
+            .put("model", svc.prefs.model).put("budget_run_usd", svc.prefs.budgetRunUsd).put("budget_day_usd", svc.prefs.budgetDayUsd)
+            .put("spent_today_usd", svc.prefs.spentToday(System.currentTimeMillis()))
+            .put("agents", JSONArray(svc.agents.agents.map { a ->
+                JSONObject().put("id", a.id).put("label", a.label).put("mode", "draft_only").put("uses_llm", a.usesLlm)
+                    .put("last_run", last.firstOrNull { it.agentId == a.id }?.let { JSONObject().put("id", it.id).put("status", it.status).put("summary", it.summary).put("ended_at", it.endedAt) } ?: JSONObject.NULL)
+            }))
+    }
+
+    fun runs(s: Services, q: Map<String, String>): JSONObject {
+        val svc = s.agents ?: return noAgents()
+        val n = (q["n"]?.toIntOrNull() ?: 10).coerceIn(1, 100)
+        return JSONObject().put("ok", true).put("runs", JSONArray(svc.runs.all().take(n).map { it.toJson() }))
+    }
+
+    fun reports(s: Services): JSONObject {
+        val svc = s.agents ?: return noAgents()
+        return JSONObject().put("ok", true).put("reports", JSONArray(svc.reports.newestFirst().map { r ->
+            JSONObject().put("id", r.id).put("agent", r.agentId).put("kind", r.kind).put("title", r.title).put("created_at", r.createdAt)
+                .put("summary", r.summary).put("items", r.items.size)
+        }))
+    }
+
+    fun report(s: Services, q: Map<String, String>): JSONObject {
+        val svc = s.agents ?: return noAgents()
+        val r = svc.reports.get(q["id"].orEmpty()) ?: return JSONObject().put("ok", false).put("error", "no report with that id")
+        return JSONObject().put("ok", true).put("report", r.toJson())
+    }
+
+    fun cloud(s: Services, q: Map<String, String>): JSONObject {
+        val cloud = s.cfg.cloud ?: return JSONObject().put("ok", false).put("error", "build.json::search.cloud is not declared")
+        return when (q["kind"]) {
+            "apps" -> {
+                val all = com.diegonmarcos.cloudsearch.core.CloudConfig.fleetApps(String(android.util.Base64.decode(BuildConfig.FLEET_APPS_B64, android.util.Base64.DEFAULT), Charsets.UTF_8))
+                JSONObject().put("ok", true).put("apps", JSONArray(cloud.apps(all, q["q"].orEmpty()).map { JSONObject().put("id", it.id).put("label", it.label).put("package", it.pkg) }))
+            }
+            "messages" -> {
+                val svc = s.agents ?: return noAgents()
+                runCatching { svc.mail.messages("", q["q"].orEmpty(), cloud.messagesSince(System.currentTimeMillis()), cloud.messagesLimit) }.fold(
+                    { rows -> JSONObject().put("ok", true).put("messages", JSONArray(rows.map { JSONObject().put("id", it.id).put("subject", it.subject).put("from", it.fromEmail).put("received_at", it.receivedAt) })) },
+                    { JSONObject().put("ok", false).put("error", it.message ?: it.javaClass.simpleName) },
+                )
+            }
+            else -> JSONObject().put("ok", false).put("error", "kind must be apps or messages")
+        }
     }
 }

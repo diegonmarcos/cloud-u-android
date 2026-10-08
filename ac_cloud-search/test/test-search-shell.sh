@@ -31,7 +31,10 @@
 #       the fleet kit (libs:ui-kit) is not linked or imported; its bottom nav and sub-page strips are
 #       the fleet's: libs:bottomnav is linked, Glass.kt draws no BottomNav/SubNav, SearchShell draws
 #       BottomNavIsland and the vertical pages PageTabs from the NavDecl build.json::ui bakes, the app
-#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION, and ui.sections is search.verticals.
+#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION. #913: the island is Web Search, Cloud
+#       Search, Chat, Agents, Reports; Web Search's pages are search.verticals (less the assistant), each
+#       with its subpages one strip lower, Chat is the assistant vertical, and every section icon is a
+#       branch of IconCatalog.
 #   S11 (#803) the app icon is the mockup's central nav icon: res/drawable/ic_launcher_foreground.xml
 #       and ic_launcher_monochrome.xml are exactly what app/tools/phosphor2vd.py makes of
 #       phosphor.json::launcher (the Phosphor glyph, the .ai-nav-icon gradient from colors.xml), and
@@ -120,6 +123,9 @@ declared_icons += [("calculator", k, c.get("icon")) for k, c in S["calculators"]
 for kind, ident, icon in declared_icons:
     if icon not in icons:
         bad.append("S3 %s %s icon %r has no IconCatalog branch — it would draw the fallback" % (kind, ident, icon))
+for x in (bj.get("ui") or {}).get("sections") or []:
+    if x.get("icon") not in icons:
+        bad.append("S3 ui.sections %s icon %r has no IconCatalog branch — the island would draw the fallback" % (x.get("id"), x.get("icon")))
 colors = set(re.findall(r'<color name="([\w]+)"', open(os.path.join(app, "app", "src", "main", "res", "values", "colors.xml"), encoding="utf-8").read()))
 declared_colors = [("engine", e["id"], e.get("accent")) for e in S["engines"]]
 declared_colors += [("vertical", v["id"], v.get("chart_color")) for v in S["verticals"] if v.get("analysis", "none") != "none"]
@@ -181,7 +187,7 @@ if re.search(r"SharedPreferences|getSharedPreferences|putString|writeText|FileOu
 api = code(os.path.join(src, "debugapi", "SearchDebugApi.kt"))
 if "BuildConfig.DEBUG_API_GROUP" not in api:
     bad.append("S7 SearchDebugApi does not register under build.json::ui.debug_api.group")
-for op in ("verticals", "query", "calc", "analysis", "feed", "things"):
+for op in ("verticals", "query", "calc", "analysis", "feed", "things", "agents", "runs", "reports", "report", "cloud"):
     if not re.search(r'AppDebugServer\.Op\("%s"' % op, api) or not re.search(r'"%s" ->' % op, api):
         bad.append("S7 /api/<group>/%s is not both documented and answered" % op)
 if re.search(r'"state"', api):
@@ -233,26 +239,51 @@ if not re.search(r"BottomNavIsland\(\s*entries = NAV\.islandEntries", shell):
     bad.append("S10 SearchShell does not draw BottomNavIsland from the baked NavDecl (NAV.islandEntries)")
 if "NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)" not in shell:
     bad.append("S10 SearchShell's NAV is not NavDecl.fromBuildConfig of the three baked fields")
-if not re.search(r"PageTabs\(\s*pages = NAV\.section\(v\.id\)", code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))):
-    bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from NAV.section(v.id).pages")
+vpages = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))
+if not re.search(r"PageTabs\(\s*pages = NAV\.section\(state\.sectionOf\(v\.id\)\)\?\.page\(v\.id\)", vpages):
+    bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from the vertical's page in the NavDecl")
+if not re.search(r"PageTabs\(\s*pages = NAV\.section\(\"web\"\)", shell):
+    bad.append("S10 SearchShell does not draw Web Search's verticals with PageTabs from NAV.section(\"web\")")
 gradle = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
 for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION"):
     if field not in gradle:
         bad.append("S10 app/build.gradle does not bake %s" % field)
-# ui.sections is build.json::search.verticals, restated for NavDecl: same ids, order, icons, subpages
+# #913 the declaration: five island sections; Web Search's pages are the verticals (less the assistant's), each with its
+# subpages one strip lower; Chat is the assistant vertical; Cloud Search, Agents and Reports are pages of their own.
 ui, vs = bj.get("ui") or {}, bj["search"]["verticals"]
-secs = ui.get("sections") or []
-if ui.get("bottom_nav") != [v["id"] for v in vs] or [x.get("id") for x in secs] != [v["id"] for v in vs]:
-    bad.append("S10 ui.bottom_nav / ui.sections ids are not search.verticals' ids, in order")
-for x, v in zip(secs, vs):
-    if x.get("icon") != v.get("icon") or [q.get("id") for q in x.get("pages") or []] != v.get("subpages"):
-        bad.append("S10 ui.sections[%s] icon or pages differ from search.verticals[%s]" % (x.get("id"), v["id"]))
-    labels = {q["id"]: q["label"] for q in bj["search"]["subpages"]}
-    for q in x.get("pages") or []:
-        if q.get("label") != labels.get(q.get("id")):
-            bad.append("S10 ui.sections[%s] page %s label differs from search.subpages" % (x.get("id"), q.get("id")))
-if ui.get("default_section") != bj["search"]["default_vertical"]:
-    bad.append("S10 ui.default_section is not search.default_vertical")
+secs = {x.get("id"): x for x in ui.get("sections") or []}
+if ui.get("bottom_nav") != ["web", "cloud", "chat", "agents", "reports"]:
+    bad.append("S10 ui.bottom_nav is not web, cloud, chat, agents, reports")
+if [x.get("id") for x in ui.get("sections") or []] != ui.get("bottom_nav"):
+    bad.append("S10 ui.sections are not exactly the island's items, in order")
+labels = {q["id"]: q["label"] for q in bj["search"]["subpages"]}
+chat_v = [v for v in vs if any(kinds_.get(x) == "assistant" for x in v["subpages"])] if (kinds_ := {sp["id"]: sp["kind"] for sp in S["subpages"]}) else []
+web_v = [v for v in vs if v not in chat_v]
+web = secs.get("web") or {}
+if [q.get("id") for q in web.get("pages") or []] != [v["id"] for v in web_v]:
+    bad.append("S10 ui.sections[web] pages are not search.verticals (less the assistant), in order")
+for q, v in zip(web.get("pages") or [], web_v):
+    if q.get("label") != v["label"]:
+        bad.append("S10 ui.sections[web] page %s label differs from search.verticals" % q.get("id"))
+    if len(v["subpages"]) > 1:
+        if [z.get("id") for z in q.get("pages") or []] != v["subpages"]:
+            bad.append("S10 ui.sections[web] page %s subpages differ from search.verticals[%s]" % (q.get("id"), v["id"]))
+        for z in q.get("pages") or []:
+            if z.get("label") != labels.get(z.get("id")):
+                bad.append("S10 ui.sections[web] page %s/%s label differs from search.subpages" % (q.get("id"), z.get("id")))
+    elif q.get("pages"):
+        bad.append("S10 ui.sections[web] page %s declares a second strip for a vertical with one subpage" % q.get("id"))
+chat = secs.get("chat") or {}
+if len(chat_v) != 1 or [q.get("id") for q in chat.get("pages") or []] != chat_v[0]["subpages"] or chat.get("icon") != chat_v[0].get("icon"):
+    bad.append("S10 ui.sections[chat] is not the assistant vertical's page and icon")
+if [q.get("id") for q in (secs.get("cloud") or {}).get("pages") or []] != ["apps", "messages", "code"]:
+    bad.append("S10 ui.sections[cloud] pages are not apps, messages, code")
+if [q.get("id") for q in (secs.get("agents") or {}).get("pages") or []] != ["agents", "runs", "templates", "settings"]:
+    bad.append("S10 ui.sections[agents] pages are not agents, runs, templates, settings")
+if [q.get("id") for q in (secs.get("reports") or {}).get("pages") or []] != ["reports"]:
+    bad.append("S10 ui.sections[reports] pages are not reports")
+if ui.get("default_section") != ("chat" if S["default_vertical"] == (chat_v[0]["id"] if chat_v else "") else "web"):
+    bad.append("S10 ui.default_section does not hold search.default_vertical")
 
 # S11
 res = os.path.join(app, "app", "src", "main", "res")
@@ -383,10 +414,16 @@ mutate fleet-kit-linked build.json 's.replace("\"libs:text-tools\",\n        \"l
 mutate fleet-kit-imported "$J/ui/SearchTheme.kt" 's.replace("import com.diegonmarcos.cloudsearch.R\n", "import com.diegonmarcos.cloudsearch.R\nimport com.diegonmarcos.superapp.uikit.KitCard\n")' "S10 SearchTheme.kt imports the fleet uikit"
 mutate own-nav-back "$J/ui/Glass.kt" 's + "\n@androidx.compose.runtime.Composable\nfun BottomNav() {}\n"' "S10 Glass.kt draws its own BottomNav/SubNav"
 mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("BottomNavIsland(\n                            entries = NAV.islandEntries", "NavRail(\n                            entries = NAV.islandEntries")' "S10 SearchShell does not draw BottomNavIsland"
-mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(v.id)", "SubNav(\n                pages = NAV.section(v.id)")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
+mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(state.sectionOf", "SubNav(\n                pages = NAV.section(state.sectionOf")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
+mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(\"web\")", "SubNav(\n                pages = NAV.section(\"web\")")' "S10 SearchShell does not draw Web Search"
+mutate chat-section-dropped build.json 's.replace("\"id\": \"chat\",\n        \"label\": \"Chat\"", "\"id\": \"chats\",\n        \"label\": \"Chat\"")' "S10 ui.sections are not exactly the island"
+mutate section-icon-misspelt build.json 's.replace("\"icon\": \"agents\"", "\"icon\": \"agentz\"")' "S3 ui.sections agents icon"
+mutate agents-page-dropped build.json 's.replace("\"id\": \"runs\",\n            \"label\": \"Runs\"", "\"id\": \"run\",\n            \"label\": \"Runs\"")' "S10 ui.sections[agents] pages"
+mutate cloud-pages-reordered build.json 's.replace("\"id\": \"apps\",\n            \"label\": \"Apps\"", "\"id\": \"appz\",\n            \"label\": \"Apps\"")' "S10 ui.sections[cloud] pages"
+mutate agents-debug-op-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"runs\" -> runs(", "\"runz\" -> runs(")' "S7 /api/<group>/runs"
 mutate nav-not-baked app/build.gradle 's.replace("\"UI_SECTIONS_B64\"", "\"UI_SECTIONS\"")' "S10 app/build.gradle does not bake UI_SECTIONS_B64"
-mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"house\",\n      \"jobs\",", "\"bottom_nav\": [\n      \"jobs\",\n      \"house\",")' "S10 ui.bottom_nav / ui.sections ids are not search.verticals"
-mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n            \"label\": \"Calculators\",\n            \"icon\": \"\"\n          }\n        ]\n      },\n      {\n        \"id\": \"jobs\"", "\"id\": \"calculators\",\n            \"label\": \"Calculatorz\",\n            \"icon\": \"\"\n          }\n        ]\n      },\n      {\n        \"id\": \"jobs\"")' "S10 ui.sections[house] page calculators label"
+mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"web\",\n      \"cloud\",", "\"bottom_nav\": [\n      \"cloud\",\n      \"web\",")' "S10 ui.bottom_nav is not web, cloud, chat, agents, reports"
+mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n                \"label\": \"Calculators\"", "\"id\": \"calculators\",\n                \"label\": \"Calculatorz\"")' "S10 ui.sections[web] page house/calculators label"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
 mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"
