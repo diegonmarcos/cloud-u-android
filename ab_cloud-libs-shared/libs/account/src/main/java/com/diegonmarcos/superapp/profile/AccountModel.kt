@@ -216,10 +216,10 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     }
 
     /** What an upload commits: the saved L's file, its target and its message. Null when there is no saved L. */
-    fun uploadPlan(device: String): Triple<AccountUpload.Target, ByteArray, String>? {
+    fun uploadPlan(device: String): Triple<UploadTarget, ByteArray, String>? {
         val l = savedLocal() ?: return null
         val cs = com.diegonmarcos.cloudlib.auth.AuthDeclaration.configSource
-        val target = AccountUpload.Target(upload.optString("api"), cs.gitRepo, upload.optString("path"), cs.gitRef)
+        val target = UploadTarget(cs.gitRepo, upload.optString("path"), cs.gitRef)
         val differ = diff(FilePair("LS", Slot.L, Slot.S)).count { it.kind != AccountDrift.Kind.SAME }
         val message = upload.optString("message").replace("{device}", device.ifBlank { "this phone" }).replace("{fields}", differ.toString())
         return Triple(target, (l.json().toString(2) + "\n").toByteArray(), message)
@@ -229,10 +229,17 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
     fun upload(token: String, device: String): String {
         if (dirty) save()
         val (target, bytes, message) = uploadPlan(device) ?: return "✗ no saved local copy to upload".also { changed(it) }
-        return when (val r = AccountUpload.commit(target, token, bytes, message)) {
-            is AccountUpload.Result.Committed ->
-                "✓ committed ${r.sha.take(12)} to ${target.repo}:${target.path}${if (r.created) " (new file)" else ""}\n${r.url}"
-            is AccountUpload.Result.Failed -> "✗ upload refused: ${r.reason}"
+        // ForgeClient replaced AccountUpload (cloud-account redesign 5.3): same contents API, the
+        // GitHub forge (Bearer) on auth.config_source.git.repo; a stale sha is refetched and retried once.
+        val client = ForgeClient(ForgeClient.Forge("github", upload.optString("api").substringBefore("/repos/").ifBlank { "https://api.github.com" }, target.repo, ForgeClient.Auth.BEARER), token)
+        val sha = when (val g = client.get(target.path, target.branch)) {
+            is ForgeClient.Result.Ok -> g.value.sha
+            is ForgeClient.Result.Failed -> if (g.status == 404) null else return "✗ upload refused: ${g.reason}".also { changed(it) }
+        }
+        return when (val r = client.put(target.path, String(bytes), sha, message, target.branch)) {
+            is ForgeClient.Result.Ok ->
+                "✓ committed ${r.value.take(12)} to ${target.repo}:${target.path}${if (sha == null) " (new file)" else ""}"
+            is ForgeClient.Result.Failed -> "✗ upload refused: ${r.reason}"
         }.also { changed(it) }
     }
 
@@ -259,6 +266,9 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
         })
         return out
     }
+
+    /** Where an upload commits: repo, path, branch (the GitHub forge; the token is never part of it). */
+    data class UploadTarget(val repo: String, val path: String, val branch: String)
 
     companion object {
         /**

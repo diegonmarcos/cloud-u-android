@@ -288,6 +288,38 @@
       }
     ],
     "default_section": "profiles",
-    "_doc_pages": "#873/#874 the pages Cloud Account adds under the four sections (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Connections (every endpoint, token and profile the vault holds, with the encrypted bundle export/import and the take-in from SuperApp), Data (profile, identities, S/R/L), Configs (every app's declared settings by store), Secrets (per-app grants, revocable), Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws them: selectTab(<page id>) opens one and onTabShown reports its SECTION (PAGE_SECTION), so the island never disagrees with the page."
+    "_doc_pages": "#873/#874 the pages Cloud Account adds under the four sections (the first page of a section is the section's own tab, so selecting a section still opens what it always did): Connections (every endpoint, token and profile the vault holds, with the encrypted bundle export/import and the take-in from SuperApp), Data (profile, identities, S/R/L), Configs (every app's declared settings by store), Secrets (per-app grants, revocable), Fleet Setup (describe -> apply -> read back, per app). libs:account's ProfileFragment draws them: selectTab(<page id>) opens one and onTabShown reports its SECTION (PAGE_SECTION), so the island never disagrees with the page.",
+    "account": {
+      "_doc": "Cloud Account redesign, task 2 (a0_docs/eng-specs/cloud-account-redesign.md sections 2, 5, 6). Read by libs:account's build.gradle into BuildConfig.UI_ACCOUNT_B64 (ForgeClient.Decl). forges: where the vault lives, each written through its contents API; auth 'bearer' sends `Authorization: Bearer <t>` (GitHub), 'token' sends `Authorization: token <t>` (Gitea). A forge's token is read from AccountVault Connections at forge.<id>.token, the primary forge id at forge.primary (default: the first forge with a repo). vault: the branch, the folder the app writes per-device profiles to (devices/<id>.json, DEFAULT.json; never an emit.py input), and the generated secrets file the connect fetch keeps reading.",
+      "forges": [
+        {
+          "id": "github",
+          "api": "https://api.github.com",
+          "repo": "diegonmarcos/cloud-me_vault",
+          "auth": "bearer",
+          "ways": [
+            "gh_auth_login",
+            "github_pat",
+            "github_ssh"
+          ]
+        },
+        {
+          "id": "gitea",
+          "api": "https://git.diegonmarcos.com/api/v1",
+          "repo": null,
+          "auth": "token",
+          "ways": [
+            "gitea_token",
+            "authelia_web"
+          ],
+          "_doc_repo": "null on purpose: the vault repo is NOT mirrored to Gitea (cloud-u-containers infra-dat_gitea build.json mirror_policy.exclude lists cloud-vault and cloud-me_vault), so no owner/repo path exists there. The owner declares it once a private Gitea repo for the vault exists; until then this forge is skipped (ForgeClient refuses a forge without a repo)."
+        }
+      ],
+      "vault": {
+        "branch": "main",
+        "devices_dir": "C_A1-configs/devices",
+        "secrets_file": "C_A1-configs/profile-secrets.json"
+      }
+    }
   }
 }

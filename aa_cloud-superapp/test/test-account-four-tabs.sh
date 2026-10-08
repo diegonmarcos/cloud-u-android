@@ -54,7 +54,7 @@ AT="$PKG/AccountTabs.kt"      # #778 Profiles · Runtime · Drift (Compose)
 AM="$PKG/AccountModel.kt"     # the one model the tabs and the debug API share
 AD="$PKG/AccountDrift.kt"     # the three-file engine
 AR="$PKG/AccountRuntime.kt"   # per-app live readers / pushers
-AU="$PKG/AccountUpload.kt"    # L → server commit
+AU="$PKG/ForgeClient.kt"      # L → server commit (replaced AccountUpload)
 ADA="$PKG/AccountDebugApi.kt" # /api/account/*
 RES="$APP/../ab_cloud-libs-shared/libs/account/src/main/res"   # #867 the Account strings moved with the page
 for f in "$BJ" "$SHARED" "$PF" "$IM" "$CP" "$GS" "$GE" "$AT" "$AM" "$AD" "$AR" "$AU" "$ADA" "$RES/values/strings.xml"; do
@@ -390,16 +390,16 @@ else
 fi
 grep -q 'UI_PROFILE_DRIFT_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.gradle" && grep -qF 'BuildConfig.UI_PROFILE_DRIFT_B64' "$AM" \
     && ok "D: the drift declaration is baked and read" || bad "D: UI_PROFILE_DRIFT_B64 is not baked or not read"
-engine_ok() {   # $1 = AccountDrift.kt, $2 = AccountModel.kt, $3 = AccountUpload.kt; prints the first broken rule
+engine_ok() {   # $1 = AccountDrift.kt, $2 = AccountModel.kt, $3 = ForgeClient.kt; prints the first broken rule
     grep -qF 'if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null' "$2" || { echo "a comparison with R is not limited to what R observed"; return 1; }
     local rd; rd=$(awk '/    fun runtimeToDeclared\(/{f=1} f{print} f&&/^    }$/{exit}' "$1")
     grep -qF 'p !in observed -> skipped[p] = Skip.NOT_OBSERVED' <<<"$rd" || { echo "an unobserved field can be pulled into L"; return 1; }
     grep -qF 'p in readOnly -> skipped[p] = Skip.READ_ONLY' <<<"$rd" || { echo "a read-only field can be pulled into L"; return 1; }
     grep -qF 'v == null -> skipped[p] = Skip.HOLDS_NONE' <<<"$rd" || { echo "a runtime holding nothing can erase a declared value"; return 1; }
     grep -qF 'fun sha256(body: JSONObject): String' "$1" && grep -qF 'canonical(body)' <<<"$(grep -A2 'fun sha256' "$1")" || { echo "the file hash is not over canonical JSON"; return 1; }
-    grep -qF '"Authorization" to "Bearer $token"' "$3" || { echo "the upload token does not ride a header"; return 1; }
+    grep -qF 'put("Authorization", forge.auth.scheme + " " + token)' "$3" || { echo "the upload token does not ride a header"; return 1; }
     grep -qE '(url|api|path).*\$\{?token' "$3" && { echo "the upload token reaches a URL"; return 1; }
-    grep -qF 'if (sha != null) put.put("sha", sha)' "$3" || { echo "an update does not name the sha it replaces"; return 1; }
+    grep -qF 'if (sha != null) body.put("sha", sha)' "$3" || { echo "an update does not name the sha it replaces"; return 1; }
     return 0
 }
 msg=$(engine_ok "$AD" "$AM" "$AU") && ok "D: R comparisons cover what R observed; runtime→declared never takes unobserved, read-only or empty values; the upload names its sha and keeps the token in a header" || bad "D: $msg"
@@ -435,8 +435,8 @@ dm() {   # $1 = which file var, $2 = sed; 0 iff its check goes red; 2 iff nothin
 for m in 'AM|s/if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runtime()?.apps) else null/null/' \
          'AD|s/                v == null -> skipped\[p\] = Skip.HOLDS_NONE/                v == null -> Unit/' \
          'AD|s/                p in readOnly -> skipped\[p\] = Skip.READ_ONLY/                false -> Unit/' \
-         'AU|s/target.url + "?ref=" + target.branch/target.url + "?ref=" + target.branch + "\&access_token=$token"/' \
-         'AU|s/if (sha != null) put.put("sha", sha)/Unit/' \
+         'AU|s/forge.contents(path) + refQuery(ref)/forge.contents(path) + refQuery(ref) + "\&access_token=$token"/' \
+         'AU|s/if (sha != null) body.put("sha", sha)/Unit/' \
          'AT|s/AccountTags.DISCARD, !busy) { m.discardLocal() }/AccountTags.DISCARD, !busy) { }/' \
          'AT|s/AccountTags.pullItem(f.path)/AccountTags.RESULT/' \
          'ADA|s/            "drift" -> m.report()/            "drift_old" -> m.report()/'; do

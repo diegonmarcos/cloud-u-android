@@ -42,6 +42,12 @@ object AccountDebugApi {
             Op("vault", "", "the four sections' sizes (connections, data, configs, secrets) and the per-package grants (patterns only)"),
             Op("setup", "dry=1|run=1&app=", "dry=1: per app the keys Fleet Setup would push (names, never values) and what no declared store takes; run=1: describe -> apply -> read back, one ✓/✗ line per app (app= retries one)"),
             Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
+            // Cloud Account redesign task 2: the per-device files in the vault, through ForgeClient
+            Op("devices", "", "devices/ on the primary forge: id, path, blob sha, captured_at per file; and which forges hold a token (true/false)"),
+            Op("backup", "device=&dry=1", "capture this phone as devices/<device>.json, one commit (dry=1: key NAMES and counts only; equal but for captured_at = no commit)"),
+            Op("load", "device=", "fetch devices/<device|DEFAULT>.json into the working slot (refused if a secret-class key holds a literal)"),
+            Op("setdefault", "device=", "copy devices/<device>.json over devices/DEFAULT.json, one commit"),
+            Op("forge", "op=get|put&path=&forge=&dry=1", "get: the file's blob sha and size (never the content); put: dry=1 only — target, method, body keys"),
             // #802 the engine's way in (linux-account phone import): the decrypted export as the POST body
             Op("import", "POST body = the decrypted vault export · device=<electronics id> (optional: the device this phone is, as the terminal picked it)", "land the bundle as S through the UI import's own gates (VaultFile.classify: sops/ENC refused, schema_version must be known) — the verdict and per-topic counts, never a value", maxBody = IMPORT_MAX_BODY),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
@@ -115,6 +121,11 @@ object AccountDebugApi {
                 JSONObject().put("result", done.poll(30, java.util.concurrent.TimeUnit.SECONDS) ?: "✗ no answer in 30 s — the erase may still complete")
             }
             "fleet" -> fleet(ctx)
+            "devices" -> DeviceVault(ctx).let { v -> v.devices().put("credentials", v.credentials()) }
+            "backup" -> DeviceVault(ctx).backup(q["device"]?.trim().orEmpty().ifBlank { VaultCockpit.selectedDevice(ctx) }, q["dry"] == "1")
+            "load" -> DeviceVault(ctx).load(q["device"]?.trim().orEmpty())
+            "setdefault" -> DeviceVault(ctx).setDefault(q["device"]?.trim().orEmpty())
+            "forge" -> forge(ctx, q)
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
                 q["dry"] == "1" -> m.migratePlan()
@@ -159,6 +170,26 @@ object AccountDebugApi {
         picked?.let { out.put("device", it) }
         out.optJSONArray("topics")?.let { t -> for (i in 0 until t.length()) t.optJSONObject(i)?.remove("rows") }
         return out.put("verdict", verdict).put("result", m.last)
+    }
+
+    /** `forge?op=get|put`: the raw ForgeClient, for testing both forges. Never prints a token or a file's content. */
+    private fun forge(ctx: Context, q: Map<String, String>): JSONObject {
+        val v = DeviceVault(ctx)
+        val path = q["path"].orEmpty().trim()
+        if (path.isBlank()) return JSONObject().put("result", "✗ path=")
+        val forgeId = q["forge"]?.trim()
+        val f = (if (forgeId.isNullOrBlank()) v.primary() else v.decl.forge(forgeId))
+            ?: return JSONObject().put("result", "✗ no such forge (declared: ${v.decl.forges.joinToString { it.id }})")
+        if (f.repo == null) return JSONObject().put("forge", f.id).put("result", "✗ forge '${f.id}' declares no repo")
+        return when (q["op"]) {
+            "get" -> when (val g = v.client(f.id)!!.get(path, v.decl.branch)) {
+                is ForgeClient.Result.Ok -> JSONObject().put("forge", f.id).put("path", path).put("sha", g.value.sha).put("bytes", g.value.text.length)
+                is ForgeClient.Result.Failed -> JSONObject().put("forge", f.id).put("status", g.status).put("result", "✗ ${g.reason}")
+            }
+            "put" -> if (q["dry"] != "1") JSONObject().put("result", "✗ forge put is dry=1 only here — writes go through backup / setdefault")
+                     else ForgeClient(f, "-").putShape(path, q["sha"]?.ifBlank { null }, "account(dry): put $path", v.decl.branch)
+            else -> JSONObject().put("result", "✗ op=get|put")
+        }
     }
 
     /** #783 per fleet app: what the contract moves and what it cannot yet (paths and counts, never values). */

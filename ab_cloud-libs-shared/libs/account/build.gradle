@@ -53,6 +53,11 @@ def profileTabsB64    = b64(profileUi.tabs ?: [])
 def profileDriftB64   = b64(profileUi.drift ?: [:])
 def profileInfosB64   = b64(profileUi.infos ?: [:])
 def profileConnectB64 = b64(profileUi.connect ?: [:])
+// Cloud Account redesign (task 2): ui.account {forges, vault} is declared in the HOST app's own
+// build.json (ac_cloud-account). Read from rootDir directly: buildJson above falls back to the
+// SuperApp's file when the host has no ui.profile, and the SuperApp declares no ui.account.
+def hostJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+def accountDeclB64 = b64(hostJson.ui?.account ?: [:])
 
 // #713 THE gh ENGINE the Account page's GitHub ▸ WebAuth binds (build.json::engines.gh): its package
 // comes from the constellation manifest; an id the manifest lacks is a hard error, because the way
@@ -101,6 +106,7 @@ android {
         buildConfigField "String", "UI_PROFILE_DRIFT_B64",  "\"${profileDriftB64}\""
         buildConfigField "String", "UI_PROFILE_INFOS_B64",  "\"${profileInfosB64}\""
         buildConfigField "String", "UI_PROFILE_CONNECT_B64", "\"${profileConnectB64}\""
+        buildConfigField "String", "UI_ACCOUNT_B64",         "\"${accountDeclB64}\""
         buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""
         buildConfigField "String", "GH_ENGINE_ACTION",       "\"${ghEngineAction}\""
         buildConfigField "int",    "GH_ENGINE_MIN_CONTRACT", "${ghEngineMinContract}"
