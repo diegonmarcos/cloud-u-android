@@ -67,6 +67,12 @@
       "why": "G5 Network badge: a foreground service re-posting the mesh state (connection, IP, peers, traffic), event-driven plus a 30s tick while connected."
     },
     {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/BatteryBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "Battery badge: a foreground service re-posting the battery state (time to full or empty, level, current, health), driven by ACTION_BATTERY_CHANGED, no timer."
+    },
+    {
       "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/MarketsBadgeService.kt",
       "kind": "badge",
       "notify_calls": 1,

@@ -216,6 +216,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "battery_badge": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "The Battery badge's short-term rate tracker: the reference sample (time, level, charge counter, direction) and the EMA of the charge or drain rate. Hardware-specific telemetry, rebuilt within minutes.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "battery_history": {
       "kind": "prefs",
       "class": "device",

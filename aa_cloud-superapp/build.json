@@ -8768,7 +8768,7 @@
         {
           "id": "live",
           "label": "Markets · Health · Weather",
-          "members": ["markets_prices", "health_activity", "weather_today"]
+          "members": ["markets_prices", "health_activity", "weather_today", "battery_status"]
         },
         {
           "id": "actions",
@@ -9040,6 +9040,38 @@
             "notifications"
           ],
           "shows": "Connected/disconnected, tunnel, mesh IP, peers, rx/tx; expanded: handshakes, addresses, DNS, uptime.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "battery_status",
+          "label": "Battery",
+          "subtitle": "The battery at a glance, time first: charging shows the time until full, discharging the time until empty from the average drain since the last unplug or full charge (h:mm, labelled as an estimate; 'learning' until 2% is used or 15 min pass). Expanded: level, status and plug, current now and average, voltage, temperature, health, cycles, charge and capacity, time and percent used since the last charge, and the short-term rate. Refreshed on the battery-changed event only; nothing polls.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "battery_status",
+          "owner": "notificationcenter/BatteryBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.BatteryBadgeService",
+          "requires": [
+            "notifications"
+          ],
+          "shows": "Time to full or empty (est), level, status, plug, current, voltage, temperature, health, cycles, capacity, time and % since last charge.",
           "customization": [
             {
               "key": "enabled",

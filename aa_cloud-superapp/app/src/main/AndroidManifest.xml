@@ -481,6 +481,20 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent mesh status badge (connection, IP, peers, traffic) for the Cloud SuperApp" />
         </service>
+        <!-- BatteryBadgeService - pins the persistent "Cloud SA - Battery"
+             badge (time to full / to empty first, then level, current,
+             voltage, temperature, health, cycles, capacity). type=specialUse
+             for the same reason as its siblings: a standing battery-status
+             badge is not one of the predefined FGS categories. Not exported -
+             only BadgeServices.ensureAll starts it, from the declaration. -->
+        <service
+            android:name=".notificationcenter.BatteryBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent battery status badge (time to full or empty, level, current, temperature) for the Cloud SuperApp" />
+        </service>
         <!-- WeatherBadgeService — pins the persistent "Cloud SA - Weather"
              badge (current temp, day max/min, hourly forecast, place name;
              Open-Meteo + last-known location, no key). type=specialUse for the
