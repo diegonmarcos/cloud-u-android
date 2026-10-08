@@ -1994,6 +1994,12 @@ open class ShellActivity : AppCompatActivity(),
             // so it resolved to nothing and snacked "No app handles".
             actionType == "open_camera" -> openCamera()
             actionType == "open_screenshots" -> openScreenshots()
+            // The Data Manager (libs:datamanager), the dialog Configs > About > Data Usage
+            // opens; the Data badge's button lands here.
+            actionType == "open_data_manager" -> runCatching {
+                com.diegonmarcos.superapp.datamanager.DataUsageDialog()
+                    .show(supportFragmentManager, com.diegonmarcos.superapp.datamanager.DataUsageDialog.TAG)
+            }
             actionType == "reapply_mail_rules" -> reapplyMailRules(anchor)
             // Configs → Keyboard now hands off to the standalone Cloud-Keyboard
             // app via extapp:cloud-keyboard (ui.external_apps[cloud-keyboard]);

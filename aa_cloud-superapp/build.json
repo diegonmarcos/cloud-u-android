@@ -8795,7 +8795,7 @@
         {
           "id": "network",
           "label": "Network",
-          "members": ["network_mesh"]
+          "members": ["network_mesh", "network_data"]
         }
       ],
       "producers": [
@@ -9025,8 +9025,8 @@
         },
         {
           "id": "network_mesh",
-          "label": "Network",
-          "subtitle": "The mesh at a glance: connected or not, the tunnel, this device's mesh IP, peer count and rx/tx; expanded, the last handshake per peer, the interface and peer addresses, DNS and uptime. Buttons: Always On (shows the system state, opens the VPN settings where it is switched), Connect/Disconnect, More (the Cloud Mesh page). Read over INetBackend from Cloud-Lib-Net-Wg; refreshed on connect/disconnect and VPN network events, plus every 30s only while connected.",
+          "label": "Mesh",
+          "subtitle": "The mesh at a glance (the Mesh badge of the Network group): connected or not, the tunnel, this device's mesh IP, peer count and rx/tx; expanded, the last handshake per peer, the interface and peer addresses, DNS (the mesh DNS, the resolvers Android uses now, the 127.0.0.1 bridge status, Private DNS mode) and uptime. Buttons: Always On (shows the system state, opens the VPN settings where it is switched), Connect/Disconnect, More (the Cloud Mesh page). Read over INetBackend from Cloud-Lib-Net-Wg; refreshed on connect/disconnect and VPN network events, plus every 30s only while connected.",
           "icon": "ic_stat_notify",
           "surface": "system_notification",
           "channel": "network_mesh",
@@ -9040,6 +9040,38 @@
             "notifications"
           ],
           "shows": "Connected/disconnected, tunnel, mesh IP, peers, rx/tx; expanded: handshakes, addresses, DNS, uptime.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "network_data",
+          "label": "Data",
+          "subtitle": "The Data badge of the Network group: data used today and this month, mobile vs Wi-Fi, and the top apps of the month, all from the Data Manager engine (libs:datamanager, the one behind Configs > About > Data Usage). Buttons: Data Manager (opens it), Refresh; without Usage Access the badge says so and offers Grant access. Read when the screen comes on and on Refresh; nothing polls.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "network_data",
+          "owner": "notificationcenter/DataBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.DataBadgeService",
+          "requires": [
+            "notifications"
+          ],
+          "shows": "Data today and this month (mobile, Wi-Fi), top apps; Usage Access needed.",
           "customization": [
             {
               "key": "enabled",

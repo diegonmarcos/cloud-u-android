@@ -24,13 +24,16 @@ import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.network.NetworkBadgeModel
 import com.diegonmarcos.superapp.network.NetworkBadgeModel.Act
+import com.diegonmarcos.superapp.network.FleetDns
 import com.diegonmarcos.superapp.network.WgState
+import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
+import org.json.JSONObject
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.crypto.Key
 import java.util.concurrent.Executors
 
 /**
- * The persistent "Network" badge: the mesh's state in the shade.
+ * The persistent "Mesh" badge (one of the two "Network" group badges, with Data): the mesh's state in the shade.
  *
  * ONE notification, and it is the foreground-service notification: nothing
  * else in the fleet posts one for the VPN (the engine APK's VpnService never
@@ -144,6 +147,7 @@ class NetworkBadgeService : Service() {
         val up = installed && runCatching { backend.getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
         val stats = if (up) runCatching { backend.getStatistics(WgState.tunnel) }.getOrNull() else null
         val now = System.currentTimeMillis()
+        val dns = FleetDns.readAndroid(this)
 
         if (up && wasConnected != true) { upSince = now; upExact = wasConnected == false }
         if (!up) { upSince = 0; upExact = false; }
@@ -164,10 +168,22 @@ class NetworkBadgeService : Service() {
             tunnel = WgState.tunnel.name, profile = prefs.activeProfile,
             addresses = split(prefs.interfaceAddress), dns = split(prefs.interfaceDns),
             peers = rows,
+            resolvers = dns.activeServers, resolversOnVpn = dns.onVpn,
+            bridge = bridgeLine(), privateDns = NetworkBadgeModel.privateDnsLine(
+                dns.mode, dns.specifier, dns.privateDnsActive, dns.privateDnsServer),
             alwaysOn = installed && runCatching { backend.isAlwaysOn }.getOrDefault(false),
             upSinceMs = upSince, upSinceExact = upExact, nowMs = now, note = note,
         )
     }
+
+    /** The fleet DNS bridge's own state (FleetDnsBridge.stateJson), as one line. */
+    private fun bridgeLine(): String = runCatching {
+        val o = JSONObject(FleetDnsBridge.stateJson())
+        NetworkBadgeModel.bridgeLine(
+            o.optBoolean("listening"), o.optInt("port"),
+            o.optString("route").takeIf { it.isNotEmpty() && it != "null" },
+            o.optString("why").takeIf { it.isNotEmpty() && it != "null" } ?: o.optString("bind").takeIf { it.isNotEmpty() && it != "null" })
+    }.getOrDefault("")
 
     /** Connect/Disconnect through the same calls Configs > Mesh makes. */
     private fun toggle() {
@@ -204,7 +220,7 @@ class NetworkBadgeService : Service() {
             .setColor(0xFF0A0A0A.toInt())
             .setContentTitle(card.title)
             .setContentText(card.text)
-            .setSubText("Cloud SA - Network")
+            .setSubText("Cloud SA - Mesh")
             .setStyle(NotificationCompat.BigTextStyle().bigText(card.expanded))
             .setContentIntent(more)
             .setOngoing(pinned)

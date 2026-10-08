@@ -30,13 +30,13 @@ class NetworkBadgeModelTest {
 
     @Test fun `connected title and line carry tunnel, mesh ip, peer count and rx tx`() {
         val c = NetworkBadgeModel.card(up(peerA, peerB))
-        assertEquals("Network · Connected", c.title)
+        assertEquals("Mesh · Connected", c.title)
         assertEquals("wg-mesh · 10.0.0.5 · 2 peers · ↓1.5 KB ↑1.0 MB", c.text)
     }
 
     @Test fun `disconnected says so and shows no traffic`() {
         val c = NetworkBadgeModel.card(down)
-        assertEquals("Network · Disconnected", c.title)
+        assertEquals("Mesh · Disconnected", c.title)
         assertEquals("wg-mesh · 10.0.0.5 · 1 peer", c.text)
     }
 
@@ -82,7 +82,7 @@ class NetworkBadgeModelTest {
     @Test fun `expanded lists addresses, endpoints, allowed ips, dns and uptime`() {
         val e = NetworkBadgeModel.expanded(up(peerA, peerB))
         assertTrue(e, e.contains("Interface: 10.0.0.5/32, fd00::5/128"))
-        assertTrue(e, e.contains("DNS: 10.0.0.1, 10.0.0.2"))
+        assertTrue(e, e.contains("Mesh DNS: 10.0.0.1, 10.0.0.2"))
         assertTrue(e, e.contains("endpoint 192.0.2.1:51820"))
         assertTrue(e, e.contains("allowed 10.0.0.0/24, fd00::/64"))
         assertTrue(e, e.contains("endpoint 198.51.100.7:51820"))
@@ -138,5 +138,43 @@ class NetworkBadgeModelTest {
         assertEquals("45s", NetworkBadgeModel.duration(45_000))
         assertEquals("5m 3s", NetworkBadgeModel.duration(303_000))
         assertEquals("1d 3h", NetworkBadgeModel.duration(100_000_000))
+    }
+
+    // ── DNS details ──────────────────────────────────────────────────────
+
+    private val dnsUp = up(peerA).copy(
+        resolvers = listOf("10.0.0.1", "1.1.1.1"), resolversOnVpn = true,
+        bridge = "127.0.0.1:2053 listening, last route Android resolver on Wi-Fi", privateDns = "off",
+    )
+
+    @Test fun `expanded names the resolvers in effect, the bridge and private dns`() {
+        val e = NetworkBadgeModel.expanded(dnsUp)
+        assertTrue(e, e.contains("Resolvers: 10.0.0.1, 1.1.1.1 (via VPN)"))
+        assertTrue(e, e.contains("Bridge: 127.0.0.1:2053 listening, last route Android resolver on Wi-Fi"))
+        assertTrue(e, e.contains("Private DNS: off"))
+        assertTrue(e, e.contains("Mesh DNS: 10.0.0.1, 10.0.0.2"))
+    }
+
+    @Test fun `unasked dns lines stay out and an empty resolver list reads as a dash`() {
+        val e = NetworkBadgeModel.expanded(up(peerA))
+        assertFalse(e, e.contains("Bridge:"))
+        assertFalse(e, e.contains("Private DNS:"))
+        assertTrue(e, e.contains("Resolvers: -"))
+    }
+
+    @Test fun `bridge line`() {
+        assertEquals("127.0.0.1:2053 listening, no query yet", NetworkBadgeModel.bridgeLine(true, 2053, null, null))
+        assertEquals("127.0.0.1:2053 listening, last route X", NetworkBadgeModel.bridgeLine(true, 2053, "X", null))
+        assertEquals("127.0.0.1:2053 not listening (taken)", NetworkBadgeModel.bridgeLine(false, 2053, null, "taken"))
+        assertEquals("127.0.0.1:- not listening", NetworkBadgeModel.bridgeLine(false, 0, null, null))
+    }
+
+    @Test fun `private dns line`() {
+        assertEquals("off", NetworkBadgeModel.privateDnsLine("off", null, null, null))
+        assertEquals("automatic (not in use)", NetworkBadgeModel.privateDnsLine("opportunistic", null, false, null))
+        assertEquals("automatic (active: dns.example)", NetworkBadgeModel.privateDnsLine("opportunistic", null, true, "dns.example"))
+        assertEquals("hostname dns.example (active)", NetworkBadgeModel.privateDnsLine("hostname", "dns.example", true, null))
+        assertEquals("hostname dns.example (not active)", NetworkBadgeModel.privateDnsLine("hostname", "dns.example", false, null))
+        assertEquals("unknown", NetworkBadgeModel.privateDnsLine(null, null, null, null))
     }
 }

@@ -3,7 +3,7 @@ package com.diegonmarcos.superapp.network
 import java.util.Locale
 
 /**
- * The "Network" badge as a pure function of the mesh state: [Snapshot] in,
+ * The "Mesh" badge as a pure function of the mesh state: [Snapshot] in,
  * [Card] out. No Android type is touched here, so the labels, the action set
  * and the expanded text are unit-testable without a device, and the service
  * that posts the notification (notificationcenter/NetworkBadgeService.kt) has
@@ -42,6 +42,14 @@ object NetworkBadgeModel {
         val nowMs: Long = 0,
         /** Why the last action did not do what was asked; "" when nothing to say. */
         val note: String = "",
+        /** DNS servers Android resolves with right now (the active network's). */
+        val resolvers: List<String> = emptyList(),
+        /** True when the active network is the VPN, so [resolvers] came through the mesh. */
+        val resolversOnVpn: Boolean = false,
+        /** The fleet DNS bridge line, see [bridgeLine]; "" = not asked. */
+        val bridge: String = "",
+        /** Android's Private DNS line, see [privateDnsLine]; "" = not asked. */
+        val privateDns: String = "",
     )
 
     enum class Act { ALWAYS_ON, TOGGLE, MORE }
@@ -66,7 +74,7 @@ object NetworkBadgeModel {
     )
 
     fun title(s: Snapshot): String =
-        "Network · " + if (s.connected) "Connected" else "Disconnected"
+        "Mesh · " + if (s.connected) "Connected" else "Disconnected"
 
     fun alwaysOnLabel(s: Snapshot) = "Always On: " + if (s.alwaysOn) "ON" else "OFF"
 
@@ -104,7 +112,11 @@ object NetworkBadgeModel {
         l += "Tunnel: ${s.tunnel.ifBlank { "-" }}" +
             if (s.profile.isNotBlank() && s.profile != s.tunnel) " (profile ${s.profile})" else ""
         l += "Interface: " + s.addresses.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
-        l += "DNS: " + s.dns.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
+        l += "Mesh DNS: " + s.dns.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
+        l += "Resolvers: " + s.resolvers.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" } +
+            if (s.resolversOnVpn && s.resolvers.isNotEmpty()) " (via VPN)" else ""
+        if (s.bridge.isNotBlank()) l += "Bridge: ${s.bridge}"
+        if (s.privateDns.isNotBlank()) l += "Private DNS: ${s.privateDns}"
         l += "Always On: " + if (s.alwaysOn) "on" else "off"
         l += "Uptime: " + uptime(s)
         l += if (s.peers.isEmpty()) "Peers: none configured" else "Peers (${s.peers.size}):"
@@ -115,6 +127,22 @@ object NetworkBadgeModel {
             l += "   allowed ${p.allowedIps.ifBlank { "-" }}"
         }
         return l.joinToString("\n")
+    }
+
+    /** "127.0.0.1:2053 listening, last route Android resolver on Wi-Fi" / "127.0.0.1:2053 not listening (taken)". */
+    fun bridgeLine(listening: Boolean, port: Int, route: String?, why: String?): String {
+        val where = "127.0.0.1:" + if (port > 0) port.toString() else "-"
+        return if (listening) where + " listening" + (route?.takeIf { it.isNotBlank() }?.let { ", last route $it" } ?: ", no query yet")
+        else where + " not listening" + (why?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "")
+    }
+
+    /** Android's Private DNS: "off", "automatic", "hostname dns.example (active)". */
+    fun privateDnsLine(mode: String?, specifier: String?, active: Boolean?, server: String?): String = when (mode) {
+        null, "" -> "unknown"
+        "off" -> "off"
+        "opportunistic" -> "automatic" + if (active == true) " (active${server?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""})" else " (not in use)"
+        "hostname" -> "hostname ${specifier.orEmpty().ifBlank { "-" }}" + if (active == true) " (active)" else " (not active)"
+        else -> mode
     }
 
     fun uptime(s: Snapshot): String {

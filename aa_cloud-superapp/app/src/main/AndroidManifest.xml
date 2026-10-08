@@ -466,6 +466,19 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent daily activity summary badge (active calories + distance) for the Cloud SuperApp" />
         </service>
+        <!-- DataBadgeService - pins the persistent "Cloud SA - Data" badge (data
+             used today / this month, mobile vs Wi-Fi, top apps, read through
+             libs:datamanager). type=specialUse for the same reason as its
+             siblings. Not exported - only BadgeServices.ensureAll starts it,
+             from the declaration. -->
+        <service
+            android:name=".notificationcenter.DataBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent data-usage badge (today, month, top apps) for the Cloud SuperApp" />
+        </service>
         <!-- NetworkBadgeService — pins the persistent "Cloud SA - Network"
              badge (mesh state, IP, peers, rx/tx; Always On / Connect / More).
              type=specialUse for the same reason as its siblings: a standing

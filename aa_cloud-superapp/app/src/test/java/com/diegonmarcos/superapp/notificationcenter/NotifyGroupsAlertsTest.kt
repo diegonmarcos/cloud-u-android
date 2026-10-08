@@ -78,7 +78,7 @@ class NotifyGroupsAlertsTest {
         assertEquals(listOf("markets_prices", "health_activity", "weather_today", BatteryBadgeService.BADGE_ID), group("live").members)
         assertEquals(listOf("floating_nav_quick_actions", "kde_status"), group("actions").members)
         assertEquals(listOf("media_now_playing"), group("media").members)
-        assertEquals(listOf(NetworkBadgeService.BADGE_ID), group("network").members)
+        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID), group("network").members)
         assertEquals(listOf(AlertsNotifier.BADGE_ID), group("alerts").members)
         assertEquals("only the alerts group is the alerts group", listOf("alerts"),
             NotifyGroups.declared.filter { it.alerts }.map { it.id })
