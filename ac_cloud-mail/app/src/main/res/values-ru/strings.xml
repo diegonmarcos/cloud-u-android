@@ -1104,7 +1104,16 @@
     <string name="settings_text_enhance_language">Язык результата</string>
     <string name="settings_text_resume_shape">Форма резюме</string>
     <string name="settings_text_translation_note">Язык, на который перевод преобразует письмо. Это собственные настройки Cloud Mail — их изменение здесь не затрагивает настройки Cloud Keyboard.</string>
-    <string name="settings_text_translation_target">Код языка перевода (например, en, pt, de)</string>
+    <string name="settings_text_translation_target">Переводить на</string>
+    <string name="settings_text_translation_auto_title">Автоматически переводить входящие сообщения не на языке: %1$s</string>
+    <string name="settings_text_translation_auto_summary">Переводит сообщение при открытии и показывает перевод. «Показать оригинал» в меню сообщения возвращает исходный текст.</string>
+    <string name="settings_text_resume_auto_title">Автоматическое резюме</string>
+    <string name="settings_text_resume_auto_summary">Составляет резюме сообщения при открытии и показывает его под заголовком.</string>
+    <string name="settings_text_resume_language">Язык резюме</string>
+    <string name="message_show_original">Показать оригинал</string>
+    <string name="message_show_translated">Показать перевод</string>
+    <string name="message_summary_collapse">Свернуть резюме</string>
+    <string name="message_summary_expand">Развернуть резюме</string>
     <string name="text_tool_enhance">Улучшить текст</string>
     <string name="text_tool_translate">Перевести</string>
     <string name="text_tool_running">Выполняется…</string>

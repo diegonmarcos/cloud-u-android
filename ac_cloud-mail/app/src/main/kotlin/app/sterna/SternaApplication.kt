@@ -65,6 +65,7 @@ class AppContainer(context: Context) {
         )
     val mailRepository: MailRepository = dataLayer.mailRepository
     val storageRepository: StorageRepository = dataLayer.storageRepository
+    val messageTextCache = dataLayer.messageTextCache
     val appLock: AppLock = AppLock(accountStore)
 
     /** UnifiedPush transport state machine (issue #17); inert without a distributor. */

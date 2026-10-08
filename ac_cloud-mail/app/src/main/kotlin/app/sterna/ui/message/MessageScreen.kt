@@ -98,10 +98,10 @@ import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.LocalTextToolRunner
+import app.sterna.ui.text.onReader
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolIconRow
-import app.sterna.ui.text.TextToolPanel
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.core.data.text.extractVerificationCode
 import app.sterna.core.data.text.htmlEscape
@@ -114,6 +114,7 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Unsubscribe
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.filled.Report
@@ -125,6 +126,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import app.sterna.ui.components.Icon
 import app.sterna.ui.components.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -739,6 +741,25 @@ internal fun receivedTextToolSource(email: Email): String {
 }
 
 /**
+ * What a tap on a reading tool does on a RECEIVED message. Translate rewrites the text of the page in
+ * place (the fragment the reader renders, cached per message and language) and Resume writes the summary
+ * box under the sender; neither opens a dialog and neither writes the stored message. Enhance is not on
+ * this surface, so there is nothing for it to do here. ONE function for the icon row and the overflow, so
+ * the two cannot start different things.
+ */
+private fun runReaderTool(
+    viewModel: MessageViewModel,
+    tool: TextTool,
+    email: Email,
+    plainText: Boolean,
+    derivedNotice: String,
+    noContent: String,
+) = tool.onReader(
+    translate = { viewModel.translateNow(readerBody(email, plainText, derivedNotice, noContent).fragment) },
+    summarise = { viewModel.summariseNow(receivedTextToolSource(email)) },
+)
+
+/**
  * The ONE "Copy Code" gesture (#438), shared by the reading row's icon and the overflow's named
  * entry so the two cannot drift apart: the extractor's confident candidate goes to the clipboard
  * with a word, and a message that offers nothing confident gets a word that says so — never a
@@ -874,8 +895,10 @@ private fun MessageActions(
     // The reader's ONE runner, not a fresh one: AI Resume is started here and drawn under the
     // sender, which is a different subtree of the same composition.
     val textTools = LocalTextToolRunner.current
-    val textToolScope = rememberCoroutineScope()
-    TextToolPanel(textTools, onApply = null)
+    // Translate and the summary no longer open a dialog: Translate rewrites the text of the page in
+    // place and the summary is a box under the sender. Both are driven by the page's ViewModel.
+    val translation by viewModel.translation.collectAsStateWithLifecycle()
+    val readerSummary by viewModel.summary.collectAsStateWithLifecycle()
     val inTrash by viewModel.inTrash.collectAsStateWithLifecycle()
     val resolvedMailbox by viewModel.mailboxId.collectAsStateWithLifecycle()
     // The tag/label surface (part five) and its state: the mailboxes this message is in, and the
@@ -1039,10 +1062,10 @@ private fun MessageActions(
                 DropdownMenuItem(
                     text = { Text(stringResource(tool.label)) },
                     leadingIcon = { Icon(tool.icon, contentDescription = null) },
-                    enabled = textTools.busy == null,
+                    enabled = !translation.running && !readerSummary.running,
                     onClick = {
                         menuOpen = false
-                        textTools.run(textToolScope, tool, receivedTextToolSource(loaded.email))
+                        runReaderTool(viewModel, tool, loaded.email, plainText, derivedNotice, noContent)
                     },
                 )
             }
@@ -1261,6 +1284,20 @@ private fun MessageActions(
                     onClick = { menuOpen = false; viewModel.askUnsubscribe() },
                 )
             }
+            // Show Original / Show Translated: flips the page between the message as it arrived and
+            // its cached in-place translation. Greyed until a translation exists for this text.
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(
+                            if (translation.shown) R.string.message_show_original else R.string.message_show_translated,
+                        ),
+                    )
+                },
+                leadingIcon = { Icon(Icons.Filled.Translate, contentDescription = null) },
+                enabled = translation.exists,
+                onClick = { menuOpen = false; viewModel.toggleTranslated() },
+            )
             // Read-only raw-headers view (issue #60). Headers are fetched on demand here, so
             // the normal reader path never pulls them.
             DropdownMenuItem(
@@ -1880,7 +1917,8 @@ private fun MessageContent(
     // The reading-mode verdict is this page's own: the same function the overflow asks, over the
     // same localised lines the page renders (resolved above for the printer).
     val textTools = LocalTextToolRunner.current
-    val textToolScope = rememberCoroutineScope()
+    val translation by viewModel.translation.collectAsStateWithLifecycle()
+    val readerSummary by viewModel.summary.collectAsStateWithLifecycle()
     val readingEmail = (state as? MessageState.Loaded)?.email
     val readingModeOffered = remember(readingEmail, printDerivedNotice, printNoContent) {
         readingEmail != null && readingModesDiffer(readingEmail, printDerivedNotice, printNoContent)
@@ -1889,7 +1927,7 @@ private fun MessageContent(
     val readingActions: @Composable () -> Unit = {
         TextToolIconRow(
             surface = textTools.surface,
-            enabled = textTools.busy == null,
+            enabled = !translation.running && !readerSummary.running,
             skip = { it == TextTool.RESUME && messages.firstOrNull()?.body == null },
             trailing = {
                 // The row reads "Translate Resume | Show images Show Plain Text | Copy Code"
@@ -1920,7 +1958,7 @@ private fun MessageContent(
                 }
             },
         ) { tool ->
-            readingEmail?.let { textTools.run(textToolScope, tool, receivedTextToolSource(it)) }
+            readingEmail?.let { runReaderTool(viewModel, tool, it, plainText, printDerivedNotice, printNoContent) }
         }
     }
     val senderRule = SenderRuleOffer(
@@ -1937,6 +1975,31 @@ private fun MessageContent(
         onBlock = viewModel::blockSender,
     )
 
+    // The text this page renders, and the quote-free text a summary is made from. Once the body is
+    // there the ViewModel brings back whatever is kept for it (translation, summary) and does what
+    // Configs switched on - nothing here decides that, it only says WHICH text.
+    val hasBody = messages.firstOrNull()?.body != null
+    val readerFragment = remember(readingEmail, hasBody, plainText, printDerivedNotice, printNoContent) {
+        readingEmail?.takeIf { hasBody }
+            ?.let { readerBody(it, plainText, printDerivedNotice, printNoContent).fragment }
+    }
+    LaunchedEffect(readerFragment) {
+        val email = readingEmail
+        if (readerFragment != null && email != null) {
+            viewModel.onReaderOpened(readerFragment, receivedTextToolSource(email))
+        }
+    }
+    // The engine's reason when a translation fails: a word on screen, not a dialog.
+    val translationError = translation.error
+    LaunchedEffect(translationError) {
+        if (translationError != null) {
+            Toast.makeText(context, translationError, Toast.LENGTH_LONG).show()
+            viewModel.dismissTranslationError()
+        }
+    }
+    CompositionLocalProvider(
+        LocalReaderSummary provides ReaderSummaryUi(readerSummary, viewModel::dismissSummaryError),
+    ) {
     Box(Modifier.fillMaxSize()) {
         when (val s = state) {
             is MessageState.Loading -> LoadingRing(Modifier.align(Alignment.Center))
@@ -2007,8 +2070,11 @@ private fun MessageContent(
                 metadata = metadata,
                 onSenderPanelOpened = viewModel::loadMetadataHeaders,
                 readingActions = readingActions,
+                translatedFragment = translation.fragmentFor(readerFragment),
+                translating = translation.running,
             )
         }
+    }
     }
 }
 
@@ -2072,6 +2138,10 @@ private fun ConversationBody(
     onSenderPanelOpened: () -> Unit = {},
     /** The reading icon row, drawn by [MessageHeader] under the tags (#293). Built by MessageContent. */
     readingActions: @Composable () -> Unit = {},
+    /** The page's text translated in place, or null for the message as it arrived. */
+    translatedFragment: String? = null,
+    /** An in-place translation is running: a thin bar at the top of the page says so. */
+    translating: Boolean = false,
 ) {
     val msg = messages.firstOrNull() ?: return
     val full = msg.body
@@ -2194,11 +2264,12 @@ private fun ConversationBody(
                 // flash white, send her back to the top and reset the zoom, in a loop.
                 val html = remember(
                     full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
+                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel, translatedFragment,
                 ) {
                     buildHtmlDocument(
                         full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
                         plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
+                        translatedFragment = translatedFragment,
                     )
                 }
                 EmailWebView(
@@ -2261,6 +2332,11 @@ private fun ConversationBody(
                 onSenderPanelOpened = onSenderPanelOpened,
                 readingActions = readingActions,
             )
+        }
+        // The translation is in flight: a thin bar across the top, over the header, until the text
+        // is swapped. Nothing else on the page moves.
+        if (translating) {
+            LinearProgressIndicator(Modifier.align(Alignment.TopStart).fillMaxWidth())
         }
         // Spinner until the body has laid out (cached/prefetched mail beats the 500ms, so none flashes).
         if (full != null && !bodyReady && spinnerDue) {
@@ -2513,7 +2589,7 @@ private fun MessageHeader(
         // AI Resume — the summary, in a box under the sender, exactly where the owner asked for it.
         // It draws the SHARED runner's state (the same progress and the same verbatim error Enhance
         // and Translate show) and writes nothing back to the message. See ResumeBox.
-        ResumeBox(LocalTextToolRunner.current, msg.id)
+        ResumeBox(LocalReaderSummary.current, msg.id)
         // OpenPGP status card: locked/unlock prompt, progress, verdict, or failure.
         if (crypto != CryptoUiState.None) {
             HorizontalDivider()
@@ -4954,11 +5030,15 @@ internal fun buildHtmlDocument(
     // has always been. Empty means the pass does not run at all, so the print document (whose links
     // cannot be tapped) simply omits it.
     deceptiveLinkLabel: String = "",
+    // The fragment with its TEXT translated in place (InPlaceHtmlTranslation), standing in for the
+    // message's own fragment; null = the message as it arrived. Everything downstream - inline images,
+    // the dark-mode rewrite, the quote fold - runs on it exactly as it would on the original.
+    translatedFragment: String? = null,
 ): String {
     // Which part of the message the document carries, and what that implies for the page, is
     // decided in ONE place a test can run — see [readerBody].
     val body = readerBody(email, plainText, derivedNotice, noContent)
-    var inner = body.fragment
+    var inner = translatedFragment ?: body.fragment
     // The two rewrites below UNDO MARKUP the message wrote, so they apply only while the document
     // actually carries that markup — [ReaderBody.richHtml], NOT "the message has HTML" (#149). A body
     // we paint ourselves is HTML-escaped text, and escaping touches neither ':' nor '-': a message

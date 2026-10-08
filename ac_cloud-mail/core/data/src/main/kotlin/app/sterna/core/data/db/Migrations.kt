@@ -361,3 +361,28 @@ val MIGRATION_27_28 = object : Migration(27, 28) {
         db.execSQL("ALTER TABLE `emails` ADD COLUMN `attachmentsJson` TEXT")
     }
 }
+
+/** The `message_text_cache` table ([MessageTextCacheEntity]); shared with the JVM test. */
+const val MESSAGE_TEXT_CACHE_CREATE_SQL: String =
+    "CREATE TABLE IF NOT EXISTS `message_text_cache` (" +
+        "`accountId` TEXT NOT NULL, " +
+        "`emailId` TEXT NOT NULL, " +
+        "`kind` TEXT NOT NULL, " +
+        "`lang` TEXT NOT NULL, " +
+        "`sourceHash` TEXT NOT NULL, " +
+        "`payload` TEXT NOT NULL, " +
+        "`createdAt` INTEGER NOT NULL, " +
+        "PRIMARY KEY(`accountId`, `emailId`, `kind`, `lang`))"
+
+/**
+ * Additive 28→29: the `message_text_cache` table. A message's in-place translation and its summary
+ * are kept per message and per language, so reopening one shows them without an engine call.
+ *
+ * ADDITIVE AND SELF-CONTAINED: a new table, no existing row is read or rewritten. The rows are a
+ * cache - the worst a lost one costs is one engine call - so there is nothing to backfill.
+ */
+val MIGRATION_28_29 = object : Migration(28, 29) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(MESSAGE_TEXT_CACHE_CREATE_SQL)
+    }
+}

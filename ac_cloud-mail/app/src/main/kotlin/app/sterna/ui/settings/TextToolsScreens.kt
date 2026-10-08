@@ -9,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.sterna.R
 import app.sterna.ui.text.MailAiRegistry
+import app.sterna.ui.text.MailLanguages
 import app.sterna.ui.text.MailTextToolsPrefs
 import app.sterna.ui.text.textToolsClient
 import app.sterna.ui.theme.MailMetrics
@@ -285,6 +285,8 @@ internal fun MailTextResumeScreen(onBack: () -> Unit) {
         val (summaryId, setSummary) = rememberStoredChoice(MailTextToolsPrefs.KEY_SUMMARY_STYLE) {
             MailTextToolsPrefs.summaryStyleId(context)
         }
+        var summaryLanguage by remember { mutableStateOf(MailTextToolsPrefs.summaryLanguage(context)) }
+        var autoSummary by remember { mutableStateOf(MailTextToolsPrefs.autoSummary(context)) }
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             TextToolChoiceGroup(
                 title = stringResource(R.string.settings_text_resume_shape),
@@ -293,19 +295,38 @@ internal fun MailTextResumeScreen(onBack: () -> Unit) {
                 onSelect = setSummary,
             )
             HorizontalDivider()
-            ComposedPromptPreview(MailAiRegistry.summaryPrompt(summaryId))
+            LanguageDropdown(
+                label = stringResource(R.string.settings_text_resume_language),
+                selected = summaryLanguage,
+                onSelect = {
+                    summaryLanguage = it
+                    MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_SUMMARY_LANGUAGE, it)
+                },
+                modifier = Modifier.padding(top = MailMetrics.s16),
+            )
+            SettingSwitch(
+                title = stringResource(R.string.settings_text_resume_auto_title),
+                subtitle = stringResource(R.string.settings_text_resume_auto_summary),
+                checked = autoSummary,
+                onCheckedChange = {
+                    autoSummary = it
+                    MailTextToolsPrefs.putBoolean(context, MailTextToolsPrefs.KEY_AUTO_SUMMARY, it)
+                },
+            )
+            HorizontalDivider()
+            ComposedPromptPreview(MailTextToolsPrefs.summaryPrompt(context, summaryLanguage))
         }
     }
 }
 
 /**
- * Configs ▸ Text ▸ Translation — the default target language for Translate on a message.
+ * Configs ▸ Text ▸ Translation - the language Translate turns a message into, and whether incoming
+ * messages are translated on open.
  *
- * A FREE-TEXT TAG RATHER THAN A MENU, and deliberately. The list of languages a translation engine
- * can reach is the ENGINE's, discovered at runtime on the device, not registry data this app could
- * bake — so a menu here would either be a second, staler copy of that list or would need the engine
- * bound just to render. An empty field means "the engine's own default", which is what this app
- * sent before it had a setting at all.
+ * A DROPDOWN of languages, English by default. It was a free-text tag field because the list of what
+ * an engine can reach is the engine's; the picker lists the languages the fleet's translate engine
+ * serves ([MailLanguages]) and an engine that turns out not to know one says so, with its own reason,
+ * when a message is translated.
  */
 @Composable
 internal fun MailTranslationScreen(onBack: () -> Unit) {
@@ -313,24 +334,30 @@ internal fun MailTranslationScreen(onBack: () -> Unit) {
     val context = LocalContext.current.applicationContext
     DetailScaffold(stringResource(R.string.settings_text_translation_title), onBack) { padding ->
         var target by remember { mutableStateOf(MailTextToolsPrefs.translateTarget(context)) }
+        var auto by remember { mutableStateOf(MailTextToolsPrefs.autoTranslate(context)) }
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             Text(
                 stringResource(R.string.settings_text_translation_note),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(MailMetrics.s16),
             )
-            OutlinedTextField(
-                value = target,
-                onValueChange = {
-                    // Written on every keystroke rather than on a Save button: this app's other
-                    // free-text settings behave that way, and a field that needs confirming is a
-                    // field an owner can leave thinking they changed something.
+            LanguageDropdown(
+                label = stringResource(R.string.settings_text_translation_target),
+                selected = target,
+                onSelect = {
                     target = it
-                    MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_TRANSLATE_TARGET, it.trim())
+                    MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_TRANSLATE_TARGET, it)
                 },
-                singleLine = true,
-                label = { Text(stringResource(R.string.settings_text_translation_target)) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16),
+            )
+            HorizontalDivider(Modifier.padding(top = MailMetrics.s16))
+            SettingSwitch(
+                title = stringResource(R.string.settings_text_translation_auto_title, MailLanguages.nameOf(target)),
+                subtitle = stringResource(R.string.settings_text_translation_auto_summary),
+                checked = auto,
+                onCheckedChange = {
+                    auto = it
+                    MailTextToolsPrefs.putBoolean(context, MailTextToolsPrefs.KEY_AUTO_TRANSLATE, it)
+                },
             )
         }
     }

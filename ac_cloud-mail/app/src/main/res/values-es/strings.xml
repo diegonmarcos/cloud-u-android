@@ -1120,7 +1120,16 @@
     <string name="settings_text_translation_title">Traducción</string>
     <string name="settings_text_translation_summary">Idioma de destino predeterminado de Traducir en esta aplicación</string>
     <string name="settings_text_translation_note">El idioma al que Traducir convierte un mensaje. Son los ajustes propios de Cloud Mail — cambiarlos aquí no cambia los de Cloud Keyboard.</string>
-    <string name="settings_text_translation_target">Etiqueta del idioma de destino (p. ej. en, pt, de)</string>
+    <string name="settings_text_translation_target">Traducir a</string>
+    <string name="settings_text_translation_auto_title">Traducir automáticamente los mensajes entrantes que no estén en %1$s</string>
+    <string name="settings_text_translation_auto_summary">Traduce un mensaje al abrirlo y muestra la traducción. «Mostrar original» en el menú del mensaje vuelve atrás.</string>
+    <string name="settings_text_resume_auto_title">Resumen automático</string>
+    <string name="settings_text_resume_auto_summary">Resume un mensaje al abrirlo y muestra el resumen bajo la cabecera.</string>
+    <string name="settings_text_resume_language">Idioma del resumen</string>
+    <string name="message_show_original">Mostrar original</string>
+    <string name="message_show_translated">Mostrar traducción</string>
+    <string name="message_summary_collapse">Contraer el resumen</string>
+    <string name="message_summary_expand">Expandir el resumen</string>
     <string name="settings_text_prompt_preview_title">Lo que se envía</string>
     <string name="settings_text_prompt_preview_empty">Las opciones de arriba no añaden ninguna instrucción, así que el texto se envía tal cual.</string>
     <string name="settings_text_provider">Proveedor</string>

@@ -1459,7 +1459,7 @@
     "text_tools": {
       "kind": "prefs",
       "class": "config",
-      "doc": "Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target.",
+      "doc": "Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en).",
       "used_by": [
         "ac_cloud-mail",
         "ac_cloud-writer"

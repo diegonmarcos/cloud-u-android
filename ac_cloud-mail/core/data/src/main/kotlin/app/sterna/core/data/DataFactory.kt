@@ -2,6 +2,7 @@ package app.sterna.core.data
 
 import android.content.Context
 import app.sterna.core.data.account.AccountStore
+import app.sterna.core.data.db.MessageTextCacheDao
 import app.sterna.core.data.db.SternaDatabase
 import app.sterna.core.data.mail.ImapMailService
 import app.sterna.core.data.mail.LOCAL_DRAFT_FILES_DIR
@@ -23,6 +24,8 @@ object DataFactory {
     class DataLayer(
         val mailRepository: MailRepository,
         val storageRepository: StorageRepository,
+        /** The per-message, per-language translation and summary cache (message_text_cache). */
+        val messageTextCache: MessageTextCacheDao,
     )
 
     fun create(
@@ -52,6 +55,7 @@ object DataFactory {
             uidValidity,
         )
         return DataLayer(
+            messageTextCache = database.messageTextCacheDao(),
             mailRepository = MailRepository(
                 client, database.emailDao(), database.emailFtsDao(), database.emailBodyDao(),
                 database.mailboxDao(), imapService,

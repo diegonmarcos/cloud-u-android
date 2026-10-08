@@ -41,6 +41,14 @@ import app.sterna.core.data.mail.UnsubscribeOptions
 import app.sterna.core.data.mail.confirmationTarget
 import app.sterna.core.data.mail.preferredAction
 import app.sterna.core.data.mail.unsubscribePreview
+import app.sterna.core.data.text.LanguageGuess
+import app.sterna.core.data.text.ReaderTextAi
+import app.sterna.core.data.text.SummaryOutcome
+import app.sterna.core.data.text.TranslationOutcome
+import app.sterna.core.data.text.htmlToText
+import app.sterna.ui.text.MailTextToolsPrefs
+import app.sterna.ui.text.TextToolsReaderEngine
+import app.sterna.ui.text.textToolsClient
 import app.sterna.core.data.settings.REPLY_BAR_DEFAULT
 import app.sterna.core.data.settings.MessageTextSize
 import app.sterna.core.data.unsubscribe.UnsubscribeFailure
@@ -1053,6 +1061,122 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     /** The detected crypto kind, kept so a cancelled unlock returns to Locked. */
     private var lockedKind: CryptoKind? = null
 
+
+    // ---- in-place translation and summary of the opened message -----------------------------------
+    //
+    // Both are cached per message and per language in message_text_cache, so reopening a message is a
+    // row read. State belongs to the message on this page: [resetReaderAi] drops it, and a result that
+    // arrives for a message the page has since left is discarded.
+
+    private val textAi by lazy {
+        val app = getApplication<Application>()
+        ReaderTextAi(app.container.messageTextCache, TextToolsReaderEngine(textToolsClient(app), app), LanguageGuess)
+    }
+
+    private val _translation = MutableStateFlow(ReaderTranslation())
+    val translation = _translation.asStateFlow()
+
+    private val _summary = MutableStateFlow(ReaderSummary())
+    val summary = _summary.asStateFlow()
+
+    private var translationJob: Job? = null
+    private var summaryJob: Job? = null
+
+    private fun resetReaderAi() {
+        translationJob?.cancel(); summaryJob?.cancel()
+        _translation.value = ReaderTranslation()
+        _summary.value = ReaderSummary()
+    }
+
+    private fun cacheAccount(): String = accountId ?: ""
+
+    /**
+     * The reader has a body on screen: bring back whatever is already kept for it, then do what the
+     * owner switched on. [fragment] is what the reader renders (the translation source); [summarySource]
+     * is the quote-free text a summary is made from.
+     */
+    fun onReaderOpened(fragment: String, summarySource: String) {
+        val id = loadedId ?: return
+        val app = getApplication<Application>()
+        val target = MailTextToolsPrefs.translateTarget(app)
+        val summaryLang = MailTextToolsPrefs.summaryLanguage(app)
+        if (_translation.value.source != fragment) {
+            translationJob?.cancel()
+            translationJob = viewModelScope.launch {
+                val kept = textAi.cachedTranslation(cacheAccount(), id, target, fragment)
+                if (loadedId != id) return@launch
+                if (kept != null) {
+                    _translation.value = ReaderTranslation(target, fragment, kept, shown = true)
+                } else {
+                    _translation.value = ReaderTranslation(target, fragment)
+                    val auto = MailTextToolsPrefs.autoTranslate(app) &&
+                        textAi.needsTranslation(htmlToText(fragment), target)
+                    if (auto && loadedId == id) runTranslation(id, fragment, target)
+                }
+            }
+        }
+        if (_summary.value.text == null && !_summary.value.running) {
+            summaryJob?.cancel()
+            summaryJob = viewModelScope.launch {
+                val kept = textAi.cachedSummary(cacheAccount(), id, summaryLang, summarySource)
+                if (loadedId != id) return@launch
+                if (kept != null) _summary.value = ReaderSummary(text = kept)
+                else if (MailTextToolsPrefs.autoSummary(app) && summarySource.isNotBlank()) runSummary(id, summarySource, summaryLang)
+            }
+        }
+    }
+
+    /** The Translate tool: translate the reader's fragment in place into the chosen language. */
+    fun translateNow(fragment: String) {
+        val id = loadedId ?: return
+        if (_translation.value.running) return
+        val target = MailTextToolsPrefs.translateTarget(getApplication<Application>())
+        translationJob?.cancel()
+        translationJob = viewModelScope.launch { runTranslation(id, fragment, target) }
+    }
+
+    private suspend fun runTranslation(id: String, fragment: String, target: String) {
+        _translation.value = ReaderTranslation(target, fragment, running = true)
+        val outcome = textAi.translate(cacheAccount(), id, target, fragment)
+        if (loadedId != id) return
+        _translation.value = when (outcome) {
+            is TranslationOutcome.Done -> ReaderTranslation(target, fragment, outcome.fragment, shown = true)
+            is TranslationOutcome.Failed -> ReaderTranslation(target, fragment, error = outcome.reason)
+        }
+    }
+
+    /** Show Original / Show Translated. A no-op until a translation exists. */
+    fun toggleTranslated() {
+        _translation.value = _translation.value.let { if (it.exists) it.copy(shown = !it.shown) else it }
+    }
+
+    fun dismissTranslationError() {
+        _translation.value = _translation.value.copy(error = null)
+    }
+
+    /** The Resume tool: summarise [source] into the chosen summary language. */
+    fun summariseNow(source: String) {
+        val id = loadedId ?: return
+        if (_summary.value.running) return
+        val lang = MailTextToolsPrefs.summaryLanguage(getApplication<Application>())
+        summaryJob?.cancel()
+        summaryJob = viewModelScope.launch { runSummary(id, source, lang) }
+    }
+
+    private suspend fun runSummary(id: String, source: String, lang: String) {
+        _summary.value = ReaderSummary(running = true)
+        val outcome = textAi.summarise(cacheAccount(), id, lang, source)
+        if (loadedId != id) return
+        _summary.value = when (outcome) {
+            is SummaryOutcome.Done -> ReaderSummary(text = outcome.text)
+            is SummaryOutcome.Failed -> ReaderSummary(error = outcome.reason)
+        }
+    }
+
+    fun dismissSummaryError() {
+        _summary.value = _summary.value.copy(error = null)
+    }
+
     private var loadedId: String? = null
     /** Owning account when opened from the unified inbox; null = current account. */
     private var accountId: String? = null
@@ -1143,6 +1267,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         _metadataHeaders.value = emptyList()
         _unsubscribeState.value = UnsubscribeState.Idle
         _unsubscribeConfirm.value = null
+        resetReaderAi()
         // And the read receipt, one degree worse: its button answers a NAMED stranger, captured from
         // the message we are leaving.
         _readReceiptOffer.value = null

@@ -87,6 +87,7 @@ for scr in MailAiRoutingScreen MailTextEnhanceScreen MailTextResumeScreen MailTr
   wired=no
   case "$body" in *"onSelect = set"*) wired=yes ;; esac
   case "$body" in *onValueChange*MailTextToolsPrefs.put*) wired=yes ;; esac
+  case "$body" in *"onSelect = {"*MailTextToolsPrefs.put*) wired=yes ;; esac   # the language dropdown
   case "$body" in *"onSelect = {}"*|*"onValueChange = {}"*) wired=no ;; esac
   [ "$wired" = yes ] && ok "C2 $scr can write - it is editable, not a read-only mirror" \
                      || bad "C2 $scr has no control bound to a setter - it is read-only"
@@ -163,8 +164,8 @@ case "$snap" in *TOKEN*|*token*) bad "K1 the settings snapshot carries a token" 
   *) ok "K1 the settings snapshot carries choices, never the credential" ;; esac
 
 # ── B1 a received message's stored body is never written ──
-has "$UI/message/MessageScreen.kt" 'TextToolPanel(textTools, onApply = null)' \
-  "B1 the reader passes NO apply callback - there is nothing to write the result into"
+lacks "$UI/message/MessageScreen.kt" 'TextToolPanel(' \
+  "B1 the reader opens no result dialog - Translate rewrites the page in place, the summary is a box, and neither has anywhere to write back"
 recv=$(awk '/fun receivedTextToolSource\(/,/^}$/' "$UI/message/MessageScreen.kt")
 case "$recv" in *TextToolScope.receivedScope*) ok "B1 the reader sends a quote-free COPY" ;;
   *) bad "B1 the reader does not cut the quoted history" ;; esac

@@ -151,6 +151,9 @@ for scr in MailAiRoutingScreen MailTextEnhanceScreen MailTextResumeScreen MailTr
     *onValueChange*MailTextToolsPrefs.put*) wired=yes ;;   # a free-text field that writes
   esac
   case "$body" in
+    *"onSelect = {"*MailTextToolsPrefs.put*) wired=yes ;;  # a language dropdown that writes
+  esac
+  case "$body" in
     *"onSelect = {}"*|*"onValueChange = {}"*)
       wired=no ;;                                          # an explicitly inert handler
   esac

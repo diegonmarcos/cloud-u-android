@@ -1084,7 +1084,16 @@
     <string name="settings_text_enhance_language">Uitvoertaal</string>
     <string name="settings_text_resume_shape">Vorm van de samenvatting</string>
     <string name="settings_text_translation_note">De taal waarin het vertalen een bericht omzet. Dit zijn de eigen instellingen van Cloud Mail — ze hier wijzigen verandert die van Cloud Keyboard niet.</string>
-    <string name="settings_text_translation_target">Doeltaalcode (bijv. en, pt, de)</string>
+    <string name="settings_text_translation_target">Vertalen naar</string>
+    <string name="settings_text_translation_auto_title">Binnenkomende berichten automatisch vertalen als ze niet in %1$s zijn</string>
+    <string name="settings_text_translation_auto_summary">Vertaalt een bericht zodra je het opent en toont de vertaling. „Origineel tonen” in het berichtmenu schakelt terug.</string>
+    <string name="settings_text_resume_auto_title">Automatische samenvatting</string>
+    <string name="settings_text_resume_auto_summary">Vat een bericht samen zodra je het opent en toont de samenvatting onder de kop.</string>
+    <string name="settings_text_resume_language">Taal van de samenvatting</string>
+    <string name="message_show_original">Origineel tonen</string>
+    <string name="message_show_translated">Vertaling tonen</string>
+    <string name="message_summary_collapse">Samenvatting inklappen</string>
+    <string name="message_summary_expand">Samenvatting uitklappen</string>
     <string name="text_tool_enhance">Tekst verbeteren</string>
     <string name="text_tool_translate">Vertalen</string>
     <string name="text_tool_running">Bezig…</string>

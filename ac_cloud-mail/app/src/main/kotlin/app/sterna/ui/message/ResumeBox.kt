@@ -1,111 +1,120 @@
 package app.sterna.ui.message
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sterna.R
-import app.sterna.ui.text.TextTool
-import app.sterna.ui.text.TextToolRunner
+import app.sterna.ui.components.Icon
 import app.sterna.ui.theme.MailMetrics
 
+/** The summary of the open message and the one thing the box can ask back: dismiss an error. */
+class ReaderSummaryUi(val summary: ReaderSummary, val dismissError: () -> Unit) {
+    companion object {
+        val None = ReaderSummaryUi(ReaderSummary()) {}
+    }
+}
+
 /**
- * "AI Resume" — the summary of this message, in a box under the sender.
+ * Provided once by the reader's page. A composition local rather than a parameter for the reason the
+ * text-tool runner was one: the box is drawn four composables below the place that knows the summary,
+ * and threading it would add an argument to signatures that tests pin line for line. The default is an
+ * empty summary, so a preview or a test that draws a header without a reader draws no box.
+ */
+val LocalReaderSummary = compositionLocalOf { ReaderSummaryUi.None }
+
+/**
+ * "AI Resume" - the summary of this message, in a collapsible box directly below the header.
  *
- * RESUME MEANS SUMMARISE. It is the owner's product name for condensing this email to its
- * essentials, kept exactly as they spell it; it is not a curriculum vitae and it does not resume
- * anything that was paused.
+ * RESUME MEANS SUMMARISE: the owner's product name for condensing the message, kept exactly. It is
+ * not a curriculum vitae and does not resume anything paused.
  *
- * IT NEVER TOUCHES THE STORED MESSAGE. The summary lives in this composable's own state and
- * nowhere else. There is no callback out of here that writes a body, no ViewModel method taken,
- * nothing saved: a received message is the record of what somebody sent, and a feature that edited
- * it in place would have destroyed the only copy of that. The box is editable because the owner
- * asked for it to be — a near-miss summary is worth fixing by hand and taking away — and what the
- * edit changes is the text in this box, which is thrown away when the reader leaves the message.
- * That is the deal, and the Copy button is how anything survives it.
+ * ALWAYS THERE ONCE IT EXISTS. The summary is cached per message and language, so a message opened
+ * again shows its box at once, without anyone asking again; and the box is expanded by default, with a
+ * chevron to collapse it (the choice is remembered for this message while the reader is on it).
  *
- * The progress and the error are the runner's, i.e. the same ones Enhance and Translate show, so a
- * slow call reads as a slow provider rather than a stuck app and a failure carries the engine's own
- * reason verbatim instead of a generic apology. This composable draws that state; it does not
- * reimplement it. See TextToolRunner.
+ * IT NEVER TOUCHES THE STORED MESSAGE. It draws text it was handed and offers Copy; there is no
+ * ViewModel here and no path back to a body. A received message is the record of what somebody sent.
+ *
+ * The progress and the engine's own reason (verbatim - "no API key for OpenRouter", the provider's HTTP
+ * error) are drawn here, because this box is where the summary was going to be and so where its absence
+ * has to be explained.
  */
 @Composable
-fun ResumeBox(runner: TextToolRunner, emailId: String) {
-    val busy = runner.busy == TextTool.RESUME
-    val outcome = runner.outcome?.takeIf { it.tool == TextTool.RESUME }
-    if (!busy && outcome == null) return
-
+fun ResumeBox(ui: ReaderSummaryUi, emailId: String) {
+    val summary = ui.summary
+    if (!summary.visible) return
     val clipboard = LocalClipboardManager.current
-    // Seeded from the outcome and keyed on it, so a fresh run replaces the text while a user's own
-    // edits survive every recomposition in between. Keyed on the MESSAGE too: the same box drawn
-    // for the next message must not inherit this one's words.
-    var edited by remember(emailId, outcome) { mutableStateOf(outcome?.text.orEmpty()) }
+    var expanded by rememberSaveable(emailId) { mutableStateOf(true) }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
-        Text(
-            stringResource(R.string.text_tool_resume),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            Modifier.fillMaxWidth().clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                stringResource(R.string.text_tool_resume),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Icon(
+                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = stringResource(
+                    if (expanded) R.string.message_summary_collapse else R.string.message_summary_expand,
+                ),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!expanded) return@Column
         when {
-            busy -> {
-                val provider = runner.providerLabel()
+            summary.running -> {
                 Text(
-                    if (provider != null) {
-                        stringResource(R.string.text_tool_running_with, provider)
-                    } else {
-                        stringResource(R.string.text_tool_running)
-                    },
+                    stringResource(R.string.text_tool_running),
                     Modifier.padding(top = MailMetrics.s4),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = MailMetrics.s8))
             }
-            // The engine's OWN reason, verbatim — "no API key for OpenRouter", "the model cut the
-            // reply off", the provider's HTTP error. Not a toast: this box is where the summary was
-            // going to be, so it is where its absence has to be explained.
-            outcome?.error != null -> Text(
-                outcome.error,
-                Modifier.padding(top = MailMetrics.s4),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            else -> {
-                OutlinedTextField(
-                    value = edited,
-                    onValueChange = { edited = it },
-                    modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
-                    minLines = 2,
-                    textStyle = MaterialTheme.typography.bodyMedium,
+            summary.error != null -> {
+                Text(
+                    summary.error,
+                    Modifier.padding(top = MailMetrics.s4),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { clipboard.setText(AnnotatedString(edited)) }) {
-                        Text(stringResource(R.string.text_tool_copy))
-                    }
-                    TextButton(onClick = { runner.dismiss() }) {
-                        Text(stringResource(R.string.text_tool_close))
-                    }
-                }
+                TextButton(onClick = ui.dismissError) { Text(stringResource(R.string.text_tool_close)) }
             }
-        }
-        if (!busy && outcome?.error != null) {
-            TextButton(onClick = { runner.dismiss() }) {
-                Text(stringResource(R.string.text_tool_close))
+            else -> {
+                val text = summary.text.orEmpty()
+                Text(
+                    text,
+                    Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(onClick = { clipboard.setText(AnnotatedString(text)) }) {
+                    Text(stringResource(R.string.text_tool_copy))
+                }
             }
         }
     }

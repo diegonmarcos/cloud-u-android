@@ -52,8 +52,17 @@ object MailTextToolsPrefs {
     /** Text Resume: which summary shape. */
     const val KEY_SUMMARY_STYLE = "summary_style"
 
-    /** Translation: BCP-47 target tag; "" = the engine's own default. */
+    /** Translation: BCP-47 target tag; blank = English ([MailLanguages.DEFAULT]). */
     const val KEY_TRANSLATE_TARGET = "translate_default_target"
+
+    /** Auto-translate: translate a message on open when it is not already in the target. Off by default. */
+    const val KEY_AUTO_TRANSLATE = "auto_translate_incoming"
+
+    /** Auto-summary: summarise a message on open. Off by default. */
+    const val KEY_AUTO_SUMMARY = "auto_summary_incoming"
+
+    /** The language a summary is written in; blank = English. */
+    const val KEY_SUMMARY_LANGUAGE = "summary_language"
 
     /**
      * Set once the values below have been seeded from whatever the owner had already configured.
@@ -101,7 +110,18 @@ object MailTextToolsPrefs {
         prefs(context).getString(KEY_SUMMARY_STYLE, null) ?: MailAiRegistry.defaultSummary
 
     fun translateTarget(context: Context): String =
-        prefs(context).getString(KEY_TRANSLATE_TARGET, null).orEmpty()
+        MailLanguages.normalise(prefs(context).getString(KEY_TRANSLATE_TARGET, null))
+
+    fun autoTranslate(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO_TRANSLATE, false)
+
+    fun autoSummary(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO_SUMMARY, false)
+
+    fun summaryLanguage(context: Context): String =
+        MailLanguages.normalise(prefs(context).getString(KEY_SUMMARY_LANGUAGE, null))
+
+    fun putBoolean(context: Context, key: String, value: Boolean) {
+        prefs(context).edit().putBoolean(key, value).apply()
+    }
 
     // ---- writes: the whole point of the split. Each one lands in THIS app's file only. ----
 
@@ -122,7 +142,12 @@ object MailTextToolsPrefs {
         enhanceLanguageId(context),
     )
 
-    fun summaryPrompt(context: Context): String = MailAiRegistry.summaryPrompt(summaryStyleId(context))
+    fun summaryPrompt(context: Context): String = summaryPrompt(context, summaryLanguage(context))
+
+    /** The chosen summary shape, told which language to write in. */
+    fun summaryPrompt(context: Context, languageTag: String): String =
+        MailAiRegistry.summaryPrompt(summaryStyleId(context)) +
+            "\nWrite the summary in ${MailLanguages.nameOf(languageTag, java.util.Locale.ENGLISH)}."
 
     /** Whether this app's chosen summary prompt asked the model for a list. */
     fun summaryWantsBullets(context: Context): Boolean =
@@ -200,7 +225,10 @@ object MailTextToolsPrefs {
         // A target tag is free text from an engine's language list rather than a registry id, so
         // there is nothing here to validate it against; it is taken as given, and an empty one
         // means "the engine's default", which is also this app's default.
-        edit.putString(KEY_TRANSLATE_TARGET, snapshot.optString(KEY_TRANSLATE_TARGET))
+        // Only a tag the dropdown can show: the field was free text, and a value that is not on the
+        // list would be a setting no row here can display or change. Anything else starts at English.
+        snapshot.optString(KEY_TRANSLATE_TARGET).let { MailLanguages.normalise(it) }
+            .takeIf { it in MailLanguages.TAGS }?.let { edit.putString(KEY_TRANSLATE_TARGET, it) }
 
         edit.putBoolean(KEY_SEEDED, true).apply()
         Log.i(TAG, "seeded cloud-mail's text-tool settings from the keyboard's, once")

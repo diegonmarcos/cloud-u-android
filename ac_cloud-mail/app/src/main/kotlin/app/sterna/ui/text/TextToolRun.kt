@@ -1,5 +1,6 @@
 package app.sterna.ui.text
 
+import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -14,6 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import app.sterna.R
+import app.sterna.core.data.text.InPlaceHtmlTranslation.TranslationFailed
+import app.sterna.core.data.text.ReaderTextEngine
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -207,6 +210,18 @@ class TextToolRunner internal constructor(
 }
 
 /**
+ * What a tap on a reading tool does on a RECEIVED message, said without naming a tool outside this file:
+ * Translate rewrites the page in place and Resume fills the summary box - neither opens a dialog and
+ * neither writes the stored message. Enhance is not on the read surface, so there is nothing to do.
+ * ONE function for the reader's icon row and its overflow, so they cannot start different things.
+ */
+internal inline fun TextTool.onReader(translate: () -> Unit, summarise: () -> Unit) {
+    // Written as tests, not as `when` arms: the router above is the ONE tool-to-engine dispatch, and a
+    // second table of arms in this file would be a second place the pairing could be read from.
+    if (this == TextTool.TRANSLATE) translate() else if (this == TextTool.RESUME) summarise()
+}
+
+/**
  * One runner per screen, over one binding per process.
  *
  * The client binds on construction and rebinds on use, so it is deliberately kept on the
@@ -253,4 +268,41 @@ private fun sharedClient(app: android.content.Context): TextToolsClient = textTo
  */
 val LocalTextToolRunner = compositionLocalOf<TextToolRunner> {
     error("No TextToolRunner provided — MessagePager provides one for the whole reader")
+}
+
+/**
+ * The reader's two engine calls, over the same binder and with the same settings as every other text
+ * tool in this app: Translate goes to the translation library, the summary to the OpenRouter provider
+ * and model chosen on the AI Routing page, with the prompt of the chosen shape told which language to
+ * write in. Nothing is routed differently from [TextToolRunner]; what differs is only that a failure is
+ * thrown with the engine's own reason, which the in-place pipeline turns into a message under the
+ * reader instead of a dialog.
+ *
+ * BLOCKING, like the calls underneath: callers run it off the main thread.
+ */
+internal class TextToolsReaderEngine(
+    private val client: TextToolsClient,
+    private val context: Context,
+) : ReaderTextEngine {
+
+    override fun translate(text: String, targetTag: String): String {
+        MailTextToolsPrefs.seedFromKeyboard(context, client)
+        val result = client.translate(text, targetTag)
+        result.error?.let { throw TranslationFailed(it) }
+        return result.text ?: throw TranslationFailed("The translation engine returned nothing")
+    }
+
+    override fun summarise(text: String, languageTag: String): String {
+        MailTextToolsPrefs.seedFromKeyboard(context, client)
+        val provider = MailTextToolsPrefs.providerId(context)
+        val result = client.summariseWith(
+            text,
+            MailTextToolsPrefs.summaryPrompt(context, languageTag),
+            MailTextToolsPrefs.summaryWantsBullets(context),
+            provider,
+            MailTextToolsPrefs.modelId(context, provider),
+        )
+        result.error?.let { throw TranslationFailed(it) }
+        return result.text ?: throw TranslationFailed("The model returned nothing")
+    }
 }

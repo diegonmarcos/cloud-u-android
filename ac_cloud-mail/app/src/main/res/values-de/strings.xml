@@ -1081,7 +1081,16 @@
     <string name="settings_text_enhance_language">Ausgabesprache</string>
     <string name="settings_text_resume_shape">Form der Zusammenfassung</string>
     <string name="settings_text_translation_note">Die Sprache, in die das Übersetzen eine Nachricht überträgt. Dies sind die eigenen Einstellungen von Cloud Mail — sie hier zu ändern ändert die von Cloud Keyboard nicht.</string>
-    <string name="settings_text_translation_target">Zielsprachkürzel (z. B. en, pt, de)</string>
+    <string name="settings_text_translation_target">Übersetzen nach</string>
+    <string name="settings_text_translation_auto_title">Eingehende Nachrichten automatisch übersetzen, wenn nicht in %1$s</string>
+    <string name="settings_text_translation_auto_summary">Übersetzt eine Nachricht beim Öffnen und zeigt die Übersetzung. „Original anzeigen“ im Nachrichtenmenü schaltet zurück.</string>
+    <string name="settings_text_resume_auto_title">Automatische Zusammenfassung</string>
+    <string name="settings_text_resume_auto_summary">Fasst eine Nachricht beim Öffnen zusammen und zeigt die Zusammenfassung unter dem Kopf.</string>
+    <string name="settings_text_resume_language">Sprache der Zusammenfassung</string>
+    <string name="message_show_original">Original anzeigen</string>
+    <string name="message_show_translated">Übersetzung anzeigen</string>
+    <string name="message_summary_collapse">Zusammenfassung einklappen</string>
+    <string name="message_summary_expand">Zusammenfassung ausklappen</string>
     <string name="text_tool_enhance">Text verbessern</string>
     <string name="text_tool_translate">Übersetzen</string>
     <string name="text_tool_running">Wird ausgeführt…</string>

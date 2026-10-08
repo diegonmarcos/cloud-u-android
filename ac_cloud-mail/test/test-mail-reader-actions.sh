@@ -200,26 +200,24 @@ PY
 
 # ── B1 the summary never writes back to the stored body ──
 BOX="$UI/message/ResumeBox.kt"
-has "$BOX" 'var edited by remember' "B1 the summary lives in the box's own state"
-# Nothing in the box may reach a writer. The runner is passed for its progress/error and dismiss()
-# only -- any other call on it, or any viewModel at all, is a route to the message.
+has "$BOX" 'val text = summary.text.orEmpty()' "B1 the box draws text it was handed (the cached summary), it does not edit a body"
+# Nothing in the box may reach a writer, and it has no ViewModel at all.
 lacks "$BOX" 'viewModel' "B1 the box holds no ViewModel, so it cannot ask for a write"
 for writer in 'saveBody' 'updateBody' 'setBody' 'copy(bodyValues' 'onApply'; do
   lacks "$BOX" "$writer" "B1 the box calls no body writer ($writer)"
 done
-# The reader still passes NO apply callback to the shared panel, as the previous agent left it.
-has "$SCREEN" 'TextToolPanel(textTools, onApply = null)' "B1 the shared panel still has nowhere to apply"
-# What is SENT is the quote-free flattened copy, not the stored body.
+# The reader opens NO dialog any more: Translate rewrites the page in place and the summary is a box,
+# so there is no panel for a result to be applied from, and nothing to apply it to.
+lacks "$SCREEN" 'TextToolPanel(' "B1 the reader opens no result dialog (nothing to apply, nowhere to apply it)"
+# What is SENT to the summary is the quote-free flattened copy, not the stored body.
 has "$SCREEN" 'TextToolScope.receivedScope' "B1 the summary is made from a quote-free COPY"
-# ...and EVERY tool the reader runs sends that same source rather than building a second one. Since
-# #293 there are TWO run sites -- the overflow's named entries and the icon row under the tags -- so
-# the assertion is that every run site on this screen sends receivedTextToolSource(...), and that
-# the one function is the quote-free flattened copy. A site built from the stored body is what B1
-# exists to catch, whichever tool it belongs to.
-n=$(grep -c 'textTools\.run(' "$SCREEN")
-m=$(grep -c 'textTools\.run(textToolScope, tool, receivedTextToolSource(' "$SCREEN")
-[ "$n" -ge 1 ] && [ "$n" = "$m" ] && ok "B1 all $n reader run sites send the same scoped text" \
-  || bad "B1 $n run sites on the reader, $m sending receivedTextToolSource() -- a second, unscoped source"
+# ...and EVERY reading tool goes through ONE function, which sends receivedTextToolSource for the
+# summary. A site built from the stored body is what B1 exists to catch.
+n=$(grep -c 'runReaderTool(viewModel' "$SCREEN")
+[ "$n" -ge 2 ] && ok "B1 the icon row and the overflow both start tools through runReaderTool ($n sites)" \
+  || bad "B1 $n runReaderTool sites -- the reader has a second, unscoped way to start a tool"
+has "$SCREEN" 'summarise = { viewModel.summariseNow(receivedTextToolSource(email)) }' \
+  "B1 the summary is made from receivedTextToolSource"
 has "$SCREEN" 'return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)' \
   "B1 that one source is the quote-free flattened copy"
 

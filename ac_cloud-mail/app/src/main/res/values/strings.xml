@@ -523,7 +523,16 @@
     <string name="settings_text_enhance_language">Output language</string>
     <string name="settings_text_resume_shape">Summary shape</string>
     <string name="settings_text_translation_note">The language Translate turns a message into. These are Cloud Mail\'s own settings — changing them here does not change Cloud Keyboard\'s.</string>
-    <string name="settings_text_translation_target">Target language tag (e.g. en, pt, de)</string>
+    <string name="settings_text_translation_target">Translate to</string>
+    <string name="settings_text_translation_auto_title">Auto-translate incoming messages not in %1$s</string>
+    <string name="settings_text_translation_auto_summary">Translates a message when you open it and shows the translation. Show Original in the message menu switches back.</string>
+    <string name="settings_text_resume_auto_title">Auto-summary</string>
+    <string name="settings_text_resume_auto_summary">Summarises a message when you open it and shows the summary under the header.</string>
+    <string name="settings_text_resume_language">Summary language</string>
+    <string name="message_show_original">Show original</string>
+    <string name="message_show_translated">Show translated</string>
+    <string name="message_summary_collapse">Collapse the summary</string>
+    <string name="message_summary_expand">Expand the summary</string>
 
     <!-- The two Text tools on a message. Two entries, two engines: Enhance goes through the
          OpenRouter model chosen in AI Routing, Translate through the translation library. -->
