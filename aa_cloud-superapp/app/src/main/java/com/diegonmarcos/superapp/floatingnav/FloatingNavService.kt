@@ -461,12 +461,15 @@ class FloatingNavService : Service() {
         }
     }
 
-    /** Open the device calculator via the standard CATEGORY_APP_CALCULATOR. */
+    /** Open Cloud Calc; absent, Cloud Store on its Cloud tab, else SuperApp's own Store (never the system calculator). */
     private fun openCalculator() {
-        val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (intent.resolveActivity(packageManager) != null) runCatching { startActivity(intent) }
-        else android.widget.Toast.makeText(this, "No calculator app found", android.widget.Toast.LENGTH_SHORT).show()
+        val ok = when (com.diegonmarcos.superapp.apps.CalcHandoff.target(this)) {
+            com.diegonmarcos.superapp.apps.CalcHandoff.Target.CLOUD_CALC -> com.diegonmarcos.superapp.apps.CalcHandoff.launch(this)
+            com.diegonmarcos.superapp.apps.CalcHandoff.Target.CLOUD_STORE ->
+                com.diegonmarcos.superapp.apps.CloudStoreHandoff.open(this, com.diegonmarcos.superapp.apps.CalcHandoff.STORE_TAB)
+            com.diegonmarcos.superapp.apps.CalcHandoff.Target.SUPERAPP_STORE -> false
+        }
+        if (!ok) openApp(com.diegonmarcos.superapp.apps.CalcHandoff.PKG, "cloud-calc")
     }
 
     private fun openApp(pkg: String, installApp: String) {

@@ -9437,7 +9437,7 @@
           "install_app": "cloud-nav"
         }
       ],
-      "_doc_actions": "Global utility actions, identical in every context. The COMPACT menu shows the first `compact_action_count` (3); the EXPANDED view shows ALL of them (up to 5) plus a now-playing album-art card. Targets: `torch` toggles the flashlight (CameraManager.setTorchMode, no camera perm); `calc` opens the device calculator (Intent CATEGORY_APP_CALCULATOR); `screensaver` starts ScreensaverService (full-black cover overlay — see ui.screensaver); `lock` locks the screen (ScreenLocker); `action:<id>` routes through Cloud-SuperApp. Add/replace/reorder = edit here.",
+      "_doc_actions": "Global utility actions, identical in every context. The COMPACT menu shows the first `compact_action_count` (3); the EXPANDED view shows ALL of them (up to 5) plus a now-playing album-art card. Targets: `torch` toggles the flashlight (CameraManager.setTorchMode, no camera perm); `calc` opens Cloud Calc (com.diegonmarcos.cloudcalc), else Cloud Store on its Cloud tab, else the SuperApp Store row (apps/CalcHandoff.kt), never the system calculator; `screensaver` starts ScreensaverService (full-black cover overlay — see ui.screensaver); `lock` locks the screen (ScreenLocker); `action:<id>` routes through Cloud-SuperApp. Add/replace/reorder = edit here.",
       "compact_action_count": 3,
       "actions": [
         {
