@@ -149,7 +149,9 @@ object AppDebugServer {
      * Same three fields the universal endpoints already publish, so a client
      * reads one list and does not care which half an entry came from.
      */
-    data class Op(
+    // @JvmOverloads: the terminals' TerminalDebugApi.java calls Op(op, params, description); a
+    // Kotlin default (maxBody, #802) is invisible to Java without the generated overloads.
+    data class Op @JvmOverloads constructor(
         val op: String,
         val params: String = "",
         val description: String = "",

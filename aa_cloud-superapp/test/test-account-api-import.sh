@@ -69,5 +69,9 @@ has "$SRV" 'val limit = if (fleet) bodyLimit(op) else MAX_BODY_BYTES' "an unauth
 has "$SRV" 'internal fun bodyLimit(op: String): Int =' "bodyLimit reads the op's declared maxBody"
 has "$SRV" 'if (op !in OPEN_OPS && !fleet) {' "the token check is the same decision"
 
+# The terminals' TerminalDebugApi.java constructs Op(op, params, description): a Kotlin default
+# parameter (maxBody) needs @JvmOverloads or the terminal does not compile (CI 2026-10-08).
+has "$ROOT/../ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt" 'data class Op @JvmOverloads constructor(' "Op keeps its Java-callable constructors (@JvmOverloads) beside the maxBody default"
+
 echo; echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
