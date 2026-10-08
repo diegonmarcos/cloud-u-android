@@ -20,7 +20,7 @@ class NetworkBadgeDeclarationTest {
         val b = badge
         assertTrue("network_mesh is not in the shipped declaration: ${BadgeServices.declared.map { it.id }}", b != null)
         b!!
-        assertTrue(b.badge && b.persistent && b.enabled)
+        assertTrue(b.isBadge && b.persistent && b.enabled)
         assertEquals(NetworkBadgeService::class.java.name, b.service)
         assertEquals(NetworkBadgeService.CHANNEL_ID, b.channel)
         assertTrue("restarted after an update", BadgeDeclaration.restartServices(BadgeServices.declared).contains(b.service))
