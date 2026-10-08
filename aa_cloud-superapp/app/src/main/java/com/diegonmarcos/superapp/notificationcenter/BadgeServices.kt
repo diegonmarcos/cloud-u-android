@@ -244,6 +244,8 @@ object BadgeServices {
                 return "\"Display over other apps\" is not granted — Control ▸ Permissions."
             "health_connect" -> if (!healthConnectInstalled(ctx))
                 return "Health Connect is not installed on this device."
+            "notifications" -> if (!NetworkBadgeService.canPost(ctx))
+                return "Notification permission is not granted - Control \u25b8 Permissions."
             "location" -> if (ContextCompat.checkSelfPermission(ctx,
                     android.Manifest.permission.ACCESS_COARSE_LOCATION)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED)

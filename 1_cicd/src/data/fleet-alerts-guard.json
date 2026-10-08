@@ -61,6 +61,12 @@
       "why": "#812 Store badge (Notify > Store): the pending-updates count, non-persistent, cleared at 0 or when the Store opens. A count, not an alert."
     },
     {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/NetworkBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "G5 Network badge: a foreground service re-posting the mesh state (connection, IP, peers, traffic), event-driven plus a 30s tick while connected."
+    },
+    {
       "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/MarketsBadgeService.kt",
       "kind": "badge",
       "notify_calls": 1,

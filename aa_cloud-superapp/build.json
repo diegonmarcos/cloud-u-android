@@ -8789,6 +8789,11 @@
           "id": "store",
           "label": "Store",
           "members": ["store_updates"]
+        },
+        {
+          "id": "network",
+          "label": "Network",
+          "members": ["network_mesh"]
         }
       ],
       "producers": [
@@ -9013,6 +9018,38 @@
               "type": "toggle",
               "label": "Keep the summary pinned (ongoing)",
               "default": false
+            }
+          ]
+        },
+        {
+          "id": "network_mesh",
+          "label": "Network",
+          "subtitle": "The mesh at a glance: connected or not, the tunnel, this device's mesh IP, peer count and rx/tx; expanded, the last handshake per peer, the interface and peer addresses, DNS and uptime. Buttons: Always On (shows the system state, opens the VPN settings where it is switched), Connect/Disconnect, More (the Cloud Mesh page). Read over INetBackend from Cloud-Lib-Net-Wg; refreshed on connect/disconnect and VPN network events, plus every 30s only while connected.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "network_mesh",
+          "owner": "notificationcenter/NetworkBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.NetworkBadgeService",
+          "requires": [
+            "notifications"
+          ],
+          "shows": "Connected/disconnected, tunnel, mesh IP, peers, rx/tx; expanded: handshakes, addresses, DNS, uptime.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
             }
           ]
         },

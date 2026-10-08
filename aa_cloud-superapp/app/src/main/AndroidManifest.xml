@@ -466,6 +466,21 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent daily activity summary badge (active calories + distance) for the Cloud SuperApp" />
         </service>
+        <!-- NetworkBadgeService — pins the persistent "Cloud SA - Network"
+             badge (mesh state, IP, peers, rx/tx; Always On / Connect / More).
+             type=specialUse for the same reason as its siblings: a standing
+             connection-status badge is not one of the predefined FGS
+             categories. It is NOT `systemExempted`/VPN: the tunnel lives in the
+             engine APK; this only reads it over INetBackend. Not exported -
+             only BadgeServices.ensureAll starts it, from the declaration. -->
+        <service
+            android:name=".notificationcenter.NetworkBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent mesh status badge (connection, IP, peers, traffic) for the Cloud SuperApp" />
+        </service>
         <!-- WeatherBadgeService — pins the persistent "Cloud SA - Weather"
              badge (current temp, day max/min, hourly forecast, place name;
              Open-Meteo + last-known location, no key). type=specialUse for the

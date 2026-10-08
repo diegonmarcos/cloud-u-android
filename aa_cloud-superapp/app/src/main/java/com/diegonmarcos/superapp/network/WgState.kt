@@ -28,8 +28,13 @@ object WgState {
     /** The single Tunnel instance — name resolved on demand. */
     val tunnel: Tunnel = object : Tunnel {
         override fun getName(): String = prefsRef?.tunnelName?.takeIf { it.isNotBlank() } ?: "wg-mesh"
-        override fun onStateChange(newState: Tunnel.State) = Unit
+        override fun onStateChange(newState: Tunnel.State) { stateListener?.invoke(newState) }
     }
+
+    /** The one subscriber to state changes the app itself makes through
+     *  [AidlBackend.setState] (the engine cannot call back across the process
+     *  boundary). The Network badge sets it so it redraws on the event. */
+    @Volatile var stateListener: ((Tunnel.State) -> Unit)? = null
 
     /**
      * The tunnel engine. Used to be a GoBackend compiled into this APK; it is

@@ -72,12 +72,13 @@ class NotifyGroupsAlertsTest {
 
     // ── the groups ──────────────────────────────────────────────────────
 
-    @Test fun `exactly the four declared groups, in the brief's order and membership`() {
-        assertEquals(listOf("live", "actions", "media", "alerts", "store"), NotifyGroups.declared.map { it.id })
+    @Test fun `exactly the declared groups, in the brief's order and membership`() {
+        assertEquals(listOf("live", "actions", "media", "alerts", "store", "network"), NotifyGroups.declared.map { it.id })
         assertEquals("#812 the Store badge", listOf(StoreBadgeNotifier.BADGE_ID), group("store").members)
         assertEquals(listOf("markets_prices", "health_activity", "weather_today"), group("live").members)
         assertEquals(listOf("floating_nav_quick_actions", "kde_status"), group("actions").members)
         assertEquals(listOf("media_now_playing"), group("media").members)
+        assertEquals(listOf(NetworkBadgeService.BADGE_ID), group("network").members)
         assertEquals(listOf(AlertsNotifier.BADGE_ID), group("alerts").members)
         assertEquals("only the alerts group is the alerts group", listOf("alerts"),
             NotifyGroups.declared.filter { it.alerts }.map { it.id })
@@ -126,9 +127,9 @@ class NotifyGroupsAlertsTest {
 
     @Test fun `order is the owner's and survives a re-read`() {
         NotifyGroups.move(ctx, group("alerts"), -3)
-        assertEquals(listOf("alerts", "live", "actions", "media", "store"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "live", "actions", "media", "store", "network"), NotifyGroups.ordered(ctx).map { it.id })
         NotifyGroups.move(ctx, group("live"), +1)
-        assertEquals(listOf("alerts", "actions", "live", "media", "store"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "actions", "live", "media", "store", "network"), NotifyGroups.ordered(ctx).map { it.id })
     }
 
     // ── mock data is gone ───────────────────────────────────────────────
