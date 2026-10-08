@@ -73,5 +73,11 @@ has "$SRV" 'if (op !in OPEN_OPS && !fleet) {' "the token check is the same decis
 # parameter (maxBody) needs @JvmOverloads or the terminal does not compile (CI 2026-10-08).
 has "$ROOT/../ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt" 'data class Op @JvmOverloads constructor(' "Op keeps its Java-callable constructors (@JvmOverloads) beside the maxBody default"
 
+# The device pick travels with the bundle (linux-account phone import ?device=): a phone left to
+# the live tunnel's address inherits whoever's profile is up — the A37 ran as the S21+.
+has "$DBG" 'val device = q["device"]?.trim().orEmpty()' "import reads the optional device pick"
+has "$DBG" 'VaultCockpit.devices(v.bundle).none { it.id == device } -> "✗ device' "a device the bundle does not declare is refused by name"
+has "$DBG" 'VaultCockpit.selectDevice(ctx, device); "✓ $device"' "a declared device is selected through VaultCockpit.selectDevice, the Connect tab setter"
+
 echo; echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

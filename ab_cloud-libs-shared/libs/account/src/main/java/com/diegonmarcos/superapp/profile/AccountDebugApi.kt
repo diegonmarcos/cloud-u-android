@@ -43,7 +43,7 @@ object AccountDebugApi {
             Op("setup", "dry=1|run=1&app=", "dry=1: per app the keys Fleet Setup would push (names, never values) and what no declared store takes; run=1: describe -> apply -> read back, one ✓/✗ line per app (app= retries one)"),
             Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
             // #802 the engine's way in (linux-account phone import): the decrypted export as the POST body
-            Op("import", "POST body = the decrypted vault export", "land the bundle as S through the UI import's own gates (VaultFile.classify: sops/ENC refused, schema_version must be known) — the verdict and per-topic counts, never a value", maxBody = IMPORT_MAX_BODY),
+            Op("import", "POST body = the decrypted vault export · device=<electronics id> (optional: the device this phone is, as the terminal picked it)", "land the bundle as S through the UI import's own gates (VaultFile.classify: sops/ENC refused, schema_version must be known) — the verdict and per-topic counts, never a value", maxBody = IMPORT_MAX_BODY),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
@@ -115,7 +115,7 @@ object AccountDebugApi {
                 JSONObject().put("result", done.poll(30, java.util.concurrent.TimeUnit.SECONDS) ?: "✗ no answer in 30 s — the erase may still complete")
             }
             "fleet" -> fleet(ctx)
-            "import" -> importBundle(ctx, q["_body"].orEmpty(), m)
+            "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
                 q["dry"] == "1" -> m.migratePlan()
                 q["status"] == "1" -> AccountFleet.progress
@@ -136,7 +136,7 @@ object AccountDebugApi {
      * refusal sentence when refused, and the Profiles topics as counts only (rows dropped):
      * nothing of the body is echoed.
      */
-    private fun importBundle(ctx: Context, text: String, m: AccountModel): JSONObject {
+    private fun importBundle(ctx: Context, text: String, q: Map<String, String>, m: AccountModel): JSONObject {
         if (text.isEmpty()) return JSONObject().put("verdict", "empty").put("result", "✗ POST the decrypted vault export as the request body")
         val v = AccountHost.classify(text)
         val verdict = v::class.java.simpleName.lowercase()
@@ -146,7 +146,17 @@ object AccountDebugApi {
             return JSONObject().put("verdict", "unknownschema").put("schema_version", bad)
                 .put("result", "✗ schema_version $bad — this build knows ${com.diegonmarcos.cloudlib.auth.VaultConnect.knownSchemaVersions.sorted()}")
         }
+        // The device pick travels with the bundle: the terminal already knows which declared
+        // device this phone is (linux-account device), and a phone whose pick is left to the
+        // live tunnel inherits whoever's profile is up — the A37 ran as the S21+ (10.0.0.9).
+        val device = q["device"]?.trim().orEmpty()
+        val picked = when {
+            device.isEmpty() -> null
+            VaultCockpit.devices(v.bundle).none { it.id == device } -> "✗ device '$device' is not declared in this bundle"
+            else -> { VaultCockpit.selectDevice(ctx, device); "✓ $device" }
+        }
         val out = profiles(m)
+        picked?.let { out.put("device", it) }
         out.optJSONArray("topics")?.let { t -> for (i in 0 until t.length()) t.optJSONObject(i)?.remove("rows") }
         return out.put("verdict", verdict).put("result", m.last)
     }
