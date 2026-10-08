@@ -1424,14 +1424,16 @@
     "sterna_account": {
       "kind": "prefs",
       "class": "config",
-      "doc": "Mail accounts as a JSON blob (server, username, protocol, IMAP/SMTP endpoints — the account LINKS) and the current account; each pw_<id> slot is a password or refresh token encrypted with this phone's Keystore, so it never moves — the new phone signs in once per account. vault_mail / vault_owner are the vault bundle's mail section and owner address IN TRANSIT (cockpit derived_settings, applied by server → runtime and the migration): the app consumes them on start (VaultMailImport adds the accounts through AccountStore.add, encrypting each password) and removes them.",
+      "doc": "Mail accounts as a JSON blob (server, username, protocol, IMAP/SMTP endpoints — the account LINKS) and the current account; each pw_<id> slot is a password or refresh token encrypted with this phone's Keystore, so it never moves — the new phone signs in once per account. vault_mail / vault_owner are the vault bundle's mail section and owner address IN TRANSIT (cockpit derived_settings, applied by server → runtime and the migration): the app consumes them on start (VaultMailImport adds the accounts through AccountStore.add, encrypting each password) and removes them. The accounts JSON and the current id are THIS phone's state: ids key the pw_<id> slots, so a copy from another capture that lands over them leaves every account without a credential (the owner's me@ lost its login that way on 2026-10-08). They stay home; vault_mail is what travels.",
       "used_by": [
         "ac_cloud-mail"
       ],
       "keys": {
         "pw_*": "device",
         "vault_mail": "secret",
-        "vault_owner": "secret"
+        "vault_owner": "secret",
+        "accounts": "device",
+        "current": "device"
       }
     },
     "sync_states": {
