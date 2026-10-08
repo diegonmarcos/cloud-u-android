@@ -96,8 +96,17 @@ class DataBadgeService : Service() {
         val monthStart = DataUsageProvider.startOfMonth(now)
         val top = DataUsageProvider.perApp(this, monthStart, now).take(DataBadgeModel.TOP_APPS)
             .map { DataBadgeModel.App(it.label, it.totals.total) }
+        val cal = java.util.Calendar.getInstance().apply { timeInMillis = monthStart }
+        val nextStart = (cal.clone() as java.util.Calendar).apply { add(java.util.Calendar.MONTH, 1) }.timeInMillis
+        val lastDay = java.util.Calendar.getInstance().apply { timeInMillis = nextStart - 1 }.time
+        // Per SIM: the engine measures it where Android allows and says so (exact); it never splits what it cannot.
+        val hasPhone = DataUsageProvider.hasPhoneState(this)
+        val sims = if (!hasPhone) emptyList() else DataUsageProvider.mobilePerSubscription(this, monthStart, now)
+            .map { DataBadgeModel.Sim(it.slot, it.carrier, it.totals.mobile, it.exact) }
         return DataBadgeModel.Snapshot(
-            hasAccess = true,
+            hasAccess = true, hasPhone = hasPhone, sims = sims,
+            monthElapsedMs = now - monthStart, monthLengthMs = nextStart - monthStart,
+            monthEndLabel = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(lastDay),
             today = win(DataUsageProvider.deviceTotals(this, DataUsageProvider.startOfToday(now), now)),
             month = win(DataUsageProvider.deviceTotals(this, monthStart, now)),
             topApps = top,
@@ -128,6 +137,10 @@ class DataBadgeService : Service() {
                     Intent(DataUsageProvider.USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName"))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                Act.GRANT_PHONE -> PendingIntent.getActivity(this, RC_GRANT_PHONE,
+                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 Act.REFRESH -> PendingIntent.getService(this, RC_REFRESH,
                     Intent(this, DataBadgeService::class.java).setAction(ACTION_REFRESH),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -152,6 +165,7 @@ class DataBadgeService : Service() {
         private const val RC_GRANT = 0x4441
         private const val RC_REFRESH = 0x4442
         private const val RC_OPEN = 0x4443
+        private const val RC_GRANT_PHONE = 0x4444
         private const val MIN_GAP_MS = 30_000L
 
         private fun openDataManager(ctx: Context): PendingIntent = PendingIntent.getActivity(

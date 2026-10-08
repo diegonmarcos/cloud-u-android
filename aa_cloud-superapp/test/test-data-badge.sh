@@ -101,6 +101,20 @@ else:                                           print('OK')
 PY
 )" "action:open_data_manager is handled and opens DataUsageDialog"
 
+echo "== T7: per-SIM comes from the engine, the phone grant is fixable, the forecast is data =="
+check "$(python3 - "$SVC" "$MODEL" <<'PY'
+import sys
+s, m = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+if 'mobilePerSubscription' not in s:            print('per-SIM split is not read from the engine')
+elif 'hasPhoneState' not in s:                  print('never checks READ_PHONE_STATE')
+elif 'SubscriptionManager' in s or 'getSubscriberId' in s or 'subscriberId' in s: print('re-implements the SIM lookup')
+elif 'GRANT_PHONE' not in m or 'Grant phone' not in m: print('no phone grant button')
+elif 'forecast: learning' not in m or 'fun forecastBytes' not in m: print('no forecast / learning state')
+elif 'exact' not in m:                          print('the model ignores the engine\'s exact flag')
+else:                                           print('OK')
+PY
+)" "SIMs via the engine; Phone grant button; forecast with a learning state; never an invented split"
+
 echo
 echo "data-badge: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
