@@ -403,6 +403,18 @@ regen_constellation() {
     rootfs_libs="$(python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py" \
                         --root "$UNIX" --emit-rootfs-libs)" \
         || { echo "ERROR: runtime payload libraries do not resolve (#628)" >&2; return 1; }
+    # A content address computed on a base that predates the newest change to
+    # the payload's tree is a true address of an OLD tree: writing it regressed
+    # the row twice (c36c865f4 -> e6a74e461). Refuse, and name the fix.
+    local stale_dir stale_n
+    while IFS= read -r stale_dir; do
+        stale_n="$(git -C "$UNIX" rev-list --count "HEAD..origin/main" -- "$stale_dir" 2>/dev/null || echo 0)"
+        if [ "${stale_n:-0}" -gt 0 ]; then
+            echo "ERROR: stale base - origin/main has $stale_n newer commit(s) touching $stale_dir, so its content address here is out of date." >&2
+            echo "       git fetch && rebase (or new worktree) onto origin/main, then re-run regen.sh." >&2
+            return 1
+        fi
+    done < <(printf '%s' "$rootfs_libs" | jq -r '.[].app_dir')
     apps="$(jq -n --argjson apps "$apps" --argjson libs "$rootfs_libs" \
                --arg rel "$rel" --arg tree "$tree" --arg pkg "$pkg" '
         $apps + [ $libs[]
