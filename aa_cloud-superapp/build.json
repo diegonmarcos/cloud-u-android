@@ -6223,7 +6223,7 @@
             { "id": "electronics", "label": "Electronics",
               "fields": ["fleet", "models_and_macs", "watches", "other_devices", "kde_connect"] },
             { "id": "apps", "label": "Apps", "render": "apps", "route": "page:config/store-phone",
-              "fields": ["devices › galaxy › fleet", "devices › galaxy › inventory", "devices › surface › fleet"] },
+              "fields": ["devices › galaxy › fleet", "devices › galaxy › inventory", "devices › samsung-a37 › fleet", "devices › samsung-a37 › inventory", "devices › surface › fleet"] },
             { "id": "peers", "label": "Peers", "staged": true,
               "fields": ["registry", "samsung-s21plus › wg0", "samsung-s21plus › wg_public", "samsung-s21plus › profiles", "samsung-s21plus › public_key", "samsung-a37 › wg0", "samsung-a37 › wg_public", "samsung-a37 › profiles", "samsung-a37 › public_key", "surface-8-pro › wg0", "surface-8-pro › wg_public", "surface-8-pro › profiles", "surface-8-pro › public_key"] }
           ]
@@ -7008,6 +7008,8 @@
           "electronics › kde_connect": {"apps": [], "held": false, "why": "KDE Connect's peers come from build.json ui.kde_connect, not the vault"},
           "apps › devices › galaxy › fleet": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
           "apps › devices › galaxy › inventory": {"apps": ["apps"], "held": false, "why": "#570 the S21+ Store > Phone Apps export (apps/galaxy-apps.json); apps reports a summary (N of M declared installed), not the list (runtime.fields false). Fleet > Apps > Apply list to Store hands it to the Store's import plan."},
+          "apps › devices › samsung-a37 › fleet": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
+          "apps › devices › samsung-a37 › inventory": {"apps": ["apps"], "held": false, "why": "#570 the A37 Store > Phone Apps export (apps/samsung-a37-apps.json); apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
           "apps › devices › surface › fleet": {"apps": ["apps"], "held": false, "why": "apps reports a summary (N of M declared installed), not the list (runtime.fields false)"},
           "peers › registry": {"apps": [], "held": false, "why": "Connect's who / which-device list (libs:auth UserRegistry), sign-in input; no app holds it"},
           "peers › samsung-s21plus › wg0": {"apps": ["mesh"], "held": false, "why": "input only: the peer's mesh address picks its profiles"},

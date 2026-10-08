@@ -68,6 +68,18 @@
         "cmd": "b=$(am get-standby-bucket cld.termux); [ \"$b\" -le 10 ] && echo ok",
         "expect": "ok"
       }
+    },
+    {
+      "id": "mesh_engine_vpn_consent",
+      "title": "Mesh engine holds the VPN consent",
+      "why": "Android grants VPN consent per package (VpnService.prepare), and only the package that owns the service can ask: the WireGuard engine lib (com.diegonmarcos.cloudlib.netwg), not the apps that drive it. Granted here, the Account's mesh apply and the fleet API bring the tunnel up with no dialog a terminal cannot answer; the engine's row under Settings › VPN is this grant. The SuperApp's own firewall VpnServices keep asking through the system dialog when the firewall is first enabled — nothing grants those.",
+      "apply": [
+        "appops set com.diegonmarcos.cloudlib.netwg ACTIVATE_VPN allow"
+      ],
+      "verify": {
+        "cmd": "appops get com.diegonmarcos.cloudlib.netwg ACTIVATE_VPN | grep -q allow && echo ok",
+        "expect": "ok"
+      }
     }
   ]
 }

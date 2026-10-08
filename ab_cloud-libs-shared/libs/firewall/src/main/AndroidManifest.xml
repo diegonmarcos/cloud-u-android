@@ -28,6 +28,7 @@
     <application>
         <service
             android:name="com.diegonmarcos.superapp.firewall.FirewallVpnService"
+            android:label="Firewall (per-app rules)"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="systemExempted"
             android:exported="false">
@@ -45,6 +46,7 @@
              been validated on-device. -->
         <service
             android:name="com.diegonmarcos.superapp.firewall.FirestackTunnelService"
+            android:label="Firestack tunnel (staged, not active)"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="systemExempted"
             android:exported="false">

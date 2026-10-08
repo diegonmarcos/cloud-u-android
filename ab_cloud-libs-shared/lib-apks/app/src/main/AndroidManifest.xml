@@ -8,7 +8,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="Cloud Library"
+        android:label="${libLabel}"
         android:hasCode="true" />
 
 </manifest>

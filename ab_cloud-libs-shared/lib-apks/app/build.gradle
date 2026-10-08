@@ -98,6 +98,10 @@ android {
                 // '-' is illegal in an applicationId segment, so it is stripped
                 // rather than replaced: ml-l-text-mlkit -> ...cloudlib.mlltextmlkit.
                 applicationId "${libCfg.application_id_prefix}.${name.replace('-', '')}"
+                // The installed label is the lib's fleet label (cloud-lib-<module>), the one the
+                // Store and the fleet manifest show — "Cloud Library" told the owner nothing under
+                // Settings › VPN when the net-wg engine held the mesh tunnel.
+                manifestPlaceholders = [libLabel: "cloud-lib-${name}"]
             }
         }
     }
