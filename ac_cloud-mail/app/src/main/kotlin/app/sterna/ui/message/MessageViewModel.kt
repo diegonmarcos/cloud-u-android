@@ -1065,7 +1065,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     // ---- in-place translation and summary of the opened message -----------------------------------
     //
     // Both are cached per message and per language in message_text_cache, so reopening a message is a
-    // row read. State belongs to the message on this page: [resetReaderAi] drops it, and a result that
+    // row read. State belongs to the message on this page: load() drops it, and a result that
     // arrives for a message the page has since left is discarded.
 
     private val textAi by lazy {
@@ -1081,12 +1081,6 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
 
     private var translationJob: Job? = null
     private var summaryJob: Job? = null
-
-    private fun resetReaderAi() {
-        translationJob?.cancel(); summaryJob?.cancel()
-        _translation.value = ReaderTranslation()
-        _summary.value = ReaderSummary()
-    }
 
     private fun cacheAccount(): String = accountId ?: ""
 
@@ -1267,7 +1261,11 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         _metadataHeaders.value = emptyList()
         _unsubscribeState.value = UnsubscribeState.Idle
         _unsubscribeConfirm.value = null
-        resetReaderAi()
+        // The previous message's translation and summary, and the work still making them.
+        translationJob?.cancel()
+        summaryJob?.cancel()
+        _translation.value = ReaderTranslation()
+        _summary.value = ReaderSummary()
         // And the read receipt, one degree worse: its button answers a NAMED stranger, captured from
         // the message we are leaving.
         _readReceiptOffer.value = null

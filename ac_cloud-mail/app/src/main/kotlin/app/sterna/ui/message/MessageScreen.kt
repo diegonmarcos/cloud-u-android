@@ -2264,7 +2264,8 @@ private fun ConversationBody(
                 // flash white, send her back to the top and reset the zoom, in a loop.
                 val html = remember(
                     full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel, translatedFragment,
+                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
+                    translatedFragment,
                 ) {
                     buildHtmlDocument(
                         full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,

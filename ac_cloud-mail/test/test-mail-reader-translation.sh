@@ -56,7 +56,7 @@ import sys
 s = open(sys.argv[1] + "/app/sterna/ui/message/MessageScreen.kt", encoding="utf-8").read()
 bad = []
 for need, why in (("var inner = translatedFragment ?: body.fragment", "the builder does not use the translated fragment"),
-                  ("deceptiveLinkLabel, translatedFragment,", "the translation is not a key of the remembered document"),
+                  ("deceptiveLinkLabel,\n                    translatedFragment,\n                ) {", "the translation is not a key of the remembered document"),
                   ("translatedFragment = translation.fragmentFor(readerFragment),", "the page is not handed the translation only while shown and current")):
     if need not in s: bad.append(why)
 for b in bad: print("    " + b)

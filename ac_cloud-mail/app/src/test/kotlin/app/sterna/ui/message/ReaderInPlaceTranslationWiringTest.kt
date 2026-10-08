@@ -47,7 +47,10 @@ class ReaderInPlaceTranslationWiringTest {
             "ConversationBody is handed the translation only while it is shown and still current",
             "translatedFragment = translation.fragmentFor(readerFragment)," in screen,
         )
-        assertTrue("it is a key of the remembered document", "quoteLabel, deceptiveLinkLabel, translatedFragment," in screen)
+        assertTrue(
+            "it is a key of the remembered document",
+            Regex("""deceptiveLinkLabel,\s*translatedFragment,\s*\) \{""").containsMatchIn(screen),
+        )
         assertTrue("the builder swaps the fragment and keeps the rest of the pipeline", "var inner = translatedFragment ?: body.fragment" in screen)
     }
 
@@ -60,7 +63,9 @@ class ReaderInPlaceTranslationWiringTest {
 
     @Test fun `a message's state is dropped when the page loads another`() {
         val load = model.substring(model.indexOf("fun load(emailId: String"))
-        assertTrue("load() resets the translation and the summary", "resetReaderAi()" in load.take(3000))
+        val prologue = load.substring(0, load.indexOf("viewModelScope.launch"))
+        assertTrue("load() resets the translation", "_translation.value = ReaderTranslation()" in prologue)
+        assertTrue("load() resets the summary", "_summary.value = ReaderSummary()" in prologue)
         assertTrue("a result for a message the page has left is discarded", "if (loadedId != id) return" in model)
     }
 

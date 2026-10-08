@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import app.sterna.ui.message.ReaderSummary
 import app.sterna.ui.message.ReaderSummaryUi
 import app.sterna.ui.message.ResumeBox
@@ -75,7 +76,7 @@ class ReaderAiUiTest {
             }
         }
         compose.onNodeWithTag(LANGUAGE_FIELD_TAG).performClick()
-        compose.onNodeWithTag(languageRowTag("es")).performClick()
+        compose.onNodeWithTag(languageRowTag("es")).performScrollTo().performClick()
         assertEquals(listOf("es"), picked)
         compose.onNodeWithText("Spanish").assertExists()
         compose.onNodeWithTag(languageRowTag("es")).assertDoesNotExist() // the menu closed
