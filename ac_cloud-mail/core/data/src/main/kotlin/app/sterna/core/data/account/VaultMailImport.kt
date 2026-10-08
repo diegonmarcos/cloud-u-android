@@ -80,7 +80,16 @@ object VaultMailImport {
                     // otherwise the app keeps it listed, refuses to make it current, and shows the
                     // first account that CAN log in instead — the owner tapped me@ and saw no-reply@.
                     if (store.credentials(existing.id) == null && d.password != null) {
+                        // A vault password is a BASIC credential. An account restored as OAUTH (its
+                        // access token expired, no refresh token in the backup) would otherwise file
+                        // the password in its refresh-token slot and stay unable to log in — the
+                        // "isn't signed in yet" me@ account of 2026-10-08.
+                        val login = existing.loginKey()
+                        if (store.accounts().firstOrNull { it.id == login }?.authType == AuthType.OAUTH) {
+                            store.convertToBasicAuth(login)
+                        }
                         store.updatePassword(existing.id, d.password)
+                        store.setImportPending(existing.id, false)
                         Log.i(AccountStore.TAG, "vault mail: ${d.email} already stored — credentials restored from the vault")
                     } else Log.i(AccountStore.TAG, "vault mail: ${d.email} already stored")
                     existing.id
