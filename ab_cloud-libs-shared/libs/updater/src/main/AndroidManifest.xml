@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Install other APKs via PackageInstaller (user prompt). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Declared HERE, not per app: every consumer of libs:updater installs
@@ -21,6 +22,16 @@
             android:name="com.diegonmarcos.superapp.updater.BatchForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- #903 WorkManager runs UpdateWorker / ApkInstallWorker's ForegroundInfo(dataSync) in
+             ITS service: Android 14 refuses a type the manifest does not declare
+             ("foregroundServiceType 0x1 is not a subset of ... 0x0", seen in cloud-nav's
+             instrumented run). Declared HERE, once, so every app that links this lib and
+             runs its workers carries it — not only the two Store hosts. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge"
+            tools:replace="android:foregroundServiceType" />
         <!-- Reused for PackageInstaller callback. -->
         <receiver
             android:name=".PackageInstallerReceiver"

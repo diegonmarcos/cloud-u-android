@@ -116,4 +116,12 @@ for p in problems:
 sys.exit(1 if problems else 0)
 PY
 
+# TerminalDebugApi.java constructs AppDebugServer.Op(op, params, description) from JAVA: the lib's
+# Kotlin data class carries a default (maxBody, #802) that Java cannot see unless the constructor
+# is @JvmOverloads — the terminal did not compile from f7478b5ca to e9769ab44 for exactly that.
+DEBUG_SRV="$(dirname "$0")/../../ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+grep -q 'data class Op @JvmOverloads constructor(' "$DEBUG_SRV" \
+    && ok "AppDebugServer.Op is @JvmOverloads, so this app's Java caller keeps its 3-argument constructor" \
+    || bad "AppDebugServer.Op lost @JvmOverloads: TerminalDebugApi.java cannot construct it"
+
 [ "$fails" -eq 0 ] || { echo "$fails assertion(s) failed"; exit 1; }
