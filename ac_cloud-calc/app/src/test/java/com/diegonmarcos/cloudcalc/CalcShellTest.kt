@@ -213,7 +213,7 @@ class CalcShellTest {
         resultIs("200")
         // The cursor to the very start: "(" goes there, not to the end.
         select(0)
-        typeKeys("(")
+        typeKeys("( )")
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("(600/3")
         // DEL deletes before the cursor (here: nothing is left of the "("), then after the "(" it eats the "(".
         select(1)
@@ -311,6 +311,8 @@ class CalcShellTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.CONVERT_EQ).fetchSemanticsNodes().isNotEmpty() }
         assertTrue(has("Rates as of"))
         compose.onNodeWithTag(CalcTags.CONVERT_SWAP).performClick()
+        // The result belongs to the conversion it answered: after a swap there is none until the new one is answered.
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.CONVERT_EQ).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag(CalcTags.CONVERT_EQ).performClick()
         compose.waitForIdle()
         assertEquals(cur.id, state.history.first().mode)
