@@ -12,13 +12,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import app.sterna.contacts.AndroidContacts
 import app.sterna.contacts.ContactPhotos
 import app.sterna.contacts.SenderAvatarLoader
+import app.sterna.ui.theme.MailMetrics
 
 /** The avatar slot's size — the same for a photo, a logo and a monogram, so rows never resize. */
-val ContactAvatarSize = 40.dp
+val ContactAvatarSize = MailMetrics.s40
 
 /**
  * A sender's avatar, resolved down a declared fallback chain (task #464):

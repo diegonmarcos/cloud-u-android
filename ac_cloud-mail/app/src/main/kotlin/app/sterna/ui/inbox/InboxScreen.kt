@@ -94,8 +94,8 @@ import app.sterna.ui.message.snoozePresets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
@@ -220,6 +220,7 @@ import app.sterna.ui.search.SearchCount
 import app.sterna.ui.search.SearchDisplay
 import app.sterna.ui.search.searchCount
 import app.sterna.ui.search.searchDisplay
+import app.sterna.ui.theme.MailMetrics
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import kotlin.math.abs
@@ -434,7 +435,7 @@ fun InboxScreen(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
-                                    .padding(horizontal = 16.dp),
+                                    .padding(horizontal = MailMetrics.s16),
                             )
                         }
                         TextField(
@@ -469,7 +470,7 @@ fun InboxScreen(
                                 text = stringResource(R.string.inbox_no_folder_matches),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = MailMetrics.s12),
                             )
                         }
                         shownMoveRows.forEach { row ->
@@ -483,7 +484,7 @@ fun InboxScreen(
                                         viewModel.chooseMoveAccount(null)
                                     }
                                     .semantics(mergeDescendants = true) { role = Role.Button }
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = MailMetrics.s12),
                             ) {
                                 Text(
                                     text = row.name,
@@ -895,9 +896,9 @@ fun InboxScreen(
                                 Icon(
                                     Icons.Filled.CheckCircle,
                                     contentDescription = null,
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(MailMetrics.s22),
                                 )
-                                Spacer(Modifier.width(8.dp))
+                                Spacer(Modifier.width(MailMetrics.s8))
                                 Text(selectedKeys.size.toString(), maxLines = 1)
                             }
                         },
@@ -1030,7 +1031,7 @@ fun InboxScreen(
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier
                                             .align(Alignment.CenterStart)
-                                            .padding(horizontal = 16.dp),
+                                            .padding(horizontal = MailMetrics.s16),
                                     )
                                 }
                                 TextField(
@@ -1561,8 +1562,8 @@ fun InboxScreen(
                                 Row(
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s6),
+                                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
@@ -1591,15 +1592,15 @@ fun InboxScreen(
                                         else -> null
                                     }
                                     Box(
-                                        Modifier.size(12.dp).semantics {
+                                        Modifier.size(MailMetrics.s12).semantics {
                                             progressHint?.let { contentDescription = it }
                                         },
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         if (ui.searchLoading) {
                                             CircularProgressIndicator(
-                                                Modifier.size(12.dp),
-                                                strokeWidth = 1.5.dp,
+                                                Modifier.size(MailMetrics.s12),
+                                                strokeWidth = MailMetrics.hair,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
@@ -1656,19 +1657,19 @@ fun InboxScreen(
                             when (listRows.loadState.append) {
                                 is LoadState.Loading -> item(key = "append-loading") {
                                     Box(
-                                        Modifier.fillMaxWidth().padding(16.dp),
+                                        Modifier.fillMaxWidth().padding(MailMetrics.s16),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        LoadingRing(Modifier.size(28.dp), strokeWidth = 2.dp)
+                                        LoadingRing(Modifier.size(MailMetrics.s28), strokeWidth = MailMetrics.s2)
                                     }
                                 }
                                 is LoadState.Error -> item(key = "append-error") {
                                     // Column (not Row): a long localized message must not squeeze
                                     // the Retry button down to a 1-char-wide, multi-line stub.
                                     Column(
-                                        Modifier.fillMaxWidth().padding(16.dp),
+                                        Modifier.fillMaxWidth().padding(MailMetrics.s16),
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                                     ) {
                                         Text(
                                             stringResource(R.string.inbox_load_more_failed),
@@ -1706,9 +1707,9 @@ fun InboxScreen(
                     // whose promise ("we'll sync as soon as you're back") would be untrue here.
                     notice == RefreshNotice.ERROR -> PullableCenter {
                         Column(
-                            Modifier.align(Alignment.Center).padding(32.dp),
+                            Modifier.align(Alignment.Center).padding(MailMetrics.s32),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                         ) {
                             Text(
                                 stringResource(R.string.sync_error_banner, ui.error.orEmpty()),
@@ -1860,7 +1861,7 @@ private fun DrawerContent(
                 // value is what makes "all the rows agree" true by construction instead of by
                 // five call sites happening to match.
                 val drawerRowModifier = Modifier
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = MailMetrics.s12)
                     .heightIn(max = drawerRowHeight(LocalDensity.current))
                 val currentAccount = accounts.firstOrNull { it.id == currentAccountId }
                 val currentLabel = currentAccount?.label()
@@ -1874,8 +1875,8 @@ private fun DrawerContent(
                 val prevAccount = if (accounts.size > 1 && curIdx >= 0) accounts[(curIdx - 1 + accounts.size) % accounts.size] else null
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
+                    modifier = Modifier.fillMaxWidth().padding(start = MailMetrics.s16, end = MailMetrics.s4, top = MailMetrics.s8, bottom = MailMetrics.s8),
                 ) {
                     // The active account as a little carousel: drag it sideways to bring the
                     // next/previous account in; releasing past a threshold switches account in place.
@@ -1972,14 +1973,14 @@ private fun DrawerContent(
                         val label = account.label()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                             modifier = Modifier.fillMaxWidth()
                                 .clickable {
                                     onSwitchAccount(account.id)
                                     accountsExpanded = false
                                     scope.launch { drawerState.close() }
                                 }
-                                .padding(start = 28.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                                .padding(start = MailMetrics.s28, end = MailMetrics.s16, top = MailMetrics.s10, bottom = MailMetrics.s10),
                         ) {
                             Monogram(seed = label, label = label, color = accountColorOf(account.color))
                             Column {
@@ -2000,7 +2001,7 @@ private fun DrawerContent(
                         }
                     }
                 }
-                HorizontalDivider(Modifier.padding(bottom = 12.dp))
+                HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))
                 // FIRST of the drawer's navigation affordances, above "All inboxes" and well above
                 // the 28 folder rows: Home describes every account at once, so it belongs with the
                 // rows that are not one folder rather than sorted in among the ones that are. It is
@@ -2095,7 +2096,7 @@ private fun DrawerContent(
                     pages = folderTabs,
                     selectedId = folderTab.name,
                     onSelect = { folderTab = FolderTab.valueOf(it.id) },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s12),
                     underTopChrome = false,
                 )
                 // ONLY the drawn list narrows with the tab. The fold registry below and the badge
@@ -2137,7 +2138,7 @@ private fun DrawerContent(
                                         },
                                     )
                                 } else {
-                                    Spacer(Modifier.width(24.dp))
+                                    Spacer(Modifier.width(MailMetrics.s24))
                                 }
                                 Icon(folderIcon(mailbox.role), contentDescription = null)
                             }
@@ -2169,7 +2170,7 @@ private fun DrawerContent(
                                         .size(DRAWER_FOLDER_MENU_TAP_SIZE_DP.dp)
                                         .clip(CircleShape)
                                         .clickable { folderMenu = true }
-                                        .padding(4.dp),
+                                        .padding(MailMetrics.s4),
                                 )
                                 DropdownMenu(folderMenu, onDismissRequest = { folderMenu = false }, shape = MaterialTheme.shapes.medium) {
                                     // Watch keeps its original audience: meaningless on the inbox
@@ -2296,8 +2297,8 @@ private fun PullableCenter(onClick: (() -> Unit)? = null, content: @Composable B
 private fun AccountChip(label: String, color: Color?, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
+        modifier = modifier.fillMaxWidth().padding(vertical = MailMetrics.s8),
     ) {
         Monogram(seed = label, label = label, color = color)
         Text(
@@ -2423,7 +2424,7 @@ private fun SwipeableEmailRow(
         modifier = modifier
             .graphicsLayer {
                 alpha = enter.value
-                translationY = (1f - enter.value) * 14.dp.toPx()
+                translationY = (1f - enter.value) * MailMetrics.s14.toPx()
             }
             .onGloballyPositioned { rowLeftPx = it.positionInWindow().x }
             .onSizeChanged { rowWidth = it.width }
@@ -2606,7 +2607,7 @@ private fun SwipeableEmailRow(
                 label = "swipeRevealScale",
             )
             Box(
-                Modifier.matchParentSize().background(bg).padding(horizontal = 24.dp),
+                Modifier.matchParentSize().background(bg).padding(horizontal = MailMetrics.s24),
                 contentAlignment = if (draggingRight) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
                 val labelRes = swipeActionLabel(action, email, unarchiveContext, trashContext)
@@ -2939,7 +2940,7 @@ private fun ThreadChildren(
                     val ownerAccount = if (unified) accounts.firstOrNull { it.id == child.accountId } else null
                     // Indented so the children read as belonging to the conversation above.
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(MailMetrics.s16))
                         SwipeableEmailRow(
                             email = child,
                             originLabel = ownerAccount?.label() ?: folderFor(child)?.let { mailboxDisplayName(it.role, it.name) },
@@ -3107,11 +3108,11 @@ private fun OfflineBanner() {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.CloudOff, contentDescription = null)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
             Text(
                 stringResource(R.string.offline_banner),
                 style = MaterialTheme.typography.bodyMedium,
@@ -3131,11 +3132,11 @@ private fun SyncErrorBanner(message: String) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.Warning, contentDescription = null)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
             Text(
                 stringResource(R.string.sync_error_banner, message),
                 style = MaterialTheme.typography.bodyMedium,
@@ -3155,11 +3156,11 @@ private fun OutboxFailureBanner(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.Warning, contentDescription = null)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
             Text(
                 stringResource(R.string.outbox_banner_failed),
                 style = MaterialTheme.typography.bodyMedium,

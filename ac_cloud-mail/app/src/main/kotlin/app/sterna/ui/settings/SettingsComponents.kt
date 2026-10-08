@@ -31,8 +31,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -61,10 +61,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.components.Monogram
 import app.sterna.ui.components.onAccentColor
+import app.sterna.ui.theme.MailMetrics
 
 /** Shared settings component kit (DESIGN.md → "Settings & secondary screens"): no cards, 16dp
  *  margins, icon tint `onSurfaceVariant`, summary in `bodyMedium`, headers in the single accent. */
@@ -80,7 +80,7 @@ fun SettingsCategoryRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s14),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -88,7 +88,7 @@ fun SettingsCategoryRow(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -97,7 +97,7 @@ fun SettingsCategoryRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
@@ -113,7 +113,7 @@ fun SettingsSection(title: String, content: @Composable () -> Unit) {
             title,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+            modifier = Modifier.padding(start = MailMetrics.s16, end = MailMetrics.s16, top = MailMetrics.s16, bottom = MailMetrics.s4),
         )
         content()
     }
@@ -131,7 +131,7 @@ fun SettingSwitch(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -151,7 +151,7 @@ fun SettingSwitch(
                     .copy(alpha = if (enabled) 1f else 0.38f),
             )
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
@@ -170,7 +170,7 @@ fun <T> SettingChoiceRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showDialog = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -213,7 +213,7 @@ fun <T> SettingMultiChoiceRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showDialog = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -262,12 +262,12 @@ fun <T> SettingMultiChoiceDialog(
                                 role = Role.Checkbox,
                                 onValueChange = { onCheckedChange(option, it) },
                             )
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = MailMetrics.s12),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Start,
                     ) {
                         Checkbox(checked = isChecked, onCheckedChange = null)
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(MailMetrics.s16))
                         Text(optionLabel(option), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -298,15 +298,15 @@ fun AccountRow(
             .clickable(onClick = onClick)
             // PINNED BY SharedAccountScreenTest — the indent, statement by statement
             .padding(
-                start = if (indented) 32.dp else 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 12.dp,
+                start = if (indented) MailMetrics.s32 else MailMetrics.s16,
+                end = MailMetrics.s16,
+                top = MailMetrics.s12,
+                bottom = MailMetrics.s12,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Monogram(seed = seed, label = label, color = color)
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -316,7 +316,7 @@ fun AccountRow(
             )
         }
         if (isCurrent) {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(MailMetrics.s16))
             Icon(
                 Icons.Filled.Check,
                 contentDescription = stringResource(R.string.settings_current_account),
@@ -344,7 +344,7 @@ fun SettingCopyableRow(
                 clipboard.setText(AnnotatedString(value))
                 Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -357,7 +357,7 @@ fun SettingCopyableRow(
                 )
             }
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         // Decorative: the whole row is the one click target, and a screen reader already reads it.
         Icon(Icons.Filled.ContentCopy, contentDescription = null)
     }
@@ -402,7 +402,7 @@ fun SettingTextField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 
@@ -432,12 +432,12 @@ fun <T> SettingChoiceDialog(
                                 role = Role.RadioButton,
                                 onClick = { onSelect(option) },
                             )
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = MailMetrics.s12),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Start,
                     ) {
                         RadioButton(selected = option == selected, onClick = null)
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(MailMetrics.s16))
                         Text(optionLabel(option), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -470,7 +470,7 @@ fun SaveChangesDialog(
         confirmButton = {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8, Alignment.End),
             ) {
                 TextButton(onClick = onCancel) {
                     Text(stringResource(R.string.settings_cancel))
@@ -493,11 +493,11 @@ internal fun ColourSwatch(color: Color?, selected: Boolean, onClick: () -> Unit)
     Box(
         modifier = Modifier
             .minimumInteractiveComponentSize()
-            .size(44.dp)
+            .size(MailMetrics.s44)
             .clip(CircleShape)
             .background(color ?: MaterialTheme.colorScheme.surfaceVariant)
             .border(
-                width = if (selected) 3.dp else 1.dp,
+                width = if (selected) MailMetrics.s3 else MailMetrics.hair,
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 shape = CircleShape,
             )

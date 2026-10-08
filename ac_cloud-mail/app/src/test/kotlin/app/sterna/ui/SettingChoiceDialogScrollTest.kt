@@ -55,7 +55,7 @@ class SettingChoiceDialogScrollTest {
                 "overflow do it to each label. This rule reads the slot and ONLY the slot: a size " +
                 "pinned on the AlertDialog itself is out of its reach, and out of the bench " +
                 "reading it was written from. If you are here to add a legitimate " +
-                "heightIn(min = 48.dp) — Material's minimum touch target on each option Row, " +
+                "heightIn(min = MailMetrics.s48) — Material's minimum touch target on each option Row, " +
                 "which is a floor and not a ceiling — widen this rule deliberately rather than " +
                 "work around it. Slot was:\n$slot",
             emptyList<String>(),

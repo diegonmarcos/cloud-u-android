@@ -9,7 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
+import app.sterna.ui.components.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,9 +24,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.core.data.account.StoredAccount
+import app.sterna.ui.theme.MailMetrics
 
 /** The account row at the head of the move-to-folder picker (#189), drawn only when there is a
  *  choice to make. [owner] is the account of what is being moved, [chosen] the id recorded by the
@@ -50,7 +50,7 @@ internal fun MoveAccountRow(
                 .fillMaxWidth()
                 .clickable { open = true }
                 .semantics(mergeDescendants = true) { role = Role.Button }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         ) {
             Text(
                 text = shown.label(),

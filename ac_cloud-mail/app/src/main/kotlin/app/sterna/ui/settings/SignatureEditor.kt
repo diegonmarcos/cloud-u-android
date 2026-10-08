@@ -23,9 +23,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.core.data.account.StoredSignature
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * The named-signatures editor for one identity (#206): the list, which one is the default, and the
@@ -60,7 +60,7 @@ internal fun SignatureListEditor(
         fun update(transform: (StoredSignature) -> StoredSignature) {
             onChange(signatures.mapIndexed { i, s -> if (i == index) transform(s) else s })
         }
-        Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(top = MailMetrics.s8)) {
             // Which one composing pre-selects. The SAME control as "Remitente predeterminado" one
             // level up, deliberately: that screen already means "several things, one preselected", and
             // a differently-shaped answer to the same question is a thing to learn twice.
@@ -75,7 +75,7 @@ internal fun SignatureListEditor(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RadioButton(selected = signature.id == defaultSignatureId, onClick = null)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(
                     stringResource(R.string.settings_signature_default),
                     style = MaterialTheme.typography.bodyMedium,
@@ -86,7 +86,7 @@ internal fun SignatureListEditor(
                 onValueChange = { v -> update { it.copy(name = v) } },
                 label = { Text(stringResource(R.string.settings_signature_name_label)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
             )
             OutlinedTextField(
                 // The SOURCE, so HTML the owner typed survives the next recomposition.
@@ -110,11 +110,11 @@ internal fun SignatureListEditor(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
             )
             SignatureSourcePreview(signature, delimiter)
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s12),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedButton(onClick = {
@@ -139,12 +139,12 @@ internal fun SignatureListEditor(
                     }
                 }
             }
-            HorizontalDivider(Modifier.padding(top = 12.dp))
+            HorizontalDivider(Modifier.padding(top = MailMetrics.s12))
         }
     }
     OutlinedButton(
         onClick = { onChange(signatures + StoredSignature(id = newId(), name = "")) },
-        modifier = Modifier.padding(top = 12.dp),
+        modifier = Modifier.padding(top = MailMetrics.s12),
     ) {
         Text(stringResource(R.string.settings_signature_add))
     }
@@ -176,7 +176,7 @@ private fun SignatureSourcePreview(signature: StoredSignature, delimiter: Boolea
     } else {
         signaturePreview(signature.text, delimiter)?.let { AnnotatedString(it) }
     } ?: return
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = MailMetrics.s8)) {
         Text(
             stringResource(R.string.settings_signature_preview_title),
             style = MaterialTheme.typography.labelSmall,
@@ -190,14 +190,14 @@ private fun SignatureSourcePreview(signature: StoredSignature, delimiter: Boolea
             // is rendered text, and keeps the face a recipient's client would give it.
             fontFamily = if (signature.isHtml) null else FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
+            modifier = Modifier.padding(top = MailMetrics.s2),
         )
         if (!signature.isHtml && signatureHasOwnDelimiter(signature.text, delimiter)) {
             Text(
                 stringResource(R.string.settings_signature_duplicate_delimiter),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = MailMetrics.s4),
             )
         }
     }

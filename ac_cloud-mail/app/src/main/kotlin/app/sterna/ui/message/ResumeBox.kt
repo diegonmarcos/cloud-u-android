@@ -19,10 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolRunner
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * "AI Resume" — the summary of this message, in a box under the sender.
@@ -56,7 +56,7 @@ fun ResumeBox(runner: TextToolRunner, emailId: String) {
     // for the next message must not inherit this one's words.
     var edited by remember(emailId, outcome) { mutableStateOf(outcome?.text.orEmpty()) }
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
         Text(
             stringResource(R.string.text_tool_resume),
             style = MaterialTheme.typography.titleSmall,
@@ -71,17 +71,17 @@ fun ResumeBox(runner: TextToolRunner, emailId: String) {
                     } else {
                         stringResource(R.string.text_tool_running)
                     },
-                    Modifier.padding(top = 4.dp),
+                    Modifier.padding(top = MailMetrics.s4),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = MailMetrics.s8))
             }
             // The engine's OWN reason, verbatim — "no API key for OpenRouter", "the model cut the
             // reply off", the provider's HTTP error. Not a toast: this box is where the summary was
             // going to be, so it is where its absence has to be explained.
             outcome?.error != null -> Text(
                 outcome.error,
-                Modifier.padding(top = 4.dp),
+                Modifier.padding(top = MailMetrics.s4),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -89,7 +89,7 @@ fun ResumeBox(runner: TextToolRunner, emailId: String) {
                 OutlinedTextField(
                     value = edited,
                     onValueChange = { edited = it },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
                     minLines = 2,
                     textStyle = MaterialTheme.typography.bodyMedium,
                 )

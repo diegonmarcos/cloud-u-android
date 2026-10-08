@@ -81,7 +81,7 @@ class UnsubscribeStripTest {
         )
         assertTrue(
             "…and carry no vertical padding of its own on top of that floor",
-            ".padding(horizontal = 16.dp)" in strip && "vertical = 10.dp" !in strip,
+            ".padding(horizontal = MailMetrics.s16)" in strip && "vertical = MailMetrics.s10" !in strip,
         )
         assertTrue(
             "the resting strip is a TextButton — the house vocabulary for a secondary action — " +
@@ -99,11 +99,11 @@ class UnsubscribeStripTest {
             "the icon must be 18 dp and muted (onSurfaceVariant), not 20 dp and primary: a " +
                 "tinted icon is how the two rare strips ask for a decision",
             "tint = MaterialTheme.colorScheme.onSurfaceVariant," in strip &&
-                "modifier = Modifier.size(18.dp)," in strip,
+                "modifier = Modifier.size(MailMetrics.s18)," in strip,
         )
         assertTrue(
             "the spinner must sit INSIDE the button, in the icon's place and at the icon's size",
-            "CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)" in strip,
+            "CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)" in strip,
         )
         assertTrue(
             "the finished states draw the terminal line in onSurfaceVariant and no button",

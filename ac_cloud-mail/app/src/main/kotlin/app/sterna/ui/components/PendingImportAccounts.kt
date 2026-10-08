@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,11 +39,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.core.data.account.AuthType
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.core.data.mail.OAuthProvider
+import app.sterna.ui.theme.MailMetrics
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -65,7 +64,7 @@ fun PendingImportAccountsSection(
             stringResource(R.string.import_pending_title),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         )
         for (account in accounts) {
             key(account.id) {
@@ -173,7 +172,7 @@ private fun SwipeToDismissRow(
                 if (armed) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             Box(
-                Modifier.matchParentSize().background(bg).padding(horizontal = 24.dp),
+                Modifier.matchParentSize().background(bg).padding(horizontal = MailMetrics.s24),
                 contentAlignment = if (draggingRight) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
                 Text(
@@ -200,9 +199,9 @@ private fun PendingAccountRow(account: StoredAccount, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
     ) {
         Column(Modifier.weight(1f)) {
             Text(

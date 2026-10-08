@@ -202,7 +202,7 @@ class DrawerRowDensityLintTest {
          * fails here too.
          */
         private const val EXPECTED_ROW_MODIFIER_DECLARATION =
-            "val drawerRowModifier = Modifier .padding(horizontal = 12.dp) " +
+            "val drawerRowModifier = Modifier .padding(horizontal = MailMetrics.s12) " +
                 ".heightIn(max = drawerRowHeight(LocalDensity.current))"
 
         private const val LABEL_ANCHOR = "private fun DrawerLabel(text: String)"

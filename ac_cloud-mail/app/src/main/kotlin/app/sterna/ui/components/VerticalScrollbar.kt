@@ -13,7 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * A lightweight scroll position indicator drawn on the right edge of a scrolling
@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 fun Modifier.verticalScrollbar(
     state: LazyListState,
     itemCount: Int,
-    width: Dp = 4.dp,
+    width: Dp = MailMetrics.s4,
 ): Modifier = composed {
     val alpha by animateFloatAsState(
         targetValue = if (state.isScrollInProgress) 1f else 0f,

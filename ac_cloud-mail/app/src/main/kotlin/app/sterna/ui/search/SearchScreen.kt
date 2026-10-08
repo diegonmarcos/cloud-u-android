@@ -32,8 +32,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -72,7 +72,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
@@ -85,6 +84,7 @@ import app.sterna.ui.components.EmptyState
 import app.sterna.ui.components.LoadingRing
 import app.sterna.ui.components.accountColorOf
 import app.sterna.ui.theme.LocalMailListPalette
+import app.sterna.ui.theme.MailMetrics
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -123,7 +123,7 @@ fun SearchScreen(
     var firstSync by remember { mutableStateOf(true) }
     // The handle's height: reserved at the top of the results so a closed handle sits clear of the
     // first row, and reused as the handle's own size so it reads as a solid edge.
-    val handleHeight = 18.dp
+    val handleHeight = MailMetrics.s18
 
     // How far the panel is pulled out, 0 (shut) to panelHeightPx. A PLAIN float state, written
     // synchronously, and the only reader of the panel's position on this screen.
@@ -262,7 +262,7 @@ fun SearchScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { runSearch() }),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 )
             }
             // clipToBounds hides the panel where it rests above the handle; weight(1f) is the
@@ -294,7 +294,7 @@ fun SearchScreen(
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                         )
                     }
                     Box(Modifier.fillMaxWidth().weight(1f)) {
@@ -308,7 +308,7 @@ fun SearchScreen(
                             is SearchState.Error -> Text(
                                 stringResource(R.string.search_failed, s.message),
                                 color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                                modifier = Modifier.align(Alignment.Center).padding(MailMetrics.s24),
                             )
                             // A truncated scan that returned nothing has NOT proven there is
                             // nothing: say it stopped short rather than reporting "no results" as a
@@ -377,7 +377,7 @@ fun SearchScreen(
                 Surface(
                     // No tonalElevation. Material 3 implements it by tinting the surface with
                     // the primary colour, and in this theme `background` and `surface` are the same
-                    shadowElevation = 6.dp,
+                    shadowElevation = MailMetrics.s6,
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopStart)
@@ -406,7 +406,7 @@ fun SearchScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                         )
                         // Matches To OR Cc: a message that only carries the address in copy was
                         // still received at it, so one field and no To/Cc switch.
@@ -417,7 +417,7 @@ fun SearchScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                         )
                         OutlinedTextField(
                             value = query.subject,
@@ -426,10 +426,10 @@ fun SearchScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { runSearch() }),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                         )
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -446,7 +446,7 @@ fun SearchScreen(
                         // entry could only list what the cache holds, so it would promise "your
                         // flagged mail" while hiding everything in a never-synced folder.
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -467,7 +467,7 @@ fun SearchScreen(
                         }
                         Button(
                             onClick = { runSearch() },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                         ) {
                             Text(stringResource(R.string.search_button))
                         }
@@ -494,8 +494,8 @@ fun SearchScreen(
                 ) {
                     Box(
                         Modifier
-                            .width(32.dp)
-                            .height(4.dp)
+                            .width(MailMetrics.s32)
+                            .height(MailMetrics.s4)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
                     )
@@ -545,7 +545,7 @@ private fun CriteriaSummary(query: SearchQuery, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 
@@ -562,7 +562,7 @@ private fun SearchDateRow(label: String, boundMillis: Long?, onPick: (Long?) -> 
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showPicker = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

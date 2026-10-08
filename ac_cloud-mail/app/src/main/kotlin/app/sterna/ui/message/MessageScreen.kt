@@ -125,8 +125,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
@@ -168,7 +168,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -201,6 +200,7 @@ import app.sterna.ui.isOutgoingFolder
 import app.sterna.ui.rememberLeaveOnce
 import app.sterna.ui.sender.trashFilePath
 import app.sterna.ui.snoozed.SnoozeDeadlineHeader
+import app.sterna.ui.theme.MailMetrics
 import app.sterna.util.LinkCleaner
 import app.sterna.util.MailDates
 import kotlinx.coroutines.delay
@@ -795,7 +795,7 @@ internal fun ReadingGroupSeparator() {
         text = "|",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.outline,
-        modifier = Modifier.padding(horizontal = 2.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s2),
     )
 }
 
@@ -1361,7 +1361,7 @@ private fun MessageActions(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
-                                    .padding(horizontal = 16.dp),
+                                    .padding(horizontal = MailMetrics.s16),
                             )
                         }
                         TextField(
@@ -1395,7 +1395,7 @@ private fun MessageActions(
                                 text = stringResource(R.string.inbox_no_folder_matches),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = MailMetrics.s12),
                             )
                         }
                         shownFolderRows.forEach { row ->
@@ -1417,7 +1417,7 @@ private fun MessageActions(
                                         viewModel.chooseMoveAccount(null)
                                     }
                                     .semantics(mergeDescendants = true) { role = Role.Button }
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = MailMetrics.s12),
                             ) {
                                 Text(
                                     text = row.name,
@@ -1493,7 +1493,7 @@ private fun MessageActions(
                         // here as plain text — never rendered, never a link. They come from
                         // `unsubscribePreview`, which is also what the outbox row is built from.
                         pending.mailPreview?.takeIf { action == UnsubscribeAction.MAIL }?.let { preview ->
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(MailMetrics.s12))
                             Text(
                                 text = stringResource(
                                     R.string.message_unsubscribe_confirm_mail_preview,
@@ -1563,29 +1563,29 @@ private fun MessageHeadersSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp),
+                .padding(bottom = MailMetrics.s24),
         ) {
             Text(
                 stringResource(R.string.message_headers_title),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
             )
             HorizontalDivider()
             when (state) {
                 is HeadersState.Loading -> Box(
-                    Modifier.fillMaxWidth().padding(32.dp),
+                    Modifier.fillMaxWidth().padding(MailMetrics.s32),
                     contentAlignment = Alignment.Center,
                 ) { LoadingRing() }
                 is HeadersState.Error -> Text(
                     stringResource(R.string.message_headers_error, state.message),
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s16),
                 )
                 is HeadersState.Loaded -> if (state.headers.isEmpty()) {
                     Text(
                         stringResource(R.string.message_headers_empty),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s16),
                     )
                 } else {
                     // Long values (DKIM signatures, Received chains) wrap rather than clip.
@@ -1593,8 +1593,8 @@ private fun MessageHeadersSheet(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                .padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s12),
+                            verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                         ) {
                             state.headers.forEach { header ->
                                 // JMAP's `headers` value keeps the raw leading space after the
@@ -1602,7 +1602,7 @@ private fun MessageHeadersSheet(
                                 Text(
                                     text = "${header.name}: ${header.value.trim()}",
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 13.sp,
+                                    fontSize = MailMetrics.t13,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -1629,32 +1629,32 @@ private fun AttachedMessageSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp),
+                .padding(bottom = MailMetrics.s24),
         ) {
             val subject = (state as? AttachedMessageState.Loaded)?.message?.subject
             Text(
                 if (subject.isNullOrEmpty()) stringResource(R.string.message_attached_title) else subject,
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
             )
             HorizontalDivider()
             when (state) {
                 // Not `) { LoadingRing() }` on its own line: LoadingRingTest pins that exact line to
                 // the headers sheet, once per file.
                 is AttachedMessageState.Loading ->
-                    Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { LoadingRing() }
+                    Box(Modifier.fillMaxWidth().padding(MailMetrics.s32), Alignment.Center) { LoadingRing() }
                 is AttachedMessageState.Error -> Text(
                     stringResource(R.string.message_attached_error, state.message),
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s16),
                 )
                 is AttachedMessageState.Loaded -> SelectionContainer {
                     val message = state.message
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s12),
+                        verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                     ) {
                         listOf(
                             R.string.participants_from to message.from,
@@ -1941,9 +1941,9 @@ private fun MessageContent(
         when (val s = state) {
             is MessageState.Loading -> LoadingRing(Modifier.align(Alignment.Center))
             is MessageState.Error -> Column(
-                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                modifier = Modifier.align(Alignment.Center).padding(MailMetrics.s24),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
             ) {
                 Text(
                     stringResource(R.string.message_load_error, s.message),
@@ -2121,7 +2121,7 @@ private fun ConversationBody(
         delay(BODY_REVEAL_FAILSAFE_MS)
         bodyReady = true
     }
-    val revealThresholdPx = with(density) { 4.dp.roundToPx() }
+    val revealThresholdPx = with(density) { MailMetrics.s4.roundToPx() }
     // The body reserves the overlaying bar's measured height plus a little clearance, so the bar never
     // covers the last line when it reveals. A default until measured avoids any cut on the first frame.
     var barHeightPx by remember { mutableIntStateOf(0) }
@@ -2265,10 +2265,10 @@ private fun ConversationBody(
         // Spinner until the body has laid out (cached/prefetched mail beats the 500ms, so none flashes).
         if (full != null && !bodyReady && spinnerDue) {
             Box(
-                Modifier.fillMaxWidth().heightIn(min = 80.dp).padding(24.dp).align(Alignment.Center),
+                Modifier.fillMaxWidth().heightIn(min = MailMetrics.s80).padding(MailMetrics.s24).align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
-                LoadingRing(Modifier.size(24.dp), strokeWidth = 2.dp)
+                LoadingRing(Modifier.size(MailMetrics.s24), strokeWidth = MailMetrics.s2)
             }
         }
         // No visible Reply/Forward bar here: it is rendered once, fixed, by MessagePager (#62).
@@ -2285,15 +2285,15 @@ private fun ReplyForwardBar(onReply: (mode: String) -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
+            horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
         ) {
             Button(
                 onClick = { onReply("reply") },
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(stringResource(R.string.message_reply))
             }
             OutlinedButton(
@@ -2301,7 +2301,7 @@ private fun ReplyForwardBar(onReply: (mode: String) -> Unit) {
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(stringResource(R.string.message_forward))
             }
         }
@@ -2376,11 +2376,11 @@ private fun MessageHeader(
             text = msg.header.subject?.takeIf { it.isNotBlank() }
                 ?: stringResource(R.string.message_no_subject),
             style = MaterialTheme.typography.titleLarge,
-            fontSize = 20.sp,
+            fontSize = MailMetrics.t20,
             fontWeight = if (unread) FontWeight.Bold else FontWeight.Medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                .padding(start = MailMetrics.s16, end = MailMetrics.s16, top = MailMetrics.s14),
         )
         val clipboard = LocalClipboardManager.current
         val context = LocalContext.current
@@ -2407,14 +2407,14 @@ private fun MessageHeader(
                     },
                     onClick = { showParticipants = true },
                 )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Monogram(
                 seed = (recipient ?: sender)?.email ?: "?",
                 label = (recipient ?: sender)?.display() ?: "?",
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = if (recipient != null) {
@@ -2457,42 +2457,42 @@ private fun MessageHeader(
                 val encrypted = decrypted?.wasEncrypted
                     ?: (crypto !is CryptoUiState.Decrypted) // locked/failed = still sealed
                 if (encrypted) {
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(MailMetrics.s8))
                     Icon(
                         Icons.Filled.Lock,
                         contentDescription = stringResource(R.string.a11y_pgp_encrypted),
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(MailMetrics.s18),
                     )
                 }
                 val sig = decrypted?.signature
                 if (sig != null && sig != PgpSignatureState.NONE) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(MailMetrics.s6))
                     Icon(
                         Icons.Filled.VerifiedUser,
                         contentDescription = stringResource(R.string.a11y_pgp_signature),
                         tint = signatureTint(sig),
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(MailMetrics.s18),
                     )
                 }
             }
             // Flagged star and an attachment paperclip, mirroring the message-list row.
             if (msg.header.isFlagged) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Icon(
                     Icons.Filled.Star,
                     contentDescription = stringResource(R.string.a11y_flagged),
                     tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(MailMetrics.s18),
                 )
             }
             if (msg.header.hasAttachment) {
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(MailMetrics.s6))
                 Icon(
                     Icons.Filled.AttachFile,
                     contentDescription = stringResource(R.string.a11y_has_attachment),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(MailMetrics.s18),
                 )
             }
         }
@@ -2608,12 +2608,12 @@ private fun MessageHeader(
 @Composable
 private fun MessageTagRow(tags: List<MessageTag>) {
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = MailMetrics.s16, end = MailMetrics.s16, bottom = MailMetrics.s4),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s6),
         // Wrapped lines used to sit flush against each other, because `FlowRow` separates them by
         // nothing and every gap the eye read as separation was really blank reserved INSIDE the
         // chips. With the pills measuring their own content that separation has to be stated.
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(MailMetrics.s4),
     ) {
         for (tag in tags) {
             TagPill(tag)
@@ -2643,8 +2643,8 @@ private fun TagPill(tag: MessageTag) {
     Row(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.s2),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -2661,7 +2661,7 @@ private fun TagPill(tag: MessageTag) {
             // Full-strength `onSurfaceVariant`, where the disabled chip faded both icon and label to
             // `onSurface` at 38%: a strip nobody can read is not denser, it is just smaller.
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(MailMetrics.s14),
         )
         Text(
             tag.label,
@@ -2723,12 +2723,12 @@ private fun ParticipantsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp),
+                .padding(bottom = MailMetrics.s24),
         ) {
             Text(
                 stringResource(R.string.message_participants_title),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
             )
             // First, because it is the one line the panel is opened for on a multi-alias account:
             // scanning a long To/Cc list for your own address is exactly what this spares (#81).
@@ -2776,7 +2776,7 @@ private fun MetadataGroup(rows: List<MetadataRow>) {
         stringResource(R.string.participants_delivery),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
     )
     for (row in rows) {
         Text(
@@ -2793,7 +2793,7 @@ private fun MetadataGroup(rows: List<MetadataRow>) {
             ),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp),
+            modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24, top = MailMetrics.s6),
         )
         // Bounded at four lines: Authentication-Results is routinely long and entirely
         // sender-adjacent text, and an unbounded one could push everything below it off the panel.
@@ -2802,10 +2802,10 @@ private fun MetadataGroup(rows: List<MetadataRow>) {
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 4,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+            modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24),
         )
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
 }
 
 /**
@@ -2821,12 +2821,12 @@ private fun ReceivedAtGroup(address: String?) {
         stringResource(R.string.participants_received_at),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
     )
     Text(
         address,
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24, bottom = MailMetrics.s8),
     )
 }
 
@@ -2848,7 +2848,7 @@ private fun OriginalSenderGroup(address: EmailAddress?) {
         stringResource(R.string.participants_original_sender),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
     )
     // maxLines = 1 + ellipsis on both lines, as [ParticipantRow] clamps a display name: this text is
     // ENTIRELY sender-controlled, and `stripBidiAndControls` lets 0x09 and 0x0A through, so an
@@ -2858,7 +2858,7 @@ private fun OriginalSenderGroup(address: EmailAddress?) {
         style = MaterialTheme.typography.bodyMedium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+        modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24),
     )
     // The bare address under the name, as [ParticipantRow] does — and here it is the whole point: a
     // display name is precisely what a forgery gets right. Omitted when there is no name, since
@@ -2870,10 +2870,10 @@ private fun OriginalSenderGroup(address: EmailAddress?) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+            modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24),
         )
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
 }
 
 /** One labelled block (From / To / Cc) in [ParticipantsSheet]; renders nothing when [people] empty. */
@@ -2891,7 +2891,7 @@ private fun ParticipantGroup(
         stringResource(titleRes),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
     )
     people.forEach { addr -> ParticipantRow(addr, isSender, onComposeTo, senderRule) }
 }
@@ -2919,11 +2919,11 @@ private fun ParticipantRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Monogram(seed = addr.email, label = addr.display())
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(MailMetrics.s12))
         Column(Modifier.weight(1f)) {
             Text(
                 addr.display(),
@@ -3067,7 +3067,7 @@ private fun AttachmentSection(
     onScan: (EmailBodyPart) -> Unit,
     onSave: (EmailBodyPart) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
         Text(
             text = stringResource(R.string.message_attachments, attachments.size),
             style = MaterialTheme.typography.labelLarge,
@@ -3078,14 +3078,14 @@ private fun AttachmentSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onOpen(att) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = MailMetrics.s10),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Filled.AttachFile,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 12.dp).size(20.dp),
+                    modifier = Modifier.padding(end = MailMetrics.s12).size(MailMetrics.s20),
                 )
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -3176,9 +3176,9 @@ private fun signatureSummary(sig: PgpSignatureState, signer: String?): String? =
 @Composable
 private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s10),
     ) {
         when (crypto) {
             is CryptoUiState.Locked -> {
@@ -3186,7 +3186,7 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                     Icons.Filled.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(MailMetrics.s20),
                 )
                 Text(
                     text = stringResource(
@@ -3200,7 +3200,7 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
                 if (crypto.decrypting) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)
                 } else {
                     OutlinedButton(onClick = onAction) {
                         Text(
@@ -3220,7 +3220,7 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                     Icons.Filled.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(MailMetrics.s20),
                 )
                 Text(
                     text = stringResource(R.string.message_pgp_encrypted_title),
@@ -3241,7 +3241,7 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                     } else {
                         signatureTint(sig)
                     },
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(MailMetrics.s20),
                 )
                 Column(Modifier.weight(1f)) {
                     if (crypto.result.wasEncrypted) {
@@ -3264,7 +3264,7 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                     Icons.Filled.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(MailMetrics.s20),
                 )
                 Text(
                     text = crypto.message
@@ -3310,7 +3310,7 @@ private fun UnsubscribeStrip(
             // No vertical padding of its own: the button's own minimum IS the strip's height, and it
             // is the floor for the two states that draw less.
             .heightIn(min = ButtonDefaults.MinHeight)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = MailMetrics.s16),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (body == UnsubscribeStripBody.DONE) {
@@ -3343,14 +3343,14 @@ private fun UnsubscribeStrip(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    modifier = Modifier.weight(1f).padding(end = MailMetrics.s8),
                 )
             }
             TextButton(onClick = onUnsubscribe, enabled = body.acts) {
                 if (body == UnsubscribeStripBody.SENDING) {
                     // In the icon's place, at the icon's size: the button keeps its height, so the
                     // header does, so the body underneath is not reloaded mid-gesture.
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)
                 } else {
                     Icon(
                         Icons.Filled.Unsubscribe,
@@ -3358,10 +3358,10 @@ private fun UnsubscribeStrip(
                         // costs no height: the icon was announced as nothing at all before.
                         contentDescription = stringResource(R.string.message_unsubscribe_banner),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(MailMetrics.s18),
                     )
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(
                     stringResource(
                         when {
@@ -3401,7 +3401,7 @@ private fun ReadReceiptStrip(
             .fillMaxWidth()
             // No vertical padding of its own: the button's own minimum IS the strip's height.
             .heightIn(min = ButtonDefaults.MinHeight)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = MailMetrics.s16),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -3415,7 +3415,7 @@ private fun ReadReceiptStrip(
             // ONE line in the three ordinary states, and this is a height rule, not typography.
             maxLines = if (body.shape == ReadReceiptStripShape.BUTTON_ROW) 1 else Int.MAX_VALUE,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(end = 8.dp),
+            modifier = Modifier.weight(1f).padding(end = MailMetrics.s8),
         )
         if (body.declines) {
             // Saying no: the strip goes, and NOTHING leaves. Offered only while the question stands
@@ -3425,7 +3425,7 @@ private fun ReadReceiptStrip(
                     Icons.Filled.Close,
                     contentDescription = stringResource(R.string.message_read_receipt_decline),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(MailMetrics.s18),
                 )
             }
         }
@@ -3444,8 +3444,8 @@ private fun ReadReceiptStrip(
             if (body == ReadReceiptStripBody.SENDING) {
                 // Inside the button, at the icon's size: the button keeps its height, so the header
                 // does, so the body underneath is not reloaded mid-gesture.
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)
+                Spacer(Modifier.width(MailMetrics.s8))
             }
             Text(
                 stringResource(body.button),
@@ -3471,13 +3471,13 @@ private fun CalendarEventCard(
     // "Add to calendar" CREATES something too: the event editor takes a moment to appear, and until
     // this guard a second tap put the same meeting in the calendar twice.
     val leaveOnce = rememberLeaveOnce()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 Icons.Filled.Event,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 8.dp).size(20.dp),
+                modifier = Modifier.padding(end = MailMetrics.s8).size(MailMetrics.s20),
             )
             Text(
                 text = stringResource(R.string.calendar_invite),
@@ -3485,15 +3485,15 @@ private fun CalendarEventCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (invite.loading) {
-                Spacer(Modifier.width(8.dp))
-                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(MailMetrics.s8))
+                CircularProgressIndicator(Modifier.size(MailMetrics.s14), strokeWidth = MailMetrics.s2)
             }
         }
         val event = invite.event
         when {
             invite.loading -> Unit // the placeholder above (label + spinner) is enough
             event != null -> {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(MailMetrics.s6))
                 Text(
                     text = event.title ?: stringResource(R.string.calendar_event_untitled),
                     style = MaterialTheme.typography.titleMedium,
@@ -3543,7 +3543,7 @@ private fun CalendarEventCard(
                 if (event.method == "REQUEST" && !event.cancelled && !event.organizerEmail.isNullOrBlank()) {
                     InviteRsvp(invite.response, onRespond)
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(MailMetrics.s10))
                 Button(onClick = {
                     leaveOnce {
                         val opened = addToCalendar(context, event)
@@ -3558,20 +3558,20 @@ private fun CalendarEventCard(
                     }
                 }) {
                     Icon(Icons.Filled.Event, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(MailMetrics.s8))
                     Text(stringResource(R.string.calendar_add))
                 }
             }
             else -> {
                 // Couldn't parse the .ics: let the user hand it to their calendar app directly.
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(MailMetrics.s6))
                 Text(
                     text = stringResource(R.string.calendar_invite_unparsed),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (invite.part != null) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(MailMetrics.s10))
                     OutlinedButton(onClick = onOpenInvitation) {
                         Text(stringResource(R.string.calendar_open_invitation))
                     }
@@ -3587,7 +3587,7 @@ private fun CalendarEventCard(
  */
 @Composable
 private fun InviteRsvp(response: InviteResponse, onRespond: (String) -> Unit) {
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(MailMetrics.s12))
     when (response) {
         is InviteResponse.Sent -> {
             val msg = when (response.partstat) {
@@ -3603,8 +3603,8 @@ private fun InviteRsvp(response: InviteResponse, onRespond: (String) -> Unit) {
         }
         InviteResponse.Sending -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(Modifier.size(MailMetrics.s16), strokeWidth = MailMetrics.s2)
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(
                     text = stringResource(R.string.calendar_reply_sending),
                     style = MaterialTheme.typography.bodyMedium,
@@ -3619,11 +3619,11 @@ private fun InviteRsvp(response: InviteResponse, onRespond: (String) -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(MailMetrics.s8))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
             ) {
                 Button(onClick = { onRespond("ACCEPTED") }, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.calendar_accept))
@@ -4411,8 +4411,7 @@ private fun EmailWebView(
                 // JS-disabled body the software rendering cost is negligible.
                 setLayerType(if (useSoftwareLayer) View.LAYER_TYPE_SOFTWARE else View.LAYER_TYPE_NONE, null)
                 settings.javaScriptEnabled = false
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
+                applyFitSettings()
                 // Keep the text READABLE once [FIT_CSS] has squeezed a desktop-authored page into a
                 // phone's width. Without this the two settings above are free to satisfy "it fits" by
                 // scaling the whole page down until the body is unreadable — technically fitting, and
@@ -4603,14 +4602,14 @@ private fun EmailWebView(
                             }
                             pendingLink = null
                         },
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        contentPadding = PaddingValues(horizontal = MailMetrics.s4, vertical = 0.dp),
                     ) {
                         Icon(
                             Icons.Filled.ContentCopy,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(MailMetrics.s16),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(MailMetrics.s6))
                         Text(stringResource(R.string.message_open_link_copy))
                     }
                 }
@@ -4834,6 +4833,33 @@ internal const val CSP_META =
         "form-action 'none'; base-uri 'none'; frame-src 'none'; object-src 'none'\">"
 
 /**
+ * The viewport meta of both reader templates: `width=device-width` and NOTHING ELSE.
+ *
+ * `initial-scale=1` is deliberately absent. A page-declared initial scale pins the first zoom, and
+ * with it pinned `loadWithOverviewMode` (see [applyFitSettings]) is switched off: the engine will no
+ * longer shrink a page that is still wider than the screen after [FIT_CSS], which is the last line
+ * of defence for the messages the CSS cannot narrow. Without it the layout width is the device width
+ * (so ordinary mail is untouched, scale 1) and anything that still overflows is zoomed OUT to fit.
+ * No `maximum-scale`/`user-scalable=no` either: pinch must keep working.
+ */
+internal const val FIT_VIEWPORT_META = """<meta name="viewport" content="width=device-width">"""
+
+/**
+ * The WebView half of "every message fits the width". Both settings are required together:
+ *  - `useWideViewPort` makes the engine honour the page's viewport meta (width=device-width) instead
+ *    of laying out at the legacy 980px desktop width;
+ *  - `loadWithOverviewMode` zooms a page that is still wider than that viewport out to fit it.
+ * `setInitialScale(0)` hands the first scale back to the engine (0 = automatic), so nothing the host
+ * set earlier can pin it. One function, called from the single place a body WebView is built, so the
+ * settings cannot be dropped from one path and kept in another.
+ */
+internal fun WebView.applyFitSettings() {
+    settings.useWideViewPort = true
+    settings.loadWithOverviewMode = true
+    setInitialScale(0)
+}
+
+/**
  * The rules that make a DESKTOP-AUTHORED email fit a phone's width, carried VERBATIM by both reader
  * templates — the inverted dark one and the light one. They share no other CSS (each duplicates its
  * own copy of `.s-deceptive`, `details.s-quote` and the rest), and a fit rule present in only one of
@@ -4872,6 +4898,10 @@ internal const val FIT_CSS = """
                  it REPLACES the `auto` that refuses to shrink below content size, which is the
                  one case where declaring it also helps. */
               body * { max-width: 100% !important; min-width: 0 !important; }
+              /* The two roots `body *` does not reach: a message that ships a full document brings its
+                 own <html>/<body> sizing (`<body style="width:800px">`, `<body width="700">`), and a
+                 cap on the children is no help while the container they are capped AGAINST is wide. */
+              html, body { max-width: 100% !important; min-width: 0 !important; }
               /* Cap the width WITHOUT distorting the picture: clamping width alone squashes a
                  2000px-wide image into the phone's aspect ratio. `height: auto` restores the
                  intrinsic ratio, and must be !important for the same cascade reason as the rest —
@@ -4977,7 +5007,7 @@ internal fun buildHtmlDocument(
         return """
             <!DOCTYPE html><html><head>
             $CSP_META
-            <meta name="viewport" content="width=device-width, initial-scale=1">
+            $FIT_VIEWPORT_META
             <meta name="color-scheme" content="only light">
             <style>
               /* Force the email to render its LIGHT design before we invert: many marketing
@@ -5032,7 +5062,7 @@ internal fun buildHtmlDocument(
     return """
         <!DOCTYPE html><html><head>
         $CSP_META
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        $FIT_VIEWPORT_META
         <meta name="color-scheme" content="$colorScheme">
         <style>
           html { color-scheme: $colorScheme; }

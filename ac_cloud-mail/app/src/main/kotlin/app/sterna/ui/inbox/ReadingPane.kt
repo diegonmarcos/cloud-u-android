@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.PaneSplit
 import app.sterna.ui.message.MessageScreen
+import app.sterna.ui.theme.MailMetrics
 
 /** The reading pane beside the list (#103), built as the `message/…` destination builds it.
  *  `key(session)` is what makes a tap a new reading; a swipe changes the anchor but not the session.
@@ -79,7 +80,7 @@ fun EmptyReadingPane(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(32.dp),
+            modifier = Modifier.padding(MailMetrics.s32),
         )
     }
 }

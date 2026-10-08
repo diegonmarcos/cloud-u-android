@@ -5,7 +5,6 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 /**
  * The message-list look — Gmail's conversation list, one declaration (#472).
@@ -64,16 +63,16 @@ internal val LocalMailListPalette = compositionLocalOf { PelagicMailListPalette 
  */
 internal object MailListDimens {
     /** Corner radius of a message card. */
-    val corner = 12.dp
+    val corner = MailMetrics.s12
 
     /** The card's rounded shape — the one shape every card wears. */
     val shape = RoundedCornerShape(corner)
 
     /** Pane visible left and right of every card. */
-    val gutterH = 8.dp
+    val gutterH = MailMetrics.s8
 
     /** Pane visible above and below every card. */
-    val gutterV = 6.dp
+    val gutterV = MailMetrics.s6
 }
 
 /**

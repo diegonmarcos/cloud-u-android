@@ -33,7 +33,7 @@ class EmailListItemPreviewAndActionsRowTest {
         )
         assertTrue(
             "preview Text must be indented via Modifier.padding(start = ...):\n$body",
-            Regex("""modifier = Modifier\.padding\(start = \d+\.dp\)""").containsMatchIn(body),
+            Regex("""modifier = Modifier\.padding\(start = (?:\d+\.dp|MailMetrics\.\w+)\)""").containsMatchIn(body),
         )
         assertTrue(
             "preview Text must still cap at the previewLines value, not a literal number:\n$body",

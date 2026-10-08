@@ -552,7 +552,7 @@ class TranslationParityTest {
                 "stringResource(R.string.settings_clear_account_cache_help),",
                 "style = MaterialTheme.typography.bodyMedium,",
                 "color = MaterialTheme.colorScheme.onSurfaceVariant,",
-                "modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),",
+                "modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),",
                 ")",
             ),
             lines.subList(help - 1, help + 5),

@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.sterna.BuildConfig
 import app.sterna.R
+import app.sterna.ui.theme.MailMetrics
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.BuildAge
 import com.diegonmarcos.superapp.updater.Fleet
@@ -172,7 +172,7 @@ internal fun UpdateScreen(onBack: () -> Unit, onOpenUrl: (String) -> Unit) {
                     // button greyed out against a check that has silently died is the
                     // state with no way out.
                     onClick = { Updater.checkNow(context); probeTick++ },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 ) { Text(stringResource(R.string.settings_update_check_now)) }
                 StatusLine(progress)
             }
@@ -349,7 +349,7 @@ private fun LinkRow(
 /** A read-only line: what it is, and what it currently says. */
 @Composable
 private fun Fact(label: String, value: String) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
         Text(label, style = MaterialTheme.typography.titleMedium)
         Text(
             value,
@@ -365,7 +365,7 @@ private fun Help(text: String) {
         text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 
@@ -409,7 +409,7 @@ private fun StatusLine(state: UpdateProgress.State) {
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 

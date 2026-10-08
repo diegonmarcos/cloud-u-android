@@ -83,8 +83,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.LocalTextStyle
@@ -153,7 +153,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
@@ -175,6 +174,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
 import app.sterna.container
 import app.sterna.contacts.AndroidContacts
+import app.sterna.ui.theme.MailMetrics
 import app.sterna.util.isValidEmail
 import app.sterna.ui.FORCE_ONBOARDING_PREVIEW
 import app.sterna.ui.rememberMotionEnabled
@@ -362,9 +362,9 @@ fun ComposeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = MailMetrics.s24)
+                    .padding(bottom = MailMetrics.s32),
+                verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
             ) {
                 Text(
                     stringResource(R.string.compose_contacts_priming_title),
@@ -377,7 +377,7 @@ fun ComposeScreen(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8, Alignment.End),
                 ) {
                     TextButton(onClick = dismissPriming) {
                         Text(stringResource(R.string.compose_contacts_priming_not_now))
@@ -1077,7 +1077,7 @@ fun ComposeScreen(
             confirmButton = {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8, Alignment.End),
                 ) {
                     discardChoices(mayKeepDraft, canSaveDraft).forEach { (choice, enabled) ->
                         when (choice) {
@@ -1174,7 +1174,7 @@ fun ComposeScreen(
                                     }
                                     ).copy(alpha = if (sending) 0.38f else 1f),
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(MailMetrics.s48)
                                     .clip(CircleShape)
                                     .combinedClickable(
                                         enabled = !sending,
@@ -1182,7 +1182,7 @@ fun ComposeScreen(
                                         onClick = viewModel::cyclePgpMode,
                                         onLongClick = { pgpMenu = true },
                                     )
-                                    .padding(12.dp),
+                                    .padding(MailMetrics.s12),
                             )
                             DropdownMenu(expanded = pgpMenu, onDismissRequest = { pgpMenu = false }) {
                                 PgpMode.entries.forEach { entry ->
@@ -1369,7 +1369,7 @@ fun ComposeScreen(
               textAlign = TextAlign.Center,
               // No maxLines: German and Russian run to three or four lines here, and clipping would
               // leave the only explanation on the screen half-said.
-              modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),
+              modifier = Modifier.align(Alignment.Center).padding(horizontal = MailMetrics.s24),
           )
           DraftReopenView.Editor ->
         Column(
@@ -1380,7 +1380,7 @@ fun ComposeScreen(
                 // bottom by whichever is taller — the keyboard or the nav bar — with no double inset.
                 .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                 .graphicsLayer {
-                    translationY = -fly * 64.dp.toPx()
+                    translationY = -fly * MailMetrics.s64.toPx()
                     alpha = 1f - fly
                 },
         ) {
@@ -1395,7 +1395,7 @@ fun ComposeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { fromMenu = true }
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MailMetrics.s16),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         FieldLabel(stringResource(R.string.compose_from))
@@ -1445,7 +1445,7 @@ fun ComposeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { signatureMenu = true }
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = MailMetrics.s16),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         FieldLabel(stringResource(R.string.compose_signature))
@@ -1544,7 +1544,7 @@ fun ComposeScreen(
                     stringResource(R.string.compose_pgp_subject_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                 )
             }
             // Encrypt-by-default couldn't encrypt because these recipients have no key: say so and name
@@ -1557,7 +1557,7 @@ fun ComposeScreen(
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                 )
             }
 
@@ -1566,15 +1566,15 @@ fun ComposeScreen(
                 // don't grow the header without limit (#26).
                 Column(
                     Modifier
-                        .heightIn(max = 132.dp)
+                        .heightIn(max = MailMetrics.s132)
                         .verticalScroll(rememberScrollState()),
                 ) {
                     attachments.forEach { att ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s6),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                            Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = MailMetrics.s8))
                             Text(
                                 text = att.name ?: stringResource(R.string.compose_attachment_fallback),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -1594,11 +1594,11 @@ fun ComposeScreen(
                     it,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16),
                 )
             }
             // Above the body so they stay visible while it fills the rest of the screen.
-            if (sending) LoadingRing(Modifier.padding(horizontal = 16.dp))
+            if (sending) LoadingRing(Modifier.padding(horizontal = MailMetrics.s16))
             (state as? ComposeState.Error)?.let {
                 Text(
                     text = stringResource(
@@ -1607,7 +1607,7 @@ fun ComposeScreen(
                     ),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16),
                 )
             }
           }
@@ -1658,8 +1658,8 @@ fun ComposeScreen(
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 12.dp, bottom = 16.dp),
+                            .padding(horizontal = MailMetrics.s16)
+                            .padding(top = MailMetrics.s12, bottom = MailMetrics.s16),
                     ) {
                         // …and no list either: a bullet tapped on an empty composer is drawn at the
                         // start of the first line, exactly where the placeholder sits, and the two
@@ -1739,7 +1739,7 @@ fun ComposeScreen(
             Canvas(
                 Modifier
                     .align(Alignment.Center)
-                    .size(44.dp)
+                    .size(MailMetrics.s44)
                     .graphicsLayer {
                         translationX = fly * size.width * 3f
                         translationY = -fly * size.height * 6f
@@ -1772,7 +1772,7 @@ private fun SchedulePickerDialog(
             color = AlertDialogDefaults.containerColor,
             tonalElevation = AlertDialogDefaults.TonalElevation,
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
+            Column(modifier = Modifier.padding(MailMetrics.s24)) {
                 Box(
                     modifier = Modifier
                         .weight(1f, fill = false)
@@ -1784,9 +1784,9 @@ private fun SchedulePickerDialog(
                 // A FLOW row, not a plain one, because Material's `AlertDialogFlowRow` — which this
                 // shell replaces — wraps its actions onto a second line. At 360 dp with the font
                 FlowRow(
-                    modifier = Modifier.align(Alignment.End).padding(top = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.align(Alignment.End).padding(top = MailMetrics.s24),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
+                    verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                 ) {
                     buttons()
                 }
@@ -1825,9 +1825,9 @@ private fun ComposeField(
                     focus.requestFocus()
                 }
                 // At least a 48dp tap target even when the field is empty (accessibility).
-                .heightIn(min = 48.dp)
+                .heightIn(min = MailMetrics.s48)
                 // Content is inset while the divider below runs full width (#26 follow-up).
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MailMetrics.s16),
         ) {
             BasicTextField(
                 value = value,
@@ -1840,7 +1840,7 @@ private fun ComposeField(
                 modifier = Modifier
                     .headerTapText(geometry)
                     .weight(1f)
-                    .padding(vertical = 10.dp)
+                    .padding(vertical = MailMetrics.s10)
                     .focusRequester(focus),
                 decorationBox = { inner ->
                     if (value.text.isEmpty()) {
@@ -1960,9 +1960,9 @@ private fun RecipientChipsField(
                     }
                 }
                 // At least a 48dp tap target even when the field is empty/collapsed (accessibility).
-                .heightIn(min = 48.dp)
+                .heightIn(min = MailMetrics.s48)
                 // Content is inset while the divider below runs full width (#26 follow-up).
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = MailMetrics.s16)
                 .onGloballyPositioned {
                     fieldWidthPx = it.size.width
                     fieldBottomPx = (it.positionInRoot().y + it.size.height).roundToInt()
@@ -1973,7 +1973,7 @@ private fun RecipientChipsField(
             if (collapsed) {
                 // One-line summary: the first recipient plus a count of the rest. Tapping expands.
                 Row(
-                    modifier = Modifier.weight(1f).padding(vertical = 14.dp),
+                    modifier = Modifier.weight(1f).padding(vertical = MailMetrics.s14),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -1988,7 +1988,7 @@ private fun RecipientChipsField(
                             "+${chips.size - 1}",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 8.dp),
+                            modifier = Modifier.padding(start = MailMetrics.s8),
                         )
                     }
                 }
@@ -1998,10 +1998,10 @@ private fun RecipientChipsField(
                 // the field without limit and eat the message body (#26).
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(max = 104.dp)
+                    .heightIn(max = MailMetrics.s104)
                     .verticalScroll(chipScroll)
-                    .padding(vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(vertical = MailMetrics.s6),
+                horizontalArrangement = Arrangement.spacedBy(MailMetrics.s6),
               ) {
                 chips.forEachIndexed { index, chip ->
                     // Invalid address OR (while encrypting) no key for it → flagged.
@@ -2025,7 +2025,7 @@ private fun RecipientChipsField(
                                 Icons.Filled.Close,
                                 contentDescription = stringResource(R.string.compose_remove),
                                 modifier = Modifier
-                                    .size(16.dp)
+                                    .size(MailMetrics.s16)
                                     .clickable { onValueChange(rebuild(chips.filterIndexed { i, _ -> i != index }, input)) },
                             )
                         },
@@ -2077,8 +2077,8 @@ private fun RecipientChipsField(
                         // Fill the rest of the line so a tap in the empty area past the last chip lands
                         // the caret at the end; wrap to a new line once space runs short.
                         .weight(1f)
-                        .widthIn(min = 90.dp)
-                        .padding(vertical = 6.dp)
+                        .widthIn(min = MailMetrics.s90)
+                        .padding(vertical = MailMetrics.s6)
                         .onFocusChanged { fs ->
                             if (fs.isFocused) {
                                 wasFocused = true
@@ -2153,8 +2153,8 @@ private fun RecipientChipsField(
                     },
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 6.dp,
+                    tonalElevation = MailMetrics.s3,
+                    shadowElevation = MailMetrics.s6,
                 ) {
                     // Cap the menu at the room measured under the field with the keyboard up, and let it
                     // scroll on its own — a lower cap therefore loses no suggestion, it only stops the
@@ -2178,7 +2178,7 @@ private fun RecipientChipsField(
                                         onValueChange(rebuild(chips + contact.email, ""))
                                         onClearSuggestions()
                                     }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 ContactAvatar(
@@ -2186,7 +2186,7 @@ private fun RecipientChipsField(
                                     name = contact.name,
                                     photoUri = contact.photoUri,
                                 )
-                                Spacer(Modifier.width(12.dp))
+                                Spacer(Modifier.width(MailMetrics.s12))
                                 Column(Modifier.weight(1f)) {
                                     Text(
                                         contact.name ?: contact.email,
@@ -2260,7 +2260,7 @@ private fun FieldLabel(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.width(48.dp),
+        modifier = Modifier.width(MailMetrics.s48),
     )
 }
 
@@ -2298,7 +2298,7 @@ private fun FormattingBar(
         Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = MailMetrics.s4),
     ) {
         FormattingButton(Inline.BOLD, Icons.Filled.FormatBold, R.string.compose_format_bold, active, onToggle)
         FormattingButton(Inline.ITALIC, Icons.Filled.FormatItalic, R.string.compose_format_italic, active, onToggle)
@@ -2308,14 +2308,14 @@ private fun FormattingBar(
         ListButton(BlockKind.NUMBER, Icons.Filled.FormatListNumbered, R.string.compose_format_list_numbered, activeList, onToggleList)
         // The link is not a family: it carries an address, so it opens a dialog instead of toggling,
         // and it is lit by `linkAt` rather than by the `active` set.
-        IconButton(onClick = onLink, modifier = Modifier.size(48.dp).semantics { selected = linkActive }) {
+        IconButton(onClick = onLink, modifier = Modifier.size(MailMetrics.s48).semantics { selected = linkActive }) {
             Icon(
                 Icons.Filled.Link,
                 contentDescription = stringResource(R.string.compose_format_link),
                 tint = if (linkActive) MaterialTheme.colorScheme.primary else LocalContentColor.current,
             )
         }
-        IconButton(onClick = onClear, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onClear, modifier = Modifier.size(MailMetrics.s48)) {
             Icon(Icons.Filled.FormatClear, contentDescription = stringResource(R.string.compose_format_clear))
         }
     }
@@ -2335,7 +2335,7 @@ private fun ListButton(
     val isActive = kind == activeList
     IconButton(
         onClick = { onToggleList(kind) },
-        modifier = Modifier.size(48.dp).semantics { selected = isActive },
+        modifier = Modifier.size(MailMetrics.s48).semantics { selected = isActive },
     ) {
         Icon(
             icon,
@@ -2357,7 +2357,7 @@ private fun FormattingButton(
     val isActive = kind in active
     IconButton(
         onClick = { onToggle(kind) },
-        modifier = Modifier.size(48.dp).semantics { selected = isActive },
+        modifier = Modifier.size(MailMetrics.s48).semantics { selected = isActive },
     ) {
         Icon(
             icon,

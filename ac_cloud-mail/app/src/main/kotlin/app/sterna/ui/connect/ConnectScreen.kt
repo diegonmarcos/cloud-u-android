@@ -38,8 +38,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -97,6 +97,7 @@ import app.sterna.ui.components.autofill
 import app.sterna.ui.rememberLeaveOnce
 import app.sterna.ui.settings.SettingsViewModel
 import app.sterna.ui.settings.applyAppLanguage
+import app.sterna.ui.theme.MailMetrics
 import app.sterna.util.isValidEmail
 import app.sterna.core.data.account.AuthType
 import app.sterna.core.data.account.ConnectionSecurity
@@ -366,8 +367,8 @@ fun ConnectScreen(
                 // Keep the focused field visible above the keyboard while typing (#52).
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = MailMetrics.s24),
+            verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
         ) {
             // Must stay above the panels: each hands the column over with a `return@Column`, so a
             // handler below is not composed while one is up and Back pops the whole screen with a
@@ -386,7 +387,7 @@ fun ConnectScreen(
             (importSignIn as? ConnectViewModel.ImportSignIn.Listing)?.let { listing ->
                 val sel = listing.selected
                 if (sel == null) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(MailMetrics.s8))
                     // The section renders its own "Accounts to sign in" header, so no title here.
                     PendingImportAccountsSection(
                         // Re-read each recomposition (driven by importSignIn), so signed-in and
@@ -397,13 +398,13 @@ fun ConnectScreen(
                     )
                     // Always offer the normal form: with every import deferred, the listing would
                     // be a dead end.
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(MailMetrics.s8))
                     Button(
                         onClick = viewModel::leaveImportListing,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(MailMetrics.s8))
                         Text(stringResource(R.string.connect_add_account))
                     }
                 } else {
@@ -424,7 +425,7 @@ fun ConnectScreen(
                 // ---- 1. The address, alone ----------------------------------------------------
                 ConnectStep.ADDRESS -> {
                     if (firstRun) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(MailMetrics.s4))
                         Text(
                             stringResource(R.string.connect_welcome_title),
                             style = MaterialTheme.typography.headlineSmall,
@@ -437,18 +438,18 @@ fun ConnectScreen(
                     }
                     // While deferred imported accounts remain, offer the way back to their list.
                     if (viewModel.pendingStoredAccounts.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(MailMetrics.s4))
                         OutlinedButton(
                             onClick = viewModel::resumeImportSignIn,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(MailMetrics.s8))
                             Text(stringResource(R.string.import_pending_title))
                         }
                     }
                     // Import entry points belong where people add accounts, not in Settings → Backup.
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(MailMetrics.s4))
                     Text(stringResource(R.string.connect_import_header), style = MaterialTheme.typography.labelLarge)
                     OutlinedButton(
                         onClick = {
@@ -459,7 +460,7 @@ fun ConnectScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(MailMetrics.s8))
                         Text(stringResource(R.string.connect_import_k9))
                     }
                     OutlinedButton(
@@ -471,13 +472,13 @@ fun ConnectScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(MailMetrics.s8))
                         Text(stringResource(R.string.connect_import_settings))
                     }
                     // No protocol question, no host field, no sign-in method: the probes answer those.
                     Column(
                         modifier = Modifier.bringIntoViewRequester(credentialReveal.block),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                     ) {
                         AccountNameField(accountName, { accountName = it }, credentialReveal)
                         EmailField(username, { username = it; awaitingVerdict = false }, credentialReveal) {
@@ -526,7 +527,7 @@ fun ConnectScreen(
                 }
                 // ---- 2. What the domain published, and the secret it needs --------------------
                 ConnectStep.CREDENTIALS -> {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(MailMetrics.s4))
                     // Shown rather than assumed (WYSIWYG), and a username node for the password
                     // managers that match on address + domain, not on the secret field.
                     OutlinedTextField(
@@ -571,20 +572,20 @@ fun ConnectScreen(
                                         // a sign-in belongs in the browser holding the session.
                                         leaveOnce { InAppBrowser.openLink(context, Uri.parse(url)) }
                                     },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    contentPadding = PaddingValues(horizontal = MailMetrics.s4, vertical = 0.dp),
                                 ) {
                                     Icon(
                                         Icons.Filled.OpenInNew,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(MailMetrics.s16),
                                     )
-                                    Spacer(Modifier.width(6.dp))
+                                    Spacer(Modifier.width(MailMetrics.s6))
                                     Text(stringResource(R.string.connect_app_password_help))
                                 }
                             }
                             Column(
                                 modifier = Modifier.bringIntoViewRequester(credentialReveal.block),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                             ) {
                                 SecretField(
                                     value = password,
@@ -628,7 +629,7 @@ fun ConnectScreen(
                 // ---- 3. The manual fallback — reached only when discovery came back empty -----
                 ConnectStep.MANUAL -> {
                     Text(stringResource(R.string.connect_protocol), style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
                         FilterChip(
                             selected = protocol == MailProtocol.JMAP,
                             onClick = {
@@ -651,7 +652,7 @@ fun ConnectScreen(
 
                     if (protocol == MailProtocol.JMAP) {
                         Text(stringResource(R.string.connect_auth_method), style = MaterialTheme.typography.labelLarge)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
                             FilterChip(
                                 selected = !useApiToken,
                                 onClick = { useApiToken = false },
@@ -679,7 +680,7 @@ fun ConnectScreen(
                             ) {
                                 Text(
                                     stringResource(R.string.connect_fastmail_token_hint),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s8),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 )
@@ -709,7 +710,7 @@ fun ConnectScreen(
                         Text(stringResource(R.string.connect_provider_preset), style = MaterialTheme.typography.labelLarge)
                         Row(
                             Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                         ) {
                             MAIL_PROVIDERS.forEach { provider ->
                                 // FilterChip, not AssistChip: tapping it again lets go (#105).
@@ -736,14 +737,14 @@ fun ConnectScreen(
                                         // a sign-in belongs in the browser holding the session.
                                         leaveOnce { InAppBrowser.openLink(context, Uri.parse(url)) }
                                     },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    contentPadding = PaddingValues(horizontal = MailMetrics.s4, vertical = 0.dp),
                                 ) {
                                     Icon(
                                         Icons.Filled.OpenInNew,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(MailMetrics.s16),
                                     )
-                                    Spacer(Modifier.width(6.dp))
+                                    Spacer(Modifier.width(MailMetrics.s6))
                                     Text(stringResource(R.string.connect_app_password_help))
                                 }
                             }
@@ -769,7 +770,7 @@ fun ConnectScreen(
                     // One container for the block: revealed as a unit, all of it clears the keyboard.
                     Column(
                         modifier = Modifier.bringIntoViewRequester(credentialReveal.block),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                     ) {
                         AccountNameField(accountName, { accountName = it }, credentialReveal)
                         EmailField(username, { username = it }, credentialReveal) { probeAddress() }
@@ -812,7 +813,7 @@ fun ConnectScreen(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MailMetrics.s4))
             // A value first ([statusLine]), because it is also what the effect below scrolls to:
             // two readings of the state would drift in silence. The Column is composed whatever
             // the value is; wrap it in `if (status != null)` and the requester attaches too late.
@@ -979,7 +980,7 @@ private fun SecretField(
 
 @Composable
 private fun DeviceApprovalPanel(state: ConnectState.AwaitingApproval, onCancel: () -> Unit) {
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
     // state.loginHint, and NOT the composable's own username field: this panel is shown for the
     // generic JMAP flow AND for the app-scoped Outlook one, and only the state tells them apart.
     DeviceApprovalContent(
@@ -996,7 +997,7 @@ private fun BrowserAuthorizationPanel(state: ConnectState.AwaitingBrowser, onCan
     // in one, and the other comes back with a state that is no longer the pending one.
     val leaveOnce = rememberLeaveOnce()
     var noBrowser by remember { mutableStateOf(false) }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
     Text(
         stringResource(R.string.connect_oauth_code_step1),
         style = MaterialTheme.typography.bodyMedium,
@@ -1030,8 +1031,8 @@ private fun BrowserAuthorizationPanel(state: ConnectState.AwaitingBrowser, onCan
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CircularProgressIndicator(modifier = Modifier.height(20.dp).width(20.dp))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12)) {
+        CircularProgressIndicator(modifier = Modifier.height(MailMetrics.s20).width(MailMetrics.s20))
         TextButton(onClick = onCancel) { Text(stringResource(R.string.connect_oauth_cancel)) }
     }
 }
@@ -1066,7 +1067,7 @@ private fun DeviceApprovalContent(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(userCode, style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MailMetrics.s8))
         Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.connect_oauth_copy_code))
     }
     Button(
@@ -1090,8 +1091,8 @@ private fun DeviceApprovalContent(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CircularProgressIndicator(modifier = Modifier.height(20.dp).width(20.dp))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12)) {
+        CircularProgressIndicator(modifier = Modifier.height(MailMetrics.s20).width(MailMetrics.s20))
         TextButton(onClick = onCancel) { Text(stringResource(R.string.connect_oauth_cancel)) }
     }
 }
@@ -1103,7 +1104,7 @@ private fun ImportAccountSignIn(target: ConnectViewModel.SignInTarget, viewModel
     val approval = target.approval
     when {
         approval != null -> {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MailMetrics.s8))
             // No login hint: this is the post-import Microsoft sign-in, out of #55's scope.
             DeviceApprovalContent(
                 approval.userCode, approval.verificationUri,
@@ -1123,7 +1124,7 @@ private fun ImportAccountSignIn(target: ConnectViewModel.SignInTarget, viewModel
 @Composable
 private fun ImportOAuthPanel(target: ConnectViewModel.SignInTarget, viewModel: ConnectViewModel) {
     val account = target.account
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
     Text(
         stringResource(R.string.connect_import_signin_title),
         style = MaterialTheme.typography.headlineSmall,
@@ -1150,7 +1151,7 @@ private fun ImportOAuthPanel(target: ConnectViewModel.SignInTarget, viewModel: C
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (target.verifying) {
-                CircularProgressIndicator(modifier = Modifier.height(20.dp).width(20.dp))
+                CircularProgressIndicator(modifier = Modifier.height(MailMetrics.s20).width(MailMetrics.s20))
             } else {
                 Text(stringResource(R.string.connect_import_signin_microsoft))
             }
@@ -1191,7 +1192,7 @@ private fun ImportSignInPanel(target: ConnectViewModel.SignInTarget, viewModel: 
     val account = target.account
     var password by rememberSaveable(account.id) { mutableStateOf("") }
     var passwordVisible by rememberSaveable(account.id) { mutableStateOf(false) }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(MailMetrics.s8))
     Text(
         stringResource(R.string.connect_import_signin_title),
         style = MaterialTheme.typography.headlineSmall,
@@ -1248,7 +1249,7 @@ private fun ImportSignInPanel(target: ConnectViewModel.SignInTarget, viewModel: 
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (target.verifying) {
-            CircularProgressIndicator(modifier = Modifier.height(20.dp).width(20.dp))
+            CircularProgressIndicator(modifier = Modifier.height(MailMetrics.s20).width(MailMetrics.s20))
         } else {
             Text(stringResource(R.string.connect_import_signin_button))
         }
@@ -1312,7 +1313,7 @@ private fun HostPortRow(
     onPort: (String) -> Unit,
     hostPlaceholder: String = "",
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
         OutlinedTextField(
             value = host,
             onValueChange = onHost,
@@ -1327,14 +1328,14 @@ private fun HostPortRow(
             label = { Text(stringResource(R.string.connect_port)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.width(110.dp),
+            modifier = Modifier.width(MailMetrics.s110),
         )
     }
 }
 
 @Composable
 private fun SecurityChips(selected: ConnectionSecurity, onSelect: (ConnectionSecurity) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
         FilterChip(selected == ConnectionSecurity.TLS, { onSelect(ConnectionSecurity.TLS) }, { Text(stringResource(R.string.connect_security_ssl_tls)) })
         FilterChip(selected == ConnectionSecurity.STARTTLS, { onSelect(ConnectionSecurity.STARTTLS) }, { Text(stringResource(R.string.connect_security_starttls)) })
     }

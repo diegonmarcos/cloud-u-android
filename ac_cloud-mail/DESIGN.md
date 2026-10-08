@@ -66,6 +66,23 @@ recognises. Answering someone else's request is a strip on the opened message: i
 an answer in the outbox, and nothing leaves without that tap. The single switch that governs the
 strip sits in Privacy & security, is off by default, and has no position that answers on its own.
 
+## Density
+
+Cloud Mail is a data app, so it is drawn dense. The density has ONE declaration,
+`ui/theme/MailMetrics.kt`, and every size on screen is read from it:
+
+- **Type:** `denseTypography()` resizes all 15 Material styles (size, line height, tracking) by
+  `TEXT_SCALE` (0.85, the Launcher's Scale "Default"), floor 10sp. Screens read
+  `MaterialTheme.typography.*` and follow.
+- **Spacing and boxes:** the `s*` steps (`MailMetrics.s16` is the 16 step, 13dp). No screen holds a
+  `...dp` literal.
+- **Icons and icon buttons:** `Icon` / `IconButton` from `ui/components/DenseMaterial.kt` draw at
+  `MailMetrics.icon` (20dp) and `MailMetrics.iconButton` (36dp) instead of 24 / 40.
+- **Touch floor:** Material's 48dp reservation is lowered to `MailMetrics.tap` (36dp) by the theme.
+
+Never a global transform: no `Density` / `fontScale` override, no `scaleX/scaleY` on a screen, no
+configuration rewrite, no WebView zoom. `test/test-mail-density.sh` pins all of this and bans those hacks.
+
 ## Motion
 
 Golden rule for "réactif": everything **≤ 250ms**, `FastOutSlowIn`, **no

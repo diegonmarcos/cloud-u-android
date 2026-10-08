@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * A coloured monogram avatar — initial + a colour derived from the address.
@@ -25,7 +25,7 @@ fun Monogram(seed: String, label: String, modifier: Modifier = Modifier, color: 
     val background = color ?: monogramColor(seed, MaterialTheme.colorScheme.monogramRamps())
     Box(
         modifier = modifier
-            .size(40.dp)
+            .size(MailMetrics.s40)
             .clip(CircleShape)
             .background(background),
         contentAlignment = Alignment.Center,

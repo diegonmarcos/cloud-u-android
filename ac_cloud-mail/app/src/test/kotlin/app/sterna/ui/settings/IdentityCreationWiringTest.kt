@@ -219,7 +219,7 @@ class IdentityCreationWiringTest {
                 "stringResource(R.string.settings_identity_not_created, failure.email, failure.detail),",
                 "style = MaterialTheme.typography.bodySmall,",
                 "color = MaterialTheme.colorScheme.error,",
-                "modifier = Modifier.padding(vertical = 4.dp),",
+                "modifier = Modifier.padding(vertical = MailMetrics.s4),",
                 ")",
                 "}",
             ),

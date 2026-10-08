@@ -85,11 +85,12 @@ src = open(sys.argv[1], encoding='utf-8').read()
 dims = src[src.index("internal object MailListDimens"):src.index("\n}", src.index("internal object MailListDimens"))]
 fails = 0
 for key in ("gutterH", "gutterV", "corner"):
-    m = re.search(r"\b" + key + r"\s*=\s*([0-9.]+)\.dp", dims)
-    if not m or float(m.group(1)) <= 0:
+    # the value is a literal, or a step of the ONE density declaration (MailMetrics.sNN)
+    m = re.search(r"\b" + key + r"\s*=\s*(?:([0-9.]+)\.dp|MailMetrics\.(s[0-9]+))", dims)
+    if not m or (m.group(1) is not None and float(m.group(1)) <= 0):
         print(f"  FAIL: C4 MailListDimens.{key} is {'missing' if not m else m.group(0)} — a zero gutter is a flat list again"); fails += 1
     else:
-        print(f"  ok: C4 MailListDimens.{key} = {m.group(1)}dp")
+        print(f"  ok: C4 MailListDimens.{key} = {m.group(1) or 'MailMetrics.' + m.group(2)}")
 sys.exit(1 if fails else 0)
 PY
 rc=$?

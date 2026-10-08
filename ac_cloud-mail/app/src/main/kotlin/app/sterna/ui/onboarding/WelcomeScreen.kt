@@ -27,10 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.components.EmptyArt
 import app.sterna.ui.components.EmptyState
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * First-launch privacy welcome. Communicates Sterna's posture (no ads, no tracking,
@@ -46,9 +46,9 @@ fun WelcomeScreen(onDone: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s16),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
             ) {
                 PageDots(current = page, count = pageCount)
                 Button(
@@ -97,7 +97,7 @@ fun WelcomeScreen(onDone: () -> Unit) {
 /** A small row of page-position dots. Decorative — the controls carry the labels. */
 @Composable
 private fun PageDots(current: Int, count: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
         repeat(count) { index ->
             val color = if (index == current) {
                 MaterialTheme.colorScheme.primary
@@ -106,7 +106,7 @@ private fun PageDots(current: Int, count: Int) {
             }
             Box(
                 Modifier
-                    .size(8.dp)
+                    .size(MailMetrics.s8)
                     .clip(CircleShape)
                     .background(color),
             )

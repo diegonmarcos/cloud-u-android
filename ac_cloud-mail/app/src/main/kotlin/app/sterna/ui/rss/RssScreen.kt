@@ -20,8 +20,8 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
@@ -45,6 +44,7 @@ import app.sterna.ui.components.EmptyArt
 import app.sterna.ui.components.EmptyState
 import app.sterna.ui.settings.DetailScaffold
 import app.sterna.ui.rememberLeaveOnce
+import app.sterna.ui.theme.MailMetrics
 import java.net.URI
 
 /**
@@ -80,9 +80,9 @@ fun RssScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
             ) {
                 OutlinedTextField(
                     value = address,
@@ -157,7 +157,7 @@ private fun FeedSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                .padding(start = MailMetrics.s16, end = MailMetrics.s8, top = MailMetrics.s12, bottom = MailMetrics.s4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -165,7 +165,7 @@ private fun FeedSection(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
             Text(
                 feed.title.ifBlank { url },
                 style = MaterialTheme.typography.titleMedium,
@@ -196,7 +196,7 @@ private fun ArticleRow(title: String, summary: String, published: String, onClic
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -223,7 +223,7 @@ private fun ArticleRow(title: String, summary: String, published: String, onClic
                 )
             }
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MailMetrics.s8))
         Icon(Icons.Filled.OpenInNew, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -234,7 +234,7 @@ private fun FeedUnavailableRow(url: String, message: String, onRemove: () -> Uni
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

@@ -75,7 +75,7 @@ fun SternaTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = SternaTypography,
-            content = content,
+            content = { ProvideDenseTouchTargets(content) },
         )
     }
 }

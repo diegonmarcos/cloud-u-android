@@ -420,11 +420,11 @@ class ReadReceiptStripTest {
         /** The only two lines of the strip allowed to carry any geometry at all. */
         val ALLOWED_GEOMETRY = setOf(
             ".heightIn(min = ButtonDefaults.MinHeight)",
-            ".padding(horizontal = 16.dp),",
-            "modifier = Modifier.weight(1f).padding(end = 8.dp),",
-            "CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)",
-            "Spacer(Modifier.width(8.dp))",
-            "modifier = Modifier.size(18.dp),",
+            ".padding(horizontal = MailMetrics.s16),",
+            "modifier = Modifier.weight(1f).padding(end = MailMetrics.s8),",
+            "CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)",
+            "Spacer(Modifier.width(MailMetrics.s8))",
+            "modifier = Modifier.size(MailMetrics.s18),",
         )
 
         /** Anything that can make a row taller (or add a second thing to it), matched lowercased. */
@@ -467,7 +467,7 @@ class ReadReceiptStripTest {
             "enabled = body.acts,",
             "disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,",
             "if (body == ReadReceiptStripBody.SENDING) {",
-            "CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)",
+            "CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)",
             // The label comes from the STATE, never from one fixed resource: a constant "Send"
             // greyed out beside "In the outbox: …" is a button lying about where things stand.
             "stringResource(body.button),",

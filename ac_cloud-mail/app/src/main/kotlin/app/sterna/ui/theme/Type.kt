@@ -1,6 +1,4 @@
 package app.sterna.ui.theme
 
-import androidx.compose.material3.Typography
-
-/** Default Material 3 type scale; customise as the design system grows. */
-val SternaTypography = Typography()
+/** The Material 3 type scale, resized once for a dense data view - see [denseTypography]. */
+val SternaTypography = denseTypography()

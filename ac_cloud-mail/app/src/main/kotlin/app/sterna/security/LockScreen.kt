@@ -30,10 +30,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import app.sterna.R
+import app.sterna.ui.theme.MailMetrics
 
 /** The combined authenticators we prompt with: biometric, falling back to PIN/pattern/password. */
 private const val AUTHENTICATORS = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
@@ -84,21 +84,21 @@ fun LockScreen(onUnlocked: () -> Unit) {
         color = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            modifier = Modifier.fillMaxSize().padding(MailMetrics.s32),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Text("🔒", style = MaterialTheme.typography.displayMedium)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(MailMetrics.s16))
             Text(stringResource(R.string.lock_title), style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MailMetrics.s8))
             Text(
                 stringResource(R.string.lock_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MailMetrics.s24))
             Button(onClick = { authenticate() }) { Text(stringResource(R.string.lock_unlock)) }
         }
     }

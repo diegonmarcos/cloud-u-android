@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import app.sterna.ui.components.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -27,9 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.core.jmap.model.Mailbox
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * "Add a tag / Move folder", built honestly for the protocol underneath it.
@@ -75,12 +75,12 @@ fun LabelSheet(
     var confirming by remember { mutableStateOf<MessageTag?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = MailMetrics.s24),
         ) {
             Text(
                 stringResource(R.string.message_labels),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s24, vertical = MailMetrics.s8),
             )
             // Said in one sentence at the top rather than discovered by a user whose message
             // vanished: this is membership, not location, and a message can be in several places.
@@ -88,7 +88,7 @@ fun LabelSheet(
                 stringResource(R.string.message_labels_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s24),
             )
 
             LabelGroup(R.string.message_labels_in) {
@@ -160,10 +160,10 @@ private fun LabelGroup(titleRes: Int, content: @Composable () -> Unit) {
         stringResource(titleRes),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp),
+        modifier = Modifier.padding(start = MailMetrics.s24, end = MailMetrics.s24, top = MailMetrics.s16, bottom = MailMetrics.s4),
     )
     FlowRow(
-        Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s24),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
     ) { content() }
 }

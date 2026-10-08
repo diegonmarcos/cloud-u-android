@@ -20,8 +20,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -43,13 +43,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
 import app.sterna.core.data.mail.SenderVolume
 import app.sterna.ui.components.ContactAvatar
 import app.sterna.ui.components.LoadingRing
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * "Mail by sender": for the current account, how many messages this phone holds from each
@@ -131,7 +131,7 @@ fun MailBySenderScreen(
             SenderScreenBody.FAILED ->
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     Column(
-                        modifier = Modifier.padding(32.dp),
+                        modifier = Modifier.padding(MailMetrics.s32),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
@@ -141,7 +141,7 @@ fun MailBySenderScreen(
                             textAlign = TextAlign.Center,
                         )
                         // Filled Button, like every other error-recovery "Retry" in the app.
-                        Button(onClick = { viewModel.load() }, modifier = Modifier.padding(top = 16.dp)) {
+                        Button(onClick = { viewModel.load() }, modifier = Modifier.padding(top = MailMetrics.s16)) {
                             Text(stringResource(R.string.settings_vacation_retry))
                         }
                     }
@@ -159,7 +159,7 @@ fun MailBySenderScreen(
 
             SenderScreenBody.ROWS -> LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                 item {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12)) {
                         Text(
                             stringResource(R.string.settings_vacation_account, state.accountLabel),
                             style = MaterialTheme.typography.titleSmall,
@@ -199,7 +199,7 @@ fun MailBySenderScreen(
                 state.blockNote?.let { note ->
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            modifier = Modifier.fillMaxWidth().padding(MailMetrics.s32),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
@@ -298,11 +298,11 @@ private fun SenderRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ContactAvatar(email = row.email, name = row.name, photoUri = null)
-        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+        Column(Modifier.weight(1f).padding(horizontal = MailMetrics.s12)) {
             Text(
                 row.name?.takeIf { it.isNotBlank() } ?: row.email,
                 style = MaterialTheme.typography.titleMedium,
@@ -335,7 +335,7 @@ private fun SenderRow(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.width(280.dp),
+                modifier = Modifier.width(MailMetrics.s280),
             ) {
                 // Which entries exist, and which of them can be tapped, is senderMenuEntries()'s
                 // decision — a plain function a JVM test runs. An entry is ABSENT only when this

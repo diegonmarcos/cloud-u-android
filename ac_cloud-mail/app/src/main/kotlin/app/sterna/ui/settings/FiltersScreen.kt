@@ -22,7 +22,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import app.sterna.ui.components.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
@@ -52,6 +51,7 @@ import app.sterna.core.data.filter.RuleMatch
 import app.sterna.core.data.filter.foreignScriptNotice
 import app.sterna.core.data.filter.showsNoRulesNote
 import app.sterna.ui.components.LoadingRing
+import app.sterna.ui.theme.MailMetrics
 
 /** Server-side filter rules (JMAP Sieve) for the current account: edited as a form and pushed on
  *  Save. Network-backed, so the screen carries loading / saving / error state. */
@@ -197,13 +197,13 @@ fun FiltersScreen(
 @Composable
 private fun BoxScope.FiltersNote(text: String, onRetry: (() -> Unit)? = null) {
     Column(
-        modifier = Modifier.align(Alignment.Center).padding(32.dp),
+        modifier = Modifier.align(Alignment.Center).padding(MailMetrics.s32),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (onRetry != null) {
             // Filled Button to match every other error-recovery "Retry" (inbox, message load).
-            Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) {
+            Button(onClick = onRetry, modifier = Modifier.padding(top = MailMetrics.s16)) {
                 Text(stringResource(R.string.settings_vacation_retry))
             }
         }
@@ -222,7 +222,7 @@ private fun ForeignScriptBody(foreign: ForeignScript) {
     // the same thing twice. Read through the property in both branches, the null check and the
     // draw are two different reads, which is the shape this binding removes.
     val body = foreign.body
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
         Text(
             stringResource(R.string.settings_filters_foreign_body_title, foreign.name),
             style = MaterialTheme.typography.labelLarge,
@@ -236,7 +236,7 @@ private fun ForeignScriptBody(foreign: ForeignScript) {
                 stringResource(R.string.settings_filters_foreign_body_unavailable, foreign.name),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = MailMetrics.s4),
             )
         } else {
             // Monospace and horizontally scrollable: Sieve is indented code, and re-wrapping it
@@ -248,7 +248,7 @@ private fun ForeignScriptBody(foreign: ForeignScript) {
                 softWrap = false,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .padding(top = 4.dp)
+                    .padding(top = MailMetrics.s4)
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
             )
@@ -272,7 +272,7 @@ private fun FiltersList(
                 stringResource(R.string.settings_vacation_account, state.accountLabel),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
             )
         }
         // Before the "another script is active" line and independent of it: the rules can be
@@ -282,7 +282,7 @@ private fun FiltersList(
                 stringResource(R.string.settings_filters_not_running),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         // One line, not two, in priority order: an unreadable script of our own first, then
@@ -303,7 +303,7 @@ private fun FiltersList(
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         // The script itself, verbatim. This app models a SUBSET of Sieve, so it cannot turn a
@@ -336,13 +336,13 @@ private fun FiltersList(
                     stringResource(R.string.settings_filters_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(MailMetrics.s16),
                 )
         }
 
-        OutlinedButton(onClick = onAdd, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        OutlinedButton(onClick = onAdd, modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12)) {
             Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(MailMetrics.s8))
             Text(stringResource(R.string.settings_filters_add))
         }
 
@@ -351,7 +351,7 @@ private fun FiltersList(
                 stringResource(R.string.settings_vacation_save_error, state.errorDetail),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         Button(
@@ -363,12 +363,12 @@ private fun FiltersList(
                 dirty = state.dirty,
                 rulesNotRunning = state.rulesNotRunning,
             ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         ) {
             if (state.saving) {
                 CircularProgressIndicator(
-                    modifier = Modifier.width(20.dp),
-                    strokeWidth = 2.dp,
+                    modifier = Modifier.width(MailMetrics.s20),
+                    strokeWidth = MailMetrics.s2,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
@@ -380,10 +380,10 @@ private fun FiltersList(
                 stringResource(R.string.settings_filters_saved),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp).align(Alignment.CenterHorizontally),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16).align(Alignment.CenterHorizontally),
             )
         }
-        Spacer(Modifier.padding(bottom = 24.dp))
+        Spacer(Modifier.padding(bottom = MailMetrics.s24))
     }
 }
 
@@ -392,7 +392,7 @@ private fun FiltersList(
 private fun RuleRow(rule: FilterRule, onToggle: (Boolean) -> Unit, onEdit: () -> Unit) {
     val context = LocalContext.current
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit).padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -406,7 +406,7 @@ private fun RuleRow(rule: FilterRule, onToggle: (Boolean) -> Unit, onEdit: () ->
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Switch(checked = rule.enabled, onCheckedChange = onToggle)
     }
 }
@@ -439,7 +439,7 @@ private fun RuleEditScreen(
                 onValueChange = { rule = rule.copy(name = it) },
                 label = { Text(stringResource(R.string.settings_filter_name)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
             )
             SettingsSection(stringResource(R.string.settings_filter_if)) {
                 SettingChoiceRow(
@@ -461,7 +461,7 @@ private fun RuleEditScreen(
                     onValueChange = { rule = rule.copy(value = it) },
                     label = { Text(stringResource(R.string.settings_filter_value)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                 )
             }
             SettingsSection(stringResource(R.string.settings_filter_then)) {
@@ -488,10 +488,10 @@ private fun RuleEditScreen(
                     onChange = { rule = rule.copy(flag = it) },
                 )
             }
-            TextButton(onClick = onDelete, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            TextButton(onClick = onDelete, modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
                 Text(stringResource(R.string.settings_filter_delete), color = MaterialTheme.colorScheme.error)
             }
-            Spacer(Modifier.padding(bottom = 24.dp))
+            Spacer(Modifier.padding(bottom = MailMetrics.s24))
         }
     }
 }
@@ -499,11 +499,11 @@ private fun RuleEditScreen(
 @Composable
 private fun ActionSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

@@ -17,8 +17,8 @@ class DrawerDividerMarginLintTest {
                 "The row immediately under it is selectable, and when selected Material fills it " +
                 "with a rounded pill: without this margin the pill's fill starts ON the hairline " +
                 "(issue #179). 'bottom' and not 'vertical' — the block above already ends on 8–10 " +
-                "dp of bottom padding. Compared as the WHOLE call: 'bottom = 12.dp' is contained " +
-                "in 'bottom = 12.dp * 0'. The call found, anchored on the 'accounts.size > 1' " +
+                "dp of bottom padding. Compared as the WHOLE call: 'bottom = MailMetrics.s12' is contained " +
+                "in 'bottom = MailMetrics.s12 * 0'. The call found, anchored on the 'accounts.size > 1' " +
                 "guard that holds selectUnified(), was:\n$divider",
             EXPECTED_DIVIDER_CALL,
             divider,
@@ -270,7 +270,7 @@ class DrawerDividerMarginLintTest {
     companion object {
         /** The divider that closes the account list, whole — margin on the line, below only. */
         private const val EXPECTED_DIVIDER_CALL =
-            "HorizontalDivider(Modifier.padding(bottom = 12.dp))"
+            "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))"
 
         /** The two rows that can sit right under it, by the view each one selects. */
         private val ENTRY_SELECTORS = listOf("selectUnified", "selectUnread")

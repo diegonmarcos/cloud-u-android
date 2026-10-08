@@ -3,8 +3,10 @@ package app.sterna.ui.message
 import app.sterna.core.jmap.model.Email
 import app.sterna.core.jmap.model.EmailBodyPart
 import app.sterna.core.jmap.model.EmailBodyValue
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * [buildHtmlDocument] EXECUTED over a synthetic desktop-authored email, and the page it emits judged
@@ -205,5 +207,89 @@ class ReaderFitDocumentTest {
             "nothing may pin a width on an ordinary message: the cap is a MAX, never a fixed size",
             "width: 100% !important" !in stylesheet(page).replace("max-width: 100% !important", ""),
         )
+    }
+
+    // ── The engine half: viewport meta + overview mode (regression guard) ─────────────────────────
+
+    private fun resource(name: String): String =
+        javaClass.getResourceAsStream("/fit/$name")?.bufferedReader()?.use { it.readText() }
+            ?: error("fixture /fit/$name is missing from the test resources")
+
+    private fun viewportMetas(page: String): List<String> =
+        Regex("<meta\\s+name=\"viewport\"[^>]*>").findAll(page).map { it.value }.toList()
+
+    @Test fun `both templates declare width=device-width and do not pin the initial scale`() {
+        // `initial-scale=1` pins the first zoom, and a pinned initial scale switches
+        // loadWithOverviewMode OFF - the engine then never zooms out a page that is still too wide.
+        for ((name, page) in listOf("light" to doc(light), "dark" to doc(dark))) {
+            val metas = viewportMetas(page)
+            assertEquals("the $name template must carry exactly one viewport meta: $metas", 1, metas.size)
+            assertTrue(
+                "the $name viewport meta must be width=device-width.\n${metas}",
+                "content=\"width=device-width\"" in metas.single(),
+            )
+            assertTrue(
+                "the $name viewport meta must not pin initial-scale / maximum-scale / user-scalable: " +
+                    "it defeats loadWithOverviewMode and pinch-zoom.\n${metas}",
+                listOf("initial-scale", "minimum-scale", "maximum-scale", "user-scalable")
+                    .none { it in metas.single() },
+            )
+        }
+    }
+
+    @Test fun `the reader WebView is built with overview mode and the wide viewport`() {
+        val src = codeOf("app/src/main/kotlin/app/sterna/ui/message/MessageScreen.kt")
+        val fn = src.substringAfter("internal fun WebView.applyFitSettings() {").substringBefore("\n}\n")
+        for (needle in listOf(
+            "settings.useWideViewPort = true",
+            "settings.loadWithOverviewMode = true",
+            "setInitialScale(0)",
+        )) {
+            assertTrue("applyFitSettings() must contain `$needle`; it was:\n$fn", needle in fn)
+        }
+        assertEquals(
+            "the body WebView's factory must call applyFitSettings() exactly once",
+            1, Regex("\\bapplyFitSettings\\(\\)").findAll(src.replace(Regex("fun WebView\\.applyFitSettings\\(\\)"), "")).count(),
+        )
+        for (banned in listOf("loadWithOverviewMode = false", "useWideViewPort = false")) {
+            assertTrue("`$banned` would undo the fit", banned !in src)
+        }
+        assertTrue("no template may pin initial-scale", "initial-scale" !in src)
+    }
+
+    @Test fun `wide newsletter fixtures reach the page and sit under the caps that fit them`() {
+        // 600px and 800px desktop newsletters and a 3000px image: each must survive the sanitiser
+        // (so the fixture is really too wide) and the page must carry every rule that narrows it,
+        // in BOTH themes, with the roots (html, body) capped as well as their descendants.
+        val cases = mapOf(
+            "newsletter-600.html" to listOf("width=\"600\"", "min-width:600px", "width=\"552\"", "white-space:nowrap"),
+            "newsletter-800.html" to listOf("width:800px", "width=\"800\"", "width=\"3000\"", "white-space:nowrap"),
+        )
+        for ((file, shapes) in cases) {
+            for ((name, theme) in listOf("light" to light, "dark" to dark)) {
+                val page = buildHtmlDocument(email(resource(file)), theme = theme, noContent = noContent)
+                for (shape in shapes) {
+                    assertTrue("$file ($name): `$shape` must survive the sanitiser or the fixture proves nothing", shape in page)
+                }
+                val css = stylesheet(page)
+                for (rule in listOf(
+                    "body * { max-width: 100% !important; min-width: 0 !important; }",
+                    "html, body { max-width: 100% !important; min-width: 0 !important; }",
+                    "img, video, svg, canvas { height: auto !important; }",
+                    "td, th { white-space: normal !important; }",
+                )) {
+                    assertTrue("$file ($name): rule `$rule` is missing from the page", rule in css)
+                }
+            }
+        }
+    }
+
+    private fun codeOf(path: String): String {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, path).isFile } ?: error("cannot find $path above ${File("").absolutePath}")
+        // comment lines out: prose about initial-scale must not trip the bans
+        return File(root, path).readLines().filterNot {
+            val s = it.trim(); s.startsWith("//") || s.startsWith("*") || s.startsWith("/*")
+        }.joinToString("\n")
     }
 }

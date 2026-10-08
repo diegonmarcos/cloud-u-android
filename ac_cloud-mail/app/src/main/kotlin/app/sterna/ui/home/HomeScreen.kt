@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import app.sterna.ui.components.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,7 +58,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
@@ -68,6 +67,7 @@ import app.sterna.ui.components.monogramColor
 import app.sterna.ui.components.monogramRamps
 import app.sterna.ui.rememberMotionEnabled
 import app.sterna.ui.settings.DetailScaffold
+import app.sterna.ui.theme.MailMetrics
 import java.text.DateFormat
 import java.util.Date
 
@@ -151,10 +151,10 @@ internal fun HomeContent(ui: HomeUi, onOpen: (HomeDestination) -> Unit, modifier
         ui.accounts.forEachIndexed { index, account ->
             // A rule between accounts and none before the first: the divider is what says "these
             // numbers stop belonging to the account above", which this page must never leave ambiguous.
-            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            if (index > 0) HorizontalDivider(Modifier.padding(vertical = MailMetrics.s8))
             AccountSection(account, motionOn)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MailMetrics.s16))
     }
 }
 
@@ -164,13 +164,13 @@ private fun NoAccounts(modifier: Modifier) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s32),
         ) {
             Text(
                 stringResource(R.string.home_no_accounts_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MailMetrics.s8))
             Text(
                 stringResource(R.string.home_no_accounts_body),
                 style = MaterialTheme.typography.bodyMedium,
@@ -223,24 +223,24 @@ internal data class HomeAction(val icon: ImageVector, val label: String, val onC
 @Composable
 internal fun ShortcutsRow(actions: List<HomeAction>) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s24),
     ) {
         actions.forEach { action ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier
-                        .size(48.dp)
+                        .size(MailMetrics.s48)
                         .testTag(SHORTCUT_CIRCLE_TAG)
                         .clip(CircleShape)
                         .background(colorResource(GlassOrb.fill))
-                        .border(1.dp, colorResource(GlassOrb.stroke), CircleShape)
+                        .border(MailMetrics.hair, colorResource(GlassOrb.stroke), CircleShape)
                         .clickable(role = Role.Button, onClick = action.onClick),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(action.icon, contentDescription = action.label, tint = MaterialTheme.colorScheme.primary)
                 }
-                Text(action.label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                Text(action.label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = MailMetrics.s4))
             }
         }
     }
@@ -269,8 +269,8 @@ internal fun statTag(accountId: String, key: String) = "home_stat:$accountId:$ke
 @Composable
 private fun QuickmarksRow(actions: List<HomeAction>) {
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
     ) {
         actions.forEach { action ->
             AssistChip(
@@ -343,7 +343,7 @@ private fun accentOf(stats: AccountMailStats): Color =
 @Composable
 private fun Hero(accounts: List<AccountMailStats>, motionOn: Boolean) {
     val total = heroUnread(accounts)
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s16)) {
         if (total != null) {
             CountUp(
                 target = total,
@@ -361,7 +361,7 @@ private fun Hero(accounts: List<AccountMailStats>, motionOn: Boolean) {
         Text(
             stringResource(HomeMood.of(accounts)),
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 8.dp).testTag(HOME_MOOD_TAG),
+            modifier = Modifier.padding(top = MailMetrics.s8).testTag(HOME_MOOD_TAG),
         )
         val counted = accounts.filter { (it.unread ?: 0) > 0 }
         if (counted.isNotEmpty()) UnreadBar(counted, motionOn)
@@ -380,10 +380,10 @@ private fun UnreadBar(accounts: List<AccountMailStats>, motionOn: Boolean) {
     )
     Row(
         Modifier
-            .padding(top = 12.dp)
+            .padding(top = MailMetrics.s12)
             .fillMaxWidth(grown)
-            .height(12.dp)
-            .clip(RoundedCornerShape(6.dp)),
+            .height(MailMetrics.s12)
+            .clip(RoundedCornerShape(MailMetrics.s6)),
     ) {
         accounts.forEach { account ->
             Box(
@@ -396,9 +396,9 @@ private fun UnreadBar(accounts: List<AccountMailStats>, motionOn: Boolean) {
         }
     }
     accounts.forEach { account ->
-        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(accentOf(account)))
-            Spacer(Modifier.width(8.dp))
+        Row(Modifier.padding(top = MailMetrics.s6), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(MailMetrics.s8).clip(CircleShape).background(accentOf(account)))
+            Spacer(Modifier.width(MailMetrics.s8))
             Text(
                 stringResource(R.string.home_bar_legend, account.label, account.unread ?: 0),
                 style = MaterialTheme.typography.bodyMedium,
@@ -416,10 +416,10 @@ private fun AccountSection(stats: AccountMailStats, motionOn: Boolean) {
     val accent = accentOf(stats)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = MailMetrics.s16, end = MailMetrics.s16, top = MailMetrics.s16, bottom = MailMetrics.s8),
     ) {
         Monogram(seed = stats.label, label = stats.label, color = accountColorOf(stats.color))
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(MailMetrics.s12))
         Column {
             Text(
                 stats.label,
@@ -448,7 +448,7 @@ private fun AccountSection(stats: AccountMailStats, motionOn: Boolean) {
             stringResource(R.string.home_account_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag(HOME_ACCOUNT_EMPTY_TAG),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8).testTag(HOME_ACCOUNT_EMPTY_TAG),
         )
         return
     }
@@ -490,7 +490,7 @@ internal fun statsOf(stats: AccountMailStats): List<Stat> = listOf(
 @Composable
 private fun StatRow(accountId: String, stat: Stat, accent: Color, motionOn: Boolean, delayMillis: Int) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -500,7 +500,7 @@ private fun StatRow(accountId: String, stat: Stat, accent: Color, motionOn: Bool
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f, fill = false),
         )
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         if (stat.value == null) {
             Text(
                 stringResource(R.string.home_stat_unread_unavailable),
@@ -524,7 +524,7 @@ private fun StatRow(accountId: String, stat: Stat, accent: Color, motionOn: Bool
 @Composable
 private fun FactRow(label: String, value: String, tag: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -534,7 +534,7 @@ private fun FactRow(label: String, value: String, tag: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f, fill = false),
         )
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Text(value, style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag(tag))
     }
 }

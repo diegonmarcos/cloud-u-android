@@ -231,7 +231,11 @@ class MessageTagRowDensityTest {
 
         /** The single dp figure [pattern] captures, insisting there is exactly one to be sure of. */
         fun dpIn(body: String, pattern: String): Int {
-            val hits = Regex(pattern).findAll(body).map { it.groupValues[1].toInt() }.toList()
+            // A size is a literal in dp or a step of MailMetrics, whose NUMBER is the design size this
+            // arithmetic is stated in - so the model holds whichever way the source spells it.
+            val either = pattern.replace("""(\d+)\.dp""", """(?:(\d+)\.dp|MailMetrics\.s(\d+))""")
+            val hits = Regex(either).findAll(body)
+                .map { (it.groupValues[1].ifEmpty { it.groupValues[2] }).toInt() }.toList()
             check(hits.size == 1) {
                 "expected exactly one `$pattern` to read a dp value from, found $hits in:\n$body"
             }

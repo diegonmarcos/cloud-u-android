@@ -41,11 +41,11 @@ class HomeDestinationWiringTest {
                 "28 folder rows, which is the placement the row exists to avoid; pushed above the " +
                 "divider it lands inside the account header.",
             listOf(
-                "HorizontalDivider(Modifier.padding(bottom = 12.dp))",
+                "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))",
                 "NavigationDrawerItem(",
                 "icon = { Icon(Icons.Filled.Home, contentDescription = null) },",
             ),
-            block(INBOX_SCREEN, "HorizontalDivider(Modifier.padding(bottom = 12.dp))", count = 3),
+            block(INBOX_SCREEN, "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))", count = 3),
         )
         assertEquals(
             "the drawer content is drawn by TWO envelopes — the modal sheet under 1 200 dp and the " +

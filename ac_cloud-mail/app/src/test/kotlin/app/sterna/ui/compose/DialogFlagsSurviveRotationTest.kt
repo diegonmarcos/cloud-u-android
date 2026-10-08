@@ -377,7 +377,7 @@ class DialogFlagsSurviveRotationTest {
         )
         assertPinned(
             SCREEN,
-            "modifier = Modifier.align(Alignment.End).padding(top = 24.dp),",
+            "modifier = Modifier.align(Alignment.End).padding(top = MailMetrics.s24),",
             "⛔ the clock's action row must carry NO weight — this is the whole line, so " +
                 "adding one lands here (#161). Given a weight, the row joins the picker in being " +
                 "measured LAST, out of whatever height is left over, and the measured defect is " +
@@ -390,7 +390,7 @@ class DialogFlagsSurviveRotationTest {
         )
         // Anchored, not counted: `FlowRow(` is used three times in this screen, so the line
         // that has to be one is the one RIGHT ABOVE the action row's own modifier.
-        val actionRowAt = code.indexOf("modifier = Modifier.align(Alignment.End).padding(top = 24.dp),")
+        val actionRowAt = code.indexOf("modifier = Modifier.align(Alignment.End).padding(top = MailMetrics.s24),")
         assertEquals(
             "⛔ the clock's actions must WRAP (#161). Material's own dialog puts them in an " +
                 "`AlertDialogFlowRow`, and this shell replaced that: back to a plain `Row` and, " +
@@ -551,7 +551,7 @@ class DialogFlagsSurviveRotationTest {
                 "file was written for, one level of indirection further in.",
         )
         val weightAt = code.indexOf(".weight(1f, fill = false)")
-        val actionRowAt = code.indexOf("modifier = Modifier.align(Alignment.End).padding(top = 24.dp),")
+        val actionRowAt = code.indexOf("modifier = Modifier.align(Alignment.End).padding(top = MailMetrics.s24),")
         val pickerAt = code.indexOf("picker()")
         val buttonsAt = code.indexOf("buttons()")
         assertTrue(

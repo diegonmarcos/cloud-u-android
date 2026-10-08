@@ -100,8 +100,8 @@ class SharedAccountScreenTest {
                 "modifier = Modifier",
                 ".fillMaxWidth()",
                 ".horizontalScroll(rememberScrollState())",
-                ".padding(horizontal = 16.dp, vertical = 8.dp),",
-                "horizontalArrangement = Arrangement.spacedBy(12.dp),",
+                ".padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),",
+                "horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),",
                 ") {",
                 "ColourSwatch(color = null, selected = colorArgb == null) {",
                 "colorArgb = null; viewModel.setColor(accountId, null); onAccountsChanged()",
@@ -284,7 +284,7 @@ class SharedAccountScreenTest {
         assertEquals(
             listOf(
                 ".padding(",
-                "start = if (indented) 32.dp else 16.dp,",
+                "start = if (indented) MailMetrics.s32 else MailMetrics.s16,",
             ),
             statementsAfter(COMPONENTS, INDENT_MARKER, 2),
         )

@@ -16,13 +16,13 @@ class SettingsDetailTitleInsetTest {
             "DetailScaffold's title slot must draw exactly this, line for line. It is pinned WHOLE, " +
                 "not by looking for the inset line inside it, because both ways found of putting " +
                 "the account address back against the right edge (#146) leave that one line " +
-                "untouched: chaining '.offset(x = 16.dp)' on the NEXT line pushes the glyphs back " +
+                "untouched: chaining '.offset(x = MailMetrics.s16)' on the NEXT line pushes the glyphs back " +
                 "out by exactly what the padding let in, and drawing 'title.take(24) + \"…\"' cuts " +
                 "the address without any of the keywords the other rule blacklists. 'end = 0.dp' " +
                 "dies here too. The 16dp mirrors the inset the platform already lays at the start, " +
                 "and this one slot roofs the twelve settings screens.\n" +
                 "⚠ FALSE RED, read before you 'fix' it: the same fix written on one idiomatic line " +
-                "— Text(title, modifier = Modifier.padding(end = 16.dp)) — renders identically, " +
+                "— Text(title, modifier = Modifier.padding(end = MailMetrics.s16)) — renders identically, " +
                 "pixel for pixel, and still fails here. This test is the only thing holding that " +
                 "formatting (no ktlint, no spotless in this repo); if the reflow is deliberate, " +
                 "reflow the expected list with it.\n" +
@@ -159,7 +159,7 @@ class SettingsDetailTitleInsetTest {
         private val TITLE_SLOT = listOf(
             "Text(",
             "title",
-            "modifier = Modifier.padding(end = 16.dp)",
+            "modifier = Modifier.padding(end = MailMetrics.s16)",
             ")",
         )
 

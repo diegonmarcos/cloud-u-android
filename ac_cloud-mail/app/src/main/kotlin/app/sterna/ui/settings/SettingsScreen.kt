@@ -75,8 +75,8 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -105,7 +105,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import android.content.Context
 import org.openintents.openpgp.util.OpenPgpProviderUtil
 import androidx.compose.animation.EnterTransition
@@ -147,6 +146,7 @@ import app.sterna.ui.components.LoadingRing
 import app.sterna.ui.components.PendingImportAccountsSection
 import app.sterna.core.data.account.AuthType
 import app.sterna.core.data.mail.OAuthProvider
+import app.sterna.ui.theme.MailMetrics
 import android.widget.Toast
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.SnackbarDuration
@@ -537,7 +537,7 @@ private fun AppearanceScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     text = stringResource(R.string.settings_theme_sterna_caption),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 )
             }
             SettingsSection(stringResource(R.string.settings_message_list_section)) {
@@ -856,7 +856,7 @@ private fun TimePickerRow(label: String, minutes: Int, onChange: (Int) -> Unit) 
         modifier = Modifier
             .fillMaxWidth()
             .clickable { show = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -941,11 +941,11 @@ private fun BackupScreen(
                         stringResource(R.string.settings_backup_explainer),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                     )
                     Button(
                         onClick = { exportLauncher.launch("sterna-settings.json") },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     ) { Text(stringResource(R.string.settings_backup_export)) }
                     OutlinedButton(
                         onClick = {
@@ -953,7 +953,7 @@ private fun BackupScreen(
                                 arrayOf("application/json", "application/octet-stream", "text/plain"),
                             )
                         },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     ) { Text(stringResource(R.string.settings_backup_import)) }
                 }
             }
@@ -992,7 +992,7 @@ private fun PrivacySecurityScreen(viewModel: SettingsViewModel, onBack: () -> Un
                         stringResource(R.string.settings_app_lock_unavailable),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16),
                     )
                 }
             }
@@ -1037,14 +1037,14 @@ private fun PrivacySecurityScreen(viewModel: SettingsViewModel, onBack: () -> Un
                         stringResource(R.string.settings_image_allowlist_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                     )
                 }
                 imageAllowlist.sorted().forEach { sender ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                            .padding(start = MailMetrics.s16, end = MailMetrics.s4, top = MailMetrics.s8, bottom = MailMetrics.s8),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -1060,8 +1060,8 @@ private fun PrivacySecurityScreen(viewModel: SettingsViewModel, onBack: () -> Un
                     }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s8),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                 ) {
                     TextButton(onClick = { showAddSender = true }) {
                         Text(stringResource(R.string.settings_image_allowlist_add))
@@ -1162,12 +1162,12 @@ private fun StorageScreen(
                     stringResource(R.string.settings_clear_cache_help),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                 )
                 Button(
                     onClick = { confirm = true },
                     enabled = !clearing,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 ) {
                     Text(
                         if (clearing) {
@@ -1210,10 +1210,10 @@ private fun QuotaRow(quota: QuotaUi) {
     )
     fun fmt(value: Long) = if (isStorage) formatBytes(value) else value.toString()
     val limit = quota.limit?.takeIf { it > 0 }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(MailMetrics.s16))
             Text(
                 if (limit != null) {
                     stringResource(R.string.settings_quota_used_of, fmt(quota.used), fmt(limit))
@@ -1225,7 +1225,7 @@ private fun QuotaRow(quota: QuotaUi) {
             )
         }
         if (limit != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MailMetrics.s8))
             LinearProgressIndicator(
                 progress = { (quota.used.toFloat() / limit).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1237,11 +1237,11 @@ private fun QuotaRow(quota: QuotaUi) {
 @Composable
 private fun StorageStatRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
@@ -1345,10 +1345,10 @@ private fun AccountsScreen(
                 )
             }
             item {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(MailMetrics.s16)) {
                     Button(onClick = onAddAccount, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(MailMetrics.s8))
                         Text(stringResource(R.string.settings_add_account))
                     }
                 }
@@ -1516,8 +1516,8 @@ private fun AccountDetailScreen(
                     null
                 }
                 Column(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    Modifier.fillMaxWidth().padding(MailMetrics.s16),
+                    verticalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                 ) {
                     Text(
                         stringResource(R.string.account_signin_required),
@@ -1562,7 +1562,7 @@ private fun AccountDetailScreen(
                             }
                             AccountsViewModel.AccountSignIn.Starting,
                             AccountsViewModel.AccountSignIn.Connecting ->
-                                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(Modifier.size(MailMetrics.s24), strokeWidth = MailMetrics.s2)
                             is AccountsViewModel.AccountSignIn.Approval ->
                                 InlineDeviceApproval(
                                     s.userCode, s.verificationUri, s.verificationUriComplete,
@@ -1587,8 +1587,8 @@ private fun AccountDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                 ) {
                     ColourSwatch(color = null, selected = colorArgb == null) {
                         colorArgb = null; viewModel.setColor(accountId, null); onAccountsChanged()
@@ -1621,7 +1621,7 @@ private fun AccountDetailScreen(
                         stringResource(R.string.settings_account_notifications_unwatched_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     )
                 }
                 // Read-only delivery status (#17) — transparency, never a control.
@@ -1658,7 +1658,7 @@ private fun AccountDetailScreen(
                         statusText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     )
                     // The relay block (#177) belongs inside both guards. notificationsEnabled: an
                     // address on an account Sterna is told not to fetch is a trap, since the relay
@@ -1764,7 +1764,7 @@ private fun AccountDetailScreen(
                         stringResource(R.string.settings_protocol_jmap)
                     },
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 )
             }
             SettingsSection(stringResource(R.string.settings_identities_section)) {
@@ -1772,7 +1772,7 @@ private fun AccountDetailScreen(
                     stringResource(R.string.settings_identities_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16),
                 )
                 // Two groups: server identities read-only, manual ones editable and the only ones
                 // written back on Save. Never seed the editable list from the merged
@@ -1832,7 +1832,7 @@ private fun AccountDetailScreen(
                     Text(
                         stringResource(R.string.settings_identities_server_group),
                         style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                     )
                     serverIdentities.forEach { server ->
                         val emailKey = server.email.trim().lowercase()
@@ -1844,7 +1844,7 @@ private fun AccountDetailScreen(
                         val rowId = override?.id ?: server.id
                         val isDefault = defaultIdentityId == rowId || defaultIdentityId == server.id
                         val expanded = rowId in expandedRows
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Column(Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
                             // The address heads the row, folded or not: it says whose fields these are.
                             IdentityRowHeader(
                                 email = server.email,
@@ -1871,7 +1871,7 @@ private fun AccountDetailScreen(
                                     onValueChange = { v -> overrideServer(server) { it.copy(name = v) } },
                                     label = { Text(stringResource(R.string.settings_display_name_label)) },
                                     singleLine = true,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s8),
                                 )
                                 // The identity's NAMED signatures (#206), migrated on read from the
                                 // single pre-#206 one, so an override that has never been touched
@@ -1893,7 +1893,7 @@ private fun AccountDetailScreen(
                                     newId = { java.util.UUID.randomUUID().toString() },
                                 )
                             }
-                            HorizontalDivider(Modifier.padding(top = 12.dp))
+                            HorizontalDivider(Modifier.padding(top = MailMetrics.s12))
                         }
                     }
                 }
@@ -1902,7 +1902,7 @@ private fun AccountDetailScreen(
                 Text(
                     stringResource(R.string.settings_identities_manual_group),
                     style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 )
                 identities.forEachIndexed { index, identity ->
                     // Server-email overrides are rendered in the server group above, not here.
@@ -1919,7 +1919,7 @@ private fun AccountDetailScreen(
                     val notOnServer = trimmedEmail.isNotBlank() && !emailInvalid &&
                         serverEmails.isNotEmpty() && trimmedEmail.lowercase() !in serverEmails
                     val expanded = identity.id in expandedRows
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8)) {
                         IdentityRowHeader(
                             email = trimmedEmail,
                             isDefault = identity.id == defaultIdentityId,
@@ -1939,7 +1939,7 @@ private fun AccountDetailScreen(
                                 onValueChange = { v -> update { it.copy(name = v) } },
                                 label = { Text(stringResource(R.string.settings_display_name_label)) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s8),
                             )
                             OutlinedTextField(
                                 value = identity.email,
@@ -1963,7 +1963,7 @@ private fun AccountDetailScreen(
                                         },
                                     )
                                 },
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
                             )
                             // The identity's NAMED signatures (#206); see the server group above.
                             SignatureListEditor(
@@ -1979,7 +1979,7 @@ private fun AccountDetailScreen(
                                 newId = { java.util.UUID.randomUUID().toString() },
                             )
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s12),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 // Remove is gated so one identity remains across BOTH groups.
@@ -1999,7 +1999,7 @@ private fun AccountDetailScreen(
                                 }
                             }
                         }
-                        HorizontalDivider(Modifier.padding(top = 12.dp))
+                        HorizontalDivider(Modifier.padding(top = MailMetrics.s12))
                     }
                 }
                 if (totalIdentities <= 1) {
@@ -2007,7 +2007,7 @@ private fun AccountDetailScreen(
                         stringResource(R.string.settings_identities_min_one),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     )
                 }
                 OutlinedButton(
@@ -2020,7 +2020,7 @@ private fun AccountDetailScreen(
                         expandedRows = expandedRows + added.id
                         markEdited()
                     },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 ) {
                     Text(stringResource(R.string.settings_add_identity))
                 }
@@ -2068,16 +2068,16 @@ private fun AccountDetailScreen(
                     stringResource(R.string.settings_clear_account_cache_help),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                 )
                 OutlinedButton(
                     onClick = { viewModel.clearAccountCache(accountId) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
                 ) {
                     Text(stringResource(R.string.settings_clear_account_cache))
                 }
             }
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(MailMetrics.s16), verticalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
                 OutlinedButton(
                     onClick = {
                         viewModel.testConnection(
@@ -2093,24 +2093,24 @@ private fun AccountDetailScreen(
                 }
                 when (val t = connTest) {
                     AccountsViewModel.ConnTest.Testing -> Row(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = MailMetrics.s4),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8),
                     ) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(Modifier.size(MailMetrics.s18), strokeWidth = MailMetrics.s2)
                         Text(stringResource(R.string.settings_test_connecting), style = MaterialTheme.typography.bodyMedium)
                     }
                     AccountsViewModel.ConnTest.Ok -> Text(
                         stringResource(R.string.settings_test_ok),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = MailMetrics.s4),
                     )
                     is AccountsViewModel.ConnTest.Failed -> Text(
                         stringResource(R.string.settings_test_failed, t.message),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = MailMetrics.s4),
                     )
                     else -> Unit
                 }
@@ -2120,7 +2120,7 @@ private fun AccountDetailScreen(
                         stringResource(R.string.settings_unsaved_changes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = MailMetrics.s4),
                     )
                 }
                 // Says what this button owns: four sections above write on tap and leave it nothing
@@ -2140,7 +2140,7 @@ private fun AccountDetailScreen(
                         stringResource(R.string.settings_identity_not_created, failure.email, failure.detail),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = MailMetrics.s4),
                     )
                 }
                 Button(
@@ -2225,14 +2225,14 @@ private fun RelayAddressSection(accountId: String, viewModel: AccountsViewModel)
             stringResource(R.string.settings_push_relay_explain),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
         )
         TextButton(
             onClick = {
                 viewModel.dropRelayAddress(accountId)
                 relay = viewModel.relayAddress(accountId)
             },
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s8),
         ) { Text(stringResource(R.string.settings_push_relay_remove)) }
     } else if (relay.requested) {
         RelayAddressNote(title, stringResource(R.string.settings_push_relay_waiting))
@@ -2243,7 +2243,7 @@ private fun RelayAddressSection(accountId: String, viewModel: AccountsViewModel)
                 viewModel.dropRelayAddress(accountId)
                 relay = viewModel.relayAddress(accountId)
             },
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s8),
         ) { Text(stringResource(R.string.settings_push_relay_remove)) }
     } else {
         RelayAddressNote(title, stringResource(R.string.settings_push_relay_explain))
@@ -2252,7 +2252,7 @@ private fun RelayAddressSection(accountId: String, viewModel: AccountsViewModel)
                 viewModel.requestRelayAddress(accountId)
                 relay = viewModel.relayAddress(accountId)
             },
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s8),
         ) { Text(stringResource(R.string.settings_push_relay_get)) }
     }
 }
@@ -2263,13 +2263,13 @@ private fun RelayAddressNote(title: String, note: String) {
     Text(
         title,
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        modifier = Modifier.padding(start = MailMetrics.s16, end = MailMetrics.s16, top = MailMetrics.s12),
     )
     Text(
         note,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 
@@ -2299,7 +2299,7 @@ private fun InlineDeviceApproval(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(userCode, style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MailMetrics.s8))
         Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.connect_oauth_copy_code))
     }
     Button(
@@ -2315,8 +2315,8 @@ private fun InlineDeviceApproval(
         },
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.connect_oauth_open_browser)) }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12)) {
+        CircularProgressIndicator(modifier = Modifier.size(MailMetrics.s20), strokeWidth = MailMetrics.s2)
         TextButton(onClick = onCancel) { Text(stringResource(R.string.connect_oauth_cancel)) }
     }
 }
@@ -2358,11 +2358,11 @@ private fun PgpAccountSection(
             stringResource(R.string.settings_pgp_missing_help),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16),
         )
         OutlinedButton(
             onClick = { leaveOnce { openUrl(context, OPENKEYCHAIN_FDROID_URL) } },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         ) {
             Text(stringResource(R.string.settings_pgp_install))
         }
@@ -2413,7 +2413,7 @@ private fun PgpAccountSection(
     )
     if (liveAccount.pgpEnabled) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -2458,7 +2458,7 @@ private fun PgpAccountSection(
             failed.message ?: stringResource(R.string.settings_pgp_error),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
         )
     }
 }
@@ -2495,7 +2495,7 @@ private fun PlaintextSecurityWarning(security: ConnectionSecurity) {
         stringResource(R.string.settings_security_none_warning),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
     )
 }
 
@@ -2560,7 +2560,7 @@ private fun VacationScreen(
 @Composable
 private fun BoxScope.VacationNote(text: String, onRetry: (() -> Unit)? = null) {
     Column(
-        modifier = Modifier.align(Alignment.Center).padding(32.dp),
+        modifier = Modifier.align(Alignment.Center).padding(MailMetrics.s32),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -2570,7 +2570,7 @@ private fun BoxScope.VacationNote(text: String, onRetry: (() -> Unit)? = null) {
         )
         if (onRetry != null) {
             // Filled Button to match every other error-recovery "Retry" (inbox, message, filters).
-            Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) {
+            Button(onClick = onRetry, modifier = Modifier.padding(top = MailMetrics.s16)) {
                 Text(stringResource(R.string.settings_vacation_retry))
             }
         }
@@ -2587,7 +2587,7 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 stringResource(R.string.settings_vacation_account, state.accountLabel),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
             )
         }
         // In the head of the screen, not above Save: it is about the state the account is in, not
@@ -2612,7 +2612,7 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         SettingsSection(stringResource(R.string.settings_vacation_section)) {
@@ -2634,7 +2634,7 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 minLines = 4,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         SettingsSection(stringResource(R.string.settings_vacation_period_section)) {
@@ -2654,7 +2654,7 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 stringResource(R.string.settings_vacation_invalid_dates),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         if (state.errorKind == VacationError.SAVE) {
@@ -2662,7 +2662,7 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 stringResource(R.string.settings_vacation_save_error, state.errorDetail),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
         }
         Button(
@@ -2671,12 +2671,12 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
             enabled = !state.saving && state.dirty,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s16),
         ) {
             if (state.saving) {
                 CircularProgressIndicator(
-                    modifier = Modifier.width(20.dp),
-                    strokeWidth = 2.dp,
+                    modifier = Modifier.width(MailMetrics.s20),
+                    strokeWidth = MailMetrics.s2,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
@@ -2688,10 +2688,10 @@ private fun VacationForm(state: VacationUiState, viewModel: VacationViewModel) {
                 stringResource(R.string.settings_vacation_saved),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp).align(Alignment.CenterHorizontally),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16).align(Alignment.CenterHorizontally),
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MailMetrics.s24))
     }
 }
 
@@ -2703,7 +2703,7 @@ private fun VacationDateRow(label: String, millis: Long?, onPick: (Long?) -> Uni
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showPicker = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -2766,7 +2766,7 @@ internal fun DetailScaffold(
                     // empty, and an ellipsised address is unreadable.
                     Text(
                         title,
-                        modifier = Modifier.padding(end = 16.dp),
+                        modifier = Modifier.padding(end = MailMetrics.s16),
                     )
                 },
                 navigationIcon = {
@@ -2795,7 +2795,7 @@ private fun IdentityRowHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(vertical = 8.dp),
+            .padding(vertical = MailMetrics.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -2809,7 +2809,7 @@ private fun IdentityRowHeader(
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (isDefault) {
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(MailMetrics.s8))
                     Text(
                         stringResource(R.string.settings_identity_default_sender),
                         style = MaterialTheme.typography.labelSmall,
@@ -2818,7 +2818,7 @@ private fun IdentityRowHeader(
                         modifier = Modifier
                             .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.s2),
                     )
                 }
             }
@@ -2857,12 +2857,12 @@ private fun DefaultIdentityRadioRow(selected: Boolean, onSelect: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
+            .padding(top = MailMetrics.s8)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(MailMetrics.s8))
         Column {
             Text(
                 stringResource(R.string.settings_identity_default_sender),
@@ -2889,11 +2889,11 @@ private fun DeliveryModeOption(
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s10),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(MailMetrics.s16))
         Column {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(

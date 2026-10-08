@@ -20,8 +20,6 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,6 +50,7 @@ import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.theme.LocalMailListPalette
 import app.sterna.ui.theme.MailListDimens
 import app.sterna.ui.theme.MailListPalette
+import app.sterna.ui.theme.MailMetrics
 import app.sterna.ui.theme.mailListTextInk
 import app.sterna.ui.rememberMotionEnabled
 import androidx.compose.ui.Alignment
@@ -76,7 +75,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import app.sterna.R
@@ -202,9 +200,9 @@ fun EmailListItem(
     val mailPalette = LocalMailListPalette.current
     val listTextInk = mailListTextInk(unread, mailPalette)
     val rowPadding = when (density) {
-        ListDensity.COMPACT -> 6.dp
-        ListDensity.NORMAL -> 10.dp
-        ListDensity.SPACED -> 16.dp
+        ListDensity.COMPACT -> MailMetrics.s6
+        ListDensity.NORMAL -> MailMetrics.s10
+        ListDensity.SPACED -> MailMetrics.s16
     }
     val previewLines = LocalPreviewLines.current.lines
     // Today → the time, this year → day and month, any other year → a short numeric date, so a
@@ -266,7 +264,7 @@ fun EmailListItem(
             .clip(MailListDimens.shape)
             .background(rowColor)
             .combinedClickable(onClick = onClick, onLongClick = enterSelection)
-            .padding(start = 16.dp, end = 4.dp, top = rowPadding, bottom = rowPadding),
+            .padding(start = MailMetrics.s16, end = MailMetrics.s4, top = rowPadding, bottom = rowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The sender's avatar is on the reader's switch (#144): off, no avatar and no spacing. The
@@ -280,7 +278,7 @@ fun EmailListItem(
                 name = recipient?.display() ?: senderName,
                 photoUri = null,
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MailMetrics.s12))
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -299,17 +297,17 @@ fun EmailListItem(
                 // A trashed draft shows its recipient like a sent mail (#69), so mark it "(Draft)"
                 // wherever it surfaces to keep the two apart.
                 if (showDraftBadge) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(MailMetrics.s6))
                     DraftLabel(fill = chipBackground)
                 }
                 // A second chip, right of "(Draft)": the phone is still holding this one for the
                 // server (#95). Two chips rather than one label, so an uploaded draft and a held
                 // one read the same up to the extra word.
                 if (showNotUploadedBadge) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(MailMetrics.s6))
                     NotUploadedLabel(fill = chipBackground)
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(MailMetrics.s8))
                 Text(
                     text = receivedLabel,
                     style = MaterialTheme.typography.labelMedium,
@@ -336,7 +334,7 @@ fun EmailListItem(
                 // a thread whose other messages sit in Trash would show a bogus "(1)" pill (#75).
                 // Tappable when a handler is given, otherwise a static count badge.
                 if (threadExpandable && threadCount > 1) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(MailMetrics.s6))
                     ThreadPill(
                         count = threadCount,
                         expanded = expanded,
@@ -360,7 +358,7 @@ fun EmailListItem(
                         fontStyle = FontStyle.Italic,
                         maxLines = previewLines,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 12.dp),
+                        modifier = Modifier.padding(start = MailMetrics.s12),
                     )
                 }
             }
@@ -380,7 +378,7 @@ fun EmailListItem(
                 ink = listTextInk.color,
             )
             originLabel?.takeIf { it.isNotBlank() }?.let { label ->
-                Spacer(Modifier.size(4.dp))
+                Spacer(Modifier.size(MailMetrics.s4))
                 // Tint the chip with the account's accent when there is one; a folder has none.
                 val chipColor = originColor ?: MaterialTheme.colorScheme.primary
                 Text(
@@ -395,7 +393,7 @@ fun EmailListItem(
                             if (originColor != null) originColor.copy(alpha = 0.16f)
                             else chipBackground,
                         )
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.s2),
                 )
             }
         }
@@ -404,12 +402,12 @@ fun EmailListItem(
         // shown. It still appears for a row that has the flag but no parts: a message cached before
         // schema v28, or a search hit, where "there is something in here" is all that is known.
         if (email.hasAttachment && attachmentParts.isEmpty()) {
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(MailMetrics.s4))
             Icon(
                 Icons.Filled.AttachFile,
                 contentDescription = stringResource(R.string.a11y_has_attachment),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(MailMetrics.s18),
             )
         }
         if (onToggleFavourite != null) {
@@ -441,7 +439,7 @@ fun EmailListItem(
                     .minimumInteractiveComponentSize()
                     .clip(CircleShape)
                     .clickable(onClick = onToggleFavourite)
-                    .padding(8.dp)
+                    .padding(MailMetrics.s8)
                     .scale(pop.value)
                     .clearAndSetSemantics {
                         contentDescription = favLabel
@@ -489,9 +487,9 @@ private fun ThreadPill(
                 stateDescription = stateLabel
                 role = Role.Button
             }
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = MailMetrics.s8, vertical = MailMetrics.s4)
     } else {
-        base.padding(horizontal = 6.dp, vertical = 1.dp)
+        base.padding(horizontal = MailMetrics.s6, vertical = MailMetrics.hair)
     }
     Row(modifier = pillModifier, verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -501,12 +499,12 @@ private fun ThreadPill(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (onToggleExpand != null) {
-            Spacer(Modifier.width(2.dp))
+            Spacer(Modifier.width(MailMetrics.s2))
             Icon(
                 Icons.Filled.ExpandMore,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp).rotate(rotation),
+                modifier = Modifier.size(MailMetrics.s16).rotate(rotation),
             )
         }
     }
@@ -531,7 +529,7 @@ private fun NotUploadedLabel(fill: Color) {
         modifier = Modifier
             .clip(MaterialTheme.shapes.small)
             .background(fill)
-            .padding(horizontal = 6.dp, vertical = 1.dp),
+            .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.hair),
     )
 }
 
@@ -545,7 +543,7 @@ private fun DraftLabel(fill: Color) {
         modifier = Modifier
             .clip(MaterialTheme.shapes.small)
             .background(fill)
-            .padding(horizontal = 6.dp, vertical = 1.dp),
+            .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.hair),
     )
 }
 
@@ -623,7 +621,7 @@ private fun ListRowActions(
                 fill = chipBackground,
                 openingKey = openingAttachmentKey,
                 onOpen = onOpenAttachment,
-                modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp),
+                modifier = Modifier.align(Alignment.CenterVertically).padding(start = MailMetrics.s4),
             )
         }
     }
@@ -677,8 +675,8 @@ private fun AttachmentChips(
 ) {
     FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s6),
+        verticalArrangement = Arrangement.spacedBy(MailMetrics.s4),
     ) {
         parts.take(MAX_ATTACHMENT_CHIPS).forEach { part ->
             AttachmentChip(
@@ -697,7 +695,7 @@ private fun AttachmentChips(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .background(fill)
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                    .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.s3),
             )
         }
     }
@@ -720,7 +718,7 @@ private fun AttachmentChip(
             .clip(MaterialTheme.shapes.small)
             .background(fill)
             .clickable(enabled = !busy, onClick = onOpen)
-            .padding(horizontal = 6.dp, vertical = 3.dp)
+            .padding(horizontal = MailMetrics.s6, vertical = MailMetrics.s3)
             .clearAndSetSemantics {
                 contentDescription = spoken
                 role = Role.Button
@@ -731,8 +729,8 @@ private fun AttachmentChip(
         // chip that answers, and the row does not reflow while it downloads.
         if (busy) {
             CircularProgressIndicator(
-                strokeWidth = 1.5.dp,
-                modifier = Modifier.size(12.dp),
+                strokeWidth = MailMetrics.hair,
+                modifier = Modifier.size(MailMetrics.s12),
                 color = MaterialTheme.colorScheme.primary,
             )
         } else {
@@ -740,10 +738,10 @@ private fun AttachmentChip(
                 Icons.Filled.AttachFile,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(MailMetrics.s12),
             )
         }
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(MailMetrics.s4))
         Text(
             text = attachmentChipLabel(name),
             style = MaterialTheme.typography.labelSmall,

@@ -23,11 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.text.MailAiRegistry
 import app.sterna.ui.text.MailTextToolsPrefs
 import app.sterna.ui.text.textToolsClient
+import app.sterna.ui.theme.MailMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -71,12 +71,12 @@ private fun TextToolChoiceGroup(
     selectedId: String,
     onSelect: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = MailMetrics.s8)) {
         Text(
             title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
         )
         options.forEach { option ->
             Row(
@@ -85,14 +85,14 @@ private fun TextToolChoiceGroup(
                     // The whole row is the target, not just the button: a 20dp radio is a miss
                     // waiting to happen and this app's other option rows already work this way.
                     .clickable { onSelect(option.id) }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RadioButton(selected = option.id == selectedId, onClick = { onSelect(option.id) })
                 Text(
                     option.label,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 12.dp),
+                    modifier = Modifier.padding(start = MailMetrics.s12),
                 )
             }
         }
@@ -109,7 +109,7 @@ private fun TextToolChoiceGroup(
  */
 @Composable
 private fun ComposedPromptPreview(prompt: String) {
-    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(MailMetrics.s16)) {
         Text(
             stringResource(R.string.settings_text_prompt_preview_title),
             style = MaterialTheme.typography.titleSmall,
@@ -118,12 +118,12 @@ private fun ComposedPromptPreview(prompt: String) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s8),
         ) {
             Text(
                 prompt.ifBlank { stringResource(R.string.settings_text_prompt_preview_empty) },
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.padding(MailMetrics.s12),
             )
         }
     }
@@ -192,7 +192,7 @@ internal fun MailAiRoutingScreen(onBack: () -> Unit) {
             Text(
                 stringResource(R.string.settings_text_ai_routing_note),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(MailMetrics.s16),
             )
             TextToolChoiceGroup(
                 title = stringResource(R.string.settings_text_provider),
@@ -213,7 +213,7 @@ internal fun MailAiRoutingScreen(onBack: () -> Unit) {
             Text(
                 stringResource(R.string.settings_text_key_note),
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(MailMetrics.s16),
             )
         }
     }
@@ -317,7 +317,7 @@ internal fun MailTranslationScreen(onBack: () -> Unit) {
             Text(
                 stringResource(R.string.settings_text_translation_note),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(MailMetrics.s16),
             )
             OutlinedTextField(
                 value = target,
@@ -330,7 +330,7 @@ internal fun MailTranslationScreen(onBack: () -> Unit) {
                 },
                 singleLine = true,
                 label = { Text(stringResource(R.string.settings_text_translation_target)) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16),
             )
         }
     }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -18,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.ui.browser.InAppBrowser
 import app.sterna.ui.rememberLeaveOnce
+import app.sterna.ui.theme.MailMetrics
 
 /** Microsoft's app-password creation page (used for the OAuth→app-password fallback). */
 private const val MS_APP_PASSWORD_URL = "https://account.live.com/proofs/AppPassword"
@@ -33,10 +33,10 @@ fun AppPasswordHelpLink() {
         onClick = {
             leaveOnce { InAppBrowser.openLink(context, Uri.parse(MS_APP_PASSWORD_URL)) }
         },
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+        contentPadding = PaddingValues(horizontal = MailMetrics.s4, vertical = 0.dp),
     ) {
-        Icon(Icons.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
+        Icon(Icons.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(MailMetrics.s16))
+        Spacer(Modifier.width(MailMetrics.s6))
         Text(stringResource(R.string.connect_app_password_help))
     }
 }

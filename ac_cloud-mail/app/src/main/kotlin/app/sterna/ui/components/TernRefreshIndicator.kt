@@ -24,9 +24,9 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import app.sterna.ui.rememberMotionEnabled
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * Sterna's signature pull-to-refresh: the launcher-icon tern (a filled teal
@@ -65,8 +65,8 @@ fun TernRefreshIndicator(
     val disc = MaterialTheme.colorScheme.surface
     Canvas(
         modifier
-            .padding(top = 8.dp)
-            .size(54.dp)
+            .padding(top = MailMetrics.s8)
+            .size(MailMetrics.s54)
             .graphicsLayer {
                 alpha = appear
                 val sc = 0.6f + 0.4f * appear

@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.unit.dp
 import app.sterna.R
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * The one surface both tools report through, on both surfaces they run on.
@@ -75,7 +75,7 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
                             },
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 12.dp))
+                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = MailMetrics.s12))
                     }
                     // The engine's OWN reason, verbatim — "no API key for OpenRouter", "the
                     // model cut the reply off", the provider's HTTP error. A generic apology
@@ -156,7 +156,7 @@ fun TextToolIconRow(
     onPick: (TextTool) -> Unit,
 ) {
     Row(
-        modifier = Modifier.padding(horizontal = 8.dp),
+        modifier = Modifier.padding(horizontal = MailMetrics.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         surface.tools.forEach { tool ->

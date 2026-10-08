@@ -64,13 +64,13 @@ class ListMonogramWiringTest {
      * is inside the guard.
      */
     @Test fun `the row has exactly one twelve-dp spacer, the one inside the guard`() {
-        val spacers = codeLines(EMAIL_LIST_ITEM).filter { it == "Spacer(Modifier.width(12.dp))" }
+        val spacers = codeLines(EMAIL_LIST_ITEM).filter { it == "Spacer(Modifier.width(MailMetrics.s12))" }
         assertEquals(
-            "EmailListItem.kt must contain 'Spacer(Modifier.width(12.dp))' exactly once — the one " +
+            "EmailListItem.kt must contain 'Spacer(Modifier.width(MailMetrics.s12))' exactly once — the one " +
                 "the guard above pins INSIDE the condition. A second one, in particular just " +
                 "before the 'if', survives the block rule (which only compares forwards) and leaves " +
                 "12 dp of nothing at the start of every row when the initials are off, on top of " +
-                "the Row's own padding(start = 16.dp): a 28 dp empty band down the whole list. " +
+                "the Row's own padding(start = MailMetrics.s16): a 28 dp empty band down the whole list. " +
                 "Found ${spacers.size}.",
             1,
             spacers.size,
@@ -382,7 +382,7 @@ class ListMonogramWiringTest {
             "name = recipient?.display() ?: senderName,",
             "photoUri = null,",
             ")",
-            "Spacer(Modifier.width(12.dp))",
+            "Spacer(Modifier.width(MailMetrics.s12))",
             "}",
         )
 

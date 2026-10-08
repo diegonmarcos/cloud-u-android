@@ -113,10 +113,10 @@ class LoadingRingTest {
             listOf(
                 "if (full != null && !bodyReady && spinnerDue) {",
                 "Box(",
-                "Modifier.fillMaxWidth().heightIn(min = 80.dp).padding(24.dp).align(Alignment.Center),",
+                "Modifier.fillMaxWidth().heightIn(min = MailMetrics.s80).padding(MailMetrics.s24).align(Alignment.Center),",
                 "contentAlignment = Alignment.Center,",
                 ") {",
-                "LoadingRing(Modifier.size(24.dp), strokeWidth = 2.dp)",
+                "LoadingRing(Modifier.size(MailMetrics.s24), strokeWidth = MailMetrics.s2)",
                 "}",
             ),
             "the body-layout spinner changed. It must be LoadingRing at 24 dp with a 2 dp stroke " +
@@ -331,7 +331,9 @@ class LoadingRingTest {
         private const val CALL = "CircularProgressIndicator("
 
         /** `Modifier.size(20.dp)`, `.width(20.dp)`, `.height(20.dp)` — a size written out in dp. */
-        private val SIZE_CONSTRAINT = Regex("""\.(?:size|width|height)\(\s*(\d+(?:\.\d+)?)\s*\.dp\s*\)""")
+        private val SIZE_CONSTRAINT = Regex(
+            """\.(?:size|width|height)\(\s*(?:(\d+(?:\.\d+)?)\s*\.dp|MailMetrics\.s(\d+))\s*\)""",
+        )
 
         /**
          * THE RULE, as a pure function: the 1-based line numbers of every full-size
@@ -345,7 +347,9 @@ class LoadingRingTest {
                 if (!before.isLetterOrDigit() && before != '_') {
                     val sizes = SIZE_CONSTRAINT
                         .findAll(argumentsAt(code, at + CALL.length - 1))
-                        .map { it.groupValues[1].toDouble() }
+                        // A literal in dp, or a MailMetrics step - whose NUMBER is the design size the
+                        // 24 dp line was drawn against (see MailMetrics), so both read the same.
+                        .map { (it.groupValues[1].ifEmpty { it.groupValues[2] }).toDouble() }
                         .toList()
                     if (sizes.isEmpty() || sizes.any { it > MAX_SMALL_DP }) {
                         sites += code.take(at).count { it == '\n' } + 1
@@ -422,7 +426,7 @@ class LoadingRingTest {
             RingSite(
                 INBOX_SCREEN,
                 "the inbox's paging-append footer, while the server page loads",
-                "LoadingRing(Modifier.size(28.dp), strokeWidth = 2.dp)",
+                "LoadingRing(Modifier.size(MailMetrics.s28), strokeWidth = MailMetrics.s2)",
             ),
             RingSite(
                 SEARCH_SCREEN,
@@ -477,7 +481,7 @@ class LoadingRingTest {
             RingSite(
                 COMPOSE_SCREEN,
                 "the composer, while the message is being sent",
-                "if (sending) LoadingRing(Modifier.padding(horizontal = 16.dp))",
+                "if (sending) LoadingRing(Modifier.padding(horizontal = MailMetrics.s16))",
             ),
         )
     }

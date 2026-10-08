@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import app.sterna.ui.theme.MailMetrics
 
 /**
  * A calm, coastal line-art scene for an empty screen. Each one is drawn as a
@@ -42,8 +42,8 @@ private fun ImageVector.Builder.fill(d: String, color: Color) {
 private fun buildArt(name: String, block: ImageVector.Builder.() -> Unit): ImageVector =
     ImageVector.Builder(
         name = name,
-        defaultWidth = 120.dp,
-        defaultHeight = 120.dp,
+        defaultWidth = MailMetrics.s120,
+        defaultHeight = MailMetrics.s120,
         viewportWidth = 120f,
         viewportHeight = 120f,
     ).apply(block).build()
@@ -97,14 +97,14 @@ fun EmptyState(
     val accent = MaterialTheme.colorScheme.tertiary
     val image = remember(art, ink, accent) { artVector(art, ink, accent) }
     Column(
-        modifier = modifier.padding(32.dp),
+        modifier = modifier.padding(MailMetrics.s32),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(MailMetrics.s12),
     ) {
         Image(
             imageVector = image,
             contentDescription = null,
-            modifier = Modifier.size(128.dp),
+            modifier = Modifier.size(MailMetrics.s128),
         )
         Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         if (body != null) {

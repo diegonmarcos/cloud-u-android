@@ -20,12 +20,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.sterna.R
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.push.PushController
 import app.sterna.ui.components.AccountPalette
+import app.sterna.ui.theme.MailMetrics
 
 /** The account the `sharedAccount/{id}` route may show: a delegated one, and only that. An id naming
  *  a login resolves to nothing, so this screen's writes can never land on a login's row. */
@@ -76,15 +76,15 @@ internal fun SharedAccountScreen(
                 stringResource(R.string.account_shared),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
             )
             SettingsSection(stringResource(R.string.settings_account_colour_section)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
+                    horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
                 ) {
                     ColourSwatch(color = null, selected = colorArgb == null) {
                         colorArgb = null; viewModel.setColor(accountId, null); onAccountsChanged()
@@ -114,7 +114,7 @@ internal fun SharedAccountScreen(
                         stringResource(R.string.settings_account_notifications_unwatched_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s4),
                     )
                 }
             }
