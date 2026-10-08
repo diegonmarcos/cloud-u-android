@@ -74,7 +74,17 @@ object VaultMailImport {
         for (d in plan.accounts) {
             val existing = store.accounts().firstOrNull { it.username.equals(d.email, ignoreCase = true) }
             val id = when {
-                existing != null -> { Log.i(AccountStore.TAG, "vault mail: ${d.email} already stored"); existing.id }
+                existing != null -> {
+                    // A declared account that is already here but cannot authenticate (no secret,
+                    // or a blob this phone's Keystore no longer reads) takes the vault's password:
+                    // otherwise the app keeps it listed, refuses to make it current, and shows the
+                    // first account that CAN log in instead — the owner tapped me@ and saw no-reply@.
+                    if (store.credentials(existing.id) == null && d.password != null) {
+                        store.updatePassword(existing.id, d.password)
+                        Log.i(AccountStore.TAG, "vault mail: ${d.email} already stored — credentials restored from the vault")
+                    } else Log.i(AccountStore.TAG, "vault mail: ${d.email} already stored")
+                    existing.id
+                }
                 d.password == null -> { Log.i(AccountStore.TAG, "vault mail: ${d.email} has no password in the vault; skipped"); continue }
                 else -> store.add(
                     server = plan.jmap, username = d.email, password = d.password, accountName = d.email,

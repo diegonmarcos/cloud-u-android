@@ -89,5 +89,12 @@ grep -q "a pending mail becomes declared" "$JVM" && grep -q 'assertEquals(mail.t
   && ok "AccountFleetTest: pending settings › mail becomes declared with sterna_account.vault_mail = the section text" \
   || bad "AccountFleetTest has no #mail derive case"
 
+# 2026-10-08: the owner tapped me@ and saw no-reply@ — me@ existed before the import with no
+# usable credential, and Sterna makes the first account that CAN log in current instead.
+grep -q 'store.credentials(existing.id) == null && d.password != null' "$ADAPTER" \
+    && grep -q 'store.updatePassword(existing.id, d.password)' "$ADAPTER" \
+    && ok "an already-stored declared account without a usable credential takes the vault's password" \
+    || bad "an existing account keeps its dead credential"
+
 echo; echo "test-vault-mail-import: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
