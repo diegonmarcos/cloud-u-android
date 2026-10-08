@@ -59,7 +59,7 @@ class AgentApiContractTest {
         assertNull(AgentApiContract.addressRefusal(a(100, 63, 0, 1)))
         assertNotNull(AgentApiContract.addressRefusal(a(0, 0, 0, 0)))
         assertNotNull(AgentApiContract.addressRefusal(InetAddress.getByName("fd00::1")))
-        assertNull(AgentApiContract.addressRefusal(InetAddress.getByName("2606:4700:4700::1111")))
+        assertNull(AgentApiContract.addressRefusal(InetAddress.getByName("2001:db8::1")))
     }
 
     @Test fun `redirects resolve relative to the page`() {
