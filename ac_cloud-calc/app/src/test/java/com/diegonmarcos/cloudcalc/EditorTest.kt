@@ -45,7 +45,7 @@ class EditorTest {
         assertEquals("sin(|", Editor.press(Edit.at(""), k("sin", "sin(")).show())
     }
 
-    @Test fun `editing after a result: the text is what is evaluated, 600 over 3 then 600 over 4`() {
+    @Test fun `editing after a result evaluates the edited text, 600 over 3 then 600 over 4`() {
         // = puts the result in the field with the cursor at its end ...
         val afterEquals = Editor.replaceAll("200")
         assertEquals(3, afterEquals.start)
