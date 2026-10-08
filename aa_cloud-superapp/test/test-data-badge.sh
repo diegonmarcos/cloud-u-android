@@ -109,7 +109,9 @@ if 'mobilePerSubscription' not in s:            print('per-SIM split is not read
 elif 'hasPhoneState' not in s:                  print('never checks READ_PHONE_STATE')
 elif 'SubscriptionManager' in s or 'getSubscriberId' in s or 'subscriberId' in s: print('re-implements the SIM lookup')
 elif 'GRANT_PHONE' not in m or 'Grant phone' not in m: print('no phone grant button')
-elif 'forecast: learning' not in m or 'fun forecastBytes' not in m: print('no forecast / learning state')
+elif '"learning"' not in m or 'fun forecastBytes' not in m: print('no forecast / learning state')
+elif 'avg30Estimate' not in m or '30-day avg' not in m or 'this month avg' not in m: print('the two labelled estimates are not both there')
+elif 'startOfDaysAgo(30' not in s:               print('the 30-day window is not asked of the engine')
 elif 'exact' not in m:                          print('the model ignores the engine\'s exact flag')
 else:                                           print('OK')
 PY

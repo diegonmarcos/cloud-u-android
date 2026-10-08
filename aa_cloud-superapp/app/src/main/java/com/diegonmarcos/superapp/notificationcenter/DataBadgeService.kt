@@ -101,10 +101,15 @@ class DataBadgeService : Service() {
         val lastDay = java.util.Calendar.getInstance().apply { timeInMillis = nextStart - 1 }.time
         // Per SIM: the engine measures it where Android allows and says so (exact); it never splits what it cannot.
         val hasPhone = DataUsageProvider.hasPhoneState(this)
-        val sims = if (!hasPhone) emptyList() else DataUsageProvider.mobilePerSubscription(this, monthStart, now)
-            .map { DataBadgeModel.Sim(it.slot, it.carrier, it.totals.mobile, it.exact) }
+        // The 30-day window: the engine answers any window, and the system keeps ~90 days of history.
+        val start30 = DataUsageProvider.startOfDaysAgo(30, now)
+        val sims30 = if (!hasPhone) emptyMap<Int, Long>() else DataUsageProvider.mobilePerSubscription(this, start30, now)
+            .associate { it.slot to it.totals.mobile }
+        val sims = if (!hasPhone) emptyList<DataBadgeModel.Sim>() else DataUsageProvider.mobilePerSubscription(this, monthStart, now)
+            .map { DataBadgeModel.Sim(it.slot, it.carrier, it.totals.mobile, it.exact, sims30[it.slot] ?: 0L) }
         return DataBadgeModel.Snapshot(
             hasAccess = true, hasPhone = hasPhone, sims = sims,
+            last30 = win(DataUsageProvider.deviceTotals(this, start30, now)), last30WindowMs = now - start30,
             monthElapsedMs = now - monthStart, monthLengthMs = nextStart - monthStart,
             monthEndLabel = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(lastDay),
             today = win(DataUsageProvider.deviceTotals(this, DataUsageProvider.startOfToday(now), now)),
