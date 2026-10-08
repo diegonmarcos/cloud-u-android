@@ -18,4 +18,14 @@ class TranslatePromptTest {
         assertTrue(p.contains("EXACTLY the same number of lines"))
         assertTrue(p.contains("⟦0⟧") && p.contains("web addresses"))
     }
+
+    @Test fun `the summary prompt asks for both parts, the reply in the message's language`() {
+        val known = summaryWithReplyPrompt("Summarise the message.", "de")
+        assertTrue(known.startsWith("Summarise the message."))
+        assertTrue("the marker the answer is split on", known.contains(app.sterna.core.data.text.SuggestedReply.MARK))
+        assertTrue(known.contains("written in German"))
+        val unknown = summaryWithReplyPrompt("Summarise the message.", null)
+        assertTrue(unknown.contains("the language the message is written in"))
+        assertTrue("one reply, not an essay", known.contains("ONE short suggested reply"))
+    }
 }

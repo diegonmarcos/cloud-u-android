@@ -1112,6 +1112,7 @@
     <string name="settings_text_resume_language">Язык резюме</string>
     <string name="message_show_original">Показать оригинал</string>
     <string name="message_show_translated">Показать перевод</string>
+    <string name="message_suggested_reply">Предлагаемый ответ</string>
     <string name="message_translate_source_prompt">Не удалось определить язык этого сообщения.</string>
     <string name="message_translate_source_choose">Выбрать язык</string>
     <string name="message_summary_collapse">Свернуть резюме</string>

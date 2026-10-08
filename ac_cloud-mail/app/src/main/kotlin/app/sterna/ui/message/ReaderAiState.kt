@@ -28,6 +28,8 @@ data class ReaderTranslation(
 /** The cached or running summary of ONE message, drawn as the collapsible box under the header. */
 data class ReaderSummary(
     val text: String? = null,
+    /** The reply suggested with the summary (same call, same cache row), or null. */
+    val reply: String? = null,
     val running: Boolean = false,
     val error: String? = null,
 ) {

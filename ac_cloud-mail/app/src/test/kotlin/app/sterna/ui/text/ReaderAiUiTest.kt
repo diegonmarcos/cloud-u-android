@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -117,5 +118,27 @@ class ReaderAiUiTest {
         compose.onNodeWithText("no API key for OpenRouter").assertExists()
         compose.onNodeWithText("Close").performClick()
         assertTrue(dismissed)
+    }
+
+    @Test fun `a suggested reply shows with Reply all and Copy, and Reply all hands over its text`() {
+        val handed = mutableListOf<String>()
+        compose.setContent {
+            MaterialTheme {
+                ResumeBox(
+                    ReaderSummaryUi(ReaderSummary(text = "Offer ends Friday.", reply = "Thanks, I will confirm today."), { handed += it }) {},
+                    "m1",
+                )
+            }
+        }
+        compose.onNodeWithText("Thanks, I will confirm today.").assertExists()
+        compose.onNodeWithText("Suggested reply").assertExists()
+        compose.onNodeWithContentDescription("Copy").assertExists()
+        compose.onNodeWithText("Reply all").performClick()
+        assertEquals(listOf("Thanks, I will confirm today."), handed)
+    }
+
+    @Test fun `without a suggestion there is no Reply all`() {
+        compose.setContent { MaterialTheme { ResumeBox(ReaderSummaryUi(ReaderSummary(text = "Offer ends Friday.")) {}, "m1") } }
+        compose.onNodeWithText("Reply all").assertDoesNotExist()
     }
 }

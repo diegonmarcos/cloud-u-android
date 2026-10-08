@@ -79,7 +79,7 @@ class DetectionSeesOnlyVisibleTextTest {
         var runs = 0
         override fun newRun() { runs++ }
         override fun translate(text: String, targetTag: String, sourceTag: String?): String { sources += sourceTag; return behave(text, sourceTag) }
-        override fun summarise(text: String, languageTag: String) = "s"
+        override fun summarise(text: String, languageTag: String, replyTag: String?) = "s"
     }
 
     private class Spy(val answer: String?) : LanguageDetector {

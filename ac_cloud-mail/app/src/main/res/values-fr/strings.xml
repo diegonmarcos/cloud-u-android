@@ -1101,6 +1101,7 @@
     <string name="settings_text_resume_language">Langue du résumé</string>
     <string name="message_show_original">Afficher l\'original</string>
     <string name="message_show_translated">Afficher la traduction</string>
+    <string name="message_suggested_reply">Réponse suggérée</string>
     <string name="message_translate_source_prompt">Je n\'ai pas pu déterminer la langue de ce message.</string>
     <string name="message_translate_source_choose">Choisir la langue</string>
     <string name="message_summary_collapse">Réduire le résumé</string>

@@ -38,10 +38,14 @@ class ReaderTextAiTest {
             fail?.let { throw TranslationFailed(it) }
             return text.uppercase()
         }
-        override fun summarise(text: String, languageTag: String): String {
+        var replyTags = ArrayList<String?>()
+        var reply: String? = null
+        override fun summarise(text: String, languageTag: String, replyTag: String?): String {
             summariseCalls++
+            replyTags += replyTag
             fail?.let { throw TranslationFailed(it) }
-            return "SUMMARY($languageTag): ${text.take(10)}"
+            val summary = "SUMMARY($languageTag): ${text.take(10)}"
+            return if (reply == null) summary else summary + "\n" + SuggestedReply.MARK + "\n" + reply
         }
     }
 
@@ -160,5 +164,38 @@ class ReaderTextAiTest {
         ai.prune()
         assertNull(cache.get("a", "old", MessageTextKind.TRANSLATION, "es"))
         assertNotNull(cache.get("a", "new", MessageTextKind.TRANSLATION, "es"))
+    }
+
+    // ---- the suggested reply ---------------------------------------------------------------------
+
+    @Test fun `one call gives the summary and a suggested reply, and both are cached together`() = runBlocking {
+        engine.reply = "Gracias, lo reviso hoy."
+        val ai = ai()
+        val first = ai.summarise("a", "m1", "en", spanish) as SummaryOutcome.Done
+        assertEquals("Gracias, lo reviso hoy.", first.reply)
+        assertTrue(first.text.startsWith("SUMMARY(en)"))
+        assertFalse(first.text.contains(SuggestedReply.MARK))
+        assertEquals(1, engine.summariseCalls)
+        val again = ai.summarise("a", "m1", "en", spanish) as SummaryOutcome.Done
+        assertTrue(again.fromCache)
+        assertEquals("the reply comes back from the same row", first.reply, again.reply)
+        assertEquals("no second call", 1, engine.summariseCalls)
+        assertEquals(1, cache.rows.values.count { it.kind == MessageTextKind.SUMMARY })
+    }
+
+    @Test fun `the reply is asked for in the language of the message`() = runBlocking {
+        engine.reply = "ok"
+        ai().summarise("a", "m1", "en", spanish)
+        assertEquals("es", engine.replyTags.single())
+        ai(saying { null }).summarise("a", "m2", "en", spanish)
+        assertNull("unknown language: the model is asked for the message own", engine.replyTags.last())
+    }
+
+    @Test fun `a model that forgot the reply still gives the summary`() = runBlocking {
+        engine.reply = null
+        val out = ai().summarise("a", "m1", "en", english) as SummaryOutcome.Done
+        assertNull(out.reply)
+        assertTrue(out.text.isNotBlank())
+        assertNull(ai().cachedSummaryParts("a", "m1", "en", english)!!.reply)
     }
 }

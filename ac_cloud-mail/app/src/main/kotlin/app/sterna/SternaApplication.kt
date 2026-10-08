@@ -39,10 +39,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+class PendingReplySuggestion(val emailId: String, val text: String)
+
 class AppContainer(context: Context) {
     /** Content Uris shared into the app (ACTION_SEND), awaiting attachment by the next compose
      *  screen (#45). A one-shot handoff; the compose screen reads and clears it. */
     var pendingShareUris: List<android.net.Uri> = emptyList()
+
+    /** The reply the reader suggested for [PendingReplySuggestion.emailId], handed to the NEXT reply-all
+     *  composer of that message and cleared by it. A one-shot handoff, like the share Uris above: the
+     *  text is never sent from here, it only becomes the first lines of an editable draft. */
+    @Volatile var pendingReplySuggestion: PendingReplySuggestion? = null
 
     val accountStore: AccountStore = AccountStore(context.applicationContext)
     val settingsRepository: SettingsRepository = SettingsRepository(context.applicationContext)

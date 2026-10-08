@@ -1112,9 +1112,9 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         if (_summary.value.text == null && !_summary.value.running) {
             summaryJob?.cancel()
             summaryJob = viewModelScope.launch {
-                val kept = textAi.cachedSummary(cacheAccount(), id, summaryLang, summarySource)
+                val kept = textAi.cachedSummaryParts(cacheAccount(), id, summaryLang, summarySource)
                 if (loadedId != id) return@launch
-                if (kept != null) _summary.value = ReaderSummary(text = kept)
+                if (kept != null) _summary.value = ReaderSummary(text = kept.summary, reply = kept.reply)
                 else if (MailTextToolsPrefs.autoSummary(app) && summarySource.isNotBlank()) runSummary(id, summarySource, summaryLang)
             }
         }
@@ -1172,7 +1172,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         val outcome = textAi.summarise(cacheAccount(), id, lang, source)
         if (loadedId != id) return
         _summary.value = when (outcome) {
-            is SummaryOutcome.Done -> ReaderSummary(text = outcome.text)
+            is SummaryOutcome.Done -> ReaderSummary(text = outcome.text, reply = outcome.reply)
             is SummaryOutcome.Failed -> ReaderSummary(error = outcome.reason)
         }
     }

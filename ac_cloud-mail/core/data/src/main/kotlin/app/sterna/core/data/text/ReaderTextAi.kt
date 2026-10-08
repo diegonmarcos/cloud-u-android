@@ -20,9 +20,13 @@ interface ReaderTextEngine {
     /** Called once before each message's batches, so an engine can forget what it learned on the last. */
     fun newRun() {}
 
-    /** Summarise [text], writing the summary in [languageTag]; throws the same. BLOCKING. */
+    /**
+     * Summarise [text], writing the summary in [languageTag], AND suggest a reply written in [replyTag]
+     * (null = the language of the message), in the same call; the answer is the summary, a line holding
+     * [SuggestedReply.MARK], then the reply. Throws the same. BLOCKING.
+     */
     @Throws(InPlaceHtmlTranslation.TranslationFailed::class)
-    fun summarise(text: String, languageTag: String): String
+    fun summarise(text: String, languageTag: String, replyTag: String?): String
 }
 
 /** What language a text is in: a BCP-47 tag, or null / "und" when it cannot tell. */
@@ -40,7 +44,7 @@ sealed interface TranslationOutcome {
 }
 
 sealed interface SummaryOutcome {
-    data class Done(val text: String, val fromCache: Boolean) : SummaryOutcome
+    data class Done(val text: String, val fromCache: Boolean, val reply: String? = null) : SummaryOutcome
     data class Failed(val reason: String) : SummaryOutcome
 }
 
@@ -128,22 +132,35 @@ class ReaderTextAi(
 
     // ---- summary ---------------------------------------------------------------------------------
 
-    suspend fun cachedSummary(accountId: String, emailId: String, lang: String, source: String): String? =
+    suspend fun cachedSummaryParts(accountId: String, emailId: String, lang: String, source: String): SummaryParts? =
         cache.get(accountId, emailId, MessageTextKind.SUMMARY, norm(lang))
             ?.takeIf { it.sourceHash == hash(source) }
-            ?.payload
+            ?.let { SuggestedReply.split(it.payload) }
 
+    suspend fun cachedSummary(accountId: String, emailId: String, lang: String, source: String): String? =
+        cachedSummaryParts(accountId, emailId, lang, source)?.summary
+
+    /**
+     * The summary and a suggested reply, from ONE call, kept together in one row. The reply is written
+     * in the language of the message (detected on its visible text) unless that cannot be told, in
+     * which case the model is asked for the language of the message itself.
+     */
     suspend fun summarise(accountId: String, emailId: String, lang: String, source: String): SummaryOutcome {
-        cachedSummary(accountId, emailId, lang, source)?.let { return SummaryOutcome.Done(it, fromCache = true) }
+        cachedSummaryParts(accountId, emailId, lang, source)?.let {
+            return SummaryOutcome.Done(it.summary, fromCache = true, reply = it.reply)
+        }
         val target = norm(lang)
-        val text = try {
-            withContext(Dispatchers.IO) { engine.summarise(source, target) }
+        val sample = InPlaceHtmlTranslation.forDetection(source).take(DETECT_CHARS)
+        val replyTag = if (sample.length < MIN_DETECT_CHARS) null
+        else runCatching { detector.detect(sample) }.getOrNull()?.takeIf { it.isNotBlank() && !it.equals("und", true) }
+        val parts = try {
+            SuggestedReply.split(withContext(Dispatchers.IO) { engine.summarise(source, target, replyTag) })
         } catch (e: InPlaceHtmlTranslation.TranslationFailed) {
             return SummaryOutcome.Failed(e.reason)
         }
-        if (text.isBlank()) return SummaryOutcome.Failed("The summary came back empty")
-        cache.put(MessageTextCacheEntity(accountId, emailId, MessageTextKind.SUMMARY, target, hash(source), text, now()))
-        return SummaryOutcome.Done(text, fromCache = false)
+        if (parts.summary.isBlank()) return SummaryOutcome.Failed("The summary came back empty")
+        cache.put(MessageTextCacheEntity(accountId, emailId, MessageTextKind.SUMMARY, target, hash(source), SuggestedReply.join(parts), now()))
+        return SummaryOutcome.Done(parts.summary, fromCache = false, reply = parts.reply)
     }
 
     suspend fun prune(olderThanMillis: Long = KEEP_MILLIS) {

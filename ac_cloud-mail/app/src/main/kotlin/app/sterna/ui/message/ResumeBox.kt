@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,12 +28,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import app.sterna.R
 import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
 import app.sterna.ui.theme.MailMetrics
 
 /** The summary of the open message and the one thing the box can ask back: dismiss an error. */
-class ReaderSummaryUi(val summary: ReaderSummary, val dismissError: () -> Unit) {
+class ReaderSummaryUi(
+    val summary: ReaderSummary,
+    /** Opens the composer as Reply all with the suggested [String] as the start of the body. Never sends. */
+    val onReplyAll: (String) -> Unit = {},
+    val dismissError: () -> Unit,
+) {
     companion object {
-        val None = ReaderSummaryUi(ReaderSummary()) {}
+        val None = ReaderSummaryUi(ReaderSummary(), dismissError = {})
     }
 }
 
@@ -42,6 +50,9 @@ class ReaderSummaryUi(val summary: ReaderSummary, val dismissError: () -> Unit) 
  * empty summary, so a preview or a test that draws a header without a reader draws no box.
  */
 val LocalReaderSummary = compositionLocalOf { ReaderSummaryUi.None }
+
+/** (emailId, accountId, suggested text) -> open Reply all with the text as the start of the body. */
+val LocalReplyAllWith = compositionLocalOf<(String, String?, String) -> Unit> { { _, _, _ -> } }
 
 /**
  * "AI Resume" - the summary of this message, in a collapsible box directly below the header.
@@ -114,6 +125,37 @@ fun ResumeBox(ui: ReaderSummaryUi, emailId: String) {
                 )
                 TextButton(onClick = { clipboard.setText(AnnotatedString(text)) }) {
                     Text(stringResource(R.string.text_tool_copy))
+                }
+                summary.reply?.let { reply -> SuggestedReplyBlock(reply, ui.onReplyAll) }
+            }
+        }
+    }
+}
+
+/**
+ * The reply suggested together with the summary: its text, a Reply all button, and a small Copy icon.
+ * Reply all opens the composer with this text at the top of the body; it SENDS NOTHING - the reader edits
+ * and sends from the composer. Dense: one text block and one row of two controls.
+ */
+@Composable
+private fun SuggestedReplyBlock(reply: String, onReplyAll: (String) -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    Surface(
+        Modifier.fillMaxWidth().padding(top = MailMetrics.s4),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Column(Modifier.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s8)) {
+            Text(
+                stringResource(R.string.message_suggested_reply),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(reply, Modifier.padding(top = MailMetrics.s2), style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { onReplyAll(reply) }) { Text(stringResource(R.string.message_reply_all)) }
+                IconButton(onClick = { clipboard.setText(AnnotatedString(reply)) }) {
+                    Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.text_tool_copy))
                 }
             }
         }

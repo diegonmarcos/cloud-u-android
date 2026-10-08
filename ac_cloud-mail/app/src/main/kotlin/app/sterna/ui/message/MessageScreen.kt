@@ -99,6 +99,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.LocalTextToolRunner
 import app.sterna.ui.text.onReader
+import app.sterna.PendingReplySuggestion
+import app.sterna.container
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolIconRow
@@ -457,7 +459,15 @@ private fun MessagePager(
     // headed by this sender holding a summary of the last one is the worst of the two failures
     // available here: it looks right.
     LaunchedEffect(activeMessage?.emailId) { textTools.dismiss() }
-    CompositionLocalProvider(LocalTextToolRunner provides textTools) {
+    val application = LocalContext.current.applicationContext as android.app.Application
+    CompositionLocalProvider(
+        LocalTextToolRunner provides textTools,
+        LocalReplyAllWith provides { emailId, accountId, text ->
+            // Hand the suggestion over, then open the ordinary Reply all. Nothing is sent from here.
+            application.container.pendingReplySuggestion = PendingReplySuggestion(emailId, text)
+            onReply("replyAll", emailId, accountId)
+        },
+    ) {
     Scaffold(
         topBar = {
             Column {
@@ -1919,6 +1929,7 @@ private fun MessageContent(
     val textTools = LocalTextToolRunner.current
     val translation by viewModel.translation.collectAsStateWithLifecycle()
     val readerSummary by viewModel.summary.collectAsStateWithLifecycle()
+    val replyAllWith = LocalReplyAllWith.current
     val readingEmail = (state as? MessageState.Loaded)?.email
     val readingModeOffered = remember(readingEmail, printDerivedNotice, printNoContent) {
         readingEmail != null && readingModesDiffer(readingEmail, printDerivedNotice, printNoContent)
@@ -1998,7 +2009,11 @@ private fun MessageContent(
         }
     }
     CompositionLocalProvider(
-        LocalReaderSummary provides ReaderSummaryUi(readerSummary, viewModel::dismissSummaryError),
+        LocalReaderSummary provides ReaderSummaryUi(
+            readerSummary,
+            onReplyAll = { text -> replyAllWith(emailId, accountId, text) },
+            dismissError = viewModel::dismissSummaryError,
+        ),
     ) {
     Box(Modifier.fillMaxSize()) {
         if (translation.needsSource && readerFragment != null) {

@@ -1280,3 +1280,20 @@ internal fun sweepStagedAttachments(
     }
     return StagedAttachmentSweep(kept = kept, gone = gone)
 }
+
+/**
+ * [body] (a reply's quoted original, plus its signature) with a SUGGESTED reply written above it. The
+ * suggestion comes first and the caret opens at offset 0, so the reader starts on it; a blank line
+ * separates it from what follows. Null or blank [suggested] changes nothing. Pure, and the only place a
+ * suggestion is merged - the composer sends nothing on its own.
+ */
+internal fun withSuggestedReply(suggested: String?, body: String): String {
+    val s = suggested?.trim().orEmpty()
+    if (s.isEmpty()) return body
+    val gap = when {
+        body.startsWith("\n\n") -> ""
+        body.startsWith("\n") -> "\n"
+        else -> "\n\n"
+    }
+    return s + gap + body
+}

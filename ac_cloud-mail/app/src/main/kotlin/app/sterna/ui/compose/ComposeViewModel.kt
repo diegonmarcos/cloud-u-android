@@ -456,7 +456,8 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
     /**
      * The body a reply/forward opens with: the [quoted] original, plus the signature per the three
      */
-    private suspend fun replyBody(quoted: String): String =
+    private suspend fun replyBody(quoted: String): String = withSuggestedReply(
+        suggestedReply,
         if (!settings.signatureOnReplies.first()) {
             quoted
         } else {
@@ -466,7 +467,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 settings.signatureBelowQuote.first(),
                 settings.signatureDelimiter.first(),
             )
-        }
+        },
+    )
+
+    /** The reply the reader suggested, for a reply-all composer only; see [PendingReplySuggestion]. */
+    private var suggestedReply: String? = null
 
     // --- OpenPGP -----------------------------------------------------------------------------
 
@@ -1118,6 +1123,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             // Parsed ONCE: the three branches below read this and never the raw string, so a mode one
             // of them does not know cannot open, in silence, a threaded quoted reply.
             val opening = composeOpening(mode)
+            // The reader's suggestion, taken once and only by a reply-all of THAT message: any other
+            // opening, or another message, clears it unread.
+            val pending = getApplication<Application>().container.pendingReplySuggestion
+            getApplication<Application>().container.pendingReplySuggestion = null
+            suggestedReply = pending?.takeIf { it.emailId == replyToId && opening == ComposeOpening.REPLY_ALL }?.text
             fun prefillFailed() {
                 _attachmentStatus.value =
                     getApplication<Application>().getString(R.string.compose_prefill_failed)

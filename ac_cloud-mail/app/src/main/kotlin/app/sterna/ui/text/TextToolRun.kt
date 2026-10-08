@@ -302,13 +302,15 @@ internal class TextToolsReaderEngine(
         return fallback.translate(text, targetTag, sourceTag)
     }
 
-    override fun summarise(text: String, languageTag: String): String {
+    override fun summarise(text: String, languageTag: String, replyTag: String?): String {
         MailTextToolsPrefs.seedFromKeyboard(context, client)
         val provider = MailTextToolsPrefs.providerId(context)
         val result = client.summariseWith(
             text,
-            MailTextToolsPrefs.summaryPrompt(context, languageTag),
-            MailTextToolsPrefs.summaryWantsBullets(context),
+            summaryWithReplyPrompt(MailTextToolsPrefs.summaryPrompt(context, languageTag), replyTag),
+            // false: the engine's bullet enforcement would shape the WHOLE answer, reply included. The
+            // chosen shape's own prompt still asks for bullets; only the post-hoc enforcement is off.
+            false,
             provider,
             MailTextToolsPrefs.modelId(context, provider),
         )
