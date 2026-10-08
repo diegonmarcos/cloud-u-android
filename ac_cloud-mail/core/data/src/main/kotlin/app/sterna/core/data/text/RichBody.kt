@@ -416,17 +416,26 @@ private val LIST_TAG = mapOf(BlockKind.BULLET to "ul", BlockKind.NUMBER to "ol")
 /**
  * The body as HTML: escaped text, `\n` as `<br>`, and `<a> <b> <i> <u> <s>` always nested in that
  */
-fun toHtml(body: RichBody, verbatim: Pair<Span, String>? = null): String {
+fun toHtml(body: RichBody, verbatim: Pair<Span, String>? = null): String =
+    toHtml(body, listOfNotNull(verbatim))
+
+/**
+ * [toHtml] with any number of verbatim substitutions (the signature's HTML, a reply's quoted original):
+ * each span's characters are replaced by its markup, and spans must not overlap.
+ */
+fun toHtml(body: RichBody, verbatims: List<Pair<Span, String>>): String {
     val text = body.text
-    if (body.isPlain && verbatim == null) return htmlEscapeMultiline(text)
-    val vSpan = verbatim?.first
-    if (vSpan != null) require(vSpan.start >= 0 && vSpan.end <= text.length) { "verbatim $vSpan outside the text" }
+    if (body.isPlain && verbatims.isEmpty()) return htmlEscapeMultiline(text)
+    for ((s, _) in verbatims) require(s.start >= 0 && s.end <= text.length) { "verbatim $s outside the text" }
+    val sorted = verbatims.sortedBy { it.first.start }
+    for (i in 1 until sorted.size) require(sorted[i - 1].first.end <= sorted[i].first.start) { "verbatim spans overlap" }
+    fun inVerbatim(p: Int) = sorted.any { p >= it.first.start && p < it.first.end }
     val kinds = kindsByLine(body.lineCount, body.blocks)
     val hard = hardBreaks(text, body.blocks)
     val cuts = sortedSetOf(0, text.length)
     for (spans in body.ranges.values) for (s in spans) { cuts.add(s.start); cuts.add(s.end) }
     for (l in body.links) { cuts.add(l.span.start); cuts.add(l.span.end) }
-    if (vSpan != null) { cuts.add(vSpan.start); cuts.add(vSpan.end) }
+    for ((s, _) in sorted) { cuts.add(s.start); cuts.add(s.end) }
     for (nl in hard) { cuts.add(nl); cuts.add(nl + 1) }
     val positions = cuts.toList()
 
@@ -445,12 +454,12 @@ fun toHtml(body: RichBody, verbatim: Pair<Span, String>? = null): String {
         while (common < stack.size && common < target.size && stack[common] == target[common]) common++
         while (stack.size > common) sb.append(closeTagOf(stack.removeAt(stack.size - 1)))
         for (k in common until target.size) { stack.add(target[k]); sb.append(openTagOf(target[k])) }
-        if (verbatim != null && p == verbatim.first.start) sb.append(verbatim.second)
+        sorted.firstOrNull { p == it.first.start }?.let { sb.append(it.second) }
         if (i + 1 < positions.size) {
             val q = positions[i + 1]
             if (p in hard) {
                 sb.append(listBreak(kinds, lineAt(text, p)))
-            } else if (vSpan == null || p < vSpan.start || p >= vSpan.end) {
+            } else if (!inVerbatim(p)) {
                 sb.append(htmlEscapeMultiline(text.substring(p, q)))
             }
         }

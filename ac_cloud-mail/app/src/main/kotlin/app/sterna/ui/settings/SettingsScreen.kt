@@ -256,6 +256,9 @@ fun SettingsScreen(
         composable("textResume") { entry ->
             MailTextResumeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }
+        composable("textAnswer") { entry ->
+            MailAnswerPredictionScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
         composable("textTranslation") { entry ->
             MailTranslationScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }

@@ -1183,4 +1183,13 @@
     <string name="nav_chat_not_installed">Telegram is niet geïnstalleerd</string>
     <string name="nav_video_not_installed">WhatsApp Business is niet geïnstalleerd</string>
     <string name="nav_launch_not_installed">Die app is niet geïnstalleerd</string>
+    <string name="text_tool_answer">Antwoordvoorspelling</string>
+    <string name="text_tool_grammar">Grammatica controleren</string>
+    <string name="text_tool_undo">Ongedaan maken</string>
+    <string name="text_tool_no_thread">Deze conceptmail heeft geen bericht om te beantwoorden</string>
+    <string name="settings_text_answer_title">Antwoordvoorspelling</string>
+    <string name="settings_text_answer_summary">Schrijft een voorgesteld antwoord op basis van de thread</string>
+    <string name="settings_text_answer_note">De prompt die een voorgesteld antwoord schrijft. Hij wordt gebruikt door Antwoordvoorspelling in de editor en door het voorgestelde antwoord in het AI-samenvattingsvak.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Standaard herstellen</string>
 </resources>

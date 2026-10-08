@@ -1192,4 +1192,13 @@
     <string name="nav_chat_not_installed">Telegram n\'est pas installé</string>
     <string name="nav_video_not_installed">WhatsApp Business n\'est pas installé</string>
     <string name="nav_launch_not_installed">Cette application n\'est pas installée</string>
+    <string name="text_tool_answer">Prédiction de réponse</string>
+    <string name="text_tool_grammar">Vérifier la grammaire</string>
+    <string name="text_tool_undo">Annuler</string>
+    <string name="text_tool_no_thread">Ce brouillon ne contient aucun message auquel répondre</string>
+    <string name="settings_text_answer_title">Prédiction de réponse</string>
+    <string name="settings_text_answer_summary">Rédige une réponse suggérée à partir du fil</string>
+    <string name="settings_text_answer_note">Le prompt qui rédige une réponse suggérée. Il sert à la Prédiction de réponse du composeur et à la réponse suggérée dans l\'encadré de résumé IA.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Rétablir par défaut</string>
 </resources>

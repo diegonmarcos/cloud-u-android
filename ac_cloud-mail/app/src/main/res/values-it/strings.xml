@@ -1186,4 +1186,13 @@
     <string name="nav_chat_not_installed">Telegram non è installato</string>
     <string name="nav_video_not_installed">WhatsApp Business non è installato</string>
     <string name="nav_launch_not_installed">Quell\'app non è installata</string>
+    <string name="text_tool_answer">Previsione risposta</string>
+    <string name="text_tool_grammar">Controlla grammatica</string>
+    <string name="text_tool_undo">Annulla</string>
+    <string name="text_tool_no_thread">Questa bozza non ha alcun messaggio a cui rispondere</string>
+    <string name="settings_text_answer_title">Previsione risposta</string>
+    <string name="settings_text_answer_summary">Scrive una risposta suggerita dalla conversazione</string>
+    <string name="settings_text_answer_note">Il prompt che scrive una risposta suggerita. È usato dalla Previsione risposta nel compositore e dalla risposta suggerita nel riquadro del riassunto IA.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Ripristina predefinito</string>
 </resources>

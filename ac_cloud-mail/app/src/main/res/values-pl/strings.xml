@@ -1200,4 +1200,13 @@
     <string name="nav_chat_not_installed">Telegram nie jest zainstalowany</string>
     <string name="nav_video_not_installed">WhatsApp Business nie jest zainstalowany</string>
     <string name="nav_launch_not_installed">Ta aplikacja nie jest zainstalowana</string>
+    <string name="text_tool_answer">Podpowiedź odpowiedzi</string>
+    <string name="text_tool_grammar">Sprawdź gramatykę</string>
+    <string name="text_tool_undo">Cofnij</string>
+    <string name="text_tool_no_thread">Ten szkic nie zawiera wiadomości, na którą można odpowiedzieć</string>
+    <string name="settings_text_answer_title">Podpowiedź odpowiedzi</string>
+    <string name="settings_text_answer_summary">Pisze proponowaną odpowiedź na podstawie wątku</string>
+    <string name="settings_text_answer_note">Prompt, który pisze proponowaną odpowiedź. Używa go Podpowiedź odpowiedzi w edytorze oraz odpowiedź proponowana w polu podsumowania AI.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Przywróć domyślny</string>
 </resources>

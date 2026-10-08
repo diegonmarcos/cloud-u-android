@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,7 +46,7 @@ internal class TextToolsEntry(
     @StringRes val summary: Int,
 )
 
-/** The four entries, in the order they are shown. */
+/** The five entries, in the order they are shown. */
 internal val TEXT_TOOLS_ENTRIES = listOf(
     TextToolsEntry(
         route = "textAiRouting",
@@ -67,6 +68,14 @@ internal val TEXT_TOOLS_ENTRIES = listOf(
         icon = Icons.Filled.Summarize,
         title = R.string.settings_text_resume_title,
         summary = R.string.settings_text_resume_summary,
+    ),
+    // Right after Text Resume: the prompt behind the composer's Answer Prediction and the Resume box's
+    // suggested reply.
+    TextToolsEntry(
+        route = "textAnswer",
+        icon = Icons.Filled.QuestionAnswer,
+        title = R.string.settings_text_answer_title,
+        summary = R.string.settings_text_answer_summary,
     ),
     TextToolsEntry(
         route = "textTranslation",

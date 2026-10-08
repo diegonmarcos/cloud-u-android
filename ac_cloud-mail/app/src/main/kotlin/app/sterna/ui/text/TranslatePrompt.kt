@@ -19,10 +19,10 @@ internal fun llmTranslatePrompt(targetTag: String, sourceTag: String?): String {
  * line holding exactly the marker, then the reply. [replyTag] is the message's detected language, or null
  * to ask the model to answer in the language the message is written in.
  */
-internal fun summaryWithReplyPrompt(summaryPrompt: String, replyTag: String?): String {
+internal fun summaryWithReplyPrompt(summaryPrompt: String, replyTag: String?, answerPrompt: String): String {
     val language = replyTag?.let { MailLanguages.nameOf(it, java.util.Locale.ENGLISH) } ?: "the language the message is written in"
     return summaryPrompt +
         "\nThen, after the summary, write one line containing exactly ${app.sterna.core.data.text.SuggestedReply.MARK} " +
-        "and below it ONE short suggested reply to the sender, written in $language, as plain text, " +
-        "ready to send: no subject line, no placeholders, nothing invented that the message does not support."
+        "and below it ONE short suggested reply to the sender, written in $language. For the reply, follow " +
+        "these instructions: $answerPrompt"
 }

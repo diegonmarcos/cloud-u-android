@@ -161,7 +161,7 @@ has "$TEXT" 'internal const val QUOTE_DIVIDER = "---"' \
 # The HTML alternative must not have grown a second ordering decision. It serialises the SAME body
 # the plain one flattens, so the order cannot drift: there is nothing to drift from.
 has "$TEXT" 'internal fun htmlBodyWithSignature(' "H7 the html alternative has one assembly too"
-has "$TEXT" 'val found = signatureBlockAt(body.text, signature, delimiter) ?: return toHtml(body)' \
+has "$TEXT" 'val found = signatureBlockAt(body.text, signature, delimiter)' \
   "H7 the html alternative finds the signature in the SAME body the text one does"
 hasnt "$TEXT" 'signatureBelowQuote.*toHtml' "H7 the html assembly holds no ordering decision of its own"
 # A forward joins its original AFTER the body, in both alternatives, so the signature still precedes it.

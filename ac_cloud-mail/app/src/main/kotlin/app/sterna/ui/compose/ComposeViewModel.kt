@@ -470,6 +470,17 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         },
     )
 
+    /** The quoted original of this reply in its wire shape (HTML), set whenever the editable quote is built. */
+    private var lastQuote: QuoteForHtml? = null
+
+    /**
+     * The thread being answered, as plain text, for Answer Prediction. Set when the quote is built and
+     * empty for a fresh message, which has nothing to answer.
+     */
+    @Volatile
+    var answerSource: String = ""
+        private set
+
     /** The reply the reader suggested, for a reply-all composer only; see [PendingReplySuggestion]. */
     private var suggestedReply: String? = null
 
@@ -1778,7 +1789,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun bodiesForSend(userBody: RichBody, identity: StoredIdentity?): Pair<String, String?> {
         val html = htmlBodyWithSignature(
             userBody, signatureTextOf(identity), signatureHtmlOf(identity),
-            settings.signatureDelimiter.first(),
+            settings.signatureDelimiter.first(), lastQuote,
         )
         val fwd = forwarded ?: return toPlainText(userBody) to html
         return "${toPlainText(userBody)}\n\n${fwd.text}" to "$html<br><br>${fwd.html}"
@@ -2010,6 +2021,14 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         val date = MailDates.formatFull(o.receivedAt, zone)
         val attribution = app.getString(R.string.compose_quote_attribution, date, sender)
         val quoted = quotedOriginalText(o).lineSequence().joinToString("\n") { deepenQuote(it) }
+        // The same quote for the wire: the original's own sanitised HTML in a blockquote, swapped in for
+        // these "> " lines at send time while they are still intact in the body.
+        val (raw, isHtml) = bodySource(o)
+        answerSource = originalPlainText(o)
+        lastQuote = QuoteForHtml(
+            plain = "$attribution\n$quoted",
+            html = buildQuoteHtml(attribution, raw.takeIf { isHtml }, raw),
+        )
         return "\n\n$attribution\n$quoted"
     }
 

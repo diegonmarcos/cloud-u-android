@@ -20,6 +20,9 @@ data class ReaderTranslation(
 ) {
     val exists: Boolean get() = fragment != null
 
+    /** Show Original / Show Translated: flips [shown], and does nothing until a translation exists. */
+    fun toggled(): ReaderTranslation = if (exists) copy(shown = !shown) else this
+
     /** The fragment to put in the document for [current], or null for the original. */
     fun fragmentFor(current: String?): String? =
         if (shown && fragment != null && current != null && source == current) fragment else null

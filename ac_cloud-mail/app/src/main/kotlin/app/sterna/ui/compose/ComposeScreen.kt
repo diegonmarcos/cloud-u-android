@@ -67,6 +67,7 @@ import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
 import app.sterna.ui.text.TextToolIconRow
+import app.sterna.ui.text.TextToolInPlaceBar
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.TextTool
 import app.sterna.core.data.text.Span
@@ -519,13 +520,28 @@ fun ComposeScreen(
     // moved would overwrite whatever drifted into it. Same stale guard the keyboard's Enhance
     // makes, for the same reason.
     var textToolTarget by remember { mutableStateOf<Pair<Span, String>?>(null) }
+    // The draft as it was before the last in-place tool changed it: one step, restored by the Undo icon.
+    var textToolUndo by remember { mutableStateOf<TextToolUndo?>(null) }
     fun runTextTool(tool: TextTool) {
+        if (tool.readsThread) {
+            // Answer Prediction reads the THREAD and writes at the caret; the draft is not what is sent.
+            val thread = viewModel.answerSource
+            if (thread.isBlank()) {
+                Toast.makeText(context, context.getString(R.string.text_tool_no_thread), Toast.LENGTH_SHORT).show()
+                return
+            }
+            val caret = body.selection.start.coerceIn(0, body.text.length)
+            textToolTarget = Span(caret, caret) to ""
+            textTools.run(textToolScope, tool, thread)
+            return
+        }
         val span = TextToolScope.draftScope(body.text, Span.between(body.selection.start, body.selection.end))
         val sent = body.text.substring(span.start, span.end)
         textToolTarget = span to sent
         textTools.run(textToolScope, tool, sent)
     }
-    TextToolPanel(textTools) { result ->
+    // Splice a result into the draft as ONE undoable edit. Nothing here sends anything.
+    fun applyTextTool(result: String) {
         val target = textToolTarget
         val stillThere = target != null &&
             target.first.end <= body.text.length &&
@@ -533,6 +549,7 @@ fun ComposeScreen(
         if (!stillThere) {
             Toast.makeText(context, context.getString(R.string.text_tool_stale), Toast.LENGTH_SHORT).show()
         } else {
+            textToolUndo = TextToolUndo(body, RichBody(body.text, ranges, blocks, links))
             // splice, not a whole-body assignment: the inline styling, lists and links live
             // BESIDE this text as offsets into it, and replacing a stretch without moving them
             // leaves every style after the edit pointing at the wrong words.
@@ -544,6 +561,18 @@ fun ComposeScreen(
             links = out.links
         }
         textToolTarget = null
+    }
+    TextToolPanel(textTools) { result -> applyTextTool(result) }
+    // Answer Prediction, Enhance and Check Grammar have no dialog: their result lands here, applied as an
+    // undoable edit, or their own error is shown verbatim.
+    val finished = textTools.outcome
+    LaunchedEffect(finished) {
+        if (finished != null && finished.tool.appliesInPlace) {
+            val text = finished.text
+            if (text != null) applyTextTool(text.trim('\n'))
+            else Toast.makeText(context, finished.error.orEmpty(), Toast.LENGTH_LONG).show()
+            textTools.dismiss()
+        }
     }
 
     // Which compose this is, for the signature rules: both a reply and a forward obey the two settings.
@@ -1275,6 +1304,15 @@ fun ComposeScreen(
                                 trailingIcon = { Checkbox(checked = requestReceipt, onCheckedChange = null) },
                                 onClick = { moreMenu = false; requestReceipt = !requestReceipt },
                             )
+                            // The in-place tools as NAMED items, so the overflow spells out what the toolbar icons do.
+                            textTools.surface.tools.filter { it.appliesInPlace }.forEach { tool ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(tool.label)) },
+                                    leadingIcon = { Icon(tool.icon, contentDescription = null) },
+                                    enabled = !sending && textTools.busy == null,
+                                    onClick = { moreMenu = false; runTextTool(tool) },
+                                )
+                            }
                             // The Text tools this surface offers, drawn from TextToolSurface.COMPOSE
                             // rather than listed here. Enhance belongs on THIS side and only this
                             // side: the text is the user's own, they can still change it, and the
@@ -1292,7 +1330,7 @@ fun ComposeScreen(
                             // own reason (see TextEnhancer) rather than needing to be hidden, and
                             // the reader's Resume veto exists because a message with no body has
                             // nothing to summarise, which is a fact about received mail.
-                            TextToolIconRow(textTools.surface, enabled = !sending) { tool ->
+                            TextToolIconRow(textTools.surface, enabled = !sending, skip = { it.appliesInPlace }) { tool ->
                                 moreMenu = false
                                 runTextTool(tool)
                             }
@@ -1536,6 +1574,22 @@ fun ComposeScreen(
                 { subject = it },
                 placeholder = stringResource(R.string.compose_subject),
                 focusRequester = subjectFocus,
+            )
+            TextToolInPlaceBar(
+                textTools.surface,
+                enabled = !sending,
+                running = textTools.busy,
+                canUndo = textToolUndo != null,
+                onUndo = {
+                    textToolUndo?.let { u ->
+                        body = u.body
+                        ranges = u.rich.ranges
+                        blocks = u.rich.blocks
+                        links = u.rich.links
+                    }
+                    textToolUndo = null
+                },
+                onPick = ::runTextTool,
             )
             // Only when the body is actually being encrypted to someone, so a fresh encrypt-by-default
             // compose with no recipients doesn't claim it yet (#35).
@@ -2381,3 +2435,6 @@ private fun schedulePresets(context: android.content.Context, nowMillis: Long): 
             }
             Triple(preset, context.getString(label), millis)
         }
+
+/** The draft before an in-place text tool changed it, for the Undo icon. */
+private class TextToolUndo(val body: TextFieldValue, val rich: RichBody)

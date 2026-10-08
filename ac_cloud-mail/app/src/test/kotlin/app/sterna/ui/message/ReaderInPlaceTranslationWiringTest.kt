@@ -87,7 +87,9 @@ class ReaderInPlaceTranslationWiringTest {
 
     @Test fun `the toggle cannot do anything before a translation exists`() {
         val toggle = model.substring(model.indexOf("fun toggleTranslated()"), model.indexOf("fun dismissTranslationError()"))
-        assertTrue("if (it.exists) it.copy(shown = !it.shown) else it" in toggle)
+        assertTrue("_translation.value = _translation.value.toggled()" in toggle)
+        val row = screen.substring(screen.indexOf("afterTranslate = {"))
+        assertTrue("the toggle sits in the reading row beside Translate", "enabled = translation.exists, onClick = viewModel::toggleTranslated" in row.take(600))
     }
 
     private companion object {

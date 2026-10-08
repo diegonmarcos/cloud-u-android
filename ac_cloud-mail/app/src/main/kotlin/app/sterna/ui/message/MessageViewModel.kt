@@ -1151,7 +1151,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
 
     /** Show Original / Show Translated. A no-op until a translation exists. */
     fun toggleTranslated() {
-        _translation.value = _translation.value.let { if (it.exists) it.copy(shown = !it.shown) else it }
+        _translation.value = _translation.value.toggled()
     }
 
     fun dismissTranslationError() {

@@ -116,6 +116,7 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Unsubscribe
 import androidx.compose.material3.LocalContentColor
@@ -1938,6 +1939,18 @@ private fun MessageContent(
     val readingActions: @Composable () -> Unit = {
         TextToolIconRow(
             surface = textTools.surface,
+            // Show Original / Show Translated, right beside Translate where it is found: greyed until
+            // a translation exists, one tap flips the page both ways.
+            afterTranslate = {
+                IconButton(enabled = translation.exists, onClick = viewModel::toggleTranslated) {
+                    Icon(
+                        Icons.Filled.SwapHoriz,
+                        contentDescription = stringResource(
+                            if (translation.shown) R.string.message_show_original else R.string.message_show_translated,
+                        ),
+                    )
+                }
+            },
             enabled = !translation.running && !readerSummary.running,
             skip = { it == TextTool.RESUME && messages.firstOrNull()?.body == null },
             trailing = {
@@ -2387,13 +2400,15 @@ private fun ReplyForwardBar(onReply: (mode: String) -> Unit) {
                 .padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
             horizontalArrangement = Arrangement.spacedBy(MailMetrics.s12),
         ) {
+            // The main reply is REPLY ALL (the toolbar's default action already is); plain Reply stays in
+            // the overflow menu.
             Button(
-                onClick = { onReply("reply") },
+                onClick = { onReply("replyAll") },
                 modifier = Modifier.weight(1f),
             ) {
-                Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.ReplyAll, contentDescription = null)
                 Spacer(Modifier.width(MailMetrics.s8))
-                Text(stringResource(R.string.message_reply))
+                Text(stringResource(R.string.message_reply_all))
             }
             OutlinedButton(
                 onClick = { onReply("forward") },

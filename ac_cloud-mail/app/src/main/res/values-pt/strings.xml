@@ -1190,4 +1190,13 @@
     <string name="nav_chat_not_installed">O Telegram não está instalado</string>
     <string name="nav_video_not_installed">O WhatsApp Business não está instalado</string>
     <string name="nav_launch_not_installed">Esse app não está instalado</string>
+    <string name="text_tool_answer">Previsão de resposta</string>
+    <string name="text_tool_grammar">Verificar gramática</string>
+    <string name="text_tool_undo">Desfazer</string>
+    <string name="text_tool_no_thread">Este rascunho não tem nenhuma mensagem para responder</string>
+    <string name="settings_text_answer_title">Previsão de resposta</string>
+    <string name="settings_text_answer_summary">Escreve uma resposta sugerida a partir da conversa</string>
+    <string name="settings_text_answer_note">O prompt que escreve uma resposta sugerida. É usado pela Previsão de resposta no editor e pela resposta sugerida na caixa de resumo IA.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Repor predefinição</string>
 </resources>

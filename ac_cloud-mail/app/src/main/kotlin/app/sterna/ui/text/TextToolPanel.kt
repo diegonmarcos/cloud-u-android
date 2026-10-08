@@ -3,6 +3,8 @@ package app.sterna.ui.text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -50,7 +52,9 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
     // of the machinery. Returning early here is what keeps a dialog from opening over that box.
     // The tools this dialog answers for are exactly the ones drawn in an overflow menu, so it asks
     // TextTool rather than naming RESUME: a fourth tool that draws itself is handled already.
-    if (!tool.inOverflow) return
+    // Tools that apply in place (Answer Prediction, Enhance, Check Grammar) have no dialog: the composer
+    // applies their result as an undoable edit.
+    if (!tool.inOverflow || tool.appliesInPlace) return
 
     val clipboard = LocalClipboardManager.current
     val toolName = stringResource(tool.label)
@@ -152,6 +156,9 @@ fun TextToolIconRow(
     surface: TextToolSurface,
     enabled: Boolean = true,
     skip: (TextTool) -> Boolean = { false },
+    /** Drawn straight after the Translate icon, if the surface has one: the reader puts Show Original /
+     *  Show Translated there so the toggle sits where the action it undoes is. */
+    afterTranslate: @Composable () -> Unit = {},
     trailing: @Composable () -> Unit = {},
     onPick: (TextTool) -> Unit,
 ) {
@@ -164,7 +171,47 @@ fun TextToolIconRow(
             IconButton(enabled = enabled, onClick = { onPick(tool) }) {
                 Icon(tool.icon, contentDescription = stringResource(tool.label))
             }
+            if (tool == TextTool.TRANSLATE) afterTranslate()
         }
         trailing()
+    }
+}
+
+/**
+ * The composer's dense in-place toolbar: the surface's tools that apply to the draft ([TextTool.appliesInPlace]),
+ * one icon each, plus Undo once one has been applied. Drawn FROM the surface, never by name, so a tool added
+ * to the surface with that flag shows up here and in the overflow without another list to edit.
+ */
+@Composable
+fun TextToolInPlaceBar(
+    surface: TextToolSurface,
+    enabled: Boolean,
+    running: TextTool?,
+    canUndo: Boolean,
+    onUndo: () -> Unit,
+    onPick: (TextTool) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        surface.tools.filter { it.appliesInPlace }.forEach { tool ->
+            IconButton(enabled = enabled && running == null, onClick = { onPick(tool) }) {
+                Icon(tool.icon, contentDescription = stringResource(tool.label))
+            }
+        }
+        if (running != null) {
+            LinearProgressIndicator(Modifier.weight(1f).padding(horizontal = MailMetrics.s8))
+        } else {
+            androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+        }
+        if (canUndo) {
+            IconButton(onClick = onUndo) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = stringResource(R.string.text_tool_undo),
+                )
+            }
+        }
     }
 }

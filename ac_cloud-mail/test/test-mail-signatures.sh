@@ -192,7 +192,7 @@ has "$VM" 'available.firstOrNull { it.id == chosen } ?: identity?.defaultSignatu
 # The gap #206 had to close: the send path substituted the stored signature HTML VERBATIM. The
 # reader's sanitiser covered received markup only, so the one kind of HTML the app generated itself
 # was the one kind nothing reduced.
-has "$TEXT" 'val markup = sanitiseReceivedHtml(signatureHtml.trim())' \
+has "$TEXT" 'to head + sanitiseReceivedHtml(signatureHtml.trim())' \
   "N5 the outgoing html alternative sanitises the signature"
 absent "$TEXT" 'head + signatureHtml.trim())' \
   "N5 nothing substitutes the raw signature HTML any more"

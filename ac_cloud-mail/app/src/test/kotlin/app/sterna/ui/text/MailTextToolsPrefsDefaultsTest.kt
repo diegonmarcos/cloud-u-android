@@ -46,4 +46,24 @@ class MailTextToolsPrefsDefaultsTest {
         MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_TRANSLATE_TARGET, "")
         assertEquals("en", MailTextToolsPrefs.translateTarget(context))
     }
+
+    @Test fun `the answer prompt defaults to the sensible one and states its rules`() {
+        val p = MailTextToolsPrefs.answerPrompt(context)
+        assertEquals(AnswerPrompt.DEFAULT, p)
+        assertTrue(p.contains("language of the message"))
+        assertTrue(p.contains("tone"))
+        assertTrue(p.contains("concise"))
+        assertTrue(p.contains("Never invent"))
+        assertTrue(p.contains("[date]"))
+    }
+
+    @Test fun `an edited answer prompt is stored, a blank one reads as the default, and reset restores it`() {
+        MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_ANSWER_PROMPT, "Be brief.")
+        assertEquals("Be brief.", MailTextToolsPrefs.answerPrompt(context))
+        MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_ANSWER_PROMPT, "  ")
+        assertEquals(AnswerPrompt.DEFAULT, MailTextToolsPrefs.answerPrompt(context))
+        MailTextToolsPrefs.put(context, MailTextToolsPrefs.KEY_ANSWER_PROMPT, "Be brief.")
+        MailTextToolsPrefs.resetAnswerPrompt(context)
+        assertEquals(AnswerPrompt.DEFAULT, MailTextToolsPrefs.answerPrompt(context))
+    }
 }

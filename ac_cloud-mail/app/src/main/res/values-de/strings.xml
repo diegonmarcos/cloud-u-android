@@ -1180,4 +1180,13 @@
     <string name="nav_chat_not_installed">Telegram ist nicht installiert</string>
     <string name="nav_video_not_installed">WhatsApp Business ist nicht installiert</string>
     <string name="nav_launch_not_installed">Diese App ist nicht installiert</string>
+    <string name="text_tool_answer">Antwortvorschlag</string>
+    <string name="text_tool_grammar">Grammatik prüfen</string>
+    <string name="text_tool_undo">Rückgängig</string>
+    <string name="text_tool_no_thread">In diesem Entwurf gibt es keine Nachricht zum Beantworten</string>
+    <string name="settings_text_answer_title">Antwortvorschlag</string>
+    <string name="settings_text_answer_summary">Schreibt einen Antwortentwurf aus dem Verlauf</string>
+    <string name="settings_text_answer_note">Der Prompt, der einen Antwortvorschlag schreibt. Er wird vom Antwortvorschlag im Editor und von der Antwort im KI-Resümee-Feld verwendet.</string>
+    <string name="settings_text_answer_prompt">Prompt</string>
+    <string name="settings_text_answer_reset">Auf Standard zurücksetzen</string>
 </resources>

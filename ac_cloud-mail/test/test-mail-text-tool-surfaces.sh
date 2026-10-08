@@ -54,7 +54,7 @@ declared = {
 print(f"  ok: D1 TextToolSurface declares {len(declared)} surfaces: {' '.join(sorted(declared))}")
 
 # The owner's rule, stated here independently of the code so the two have to agree.
-want = {"READ": {"RESUME", "TRANSLATE"}, "COMPOSE": {"ENHANCE", "TRANSLATE"}}
+want = {"READ": {"RESUME", "TRANSLATE"}, "COMPOSE": {"ANSWER", "ENHANCE", "GRAMMAR", "TRANSLATE"}}
 if set(declared) != set(want):
     print(f"  FAIL: S1 surfaces are {sorted(declared)}, expected {sorted(want)}")
     fails += 1
@@ -71,6 +71,8 @@ for surface, tool, why in (
     ("READ", "RESUME", "a summary is a separate text ABOUT a message somebody else sent"),
     ("READ", "TRANSLATE", "Translate is meaningful in both directions"),
     ("COMPOSE", "TRANSLATE", "Translate is meaningful in both directions"),
+    ("COMPOSE", "ANSWER", "Answer Prediction writes a reply into a draft"),
+    ("COMPOSE", "GRAMMAR", "Check Grammar corrects the user's own text"),
 ):
     if tool in declared.get(surface, []):
         print(f"  ok: S1 {tool} is on {surface} -- {why}")
@@ -80,6 +82,8 @@ for surface, tool, why in (
 for surface, tool, why in (
     ("READ", "ENHANCE", "there is nothing to improve in a record of what somebody else sent"),
     ("COMPOSE", "RESUME", "summarising a draft you are still writing answers nothing"),
+    ("READ", "ANSWER", "a received message is not a draft: the reader's reply goes through Reply all"),
+    ("READ", "GRAMMAR", "a record of what somebody else sent is not corrected"),
 ):
     if tool not in declared.get(surface, []):
         print(f"  ok: S1 {tool} is NOT on {surface} -- {why}")
@@ -113,8 +117,14 @@ has "$COMPOSER" 'rememberTextToolRunner(TextToolSurface.COMPOSE)' "S2 the compos
 # taps depending on which half of the app you were in — which is the whole of #308. Both call sites
 # are pinned, because either one alone is satisfiable while the surfaces disagree.
 has "$READER" 'TextToolIconRow(' "S2 the reader draws its actions as the shared icon row"
-has "$COMPOSER" 'TextToolIconRow(textTools.surface, enabled = !sending)' \
+has "$COMPOSER" 'TextToolIconRow(textTools.surface, enabled = !sending, skip = { it.appliesInPlace })' \
   "S2 the composer draws the SAME row, gated on its own send-in-flight flag"
+# The in-place tools (Answer Prediction, Enhance, Check Grammar) are a dense toolbar directly under
+# Subject AND named overflow items, both drawn from the surface's flag and not by tool name.
+has "$COMPOSER" 'TextToolInPlaceBar(' "S2 the composer draws the in-place tools as a toolbar under Subject"
+has "$COMPOSER" 'textTools.surface.tools.filter { it.appliesInPlace }.forEach { tool ->' \
+  "S2 the in-place tools are also named overflow items"
+has "$PANEL" 'surface.tools.filter { it.appliesInPlace }' "S2 the toolbar iterates the surface's own in-place tools"
 # The stacked helper is asserted GONE, not merely uncalled. It survived #293 with one caller left
 # and that is how the asymmetry lasted: a composable nothing calls is the one a new screen reaches
 # for, and this file exists to stop the two surfaces drifting apart a third time.
@@ -155,7 +165,7 @@ has "$READER" 'text = { Text(stringResource(R.string.message_show_images)) }' \
 # ...and the panel decides where an outcome is drawn from the same enum rather than naming a tool.
 # Code only: the KDoc above EXPLAINS that RESUME draws itself, and matching the explanation would
 # have failed on the very comment that makes the rule readable.
-has "$PANEL" 'if (!tool.inOverflow) return' "S2 the panel routes an outcome by inOverflow"
+has "$PANEL" 'if (!tool.inOverflow || tool.appliesInPlace) return' "S2 the panel routes an outcome by inOverflow"
 grep -q 'TextTool\.RESUME' <<<"$(grep -vE '^\s*(\*|//|/\*)' "$PANEL")" \
   && bad "S2 the panel still names RESUME in code instead of asking inOverflow" \
   || ok "S2 the panel names no single tool in code"

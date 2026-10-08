@@ -20,12 +20,19 @@ class TranslatePromptTest {
     }
 
     @Test fun `the summary prompt asks for both parts, the reply in the message's language`() {
-        val known = summaryWithReplyPrompt("Summarise the message.", "de")
+        val known = summaryWithReplyPrompt("Summarise the message.", "de", AnswerPrompt.DEFAULT)
         assertTrue(known.startsWith("Summarise the message."))
         assertTrue("the marker the answer is split on", known.contains(app.sterna.core.data.text.SuggestedReply.MARK))
         assertTrue(known.contains("written in German"))
-        val unknown = summaryWithReplyPrompt("Summarise the message.", null)
+        val unknown = summaryWithReplyPrompt("Summarise the message.", null, AnswerPrompt.DEFAULT)
         assertTrue(unknown.contains("the language the message is written in"))
         assertTrue("one reply, not an essay", known.contains("ONE short suggested reply"))
+    }
+
+    @Test fun `the summary's suggested reply uses the same answer prompt, edited or not`() {
+        val edited = "Reply in pirate speak."
+        val p = summaryWithReplyPrompt("Summarise the message.", "en", edited)
+        assertTrue(p.endsWith(edited))
+        assertTrue(summaryWithReplyPrompt("S", "en", AnswerPrompt.DEFAULT).endsWith(AnswerPrompt.DEFAULT))
     }
 }

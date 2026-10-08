@@ -1037,19 +1037,56 @@ internal fun htmlBodyWithSignature(
     signature: String,
     signatureHtml: String,
     delimiter: Boolean,
+    quote: QuoteForHtml? = null,
 ): String {
-    if (signatureHtml.isBlank()) return toHtml(body)
-    val found = signatureBlockAt(body.text, signature, delimiter) ?: return toHtml(body)
-    if (!signatureBlockIsIntact(body, found.start, found.end)) return toHtml(body)
-    val head = if (found.withDelimiter) "<br><br>$SIGNATURE_DELIMITER<br>" else "<br><br>"
-    // SANITISED here, at the one point a stored signature becomes markup on the wire, for the reason
-    // [readerBody] sanitises at its own single point: a policy applied at the assembly cannot be
-    // forgotten by a later caller. A signature is stored content that gets RENDERED — by the
-    // recipient, by this app when the sent copy is read back out of Sent, and by the composer's own
-    // preview — and "the owner supplied it" is not "the owner wrote it": Import HTML reads a file off
-    // the device, and backup/restore and K-9 import both write this field without anyone typing it.
-    val markup = sanitiseReceivedHtml(signatureHtml.trim())
-    return toHtml(body, verbatim = Span(found.start, found.end) to head + markup)
+    val verbatims = ArrayList<Pair<Span, String>>()
+    // The reply's quoted original, as the original's own sanitised HTML, in place of the plain
+    // "> " lines the editor shows. Only while the editable copy of it is still in the body and the
+    // user has not styled it: an edited quote is the user's text and wins, like an edited signature.
+    quote?.let { q ->
+        val block = q.plain.trim('\n')
+        val at = if (block.isEmpty()) -1 else body.text.lastIndexOf(block)
+        if (at >= 0 && signatureBlockIsIntact(body, at, at + block.length)) {
+            verbatims += Span(at, at + block.length) to q.html
+        }
+    }
+    if (signatureHtml.isNotBlank()) {
+        val found = signatureBlockAt(body.text, signature, delimiter)
+        if (found != null && signatureBlockIsIntact(body, found.start, found.end) &&
+            verbatims.none { it.first.start < found.end && it.first.end > found.start }
+        ) {
+            val head = if (found.withDelimiter) "<br><br>$SIGNATURE_DELIMITER<br>" else "<br><br>"
+            // SANITISED here, at the one point a stored signature becomes markup on the wire, for the
+            // reason [readerBody] sanitises at its own single point: a policy applied at the assembly
+            // cannot be forgotten by a later caller. A signature is stored content that gets RENDERED -
+            // by the recipient, by this app when the sent copy is read back out of Sent, and by the
+            // composer's own preview - and "the owner supplied it" is not "the owner wrote it": Import
+            // HTML reads a file off the device, and backup/restore and K-9 import both write this field
+            // without anyone typing it. The delimiter line is emitted only when the block found in the
+            // BODY carries one (#90).
+            verbatims += Span(found.start, found.end) to head + sanitiseReceivedHtml(signatureHtml.trim())
+        }
+    }
+    return if (verbatims.isEmpty()) toHtml(body) else toHtml(body, verbatims)
+}
+
+/**
+ * A reply's quoted original in both shapes: [plain] is exactly the block the editor holds (attribution
+ * line and "> " lines), [html] is the same quote for the wire - the usual header line, then the original's
+ * sanitised HTML in a blockquote. See [buildQuoteHtml].
+ */
+internal class QuoteForHtml(val plain: String, val html: String)
+
+/**
+ * The quote of [originalHtml] (or, with none, of [originalText] escaped) under its [attribution] line,
+ * as HTML: `<div>attribution</div><blockquote type="cite" ...>original</blockquote>`. The original is
+ * sanitised by [sanitiseReceivedHtml] (no script, no handlers, no foreign styles), and an inline `cid:`
+ * picture this reply does not carry becomes "[image]" rather than a broken box.
+ */
+internal fun buildQuoteHtml(attribution: String, originalHtml: String?, originalText: String): String {
+    val inner = if (originalHtml != null) cleanForwardedHtml(sanitiseReceivedHtml(originalHtml)) else htmlEscapeMultiline(originalText)
+    return "<div>${htmlEscape(attribution)}</div>" +
+        "<blockquote type=\"cite\" style=\"margin:0 0 0 0.8ex;padding-left:1ex;border-left:1px solid #ccc\">$inner</blockquote>"
 }
 
 /**

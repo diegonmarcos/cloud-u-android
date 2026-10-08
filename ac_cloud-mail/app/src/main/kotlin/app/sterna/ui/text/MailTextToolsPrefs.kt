@@ -55,6 +55,9 @@ object MailTextToolsPrefs {
     /** Translation: BCP-47 target tag; blank = English ([MailLanguages.DEFAULT]). */
     const val KEY_TRANSLATE_TARGET = "translate_default_target"
 
+    /** Answer Prediction's prompt, editable on its settings page; blank / absent = [AnswerPrompt.DEFAULT]. */
+    const val KEY_ANSWER_PROMPT = "answer_prompt"
+
     /** Auto-translate: translate a message on open when it is not already in the target. Off by default. */
     const val KEY_AUTO_TRANSLATE = "auto_translate_incoming"
 
@@ -111,6 +114,15 @@ object MailTextToolsPrefs {
 
     fun translateTarget(context: Context): String =
         MailLanguages.normalise(prefs(context).getString(KEY_TRANSLATE_TARGET, null))
+
+    /** The prompt Answer Prediction and the suggested reply use: the owner's edit, else the default. */
+    fun answerPrompt(context: Context): String =
+        prefs(context).getString(KEY_ANSWER_PROMPT, null)?.takeIf { it.isNotBlank() } ?: AnswerPrompt.DEFAULT
+
+    /** Back to [AnswerPrompt.DEFAULT]: the stored edit is removed, so the default is what is read. */
+    fun resetAnswerPrompt(context: Context) {
+        prefs(context).edit().remove(KEY_ANSWER_PROMPT).apply()
+    }
 
     fun autoTranslate(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO_TRANSLATE, false)
 

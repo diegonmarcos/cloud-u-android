@@ -180,7 +180,7 @@ NAV="$KB/helium314/keyboard/settings/SettingsNavHost.kt"
 # The rows are destinations in THIS APP now. They used to be names in the keyboard's allowlist,
 # opened by an intent, which is why nothing they showed could be edited from mail.
 n=$(grep -c 'route = "' "$SEC")
-[ "$n" = 4 ] && ok "P1 Configs > Text declares four entries" || bad "P1 declares $n entries, expected 4"
+[ "$n" = 5 ] && ok "P1 Configs > Text declares five entries" || bad "P1 declares $n entries, expected 5"
 has "$SEC" 'route = "textResume"' "P1 Text Resume is one of them"
 grep -qE '^\s*composable\("textResume"\)' "$UI/settings/SettingsScreen.kt" \
   && ok "P1 textResume resolves to a real page in mail's own settings graph" \
@@ -190,11 +190,11 @@ python3 - "$SEC" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding='utf-8').read()
 order = re.findall(r'route = "([A-Za-z_]+)"', src)
-want = ["textAiRouting", "textEnhance", "textResume", "textTranslation"]
+want = ["textAiRouting", "textEnhance", "textResume", "textAnswer", "textTranslation"]
 if order != want:
     print(f"  FAIL: P1 entry order is {order}, expected {want}")
     sys.exit(1)
-print("  ok: P1 Text Resume sits after Text Enhancement")
+print("  ok: P1 Text Resume sits after Text Enhancement, Answer Prediction right after it")
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 

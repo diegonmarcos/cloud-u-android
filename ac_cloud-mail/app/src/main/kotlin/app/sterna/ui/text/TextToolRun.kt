@@ -5,6 +5,8 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Spellcheck
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
@@ -53,10 +55,19 @@ enum class TextTool(
     @StringRes val label: Int,
     val icon: ImageVector,
     val inOverflow: Boolean,
+    /**
+     * The result is APPLIED to the draft as an edit that can be undone, with no dialog in between:
+     * Answer Prediction, Text Enhancement and Check Grammar. Nothing is ever sent by a tool.
+     */
+    val appliesInPlace: Boolean = false,
+    /** The tool reads the THREAD (the message being answered), not the draft's own text. */
+    val readsThread: Boolean = false,
 ) {
-    ENHANCE(R.string.text_tool_enhance, Icons.Filled.AutoFixHigh, inOverflow = true),
+    ENHANCE(R.string.text_tool_enhance, Icons.Filled.AutoFixHigh, inOverflow = true, appliesInPlace = true),
     TRANSLATE(R.string.text_tool_translate, Icons.Filled.Translate, inOverflow = true),
     RESUME(R.string.text_tool_resume, Icons.Filled.AutoAwesome, inOverflow = false),
+    ANSWER(R.string.text_tool_answer, Icons.Filled.QuestionAnswer, inOverflow = true, appliesInPlace = true, readsThread = true),
+    GRAMMAR(R.string.text_tool_grammar, Icons.Filled.Spellcheck, inOverflow = true, appliesInPlace = true),
 }
 
 /**
@@ -90,7 +101,7 @@ enum class TextToolSurface(val tools: List<TextTool>) {
     // the owner's "Resume below Translate" (#293) turned into a row that reads left to right.
     // Reordering here moves the buttons; it is not cosmetic.
     READ(listOf(TextTool.TRANSLATE, TextTool.RESUME)),
-    COMPOSE(listOf(TextTool.ENHANCE, TextTool.TRANSLATE)),
+    COMPOSE(listOf(TextTool.ANSWER, TextTool.ENHANCE, TextTool.GRAMMAR, TextTool.TRANSLATE)),
 }
 
 /** How a finished run ended. Exactly one of [text] and [error] is set. */
@@ -193,6 +204,8 @@ class TextToolRunner internal constructor(
                             model,
                         )
                         TextTool.TRANSLATE -> client.translate(text, MailTextToolsPrefs.translateTarget(context))
+                        TextTool.ANSWER -> answerEngine(client, text, MailTextToolsPrefs.answerPrompt(context), provider, model)
+                        TextTool.GRAMMAR -> grammarEngine(client, text, provider, model)
                         TextTool.RESUME -> client.summariseWith(
                             text,
                             MailTextToolsPrefs.summaryPrompt(context),
@@ -307,7 +320,7 @@ internal class TextToolsReaderEngine(
         val provider = MailTextToolsPrefs.providerId(context)
         val result = client.summariseWith(
             text,
-            summaryWithReplyPrompt(MailTextToolsPrefs.summaryPrompt(context, languageTag), replyTag),
+            summaryWithReplyPrompt(MailTextToolsPrefs.summaryPrompt(context, languageTag), replyTag, MailTextToolsPrefs.answerPrompt(context)),
             // false: the engine's bullet enforcement would shape the WHOLE answer, reply included. The
             // chosen shape's own prompt still asks for bullets; only the post-hoc enforcement is off.
             false,
@@ -318,3 +331,15 @@ internal class TextToolsReaderEngine(
         return result.text ?: throw TranslationFailed("The model returned nothing")
     }
 }
+
+/**
+ * Answer Prediction's engine: the thread as the text, the owner's Answer Prediction prompt as the system
+ * prompt, through the same OpenRouter provider and model as every other rewrite. Its own function so the
+ * dispatch maps each tool to an engine of its own (the property test-mail-html.sh H9 holds).
+ */
+private fun answerEngine(client: TextToolsClient, thread: String, prompt: String, provider: String, model: String) =
+    client.enhanceWith(thread, prompt, provider, model)
+
+/** Check Grammar's engine: the fixed correction prompt, over the selection or the body. */
+private fun grammarEngine(client: TextToolsClient, text: String, provider: String, model: String) =
+    client.enhanceWith(text, AnswerPrompt.GRAMMAR, provider, model)

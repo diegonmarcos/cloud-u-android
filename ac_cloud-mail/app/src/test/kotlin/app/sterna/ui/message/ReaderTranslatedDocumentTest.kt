@@ -50,4 +50,16 @@ class ReaderTranslatedDocumentTest {
         assertTrue(doc(dark, "<p>X</p>").contains("invert(1)"))
         assertFalse(doc(light, "<p>X</p>").contains("invert(1)"))
     }
+
+    @Test fun `the toggle flips the rendered document both ways`() {
+        val source = fragmentOf(light)
+        val translated = InPlaceHtmlTranslation.translate(source) { it.uppercase() }.html
+        var state = ReaderTranslation("es", source, translated, shown = true)
+        fun rendered() = doc(light, state.fragmentFor(source))
+        assertTrue("shown: translated", rendered().contains("OPEN THE OFFER") && !rendered().contains("Open the offer"))
+        state = state.toggled()
+        assertTrue("toggled: original", rendered().contains("Open the offer") && !rendered().contains("OPEN THE OFFER"))
+        state = state.toggled()
+        assertTrue("toggled again: translated", rendered().contains("OPEN THE OFFER"))
+    }
 }
