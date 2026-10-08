@@ -162,7 +162,7 @@ mut "the migration written but not registered" r4 app/sterna/core/data/db/Sterna
 mut "the cache keyed by message only" r4 app/sterna/core/data/db/MessageTextCacheEntity.kt 'primaryKeys = ["accountId", "emailId", "kind", "lang"]' 'primaryKeys = ["accountId", "emailId", "kind"]'
 mut "auto-translate on by default" r5 app/sterna/ui/text/MailTextToolsPrefs.kt "getBoolean(KEY_AUTO_TRANSLATE, false)" "getBoolean(KEY_AUTO_TRANSLATE, true)"
 mut "auto-translate without detection" r5 app/sterna/ui/message/MessageViewModel.kt "MailTextToolsPrefs.autoTranslate(app) &&
-                        textAi.needsTranslation(htmlToText(fragment), target)" "MailTextToolsPrefs.autoTranslate(app)"
+                        textAi.needsTranslation(InPlaceHtmlTranslation.visibleText(fragment), target)" "MailTextToolsPrefs.autoTranslate(app)"
 mut "the summary box collapsed by default" r6 app/sterna/ui/message/ResumeBox.kt "rememberSaveable(emailId) { mutableStateOf(true) }" "rememberSaveable(emailId) { mutableStateOf(false) }"
 mut "the summary box drawn with nothing to say" r6 app/sterna/ui/message/ResumeBox.kt "if (!summary.visible) return" ""
 mut "a free-text language field back" r7 app/sterna/ui/settings/TextToolsScreens.kt "internal fun MailTranslationScreen(onBack: () -> Unit) {" "internal fun MailTranslationScreen(onBack: () -> Unit) {

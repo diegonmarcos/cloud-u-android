@@ -45,7 +45,7 @@ import app.sterna.core.data.text.LanguageGuess
 import app.sterna.core.data.text.ReaderTextAi
 import app.sterna.core.data.text.SummaryOutcome
 import app.sterna.core.data.text.TranslationOutcome
-import app.sterna.core.data.text.htmlToText
+import app.sterna.core.data.text.InPlaceHtmlTranslation
 import app.sterna.ui.text.MailTextToolsPrefs
 import app.sterna.ui.text.TextToolsReaderEngine
 import app.sterna.ui.text.textToolsClient
@@ -1104,7 +1104,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 } else {
                     _translation.value = ReaderTranslation(target, fragment)
                     val auto = MailTextToolsPrefs.autoTranslate(app) &&
-                        textAi.needsTranslation(htmlToText(fragment), target)
+                        textAi.needsTranslation(InPlaceHtmlTranslation.visibleText(fragment), target)
                     if (auto && loadedId == id) runTranslation(id, fragment, target)
                 }
             }
@@ -1120,22 +1120,32 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** The Translate tool: translate the reader's fragment in place into the chosen language. */
-    fun translateNow(fragment: String) {
+    /**
+     * The Translate tool: translate the reader's fragment in place into the chosen language. A tap
+     * never fails on language detection: the language is detected once on the whole message, and when
+     * no engine can place it the reader is asked ([ReaderTranslation.needsSource]) and passes
+     * [chosenSource] back here.
+     */
+    fun translateNow(fragment: String, chosenSource: String? = null) {
         val id = loadedId ?: return
         if (_translation.value.running) return
         val target = MailTextToolsPrefs.translateTarget(getApplication<Application>())
         translationJob?.cancel()
-        translationJob = viewModelScope.launch { runTranslation(id, fragment, target) }
+        translationJob = viewModelScope.launch { runTranslation(id, fragment, target, chosenSource, interactive = true) }
     }
 
-    private suspend fun runTranslation(id: String, fragment: String, target: String) {
+    private suspend fun runTranslation(
+        id: String, fragment: String, target: String, chosenSource: String? = null, interactive: Boolean = false,
+    ) {
         _translation.value = ReaderTranslation(target, fragment, running = true)
-        val outcome = textAi.translate(cacheAccount(), id, target, fragment)
+        val outcome = textAi.translate(cacheAccount(), id, target, fragment, chosenSource)
         if (loadedId != id) return
         _translation.value = when (outcome) {
             is TranslationOutcome.Done -> ReaderTranslation(target, fragment, outcome.fragment, shown = true)
             is TranslationOutcome.Failed -> ReaderTranslation(target, fragment, error = outcome.reason)
+            // Auto-translate stays quiet when unsure; only a tap asks the reader which language it is.
+            is TranslationOutcome.NeedsSource ->
+                if (interactive) ReaderTranslation(target, fragment, needsSource = true) else ReaderTranslation(target, fragment)
         }
     }
 
@@ -1145,7 +1155,7 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun dismissTranslationError() {
-        _translation.value = _translation.value.copy(error = null)
+        _translation.value = _translation.value.copy(error = null, needsSource = false)
     }
 
     /** The Resume tool: summarise [source] into the chosen summary language. */

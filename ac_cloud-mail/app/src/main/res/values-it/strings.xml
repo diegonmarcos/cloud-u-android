@@ -1095,6 +1095,8 @@
     <string name="settings_text_resume_language">Lingua del riassunto</string>
     <string name="message_show_original">Mostra originale</string>
     <string name="message_show_translated">Mostra traduzione</string>
+    <string name="message_translate_source_prompt">Non sono riuscito a riconoscere la lingua di questo messaggio.</string>
+    <string name="message_translate_source_choose">Scegli la lingua</string>
     <string name="message_summary_collapse">Comprimi il riassunto</string>
     <string name="message_summary_expand">Espandi il riassunto</string>
     <string name="text_tool_enhance">Migliora il testo</string>

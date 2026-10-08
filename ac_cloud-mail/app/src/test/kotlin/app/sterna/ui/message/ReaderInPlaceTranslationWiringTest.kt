@@ -73,7 +73,7 @@ class ReaderInPlaceTranslationWiringTest {
         val open = model.substring(model.indexOf("fun onReaderOpened("), model.indexOf("fun translateNow("))
         assertTrue(
             "auto-translate must be gated by the setting AND by detection, so a message already in the target is left alone",
-            "MailTextToolsPrefs.autoTranslate(app) &&\n                        textAi.needsTranslation(htmlToText(fragment), target)" in open,
+            "MailTextToolsPrefs.autoTranslate(app) &&\n                        textAi.needsTranslation(InPlaceHtmlTranslation.visibleText(fragment), target)" in open,
         )
         assertTrue("auto-summary reads its own switch", "MailTextToolsPrefs.autoSummary(app)" in open)
         assertTrue("a kept translation is shown at once", "ReaderTranslation(target, fragment, kept, shown = true)" in open)

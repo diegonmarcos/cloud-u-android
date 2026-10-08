@@ -15,6 +15,8 @@ data class ReaderTranslation(
     val shown: Boolean = false,
     val running: Boolean = false,
     val error: String? = null,
+    /** No engine could place the message's language: the reader is asked to pick one (never a dead end). */
+    val needsSource: Boolean = false,
 ) {
     val exists: Boolean get() = fragment != null
 

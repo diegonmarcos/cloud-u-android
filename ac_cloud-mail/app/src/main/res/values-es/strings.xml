@@ -1128,6 +1128,8 @@
     <string name="settings_text_resume_language">Idioma del resumen</string>
     <string name="message_show_original">Mostrar original</string>
     <string name="message_show_translated">Mostrar traducción</string>
+    <string name="message_translate_source_prompt">No pude detectar el idioma de este mensaje.</string>
+    <string name="message_translate_source_choose">Elegir el idioma</string>
     <string name="message_summary_collapse">Contraer el resumen</string>
     <string name="message_summary_expand">Expandir el resumen</string>
     <string name="settings_text_prompt_preview_title">Lo que se envía</string>

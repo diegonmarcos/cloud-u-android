@@ -1109,6 +1109,8 @@
     <string name="settings_text_resume_language">Język streszczenia</string>
     <string name="message_show_original">Pokaż oryginał</string>
     <string name="message_show_translated">Pokaż tłumaczenie</string>
+    <string name="message_translate_source_prompt">Nie udało się rozpoznać języka tej wiadomości.</string>
+    <string name="message_translate_source_choose">Wybierz język</string>
     <string name="message_summary_collapse">Zwiń streszczenie</string>
     <string name="message_summary_expand">Rozwiń streszczenie</string>
     <string name="text_tool_enhance">Ulepsz tekst</string>

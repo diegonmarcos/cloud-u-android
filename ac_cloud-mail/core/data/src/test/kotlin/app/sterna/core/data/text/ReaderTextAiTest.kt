@@ -33,7 +33,7 @@ class ReaderTextAiTest {
         var translateCalls = 0
         var summariseCalls = 0
         var fail: String? = null
-        override fun translate(text: String, targetTag: String): String {
+        override fun translate(text: String, targetTag: String, sourceTag: String?): String {
             translateCalls++
             fail?.let { throw TranslationFailed(it) }
             return text.uppercase()
@@ -95,7 +95,7 @@ class ReaderTextAiTest {
         engine.fail = "no network"
         val out = ai().translate("a", "m1", "es", html)
         assertEquals(TranslationOutcome.Failed("no network"), out)
-        assertTrue("a half result must never be what reopening shows", cache.rows.isEmpty())
+        assertTrue("a half result must never be what reopening shows", cache.rows.values.none { it.kind == MessageTextKind.TRANSLATION })
     }
 
     @Test fun `a picture-only message is not a failure and not a row`() = runBlocking {

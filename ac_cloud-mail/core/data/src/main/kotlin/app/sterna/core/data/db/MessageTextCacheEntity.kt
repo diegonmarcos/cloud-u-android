@@ -13,6 +13,9 @@ object MessageTextKind {
 
     /** The summary of the message, written in one language. */
     const val SUMMARY = "summary"
+
+    /** The language the message was detected to be in (payload; "" = could not tell), once per message. */
+    const val SOURCE = "source"
 }
 
 /**

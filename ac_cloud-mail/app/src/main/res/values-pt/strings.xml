@@ -1099,6 +1099,8 @@
     <string name="settings_text_resume_language">Idioma do resumo</string>
     <string name="message_show_original">Mostrar original</string>
     <string name="message_show_translated">Mostrar tradução</string>
+    <string name="message_translate_source_prompt">Não consegui identificar o idioma desta mensagem.</string>
+    <string name="message_translate_source_choose">Escolher o idioma</string>
     <string name="message_summary_collapse">Recolher o resumo</string>
     <string name="message_summary_expand">Expandir o resumo</string>
     <string name="text_tool_enhance">Melhorar texto</string>

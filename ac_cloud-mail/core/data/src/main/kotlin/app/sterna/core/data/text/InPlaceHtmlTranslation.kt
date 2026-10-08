@@ -34,7 +34,14 @@ object InPlaceHtmlTranslation {
         fun translate(text: String): String
     }
 
-    class TranslationFailed(val reason: String) : Exception(reason)
+    open class TranslationFailed(val reason: String) : Exception(reason)
+
+    /**
+     * No engine could translate because none could tell what language the text is in, and none
+     * that needs no source was available. The reader answers it with a source-language picker, not a
+     * dead end; [reason] is the engine's own wording.
+     */
+    class NeedsSource(reason: String) : TranslationFailed(reason)
 
     /** [html] with its text translated; [translatedUnits] of [totalUnits] translatable lines changed. */
     class Result(val html: String, val translatedUnits: Int, val totalUnits: Int)
@@ -84,9 +91,14 @@ object InPlaceHtmlTranslation {
             val closing = tag.startsWith("/")
             val name = tag.removePrefix("/").takeWhile { it.isLetterOrDigit() || it == ':' }.lowercase()
             val selfClosed = tag.endsWith("/")
-            val skip = name in SKIP_ELEMENTS || (name == "pre" && !PLAIN_PRE.containsMatchIn(tag))
-            if (skip && !closing && !selfClosed && name !in VOID) skipStack += name
-            else if (closing && skipStack.isNotEmpty() && skipStack.last() == name) skipStack.removeAt(skipStack.lastIndex)
+            val skip = name in SKIP_ELEMENTS || (name == "pre" && !PLAIN_PRE.containsMatchIn(tag)) ||
+                (!closing && HIDDEN.containsMatchIn(tag))
+            val opens = !closing && !selfClosed && name !in VOID
+            if (skipStack.isNotEmpty() && skipStack.last() == name) {
+                // inside a skipped element: count nested elements of the same name, so the first
+                // closing tag does not end the skip early
+                if (opens) skipStack += name else if (closing) skipStack.removeAt(skipStack.lastIndex)
+            } else if (skip && opens) skipStack += name
             i = minOf(j + 1, html.length)
             textStart = i
         }
@@ -94,8 +106,41 @@ object InPlaceHtmlTranslation {
         return out
     }
 
+    /**
+     * An element the reader cannot see: `display:none`, `visibility:hidden`, zero font size or height,
+     * `opacity:0`, `mso-hide:all`, the `hidden` attribute, and the preheader / preview / tracking
+     * wrappers newsletters hide their pre-text and pixels in. Its text is not the message.
+     */
+    private val HIDDEN = Regex(
+        "display\\s*:\\s*none|visibility\\s*:\\s*hidden|font-size\\s*:\\s*0(?:px|pt|em|%)?\\s*(?:;|\"|'|!)|" +
+            "max-height\\s*:\\s*0|opacity\\s*:\\s*0\\s*(?:;|\"|'|!)|mso-hide\\s*:\\s*all|\\shidden(?:\\s|=|/|$)|" +
+            "class\\s*=\\s*[\"'][^\"']*(?:preheader|preview-?text|pre-?header|hidden|tracking)",
+        RegexOption.IGNORE_CASE,
+    )
+
     private val PLAIN_PRE = Regex("""class\s*=\s*["']plain["']""")
     private val VOID = setOf("br", "hr", "img", "wbr", "col")
+
+    // ---- visible text ----------------------------------------------------------------------------------
+
+    private val URL_OR_ADDRESS = Regex("(?:https?://|www\\.)\\S+|[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+", RegexOption.IGNORE_CASE)
+    private val MARKUP_LEFTOVER = Regex("<[^>]*>|\\{[^}]*\\}|\\bstyle\\s*=\\s*\\S+", RegexOption.IGNORE_CASE)
+
+    /**
+     * What a reader SEES of [html], as one line: the text nodes only (never a tag, an attribute, a
+     * style or script body, a comment, or an element hidden from view), entities decoded, links and
+     * addresses dropped, whitespace collapsed. This - and nothing else - is what language detection
+     * is given; detection reading markup would call a German newsletter English because of its CSS.
+     */
+    fun visibleText(html: String): String =
+        forDetection(textNodes(html).joinToString(" ") { it.decoded })
+
+    /** [text] with anything that is not prose taken out: markup left over, braces, style=, links, addresses. */
+    fun forDetection(text: String): String =
+        text.replace(URL_OR_ADDRESS, " ")
+            .replace(MARKUP_LEFTOVER, " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
 
     // ---- protected tokens ------------------------------------------------------------------------
 

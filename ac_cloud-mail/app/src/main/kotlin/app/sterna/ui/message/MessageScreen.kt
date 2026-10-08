@@ -2001,6 +2001,13 @@ private fun MessageContent(
         LocalReaderSummary provides ReaderSummaryUi(readerSummary, viewModel::dismissSummaryError),
     ) {
     Box(Modifier.fillMaxSize()) {
+        if (translation.needsSource && readerFragment != null) {
+            SourceLanguagePicker(
+                Modifier.align(Alignment.TopCenter),
+                onPick = { viewModel.translateNow(readerFragment, it) },
+                onDismiss = viewModel::dismissTranslationError,
+            )
+        }
         when (val s = state) {
             is MessageState.Loading -> LoadingRing(Modifier.align(Alignment.Center))
             is MessageState.Error -> Column(

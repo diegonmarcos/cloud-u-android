@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import app.sterna.R
+import app.sterna.core.data.text.FallbackTranslator
 import app.sterna.core.data.text.InPlaceHtmlTranslation.TranslationFailed
 import app.sterna.core.data.text.ReaderTextEngine
 import com.diegonmarcos.superapp.texttools.TextToolsClient
@@ -285,11 +286,20 @@ internal class TextToolsReaderEngine(
     private val context: Context,
 ) : ReaderTextEngine {
 
-    override fun translate(text: String, targetTag: String): String {
+    private val fallback = FallbackTranslator(
+        library = { text, target -> client.translate(text, target).let { FallbackTranslator.Reply(it.text, it.error) } },
+        model = { text, target, source ->
+            val provider = MailTextToolsPrefs.providerId(context)
+            client.enhanceWith(text, llmTranslatePrompt(target, source), provider, MailTextToolsPrefs.modelId(context, provider))
+                .let { FallbackTranslator.Reply(it.text, it.error) }
+        },
+    )
+
+    override fun newRun() = fallback.newRun()
+
+    override fun translate(text: String, targetTag: String, sourceTag: String?): String {
         MailTextToolsPrefs.seedFromKeyboard(context, client)
-        val result = client.translate(text, targetTag)
-        result.error?.let { throw TranslationFailed(it) }
-        return result.text ?: throw TranslationFailed("The translation engine returned nothing")
+        return fallback.translate(text, targetTag, sourceTag)
     }
 
     override fun summarise(text: String, languageTag: String): String {

@@ -1092,6 +1092,8 @@
     <string name="settings_text_resume_language">Taal van de samenvatting</string>
     <string name="message_show_original">Origineel tonen</string>
     <string name="message_show_translated">Vertaling tonen</string>
+    <string name="message_translate_source_prompt">Ik kon de taal van dit bericht niet bepalen.</string>
+    <string name="message_translate_source_choose">Taal kiezen</string>
     <string name="message_summary_collapse">Samenvatting inklappen</string>
     <string name="message_summary_expand">Samenvatting uitklappen</string>
     <string name="text_tool_enhance">Tekst verbeteren</string>

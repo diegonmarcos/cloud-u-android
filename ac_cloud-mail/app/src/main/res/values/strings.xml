@@ -531,6 +531,8 @@
     <string name="settings_text_resume_language">Summary language</string>
     <string name="message_show_original">Show original</string>
     <string name="message_show_translated">Show translated</string>
+    <string name="message_translate_source_prompt">I could not tell which language this message is in.</string>
+    <string name="message_translate_source_choose">Choose the language</string>
     <string name="message_summary_collapse">Collapse the summary</string>
     <string name="message_summary_expand">Expand the summary</string>
 
