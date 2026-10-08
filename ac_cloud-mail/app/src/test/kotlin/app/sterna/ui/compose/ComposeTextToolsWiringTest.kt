@@ -37,7 +37,7 @@ class ComposeTextToolsWiringTest {
     }
 
     @Test fun `the same tools are named items in the overflow`() {
-        assertTrue(screen.contains("textTools.surface.tools.filter { it.appliesInPlace }.forEach { tool ->"))
+        assertTrue(screen.contains("TextToolNamedItems(textTools.surface"))
         assertTrue(screen.contains("skip = { it.appliesInPlace }"))
     }
 

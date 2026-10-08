@@ -68,6 +68,8 @@ import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
 import app.sterna.ui.text.TextToolIconRow
 import app.sterna.ui.text.TextToolInPlaceBar
+import app.sterna.ui.text.TextToolNamedItems
+import app.sterna.ui.text.TextToolUndo
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.TextTool
 import app.sterna.core.data.text.Span
@@ -1305,13 +1307,9 @@ fun ComposeScreen(
                                 onClick = { moreMenu = false; requestReceipt = !requestReceipt },
                             )
                             // The in-place tools as NAMED items, so the overflow spells out what the toolbar icons do.
-                            textTools.surface.tools.filter { it.appliesInPlace }.forEach { tool ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(tool.label)) },
-                                    leadingIcon = { Icon(tool.icon, contentDescription = null) },
-                                    enabled = !sending && textTools.busy == null,
-                                    onClick = { moreMenu = false; runTextTool(tool) },
-                                )
+                            TextToolNamedItems(textTools.surface, enabled = !sending && textTools.busy == null) { tool ->
+                                moreMenu = false
+                                runTextTool(tool)
                             }
                             // The Text tools this surface offers, drawn from TextToolSurface.COMPOSE
                             // rather than listed here. Enhance belongs on THIS side and only this
@@ -2435,6 +2433,3 @@ private fun schedulePresets(context: android.content.Context, nowMillis: Long): 
             }
             Triple(preset, context.getString(label), millis)
         }
-
-/** The draft before an in-place text tool changed it, for the Undo icon. */
-private class TextToolUndo(val body: TextFieldValue, val rich: RichBody)

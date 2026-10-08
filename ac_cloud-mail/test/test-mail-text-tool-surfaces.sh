@@ -122,9 +122,8 @@ has "$COMPOSER" 'TextToolIconRow(textTools.surface, enabled = !sending, skip = {
 # The in-place tools (Answer Prediction, Enhance, Check Grammar) are a dense toolbar directly under
 # Subject AND named overflow items, both drawn from the surface's flag and not by tool name.
 has "$COMPOSER" 'TextToolInPlaceBar(' "S2 the composer draws the in-place tools as a toolbar under Subject"
-has "$COMPOSER" 'textTools.surface.tools.filter { it.appliesInPlace }.forEach { tool ->' \
-  "S2 the in-place tools are also named overflow items"
-has "$PANEL" 'surface.tools.filter { it.appliesInPlace }' "S2 the toolbar iterates the surface's own in-place tools"
+has "$COMPOSER" 'TextToolNamedItems(textTools.surface' "S2 the in-place tools are also named overflow items"
+has "$PANEL" 'surface.tools.filter { it.appliesInPlace }' "S2 the toolbar and the named items iterate the surface's own in-place tools"
 # The stacked helper is asserted GONE, not merely uncalled. It survived #293 with one caller left
 # and that is how the asymmetry lasted: a composable nothing calls is the one a new screen reaches
 # for, and this file exists to stop the two surfaces drifting apart a third time.

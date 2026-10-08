@@ -1,6 +1,10 @@
 package app.sterna.ui.text
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.text.input.TextFieldValue
+import app.sterna.core.data.text.RichBody
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
@@ -215,3 +219,19 @@ fun TextToolInPlaceBar(
         }
     }
 }
+
+/** The in-place tools as named overflow items (leading icon and label): what the toolbar's icons do, spelled out. */
+@Composable
+fun ColumnScope.TextToolNamedItems(surface: TextToolSurface, enabled: Boolean, onPick: (TextTool) -> Unit) {
+    surface.tools.filter { it.appliesInPlace }.forEach { tool ->
+        DropdownMenuItem(
+            text = { Text(stringResource(tool.label)) },
+            leadingIcon = { Icon(tool.icon, contentDescription = null) },
+            enabled = enabled,
+            onClick = { onPick(tool) },
+        )
+    }
+}
+
+/** The draft before an in-place text tool changed it, for the Undo icon. */
+class TextToolUndo(val body: TextFieldValue, val rich: RichBody)
