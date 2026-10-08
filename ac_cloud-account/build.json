@@ -382,6 +382,50 @@
           "kind": "vault_file",
           "label": "Import file"
         }
+      },
+      "perms": {
+        "_doc": "Setup ▸ perms (spec 4.9): the shell verb table libs:account PermsPlan reads from BuildConfig.UI_ACCOUNT_B64 (nothing in Kotlin names a verb). Each verb is a template run over the uid-2000 shell channel; {pkg} {perm} {op} {component} {role} are substituted only after a strict name check. 'PackageVerifier' is not a shell line: it names the existing lib object that writes the Play Protect Settings.Global keys. needs_user: the kinds the shell cannot grant (device admin, accessibility) and the Settings action each row opens. appops: shell op name -> the AppOpsManager opstr read back and the manifest permission (or service permission) that makes an app list the row; NOTIFICATION_LISTENER is recorded with the app ops in the profile. roles: short name -> role id.",
+        "shell_verbs": {
+          "runtime": "pm grant {pkg} {perm}",
+          "appop": "appops set {pkg} {op} allow",
+          "listener": "cmd notification allow_listener {component}",
+          "role": "cmd role add-role-holder {role} {pkg}",
+          "battery": "dumpsys deviceidle whitelist +{pkg}",
+          "verifier": "PackageVerifier"
+        },
+        "readback": {
+          "appop": "appops get {pkg} {op}",
+          "role": "cmd role get-role-holders {role}",
+          "listener": "settings get secure enabled_notification_listeners"
+        },
+        "appops": {
+          "SYSTEM_ALERT_WINDOW": {
+            "opstr": "android:system_alert_window",
+            "permission": "android.permission.SYSTEM_ALERT_WINDOW"
+          },
+          "GET_USAGE_STATS": {
+            "opstr": "android:get_usage_stats",
+            "permission": "android.permission.PACKAGE_USAGE_STATS"
+          },
+          "REQUEST_INSTALL_PACKAGES": {
+            "opstr": "android:request_install_packages",
+            "permission": "android.permission.REQUEST_INSTALL_PACKAGES"
+          },
+          "ACTIVATE_VPN": {
+            "opstr": "android:activate_vpn",
+            "permission": "android.permission.BIND_VPN_SERVICE"
+          }
+        },
+        "roles": {
+          "dialer": "android.app.role.DIALER",
+          "sms": "android.app.role.SMS",
+          "browser": "android.app.role.BROWSER",
+          "home": "android.app.role.HOME"
+        },
+        "needs_user": {
+          "device_admin": "android.settings.SECURITY_SETTINGS",
+          "accessibility": "android.settings.ACCESSIBILITY_SETTINGS"
+        }
       }
     }
   }

@@ -31,6 +31,7 @@ import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.profile.AccountConnectPage
 import com.diegonmarcos.superapp.profile.AccountHost
 import com.diegonmarcos.superapp.profile.AccountModel
+import com.diegonmarcos.superapp.profile.AccountPermsPage
 import com.diegonmarcos.superapp.profile.AccountPlaceholderPage
 import com.diegonmarcos.superapp.profile.AccountProfilePage
 import com.diegonmarcos.superapp.profile.AccountSettingsPage
@@ -112,7 +113,7 @@ class MainActivity : AppCompatActivity() {
             }
             "setup" -> when (page) {
                 "configs" -> AccountPlaceholderPage(section, page, "task 5") { FleetSetupTab(model) }
-                "perms" -> AccountPlaceholderPage(section, page, "task 6")
+                "perms" -> AccountPermsPage(go)
                 else -> AccountPlaceholderPage(section, page, "task 5")
             }
             "secrets" -> when (page) {

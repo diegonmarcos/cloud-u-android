@@ -13,7 +13,8 @@ import org.json.JSONObject
  *   "apps":     the cloud-sa.app-inventory JSON (libs:appstore AppInventory),
  *   "settings": AccountVault.appConfigs()'s shape {app: {store: {file: {key: value, "_types"}}}}
  *               with every SECRET-class key (fleet manifest classes) replaced by "@vault:<path>",
- *   "perms": {}, "system": {} }      (filled by later tasks)
+ *   "perms": { "<pkg>": { "granted": [], "appops": {}, "roles": [], "battery": false } },
+ *   "system": {} }      (perms: PermsPlan.capture; system: a later task)
  * ```
  *
  * The repo is private but plaintext (#589): a literal value in a secret-class key is REFUSED on
@@ -129,7 +130,9 @@ object DeviceProfile {
         val by = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull().orEmpty()
         val device = JSONObject().put("id", deviceId).put("model", Build.MODEL).put("android", Build.VERSION.SDK_INT)
             .put("captured_at", now).put("by", "cloud-account/$by")
-        return build(device, apps, settings, cls)
+        // perms (spec 4.9): exactly Setup ▸ perms, as granted now (PermsPlan.capture).
+        val perms = runCatching { PermsPlan.capture(ctx, com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)) }.getOrDefault(JSONObject())
+        return build(device, apps, settings, cls, perms = perms)
     }
 
     /** The bytes committed: stable two-space JSON with a final newline (so equal content = no commit). */

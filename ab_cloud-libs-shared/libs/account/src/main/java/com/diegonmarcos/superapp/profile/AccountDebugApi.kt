@@ -51,6 +51,8 @@ object AccountDebugApi {
             Op("runbook", "dry=1 | run=1&step=<id>&prompt=1", "Setup runbook (spec 4.6): dry=1 = every declared step's id + check state; run=1&step= runs one (shell, store implemented; prompt=1 lets store fall back to the system install prompt). Names and states only"),
             // #802 the engine's way in (linux-account phone import): the decrypted export as the POST body
             Op("import", "POST body = the decrypted vault export · device=<electronics id> (optional: the device this phone is, as the terminal picked it)", "land the bundle as S through the UI import's own gates (VaultFile.classify: sops/ENC refused, schema_version must be known) — the verdict and per-topic counts, never a value", maxBody = IMPORT_MAX_BODY),
+            // Cloud Account redesign task 6: Setup ▸ perms (spec 4.9) through PermsPlan
+            Op("perms", "dry=1|run=1", "Setup ▸ perms (spec 4.9): dry=1 = per app every runtime permission and special grant, its state (granted/denied/unknown) and whether the working profile wants it, names only; run=1 = Grant all over the shell channel, one line per item, each judged by a re-read"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
@@ -134,6 +136,7 @@ object AccountDebugApi {
                     else -> r.dry()
                 }
             }
+            "perms" -> perms(ctx, q)
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
                 q["dry"] == "1" -> m.migratePlan()
@@ -265,5 +268,15 @@ object AccountDebugApi {
         val file = if (m.local != null) m.savedLocal() else m.server()
         return JSONObject().put("showing", if (m.local != null) "L" else if (shown != null) "S" else JSONObject.NULL)
             .put("meta", file?.meta?.json() ?: JSONObject.NULL).put("local_unsaved", m.dirty).put("topics", topics)
+    }
+
+    /** Setup ▸ perms (spec 4.9): dry = the plan, names and states; run=1 = PermsPlan.apply's lines. */
+    private fun perms(ctx: Context, q: Map<String, String>): JSONObject {
+        val profile = DeviceVault(ctx).working()?.optJSONObject("profile")
+        val channel = runCatching { com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx) }.getOrNull()
+        val plan = PermsPlan.plan(ctx, profile, channel)
+        val ch: Any = channel?.name() ?: JSONObject.NULL
+        if (q["run"] != "1") return plan.json().put("channel", ch).put("profile", profile != null)
+        return PermsPlan.apply(ctx, plan, channel).json().put("channel", ch).put("summary", plan.summary())
     }
 }
