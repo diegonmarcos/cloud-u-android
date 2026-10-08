@@ -345,7 +345,7 @@ ignore. The real host is read from after the last `@`, so
 
 ### Android platform surface
 
-- Four components are exported by Sterna's own manifest; the libraries it embeds add more, and
+- Five components are exported by Sterna's own manifest; the libraries it embeds add more, and
   those are listed at the end of this section. The first is the launcher `MainActivity`, and it reads
   untrusted input from three kinds of entry point. Two of them are compose-screen prefill:
   `mailto:` deep links (VIEW+BROWSABLE and SENDTO filters) plus `ACTION_SEND` /
@@ -391,6 +391,17 @@ ignore. The real host is read from after the last `@`, so
   filter carries a single action, `APPWIDGET_UPDATE`, again a protected broadcast that only
   the system can send, and neither provider overrides `onReceive`: nothing is read out of the
   intent, no extra and no data URI, only the `appWidgetIds` the framework passes in.
+- The fifth is `AgentMailProvider` (`app.sterna.agentapi`, #913), the fleet agent door to mail. It is exported
+  so a sibling app can ask it for messages, and it is **guarded by the constellation's signature permission**
+  (`com.diegonmarcos.cloud.permission.CONSTELLATION_DATA`, `android:permission` on the `<provider>`), so only an
+  app signed with the one fleet key can reach it at all. It is **query-only**: `insert`, `update` and `delete`
+  return null / 0, and nothing in it can send, move, mark or delete a message. `messages` takes a sender,
+  a subject and a date (every value bound as an argument to a fixed `SELECT`, LIKE wildcards escaped) and
+  answers rows of ids, sender, subject and date; `body` answers one message's text and html, from the body
+  cache or fetched **without marking it read**, capped at 200,000 characters. It exposes the mail of every
+  account on the phone to a fleet app, which is the trust the constellation already extends over that
+  permission; Cloud Search's Agents ask for the narrowest slice (a sender filter and a date) and log the ids
+  they read. A message body is never written to the log.
 - Notification `PendingIntent`s are `IMMUTABLE` (except the RemoteInput reply, which must
   be mutable and targets a non-exported receiver explicitly).
 - The `FileProvider` shares only `cacheDir/attachments/`, with sanitized filenames and
