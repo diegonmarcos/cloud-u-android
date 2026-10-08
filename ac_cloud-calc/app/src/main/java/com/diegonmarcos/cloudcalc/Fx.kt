@@ -65,9 +65,9 @@ object Fx {
     /** The first number of an engine answer ("1.1634 USD", "≈ 1.16 USD"), null when there is none. */
     fun numberIn(text: String): Double? = NUMBER.find(text.replace(",", ""))?.value?.toDoubleOrNull()
 
-    /** [x] cut (not rounded) to at most 4 decimals, trailing zeros stripped. */
+    /** [x] cut (not rounded) to at most 4 decimals, trailing zeros stripped; float noise past 10 digits (1.2/6 = 0.19999999999999998) is not a digit to cut. */
     fun trunc(x: Double): String =
-        if (!x.isFinite()) "?" else java.math.BigDecimal(x.toString()).setScale(4, java.math.RoundingMode.DOWN).stripTrailingZeros().toPlainString().let { if (it == "-0") "0" else it }
+        if (!x.isFinite()) "?" else java.math.BigDecimal(x.toString()).round(java.math.MathContext(10)).setScale(4, java.math.RoundingMode.DOWN).stripTrailingZeros().toPlainString().let { if (it == "-0") "0" else it }
 
     /** Every decimal number in [text] cut to at most 4 decimals ("1.16349 USD" -> "1.1634 USD"). */
     fun truncateNumbers(text: String): String = DECIMAL.replace(text) { m ->

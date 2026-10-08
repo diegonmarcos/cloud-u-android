@@ -71,6 +71,7 @@ class FxTest {
     @Test fun `numbers are cut to at most four decimals with trailing zeros stripped, never rounded`() {
         assertEquals("1.4117", Fx.trunc(1.2 / 0.85))
         assertEquals("0.2", Fx.trunc(0.2))
+        assertEquals("0.2", Fx.trunc(1.2 / 6.0))
         assertEquals("170", Fx.trunc(170.0))
         assertEquals("0.8333", Fx.trunc(1.0 / 1.2))
         assertEquals("0", Fx.trunc(0.00004))
