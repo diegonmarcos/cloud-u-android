@@ -31,10 +31,10 @@ HOST="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountHost.k
 SRV="$LIB/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
 
 echo "T1 the route exists, documented, body-fed, with its own ceiling"
-has "$DBG" 'Op("import", "POST body = the decrypted vault export"' "import is a documented Op of /api/account"
+has "$DBG" 'Op("import", "POST body = the decrypted vault export' "import is a documented Op of /api/account"
 has "$DBG" 'maxBody = IMPORT_MAX_BODY' "...declaring its own body ceiling"
 has "$DBG" 'const val IMPORT_MAX_BODY = 4 * 1024 * 1024' "...4 MiB (the bundle is ~2 MB)"
-has "$DBG" '"import" -> importBundle(ctx, q["_body"].orEmpty(), m)' "the op reads the body (_body), never a query value"
+has "$DBG" '"import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)' "the op reads the body (_body), never a query value"
 has "$SRV" 'val maxBody: Int = MAX_BODY_BYTES' "Op carries maxBody, default = the server ceiling"
 has "$SRV" 'internal const val MAX_BODY_BYTES = 256 * 1024' "...which stays 256 KiB for every other op"
 has "$SRV" 'if (o.maxBody != MAX_BODY_BYTES) append(""""max_body":${o.maxBody},""")' "/api/docs shows a raised ceiling"

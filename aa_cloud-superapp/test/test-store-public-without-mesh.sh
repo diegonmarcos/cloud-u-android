@@ -59,10 +59,16 @@ def walk(o):
     if isinstance(o, dict):
         for k, v in o.items():
             if k in ("allowed_ips", "address", "interface_address") and isinstance(v, str):
+                nets = []
                 for c in v.split(","):
                     try: n = ipaddress.ip_network(c.strip(), strict=False)
                     except ValueError: continue
-                    if n.prefixlen: mesh.add(n)   # /0 is a full tunnel, not the mesh
+                    if n.prefixlen: nets.append(n)   # /0 is a full tunnel, not the mesh
+                # A full tunnel written as "everything except <the proxy>" is the
+                # complement set (0.0.0.0/3, 32.0.0.0/7, ...): it routes the public
+                # internet through wg0, it does not name the mesh. Most of IPv4 = not mesh.
+                if sum(n.num_addresses for n in nets if n.version == 4) > 2 ** 31: continue
+                mesh.update(nets)
             walk(v)
     elif isinstance(o, list):
         for v in o: walk(v)
