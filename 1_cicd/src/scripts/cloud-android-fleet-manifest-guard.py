@@ -823,6 +823,12 @@ def main():
 
     if failures:
         print("Fleet manifest guard — %d problem(s):\n" % len(failures))
+        # Under GitHub Actions each problem is also an annotation: the job log needs a token
+        # the owner's phone does not hold, and the reason (which lib, which two addresses) is
+        # what a fix needs.
+        if os.environ.get("GITHUB_ACTIONS"):
+            for line in failures:
+                print("::error title=fleet-manifest::" + line.replace("\n", " ")[:900])
         for line in failures:
             print("  " + line)
         print("\nSee task #276. :libs:updater bakes this manifest into")
