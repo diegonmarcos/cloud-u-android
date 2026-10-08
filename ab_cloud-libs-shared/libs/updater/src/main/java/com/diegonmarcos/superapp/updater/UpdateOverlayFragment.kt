@@ -12,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.core.NotificationStore
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
  * Fullscreen overlay shown while the in-app updater is checking,
@@ -146,7 +147,7 @@ class UpdateOverlayFragment : Fragment() {
                     // on the feed they already have. Reusing NotificationStore
                     // rather than adding a status surface is the whole point —
                     // this complaint has produced four of those already.
-                    NotificationStore.push(
+                    if (StoreNotifyGate.mayPost(c)) NotificationStore.push(
                         ctx      = c,
                         source   = "Updater",
                         title    = "Update continues in the background",

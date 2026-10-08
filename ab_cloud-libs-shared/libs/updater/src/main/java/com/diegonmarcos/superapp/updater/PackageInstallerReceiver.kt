@@ -16,6 +16,7 @@ import android.util.Log
 import android.widget.Toast
 import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.core.NotificationStore
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
  * Receives PackageInstaller status callbacks. Forwards the system
@@ -35,8 +36,8 @@ import com.diegonmarcos.superapp.core.NotificationStore
  */
 class PackageInstallerReceiver : BroadcastReceiver() {
     private val TAG = "Updater/Receiver"
-    private val NOTIF_CHANNEL = "superapp-updater"
-    private val NOTIF_ID = 0xC10D
+    private val NOTIF_CHANNEL = UPDATER_CHANNEL
+    private val NOTIF_ID = UPDATER_NOTIF_ID
 
     /**
      * Delete the cached APK once the install is CONFIRMED successful — and
@@ -418,7 +419,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
      *  or channel returns normally and shows nothing, so "posted" is not
      *  "shown" and the caller must not tell anyone to tap it (#588). */
     private fun notifyConfirm(context: Context, confirm: Intent, subject: String): Boolean =
-        runCatching {
+        StoreNotifyGate.mayPost(context) && runCatching {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 nm.createNotificationChannel(
@@ -449,6 +450,9 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                         severity: String = NotificationStore.Sev.INFO, key: String = short,
                         quiet: Boolean = false, raise: Boolean = true) {
         if (quiet) return
+        // #894 Store / update messages are Cloud Store's: this package posts none (no feed entry,
+        // no toast, no alert).
+        if (!StoreNotifyGate.mayPost(context)) return
         // Mirror into the in-app feed so the launcher badge AND the
         // Cloud-SuperApp Notifications panel reflect the same event.
         // Without this push the framework notification (and its badge)
@@ -493,6 +497,11 @@ class PackageInstallerReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        /** The "tap to finish installing" channel and its notification ids (confirm = id + 1);
+         *  public so the SuperApp can retire what an older build posted (#894). */
+        const val UPDATER_CHANNEL = "superapp-updater"
+        const val UPDATER_NOTIF_ID = 0xC10D
+
         /** Set on the PendingIntent so this receiver can tell an uninstall
          *  (long-press menu) from an install/update and message accordingly. */
         const val EXTRA_OP = "com.diegonmarcos.superapp.updater.OP"

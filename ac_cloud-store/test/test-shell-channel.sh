@@ -65,8 +65,8 @@ ok("listOf(ShellInstall, SessionInstall)" in fl and "listOf(ShellInstall)" in fl
 hand = rd("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/CloudStoreHandoff.kt")
 ok("fun ownsInstalls(" in hand, "SuperApp has one question: does Cloud Store own installs", "CloudStoreHandoff.ownsInstalls is gone")
 sa = rd("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt")
-ok(sa.count("CloudStoreHandoff.ownsInstalls(applicationContext)") >= 3,
-   "SuperApp's schedule, check and Update-all all stand down", "a SuperApp install path ignores Cloud Store")
+ok(sa.count("CloudStoreHandoff.ownsInstalls(applicationContext)") >= 1 and "Fleet.installAll" not in sa and "Updater.checkNow" not in sa,
+   "SuperApp's schedule stands down; its check and Update-all only open Cloud Store", "a SuperApp install path ignores Cloud Store")
 ok("else Updater.start(applicationContext)" in sa, "SuperApp schedules no self-update with Cloud Store present", "SuperApp still schedules its own self-update")
 pf = rd("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt")
 ok("if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(ctxAny()))" in pf, "the Auto-update toggle does not restart SuperApp's own updater", "the Auto-update toggle restarts SuperApp's updater")
@@ -129,8 +129,8 @@ mutate "pairing not followed up" $K/shell/CloudStoreShell.kt 'AdbPairingService.
 mutate "no reconnect" $K/shell/CloudStoreShell.kt 'EmbeddedAdbChannel.autoConnect(ctx)' 'Pair(false, "")' || M=$((M+1))
 mutate "session install first" ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt 'listOf(ShellInstall, SessionInstall)' 'listOf(SessionInstall, ShellInstall)' || M=$((M+1))
 mutate "SuperApp schedules its own self-update" $A/ShellActivity.kt 'else Updater.start(applicationContext)' 'Updater.start(applicationContext)' || M=$((M+1))
-mutate "SuperApp's Update-all installs again" $A/ShellActivity.kt 'if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
-                kotlin.concurrent.thread {' 'kotlin.concurrent.thread {' || M=$((M+1))
+mutate "SuperApp's Update-all installs again" $A/ShellActivity.kt "// #894 Installs are Cloud Store's: this opens it (or the Install Cloud Store button).
+                routeTarget(\"page:config/store-cloud\")" "routeTarget(\"page:config/store-cloud\"); kotlin.concurrent.thread { com.diegonmarcos.superapp.updater.Fleet.installAll(applicationContext, emptyList(), com.diegonmarcos.superapp.updater.Fleet.Mode.UPDATES) }" || M=$((M+1))
 mutate "toggle restarts SuperApp's updater" $A/configs/PermissionsFragment.kt 'if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(ctxAny()))' '' || M=$((M+1))
 mutate "a second writer of the indeterminate flag" $P/StoreCloudFragment.kt 'if (!d.indeterminate && bar.progress != d.percent) bar.progress = d.percent' 'bar.isIndeterminate = false; bar.progress = d.percent' || M=$((M+1))
 mutate "a draw bypasses the model" $P/StoreCloudFragment.kt 'drawBar(bar, barModel.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed))' 'drawBar(bar, ProgressBarModel.Draw(p.percent < 0, p.percent))' || M=$((M+1))

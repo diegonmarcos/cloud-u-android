@@ -8788,42 +8788,12 @@
           "max_in_shade": 20
         },
         {
-          "id": "store",
-          "label": "Store",
-          "members": ["store_updates"]
-        },
-        {
           "id": "network",
           "label": "Network",
           "members": ["network_mesh", "network_data", "battery_status"]
         }
       ],
       "producers": [
-        {
-          "id": "store_updates",
-          "label": "Store",
-          "subtitle": "#812 How many Store updates are pending, after each auto-update chain. NON-persistent: never ongoing, posted only while updates wait, cleared when they are gone or the Store is opened.",
-          "icon": "ic_stat_notify",
-          "surface": "system_notification",
-          "channel": "store_updates",
-          "owner": "notificationcenter/StoreBadgeNotifier.kt",
-          "shows_badge": true,
-          "enabled": true,
-          "badge": true,
-          "persistent": false,
-          "on_demand": true,
-          "service": "",
-          "requires": [],
-          "shows": "'N Store updates pending'; tap opens the Store.",
-          "customization": [
-            {
-              "key": "enabled",
-              "type": "toggle",
-              "label": "Show this badge",
-              "default": true
-            }
-          ]
-        },
         {
           "id": "kde_status",
           "label": "KDE Connect",

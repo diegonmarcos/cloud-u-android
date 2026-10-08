@@ -73,8 +73,9 @@ class NotifyGroupsAlertsTest {
     // ── the groups ──────────────────────────────────────────────────────
 
     @Test fun `exactly the declared groups, in the brief's order and membership`() {
-        assertEquals(listOf("live", "actions", "media", "alerts", "store", "network"), NotifyGroups.declared.map { it.id })
-        assertEquals("#812 the Store badge", listOf(StoreBadgeNotifier.BADGE_ID), group("store").members)
+        assertEquals(listOf("live", "actions", "media", "alerts", "network"), NotifyGroups.declared.map { it.id })
+        assertTrue("#894 no Store group or badge: Store notifications are Cloud Store's",
+            NotifyGroups.declared.none { it.id == "store" } && BadgeServices.declared.none { it.id == "store_updates" })
         assertEquals(listOf("markets_prices", "health_activity", "weather_today"), group("live").members)
         assertEquals(listOf("floating_nav_quick_actions", "kde_status"), group("actions").members)
         assertEquals(listOf("media_now_playing"), group("media").members)
@@ -127,9 +128,9 @@ class NotifyGroupsAlertsTest {
 
     @Test fun `order is the owner's and survives a re-read`() {
         NotifyGroups.move(ctx, group("alerts"), -3)
-        assertEquals(listOf("alerts", "live", "actions", "media", "store", "network"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "live", "actions", "media", "network"), NotifyGroups.ordered(ctx).map { it.id })
         NotifyGroups.move(ctx, group("live"), +1)
-        assertEquals(listOf("alerts", "actions", "live", "media", "store", "network"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "actions", "live", "media", "network"), NotifyGroups.ordered(ctx).map { it.id })
     }
 
     // ── mock data is gone ───────────────────────────────────────────────
@@ -247,29 +248,5 @@ class NotifyGroupsAlertsTest {
         // Not attached: no context, no caller → nothing stored, no crash.
         assertNull(p.call(FleetAlerts.METHOD_RAISE, null, FleetAlerts.Alert("x").toBundle()))
         assertTrue(AlertStore.all(ctx).isEmpty())
-    }
-
-    // ── #812 the Store badge ──────────────────────────────────────────────
-
-    private fun storeBadge() = posted().firstOrNull { it.channelId == StoreBadgeNotifier.CHANNEL_ID }
-
-    @Test fun `812 the Store badge appears with the pending count and clears - never ongoing`() {
-        val decl = BadgeServices.declared.first { it.id == StoreBadgeNotifier.BADGE_ID }
-        assertFalse("declared non-persistent", decl.persistent)
-        assertTrue("no service keeps it alive", decl.service.isBlank())
-        assertTrue(StoreBadgeNotifier.update(ctx, 7))
-        val n = storeBadge()
-        assertNotNull("posted while updates wait", n)
-        assertEquals(7, n!!.number)
-        assertTrue(n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty().contains("7 Store updates"))
-        assertEquals("never sticky", 0, n.flags and (Notification.FLAG_ONGOING_EVENT or Notification.FLAG_NO_CLEAR))
-        assertEquals(NotifyGroups.key(group("store")), n.group)
-        // The updates are gone (or the Store was opened): it clears.
-        assertFalse(StoreBadgeNotifier.update(ctx, 0))
-        assertNull(storeBadge())
-        // Control: switched off on the Notify page, it is never posted.
-        BadgeCustomization.set(ctx, decl, BadgeCustomization.KEY_ENABLED, false)
-        assertFalse(StoreBadgeNotifier.update(ctx, 3))
-        assertNull(storeBadge())
     }
 }

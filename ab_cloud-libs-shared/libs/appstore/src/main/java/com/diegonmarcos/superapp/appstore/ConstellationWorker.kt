@@ -13,6 +13,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.diegonmarcos.superapp.core.FleetAlerts
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 import androidx.work.ForegroundInfo
 import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.BatchForeground
@@ -40,6 +41,13 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
     override suspend fun getForegroundInfo(): ForegroundInfo = BatchForeground.foregroundInfo(applicationContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        // #894 Store work and Store notifications are Cloud Store's. A pass still persisted in
+        // WorkManager from an older SuperApp (periodic work outlives the update that retired it)
+        // ends here, before it can reach a progress notification or an alert.
+        if (!StoreNotifyGate.mayPost(applicationContext)) {
+            Log.i(TAG, "Store passes run in Cloud Store only - standing down")
+            return@withContext Result.success()
+        }
         // IDENTITY GATE (#453). A work-profile, parallel-clone or Secure
         // Folder copy of this app is not the install the updater owns. The
         // fleet check is the path that posts the "N constellation update(s)"
@@ -146,6 +154,14 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             if (AuConfig.AU_REQUIRE_CHARGING) setRequiresCharging(true)
         }.build()
 
+        /** #894 Every job this class can have queued: periodic, its launch one-shot and the Wi-Fi kick. */
+        fun cancelAll(context: Context) {
+            val wm = WorkManager.getInstance(context)
+            wm.cancelUniqueWork(WORK_NAME)
+            wm.cancelUniqueWork("$WORK_NAME-now")
+            wm.cancelUniqueWork("$WORK_NAME-kick")
+        }
+
         private fun triggerData(trigger: String) = Data.Builder().putString(KEY_TRIGGER, trigger).build()
 
         /**
@@ -158,6 +174,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             // A screen calls this (the Store refresh): an uninitialised WorkManager
             // must cost the trigger, never the screen.
             runCatching {
+                if (!StoreNotifyGate.mayPost(context)) return   // #894
                 if (!InstallIdentity.isManaged(context)) return
                 if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
                 if (!AppStoreHost.runsFleetPass(context)) return   // #865
@@ -171,6 +188,8 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
 
         /** Schedule the periodic fleet check. Idempotent. Call from App.onCreate. */
         fun start(context: Context) {
+            // #894 The SuperApp runs no Store pass, ever: clear what an older build queued and stop.
+            if (!StoreNotifyGate.mayPost(context)) { cancelAll(context); return }
             // IDENTITY GATE (#453). A clone must not schedule the periodic
             // fleet check (the notification/badge source); if one had it
             // scheduled already, cancel is the honest state — it must never
@@ -242,6 +261,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
 
         /** One-shot fleet check shortly after launch. Same gating as [start]. */
         fun checkNow(context: Context) {
+            if (!StoreNotifyGate.mayPost(context)) return   // #894
             // IDENTITY GATE (#453). A clone must never enqueue even a manual
             // fleet check — the notification/badge flows through this worker.
             if (!InstallIdentity.isManaged(context)) {

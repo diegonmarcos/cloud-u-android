@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.updater.install.ShellInstall
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.UpdateChecker
 import android.content.Context
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -33,6 +34,13 @@ class UpdateWorker(
     override suspend fun getForegroundInfo(): ForegroundInfo = BatchForeground.foregroundInfo(applicationContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        // #894 The SuperApp does no self-update and posts no update notification: a job still
+        // persisted from an older build (WorkManager keeps periodic work across app updates), or
+        // a manual check from anywhere, ends here. Cloud Store updates the SuperApp.
+        if (!StoreNotifyGate.mayPost(applicationContext)) {
+            Log.i("Updater/Worker", "Store notifications are Cloud Store's - self-update stays silent")
+            return@withContext Result.success()
+        }
         // IDENTITY GATE (#453). Belt-and-suspenders under Updater.start: a
         // clone could have had this worker queued before this build was
         // installed, or re-armed by an in-app toggle that never re-runs start.
@@ -133,7 +141,7 @@ class UpdateWorker(
                 applicationContext.applicationInfo.loadLabel(applicationContext.packageManager).toString(),
                 UpdateProgress.STAGE_DOWNLOADING))
             // #903 download + install under a dataSync foreground job (refused = carry on).
-            runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
+            if (BatchForeground.allowed(applicationContext)) runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
             val apk = UpdateChecker(applicationContext).download(available) {
                 isStopped || UpdateProgress.cancelRequested
             }

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import com.diegonmarcos.superapp.core.FleetAlerts
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
  * #777 — the receiving end of [FleetAlerts]: every fleet app's alert arrives
@@ -32,7 +33,9 @@ class FleetAlertsProvider : ContentProvider() {
         val ok = when (method) {
             FleetAlerts.METHOD_RAISE -> {
                 val a = FleetAlerts.Alert.fromBundle(extras ?: return null)
-                if (a.title.isBlank()) false else { fresh = AlertStore.add(ctx, caller, a).id; true }
+                // #894 Store / update alerts are Cloud Store's to post (and any other app's own): refused
+                // here, so the raiser (told ok=false) keeps the alert in its own package.
+                if (a.title.isBlank() || StoreNotifyGate.isStoreAlert(a.dedupeKey)) false else { fresh = AlertStore.add(ctx, caller, a).id; true }
             }
             FleetAlerts.METHOD_WITHDRAW -> {
                 AlertStore.withdraw(ctx, caller, extras?.getString(FleetAlerts.KEY_DEDUPE).orEmpty()); true

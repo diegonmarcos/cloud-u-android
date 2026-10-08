@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.work.ForegroundInfo
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -69,7 +70,12 @@ object BatchForeground {
         }
     }
 
+    /** #894 Only Cloud Store (and the other fleet apps) hold this service: a foreground service
+     *  cannot run without its notification, and the SuperApp posts no Store notification. */
+    fun allowed(ctx: Context): Boolean = StoreNotifyGate.mayPost(ctx)
+
     fun begin(ctx: Context) {
+        if (!allowed(ctx)) return
         if (held.incrementAndGet() != 1) return
         val app = ctx.applicationContext
         appCtx = app
@@ -119,7 +125,8 @@ object BatchForeground {
 
     /** For a CoroutineWorker's setForeground / getForegroundInfo. */
     fun foregroundInfo(ctx: Context): ForegroundInfo =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        if (!allowed(ctx)) throw IllegalStateException("Store notifications are Cloud Store's; this package posts none")
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(ID, notification(ctx), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         else ForegroundInfo(ID, notification(ctx))
 }
@@ -129,6 +136,7 @@ class BatchForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!BatchForeground.allowed(this)) { stopSelf(); return START_NOT_STICKY }
         runCatching {
             ServiceCompat.startForeground(this, BatchForeground.ID, BatchForeground.notification(this),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)

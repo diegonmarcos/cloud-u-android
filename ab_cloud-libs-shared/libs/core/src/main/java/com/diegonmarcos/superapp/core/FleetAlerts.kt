@@ -115,6 +115,11 @@ object FleetAlerts {
      *  there for the test that proves the fallback; callers leave it. */
     fun raise(ctx: Context, alert: Alert, authority: String = AUTHORITY): Delivery {
         if (alert.title.isBlank()) return Delivery.DROPPED
+        // #894 A Store / update alert is posted by the app that did the work, never by the SuperApp:
+        // from the SuperApp it is dropped, from any other app it stays in that app (the SuperApp's
+        // collector refuses it too, so this is not the only line holding the rule).
+        if (StoreNotifyGate.isStoreAlert(alert.dedupeKey))
+            return if (StoreNotifyGate.mayPost(ctx) && postLocally(ctx, alert)) Delivery.LOCAL else Delivery.DROPPED
         if (call(ctx, authority, METHOD_RAISE, alert.toBundle())) return Delivery.SUPERAPP
         return if (postLocally(ctx, alert)) Delivery.LOCAL else Delivery.DROPPED
     }
@@ -122,6 +127,7 @@ object FleetAlerts {
     /** Take back the alert this app raised under [dedupeKey]. */
     fun withdraw(ctx: Context, dedupeKey: String) {
         if (dedupeKey.isBlank()) return
+        if (StoreNotifyGate.isStoreAlert(dedupeKey)) { runCatching { nm(ctx).cancel(dedupeKey, LOCAL_ID) }; return }
         if (!call(ctx, AUTHORITY, METHOD_WITHDRAW, Bundle().apply { putString(KEY_DEDUPE, dedupeKey) }))
             runCatching { nm(ctx).cancel(dedupeKey, LOCAL_ID) }
     }

@@ -19,7 +19,7 @@ S = app + "/app/src/main/java/com/diegonmarcos/superapp/"
 FILES = {"cache": lib + "/updater/src/main/java/com/diegonmarcos/superapp/updater/cache/ApkCache.kt",
          "gradle": lib + "/updater/build.gradle", "stages": A + "StoreStages.kt", "auto": A + "StoreAuto.kt",
          "page": A + "StoreCloudFragment.kt", "shell": S + "ShellActivity.kt", "app": S + "App.kt",
-         "badge": S + "notificationcenter/StoreBadgeNotifier.kt", "bj": app + "/build.json"}
+         "bj": app + "/build.json"}
 src = {k: open(p, encoding="utf-8").read() for k, p in FILES.items()}
 P = F = 0
 def ok(m):
@@ -67,13 +67,12 @@ CHECKS = [
      lambda s: "AlertDialog" not in fun(code(s["page"]), "downloadAll")
                and "AlertDialog" not in fun(code(s["page"]), "report")
                and "progressLabel?.text" in fun(code(s["page"]), "report")),
-    ("the Store badge is declared, non-persistent, and wired to the chain and the Store",
-     lambda s: any(p.get("id") == "store_updates" and not p.get("persistent")
-                   for p in json.loads(s["bj"])["ui"]["notification_center"]["producers"])
-               and "StoreBadgeNotifier.update(c, n)" in code(s["app"])
+    ("#894 no Store badge in SuperApp: Store notifications are Cloud Store's, and the chain's pending hook stays a no-op here",
+     lambda s: not any(p.get("id") == "store_updates"
+                       for p in json.loads(s["bj"])["ui"]["notification_center"]["producers"])
+               and "StoreBadgeNotifier" not in code(s["app"])
                and "runCatching { onPending(ctx, pending(s)) }" in code(s["auto"])
-               and "StoreAuto.onPending(c.applicationContext, 0)" in fun(code(s["page"]), "onResume")
-               and "setOngoing(true)" not in code(s["badge"]) and "FLAG_NO_CLEAR" not in code(s["badge"])),
+               and "StoreAuto.onPending(c.applicationContext, 0)" in fun(code(s["page"]), "onResume")),
 ]
 def validate(s): return [n for n, c in CHECKS if not c(s)]
 
@@ -94,9 +93,8 @@ MUTANTS = [
     ("the overlay comes back", "shell", "supportFragmentManager.findFragmentByTag(UPDATE_OVERLAY_TAG)?.let {",
      "supportFragmentManager.beginTransaction().add(R.id.overlay_container, com.diegonmarcos.superapp.updater.UpdateOverlayFragment.newInstance(), UPDATE_OVERLAY_TAG).commitAllowingStateLoss()\n            supportFragmentManager.findFragmentByTag(UPDATE_OVERLAY_TAG)?.let {"),
     ("the batch report is a dialog again", "page", "        progressLabel?.text = \"$title", "        AlertDialog.Builder(requireActivity()).show()\n        progressLabel?.text = \"$title"),
-    ("the badge is never wired", "app", "StoreBadgeNotifier.update(c, n)", "Unit"),
+    ("SuperApp wires a Store badge again", "app", "StoreRetirement.run(this)", "StoreBadgeNotifier.update(this, 1)"),
     ("opening the Store does not clear the badge", "page", "StoreAuto.onPending(c.applicationContext, 0)", "Unit"),
-    ("the badge pins itself", "badge", ".setAutoCancel(true)", ".setAutoCancel(true).setOngoing(true)"),
 ]
 for name, key, old, new in MUTANTS:
     if src[key].count(old) != 1:

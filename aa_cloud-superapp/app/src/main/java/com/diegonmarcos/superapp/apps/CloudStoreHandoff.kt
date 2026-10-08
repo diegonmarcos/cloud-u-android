@@ -37,8 +37,9 @@ import androidx.fragment.app.Fragment
  *  - the Store pages, which become a button that opens Cloud Store on the
  *    matching tab.
  *
- * Until it is installed, SuperApp keeps both, so the first install of Cloud
- * Store comes from SuperApp's own Store (it is a row in the fleet list).
+ * #894 Until it is installed, SuperApp shows one thing on those pages: an Install
+ * Cloud Store button (the same fleet install the Store tile uses). No Store, no
+ * Store notification, no recurring alert comes from SuperApp.
  */
 object CloudStoreHandoff {
     const val PKG = "com.diegonmarcos.cloudstore"
@@ -104,15 +105,16 @@ object CloudStoreHandoff {
      * The fragment SectionPages puts where a Store page was. It decides when
      * it is shown, not when the page list is built (no Context there): Cloud
      * Store installed -> a button that opens it on the same tab; otherwise the
-     * Store page itself, embedded, exactly as before.
+     * one Install Cloud Store button.
      */
     fun page(pageId: String): Fragment = Page().apply {
         arguments = Bundle().apply { putString(ARG_PAGE, pageId) }
     }
 
     /**
-     * Store page id -> the fragment SuperApp embeds for it while Cloud Store is
-     * not installed. One map, read by the page, its JVM test and the shell testers.
+     * Store page id -> the Store fragment that page used to embed while Cloud Store was
+     * not installed. #894 SuperApp no longer shows them (that was the Store, with its
+     * notifications, inside SuperApp); the map stays as the page -> shelf record StoreShelvesTest reads.
      */
     val EMBEDDED: Map<String, Class<out Fragment>> = mapOf(
         "store-cloud" to com.diegonmarcos.superapp.appstore.StoreCloudFragment::class.java,
@@ -128,10 +130,9 @@ object CloudStoreHandoff {
     class Page : Fragment() {
         override fun onCreate(state: Bundle?) {
             super.onCreate(state)
-            // Cloud Store installed since this page was saved: the embedded
-            // child restored above would look for a container the button
-            // layout does not have, so it goes before any view exists.
-            if (installed(requireContext()) && childFragmentManager.fragments.isNotEmpty())
+            // A page saved by an older build restores its embedded Store child, which would
+            // look for a container the button layout does not have: it goes before any view exists.
+            if (childFragmentManager.fragments.isNotEmpty())
                 childFragmentManager.beginTransaction()
                     .apply { childFragmentManager.fragments.forEach(::remove) }.commitNow()
         }
@@ -142,21 +143,37 @@ object CloudStoreHandoff {
             val installed = installed(requireContext())
             return androidx.compose.ui.platform.ComposeView(requireContext()).apply {
                 setContent {
-                    val embedded = EMBEDDED[pageId]
-                    if (installed) {
-                        androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
-                            androidx.compose.material3.Surface { OpenCloudStore(tab) }
+                    androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
+                        androidx.compose.material3.Surface {
+                            // #894 The Store is Cloud Store's alone: installed -> a button that opens it;
+                            // absent -> the one entry point SuperApp keeps, Install Cloud Store. The Store
+                            // pages are no longer embedded here, so SuperApp has no Store notification to post.
+                            if (installed) OpenCloudStore(tab) else InstallCloudStore()
                         }
-                    } else if (embedded != null) {
-                        // Not installed: the Store page itself, exactly as before.
-                        @Suppress("UNCHECKED_CAST")
-                        val cls = embedded as Class<Fragment>
-                        androidx.fragment.compose.AndroidFragment(clazz = cls, modifier = Modifier.fillMaxSize())
-                    } else {
-                        Text("Unknown Store page: $pageId")
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun InstallCloudStore() {
+        val ctx = LocalContext.current
+        var message by remember { mutableStateOf<String?>(null) }
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "The Store is its own app now: Cloud Store.\nDownloads, updates and install prompts for the whole fleet, SuperApp included, are Cloud Store's.",
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = {
+                message = com.diegonmarcos.superapp.launcher.AppInstall.start(ctx, PKG, "Cloud Store").message
+            }) { Text("Install Cloud Store") }
+            message?.let { Text(it, Modifier.padding(top = 12.dp), textAlign = TextAlign.Center) }
         }
     }
 

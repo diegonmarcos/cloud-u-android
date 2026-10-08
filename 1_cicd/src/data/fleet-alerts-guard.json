@@ -55,12 +55,6 @@
       "why": "G1 Health badge: a foreground service re-posting its own live readout."
     },
     {
-      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/StoreBadgeNotifier.kt",
-      "kind": "badge",
-      "notify_calls": 1,
-      "why": "#812 Store badge (Notify > Store): the pending-updates count, non-persistent, cleared at 0 or when the Store opens. A count, not an alert."
-    },
-    {
       "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/DataBadgeService.kt",
       "kind": "badge",
       "notify_calls": 1,

@@ -11,6 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 import java.util.concurrent.TimeUnit
 
 /**
@@ -32,6 +33,9 @@ object Updater {
     /** Enqueue (or refresh) the periodic update worker. Idempotent. Respects
      *  the runtime Auto-update toggle (AutoUpdatePrefs.enabled) — OFF cancels. */
     fun start(context: Context) {
+        // #894 The SuperApp schedules no update work at all (Cloud Store updates it) and clears
+        // whatever an older build left in WorkManager.
+        if (!StoreNotifyGate.mayPost(context)) { cancelAll(context); return }
         // IDENTITY GATE (#453). A work-profile, parallel-clone or Secure
         // Folder copy of this app is not the install the updater owns. It must
         // not schedule the periodic self-update at all — never queue work whose
@@ -87,6 +91,12 @@ object Updater {
         val wm = WorkManager.getInstance(context)
         wm.cancelUniqueWork(WORK_NAME)
         wm.cancelUniqueWork(KICK_NAME)
+    }
+
+    /** #894 Every update job this class can have queued: periodic, its kick and the manual one-shot. */
+    fun cancelAll(context: Context) {
+        cancel(context)
+        WorkManager.getInstance(context).cancelUniqueWork(ONE_SHOT_NAME)
     }
 
     /**

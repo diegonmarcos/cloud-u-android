@@ -86,8 +86,8 @@ check() {
     ok "start() cancels queued work and attaches no Wi-Fi trigger when it does not own the pass"
   else bad "start() schedules or attaches before checking runsFleetPass, or leaves the kick queued"; fi
 
-  # 3. SuperApp hands it over exactly when Cloud Store is installed
-  strip "$SA" | grep -q 'runsFleetPass *= *{ *ctx *-> *!.*CloudStoreHandoff.installed(ctx) *}' && ok "SuperApp runs the pass only while Cloud Store is absent" || bad "SuperApp's runsFleetPass is not !CloudStoreHandoff.installed"
+  # 3. #894 SuperApp never runs the pass, Cloud Store installed or not
+  strip "$SA" | grep -q 'runsFleetPass *= *{ *false *}' && ok "SuperApp never runs the fleet pass" || bad "SuperApp's runsFleetPass is not { false }"
   local sp; sp="$(strip "$SP")"
   for pg in store-cloud store-phone apps-mesh; do
     printf '%s' "$sp" | grep -q "pageId == \"$pg\" *-> *com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)" && ok "SuperApp page $pg goes through the hand-off" || bad "SuperApp page $pg bypasses the hand-off"
@@ -229,7 +229,7 @@ mutate "kick gate removed" "$W" 'if (!AppStoreHost.runsFleetPass(context)) retur
                 val req' 'val req' || M=$((M+1))
 mutate "start gate removed" "$W" 'if (!AppStoreHost.runsFleetPass(context)) {' 'if (false) {' || M=$((M+1))
 mutate "hook default flipped" lib/AppStoreHost.kt 'var runsFleetPass: (android.content.Context) -> Boolean = { true }' 'var runsFleetPass: (android.content.Context) -> Boolean = { false }' || M=$((M+1))
-mutate "SuperApp keeps the pass" super/App.kt 'runsFleetPass = { ctx -> !com.diegonmarcos.superapp.apps.CloudStoreHandoff.installed(ctx) }' 'runsFleetPass = { true }' || M=$((M+1))
+mutate "SuperApp keeps the pass" super/App.kt 'runsFleetPass = { false }' 'runsFleetPass = { true }' || M=$((M+1))
 mutate "store page bypasses hand-off" super/launcher/SectionPages.kt 'pageId == "store-phone"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)' 'pageId == "store-phone"    -> com.diegonmarcos.superapp.appstore.StorePhoneFragment()' || M=$((M+1))
 mutate "package name drifts" super/apps/CloudStoreHandoff.kt 'const val PKG = "com.diegonmarcos.cloudstore"' 'const val PKG = "com.diegonmarcos.store"' || M=$((M+1))
 mutate "OPEN action dropped" store/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudstore.OPEN" />' '' || M=$((M+1))

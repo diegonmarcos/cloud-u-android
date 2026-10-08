@@ -1918,15 +1918,10 @@ open class ShellActivity : AppCompatActivity(),
             ?.let { (sectionId, pageId) -> openSectionPage(sectionId, pageId); return }
         val anchor = findViewById<View>(R.id.fragment_container)
         when {
-            actionType == "check_updates" -> {
-                // #894 Cloud Store runs the checks; open it on the fleet tab instead of checking here.
-                if (com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
-                    routeTarget("page:config/store-cloud")
-                else {
-                    Updater.checkNow(applicationContext)
-                    anchor.snack(R.string.check_updates_started)
-                }
-            }
+            actionType == "check_updates" ->
+                // #894 Cloud Store runs the checks; this opens it on the fleet tab (or offers to
+                // install it). SuperApp checks nothing and notifies nothing about updates itself.
+                routeTarget("page:config/store-cloud")
             actionType == "import_configs" -> {
                 val frag = ImportConfigsFragment.newInstance()
                 applyChrome(frag)
@@ -1941,17 +1936,9 @@ open class ShellActivity : AppCompatActivity(),
             // Update-all. The shared update overlay (with Cancel) shows install
             // progress. The Store is an ordinary tabbed page since #563, so
             // this is a page: target, not an action with its own branch here.
-            actionType == "update_all" -> {
+            actionType == "update_all" ->
+                // #894 Installs are Cloud Store's: this opens it (or the Install Cloud Store button).
                 routeTarget("page:config/store-cloud")
-                // #894 with Cloud Store installed that route opened Cloud Store; installs are its job.
-                if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.ownsInstalls(applicationContext))
-                kotlin.concurrent.thread {
-                    val fleet = com.diegonmarcos.superapp.updater.Fleet
-                        .parse(BuildConfig.CONSTELLATION_FLEET_B64)
-                    com.diegonmarcos.superapp.updater.Fleet.installAll(
-                        applicationContext, fleet, com.diegonmarcos.superapp.updater.Fleet.Mode.UPDATES)
-                }
-            }
             // Drawer "Home Apps" entry → open the same pull-up sheet the
             // home-screen swipe-up gesture shows.
             // ── Sirius-star inner-ring actions (build.json::onehand.circular_menu

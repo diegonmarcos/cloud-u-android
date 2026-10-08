@@ -133,11 +133,10 @@ class App : Application(), WorkManagerConfiguration.Provider {
             periodicCheckAllowed = { ctx ->
                 com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).toggle("fleet_check")
             }
-            // #865 Cloud Store runs the unattended fleet pass once it is
-            // installed, and updates SuperApp with the rest of the fleet. Read
-            // on every check, so installing or removing Cloud Store moves the
-            // pass without a restart (the worker stands down in doWork).
-            runsFleetPass = { ctx -> !com.diegonmarcos.superapp.apps.CloudStoreHandoff.installed(ctx) }
+            // #894 Cloud Store runs the unattended fleet pass and updates SuperApp with the rest of
+            // the fleet. SuperApp never does, installed or not (StoreNotifyGate holds the same line
+            // where a notification would be posted).
+            runsFleetPass = { false }
         }
         // #867 Account is a library now (libs:account); what it cannot reach in the launcher is supplied here.
         com.diegonmarcos.superapp.profile.AccountHost.apply {
@@ -232,11 +231,10 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #777: the Alerts group is drawn from the store, so it comes back
         // (silently) after a reboot or an update cleared the shade.
         runCatching { com.diegonmarcos.superapp.notificationcenter.AlertsNotifier.refresh(this) }
-        // #812 the Store badge (Notify ▸ Store): the auto chain reports how many
-        // updates still wait; 0, or opening the Store, clears it. Never ongoing.
-        com.diegonmarcos.superapp.appstore.StoreAuto.onPending = { c, n ->
-            com.diegonmarcos.superapp.notificationcenter.StoreBadgeNotifier.update(c, n)
-        }
+        // #894 The Store badge (#812) is gone with every other Store / update notification:
+        // Cloud Store is the only app that posts them. What an older build left (queued update
+        // work, its notifications and channels, collected Store alerts) is retired here.
+        runCatching { com.diegonmarcos.superapp.notificationcenter.StoreRetirement.run(this) }
         // #778: /api/account/* — Account's tabs, profiles, runtime, drift and their actions.
         runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
         // #794: /api/net/dns/overview — the DNS page as JSON: preset in effect or not, every app's path, every server.

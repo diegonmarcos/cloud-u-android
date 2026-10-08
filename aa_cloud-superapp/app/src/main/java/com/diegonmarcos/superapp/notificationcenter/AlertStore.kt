@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.notificationcenter
 
 import android.content.Context
 import com.diegonmarcos.superapp.core.FleetAlerts
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -69,9 +70,19 @@ object AlertStore {
     @Synchronized
     fun add(ctx: Context, app: String, a: FleetAlerts.Alert, now: Long = System.currentTimeMillis()): Alert {
         val entry = Alert(UUID.randomUUID().toString(), app, a.title, a.text, a.severity, a.deepLink, a.dedupeKey, now)
+        if (StoreNotifyGate.isStoreAlert(a.dedupeKey)) return entry   // #894 never kept: Store alerts are Cloud Store's
         val rest = all(ctx).filterNot { a.dedupeKey.isNotBlank() && it.app == app && it.dedupeKey == a.dedupeKey }
         save(ctx, listOf(entry) + rest)
         return entry
+    }
+
+    /** #894 Drop the Store / update alerts an older build collected. Returns how many went. */
+    @Synchronized
+    fun dropStoreAlerts(ctx: Context): Int {
+        val all = all(ctx)
+        val rest = all.filterNot { StoreNotifyGate.isStoreAlert(it.dedupeKey) }
+        if (rest.size != all.size) save(ctx, rest)
+        return all.size - rest.size
     }
 
     @Synchronized

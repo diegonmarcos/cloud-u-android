@@ -46,7 +46,7 @@ class ApkInstallWorker(
             UpdateProgress.beginJob(UpdateProgress.Job(pkg, pkg, label, UpdateProgress.STAGE_DOWNLOADING))
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, -1))
             // #903 download + install under a dataSync foreground job (refused = carry on).
-            runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
+            if (BatchForeground.allowed(applicationContext)) runCatching { setForeground(BatchForeground.foregroundInfo(applicationContext)) }
             var declared = 0L
             // The private copy of this loop is gone. It was the only one of the
             // three that chased redirects by hand and the only one that could
