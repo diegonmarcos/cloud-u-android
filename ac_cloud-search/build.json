@@ -1434,6 +1434,53 @@
         ],
         "words": []
       }
+    },
+    "agents": {
+      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors and never submits, posts or sends anything: a person copies a draft and sends it. This block is the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh).",
+      "engines": {
+        "mail": {
+          "_doc": "Cloud Mail's query-only provider (ac_cloud-mail app.sterna.agentapi). Authority is <mail package>.<authority_suffix>; the package is the fleet row `fleet`.",
+          "fleet": "mail",
+          "authority_suffix": "agentmail",
+          "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+          "path_messages": "messages",
+          "path_body": "body",
+          "param_from": "from",
+          "param_subject": "subject",
+          "param_since": "since",
+          "param_limit": "limit",
+          "param_account": "account",
+          "param_id": "id",
+          "message_columns": [
+            "id",
+            "account_id",
+            "mailbox_id",
+            "subject",
+            "from_name",
+            "from_email",
+            "received_at",
+            "sort_key",
+            "seen"
+          ],
+          "body_columns": [
+            "text",
+            "html",
+            "truncated"
+          ],
+          "max_limit": 200
+        },
+        "browser": {
+          "_doc": "Cloud Browser's open activity and read-only fetch provider (ac_cloud-browser cloudbrowser.agentapi). Authority is <browser package>.<authority_suffix>.",
+          "fleet": "browser",
+          "authority_suffix": "agentapi",
+          "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+          "open_action": "com.diegonmarcos.cloudbrowser.action.AGENT_OPEN",
+          "fetch_method": "fetch_text",
+          "extra_url": "url",
+          "extra_group": "group",
+          "extra_max_chars": "max_chars"
+        }
+      }
     }
   },
   "ui": {

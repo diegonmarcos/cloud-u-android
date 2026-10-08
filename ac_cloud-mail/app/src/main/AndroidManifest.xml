@@ -143,6 +143,16 @@
                 android:value="true" />
         </service>
 
+        <!-- #913 the fleet agent door to mail (app.sterna.agentapi.AgentMailContract): a QUERY-ONLY provider
+             for Cloud Search's Agents tab, exported but guarded by the constellation's SIGNATURE permission
+             (CONSTELLATION_DATA, defined and requested by libs:text-tools' manifest), so only an app signed
+             with the one fleet key can read from it. It has no insert, update or delete. -->
+        <provider
+            android:name="app.sterna.agentapi.AgentMailProvider"
+            android:authorities="${applicationId}.agentmail"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
         <receiver
             android:name=".push.NotificationActionReceiver"
             android:exported="false" />

@@ -60,7 +60,8 @@ def check(root, ok):
     for f in ("BrowserSuggest", "BrowserHistory"):
         ok(not any(n in src.get(LIB + "/%s.kt" % f, "") for n in NET), "U4 %s still has no network client" % f)
     others = [p for p, t in src.items() if any(n in t for n in ("HttpURLConnection",)) and "BrowserRemoteSuggest" not in p
-              and "ScrapeRemote" not in p and "search" not in p.lower() and "debugapi" not in p and "Offline" not in p and "Updater" not in p and "AuthMission" not in p]
+              and "ScrapeRemote" not in p and "search" not in p.lower() and "debugapi" not in p and "Offline" not in p and "Updater" not in p and "AuthMission" not in p
+              and "agentapi/AgentFetchProvider" not in p]  # #913 the fleet agent door's read-only GET, held by test-browser-agent-door.sh
     ok(not others, "U4 no other browser file opens a connection", str(others))
     s = [x for x in build_json(root)["ui"]["browser"]["settings"] if x["key"] == "search_suggestions"]
     ok(s and s[0]["type"] == "bool" and "sent to it" in s[0]["doc"], "U4 the setting says in words that what you type goes to the engine")

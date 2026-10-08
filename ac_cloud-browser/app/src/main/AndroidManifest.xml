@@ -77,6 +77,27 @@
             </intent-filter>
         </activity>
 
+        <!-- #913 THE FLEET AGENT DOOR (AgentApiContract): open a URL for the person in a named tab group, and a
+             read-only fetch of one page's text. Both exported but guarded by the SIGNATURE permission, the
+             AuthMissionActivity pattern: only a fleet app can call them. Nothing is clicked, filled or
+             submitted over this door. -->
+        <activity
+            android:name=".agentapi.AgentOpenActivity"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloudbrowser.action.AGENT_OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name=".agentapi.AgentFetchProvider"
+            android:authorities="${applicationId}.agentapi"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
         <!-- #802 registers /api/browser/* on the fleet debug server. Not exported, not a real provider. -->
         <provider
             android:name=".debugapi.BrowserDebugApiProvider"

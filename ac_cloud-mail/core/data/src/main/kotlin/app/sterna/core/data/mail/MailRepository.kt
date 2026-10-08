@@ -1298,6 +1298,24 @@ class MailRepository(
     fun observeUnifiedInboxUnread(): Flow<Int> =
         observeUnifiedInboxUnreadByAccount().map(UnifiedInbox::total)
 
+    /**
+     * #913 the fleet agent door (app.sterna.agentapi.AgentMailProvider): the cached rows a read-only
+     * SELECT selects. [sql] is built by AgentMailContract from validated criteria, every value a bound
+     * argument; nothing here writes.
+     */
+    suspend fun agentMessages(sql: String, args: Array<Any>): List<RecentEmailRow> =
+        emailDao.recentUnified(SimpleSQLiteQuery(sql, args))
+
+    /**
+     * #913 one message for the agent door: the body cache first, else fetched WITHOUT marking it read.
+     * Null when the account is gone or the message cannot be had; the caller says so in words.
+     */
+    suspend fun agentBody(accountId: String, emailId: String): MessageBody? {
+        cachedMessage(accountId, emailId)?.let { return it }
+        val credentials = accountStore.credentials(accountId) ?: return null
+        return openMessage(credentials, emailId, markRead = false)
+    }
+
     /** The read behind the "latest messages" widget, sharing the list's predicate [listRowsWhereSql]
      *  (the same (account, folder) PAIR scope, #121). The list's sort and filters do not apply. */
     suspend fun recentUnifiedInbox(limit: Int): RecentInbox =
