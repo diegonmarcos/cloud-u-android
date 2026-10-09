@@ -317,12 +317,12 @@
         "integrity": "unknown"
       },
       "com.android.settings": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.android.vending": {
-        "unresolved": "Google Play itself: ships with Google Mobile Services, not published as an app",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.anthropic.claude": {
         "label": "Claude",
@@ -574,12 +574,12 @@
         "integrity": "unknown"
       },
       "com.diegonmarcos.cloudcalendar": {
-        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere",
-        "integrity": "unknown"
+        "unresolved": "retired Cloud fleet package, replaced by cloud-agenda: installs from the Cloud page, never here",
+        "integrity": "none"
       },
       "com.diegonmarcos.comms.contacts": {
-        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere",
-        "integrity": "unknown"
+        "unresolved": "retired Cloud fleet package, replaced by cloud-contacts: installs from the Cloud page, never here",
+        "integrity": "none"
       },
       "com.digibites.accubattery": {
         "sources": [
@@ -593,8 +593,8 @@
         "integrity": "unknown"
       },
       "com.diotek.sec.lookup.dictionary": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.downdogapp": {
         "sources": [
@@ -1362,8 +1362,8 @@
         "integrity": "unknown"
       },
       "com.samsung.android.app.contacts": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.samsung.android.app.notes": {
         "sources": [
@@ -1437,8 +1437,8 @@
         "integrity": "unknown"
       },
       "com.samsung.android.dialer": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.samsung.android.email.provider": {
         "sources": [
@@ -1498,8 +1498,8 @@
         "integrity": "none"
       },
       "com.sec.android.app.camera": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.sec.android.app.clockpackage": {
         "sources": [
@@ -1510,8 +1510,8 @@
         "integrity": "none"
       },
       "com.sec.android.app.myfiles": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
-        "integrity": "unknown"
+        "unresolved": "system app: ships with the phone's firmware, nothing to install",
+        "integrity": "none"
       },
       "com.sec.android.app.popupcalculator": {
         "sources": [
@@ -2278,12 +2278,12 @@
         "integrity": "unknown"
       },
       "org.chromium.webapk.a64d263d6f7d935c4_v2": {
-        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it",
-        "integrity": "unknown"
+        "unresolved": "Chrome web-app shortcut: re-create it by adding the site to the home screen",
+        "integrity": "none"
       },
       "org.chromium.webapk.afdfe84a0acbbed2f_v2": {
-        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it",
-        "integrity": "unknown"
+        "unresolved": "Chrome web-app shortcut: re-create it by adding the site to the home screen",
+        "integrity": "none"
       },
       "org.faudroids.werewolf": {
         "sources": [
