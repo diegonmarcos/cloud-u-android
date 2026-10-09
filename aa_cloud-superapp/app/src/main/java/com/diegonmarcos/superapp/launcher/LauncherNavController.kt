@@ -381,7 +381,8 @@ class LauncherNavController(private val host: NavHost) {
                 // which is only the right section while you are standing in
                 // it — mirrored into the Cloud tab, every tile would have
                 // opened page:cloud/<id> and found nothing.
-                id = if (p.action.isNotBlank()) p.action else "page:${section.id}/${p.id}",
+                id = if (p.separator) "${TileGridFragment.SEPARATOR_PREFIX}${p.id}"
+                     else if (p.action.isNotBlank()) p.action else "page:${section.id}/${p.id}",
                 label = p.label,
                 iconRes = p.iconName?.let { Sections.iconResFor(ctx, it) } ?: 0,
                 // The heading comes from the PAGE (#649) — `group`/`subgroup` in

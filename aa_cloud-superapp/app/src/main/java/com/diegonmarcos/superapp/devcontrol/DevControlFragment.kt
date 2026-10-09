@@ -1563,8 +1563,8 @@ class DevControlFragment : Fragment() {
         section(ctx, column, "Firewall") {
             // No-root per-app firewall (local VpnService, :libs:firewall).
             // Info rows read WITHOUT any privileged permission via
-            // ConnectivityManager / Settings. The gray button opens the control
-            // screen (master toggle + per-app preset picker). The firestack
+            // ConnectivityManager / Settings. The gray button opens Network ▸ Firewall, where the control
+            // screen lives (master toggle + per-app preset picker). The firestack
             // merge (per-app filtering + WireGuard in one tunnel) is staged at
             // libs/firewall/phase3-firestack/ — staged, compiles only once
             // firestack.aar is built from libs/firewall/firestack/.
@@ -1574,12 +1574,9 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Active transport", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtTransport(fw))
             row(ctx, it, "System VPN", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtVpn(fw))
             row(ctx, it, "Private DNS", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtPrivateDns(fw))
-            it.addView(small(ctx, "Single VPN slot — per-app rules apply while on; firestack merge (WG-unified) is staged."))
-            it.addView(actionButton(ctx, "Firewall Details", GRAY) {
-                runCatching {
-                    com.diegonmarcos.superapp.firewall.FirewallDialog()
-                        .show(parentFragmentManager, com.diegonmarcos.superapp.firewall.FirewallDialog.TAG)
-                }
+            it.addView(small(ctx, "Read-only summary. Switch, VPN consent and per-app rules live in Network ▸ Firewall."))
+            it.addView(actionButton(ctx, "Manage in Network ▸ Firewall", GRAY) {
+                (activity as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "firewall")
             })
         }
 

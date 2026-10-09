@@ -135,6 +135,18 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
                 // c < span, not i + c < ids.size: a short last row of a group
                 // gets spacers so the next group starts on its own row.
                 if (c < span) {
+                    if (ids[i + c].startsWith(SEPARATOR_PREFIX)) {
+                        // A declared separator page: the same faint character the Data Apps row uses.
+                        row.addView(TextView(requireContext()).apply {
+                            text = labels[i + c]
+                            setTextColor(0x66FFFFFF)
+                            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+                            gravity = android.view.Gravity.CENTER
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+                        })
+                        c++; continue
+                    }
                     val tileView = inflater.inflate(R.layout.item_tile, row, false)
                     (tileView.layoutParams as LinearLayout.LayoutParams).apply {
                         width  = 0
@@ -244,6 +256,8 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         private const val ARG_TILE_ICONS  = "tile_icons"
         private const val ARG_TILE_GROUPS = "tile_groups"
         private const val ARG_TILE_SUBS   = "tile_subgroups"
+        /** Tile id prefix of a `separator` page: drawn as the faint character, never clickable. */
+        const val SEPARATOR_PREFIX = "separator:"
         private const val ARG_TILE_BREAKS = "tile_breaks"
 
         fun newInstance(title: String, tiles: List<Tile>) = TileGridFragment().apply {

@@ -423,6 +423,9 @@ object Sections {
          *  top-level children instead of Cloud | Labs | C3. `page:cloud/quant`
          *  still resolves — see [Section.allPages]. */
         val hidden: Boolean = false,
+        /** A thin `|` between two runs of tiles in the Configs page grid (same element as the
+         *  Data Apps `separator`); never a destination, so the Home row skips it. */
+        val separator: Boolean = false,
 
         /** Page ids of THIS section that this page renders behind one tab
          *  strip, in strip order — the page-level twin of
@@ -708,6 +711,7 @@ object Sections {
                         mirrorPage = po.optString("mirror_page", ""),
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
+                        separator = po.optBoolean("separator", false),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),
@@ -1463,7 +1467,7 @@ object Sections {
                         // up everywhere automatically. Pages with an
                         // `action:` field route to that action directly;
                         // ones without resolve to page:<sectionId>/<pageId>.
-                        referenced.pages.forEach { p ->
+                        referenced.pages.filterNot { it.separator }.forEach { p ->
                             val target = if (p.action.isNotBlank()) p.action
                                          else "page:${referenced.id}/${p.id}"
                             derivedTiles += HomeTile(

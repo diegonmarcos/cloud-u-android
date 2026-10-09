@@ -101,6 +101,9 @@ object SectionPages {
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // #740 Configs ▸ Mesh ▸ DNS — the fleet resolver, applied at the Cloud Mesh VPN.
         sectionId == "config" && pageId == "dns"            -> com.diegonmarcos.superapp.network.DnsFragment.newInstance()
+        // Configs ▸ Network ▸ Firewall — the engine's own controls screen (master switch, VPN consent, per-app rules)
+        // embedded as a page, no copy; About keeps a read-only summary.
+        sectionId == "config" && pageId == "firewall"       -> com.diegonmarcos.superapp.firewall.FirewallDialog().apply { showsDialog = false }
         // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
         // and libs:fin left with it. The tile that deep-linked to it is gone too
         // (the owner dropped Projects Me ▸ MyFin), so nothing here targets

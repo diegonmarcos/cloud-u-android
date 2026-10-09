@@ -69,8 +69,8 @@ print('LABEL', dns.get('label'), dns.get('hidden', False))
 EOF
 )"
 echo "$out" | sed 's/^/    /'
-echo "$out" | grep -q '^MESH wg,dns,' && ok "DNS is the tile right after Cloud Mesh in Setup ▸ Network" \
-  || bad "config/dns is not declared directly after wg in Setup ▸ Network"
+echo "$out" | grep -q '^MESH c3,kde,network-sep-1,firewall,dns,wg,' && ok "DNS is the tile right after Firewall, before Cloud Mesh, in Setup ▸ Network" \
+  || bad "config/dns is not declared second (after firewall, before wg) in Setup ▸ Network"
 echo "$out" | grep -qx 'LABEL DNS False' && ok "the page reads DNS and is a visible tile" \
   || bad "config/dns is missing, hidden or not labelled DNS"
 grep -qE 'pageId == "dns" +-> com\.diegonmarcos\.superapp\.network\.DnsFragment\.newInstance\(\)' "$PAGES" \

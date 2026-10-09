@@ -139,12 +139,12 @@ for d in locales:
               "phone_install_downloading", "phone_install_no_source"):
         check('name="%s"' % s in xml, "%s/strings.xml defines %s" % (d, s))
 
-print("== T5: SuperApp sits in Configs, immediately before Store ==")
+print("== T5: the Configs row reads Configs │ Store, C3 and still carries SuperApp ==")
 configs = [g for g in groups(bj["ui"]["sections"], "Configs")]
 check(len(configs) == 1, "exactly one Configs tile group under ui.sections (found %d)" % len(configs))
 if configs:
     row = [t.get("label") for t in configs[0]["tiles"]]
-    check(row[:2] == ["SuperApp", "Store"], "Configs row starts SuperApp | Store (got %s)" % row)
+    check(row[:4] == ["Configs", "|", "Store", "C3"] and "SuperApp" in row, "Configs row = Configs | Store, C3 (owner order; Presets and About have no tile here); SuperApp tile kept after them (got %s)" % row)
     sa = next((t for t in configs[0]["tiles"] if t.get("label") == "SuperApp"), {})
     check(sa.get("id") == "cloud-superapp" and sa.get("target") == "app://" + bj["android"]["application_id"],
           "the moved SuperApp tile still opens this app's own package (%s)" % sa.get("target"))
