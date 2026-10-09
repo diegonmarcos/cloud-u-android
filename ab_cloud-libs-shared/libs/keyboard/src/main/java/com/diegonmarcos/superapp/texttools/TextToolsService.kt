@@ -385,10 +385,15 @@ class TextToolsService : Service() {
                 .getOrNull()
 
         /** #781 See [ITextTools.importClipboardLists]. The reason travels; the lists never reach a log. */
-        override fun importClipboardLists(json: String?): Array<String> {
+        override fun importClipboardLists(json: String?): Array<String> = importLists(json, replace = true)
+
+        /** #781 See [ITextTools.appendClipboardLists]. */
+        override fun appendClipboardLists(json: String?): Array<String> = importLists(json, replace = false)
+
+        private fun importLists(json: String?, replace: Boolean): Array<String> {
             val dao = helium314.keyboard.latin.database.ClipboardDao.getInstance(this@TextToolsService)
                 ?: return failed("the clipboard store cannot open (device locked?)")
-            return runCatching { dao.importJson(org.json.JSONObject(json.orEmpty()), this@TextToolsService) }
+            return runCatching { dao.importJson(org.json.JSONObject(json.orEmpty()), this@TextToolsService, replace) }
                 .fold({ ok(it.toString()) }, { failed("clipboard lists not imported: ${it.javaClass.simpleName}") })
         }
     }

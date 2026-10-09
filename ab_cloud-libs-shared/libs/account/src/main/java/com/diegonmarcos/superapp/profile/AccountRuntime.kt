@@ -451,8 +451,43 @@ object AccountRuntime {
         val client = tools(ctx)
         val until = SystemClock.elapsedRealtime() + KEYBOARD_BIND_MS
         while (!client.isConnected() && SystemClock.elapsedRealtime() < until) Thread.sleep(100)
-        val r = client.importClipboardLists(export.toString())
-        return if (r.ok) "✓ ${r.text} clips in ${export.getJSONArray("tabs").length()} lists" else "✗ keyboard: ${r.error}"
+        // A binder call carries ~1 MB and the lists are bigger (1.3 MB, 2026-10-09: "data parcel
+        // size 1301328 bytes"), so: first chunk replaces, the rest append.
+        var total = 0
+        keyboardChunks(export, KEYBOARD_CHUNK_CHARS).forEachIndexed { i, chunk ->
+            val r = if (i == 0) client.importClipboardLists(chunk.toString()) else client.appendClipboardLists(chunk.toString())
+            if (!r.ok) return "✗ keyboard (chunk ${i + 1}): ${r.error}" + if (i > 0) " — $total clips already in" else ""
+            total += r.text?.toIntOrNull() ?: 0
+        }
+        return "✓ $total clips in ${export.getJSONArray("tabs").length()} lists"
+    }
+
+    /**
+     * #781 [export] cut into exports of at most [maxChars] of entry JSON each, entries in order, each
+     * chunk carrying only the tabs it has entries for (the first also carries every empty tab). A
+     * single entry larger than [maxChars] travels alone.
+     */
+    fun keyboardChunks(export: JSONObject, maxChars: Int): List<JSONObject> {
+        val tabs = export.getJSONArray("tabs"); val files = export.getJSONObject("files")
+        val chunks = mutableListOf<Pair<JSONArray, JSONObject>>()
+        var size = maxChars
+        for (t in 0 until tabs.length()) {
+            val tab = tabs.getJSONObject(t); val file = tab.getString("file")
+            val entries = files.optJSONArray(file) ?: JSONArray()
+            if (entries.length() == 0) {
+                if (chunks.isEmpty()) chunks.add(JSONArray() to JSONObject())
+                chunks[0].first.put(tab); chunks[0].second.put(file, JSONArray())
+                continue
+            }
+            for (e in 0 until entries.length()) {
+                val entry = entries.getJSONObject(e); val n = entry.toString().length
+                if (chunks.isEmpty() || size + n > maxChars) { chunks.add(JSONArray() to JSONObject()); size = 0 }
+                val (ct, cf) = chunks.last()
+                if (!cf.has(file)) { ct.put(tab); cf.put(file, JSONArray()) }
+                cf.getJSONArray(file).put(entry); size += n
+            }
+        }
+        return chunks.map { (t, f) -> JSONObject().put("version", export.opt("version")).put("tabs", t).put("files", f) }
     }
 
     /**
@@ -471,6 +506,9 @@ object AccountRuntime {
     }
 
     private const val KEYBOARD_BIND_MS = 5_000L
+
+    /** ~100 K chars of entry JSON per binder call: far under the ~1 MB parcel limit (2 bytes/char). */
+    private const val KEYBOARD_CHUNK_CHARS = 100_000
 
     /** A base64 Curve25519 private key's public half through the upstream crypto, null when it is not one. */
     fun derivePublicKey(privateKey: String): String? = runCatching {

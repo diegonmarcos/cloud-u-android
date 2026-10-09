@@ -112,9 +112,10 @@ AIDL="$LIBS/text-tools/src/main/aidl/com/diegonmarcos/superapp/texttools/ITextTo
 # An AIDL method's transaction code is its position: methods are only ever APPENDED, or every
 # client built before them would call the wrong method on a newer keyboard. clipboardLists came
 # next-to-last's turn first; its write half importClipboardLists was appended after it.
-tail2=$(grep -E '^\s+(String\[\]|String|List<String>) [a-zA-Z]+\(' "$AIDL" | tail -2 | tr -s ' ')
-[ "$tail2" = "$(printf ' String clipboardLists();\n String[] importClipboardLists(in String json);')" ] \
-    && ok "ITextTools ends clipboardLists, importClipboardLists (appended, transaction codes unchanged)" || bad "AIDL tail is not clipboardLists then importClipboardLists: $tail2"
+tail3=$(grep -E '^\s+(String\[\]|String|List<String>) [a-zA-Z]+\(' "$AIDL" | tail -3 | tr -s ' ')
+[ "$tail3" = "$(printf ' String clipboardLists();\n String[] importClipboardLists(in String json);\n String[] appendClipboardLists(in String json);')" ] \
+    && ok "ITextTools ends clipboardLists, importClipboardLists, appendClipboardLists (appended, transaction codes unchanged)" || bad "AIDL tail is not clipboardLists, importClipboardLists, appendClipboardLists: $tail3"
+grep -qF 'override fun appendClipboardLists(json: String?): Array<String> = importLists(json, replace = false)' "$LIBS/keyboard/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsService.kt" && ok "the keyboard appends a chunk without replacing" || bad "TextToolsService does not implement appendClipboardLists"
 grep -qF 'override fun importClipboardLists(json: String?): Array<String>' "$LIBS/keyboard/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsService.kt" && ok "the keyboard's TextToolsService takes lists in" || bad "TextToolsService does not implement importClipboardLists"
 grep -qF 'importJson(org.json.JSONObject().put("tabs", tabs).put("files", files), context)' "$LIBS/keyboard/src/main/java/helium314/keyboard/latin/database/ClipboardDao.kt" \
     && ok "Import JSON from a folder and the Account apply are ONE parser (importFromDir delegates to importJson)" || bad "importFromDir no longer delegates to importJson — two parsers"

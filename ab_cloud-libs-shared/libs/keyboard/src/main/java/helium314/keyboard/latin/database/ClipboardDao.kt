@@ -343,7 +343,7 @@ class ClipboardDao private constructor(private val db: Database) {
      * malformed one leaves the store untouched; file-backed clips are kept. Throws on a tab whose
      * file is missing. Returns the number of entries inserted.
      */
-    fun importJson(export: org.json.JSONObject, context: Context): Int = synchronized(this) {
+    fun importJson(export: org.json.JSONObject, context: Context, replace: Boolean = true): Int = synchronized(this) {
         val tabs = export.getJSONArray("tabs")
         val files = export.getJSONObject("files")
         val parsed = mutableListOf<PendingClip>()
@@ -362,8 +362,11 @@ class ClipboardDao private constructor(private val db: Database) {
             }
         }
         // everything parsed — safe to swap now
-        Log.i(TAG, "importJson: replacing ${cache.count { it.filename == null }} text clips with ${parsed.size}")
-        delete(cache.filter { it.filename == null })
+        // replace=false: one more chunk of an import too big for one binder call (#781)
+        if (replace) {
+            Log.i(TAG, "importJson: replacing ${cache.count { it.filename == null }} text clips with ${parsed.size}")
+            delete(cache.filter { it.filename == null })
+        } else Log.i(TAG, "importJson: appending ${parsed.size} text clips")
         parsed.forEach { insertNewEntry(it.timeStamp, it.listName, it.text, null, it.mimeTypes, context) }
         return parsed.size
     }

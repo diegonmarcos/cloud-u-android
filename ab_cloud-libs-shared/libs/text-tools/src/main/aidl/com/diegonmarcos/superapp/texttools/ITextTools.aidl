@@ -223,4 +223,12 @@ interface ITextTools {
      * CONSTELLATION_DATA guard and the same never-log rule: the lists hold the owner's keys.
      */
     String[] importClipboardLists(in String json);
+
+    /**
+     * #781 importClipboardLists without the replace: ADDS [json]'s clips. A binder call carries
+     * about 1 MB and the owner's lists are larger (1.3 MB, 2026-10-09), so the caller sends the
+     * first chunk through importClipboardLists and the rest through this. Appended last, same
+     * guard, same never-log rule.
+     */
+    String[] appendClipboardLists(in String json);
 }
