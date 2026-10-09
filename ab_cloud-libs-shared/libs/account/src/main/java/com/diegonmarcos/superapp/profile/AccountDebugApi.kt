@@ -44,7 +44,7 @@ object AccountDebugApi {
             Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
             // Cloud Account redesign task 2: the per-device files in the vault, through ForgeClient
             Op("devices", "", "devices/ on the primary forge: id, path, blob sha, captured_at per file; and which forges hold a token (true/false)"),
-            Op("backup", "device=&dry=1", "capture this phone as devices/<device>.json, one commit (dry=1: key NAMES and counts only; equal but for captured_at = no commit)"),
+            Op("backup", "device=&dry=1&capture=0", "capture this phone as devices/<device>.json, one commit: first every installed fleet app's export into Configs (capture=0 skips it); dry=1: key NAMES and counts only; equal but for captured_at = no commit"),
             Op("load", "device=", "fetch devices/<device|DEFAULT>.json into the working slot (refused if a secret-class key holds a literal)"),
             Op("setdefault", "device=", "copy devices/<device>.json over devices/DEFAULT.json, one commit"),
             Op("forge", "op=get|put&path=&forge=&dry=1", "get: the file's blob sha and size (never the content); put: dry=1 only — target, method, body keys"),
@@ -149,7 +149,7 @@ object AccountDebugApi {
             }
             "fleet" -> fleet(ctx)
             "devices" -> DeviceVault(ctx).let { v -> v.devices().put("credentials", v.credentials()) }
-            "backup" -> DeviceVault(ctx).backup(q["device"]?.trim().orEmpty().ifBlank { VaultCockpit.selectedDevice(ctx) }, q["dry"] == "1")
+            "backup" -> DeviceVault(ctx).backup(q["device"]?.trim().orEmpty().ifBlank { VaultCockpit.selectedDevice(ctx) }, q["dry"] == "1", q["capture"] != "0")
             "load" -> DeviceVault(ctx).load(q["device"]?.trim().orEmpty())
             "setdefault" -> DeviceVault(ctx).setDefault(q["device"]?.trim().orEmpty())
             "forge" -> forge(ctx, q)

@@ -195,10 +195,17 @@ class SetupRunbook(private val ctx: Context) {
 
     // ── configs / verified ───────────────────────────────────────────────
 
-    /** The working file's config-class keys as Fleet Setup's plan, SuperApp first. */
+    /**
+     * The SAME plan `/api/account/setup` pushes (Connections + the declared copy + the vault bundle's Configs
+     * section, [FleetSetup.plan]) MERGED with the working file's config-class keys, the device file winning per
+     * key ([SetupPlan.merge]); SuperApp first. `verified` diffs against this same plan.
+     */
     fun configsPlan(): SetupPlan.Plan? {
         val prof = workingProfile() ?: return null
-        val pl = FleetSetup.plan(ctx, null, null, DeviceProfile.plan(prof, DeviceProfile.manifestClass(ctx)))
+        val vault = com.diegonmarcos.superapp.settings.AccountVault(ctx)
+        val fleet = FleetSetup.plan(ctx, vault.prefs.json, AccountModel.get(ctx).shown(), vault.appConfigs())
+        val device = FleetSetup.plan(ctx, null, null, DeviceProfile.plan(prof, DeviceProfile.manifestClass(ctx)))
+        val pl = SetupPlan.merge(fleet, device)
         return SetupPlan.Plan(pl.apps.sortedBy { if (it.app.pkg == SUPERAPP_PKG) 0 else 1 }, pl.unmapped)
     }
 
@@ -219,7 +226,7 @@ class SetupRunbook(private val ctx: Context) {
 
     private fun checkConfigs(): State {
         val pl = configsPlan() ?: return State.Todo("no working profile: run step 'profile' first")
-        if (pl.itemCount == 0) return State.Already("nothing to push (0 config keys in the working file)")
+        if (pl.itemCount == 0) return State.Already("nothing to push (0 config keys in the vault bundle and the working file)")
         val d = drift(pl)
         return if (d.isEmpty()) State.Already("${pl.itemCount} keys in ${pl.apps.size} apps already applied")
                else State.Todo("${d.size} key(s) to apply: ${d.take(5).joinToString()}")

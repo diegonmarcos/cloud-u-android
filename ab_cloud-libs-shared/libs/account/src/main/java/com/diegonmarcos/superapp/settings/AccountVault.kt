@@ -70,7 +70,7 @@ class AccountVault(context: Context) {
     fun captureConfigs(appId: String, export: JSONObject) {
         val all = appConfigs()
         val stores = export.optJSONObject("stores") ?: return
-        all.put(appId, JSONObject(stores.toString()))
+        all.put(appId, JSONObject(stores.toString()).also { it.remove(com.diegonmarcos.superapp.profile.SetupPlan.VAULT_STORE) })
         putAppConfigs(all)
     }
 

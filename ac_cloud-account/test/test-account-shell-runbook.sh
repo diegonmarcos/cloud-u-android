@@ -109,6 +109,16 @@ ok('"derived from model ${resolved.model}"' in ap2, "picker hints the derived mo
 dd = api.split("private fun device(")[1].split("/**")[0] if "private fun device(" in api else ""
 ok('if (set !in known && q["new"] != "1")' in dd and 'Op("device"' in api and '"device" -> device(ctx, q)' in api,
    "device?set= refuses an undeclared id without new=1", "device?set= accepts an undeclared id")
+# configs = the setup op's plan (vault bundle Configs) merged with the working file; backup captures first
+cp = rb.split("fun configsPlan()")[1].split("private fun drift")[0]
+ok("vault.appConfigs()" in cp and "AccountModel.get(ctx).shown()" in cp and "SetupPlan.merge(fleet, device)" in cp,
+   "configs step = setup's plan (vault bundle) merged with the working file", "configs step ignores the vault bundle")
+dvv = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/DeviceVault.kt")
+bk = dvv.split("fun backup(")[1].split("DeviceProfile.capture(ctx, deviceId)")[0]
+ok("if (!capture) emptyList() else" in bk and "AccountMigrate.capture(vault," in bk, "backup captures every app's export first", "backup skips the capture")
+ok('q["capture"] != "0"' in api, "backup?capture=0 skips the capture", "backup has no capture=0 switch")
+sp = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/SetupPlan.kt")
+ok(sp.count("store.name == VAULT_STORE") >= 3, "setup never pushes into the Account vault's own file", "setup can overwrite the vault file")
 sys.exit(fails)
 PY
 }
@@ -129,7 +139,9 @@ ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profil
 ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt
 ac_cloud-store/app/src/main/AndroidManifest.xml
 ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShellService.kt
-ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/DeviceVault.kt
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/SetupPlan.kt"
 mutate() {  # mutate <label> <file> <old> <new>
   local label="$1" f="$2" old="$3" new="$4" d="$TMP/m"
   rm -rf "$d"; mkdir -p "$d"
@@ -181,5 +193,8 @@ mutate "exec not token-gated" $D/AppDebugServer.kt 'OPEN_OPS = setOf("system/pin
 mutate "blank id still reaches the forge" $P/SetupRunbook.kt 'if (id.isBlank()) return State.Failed("this phone has no device id' 'if (false) return State.Failed("this phone has no device id' || M=$((M+1))
 mutate "derivation ignores the model" $P/AccountPages.kt 'if (m != null && m in want) out += id' 'out += id' || M=$((M+1))
 mutate "device?set= accepts an undeclared id without new" $P/AccountDebugApi.kt 'if (set !in known && q["new"] != "1")' 'if (false)' || M=$((M+1))
+mutate "configs step ignores the vault bundle" $P/SetupRunbook.kt 'SetupPlan.merge(fleet, device)' 'device' || M=$((M+1))
+mutate "backup skips capture" $P/DeviceVault.kt 'if (!capture) emptyList() else' 'if (true) emptyList() else' || M=$((M+1))
+mutate "setup pushes into the vault file" $P/SetupPlan.kt 'if (store.name == VAULT_STORE) continue' 'if (false) continue' || M=$((M+1))
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

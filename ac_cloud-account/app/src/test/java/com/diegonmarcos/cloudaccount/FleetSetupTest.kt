@@ -127,4 +127,19 @@ class FleetSetupTest {
         val o = FleetSetup.run(plan(), { it == ctx.packageName }, lying, setOf("first")).single()
         assertEquals("✗ first: mail_jmap_prefs.email: applied, but the app reads back a different value", o.line())
     }
+
+    /** Runbook `configs` = the setup op's plan (vault bundle Configs) merged with the device file; the device file wins per key. */
+    @Test fun theRunbookPlanIsTheVaultBundleMergedWithTheDeviceFile() {
+        val m = manifest(ctx.packageName)
+        val bundle = JSONObject("""{"first":{"fleet_dns_prefs":{"fleet_dns_prefs":{"preset":"quad9","volume":3}}}}""")
+        val device = JSONObject("""{"first":{"fleet_dns_prefs":{"fleet_dns_prefs":{"preset":"cloudflare"}}}}""")
+        val fleet = SetupPlan.build(m, configs, null, bundle)
+        val merged = SetupPlan.merge(fleet, SetupPlan.build(m, null, null, device))
+        val first = merged.of("first")!!.items.associate { it.store + "." + it.key to it.value }
+        assertEquals("cloudflare", first["fleet_dns_prefs.preset"])                 // device file wins
+        assertEquals(3, first["fleet_dns_prefs.volume"])                            // vault-bundle key kept
+        assertEquals("hunter2", first["mail_jmap_prefs.password"])                  // Connections routes kept
+        assertEquals(fleet.itemCount, merged.itemCount)                              // an override, not an extra key
+        assertTrue(SetupPlan.merge(SetupPlan.build(m, null, null, JSONObject()), fleet).itemCount > 0)   // an empty working file is not "nothing to push"
+    }
 }

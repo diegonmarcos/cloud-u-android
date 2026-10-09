@@ -36,6 +36,25 @@ object SetupPlan {
 
     const val BUNDLE = "bundle"
 
+    /**
+     * The Account vault's own file (`configs_json` Connections, `app_configs_json` Configs, `data_json` identities).
+     * NEVER a setup destination nor a captured config: its keys are whole-section blobs, so pushing a captured
+     * snapshot of one replaces the live section with that snapshot (a run shrank Connections 12 -> 1). Connections
+     * reach the apps through the `bundle` routes instead.
+     */
+    const val VAULT_STORE = "import_configs"
+
+    /** [base] with every (app, store, file, key) of [over] replacing or joining it: [over] wins per key. */
+    fun merge(base: Plan, over: Plan): Plan {
+        val byApp = LinkedHashMap<String, Pair<FleetPolicy.App, LinkedHashMap<String, Item>>>()
+        fun put(p: Plan) = p.apps.forEach { ap ->
+            val m = byApp.getOrPut(ap.app.id) { ap.app to LinkedHashMap() }.second
+            ap.items.forEach { m["${it.store}\u0000${it.file}\u0000${it.key}"] = it }
+        }
+        put(base); put(over)
+        return Plan(byApp.values.map { (app, m) -> AppPlan(app, m.values.toList()) }, base.unmapped + over.unmapped)
+    }
+
     /** One declared destination of a bundle path. [pull] names the app Cloud Account reads the value FROM when it holds none yet (#874 migration). */
     data class Route(val store: String, val key: String, val pull: String? = null)
 
@@ -66,6 +85,7 @@ object SetupPlan {
             for (file in sub.keys().asSequence().filter { it != AccountFleet.SCHEMA }.sorted()) {
                 val values = sub.optJSONObject(file) ?: continue
                 val store = m.storeOfFile(app.pkg, file) ?: run { unmapped += Unmapped("settings.$id.$file", "not a declared store file"); null } ?: continue
+                if (store.name == VAULT_STORE) { unmapped += Unmapped("settings.$id.$file", "the Account vault's own file: never pushed"); continue }
                 val types = values.optJSONObject(FleetPolicy.TYPES)
                 for (k in values.keys().asSequence().filter { it != FleetPolicy.TYPES }.sorted()) {
                     if (m.keyClass(store, k, app.id) !in m.migrate) { unmapped += Unmapped("settings.$id.$file.$k", "${m.keyClass(store, k, app.id)} key: never migrates"); continue }
@@ -80,6 +100,7 @@ object SetupPlan {
             val stores = appConfigs!!.optJSONObject(id) ?: continue
             for (storeName in stores.keys().asSequence().sorted()) {
                 val store = m.stores[storeName] ?: run { unmapped += Unmapped("configs.$id.$storeName", "not a declared store"); null } ?: continue
+                if (store.name == VAULT_STORE) continue                                  // a captured vault snapshot never overwrites the live vault
                 val files = stores.optJSONObject(storeName) ?: continue
                 for (file in files.keys().asSequence().sorted()) {
                     val values = files.optJSONObject(file) ?: continue
@@ -99,6 +120,7 @@ object SetupPlan {
             routed += path
             for ((storeName, key) in targets.map { it.store to it.key }) {
                 val store = m.stores[storeName] ?: run { unmapped += Unmapped(path, "routes to $storeName, which fleet-config.json does not declare"); null } ?: continue
+                if (store.name == VAULT_STORE) { unmapped += Unmapped(path, "routes to the Account vault's own file: never pushed"); continue }
                 val owners = m.apps.values.filter { a -> store.usedBy.any { it in a.libs || it == a.module } }
                 if (owners.isEmpty()) { unmapped += Unmapped(path, "no app declares $storeName"); continue }
                 for (app in owners) add(Item(app.id, app.pkg, store.name, store.filesFor(app.pkg).first(), key, v, null, path))

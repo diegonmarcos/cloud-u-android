@@ -11,6 +11,7 @@ import com.diegonmarcos.superapp.profile.AccountData
 import com.diegonmarcos.superapp.profile.AccountMigrate
 import com.diegonmarcos.superapp.profile.AccountStore
 import com.diegonmarcos.superapp.profile.FleetSetup
+import com.diegonmarcos.superapp.profile.SetupPlan
 import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.BundleCrypto
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
@@ -195,5 +196,54 @@ class AccountVaultTest {
         val a = BundleCrypto.encrypt("x", "pw".toCharArray(), 100_000); val b = BundleCrypto.encrypt("x", "pw".toCharArray(), 100_000)
         assertFalse("a fresh salt and iv every time", JSONObject(a).getString("ct") == JSONObject(b).getString("ct"))
         assertEquals("x", BundleCrypto.decrypt(a, "pw".toCharArray()))
+    }
+
+    /**
+     * Defect: Connections 12 -> 1 after a Fleet Setup run. The plan pushed a captured `import_configs.configs_json`
+     * snapshot back into Cloud Account's own vault file, replacing the live blob. A setup pass must leave the
+     * Connections section as it was.
+     */
+    @Test fun aSetupPassLeavesTheConnectionsSectionIntact() {
+        val v = AccountVault(ctx)
+        (1..12).forEach { v.putConnection("c$it.k", "v$it") }
+        val before = AccountVault.leaves(v.connections())
+        assertEquals(12, before)
+        val m = FleetPolicy.Manifest(JSONObject("""
+          {"migrate":["config","secret"],"classes":{},"kinds":{},"resolve":{},"libs":{},"bundle":{"c1.k":[{"store":"x_prefs","key":"k"}]},
+           "apps":{"account":{"package":"${ctx.packageName}","module":"ac_account","schema_version":1,"libs":["lib-account"],"items":[]}},
+           "stores":{"import_configs":{"kind":"encrypted","class":"secret","doc":"d","used_by":["lib-account"],
+                       "keys":{"configs_json":"secret","app_configs_json":"secret","data_json":"secret"}},
+                     "x_prefs":{"kind":"prefs","class":"config","doc":"d","used_by":["lib-account"]}}}"""))
+        // the app's export as captured (an older vault with ONE connection), filed under Configs
+        val snapshot = JSONObject().put("c1", JSONObject().put("k", "old")).toString()
+        val export = JSONObject().put("stores", JSONObject().put("import_configs", JSONObject().put("import_configs",
+            JSONObject().put("configs_json", snapshot))).put("x_prefs", JSONObject().put("x_prefs", JSONObject().put("k", "v1"))))
+        v.putAppConfigs(JSONObject().put("account", export.getJSONObject("stores")))        // as a pre-fix capture left it
+        // a fake transport that writes into THIS app's stores like its setup provider does (import_configs = the vault file)
+        val x = HashMap<String, Any?>()
+        val t = FleetSetup.Transport { _, method, store, body ->
+            when (method) {
+                SetupContract.METHOD_DESCRIBE -> SetupContract.Reply.Ok(JSONObject().put("stores", JSONArray()
+                    .put(JSONObject().put("name", "import_configs").put("served", true)).put(JSONObject().put("name", "x_prefs").put("served", true))))
+                SetupContract.METHOD_APPLY -> {
+                    val vals = body!!.getJSONObject("values")
+                    if (store == "import_configs") vals.optString("configs_json").takeIf { it.isNotEmpty() }?.let { v.prefs.json = it }
+                    else vals.keys().forEach { k -> x[k] = vals.get(k) }
+                    SetupContract.Reply.Ok(JSONObject().put("ok", true))
+                }
+                else -> SetupContract.Reply.Ok(JSONObject().put("stores", JSONObject()
+                    .put("import_configs", JSONObject().put("import_configs", JSONObject().put("configs_json", v.prefs.json)))
+                    .put("x_prefs", JSONObject().put("x_prefs", JSONObject().also { o -> x.forEach { (k, xv) -> o.put(k, xv) } }))))
+            }
+        }
+        val plan = SetupPlan.build(m, v.connections(), null, v.appConfigs())
+        assertTrue(plan.apps.flatMap { it.items }.none { it.store == SetupPlan.VAULT_STORE })
+        FleetSetup.run(plan, { true }, t)
+        assertEquals(before, AccountVault.leaves(v.connections()))
+        assertEquals("v1", v.connection("c1.k"))
+        // and a fresh capture never files the vault into its own Configs section
+        AccountMigrate.capture(v, m, { true }, t)
+        assertFalse(v.appConfigs().getJSONObject("account").has(SetupPlan.VAULT_STORE))
+        assertEquals(before, AccountVault.leaves(v.connections()))
     }
 }

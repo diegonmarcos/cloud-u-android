@@ -66,10 +66,17 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
         return JSONObject().put("ok", true).put("forge", c.forge.id).put("dir", decl.devicesDir).put("devices", out)
     }
 
-    /** Capture this phone as [deviceId]. [dry]: key NAMES and counts only, nothing committed. */
-    fun backup(deviceId: String, dry: Boolean): JSONObject {
+    /**
+     * Capture this phone as [deviceId]. [dry]: key NAMES and counts only, nothing committed. [capture] first reads
+     * every installed fleet app's `export` into the Configs section ([AccountMigrate.capture]), so the file carries
+     * what the apps hold now; secret-class keys are still written as `@vault:` references ([DeviceProfile.mask]).
+     */
+    fun backup(deviceId: String, dry: Boolean, capture: Boolean = true): JSONObject {
         if (deviceId.isBlank() || deviceId == DeviceProfile.DEFAULT_ID || !deviceId.matches(Regex("[A-Za-z0-9._-]+")))
             return JSONObject().put("ok", false).put("result", "✗ device= must be a declared device id (not DEFAULT)")
+        val captured = if (!capture) emptyList() else runCatching {
+            AccountMigrate.capture(vault, AccountFleet.manifest(ctx), { FleetSetup.installed(ctx, it) }, FleetSetup.transport(ctx))
+        }.getOrElse { return JSONObject().put("ok", false).put("result", "✗ capture: ${it.javaClass.simpleName}") }
         val profile = runCatching { DeviceProfile.capture(ctx, deviceId) }
             .getOrElse { return JSONObject().put("ok", false).put("result", "✗ ${it.message}") }
         val (apps, keys) = DeviceProfile.counts(profile)
@@ -77,7 +84,7 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
         val message = "account($deviceId): backup — $apps apps, $keys settings"
         if (dry) return JSONObject().put("ok", true).put("dry", true).put("path", path).put("message", message)
             .put("apps", apps).put("settings", keys).put("settings_keys", keyNames(profile.optJSONObject("settings") ?: JSONObject()))
-            .put("forge", primary()?.id ?: JSONObject.NULL)
+            .put("forge", primary()?.id ?: JSONObject.NULL).put("captured", JSONArray(captured))
         val c = client() ?: return noForge()
         val current = when (val g = c.get(path, decl.branch)) {
             is ForgeClient.Result.Ok -> g.value
