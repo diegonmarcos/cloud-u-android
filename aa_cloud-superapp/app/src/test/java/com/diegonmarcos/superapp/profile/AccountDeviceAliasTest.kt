@@ -2,9 +2,16 @@ package com.diegonmarcos.superapp.profile
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import android.app.Application
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-/** The legacy device id migration: pure, the alias table comes from the declaration handed in. */
+/** The legacy device id migration: pure, the alias table comes from the declaration handed in.
+ *  Robolectric only for org.json, which the plain JVM android.jar stubs throw on. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class AccountDeviceAliasTest {
     private fun b64(json: String) = java.util.Base64.getEncoder().encodeToString(json.toByteArray())
     private val aliases = AccountDevice.aliases(b64("""{"device_aliases":{"old":"new-id"}}"""))
