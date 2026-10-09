@@ -26,6 +26,7 @@
   },
   "resolver": {
     "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play-anon` = Google Play's own servers through an anonymous session (PlayAnonFetcher; fetches, sha256 per file, splits installed as one session); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared. #627 KINDS ARE DECLARED, AND THE PAGE'S SOURCE TABS ARE THAT DECLARATION. `kinds` carries one entry per kind named in `order`, and Store ▸ Phone draws one tab per entry, in `order`, labelled from `label`. Adding a kind here yields a tab with no Kotlin change; a kind in `order` with no `kinds` entry (or the reverse) fails to parse. `fetches` is the honest half: true = this store hands us bytes we can verify and version-compare ourselves (vendor, fdroid); false = it is a HAND-OFF, the row deep-links into that store's own page and there is no automated version compare, which the row says rather than implying one. `installer` is the store app the hand-off is aimed at, looked up in the top-level `sources` map — never named in code. `catalogue` says this kind is a different CLIENT for another kind's catalogue, not a catalogue of its own: Aurora Store serves Google Play's index, so `aurora` aliases `play` and its tab is every app with a `play` rung. Samsung's Galaxy Store is a genuinely separate catalogue, so `samsung` aliases nothing and its tab is exactly the apps that declare it.",
+    "_doc_integrity": "Every declared row carries `integrity`: `play` = the app enforces Play Integrity / a Play-installer check and may refuse or degrade when installed by anything but com.android.vending (it KEEPS its play-anon rung: the bytes install fine, the row and the install plan say 'Play Integrity: may refuse to run'); `none` = runs the same from any installer (evidence required: the publisher ships outside Play, or the S21 already runs it from another store); `unknown` = no evidence, never rounded to none. A user's 'did not run' on an unknown app marks it play locally (IntegrityMarks), exported with the inventory. Evidence per app: a0_docs/eng-specs/store-upstream-sources.md.",
     "order": [
       "vendor",
       "fdroid",
@@ -103,7 +104,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ai.perplexity.comet": {
         "sources": [
@@ -113,7 +115,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ai.x.grok": {
         "sources": [
@@ -123,7 +126,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "app.affine.pro": {
         "sources": [
@@ -133,14 +137,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "app.sterna": {
         "sources": [
           {
             "kind": "fdroid"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "at.zuggabecka.radiofm4": {
         "sources": [
@@ -150,7 +156,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "be.greifmatthias.wakaship": {
         "sources": [
@@ -160,7 +167,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "br.gov.economia.receita.rfb": {
         "sources": [
@@ -170,7 +178,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "br.gov.meugovbr": {
         "sources": [
@@ -180,7 +189,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "cat.atm.tmobilitat": {
         "sources": [
@@ -190,7 +200,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ch.icoaching.typewise": {
         "sources": [
@@ -200,7 +211,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ch.protonvpn.android": {
         "sources": [
@@ -213,7 +225,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "chat.rocket.android": {
         "sources": [
@@ -223,7 +236,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "co.mangotechnologies.clickup": {
         "sources": [
@@ -233,7 +247,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.Slack": {
         "sources": [
@@ -243,7 +258,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.adobe.reader": {
         "sources": [
@@ -253,7 +269,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.airbnb.android": {
         "sources": [
@@ -263,7 +280,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.alphainventor.filemanager": {
         "sources": [
@@ -273,7 +291,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.amazon.avod.thirdpartyclient": {
         "sources": [
@@ -283,7 +302,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.android.chrome": {
         "sources": [
@@ -293,13 +313,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.android.settings": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
+        "integrity": "unknown"
       },
       "com.android.vending": {
-        "unresolved": "Google Play itself: ships with Google Mobile Services, not published as an app"
+        "unresolved": "Google Play itself: ships with Google Mobile Services, not published as an app",
+        "integrity": "unknown"
       },
       "com.anthropic.claude": {
         "label": "Claude",
@@ -310,7 +333,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.app.applistbackup": {
         "sources": [
@@ -320,7 +344,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.aspiro.tidal": {
         "sources": [
@@ -330,14 +355,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.aurora.store": {
         "sources": [
           {
             "kind": "fdroid"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.badoo.mobile": {
         "sources": [
@@ -347,7 +374,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.beemdevelopment.aegis": {
         "sources": [
@@ -368,7 +396,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.beeper.android": {
         "sources": [
@@ -378,7 +407,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.bereal.ft": {
         "sources": [
@@ -388,10 +418,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.binarysmith.webclipwidget.ad": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.booking": {
         "sources": [
@@ -401,7 +433,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.brave.browser": {
         "label": "Brave",
@@ -427,7 +460,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.btg.pactual.banking": {
         "sources": [
@@ -437,7 +471,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.btg.pactual.digital.mobile": {
         "sources": [
@@ -447,7 +482,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.bumble.app": {
         "sources": [
@@ -457,7 +493,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.checkitt": {
         "sources": [
@@ -467,7 +504,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.cloudflare.onedotonedotonedotone": {
         "sources": [
@@ -477,7 +515,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.collabora.libreoffice": {
         "sources": [
@@ -487,7 +526,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.comuto": {
         "sources": [
@@ -497,7 +537,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.devolutions.remotedesktopmanager": {
         "sources": [
@@ -507,7 +548,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.dgt.midgt": {
         "sources": [
@@ -517,7 +559,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.dhl.exp.dhlmobile": {
         "sources": [
@@ -527,13 +570,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.diegonmarcos.cloudcalendar": {
-        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere"
+        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere",
+        "integrity": "unknown"
       },
       "com.diegonmarcos.comms.contacts": {
-        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere"
+        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere",
+        "integrity": "unknown"
       },
       "com.digibites.accubattery": {
         "sources": [
@@ -543,10 +589,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.diotek.sec.lookup.dictionary": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
+        "integrity": "unknown"
       },
       "com.downdogapp": {
         "sources": [
@@ -556,7 +604,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.ebay.kleinanzeigen": {
         "sources": [
@@ -566,10 +615,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.epicgames.portal": {
-        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.esim.numero": {
         "sources": [
@@ -579,7 +630,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.facebook.orca": {
         "sources": [
@@ -589,7 +641,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.fatsecret.android": {
         "sources": [
@@ -599,7 +652,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.flyersoft.moonreader": {
         "sources": [
@@ -609,7 +663,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.foxdebug.acode": {
         "sources": [
@@ -630,7 +685,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.garmin.android.apps.connectmobile": {
         "sources": [
@@ -640,7 +696,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.garmin.android.apps.explore": {
         "sources": [
@@ -650,7 +707,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.garmin.android.apps.messenger": {
         "sources": [
@@ -660,7 +718,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.garmin.connectiq": {
         "sources": [
@@ -670,7 +729,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.ghisler.android.TotalCommander": {
         "sources": [
@@ -680,7 +740,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.github.android": {
         "sources": [
@@ -690,7 +751,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.authenticator2": {
         "sources": [
@@ -700,7 +762,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.bard": {
         "label": "Gemini",
@@ -711,7 +774,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.docs": {
         "sources": [
@@ -721,7 +785,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.docs.editors.docs": {
         "sources": [
@@ -731,7 +796,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.docs.editors.sheets": {
         "sources": [
@@ -741,7 +807,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.fitness": {
         "sources": [
@@ -751,7 +818,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.labs.language.tailwind": {
         "sources": [
@@ -761,7 +829,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.magazines": {
         "sources": [
@@ -771,7 +840,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.maps": {
         "label": "Google Maps",
@@ -782,7 +852,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.messaging": {
         "sources": [
@@ -792,7 +863,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.nbu.files": {
         "label": "Files by Google",
@@ -803,7 +875,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.photos": {
         "sources": [
@@ -813,7 +886,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.tachyon": {
         "sources": [
@@ -823,7 +897,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.tasks": {
         "sources": [
@@ -833,7 +908,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.translate": {
         "label": "Google Translate",
@@ -844,7 +920,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.apps.walletnfcrel": {
         "sources": [
@@ -854,7 +931,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.google.android.calculator": {
         "sources": [
@@ -864,7 +942,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.calendar": {
         "sources": [
@@ -874,7 +953,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.contacts": {
         "sources": [
@@ -884,7 +964,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.gm": {
         "label": "Gmail",
@@ -895,7 +976,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.googlequicksearchbox": {
         "sources": [
@@ -905,7 +987,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.inputmethod.latin": {
         "sources": [
@@ -915,7 +998,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.android.youtube": {
         "sources": [
@@ -925,7 +1009,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.google.audio.hearing.visualization.accessibility.scribe": {
         "sources": [
@@ -935,7 +1020,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.hostelworld.app": {
         "sources": [
@@ -945,7 +1031,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.imaginecurve.curve.prd": {
         "sources": [
@@ -955,7 +1042,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.instagram.android": {
         "label": "Instagram",
@@ -966,7 +1054,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.instagram.barcelona": {
         "sources": [
@@ -976,7 +1065,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.linkedin.android": {
         "sources": [
@@ -986,7 +1076,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.lonelycatgames.Xplore": {
         "sources": [
@@ -996,7 +1087,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mattermost.rn": {
         "sources": [
@@ -1006,7 +1098,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.medantapatient.app": {
         "sources": [
@@ -1016,7 +1109,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.memrise.android.memrisecompanion": {
         "sources": [
@@ -1026,7 +1120,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mi.earphone": {
         "sources": [
@@ -1036,13 +1131,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.microsoft.copilot": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.microsoft.lists.public": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.microsoft.office.onenote": {
         "sources": [
@@ -1052,7 +1150,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.microsoft.office.outlook": {
         "sources": [
@@ -1062,7 +1161,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.microsoft.skydrive": {
         "sources": [
@@ -1072,7 +1172,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.microsoft.todos": {
         "sources": [
@@ -1082,7 +1183,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mo2o.alsa": {
         "sources": [
@@ -1092,7 +1194,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mobidia.android.mdm": {
         "sources": [
@@ -1102,7 +1205,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mobillium.airalo": {
         "sources": [
@@ -1112,7 +1216,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.mobisystems.fileman": {
         "sources": [
@@ -1122,7 +1227,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.netflix.mediaclient": {
         "sources": [
@@ -1135,7 +1241,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.nomadmania.presentation": {
         "sources": [
@@ -1145,7 +1252,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.paypal.android.p2pmobile": {
         "sources": [
@@ -1155,7 +1263,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.phlox.simpleserver": {
         "sources": [
@@ -1165,7 +1274,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.pinterest": {
         "sources": [
@@ -1175,10 +1285,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.playdead.limbo.egs.full": {
-        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.rarlab.rar": {
         "sources": [
@@ -1188,7 +1300,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.revolut.revolut": {
         "sources": [
@@ -1198,7 +1311,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.ridedott.rider": {
         "sources": [
@@ -1208,7 +1322,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.rome2rio.www.rome2rio": {
         "sources": [
@@ -1218,7 +1333,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.rsupport.rs.activity.rsupport.aas2": {
         "sources": [
@@ -1231,7 +1347,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.ryanair.cheapflights": {
         "sources": [
@@ -1241,10 +1358,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.app.contacts": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
+        "integrity": "unknown"
       },
       "com.samsung.android.app.notes": {
         "sources": [
@@ -1254,28 +1373,32 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.app.reminder": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.app.routines": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.app.spage": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.app.watchmanager": {
         "sources": [
@@ -1288,14 +1411,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.bixby.agent": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.calendar": {
         "sources": [
@@ -1308,10 +1433,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.dialer": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
+        "integrity": "unknown"
       },
       "com.samsung.android.email.provider": {
         "sources": [
@@ -1324,14 +1451,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.game.gamehome": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.lool": {
         "sources": [
@@ -1341,41 +1470,48 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.samsung.android.mdx": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.android.messaging": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.samsung.knox.securefolder": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.sec.android.app.camera": {
-        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK",
+        "integrity": "unknown"
       },
       "com.sec.android.app.clockpackage": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.sec.android.app.myfiles": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.sec.android.app.popupcalculator": {
         "sources": [
@@ -1385,14 +1521,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.sec.android.app.samsungapps": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.sec.android.app.voicenote": {
         "sources": [
@@ -1402,7 +1540,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.sec.android.easyMover": {
         "sources": [
@@ -1412,14 +1551,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.sec.android.gallery3d": {
         "sources": [
           {
             "kind": "samsung"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.sensorberg.oneaccess": {
         "sources": [
@@ -1429,7 +1570,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.shazam.android": {
         "sources": [
@@ -1439,7 +1581,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.skiplagged": {
         "sources": [
@@ -1449,10 +1592,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.smlnskgmail.jaman.hashchecker": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.spanishcoders.pepephone": {
         "sources": [
@@ -1462,7 +1607,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.spotify.music": {
         "sources": [
@@ -1472,7 +1618,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.strava": {
         "sources": [
@@ -1482,7 +1629,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.termux": {
         "sources": [
@@ -1495,17 +1643,20 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.termux.nix": {
         "sources": [
           {
             "kind": "fdroid"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.termux.nix.boot": {
-        "unresolved": "installed from com.diegonmarcos.superapp; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.diegonmarcos.superapp; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.thetrainline": {
         "sources": [
@@ -1515,7 +1666,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.tinder": {
         "sources": [
@@ -1525,7 +1677,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.trafi.whitelabel.bvg": {
         "sources": [
@@ -1535,7 +1688,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.transferwise.android": {
         "sources": [
@@ -1545,7 +1699,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.trello": {
         "sources": [
@@ -1555,7 +1710,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.trianguloy.openInWhatsapp": {
         "sources": [
@@ -1565,7 +1721,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.ubercab": {
         "sources": [
@@ -1575,7 +1732,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.ubnt.usurvey": {
         "sources": [
@@ -1585,10 +1743,12 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.uptodown": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "integrity": "unknown"
       },
       "com.urbandroid.sleep": {
         "sources": [
@@ -1598,7 +1758,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.urbansportsclub": {
         "sources": [
@@ -1608,7 +1769,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.viber.voip": {
         "sources": [
@@ -1618,7 +1780,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.viscouspot.gitsync": {
         "sources": [
@@ -1644,7 +1807,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.wbd.stream": {
         "sources": [
@@ -1654,7 +1818,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "com.werewolfapps.online": {
         "sources": [
@@ -1664,7 +1829,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.wggesucht.android": {
         "sources": [
@@ -1674,7 +1840,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.whatsapp": {
         "label": "WhatsApp",
@@ -1690,7 +1857,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.whatsapp.w4b": {
         "sources": [
@@ -1700,7 +1868,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.wikiloc.wikilocandroid": {
         "sources": [
@@ -1710,7 +1879,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.wireguard.android": {
         "sources": [
@@ -1720,7 +1890,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.wizzair.WizzAirApp": {
         "sources": [
@@ -1730,7 +1901,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "com.x8bit.bitwarden": {
         "label": "Bitwarden",
@@ -1750,7 +1922,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "com.xe.currency": {
         "sources": [
@@ -1760,7 +1933,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.congstar.meincongstar": {
         "sources": [
@@ -1770,7 +1944,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.deutschepost.postident": {
         "sources": [
@@ -1780,7 +1955,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "de.dhl.paket": {
         "sources": [
@@ -1790,7 +1966,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.eos.uptrade.android.fahrinfo.berlin": {
         "sources": [
@@ -1800,7 +1977,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.flixbus.app": {
         "sources": [
@@ -1810,7 +1988,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.is24.android": {
         "sources": [
@@ -1820,7 +1999,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "de.number26.android": {
         "sources": [
@@ -1830,7 +2010,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "dk.shelter.app": {
         "sources": [
@@ -1840,7 +2021,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ee.mtakso.client": {
         "sources": [
@@ -1850,7 +2032,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "es.aeat.pin24h": {
         "sources": [
@@ -1860,7 +2043,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "es.bancosantander.apps": {
         "sources": [
@@ -1870,7 +2054,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "es.correos.app": {
         "sources": [
@@ -1880,7 +2065,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "es.fnmtrcm.ceres.certificadoDigitalFNMT": {
         "sources": [
@@ -1890,7 +2076,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "es.gob.interior.policia.midni": {
         "sources": [
@@ -1900,7 +2087,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "play"
       },
       "eu.faircode.email": {
         "sources": [
@@ -1913,7 +2101,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "eu.faircode.netguard": {
         "sources": [
@@ -1934,7 +2123,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "im.vector.app": {
         "sources": [
@@ -1961,7 +2151,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "io.japp.blackscreen": {
         "sources": [
@@ -1971,7 +2162,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "io.vicoach": {
         "sources": [
@@ -1981,7 +2173,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "md.obsidian": {
         "label": "Obsidian",
@@ -2000,7 +2193,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "me.proton.android.drive": {
         "sources": [
@@ -2010,7 +2204,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "mobi.eup.easygerman": {
         "sources": [
@@ -2020,7 +2215,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "moe.shizuku.privileged.api": {
         "sources": [
@@ -2030,7 +2226,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "net.esim.twa": {
         "sources": [
@@ -2040,7 +2237,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "net.skyscanner.android.main": {
         "sources": [
@@ -2050,7 +2248,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "net.sourceforge.opencamera": {
         "label": "Open Camera",
@@ -2064,7 +2263,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "net.techet.netanalyzerlite.an": {
         "sources": [
@@ -2074,13 +2274,16 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "org.chromium.webapk.a64d263d6f7d935c4_v2": {
-        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it"
+        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it",
+        "integrity": "unknown"
       },
       "org.chromium.webapk.afdfe84a0acbbed2f_v2": {
-        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it"
+        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it",
+        "integrity": "unknown"
       },
       "org.faudroids.werewolf": {
         "sources": [
@@ -2090,7 +2293,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "org.fdroid.fdroid": {
         "label": "F-Droid",
@@ -2103,7 +2307,8 @@
           {
             "kind": "fdroid"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "org.kde.kdeconnect_tp": {
         "label": "KDE Connect",
@@ -2117,7 +2322,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "org.mozilla.firefox": {
         "label": "Firefox",
@@ -2141,7 +2347,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "org.telegram.messenger": {
         "label": "Telegram",
@@ -2157,7 +2364,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "org.thoughtcrime.securesms": {
         "label": "Signal",
@@ -2177,7 +2385,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "none"
       },
       "pub.hanks.appfolderwidget": {
         "sources": [
@@ -2187,7 +2396,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "ride.app": {
         "sources": [
@@ -2197,7 +2407,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "taxi.android.client": {
         "sources": [
@@ -2207,7 +2418,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "travel.goki.app": {
         "sources": [
@@ -2217,7 +2429,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "tv.arte.plus7": {
         "sources": [
@@ -2227,7 +2440,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "vivino.web.app": {
         "sources": [
@@ -2237,7 +2451,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       },
       "xyz.chatboxapp.chatbox": {
         "sources": [
@@ -2247,7 +2462,8 @@
           {
             "kind": "play"
           }
-        ]
+        ],
+        "integrity": "unknown"
       }
     }
   }

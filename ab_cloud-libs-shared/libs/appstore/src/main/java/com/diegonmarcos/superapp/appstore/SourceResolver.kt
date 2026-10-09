@@ -111,11 +111,23 @@ object SourceResolver {
         }
     }
 
+    /**
+     * Does the app refuse to run unless Google Play installed it? [PLAY] keeps
+     * its play-anon rung — the bytes install fine — but the row and the plan say
+     * it may refuse to run. [UNKNOWN] is never rounded to [NONE].
+     */
+    enum class Integrity(val id: String) {
+        NONE("none"), PLAY("play"), UNKNOWN("unknown");
+        companion object { fun of(id: String): Integrity? = values().firstOrNull { it.id == id } }
+    }
+
     class External(
         val pkg: String, val label: String, val sources: List<Source>, val declared: Boolean,
         /** Declared reason no public source exists (`"unresolved": "<why>"`). Its
          *  ladder is empty: nothing to install from, and the row says why. */
         val unresolved: String? = null,
+        /** Declared `integrity` of the row; [Integrity.UNKNOWN] for an undeclared package. */
+        val integrity: Integrity = Integrity.UNKNOWN,
     ) {
         /** The rungs this store can download from itself. */
         val direct: List<Source> get() = sources.filter { !it.handoff }
@@ -200,11 +212,15 @@ object SourceResolver {
         cfg.apps[pkg] ?: External(pkg, pkg, listOf(Source.Play), declared = false)
 
     private fun external(pkg: String, o: JSONObject, order: List<String>, kinds: Map<String, Kind>): External {
+        // Every declared row says whether the app needs Play's installer; a row
+        // that does not say is half a declaration.
+        val integrity = Integrity.of(o.optString("integrity"))
+            ?: error("$pkg: integrity must be one of ${Integrity.values().map { it.id }}, got '${o.optString("integrity")}'")
         val unresolved = o.optString("unresolved").ifEmpty { null }
         if (unresolved != null) {
             // An app with no public source says so, and claims no rung.
             require((o.optJSONArray("sources")?.length() ?: 0) == 0) { "$pkg: unresolved carries no sources" }
-            return External(pkg, o.optString("label").ifEmpty { pkg }, emptyList(), declared = true, unresolved = unresolved)
+            return External(pkg, o.optString("label").ifEmpty { pkg }, emptyList(), declared = true, unresolved = unresolved, integrity = integrity)
         }
         val arr = o.getJSONArray("sources")
         val list = (0 until arr.length()).map { i -> source(arr.getJSONObject(i), kinds) }
@@ -214,7 +230,7 @@ object SourceResolver {
         require(list.isNotEmpty() && ranks.all { it >= 0 } && ranks == ranks.sorted() && ranks.distinct().size == ranks.size) {
             "$pkg: sources ${list.map { it.kind }} are not a subsequence of $order"
         }
-        return External(pkg, o.optString("label").ifEmpty { pkg }, list, declared = true)
+        return External(pkg, o.optString("label").ifEmpty { pkg }, list, declared = true, integrity = integrity)
     }
 
     private fun source(o: JSONObject, kinds: Map<String, Kind>): Source = when (val kind = o.getString("kind")) {

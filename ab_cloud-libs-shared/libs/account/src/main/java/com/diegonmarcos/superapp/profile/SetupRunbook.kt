@@ -386,7 +386,10 @@ class SetupRunbook(private val ctx: Context) {
         /** `61 declared · 58 installed · 3 need a source` (need a source = no fleet, vendor or F-Droid rung). */
         fun appsLine(p: AppInventory.Plan): String {
             val n = p.installed.size + p.ours.size + p.direct.size + p.store.size + p.manual.size
-            return "$n declared · ${p.installed.size} installed · ${p.store.size + p.manual.size} need a source"
+            // play-anon apps are installable by our Store (in p.direct); the ones whose
+            // vendor ties them to Play Integrity are counted apart, not hidden.
+            return "$n declared · ${p.installed.size} installed · ${p.managed.size} managed by our Store · " +
+                "${p.needIntegrity.size} vendor requires Play · ${p.store.size + p.manual.size} need a source"
         }
         /** Spec 4.6, in order: the default when the host declares no runbook. */
         val SPEC_STEPS = listOf(CONNECTED, PROFILE, SHELL, STORE, APPS, CONFIGS, PERMS, VERIFIED)

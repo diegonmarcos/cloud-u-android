@@ -59,6 +59,12 @@ object StoreImport {
         // all): this page neither lists them as declared nor installs them. One line says so.
         if (plan.ours.isNotEmpty()) col.addView(text(ctx, ctx.getString(R.string.store_import_ours_cloud_page, plan.ours.size), StoreDensity.T_CAPTION))
 
+        // Counted SEPARATELY: these install fine from Play's servers, but the
+        // app itself may refuse to run without Google Play as its installer.
+        if (plan.needIntegrity.isNotEmpty()) {
+            col.addView(text(ctx, ctx.getString(R.string.store_import_need_integrity, plan.needIntegrity.size), StoreDensity.T_CAPTION, bold = true))
+            plan.needIntegrity.forEach { col.addView(text(ctx, it.pkg + "  ·  " + ctx.getString(R.string.store_phone_integrity_badge), StoreDensity.T_CAPTION, mono = true)) }
+        }
         val missing = plan.direct.size
         val play = plan.store.size + plan.manual.size
         if (missing > 0) col.addView(button(ctx, ctx.getString(R.string.store_import_install_missing, missing, play)) {

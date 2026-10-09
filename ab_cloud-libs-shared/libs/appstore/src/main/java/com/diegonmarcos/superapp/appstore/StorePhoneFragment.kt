@@ -203,7 +203,7 @@ class StorePhoneFragment : Fragment() {
         thread(name = "store-export") {
             val result = runCatching {
                 val entries = AppInventory.entriesFor(app, AppInventory.launchable(app))
-                app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(AppInventory.toJson(entries).toByteArray()) }
+                app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(AppInventory.toJson(entries, IntegrityMarks.marked(app)).toByteArray()) }
                 entries.size
             }
             toastLater(app, result.fold({ app.getString(R.string.store_export_done, it) },
@@ -309,17 +309,45 @@ class StorePhoneFragment : Fragment() {
         val play = shown.count { !it.installed && !it.direct }
         into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
             ctx.getString(R.string.store_phone_count_missing, missing, play)))
-        var heading: String? = null
-        for (r in shown) {
-            val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
-            if (here != null && here != heading) into.addView(TextView(ctx).apply {
-                text = here; textSize = StoreDensity.T_META; setTextColor(cHead)
-                setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
+        // Two groups, each with its own Install all: what our Store fully
+        // manages, and what the VENDOR ties to Google Play (Play Integrity / a
+        // Play-installer check). The second still installs from Play's servers;
+        // it is grouped apart because it may refuse to run.
+        val (needPlay, managed) = shown.partition { integrity(ctx, it) == SourceResolver.Integrity.PLAY }
+        for ((title, group) in listOf(R.string.store_phone_group_managed to managed, R.string.store_phone_group_play to needPlay)) {
+            if (group.isEmpty()) continue
+            val header = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S4))
+            }
+            header.addView(TextView(ctx).apply {
+                text = ctx.getString(title, group.size); textSize = StoreDensity.T_TITLE
+                typeface = Typeface.DEFAULT_BOLD; setTextColor(0xFFFFFFFF.toInt())
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
-            heading = here
-            into.addView(row(ctx, r))
+            val targets = group.filter { !it.installed && it.direct }
+            if (targets.isNotEmpty()) header.addView(btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
+                ctx.getString(R.string.store_phone_group_install_all, targets.size), null, null)) {
+                Toast.makeText(ctx, ctx.getString(R.string.store_phone_batch_start, targets.size), Toast.LENGTH_SHORT).show()
+                batch(ctx, targets)
+            })
+            into.addView(header)
+            var heading: String? = null
+            for (r in group) {
+                val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
+                if (here != null && here != heading) into.addView(TextView(ctx).apply {
+                    text = here; textSize = StoreDensity.T_META; setTextColor(cHead)
+                    setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
+                })
+                heading = here
+                into.addView(row(ctx, r))
+            }
         }
     }
+
+    /** The row's integrity: declared, raised to PLAY by this phone's own "did not run". */
+    private fun integrity(ctx: Context, r: Row): SourceResolver.Integrity =
+        r.external?.let { IntegrityMarks.effective(ctx, it) } ?: SourceResolver.Integrity.NONE
 
     /** Re-render the current rows under the current filter — no enumerate, no probe. */
     private fun redraw() {
@@ -350,6 +378,13 @@ class StorePhoneFragment : Fragment() {
             stateViews[r.pkg] = this
             paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
         })
+        // The Play Integrity badge: an app the vendor ties to Google Play. We
+        // still install it; the badge says it may refuse to run. Tagged so a
+        // test reads the rendered badge.
+        if (integrity(ctx, r) == SourceResolver.Integrity.PLAY) addView(TextView(ctx).apply {
+            tag = INTEGRITY_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
+            text = ctx.getString(R.string.store_phone_integrity_badge); setTextColor(cBadge)
+        })
         // #625 cached-vs-installed, per row. "cached, matches what is
         // installed" is the state in which the bytes are about to be reaped;
         // "cached, NOT installed" is a download waiting for its install — the
@@ -371,6 +406,15 @@ class StorePhoneFragment : Fragment() {
             setPadding(0, dp(ctx, StoreDensity.S4), 0, 0)
         }
         r.actions.forEach { a -> buttons.addView(btn(ctx, a) { act(ctx, r, a) }) }
+        // Detected at runtime: an UNKNOWN app this store installed that did not
+        // run is marked PLAY on this phone (persisted, exported with the inventory).
+        val ext = r.external
+        if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) buttons.addView(btn(ctx,
+            PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL, ctx.getString(R.string.store_phone_did_not_run), null, null)) {
+            IntegrityMarks.mark(ctx, r.pkg)
+            Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
+            redraw()
+        })
         addView(HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(buttons) })
     }
 
@@ -632,6 +676,8 @@ class StorePhoneFragment : Fragment() {
     }
 
     companion object {
+        /** The Play Integrity badge of a row, tagged [INTEGRITY_TAG_PREFIX] + package. */
+        const val INTEGRITY_TAG_PREFIX = "store-integrity:"
         /** The state line of a row is tagged [STATE_TAG_PREFIX] + package. */
         const val STATE_TAG_PREFIX = "store-phone-state:"
         /** #625 the cached-vs-installed line, tagged [CACHE_TAG_PREFIX] + package.

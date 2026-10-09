@@ -17,6 +17,9 @@
 #     structural / size-only fallback.
 #  6. A dispenser outage is reported as "Play token unavailable" (the named
 #     TokenUnavailable), never as "not installable".
+#  8. Every declared row has `integrity` in {none, play, unknown}; a `play`
+#     row renders the "Play Integrity: may refuse to run" badge on Store >
+#     Phone, and the install plan counts those apps separately.
 #  7. Every vendor rung carries `verified` evidence (the date and the answer
 #     its URL gave), so a vendor URL nobody checked does not parse as declared.
 #
@@ -128,6 +131,25 @@ nov = [p for p, a in apps.items() for s in a.get("sources", []) if s["kind"] == 
 if nov: bad(f"vendor rung(s) without verified evidence: {nov}")
 else: ok("every vendor rung carries verified evidence")
 
+# 8
+enum = {"none", "play", "unknown"}
+noint = [p for p, a in apps.items() if a.get("integrity") not in enum]
+if noint: bad(f"rows without a valid integrity: {noint[:5]}")
+else: ok("every declared row has integrity none/play/unknown")
+appdir = os.path.join(root, kt1, "com/diegonmarcos/superapp/appstore")
+frag = strip(open(os.path.join(appdir, "StorePhoneFragment.kt"), encoding="utf-8").read())
+imp = strip(open(os.path.join(appdir, "StoreImport.kt"), encoding="utf-8").read())
+strings = open(os.path.join(root, kt1, "../res/values/strings.xml"), encoding="utf-8").read()
+if not re.search(r'if \(integrity\(ctx, r\) == SourceResolver\.Integrity\.PLAY\) addView\(TextView\(ctx\)\.apply \{\s*tag = INTEGRITY_TAG_PREFIX \+ r\.pkg[^}]*store_phone_integrity_badge', frag):
+    bad("a play row does not render the Play Integrity badge")
+elif "Play Integrity: may refuse to run" not in strings:
+    bad("the badge text is not 'Play Integrity: may refuse to run'")
+elif not re.search(r'plan\.needIntegrity\.size', imp) or "need Play Integrity" not in strings:
+    bad("the install plan does not count the Play Integrity apps separately")
+elif not re.search(r'store_phone_group_managed', frag) or not re.search(r'store_phone_group_play', frag):
+    bad("Store > Phone is not grouped into Managed by our Store / Vendor requires Play")
+else: ok("play rows carry the badge, the plan counts them, the page groups them")
+
 sys.exit(fails)
 PY
 }
@@ -138,7 +160,7 @@ check "$ROOT"; real=$?
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 copy() {
   rm -rf "$SCRATCH/t"; mkdir -p "$SCRATCH/t"
-  for p in "$REL_MAP" "$REL_LIST" "$REL_GP" "$REL_KT1" "$REL_KT2"; do
+  for p in "$REL_MAP" "$REL_LIST" "$REL_GP" "$REL_KT1" "$REL_KT2" "ab_cloud-libs-shared/libs/appstore/src/main/res"; do
     mkdir -p "$SCRATCH/t/$(dirname "$p")"; cp -R "$ROOT/$p" "$SCRATCH/t/$p"
   done
 }
@@ -167,7 +189,9 @@ mut "order: play-anon above fdroid" 'd=jload(); o=d["resolver"]["order"]; o.remo
 mut "ladder out of order" 'd=jload(); a=next(v for v in d["resolver"]["apps"].values() if len(v.get("sources",[]))>1); a["sources"].reverse(); jsave(d)' || mf=$((mf+1))
 mut "dispenser literal in Kotlin" 'u=jload()["resolver"]["play_anon"]["dispensers"][0]["url"]; open(os.path.join(root,kt1,"Planted.kt"),"w").write("val x = \"%s\"\n" % u)' || mf=$((mf+1))
 mut "unverified vendor rung" 'd=jload(); s=next(s for v in d["resolver"]["apps"].values() for s in v.get("sources",[]) if s["kind"]=="vendor"); s.pop("verified"); jsave(d)' || mf=$((mf+1))
+mut "a row without integrity" 'd=jload(); a=next(iter(d["resolver"]["apps"].values())); a.pop("integrity"); jsave(d)' || mf=$((mf+1))
+mut "a play row without the badge" 'edit(os.path.join(root,kt1,"com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt"), "tag = INTEGRITY_TAG_PREFIX + r.pkg", "tag = CACHE_TAG_PREFIX + r.pkg")' || mf=$((mf+1))
 
 echo
-if [ "$real" -eq 0 ] && [ "$mf" -eq 0 ]; then echo "ALL GREEN (real tree green, 8 mutations red)"; exit 0; fi
+if [ "$real" -eq 0 ] && [ "$mf" -eq 0 ]; then echo "ALL GREEN (real tree green, 10 mutations red)"; exit 0; fi
 echo "RED: real-tree failures=$real, mutations that stayed green=$mf"; exit 1

@@ -30,6 +30,9 @@ object AppInventory {
         val origin: String?,
         val ours: Boolean,
         val category: String?,
+        /** `"play"` when this phone found the app refuses to run unless Play installed it
+         *  ([IntegrityMarks]); null otherwise. Travels with the inventory. */
+        val integrity: String? = null,
     )
 
     /** Every launchable package, fleet or not: package → label. */
@@ -56,7 +59,7 @@ object AppInventory {
         }
     }
 
-    fun toJson(entries: List<Entry>): String {
+    fun toJson(entries: List<Entry>, integrityPlay: Set<String> = emptySet()): String {
         val apps = JSONArray()
         for (e in entries.sortedBy { it.pkg }) apps.put(JSONObject().apply {
             put("package", e.pkg)
@@ -65,6 +68,7 @@ object AppInventory {
             put("origin_store", e.origin ?: JSONObject.NULL)
             put("ours", e.ours)
             put("category", e.category ?: JSONObject.NULL)
+            if (e.integrity == "play" || e.pkg in integrityPlay) put("integrity", "play")
         })
         return JSONObject().put("kind", KIND).put("schema", SCHEMA).put("apps", apps).toString(2) + "\n"
     }
@@ -81,7 +85,7 @@ object AppInventory {
         return (0 until apps.length()).map { i ->
             val a = apps.getJSONObject(i)
             Entry(a.getString("package"), a.optString("version_name"), a.optLong("version_code"),
-                a.text("origin_store"), a.optBoolean("ours"), a.text("category"))
+                a.text("origin_store"), a.optBoolean("ours"), a.text("category"), a.text("integrity"))
         }
     }
 
@@ -99,7 +103,12 @@ object AppInventory {
         val store: List<StoreLink>,
         /** Everything else — sideloads, unknown installers. Listed, never acted on. */
         val manual: List<Entry>,
-    )
+        /** The part of [direct] whose app needs Play Integrity: installable by us, may refuse to run. */
+        val needIntegrity: List<Entry> = emptyList(),
+    ) {
+        /** [direct] minus [needIntegrity]: what our Store fully manages. */
+        val managed: List<Entry> get() = direct.filter { it !in needIntegrity }
+    }
 
     /**
      * `ours` is decided by THIS build's fleet, not by the file's flag: a file
@@ -122,6 +131,9 @@ object AppInventory {
                 else -> manual += e
             }
         }
-        return Plan(have, ours, direct, store, manual)
+        val needIntegrity = direct.filter { e ->
+            e.integrity == "play" || SourceResolver.resolve(cfg, e.pkg).integrity == SourceResolver.Integrity.PLAY
+        }
+        return Plan(have, ours, direct, store, manual, needIntegrity)
     }
 }

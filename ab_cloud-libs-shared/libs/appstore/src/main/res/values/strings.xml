@@ -96,6 +96,13 @@
     <string name="store_phone_checking">checking…</string>
     <string name="store_phone_count_missing">%1$d not installed, %2$d of them need Play</string>
     <string name="store_phone_badge_needs_play">needs Play</string>
+    <string name="store_phone_integrity_badge">\u26a0 Play Integrity: may refuse to run</string>
+    <string name="store_phone_group_managed">Managed by our Store (%1$d)</string>
+    <string name="store_phone_group_play">Vendor requires Play (%1$d)</string>
+    <string name="store_phone_group_install_all">Install all (%1$d)</string>
+    <string name="store_phone_did_not_run">Did not run</string>
+    <string name="store_phone_marked_play">%1$s marked: needs Play Integrity (saved on this phone, exported with the inventory)</string>
+    <string name="store_import_need_integrity">%1$d need Play Integrity (we install them; they may refuse to run)</string>
     <string name="store_phone_state_unresolved">\u25cb not installed  \u00b7  no public source: %1$s</string>
     <string name="store_phone_state_needs_store">\u25cb not installed  \u00b7  %1$s publishes no APK we can fetch; its own page is the official path</string>
     <string name="store_phone_state_needs_play">◯ not installed  ·  %1$s  ·  Google Play publishes no APK; the Play button is the official path</string>
