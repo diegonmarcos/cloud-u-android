@@ -2,12 +2,15 @@ package com.diegonmarcos.superapp.network.mesh
 
 import android.content.Context
 import android.content.Intent
+import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.firewall.FirewallController
 import com.diegonmarcos.superapp.network.AccountMesh
 import com.diegonmarcos.superapp.network.FleetDns
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.network.WireGuardProfiles
+import com.diegonmarcos.superapp.profile.AccountModel
+import com.diegonmarcos.superapp.profile.VaultCockpit
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import com.wireguard.crypto.Key
@@ -269,9 +272,26 @@ class AndroidMeshPort(context: Context) : MeshPort {
     override fun matchesCloudPreset() = prefs.matchesCloudPreset()
 
     override fun applyCloudPreset(): String {
+        // #573 the baked preset is ONE device's identity (its Address line). A phone the Account
+        // declares as another device keeps its own: the preset is refused, never re-identifies it.
+        // ponytail: a guard; per-device baked presets when a second phone wants the Cloud provider.
+        declaredAddresses()?.let { mine ->
+            val baked = BuildConfig.UI_WG_INTERFACE_ADDRESS.split(',').map { it.trim().substringBefore('/') }
+            if (baked.none { it in mine })
+                return "✗ Cloud preset is ${BuildConfig.UI_WG_INTERFACE_ADDRESS} - this phone is declared as ${mine.joinToString(", ")}; apply its own profiles from Account › Mesh"
+        }
         prefs.applyCloudPreset()
         prefs.configProvider = WireGuardPrefs.PROVIDER_CLOUD
         return "Cloud preset applied - this device still needs its own private key"
+    }
+
+    /** The EXPLICITLY picked device's declared wg addresses; null when nothing is picked or no
+     *  bundle is landed (the live tunnel is never consulted: it is what this guard protects). */
+    private fun declaredAddresses(): Set<String>? {
+        val picked = VaultCockpit.selectedDevice(ctx).ifBlank { return null }
+        val bundle = AccountModel.get(ctx).server()?.body ?: return null
+        val d = runCatching { VaultCockpit.devices(bundle) }.getOrNull()?.firstOrNull { it.id == picked } ?: return null
+        return setOf(d.wgIp, d.wgIpv6).filter { it.isNotBlank() }.toSet()
     }
 
     override fun setProviderCustom(): String {
