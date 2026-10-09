@@ -4,6 +4,7 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
 /**
  * Models FIDO 2 credential creation request options received from a Relying Party (RP).
@@ -21,7 +22,10 @@ data class PasskeyAttestationOptions(
     val authenticatorSelection: AuthenticatorSelectionCriteria = AuthenticatorSelectionCriteria(),
     @SerialName("challenge")
     val challenge: String,
-    @SerialName("excludedCredentials")
+    // WebAuthn spells it `excludeCredentials`; `excludedCredentials` is the name this model used
+    // before and is still accepted when reading.
+    @JsonNames("excludedCredentials")
+    @SerialName("excludeCredentials")
     val excludeCredentials: List<PublicKeyCredentialDescriptor> = emptyList(),
     @EncodeDefault
     @SerialName("pubKeyCredParams")

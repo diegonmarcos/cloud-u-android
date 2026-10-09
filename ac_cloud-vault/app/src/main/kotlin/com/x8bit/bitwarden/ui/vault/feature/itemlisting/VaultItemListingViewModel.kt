@@ -2376,6 +2376,8 @@ class VaultItemListingViewModel @Inject constructor(
             VaultItemListingEvent.CompleteCredentialRegistration(
                 CreateCredentialResult.Error(
                     message = error.messageResourceId.asText(),
+                    isInvalidState = error ==
+                        Fido2RegisterCredentialResult.Error.CredentialAlreadyExists,
                 ),
             ),
         )

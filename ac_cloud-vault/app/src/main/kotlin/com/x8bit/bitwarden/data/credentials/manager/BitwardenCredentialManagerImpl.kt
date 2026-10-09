@@ -390,6 +390,11 @@ class BitwardenCredentialManagerImpl(
                     }
                 }
                 ?.let { passkeyAttestationOptionsSanitizer.sanitize(options = it) }
+                ?.also { options ->
+                    if (hasExcludedCredential(options)) {
+                        return Fido2RegisterCredentialResult.Error.CredentialAlreadyExists
+                    }
+                }
                 ?.runCatching { json.encodeToString(this) }
                 ?.fold(
                     onSuccess = { it },
@@ -425,6 +430,19 @@ class BitwardenCredentialManagerImpl(
                     Fido2RegisterCredentialResult.Error.InternalError
                 },
             )
+    }
+
+    /**
+     * True when [options] excludes a credential id this vault already holds for the same
+     * relying party (WebAuthn: creation must then fail with `InvalidStateError`).
+     */
+    private suspend fun hasExcludedCredential(options: PasskeyAttestationOptions): Boolean {
+        val rpId = options.relyingParty.id?.takeUnless { it.isEmpty() } ?: return false
+        val excludedIds = options.excludeCredentials.mapNotNull {
+            runCatching { java.util.Base64.getUrlDecoder().decode(it.id) }.getOrNull()
+        }
+        if (excludedIds.isEmpty()) return false
+        return findCredentials(ids = excludedIds, ripId = rpId, userHandle = null).isNotEmpty()
     }
 
     private fun List<BeginGetPasswordOption>.toPasswordCredentialEntries(

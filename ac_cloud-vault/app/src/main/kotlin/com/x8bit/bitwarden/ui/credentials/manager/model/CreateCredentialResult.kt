@@ -23,9 +23,13 @@ sealed class CreateCredentialResult {
     }
 
     /**
-     * Indicates that an error occurred during credential creation.
+     * Indicates that an error occurred during credential creation. [isInvalidState] reports it to
+     * the caller as the WebAuthn `InvalidStateError` (a credential already exists).
      */
-    data class Error(val message: Text) : CreateCredentialResult()
+    data class Error(
+        val message: Text,
+        val isInvalidState: Boolean = false,
+    ) : CreateCredentialResult()
 
     /**
      * Indicates that credential creation was cancelled by the user.

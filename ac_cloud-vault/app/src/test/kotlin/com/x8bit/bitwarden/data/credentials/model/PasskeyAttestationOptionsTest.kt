@@ -6,6 +6,7 @@ import io.mockk.mockk
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PasskeyAttestationOptionsTest {
@@ -37,6 +38,45 @@ class PasskeyAttestationOptionsTest {
         )
 
         assertEquals("abc", options.challenge)
+    }
+
+    @Test
+    fun `excludeCredentials is read under the WebAuthn name and the legacy name`() {
+        val entry = "[{\"type\":\"public-key\",\"id\":\"AQID\"}]"
+        val webauthn = json.decodeFromString<PasskeyAttestationOptions>(
+            SPARSE_OPTIONS_JSON.replace("\"challenge\"", "\"excludeCredentials\": $entry, \"challenge\""),
+        )
+        val legacy = json.decodeFromString<PasskeyAttestationOptions>(
+            SPARSE_OPTIONS_JSON.replace("\"challenge\"", "\"excludedCredentials\": $entry, \"challenge\""),
+        )
+
+        assertEquals(listOf("AQID"), webauthn.excludeCredentials.map { it.id })
+        assertEquals(listOf("AQID"), legacy.excludeCredentials.map { it.id })
+    }
+
+    @Test
+    fun `an empty or absent excludeCredentials list parses as empty`() {
+        val empty = json.decodeFromString<PasskeyAttestationOptions>(
+            SPARSE_OPTIONS_JSON.replace("\"challenge\"", "\"excludeCredentials\": [], \"challenge\""),
+        )
+        val absent = json.decodeFromString<PasskeyAttestationOptions>(SPARSE_OPTIONS_JSON)
+
+        assertEquals(emptyList<PublicKeyCredentialDescriptor>(), empty.excludeCredentials)
+        assertEquals(emptyList<PublicKeyCredentialDescriptor>(), absent.excludeCredentials)
+    }
+
+    @Test
+    fun `excludeCredentials is written to the SDK under the WebAuthn name`() {
+        val parsed = json.decodeFromString<PasskeyAttestationOptions>(
+            SPARSE_OPTIONS_JSON.replace(
+                "\"challenge\"",
+                "\"excludedCredentials\": [{\"type\":\"public-key\",\"id\":\"AQID\"}], \"challenge\"",
+            ),
+        )
+
+        val written = json.encodeToString(parsed)
+
+        assertTrue(written.contains("\"excludeCredentials\":[{"), written)
     }
 
     /**

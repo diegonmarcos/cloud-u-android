@@ -12,6 +12,8 @@ import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialUnknownException
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.domerrors.InvalidStateError
+import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
 import androidx.credentials.exceptions.GetCredentialUnknownException
 import androidx.credentials.provider.BeginGetCredentialResponse
 import androidx.credentials.provider.PendingIntentHandler
@@ -37,9 +39,16 @@ class CredentialProviderCompletionManagerImpl(
                     PendingIntentHandler
                         .setCreateCredentialException(
                             intent = intent,
-                            exception = CreateCredentialUnknownException(
-                                errorMessage = result.message.invoke(it.resources),
-                            ),
+                            exception = if (result.isInvalidState) {
+                                CreatePublicKeyCredentialDomException(
+                                    domError = InvalidStateError(),
+                                    errorMessage = result.message.invoke(it.resources),
+                                )
+                            } else {
+                                CreateCredentialUnknownException(
+                                    errorMessage = result.message.invoke(it.resources),
+                                )
+                            },
                         )
                 }
 

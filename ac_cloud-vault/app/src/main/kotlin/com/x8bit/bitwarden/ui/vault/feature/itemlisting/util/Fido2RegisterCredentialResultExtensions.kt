@@ -15,6 +15,10 @@ val Fido2RegisterCredentialResult.Error.messageResourceId: Int
             BitwardenString.passkey_registration_failed_due_to_an_internal_error
         }
 
+        Fido2RegisterCredentialResult.Error.CredentialAlreadyExists -> {
+            BitwardenString.passkey_operation_failed_because_a_passkey_already_exists
+        }
+
         Fido2RegisterCredentialResult.Error.InvalidAppSignature -> {
             BitwardenString.passkey_operation_failed_because_app_signature_is_invalid
         }

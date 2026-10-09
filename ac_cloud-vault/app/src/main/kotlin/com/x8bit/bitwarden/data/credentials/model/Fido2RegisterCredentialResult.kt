@@ -28,6 +28,12 @@ sealed class Fido2RegisterCredentialResult {
         data object InvalidAppSignature : Error()
 
         /**
+         * Indicates the request's `excludeCredentials` names a passkey this vault already holds
+         * for the relying party (WebAuthn `InvalidStateError`).
+         */
+        data object CredentialAlreadyExists : Error()
+
+        /**
          * Indicates an internal error occurred.
          */
         data object InternalError : Error()

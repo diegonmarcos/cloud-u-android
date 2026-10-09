@@ -34,6 +34,7 @@ import com.x8bit.bitwarden.data.credentials.model.Fido2RegisterCredentialResult
 import com.x8bit.bitwarden.data.credentials.model.GetCredentialsRequest
 import com.x8bit.bitwarden.data.credentials.model.PasskeyAssertionOptions
 import com.x8bit.bitwarden.data.credentials.model.PasskeyAttestationOptions
+import com.x8bit.bitwarden.data.credentials.model.PublicKeyCredentialDescriptor
 import com.x8bit.bitwarden.data.credentials.model.UserVerificationRequirement
 import com.x8bit.bitwarden.data.credentials.sanitizer.PasskeyAttestationOptionsSanitizer
 import com.x8bit.bitwarden.data.platform.manager.ciphermatching.CipherMatchingManager
@@ -125,7 +126,9 @@ class BitwardenCredentialManagerTest {
         every { credentialOptions } returns listOf(mockGetPublicKeyCredentialOption)
     }
     private val mockVaultSdkSource = mockk<VaultSdkSource>()
-    private val mockFido2CredentialStore = mockk<Fido2CredentialStore>()
+    private val mockFido2CredentialStore = mockk<Fido2CredentialStore> {
+        coEvery { findCredentials(any(), any(), any()) } returns emptyList()
+    }
     private val mockVaultRepository = mockk<VaultRepository> {
         every { decryptCipherListResultStateFlow } returns mutableDecryptCipherListResultStateFlow
     }
@@ -432,6 +435,72 @@ class BitwardenCredentialManagerTest {
                 Fido2RegisterCredentialResult.Error.InternalError,
                 result,
             )
+        }
+
+    @Test
+    fun `registerFido2Credential should fail with CredentialAlreadyExists when an excluded credential is already stored for the rpId`() =
+        runTest {
+            val excluded = mockPasskeyAttestationOptions.copy(
+                excludeCredentials = listOf(
+                    PublicKeyCredentialDescriptor(type = "public-key", id = "AQID", transports = null),
+                ),
+            )
+            every { json.decodeFromStringOrNull<PasskeyAttestationOptions>(any()) } returns excluded
+            every { mockPasskeyAttestationOptionsSanitizer.sanitize(excluded) } returns excluded
+            every { mockCreatePublicKeyCredentialRequest.origin } returns DEFAULT_WEB_ORIGIN.v1
+            every { mockCallingAppInfo.signingInfo } returns mockSigningInfo
+            coEvery {
+                mockFido2CredentialStore.findCredentials(
+                    match { it.size == 1 && it[0].contentEquals(byteArrayOf(1, 2, 3)) },
+                    DEFAULT_HOST,
+                    null,
+                )
+            } returns listOf(createMockCipherView(number = 1))
+
+            val result = bitwardenCredentialManager.registerFido2Credential(
+                userId = "mockUserId",
+                createPublicKeyCredentialRequest = mockCreatePublicKeyCredentialRequest,
+                selectedCipherView = createMockCipherView(number = 1),
+                callingAppInfo = mockCallingAppInfo,
+            )
+
+            assertEquals(Fido2RegisterCredentialResult.Error.CredentialAlreadyExists, result)
+            coVerify(exactly = 0) {
+                mockVaultSdkSource.registerFido2Credential(request = any(), fido2CredentialStore = any())
+            }
+        }
+
+    @Test
+    fun `registerFido2Credential should not block creation when no excluded credential is stored or the list is empty`() =
+        runTest {
+            val excluded = mockPasskeyAttestationOptions.copy(
+                excludeCredentials = listOf(
+                    PublicKeyCredentialDescriptor(type = "public-key", id = "BAUG", transports = null),
+                ),
+            )
+            val empty = mockPasskeyAttestationOptions.copy(excludeCredentials = emptyList())
+            every { mockCreatePublicKeyCredentialRequest.origin } returns DEFAULT_WEB_ORIGIN.v1
+            every { mockCallingAppInfo.signingInfo } returns mockSigningInfo
+            every { Base64.encodeToString(any(), any()) } returns DEFAULT_APP_SIGNATURE
+            every { json.encodeToString<Fido2AttestationResponse>(any(), any()) } returns ""
+            coEvery {
+                mockVaultSdkSource.registerFido2Credential(request = any(), fido2CredentialStore = any())
+            } returns createMockPublicKeyAttestationResponse(number = 1).asSuccess()
+
+            listOf(excluded, empty).forEach { options ->
+                every { json.decodeFromStringOrNull<PasskeyAttestationOptions>(any()) } returns options
+                every { mockPasskeyAttestationOptionsSanitizer.sanitize(options) } returns options
+                every { json.encodeToString(options) } returns DEFAULT_FIDO2_CREATE_REQUEST_JSON
+
+                val result = bitwardenCredentialManager.registerFido2Credential(
+                    userId = "mockUserId",
+                    createPublicKeyCredentialRequest = mockCreatePublicKeyCredentialRequest,
+                    selectedCipherView = createMockCipherView(number = 1),
+                    callingAppInfo = mockCallingAppInfo,
+                )
+
+                assertTrue(result is Fido2RegisterCredentialResult.Success)
+            }
         }
 
     @Test
