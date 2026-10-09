@@ -105,10 +105,11 @@ if "ActivityResultContracts.CreateDocument(" in phone and "ActivityResultContrac
 else: bad("export/import do not go through the document pickers")
 imp = kt.get("StoreImport.kt", "")
 installs = re.findall(r"Fleet\.install\w*\(|ExternalInstall\.run\(|PackageInstaller|ACTION_INSTALL_PACKAGE|ACTION_DELETE", imp)
-# #571: two installs and only two — the fleet path over plan.ours, and the
-# resolver's ExternalInstall over plan.direct. Nothing installs a plan.store app.
-if sorted(installs) == ["ExternalInstall.run(", "Fleet.installAll("] and "plan.ours" in imp and "plan.direct" in imp:
-    ok("the import installs only through Fleet.installAll (plan.ours) and ExternalInstall (plan.direct)")
+# #571 + 2026-10-09: ONE install path, the resolver's ExternalInstall over plan.direct. The Phone
+# page is the foreign apps' page: a fleet member (plan.ours) is the Cloud page's install, never
+# listed as declared nor installed here. Nothing installs a plan.store app.
+if sorted(installs) == ["ExternalInstall.run("] and "plan.direct" in imp and "Fleet.installAll(" not in imp:
+    ok("the import installs only through ExternalInstall (plan.direct); fleet members are the Cloud page's")
 else: bad("the import reaches install paths %s" % installs)
 
 print("== T5: the Declared / Installed filter (#619, #896: the page's top tabs) ==")

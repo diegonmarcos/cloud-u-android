@@ -54,9 +54,12 @@ object StoreImport {
             val p = dp(ctx, StoreDensity.S12); setPadding(p, dp(ctx, StoreDensity.S8), p, p)
         }
         col.addView(text(ctx, ctx.getString(R.string.store_import_summary,
-            plan.installed.size, plan.ours.size + plan.store.size, plan.manual.size), StoreDensity.T_BODY, bold = true))
+            plan.installed.size, plan.store.size, plan.manual.size), StoreDensity.T_BODY, bold = true))
+        // Fleet members the phone lacks are the Cloud page's (constellation install / update
+        // all): this page neither lists them as declared nor installs them. One line says so.
+        if (plan.ours.isNotEmpty()) col.addView(text(ctx, ctx.getString(R.string.store_import_ours_cloud_page, plan.ours.size), StoreDensity.T_CAPTION))
 
-        val missing = plan.ours.size + plan.direct.size
+        val missing = plan.direct.size
         val play = plan.store.size + plan.manual.size
         if (missing > 0) col.addView(button(ctx, ctx.getString(R.string.store_import_install_missing, missing, play)) {
             val app = ctx.applicationContext
@@ -64,17 +67,6 @@ object StoreImport {
             Toast.makeText(ctx, ctx.getString(R.string.store_phone_install_all_start, missing, play), Toast.LENGTH_LONG).show()
             thread(name = "store-import-missing") { installMissing(app, cfg, plan) }
         })
-        if (plan.ours.isNotEmpty()) {
-            col.addView(heading(ctx, ctx.getString(R.string.store_import_ours, plan.ours.size)))
-            plan.ours.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
-            col.addView(button(ctx, ctx.getString(R.string.store_import_install_ours, plan.ours.size)) {
-                val want = plan.ours.map { it.pkg }.toSet()
-                val apps = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
-                    .filter { it.pkg in want || (it.altId ?: "") in want }
-                Toast.makeText(ctx, ctx.getString(R.string.store_import_installing, apps.size), Toast.LENGTH_SHORT).show()
-                thread(name = "store-import-install") { Fleet.installAll(ctx, apps, Fleet.Mode.MISSING) }
-            })
-        }
         if (plan.direct.isNotEmpty()) {
             col.addView(heading(ctx, ctx.getString(R.string.store_import_direct, plan.direct.size)))
             plan.direct.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
@@ -129,9 +121,8 @@ object StoreImport {
      * a Play-only app keeps its "needs Play" hand-off. Blocking.
      */
     fun installMissing(app: Context, cfg: SourceResolver.Config, plan: AppInventory.Plan): List<BatchInstall.Outcome> {
-        val fleet = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))
-        val targets = plan.ours.mapNotNull { e -> fleet[e.pkg]?.let { BatchInstall.Target(e.pkg, it.label, it, null) } } +
-            plan.direct.map { e -> SourceResolver.resolve(cfg, e.pkg).let { BatchInstall.Target(e.pkg, it.label, null, it) } }
+        // Foreign apps only: a fleet member is the Cloud page's install, never this one's.
+        val targets = plan.direct.map { e -> SourceResolver.resolve(cfg, e.pkg).let { BatchInstall.Target(e.pkg, it.label, null, it) } }
         val outcomes = BatchInstall.run(app, targets, BatchInstall.engine(cfg)) { phase, t, i, n ->
             UpdateProgress.beginBatch((if (phase == BatchInstall.Phase.DOWNLOAD) "\u2193 " else "") + t.label, i, n)
         }

@@ -49,7 +49,9 @@ if not vault:
 else:
     sch = json.load(open(os.path.join(vault, "schema.json")))
     ids = [s["id"] for s in sch["sections"]]
-    (ok if ids and ids[-1] == "apps" else bad)("schema.json lists `apps` as the LAST section (%s)" % ids[-1:])
+    # #570 apps, then #573 peers: the two staged sections went in LAST, in that order (adding a
+    # section makes emit.py check demand a keyed rebuild, so nothing may land after them by accident).
+    (ok if ids and ids[-2:] == ["apps", "peers"] else bad)("schema.json lists `apps` then `peers` as the LAST sections (%s)" % ids[-2:])
     src = json.load(open(os.path.join(vault, "apps", "sources.json")))["items"]
     inv = src.get("devices", {}).get("galaxy", {}).get("inventory", {})
     (ok if inv.get("kind") == "json" and inv.get("repo") == "cloud-vault" and inv.get("path") == "C_A1-configs/apps/galaxy-apps.json" and inv.get("pointer") == []
@@ -93,7 +95,7 @@ print("== T3: Install all missing = the resolver ladder, Play-only skipped ==")
 body = imp.split("fun installMissing")[1] if "fun installMissing" in imp else ""
 (ok if body else bad)("StoreImport.installMissing exists")
 (ok if "BatchInstall.run(" in body and "BatchInstall.engine(cfg)" in body else bad)("it runs ONE BatchInstall pass with the real engine (FleetInstall / ExternalInstall ladder)")
-(ok if "plan.ours" in body and "plan.direct" in body and "plan.store" not in body and "plan.manual" not in body else bad)("targets are plan.ours + plan.direct only — plan.store / plan.manual (Play-only) are never targets")
+(ok if "plan.ours" not in body and "plan.direct" in body and "plan.store" not in body and "plan.manual" not in body else bad)("targets are plan.direct only — plan.ours is the Cloud page's install, plan.store / plan.manual (Play-only) are never targets")
 (ok if re.search(r"plan\.direct\.map \{ e -> SourceResolver\.resolve\(cfg, e\.pkg\)", body) else bad)("external targets come from SourceResolver.resolve (vendor → F-Droid → Play ladder)")
 (ok if "plan.store.size + plan.manual.size" in imp and "store_import_install_missing" in imp else bad)("the button counts the skipped need-Play apps")
 s = rd(os.path.join(lib, "appstore/src/main/res/values/strings.xml"))
@@ -112,7 +114,7 @@ inv = rd(os.path.join(lib, "appstore/src/main/java/com/diegonmarcos/superapp/app
 (ok if "e.pkg in installed -> have += e" in inv else bad)("the plan diffs against the installed set first — a second apply finds nothing to install")
 
 # mutation: the T3 target check must go RED when plan.store becomes a target
-mut = body.replace("plan.ours", "plan.store")
+mut = body.replace("plan.direct", "plan.store")
 (ok if "plan.store" in mut and "plan.store" not in body else bad)("T3-mutation: a plan.store target would be caught")
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

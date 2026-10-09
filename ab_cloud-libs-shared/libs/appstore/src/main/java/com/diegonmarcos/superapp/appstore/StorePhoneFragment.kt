@@ -251,10 +251,11 @@ class StorePhoneFragment : Fragment() {
         val sources = PhoneAppActions.sources(ctx)
         val resolver = PhoneAppActions.resolver(sources).also { cfg = it }
         val shellReady = ShellChannels.active(ctx) != null
+        // The Phone page is the FOREIGN apps' page: a fleet app — installed or not — is the Cloud
+        // page's (constellation install / update all), never declared, listed or installed here.
         val declared = LinkedHashMap<String, String>()
-        declared.putAll(AppInventory.launchable(ctx))
-        fleetList.filter { it.kind == "app" }.forEach { declared.putIfAbsent(it.pkg, it.label) }
-        resolver.apps.values.forEach { declared.putIfAbsent(it.pkg, it.label) }
+        declared.putAll(AppInventory.launchable(ctx).filterKeys { it !in fleet })
+        resolver.apps.values.filter { it.pkg !in fleet }.forEach { declared.putIfAbsent(it.pkg, it.label) }
         val shelves = AppStoreHost.classify(ctx, declared)
         states.clear()
         cached.clear()
