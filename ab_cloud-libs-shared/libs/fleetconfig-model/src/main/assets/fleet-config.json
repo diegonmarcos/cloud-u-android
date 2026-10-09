@@ -138,7 +138,7 @@
     "adb_shell": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Per-install random token shared with the local adb shell server; install identity.",
+      "doc": "Per-install random token shared with the local adb shell server (install identity), and the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down).",
       "used_by": [
         "lib-shizuku-adb-debug-tools"
       ]

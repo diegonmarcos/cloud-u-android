@@ -108,7 +108,7 @@ object EmbeddedAdbChannel : ShellChannel {
         if (timedOut) "$text\n[…truncated at ${timeoutMs}ms — ${text.length} bytes]" else text
     }.getOrNull()
 
-    private const val PREFS = "embedded_adb"
+    private const val PREFS = "adb_shell"
     private const val KEY_PAIRED = "paired"
 
     /** adbd keeps the trust, so the only record of "this app was paired" is ours: set on
