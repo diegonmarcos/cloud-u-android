@@ -80,6 +80,18 @@
         "cmd": "appops get com.diegonmarcos.cloudlib.netwg ACTIVATE_VPN | grep -q allow && echo ok",
         "expect": "ok"
       }
+    },
+    {
+      "id": "android_private_dns_off",
+      "title": "Android Private DNS off",
+      "why": "Android's Automatic Private DNS validates DNS-over-TLS against the public servers the VPN carries (1.1.1.1, dns.google) and then sends EVERY lookup to them over DoT before any plain server is asked — the fleet resolver (hickory at 10.0.0.1) is never reached, so vault.diegonmarcos.com answers its public address even with the mesh up. Off makes the resolver ask the VPN's servers in their declared order, fleet first (ui.dns.android_private_dns.private_presets_require).",
+      "apply": [
+        "settings put global private_dns_mode off"
+      ],
+      "verify": {
+        "cmd": "settings get global private_dns_mode",
+        "expect": "off"
+      }
     }
   ]
 }

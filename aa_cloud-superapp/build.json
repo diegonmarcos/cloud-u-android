@@ -6428,7 +6428,9 @@
           { "id": "opportunistic", "label": "Automatic" },
           { "id": "hostname", "label": "Private DNS provider hostname" }
         ],
-        "hostname_suggestions": ["one.one.one.one", "dns.google"]
+        "hostname_suggestions": ["one.one.one.one", "dns.google"],
+        "_doc_private_presets_require": "#794 Android's Automatic (opportunistic) Private DNS sends EVERY lookup over DoT to a validated public server (1.1.1.1, dns.google) before any plain server in the list is asked, so with a public fallback on the VPN the fleet resolver is never reached and mesh names answer public. A private preset is only in effect in this mode; FleetDns.verdict says so and data/device-tuning.json (android_private_dns_off) applies it.",
+        "private_presets_require": "off"
       },
       "presets": [
         { "id": "mirror", "label": "Mirror Android", "kind": "mirror",

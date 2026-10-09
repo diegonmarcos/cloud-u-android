@@ -73,10 +73,14 @@ object FleetDns {
         val meshDownAddresses: List<String>,
         val androidModes: List<Pair<String, String>>,
         val hostnameSuggestions: List<String>,
+        /** #794 the Android Private DNS mode a private preset needs (ui.dns.android_private_dns.private_presets_require):
+         *  Automatic sends every lookup over DoT to a validated public server BEFORE any plain server is asked. */
+        val privatePresetsRequire: String = "",
         val presets: List<Preset>,
         val selfResolvers: List<SelfResolver> = emptyList(),
     ) {
         fun preset(id: String?): Preset? = presets.firstOrNull { it.id == id }
+        fun modeLabel(mode: String?): String = androidModes.firstOrNull { it.first == mode }?.second ?: (mode ?: "unset")
     }
 
     /** #794 fleet code that talks DNS itself (ui.dns.self_resolvers): flagged on the DNS page. */
@@ -109,6 +113,7 @@ object FleetDns {
                 val m = modes.getJSONObject(it); m.getString("id") to m.getString("label")
             },
             hostnameSuggestions = apd.optJSONArray("hostname_suggestions").strings(),
+            privatePresetsRequire = apd.optString("private_presets_require"),
             presets = (0 until ps.length()).map {
                 val p = ps.getJSONObject(it)
                 Preset(
@@ -352,6 +357,11 @@ object FleetDns {
         return when {
             android.mode == "hostname" ->
                 bad("Android's strict Private DNS (${android.specifier}) answers every lookup — ${p.label} is bypassed")
+            p.kind == KIND_PRIVATE && d.privatePresetsRequire.isNotEmpty() && android.privateDnsActive == true &&
+                android.mode != d.privatePresetsRequire ->
+                bad("Android's Private DNS (${d.modeLabel(android.mode)}) is in use on the VPN: every lookup goes over DoT to a " +
+                    "validated public server before the fleet resolver is asked — ${p.label} is bypassed. " +
+                    "The device tuning sets it to ${d.modeLabel(d.privatePresetsRequire)}.")
             android.onVpn && actual.toSet() == want.toSet() ->
                 Verdict(true, false, want, actual, "${p.label} is in effect: Android resolves with $now")
             needsConsent ->

@@ -177,6 +177,19 @@ class FleetDnsTest {
     private fun verdict(id: String, chosen: Boolean, up: Boolean, idle: String, a: FleetDns.AndroidDns, fb: List<String> = emptyList()) =
         FleetDns.verdict(d, id, fb, chosen, FLEET, up, idle, a, "ENGINE")
 
+    @Test fun aPrivatePresetIsBypassedWhileAndroidPrivateDnsIsInUseOnTheVpn() {
+        // #794 Automatic Private DNS sends every lookup over DoT to a validated public server first:
+        // the promised servers ARE on the VPN, yet the fleet resolver is never asked.
+        val priv = d.presets.first { it.kind == FleetDns.KIND_PRIVATE }
+        val want = verdict(priv.id, true, true, "UP", android(emptyList(), true)).promised
+        val dot = FleetDns.AndroidDns("opportunistic", null, true, null, want, true)
+        val v = verdict(priv.id, true, true, "UP", dot)
+        assertFalse("DoT to a public server pre-empts the fleet resolver", v.ok)
+        assertTrue(v.why, "Private DNS" in v.why && d.modeLabel(d.privatePresetsRequire) in v.why)
+        assertTrue("Off: the servers are asked in order", verdict(priv.id, true, true, "UP", FleetDns.AndroidDns("off", null, false, null, want, true)).ok)
+        assertTrue("Automatic with nothing validated is plain DNS in order", verdict(priv.id, true, true, "UP", android(want, true)).ok)
+    }
+
     @Test fun aChosenPresetTheEngineCannotStartForWantOfConsentIsRedAndAsksForIt() {
         // the owner's phone, 2026-10-03: Public open chosen, mesh down, no consent, Android on the Wi-Fi's DNS
         val pub = publics.first()

@@ -118,6 +118,8 @@ if not inzone(tn.get('mesh', '')): pr.append('test_names.mesh %r is in no mesh z
 if not tn.get('public') or inzone(tn['public']): pr.append('test_names.public %r is missing or a mesh name' % tn.get('public'))
 modes = [m['id'] for m in d.get('android_private_dns', {}).get('modes', [])]
 if modes != ['off', 'opportunistic', 'hostname']: pr.append('android_private_dns.modes = %r, not Android\'s three' % modes)
+req = d.get('android_private_dns', {}).get('private_presets_require')
+if req not in modes: pr.append('android_private_dns.private_presets_require = %r is not a declared mode (#794: Automatic Private DNS pre-empts the fleet resolver)' % req)
 print('; '.join(pr) or 'OK')
 EOF
 )"
@@ -252,6 +254,8 @@ need('dns', 'deepLink = "page:config/dns"', 'the alert no longer opens the DNS p
 need('dns', 'else FleetAlerts.withdraw(ctx, CONSENT_ALERT)', 'a good verdict no longer takes the alert back')
 need('dns', 'idle.contains(BackendException.Reason.VPN_NOT_AUTHORIZED.name)', 'the verdict no longer recognises missing VPN consent')
 need('dns', 'android.onVpn && actual.toSet() == want.toSet() ->', '"in effect" no longer needs the promised servers ON the VPN')
+need('dns', 'android.privateDnsActive == true &&', 'the verdict no longer sees Android Private DNS in use pre-empting a private preset (#794)')
+need('dns', 'privatePresetsRequire = apd.optString("private_presets_require")', 'the required Private DNS mode is not read from the declaration')
 need('frag', 'registerForActivityResult(ActivityResultContracts.StartActivityForResult())', 'the consent is not launched for a result')
 need('frag', 'WgState.backend(ctx).consentIntent()?.let { consentLauncher.launch(it) }', 'the one tap no longer launches the engine consent for a result')
 need('frag', 'FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnabled(ctx))', 'consent / a preset change no longer syncs and re-checks', 2)
