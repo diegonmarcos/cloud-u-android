@@ -224,7 +224,7 @@ object UpdateProgress {
         private set
 
     fun beginJob(j: Job) {
-        tkey.get()?.let { k -> sink?.onJob(k, j); return }
+        tkey.get()?.let { k -> sink?.onJob(k, j) }
         job = j; republish()
     }
 
@@ -233,7 +233,8 @@ object UpdateProgress {
     // others download), so a state with no owner is a state every row fights over.
     // A thread that runs a job declares its key; whatever the pipeline publishes
     // on that thread is ALSO delivered to the [sink] under that key alone. The
-    // process-wide [state] stays, for the shell overlay and the HTTP API.
+    // process-wide [state] and [job] keep following too (last writer wins), for the shell
+    // overlay and /api/store/progress; the Store page reads the keyed board instead.
 
     /** Receives each keyed job's own events. */
     interface JobSink {
@@ -255,13 +256,13 @@ object UpdateProgress {
     /** The running job moves to [stage]. No job → no-op: the host's own
      *  self-update has no Store row to name. */
     fun stage(stage: String) {
-        tkey.get()?.let { k -> sink?.onStage(k, stage); return }
+        tkey.get()?.let { k -> sink?.onStage(k, stage) }
         val j = job ?: return
         if (j.stage != stage) { job = j.copy(stage = stage); republish() }
     }
 
     fun endJob() {
-        tkey.get()?.let { k -> sink?.onJob(k, null); return }
+        tkey.get()?.let { k -> sink?.onJob(k, null) }
         job = null; republish()
     }
 

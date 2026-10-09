@@ -142,7 +142,7 @@ object StoreBar {
             ControlStatus.Channel.DOWN -> ctx.getString(R.string.store_bar_channel_down)
             ControlStatus.Channel.NOT_PAIRED -> ctx.getString(R.string.store_bar_channel_unpaired)
         }
-        val chTap: (() -> Unit)? = if (ch == null) null else ({
+        val chTap: (() -> Unit)? = if (ch == null) ({ StoreStatus.refresh(ctx) { into.post { redraw() } } }) else ({
                 val wd = WirelessDebugging.isOn(ctx)
                 when (ControlStatus.channelAction(ch, wd)) {
                     ControlStatus.Action.OPEN_SETTINGS -> openDevSettings(host)

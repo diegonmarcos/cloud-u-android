@@ -290,23 +290,25 @@ object StoreStages {
      * error line outlives the job that raised it. One that finishes clean
      * clears the bar: left alone it sat on its last "100%" frame, nameless,
      * until something else moved — a pending install sheet is on screen itself.
-     * ponytail: one global job, like [UpdateProgress.state]; two rows running at
-     * once share the bar, last one named wins.
+     * The process-wide job (overlay, /api/store/progress) is still one, last one named
+     * wins; the Store page itself draws from the per-package [StoreJobs] board.
      */
     private fun named(ctx: Context, app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage = BatchForeground.hold(ctx) {
         // Keyed by package: everything the pipeline publishes on this thread is THIS row's
         // and reaches no other row (StoreJobs). The process-wide state still follows, for the overlay.
         StoreJobs.install()
         UpdateProgress.withKey(app.pkg) {
-            UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
+            val mine = UpdateProgress.job?.appId != app.id
+            if (mine) UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
+            else UpdateProgress.stage(stage)
             try {
                 val s = verb()
                 if (s.failedAt != null) UpdateProgress.update(UpdateProgress.State.Failed(s.text, app.id, app.pkg,
-                    stage = stageOf(s.failedAt), app = app.label))
-                else UpdateProgress.update(UpdateProgress.State.Done)
+                    stage = UpdateProgress.job?.stage ?: stageOf(s.failedAt), app = app.label))
+                else if (mine) UpdateProgress.update(UpdateProgress.State.Idle)
                 s
             } finally {
-                UpdateProgress.endJob()
+                if (mine) UpdateProgress.endJob()
             }
         }
     }

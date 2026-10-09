@@ -726,19 +726,30 @@ class StoreCacheStagesTest {
     /** A second lib served by the same release, so a batch has a "next". */
     private fun two() = app().copy(id = "lib-two-test", label = "Two", pkg = "org.example.two")
 
+    /** Each app's own row, recorded on the thread that published it (the board is keyed by package). */
+    private val rowLog = java.util.Collections.synchronizedList(ArrayList<com.diegonmarcos.superapp.appstore.JobBoard.Row>())
+    private val rowWatch: () -> Unit = {
+        com.diegonmarcos.superapp.appstore.StoreJobs.board.rows().forEach { rowLog += it }
+    }
+    private fun watchingRows() {
+        rowLog.clear(); com.diegonmarcos.superapp.appstore.StoreJobs.addObserver(rowWatch)
+    }
+
     @Test
-    fun `785 Download all names each app, its stage, bytes and %, its place in the batch and what is next`() {
-        watching()
+    fun `785 Download all gives each app its own row with its own stage, bytes and percent`() {
+        watchingRows()
         val got = StoreStages.downloadAll(ctx, listOf(app(), two()), online = true)
+        com.diegonmarcos.superapp.appstore.StoreJobs.removeObserver(rowWatch)
         assertEquals(got.summary, 2, got.count(StoreStages.DOWNLOADED))
-        val seen = lines.toList()
-        assertTrue("no line named Rootfs downloading with bytes, %, 1 of 2 and next Two: $seen", seen.any {
-            it.startsWith("Rootfs") && "downloading" in it && Regex("""\d+%""").containsMatchIn(it) &&
-                " / " in it && "1 of 2" in it && "next: Two" in it })
-        assertTrue("no line named Two as 2 of 2: $seen", seen.any { it.startsWith("Two") && "downloading" in it && "2 of 2" in it })
-        // Controls: the position belongs to the app it names, and the last app has no next.
-        assertFalse(seen.any { it.startsWith("Rootfs") && "2 of 2" in it })
-        assertFalse(seen.any { "2 of 2" in it && "next:" in it })
+        val seen = rowLog.toList()
+        for (pkg in listOf(app().pkg, two().pkg)) {
+            val mine = seen.filter { it.key == pkg }
+            assertTrue("no downloading row with bytes for $pkg: $seen", mine.any {
+                it.phase == com.diegonmarcos.superapp.appstore.JobBoard.Phase.DOWNLOADING && it.bytes > 0 && it.percent >= 0 })
+            // Monotonic per row, whatever the other app is doing at the same time.
+            val pcts = mine.filter { it.percent >= 0 }.map { it.percent }
+            assertEquals("a row's percent went backwards: $pcts", pcts.sorted(), pcts)
+        }
         assertEquals("a clean batch leaves nothing on the bar", null, StoreStages.progress())
     }
 
@@ -750,15 +761,14 @@ class StoreCacheStagesTest {
         ApkCache.file(ctx, "fleet-lib-two-test-v2-${hex(b2).take(6)}.apk").apply {
             writeBytes(b2); java.io.File(parentFile, "$name.record").writeText("org.example.two\n2\n${hex(b2)}\n")
         }
-        watching()
+        watchingRows()
         val up = StoreStages.updateAll(ctx, listOf(app(), two()), online = false)
+        com.diegonmarcos.superapp.appstore.StoreJobs.removeObserver(rowWatch)
         assertEquals(up.summary, StoreStages.FAILED, up.outcomes.first { it.app.id == app().id }.result)
-        val seen = lines.toList()
-        for (st in listOf("verifying", "installing"))
-            assertTrue("no '$st' line for Rootfs v2, 1 of 2, next Two: $seen",
-                seen.any { it.startsWith("Rootfs v2") && "  ·  $st  ·  " in it && "1 of 2" in it && "next: Two" in it })
-        assertTrue("Two never got the bar as 2 of 2: $seen", seen.any { it.startsWith("Two v2") && "2 of 2" in it })
-        // The batch is over, its job is gone — and the bar still says what failed, where, and why.
+        val mine = rowLog.filter { it.key == app().pkg }.map { it.phase }
+        for (ph in listOf(com.diegonmarcos.superapp.appstore.JobBoard.Phase.VERIFYING, com.diegonmarcos.superapp.appstore.JobBoard.Phase.INSTALLING))
+            assertTrue("Rootfs never went through $ph: $mine", ph in mine)
+        // The batch is over, its job is gone - and the bar still says what failed, where, and why.
         assertEquals(null, UpdateProgress.job)
         val p = StoreStages.progress()!!
         assertTrue(p.failed)

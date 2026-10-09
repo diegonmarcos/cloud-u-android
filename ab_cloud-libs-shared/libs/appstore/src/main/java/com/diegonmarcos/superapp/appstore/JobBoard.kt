@@ -87,6 +87,12 @@ class JobBoard {
     @Synchronized fun fail(key: String, reason: String) = edit(key) { it.copy(phase = Phase.FAILED, reason = reason, waitingFor = "") }
     @Synchronized fun done(key: String) = edit(key) { it.copy(phase = Phase.DONE, waitingFor = "") }
 
+    /** The job's thread is finished: a row still open (it never said failed) is done, never stuck. */
+    @Synchronized fun settle(key: String) {
+        val r = rows[key] ?: return
+        if (!r.finished) rows[key] = r.copy(phase = Phase.DONE, waitingFor = "")
+    }
+
     @Synchronized fun row(key: String): Row? = rows[key]
     @Synchronized fun rows(): List<Row> = rows.values.toList()
 

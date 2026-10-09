@@ -42,7 +42,7 @@ object StoreJobs : UpdateProgress.JobSink {
     }
 
     override fun onJob(key: String, job: UpdateProgress.Job?) {
-        if (job != null) board.begin(key, job.app.ifEmpty { key })
+        if (job != null) board.begin(key, job.app.ifEmpty { key }) else board.settle(key)
         changed()
     }
 }

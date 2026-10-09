@@ -100,6 +100,15 @@ class JobBoardTest {
         assertEquals(70, b.row("a")!!.percent)
     }
 
+    @Test fun `a job whose thread ended without failing is done, never stuck, and settling an unknown key adds nothing`() {
+        val b = JobBoard().apply { queue("a") }
+        b.download("a", 10, 100)
+        b.settle("a"); b.settle("zzz")
+        assertEquals(Phase.DONE, b.row("a")!!.phase)
+        assertNull(b.row("zzz"))
+        assertEquals(0, b.overall().active)
+    }
+
     @Test fun `single job - the bar speaks for it, not for a batch`() {
         val b = JobBoard().apply { queue("a") }
         assertTrue(!b.overall().multi)
