@@ -155,7 +155,7 @@ public fun SearchHtmlIsland(
                         }
                         Text(
                             e.label, color = ink, style = labelStyle, textAlign = TextAlign.Center,
-                            maxLines = 1, overflow = TextOverflow.Clip, softWrap = false,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = t.labelBottom)
                                 .testTag(labelTag(e.id))
                                 .graphicsLayer { alpha = label; translationY = (1f - label) * 8.dp.toPx() },

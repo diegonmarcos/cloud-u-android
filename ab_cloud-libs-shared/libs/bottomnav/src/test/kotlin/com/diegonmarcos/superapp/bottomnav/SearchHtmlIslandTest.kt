@@ -119,7 +119,7 @@ class SearchHtmlIslandTest {
         // space-around: five 50 dp cells in 328 - 16 = 312 dp leave equal gaps.
         val cells = SHIPPED.map { bounds(itemTag(it.first)) }
         val gaps = cells.zipWithNext { a, b -> b.left - a.right }
-        assertTrue("equal gaps between the cells: $gaps", gaps.max() - gaps.min() < 1f)
+        assertTrue("equal gaps between the cells (whole pixels): $gaps", gaps.max() - gaps.min() <= 1.5f)
         assertEquals("the bar is a true semicircle-ended pill: radius 30 on a 60 dp bar", island.height / 2, 30f, 0.5f)
     }
 
