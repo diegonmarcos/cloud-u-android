@@ -33,26 +33,13 @@ object AuthClassifier {
         return if (hasAuthLink(subject, bodyText, html)) AuthClass.LINK else AuthClass.NONE
     }
 
-    /** URL patterns: an auth verb in the path or query of a link. */
+    /** URL patterns: an auth token in the path or query of a link. From the declared pattern set. */
     private val authUrl = Regex(
-        "(verif|confirm|magic|sign-?in|log-?in|reset|activat|passwordless|one-?time|otp|auth/|/auth|recover)",
+        AuthPatterns.URL_TOKENS.joinToString("|", "(", ")") { Regex.escape(it) },
         RegexOption.IGNORE_CASE,
     )
     private val urlInText = Regex("""https?://[^\s"'<>()\[\]]+""", RegexOption.IGNORE_CASE)
     private val hrefIn = Regex("""href\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-
-    /** Link text / call-to-action phrases, for the preview that carries words but rarely the URL. */
-    private val authPhrase = Regex(
-        "(" +
-            "(verify|confirm|validate) (your )?(e-?mail|account|address|identity|sign-?up|registration)" +
-            "|reset (your )?password|password reset|forgot(ten)? (your )?password|choose a new password" +
-            "|magic link|sign-?in link|log-?in link|one-?time (sign|log)-?in" +
-            "|(sign|log)[ -]?in to (your|complete|continue)" +
-            "|activate (your )?(account|membership)" +
-            "|(click|tap) (the )?(link|button) below to (verify|confirm|sign|log|reset|activate)" +
-            ")",
-        RegexOption.IGNORE_CASE,
-    )
 
     internal fun hasAuthLink(subject: String?, bodyText: String, html: String?): Boolean {
         val urls = buildList {
@@ -61,8 +48,9 @@ object AuthClassifier {
         }
         // Only the part after the host is judged: "login.example.com" in a footer is not a sign-in link.
         if (urls.any { authUrl.containsMatchIn(afterHost(it)) }) return true
-        val words = (subject.orEmpty() + "\n" + bodyText)
-        return authPhrase.containsMatchIn(words)
+        // Link / call-to-action phrases, for the preview that carries words but rarely the URL.
+        val words = (subject.orEmpty() + "\n" + bodyText).lowercase()
+        return AuthPatterns.LINK_PHRASES.any { it in words }
     }
 
     private fun afterHost(url: String): String {

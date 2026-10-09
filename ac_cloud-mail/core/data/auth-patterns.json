@@ -1,0 +1,54 @@
+{
+  "_doc": "THE declared pattern set of rule 'G0 _ Auth' (Ga Code, Gb Link to auth, Gc No Auth). One source, two derivations: _shared/lib/derive-mail-rules.ts turns it into the maddy-sorter's G0 axis rules (header_contains on Subject), and the Cloud Mail app's AuthClassifier is built from a vendored copy of this file (ac_cloud-mail/core/data/src/main/resources/auth-patterns.json in cloud-u-android, held equal by AuthPatternsParityTest). Change a phrase HERE, re-derive, and re-vendor; the parity tests fail on either side that did not follow. The server sees headers only (the sorter reads msgs.cachedHeader), so its Ga/Gb are decided on the Subject; the app also reads the preview/body, where Ga is decided by the reading pane's code extractor and Gb additionally by url_tokens in links.",
+  "rule": "G0 _ Auth",
+  "server_header": "G0 _ AUTH",
+  "classes": {
+    "Ga": { "name": "Ga Code", "folder": "Ga    🔑 Code" },
+    "Gb": { "name": "Gb Link to auth", "folder": "Gb    🔗 Link to auth" },
+    "Gc": { "name": "Gc No Auth", "folder": "Gc    ⚪ No Auth" }
+  },
+  "code_subject_phrases": [
+    "verification code",
+    "security code",
+    "one-time code",
+    "one-time password",
+    "login code",
+    "sign-in code",
+    "authentication code",
+    "confirmation code",
+    "your code",
+    "passcode"
+  ],
+  "link_phrases": [
+    "verify your email",
+    "verify your account",
+    "confirm your email",
+    "confirm your account",
+    "reset your password",
+    "password reset",
+    "forgot your password",
+    "magic link",
+    "sign-in link",
+    "sign in to",
+    "log in to",
+    "activate your account",
+    "finish signing up"
+  ],
+  "url_tokens": [
+    "verif",
+    "confirm",
+    "magic",
+    "signin",
+    "sign-in",
+    "login",
+    "log-in",
+    "reset",
+    "activat",
+    "passwordless",
+    "one-time",
+    "otp",
+    "auth/",
+    "/auth",
+    "recover"
+  ]
+}
