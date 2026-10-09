@@ -138,6 +138,25 @@ object StoreBar {
         // embedded adb or Shizuku, probed off the main thread. NOT the system "wireless
         // debugging" switch - that can be on while the channel is dead.
         val ch = StoreStatus.channel()
+        configRow.addView(channelButton(ctx, into, ::redraw) { openDevSettings(host) })
+        configRow.addView(btn(ctx, Item.DEV_OPTIONS, ctx.getString(R.string.store_bar_open), 0xFF7C3AED.toInt()) {
+            openDevSettings(host)
+        })
+        into.addView(caption(ctx, ctx.getString(when (ch?.state) {
+            ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
+            ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
+            ControlStatus.Channel.NOT_PAIRED -> R.string.store_bar_channel_unpaired_caption
+            null -> R.string.store_bar_channel_checking })))
+    }
+
+    /**
+     * THE Wireless Debugging button (#918): the privileged channel's live status as its label, and
+     * what a tap does about it (Reconnect / Pair / open settings). One builder, drawn by this bar
+     * and by Access > Android Perms. [redraw] repaints whoever hosts it; [openDev] opens the
+     * developer settings.
+     */
+    fun channelButton(ctx: Context, into: View, redraw: () -> Unit, openDev: () -> Unit): TextView {
+        val ch = StoreStatus.channel()
         if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { into.post { redraw() } }
         val chLabel = ch?.shizuku?.let { ChannelSelector.shizukuLabel(it) } ?: when (ch?.state) {
             null -> ctx.getString(R.string.store_bar_channel_checking)
@@ -150,7 +169,7 @@ object StoreBar {
                 when (ControlStatus.channelAction(ch, wd, ChannelModePrefs.current(ctx))) {
                     ControlStatus.Action.OPEN_SHIZUKU, ControlStatus.Action.REQUEST_SHIZUKU ->
                         toast(ctx, ShizukuStatus.act(ctx))
-                    ControlStatus.Action.OPEN_SETTINGS -> openDevSettings(host)
+                    ControlStatus.Action.OPEN_SETTINGS -> openDev()
                     ControlStatus.Action.RECONNECT -> {
                         toast(ctx, ctx.getString(R.string.store_bar_asking_shell))
                         thread(name = "channel-reconnect") {
@@ -162,23 +181,26 @@ object StoreBar {
                     ControlStatus.Action.PAIR -> thread(name = "channel-pair") {
                         // A phone paired before the pairing record existed lands here: reconnect first.
                         val ok = EmbeddedAdbChannel.autoConnect(ctx).first
-                        if (!ok) into.post { openDevSettings(host); runCatching { AdbPairingService.start(ctx) } }
+                        if (!ok) into.post { openDev(); runCatching { AdbPairingService.start(ctx) } }
                         StoreStatus.invalidate()
                         into.post { redraw() }
                     }
                 }
         })
-        configRow.addView(btn(ctx, Item.WIRELESS_DEBUG, chLabel,
+        return btn(ctx, Item.WIRELESS_DEBUG, chLabel,
             when (ch?.state) { ControlStatus.Channel.UP -> 0xFF2F855A.toInt(); ControlStatus.Channel.DOWN -> 0xFFC05621.toInt()
-                else -> 0xFF4A4A55.toInt() }, chTap))
-        configRow.addView(btn(ctx, Item.DEV_OPTIONS, ctx.getString(R.string.store_bar_open), 0xFF7C3AED.toInt()) {
-            openDevSettings(host)
-        })
-        into.addView(caption(ctx, ctx.getString(when (ch?.state) {
-            ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
-            ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
-            ControlStatus.Channel.NOT_PAIRED -> R.string.store_bar_channel_unpaired_caption
-            null -> R.string.store_bar_channel_checking })))
+                else -> 0xFF4A4A55.toInt() }, chTap)
+    }
+
+    /** A row holding THE Wireless Debugging button for a Compose host; [onChange] fires whenever it redraws (status changed). */
+    fun channelHost(ctx: Context, onChange: () -> Unit, openDev: () -> Unit): View {
+        val box = row(ctx)
+        fun draw() {
+            box.removeAllViews()
+            box.addView(channelButton(ctx, box, { draw(); onChange() }, openDev))
+        }
+        draw()
+        return box
     }
 
     /** Back in front (e.g. from settings): drop the cached readings and repaint [bar]. */

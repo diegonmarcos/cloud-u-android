@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +17,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.viewinterop.AndroidView
+import com.diegonmarcos.superapp.appstore.PermsGrant
+import com.diegonmarcos.superapp.appstore.PermsGrantDevice
+import com.diegonmarcos.superapp.appstore.StoreBar
+import kotlin.concurrent.thread
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +64,7 @@ import com.diegonmarcos.superapp.updater.Fleet
 fun AccessPage(page: String) {
     when (page) {
         PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize())
-        PAGE_ANDROID -> PermsList(cloud = false)
+        PAGE_ANDROID -> AndroidPermsPage()
         else -> PermsList(cloud = true)
     }
 }
@@ -81,12 +92,16 @@ private fun PermsList(cloud: Boolean) {
 
 @Composable
 private fun PermsCard(ctx: Context, app: Fleet.App, cloud: Boolean) {
-    val pkg = Fleet.installedId(ctx, app)
+    PermsCard(ctx, app.label + (if (app.kind == "lib") "  ·  lib" else ""), Fleet.installedId(ctx, app), app.pkg, cloud)
+}
+
+@Composable
+private fun PermsCard(ctx: Context, title: String, pkg: String?, fleetPkg: String, cloud: Boolean) {
     val h = dpOf(StoreDensity.S12); val v = dpOf(StoreDensity.S6)
     Column(Modifier.fillMaxWidth().background(CARD).padding(h, v)) {
-        Text(app.label + (if (app.kind == "lib") "  ·  lib" else ""), color = Color.White,
+        Text(title, color = Color.White,
             fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_TITLE.sp)
-        Text(pkg ?: app.pkg, color = DIM, fontFamily = FontFamily.Monospace, fontSize = StoreDensity.T_CAPTION.sp)
+        Text(pkg ?: fleetPkg, color = DIM, fontFamily = FontFamily.Monospace, fontSize = StoreDensity.T_CAPTION.sp)
         when {
             pkg == null -> Text("◯ not installed", color = MISSING, fontSize = StoreDensity.T_META.sp)
             sameSignature(ctx, pkg) -> Text("🔑 same key  ·  eligible for signature-level data access", color = UP, fontSize = StoreDensity.T_META.sp)
@@ -95,6 +110,122 @@ private fun PermsCard(ctx: Context, app: Fleet.App, cloud: Boolean) {
         if (pkg == null) return@Column
         if (cloud) CloudPerms(ctx, pkg) else AndroidPerms(ctx, pkg)
     }
+}
+
+/**
+ * Android Perms: an action row (permission filter, the Wireless Debugging button, Grant missing
+ * perms) over the fleet's apps, A-Z. The grant plan, filter and sort are [PermsGrant]'s.
+ */
+@Composable
+private fun AndroidPermsPage() {
+    val ctx = LocalContext.current
+    val fleet = remember { Fleet.parse(StoreBuild.CONSTELLATION_FLEET_B64) }
+    var tick by remember { mutableStateOf(0) }          // a grant ran: re-read the device
+    var chan by remember { mutableStateOf(0) }          // the channel's status changed: redraw
+    val apps = remember(tick) { PermsGrant.sorted(PermsGrantDevice.read(ctx, fleet)) }
+    val kind = remember { PermsGrantDevice.kindOf(ctx) }
+    val options = remember(apps) { PermsGrant.filterOptions(apps, kind) }
+    var selected by remember { mutableStateOf(PermsGrant.ALL) }
+    if (selected !in options) selected = PermsGrant.ALL
+    val shown = PermsGrant.view(apps, selected)
+    val plan = remember(apps) { PermsGrant.plan(apps, kind) }
+    val up = chan >= 0 && PermsGrantDevice.channelUp()
+    val reason = PermsGrant.disabledReason(up)
+    var confirm by remember { mutableStateOf(false) }
+    var running by remember { mutableStateOf(false) }
+    var summary by remember { mutableStateOf<PermsGrant.Summary?>(null) }
+    var logLines by remember { mutableStateOf(listOf<String>()) }
+    var needsOpen by remember { mutableStateOf(false) }
+    val s4 = dpOf(StoreDensity.S4)
+
+    LazyColumn(Modifier.fillMaxSize().padding(dpOf(StoreDensity.S8)), verticalArrangement = Arrangement.spacedBy(s4)) {
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(s4), verticalAlignment = Alignment.CenterVertically) {
+                PermFilter(options, selected, { selected = it }, Modifier.weight(1f))
+                AndroidView(modifier = Modifier.weight(1.4f), factory = { c ->
+                    StoreBar.channelHost(c, onChange = { chan++ }) { openSettings(c, "android.settings.APPLICATION_DEVELOPMENT_SETTINGS", null) }
+                })
+                val can = up && !running && plan.steps.isNotEmpty()
+                Text(if (running) "Granting..." else "Grant missing perms (${plan.steps.size})",
+                    Modifier.weight(1.2f).background(if (can) UP else IDLE).clickable(enabled = can) { confirm = true }
+                        .padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S6)),
+                    color = if (can) Color.White else DIM, fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_META.sp, maxLines = 1)
+            }
+        }
+        if (reason != null) item { Text(reason, color = BLOCKED, fontSize = StoreDensity.T_CAPTION.sp) }
+        summary?.let { sm ->
+            item {
+                Column(Modifier.fillMaxWidth().background(CARD).padding(dpOf(StoreDensity.S8), s4)) {
+                    Text(sm.text(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_META.sp)
+                    for (f in sm.failures) Text("✕ ${f.step.label} ${PermsGrant.short(f.step.perm)}: ${f.reason}", color = BLOCKED, fontSize = StoreDensity.T_CAPTION.sp)
+                    for (l in logLines) Text(l, color = DIM, fontFamily = FontFamily.Monospace, fontSize = StoreDensity.T_CAPTION.sp)
+                }
+            }
+        }
+        if (plan.needsYou.isNotEmpty()) {
+            item {
+                Text((if (needsOpen) "▾ " else "▸ ") + "Needs you (${plan.needsYou.size}) - special access, only a settings screen grants it",
+                    Modifier.fillMaxWidth().clickable { needsOpen = !needsOpen }, color = MISSING,
+                    fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_META.sp)
+            }
+            if (needsOpen) items(plan.needsYou, key = { it.pkg + it.perm }) { n ->
+                Row(Modifier.fillMaxWidth().background(CARD).padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S2)), verticalAlignment = Alignment.CenterVertically) {
+                    Text(n.label + "  " + PermsGrant.short(n.perm), Modifier.weight(1f), color = Color.White, fontSize = StoreDensity.T_CAPTION.sp)
+                    Text("Settings ↗", Modifier.clickable { openSettings(ctx, n.action, n.pkg) }.padding(horizontal = dpOf(StoreDensity.S4)),
+                        color = MISSING, fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_CAPTION.sp)
+                }
+            }
+        }
+        items(shown, key = { it.pkg }) { a -> PermsCard(ctx, a.label, a.pkg, a.pkg, cloud = false) }
+    }
+
+    if (confirm) AlertDialog(
+        onDismissRequest = { confirm = false },
+        title = { Text(plan.confirmText()) },
+        text = { Text("Through the privileged channel, in the current mode. Only constellation-signed apps; special access is left to you.") },
+        confirmButton = { TextButton({
+            confirm = false; running = true
+            val ch = PermsGrantDevice.channel(ctx); val lines = ArrayList<String>()
+            thread(name = "grant-missing-perms") {
+                val sm = PermsGrant.run(plan, ch) { lines += it; PermsGrantDevice.log(it) }
+                summary = sm; logLines = lines.toList(); running = false; tick++
+            }
+        }) { Text("Grant") } },
+        dismissButton = { TextButton({ confirm = false }) { Text("Cancel") } },
+    )
+}
+
+/** The permission dropdown: a dense box that opens a searchable list; "All" first. */
+@Composable
+private fun PermFilter(options: List<String>, selected: String, onSelect: (String) -> Unit, modifier: Modifier) {
+    var open by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    Box(modifier) {
+        Text("▾ " + (if (selected == PermsGrant.ALL) selected else PermsGrant.short(selected)),
+            Modifier.fillMaxWidth().background(IDLE).clickable { open = true }.padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S6)),
+            color = Color.White, fontWeight = FontWeight.Bold, fontSize = StoreDensity.T_META.sp, maxLines = 1)
+        DropdownMenu(open, { open = false }) {
+            BasicTextField(query, { query = it }, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = StoreDensity.T_META.sp),
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier.fillMaxWidth().background(IDLE).padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S4)),
+                decorationBox = { inner -> if (query.isEmpty()) Text("search permission", color = DIM, fontSize = StoreDensity.T_META.sp); inner() })
+            Column {
+                for (o in PermsGrant.search(options, query)) Text(if (o == PermsGrant.ALL) o else PermsGrant.short(o),
+                    Modifier.fillMaxWidth().clickable { onSelect(o); open = false; query = "" }.padding(dpOf(StoreDensity.S8), dpOf(StoreDensity.S4)),
+                    color = if (o == selected) UP else Color.White, fontSize = StoreDensity.T_META.sp)
+            }
+        }
+    }
+}
+
+/** Opens the settings screen for [action]; falls back to the app's own details screen. */
+private fun openSettings(ctx: Context, action: String, pkg: String?) {
+    fun go(i: Intent) = runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    val uri = pkg?.let { Uri.fromParts("package", it, null) }
+    if (uri != null && go(Intent(action, uri))) return
+    if (go(Intent(action))) return
+    if (uri == null || !go(Intent(PermsGrant.FALLBACK_SETTINGS, uri))) Toast.makeText(ctx, "No settings screen", Toast.LENGTH_SHORT).show()
 }
 
 /** Android's own runtime permissions for [pkg]: what it requests and whether it holds it, then a hand-off to the system screen. */
