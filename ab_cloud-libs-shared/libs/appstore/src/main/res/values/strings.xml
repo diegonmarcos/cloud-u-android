@@ -89,7 +89,7 @@
     <string name="store_import_no_store">%1$s is not available on this phone.</string>
     <string name="store_import_open_in">Open in %1$s</string>
     <string name="store_import_ours">Ours - Constellation install (%1$d)</string>
-    <string name="store_import_ours_cloud_page">%1$d cloud apps in this list are the Cloud page's — install or update them there</string>
+    <string name="store_import_ours_cloud_page">%1$d cloud apps in this list are the Cloud page\'s — install or update them there</string>
     <string name="store_import_store">From their store (%1$d)</string>
     <string name="store_import_summary">%1$d already installed · %2$d to install · %3$d manual. Nothing happens until you tap.</string>
     <string name="store_import_title">Import app list</string>
