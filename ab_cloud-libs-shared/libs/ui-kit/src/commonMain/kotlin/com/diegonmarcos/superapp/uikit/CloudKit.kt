@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -48,13 +49,27 @@ data class KitPalette(
     val hairline: Color,
     /** The ink that sits ON a lit (textPrimary-filled) tile. */
     val tileInk: Color,
+    /**
+     * The three STATE tokens (cloud-account-ui spec 0.3): a state pill, a banner and a stat tile
+     * colour their dot by these and by nothing else. Each palette builder declares its own; the
+     * defaults here only keep a builder that predates them (the wasm Store page, Writer) compiling.
+     */
+    val ok: Color = DEFAULT_OK,
+    val warn: Color = DEFAULT_WARN,
+    val bad: Color = DEFAULT_BAD,
 ) {
     companion object {
+        val DEFAULT_OK: Color = Color(0xFF7FC98F)
+        val DEFAULT_WARN: Color = Color(0xFFE2B85C)
+        val DEFAULT_BAD: Color = Color(0xFFE5737A)
+
         /** From resolved ARGB ints, which is what a View-era palette already holds. */
         fun fromArgb(surface: Int, surfaceSelected: Int, textPrimary: Int, textSecondary: Int,
-                     accent: Int, hairline: Int, tileInk: Int): KitPalette = KitPalette(
+                     accent: Int, hairline: Int, tileInk: Int,
+                     ok: Int = DEFAULT_OK.toArgb(), warn: Int = DEFAULT_WARN.toArgb(),
+                     bad: Int = DEFAULT_BAD.toArgb()): KitPalette = KitPalette(
             Color(surface), Color(surfaceSelected), Color(textPrimary), Color(textSecondary),
-            Color(accent), Color(hairline), Color(tileInk),
+            Color(accent), Color(hairline), Color(tileInk), Color(ok), Color(warn), Color(bad),
         )
     }
 }
@@ -95,10 +110,19 @@ object KitTags {
     const val DIALOG_DISMISS: String = "kit:dialog:dismiss"
 }
 
-/** Section title + caption, the heading over every group of a settings page. */
+/**
+ * Section title + caption, the heading over every group of a settings page. [eyebrow] draws the
+ * small upper-case label the Account pages put over a group (THIS PHONE, ABOUT) instead.
+ */
 @Composable
-fun KitSectionHeader(title: String, subtitle: String, modifier: Modifier = Modifier) {
+fun KitSectionHeader(title: String, subtitle: String, modifier: Modifier = Modifier, eyebrow: Boolean = false) {
     val p = LocalKitPalette.current
+    if (eyebrow) {
+        Text(title.uppercase(), color = p.textSecondary, fontSize = KitDensity.caption,
+            letterSpacing = KitDensity.eyebrowTracking,
+            modifier = modifier.fillMaxWidth().padding(top = KitDensity.medium, bottom = KitDensity.small))
+        return
+    }
     Column(modifier.fillMaxWidth()) {
         Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 8.dp))

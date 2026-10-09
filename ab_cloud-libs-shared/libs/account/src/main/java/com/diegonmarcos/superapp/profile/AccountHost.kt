@@ -102,6 +102,8 @@ object AccountHost {
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),
         textPrimary = 0xFFE6E6E6.toInt(), textSecondary = 0xFF9AA0A6.toInt(),
         accent = 0xFF7AA2F7.toInt(), hairline = 0xFF2A2C33.toInt(), tileInk = 0xFF000000.toInt(),
+        // The three state tokens (cloud-account-ui spec 0.3): pills, banners and stat tiles only.
+        ok = 0xFF7FC98F.toInt(), warn = 0xFFE2B85C.toInt(), bad = 0xFFE5737A.toInt(),
     )
 }
 
