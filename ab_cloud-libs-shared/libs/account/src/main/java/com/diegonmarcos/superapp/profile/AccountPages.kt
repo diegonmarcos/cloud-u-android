@@ -4,10 +4,12 @@ import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,8 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudlib.auth.SignIn
 import com.diegonmarcos.cloudlib.auth.SignInHost
@@ -39,7 +40,19 @@ import com.diegonmarcos.cloudlib.auth.SignInWays
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
+import com.diegonmarcos.superapp.uikit.KitAction
+import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitDeviceCard
+import com.diegonmarcos.superapp.uikit.KitEmptyState
+import com.diegonmarcos.superapp.uikit.KitFingerprint
+import com.diegonmarcos.superapp.uikit.KitHero
+import com.diegonmarcos.superapp.uikit.KitListRow
+import com.diegonmarcos.superapp.uikit.KitSegmented
+import com.diegonmarcos.superapp.uikit.KitStatTile
+import com.diegonmarcos.superapp.uikit.KitState
+import com.diegonmarcos.superapp.uikit.KitStatePill
+import com.diegonmarcos.superapp.uikit.KitStatusBanner
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitSelectableTile
 import com.diegonmarcos.superapp.uikit.KitSettingsRow
@@ -178,37 +191,34 @@ object AccountDevice {
 private fun jsonAt(ctx: Context, path: String): JSONObject? =
     (AccountVault(ctx).connection(path) as? String)?.let { runCatching { JSONObject(it) }.getOrNull() }
 
-@Composable
-private fun Dense(text: String, secondary: Boolean = false, tag: String? = null) {
-    val p = LocalKitPalette.current
-    Text(text, color = if (secondary) p.textSecondary else p.textPrimary, fontFamily = FontFamily.Monospace,
-        style = MaterialTheme.typography.bodySmall, modifier = if (tag != null) Modifier.testTag(tag) else Modifier)
-}
-
-@Composable
-private fun Tile(label: String, value: String, modifier: Modifier, onClick: (() -> Unit)? = null) {
-    KitCard(modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)) {
-        Dense(label, secondary = true)
-        Dense(value)
-    }
-}
-
-@Composable
-private fun Pill(label: String, tag: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag(tag)) { Text(label) }
-}
-
 /** A page a later task of the redesign fills; it says which, so the app is navigable now. */
 @Composable
 fun AccountPlaceholderPage(section: String, page: String, task: String, body: (@Composable () -> Unit)? = null) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
         .testTag(AccountPageTags.placeholder(section, page)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        KitSectionHeader("$section ▸ $page", "filled by $task of the Cloud Account redesign")
+        KitEmptyState("$section ▸ $page", "filled by $task of the Cloud Account redesign")
         body?.invoke()
     }
 }
 
 // ── Account ▸ profile ────────────────────────────────────────────────────
+
+/** The trailing value of a schema row: a fingerprint for a masked one, "Add" for an unfilled one. */
+@Composable
+private fun AboutValue(row: InfoMask.Row, full: String, shown: JSONObject?, editable: Boolean) {
+    val p = LocalKitPalette.current
+    when (row.kind) {
+        InfoMask.Kind.MASKED -> KitFingerprint(
+            AccountDrift.leaves(shown)[full]?.let(AccountDrift::text)?.let(::fingerprint), length = row.size, tag = full)
+        InfoMask.Kind.EMPTY -> Text(if (editable) "Add" else "—", color = if (editable) p.accent else p.textSecondary,
+            style = MaterialTheme.typography.bodyMedium)
+        InfoMask.Kind.COLLAPSED -> Text("${row.size} entries ›", color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
+        InfoMask.Kind.PENDING -> KitStatePill("pending", KitState.WARN)
+        InfoMask.Kind.SHOWN -> Text(shownValue(full, row.text) + if (editable) "  ›" else "", color = p.textSecondary,
+            style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 200.dp))
+    }
+}
 
 @Composable
 fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
@@ -226,62 +236,94 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
     val resolved = remember(tick) { AccountDevice.resolve(ctx) }
     val deviceId = resolved.id
     val working = remember(tick) { DeviceVault(ctx).working() }
+    val rows = if (about == null) emptyList() else InfoMask.declared.schemaRows(about, shown?.opt(about.id))
+    fun shownAt(vararg path: String): String {
+        val want = path.fold("") { acc, s -> InfoMask.join(acc, s) }
+        return rows.firstOrNull { it.path == want && it.kind == InfoMask.Kind.SHOWN }?.text.orEmpty()
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag(AccountPageTags.PROFILE),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        KitSectionHeader("Identity", "the vault's about topic, through the mask; tap a field to edit")
-        KitCard {
-            if (about == null) Dense("no about topic is declared", true)
-            else {
-                val rows = InfoMask.declared.schemaRows(about, shown?.opt(about.id))
-                if (rows.isEmpty() || shown == null) Dense("nothing fetched yet: Account ▸ connect", true)
-                for (row in rows) {
-                    val full = if (row.path.isBlank()) about.id else about.id + AccountDrift.SEP + row.path
-                    val editable = (row.kind == InfoMask.Kind.SHOWN || row.kind == InfoMask.Kind.EMPTY) && '[' !in row.path
-                    Column(Modifier.fillMaxWidth().then(if (editable) Modifier.clickable { editing = full } else Modifier)) {
-                        Dense(row.path.ifBlank { about.id }, true)
-                        Dense(when (row.kind) {
-                            InfoMask.Kind.MASKED -> "•••• (${row.size})"
-                            InfoMask.Kind.EMPTY -> "empty"
-                            InfoMask.Kind.COLLAPSED -> "… (${row.size})"
-                            InfoMask.Kind.PENDING -> row.text
-                            InfoMask.Kind.SHOWN -> shownValue(full, row.text)
-                        })
-                    }
-                }
-            }
-        }
-        KitSectionHeader("This phone", "which device file this phone backs up to and restores from")
-        KitCard {
-            KitSettingsRow("Device id", deviceId.ifBlank { "not picked — tap to pick" }, onClick = { picking = true })
-            if (resolved.source == AccountDevice.SRC_DERIVED) Dense("derived from model ${resolved.model}", true)
-            Dense("model ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-            val prof = working?.optJSONObject("profile")
-            Dense("loaded profile: " + (working?.optString("device")?.ifBlank { null } ?: "none"))
-            Dense("captured at: " + (prof?.optJSONObject("device")?.optString("captured_at")?.ifBlank { null } ?: "—"))
-        }
+        val name = shownAt("profile", "name")
+        KitHero(
+            name = name.ifBlank { "Not connected yet" },
+            lines = listOf(
+                shownAt("profile", "email").ifBlank { if (shown == null) "fetch the vault on Account ▸ connect" else "" },
+                listOf(shownAt("profile", "location"), shownAt("profile", "company")).filter { it.isNotBlank() }.joinToString(" · "),
+            ),
+            initials = shownAt("profile", "initials").ifBlank { initialsOf(name) },
+            tag = "profile",
+            onClick = { if (shown == null) open("account", "connect") },
+        )
+
+        KitSectionHeader("This phone", "", eyebrow = true)
         val fetched = remember(tick, model.version.intValue) { ConnectWays.lastFetch(ctx) }
         val backup = remember(tick) { jsonAt(ctx, "backup.last") }
         val restore = remember(tick) { jsonAt(ctx, "restore.last") }
+        val prof = working?.optJSONObject("profile")
+        val loaded = working?.optString("device")?.ifBlank { null }
+        val derivedHint = if (resolved.source == AccountDevice.SRC_DERIVED) "derived from model ${resolved.model}" else ""
+        KitDeviceCard(
+            id = deviceId.ifBlank { "Pick this phone" },
+            model = "${Build.MODEL} · Android ${Build.VERSION.RELEASE}",
+            state = listOf(
+                loaded?.let { "profile $it loaded" } ?: "no profile loaded",
+                backup?.optString("at")?.ifBlank { null }?.let { "backed up $it" } ?: "never backed up",
+                derivedHint,
+            ).filter { it.isNotBlank() }.joinToString(" · "),
+            badge = if (deviceId.isBlank()) "" else "this phone",
+            pill = if (deviceId.isBlank()) "not picked" to KitState.WARN else null,
+            onClick = { picking = true },
+        )
+        val counts = remember(tick) { prof?.let { DeviceProfile.counts(it) } }
+        val perms = remember(tick) { AccountDrift.leaves(prof?.optJSONObject("perms")).size }
+        val drift = remember(tick, model.version.intValue) { profilesDriftCount(ctx, model).let { it } }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Tile("Vault fetched", fetched?.optString("at")?.ifBlank { null } ?: "never", Modifier.weight(1f))
-            Tile("Last backup", backup?.let { "${it.optString("device")} · ${it.optString("at")}" } ?: "never", Modifier.weight(1f))
+            KitStatTile("${counts?.first ?: 0}", "apps in the profile", if (counts == null) KitState.IDLE else KitState.OK,
+                Modifier.weight(1f), tag = "apps") { open("setup", "apps") }
+            KitStatTile("${counts?.second ?: 0}", if (drift == 0) "settings in sync" else "settings captured",
+                if (counts == null) KitState.IDLE else if (drift == 0) KitState.OK else KitState.WARN,
+                Modifier.weight(1f), tag = "settings") { open("profiles", "working") }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Tile("Last restore", restore?.let { "${it.optString("device")} · ${it.optString("sha").take(7)}" } ?: "never", Modifier.weight(1f))
-            Tile("Drift", remember(tick, model.version.intValue) { profilesDriftCount(ctx, model).let { if (it == 0) "in sync" else "$it differ" } }, Modifier.weight(1f)) { open("profiles", "diff") }
+            KitStatTile("$drift", if (drift == 0) "keys differ · in sync" else "keys differ", if (drift == 0) KitState.OK else KitState.WARN,
+                Modifier.weight(1f), tag = "drift") { open("profiles", "diff") }
+            KitStatTile("$perms", "permissions in the profile", if (perms == 0) KitState.IDLE else KitState.OK,
+                Modifier.weight(1f), tag = "perms") { open("setup", "perms") }
         }
-        Pill(if (busy) "Backing up…" else "Backup now", AccountPageTags.BACKUP) {
-            if (busy) return@Pill
-            busy = true; result = "…"
-            scope.launch {
-                result = withContext(Dispatchers.IO) { DeviceVault(ctx).backup(AccountDevice.id(ctx), false).optString("result") }
-                busy = false; tick++
+        Text(listOf(
+            "vault fetched " + (fetched?.optString("at")?.ifBlank { null } ?: "never"),
+            "last restore " + (restore?.let { "${it.optString("device")} · ${it.optString("sha").take(7)}" } ?: "never"),
+        ).joinToString(" · "), color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodySmall)
+        KitActionBar(listOf(
+            KitAction(if (busy) "Backing up…" else "Backup now", AccountPageTags.BACKUP, !busy) {
+                busy = true; result = "…"
+                scope.launch {
+                    result = withContext(Dispatchers.IO) { DeviceVault(ctx).backup(AccountDevice.id(ctx), false).optString("result") }
+                    busy = false; tick++
+                }
+            },
+            KitAction("Restore", "profile:restore") { open("setup", "runbook") },
+            KitAction("Migrate this phone", "profile:migrate") { open("setup", "runbook") },
+        ))
+        SaidBanner(result, "profile:result")
+
+        KitSectionHeader(about?.label ?: "About", "", eyebrow = true)
+        KitCard {
+            if (about == null) KitSettingsRow("No about topic is declared")
+            else if (rows.isEmpty() || shown == null) KitSettingsRow("Nothing fetched yet", "Account ▸ connect", onClick = { open("account", "connect") })
+            for (row in rows) {
+                if (about == null || shown == null) break
+                val full = if (row.path.isBlank()) about.id else about.id + AccountDrift.SEP + row.path
+                val editable = (row.kind == InfoMask.Kind.SHOWN || row.kind == InfoMask.Kind.EMPTY) && '[' !in row.path
+                KitListRow(fieldLabel(row.path.ifBlank { about.id }), tag = full,
+                    secondary = if (row.kind == InfoMask.Kind.PENDING) row.text else "",
+                    onClick = if (editable) ({ editing = full }) else null,
+                    onLongClick = { copyPath(ctx, full) }) {
+                    AboutValue(row, full, shown, editable)
+                }
             }
         }
-        Pill("Restore", "profile:restore") { open("setup", "runbook") }
-        Pill("Migrate this phone", "profile:migrate") { open("setup", "runbook") }
-        if (result.isNotBlank()) Dense(result)
     }
 
     if (picking) {
@@ -292,7 +334,8 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
             title = { Text("Which device is this phone?") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (devices.isEmpty()) Dense("the vault declares no devices yet (fetch it on Account ▸ connect)", true)
+                    if (devices.isEmpty()) Text("The vault declares no devices yet: fetch it on Account ▸ connect.",
+                        color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodySmall)
                     for (d in devices) KitSelectableTile(d.label.ifBlank { d.id },
                         when {
                             d.id == deviceId && resolved.source == AccountDevice.SRC_DERIVED -> "${d.id} · derived from model ${resolved.model}"
@@ -315,7 +358,7 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
         var value by remember(path) { mutableStateOf(AccountDrift.leaves(shown)[path]?.let(AccountDrift::text).orEmpty()) }
         AlertDialog(
             onDismissRequest = { editing = null },
-            title = { Text(path) },
+            title = { Text(fieldLabel(path)) },
             text = { OutlinedTextField(value, { value = it }) },
             confirmButton = {
                 TextButton(enabled = !InfoMask.declared.hides(path, value), onClick = {
@@ -329,118 +372,152 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
 
 // ── Account ▸ connect ────────────────────────────────────────────────────
 
+/** The primary forge as a segmented pick, its repo and branch under it. Shared by connect and Settings. */
 @Composable
 private fun OriginPicker(tick: Int, changed: () -> Unit) {
     val ctx = LocalContext.current
     val decl = remember { ConnectWays.decl() }
     val primary = remember(tick) { DeviceVault(ctx).primary()?.id }
-    for (f in decl.forges) {
-        val usable = f.repo != null
-        KitSelectableTile(f.id, if (usable) "${f.repo} · ${decl.branch}" else "no vault repo declared on ${f.id} yet", f.id == primary, {
-            if (usable) { AccountVault(ctx).putConnection("forge.primary", f.id); changed() }
-        })
-    }
+    KitSegmented(decl.forges.map { it.id to it.id.replaceFirstChar { c -> c.uppercase() } }, primary, { id ->
+        if (decl.forge(id)?.repo != null) { AccountVault(ctx).putConnection("forge.primary", id); changed() }
+    }, tag = "origin", enabled = { decl.forge(it)?.repo != null })
+    val f = decl.forge(primary)
+    val p = LocalKitPalette.current
+    Text(f?.repo ?: "no vault repo declared on ${primary ?: "any forge"} yet", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+    Text("branch ${decl.branch}", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AccountConnectPage() {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf(Said(KitState.IDLE, "")) }
     var tick by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<String?>(null) }
     val ways = remember { ConnectWays.ways() }
     val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+    val p = LocalKitPalette.current
 
     fun launchWay(block: () -> ConnectWays.Outcome) {
-        status = "…"
-        scope.launch { status = withContext(Dispatchers.IO) { runCatching(block).getOrElse { ConnectWays.Outcome(false, "✗ ${it.javaClass.simpleName}") } }.line; tick++ }
+        status = Said(KitState.BUSY, "working")
+        scope.launch {
+            val o = withContext(Dispatchers.IO) { runCatching(block).getOrElse { ConnectWays.Outcome(false, it.javaClass.simpleName) } }
+            status = Said(if (o.ok) KitState.OK else KitState.BAD, said(o.line).text); tick++
+        }
     }
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         launchWay {
             val text = runCatching { ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull()
-            if (text.isNullOrEmpty()) ConnectWays.Outcome(false, "✗ could not read ${uri.lastPathSegment.orEmpty()}") else ConnectWays.importFile(ctx, text)
+            if (text.isNullOrEmpty()) ConnectWays.Outcome(false, "could not read ${uri.lastPathSegment.orEmpty()}") else ConnectWays.importFile(ctx, text)
         }
     }
     val signInHost = remember {
         object : SignInHost {
-            override fun onSignedIn(result: SignInResult) { status = ConnectWays.signedIn(ctx, result).line; tick++ }
+            override fun onSignedIn(result: SignInResult) { status = said(ConnectWays.signedIn(ctx, result).line); tick++ }
         }
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag(AccountPageTags.CONNECT),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        for ((forge, group) in ways.groupBy { it.forge }) {
-            KitSectionHeader(forge?.replaceFirstChar { it.uppercase() } ?: "File", group.mapNotNull { it.note.ifBlank { null } }.joinToString(" · "))
-            for (way in group) {
-                when (val h = ConnectWays.handler(way.kind)) {
-                    ConnectWays.Handler.GhLogin -> Pill(way.label, AccountPageTags.way(way.kind)) {
-                        launchWay { ConnectWays.ghLogin(ctx) { code, page -> main.post { status = ConnectWays.ghPrompt(ctx, code, page) } } }
-                    }
-                    ConnectWays.Handler.Pat, ConnectWays.Handler.Ssh, ConnectWays.Handler.GiteaToken ->
-                        Pill(if (h == ConnectWays.Handler.Ssh) "${way.label} (read only)" else way.label, AccountPageTags.way(way.kind)) { dialog = way.kind }
-                    ConnectWays.Handler.AutheliaWeb -> {
-                        val ids = remember { SignIn.offered(emptyList()).filter { it.kind == SignIn.Kind.AUTHELIA_WEB }.map { it.id } }
-                        if (ids.isEmpty()) Dense("${way.label}: not offered by this build's sign-in declaration", true)
-                        else SignInWays(host = signInHost, policy = ids, pill = { _, tag, onClick -> Pill(way.label, tag, onClick) })
-                    }
-                    ConnectWays.Handler.File -> Pill(way.label, AccountPageTags.way(way.kind)) {
-                        filePicker.launch(arrayOf("application/json", "text/*", "*/*"))
-                    }
-                    is ConnectWays.Handler.Unwired -> Dense(h.why, true)
-                }
-            }
-        }
-        KitSectionHeader("Origin", "the primary forge: where Fetch now reads and Backup writes")
-        OriginPicker(tick) { tick++ }
-        Pill("Fetch now", AccountPageTags.FETCH) { launchWay { ConnectWays.fetchNow(ctx) } }
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val last = remember(tick) { ConnectWays.lastFetch(ctx) }
-        Dense(last?.let { "last fetch ${it.optString("at")}: ${it.optString("line")}" } ?: "no fetch yet", true)
-        if (status.isNotBlank()) Dense(status)
-    }
-
-    dialog?.let { kind ->
-        var secret by remember(kind) { mutableStateOf("") }
-        var pass by remember(kind) { mutableStateOf("") }
-        val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri ?: return@rememberLauncherForActivityResult
-            secret = runCatching { ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull()
-                ?.let(ConnectWays::extractSshKey).orEmpty()
+        val primary = remember(tick) { DeviceVault(ctx).primary()?.id }
+        when {
+            last == null -> KitStatusBanner("Not connected", KitState.WARN, tag = "connect",
+                action = KitAction("Fetch now", "connect:banner:fetch") { launchWay { ConnectWays.fetchNow(ctx) } })
+            last.optBoolean("ok", false) -> KitStatusBanner(
+                "Connected · ${primary?.replaceFirstChar { it.uppercase() } ?: "vault"} · fetched ${last.optString("at")}", KitState.OK, tag = "connect")
+            else -> KitStatusBanner("Last fetch failed · ${said(last.optString("line")).text}", KitState.BAD, tag = "connect",
+                action = KitAction("Retry", "connect:banner:fetch") { launchWay { ConnectWays.fetchNow(ctx) } })
         }
-        val ssh = kind == ConnectWays.GITHUB_SSH
-        AlertDialog(
-            onDismissRequest = { dialog = null },
-            title = { Text(ways.firstOrNull { it.kind == kind }?.label ?: kind) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (ssh) Dense("Read only: a shallow bare clone, the one file read, then deleted. Backups need a token.", true)
-                    else Dense("Filed in this phone's encrypted vault once it works; never shown back.", true)
-                    OutlinedTextField(secret, { secret = it }, label = { Text(if (ssh) "private key" else "token") },
-                        visualTransformation = PasswordVisualTransformation(), singleLine = !ssh)
-                    if (ssh) {
-                        TextButton(onClick = { keyPicker.launch("*/*") }) { Text("Import key from file…") }
-                        OutlinedTextField(pass, { pass = it }, label = { Text("passphrase (empty if none)") },
-                            visualTransformation = PasswordVisualTransformation(), singleLine = true)
+        if (status.text.isNotBlank()) KitStatusBanner(status.text, status.state, tag = "connect:status")
+
+        for ((forge, group) in ways.groupBy { it.forge }) {
+            val readOnly = group.all { ConnectWays.handler(it.kind) == ConnectWays.Handler.Ssh }
+            KitCard {
+                Text(forge?.replaceFirstChar { it.uppercase() } ?: "File", color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(if (forge == null) "offline" else if (readOnly) "read only" else "read and write",
+                    color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (way in group) {
+                        val tile = Modifier.widthIn(max = 220.dp).testTag(AccountPageTags.way(way.kind))
+                        when (val h = ConnectWays.handler(way.kind)) {
+                            ConnectWays.Handler.GhLogin -> KitSelectableTile(way.label, way.note, false, {
+                                launchWay { ConnectWays.ghLogin(ctx) { code, page -> main.post { status = said(ConnectWays.ghPrompt(ctx, code, page)) } } }
+                            }, tile)
+                            ConnectWays.Handler.Pat, ConnectWays.Handler.Ssh, ConnectWays.Handler.GiteaToken ->
+                                KitSelectableTile(way.label, way.note, dialog == way.kind, { dialog = if (dialog == way.kind) null else way.kind }, tile)
+                            ConnectWays.Handler.AutheliaWeb -> {
+                                val ids = remember { SignIn.offered(emptyList()).filter { it.kind == SignIn.Kind.AUTHELIA_WEB }.map { it.id } }
+                                if (ids.isEmpty()) KitSelectableTile(way.label, "not offered by this build's sign-in declaration", false, {}, tile)
+                                else SignInWays(host = signInHost, policy = ids, pill = { _, tag, onClick ->
+                                    KitSelectableTile(way.label, way.note, false, onClick, Modifier.widthIn(max = 220.dp).testTag(tag))
+                                })
+                            }
+                            ConnectWays.Handler.File -> KitSelectableTile(way.label, way.note, false, {
+                                filePicker.launch(arrayOf("application/json", "text/*", "*/*"))
+                            }, tile)
+                            is ConnectWays.Handler.Unwired -> KitSelectableTile(way.label, h.why, false, {}, tile)
+                        }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val s = secret; val pw = pass
-                    secret = ""; pass = ""; dialog = null
+                val open = dialog
+                if (open != null && group.any { it.kind == open }) WayForm(open, ways.firstOrNull { it.kind == open }?.label ?: open,
+                    onCancel = { dialog = null }) { s, pw ->
+                    dialog = null
                     launchWay {
-                        when (ConnectWays.handler(kind)) {
+                        when (ConnectWays.handler(open)) {
                             ConnectWays.Handler.Pat -> ConnectWays.pat(ctx, s)
                             ConnectWays.Handler.Ssh -> ConnectWays.ssh(ctx, s, pw)
                             ConnectWays.Handler.GiteaToken -> ConnectWays.giteaToken(ctx, s)
-                            else -> ConnectWays.Outcome(false, "✗ $kind takes no secret")
+                            else -> ConnectWays.Outcome(false, "$open takes no secret")
                         }
                     }
-                }) { Text(if (ssh) "Clone & read" else "Read") }
+                }
+            }
+        }
+        KitSectionHeader("Origin", "", eyebrow = true)
+        OriginPicker(tick) { tick++ }
+        KitActionBar(listOf(KitAction("Fetch now", AccountPageTags.FETCH) { launchWay { ConnectWays.fetchNow(ctx) } }))
+        Text(last?.let { "last fetch ${it.optString("at")}: ${said(it.optString("line")).text}" } ?: "no fetch yet",
+            color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** The selected way's form, inside its forge card: a token, or a key + passphrase for SSH. */
+@Composable
+private fun WayForm(kind: String, label: String, onCancel: () -> Unit, submit: (String, String) -> Unit) {
+    val ctx = LocalContext.current
+    val p = LocalKitPalette.current
+    var secret by remember(kind) { mutableStateOf("") }
+    var pass by remember(kind) { mutableStateOf("") }
+    val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        secret = runCatching { ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull()
+            ?.let(ConnectWays::extractSshKey).orEmpty()
+    }
+    val ssh = kind == ConnectWays.GITHUB_SSH
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
+        Text(if (ssh) "Read only: a shallow bare clone, the one file read, then deleted. Backups need a token."
+             else "Filed in this phone's encrypted vault once it works; never shown back.",
+            color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(secret, { secret = it }, label = { Text(if (ssh) "private key" else "token") },
+            visualTransformation = PasswordVisualTransformation(), singleLine = !ssh, modifier = Modifier.fillMaxWidth())
+        if (ssh) {
+            TextButton(onClick = { keyPicker.launch("*/*") }) { Text("Import key from file…") }
+            OutlinedTextField(pass, { pass = it }, label = { Text("passphrase (blank if none)") },
+                visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        KitActionBar(listOf(
+            KitAction(if (ssh) "Clone & read" else "Read", "connect:form:go:$kind") {
+                val s = secret; val pw = pass
+                secret = ""; pass = ""
+                submit(s, pw)
             },
-            dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
-        )
+            KitAction("Cancel", "connect:form:cancel:$kind") { secret = ""; pass = ""; onCancel() },
+        ))
     }
 }
 
@@ -466,45 +543,64 @@ fun AccountSettingsPage(version: String) {
     var tick by remember { mutableIntStateOf(0) }
     var typed by remember { mutableStateOf(AccountDevice.id(ctx)) }
     var token by remember { mutableStateOf("") }
-    var line by remember { mutableStateOf("") }
+    var line by remember { mutableStateOf(Said(KitState.IDLE, "")) }
     val vault = remember { AccountVault(ctx) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag(AccountPageTags.SETTINGS),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KitSectionHeader("Device id", "overrides the pick on Account ▸ profile")
-        OutlinedTextField(typed, { typed = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Pill("Save device id", "settings:device") {
-            if (typed.isNotBlank() && typed.trim() != DeviceProfile.DEFAULT_ID) { AccountDevice.setId(ctx, typed); line = "✓ device id = ${typed.trim()}" }
-            else line = "✗ a device id, not blank and not DEFAULT"
+        if (line.text.isNotBlank()) KitStatusBanner(line.text, line.state, tag = "settings")
+        KitSectionHeader("Device", "", eyebrow = true)
+        KitCard {
+            KitSettingsRow("Device id", remember(tick) { AccountDevice.id(ctx) }.ifBlank { "not picked" } + " · overrides the pick on Account ▸ profile")
+            OutlinedTextField(typed, { typed = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("device id") })
+            KitActionBar(listOf(KitAction("Save device id", "settings:device") {
+                if (typed.isNotBlank() && typed.trim() != DeviceProfile.DEFAULT_ID) { AccountDevice.setId(ctx, typed); line = Said(KitState.OK, "device id = ${typed.trim()}"); tick++ }
+                else line = Said(KitState.BAD, "a device id, not blank and not DEFAULT")
+            }))
         }
-        KitSectionHeader("Primary forge", "where Fetch now reads and Backup writes")
-        OriginPicker(tick) { tick++ }
-        KitSectionHeader("Auto-backup", "capture, compare, commit only when something changed")
-        val mode = remember(tick) { AutoBackup.mode(ctx) }
-        for ((id, label) in listOf(AutoBackup.OFF to "Off", AutoBackup.DAILY to "Daily", AutoBackup.WIFI to "On Wi-Fi")) {
-            KitSelectableTile(label, if (id == AutoBackup.WIFI) "daily, only on an unmetered network" else "", mode == id, {
+        KitSectionHeader("Vault", "", eyebrow = true)
+        KitCard {
+            KitSettingsRow("Primary forge", "where Fetch now reads and Backup writes")
+            OriginPicker(tick) { tick++ }
+        }
+        KitSectionHeader("Backup", "", eyebrow = true)
+        KitCard {
+            KitSettingsRow("Auto-backup", "capture, compare, commit only when something changed; Wi-Fi = daily, unmetered only")
+            val mode = remember(tick) { AutoBackup.mode(ctx) }
+            KitSegmented(listOf(AutoBackup.OFF to "Off", AutoBackup.DAILY to "Daily", AutoBackup.WIFI to "Wi-Fi"), mode, { id ->
                 vault.putConnection("backup.auto", id); AccountHost.autoBackupChanged(ctx); tick++
+            }, tag = "autobackup")
+        }
+        KitSectionHeader("Fleet token", "", eyebrow = true)
+        KitCard {
+            val held = remember(tick) { DeviceVault(ctx).credentials() }
+            for (f in held.keys().asSequence().toList()) {
+                val has = held.optBoolean(f)
+                KitListRow(f.replaceFirstChar { it.uppercase() }, secondary = "filed encrypted; never shown back", tag = "token:$f",
+                    pill = if (has) "held" to KitState.OK else "none" to KitState.IDLE)
+            }
+            OutlinedTextField(token, { token = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(), label = { Text("paste a token") })
+            KitActionBar(listOf(KitAction("File token for the primary forge", "settings:token") {
+                val f = DeviceVault(ctx).primary()
+                line = when {
+                    f == null -> Said(KitState.BAD, "no usable forge declared")
+                    token.isBlank() -> Said(KitState.BAD, "paste a token first")
+                    else -> { vault.putConnection("forge.${f.id}.token", token.trim()); Said(KitState.OK, "token filed for ${f.id}") }
+                }
+                token = ""; tick++
+            }))
+        }
+        KitSectionHeader("Debug", "", eyebrow = true)
+        KitCard {
+            val on = remember(tick) { DebugApiSwitch.enabled(ctx) }
+            KitSwitchRow("Debug API", if (AppDebugServer.isRunning()) "the loopback /api/account/… routes · listening" else "the loopback /api/account/… routes · stopped", on, { v ->
+                vault.putConnection("debug.api", if (v) "on" else "off"); DebugApiSwitch.apply(ctx); tick++
             })
         }
-        KitSectionHeader("Fleet token", "the primary forge's token, filed encrypted; never shown back")
-        val held = remember(tick) { DeviceVault(ctx).credentials() }
-        Dense(held.keys().asSequence().joinToString(" · ") { "$it: ${if (held.optBoolean(it)) "held" else "none"}" }, true)
-        OutlinedTextField(token, { token = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(), label = { Text("paste a token") })
-        Pill("File token for the primary forge", "settings:token") {
-            val f = DeviceVault(ctx).primary()
-            line = when {
-                f == null -> "✗ no usable forge declared"
-                token.isBlank() -> "✗ paste a token first"
-                else -> { vault.putConnection("forge.${f.id}.token", token.trim()); "✓ token filed for ${f.id}" }
-            }
-            token = ""; tick++
+        KitSectionHeader("About", "", eyebrow = true)
+        KitCard {
+            KitSettingsRow("Cloud Account", version)
+            KitSettingsRow("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.MODEL}")
         }
-        KitSectionHeader("Debug API", "the loopback /api/account/… routes")
-        val on = remember(tick) { DebugApiSwitch.enabled(ctx) }
-        KitSwitchRow("Debug API", if (AppDebugServer.isRunning()) "listening on loopback" else "stopped", on, { v ->
-            vault.putConnection("debug.api", if (v) "on" else "off"); DebugApiSwitch.apply(ctx); tick++
-        })
-        KitSectionHeader("About", "Cloud Account $version")
-        if (line.isNotBlank()) Dense(line)
     }
 }

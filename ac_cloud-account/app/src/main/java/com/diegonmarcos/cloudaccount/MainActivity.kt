@@ -148,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                 "grants" -> GrantsTab()
                 else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
             }
-            "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} (${BuildConfig.GIT_SHORT_SHA})")
+            "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
             else -> AccountPlaceholderPage(section, page, "no task: undeclared section")
         }
     }

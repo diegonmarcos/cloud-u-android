@@ -148,7 +148,7 @@ fun ConnectionsTab(pickBundle: ((String) -> Unit) -> Unit, export: (String, Stri
 private data class SecretRow(val path: String, val fingerprint: String, val source: String)
 
 /** sha256(value) hex prefix: a fingerprint, never the value. */
-private fun fingerprint(value: String): String =
+internal fun fingerprint(value: String): String =
     MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }.take(12)
 
 /**
