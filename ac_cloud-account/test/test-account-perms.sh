@@ -63,7 +63,7 @@ ok("PermsPlan.capture(ctx" in dp and "build(device, apps, settings, cls, perms =
 
 pg = rd(f"{PROF}/PermsPage.kt")
 ok("PermsPlan.apply(ctx, p, ch)" in pg and "GRANT_ALL" in pg, "page: Grant all runs PermsPlan.apply", "page has no Grant all")
-ok('go("setup", "runbook")' in pg, "page: no channel offers the runbook's shell step", "page: no channel is not offered the runbook")
+ok('go("setup", "adb-shell")' in pg, "page: no channel offers the ADB Shell page", "page: no channel is not offered the ADB Shell page")
 ok("PermsPlan.settingsIntent(item)" in pg and "needs the user" in pg, "page: needs-the-user rows open Settings", "page: needs-the-user rows do not open Settings")
 ok("PermsPlan.applyOne(ctx, i, channel)" in pg, "page: per-row Grant", "page: no per-row Grant")
 
@@ -118,7 +118,7 @@ mutate "capture missing roles" "$PROF/PermsPlan.kt" '.put("roles", roles)' '' ||
 mutate "capture missing battery" "$PROF/PermsPlan.kt" '.put("battery", battery)' '' || MUT=1
 mutate "DeviceProfile perms left empty" "$PROF/DeviceProfile.kt" 'build(device, apps, settings, cls, perms = perms)' 'build(device, apps, settings, cls)' || MUT=1
 mutate "page not mounted" "ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt" '"perms" -> AccountPermsPage(go)' '"perms" -> AccountPlaceholderPage(section, page, "task 6")' || MUT=1
-mutate "no-channel row offers nothing" "$PROF/PermsPage.kt" 'go("setup", "runbook")' '' || MUT=1
+mutate "no-channel row offers nothing" "$PROF/PermsPage.kt" 'go("setup", "adb-shell")' '' || MUT=1
 
 [ "$REAL" -eq 0 ] && [ "$MUT" -eq 0 ] && { echo "PASS"; exit 0; }
 echo "FAIL (real=$REAL mutations=$MUT)"; exit 1

@@ -131,19 +131,6 @@ class ChannelModeTest {
         assertEquals(ShizukuState.NOT_RUNNING, ControlStatus.Probe(B(ShizukuState.UP, answers = false)).get().shizuku)
     }
 
-    @Test fun layersDescribe() {
-        val l = ShellChannelLayers(LOCAL_SERVER, wirelessDebug = true, adbPaired = true, adbConnected = false,
-            serverPort = 38099, serverRunning = true, serverUid = ShellChannelLayers.uidOf("uid=2000(shell) gid=2000"),
-            serverUptime = "01:02", shizuku = ShizukuState.NOT_INSTALLED, route = "local-server")
-        assertEquals(listOf(
-            "Wireless debugging" to "on", "Embedded adb" to "paired, not connected",
-            "Local server :38099" to "running, uid 2000, up 01:02", "Shizuku" to "not installed",
-            "Active route" to "local-server"), l.describe())
-        assertEquals("not running", l.copy(serverRunning = false).describe()[2].second)
-        assertEquals("not paired", l.copy(adbPaired = false, adbConnected = false).describe()[1].second)
-        assertEquals("none", l.copy(route = null).describe()[4].second)
-    }
-
     @Test fun statusLabel() {
         assertEquals("Wireless Dbg: up (local-server)", ChannelSelector.label("local-server", down = false))
         assertEquals("Wireless Dbg: up (embedded-adb)", ChannelSelector.label("embedded-adb", down = false))

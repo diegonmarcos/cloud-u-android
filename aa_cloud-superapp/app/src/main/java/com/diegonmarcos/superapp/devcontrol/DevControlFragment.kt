@@ -96,23 +96,6 @@ class DevControlFragment : Fragment() {
         }
     }
 
-    /** Open Developer options (where Wireless Debugging lives) so the user can
-     *  enable it and read the pairing/connect ports for the self-contained
-     *  embedded-adb channel (libs:shizuku-adb-debug-tools). There is no public
-     *  direct action for the Wireless-Debugging sub-screen, so we jump to
-     *  Developer options; falls back to the top-level Settings if an OEM
-     *  hides/locks the dev-settings action. */
-    private fun openWirelessDebuggingSettings() {
-        val dev = android.content.Intent(
-            android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS,
-        )
-        if (dev.resolveActivity(requireContext().packageManager) != null) {
-            runCatching { startActivity(dev) }
-        } else {
-            runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS)) }
-        }
-    }
-
     /** Read per-app foreground + background time from UsageStatsManager.
      *  Returns (foregroundMs, backgroundMs); both -1 if the user hasn't
      *  granted PACKAGE_USAGE_STATS. Window = last 7 days. */
@@ -745,11 +728,11 @@ class DevControlFragment : Fragment() {
             // moment: the channel that makes an install silent is the switch
             // someone reaching for the recovery install most often needs, and a
             // control that far down the page is one the user reports as absent.
-            // Status is read here (unprivileged); the OS toggle has no API, so
-            // the button is the Developer-options deep link, as everywhere else.
+            // Status is read here (unprivileged); every control (pair, connect, the server, Shizuku)
+            // is on the ADB Shell page, which the button opens.
             row(ctx, it, "Wireless debugging",
                 if (WirelessDebugging.isOn(ctxAny())) "ON" else "OFF")
-            it.addView(actionButton(ctx, "Open W-less Debuging", GRAY) { openWirelessDebuggingSettings() })
+            it.addView(actionButton(ctx, "ADB Shell ›", GRAY) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) })
             // The consolidated cloud-data config that feeds the mesh.
             it.addView(small(ctx, "Config source:"))
             row(ctx, it, "Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
@@ -1697,25 +1680,14 @@ class DevControlFragment : Fragment() {
             // bearer left as a placeholder is a walkthrough nobody can follow.
             val prefs = DevControlPrefs(requireContext())
             it.addView(small(ctx, "Self-contained ADB — enable Wireless Debugging, then pair via /api/adb/pair + /api/adb/connect:"))
-            it.addView(actionButton(ctx, "Open W-less Debuging", GRAY) { openWirelessDebuggingSettings() })
-            // Shizuku shortcut -- the Tier-2 privileged-read path (ShizukuEnergy
-            // binds through it for exact per-app mAh). Shizuku must be STARTED
-            // from its own app after every reboot, so a direct launcher here
-            // saves hunting for it in the drawer.
-            it.addView(actionButton(ctx, "Start Shizuku", GRAY) {
-                val pm = requireContext().packageManager
-                val intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-                if (intent != null) runCatching { startActivity(intent) }
-                else Toast.makeText(requireContext(), "Shizuku not installed", Toast.LENGTH_SHORT).show()
-            })
-
+            it.addView(actionButton(ctx, "ADB Shell ›", GRAY) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) })
             // ── Self-contained ADB how-to (embedded adb client, no Shizuku
             //    app, no PC; works with WireGuard ON). Long-press any row to
             //    copy. Documented here next to the button that enables it.
             val adbPort = DevControlPrefs(requireContext()).port
             val adbTok  = prefs.token
             it.addView(small(ctx, "Self-contained ADB (embedded libadb — no Shizuku app, no PC, works with WireGuard ON). Steps:"))
-            it.addView(small(ctx, "1) Tap 'Open Wireless Debugging' → turn it ON. 2) /api/adb/pair posts the pairing notification. 3) 'Pair device with pairing code' → type the 6-digit code into the notification (or pass code=). IP + ports are discovered over mDNS."))
+            it.addView(small(ctx, "1) Open ADB Shell and press Connect (or turn Wireless Debugging ON by hand). 2) /api/adb/pair posts the pairing notification. 3) 'Pair device with pairing code' → type the 6-digit code into the notification (or pass code=). IP + ports are discovered over mDNS."))
             it.addView(small(ctx, "⚠ HOST GOTCHA: use your Wi-Fi LAN IP (e.g. 192.168.x.x), NOT the 10.x the dialog shows — that 10.x is the WireGuard tun0 and gets ECONNREFUSED. Find the real wlan0 IP with /api/adb/netinfo."))
             row(ctx, it, "0 NetInfo",  "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/netinfo   # find wlan0 IPv4")
             row(ctx, it, "1 Pair",     "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/pair'   # optional &code=<6digits>; port via mDNS")

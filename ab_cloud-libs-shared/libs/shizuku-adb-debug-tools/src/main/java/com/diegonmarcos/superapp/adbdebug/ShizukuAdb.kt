@@ -56,6 +56,9 @@ object ShizukuAdb {
     fun isAvailable(): Boolean =
         runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
+    /** The running Shizuku's API version as "v13", or null when its binder is not alive. */
+    fun version(): String? = runCatching { if (Shizuku.pingBinder()) "v" + Shizuku.getVersion() else null }.getOrNull()
+
     /** This app has been granted Shizuku permission by the user. */
     fun isGranted(): Boolean = runCatching {
         Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED

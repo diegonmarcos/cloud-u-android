@@ -61,7 +61,7 @@ Five island entries (build.json::ui.bottom_nav), child pages as strips (ui.secti
 |---|---|---|
 | **Account** | `profile` · `connect` | Who am I, which device is this, am I connected, when was the last backup / restore |
 | **Profiles** | `devices` · `working` · `diff` | Which device files exist, what the loaded one says, how the phone differs from it |
-| **Setup** | `runbook` · `apps` · `configs` · `perms` | Make this phone match the loaded profile, step by step (the Store look) |
+| **Setup** | `runbook` · `apps` · `configs` · `perms` · `adb-shell` | Make this phone match the loaded profile, step by step (the Store look) |
 | **Secrets** | `connections` · `secrets` · `grants` | The fleet's tokens, keys and endpoints; who may read what |
 | **Settings** | — | Device id, default forge, auto-backup, fleet token, debug API |
 
@@ -198,7 +198,7 @@ is the file's sha; R is read live, never stored).
 ## 6. Declarations added to build.json (ac_cloud-account)
 ```
 ui.bottom_nav: [account, profiles, setup, secrets, settings]
-ui.sections: account[profile, connect] · profiles[devices, working, diff] · setup[runbook, apps, configs, perms]
+ui.sections: account[profile, connect] · profiles[devices, working, diff] · setup[runbook, apps, configs, perms, adb-shell]
              · secrets[connections, secrets, grants] · settings[]
 ui.account.forges: [ {id: github, api: https://api.github.com, repo: <declared>, auth: bearer, ways: [gh_auth_login, github_pat, github_ssh]},
                      {id: gitea,  api: https://git.diegonmarcos.com/api/v1, repo: <owner/repo to confirm>, auth: token, ways: [gitea_token, authelia_web]} ]

@@ -87,6 +87,7 @@ object AdbShellBootstrap {
             if (up) "server up" else "server did not come up" + (if (out.isBlank()) "" else " (${out.take(80)})")
         sp.edit().putString(K_BOOT_RESULT, result).apply()
         Log.i(TAG, "self-bootstrap $result")
+        ChannelLog.shared.add("server", result)
         return up
     }
 

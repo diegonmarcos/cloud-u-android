@@ -25,14 +25,12 @@ import com.diegonmarcos.superapp.system.DeviceTuning
 import com.diegonmarcos.superapp.system.PrivilegedGrants
 import com.diegonmarcos.superapp.system.ScreenLocker
 import kotlinx.coroutines.launch
-import com.diegonmarcos.superapp.adbdebug.AdbPairingService
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.ShizukuShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
 import com.diegonmarcos.superapp.adbdebug.LocalHotspot
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.adbdebug.WifiDirect
-import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import android.content.pm.PackageManager
 
 /** Permissions page — runtime perms, special access, Health Connect,
@@ -127,20 +125,24 @@ class PermissionsFragment : Fragment() {
         }
         permRow(ctx, col, "Notifications (post)", grantedNotifWrite(ctxAny()), "", "Request") { requestNotificationsPermission() }
         col.addView(small(ctx, "Privileged perms — signature perms Android never asks for. Granted by the privileged plane (embedded adb / Shizuku) via pm grant; persist across reboots + updates." +
-            (if (plane == null) " ⚠ No shell channel ready — pair the embedded adb under Dev tools (once, ever) to enable these buttons." else " Channel: ${plane.name()}")))
+            (if (plane == null) " ⚠ No shell channel ready — open ADB Shell and press Connect to enable these buttons." else " Channel: ${plane.name()}")))
         for (pp in priv) {
             val g = PrivilegedGrants.isGranted(ctxAny(), pp)
             permRow(ctx, col, "${pp.label} → ${pp.pkg.substringAfterLast('.')}", g, "", if (g) "OK" else if (plane != null) "Grant" else "needs plane") {
-                if (plane != null) grantPrivileged(plane, pp) else Toast.makeText(ctxAny(), "Pair the embedded adb first (Dev tools)", Toast.LENGTH_LONG).show()
+                if (plane != null) grantPrivileged(plane, pp) else Toast.makeText(ctxAny(), "Open ADB Shell and press Connect first", Toast.LENGTH_LONG).show()
             }
         }
 
-        // ── Privileged plane: pair once (ever), then it self-heals on every boot/launch ──
-        // Our OWN channel (local-server, the PRIMARY): the same self-bootstrap
-        // string /api/adb/status reports — prefs only, no socket on the main thread.
-        row(ctx, col, "Own shell server (local-server)", "self-bootstrap " + com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctxAny()))
-        col.addView(small(ctx, "Privileged plane — " + (plane?.let { "connected via ${it.name()}" } ?: "NOT connected") +
-            ". Pair ONCE, the Shizuku way: ② posts a notification, then phone Settings → Developer options → Wireless debugging → 'Pair device with pairing code' and type the 6-digit code INTO THE NOTIFICATION. IP and ports are discovered over mDNS — nothing to copy. After that every boot/launch reconnects and self-grants the list above."))
+        // ── Privileged channel: ONE page (ADB Shell) owns pairing, connecting and the server ──
+        // This screen keeps a status chip only. Every control that used to live here (Wireless debugging
+        // toggle, Pair, Connect, the server row) is on the ADB Shell page, which every app that links
+        // libs:shizuku-adb-debug-tools has; test-adb-shell-one-place.sh holds it to that.
+        row(ctx, col, "Privileged channel", plane?.let { "✓ ${it.name()}" } ?: "◯ no adb session (server: ${com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctxAny())})")
+        col.addView(permButtonRow(ctx,
+            permButton(ctx, "ADB Shell ›", null) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) },
+        ))
+        // Pairing network helpers: Wireless debugging needs a Wi-Fi network, and these CREATE one (they
+        // are not channel controls). The connecting itself is on the ADB Shell page.
         // Step ⓪ (optional): no external WiFi to join? Spin up a device-local
         // hotspot so the radio is ON + attached to a network, which Wireless
         // Debugging (adb over WiFi, API 30+) needs. Local-only, not internet-
@@ -163,42 +165,6 @@ class PermissionsFragment : Fragment() {
         if (wifiDirectStatus is WifiDirect.Status.Active) col.addView(small(ctx,
             "WiFi Direct up — SSID: ${wifiDirectStatus.ssid}  ·  password: ${wifiDirectStatus.passphrase}" +
             (wifiDirectStatus.ownerIp?.let { "  ·  owner IP: $it" } ?: "")))
-        // Step 1: Wireless Debugging itself. This used to be a deep link ONLY —
-        // "the app cannot toggle it" was written here as though it were a
-        // platform fact, and it was not: `adb_wifi_enabled` is a Settings.Global
-        // key, this app holds WRITE_SECURE_SETTINGS, and PrivilegedPlaneWorker
-        // has been writing that exact key on every boot the whole time. The
-        // toggle is the same mechanism, reachable by the user.
-        //
-        // The deep link STAYS beside it, because the write is refused on any
-        // device the privileged plane has never reached — and there the system
-        // page is the only door.
-        val wdOn = WirelessDebugging.isOn(ctxAny())
-        row(ctx, col, "Wireless debugging", if (wdOn) "✓ ON" else "◯ OFF")
-        if (wdOn) col.addView(small(ctx,
-            "Turning this OFF also ends the embedded adb channel that installs " +
-            "updates without a dialog. Updates keep working, they just ask first. " +
-            "The toggle refuses while an install is in flight."))
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "① Wireless debugging: " + (if (wdOn) "ON" else "OFF"), wdOn) {
-                toggleWirelessDebugging(!wdOn)
-            },
-            permButton(ctx, "Open W-less Debuging", null) { openWirelessDebuggingSettings() },
-        ))
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "② Pair", plane != null) {
-                // Shizuku-exact: the button only posts the pairing notification;
-                // AdbPairingService discovers the pairing port over mDNS, takes
-                // the code from the notification's RemoteInput, pairs, connects
-                // and arms the plane (App.kt hooks AdbPairingService.onConnected).
-                if (!grantedNotifWrite(ctxAny())) { requestNotificationsPermission(); Toast.makeText(ctxAny(), "Allow notifications first — the pairing code is typed into one", Toast.LENGTH_LONG).show(); return@permButton }
-                runCatching { AdbPairingService.start(ctxAny()) }
-                    .onSuccess { Toast.makeText(ctxAny(), "Pairing notification posted — open 'Pair device with pairing code' and type the code there", Toast.LENGTH_LONG).show() }
-                    .onFailure { Toast.makeText(ctxAny(), "Could not start pairing: ${it.message}", Toast.LENGTH_LONG).show() }
-            },
-            permButton(ctx, "③ Connect plane now", plane != null) { armPlane(); Toast.makeText(ctxAny(), "Connecting + self-granting in background…", Toast.LENGTH_SHORT).show() },
-        ))
-
         // ── Device tuning ────────────────────────────────────────────────
         // The shell-applied settings declared in data/device-tuning.json
         // (phantom-process killer off, ...) — the rows are the declared entries,
@@ -277,8 +243,8 @@ class PermissionsFragment : Fragment() {
         if (silentCh == null) col.addView(small(ctx,
             "No shell channel, so each update opens a confirm dialog and holds a " +
             "PackageInstaller session until you answer — which is why the unattended pass " +
-            "only takes a few apps at a time. Start Shizuku (or pair the embedded adb under " +
-            "Dev tools) and the pass installs the whole fleet with nothing shown. " +
+            "only takes a few apps at a time. Open ADB Shell and press Connect (embedded adb, local server or Shizuku" +
+            ") and the pass installs the whole fleet with nothing shown. " +
             "'Install unknown apps' alone is not enough: USER_ACTION_NOT_REQUIRED is honoured " +
             "only for apps this one already installed, so anything installed by hand prompts " +
             "once regardless."))
@@ -394,9 +360,8 @@ class PermissionsFragment : Fragment() {
                     is LocalHotspot.Status.Active -> {
                         // Local-only hotspot: the phone's AP address is conventionally
                         // 192.168.43.1 — auto-fill it so the pairing host is set.
-                        enableWirelessDebuggingIfPermitted()
                         Toast.makeText(ctxAny(),
-                            "Local WiFi up — SSID: ${status.ssid} · pass: ${status.passphrase}. Now: Wireless debugging → Pair with code → ② Pair → type the code into the notification.", Toast.LENGTH_LONG).show()
+                            "Local WiFi up — SSID: ${status.ssid} · pass: ${status.passphrase}. Now open ADB Shell and press Connect.", Toast.LENGTH_LONG).show()
                     }
                     is LocalHotspot.Status.Failed -> Toast.makeText(ctxAny(),
                         "Couldn't create local WiFi (${status.reason}). Some devices (e.g. certain " +
@@ -451,11 +416,10 @@ class PermissionsFragment : Fragment() {
                         // Debugging dialog shows this same IP (192.168.49.1). Then
                         // enable Wireless Debugging (if we hold WRITE_SECURE_SETTINGS)
                         // and open the pairing page: only the 6-digit code is left.
-                        enableWirelessDebuggingIfPermitted()
                         Toast.makeText(ctxAny(),
-                            "WiFi Direct up (host ${status.ownerIp ?: "?"}). Now: Wireless debugging → ② Pair → type the 6-digit code into the notification.",
+                            "WiFi Direct up (host ${status.ownerIp ?: "?"}). Now open ADB Shell and press Connect.",
                             Toast.LENGTH_LONG).show()
-                        openWirelessDebuggingSettings()
+                        com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny())
                     }
                     is WifiDirect.Status.Failed -> Toast.makeText(ctxAny(),
                         "Couldn't create WiFi Direct group (${status.reason}).", Toast.LENGTH_LONG).show()
@@ -466,51 +430,6 @@ class PermissionsFragment : Fragment() {
         }
     }.getOrElse {
         Toast.makeText(ctxAny(), "WiFi Direct failed: ${it.message}", Toast.LENGTH_LONG).show()
-    }
-
-    /** Deep-link to Developer options (where Wireless Debugging + its pairing
-     *  dialog live). The OS toggle has no app API — this is the closest jump. */
-    /** If we already hold WRITE_SECURE_SETTINGS (granted once by the plane),
-     *  flip adb_wifi_enabled=1 so Wireless Debugging comes up without the user
-     *  toggling it. No-op (silent) otherwise — the user enables it by hand. */
-    private fun enableWirelessDebuggingIfPermitted() = runCatching {
-        if (ctxAny().checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS)
-                == PackageManager.PERMISSION_GRANTED) {
-            android.provider.Settings.Global.putInt(ctxAny().contentResolver, "adb_wifi_enabled", 1)
-        }
-    }.let { }
-
-    /**
-     * The real ON/OFF, reporting WHICH mechanism did it.
-     *
-     * Off the main thread because the ladder can bind Shizuku, and the verdict
-     * comes from [WirelessDebugging.Result] — which re-reads the setting rather
-     * than trusting the write — so the Toast can never claim a change that did
-     * not happen. A toggle that silently no-ops is worse than no toggle: that
-     * exact pattern is what made the stranded-fleet incident take hours to see.
-     */
-    private fun toggleWirelessDebugging(on: Boolean) {
-        val ctx = ctxAny().applicationContext
-        Toast.makeText(ctxAny(), if (on) "Enabling Wireless debugging…" else "Disabling…",
-            Toast.LENGTH_SHORT).show()
-        kotlin.concurrent.thread(name = "wireless-debug-toggle") {
-            // busy = an install batch holds the Fleet lease. Turning the channel
-            // off underneath one would strand a half-finished install with
-            // nothing left to finish it on.
-            val st = com.diegonmarcos.superapp.updater.UpdateProgress.state
-            val busy = com.diegonmarcos.superapp.updater.UpdateProgress.batchLabel != null ||
-                st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Downloading ||
-                st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Installing
-            val r = WirelessDebugging.set(ctx, on, busy = busy)
-            view?.post {
-                Toast.makeText(ctxAny(),
-                    (if (r.ok) "Wireless debugging ${if (r.on) "ON" else "OFF"} via ${r.channel}"
-                     else "NOT changed (${r.channel}) — still ${if (r.on) "ON" else "OFF"}") +
-                        "\n${r.detail}",
-                    Toast.LENGTH_LONG).show()
-                rebuildFragment()
-            }
-        }
     }
 
     /**
@@ -540,11 +459,6 @@ class PermissionsFragment : Fragment() {
         }
     }
 
-    private fun openWirelessDebuggingSettings() {
-        val dev = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-        if (dev.resolveActivity(ctxAny().packageManager) != null) runCatching { startActivity(dev) }
-        else runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS)) }
-    }
     /** One row: "✓/◯ label  state" on the left, its own button on the right. */
     private fun permRow(ctx: Context, host: LinearLayout, label: String, granted: Boolean?, state: String, btn: String, onClick: () -> Unit) {
         val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, dp(1), 0, dp(1)) }

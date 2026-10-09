@@ -18,6 +18,9 @@
 
 
 
+    <string name="adb_shell_preference_title">ADB Shell</string>
+    <string name="adb_shell_preference_summary">Shell channel for rish: status, connect, logs and what this app needs it for</string>
+
     <!-- Termux RUN_COMMAND permission -->
     <string name="permission_run_command_label">Run commands in &TERMUX_APP_NAME; environment</string>
     <string name="permission_run_command_description">execute arbitrary commands within &TERMUX_APP_NAME;

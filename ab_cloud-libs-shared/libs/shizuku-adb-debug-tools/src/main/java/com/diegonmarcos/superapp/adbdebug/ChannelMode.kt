@@ -28,6 +28,8 @@ object ChannelSelector {
     const val EMBEDDED = "embedded-adb"
     const val LOCAL = "local-server"
     const val SHIZUKU = "shizuku"
+    /** The SuperApp's loopback exec route, a terminal's way to the shell (build.json::shizuku_client.providers). */
+    const val BRIDGE = "superapp-bridge"
 
     /** Channel names allowed to RUN COMMANDS in [mode], in order, out of [ladder] (preference order). */
     fun execOrder(mode: ChannelMode, ladder: List<String>): List<String> = when (mode) {
@@ -93,4 +95,20 @@ enum class ShizukuState {
             else -> UP
         }
     }
+}
+
+/** Display names of the four modes; the one place they are spelled. */
+fun ChannelMode.title(): String = when (this) {
+    ChannelMode.LOCAL_SERVER -> "Local server"
+    ChannelMode.EMBEDDED_ONLY -> "Embedded adb"
+    ChannelMode.SHIZUKU -> "Shizuku"
+    ChannelMode.AUTO -> "Auto"
+}
+
+/** What a mode does, one line. */
+fun ChannelMode.hint(): String = when (this) {
+    ChannelMode.LOCAL_SERVER -> "Commands run through the local server on 127.0.0.1; adb or Shizuku only starts it."
+    ChannelMode.EMBEDDED_ONLY -> "Embedded adb only; the local server is skipped."
+    ChannelMode.SHIZUKU -> "The external Shizuku app only."
+    ChannelMode.AUTO -> "Embedded adb, then the local server, then Shizuku."
 }

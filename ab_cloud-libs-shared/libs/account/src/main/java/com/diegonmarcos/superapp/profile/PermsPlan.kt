@@ -94,7 +94,7 @@ object PermsPlan {
             Status.GRANTED -> "✓ ${item.pkg} ${item.name} granted (re-read)"
             Status.ALREADY -> "✓ ${item.pkg} ${item.name} already"
             Status.NEEDS_USER -> "✋ ${item.pkg} ${item.name} needs the user: $detail"
-            Status.NO_CHANNEL -> "✗ ${item.pkg} ${item.name}: no shell channel — run Setup ▸ runbook ▸ shell"
+            Status.NO_CHANNEL -> "✗ ${item.pkg} ${item.name}: no shell channel — open Setup ▸ ADB Shell and Connect"
             Status.FAILED -> "✗ ${item.pkg} ${item.name}: $detail"
         }
     }

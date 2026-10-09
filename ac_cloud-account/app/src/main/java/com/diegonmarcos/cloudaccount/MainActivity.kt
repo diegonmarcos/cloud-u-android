@@ -137,6 +137,7 @@ class MainActivity : AppCompatActivity() {
                 "apps" -> AppsPage()
                 "perms" -> AccountPermsPage(go)
                 "runbook" -> RunbookPage(go)
+                "adb-shell" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { com.diegonmarcos.superapp.adbdebug.AdbShellPage() }
                 else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
             }
             "secrets" -> when (page) {

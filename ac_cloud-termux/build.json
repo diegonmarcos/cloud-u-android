@@ -125,6 +125,30 @@
     ],
     "_doc_binds": "enter.sh binds each stage file (relative to the login's own directory, the #644 cloud-store idiom) onto its guest path; install-in-rootfs.sh creates the mountpoints so proot's file-bind always lands."
   },
+  "privileged_channel": {
+    "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (Settings > ADB Shell). Add a need here and it shows there; nothing about it is typed in Kotlin. A terminal runs no local server of its own, so its ADB Shell page shows none and offers no server buttons.",
+    "needs": [
+      {
+        "id": "rish-shell",
+        "label": "rish: a shell-uid shell inside the terminal",
+        "why": "The terminal exports rish into its rootfs, so a command typed there can run as the shell user through the SuperApp bridge or Shizuku.",
+        "commands": [
+          "rish",
+          "sh -c"
+        ]
+      },
+      {
+        "id": "termux-tooling",
+        "label": "Fleet tooling from the terminal",
+        "why": "Agents and scripts in the terminal use rish for pm, am and settings calls the proot cannot make itself.",
+        "commands": [
+          "pm",
+          "am",
+          "settings"
+        ]
+      }
+    ]
+  },
   "release": {
     "ghcr": {
       "_doc": "PUBLIC on first build. Published arm64-only (the canonical phone image) so the two ABI jobs cannot collide on `latest`; x86_64 ships via the release asset only. step_oras_push creates an ABSENT package with GITHUB_TOKEN (GHCR_CREATE_TOKEN), which links it to THIS public repo and is born public; _ghcr_gate_public anon-pulls after and auto-deletes if it ever comes out private, so the store falls through to the public release rather than waiting on an unreachable mirror. The old `cloud-terminal` package was linked to cloud-infra-desktop and so 403'd every cloud-u-android push; it was deleted 2026-09-02 to free the name.",

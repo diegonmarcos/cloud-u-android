@@ -19,6 +19,6 @@
 -keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
 
-# ShellChannelPanel is Compose and compiled against the host (compileOnly): hosts without Compose never load it.
+# AdbShellPage / AdbShellActivity are Compose and compiled against the host (compileOnly): hosts without Compose never load them.
 -dontwarn androidx.compose.**
 -dontwarn kotlinx.coroutines.**

@@ -117,6 +117,16 @@ object EmbeddedAdbChannel : ShellChannel {
         runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_PAIRED, true).apply() }
     }
 
+    private const val KEY_PORT = "last_connect_port"
+
+    /** Where the live session points: "host:port", or just "host" when the port was found over mDNS and not kept. Null when not connected. */
+    fun endpoint(ctx: Context): String? {
+        if (!isReady(ctx)) return null
+        val host = runCatching { AdbManager.getInstance(ctx).hostAddress }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        val port = runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_PORT, 0) }.getOrDefault(0)
+        return if (port > 0) "$host:$port" else host
+    }
+
     fun everPaired(ctx: Context): Boolean = runCatching {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PAIRED, false)
     }.getOrDefault(false)
@@ -151,7 +161,7 @@ object EmbeddedAdbChannel : ShellChannel {
      */
     fun connect(ctx: Context, host: String, port: Int): Pair<Boolean, String> = runCatching {
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).connect(host, port) }
-        if (ok) markPaired(ctx)
+        if (ok) { markPaired(ctx); runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_PORT, port).apply() } }
         ok to (if (ok) "connected" else "connect returned false")
     }.getOrElse { false to "connect failed: ${it.message}" }
 
@@ -176,7 +186,7 @@ object EmbeddedAdbChannel : ShellChannel {
     fun autoConnect(ctx: Context): Pair<Boolean, String> = runCatching {
         if (isReady(ctx)) return@runCatching true to "already connected"
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).autoConnect(ctx, 10_000) }
-        if (ok) markPaired(ctx)
+        if (ok) { markPaired(ctx); runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_PORT).apply() } }
         ok to (if (ok) "auto-connected via mDNS" else "no _adb-tls-connect service found — Wireless Debugging ON + paired?")
     }.getOrElse { false to "autoconnect failed: ${it.message}" }
 

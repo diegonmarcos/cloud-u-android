@@ -34,6 +34,13 @@
         app:isPreferenceVisible="false"
         app:fragment="com.termux.app.fragments.settings.TermuxWidgetPreferencesFragment"/>
 
+    <!-- THE ADB Shell page (libs:shizuku-adb-debug-tools): connect, status, logs, this app's declared needs. -->
+    <Preference
+        app:key="adb_shell"
+        app:title="@string/adb_shell_preference_title"
+        app:summary="@string/adb_shell_preference_summary"
+        app:persistent="false"/>
+
     <Preference
         app:key="about"
         app:title="@string/about_preference_title"

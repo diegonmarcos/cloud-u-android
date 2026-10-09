@@ -133,7 +133,7 @@ PY
 import json, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 want = {'account': ['profile', 'connect'], 'profiles': ['devices', 'working', 'diff'],
-        'setup': ['runbook', 'apps', 'configs', 'perms'], 'secrets': ['connections', 'secrets', 'grants'], 'settings': []}
+        'setup': ['runbook', 'apps', 'configs', 'perms', 'adb-shell'], 'secrets': ['connections', 'secrets', 'grants'], 'settings': []}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
 ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') in want
       and isinstance(ui.get('account', {}).get('forges'), list)

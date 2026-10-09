@@ -97,6 +97,6 @@ object ShellChannels {
         // The ladder asks it to execute before trusting it; ensureServer replaces a wedged one.
         return ChannelSelector.select(mode, ladder, { it.name() },
             usable = { it.isReady(ctx) && (it !== LocalShellChannel || it.probe(ctx)) },
-            relaunch = { sources -> owns && AdbShellBootstrap.ensureServer(ctx, sources) })
+            relaunch = { sources -> owns && AdbShellBootstrap.ensureServer(ctx, LaunchViaPrefs.order(ctx, sources)) })
     }
 }

@@ -38,6 +38,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application>
+        <!-- The ADB Shell page (AdbShellScreen) as its own screen: opened by every status chip in every app
+             that links this module. Follows the system light/dark theme. -->
+        <activity
+            android:name="com.diegonmarcos.superapp.adbdebug.AdbShellActivity"
+            android:exported="false"
+            android:label="ADB Shell"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <service
             android:name="com.diegonmarcos.superapp.adbdebug.AdbPairingService"
             android:exported="false"

@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
-import com.diegonmarcos.superapp.adbdebug.AdbPairingService
+import com.diegonmarcos.superapp.adbdebug.AdbShellLink
 import com.diegonmarcos.superapp.adbdebug.HostShell
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
@@ -289,15 +289,11 @@ class SetupRunbook(private val ctx: Context) {
             ShellChannels.active(ctx)?.let { selfGrant(it) }
             return State.Done("reconnected with the stored pairing ($msg); ${grantLine()}")
         }
-        if (!WirelessDebugging.isOn(ctx))
-            return State.Failed("Wireless debugging is off: Settings > Developer options > Wireless debugging, " +
-                "turn it on (stay on Wi-Fi), then run this step again")
-        AdbPairingService.start(ctx)
-        val notes = if (notificationsBlocked()) " Notifications are blocked for this app: allow them first, " +
-            "the code field lives in the notification." else ""
-        return State.Running("pairing started: in Wireless debugging tap 'Pair device with pairing code' and type " +
-            "the 6-digit code into this app's notification; the channel and the WRITE_SECURE_SETTINGS self-grant " +
-            "follow on their own.$notes")
+        // Connecting is ONE page's job (ADB Shell: pair, connect, start the server, the logs): the
+        // runbook opens it rather than carrying a second pairing flow, and picks up once a channel is up.
+        AdbShellLink.open(ctx)
+        return State.Running("ADB Shell is open: press Connect there (Wireless debugging on, then pair with the code " +
+            "typed into the notification). The channel and the WRITE_SECURE_SETTINGS self-grant follow on their own.")
     }
 
     /** `pm grant <self> WRITE_SECURE_SETTINGS` over the live channel, so adb_wifi_enabled survives a reboot. */
@@ -310,9 +306,6 @@ class SetupRunbook(private val ctx: Context) {
     private fun grantLine() =
         if (HostShell.canWriteSecureSettings(ctx)) "WRITE_SECURE_SETTINGS held (Wireless debugging re-armed at boot)"
         else "WRITE_SECURE_SETTINGS not held (Wireless debugging will not come back after a reboot)"
-
-    private fun notificationsBlocked(): Boolean = Build.VERSION.SDK_INT >= 33 &&
-        ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
     // ── store ────────────────────────────────────────────────────────────
 

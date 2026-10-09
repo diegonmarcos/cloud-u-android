@@ -137,6 +137,44 @@
       "moe.shizuku.privileged.api"
     ]
   },
+  "privileged_channel": {
+    "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage). Add a need here and it shows there; nothing about it is typed in Kotlin. Each need: id (unique), label, why (one sentence), commands (the shell verbs it runs).",
+    "needs": [
+      {
+        "id": "install-store",
+        "label": "Install Cloud Store",
+        "why": "Account is the first app on an empty phone: it installs Cloud Store through pm install.",
+        "commands": [
+          "pm install",
+          "pm install-write"
+        ]
+      },
+      {
+        "id": "perms-grant",
+        "label": "Profile permissions",
+        "why": "Setup > Perms applies the working profile's permissions to every app.",
+        "commands": [
+          "pm grant"
+        ]
+      },
+      {
+        "id": "appops",
+        "label": "App-ops",
+        "why": "Applies the profile's app-ops that a runtime grant does not cover.",
+        "commands": [
+          "appops set"
+        ]
+      },
+      {
+        "id": "wireless-keepalive",
+        "label": "Keep wireless debugging on",
+        "why": "Grants WRITE_SECURE_SETTINGS to itself so wireless debugging comes back after a reboot.",
+        "commands": [
+          "pm grant"
+        ]
+      }
+    ]
+  },
   "shizuku_diagnostics": {
     "_doc": "Only the per-app local server identity. Without this block the lib falls back to the shared block whose app_process server binds 38099 (SuperApp's); Cloud Store holds 38098. Two apps on one port means the second silently fails to bind, so Account takes 38097 (free in 1_cicd/src/data/debug-ports.json, which starts at 38139 for debug APIs).",
     "bundles": [],
@@ -298,6 +336,12 @@
           {
             "id": "perms",
             "label": "Perms",
+            "icon": "setup"
+          },
+          {
+            "_doc": "ADB Shell - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one the SuperApp (Configs > Network), Cloud Store (Settings) and every status chip draw: status table, connect, active connection, logs, this app's declared needs (privileged_channel above), setup checklist.",
+            "id": "adb-shell",
+            "label": "ADB Shell",
             "icon": "setup"
           }
         ]

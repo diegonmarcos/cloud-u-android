@@ -22,28 +22,26 @@
 
     <string name="store_phone_why_unpublished">Not published in the Cloud fleet yet, so there is nothing to update to.</string>
     <string name="store_phone_why_no_launcher">This app has no launcher screen to open.</string>
-    <string name="store_phone_why_no_shell">Force-stop needs the embedded adb channel. Pair Wireless Debugging (Store ▸ Cloud header) or use App info ▸ Force stop.</string>
+    <string name="store_phone_why_no_shell">Force-stop needs the embedded adb channel. Open ADB Shell (the Wireless Dbg button in the Store header) and Connect, or use App info ▸ Force stop.</string>
     <string name="store_self_stop_install_notice">An install is in progress; it resumes when SuperApp opens again. Stopping…</string>
-    <string name="store_fleet_stop_no_channel">Stop force-stops the app through the privileged shell channel (embedded adb, local shell or Shizuku), and none is connected right now. Pair Wireless Debugging from the Store header to arm it, or open App settings — Android\'s own Force stop is there.</string>
+    <string name="store_fleet_stop_no_channel">Stop force-stops the app through the privileged shell channel (embedded adb, local shell or Shizuku), and none is connected right now. Open ADB Shell from the Store header and Connect to arm it, or open App settings — Android\'s own Force stop is there.</string>
     <string name="store_fleet_not_installed">%1$s is not installed, so Android has no settings page for it yet.</string>
     <string name="store_phone_why_system">A system app cannot be removed, only disabled from App info.</string>
     <string name="store_phone_why_no_host">This build has no Cloud store page to open.</string>
 
     <!-- #565: the shared Store bar (StoreBar), export/import (AppInventory, StoreImport). -->
-    <string name="store_bar_asking_shell">Asking the shell channel…</string>
     <string name="store_bar_auto_update">Auto update: %1$s</string>
     <string name="store_bar_auto_update_toast">Auto-update %1$s</string>
     <string name="store_bar_check_all">↻  Check all</string>
     <string name="store_bar_install_all">⬇  Install all</string>
     <string name="store_bar_download_all">⇣  Download all</string>
-    <string name="store_bar_open">Open ↗</string>
     <string name="store_bar_play_protect">Play Protect: %1$s</string>
     <string name="store_bar_play_protect_unknown">This device does not let the Store read Play Protect\'s install scan. Tap to open its settings.</string>
     <string name="store_bar_play_protect_settings">Play Protect: toggle not allowed here (%1$s). Opened its settings.</string>
     <string name="store_bar_channel_checking">Wireless Dbg: checking...</string>
-    <string name="store_bar_channel_up_caption">One shell path in two layers: embedded adb pairs with Wireless Debugging and (re)starts the uid-2000 local server on loopback; the channel named answered a live `id` as uid 2000, so installs carry no tap.</string>
-    <string name="store_bar_channel_down_caption">Paired, but neither embedded adb nor the local server answers. Reconnect needs Wireless Debugging on; tap to retry.</string>
-    <string name="store_bar_channel_unpaired_caption">No shell channel was ever paired. Tap to pair (the code goes in the notification).</string>
+    <string name="store_bar_channel_up_caption">The channel named answered a live `id` as uid 2000, so installs carry no tap. Tap the button for the ADB Shell page (connect, server, logs).</string>
+    <string name="store_bar_channel_down_caption">Paired, but neither embedded adb nor the local server answers. Tap the button: ADB Shell reconnects it.</string>
+    <string name="store_bar_channel_unpaired_caption">No shell channel was ever paired. Tap the button: ADB Shell pairs it (the code goes in the notification).</string>
     <string name="store_bar_play_protect_off">No install-scan prompt - fleet installs go straight through.</string>
     <string name="store_bar_play_protect_on">Play Protect prompts on every install. Turning it off needs the embedded adb channel (or Shizuku, if you run it); it is device-wide and survives uninstall.</string>
     <string name="store_bar_silent_off">Grant \'Install unknown apps\' for no-tap updates.</string>

@@ -140,12 +140,14 @@ class AdbPairingService : Service() {
     }
 
     private fun show(text: String) {
+        ChannelLog.shared.add("pair", text)
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .notify(NOTIF_ID, notification(text))
     }
 
     /** Done (either way): leave a plain, dismissible result and go away. */
     private fun finish(text: String) {
+        ChannelLog.shared.add("pair", text)
         stopForeground(STOP_FOREGROUND_REMOVE)
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
             RESULT_ID,

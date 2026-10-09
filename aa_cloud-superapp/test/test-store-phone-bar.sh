@@ -5,7 +5,8 @@
 # this tester holds the source-level contracts that a Robolectric run cannot see.
 #
 # T1 ONE BAR (#228). The bar's device controls live in exactly one file of the
-#    store library and both Store fragments draw it. A second copy of any of
+#    store library and both Store fragments draw it. The channel chip is one of them,
+#    and its one tap target is the ADB Shell page (AdbShellLink.open), never a control. A second copy of any of
 #    them is the drift the brief forbids.
 # T2 i18n. Every R.string the store library names exists in its values/
 #    (English is the fleet base, #298/#299), and the new screens draw no
@@ -46,7 +47,7 @@ for frag in ("StoreCloudFragment.kt", "StorePhoneFragment.kt"):
     if re.search(r"StoreBar\.render\(this\b", kt[frag]): ok(frag + " draws StoreBar")
     else: bad(frag + " does not draw the shared StoreBar")
 for needle in ("AutoUpdatePrefs.setEnabled(", "AutoUpdatePrefs.setRequireUnmetered(",
-               "PackageVerifier.setScanning(", "ControlStatus.channelAction(", "ACTION_APPLICATION_DEVELOPMENT_SETTINGS"):
+               "PackageVerifier.setScanning(", "AdbShellLink.open("):
     owners = sorted(f for f, t in kt.items() if needle in t)
     if owners == ["StoreBar.kt"]: ok(needle + " lives only in StoreBar")
     else: bad(needle + " is in %s — a second copy of the bar" % owners)

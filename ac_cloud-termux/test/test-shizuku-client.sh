@@ -142,7 +142,7 @@ has "$ADB/AdbShellBootstrap.kt" 'now - last < RETRY_MS) return false' "no retry 
 has "$ADB/AdbShellBootstrap.kt" 'RETRY_MS = 60_000L' "retry window is 60 s"
 has "$ADB/AdbShellBootstrap.kt" 'Log.i(TAG, "self-bootstrap $result")' "one log line per attempt"
 has "$ADB/AdbShellBootstrap.kt" 'fun bootstrapState(ctx: Context): String' "bootstrap result is exposed as one short string"
-has "$ADB/ShellChannel.kt" 'relaunch = { sources -> owns && AdbShellBootstrap.ensureServer(ctx, sources) }' "the ladder's active() triggers the self-bootstrap — only in an app that owns a server (declares its own local_server)"
+has "$ADB/ShellChannel.kt" 'relaunch = { sources -> owns && AdbShellBootstrap.ensureServer(ctx, LaunchViaPrefs.order(ctx, sources)) }' "the ladder's active() triggers the self-bootstrap — only in an app that owns a server (declares its own local_server)"
 has "$ADB/LocalShellChannel.kt" 'self-bootstrap ${AdbShellBootstrap.bootstrapState(ctx)}' "/api/adb/status local-server row says attempted + result"
 has "$SUPERAPP/app/src/main/java/com/diegonmarcos/superapp/system/PrivilegedPlaneWorker.kt" 'ShellChannels.active(ctx)?.name()' "PrivilegedPlaneWorker consults the ladder at start"
 has "$SUPERAPP/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt" 'AdbShellBootstrap.bootstrapState(ctxAny())' "Permissions page row shows the same bootstrap string"

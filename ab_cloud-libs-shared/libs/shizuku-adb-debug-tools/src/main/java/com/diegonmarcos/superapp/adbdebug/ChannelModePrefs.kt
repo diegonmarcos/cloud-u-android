@@ -28,3 +28,23 @@ object ChannelModePrefs {
         listeners.forEach { runCatching { it(mode) } }
     }
 }
+
+/** Who launches the local server (Embedded adb or Shizuku): the page's choice, kept in the same prefs. */
+object LaunchViaPrefs {
+    private const val PREFS = "adb_shell"
+    private const val KEY = "launch_via"
+
+    fun current(ctx: Context): LaunchVia = runCatching {
+        LaunchVia.parse(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null))
+    }.getOrDefault(LaunchVia.ADB)
+
+    fun set(ctx: Context, via: LaunchVia) {
+        runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, via.id).commit() }
+    }
+
+    /** [sources] (channels allowed to launch the server) with the chosen launcher first. */
+    fun order(ctx: Context, sources: List<ShellChannel>): List<ShellChannel> {
+        val first = if (current(ctx) == LaunchVia.SHIZUKU) ChannelSelector.SHIZUKU else ChannelSelector.EMBEDDED
+        return sources.sortedBy { if (it.name() == first) 0 else 1 }
+    }
+}

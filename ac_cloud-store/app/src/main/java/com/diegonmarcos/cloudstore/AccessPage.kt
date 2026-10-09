@@ -113,7 +113,7 @@ private fun PermsCard(ctx: Context, title: String, pkg: String?, fleetPkg: Strin
 }
 
 /**
- * Android Perms: an action row (permission filter, the Wireless Debugging button, Grant missing
+ * Android Perms: an action row (permission filter, the Wireless Debugging chip that opens ADB Shell, Grant missing
  * perms) over the fleet's apps, A-Z. The grant plan, filter and sort are [PermsGrant]'s.
  */
 @Composable
@@ -143,7 +143,7 @@ private fun AndroidPermsPage() {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(s4), verticalAlignment = Alignment.CenterVertically) {
                 PermFilter(options, selected, { selected = it }, Modifier.weight(1f))
                 AndroidView(modifier = Modifier.weight(1.4f), factory = { c ->
-                    StoreBar.channelHost(c, onChange = { chan++ }) { openSettings(c, "android.settings.APPLICATION_DEVELOPMENT_SETTINGS", null) }
+                    StoreBar.channelHost(c, onChange = { chan++ })
                 })
                 val can = up && !running && plan.steps.isNotEmpty()
                 Text(if (running) "Granting..." else "Grant missing perms (${plan.steps.size})",

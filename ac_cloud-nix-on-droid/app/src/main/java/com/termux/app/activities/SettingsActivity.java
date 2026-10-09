@@ -59,6 +59,7 @@ public class SettingsActivity extends AppCompatActivity {
             if (context == null) return;
 
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
+            configureAdbShellPreference(context);
 
             new Thread() {
                 @Override
@@ -71,6 +72,17 @@ public class SettingsActivity extends AppCompatActivity {
                     configureDonatePreference(context);
                 }
             }.start();
+        }
+
+        /** ADB Shell: the lib's one page for the privileged channel (status, connect, logs, declared needs). */
+        private void configureAdbShellPreference(@NonNull Context context) {
+            Preference adbShellPreference = findPreference("adb_shell");
+            if (adbShellPreference != null) {
+                adbShellPreference.setOnPreferenceClickListener(preference -> {
+                    com.diegonmarcos.superapp.adbdebug.AdbShellLink.INSTANCE.open(context);
+                    return true;
+                });
+            }
         }
 
         private void configureTermuxAPIPreference(@NonNull Context context) {

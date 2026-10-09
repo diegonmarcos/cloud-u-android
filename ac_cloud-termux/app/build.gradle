@@ -83,6 +83,16 @@ android {
         implementation project(":libs:core")
         // Shizuku client + rish bridge, data-driven from build.json::shizuku_client.
         implementation project(":libs:shizuku-adb-debug-tools")
+        // The ADB Shell page (AdbShellActivity) is Compose, compiled against the HOST's Compose
+        // (compileOnly in the lib): this terminal supplies the runtime. ONE BOM for the fleet
+        // (test-compose-bom-one-version.sh): FlowRow is experimental and has no binary compatibility
+        // across Compose versions, so the lib and the host must run the same one.
+        implementation platform('androidx.compose:compose-bom:2025.11.01')
+        implementation 'androidx.compose.ui:ui'
+        implementation 'androidx.compose.foundation:foundation'
+        implementation 'androidx.compose.material3:material3'
+        implementation 'androidx.compose.runtime:runtime'
+        implementation 'androidx.activity:activity-compose:1.9.3'
         // core's androidx.core 1.13.1 brings concurrent-futures and with it
         // listenablefuture 1.0, whose one class guava 24.1-jre (above) already
         // carries: a duplicate-class build failure. The empty 9999 artifact is

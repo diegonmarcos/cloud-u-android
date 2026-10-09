@@ -162,8 +162,10 @@ class MainActivity : AppCompatActivity() {
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth().padding(top = StoreDensity.dpValue(StoreDensity.S8).dp),
             )
-            // #894 the pairing flow for this app's own shell channel (silent installs).
-            com.diegonmarcos.cloudstore.shell.ShellChannelSection(ctx)
+            // #894 this app's own shell channel (silent installs): THE ADB Shell page, the same composable the
+            // SuperApp and Cloud Account draw, with this app's declared needs and its own server port.
+            Text("ADB Shell", fontSize = StoreDensity.T_TITLE.sp, modifier = Modifier.padding(top = StoreDensity.dpValue(StoreDensity.S12).dp))
+            com.diegonmarcos.superapp.adbdebug.AdbShellPage()
         }
     }
 

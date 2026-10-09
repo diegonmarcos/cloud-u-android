@@ -1,8 +1,8 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    // The channel panel (ShellChannelPanel / ChannelModeBar) is Compose, compiled against the host's Compose
-    // (compileOnly below): only Cloud Store and the SuperApp draw it; every other consumer never loads it.
+    // The channel panel (AdbShellPage / ChannelModeBar) is Compose, compiled against the host's Compose
+    // (compileOnly below): every app that links the module can open it (Cloud Store, Cloud Account, the SuperApp); one that never opens it never loads it.
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
@@ -69,6 +69,20 @@ def shizukuClientJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/bui
 def shizukuClient    = shizukuClientJson.shizuku_client ?: [:]
 def shizukuClientB64 = groovy.json.JsonOutput.toJson(shizukuClient).bytes.encodeBase64().toString()
 
+// ── Declared needs (consumer-owned) ─────────────────────────────────
+// What the CONSUMING app says it needs the privileged channel for
+// (build.json::privileged_channel.needs[]). Same re-parse of rootDir's
+// build.json as shizuku_client above; baked into BuildConfig so the ADB Shell
+// page (AdbShellPage > Declared needs) lists the app's own declaration and
+// nothing is typed in Kotlin. An app with no block bakes "{}" and lists none.
+// build.json first; privileged-channel.json beside it when build.json has no such block (Nix-on-Droid: its
+// build.json is an input of the rootfs library's content address, so editing it would republish ~400 MB).
+def privilegedChannel    = shizukuClientJson.privileged_channel
+if (privilegedChannel == null && file("${rootDir}/privileged-channel.json").exists())
+    privilegedChannel = new groovy.json.JsonSlurper().parse(file("${rootDir}/privileged-channel.json"))
+privilegedChannel = privilegedChannel ?: [:]
+def privilegedChannelB64 = groovy.json.JsonOutput.toJson(privilegedChannel).bytes.encodeBase64().toString()
+
 android {
     namespace 'com.diegonmarcos.superapp.adbdebug'
     compileSdk 36
@@ -82,6 +96,7 @@ android {
         buildConfigField "String", "ADB_SHELL_SERVER_NICE",  "\"${adbServerNice}\""
         buildConfigField "String", "SFC_CONFIG_B64",          "\"${sfcCfgB64}\""
         buildConfigField "String", "SHIZUKU_CLIENT_B64",      "\"${shizukuClientB64}\""
+        buildConfigField "String", "CHANNEL_NEEDS_B64",       "\"${privilegedChannelB64}\""
     }
     buildFeatures {
         buildConfig = true
@@ -104,6 +119,9 @@ dependencies {
     compileOnly 'androidx.compose.foundation:foundation'
     compileOnly 'androidx.compose.material3:material3'
     compileOnly 'androidx.compose.runtime:runtime'
+    // AdbShellActivity (the page opened from a status chip) is a ComponentActivity hosting the Compose
+    // page: every consumer already has androidx.activity (AppCompat / activity-compose), so it is not bundled here.
+    compileOnly 'androidx.activity:activity:1.9.3'
     implementation project(':libs:core')
     // HostShell: the re-arm job a host app schedules (WorkManager), shared by Cloud Store and Cloud Account.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
@@ -139,4 +157,6 @@ dependencies {
     // JVM unit tests for the PURE SfcVerdict parser (no Android/device deps —
     // it parses dumpsys text + a device-cap map and emits a verdict).
     testImplementation 'junit:junit:4.13.2'
+    // The pure models parse build.json fragments with org.json (Android ships it; the JVM test classpath does not).
+    testImplementation 'org.json:json:20250107'
 }

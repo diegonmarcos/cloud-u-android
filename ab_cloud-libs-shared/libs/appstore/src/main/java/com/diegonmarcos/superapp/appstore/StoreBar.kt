@@ -12,15 +12,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.adbdebug.AdbPairingService
-import com.diegonmarcos.superapp.adbdebug.ChannelModePrefs
+import com.diegonmarcos.superapp.adbdebug.AdbShellLink
 import com.diegonmarcos.superapp.adbdebug.ChannelSelector
-import com.diegonmarcos.superapp.adbdebug.ShizukuStatus
 import com.diegonmarcos.superapp.adbdebug.ControlStatus
-import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
-import com.diegonmarcos.superapp.adbdebug.ShellAccess
-import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import kotlin.concurrent.thread
 
@@ -45,7 +40,7 @@ object StoreBar {
     /** #785 the live progress row under this bar (drawn by the Cloud tab). */
     const val PROGRESS_TAG = "store-progress"
 
-    enum class Item { CHECK, INSTALL, DOWNLOAD, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG, DEV_OPTIONS }
+    enum class Item { CHECK, INSTALL, DOWNLOAD, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG }
 
     class Verbs(
         val checkAll: () -> Unit,
@@ -138,10 +133,7 @@ object StoreBar {
         // embedded adb or Shizuku, probed off the main thread. NOT the system "wireless
         // debugging" switch - that can be on while the channel is dead.
         val ch = StoreStatus.channel()
-        configRow.addView(channelButton(ctx, into, ::redraw) { openDevSettings(host) })
-        configRow.addView(btn(ctx, Item.DEV_OPTIONS, ctx.getString(R.string.store_bar_open), 0xFF7C3AED.toInt()) {
-            openDevSettings(host)
-        })
+        configRow.addView(channelButton(ctx, into, ::redraw))
         into.addView(caption(ctx, ctx.getString(when (ch?.state) {
             ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
             ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
@@ -150,12 +142,13 @@ object StoreBar {
     }
 
     /**
-     * THE Wireless Debugging button (#918): the privileged channel's live status as its label, and
-     * what a tap does about it (Reconnect / Pair / open settings). One builder, drawn by this bar
-     * and by Access > Android Perms. [redraw] repaints whoever hosts it; [openDev] opens the
-     * developer settings.
+     * THE Wireless Debugging chip (#918): the privileged channel's live status as its label, and ONE tap
+     * target - the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage), where pairing, connecting,
+     * the local server, the logs and the setup checklist live. It carries no channel control of its own:
+     * test-adb-shell-one-place.sh fails if this builder ever starts one again. Drawn by this bar and by
+     * Access > Android Perms. [redraw] repaints whoever hosts it.
      */
-    fun channelButton(ctx: Context, into: View, redraw: () -> Unit, openDev: () -> Unit): TextView {
+    fun channelButton(ctx: Context, into: View, redraw: () -> Unit): TextView {
         val ch = StoreStatus.channel()
         if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { into.post { redraw() } }
         val chLabel = ch?.shizuku?.let { ChannelSelector.shizukuLabel(it) } ?: when (ch?.state) {
@@ -164,40 +157,17 @@ object StoreBar {
             ControlStatus.Channel.DOWN -> ChannelSelector.label(null, down = true)
             ControlStatus.Channel.NOT_PAIRED -> ChannelSelector.label(null, down = false)
         }
-        val chTap: (() -> Unit)? = if (ch == null) ({ StoreStatus.refresh(ctx) { into.post { redraw() } } }) else ({
-                val wd = WirelessDebugging.isOn(ctx)
-                when (ControlStatus.channelAction(ch, wd, ChannelModePrefs.current(ctx))) {
-                    ControlStatus.Action.OPEN_SHIZUKU, ControlStatus.Action.REQUEST_SHIZUKU ->
-                        toast(ctx, ShizukuStatus.act(ctx))
-                    ControlStatus.Action.OPEN_SETTINGS -> openDev()
-                    ControlStatus.Action.RECONNECT -> {
-                        toast(ctx, ctx.getString(R.string.store_bar_asking_shell))
-                        thread(name = "channel-reconnect") {
-                            val msg = ShellAccess.ensure(ctx) {}
-                            StoreStatus.invalidate()
-                            into.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show(); redraw() }
-                        }
-                    }
-                    ControlStatus.Action.PAIR -> thread(name = "channel-pair") {
-                        // A phone paired before the pairing record existed lands here: reconnect first.
-                        val ok = EmbeddedAdbChannel.autoConnect(ctx).first
-                        if (!ok) into.post { openDev(); runCatching { AdbPairingService.start(ctx) } }
-                        StoreStatus.invalidate()
-                        into.post { redraw() }
-                    }
-                }
-        })
         return btn(ctx, Item.WIRELESS_DEBUG, chLabel,
             when (ch?.state) { ControlStatus.Channel.UP -> 0xFF2F855A.toInt(); ControlStatus.Channel.DOWN -> 0xFFC05621.toInt()
-                else -> 0xFF4A4A55.toInt() }, chTap)
+                else -> 0xFF4A4A55.toInt() }) { AdbShellLink.open(ctx) }
     }
 
-    /** A row holding THE Wireless Debugging button for a Compose host; [onChange] fires whenever it redraws (status changed). */
-    fun channelHost(ctx: Context, onChange: () -> Unit, openDev: () -> Unit): View {
+    /** A row holding THE chip for a Compose host; [onChange] fires whenever it redraws (status changed). */
+    fun channelHost(ctx: Context, onChange: () -> Unit): View {
         val box = row(ctx)
         fun draw() {
             box.removeAllViews()
-            box.addView(channelButton(ctx, box, { draw(); onChange() }, openDev))
+            box.addView(channelButton(ctx, box) { draw(); onChange() })
         }
         draw()
         return box
@@ -211,11 +181,6 @@ object StoreBar {
     }
 
     private val AMBER = 0xFFB7791F.toInt()
-
-    private fun openDevSettings(host: Fragment) {
-        val dev = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-        host.startActivity(if (dev.resolveActivity(host.requireContext().packageManager) != null) dev else Intent(Settings.ACTION_SETTINGS))
-    }
 
     private fun openPlayProtect(host: Fragment) {
         val pm = host.requireContext().packageManager

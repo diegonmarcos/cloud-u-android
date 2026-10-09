@@ -27,7 +27,7 @@
 #       exec'd and the app hooks onConnected to arm the privileged plane
 #   P6  the bundled Conscrypt (exported keying material) stays declared in the
 #       lib — Android's platform Conscrypt does not expose it
-#   P7  the UI button only starts the service — no pair() on the fragment
+#   P7  the ADB Shell page's Pair only starts the service — no pair() in the UI, no Pair on the Permissions page
 #
 # FAIL CLOSED: a moved file proves nothing and says so.
 
@@ -138,10 +138,11 @@ else
 fi
 
 # ── P7 ── the button only starts the service
-if has "$PERMS" 'AdbPairingService.start(' && ! has "$PERMS" 'EmbeddedAdbChannel.pair('; then
-  ok "P7 the ② Pair button starts AdbPairingService and pairs nothing itself"
+DEVICE="$SRC/ChannelDevice.kt"
+if has "$DEVICE" 'AdbPairingService.start(' && ! has "$DEVICE" 'EmbeddedAdbChannel.pair(' && ! has "$PERMS" 'AdbPairingService.start(' && ! has "$PERMS" 'EmbeddedAdbChannel.pair('; then
+  ok "P7 the ADB Shell page's Pair starts AdbPairingService and pairs nothing itself; the Permissions page has no Pair"
 else
-  bad "P7 the ② Pair button does not (only) start AdbPairingService"
+  bad "P7 Pair is not (only) the ADB Shell page's start of AdbPairingService"
 fi
 
 echo "== RESULT: $PASS passed, $FAIL failed =="

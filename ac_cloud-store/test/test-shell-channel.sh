@@ -5,7 +5,7 @@
 #  1. build.json: shizuku_client (Shizuku fallback, NO SuperApp bridge), its own local-server
 #     port, the shizuku and fleetconfig modules on the app's dependency list.
 #  2. the app links the module, declares the pairing service + boot receiver + permissions, arms
-#     the channel from App.onCreate and offers the pairing flow in Settings.
+#     the channel from App.onCreate and draws the ADB Shell page in Settings.
 #  3. SuperApp stands down: no self-update schedule, no check, no Update-all of its own when Cloud
 #     Store is installed.
 #  4. the Store bar is written in ONE place, through ProgressBarModel (indeterminate only until
@@ -53,9 +53,9 @@ ok("RECEIVE_BOOT_COMPLETED" in mf and ".shell.ShellBootReceiver" in mf and "FORE
 app = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt")
 ok("CloudStoreShell.install(this)" in app, "App.onCreate arms the channel", "App.onCreate never arms the channel")
 ma = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt")
-ok("ShellChannelSection(ctx)" in ma, "Settings offers the pairing flow", "Settings does not offer the pairing flow")
-sec = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/ShellChannelSection.kt")
-ok("AdbPairingService.start(ctx)" in sec, "the Pair button starts the pairing service", "the Pair button does not start the pairing service")
+ok("com.diegonmarcos.superapp.adbdebug.AdbShellPage()" in ma, "Settings draws THE ADB Shell page (pairing, connect, server, logs)", "Settings does not offer the ADB Shell page")
+lp = rd("ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/ChannelDevice.kt")
+ok("AdbPairingService.start(ctx)" in lp, "the page's Pair starts the pairing service", "the page's Pair does not start the pairing service")
 # The host glue lives once in the lib (HostShell); the Store's CloudStoreShell must call it.
 cs = rd("ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/CloudStoreShell.kt")
 ok("HostShell.install(app)" in cs, "the Store arms the shared HostShell", "the Store no longer calls HostShell")
@@ -93,7 +93,7 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 FILES="ac_cloud-store/build.json ac_cloud-store/app/build.gradle ac_cloud-store/app/src/main/AndroidManifest.xml
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt
-ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/ShellChannelSection.kt
+ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/ChannelDevice.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/shell/CloudStoreShell.kt
 ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt
 ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt
@@ -128,8 +128,8 @@ mutate "app no longer links the shell lib" $S/app/build.gradle "implementation p
 mutate "pairing service not declared" $S/app/src/main/AndroidManifest.xml 'foregroundServiceType="specialUse">' 'foregroundServiceType="dataSync">' || M=$((M+1))
 mutate "boot receiver dropped" $S/app/src/main/AndroidManifest.xml '.shell.ShellBootReceiver' '.shell.Gone' || M=$((M+1))
 mutate "channel never armed" $K/App.kt 'CloudStoreShell.install(this)' 'Unit' || M=$((M+1))
-mutate "no pairing flow in Settings" $K/MainActivity.kt 'ShellChannelSection(ctx)' 'Unit' || M=$((M+1))
-mutate "Pair does not start the service" $K/shell/ShellChannelSection.kt 'AdbPairingService.start(ctx)' 'Unit' || M=$((M+1))
+mutate "no ADB Shell page in Settings" $K/MainActivity.kt 'com.diegonmarcos.superapp.adbdebug.AdbShellPage()' 'Unit' || M=$((M+1))
+mutate "Pair does not start the service" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/ChannelDevice.kt 'AdbPairingService.start(ctx)' 'Unit' || M=$((M+1))
 H=ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt
 mutate "Store build without HostShell" $K/shell/CloudStoreShell.kt 'fun install(app: Context) = HostShell.install(app)' 'fun install(app: Context) = Unit' || M=$((M+1))
 mutate "boot receiver bypasses HostShell" $K/shell/CloudStoreShell.kt 'class ShellBootReceiver : HostShellBootReceiver()' 'class ShellBootReceiver : android.content.BroadcastReceiver()' || M=$((M+1))

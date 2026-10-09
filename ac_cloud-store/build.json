@@ -93,6 +93,60 @@
       "moe.shizuku.privileged.api"
     ]
   },
+  "privileged_channel": {
+    "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage). Add a need here and it shows there; nothing about it is typed in Kotlin. Each need: id (unique), label, why (one sentence), commands (the shell verbs it runs).",
+    "needs": [
+      {
+        "id": "silent-installs",
+        "label": "Silent installs",
+        "why": "Installs and updates the fleet's apps with pm install, so no per-app dialog appears.",
+        "commands": [
+          "pm install",
+          "pm install-write"
+        ]
+      },
+      {
+        "id": "perms-grant",
+        "label": "Permissions grant",
+        "why": "Access > Android Perms grants the fleet's missing runtime and signature permissions.",
+        "commands": [
+          "pm grant"
+        ]
+      },
+      {
+        "id": "appops",
+        "label": "App-ops",
+        "why": "Flips the app-op behind a permission that pm grant alone leaves denied.",
+        "commands": [
+          "appops set"
+        ]
+      },
+      {
+        "id": "force-stop",
+        "label": "Force-stop",
+        "why": "Phone apps > Stop force-stops an app through the channel.",
+        "commands": [
+          "am force-stop"
+        ]
+      },
+      {
+        "id": "play-protect",
+        "label": "Play Protect scan",
+        "why": "The bar's Play Protect switch writes the verifier settings when WRITE_SECURE_SETTINGS is not held.",
+        "commands": [
+          "settings put global"
+        ]
+      },
+      {
+        "id": "wireless-keepalive",
+        "label": "Keep wireless debugging on",
+        "why": "Grants WRITE_SECURE_SETTINGS to itself so wireless debugging comes back after a reboot.",
+        "commands": [
+          "pm grant"
+        ]
+      }
+    ]
+  },
   "shizuku_diagnostics": {
     "_doc": "Only the per-app local server identity. The lib reads the CONSUMER's block first and falls back to SuperApp's whole block when absent, and SuperApp's app_process server binds 38099: two apps on one port means whichever starts second silently fails to bind. Cloud Store has no diagnostic bundles of its own.",
     "bundles": [],

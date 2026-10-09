@@ -720,6 +720,80 @@
       "swipe_down": "page:phone/apps"
     }
   },
+  "privileged_channel": {
+    "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage). Add a need here and it shows there; nothing about it is typed in Kotlin. Each need: id (unique), label, why (one sentence), commands (the shell verbs it runs).",
+    "needs": [
+      {
+        "id": "perms-grant",
+        "label": "Permissions grant",
+        "why": "Configs > Permissions grants the fleet's signature permissions (data/constellation-fleet.json privileged list).",
+        "commands": [
+          "pm grant",
+          "pm revoke"
+        ]
+      },
+      {
+        "id": "appops",
+        "label": "App-ops",
+        "why": "Sets the app-op that backs a permission, because pm grant alone reports success while access stays denied.",
+        "commands": [
+          "appops set"
+        ]
+      },
+      {
+        "id": "device-tuning",
+        "label": "Device tuning",
+        "why": "Applies the shell settings declared in data/device-tuning.json (phantom-process killer and the like).",
+        "commands": [
+          "settings put",
+          "device_config put"
+        ]
+      },
+      {
+        "id": "diagnostics",
+        "label": "Shell-domain diagnostics",
+        "why": "Runs the shizuku_diagnostics bundles: dumpsys battery and usb, sysfs power-supply reads.",
+        "commands": [
+          "dumpsys",
+          "cat /sys/class/power_supply"
+        ]
+      },
+      {
+        "id": "display",
+        "label": "Display settings",
+        "why": "Dark mode, density and font size need shell settings.",
+        "commands": [
+          "cmd uimode",
+          "wm density",
+          "settings put system"
+        ]
+      },
+      {
+        "id": "play-protect",
+        "label": "Play Protect scan",
+        "why": "The Installs block toggles the verifier settings.",
+        "commands": [
+          "settings put global"
+        ]
+      },
+      {
+        "id": "silent-installs",
+        "label": "Silent installs",
+        "why": "Updates silently through pm install when Cloud Store is not installed to do it.",
+        "commands": [
+          "pm install"
+        ]
+      },
+      {
+        "id": "wireless-keepalive",
+        "label": "Keep wireless debugging on",
+        "why": "Re-arms adb_wifi_enabled after a reboot so the channel returns by itself.",
+        "commands": [
+          "settings put global"
+        ]
+      }
+    ]
+  },
   "shizuku_diagnostics": {
     "_doc": "Data-driven catalog of shell-domain diagnostic bundles run by libs:shizuku-adb-debug-tools. Two execution channels share this catalog (ladder, first ready wins): (1) local_server — OUR OWN app_process server (AdbShellServer) started once per boot via the adb one-liner from /api/adb/server-command; it runs in the SHELL SELinux domain (uid 2000) so dumpsys/usb/sysfs that untrusted_app is denied all work. NO third-party app. (2) Shizuku UserService — optional fallback when its app happens to be running. The lib's build.gradle base64-encodes bundles[] into BuildConfig.ADB_DIAG_BUNDLES_B64; AdbDiagnostics decodes + runs the chosen bundle, returning {bundle,label,channel,ok,results:[{id,cmd,out}]}. Adding a diagnostic = one entry here, no Kotlin edit (Pillar: DATA-DRIVEN). READ-ONLY diagnostics only — never a write/mutation.",
     "local_server": {
@@ -4806,7 +4880,7 @@
             "subgroup": "Network"
           },
           {
-            "_doc": "ADB SHELL — the full control for the SuperApp's privileged channel (the Cloud Store's Privileged channel setting, same lib: libs:shizuku-adb-debug-tools ShellChannelPanel). Mode (Local server default / Embedded adb / Shizuku / Auto), the live status of each layer (Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route) and Pair / Reconnect / Start / Restart / Stop server / Open Shizuku / Developer options / Test. The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",
+            "_doc": "ADB SHELL - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one Cloud Store (Settings), Cloud Account (Setup), the terminals (Settings) and every status chip draw. Six sections: the status table (Developer options, Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route and mode, each with a colour dot and when it was probed), Connect (the method that applies to the chosen mode, run step by step with the step that failed named), Active connection (Disconnect / Reconnect / Restart server / Stop server / Test round-trip, each disabled when it does not apply), Logs (an in-memory ring, tokens redacted, Copy and Clear), Declared needs (this app's privileged_channel above) and Setup (the checklist, each item opening its exact settings screen). The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",
             "id": "adb-shell",
             "label": "ADB Shell",
             "icon": "ic_settings",
