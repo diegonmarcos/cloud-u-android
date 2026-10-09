@@ -65,26 +65,6 @@ object AccountDebugApi {
         )) { op, q -> runCatching { adb(app, op, q) }.getOrElse { "ERR: ${it.javaClass.simpleName}\n" } }
     }
 
-    /** `/api/adb/status` and `/api/adb/exec?cmd=`; null (404) for any other op. */
-    private fun adb(ctx: Context, op: String, q: Map<String, String>): String? {
-        val shell = com.diegonmarcos.superapp.adbdebug.ShellChannels
-        return when (op) {
-            "status" -> {
-                val active = shell.active(ctx)
-                JSONObject().put("active", active?.name() ?: "none")
-                    .put("channels", org.json.JSONArray(shell.all.map { c ->
-                        JSONObject().put("name", c.name()).put("ready", c.isReady(ctx)).put("status", c.status(ctx))
-                    })).toString()
-            }
-            "exec" -> {
-                val cmd = q["cmd"]
-                if (cmd.isNullOrBlank()) "missing cmd\n"
-                else shell.active(ctx)?.exec(ctx, cmd)
-                    ?: "ERR: no shell channel ready — ${com.diegonmarcos.superapp.adbdebug.LocalShellChannel.status(ctx)}\n"
-            }
-            else -> null
-        }
-    }
 
     /** `vault`: section counts, grants, and per-manifest-class key counts (config / secret / device). */
     private fun vault(ctx: Context): JSONObject {
@@ -326,5 +306,26 @@ object AccountDebugApi {
         val ch: Any = channel?.name() ?: JSONObject.NULL
         if (q["run"] != "1") return plan.json().put("channel", ch).put("profile", profile != null)
         return PermsPlan.apply(ctx, plan, channel).json().put("channel", ch).put("summary", plan.summary())
+    }
+
+    /** `/api/adb/status` and `/api/adb/exec?cmd=`; null (404) for any other op. */
+    private fun adb(ctx: Context, op: String, q: Map<String, String>): String? {
+        val shell = com.diegonmarcos.superapp.adbdebug.ShellChannels
+        return when (op) {
+            "status" -> {
+                val active = shell.active(ctx)
+                JSONObject().put("active", active?.name() ?: "none")
+                    .put("channels", org.json.JSONArray(shell.all.map { c ->
+                        JSONObject().put("name", c.name()).put("ready", c.isReady(ctx)).put("status", c.status(ctx))
+                    })).toString()
+            }
+            "exec" -> {
+                val cmd = q["cmd"]
+                if (cmd.isNullOrBlank()) "missing cmd\n"
+                else shell.active(ctx)?.exec(ctx, cmd)
+                    ?: "ERR: no shell channel ready — ${com.diegonmarcos.superapp.adbdebug.LocalShellChannel.status(ctx)}\n"
+            }
+            else -> null
+        }
     }
 }
