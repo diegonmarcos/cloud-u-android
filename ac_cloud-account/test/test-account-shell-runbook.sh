@@ -49,9 +49,33 @@ ok("SHELL -> Step(id, { checkShell() }, { runShell() })" in rb and "STORE -> Ste
 ok('private fun checkStore(): State =\n        storeInfo()?.let { State.Already("Cloud Store ${it.versionName} installed") }' in rb, "store check says ALREADY when Cloud Store is installed", "store check never says ALREADY")
 ok('if (ch == null && !allowPrompt)\n            return State.Failed("no shell channel' in rb, "no channel + no prompt -> a named FAILED", "no channel falls through silently")
 ok("theirs.intersect(ours).isEmpty()" in rb, "store refuses an APK not signed with the fleet key", "store installs without the signer check")
-ok('State.Todo("not implemented in this slot")' in rb, "unimplemented steps answer TODO", "unimplemented steps do not answer TODO")
+ok('else -> Step(id, { notHere() }, { notHere() })' in rb, "an unknown step id answers TODO", "an unknown step id is not TODO")
 api = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt")
 ok('"runbook" -> SetupRunbook(ctx)' in api and 'Op("runbook"' in api, "debug API serves /api/account/runbook", "debug API has no runbook op")
+
+# task 5: the remaining steps, Run all, the runbook + apps pages (spec 4.6 / 4.7)
+for sid in ("CONNECTED", "PROFILE", "APPS", "CONFIGS", "PERMS", "VERIFIED"):
+    ok(f"{sid} -> Step(id," in rb, f"runbook wires {sid.lower()}", f"runbook does not wire {sid.lower()}")
+ok("if (st is State.Failed || st is State.Running) { stopped = s.id; break }" in rb, "Run all stops at the first FAILED", "Run all does not stop at FAILED")
+ok("if (it.app.pkg == SUPERAPP_PKG) 0 else 1" in rb, "configs pushes SuperApp first", "configs does not order SuperApp first")
+ok("StoreImport.EXTRA_IMPORT" in rb, "apps hands the inventory over EXTRA_IMPORT", "apps does not use the Store hand-off")
+ok("PermsPlan.plan(ctx, prof, ch)" in rb and "PermsPlan.apply(ctx, plan, ch)" in rb, "perms step runs PermsPlan over the channel", "perms step does not use PermsPlan")
+dr = rb.split("private fun drift")[1].split("private fun checkConfigs")[0]
+ok("i.value" not in dr.replace("FleetSetup.same(back.opt(i.key), i.value)", ""), "drift lines carry key names only", "drift line prints a value")
+ok(' need a source"' in rb, "apps line counts what needs a source", "apps line lost its need-a-source count")
+pg = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/RunbookPage.kt")
+ra = pg.split("RunbookTags.RUN_ALL")[1].split("KitCard")[0] if "RunbookTags.RUN_ALL" in pg else ""
+ok("rb.plan()" in ra and "runAll" not in ra, "Run all opens the plan sheet first", "Run all acts without the plan sheet")
+ok("rb.runAll" in pg.split("RunbookTags.SHEET_GO")[-1], "Run all acts only from the sheet's confirm", "Run all is not behind the sheet")
+ok(not any(x in pg for x in (".value", "\"value\"", "workingProfile", "settings")), "runbook rows print state + detail only", "runbook page prints a value")
+ap = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AppsPage.kt")
+ok("\"no source declared: add it to the source map\"" in ap and "play" not in ap.lower().replace("display", ""), "apps page says 'no source declared'", "apps page lost 'no source declared'")
+ok(not any(x in ap for x in (".intent", "startActivity", "storePage", "play.google", "market://")), "apps page never offers a Play page", "apps page offers a store/Play page")
+ok("versionName" not in ap and "settings" not in ap, "apps rows are names and classes only", "apps page prints a value")
+ok("handToStore()" in ap and "DeviceVault(ctx).backup(" in ap, "apps page: Install missing via Store + Capture", "apps page lost an action")
+ma = rd("ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt")
+ok('"runbook" -> RunbookPage(go)' in ma and '"apps" -> AppsPage()' in ma and '"configs" -> FleetSetupPage(model)' in ma, "Setup mounts runbook / apps / configs", "Setup does not mount runbook/apps/configs")
+ok('q["step"].isNullOrBlank() -> r.runAll(' in api and 'Op("apps"' in api and '"apps" -> SetupRunbook(ctx).appsPlan()' in api, "debug API: run=1 = Run all, apps op", "debug API lacks Run all or apps")
 sys.exit(fails)
 PY
 }
@@ -65,7 +89,10 @@ ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/App.kt
 ab_cloud-libs-shared/libs/account/build.gradle
 ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/SetupRunbook.kt
-ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt"
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/RunbookPage.kt
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AppsPage.kt
+ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt"
 mutate() {  # mutate <label> <file> <old> <new>
   local label="$1" f="$2" old="$3" new="$4" d="$TMP/m"
   rm -rf "$d"; mkdir -p "$d"
@@ -94,6 +121,16 @@ mutate "store never ALREADY" $P/SetupRunbook.kt 'State.Already("Cloud Store ${it
 mutate "no channel is silent" $P/SetupRunbook.kt 'if (ch == null && !allowPrompt)' 'if (false)' || M=$((M+1))
 mutate "signer check removed" $P/SetupRunbook.kt 'theirs.intersect(ours).isEmpty()' 'false' || M=$((M+1))
 mutate "debug op missing" $P/AccountDebugApi.kt '"runbook" -> SetupRunbook(ctx)' '"runbookX" -> SetupRunbook(ctx)' || M=$((M+1))
+mutate "Run all does not stop at FAILED" $P/SetupRunbook.kt 'if (st is State.Failed || st is State.Running) { stopped = s.id; break }' 'if (false) { stopped = s.id; break }' || M=$((M+1))
+mutate "plan sheet skipped" $P/RunbookPage.kt 'runCatching { rb.plan() }.getOrNull()' 'runCatching { rb.runAll() }.getOrNull()' || M=$((M+1))
+mutate "a value printed in a drift row" $P/SetupRunbook.kt 'out += "${ap.app.id}.${sf.first}.${i.key}"' 'out += "${ap.app.id}.${sf.first}.${i.key}=${i.value}"' || M=$((M+1))
+mutate "a value printed in a runbook row" $P/RunbookPage.kt 'Text(r?.optString("detail").orEmpty()' 'Text(r?.optString("detail").orEmpty() + rb.configsPlan()?.apps?.firstOrNull()?.items?.firstOrNull()?.value' || M=$((M+1))
+mutate "a value printed in an apps row" $P/AppsPage.kt 'pl.installed.map { it.pkg to (if (it.ours) "fleet" else "installed") }' 'pl.installed.map { it.pkg to it.versionName }' || M=$((M+1))
+mutate "a Play page offered" $P/AppsPage.kt '(pl.store.map { it.entry } + pl.manual)' '(pl.store.also { ctx.startActivity(it.first().intent) }.map { it.entry } + pl.manual)' || M=$((M+1))
+mutate "no source declared dropped" $P/AppsPage.kt '"no source declared: add it to the source map"' '"open in Play"' || M=$((M+1))
+mutate "perms step not wired to PermsPlan" $P/SetupRunbook.kt 'PermsPlan.apply(ctx, plan, ch)' 'PermsPlan.Outcome(emptyList())' || M=$((M+1))
+mutate "runbook page unmounted" $K/MainActivity.kt '"runbook" -> RunbookPage(go)' '"runbook" -> AccountPlaceholderPage(section, page, "x")' || M=$((M+1))
+mutate "debug run=1 without step is not Run all" $P/AccountDebugApi.kt 'q["step"].isNullOrBlank() -> r.runAll(' 'false -> r.runAll(' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

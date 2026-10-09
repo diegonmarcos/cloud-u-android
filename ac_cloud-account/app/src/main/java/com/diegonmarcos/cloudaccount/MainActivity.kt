@@ -6,6 +6,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -35,6 +39,8 @@ import com.diegonmarcos.superapp.profile.AccountPermsPage
 import com.diegonmarcos.superapp.profile.AccountPlaceholderPage
 import com.diegonmarcos.superapp.profile.AccountProfilePage
 import com.diegonmarcos.superapp.profile.AccountSettingsPage
+import com.diegonmarcos.superapp.profile.AppsPage
+import com.diegonmarcos.superapp.profile.RunbookPage
 import com.diegonmarcos.superapp.profile.ConnectionsTab
 import com.diegonmarcos.superapp.profile.DriftTab
 import com.diegonmarcos.superapp.profile.FleetSetupTab
@@ -112,9 +118,11 @@ class MainActivity : AppCompatActivity() {
                 else -> AccountPlaceholderPage(section, page, "task 4")
             }
             "setup" -> when (page) {
-                "configs" -> AccountPlaceholderPage(section, page, "task 5") { FleetSetupTab(model) }
+                "configs" -> FleetSetupPage(model)
+                "apps" -> AppsPage()
                 "perms" -> AccountPermsPage(go)
-                else -> AccountPlaceholderPage(section, page, "task 5")
+                "runbook" -> RunbookPage(go)
+                else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
             }
             "secrets" -> when (page) {
                 "connections" -> AccountPlaceholderPage(section, page, "task 7") { ConnectionsTab({ }, { _, _ -> }) }
@@ -124,6 +132,12 @@ class MainActivity : AppCompatActivity() {
             "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} (${BuildConfig.GIT_SHORT_SHA})")
             else -> AccountPlaceholderPage(section, page, "no task: undeclared section")
         }
+    }
+
+    /** Setup ▸ configs (spec 4.8): FleetSetupTab as it is, in a scrolling page. */
+    @Composable
+    private fun FleetSetupPage(model: AccountModel) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { FleetSetupTab(model) }
     }
 
     companion object {
