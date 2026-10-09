@@ -5,7 +5,9 @@
 # 2025.01.00, and the SuperApp's ADB Shell page died with NoSuchMethodError FlowRow(...): an
 # experimental API has no binary compatibility across Compose versions, and no compile step
 # can see the mismatch. So every `compose-bom:` declaration in the repo must name the same
-# version. Fleet-wide: inside ship-cloud-superapp this is a warning (it reads outside the app);
+# version, and so must a build.json that pins it as data. Apps with their own version catalog (forks:
+# mail, matrix, notes, vault) are separate builds sharing no Compose module, so they are out of scope.
+# Fleet-wide: inside ship-cloud-superapp this is a warning (it reads outside the app);
 # compose-bom-guard.yml runs it fatal.
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -16,6 +18,10 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL $1"; }
 echo "== one compose-bom version"
 lines=$(cd "$ROOT" && git grep -n 'compose-bom:[0-9]' -- '*build.gradle' '*build.gradle.kts' 2>/dev/null | grep -v ':[[:space:]]*//' || true)
 [ -n "$lines" ] || lines=$(grep -rn 'compose-bom:[0-9]' --include=build.gradle --include=build.gradle.kts "$ROOT" 2>/dev/null | grep -v '/build/' | grep -v ':[[:space:]]*//' || true)
+# A build.json that pins the BOM as data (ac_cloud-writer: toolchain.compose_bom, restated by its gradle) is a declaration too.
+pins=$(cd "$ROOT" && git grep -n '"compose_bom": *"[0-9]' -- '*build.json' 2>/dev/null | sed 's/"compose_bom": *"\([0-9.]*\)"/compose-bom:\1/' || true)
+[ -n "$pins" ] && lines="$lines
+$pins"
 versions=$(echo "$lines" | grep -o 'compose-bom:[0-9][0-9.]*' | sort -u)
 n=$(echo "$versions" | grep -c .)
 total=$(echo "$lines" | grep -c .)

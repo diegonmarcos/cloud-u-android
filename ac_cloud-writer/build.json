@@ -824,7 +824,7 @@
     "kotlin": "2.1.0",
     "jdk": "17",
     "_doc_kotlin": "2.1.0 to match ac_cloud-mail exactly, which is the fleet's Compose reference. The Compose compiler stopped being a separately-versioned artifact at Kotlin 2.0 and became org.jetbrains.kotlin.plugin.compose AT THE KOTLIN VERSION, so this one number pins both and they cannot drift apart.",
-    "compose_bom": "2025.01.00",
+    "compose_bom": "2025.11.01",
     "_doc_compose_bom": "androidx.compose BOM, the same one ac_cloud-mail resolves. A BOM rather than per-artifact versions so ui, material3 and tooling cannot be bumped independently into a combination nobody has built."
   },
   "signing": {

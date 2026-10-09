@@ -46,7 +46,7 @@ BREAKS = [
      "but build.json::toolchain.kotlin says"),
 
     ("the compose BOM is bumped in the build and not in build.json", APP + "/app/build.gradle",
-     ("androidx.compose:compose-bom:2025.01.00", "androidx.compose:compose-bom:2025.06.00"),
+     ("androidx.compose:compose-bom:2025.11.01", "androidx.compose:compose-bom:2025.06.00"),
      "does not resolve the compose BOM build.json pins"),
 
     # ── T2/T3: the hand-drawn screen creeps back ────────────────────────────
