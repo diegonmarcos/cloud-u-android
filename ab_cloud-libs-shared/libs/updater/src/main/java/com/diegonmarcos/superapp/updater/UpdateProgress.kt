@@ -223,16 +223,47 @@ object UpdateProgress {
     @Volatile var job: Job? = null
         private set
 
-    fun beginJob(j: Job) { job = j; republish() }
+    fun beginJob(j: Job) {
+        tkey.get()?.let { k -> sink?.onJob(k, j); return }
+        job = j; republish()
+    }
+
+    // ── per-job routing ────────────────────────────────────────────────────
+    // The Store runs several jobs at once (parallel downloads, an install while
+    // others download), so a state with no owner is a state every row fights over.
+    // A thread that runs a job declares its key; whatever the pipeline publishes
+    // on that thread is ALSO delivered to the [sink] under that key alone. The
+    // process-wide [state] stays, for the shell overlay and the HTTP API.
+
+    /** Receives each keyed job's own events. */
+    interface JobSink {
+        fun onState(key: String, state: State)
+        fun onStage(key: String, stage: String)
+        fun onJob(key: String, job: Job?)
+    }
+
+    @Volatile var sink: JobSink? = null
+    private val tkey = ThreadLocal<String?>()
+
+    /** Run [f] as the job [key]: every update, stage and job write on this thread is that job's. */
+    fun <T> withKey(key: String, f: () -> T): T {
+        val prev = tkey.get()
+        tkey.set(key)
+        try { return f() } finally { tkey.set(prev) }
+    }
 
     /** The running job moves to [stage]. No job → no-op: the host's own
      *  self-update has no Store row to name. */
     fun stage(stage: String) {
+        tkey.get()?.let { k -> sink?.onStage(k, stage); return }
         val j = job ?: return
         if (j.stage != stage) { job = j.copy(stage = stage); republish() }
     }
 
-    fun endJob() { job = null; republish() }
+    fun endJob() {
+        tkey.get()?.let { k -> sink?.onJob(k, null); return }
+        job = null; republish()
+    }
 
     /** A job change with no state change still has to reach the inline rows —
      *  and so does a #804 auto-chain phase change (StoreAuto). */
@@ -291,6 +322,7 @@ object UpdateProgress {
      * "nothing is happening" reading of work that was, in fact, happening.
      */
     fun update(next: State) {
+        tkey.get()?.let { k -> sink?.onState(k, next) }
         state = next
         if (!quiet) listener?.invoke(next)
         observers.toList().forEach { it(next) }

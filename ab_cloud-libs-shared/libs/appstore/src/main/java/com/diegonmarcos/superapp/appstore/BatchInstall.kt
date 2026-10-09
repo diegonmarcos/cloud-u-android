@@ -101,26 +101,36 @@ object BatchInstall {
         targets.forEach { outcomes[it.pkg] = Outcome(it, downloaded = false, installed = false, message = null) }
 
         // ── PHASE 1: download every one of them, install nothing ────────────
-        val staged = ArrayList<Pair<Target, VerifiedApk>>(targets.size)
-        targets.forEachIndexed { i, t ->
-            if (UpdateProgress.cancelRequested) {
-                outcomes[t.pkg] = Outcome(t, false, false, "cancelled before it was downloaded")
-                return@forEachIndexed
-            }
-            onPhase(Phase.DOWNLOAD, t, i + 1, targets.size)
-            try {
-                staged += t to engine.stage(ctx, t)
-                outcomes[t.pkg] = Outcome(t, downloaded = true, installed = false,
-                    message = null)
-            } catch (c: java.util.concurrent.CancellationException) {
-                outcomes[t.pkg] = Outcome(t, false, false, "cancelled while downloading")
-            } catch (th: Throwable) {
-                // One dead source must not cost the other nine their install.
-                val why = th.message ?: th.javaClass.simpleName
-                Log.w(TAG, "download ${t.label}: $why")
-                outcomes[t.pkg] = Outcome(t, false, false, why)
-            }
-        }
+        // Up to 3 at once (JobRunner's gate); each row is its own keyed job, so no row reads another's progress.
+        StoreJobs.install()
+        val stagedAt = arrayOfNulls<VerifiedApk>(targets.size)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(targets.size.coerceIn(1, 3))
+        try {
+            targets.mapIndexed { i, t ->
+                StoreJobs.board.begin(t.pkg, t.label)
+                pool.submit {
+                    if (UpdateProgress.cancelRequested) {
+                        synchronized(outcomes) { outcomes[t.pkg] = Outcome(t, false, false, "cancelled before it was downloaded") }
+                        return@submit
+                    }
+                    onPhase(Phase.DOWNLOAD, t, i + 1, targets.size)
+                    try {
+                        val apk = UpdateProgress.withKey(t.pkg) { StoreJobs.runner.download(t.pkg) { engine.stage(ctx, t) } }
+                        stagedAt[i] = apk
+                        synchronized(outcomes) { outcomes[t.pkg] = Outcome(t, downloaded = true, installed = false, message = null) }
+                    } catch (c: java.util.concurrent.CancellationException) {
+                        synchronized(outcomes) { outcomes[t.pkg] = Outcome(t, false, false, "cancelled while downloading") }
+                    } catch (th: Throwable) {
+                        // One dead source must not cost the other nine their install.
+                        val why = th.message ?: th.javaClass.simpleName
+                        Log.w(TAG, "download ${t.label}: $why")
+                        StoreJobs.board.fail(t.pkg, why)
+                        synchronized(outcomes) { outcomes[t.pkg] = Outcome(t, false, false, why) }
+                    }
+                }
+            }.forEach { it.get() }
+        } finally { pool.shutdown() }
+        val staged = targets.mapIndexedNotNull { i, t -> stagedAt[i]?.let { t to it } }
 
         // ── PHASE 2: install from the cache, strictly one at a time ─────────
         // Sequential is not a style choice: PackageInstaller sessions collide,
@@ -132,7 +142,7 @@ object BatchInstall {
                 return@forEachIndexed
             }
             onPhase(Phase.INSTALL, t, i + 1, staged.size)
-            val msg = engine.install(ctx, t, apk)
+            val msg = UpdateProgress.withKey(t.pkg) { StoreJobs.runner.install(t.pkg) { engine.install(ctx, t, apk) } }
             outcomes[t.pkg] = Outcome(t, downloaded = true, installed = msg == null, message = msg)
         }
         return targets.mapNotNull { outcomes[it.pkg] }

@@ -113,13 +113,19 @@ object StoreStages {
     fun stage(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
         when (busy[app.pkg]) {
             DOWNLOAD -> {
-                val d = UpdateProgress.state as? UpdateProgress.State.Downloading
+                // This row's OWN state (keyed by package), never the process-wide one another row is writing.
+                val r = StoreJobs.board.row(app.pkg)
+                if (r?.phase == JobBoard.Phase.QUEUED) return Stage("queued", r.text(), emptyList())
                 return Stage("downloading",
-                    if (d != null) "downloading ${d.percent}% · ${mb(d.bytes)}" +
-                        (if (d.total > 0) " of ${mb(d.total)}" else "") else "downloading…",
+                    if (r != null && r.bytes > 0) "downloading ${r.percent.coerceAtLeast(0)}% · ${mb(r.bytes)}" +
+                        (if (r.total > 0) " of ${mb(r.total)}" else "") else "downloading…",
                     emptyList())
             }
-            INSTALL -> return Stage("installing", "installing from cache…", emptyList(), cachedFor(ctx, app))
+            INSTALL -> {
+                val r = StoreJobs.board.row(app.pkg)
+                if (r?.phase == JobBoard.Phase.QUEUED) return Stage("queued", r.text(), emptyList(), cachedFor(ctx, app))
+                return Stage("installing", "installing from cache…", emptyList(), cachedFor(ctx, app))
+            }
         }
         // #858 a handover that was aborted, abandoned or never answered turns
         // into the Install-stage note read below: the row offers Retry.
@@ -230,8 +236,11 @@ object StoreStages {
         if (busy.putIfAbsent(app.pkg, DOWNLOAD) != null) return null
         return try {
             UpdateProgress.beginDownload()
-            UpdateProgress.stage(UpdateProgress.STAGE_DOWNLOADING)
-            Fleet.download(ctx, app)
+            // At most 3 downloads at once; a 4th shows "queued" on its own row.
+            StoreJobs.runner.download(app.pkg) {
+                UpdateProgress.stage(UpdateProgress.STAGE_DOWNLOADING)
+                Fleet.download(ctx, app)
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "download ${app.id} stopped: ${t.message}")
             null
@@ -285,17 +294,20 @@ object StoreStages {
      * once share the bar, last one named wins.
      */
     private fun named(ctx: Context, app: Fleet.App, stage: String, version: String, verb: () -> Stage): Stage = BatchForeground.hold(ctx) {
-        val mine = UpdateProgress.job?.appId != app.id
-        if (mine) UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
-        else UpdateProgress.stage(stage)
-        try {
-            val s = verb()
-            if (s.failedAt != null) UpdateProgress.update(UpdateProgress.State.Failed(s.text, app.id, app.pkg,
-                stage = UpdateProgress.job?.stage ?: stageOf(s.failedAt), app = app.label))
-            else if (mine) UpdateProgress.update(UpdateProgress.State.Idle)
-            return@hold s
-        } finally {
-            if (mine) UpdateProgress.endJob()
+        // Keyed by package: everything the pipeline publishes on this thread is THIS row's
+        // and reaches no other row (StoreJobs). The process-wide state still follows, for the overlay.
+        StoreJobs.install()
+        UpdateProgress.withKey(app.pkg) {
+            UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, stage, version))
+            try {
+                val s = verb()
+                if (s.failedAt != null) UpdateProgress.update(UpdateProgress.State.Failed(s.text, app.id, app.pkg,
+                    stage = stageOf(s.failedAt), app = app.label))
+                else UpdateProgress.update(UpdateProgress.State.Done)
+                s
+            } finally {
+                UpdateProgress.endJob()
+            }
         }
     }
 
@@ -315,6 +327,17 @@ object StoreStages {
     private fun installCached(ctx: Context, app: Fleet.App, e: ApkCache.Entry) {
         if (busy.putIfAbsent(app.pkg, INSTALL) != null) return
         try {
+            // ONE install at a time (PackageInstaller / pm must not overlap); the rest show "queued".
+            StoreJobs.runner.install(app.pkg) { installCachedGated(ctx, app, e) }
+        } catch (t: Throwable) {
+            ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, t.message ?: t.javaClass.simpleName)
+        } finally {
+            busy.remove(app.pkg)
+        }
+    }
+
+    private fun installCachedGated(ctx: Context, app: Fleet.App, e: ApkCache.Entry) {
+        run {
             UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
             // Re-verify before handing bytes to the installer: against the
             // digest recorded at download time, or — record-less — against the
@@ -341,10 +364,6 @@ object StoreStages {
                 // until it lands, fails, is abandoned or times out.
                 StoreInstallWatch.record(ctx, app.pkg, before)
             }
-        } catch (t: Throwable) {
-            ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, t.message ?: t.javaClass.simpleName)
-        } finally {
-            busy.remove(app.pkg)
         }
     }
 
@@ -461,20 +480,19 @@ object StoreStages {
                 }
             }
         }
-        for ((i, pair) in go.withIndex()) {
+        // Up to 3 downloads at once (the runner's gate); each row is its own keyed job.
+        out += inParallel(go) { _, pair ->
             val (app, remote) = pair
-            if (UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
+            if (UpdateProgress.cancelRequested) return@inParallel Outcome(app, SKIPPED, "cancelled")
             // The plan reserved room for this one; re-read it, since what is
             // really free may have moved under the batch.
             val want = (remote.bytes - partialBytes(ctx, app)).coerceAtLeast(0)
             val now = room(ctx)
-            if (want > now) { out += Outcome(app, NO_ROOM, "needs ${mb(want)}, ${mb(now)} free — not downloaded"); continue }
-            UpdateProgress.beginBatch("↓ ${app.label}", i + 1, go.size)
-            beginNext(UpdateProgress.Job(app.id, app.pkg, app.label, UpdateProgress.STAGE_DOWNLOADING,
-                versionOf(remote, null), i + 1, go.size, go.getOrNull(i + 1)?.first?.label))
+            if (want > now) return@inParallel Outcome(app, NO_ROOM, "needs ${mb(want)}, ${mb(now)} free — not downloaded")
+            StoreJobs.board.begin(app.pkg, app.label)
             val s = download(ctx, app)
-            out += if (actionableFor(ctx, app) != null) Outcome(app, DOWNLOADED, s.text)
-                   else Outcome(app, FAILED, s.text, failedAt = s.failedAt ?: DOWNLOAD)
+            if (actionableFor(ctx, app) != null) Outcome(app, DOWNLOADED, s.text)
+            else Outcome(app, FAILED, s.text, failedAt = s.failedAt ?: DOWNLOAD)
         }
         if (!dryRun) finishBatch(out)
         return Batch("downloadAll", dryRun, online, out, need, startRoom)
@@ -524,18 +542,16 @@ object StoreStages {
                 else -> go += app to remote
             }
         }
-        for ((i, pair) in go.withIndex()) {
+        // Downloads overlap (3 at a time) and installs queue behind ONE install slot, so a finished
+        // download installs while others still fetch. Every app is its own keyed job.
+        out += inParallel(go, threads = 4) { _, pair ->
             val (app, remote) = pair
-            if (UpdateProgress.cancelRequested) { out += Outcome(app, SKIPPED, "cancelled"); continue }
-            val act = actionableFor(ctx, app, remote)
-            UpdateProgress.beginBatch(app.label, i + 1, go.size)
-            beginNext(UpdateProgress.Job(app.id, app.pkg, app.label,
-                if (act != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
-                versionOf(remote, act), i + 1, go.size, go.getOrNull(i + 1)?.first?.label))
+            if (UpdateProgress.cancelRequested) return@inParallel Outcome(app, SKIPPED, "cancelled")
+            StoreJobs.board.begin(app.pkg, app.label)
             val before = installedCode(ctx, app)
             val s = install(ctx, app, remote)
             val after = installedCode(ctx, app)
-            out += when {
+            when {
                 after != null && after != before -> Outcome(app, INSTALLED, s.text)
                 s.failedAt != null -> Outcome(app, FAILED, s.text, failedAt = s.failedAt)
                 else -> Outcome(app, PENDING, "handed to the installer — confirm it on screen")
@@ -543,6 +559,20 @@ object StoreStages {
         }
         if (!dryRun) finishBatch(out)
         return Batch("updateAll", dryRun, online, out)
+    }
+
+    /** Run [f] over [items] on up to [threads] workers; results come back in item order. A throw is that item's alone. */
+    private fun <T> inParallel(items: List<T>, threads: Int = 3, f: (Int, T) -> Outcome): List<Outcome> {
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(threads.coerceAtMost(items.size).coerceAtLeast(1))
+        try {
+            val futures = items.mapIndexed { i, item -> pool.submit(java.util.concurrent.Callable { f(i, item) }) }
+            return futures.mapIndexed { i, fu ->
+                try { fu.get() } catch (e: Exception) {
+                    val app = (items[i] as Pair<*, *>).first as Fleet.App
+                    Outcome(app, FAILED, e.cause?.message ?: e.message ?: "failed", failedAt = DOWNLOAD)
+                }
+            }
+        } finally { pool.shutdown() }
     }
 
     /** A batch's next app. The last app's failure is not drawn over this one

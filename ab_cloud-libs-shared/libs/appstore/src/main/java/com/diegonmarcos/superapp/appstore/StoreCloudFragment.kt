@@ -209,7 +209,14 @@ class StoreCloudFragment : Fragment() {
      */
     private val progressObserver: (UpdateProgress.State) -> Unit = { state ->
         val p = StoreStages.progress(state)
-        progressRow?.post { renderProgress(state, p) }
+        // While keyed jobs run, the bar speaks from THEIR board, not from the one process-wide state
+        // whichever job wrote last.
+        progressRow?.post { if (StoreJobs.board.overall().active > 0) renderBoard() else renderProgress(state, p) }
+    }
+
+    /** The board changed (a job's own event): redraw the bar from the board alone. */
+    private val boardObserver: () -> Unit = {
+        progressRow?.post { if (StoreJobs.board.overall().active > 0) renderBoard() else renderProgress(UpdateProgress.state, StoreStages.progress()) }
     }
     private val filterChips = ArrayList<TextView>()
     private val actionRows = HashMap<String, LinearLayout>()
@@ -284,6 +291,7 @@ class StoreCloudFragment : Fragment() {
 
     override fun onDestroyView() {
         UpdateProgress.removeObserver(progressObserver)
+        StoreJobs.removeObserver(boardObserver)
         progressRow = null; progressIcon = null; progressLabel = null; progressBar = null; progressCancel = null
         // Restore the unconditional-refuse default the moment this page is
         // no longer visible. Any downgrade a background pass hits after this
@@ -535,6 +543,8 @@ class StoreCloudFragment : Fragment() {
         // first — the field is the same lambda instance for the fragment's life.
         UpdateProgress.removeObserver(progressObserver)
         UpdateProgress.addObserver(progressObserver)
+        StoreJobs.install()
+        StoreJobs.addObserver(boardObserver)
         return row
     }
 
@@ -557,6 +567,25 @@ class StoreCloudFragment : Fragment() {
     private fun drawBar(bar: ProgressBar, d: ProgressBarModel.Draw) {
         if (bar.isIndeterminate != d.indeterminate) bar.isIndeterminate = d.indeterminate
         if (!d.indeterminate && bar.progress != d.percent) bar.progress = d.percent
+    }
+
+    /** Several jobs in flight: ONE overall line ("3 running · 2 queued · 41%"), bytes done over bytes total
+     *  with installs as steps. One job: that job's own words. Never one app's percent for all of them. */
+    private fun renderBoard() {
+        val row = progressRow ?: return
+        val label = progressLabel ?: return
+        val bar = progressBar ?: return
+        val o = StoreJobs.board.overall()
+        val live = StoreJobs.board.rows().filter { !it.finished }
+        val only = live.singleOrNull()
+        label.text = if (o.multi || only == null) o.text() else "${only.label} · ${only.text()}"
+        label.setTextColor(cUpd)
+        drawBar(bar, barModel.step(if (o.multi) "overall" else only?.key.orEmpty(),
+            if (o.percent > 0) 1L else 0L, if (o.multi) o.percent else only?.percent ?: -1, false))
+        progressIcon?.visibility = View.GONE
+        row.setOnClickListener(null)
+        progressCancel?.visibility = View.VISIBLE
+        row.visibility = View.VISIBLE
     }
 
     private fun renderProgress(state: UpdateProgress.State, p: StoreStages.Progress?) {
