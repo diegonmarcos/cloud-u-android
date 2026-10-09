@@ -32,14 +32,15 @@ class ListViewControlsTest {
     }
 
     @Test fun `the top bar draws the groups, then Search as the last icon, then the overflow`() {
-        val actions = src("InboxScreen.kt").let { it.substring(it.indexOf("actions = {")) }
-        val groups = actions.indexOf("ListViewIconGroups(")
-        val search = actions.indexOf("IconButton(onClick = { viewModel.setSearchActive(true) })")
-        val overflow = actions.indexOf("Icons.Filled.MoreVert")
-        assertTrue("groups, then search, then overflow: $groups $search $overflow", groups in 0 until search && search < overflow)
-        // nothing but the Search icon sits between the groups and the overflow icon
-        val between = actions.substring(groups, overflow)
-        assertEquals("one IconButton between groups and overflow (Search) plus the overflow's own", 2, Regex("""\bIconButton\(""").findAll(between).count())
+        val screen = src("InboxScreen.kt")
+        val groups = screen.indexOf("ListViewIconGroups(")
+        val search = screen.indexOf("IconButton(onClick = { viewModel.setSearchActive(true) })", groups)
+        val overflow = screen.indexOf("Icons.Filled.MoreVert", search)
+        assertTrue("groups, then search, then overflow: $groups $search $overflow", groups >= 0 && search > groups && overflow > search)
+        // nothing but the Search icon sits between the groups and the overflow icon: two IconButtons,
+        // Search's and the overflow's own
+        val between = screen.substring(groups, overflow)
+        assertEquals(2, Regex("""\bIconButton\(""").findAll(between).count())
     }
 
     // -- the overflow lists every function by name, checked when active -------------------------

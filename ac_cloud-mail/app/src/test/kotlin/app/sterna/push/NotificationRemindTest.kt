@@ -44,9 +44,7 @@ class NotificationRemindTest {
         val n = src("push/Notifications.kt")
         val cancelChild = n.substringAfter("fun cancelChild(").substringBefore("fun dismiss(")
         assertTrue(cancelChild.contains("NotificationReminders.cancel(context, accountId, emailId)"))
-        val dismiss = n.substringAfter("fun dismiss(").substringBefore("fun notifyGroupSummary")
-        assertTrue(dismiss.contains("NotificationReminders.cancel(context, accountId, it)"))
-        // and the worker itself will not re-post a message that has been read
+        // a reminder whose banner was already down is caught by the worker: it will not re-post a read message
         assertTrue(src("push/RemindWorker.kt").contains("if (email.isSeen) return Result.success()"))
     }
 

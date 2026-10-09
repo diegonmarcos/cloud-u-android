@@ -38,17 +38,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val credentials = container.accountStore.credentials(accountId)
-                if (action == ACTION_COPY_CODE) {
-                    if (code != null) copyCode(appContext, code)
-                    // The code is on the clipboard; the banner has done its job.
-                    dismiss(appContext, accountId, credentials, emailId, notifId)
-                    return@launch
-                }
-                if (action == ACTION_REMIND) {
-                    // Down first, then scheduled: dismiss() cancels nothing of the reminder, but the
-                    // order keeps a failed schedule from leaving the banner up AND the tap spent.
-                    dismiss(appContext, accountId, credentials, emailId, notifId)
-                    NotificationReminders.schedule(appContext, accountId, emailId)
+                if (action == ACTION_COPY_CODE || action == ACTION_REMIND) {
+                    copyOrRemind(appContext, action, accountId, credentials, emailId, notifId, code)
                     return@launch
                 }
                 // Reply leaves the common path BEFORE the dismissal below: it used to fall through
@@ -76,6 +67,26 @@ class NotificationActionReceiver : BroadcastReceiver() {
             } finally {
                 pending.finish()
             }
+        }
+    }
+
+    /** Copy Code and Remind: neither touches the server, and both take the banner down. */
+    private fun copyOrRemind(
+        context: Context,
+        action: String,
+        accountId: String,
+        credentials: AccountCredentials?,
+        emailId: String,
+        notifId: Int,
+        code: String?,
+    ) {
+        if (action == ACTION_COPY_CODE) {
+            if (code != null) copyCode(context, code)
+            dismiss(context, accountId, credentials, emailId, notifId)
+        } else {
+            // Down first, then scheduled; the re-post is WorkManager's, so it survives the process and a reboot.
+            dismiss(context, accountId, credentials, emailId, notifId)
+            NotificationReminders.schedule(context, accountId, emailId)
         }
     }
 

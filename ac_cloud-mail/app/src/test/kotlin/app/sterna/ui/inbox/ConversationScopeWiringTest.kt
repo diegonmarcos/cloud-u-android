@@ -334,7 +334,7 @@ class ConversationScopeWiringTest {
         )
         assertTrue(
             "every pager must be given that resolution and nothing else. Body was:\n$body",
-            "conversationView, sent)" in body,
+            "conversationView, sent, key.shape)" in body,
         )
         assertEquals(
             "exactly three pagers, one per Sel variant — a folder, the unified inbox, the unread " +

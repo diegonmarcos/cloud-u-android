@@ -397,8 +397,6 @@ object Notifications {
     /** Dismiss the notifications for [emailIds] that just became read, here or on another device,
      *  and refresh the group summary. A no-op for ids with no live notification (#19). */
     fun dismiss(context: Context, accountId: String, accountLabel: String, emailIds: Collection<String>) {
-        // Reminders go even for ids whose banner is already down (the Remind tap took it down).
-        emailIds.forEach { NotificationReminders.cancel(context, accountId, it) }
         val active = activeChildIds(context, accountId)
         val hit = emailIds.filter { isChildActive(active, accountId, it) }
         if (hit.isEmpty()) return

@@ -268,7 +268,7 @@ class LocalDraftListWiringLintTest {
                 "results = search.results?.map { it.emailKey() },",
                 "loading = search.loading,",
                 "complete = search.complete,",
-                "folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered), hidden),",
+                "folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered, listView.value.shape()), hidden),",
                 ")",
                 "}",
             ),

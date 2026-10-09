@@ -46,7 +46,7 @@ class SelectAllWiringTest {
                 "complete = search.complete",
                 // The folder read, minus the server rows a local draft is standing in for (#95):
                 // those are taken OUT of the list but are still filed in `emails`, so the read
-                "folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered), hidden)",
+                "folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered, listView.value.shape()), hidden)",
             ),
             arguments(call),
         )
