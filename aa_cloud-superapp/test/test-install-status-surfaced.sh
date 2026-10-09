@@ -132,7 +132,7 @@ has_code "$RCV" 'NO_STATUS' "a missing EXTRA_STATUS is its own named case"
 echo "== T5: a 267 MB install is sized and space-checked BEFORE it is attempted =="
 # Without setSize the platform reserves nothing and evicts no cache ahead of
 # the staging write. Invisible at 25 MB; decisive at 267 MB.
-has_code "$INST" 'setSize(expected)'          "the session is told how big the APK is"
+has_code "$INST" 'setSize(expected + splits.sumOf { it.length() })'          "the session is told how big the APK is"
 has_code "$INST" 'openWrite("base.apk", 0, expected)' "the write declares the same length the session was sized with"
 has_code "$INST" 'freeStagingBytes()'         "free space is read before committing"
 has_code "$INST" 'free in 0 until expected'   "a shortfall that makes staging impossible refuses early"
