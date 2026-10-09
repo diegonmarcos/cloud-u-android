@@ -31,7 +31,8 @@ checks() {
   grep -q 'SHA-256' "$tabs" || echo "secrets page has no sha256 fingerprint"
   grep -q 'it.id == "vault"' "$tabs" || echo "Cloud Vault is not looked up in the fleet manifest"
   ! grep -q 'com\.diegonmarcos\.cloudvault' "$tabs" || echo "Cloud Vault package hardcoded in the Secrets pages"
-  ! grep -Eq 'Dense\([^)]*vault\.connection\(' "$tabs" || echo "secrets page renders a raw value"
+  ! grep -Eq '(Dense|Text|KitListRow)\([^)]*vault\.connection\(' "$tabs" || echo "secrets page renders a raw value"
+  grep -q 'KitFingerprint(row.fingerprint' "$tabs" || echo "secrets page does not draw the fingerprint through KitFingerprint"
   grep -q 'VaultTags.revokeAll(who)' "$tabs" && grep -q 'VaultTags.revoke(who, k)' "$tabs" || echo "grants lost revoke / revoke-all"
   # 3. mounting
   for p in 'ConnectionsTab(' 'SecretsTab(openVault' 'GrantsTab()'; do grep -qF "$p" "$main" || echo "MainActivity does not mount $p"; done
@@ -77,7 +78,8 @@ mutate "secret literal accepted by parse"      DeviceProfile.kt 'Parsed.Refused(
 mutate "secret gate dropped from violations"   DeviceProfile.kt 'cls.secret(app, store, key) && isLiteral(v)' 'isLiteral(v)'
 mutate "connections shows non-config values"   AccountVaultTabs.kt 'r.key, app.id) == "config"' 'r.key, app.id) != "x"'
 mutate "secrets page lists every class"        AccountVaultTabs.kt '!= "secret") return@mapNotNull null' '!= "") return@mapNotNull null'
-mutate "secrets page renders the value"        AccountVaultTabs.kt 'Dense(row.path)' 'Dense(row.path); Dense(vault.connection(row.path))'
+mutate "secrets page renders the value"        AccountVaultTabs.kt 'KitFingerprint(row.fingerprint, tag = row.path)' 'Text(vault.connection(row.path).toString()); KitFingerprint(row.fingerprint, tag = row.path)'
+mutate "secrets page drops the fingerprint chip"  AccountVaultTabs.kt 'KitFingerprint(row.fingerprint, tag = row.path)' 'Text(row.fingerprint)'
 mutate "Cloud Vault package hardcoded"         AccountVaultTabs.kt 'it.id == "vault"' 'it.pkg == "com.diegonmarcos.cloudvault"'
 mutate "grants lose revoke-all"                AccountVaultTabs.kt 'VaultTags.revokeAll(who)' 'VaultTags.GRANTS'
 mutate "grants page unmounted"                 Main.kt 'GrantsTab()' 'AccountPlaceholderPage(section, page, "x")'

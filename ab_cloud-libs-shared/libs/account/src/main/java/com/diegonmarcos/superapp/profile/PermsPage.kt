@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,11 +23,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
+import com.diegonmarcos.superapp.uikit.KitAction
+import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitListRow
+import com.diegonmarcos.superapp.uikit.KitState
+import com.diegonmarcos.superapp.uikit.KitStatusBanner
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
@@ -45,13 +48,6 @@ object PermsPageTags {
     const val PAGE = "account:setup:perms"
     const val GRANT_ALL = "account:setup:perms:grant-all"
     const val NO_CHANNEL = "account:setup:perms:no-channel"
-}
-
-@Composable
-private fun Mono(text: String, secondary: Boolean = false) {
-    val p = LocalKitPalette.current
-    Text(text, color = if (secondary) p.textSecondary else p.textPrimary, fontFamily = FontFamily.Monospace,
-        style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
@@ -77,44 +73,44 @@ fun AccountPermsPage(go: (section: String, page: String) -> Unit) {
         if (busy) return
         busy = true
         scope.launch {
-            val out = withContext(Dispatchers.IO) { runCatching { block() }.getOrElse { listOf("✗ ${it.message}") } }
+            val out = withContext(Dispatchers.IO) { runCatching { block() }.getOrElse { listOf("failed: ${it.message}") } }
             lines = out; busy = false; tick++
         }
     }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp).testTag(PermsPageTags.PAGE), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            KitSectionHeader("Setup ▸ perms", plan?.summary() ?: "reading every app's grants…")
+            KitStatusBanner(plan?.summary() ?: "reading every app's grants…",
+                when { plan == null -> KitState.BUSY; plan?.todo.isNullOrEmpty() -> KitState.OK; else -> KitState.WARN }, tag = "perms")
         }
         item {
             KitCard(Modifier.fillMaxWidth()) {
                 val ch = channel
                 if (ch == null) {
-                    Mono("No shell channel: Grant all needs one. Pair it in the runbook's shell step.", secondary = true)
-                    OutlinedButton(onClick = { go("setup", "runbook") }, modifier = Modifier.fillMaxWidth().testTag(PermsPageTags.NO_CHANNEL)) {
-                        Text("Open runbook ▸ shell")
-                    }
-                } else Mono("shell channel: ${ch.name()}", secondary = true)
-                OutlinedButton(enabled = !busy && plan != null && ch != null,
-                    onClick = { plan?.let { p -> work { PermsPlan.apply(ctx, p, ch).lines.map { it.text() } } } },
-                    modifier = Modifier.fillMaxWidth().testTag(PermsPageTags.GRANT_ALL)) {
-                    Text(if (busy) "Granting…" else "Grant all (${plan?.todo?.size ?: 0} from the profile)")
-                }
-                lines.forEach { Mono(it) }
+                    KitListRow("No shell channel", secondary = "Grant all needs one: pair it in the runbook's shell step",
+                        pill = "none" to KitState.BAD, tag = "perms:channel")
+                    KitActionBar(listOf(KitAction("Open runbook ▸ shell", PermsPageTags.NO_CHANNEL) { go("setup", "runbook") }))
+                } else KitListRow("Shell channel", secondary = ch.name(), pill = "ready" to KitState.OK, tag = "perms:channel")
+                KitActionBar(listOf(KitAction(if (busy) "Granting…" else "Grant all (${plan?.todo?.size ?: 0} from the profile)",
+                    PermsPageTags.GRANT_ALL, !busy && plan != null && ch != null) {
+                    plan?.let { p -> work { PermsPlan.apply(ctx, p, ch).lines.map { it.text() } } }
+                }))
+                lines.forEach { l -> SaidBanner(l, "perms:line") }
             }
         }
         val p = plan
         if (p != null) {
             if (p.global.isNotEmpty()) item {
+                KitSectionHeader("Device", "", eyebrow = true)
                 KitCard(Modifier.fillMaxWidth()) {
-                    Mono("Device")
                     p.global.forEach { ItemRow(it, busy, channel) { i -> work { listOf(PermsPlan.applyOne(ctx, i, channel).text()) } } }
                 }
             }
             items(p.apps, key = { it.pkg }) { a ->
                 KitCard(Modifier.fillMaxWidth()) {
-                    Mono(a.label + if (a.fleet) "  · fleet" else "")
-                    Mono("${a.pkg}  ·  ${a.granted} granted · ${a.denied} denied", secondary = true)
+                    KitListRow(a.label, secondary = a.pkg + if (a.fleet) " · fleet" else "", tag = a.pkg,
+                        leading = a.label.take(1).uppercase(),
+                        pill = "${a.granted} granted · ${a.denied} denied" to (if (a.denied == 0) KitState.OK else KitState.WARN))
                     a.items.forEach { ItemRow(it, busy, channel) { i -> work { listOf(PermsPlan.applyOne(ctx, i, channel).text()) } } }
                 }
             }
@@ -125,10 +121,13 @@ fun AccountPermsPage(go: (section: String, page: String) -> Unit) {
 @Composable
 private fun ItemRow(item: PermsPlan.Item, busy: Boolean, channel: ShellChannel?, grant: (PermsPlan.Item) -> Unit) {
     val ctx = LocalContext.current
-    val mark = when (item.granted) { true -> "✓"; false -> "·"; null -> "?" }
-    val want = if (item.wanted) "  (profile)" else ""
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column(Modifier.weight(1f)) { Mono("$mark ${item.kind.id}  ${item.name}$want", secondary = item.granted == true) }
+    val pill = when (item.granted) {
+        true -> "granted" to KitState.OK
+        false -> "denied" to (if (item.wanted) KitState.WARN else KitState.IDLE)
+        null -> "unknown" to KitState.IDLE
+    }
+    KitListRow(item.name.substringAfterLast('.'), secondary = item.kind.id + (if (item.wanted) " · in the profile" else "") + " · " + item.name,
+        pill = pill, tag = "${item.pkg}:${item.kind.id}:${item.name}") {
         if (item.granted != true) {
             if (item.kind == PermsPlan.Kind.USER) {
                 TextButton(onClick = {

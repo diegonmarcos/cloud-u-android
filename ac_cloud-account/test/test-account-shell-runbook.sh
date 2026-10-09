@@ -64,7 +64,7 @@ dr = rb.split("private fun drift")[1].split("private fun checkConfigs")[0]
 ok("i.value" not in dr.replace("FleetSetup.same(back.opt(i.key), i.value)", ""), "drift lines carry key names only", "drift line prints a value")
 ok(' need a source"' in rb, "apps line counts what needs a source", "apps line lost its need-a-source count")
 pg = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/RunbookPage.kt")
-ra = pg.split("RunbookTags.RUN_ALL")[1].split("KitCard")[0] if "RunbookTags.RUN_ALL" in pg else ""
+ra = pg.split("RunbookTags.RUN_ALL")[1].split("sheet?.let")[0] if "RunbookTags.RUN_ALL" in pg else ""
 ok("rb.plan()" in ra and "runAll" not in ra, "Run all opens the plan sheet first", "Run all acts without the plan sheet")
 ok("rb.runAll" in pg.split("RunbookTags.SHEET_GO")[-1], "Run all acts only from the sheet's confirm", "Run all is not behind the sheet")
 ok(not any(x in pg for x in (".value", "\"value\"", "workingProfile", "settings")), "runbook rows print state + detail only", "runbook page prints a value")
@@ -173,7 +173,7 @@ mutate "debug op missing" $P/AccountDebugApi.kt '"runbook" -> SetupRunbook(ctx)'
 mutate "Run all does not stop at FAILED" $P/SetupRunbook.kt 'if (st is State.Failed || st is State.Running) { stopped = s.id; break }' 'if (false) { stopped = s.id; break }' || M=$((M+1))
 mutate "plan sheet skipped" $P/RunbookPage.kt 'runCatching { rb.plan() }.getOrNull()' 'runCatching { rb.runAll() }.getOrNull()' || M=$((M+1))
 mutate "a value printed in a drift row" $P/SetupRunbook.kt 'out += "${ap.app.id}.${sf.first}.${i.key}"' 'out += "${ap.app.id}.${sf.first}.${i.key}=${i.value}"' || M=$((M+1))
-mutate "a value printed in a runbook row" $P/RunbookPage.kt 'Text(r?.optString("detail").orEmpty()' 'Text(r?.optString("detail").orEmpty() + rb.configsPlan()?.apps?.firstOrNull()?.items?.firstOrNull()?.value' || M=$((M+1))
+mutate "a value printed in a runbook row" $P/RunbookPage.kt 'detail = r?.optString("detail").orEmpty()' 'detail = r?.optString("detail").orEmpty() + rb.configsPlan()?.apps?.firstOrNull()?.items?.firstOrNull()?.value' || M=$((M+1))
 mutate "a value printed in an apps row" $P/AppsPage.kt 'pl.installed.map { it.pkg to (if (it.ours) "fleet" else "installed") }' 'pl.installed.map { it.pkg to it.versionName }' || M=$((M+1))
 mutate "a Play page offered" $P/AppsPage.kt '(pl.store.map { it.entry } + pl.manual)' '(pl.store.also { ctx.startActivity(it.first().intent) }.map { it.entry } + pl.manual)' || M=$((M+1))
 mutate "no source declared dropped" $P/AppsPage.kt '"no source declared: add it to the source map"' '"open in Play"' || M=$((M+1))

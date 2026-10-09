@@ -1,14 +1,15 @@
 package com.diegonmarcos.superapp.profile
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,13 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.account.R
 import com.diegonmarcos.superapp.settings.AccountVault
+import com.diegonmarcos.superapp.uikit.KitAction
+import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitChip
+import com.diegonmarcos.superapp.uikit.KitFingerprint
+import com.diegonmarcos.superapp.uikit.KitListRow
+import com.diegonmarcos.superapp.uikit.KitSettingsRow
+import com.diegonmarcos.superapp.uikit.KitState
+import com.diegonmarcos.superapp.uikit.KitStatusBanner
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
@@ -58,17 +67,18 @@ object VaultTags {
     const val GRANT_ADD = "vault:grant_add"
 }
 
+/** A caption line under a section (summary, result); rows are KitListRow. */
 @Composable
-private fun Dense(text: String, tag: String? = null, secondary: Boolean = false) {
+private fun Caption(text: String, tag: String? = null) {
     val p = LocalKitPalette.current
-    Text(text, color = if (secondary) p.textSecondary else p.textPrimary, fontFamily = FontFamily.Monospace,
-        style = MaterialTheme.typography.bodySmall, modifier = if (tag != null) Modifier.testTag(tag) else Modifier)
+    Text(text, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+        modifier = if (tag != null) Modifier.testTag(tag) else Modifier)
 }
 
 @Composable
 private fun SummaryLine(v: AccountVault, tick: Int) {
     val s = remember(tick) { v.summary() }
-    Dense(stringResource(R.string.vault_summary, s.optInt("connections"), s.optInt("data"), s.optInt("configs"), s.optInt("secrets")), VaultTags.SUMMARY, true)
+    Caption(stringResource(R.string.vault_summary, s.optInt("connections"), s.optInt("data"), s.optInt("configs"), s.optInt("secrets")), VaultTags.SUMMARY)
 }
 
 // ── CONNECTIONS ──────────────────────────────────────────────────────────
@@ -85,7 +95,7 @@ fun ConnectionsTab(pickBundle: ((String) -> Unit) -> Unit, export: (String, Stri
     val scope = rememberCoroutineScope()
     val vault = remember { AccountVault(ctx) }
     var tick by remember { mutableStateOf(0) }
-    var result by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf(Said(KitState.IDLE, "")) }
     var askPass by remember { mutableStateOf<((CharArray) -> Unit)?>(null) }
     val m = remember { runCatching { AccountFleet.manifest(ctx) }.getOrNull() }
     val paths = remember(tick) { com.diegonmarcos.superapp.profile.SetupPlan.leaves(vault.connections()) }
@@ -98,33 +108,35 @@ fun ConnectionsTab(pickBundle: ((String) -> Unit) -> Unit, export: (String, Stri
     Column(Modifier.fillMaxWidth().testTag(VaultTags.CONNECTIONS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         KitSectionHeader(stringResource(R.string.vault_connections_title), stringResource(R.string.vault_connections_caption))
         SummaryLine(vault, tick)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(modifier = Modifier.testTag(VaultTags.EXPORT), onClick = {
-                askPass = { pass -> scope.launch { val text = withContext(Dispatchers.Default) { vault.exportBundle(pass) }; export("cloud-account-bundle.json", text); result = ctx.getString(R.string.vault_exported) } }
-            }) { Text(stringResource(R.string.vault_export)) }
-            OutlinedButton(modifier = Modifier.testTag(VaultTags.IMPORT), onClick = {
+        KitActionBar(listOf(
+            KitAction(stringResource(R.string.vault_export), VaultTags.EXPORT) {
+                askPass = { pass -> scope.launch { val text = withContext(Dispatchers.Default) { vault.exportBundle(pass) }; export("cloud-account-bundle.json", text); result = Said(KitState.OK, ctx.getString(R.string.vault_exported)) } }
+            },
+            KitAction(stringResource(R.string.vault_import), VaultTags.IMPORT) {
                 pickBundle { text ->
                     askPass = { pass -> scope.launch {
                         val r = withContext(Dispatchers.Default) { vault.importBundle(text, pass) }
-                        result = if (r.ok) ctx.getString(R.string.vault_imported, r.sections.joinToString(", ")) else "✗ ${r.why}"; tick++
+                        result = if (r.ok) Said(KitState.OK, ctx.getString(R.string.vault_imported, r.sections.joinToString(", "))) else Said(KitState.BAD, r.why); tick++
                     } }
                 }
-            }) { Text(stringResource(R.string.vault_import)) }
-        }
-        OutlinedButton(modifier = Modifier.fillMaxWidth().testTag(VaultTags.MIGRATE), onClick = {
-            scope.launch {
-                val filled = withContext(Dispatchers.IO) { AccountMigrate.run(ctx) }
-                result = ctx.getString(R.string.vault_migrated, filled.size, filled.joinToString(", ") { it.path }); tick++
-            }
-        }) { Text(stringResource(R.string.vault_migrate)) }
-        if (result.isNotBlank()) Dense(result, VaultTags.RESULT, true)
+            },
+            KitAction(stringResource(R.string.vault_migrate), VaultTags.MIGRATE) {
+                scope.launch {
+                    val filled = withContext(Dispatchers.IO) { AccountMigrate.run(ctx) }
+                    result = Said(KitState.OK, ctx.getString(R.string.vault_migrated, filled.size, filled.joinToString(", ") { it.path })); tick++
+                }
+            },
+        ), filledFirst = false)
+        if (result.text.isNotBlank()) KitStatusBanner(result.text, result.state, Modifier.testTag(VaultTags.RESULT), tag = "vault:result")
         KitCard {
-            if (paths.isEmpty()) Dense(stringResource(R.string.vault_connections_none), secondary = true)
+            if (paths.isEmpty()) KitSettingsRow(stringResource(R.string.vault_connections_none))
             for (path in paths) {
                 val v = vault.connection(path)
-                Row(Modifier.fillMaxWidth().testTag(VaultTags.row(path)), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Dense(path)
-                    Dense(if (visible(path)) v.toString().take(48) else ctx.getString(R.string.vault_masked, v?.toString()?.length ?: 0), secondary = true)
+                KitListRow(fieldLabel(path), Modifier.testTag(VaultTags.row(path)), secondary = path, tag = path,
+                    onLongClick = { copyPath(ctx, path) }) {
+                    if (visible(path)) Text(v.toString().take(48), color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                    else KitFingerprint(fingerprint(v?.toString().orEmpty()), length = v?.toString()?.length ?: 0, tag = path)
                 }
             }
         }
@@ -175,18 +187,19 @@ fun SecretsTab(openVault: () -> Unit) {
     }
     Column(Modifier.fillMaxWidth().testTag(VaultTags.SECRETS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         KitSectionHeader(stringResource(R.string.vault_secrets_title), stringResource(R.string.vault_secrets_values_caption))
-        Row(Modifier.fillMaxWidth().testTag(VaultTags.VAULT_LINK), horizontalArrangement = Arrangement.SpaceBetween) {
-            Dense(vaultApp?.label ?: stringResource(R.string.vault_cloud_vault_fallback_label))
+        KitListRow(vaultApp?.label ?: stringResource(R.string.vault_cloud_vault_fallback_label), Modifier.testTag(VaultTags.VAULT_LINK),
+            secondary = "passwords live there; this page is the fleet's secrets", tag = "cloud-vault",
+            pill = if (installed) "installed" to KitState.OK else "not installed" to KitState.IDLE) {
             TextButton(onClick = openVault) {
                 Text(stringResource(if (installed) R.string.vault_open_cloud_vault else R.string.vault_install_cloud_vault))
             }
         }
         KitCard {
-            if (rows.isEmpty()) Dense(stringResource(R.string.vault_secrets_values_none), secondary = true)
+            if (rows.isEmpty()) KitSettingsRow(stringResource(R.string.vault_secrets_values_none))
             for (row in rows) {
-                Row(Modifier.fillMaxWidth().testTag(VaultTags.secretRow(row.path)), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Dense(row.path)
-                    Dense(stringResource(R.string.vault_secret_row, row.fingerprint, row.source), secondary = true)
+                KitListRow(fieldLabel(row.path), Modifier.testTag(VaultTags.secretRow(row.path)), secondary = "${row.path} · ${row.source}",
+                    tag = row.path, pill = "held" to KitState.OK) {
+                    KitFingerprint(row.fingerprint, tag = row.path)
                 }
             }
         }
@@ -196,6 +209,7 @@ fun SecretsTab(openVault: () -> Unit) {
 // ── GRANTS ───────────────────────────────────────────────────────────────
 
 /** Secrets ▸ grants: which package may read which key. Revocable per key or whole; values never drawn. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GrantsTab() {
     val ctx = LocalContext.current
@@ -208,26 +222,27 @@ fun GrantsTab() {
     Column(Modifier.fillMaxWidth().testTag(VaultTags.GRANTS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         KitSectionHeader(stringResource(R.string.vault_secrets_title), stringResource(R.string.vault_secrets_caption))
         SummaryLine(vault, tick)
-        KitCard {
-            if (grants.isEmpty()) Dense(stringResource(R.string.vault_secrets_none), secondary = true)
-            for ((who, keys) in grants) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Dense(who)
-                    Text(stringResource(R.string.vault_revoke_all), color = p.accent, style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.testTag(VaultTags.revokeAll(who)).clickable { vault.grants.revoke(who); tick++ })
+        if (grants.isEmpty()) KitCard { KitSettingsRow(stringResource(R.string.vault_secrets_none)) }
+        for ((who, keys) in grants) {
+            KitCard {
+                KitListRow(who.substringAfterLast('.').replaceFirstChar { it.uppercase() }, secondary = who, tag = who,
+                    leading = who.substringAfterLast('.').take(1).uppercase(), pill = "${keys.size} keys" to KitState.OK) {
+                    TextButton(modifier = Modifier.testTag(VaultTags.revokeAll(who)), onClick = { vault.grants.revoke(who); tick++ }) {
+                        Text(stringResource(R.string.vault_revoke_all), color = p.accent)
+                    }
                 }
-                for (k in keys) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Dense("  $k", VaultTags.grant(who, k), true)
-                    Text(stringResource(R.string.vault_revoke), color = p.accent, style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.testTag(VaultTags.revoke(who, k)).clickable { vault.grants.revoke(who, k); tick++ })
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (k in keys) KitChip(fieldLabel(k), onRemove = { vault.grants.revoke(who, k); tick++ },
+                        tag = VaultTags.grant(who, k), removeTag = VaultTags.revoke(who, k))
                 }
             }
         }
         KitCard {
             OutlinedTextField(pkg, { pkg = it }, singleLine = true, label = { Text(stringResource(R.string.vault_grant_pkg)) }, modifier = Modifier.fillMaxWidth().testTag(VaultTags.GRANT_PKG))
             OutlinedTextField(key, { key = it }, singleLine = true, label = { Text(stringResource(R.string.vault_grant_key)) }, modifier = Modifier.fillMaxWidth().testTag(VaultTags.GRANT_KEY))
-            OutlinedButton(enabled = pkg.isNotBlank() && key.isNotBlank(), modifier = Modifier.fillMaxWidth().testTag(VaultTags.GRANT_ADD),
-                onClick = { vault.grants.grant(pkg.trim(), key.trim()); pkg = ""; key = ""; tick++ }) { Text(stringResource(R.string.vault_grant_add)) }
+            KitActionBar(listOf(KitAction(stringResource(R.string.vault_grant_add), VaultTags.GRANT_ADD, pkg.isNotBlank() && key.isNotBlank()) {
+                vault.grants.grant(pkg.trim(), key.trim()); pkg = ""; key = ""; tick++
+            }))
         }
     }
 }

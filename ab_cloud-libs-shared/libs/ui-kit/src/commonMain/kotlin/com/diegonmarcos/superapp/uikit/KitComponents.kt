@@ -352,7 +352,9 @@ fun KitSegmented(
 /** A step of a [KitStepper]. */
 enum class KitStepState { TODO, RUNNING, DONE, FAILED }
 
-data class KitStep(val id: String, val title: String, val detail: String, val state: KitStepState, val action: KitAction? = null)
+data class KitStep(val id: String, val title: String, val detail: String, val state: KitStepState, val action: KitAction? = null,
+                   /** The row's test tag; [KitPartTags.step] of [id] when blank. */
+                   val tag: String = "")
 
 /**
  * Steps on a vertical rail: ○ ● ✓ ✗ joined by a line, the title, the detail under it and one
@@ -370,7 +372,7 @@ fun KitStepper(steps: List<KitStep>, modifier: Modifier = Modifier) {
                 KitStepState.DONE -> "✓" to KitState.OK
                 KitStepState.FAILED -> "✗" to KitState.BAD
             }
-            Row(Modifier.fillMaxWidth().testTag(KitPartTags.step(s.id))) {
+            Row(Modifier.fillMaxWidth().testTag(s.tag.ifBlank { KitPartTags.step(s.id) })) {
                 Column(Modifier.width(KitDensity.glyph), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(glyph, color = kitStateColor(state), fontSize = KitDensity.head,
                         modifier = Modifier.padding(top = KitDensity.small))
@@ -427,6 +429,22 @@ fun KitListRow(
         }
         if (pill != null) KitStatePill(pill.first, pill.second, Modifier.padding(start = KitDensity.small))
         if (trailing != null) Box(Modifier.padding(start = KitDensity.small)) { trailing() }
+    }
+}
+
+/** A removable chip: [label] and an × that calls [onRemove] (a grant's key on the Secrets page). */
+@Composable
+fun KitChip(label: String, onRemove: () -> Unit, modifier: Modifier = Modifier, tag: String = label, removeTag: String = "$tag:remove") {
+    val p = LocalKitPalette.current
+    Row(
+        modifier.testTag(tag).clip(RoundedCornerShape(KitDensity.corner)).background(p.surfaceSelected)
+            .padding(start = KitDensity.small, end = KitDensity.small / 2),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = p.textPrimary, fontSize = KitDensity.caption, maxLines = 1)
+        Text("×", color = p.textSecondary, fontSize = KitDensity.title,
+            modifier = Modifier.testTag(removeTag).clickable(role = Role.Button, onClick = onRemove)
+                .padding(horizontal = KitDensity.small / 2, vertical = KitDensity.small / 4))
     }
 }
 

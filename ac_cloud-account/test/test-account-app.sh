@@ -194,7 +194,7 @@ PY
     printf '%s' "$ma2" | grep -qF "$pg" && ok "MainActivity mounts $pg" || bad "MainActivity does not mount $pg"
   done
   strip "$PP" | grep -q '{ confirmDelete = id }' && strip "$PP" | grep -q 'KitConfirmDialog(' && ok "Delete opens a confirm; only the dialog's confirm deletes" || bad "Delete can fire without a confirm"
-  strip "$PP" | grep -q 'InfoMask.declared.hides(' && strip "$PP" | grep -q 'if (secret) "file: ••••' && ok "diff shows secret-class rows as presence only" || bad "diff may render a secret-class value"
+  strip "$PP" | grep -q 'InfoMask.declared.hides(' && [ "$(strip "$PP" | grep -c 'if (secret) KitFingerprint(')" -ge 2 ] && strip "$PP" | grep -q 'if (secret) "file and phone hold a secret: fingerprints only" else' && ok "diff shows secret-class rows as presence only (fingerprints, never the value)" || bad "diff may render a secret-class value"
   strip "$PG" | grep -q 'profilesDriftCount(ctx, model)' && ! strip "$PG" | grep -q 'n/a (task 4)' && ok "Account profile's Drift tile reads the diff count" || bad "Drift tile is not wired to the diff count"
   return $fails
 }
@@ -261,7 +261,8 @@ mutate "devices page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudac
 mutate "working page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"working" -> ProfilesWorkingPage()' '"working" -> AccountPlaceholderPage(section, page, "task 4")' || M=$((M+1))
 mutate "diff page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"diff" -> ProfilesDiffPage(model)' '"diff" -> AccountPlaceholderPage(section, page, "task 4")' || M=$((M+1))
 mutate "Delete fires without confirm" lib/profile/ProfilesPages.kt '{ confirmDelete = id }' '{ io { vault.delete(id).optString("result") } }' || M=$((M+1))
-mutate "diff draws a secret-class value" lib/profile/ProfilesPages.kt 'if (secret) "file: ••••' 'if (false) "file: ••••' || M=$((M+1))
+mutate "diff draws a secret-class value" lib/profile/ProfilesPages.kt 'if (secret) "file and phone hold a secret: fingerprints only" else' 'if (false) "file and phone hold a secret: fingerprints only" else' || M=$((M+1))
+mutate "diff drops a secret fingerprint" lib/profile/ProfilesPages.kt 'if (secret) KitFingerprint(f.a' 'if (false) KitFingerprint(f.a' || M=$((M+1))
 mutate "Drift tile says n/a again" lib/profile/AccountPages.kt 'profilesDriftCount(ctx, model).let' '0.let' || M=$((M+1))
 mutate "tabs op stops answering the islands" lib/profile/AccountDebugApi.kt 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' 'Unit' || M=$((M+1))
 mutate "token filed before the read" lib/profile/ConnectWays.kt 'if (o.ok && file)' 'if (file)' || M=$((M+1))
