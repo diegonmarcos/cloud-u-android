@@ -45,7 +45,7 @@ class PasskeySupportTest {
         assertFalse(PasskeySupport.isPasskeyChallengeUrl("https://accounts.google.com/v3/signin/challenge/pwd"))
     }
 
-    @Test fun `a WebAuthn call that fails fast offers; a user cancel does not`() {
+    @Test fun `a WebAuthn call that fails fast offers, a user cancel does not`() {
         assertTrue(PasskeySupport.isWebAuthnFailure("NotSupportedError", 5))
         assertTrue(PasskeySupport.isWebAuthnFailure("SecurityError", 5000))
         assertTrue(PasskeySupport.isWebAuthnFailure("NotAllowedError", 50))
