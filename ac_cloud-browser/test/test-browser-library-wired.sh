@@ -32,7 +32,7 @@ def check(root, ok):
     ok("BrowserBookmarkOps.add(all()" in bm and "BrowserBookmarkOps.moveFolder(all()" in bm and "BrowserBookmarkOps.deleteFolder(all()" in bm,
        "the store applies the pure (tested) folder rules, not its own")
     ok("fun showHistory(" in frag and "BrowserListScreen(\"History\"" in frag, "history is the Compose list page")
-    ok("ScrollView" not in frag, "the View history page is gone")
+    ok(not __import__("re").search(r"(?<!Horizontal)ScrollView", frag), "the View history page is gone")
     for op in ("bookmarks", "bookmarks/add", "bookmarks/remove", "bookmarks/folders", "bookmarks/folder/rename",
                "bookmarks/folder/delete", "downloads", "downloads/enqueue", "downloads/clear"):
         ok('Op("%s"' % op in api and '"%s" ->' % op in api, "route %s is documented and handled" % op)

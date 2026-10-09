@@ -121,7 +121,7 @@ check(has("BrowserTabGrid", "GroupHeader", "getSpanSize"),
 # ── 5. history: recorded, viewable, clearable, LOCAL ─────────────────
 check(has("BrowserHostFragment", "history.record("),
       "5: visits are recorded on page finish")
-check(has("BrowserHostFragment", "fun showHistory(", 'pill(ctx, "History")'),
+check(has("BrowserHostFragment", "fun showHistory(", 'BrowserTabsBar.Id.HISTORY -> showHistory()'),
       "5: the history view is reachable from the tab grid")
 check(has("BrowserHostFragment", "history.clear()"),
       "5: he can clear it")
