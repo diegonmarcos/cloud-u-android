@@ -38,10 +38,20 @@ def check(root, ok):
     ok("BrowserSitePolicy.shouldRecord(tab)" in src.get(os.path.join(LIB, "BrowserTabsBar.kt"), ""), "the private-session gate is the shouldRecord policy")
     ok("tabs.filter { BrowserSitePolicy.shouldRecord(it) }" in sug, "suggestions skip private tabs")
     ok("LOAD_NO_CACHE" in frag, "a private tab keeps no HTTP cache")
-    ok("WebViewCompat.setProfile(wv, name)" in frag and "WebViewFeature.MULTI_PROFILE" in frag, "private tabs bind the incognito profile where multi-profile exists")
+    ok("WebViewCompat.setProfile(wv, name)" in src.get(os.path.join(LIB, "TabProfile.kt"), "") and "WebViewFeature.MULTI_PROFILE" in frag, "private tabs bind the incognito profile where multi-profile exists")
     wv = frag[frag.find("webView = WebView(ctx).apply {"):]
     ok(0 <= wv.find("bindProfile(this, tab)") < wv.find("settings.javaScriptEnabled"), "setProfile runs before the WebView loads anything")
     ok("store.deleteProfile(PrivateProfile.NAME)" in frag, "the last private tab closing deletes the profile")
+    # tab-scoped paths never read the process-wide cookie jar: a private tab's cookies are in its profile
+    import re as _re
+    for nm in ("BrowserHostFragment.kt", "BrowserDownloads.kt", "OfflineSites.kt"):
+        txt = src.get(os.path.join(LIB, nm), "")
+        ok(txt != "" and not _re.search(r"CookieManager\.getInstance\(\)", txt), "%s has no bare CookieManager.getInstance()" % nm)
+    dl = src.get(os.path.join(LIB, "BrowserDownloads.kt"), "")
+    ok("cookieHeader: (String) -> String?" in dl and "cookieHeader(url)" in dl, "a download takes its cookie header from the caller's jar")
+    ok("cookiesOf(webView).getCookie(u)" in frag, "the download reads the requesting tab's profile cookies")
+    ok("profile = profileOfWebView[wv]" in frag and "TabProfile.bind(this, profile)" in src.get(os.path.join(LIB, "OfflineSites.kt"), ""), "the offline save binds the asking tab's profile")
+    ok("TabProfile.bind(this, profileOfWebView[wv])" in frag, "the scraper's hidden WebView binds the asking tab's profile")
     ok("BrowserClearData.endPrivateSession(" in frag, "closing the last private tab ends the private session")
     ok("override fun onPermissionRequest" in frag and "override fun onGeolocationPermissionsShowPrompt" in frag,
        "WebView's permission and location prompts are handled")
@@ -62,6 +72,7 @@ PRIV = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superap
 FRAG = "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt"
 main("privacy wiring", check, [
     ("the cache box stops clearing", PRIV, "clearCache(true)", "settings.toString()", "`cache` makes its call"),
+    ("a download reads the default jar", "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserDownloads.kt", "cookieHeader(url)?.let", "android.webkit.CookieManager.getInstance().getCookie(url)?.let", "no bare CookieManager.getInstance()"),
     ("private visits reach history", FRAG, "if (!privateSession.visit(prefs.byId(tabKey), origin)) return", "if (false) return", "before history.record"),
     ("a site permission the manifest lacks", "ac_cloud-browser/app/src/main/AndroidManifest.xml", 'android:name="android.permission.CAMERA"', 'android:name="android.permission.NOCAM"', "CAMERA"),
     ("privacy/clear without confirm", "ac_cloud-browser/app/src/main/java/com/diegonmarcos/cloudbrowser/debugapi/BrowserDebugApi.kt", 'q["confirm"] != "1" -> JSONObject().put("ok", false).put("error", "add confirm=1")', 'false -> JSONObject()', "confirm=1"),

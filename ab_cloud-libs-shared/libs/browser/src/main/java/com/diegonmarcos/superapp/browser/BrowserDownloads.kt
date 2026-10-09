@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
-import android.webkit.CookieManager
 import android.webkit.URLUtil
 import org.json.JSONArray
 import org.json.JSONObject
@@ -53,14 +52,15 @@ class BrowserDownloads(context: Context) {
     fun all(): List<BrowserDownload> = BrowserDownloadIndex.fromJson(sp.getString(KEY, "[]"))
 
     /** Queue [url]; [dir] is a sub-folder of the public Downloads ("" = Downloads itself). */
-    fun enqueue(url: String, userAgent: String?, contentDisposition: String?, mime: String?, dir: String): BrowserDownload {
+    fun enqueue(url: String, userAgent: String?, contentDisposition: String?, mime: String?, dir: String,
+                cookieHeader: (String) -> String?): BrowserDownload {
         val name = URLUtil.guessFileName(url, contentDisposition, mime)
         val rel = BrowserBookmarkOps.normFolder(dir).let { if (it.isEmpty()) name else "$it/$name" }
         val req = DownloadManager.Request(Uri.parse(url))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, rel)
             .setTitle(name)
-        CookieManager.getInstance().getCookie(url)?.let { req.addRequestHeader("Cookie", it) }
+        cookieHeader(url)?.let { req.addRequestHeader("Cookie", it) }
         userAgent?.let { req.addRequestHeader("User-Agent", it) }
         mime?.takeIf { it.isNotBlank() }?.let { req.setMimeType(it) }
         val id = dm.enqueue(req)

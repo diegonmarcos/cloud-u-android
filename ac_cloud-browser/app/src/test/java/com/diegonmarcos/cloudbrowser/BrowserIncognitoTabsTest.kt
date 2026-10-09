@@ -125,4 +125,23 @@ class BrowserIncognitoTabsTest {
         assertFalse(PrivateProfile.staleAtStart(true, listOf(tab("p", true))))
         assertFalse(PrivateProfile.staleAtStart(false, emptyList()))
     }
+
+    @Test
+    fun `a private tab's download and offline save read the private jar, a normal tab's the default one`() {
+        val calls = ArrayList<String>()
+        fun cookie(tab: BrowserTab, supported: Boolean) = PrivateProfile.jarFor(PrivateProfile.nameFor(tab, supported),
+            { n -> calls.add("profile:$n"); "private-cookie" }, { calls.add("default"); "normal-cookie" })
+        assertEquals("private-cookie", cookie(tab("p", true), true))
+        assertEquals(listOf("profile:incognito"), calls)
+        calls.clear()
+        assertEquals("normal-cookie", cookie(tab("n"), true))
+        assertEquals(listOf("default"), calls)
+        calls.clear()
+        // Without multi-profile a private tab has no profile, so the default jar is the only one there is.
+        assertEquals("normal-cookie", cookie(tab("p", true), false))
+        assertEquals(listOf("default"), calls)
+        // The offline save gets the profile of the tab that asked (what OfflineSiteJob binds before loading).
+        assertEquals("incognito", PrivateProfile.nameFor(tab("p", true), true))
+        assertNull(PrivateProfile.nameFor(tab("n"), true))
+    }
 }

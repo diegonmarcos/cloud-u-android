@@ -78,6 +78,8 @@ class OfflineSiteJob(
     private val settleMs: Long,
     private val onProgress: (SaveProgress) -> Unit,
     private val onDone: (OfflineSite?) -> Unit,
+    /** The profile of the tab that asked for the save (null = default); bound before the hidden WebView loads. */
+    private val profile: String? = null,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val crawl = SiteCrawl(startUrl, limits)
@@ -90,6 +92,7 @@ class OfflineSiteJob(
 
     fun start() {
         hidden = WebView(ctx).apply {
+            TabProfile.bind(this, profile)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             userAgent?.let { settings.userAgentString = it }

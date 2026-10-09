@@ -88,6 +88,10 @@ object PrivateProfile {
     fun showNotice(supported: Boolean, filter: BrowserTabsBar.Filter): Boolean =
         !supported && filter == BrowserTabsBar.Filter.INCOGNITO
 
+    /** Which jar a request reads: the profile's when [name] is a profile, else the default one. */
+    fun <T> jarFor(name: String?, profileJar: (String) -> T, defaultJar: () -> T): T =
+        if (name != null) profileJar(name) else defaultJar()
+
     /** At start: a profile left by a previous run is deleted when no private tab survives. */
     fun staleAtStart(supported: Boolean, tabs: List<BrowserTab>): Boolean = supported && tabs.none { it.isPrivate }
 }

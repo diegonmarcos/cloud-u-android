@@ -74,12 +74,15 @@ class BrowserHostFragment : Fragment() {
 
     /** Bind [wv] to its tab's profile. MUST run before the WebView loads anything. */
     private fun bindProfile(wv: WebView, tab: BrowserTab?) {
-        val name = PrivateProfile.nameFor(tab, profileSupported) ?: return
-        runCatching {
-            androidx.webkit.ProfileStore.getInstance().getOrCreateProfile(name)
-            androidx.webkit.WebViewCompat.setProfile(wv, name)
-        }
+        val name = PrivateProfile.nameFor(tab, profileSupported)
+        if (name != null) profileOfWebView[wv] = name
+        TabProfile.bind(wv, name)
     }
+
+    /** The profile each live WebView was bound to (absent = default). */
+    private val profileOfWebView = java.util.WeakHashMap<WebView, String>()
+    /** The cookie manager for [wv]'s profile; the process-wide one only for a default-profile WebView. */
+    private fun cookiesOf(wv: WebView?): android.webkit.CookieManager = TabProfile.cookies(wv?.let { profileOfWebView[it] })
 
     /** The last private tab is gone: drop the profile, or failing that wipe everything in it. */
     private fun dropPrivateProfile() {
@@ -602,7 +605,8 @@ class BrowserHostFragment : Fragment() {
             onDone = { site ->
                 OfflineSiteJob.active = null
                 toast(if (site != null) "Saved ${site.pages.size} page(s), ${SiteData.human(site.bytes)}" else "Nothing could be saved")
-            })
+            },
+            profile = profileOfWebView[wv])
         OfflineSiteJob.active = job
         overlay(bottom = true) { close -> BrowserSavePanel(saveState, onStop = { job.cancel() }, onClose = close) }
         job.start()
@@ -806,7 +810,7 @@ class BrowserHostFragment : Fragment() {
             // #893 sign-in (Google, OAuth) opens a child window and posts back through window.opener.
             settings.setSupportMultipleWindows(true)
             settings.javaScriptCanOpenWindowsAutomatically = true
-            android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+            cookiesOf(this).setAcceptCookie(true)
             // Passkeys: WebAuthn is off in WebView unless asked for; a refusal falls back to the system browser.
             passkeyMode = PasskeySupport.apply(settings)
             val self = this
@@ -959,7 +963,7 @@ class BrowserHostFragment : Fragment() {
         child.settings.javaScriptCanOpenWindowsAutomatically = true
         PasskeySupport.apply(child.settings)
         applyViewMode(child)
-        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(child, browserSettings.bool("block_third_party_cookies") != true)
+        cookiesOf(child).setAcceptThirdPartyCookies(child, browserSettings.bool("block_third_party_cookies") != true)
         val dialog = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar)
         child.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean =
@@ -1122,7 +1126,9 @@ class BrowserHostFragment : Fragment() {
 
     /** A page download, with the page's cookies and agent, into the `download_dir` setting. */
     private fun download(url: String, ua: String?, disposition: String?, mime: String?): BrowserDownload =
-        downloads.enqueue(url, ua, disposition, mime, browserSettings.string("download_dir").orEmpty())
+        downloads.enqueue(url, ua, disposition, mime, browserSettings.string("download_dir").orEmpty()) { u ->
+            cookiesOf(webView).getCookie(u)   // the requesting tab's jar: a private tab's cookies are in its profile
+        }
 
     /** Pin [url] to the launcher; it opens here (MainActivity takes VIEW intents). */
     private fun addToHome(url: String, title: String): Boolean {
@@ -1164,7 +1170,7 @@ class BrowserHostFragment : Fragment() {
         browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
         browserSettings.int("text_zoom")?.let { s.textZoom = it }
         // #893 third-party cookies are ON unless the user blocks them (WebView's own default is off, which breaks sign-in).
-        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)
+        cookiesOf(wv).setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)
         applyViewMode(wv)
         applyShields(wv, url)
         // #887 file access only for a page of an offline copy (targetSdk 30+ has it off by default).
@@ -1428,7 +1434,7 @@ class BrowserHostFragment : Fragment() {
             pages.add(ScrapeEngine.rows(r, plan))
             val next = r?.optString("next")?.takeIf { it.startsWith("http") }
             if (next == null || n >= plan.maxPages) return finish(hidden)
-            val h = hidden ?: WebView(requireContext()).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true }
+            val h = hidden ?: WebView(requireContext()).apply { TabProfile.bind(this, profileOfWebView[wv]); settings.javaScriptEnabled = true; settings.domStorageEnabled = true }
             var waiting = true
             h.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
