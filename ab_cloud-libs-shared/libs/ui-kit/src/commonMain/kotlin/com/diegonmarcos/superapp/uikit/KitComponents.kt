@@ -432,9 +432,9 @@ fun KitListRow(
     }
 }
 
-/** A removable chip: [label] and an × that calls [onRemove] (a grant's key on the Secrets page). */
+/** A chip: [label] and, when [onRemove] is set, an × that calls it (a grant's key on the Secrets page); null = read-only. */
 @Composable
-fun KitChip(label: String, onRemove: () -> Unit, modifier: Modifier = Modifier, tag: String = label, removeTag: String = "$tag:remove") {
+fun KitChip(label: String, onRemove: (() -> Unit)?, modifier: Modifier = Modifier, tag: String = label, removeTag: String = "$tag:remove") {
     val p = LocalKitPalette.current
     Row(
         modifier.testTag(tag).clip(RoundedCornerShape(KitDensity.corner)).background(p.surfaceSelected)
@@ -442,7 +442,8 @@ fun KitChip(label: String, onRemove: () -> Unit, modifier: Modifier = Modifier, 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, color = p.textPrimary, fontSize = KitDensity.caption, maxLines = 1)
-        Text("×", color = p.textSecondary, fontSize = KitDensity.title,
+        // A read-only chip (onRemove = null) carries no ×.
+        if (onRemove != null) Text("×", color = p.textSecondary, fontSize = KitDensity.title,
             modifier = Modifier.testTag(removeTag).clickable(role = Role.Button, onClick = onRemove)
                 .padding(horizontal = KitDensity.small / 2, vertical = KitDensity.small / 4))
     }

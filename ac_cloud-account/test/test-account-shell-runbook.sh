@@ -119,6 +119,11 @@ ok("if (!capture) emptyList() else" in bk and "AccountMigrate.capture(vault," in
 ok('q["capture"] != "0"' in api, "backup?capture=0 skips the capture", "backup has no capture=0 switch")
 sp = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/SetupPlan.kt")
 ok(sp.count("store.name == VAULT_STORE") >= 3, "setup never pushes into the Account vault's own file", "setup can overwrite the vault file")
+# phone-seen: the alias migration runs at app start, and the card says what the id was for one session
+ok("AccountDevice.migrateAtStart(this)" in app, "App.onCreate runs the device alias migration", "the alias migration waits for the profile step")
+ms = ap2.split("fun migrateAtStart(")[1].split("\n    }\n")[0] if "fun migrateAtStart(" in ap2 else ""
+ok("runCatching { resolve(app) }" in ms and "DeviceVault(app).devices()" in ms, "start-up migration resolves now and after refreshing the listing", "start-up migration does not resolve")
+ok("renamedFrom = conn" in ap2 and '"was $it"' in ap2, "the device card notes the legacy id (was galaxy)", "the card never names the legacy id")
 sys.exit(fails)
 PY
 }
@@ -196,5 +201,8 @@ mutate "device?set= accepts an undeclared id without new" $P/AccountDebugApi.kt 
 mutate "configs step ignores the vault bundle" $P/SetupRunbook.kt 'SetupPlan.merge(fleet, device)' 'device' || M=$((M+1))
 mutate "backup skips capture" $P/DeviceVault.kt 'if (!capture) emptyList() else' 'if (true) emptyList() else' || M=$((M+1))
 mutate "setup pushes into the vault file" $P/SetupPlan.kt 'if (store.name == VAULT_STORE) continue' 'if (false) continue' || M=$((M+1))
+mutate "alias migration not run at app start" $K/App.kt 'AccountDevice.migrateAtStart(this)' 'toString()' || M=$((M+1))
+mutate "start-up migration never resolves" $P/AccountPages.kt 'runCatching { resolve(app) }' 'runCatching { app }' || M=$((M+1))
+mutate "card drops the alias note" $P/AccountPages.kt 'renamedFrom = conn' 'Unit' || M=$((M+1))
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

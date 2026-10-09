@@ -37,6 +37,9 @@ class App : Application() {
         kotlin.concurrent.thread(name = "account-migrate") {
             runCatching { AccountMigrate.run(this) }.onFailure { Log.w(TAG, "migration from SuperApp failed: ${it.javaClass.simpleName}") }
         }
+        // A legacy device id renamed by a declared alias (galaxy -> galaxy-s21) is migrated now, before any page draws it.
+        runCatching { com.diegonmarcos.superapp.profile.AccountDevice.migrateAtStart(this) }
+            .onFailure { Log.w(TAG, "device alias migration failed: ${it.javaClass.simpleName}") }
         // Account's OWN uid-2000 channel (spec 2.4): embedded adb pairing, Shizuku as the fallback.
         // Re-armed after every boot; the runbook's shell and store steps run over it.
         // HostShellService keeps the debug server up only while Settings ▸ Debug API allows it.

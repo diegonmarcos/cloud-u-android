@@ -71,11 +71,17 @@ class SetupRunbook(private val ctx: Context) {
 
     fun step(id: String, allowPrompt: Boolean = false): Step? = steps(allowPrompt).firstOrNull { it.id == id }
 
-    /** Every step's check, in order (the dry run). */
+    /** Every step's check, in order (the dry run); `checked_at` = when the checks finished (UTC ISO). */
     fun dry(): JSONObject {
         val arr = JSONArray()
         for (s in steps()) arr.put(guard { s.check() }.json().put("id", s.id))
-        return JSONObject().put("steps", arr)
+        return JSONObject().put("steps", arr).put("checked_at", java.time.Instant.now().toString())
+    }
+
+    /** ONE step's check (what the runbook page runs per row on open and after every run). */
+    fun check(id: String): JSONObject {
+        val s = step(id) ?: return State.Failed("no step '$id' (declared: ${declaredIds().joinToString(",")})").json().put("id", id)
+        return guard { s.check() }.json().put("id", s.id)
     }
 
     /** Run ONE step. Unknown or undeclared ids answer FAILED with the declared list. */

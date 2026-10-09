@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.diegonmarcos.superapp.uikit.KitDates
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,7 +112,7 @@ fun ProfilesDevicesPage() {
         val def = byId["DEFAULT"]
         KitDeviceCard(
             id = "DEFAULT", glyph = "♛", model = "the profile a new phone starts from",
-            state = def?.optString("captured_at")?.ifBlank { null }?.let { "captured $it" } ?: "not captured",
+            state = def?.optString("captured_at")?.ifBlank { null }?.let { "captured ${KitDates.relative(it)}" } ?: "not captured",
             pill = if (def == null) "missing" to KitState.WARN else "file" to KitState.OK,
             primary = KitAction("Load", ProfilesPageTags.load("DEFAULT"), !busy) { io { vault.load("DEFAULT").optString("result") } },
         )
@@ -128,7 +129,7 @@ fun ProfilesDevicesPage() {
                 val apps = row.optJSONObject("apps")?.optInt("apps") ?: 0
                 KitDeviceCard(
                     id = id, model = row.optString("model").ifBlank { "" },
-                    state = "$apps apps · captured ${row.optString("captured_at").ifBlank { "—" }}",
+                    state = "$apps apps · captured ${row.optString("captured_at").ifBlank { null }?.let { KitDates.relative(it) } ?: "—"}",
                     badge = if (mine) "this phone" else "",
                     pill = "file" to KitState.OK,
                     primary = KitAction("Load", ProfilesPageTags.load(id), !busy) { io { vault.load(id).optString("result") } },

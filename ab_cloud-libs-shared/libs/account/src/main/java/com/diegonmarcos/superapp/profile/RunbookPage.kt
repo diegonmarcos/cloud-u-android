@@ -15,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitAction
+import com.diegonmarcos.superapp.uikit.KitDates
 import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitListRow
 import com.diegonmarcos.superapp.uikit.KitState
@@ -75,38 +77,41 @@ fun RunbookPage(open: (section: String, page: String) -> Unit) {
     var sheet by remember { mutableStateOf<JSONObject?>(null) }
     var result by remember { mutableStateOf("") }
 
-    fun refresh() {
-        busy = true
-        scope.launch {
-            val d = withContext(Dispatchers.IO) { runCatching { rb.dry() }.getOrNull() }
-            d?.optJSONArray("steps")?.let { a -> for (i in 0 until a.length()) a.getJSONObject(i).let { rows[it.getString("id")] = it } }
-            busy = false
+    var checking by remember { mutableIntStateOf(0) }
+    var checkedAt by remember { mutableStateOf("") }
+
+    /**
+     * Every step's check, one row at a time off the main thread (a slow check, e.g. verified diffing
+     * every app's export, does not hold the others back). [keep]: a row the last run just answered
+     * keeps that answer when its check only says TODO (a RUNNING step waits on the user).
+     */
+    suspend fun checkAll(keep: Set<String> = emptySet()) {
+        for ((n, id) in ids.withIndex()) {
+            checking = n + 1
+            val c = withContext(Dispatchers.IO) { rb.check(id) }
+            val prev = rows[id]
+            rows[id] = if (id in keep && prev != null && c.optString("state") == "TODO") prev else c
         }
+        checking = 0
+        checkedAt = java.time.Instant.now().toString()
     }
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) { busy = true; checkAll(); busy = false }
 
     fun runOne(id: String) {
         busy = true
         rows[id] = JSONObject().put("id", id).put("state", "RUNNING").put("detail", "…")
         scope.launch {
             rows[id] = withContext(Dispatchers.IO) { rb.run(id) }
+            checkAll(keep = setOf(id))
             busy = false
         }
     }
 
     Column(Modifier.fillMaxSize().testTag(RunbookTags.PAGE)) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val failed = ids.count { rows[it]?.optString("state") == "FAILED" }
-            val done = ids.count { rows[it]?.optString("state") in setOf("DONE", "ALREADY") }
-            KitStatusBanner(
-                when {
-                    failed > 0 -> "$failed of ${ids.size} steps need attention"
-                    done == ids.size && ids.isNotEmpty() -> "This phone matches the working profile"
-                    else -> "$done of ${ids.size} steps done · run them in order"
-                },
-                when { failed > 0 -> KitState.BAD; done == ids.size && ids.isNotEmpty() -> KitState.OK; else -> KitState.WARN },
-                tag = "runbook",
-            )
+            val banner = runbookBanner(ids.map { rows[it]?.optString("state") ?: "TODO" }, checking,
+                checkedAt.takeIf { it.isNotBlank() }?.let { KitDates.relative(it) }.orEmpty())
+            KitStatusBanner(banner.text, banner.state, tag = "runbook")
             SaidBanner(result, "runbook:result")
             KitStepper(ids.map { id ->
                 val r = rows[id]
@@ -155,12 +160,30 @@ fun RunbookPage(open: (section: String, page: String) -> Unit) {
                             rb.runAll { row -> scope.launch { rows[row.getString("id")] = row } }
                         }
                         result = out.optString("result")
+                        checkAll(keep = out.optJSONArray("steps")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("id") }.toSet() }.orEmpty())
                         busy = false
                     }
                 }) { Text("Run") }
             },
             dismissButton = { TextButton(onClick = { sheet = null }) { Text("Cancel") } },
         )
+    }
+}
+
+/**
+ * The banner: it counts CHECKS (and runs, which replace a row until the next check), so a set-up
+ * phone opens on "matches" rather than "0 done". [checking] = 1-based step being checked, 0 = idle.
+ */
+fun runbookBanner(states: List<String>, checking: Int, checkedAt: String = ""): Said {
+    val n = states.size
+    if (checking > 0) return Said(KitState.BUSY, "Checking step $checking of $n…")
+    val failed = states.count { it == "FAILED" }
+    val done = states.count { it == "DONE" || it == "ALREADY" }
+    val at = if (checkedAt.isBlank()) "" else " · checked $checkedAt"
+    return when {
+        failed > 0 -> Said(KitState.BAD, "$failed of $n steps need attention · $done done$at")
+        done == n && n > 0 -> Said(KitState.OK, "This phone matches the working profile · $n of $n done$at")
+        else -> Said(KitState.WARN, "$done of $n steps done · run them in order$at")
     }
 }
 

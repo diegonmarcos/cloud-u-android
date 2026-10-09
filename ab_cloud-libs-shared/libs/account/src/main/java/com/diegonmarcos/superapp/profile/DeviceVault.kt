@@ -104,6 +104,8 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
             is ForgeClient.Result.Ok -> {
                 vault.putConnection("backup.last", JSONObject().put("device", deviceId).put("sha", p.value)
                     .put("at", profile.getJSONObject("device").optString("captured_at")).toString())
+                // The file just committed IS this phone's current file: the pages read it from the working slot.
+                runCatching { setWorking(deviceId, p.value, JSONObject(DeviceProfile.text(profile))) }
                 JSONObject().put("ok", true).put("sha", p.value).put("path", path).put("forge", c.forge.id).put("result", "✓ $message")
             }
             is ForgeClient.Result.Failed -> fail(p)
@@ -128,6 +130,29 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
                     .put("result", "✓ loaded $id into working ($apps apps, $keys settings)")
             }
         }
+    }
+
+    private fun setWorking(device: String, sha: String, profile: JSONObject) =
+        ConfigsPrefs(ctx).putText(K_WORKING, JSONObject().put("device", device).put("sha", sha).put("profile", profile).toString())
+
+    /**
+     * This phone's device file as the Account pages read it (profile tiles, perms, drift): the working
+     * slot when it already holds [deviceId] at the last backup's sha; else STALE (nothing loaded, another
+     * device's file, or a newer commit than the slot) and fetched from the forge into the slot, without
+     * touching `restore.last` (a read, not a restore). A failed fetch keeps the slot. Blocks: off main.
+     */
+    fun current(deviceId: String): JSONObject? {
+        val w = working()
+        if (deviceId.isBlank() || deviceId == DeviceProfile.DEFAULT_ID) return w
+        val last = (vault.connection("backup.last") as? String)?.let { runCatching { JSONObject(it) }.getOrNull() }
+            ?.takeIf { it.optString("device") == deviceId }
+        val fresh = w != null && w.optString("device") == deviceId && (last == null || last.optString("sha") == w.optString("sha"))
+        if (fresh) return w
+        val c = client() ?: return w
+        val file = (c.get(decl.devicePath(deviceId), decl.branch) as? ForgeClient.Result.Ok)?.value ?: return w
+        val p = DeviceProfile.parse(file.text, DeviceProfile.manifestClass(ctx)) as? DeviceProfile.Parsed.Ok ?: return w
+        setWorking(deviceId, file.sha, p.json)
+        return working()
     }
 
     /** The working slot: the loaded profile, its device and file sha; null when nothing is loaded. */

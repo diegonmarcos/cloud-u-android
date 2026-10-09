@@ -28,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.diegonmarcos.superapp.uikit.KitDates
+import com.diegonmarcos.superapp.uikit.KitChip
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -100,6 +103,27 @@ object AccountDevice {
 
     fun id(ctx: Context): String = resolve(ctx).id
 
+    /**
+     * The legacy id this process renamed by a declared alias (`galaxy` → `galaxy-s21`), for the device
+     * card's "was galaxy" note. Process memory only: the note lasts one session, the rename is for good.
+     */
+    @Volatile var renamedFrom: String? = null
+        private set
+
+    /**
+     * App start: run the alias migration once, before any page (the card must not show the legacy id
+     * until the profile step runs). First on the cached devices listing (local, safe on main), then —
+     * on a background thread, when the listing has never been fetched — after refreshing it from the
+     * forge, since [migrated] only renames against a known listing.
+     */
+    fun migrateAtStart(ctx: Context) {
+        val app = ctx.applicationContext
+        runCatching { resolve(app) }
+        if (listingIds(app).isEmpty()) kotlin.concurrent.thread(name = "account-device-alias") {
+            runCatching { DeviceVault(app).devices(); resolve(app) }
+        }
+    }
+
     fun resolve(ctx: Context): Resolved {
         val v = AccountVault(ctx)
         val model = Build.MODEL.orEmpty()
@@ -108,6 +132,7 @@ object AccountDevice {
             // A legacy id the vault no longer lists, renamed by a declared alias: rewrite it once, for good.
             if ((v.connection(K_DERIVED) as? String).orEmpty() == conn) v.putConnection(K_DERIVED, to)
             v.putConnection("device.id", to)
+            renamedFrom = conn
             conn = to
         }
         if (conn.isNotBlank()) {
@@ -203,7 +228,15 @@ fun AccountPlaceholderPage(section: String, page: String, task: String, body: (@
 
 // ── Account ▸ profile ────────────────────────────────────────────────────
 
+/** `| Product Engineering 💾 | Venture C… |` → its titles, trimmed, blanks dropped (the stored string is unchanged). */
+fun titleChips(value: String): List<String> = value.split('|').map { it.trim() }.filter { it.isNotEmpty() }
+
+/** A titles field (`profile › titles`, `titles_v2`): its last path segment, version suffix dropped. */
+private fun isTitles(path: String): Boolean =
+    path.split(InfoMask.SEP.trim(), ".", "/").lastOrNull()?.trim()?.replace(Regex("""_v\d+$"""), "") == "titles"
+
 /** The trailing value of a schema row: a fingerprint for a masked one, "Add" for an unfilled one. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AboutValue(row: InfoMask.Row, full: String, shown: JSONObject?, editable: Boolean) {
     val p = LocalKitPalette.current
@@ -214,12 +247,16 @@ private fun AboutValue(row: InfoMask.Row, full: String, shown: JSONObject?, edit
             style = MaterialTheme.typography.bodyMedium)
         InfoMask.Kind.COLLAPSED -> Text("${row.size} entries ›", color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
         InfoMask.Kind.PENDING -> KitStatePill("pending", KitState.WARN)
-        InfoMask.Kind.SHOWN -> Text(shownValue(full, row.text) + if (editable) "  ›" else "", color = p.textSecondary,
+        InfoMask.Kind.SHOWN -> if (isTitles(full) && titleChips(row.text).isNotEmpty()) FlowRow(
+            Modifier.widthIn(max = 220.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            for ((i, t) in titleChips(row.text).withIndex()) KitChip(t, onRemove = null, tag = "$full:$i")
+        } else Text(shownValue(full, row.text) + if (editable) "  ›" else "", color = p.textSecondary,
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 200.dp))
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
     val ctx = LocalContext.current
@@ -235,7 +272,14 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
     val about = InfoMask.schema.firstOrNull { it.id == "about" }
     val resolved = remember(tick) { AccountDevice.resolve(ctx) }
     val deviceId = resolved.id
-    val working = remember(tick) { DeviceVault(ctx).working() }
+    // This phone's CURRENT device file (DeviceVault.current: the slot, refreshed from the forge when stale), off main.
+    var working by remember { mutableStateOf(DeviceVault(ctx).working()?.takeIf { it.optString("device") == deviceId }) }
+    var drift by remember { mutableIntStateOf(0) }
+    LaunchedEffect(tick, deviceId, model.version.intValue) {
+        working = withContext(Dispatchers.IO) { runCatching { DeviceVault(ctx).current(deviceId) }.getOrNull() } ?: working
+        // The diff op's number: the same count Profiles ▸ diff draws, over the refreshed slot.
+        drift = withContext(Dispatchers.IO) { runCatching { profilesDriftCount(ctx, model) }.getOrDefault(0) }
+    }
     val rows = if (about == null) emptyList() else InfoMask.declared.schemaRows(about, shown?.opt(about.id))
     fun shownAt(vararg path: String): String {
         val want = path.fold("") { acc, s -> InfoMask.join(acc, s) }
@@ -256,6 +300,11 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
             onClick = { if (shown == null) open("account", "connect") },
         )
 
+        val titles = titleChips(shownAt("profile", "titles"))
+        if (titles.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for ((i, t) in titles.withIndex()) KitChip(t, onRemove = null, tag = "profile:title:$i")
+        }
+
         KitSectionHeader("This phone", "", eyebrow = true)
         val fetched = remember(tick, model.version.intValue) { ConnectWays.lastFetch(ctx) }
         val backup = remember(tick) { jsonAt(ctx, "backup.last") }
@@ -263,21 +312,22 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
         val prof = working?.optJSONObject("profile")
         val loaded = working?.optString("device")?.ifBlank { null }
         val derivedHint = if (resolved.source == AccountDevice.SRC_DERIVED) "derived from model ${resolved.model}" else ""
+        val aliasNote = AccountDevice.renamedFrom?.takeIf { deviceId.isNotBlank() && it != deviceId }?.let { "was $it" }.orEmpty()
         KitDeviceCard(
             id = deviceId.ifBlank { "Pick this phone" },
             model = "${Build.MODEL} · Android ${Build.VERSION.RELEASE}",
             state = listOf(
                 loaded?.let { "profile $it loaded" } ?: "no profile loaded",
-                backup?.optString("at")?.ifBlank { null }?.let { "backed up $it" } ?: "never backed up",
+                backup?.optString("at")?.ifBlank { null }?.let { "backed up ${KitDates.relative(it)}" } ?: "never backed up",
+                aliasNote,
                 derivedHint,
             ).filter { it.isNotBlank() }.joinToString(" · "),
             badge = if (deviceId.isBlank()) "" else "this phone",
             pill = if (deviceId.isBlank()) "not picked" to KitState.WARN else null,
             onClick = { picking = true },
         )
-        val counts = remember(tick) { prof?.let { DeviceProfile.counts(it) } }
-        val perms = remember(tick) { AccountDrift.leaves(prof?.optJSONObject("perms")).size }
-        val drift = remember(tick, model.version.intValue) { profilesDriftCount(ctx, model).let { it } }
+        val counts = remember(prof) { prof?.let { DeviceProfile.counts(it) } }
+        val perms = remember(prof) { AccountDrift.leaves(prof?.optJSONObject("perms")).size }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KitStatTile("${counts?.first ?: 0}", "apps in the profile", if (counts == null) KitState.IDLE else KitState.OK,
                 Modifier.weight(1f), tag = "apps") { open("setup", "apps") }
@@ -292,7 +342,7 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
                 Modifier.weight(1f), tag = "perms") { open("setup", "perms") }
         }
         Text(listOf(
-            "vault fetched " + (fetched?.optString("at")?.ifBlank { null } ?: "never"),
+            "vault fetched " + (fetched?.optString("at")?.ifBlank { null }?.let { KitDates.relative(it) } ?: "never"),
             "last restore " + (restore?.let { "${it.optString("device")} · ${it.optString("sha").take(7)}" } ?: "never"),
         ).joinToString(" · "), color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodySmall)
         KitActionBar(listOf(
@@ -427,7 +477,7 @@ fun AccountConnectPage() {
             last == null -> KitStatusBanner("Not connected", KitState.WARN, tag = "connect",
                 action = KitAction("Fetch now", "connect:banner:fetch") { launchWay { ConnectWays.fetchNow(ctx) } })
             last.optBoolean("ok", false) -> KitStatusBanner(
-                "Connected · ${primary?.replaceFirstChar { it.uppercase() } ?: "vault"} · fetched ${last.optString("at")}", KitState.OK, tag = "connect")
+                "Connected · ${primary?.replaceFirstChar { it.uppercase() } ?: "vault"} · fetched ${KitDates.relative(last.optString("at"))}", KitState.OK, tag = "connect")
             else -> KitStatusBanner("Last fetch failed · ${said(last.optString("line")).text}", KitState.BAD, tag = "connect",
                 action = KitAction("Retry", "connect:banner:fetch") { launchWay { ConnectWays.fetchNow(ctx) } })
         }
@@ -480,7 +530,7 @@ fun AccountConnectPage() {
         KitSectionHeader("Origin", "", eyebrow = true)
         OriginPicker(tick) { tick++ }
         KitActionBar(listOf(KitAction("Fetch now", AccountPageTags.FETCH) { launchWay { ConnectWays.fetchNow(ctx) } }))
-        Text(last?.let { "last fetch ${it.optString("at")}: ${said(it.optString("line")).text}" } ?: "no fetch yet",
+        Text(last?.let { "last fetch ${KitDates.relative(it.optString("at"))}: ${said(it.optString("line")).text}" } ?: "no fetch yet",
             color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
     }
 }

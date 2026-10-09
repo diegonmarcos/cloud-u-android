@@ -19,7 +19,9 @@ PROF="ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/
 KIT="ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit"
 PAGES="AccountPages.kt ProfilesPages.kt RunbookPage.kt AppsPage.kt PermsPage.kt AccountVaultTabs.kt FleetSetupTab.kt AccountKit.kt"
 FILES="$KIT/CloudKit.kt $KIT/KitComponents.kt $PROF/AccountHost.kt
-aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/ui/LauncherPalette.kt"
+aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/ui/LauncherPalette.kt
+$PROF/SetupRunbook.kt $PROF/DeviceVault.kt
+ab_cloud-libs-shared/libs/ui-kit/src/main/kotlin/com/diegonmarcos/superapp/uikit/KitDates.kt"
 for f in $PAGES; do FILES="$FILES $PROF/$f"; done
 
 check() {
@@ -109,6 +111,31 @@ short = [f"{p}:{n}" for p, n, k in uses if pages[p].count(n) < k]
 ok(not short, "the pages draw with the kit (hero, device card, 2x2 tiles, bars, banners, stepper, rows, chips)", f"a page stopped using: {short}")
 private = [p for p, s in pages.items() if re.search(r"private fun (Dense|Mono|Tile|Pill|RowButton)\(", s)]
 ok(not private, "no page defines a private row style", f"private row style in {private}")
+# 6. phone-seen defects (runbook truth, current device file, dates, titles)
+rp = pages["RunbookPage.kt"]
+rbk = code(rd(f"{PROF}/SetupRunbook.kt"))
+ok("LaunchedEffect(Unit) { busy = true; checkAll(); busy = false }" in rp and "withContext(Dispatchers.IO) { rb.check(id) }" in rp,
+   "the runbook page runs every step's check on open, off the main thread", "the runbook page skips the checks on open")
+ok("checkAll(keep = setOf(id))" in rp and rp.count("checkAll(keep =") >= 2, "the runbook page re-checks after a run and after Run all", "the runbook page does not re-check after a run")
+bb = rp.split("fun runbookBanner(")[1].split("\n}\n")[0] if "fun runbookBanner(" in rp else ""
+ok('it == "DONE" || it == "ALREADY"' in bb and "KitState.BUSY" in bb and "runbookBanner(" in rp.split("KitStepper(")[0],
+   "the banner counts ALREADY/DONE checks and shows a loading state", "the banner ignores checks or has no loading state")
+ck = rbk.split("fun check(id: String)")[1].split("\n    }\n")[0] if "fun check(id: String)" in rbk else ""
+ok("guard { s.check() }" in ck and "guard { s.check() }" in rbk.split("fun dry()")[1].split("\n    }\n")[0],
+   "page and debug op run the same per-step check", "the page's check is not the debug op's check")
+ap6 = pages["AccountPages.kt"]
+ok("DeviceVault(ctx).current(deviceId)" in ap6 and "profilesDriftCount(ctx, model)" in ap6.split("LaunchedEffect(tick, deviceId")[1].split("\n    }\n")[0] if "LaunchedEffect(tick, deviceId" in ap6 else False,
+   "profile tiles read this phone's current device file and the diff op's count", "profile tiles read a stale slot")
+ok('AccountDrift.leaves(prof?.optJSONObject("perms"))' in ap6, "permissions tile reads the device file's perms", "permissions tile lost the device file's perms")
+dv6 = code(rd(f"{PROF}/DeviceVault.kt"))
+ok("fun current(deviceId: String)" in dv6 and 'last.optString("sha") == w.optString("sha")' in dv6 and "setWorking(deviceId, p.value," in dv6,
+   "DeviceVault.current refreshes a stale slot; a backup becomes the slot", "the working slot is never refreshed")
+raw_at = [f"{p}:{l.strip()[:60]}" for p, s in pages.items() for l in s.splitlines()
+          if re.search(r'optString\("(at|captured_at)"\)', l) and "$" in l and "KitDates.relative" not in l]
+ok(not raw_at, "every timestamp is drawn through KitDates.relative", f"raw ISO timestamp drawn: {raw_at}")
+kd = rd("ab_cloud-libs-shared/libs/ui-kit/src/main/kotlin/com/diegonmarcos/superapp/uikit/KitDates.kt")
+ok('"today " + t.format(HM)' in kd and '"yesterday"' in kd and "fun relative(iso: String" in kd, "ui-kit holds KitDates.relative (today / yesterday / d MMM)", "KitDates.relative missing")
+ok("value.split('|')" in ap6 and ap6.count("KitChip(t, onRemove = null") >= 2, "titles split on | into chips (profile + About row)", "titles drawn as the raw string")
 sys.exit(fails)
 PY
 }
@@ -137,7 +164,7 @@ M=0
 mutate "a page draws in monospace" $P/AppsPage.kt 'secondary = "$pkg · $why",' 'secondary = "$pkg · $why", fontFamily = FontFamily.Monospace,' || M=$((M+1))
 mutate "a raw path drawn with Text(" $P/AccountPages.kt 'AboutValue(row, full, shown, editable)' 'Text(full); AboutValue(row, full, shown, editable)' || M=$((M+1))
 mutate "the word empty as a value" $P/AccountPages.kt 'Text(if (editable) "Add" else "—"' 'Text(if (editable) "empty" else "—"' || M=$((M+1))
-mutate "a colour literal in a page" $P/RunbookPage.kt 'tag = "runbook",' 'tag = "runbook", color = Color(0xFFFF0000),' || M=$((M+1))
+mutate "a colour literal in a page" $P/RunbookPage.kt 'tag = "runbook")' 'tag = "runbook", color = Color(0xFFFF0000))' || M=$((M+1))
 mutate "a colour literal in a kit component" $KIT/KitComponents.kt 'KitState.IDLE -> p.textSecondary' 'KitState.IDLE -> Color(0xFF888888)' || M=$((M+1))
 mutate "a state token dropped from KitPalette" $KIT/CloudKit.kt 'val bad: Color = DEFAULT_BAD,' '' || M=$((M+1))
 mutate "DEFAULT_PALETTE leaves ok to the default" $P/AccountHost.kt 'ok = 0xFF7FC98F.toInt(), ' '' || M=$((M+1))
@@ -159,6 +186,16 @@ private fun ItemRow(' '@Composable
 private fun Mono(t: String) = Text(t)
 @Composable
 private fun ItemRow(' || M=$((M+1))
+
+mutate "runbook page skips the check on open" $P/RunbookPage.kt 'LaunchedEffect(Unit) { busy = true; checkAll(); busy = false }' 'LaunchedEffect(Unit) { busy = false }' || M=$((M+1))
+mutate "runbook page does not re-check after a run" $P/RunbookPage.kt 'checkAll(keep = setOf(id))' 'Unit' || M=$((M+1))
+mutate "banner counts runs only" $P/RunbookPage.kt 'it == "DONE" || it == "ALREADY"' 'it == "DONE"' || M=$((M+1))
+mutate "page check differs from the debug op" $P/SetupRunbook.kt 'return guard { s.check() }.json().put("id", s.id)' 'return guard { State.Todo("x") }.json().put("id", s.id)' || M=$((M+1))
+mutate "profile tiles read the stale slot" $P/AccountPages.kt 'DeviceVault(ctx).current(deviceId)' 'DeviceVault(ctx).working()' || M=$((M+1))
+mutate "backup never becomes the slot" $P/DeviceVault.kt 'runCatching { setWorking(deviceId, p.value, JSONObject(DeviceProfile.text(profile))) }' '' || M=$((M+1))
+mutate "a raw ISO timestamp on the card" $P/AccountPages.kt '"backed up ${KitDates.relative(it)}"' '"backed up $it"' || M=$((M+1))
+mutate "a raw captured_at on Profiles" $P/ProfilesPages.kt '"captured ${KitDates.relative(it)}"' '"captured $it"' || M=$((M+1))
+mutate "titles drawn raw" $P/AccountPages.kt "value.split('|')" 'listOf(value)' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

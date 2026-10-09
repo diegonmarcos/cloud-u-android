@@ -263,7 +263,7 @@ mutate "diff page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccou
 mutate "Delete fires without confirm" lib/profile/ProfilesPages.kt '{ confirmDelete = id }' '{ io { vault.delete(id).optString("result") } }' || M=$((M+1))
 mutate "diff draws a secret-class value" lib/profile/ProfilesPages.kt 'if (secret) "file and phone hold a secret: fingerprints only" else' 'if (false) "file and phone hold a secret: fingerprints only" else' || M=$((M+1))
 mutate "diff drops a secret fingerprint" lib/profile/ProfilesPages.kt 'if (secret) KitFingerprint(f.a' 'if (false) KitFingerprint(f.a' || M=$((M+1))
-mutate "Drift tile says n/a again" lib/profile/AccountPages.kt 'profilesDriftCount(ctx, model).let' '0.let' || M=$((M+1))
+mutate "Drift tile says n/a again" lib/profile/AccountPages.kt 'runCatching { profilesDriftCount(ctx, model) }' 'runCatching { 0 }' || M=$((M+1))
 mutate "tabs op stops answering the islands" lib/profile/AccountDebugApi.kt 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' 'Unit' || M=$((M+1))
 mutate "token filed before the read" lib/profile/ConnectWays.kt 'if (o.ok && file)' 'if (file)' || M=$((M+1))
 mutate "the strip is dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'PageTabs(' 'Column(' || M=$((M+1))
