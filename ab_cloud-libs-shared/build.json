@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-06",
+        "pricing_as_of": "2026-10-09",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3147,7 +3147,7 @@
             "open": true,
             "params_b": 8,
             "quant": ["fp8", "bf16"],
-            "trained_for": ["translation", "trivia"],
+            "trained_for": ["translation"],
             "prompt": 0.05, "completion": 0.08,
             "note": "Cheapest and smallest row; translation-ranked, best for short fixes."
           },
@@ -3166,8 +3166,8 @@
             "open": true,
             "params_b": 26,
             "quant": ["fp8", "bf16"],
-            "trained_for": ["academia", "marketing", "translation"],
-            "prompt": 0.09, "completion": 0.3,
+            "trained_for": ["marketing", "roleplay", "translation"],
+            "prompt": 0.0675, "completion": 0.225,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -3186,7 +3186,7 @@
             "open": true,
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["health", "roleplay"],
+            "trained_for": ["health", "marketing", "roleplay"],
             "prompt": 0.09, "completion": 0.34,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
@@ -3214,7 +3214,7 @@
             "open": true,
             "quant": ["fp4", "fp8"],
             "trained_for": ["roleplay", "translation"],
-            "prompt": 0.28, "completion": 0.42,
+            "prompt": 0.259, "completion": 0.42,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
@@ -3223,7 +3223,7 @@
             "open": true,
             "quant": ["fp4", "fp8"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.0046, "completion": 1.28,
+            "prompt": 0.0047, "completion": 1.28,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -3231,8 +3231,8 @@
             "name": "GLM 5.2",
             "open": true,
             "quant": ["fp4", "fp8", "mxfp4", "nvfp4"],
-            "trained_for": ["academia", "finance", "legal", "marketing", "programming", "roleplay", "science", "technology"],
-            "prompt": 0.152, "completion": 12,
+            "trained_for": ["academia", "finance", "legal", "programming", "roleplay", "science", "technology"],
+            "prompt": 0.06, "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -3255,21 +3255,21 @@
           {
             "id": "anthropic/claude-haiku-4.5",
             "name": "Claude Haiku 4.5",
-            "trained_for": [],
+            "trained_for": ["health"],
             "prompt": 1.0, "completion": 5.0,
             "note": "Dearest row. Pick it when following a fussy instruction matters more than price."
           },
           {
             "id": "openai/gpt-4.1-mini",
             "name": "GPT-4.1 mini",
-            "trained_for": [],
+            "trained_for": ["translation"],
             "prompt": 0.4, "completion": 1.6,
             "note": "Translation-ranked and closed-weight; steady, conservative English grammar fixes."
           },
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": ["health", "legal", "marketing", "translation", "trivia"],
+            "trained_for": ["finance", "health", "marketing", "translation"],
             "prompt": 0.3, "completion": 2.5,
             "note": "The default: translation-ranked plus eight more categories, and still cheap."
           }
