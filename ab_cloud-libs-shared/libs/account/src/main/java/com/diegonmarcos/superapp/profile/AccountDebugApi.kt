@@ -54,7 +54,7 @@ object AccountDebugApi {
             // Cloud Account redesign task 6: Setup ▸ perms (spec 4.9) through PermsPlan
             Op("perms", "dry=1|run=1", "Setup ▸ perms (spec 4.9): dry=1 = per app every runtime permission and special grant, its state (granted/denied/unknown) and whether the working profile wants it, names only; run=1 = Grant all over the shell channel, one line per item, each judged by a re-read"),
             Op("apps", "", "Setup ▸ apps (spec 4.7): the working profile's inventory vs this phone in the Store's classes (installed / fleet / direct = vendor or F-Droid rung / no source declared), package names and counts only"),
-            Op("profiles", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
+            Op("profilepages", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
@@ -143,7 +143,7 @@ object AccountDebugApi {
             "perms" -> perms(ctx, q)
             "apps" -> SetupRunbook(ctx).appsPlan()?.let { SetupRunbook.appsJson(it) }
                 ?: JSONObject().put("result", "✗ no working profile: load one first (/api/account/load)")
-            "profiles" -> JSONObject().put("loaded", DeviceVault(ctx).working()?.optString("device").orEmpty())
+            "profilepages" -> JSONObject().put("loaded", DeviceVault(ctx).working()?.optString("device").orEmpty())
                 .put("drift", profilesDriftCount(ctx, m))
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
