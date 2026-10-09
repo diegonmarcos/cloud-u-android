@@ -58,6 +58,14 @@ object BatchForeground {
     @Volatile var launch: (Context) -> Intent? = { null }
 
     private val held = AtomicInteger(0)
+    /** True once the service has called startForeground. Only then may [end] stop it: on 12+ a
+     *  service stopped between startForegroundService() and its own startForeground() takes the
+     *  whole process down (ForegroundServiceDidNotStartInTimeException) — every verb takes and
+     *  releases the hold, so a batch hit that window hundreds of times and the Store crashed
+     *  mid-import. A stop that comes too early is left to the service: it starts foreground,
+     *  sees nothing [isHeld], and stops itself. */
+    @Volatile internal var foreground = false
+    fun isHeld(): Boolean = held.get() > 0
     @Volatile private var lastAt = 0L
     @Volatile private var appCtx: Context? = null
 
@@ -89,7 +97,7 @@ object BatchForeground {
         if (held.get() <= 0 || held.decrementAndGet() != 0) return
         UpdateProgress.removeObserver(observer)
         val app = ctx.applicationContext
-        runCatching { app.stopService(Intent(app, BatchForegroundService::class.java)) }
+        if (foreground) runCatching { app.stopService(Intent(app, BatchForegroundService::class.java)) }
         runCatching { nm(app).cancel(ID) }
         appCtx = null
     }
@@ -136,18 +144,23 @@ class BatchForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!BatchForeground.allowed(this)) { stopSelf(); return START_NOT_STICKY }
+        // startForeground FIRST, always: a started-foreground service that stops before it is
+        // foreground crashes the process, whatever the reason it has to stop.
         runCatching {
             ServiceCompat.startForeground(this, BatchForeground.ID, BatchForeground.notification(this),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
+            BatchForeground.foreground = true
         }.onFailure {
             Log.w("BatchForeground", "startForeground refused: ${it.message}")
-            stopSelf()
+            stopSelf(); return START_NOT_STICKY
         }
+        // The batch may have ended while this start was in flight ([BatchForeground.end] left the stop to us).
+        if (!BatchForeground.allowed(this) || !BatchForeground.isHeld()) stopSelf()
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        BatchForeground.foreground = false
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }

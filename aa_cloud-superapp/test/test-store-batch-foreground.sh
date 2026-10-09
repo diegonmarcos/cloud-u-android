@@ -95,6 +95,20 @@ grep -q 'private val held = AtomicInteger(0)' "$SVC" \
   && grep -q 'if (held.incrementAndGet() != 1) return' "$SVC" \
   && grep -q 'if (held.get() <= 0 || held.decrementAndGet() != 0) return' "$SVC" \
   && ok "begin/end are refcounted: the first begin starts, the last end stops" || bad "begin/end are not refcounted"
+# The process crashed (ForegroundServiceDidNotStartInTimeException) whenever end() stopped the
+# service before its onStartCommand reached startForeground: every verb takes the hold, so an
+# import of 128 apps hit that window and the Store died mid-batch, three times.
+grep -q 'if (foreground) runCatching { app.stopService(Intent(app, BatchForegroundService::class.java)) }' "$SVC" \
+  && ok "end() stops only a service that is already foreground" || bad "end() can stop the service before it is foreground (process crash)"
+python3 - "$SVC" <<'PYC' && ok "onStartCommand: startForeground first, then stopSelf when the hold already ended" || bad "onStartCommand can stop before startForeground, or never stops after a too-early end()"
+import re, sys
+s = open(sys.argv[1]).read()
+b = re.search(r'override fun onStartCommand\(.*?\n    \}\n', s, re.S).group(0)
+fg, flag = b.find('ServiceCompat.startForeground('), b.find('BatchForeground.foreground = true')
+late = b.find('if (!BatchForeground.allowed(this) || !BatchForeground.isHeld()) stopSelf()')
+first_stop = b.find('stopSelf()')
+assert 0 <= fg < flag < late and fg < first_stop, (fg, flag, late, first_stop)
+PYC
 grep -q 'inline fun <T> hold(ctx: Context, on: Boolean = true, body: () -> T): T' "$SVC" \
   && grep -q 'try { return body() } finally { if (on) end(ctx) }' "$SVC" \
   && ok "hold() ends on every exit (done, failed, cancelled, thrown)" || bad "hold() can leak the service"
