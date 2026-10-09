@@ -277,8 +277,22 @@ class TextToolsClient(context: Context) {
      * #781 The serving app's clipboard lists as one JSON text ([ITextTools.clipboardLists]); null
      * when unbound, or from a serving app older than the method. Never log it: the lists hold keys.
      */
-    fun clipboardLists(): String? =
-        boundOrRebind()?.let { runCatching { it.clipboardLists() }.getOrNull() }
+    fun clipboardLists(): String? {
+        val t = boundOrRebind() ?: return null
+        // Sliced first: the whole export can outgrow one binder reply. A keyboard older than the
+        // slice method throws here, and gets the one-shot call it understands.
+        val sliced = runCatching {
+            val sb = StringBuilder()
+            while (true) {
+                val s = t.clipboardListsSlice(sb.length, SLICE_CHARS) ?: return@runCatching null
+                sb.append(s)
+                if (s.length < SLICE_CHARS) break
+            }
+            sb.toString()
+        }
+        // An unknown transaction may also answer null rather than throw: either way, one-shot.
+        return sliced.getOrNull()?.takeIf { it.isNotEmpty() } ?: runCatching { t.clipboardLists() }.getOrNull()
+    }
 
     /** #781 Replace the serving app's clipboard lists with [json] ([ITextTools.importClipboardLists]); text = count. */
     fun importClipboardLists(json: String): TextTools.Result = call("importClipboardLists") { it.importClipboardLists(json) }
@@ -299,5 +313,8 @@ class TextToolsClient(context: Context) {
     private companion object {
         const val TAG = "TextToolsClient"
         const val REBIND_MS = 5_000L
+
+        /** Chars per clipboardListsSlice reply: ~400 KB on the wire, well under the ~1 MB binder limit. */
+        const val SLICE_CHARS = 200_000
     }
 }

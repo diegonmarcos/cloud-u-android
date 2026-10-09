@@ -66,6 +66,8 @@ object StoreDebugApi {
             AppDebugServer.Op("feeds", "load=1 (optional: re-read every feed now)",
                 "#841 Commits / CI-CD feeds: proxy + public url, bearer set (yes/no, never the value), and the " +
                 "leg that last served each (proxy | github-fallback | github | failed) with the proxy's error"),
+            AppDebugServer.Op("import", "POST body = an app inventory (#565 Store ▸ Phone export, e.g. the vault's apps/<device>-apps.json) · run=1 (optional: install the direct ones)",
+                "Store ▸ Phone's import from a terminal: the plan against THIS phone (installed / direct = vendor or F-Droid rung / store = needs its store / manual), package names only; run=1 installs the direct ones in the background through the Phone page's own installMissing. Fleet apps are the Cloud page's and never installed here."),
             AppDebugServer.Op("progress", "",
                 "the Store bar's line now: app, version, stage, bytes/total, %, batch position, next, error"),
         )) { op, q -> route(app, op, q) }
@@ -110,9 +112,33 @@ object StoreDebugApi {
         "batch" -> (lastBatch(ctx) ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
         "auto" -> if (q["pkg"].isNullOrEmpty()) auto(ctx, q["run"] == "1").toString() else verb(ctx, q)
         "progress" -> progress().toString()
+        "import" -> importInventory(ctx, q["_body"].orEmpty(), q["run"] == "1").toString()
         "feeds" -> feeds(ctx, q["load"] == "1").toString()
         "stage", "download", "install", "clear" -> verb(ctx, q, op)
         else -> null
+    }
+
+    /** Store ▸ Phone import, headless: [StorePhoneFragment.importText]'s plan, and [StoreImport.installMissing] on run. */
+    private fun importInventory(ctx: Context, body: String, run: Boolean): JSONObject {
+        val app = ctx.applicationContext
+        val wanted = runCatching { AppInventory.parse(body) }.getOrElse {
+            return JSONObject().put("ok", false).put("error", "not an app inventory: ${it.message}")
+        }
+        val pm = app.packageManager
+        val installed = wanted.map { it.pkg }.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.toSet()
+        val sources = PhoneAppActions.sources(app)
+        val plan = AppInventory.plan(wanted, installed, AppInventory.fleetPackages(), sources)
+        fun pkgs(l: List<AppInventory.Entry>) = JSONArray(l.map { it.pkg })
+        val out = JSONObject().put("ok", true)
+            .put("counts", JSONObject().put("installed", plan.installed.size).put("ours", plan.ours.size)
+                .put("direct", plan.direct.size).put("store", plan.store.size).put("manual", plan.manual.size))
+            .put("direct", pkgs(plan.direct)).put("manual", pkgs(plan.manual))
+            .put("store", JSONArray(plan.store.map { JSONObject().put("pkg", it.entry.pkg).put("store", it.label) }))
+        if (run && plan.direct.isNotEmpty()) {
+            thread(name = "store-import-api") { StoreImport.installMissing(app, PhoneAppActions.resolver(sources), plan) }
+            out.put("started", "installing ${plan.direct.size} direct apps in the background; poll /api/store/progress")
+        }
+        return out
     }
 
     /** #841 which leg (fleet git-proxy or GitHub fallback) served each feed. */

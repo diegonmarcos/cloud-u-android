@@ -387,6 +387,13 @@ class TextToolsService : Service() {
         /** #781 See [ITextTools.importClipboardLists]. The reason travels; the lists never reach a log. */
         override fun importClipboardLists(json: String?): Array<String> = importLists(json, replace = true)
 
+        /** #781 See [ITextTools.clipboardListsSlice]. */
+        override fun clipboardListsSlice(start: Int, length: Int): String? {
+            val all = clipboardLists() ?: return null
+            if (start >= all.length || length <= 0) return ""
+            return all.substring(start.coerceAtLeast(0), minOf(all.length, start.coerceAtLeast(0) + length))
+        }
+
         /** #781 See [ITextTools.appendClipboardLists]. */
         override fun appendClipboardLists(json: String?): Array<String> = importLists(json, replace = false)
 

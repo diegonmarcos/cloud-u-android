@@ -112,9 +112,11 @@ AIDL="$LIBS/text-tools/src/main/aidl/com/diegonmarcos/superapp/texttools/ITextTo
 # An AIDL method's transaction code is its position: methods are only ever APPENDED, or every
 # client built before them would call the wrong method on a newer keyboard. clipboardLists came
 # next-to-last's turn first; its write half importClipboardLists was appended after it.
-tail3=$(grep -E '^\s+(String\[\]|String|List<String>) [a-zA-Z]+\(' "$AIDL" | tail -3 | tr -s ' ')
-[ "$tail3" = "$(printf ' String clipboardLists();\n String[] importClipboardLists(in String json);\n String[] appendClipboardLists(in String json);')" ] \
-    && ok "ITextTools ends clipboardLists, importClipboardLists, appendClipboardLists (appended, transaction codes unchanged)" || bad "AIDL tail is not clipboardLists, importClipboardLists, appendClipboardLists: $tail3"
+tail4=$(grep -E '^\s+(String\[\]|String|List<String>) [a-zA-Z]+\(' "$AIDL" | tail -4 | tr -s ' ')
+[ "$tail4" = "$(printf ' String clipboardLists();\n String[] importClipboardLists(in String json);\n String[] appendClipboardLists(in String json);\n String clipboardListsSlice(int start, int length);')" ] \
+    && ok "ITextTools ends clipboardLists, importClipboardLists, appendClipboardLists, clipboardListsSlice (appended, transaction codes unchanged)" || bad "AIDL tail is not the four clipboard methods in order: $tail4"
+grep -qF 'override fun clipboardListsSlice(start: Int, length: Int): String?' "$LIBS/keyboard/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsService.kt" && ok "the keyboard serves its lists in slices" || bad "TextToolsService does not implement clipboardListsSlice"
+grep -qF 't.clipboardListsSlice(sb.length, SLICE_CHARS)' "$LIBS/text-tools/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsClient.kt" && ok "the client reads them back slice by slice" || bad "TextToolsClient.clipboardLists does not read slices"
 grep -qF 'override fun appendClipboardLists(json: String?): Array<String> = importLists(json, replace = false)' "$LIBS/keyboard/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsService.kt" && ok "the keyboard appends a chunk without replacing" || bad "TextToolsService does not implement appendClipboardLists"
 grep -qF 'override fun importClipboardLists(json: String?): Array<String>' "$LIBS/keyboard/src/main/java/com/diegonmarcos/superapp/texttools/TextToolsService.kt" && ok "the keyboard's TextToolsService takes lists in" || bad "TextToolsService does not implement importClipboardLists"
 grep -qF 'importJson(org.json.JSONObject().put("tabs", tabs).put("files", files), context)' "$LIBS/keyboard/src/main/java/helium314/keyboard/latin/database/ClipboardDao.kt" \

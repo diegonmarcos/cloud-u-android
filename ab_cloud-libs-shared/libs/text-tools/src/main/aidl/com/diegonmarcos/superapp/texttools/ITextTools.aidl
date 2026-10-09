@@ -231,4 +231,12 @@ interface ITextTools {
      * guard, same never-log rule.
      */
     String[] appendClipboardLists(in String json);
+
+    /**
+     * #781 clipboardLists in pieces: chars [start, start + length) of the same JSON text, "" past
+     * the end, null when the store cannot open. clipboardLists returns the whole 1.3 MB in one reply
+     * and dies on the ~1 MB binder limit (2026-10-09: Runtime read "no lists" right after a good
+     * apply), so the reader asks for slices until one comes back short. Appended last; same guard.
+     */
+    String clipboardListsSlice(int start, int length);
 }
