@@ -64,8 +64,15 @@ object PhoneAppActions {
             }
             // No public source at all: say why, and offer no store page that
             // does not have it.
-            app.unresolved != null -> out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
-                ctx.getString(R.string.store_phone_state_unresolved, app.unresolved))
+            app.unresolved != null -> {
+                out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
+                    ctx.getString(R.string.store_phone_state_unresolved, app.unresolved))
+                // The publisher's own download page, for a person to open: no bytes for us.
+                app.officialPage?.let { page ->
+                    out += Action(Kind.ORIGIN, s(R.string.store_phone_official_page),
+                        Intent(Intent.ACTION_VIEW, Uri.parse(page)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), null)
+                }
+            }
             else -> {
                 // #627 HAND OFF TO THE STORE THIS APP ACTUALLY NEEDS. This used
                 // to be Play unconditionally, so an app published only on the

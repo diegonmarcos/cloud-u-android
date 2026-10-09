@@ -422,7 +422,7 @@
         "integrity": "unknown"
       },
       "com.binarysmith.webclipwidget.ad": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "unresolved": "delisted from Google Play, no publisher site or APK found",
         "integrity": "unknown"
       },
       "com.booking": {
@@ -619,8 +619,9 @@
         "integrity": "unknown"
       },
       "com.epicgames.portal": {
-        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
-        "integrity": "unknown"
+        "unresolved": "Epic Games Store: official APK behind Epic's bot protection, so a person downloads it from the official page",
+        "official_page": "https://store.epicgames.com/mobile/android",
+        "integrity": "none"
       },
       "com.esim.numero": {
         "sources": [
@@ -1135,11 +1136,13 @@
         "integrity": "unknown"
       },
       "com.microsoft.copilot": {
-        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "unresolved": "not on Google Play in this region under this package and no Microsoft APK: Microsoft's page",
+        "official_page": "https://copilot.microsoft.com/",
         "integrity": "unknown"
       },
       "com.microsoft.lists.public": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "unresolved": "not on Google Play in this region under this package and no Microsoft APK: Microsoft's page",
+        "official_page": "https://www.microsoft.com/en-us/microsoft-365/microsoft-lists",
         "integrity": "unknown"
       },
       "com.microsoft.office.onenote": {
@@ -1289,7 +1292,8 @@
         "integrity": "unknown"
       },
       "com.playdead.limbo.egs.full": {
-        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "unresolved": "Epic Games Store exclusive build: install Epic Games, then Limbo inside it",
+        "official_page": "https://store.epicgames.com/p/limbo",
         "integrity": "unknown"
       },
       "com.rarlab.rar": {
@@ -1596,8 +1600,17 @@
         "integrity": "unknown"
       },
       "com.smlnskgmail.jaman.hashchecker": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
-        "integrity": "unknown"
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/hash-checker/hash-checker/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/hash-checker/hash-checker/releases/latest/download/hash-checker_google-play_{version}.apk",
+            "verified": "2026-10-10 HTTP 206 application/vnd.android.package-archive (google-play flavour keeps the package id; no-google-play adds .thirdparty)"
+          }
+        ],
+        "integrity": "none"
       },
       "com.spanishcoders.pepephone": {
         "sources": [
@@ -1655,7 +1668,7 @@
         "integrity": "none"
       },
       "com.termux.nix.boot": {
-        "unresolved": "installed from com.diegonmarcos.superapp; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
+        "unresolved": "Nix-on-Droid boot add-on: no public release found; it was sideloaded through SuperApp",
         "integrity": "unknown"
       },
       "com.thetrainline": {
@@ -1747,8 +1760,9 @@
         "integrity": "unknown"
       },
       "com.uptodown": {
-        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK",
-        "integrity": "unknown"
+        "unresolved": "Uptodown's own APK, minted per visit on its official page: no stable download URL",
+        "official_page": "https://uptodown-android.en.uptodown.com/android",
+        "integrity": "none"
       },
       "com.urbandroid.sleep": {
         "sources": [

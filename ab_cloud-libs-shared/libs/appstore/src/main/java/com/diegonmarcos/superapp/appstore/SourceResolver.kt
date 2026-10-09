@@ -126,6 +126,9 @@ object SourceResolver {
         /** Declared reason no public source exists (`"unresolved": "<why>"`). Its
          *  ladder is empty: nothing to install from, and the row says why. */
         val unresolved: String? = null,
+        /** An unresolved row's official download page (`"official_page"`, https only): a page a
+         *  person opens, never a URL this store fetches from. */
+        val officialPage: String? = null,
         /** Declared `integrity` of the row; [Integrity.UNKNOWN] for an undeclared package. */
         val integrity: Integrity = Integrity.UNKNOWN,
     ) {
@@ -220,7 +223,10 @@ object SourceResolver {
         if (unresolved != null) {
             // An app with no public source says so, and claims no rung.
             require((o.optJSONArray("sources")?.length() ?: 0) == 0) { "$pkg: unresolved carries no sources" }
-            return External(pkg, o.optString("label").ifEmpty { pkg }, emptyList(), declared = true, unresolved = unresolved, integrity = integrity)
+            val page = o.optString("official_page").ifEmpty { null }
+            require(page == null || page.startsWith("https://")) { "$pkg: official_page must be https" }
+            return External(pkg, o.optString("label").ifEmpty { pkg }, emptyList(), declared = true, unresolved = unresolved,
+                officialPage = page, integrity = integrity)
         }
         val arr = o.getJSONArray("sources")
         val list = (0 until arr.length()).map { i -> source(arr.getJSONObject(i), kinds) }

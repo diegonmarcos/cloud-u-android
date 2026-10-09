@@ -104,6 +104,9 @@ def validate(doc):
             if not isinstance(a["unresolved"], str) or not a["unresolved"].strip():
                 v.append("%s: unresolved gives no reason (%r)" % (pkg, a["unresolved"]))
             if srcs: v.append("%s: unresolved but still claims rungs %r" % (pkg, [s.get("kind") for s in srcs]))
+            pg = a.get("official_page")
+            if pg is not None and (not str(pg).startswith("https://") or "play.google.com" in str(pg)):
+                v.append("%s: official_page %r is not an https publisher page" % (pkg, pg))
             n_not_ours += 1
             continue
         kinds = [s.get("kind") for s in srcs]
@@ -159,6 +162,7 @@ mutations = {
     "a plain-http vendor APK": lambda d: d["resolver"]["apps"][vendor]["sources"][0].__setitem__("apk", "http://example.invalid/x.apk"),
     "an unresolved row that also claims a rung": lambda d: d["resolver"]["apps"][unresolved].__setitem__("sources", [{"kind": "play-anon"}]),
     "an unresolved row with a blank reason": lambda d: d["resolver"]["apps"][unresolved].__setitem__("unresolved", "  "),
+    "an official page over plain http": lambda d: d["resolver"]["apps"][next(p for p, a in d["resolver"]["apps"].items() if a.get("official_page"))].__setitem__("official_page", "http://example.invalid/"),
     "a row with neither a ladder nor an unresolved reason": lambda d: d["resolver"]["apps"][unresolved].pop("unresolved"),
     "a row without integrity": lambda d: d["resolver"]["apps"][unresolved].pop("integrity"),
     "a truncated F-Droid signer pin": lambda d: d["resolver"]["fdroid"].__setitem__("cert_sha256", "abc"),
