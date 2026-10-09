@@ -186,6 +186,9 @@ android {
     }
 
     buildFeatures { buildConfig = true; compose = true }
+    // Two dependencies (Bouncy Castle and another multi-release jar) both carry an OSGi manifest at the
+    // same path since the fleet-wide Compose BOM; Android reads neither, so merging drops it.
+    packaging { resources { excludes += 'META-INF/versions/9/OSGI-INF/MANIFEST.MF' } }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
