@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.diegonmarcos.superapp.settings.GridColumns
 import com.google.android.material.card.MaterialCardView
 
 /** The card grid an INDEX row is drawn with.
@@ -53,7 +54,7 @@ object IndexTiles {
                 inRow = 0
             }
             inRow++
-            row.addView(card(ctx, cell))
+            row.addView(card(ctx, cell, columns))
         }
         if (inRow > 0) {
             repeat(columns - inRow) { row.addView(spacer(ctx)) }
@@ -62,7 +63,10 @@ object IndexTiles {
         return rows
     }
 
-    private fun card(ctx: Context, cell: Cell): View {
+    private fun card(ctx: Context, cell: Cell, cols: Int): View {
+        // Page padding 16 dp a side, card margin 4 dp a side, then the inner pad.
+        val padDp = GridColumns.cellPadDp(cols)
+        val cellPx = GridColumns.cellPx(ctx.resources.displayMetrics.widthPixels - dp(ctx, 32), cols)
         val card = MaterialCardView(ctx).apply {
             radius        = dp(ctx, 12).toFloat()
             cardElevation = 0f
@@ -74,7 +78,7 @@ object IndexTiles {
         val inner = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            val pad = dp(ctx, 8); setPadding(pad, pad, pad, pad)
+            val pad = dp(ctx, padDp); setPadding(pad, pad, pad, pad)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -83,7 +87,7 @@ object IndexTiles {
         when {
             cell.iconRes != 0 -> inner.addView(ImageView(ctx).apply {
                 setImageResource(cell.iconRes)
-                val sz = dp(ctx, 28); layoutParams = LinearLayout.LayoutParams(sz, sz)
+                val sz = GridColumns.iconPx(dp(ctx, 28), cellPx, dp(ctx, 8 + 2 * padDp), dp(ctx, 16)); layoutParams = LinearLayout.LayoutParams(sz, sz)
             })
             cell.glyph.isNotBlank() -> inner.addView(TextView(ctx).apply {
                 text = cell.glyph
@@ -96,6 +100,8 @@ object IndexTiles {
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             gravity = Gravity.CENTER
             maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            textSize = GridColumns.labelSp(cols) + 1f
         })
         card.addView(inner)
         card.setOnClickListener { cell.onClick() }

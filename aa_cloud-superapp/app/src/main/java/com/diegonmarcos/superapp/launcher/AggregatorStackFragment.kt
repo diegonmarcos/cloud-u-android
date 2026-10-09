@@ -1,4 +1,6 @@
 package com.diegonmarcos.superapp.launcher
+import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
@@ -184,6 +186,11 @@ class AggregatorStackFragment : Fragment(),
      *  watermark rather than pretending to be permanently unread. */
     private fun isUnread(r: NotifRow): Boolean =
         if (r.id.isBlank()) r.ts > visitSeenAt else r.id !in readIds
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redrawOnGridColumns(GridColumns.Kind.CLOUD)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -2444,8 +2451,8 @@ class AggregatorStackFragment : Fragment(),
         flatLinks: List<Sections.LinkItem>,
     ) {
         // Sub-section header per column → N-icon grid of links beneath it.
-        // N comes from build.json::ui.tile_columns (data-driven, no hardcode).
-        val cols = BuildConfig.UI_TILE_COLUMNS.coerceAtLeast(1)
+        // N: build.json::ui.tile_columns by default, the Controls stepper when set.
+        val cols = GridColumns.cloud(ctx)
         if (columns.isNotEmpty()) {
             for (col in columns) {
                 if (col.header.isNotBlank()) body.addView(colHeader(ctx, col.header, col.headerUrl))
@@ -2525,7 +2532,7 @@ class AggregatorStackFragment : Fragment(),
         val ctx = body.context
         body.addView(IndexTiles.grid(
             ctx,
-            com.diegonmarcos.superapp.BuildConfig.UI_TILE_COLUMNS,
+            GridColumns.cloud(ctx),
             tiles.map { tile ->
                 IndexTiles.Cell(
                     label   = tile.label,
@@ -3112,7 +3119,7 @@ class AggregatorStackFragment : Fragment(),
         ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
     ) {
         val dash = Sections.cloudServices()
-        val cols = com.diegonmarcos.superapp.BuildConfig.UI_TILE_COLUMNS.coerceAtLeast(1)
+        val cols = GridColumns.cloud(ctx)
         val executor = java.util.concurrent.Executors.newFixedThreadPool(8)
         val wanted = panel.dashGroupIds.ifEmpty { dash.groups.map { it.id } }
         val groups = dash.groups.filter { it.id in wanted }

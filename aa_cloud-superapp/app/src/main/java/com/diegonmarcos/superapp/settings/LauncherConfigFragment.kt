@@ -225,6 +225,21 @@ class LauncherConfigFragment : Fragment() {
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
         }
+        // ── Icons per row ──────────────────────────────────────────
+        // Two separate steppers, one per grid family. Neither writes until it is
+        // tapped, so a phone that never touches them keeps following the
+        // shipped defaults (see GridColumns). The grids redraw themselves when
+        // the stored value changes.
+        root.addView(spacer(ctx, dp(ctx, 24)))
+        root.addView(sectionHeader(ctx, "Icons per row",
+            "How many icons the Cloud apps and Phone apps grids fit on a line (${GridColumns.MIN}–${GridColumns.MAX})."))
+        root.addView(stepperRow(ctx, "Cloud apps", "Cloud grids",
+            GridColumns.cloud(ctx)) { GridColumns.set(ctx, GridColumns.Kind.CLOUD, it) })
+        root.addView(spacer(ctx, dp(ctx, 8)))
+        root.addView(stepperRow(ctx, "Phone apps", "Phone grids",
+            GridColumns.phone(ctx)) { GridColumns.set(ctx, GridColumns.Kind.PHONE, it) })
+        root.addView(spacer(ctx, dp(ctx, 8)))
+
         // Screen brightness (device-wide → needs WRITE_SETTINGS)
         val b = LauncherSettingsPrefs.Config.brightness
         root.addView(sliderRow(ctx, b.label, b.subtitle, b.min, b.max,
@@ -264,6 +279,63 @@ class LauncherConfigFragment : Fragment() {
         })
 
         return scroll
+    }
+
+    /** Compact −/+ stepper over [GridColumns.MIN]..[GridColumns.MAX]. */
+    private fun stepperRow(
+        ctx: android.content.Context,
+        label: String, subtitle: String, value: Int,
+        onChange: (Int) -> Unit,
+    ): View {
+        val palette = LauncherPalette.of(ctx)
+        var cur = GridColumns.clamp(value)
+        val readout = TextView(ctx).apply {
+            gravity = Gravity.CENTER
+            minWidth = dp(ctx, 36)
+            setTextColor(palette.accent)
+            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
+        }
+        fun btn(glyph: String, desc: String, delta: Int) = TextView(ctx).apply {
+            text = glyph
+            gravity = Gravity.CENTER
+            contentDescription = desc
+            setTextColor(palette.textPrimary)
+            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
+            setBackgroundColor(palette.surfaceSelected)
+            isClickable = true; isFocusable = true
+            layoutParams = LinearLayout.LayoutParams(dp(ctx, 44), dp(ctx, 44))
+            setOnClickListener {
+                val next = GridColumns.clamp(cur + delta)
+                if (next == cur) return@setOnClickListener
+                Haptics.tap(it)
+                cur = next; readout.text = next.toString()
+                onChange(next)
+            }
+        }
+        readout.text = cur.toString()
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val pad = dp(ctx, 14); setPadding(pad, dp(ctx, 8), pad, dp(ctx, 8))
+            setBackgroundColor(palette.surface)
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                addView(TextView(ctx).apply {
+                    text = label
+                    setTextColor(palette.textPrimary)
+                    setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
+                })
+                addView(TextView(ctx).apply {
+                    text = subtitle
+                    setTextColor(palette.textSecondary)
+                    setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+                })
+            })
+            addView(btn("−", "Fewer icons per row", -1))
+            addView(readout)
+            addView(btn("+", "More icons per row", 1))
+        }
     }
 
     /** A label/subtitle + right-aligned switch row, persisted on toggle.

@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.settings.redrawOnGridColumns
+
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.ModePrefs
@@ -49,6 +51,11 @@ import kotlin.math.ceil
  */
 class HomeGroupedFragment : Fragment(R.layout.fragment_home_grouped) {
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redrawOnGridColumns(GridColumns.Kind.CLOUD)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val ctx = requireContext()
@@ -58,8 +65,6 @@ class HomeGroupedFragment : Fragment(R.layout.fragment_home_grouped) {
     }
 
     companion object {
-        // Data-driven from build.json::ui.tile_columns.
-        private val COLS: Int get() = BuildConfig.UI_TILE_COLUMNS
         fun newInstance() = HomeGroupedFragment()
 
         /** Build the grouped "All Apps" grid (build.json::ui.home_groups +
@@ -69,6 +74,8 @@ class HomeGroupedFragment : Fragment(R.layout.fragment_home_grouped) {
          *  inline instead of navigating to a separate "more" screen. */
         fun buildInto(ctx: Context, inflater: LayoutInflater, root: LinearLayout) {
             val palette = tilePalette(ctx)
+            // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
+            val COLS = GridColumns.cloud(ctx)
             // Per-mode icon selection. Section.iconForMode(mode) is the
             // SOURCE OF TRUTH — when a tile points at `section:X`, we look
             // the section up and resolve its mode-aware icon there, so the
@@ -158,6 +165,7 @@ class HomeGroupedFragment : Fragment(R.layout.fragment_home_grouped) {
                             val iconRes = Sections.iconResFor(ctx, iconName).takeIf { it != 0 }
                                 ?: R.drawable.ic_settings
                             bindTile(ctx, tileView, id, label, iconRes, palette)
+                            com.diegonmarcos.superapp.settings.fitTileIcon(tileView, R.id.tile_icon_bg, COLS, 8, 16)
                             row.addView(tileView)
                         } else {
                             val spacer = View(ctx)

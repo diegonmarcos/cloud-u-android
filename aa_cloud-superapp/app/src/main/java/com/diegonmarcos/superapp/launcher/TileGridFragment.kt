@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.R
 
 import android.content.res.ColorStateList
@@ -32,6 +33,11 @@ import kotlin.math.abs
  * to the matching nav action via [TileClickListener].
  */
 class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        redrawOnGridColumns(GridColumns.Kind.CLOUD)
+    }
 
     fun interface TileClickListener {
         fun onTileClicked(tileId: String)
@@ -84,7 +90,8 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
 
         val inflater = LayoutInflater.from(requireContext())
         val palette  = tilePalette(requireContext())
-        val cols = COLS
+        // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
+        val cols = GridColumns.cloud(requireContext())
         var i = 0
         var shownGroup: String? = null
         var shownSub:   String? = null
@@ -166,6 +173,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val (bg, fg) = palette[slot]
 
         tileView.findViewById<TextView>(R.id.tile_label).text = label
+        com.diegonmarcos.superapp.settings.fitTileIcon(tileView, R.id.tile_icon_bg, GridColumns.cloud(requireContext()), 0, 14)
 
         // Plain icon — no glass coin behind it. Linktree pattern: the
         // tile CARD carries the glass surface (bg_tile_glass), the
@@ -230,9 +238,6 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
     private fun android.content.Context.color(id: Int): Int = ContextCompat.getColor(this, id)
 
     companion object {
-        // Data-driven from build.json::ui.tile_columns (baked into
-        // BuildConfig at gradle eval). NEVER hardcode this.
-        private val COLS: Int get() = BuildConfig.UI_TILE_COLUMNS
         private const val ARG_TITLE       = "title"
         private const val ARG_TILE_IDS    = "tile_ids"
         private const val ARG_TILE_LABELS = "tile_labels"

@@ -259,7 +259,7 @@ def homeSwipeDown  = (buildJson.onehand?.home_swipes?.swipe_down  ?: "open_home_
 // by declaring the block and nothing else.
 // Phone tab folder taxonomy + sections (ui.phone_folders / phone_sections) are
 // baked by libs:appstore (#866), which owns PhoneFolders/PhoneSections.
-def phoneGridColumns   = (buildJson.ui.phone_grid_columns as Number)?.intValue() ?: 6
+def phoneGridColumns   = (buildJson.ui.phone_grid_columns as Number)?.intValue() ?: 7
 
 // Channel classes for Projects > Inboxes (build.json::ui.inbox_classes). Baked
 // beside the folder taxonomy because it is the second half of the same answer:

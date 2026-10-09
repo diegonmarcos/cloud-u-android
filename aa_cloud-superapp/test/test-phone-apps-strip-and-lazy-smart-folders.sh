@@ -327,10 +327,10 @@ echo "== T5: the strip's density stays data-driven =="
 # break now, so it decides how many tiles are visible at rest -- but it must
 # still be the thing deciding, not a number typed into the Kotlin.
 CELL="$(body cellWidth)"
-if printf '%s\n' "$CELL" | grep -qF 'BuildConfig.UI_PHONE_GRID_COLUMNS'; then
-    ok "cellWidth() derives from build.json::ui.phone_grid_columns"
+if printf '%s\n' "$CELL" | grep -qF 'GridColumns.phone('; then
+    ok "cellWidth() derives from the phone column count (build.json::ui.phone_grid_columns default, Controls override)"
 else
-    bad "cellWidth() ignores UI_PHONE_GRID_COLUMNS -- the columns knob no longer reaches the page"
+    bad "cellWidth() ignores GridColumns.phone -- the columns knob no longer reaches the page"
 fi
 COLUMNS="$(jq -r '.ui.phone_grid_columns' "$BUILD_JSON")" || {
     echo "FATAL: jq failed reading ui.phone_grid_columns"; exit 2; }

@@ -1,4 +1,6 @@
 package com.diegonmarcos.superapp.apps
+import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
@@ -53,6 +55,11 @@ import kotlinx.coroutines.withContext
 class PhoneAppsFragment : Fragment() {
 
     private lateinit var launcherApps: LauncherApps
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redrawOnGridColumns(GridColumns.Kind.PHONE)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -140,7 +147,7 @@ class PhoneAppsFragment : Fragment() {
      *  shown — empty ones render as empty glass squares, per spec. */
     private fun buildAlphabetic(ctx: Context, rootCol: LinearLayout) {
         val apps    = sCachedApps ?: collectLaunchableApps(ctx).also { sCachedApps = it }
-        val columns = BuildConfig.UI_PHONE_GRID_COLUMNS
+        val columns = GridColumns.phone(ctx)
         val byLetter = LinkedHashMap<String, MutableList<PhoneApp>>()
         for (c in 'A'..'Z') byLetter[c.toString()] = mutableListOf()
         val hash = mutableListOf<PhoneApp>()
@@ -247,7 +254,7 @@ class PhoneAppsFragment : Fragment() {
             } else {
                 PhoneAppClassifier.groupByFolder(apps, folders)
             }
-            val columns  = BuildConfig.UI_PHONE_GRID_COLUMNS
+            val columns  = GridColumns.phone(ctx)
 
             // Skip empty folders entirely — One UI hides them too, and an
             // empty 2×2 placeholder reads as broken to the user. EXCEPT
@@ -463,12 +470,12 @@ class PhoneAppsFragment : Fragment() {
             rootCol: LinearLayout,
             rendered: List<SmartRendered>,
         ) {
-            val columns = BuildConfig.UI_PHONE_GRID_COLUMNS
+            val columns = GridColumns.phone(ctx)
             // Smaller "subtile" cells for Smart Folders — denser than the
             // A-Z/category grid above, and grouped under sub-labels
             // (Usage/Stores/Dev/Rank/…) per build.json's `group` field.
             val subtileCell = dp(ctx, 44)
-            val subtileColumns = columns + 1
+            val subtileColumns = (columns + 1).coerceAtMost(GridColumns.MAX + 1)
             rendered.groupBy { it.spec.group ?: "Other" }.forEach { (group, inGroup) ->
                 rootCol.addView(subhead(ctx, group))
                 // Synthesize a Folder per Smart Folder so the existing
@@ -511,6 +518,12 @@ class PhoneAppsFragment : Fragment() {
             columns: Int,
             cellSize: Int = dp(ctx, 60),
         ) {
+            // The square may not be wider than its column: 60 dp is right at 4-5
+            // columns and wider than the column from 6 on, at 360 dp.
+            val fitted = GridColumns.iconPx(
+                cellSize,
+                GridColumns.cellPx(ctx.resources.displayMetrics.widthPixels - dp(ctx, 16), columns),
+                dp(ctx, 4), dp(ctx, 28))
             folders.chunked(columns).forEach { rowFolders ->
                 val row = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -521,7 +534,7 @@ class PhoneAppsFragment : Fragment() {
                 }
                 for (folder in rowFolders) {
                     val apps = grouped[folder.id].orEmpty()
-                    row.addView(makeFolderCard(ctx, folder, apps, cellSize))
+                    row.addView(makeFolderCard(ctx, folder, apps, fitted))
                 }
                 // Pad the row with empty weighted spacers if it has fewer
                 // than `columns` folders, so the last row stays left-aligned
@@ -588,7 +601,7 @@ class PhoneAppsFragment : Fragment() {
                 text = folder.label
                 setTextColor(0xFFE9D8FD.toInt())
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                textSize = 10f
+                textSize = GridColumns.labelSp(GridColumns.phone(ctx)) - 1f
                 gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -634,7 +647,7 @@ class PhoneAppsFragment : Fragment() {
             scroll.addView(grid)
             // Match the folder-grid column count (build.json::ui.phone_grid_columns,
             // default 6) instead of a hardcoded 5.
-            val expandedCols = BuildConfig.UI_PHONE_GRID_COLUMNS
+            val expandedCols = GridColumns.phone(ctx)
             apps.chunked(expandedCols).forEach { rowApps ->
                 val row = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -672,7 +685,7 @@ class PhoneAppsFragment : Fragment() {
             val tile = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
-                val p = dp(ctx, 8); setPadding(p, p, p, p)
+                val p = dp(ctx, GridColumns.cellPadDp(GridColumns.phone(ctx))); setPadding(p, p, p, p)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 isClickable = true; isFocusable = true
                 setOnClickListener {
@@ -706,14 +719,18 @@ class PhoneAppsFragment : Fragment() {
             }
             tile.addView(ImageView(ctx).apply {
                 app.icon?.let { setImageDrawable(it) }
-                val sz = dp(ctx, 48)
+                val cols = GridColumns.phone(ctx)
+                // Dialog: screen - 2 x 20 dp margin - 2 x 16 dp sheet padding.
+                val sz = GridColumns.iconPx(dp(ctx, 48),
+                    GridColumns.cellPx(ctx.resources.displayMetrics.widthPixels - dp(ctx, 72), cols),
+                    dp(ctx, 2 * GridColumns.cellPadDp(cols)), dp(ctx, 24))
                 layoutParams = LinearLayout.LayoutParams(sz, sz)
             })
             tile.addView(TextView(ctx).apply {
                 text = app.label
                 setTextColor(0xFFE9D8FD.toInt())
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                textSize = 11f
+                textSize = GridColumns.labelSp(GridColumns.phone(ctx))
                 gravity = Gravity.CENTER
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END

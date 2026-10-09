@@ -95,7 +95,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `kdeconnect_trust` | prefs | device | no | Pinned peer certificates and paired flags; tied to this device's keystore, must re-pair on a new phone. |
 | `launcher_mode_prefs` | prefs | config | yes | Selected launcher mode preset (key 'mode'). |
 | `launcher_profile_prefs` | prefs | config | yes | Selected launcher profile preset (personal/work/guest). |
-| `launcher_settings` | prefs | config | yes | Launcher settings: screensaver, scale, brightness, eye intensity, screensaver timeout, animation/one-hand/control toggles. |
+| `launcher_settings` | prefs | config | yes | Launcher settings: screensaver, scale, brightness, eye intensity, screensaver timeout, animation/one-hand/control toggles, and the icons-per-row steppers grid_cols_cloud and grid_cols_phone (4..8; absent until the owner moves a stepper, so a phone that never chose follows the shipped default and a chosen value migrates with the phone). |
 | `launcher_theme_prefs` | prefs | config | yes | Selected launcher theme (cloud / cloud_minimalist_black). |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `mattermost_prefs` | encrypted | config (keys: token→secret) | yes | Mattermost server_url/user_id are account links; token is a credential. |

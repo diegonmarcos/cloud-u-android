@@ -132,3 +132,46 @@ internal fun applyShellLiveToggles(activity: android.app.Activity?) {
             as? com.diegonmarcos.superapp.ui.IslandWaveView)?.applyIslandPref()
     }
 }
+
+// ── Icons per row: the View-side half of [GridColumns] ──────────────────────
+
+/**
+ * Call from a grid fragment's onCreate. While it is started it listens for
+ * [kind]'s key and re-renders itself when the value it last drew with is no
+ * longer the answer; a change that landed while it was stopped is caught on the
+ * next start. The stepper therefore needs to know no grid by name.
+ */
+internal fun Fragment.redrawOnGridColumns(kind: GridColumns.Kind) {
+    var drawn = GridColumns.get(requireContext(), kind)
+    fun redrawIfChanged() {
+        val now = GridColumns.get(requireContext(), kind)
+        if (now == drawn) return
+        drawn = now
+        // Posted: the listener can fire inside a FragmentManager transaction.
+        (view ?: return).post { if (isAdded) rerenderPage() }
+    }
+    val l = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == kind.key) redrawIfChanged()
+    }
+    lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+        override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
+            redrawIfChanged()
+            GridColumns.sp(requireContext()).registerOnSharedPreferenceChangeListener(l)
+        }
+        override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+            GridColumns.sp(requireContext()).unregisterOnSharedPreferenceChangeListener(l)
+        }
+    })
+}
+
+/** Shrink an `R.layout.item_tile` icon (32 dp wanted) to fit its column: the
+ *  screen minus [pageDp] of page padding, split [cols] ways, minus [chromeDp]
+ *  of tile margin + padding. */
+internal fun fitTileIcon(tile: View, iconBgId: Int, cols: Int, pageDp: Int, chromeDp: Int) {
+    val bg = tile.findViewById<View>(iconBgId) ?: return
+    val dm = tile.resources.displayMetrics
+    val d = dm.density
+    val cell = GridColumns.cellPx(dm.widthPixels - (pageDp * d).toInt(), cols)
+    val sz = GridColumns.iconPx((32 * d).toInt(), cell, (chromeDp * d).toInt(), (16 * d).toInt())
+    bg.layoutParams = bg.layoutParams.also { it.width = sz; it.height = sz }
+}

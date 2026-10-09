@@ -1,4 +1,6 @@
 package com.diegonmarcos.superapp.apps
+import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.launcher.AppInstall
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
@@ -47,7 +49,7 @@ import com.diegonmarcos.superapp.ui.AppIconCache
  *   • One subhead per group title.
  *   • ONE sideways-scrollable line of icon tiles below it, never two —
  *     the same HorizontalScrollView strip GroupedTilesFragment.tileRow
- *     uses, for the same reason it adopted one. UI_PHONE_GRID_COLUMNS
+ *     uses, for the same reason it adopted one. the phone column count
  *     now sets how many tiles are visible at rest rather than where the
  *     line breaks, because there is no longer a line break. See
  *     [tileStrip].
@@ -75,6 +77,11 @@ import com.diegonmarcos.superapp.ui.AppIconCache
  * reported.
  */
 class SuitePhoneAppsFragment : Fragment() {
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        redrawOnGridColumns(GridColumns.Kind.PHONE)
+    }
 
     /** One curated entry as build.json declares it: the package, plus the
      *  name to show when that package is NOT installed. `label` is a
@@ -636,7 +643,7 @@ class SuitePhoneAppsFragment : Fragment() {
      * WHAT WAS ACTUALLY WRAPPING, because the answer is not what the symptom
      * suggests. Nothing on this page was ever a flow layout, a FlexboxLayout
      * or a GridLayoutManager — the wrap was arithmetic. Each section chunked
-     * its tiles into groups of UI_PHONE_GRID_COLUMNS and added ONE HORIZONTAL
+     * its tiles into groups of the phone column count (GridColumns.phone) and added ONE HORIZONTAL
      * LinearLayout PER CHUNK to a vertical parent, so a group of thirteen apps
      * drew three stacked rows by construction. No change to tile width could
      * ever have fixed that: the second line was not overflow, it was a second
@@ -678,7 +685,7 @@ class SuitePhoneAppsFragment : Fragment() {
      *  computed instead of negotiated. The columns knob keeps meaning what it
      *  meant; it governs density now rather than where the line breaks. */
     private fun cellWidth(ctx: Context): Int {
-        val columns = BuildConfig.UI_PHONE_GRID_COLUMNS.coerceAtLeast(1)
+        val columns = GridColumns.phone(ctx)
         // The page root carries dp(8) of padding on each side — see onCreateView.
         val usable = ctx.resources.displayMetrics.widthPixels - 2 * dp(ctx, 8)
         return (usable / columns).coerceAtLeast(dp(ctx, 48))
@@ -779,7 +786,7 @@ class SuitePhoneAppsFragment : Fragment() {
                 setImageResource(R.drawable.ic_app_not_installed)
                 imageTintList = ColorStateList.valueOf(palette.textSecondary)
             }
-            val sz = dp(ctx, 52)
+            val sz = GridColumns.iconPx(dp(ctx, 52), cellWidth(ctx), dp(ctx, 12), dp(ctx, 24))
             layoutParams = LinearLayout.LayoutParams(sz, sz)
         })
         addView(TextView(ctx).apply {
@@ -933,7 +940,7 @@ class SuitePhoneAppsFragment : Fragment() {
         }
         scroll.addView(grid)
         // Match the phone grid column count (default 6), not a hardcoded 5.
-        val cols = BuildConfig.UI_PHONE_GRID_COLUMNS
+        val cols = GridColumns.phone(ctx)
         for (rowChunk in contents.chunked(cols)) {
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -967,7 +974,7 @@ class SuitePhoneAppsFragment : Fragment() {
         val tile = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            val pad = dp(ctx, 8); setPadding(pad, pad, pad, pad)
+            val pad = dp(ctx, GridColumns.cellPadDp(GridColumns.phone(ctx))); setPadding(pad, pad, pad, pad)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             isClickable = true; isFocusable = true
             contentDescription =
@@ -1007,7 +1014,11 @@ class SuitePhoneAppsFragment : Fragment() {
                 setImageResource(R.drawable.ic_app_not_installed)
                 imageTintList = ColorStateList.valueOf(palette.textSecondary)
             }
-            val sz = dp(ctx, 48)
+            val cols = GridColumns.phone(ctx)
+            // Dialog: screen - 2 x 20 dp margin - 2 x 16 dp sheet padding.
+            val sz = GridColumns.iconPx(dp(ctx, 48),
+                GridColumns.cellPx(ctx.resources.displayMetrics.widthPixels - dp(ctx, 72), cols),
+                dp(ctx, 2 * GridColumns.cellPadDp(cols)), dp(ctx, 24))
             layoutParams = LinearLayout.LayoutParams(sz, sz)
         })
         tile.addView(TextView(ctx).apply {
@@ -1018,7 +1029,7 @@ class SuitePhoneAppsFragment : Fragment() {
                 )
             setTextColor(if (app.installed) 0xFFE9D8FD.toInt() else palette.textSecondary)
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            textSize = 11f
+            textSize = GridColumns.labelSp(GridColumns.phone(ctx))
             gravity = Gravity.CENTER
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
