@@ -166,7 +166,7 @@ dependencies {
     // cannot be bumped independently into a combination nobody has built. The
     // version is build.json::toolchain.compose_bom and the toolchain tester
     // fails the build if the two disagree.
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'

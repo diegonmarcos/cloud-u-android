@@ -99,7 +99,7 @@ android {
 }
 
 dependencies {
-    compileOnly platform('androidx.compose:compose-bom:2025.01.00')
+    compileOnly platform('androidx.compose:compose-bom:2025.11.01')
     compileOnly 'androidx.compose.ui:ui'
     compileOnly 'androidx.compose.foundation:foundation'
     compileOnly 'androidx.compose.material3:material3'

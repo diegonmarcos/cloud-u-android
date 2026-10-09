@@ -136,7 +136,7 @@ dependencies {
     // `api` because a host receives ConfigSyncClient.Outcome through SignInHost.
     api project(':libs:core')
 
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'

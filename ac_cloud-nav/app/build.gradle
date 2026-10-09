@@ -314,7 +314,7 @@ dependencies {
     implementation 'org.maplibre.gl:android-sdk:11.7.0'
     // #868 BottomNavIslandView / PageTabsView are Compose hosts: their supertypes and the
     // WindowInsets / ColorScheme they expose must be on this module's compile classpath.
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
@@ -325,6 +325,6 @@ dependencies {
     androidTestImplementation 'androidx.test:core:1.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     // ExploredRenderTest drives the Compose island / tab strip by their test tags.
-    androidTestImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    androidTestImplementation platform('androidx.compose:compose-bom:2025.11.01')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
 }

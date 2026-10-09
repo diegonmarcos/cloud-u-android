@@ -48,7 +48,7 @@ kotlin {
 
 dependencies {
     // `api`: a consumer builds the theme (Color, Brush, Dp, TextUnit) and fills composable slots.
-    api platform('androidx.compose:compose-bom:2025.01.00')
+    api platform('androidx.compose:compose-bom:2025.11.01')
     api 'androidx.compose.ui:ui'
     api 'androidx.compose.foundation:foundation'
     api 'androidx.compose.material3:material3'

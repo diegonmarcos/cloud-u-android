@@ -1189,6 +1189,13 @@
           ]
         },
         {
+          "label": "Dump system services (dumpsys from the ADB Shell page and the fleet API, Shizuku stopped)",
+          "perm": "android.permission.DUMP",
+          "apps": [
+            "com.diegonmarcos.superapp"
+          ]
+        },
+        {
           "_doc": "#736 the terminals bind ~/emulated and ~/cloud-drive-shared-store only when /storage/emulated/0 is readable, and a fresh install has no storage grant. Both target SDK 28, where the legacy READ/WRITE runtime pair is what opens shared storage (All-Files-Access is ignored below target 30). Each terminal asks for it itself at every session start; this entry lets the plane grant it with no prompt once embedded adb is armed. Runtime permissions are not development-flagged, so they reach a package only through an explicit apps list, and staleGrants never revokes them (a user may have granted them through the dialog). Every package here must be a constellation-fleet package whose manifest declares the permission: aa_cloud-superapp/test/test-terminal-storage-grant.sh.",
           "label": "Shared storage for the terminals (read ~/emulated, ~/cloud-drive-shared-store)",
           "perm": "android.permission.READ_EXTERNAL_STORAGE",

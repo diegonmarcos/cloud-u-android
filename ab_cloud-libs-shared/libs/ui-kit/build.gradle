@@ -55,7 +55,7 @@ kotlin {
 dependencies {
     // `api`: a consumer's screens call MaterialTheme / Text inside kit slots and subclass
     // KitComposeFragment, so these types are part of this module's surface.
-    api platform('androidx.compose:compose-bom:2025.01.00')
+    api platform('androidx.compose:compose-bom:2025.11.01')
     api 'androidx.compose.ui:ui'
     api 'androidx.compose.foundation:foundation'
     api 'androidx.compose.material3:material3'

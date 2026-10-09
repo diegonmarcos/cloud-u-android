@@ -190,7 +190,7 @@ dependencies {
     // Compose hosts: their supertype and the WindowInsets / ColorScheme they expose must be on this
     // module's compile classpath, though nothing here is written in Compose.
     implementation(project(":libs:bottomnav"))
-    implementation(platform("androidx.compose:compose-bom:2025.01.00"))
+    implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")

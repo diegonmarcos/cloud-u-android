@@ -622,7 +622,7 @@ dependencies {
     // libs:gix was linked and called by nothing, so it ships only as Cloud-Lib-Gix.apk.
     // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
     // libraries pin, so app and libraries compose against one toolchain.
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.animation:animation'
@@ -663,6 +663,6 @@ dependencies {
     // and the Robolectric Compose layout-tree test — the libs:bottomnav test stack.
     // (junit itself is declared once above, with #577's PDF tests.)
     testImplementation 'org.robolectric:robolectric:4.16.1'
-    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
     testImplementation 'androidx.compose.ui:ui-test-junit4'
 }

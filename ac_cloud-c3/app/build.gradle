@@ -256,7 +256,7 @@ dependencies {
     // #648 Compose survives for ONE reason: libs:bottomnav's island is an
     // AbstractComposeView, so the app needs the compiler and runtime even though its own
     // shell is Views — the same trade ac_cloud-me makes, and its build.gradle says so too.
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
@@ -282,7 +282,7 @@ dependencies {
     // The JVM unit phase (build.json::tests.unit) runs these on every ship.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.16.1'
-    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
     testImplementation 'androidx.compose.ui:ui-test-junit4'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'

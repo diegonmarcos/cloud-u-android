@@ -1,0 +1,39 @@
+# Compose BOM guard.
+#
+# ONE Compose BOM for the whole fleet. A shared lib is a project module: it compiles
+# against the BOM its own build.gradle names, while the app hosting it runs on the
+# highest version any of its modules pulled in. libs:health moved to 2025.11.01,
+# libs:shizuku-adb-debug-tools stayed on 2025.01.00, and the SuperApp's ADB Shell
+# page died at runtime with NoSuchMethodError FlowRow(...): an experimental API has no
+# binary compatibility across Compose versions, and no compile step can see the
+# mismatch. aa_cloud-superapp/test/test-compose-bom-one-version.sh reads every
+# build.gradle in the repo; inside ship-cloud-superapp that makes it a warning, so
+# it runs here, fleet-wide and fatal.
+#
+# Two steps on purpose: the first asserts the property on this tree, the second puts
+# one lib back on the old BOM in a throwaway copy and requires the tester to go red.
+name: "compose bom guard — every app and lib names the same Compose BOM"
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compose-bom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every compose-bom declaration in the fleet names one version
+        run: bash aa_cloud-superapp/test/test-compose-bom-one-version.sh
+      - name: The tester still fails when one lib drifts to another BOM
+        run: |
+          set -eu
+          sed -i 's/compose-bom:2025\.11\.01/compose-bom:2025.01.00/' ab_cloud-libs-shared/libs/ui-kit/build.gradle
+          if bash aa_cloud-superapp/test/test-compose-bom-one-version.sh; then
+            echo "::error::test-compose-bom-one-version.sh passed with libs:ui-kit on another Compose BOM — the guard is vacuous"
+            exit 1
+          fi
+          git checkout -- .
+          echo "the tester went red on the drifted lib, as it must"

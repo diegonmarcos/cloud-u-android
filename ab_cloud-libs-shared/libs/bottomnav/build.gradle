@@ -86,7 +86,7 @@ dependencies {
     // navigation-compose NavController that drives destination moves. Pinned to
     // the same BOM and versions cloud-mail's app module links, so this lib
     // composes against the app's own compose/AGP toolchain.
-    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
@@ -99,6 +99,6 @@ dependencies {
     // measures it. NATIVE graphics lets it read pixels back.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.16.1'
-    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
     testImplementation 'androidx.compose.ui:ui-test-junit4'
 }
