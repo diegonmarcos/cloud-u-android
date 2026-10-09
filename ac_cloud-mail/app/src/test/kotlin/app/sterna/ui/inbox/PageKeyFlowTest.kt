@@ -1,5 +1,6 @@
 package app.sterna.ui.inbox
 
+import app.sterna.core.data.mail.AuthFilter
 import app.sterna.core.data.mail.ListShape
 import app.sterna.core.data.settings.SortOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -275,10 +276,10 @@ class PageKeyFlowTest {
     @Test
     fun `a different shape is a different key, and an equal one is not`() {
         val seen = keys {
-            shape.value = ListShape(codes = true); runCurrent()
+            shape.value = ListShape(auth = AuthFilter.CODES); runCurrent()
             shape.again(); runCurrent()
             shape.value = ListShape(bySender = true); runCurrent()
         }
-        assertEquals(listOf(ListShape.NONE, ListShape(codes = true), ListShape(bySender = true)), seen.map { it.shape })
+        assertEquals(listOf(ListShape.NONE, ListShape(auth = AuthFilter.CODES), ListShape(bySender = true)), seen.map { it.shape })
     }
 }

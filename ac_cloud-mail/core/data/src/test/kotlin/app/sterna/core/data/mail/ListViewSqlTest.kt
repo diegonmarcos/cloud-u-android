@@ -43,7 +43,7 @@ class ListViewSqlTest {
     @After fun tearDown() = db.close()
 
     private fun insert(id: String, thread: String?, subject: String, from: String, seen: Int, flagged: Int, att: Int, auth: Int?, key: Long) {
-        db.prepareStatement("INSERT INTO emails VALUES(?, 'acc', 'inbox', ?, ?, 'p', '', 'N', ?, ?, ?, ?, ?, ?)").use { ps ->
+        db.prepareStatement("INSERT INTO emails VALUES(?, 'acc', 'inbox', ?, ?, 'p', '', NULL, ?, ?, ?, ?, ?, ?)").use { ps ->
             ps.setString(1, id); ps.setString(2, thread); ps.setString(3, subject); ps.setString(4, from)
             ps.setInt(5, seen); ps.setInt(6, flagged); ps.setInt(7, att); ps.setLong(8, key); if (auth == null) ps.setNull(9, java.sql.Types.INTEGER) else ps.setInt(9, auth)
             ps.executeUpdate()
@@ -81,9 +81,14 @@ class ListViewSqlTest {
 
     @Test fun `rank newest first, by sender, by subject`() {
         assertEquals(listOf("m4", "m3", "m2", "m1", "m5"), flat(SortOrder.DATE_DESC))
-        assertEquals("m4", flat(SortOrder.SENDER).last())
-        assertEquals(listOf("m1", "m2"), flat(SortOrder.SUBJECT).take(2))
-        assertEquals(listOf("m1", "m2", "m3", "m4", "m5"), flat(SortOrder.SUBJECT))
+        // by sender: amy (m2, m3, m5 - one address in any case), then bob, then zed
+        val bySender = flat(SortOrder.SENDER)
+        assertEquals(setOf("m2", "m3", "m5"), bySender.take(3).toSet())
+        assertEquals(listOf("m4", "m1"), bySender.drop(3))
+        // by subject: Alpha (m1, m2), Bravo, Charlie, Delta
+        val bySubject = flat(SortOrder.SUBJECT)
+        assertEquals(setOf("m1", "m2"), bySubject.take(2).toSet())
+        assertEquals(listOf("m3", "m4", "m5"), bySubject.drop(2))
     }
 
     // -- filters, alone and combined ---------------------------------------------------------

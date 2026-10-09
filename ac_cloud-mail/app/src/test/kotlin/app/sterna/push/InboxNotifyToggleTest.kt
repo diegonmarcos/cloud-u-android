@@ -51,7 +51,7 @@ class InboxNotifyToggleTest {
         assertEquals(listOf("NewMailNotifier.kt", "RemindWorker.kt", "SnoozeWorker.kt"), posters)
     }
 
-    @Test fun `turning it back on does not replay: the baseline advances while it is off`() {
+    @Test fun `turning it back on does not replay because the baseline advances while it is off`() {
         // notifyDiff ends in seed(baselineIds) whatever announce says, so mail that arrived while muted is
         // remembered and only later arrivals are new.
         val notifier = src("push/NewMailNotifier.kt")
