@@ -171,7 +171,7 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Tile("Last restore", restore?.let { "${it.optString("device")} · ${it.optString("sha").take(7)}" } ?: "never", Modifier.weight(1f))
-            Tile("Drift", "n/a (task 4)", Modifier.weight(1f)) { open("profiles", "diff") }
+            Tile("Drift", remember(tick, model.version.intValue) { profilesDriftCount(ctx, model).let { if (it == 0) "in sync" else "$it differ" } }, Modifier.weight(1f)) { open("profiles", "diff") }
         }
         Pill(if (busy) "Backing up…" else "Backup now", AccountPageTags.BACKUP) {
             if (busy) return@Pill

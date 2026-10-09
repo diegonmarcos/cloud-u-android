@@ -151,6 +151,24 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
         }
     }
 
+    /**
+     * Delete `devices/<id>.json`. Never DEFAULT (that is a pointer other devices rely on) and
+     * never silent — the caller gates this behind a confirm (Profiles ▸ devices, spec 4.3).
+     */
+    fun delete(deviceId: String): JSONObject {
+        if (deviceId.isBlank() || deviceId == DeviceProfile.DEFAULT_ID) return JSONObject().put("ok", false).put("result", "✗ device= must name a device file (not DEFAULT)")
+        val c = client() ?: return noForge()
+        val path = decl.devicePath(deviceId)
+        val current = when (val g = c.get(path, decl.branch)) {
+            is ForgeClient.Result.Ok -> g.value
+            is ForgeClient.Result.Failed -> return fail(g)
+        }
+        return when (val d = c.delete(path, current.sha, "account($deviceId): delete", decl.branch)) {
+            is ForgeClient.Result.Ok -> JSONObject().put("ok", true).put("path", path).put("result", "✓ deleted $deviceId")
+            is ForgeClient.Result.Failed -> fail(d)
+        }
+    }
+
     companion object {
         const val K_WORKING = "account_working_json"
 

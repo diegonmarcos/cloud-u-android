@@ -185,6 +185,17 @@ PY
   strip "$AP" | grep -q 'AccountVault.install(this)' && strip "$AP" | grep -q 'AccountMigrate.run(this)' && ok "App installs the grant-aware authorizer and takes in what SuperApp kept" || bad "App.kt does not install the vault authorizer or run the migration"
   local FB="$P/cloud/FleetBearerProvider.kt"
   [ -f "$FB" ] && strip "$FB" | grep -q 'AccountData.secret(ctx, "fleet.bearer")' && ok "SuperApp's fleet bearer reads through Cloud Account first" || bad "SuperApp's FleetBearerProvider does not read the fleet bearer through Cloud Account"
+
+  # 7. redesign task 4: Profiles devices/working/diff
+  local PP="$L/profile/ProfilesPages.kt"
+  [ -f "$PP" ] || { bad "missing $PP"; return 99; }
+  local ma2; ma2="$(strip "$MA")"
+  for pg in 'ProfilesDevicesPage()' 'ProfilesWorkingPage()' 'ProfilesDiffPage(model)'; do
+    printf '%s' "$ma2" | grep -qF "$pg" && ok "MainActivity mounts $pg" || bad "MainActivity does not mount $pg"
+  done
+  strip "$PP" | grep -q '{ confirmDelete = id }' && strip "$PP" | grep -q 'KitConfirmDialog(' && ok "Delete opens a confirm; only the dialog's confirm deletes" || bad "Delete can fire without a confirm"
+  strip "$PP" | grep -q 'InfoMask.declared.hides(' && strip "$PP" | grep -q 'if (secret) "file: ••••' && ok "diff shows secret-class rows as presence only" || bad "diff may render a secret-class value"
+  strip "$PG" | grep -q 'profilesDriftCount(ctx, model)' && ! strip "$PG" | grep -q 'n/a (task 4)' && ok "Account profile's Drift tile reads the diff count" || bad "Drift tile is not wired to the diff count"
   return $fails
 }
 
@@ -245,7 +256,13 @@ mutate "connect dispatch replaced by a literal" lib/profile/ConnectWays.kt 'fun 
 mutate "a declared kind loses its branch" lib/profile/ConnectWays.kt '        GITEA_TOKEN -> Handler.GiteaToken
 ' '' || M=$((M+1))
 mutate "the page stops dispatching on kind" lib/profile/AccountPages.kt 'when (val h = ConnectWays.handler(way.kind))' 'when (val h = ConnectWays.handler("vault_file"))' || M=$((M+1))
-mutate "a page id has no branch" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"diff" -> AccountPlaceholderPage' '"diffx" -> AccountPlaceholderPage' || M=$((M+1))
+mutate "a page id has no branch" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"diff" -> ProfilesDiffPage(model)' '"diffx" -> ProfilesDiffPage(model)' || M=$((M+1))
+mutate "devices page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"devices" -> ProfilesDevicesPage()' '"devices" -> AccountPlaceholderPage(section, page, "task 4")' || M=$((M+1))
+mutate "working page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"working" -> ProfilesWorkingPage()' '"working" -> AccountPlaceholderPage(section, page, "task 4")' || M=$((M+1))
+mutate "diff page not mounted" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt '"diff" -> ProfilesDiffPage(model)' '"diff" -> AccountPlaceholderPage(section, page, "task 4")' || M=$((M+1))
+mutate "Delete fires without confirm" lib/profile/ProfilesPages.kt '{ confirmDelete = id }' '{ io { vault.delete(id).optString("result") } }' || M=$((M+1))
+mutate "diff draws a secret-class value" lib/profile/ProfilesPages.kt 'if (secret) "file: ••••' 'if (false) "file: ••••' || M=$((M+1))
+mutate "Drift tile says n/a again" lib/profile/AccountPages.kt 'profilesDriftCount(ctx, model).let' '0.let' || M=$((M+1))
 mutate "tabs op stops answering the islands" lib/profile/AccountDebugApi.kt 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' 'Unit' || M=$((M+1))
 mutate "token filed before the read" lib/profile/ConnectWays.kt 'if (o.ok && file)' 'if (file)' || M=$((M+1))
 mutate "the strip is dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'PageTabs(' 'Column(' || M=$((M+1))

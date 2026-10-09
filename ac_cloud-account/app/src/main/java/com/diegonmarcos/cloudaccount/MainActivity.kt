@@ -42,11 +42,11 @@ import com.diegonmarcos.superapp.profile.AccountSettingsPage
 import com.diegonmarcos.superapp.profile.AppsPage
 import com.diegonmarcos.superapp.profile.RunbookPage
 import com.diegonmarcos.superapp.profile.ConnectionsTab
-import com.diegonmarcos.superapp.profile.DriftTab
 import com.diegonmarcos.superapp.profile.FleetSetupTab
-import com.diegonmarcos.superapp.profile.ProfilesTab
+import com.diegonmarcos.superapp.profile.ProfilesDevicesPage
+import com.diegonmarcos.superapp.profile.ProfilesDiffPage
+import com.diegonmarcos.superapp.profile.ProfilesWorkingPage
 import com.diegonmarcos.superapp.profile.SecretsTab
-import com.diegonmarcos.superapp.profile.VaultCockpit
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.updater.Updater
 
@@ -113,8 +113,9 @@ class MainActivity : AppCompatActivity() {
                 else -> AccountProfilePage(go)
             }
             "profiles" -> when (page) {
-                "working" -> AccountPlaceholderPage(section, page, "task 4") { ProfilesTab(model, "Connect", { _, _ -> }, { r -> AccountHost.route(this, r) }) }
-                "diff" -> AccountPlaceholderPage(section, page, "task 4") { DriftTab(model, VaultCockpit.selectedDevice(ctx)) { _, _ -> } }
+                "devices" -> ProfilesDevicesPage()
+                "working" -> ProfilesWorkingPage()
+                "diff" -> ProfilesDiffPage(model)
                 else -> AccountPlaceholderPage(section, page, "task 4")
             }
             "setup" -> when (page) {

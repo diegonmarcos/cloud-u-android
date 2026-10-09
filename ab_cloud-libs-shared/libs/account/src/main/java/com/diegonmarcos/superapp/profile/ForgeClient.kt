@@ -140,6 +140,20 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         }
     }
 
+    /**
+     * DELETE [path] on [branch] (the blob [sha] the caller read must still be current, same as
+     * [put]). Profiles ▸ devices (spec 4.3) Delete, behind a confirm sheet on the caller's side —
+     * this call itself never asks, so the gate is the UI's alone.
+     */
+    fun delete(path: String, sha: String, message: String, branch: String): Result<Unit> {
+        if (token.isBlank()) return Result.Failed(0, "no credential for forge '${forge.id}'")
+        if (forge.repo == null) return Result.Failed(0, "forge '${forge.id}' declares no repo")
+        val body = JSONObject().put("message", message).put("sha", sha).put("branch", branch)
+        val (status, resp) = exchange("DELETE", forge.contents(path), body.toString()) ?: return Result.Failed(0, "network error")
+        if (status != 200) return Result.Failed(status, reason(status, resp))
+        return Result.Ok(Unit)
+    }
+
     private fun putOnce(path: String, text: String, sha: String?, message: String, branch: String): Result<String> {
         val body = JSONObject()
             .put("message", message)
