@@ -61,6 +61,16 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Pairs this app's embedded adb client with the phone's own Wireless debugging while the user types the pairing code into the notification" />
         </service>
+        <!-- HostShellService (libs:shizuku-adb-debug-tools): holds the process up so the embedded adb
+             channel and the fleet debug server (both process state) survive in the background. -->
+        <service
+            android:name="com.diegonmarcos.superapp.adbdebug.HostShellService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps this app's on-device shell channel and its loopback debug server running between uses" />
+        </service>
         <receiver
             android:name="com.diegonmarcos.superapp.adbdebug.HostShellBootReceiver"
             android:exported="false">

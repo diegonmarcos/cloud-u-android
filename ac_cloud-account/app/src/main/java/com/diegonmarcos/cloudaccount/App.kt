@@ -39,6 +39,8 @@ class App : Application() {
         }
         // Account's OWN uid-2000 channel (spec 2.4): embedded adb pairing, Shizuku as the fallback.
         // Re-armed after every boot; the runbook's shell and store steps run over it.
+        // HostShellService keeps the debug server up only while Settings ▸ Debug API allows it.
+        HostShell.debugServerAllowed = { com.diegonmarcos.superapp.profile.DebugApiSwitch.enabled(it) }
         runCatching { HostShell.install(this) }.onFailure { Log.w(TAG, "shell channel not armed", it) }
         // /api/account/... on the fleet debug server, as in SuperApp.
         runCatching { AccountDebugApi.register(this) }

@@ -56,6 +56,34 @@ object AccountDebugApi {
             Op("apps", "", "Setup ▸ apps (spec 4.7): the working profile's inventory vs this phone in the Store's classes (installed / fleet / direct = vendor or F-Droid rung / no source declared), package names and counts only"),
             Op("profiles", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
+        // /api/adb/... on Account's own port, so its uid-2000 channel can be driven from a terminal.
+        // Same shape as SuperApp's DevControlServer handler (copied: a lib never imports app code);
+        // behind the fleet token like every route group.
+        AppDebugServer.route("adb", listOf(
+            Op("status", "", "the shell-channel ladder: which channel is active, and per channel ready + status"),
+            Op("exec", "cmd=<shell command>", "'adb shell' passthrough: runs `sh -c <cmd>` as uid 2000 over the active channel and returns raw stdout; token-gated, loopback-only"),
+        )) { op, q -> runCatching { adb(app, op, q) }.getOrElse { "ERR: ${it.javaClass.simpleName}\n" } }
+    }
+
+    /** `/api/adb/status` and `/api/adb/exec?cmd=`; null (404) for any other op. */
+    private fun adb(ctx: Context, op: String, q: Map<String, String>): String? {
+        val shell = com.diegonmarcos.superapp.adbdebug.ShellChannels
+        return when (op) {
+            "status" -> {
+                val active = shell.active(ctx)
+                JSONObject().put("active", active?.name() ?: "none")
+                    .put("channels", org.json.JSONArray(shell.all.map { c ->
+                        JSONObject().put("name", c.name()).put("ready", c.isReady(ctx)).put("status", c.status(ctx))
+                    })).toString()
+            }
+            "exec" -> {
+                val cmd = q["cmd"]
+                if (cmd.isNullOrBlank()) "missing cmd\n"
+                else shell.active(ctx)?.exec(ctx, cmd)
+                    ?: "ERR: no shell channel ready — ${com.diegonmarcos.superapp.adbdebug.LocalShellChannel.status(ctx)}\n"
+            }
+            else -> null
+        }
     }
 
     /** `vault`: section counts, grants, and per-manifest-class key counts (config / secret / device). */

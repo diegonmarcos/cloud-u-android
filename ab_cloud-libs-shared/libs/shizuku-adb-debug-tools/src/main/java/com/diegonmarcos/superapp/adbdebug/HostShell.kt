@@ -33,12 +33,21 @@ object HostShell {
     /** Unique WorkManager name for this host's re-arm job. */
     fun workName(ctx: Context): String = "${ctx.packageName}.shell-channel"
 
+    /**
+     * Whether [HostShellService] may (re)start the fleet debug server. The host's switch, set
+     * before [install]: Cloud Account wires Settings ▸ Debug API here; a host that sets nothing
+     * keeps the server up, as DebugInitProvider already starts it.
+     */
+    @Volatile var debugServerAllowed: (Context) -> Boolean = { true }
+
     /** Called once from the host's Application.onCreate. */
     fun install(app: Context) {
         // The pairing service ends with the channel up; what follows is the host's.
         AdbPairingService.onConnected = { c -> onConnected(c.applicationContext) }
         runCatching { RishBridge.requestShizukuPermissionIfNeeded() }
         schedule(app, replace = false)
+        // The channel and the debug server are process state: the foreground service holds the process up.
+        HostShellService.start(app)
     }
 
     /** Re-arm the channel in the background: unique work, so a repeat call never stacks. */
@@ -110,7 +119,9 @@ open class HostShellWorker(ctx: Context, params: WorkerParameters) : Worker(ctx,
 /** BOOT_COMPLETED: the embedded client's connection is process state, so it is gone after a reboot. */
 open class HostShellBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED)
+        if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
             HostShell.schedule(context.applicationContext, replace = true)
+            HostShellService.start(context.applicationContext)
+        }
     }
 }

@@ -1,0 +1,87 @@
+package com.diegonmarcos.superapp.adbdebug
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.IBinder
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.devtools.AppDebugServer
+
+/**
+ * Keeps the host process alive so its two pieces of process state survive: the embedded adb
+ * channel (the client's connection lives in this process) and the fleet debug server (a loopback
+ * socket in this process). Without it nothing holds Cloud Account or Cloud Store up between a
+ * pairing and the next daily job, Android reclaims the process, the debug port goes dead and the
+ * channel is gone until something relaunches the app.
+ *
+ * A quiet, low-importance foreground service, START_STICKY, started by [HostShell.install] and by
+ * [HostShellBootReceiver]. While running it re-arms the channel when it drops and keeps the debug
+ * server listening when the host's [HostShell.debugServerAllowed] says so.
+ */
+class HostShellService : Service() {
+    @Volatile private var loop: Thread? = null
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Cloud shell channel",
+            NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 34)
+                startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            else startForeground(NOTIF_ID, notification())
+        }.onFailure { Log.w(TAG, "not promoted to foreground", it) }
+        if (loop?.isAlive != true) loop = Thread({ keepUp() }, "host-shell-keepalive").apply { isDaemon = true; start() }
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        loop?.interrupt(); loop = null
+        super.onDestroy()
+    }
+
+    private fun keepUp() {
+        val ctx = applicationContext
+        try {
+            while (!Thread.currentThread().isInterrupted) {
+                runCatching {
+                    if (HostShell.debugServerAllowed(ctx)) AppDebugServer.start(ctx)
+                    if (!EmbeddedAdbChannel.isReady(ctx)) HostShell.reconnect(ctx, ATTEMPTS)
+                }.onFailure { Log.w(TAG, "keep-alive pass failed: ${it.javaClass.simpleName}") }
+                Thread.sleep(PERIOD_MS)
+            }
+        } catch (_: InterruptedException) { }
+    }
+
+    private fun notification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(applicationInfo.icon)
+            .setContentTitle("Cloud shell channel")
+            .setContentText("Keeps the shell channel and the debug server up")
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+
+    companion object {
+        private const val TAG = "HostShellService"
+        const val CHANNEL_ID = "host_shell_channel"
+        private const val NOTIF_ID = 38227
+        private const val ATTEMPTS = 3
+        private const val PERIOD_MS = 60_000L
+
+        /** startForegroundService; refused from the background on Android 12+, which is logged, not thrown. */
+        fun start(ctx: Context) {
+            runCatching { ContextCompat.startForegroundService(ctx, Intent(ctx, HostShellService::class.java)) }
+                .onFailure { Log.w(TAG, "service not started: ${it.javaClass.simpleName}") }
+        }
+    }
+}

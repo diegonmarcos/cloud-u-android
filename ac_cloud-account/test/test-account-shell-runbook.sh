@@ -76,6 +76,24 @@ ok("handToStore()" in ap and "DeviceVault(ctx).backup(" in ap, "apps page: Insta
 ma = rd("ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt")
 ok('"runbook" -> RunbookPage(go)' in ma and '"apps" -> AppsPage()' in ma and '"configs" -> FleetSetupPage(model)' in ma, "Setup mounts runbook / apps / configs", "Setup does not mount runbook/apps/configs")
 ok('q["step"].isNullOrBlank() -> r.runAll(' in api and 'Op("apps"' in api and '"apps" -> SetupRunbook(ctx).appsPlan()' in api, "debug API: run=1 = Run all, apps op", "debug API lacks Run all or apps")
+
+# spec 4.6 step 3: a foreground service holds the process up (channel + debug server are process state)
+svc = rd("ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShellService.kt")
+ok("return START_STICKY" in svc and "startForeground(" in svc, "HostShellService is a sticky foreground service", "HostShellService is not START_STICKY / never foreground")
+ok("HostShell.reconnect(ctx" in svc and "AppDebugServer.start(ctx)" in svc and "HostShell.debugServerAllowed(ctx)" in svc, "service re-arms the channel and keeps the debug server (host switch honoured)", "service does not keep channel + debug server")
+ok(hs.count("HostShellService.start(") >= 2, "HostShell.install and the boot receiver start the service", "service not started from install and boot")
+for name, path in (("Account", "ac_cloud-account/app/src/main/AndroidManifest.xml"), ("Store", "ac_cloud-store/app/src/main/AndroidManifest.xml")):
+    m = rd(path)
+    blk = m.split('android:name="com.diegonmarcos.superapp.adbdebug.HostShellService"')
+    ok(len(blk) == 2 and 'android:foregroundServiceType="specialUse"' in blk[1].split("</service>")[0] and "android.permission.FOREGROUND_SERVICE_SPECIAL_USE" in m,
+       f"{name} manifest declares HostShellService (specialUse) + its permission", f"{name} manifest lacks HostShellService or FOREGROUND_SERVICE_SPECIAL_USE")
+ok("HostShell.debugServerAllowed = { com.diegonmarcos.superapp.profile.DebugApiSwitch.enabled(it) }" in app, "Account wires Settings > Debug API into the service", "Account does not wire the Debug API switch")
+# /api/adb/exec + status on Account's port, behind the fleet token
+ok('AppDebugServer.route("adb", listOf(' in api and 'Op("exec", "cmd=' in api and 'Op("status"' in api, "Account serves /api/adb/exec and /api/adb/status (in /api/docs)", "Account has no adb route group")
+ad = api.split("private fun adb(")[1] if "private fun adb(" in api else ""
+ok('"exec" ->' in ad and "shell.active(ctx)?.exec(ctx, cmd)" in ad, "adb/exec runs over ShellChannels.active", "adb/exec does not run over the active channel")
+srv = rd("ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt")
+ok('OPEN_OPS = setOf("system/ping")' in srv and "if (op !in OPEN_OPS && !fleet)" in srv, "route groups (adb/exec included) sit behind the fleet token", "adb/exec reachable without the fleet token")
 sys.exit(fails)
 PY
 }
@@ -92,7 +110,10 @@ ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profil
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/RunbookPage.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AppsPage.kt
-ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt"
+ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt
+ac_cloud-store/app/src/main/AndroidManifest.xml
+ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShellService.kt
+ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
 mutate() {  # mutate <label> <file> <old> <new>
   local label="$1" f="$2" old="$3" new="$4" d="$TMP/m"
   rm -rf "$d"; mkdir -p "$d"
@@ -132,5 +153,14 @@ mutate "perms step not wired to PermsPlan" $P/SetupRunbook.kt 'PermsPlan.apply(c
 mutate "runbook page unmounted" $K/MainActivity.kt '"runbook" -> RunbookPage(go)' '"runbook" -> AccountPlaceholderPage(section, page, "x")' || M=$((M+1))
 mutate "debug run=1 without step is not Run all" $P/AccountDebugApi.kt 'q["step"].isNullOrBlank() -> r.runAll(' 'false -> r.runAll(' || M=$((M+1))
 
+S=ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug
+D=ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools
+mutate "service not START_STICKY" $S/HostShellService.kt 'return START_STICKY' 'return START_NOT_STICKY' || M=$((M+1))
+mutate "service missing from Account manifest" $A/app/src/main/AndroidManifest.xml 'android:name="com.diegonmarcos.superapp.adbdebug.HostShellService"' 'android:name="gone"' || M=$((M+1))
+mutate "service missing from Store manifest" ac_cloud-store/app/src/main/AndroidManifest.xml 'android:name="com.diegonmarcos.superapp.adbdebug.HostShellService"' 'android:name="gone"' || M=$((M+1))
+mutate "service never started at boot" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt '            HostShellService.start(context.applicationContext)' '' || M=$((M+1))
+mutate "exec route missing" $P/AccountDebugApi.kt 'Op("exec", "cmd=' 'Op("execX", "cmd=' || M=$((M+1))
+mutate "exec not over the channel" $P/AccountDebugApi.kt 'shell.active(ctx)?.exec(ctx, cmd)' 'null' || M=$((M+1))
+mutate "exec not token-gated" $D/AppDebugServer.kt 'OPEN_OPS = setOf("system/ping")' 'OPEN_OPS = setOf("system/ping", "adb/exec")' || M=$((M+1))
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]
