@@ -9,6 +9,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *   ui.bottom_nav      [<section id>, ...]   at most [MAX_BOTTOM] ids, in display order. The island.
  *   ui.sections        [{id,label,icon,pages:[{id,label,icon,action?,pages?:[...]}]}]
  *   ui.default_section <section id>          one of ui.bottom_nav
+ *   ui.style           "fleet" (default) | "search-html"   see [NavStyle]; only the apps nav-shape.json::variants
+ *                                            names may declare anything but the default (rule N8)
  *
  * A section's `pages` are its TOP tab strip ([PageTabs]); a page's own `pages` are a SECOND strip
  * below it, to any depth (Cloud Me's Projects > Health > Workout > Gym is three deep). The app
@@ -20,6 +22,23 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * is what makes a malformed declaration a build failure instead.
  */
 public const val MAX_BOTTOM: Int = 5
+
+/**
+ * Which look the island is drawn in (`build.json::ui.style`). [Fleet] is SuperApp's island and every
+ * app's; [SearchHtml] is the ONE declared exception (the owner asked, 2026-10): Cloud Search's bar from
+ * his HTML mockup, a variant of this library ([SearchHtmlIsland]) and not an app's own nav. The nav-shape
+ * guard (rule N8) lets only the apps nav-shape.json::variants names declare it.
+ */
+public enum class NavStyle(public val declared: String) {
+    Fleet("fleet"),
+    SearchHtml("search-html");
+
+    public companion object {
+        /** A declared `ui.style`; blank is [Fleet], anything unknown is null (the guard rejects it). */
+        public fun of(text: String?): NavStyle? =
+            if (text.isNullOrBlank()) Fleet else entries.firstOrNull { it.declared == text.trim() }
+    }
+}
 
 /** A tab. [pages] is non-empty only for a container tab, which holds a strip of its own. */
 public data class NavPage(
@@ -57,6 +76,8 @@ public class NavDecl(
     public val sections: List<NavSection>,
     /** `ui.default_section`; blank resolves to the first bottom-nav id. */
     public val defaultSection: String = "",
+    /** `ui.style`: which look the island is drawn in. Fleet for every app but the declared exception. */
+    public val style: NavStyle = NavStyle.Fleet,
 ) {
     private val index: Map<String, NavSection> = sections.associateBy { it.id }
 
@@ -86,11 +107,12 @@ public class NavDecl(
             uiSectionsB64: String,
             uiBottomNav: String = "",
             uiDefaultSection: String = "",
+            uiStyle: String = "",
         ): NavDecl = runCatching {
             // Android's decoder skipped whitespace and tolerated missing padding; so does this.
             val b64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
             val json = b64.decode(uiSectionsB64.filterNot { it.isWhitespace() }).decodeToString()
-            parse(json, uiBottomNav, uiDefaultSection)
+            parse(json, uiBottomNav, uiDefaultSection, uiStyle)
         }.getOrDefault(EMPTY)
 
         /**
@@ -99,12 +121,12 @@ public class NavDecl(
          * this common code never names the type. [bottomNav] is JSON array text or a comma list.
          * Throws on anything that is not a JSON array; [fromBuildConfig] turns that into [EMPTY].
          */
-        public fun parse(sections: Any, bottomNav: String = "", defaultSection: String = ""): NavDecl {
+        public fun parse(sections: Any, bottomNav: String = "", defaultSection: String = "", style: String = ""): NavDecl {
             val array = MiniJson.parse(sections.toString()) as? List<*>
                 ?: throw IllegalArgumentException("ui.sections is not a JSON array")
             val parsed = array.mapNotNull { (it as? Map<*, *>)?.let(::section) }
             val bar = bottomIds(bottomNav).ifEmpty { parsed.map { it.id } }.take(MAX_BOTTOM)
-            return NavDecl(bar, parsed, defaultSection)
+            return NavDecl(bar, parsed, defaultSection, NavStyle.of(style) ?: NavStyle.Fleet)
         }
 
         private fun bottomIds(text: String): List<String> {

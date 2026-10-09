@@ -71,6 +71,7 @@ stage() {
 import json, sys
 d = json.load(open(sys.argv[1]))
 d["exempt"] = {"ac_cloud-old": "Batch Z (synthetic): this fixture app has not migrated yet."}
+d["variants"] = {"_doc": "synthetic: no app is a declared exception until a test makes it one"}
 json.dump(d, open(sys.argv[2], "w"))
 PY
     cat > "$T/$FIX/build.json" <<'J'
@@ -145,6 +146,57 @@ mutate "the window chrome is not called"         "$KT" "s=s.replace('FleetChrome
 mutate "an exemption without a reason"           "$DATA" "$(J "d['exempt']['ac_cloud-old']='tbd'")" "N6 ac_cloud-old: exemption needs a reason"
 mutate "an exemption for an app that is gone"    "$DATA" "$(J "d['exempt']['ac_cloud-gone']='Batch Z (synthetic): there is no such app any more.'")" "N6 ac_cloud-gone: exempt"
 mutate "a migrated app still exempt"             "$DATA" "$(J "d['exempt']['$FIX']='Batch Z (synthetic): migrated but nobody deleted this.'")" "N6 $FIX: passes N1-N5 but is still exempt"
+
+# N8: the fleet island has ONE declared exception (nav-shape.json::variants); everyone else stays on it
+VARIANT='{"style": "search-html", "call": "SearchHtmlIsland(", "reason": "Synthetic owner request: this fixture app keeps the lib variant for the test."}'
+variant_fleet() {   # the fixture as a declared variant: data, ui.style and the call all agree
+    stage
+    python3 - "$T" "$DATA" "$FIX" "$KT" "$VARIANT" <<'PY'
+import json, os, sys
+t, data, fix, kt, variant = sys.argv[1:6]
+p = os.path.join(t, data); d = json.load(open(p)); d["variants"][fix] = json.loads(variant); json.dump(d, open(p, "w"))
+b = os.path.join(t, fix, "build.json"); j = json.load(open(b)); j["ui"]["style"] = "search-html"; json.dump(j, open(b, "w"))
+k = os.path.join(t, kt); s = open(k).read()
+open(k, "w").write(s.replace("BottomNavIsland(entries, null, onSelect = { height = 4 })", "SearchHtmlIsland(entries, null, onSelect = { height = 4 }, dark = true)"))
+PY
+}
+n8() {   # n8 <label> <expected-substring or ""> <python edit of the staged tree: t, data, fix, kt in scope>
+    variant_fleet
+    python3 - "$T" "$DATA" "$FIX" "$KT" "$3" <<'PY'
+import json, os, sys
+t, data, fix, kt, edit = sys.argv[1:6]
+exec(edit)
+PY
+    local out rc
+    out="$(python3 "$GUARD" "$T")"; rc=$?
+    if [ -z "$2" ]; then
+        if [ "$rc" -eq 0 ]; then ok "$1 passes"; else fail "$1 is red (rc=$rc)"; printf '%s\n' "$out" | grep FAIL; fi
+    elif [ "$rc" -eq 1 ] && grep -qF -- "$2" <<<"$out"; then ok "$1 goes red ($2)"
+    else fail "$1 stayed green or named the wrong thing (rc=$rc)"; printf '%s\n' "$out" | tail -4; fi
+}
+n8 "a declared variant that agrees everywhere" "" "pass"
+mutate "an app declares the variant without being named" "$FIX/build.json" "$(J "d['ui']['style']='search-html'")" "N8 $FIX: ui.style is 'search-html' but $DATA only lets"
+mutate "an unknown style"                        "$FIX/build.json" "$(J "d['ui']['style']='glass'")" "N8 $FIX: ui.style 'glass' is not one of"
+mutate "another app reaches for the variant"     "$KT" "s+='\nfun f() { SearchHtmlIsland(entries, null, {}, dark = true) }\n'" "N8 $FIX: $KT:6 uses \`SearchHtmlIsland\`"
+mutate "another app reads the variant's tokens"  "$KT" "s+='\nval k = SearchHtmlTokens.height\n'" "uses \`SearchHtmlTokens\`"
+n8 "a named variant app that does not declare the style" "N8 $FIX: ui.style is 'fleet' but $DATA declares 'search-html' for it" \
+    "b=os.path.join(t,fix,'build.json'); j=json.load(open(b)); del j['ui']['style']; json.dump(j,open(b,'w'))"
+n8 "a named variant app whose style differs" "declares 'search-html' for it" \
+    "b=os.path.join(t,fix,'build.json'); j=json.load(open(b)); j['ui']['style']='fleet'; json.dump(j,open(b,'w'))"
+n8 "a variant that is no longer drawn (stale exception)" "a variant that is not drawn is a stale exception" \
+    "k=os.path.join(t,kt); s=open(k).read(); open(k,'w').write(s.replace('SearchHtmlIsland(entries, null, onSelect = { height = 4 }, dark = true)','BottomNavIsland(entries, null, {})'))"
+n8 "a variant that also draws the fleet island" "draws BottomNavIsland as well as its variant" \
+    "k=os.path.join(t,kt); s=open(k).read(); open(k,'w').write(s+'\nfun h() { BottomNavIsland(entries, null, {}) }\n')"
+n8 "a variant that restyles the bar through the call" "passes \`colorScheme\` to SearchHtmlIsland" \
+    "k=os.path.join(t,kt); s=open(k).read(); open(k,'w').write(s+'\nfun h() { SearchHtmlIsland(entries, null, {}, dark = true, colorScheme = x) }\n')"
+n8 "a variant without a reason" "N8 $FIX: the variant needs a reason" \
+    "p=os.path.join(t,data); d=json.load(open(p)); d['variants'][fix]['reason']='ok'; json.dump(d,open(p,'w'))"
+n8 "a variant that is also exempt" "a variant but also exempt" \
+    "p=os.path.join(t,data); d=json.load(open(p)); d['exempt'][fix]='Batch Z (synthetic): exempt and a variant at once.'; json.dump(d,open(p,'w'))"
+n8 "a variant for an app that is gone" "N8 ac_cloud-gone: a variant" \
+    "p=os.path.join(t,data); d=json.load(open(p)); d['variants']['ac_cloud-gone']=d['variants'][fix]; json.dump(d,open(p,'w'))"
+mutate "the lib loses the variant" "$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt" \
+    "s=s.replace('fun SearchHtmlIsland(','fun Gone(')" "N0 $LIB: BottomNavSearchHtml.kt no longer declares"
 
 echo
 [ "$FAILURES" -eq 0 ] && echo "nav-shape-guard.test: OK" || { echo "nav-shape-guard.test: $FAILURES FAILED"; exit 1; }

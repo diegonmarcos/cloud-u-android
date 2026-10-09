@@ -27,6 +27,12 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       island-ish colour/dimen/style resource of its own; and some source calls the
       lib's FleetChrome.apply (the window Cloud SuperApp has)
 
+  N8  declared exceptions: ui.style is "fleet" (or absent) for every app but the ones
+      nav-shape.json::variants names (today only Cloud Search, "search-html", at the owner's
+      explicit request). A named app must declare exactly that style, draw it through the lib's
+      variant call and no second island; nobody else may reference the variant's symbols. The
+      variant itself lives in libs:bottomnav, so the colours, sizes and shape stay the lib's.
+
 Rules N1-N5 and N7 hold for every app that is NOT exempt. The baseline is all-exempt, so
 this is green today; each migration batch deletes its apps' entries.
 
@@ -184,6 +190,54 @@ def check_parity(root, app, spec, code, bad):
                    f"(edge-to-edge, transparent bars); call the lib's FleetChrome from the main activity")
 
 
+def app_code(root, app):
+    """{path: comment-blanked source} of an app's main Kotlin/Java."""
+    out = {}
+    for t in (os.path.join(root, app, "app", "src", "main"), os.path.join(root, app, "src", "main")):
+        for p in walk(t, (".kt", ".java")):
+            out[p] = blank_comments(read(p))
+    return out
+
+
+def check_variants(root, apps, uis, spec, exempt, bad):
+    """N8: the fleet's island has ONE declared exception; everyone else stays on it."""
+    variants = {k: v for k, v in (spec.get("variants") or {}).items() if not k.startswith("_")}
+    styles = spec.get("styles") or ["fleet"]
+    symbols = re.compile(r"\b(%s)\b" % "|".join(re.escape(x) for x in spec.get("variant_symbols") or ["SearchHtmlIsland"]))
+    rel = lambda p: os.path.relpath(p, root)
+    for app in apps:
+        style = (uis.get(app) or {}).get("style")
+        want = (variants.get(app) or {}).get("style", "fleet")
+        if style is not None and style not in styles:
+            bad.append(f"N8 {app}: ui.style {style!r} is not one of {styles}")
+        elif (style or "fleet") != want:
+            bad.append(f"N8 {app}: ui.style is {style or 'fleet'!r} but {DATA} " +
+                       (f"declares {want!r} for it" if app in variants else "only lets the apps in `variants` leave the fleet island"))
+        if app in variants:
+            continue
+        for p, text in app_code(root, app).items():
+            m = symbols.search(text)
+            if m:
+                bad.append(f"N8 {app}: {rel(p)}:{line_of(text, m.start())} uses `{m.group(1)}`, the declared variant of "
+                           f"{', '.join(sorted(variants))} — every other app wears the fleet island")
+    for app, v in sorted(variants.items()):
+        if app not in apps:
+            bad.append(f"N8 {app}: a variant in {DATA} but there is no such app (a[ac]_*/build.json)")
+            continue
+        if app in exempt:
+            bad.append(f"N8 {app}: a variant but also exempt — a variant app is held to N1-N7")
+        if v.get("style") not in styles or v.get("style") == "fleet":
+            bad.append(f"N8 {app}: variant style {v.get('style')!r} must be one of {[x for x in styles if x != 'fleet']}")
+        if len(str(v.get("reason", "")).strip()) < spec["min_reason_chars"]:
+            bad.append(f"N8 {app}: the variant needs a reason of at least {spec['min_reason_chars']} characters")
+        code = "\n".join(app_code(root, app).values())
+        if v.get("call", "") not in code:
+            bad.append(f"N8 {app}: declares ui.style {v.get('style')!r} but no source calls {v.get('call')}…) — "
+                       f"a variant that is not drawn is a stale exception: delete it")
+        if re.search(r"\bBottomNavIsland\s*\(", code):
+            bad.append(f"N8 {app}: draws BottomNavIsland as well as its variant — one island per app")
+
+
 def check_app(root, app, ui, spec, bad):
     sections = [s for s in (ui.get("sections") or []) if isinstance(s, dict)]
     ids = {s.get("id") for s in sections}
@@ -297,6 +351,14 @@ def main(argv):
         checked += 1
         check_app(root, app, ui, spec, bad)
 
+    uis = {}
+    for app in apps:
+        try:
+            uis[app] = json.load(open(os.path.join(root, app, "build.json"))).get("ui") or {}
+        except (OSError, ValueError):
+            pass
+    check_variants(root, apps, uis, spec, exempt, bad)
+
     for app, why in sorted(exempt.items()):
         if app not in apps:
             bad.append(f"N6 {app}: exempt in {DATA} but there is no such app (a[ac]_*/build.json)")
@@ -305,7 +367,7 @@ def main(argv):
 
     for b in bad:
         print("FAIL     " + b)
-    print(f"── {len(apps)} app(s): {checked} held to N1-N5 + N7, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
+    print(f"── {len(apps)} app(s): {checked} held to N1-N5 + N7 + N8, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
     return 1 if bad else 0
 
 

@@ -31,7 +31,8 @@
 #       the fleet kit (libs:ui-kit) is not linked or imported; its bottom nav and sub-page strips are
 #       the fleet's: libs:bottomnav is linked, Glass.kt draws no BottomNav/SubNav, SearchShell draws
 #       BottomNavIsland and the vertical pages PageTabs from the NavDecl build.json::ui bakes, the app
-#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION. #913: the island is Web Search, Cloud
+#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION/UI_STYLE. The island is the lib's declared
+#       search-html variant (the owner's mockup .bottom-nav, nav-shape.json::variants), SearchHtmlIsland. #913: the island is Web Search, Cloud
 #       Search, Chat, Agents, Reports; Web Search's pages are search.verticals (less the assistant), each
 #       with its subpages one strip lower, Chat is the assistant vertical, and every section icon is a
 #       branch of IconCatalog.
@@ -235,17 +236,22 @@ for p in kts:
 glass = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/Glass.kt"))
 if re.search(r"fun\s+(BottomNav|SubNav)\b", glass):
     bad.append("S10 Glass.kt draws its own BottomNav/SubNav — the bar is libs:bottomnav's BottomNavIsland, the strip its PageTabs")
-if not re.search(r"BottomNavIsland\(\s*entries = NAV\.islandEntries", shell):
-    bad.append("S10 SearchShell does not draw BottomNavIsland from the baked NavDecl (NAV.islandEntries)")
-if "NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)" not in shell:
-    bad.append("S10 SearchShell's NAV is not NavDecl.fromBuildConfig of the three baked fields")
+# The island is the lib's declared search-html variant (the owner's mockup bar; nav-shape.json::variants), fed by the baked NavDecl.
+if not re.search(r"SearchHtmlIsland\(\s*entries = NAV\.islandEntries", shell):
+    bad.append("S10 SearchShell does not draw SearchHtmlIsland from the baked NavDecl (NAV.islandEntries)")
+if re.search(r"\bBottomNavIsland\s*\(", shell):
+    bad.append("S10 SearchShell also draws the fleet BottomNavIsland - one island, the declared variant")
+if "NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION, BuildConfig.UI_STYLE)" not in shell:
+    bad.append("S10 SearchShell's NAV is not NavDecl.fromBuildConfig of the four baked fields")
+if (bj.get("ui") or {}).get("style") != "search-html":
+    bad.append("S10 build.json ui.style is not search-html - the owner's mockup bar is the declared exception")
 vpages = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))
 if not re.search(r"PageTabs\(\s*pages = NAV\.section\(state\.sectionOf\(v\.id\)\)\?\.page\(v\.id\)", vpages):
     bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from the vertical's page in the NavDecl")
 if not re.search(r"PageTabs\(\s*pages = NAV\.section\(\"web\"\)", shell):
     bad.append("S10 SearchShell does not draw Web Search's verticals with PageTabs from NAV.section(\"web\")")
 gradle = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
-for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION"):
+for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION", "UI_STYLE"):
     if field not in gradle:
         bad.append("S10 app/build.gradle does not bake %s" % field)
 # #913 the declaration: five island sections; Web Search's pages are the verticals (less the assistant's), each with its
@@ -413,7 +419,10 @@ mutate fleet-nav-unlinked build.json 's.replace("\"libs:text-tools\",\n        \
 mutate fleet-kit-linked build.json 's.replace("\"libs:text-tools\",\n        \"libs:bottomnav\",", "\"libs:text-tools\",\n        \"libs:bottomnav\",\n        \"libs:ui-kit\",")' "S10 build.json links libs:ui-kit"
 mutate fleet-kit-imported "$J/ui/SearchTheme.kt" 's.replace("import com.diegonmarcos.cloudsearch.R\n", "import com.diegonmarcos.cloudsearch.R\nimport com.diegonmarcos.superapp.uikit.KitCard\n")' "S10 SearchTheme.kt imports the fleet uikit"
 mutate own-nav-back "$J/ui/Glass.kt" 's + "\n@androidx.compose.runtime.Composable\nfun BottomNav() {}\n"' "S10 Glass.kt draws its own BottomNav/SubNav"
-mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("BottomNavIsland(\n                            entries = NAV.islandEntries", "NavRail(\n                            entries = NAV.islandEntries")' "S10 SearchShell does not draw BottomNavIsland"
+mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("SearchHtmlIsland(\n                            entries = NAV.islandEntries", "NavRail(\n                            entries = NAV.islandEntries")' "S10 SearchShell does not draw SearchHtmlIsland"
+mutate fleet-island-back "$J/ui/SearchShell.kt" 's + "\nfun again() { BottomNavIsland(entries = e, selectedId = null, onSelect = {}) }\n"' "S10 SearchShell also draws the fleet BottomNavIsland"
+mutate style-undeclared build.json 's.replace("\"style\": \"search-html\",", "\"style\": \"fleet\",")' "S10 build.json ui.style is not search-html"
+mutate style-not-baked app/build.gradle 's.replace("\"UI_STYLE\"", "\"UI_STYL\"")' "S10 app/build.gradle does not bake UI_STYLE"
 mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(state.sectionOf", "SubNav(\n                pages = NAV.section(state.sectionOf")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
 mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(\"web\")", "SubNav(\n                pages = NAV.section(\"web\")")' "S10 SearchShell does not draw Web Search"
 mutate chat-section-dropped build.json 's.replace("\"id\": \"chat\",\n        \"label\": \"Chat\"", "\"id\": \"chats\",\n        \"label\": \"Chat\"")' "S10 ui.sections are not exactly the island"

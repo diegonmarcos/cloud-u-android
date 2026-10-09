@@ -193,6 +193,62 @@ class SearchShellTest {
         assertEquals("What is the Grundfreibetrag?", services.sessions.all().single().messages.single().content)
     }
 
+    /**
+     * The owner's mockup bar (ui.style = "search-html", nav-shape.json::variants), restored as a variant of
+     * libs:bottomnav: it renders with the mockup's geometry at 360 dp, every label fits its 50 dp cell whichever
+     * item is selected (the fleet island's two-word labels once sent the lib's label fitting into a layout
+     * loop that never settled), and the active item is the only one that shows its label.
+     */
+    @Test fun theMockupBottomNavRendersAndItsLabelsFit() {
+        launch()
+        assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.SearchHtml, com.diegonmarcos.cloudsearch.ui.NAV.style)
+        waitFor("bottomnav_island")
+        val bounds = { tag: String -> compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
+        val island = bounds("bottomnav_island")
+        assertEquals("the mockup's .bottom-nav is 60 dp high", 60f, island.height, 0.5f)
+        val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
+        assertEquals(listOf("web", "cloud", "chat", "agents", "reports"), ids)
+        for (selected in ids) {
+            compose.onNodeWithTag(Tags.nav(selected)).performClick()
+            compose.waitForIdle()
+            for (id in ids) {
+                val cell = bounds(Tags.nav(id))
+                assertEquals("cell $id is the mockup's 50 dp circle", 50f, cell.width, 0.5f)
+                val label = bounds("bottomnav_label_$id")
+                assertTrue("label $id fits its cell with $selected selected: $label in $cell", label.left >= cell.left - 0.5f && label.right <= cell.right + 0.5f)
+                val out = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                compose.onNodeWithTag("bottomnav_label_$id", useUnmergedTree = true).fetchSemanticsNode()
+                    .config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!.invoke(out)
+                assertFalse("label $id overflows with $selected selected", out.single().hasVisualOverflow)
+            }
+            assertEquals(selected, state.section)
+        }
+        // The fleet island is not drawn beside it: one bar, 5 cells.
+        assertEquals(1, compose.onAllNodesWithTag("bottomnav_island", useUnmergedTree = true).fetchSemanticsNodes().size)
+    }
+
+    /** The five destinations still route, and each shows its top tabs (Web Search's verticals, Cloud's, Agents'). */
+    @Test fun theFiveDestinationsRouteAndKeepTheirTopTabs() {
+        launch()
+        val decl = com.diegonmarcos.cloudsearch.ui.NAV
+        val tabs = mapOf(
+            "web" to decl.section("web")!!.pages.map { it.id },
+            "cloud" to listOf("apps", "messages", "code"),
+            "chat" to emptyList(),
+            "agents" to listOf("agents", "runs", "templates", "settings"),
+            "reports" to emptyList(),
+        )
+        for ((section, pages) in tabs) {
+            compose.onNodeWithTag(Tags.nav(section)).performClick()
+            compose.waitForIdle()
+            compose.runOnIdle { assertEquals(section, state.section) }
+            for (id in pages) compose.onNodeWithTag(Tags.subpage(id)).assertExists()
+        }
+        compose.onNodeWithTag(Tags.nav("web")).performClick()
+        compose.waitForIdle()
+        waitFor(Tags.WEB_STRIP)
+    }
+
     @Test fun themeToggleFlipsAndIsRemembered() {
         launch()
         val before = state.dark

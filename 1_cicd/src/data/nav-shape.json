@@ -5,7 +5,8 @@
   "lib_symbols": {
     "NavDecl.kt": "class NavDecl",
     "PageTabs.kt": "fun PageTabs(",
-    "PageTabsView.kt": "class PageTabsView"
+    "PageTabsView.kt": "class PageTabsView",
+    "BottomNavSearchHtml.kt": "fun SearchHtmlIsland("
   },
   "max_bottom": 5,
   "min_reason_chars": 30,
@@ -59,13 +60,23 @@
   ],
   "n7": {
     "_doc": "N7 = nothing app-side can change how the fleet's island and tab strips look. forbidden_args: named arguments at the top level of an island/strip call. forbidden_props: properties that no longer exist on the View hosts and may not come back. resource_names: regex of res/values* names an app may not declare (island colours, dimens, typography). chrome_call: every held app's main code calls it (edge-to-edge, transparent bars: the same window as Cloud SuperApp).",
-    "calls": ["BottomNavIsland", "BottomNavHost", "PageTabs"],
+    "calls": ["BottomNavIsland", "BottomNavHost", "PageTabs", "SearchHtmlIsland"],
     "forbidden_args": ["colorScheme", "palette", "colors", "dimens", "typography", "textStyle", "elevation", "tonalElevation", "shadowElevation", "insets", "windowInsets", "iconSize", "labelSize", "fontSize", "fontFamily", "height", "containerColor", "contentColor", "indicatorColor", "shape", "backgroundColor"],
     "forbidden_props": ["colorScheme", "palette", "dimens", "typography", "elevation", "insets", "iconSize", "labelSize"],
     "view_hosts": ["BottomNavIslandView", "PageTabsView"],
     "resource_names": "^(bottom_?nav|page_?tabs|nav_island|navbar_island|tab_strip|nav_pill)(_|$)",
     "chrome_call": "FleetChrome.apply("
   },
+  "styles": ["fleet", "search-html"],
+  "variants": {
+    "_doc": "N8 THE declared exceptions to the fleet's island look. An app named here draws the lib's variant (ui.style = its style, the island through the variant's call) instead of BottomNavIsland; nobody else may declare a style other than fleet or reference the variant's symbols, so every other app stays locked to SuperApp's island (N7). Adding an entry needs the OWNER's explicit request, named in the reason; the variant lives in libs:bottomnav, never in the app.",
+    "ac_cloud-search": {
+      "style": "search-html",
+      "call": "SearchHtmlIsland(",
+      "reason": "Owner's explicit request (2026-10): Cloud Search keeps the bottom nav of his own HTML mockup (cloud-search-mockup.html .bottom-nav, #797) that #868/#913 replaced with the fleet island; drawn by libs:bottomnav's SearchHtmlIsland, not by the app."
+    }
+  },
+  "variant_symbols": ["SearchHtmlIsland", "SearchHtmlTokens", "NavStyle.SearchHtml"],
   "exempt": {
     "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",

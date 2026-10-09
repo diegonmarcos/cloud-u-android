@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,12 +50,11 @@ import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.SearchHost
 import com.diegonmarcos.cloudsearch.data.Services
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.SearchHtmlIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.searchpage.SearchChatState
 import com.diegonmarcos.superapp.searchpage.SearchPageTags
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +64,7 @@ import kotlinx.coroutines.withContext
 /** Which of the mockup's menus is open over the shell (one at a time, like its closeAllMenus()). */
 /** build.json::ui as baked into BuildConfig (#868): the island's items and each vertical's sub-page strip. */
 val NAV: NavDecl by lazy {
-    NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+    NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION, BuildConfig.UI_STYLE)
 }
 
 enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
@@ -193,9 +191,8 @@ fun SearchShell(state: SearchState) {
         SearchTheme(state.dark) {
             val g = LocalGlass.current
             val v = state.v()
-            val collapse = rememberBottomNavCollapse()
             Box(Modifier.fillMaxSize().background(g.background).testTag(Tags.SHELL)) {
-                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding().nestedScroll(collapse)) {
+                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding()) {
                     // The page under the chrome: it pads itself by contentTop / contentBottom.
                     if (state.saved) SavedPage()
                     else when (state.section) {
@@ -210,15 +207,17 @@ fun SearchShell(state: SearchState) {
                     }
                     TopBar(state, v, Modifier.align(Alignment.TopCenter))
                     // The keyboard takes the bottom of the screen; the nav returns when it closes.
-                    // #868 the fleet's island, fed by build.json::ui. This box already clears the system
-                    // bars, and the island reads what it consumed, so it clears none of them twice.
+                    // #868 the nav is build.json::ui's, drawn by libs:bottomnav. Cloud Search is the ONE app the
+                    // owner asked to keep his mockup's .bottom-nav (ui.style = "search-html", nav-shape.json::variants):
+                    // a variant of the lib, not a nav of its own. This box already clears the system bars.
                     if (!imeOpen()) {
-                        BottomNavIsland(
+                        SearchHtmlIsland(
                             entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
                             selectedId = if (state.saved) null else state.section,
                             onSelect = { state.openSection(it.id) },
+                            dark = state.dark,
                             modifier = Modifier.align(Alignment.BottomCenter),
-                            collapsed = collapse.collapsed,
+                            gradientIds = NAV.bottomSections().filter { IconCatalog.gradient(it.icon) }.map { it.id }.toSet(),
                         )
                     }
                 }
