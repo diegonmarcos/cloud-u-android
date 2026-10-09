@@ -356,7 +356,11 @@ class BrowserTabGrid(
             visibility = if (tab.group.isBlank()) View.GONE else View.VISIBLE
             setBackgroundColor(BrowserTabGroups.colorOf(groupColors(), tab.group))
         }
-        (v.background as? GradientDrawable)?.setStroke(1, 0x55B794F4)
+        // Incognito cards: grey, thicker stroke, so they never read as normal tabs.
+        (v.background as? GradientDrawable)?.apply {
+            if (tab.isPrivate) { setColor(0xFF1F2937.toInt()); setStroke(dp(v.context, 2), 0xFF9CA3AF.toInt()) }
+            else { setColor(0xFF1A0033.toInt()); setStroke(1, 0x55B794F4) }
+        }
         v.scaleX = 1f; v.scaleY = 1f
 
         // A pinned tab has NO close affordance. BrowserTabPrefs.remove

@@ -66,7 +66,9 @@ class BrowserHostFragment : Fragment() {
     private lateinit var downloads: BrowserDownloads
     private lateinit var sitePerms: BrowserSitePermissions
     /** Origins a private tab visited this session — their site storage goes when the last one closes. */
-    private val privateOrigins = HashSet<String>()
+    private val privateSession = PrivateSession()
+    /** The Tabs view shows normal or incognito tabs, one at a time. */
+    private var tabFilter = BrowserTabsBar.Filter.NORMAL
     private lateinit var browserSettings: BrowserSettings
     private lateinit var config: BrowserConfig
     private lateinit var rootContainer: FrameLayout
@@ -227,27 +229,14 @@ class BrowserHostFragment : Fragment() {
             )
         }
 
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            val pad = dp(12); setPadding(pad, dp(8), pad, dp(4))
-        }
-        header.addView(TextView(ctx).apply {
-            text = "Tabs"
-            setTextColor(0xFFE9D8FD.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            setTextAppearance(android.R.style.TextAppearance_Material_Title)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        header.addView(pill(ctx, "History") { showHistory() })
-        header.addView(TextView(ctx).apply { text = "  " })
-        header.addView(pill(ctx, "+ New tab") { promptForUrl() })
-        column.addView(header)
+        column.addView(tabsBar(ctx))
 
-        val tabs = prefs.all()
+        val incog = tabFilter == BrowserTabsBar.Filter.INCOGNITO
+        if (incog) column.setBackgroundColor(0xFF121212.toInt())
+        val tabs = BrowserTabsBar.filter(prefs.all(), tabFilter)
         if (tabs.isEmpty()) {
             column.addView(TextView(ctx).apply {
-                text = "No tabs yet. Tap + to open a URL or search."
+                text = if (incog) "No incognito tabs. Tap New Incognito to open one." else "No tabs yet. Tap New Tab to open a URL or search."
                 setTextColor(0xCCFFFFFF.toInt())
                 alpha = 0.7f
                 val pad = dp(20); setPadding(pad, pad, pad, pad)
@@ -296,10 +285,7 @@ class BrowserHostFragment : Fragment() {
         BrowserWebState.delete(requireContext(), tab.key)
         if (tab.previewPath.isNotBlank()) runCatching { File(tab.previewPath).delete() }
         val left = prefs.all()
-        if (tab.isPrivate && left.none { it.isPrivate }) {
-            BrowserClearData.endPrivateSession(privateOrigins, normalTabsOpen = left.isNotEmpty())
-            privateOrigins.clear()
-        }
+        privateSession.close(tab, left)?.let { BrowserClearData.endPrivateSession(it.clearOrigins, normalTabsOpen = !it.clearSessionCookies) }
         showGrid()
     }
 
@@ -333,6 +319,51 @@ class BrowserHostFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    /** The Tabs row: dense, no minHeight, scrolls sideways rather than wrapping on a narrow screen. */
+    private fun tabsBar(ctx: Context): View {
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(6), dp(4), dp(6), dp(2))
+        }
+        for (item in BrowserTabsBar.items(tabFilter)) {
+            row.addView(when (item) {
+                is BrowserTabsBar.Item.Sep -> TextView(ctx).apply {
+                    text = BrowserTabsBar.SEP; setTextColor(0x80FFFFFF.toInt()); isSingleLine = true
+                    setPadding(dp(2), 0, dp(2), 0)
+                }
+                is BrowserTabsBar.Item.Action -> TextView(ctx).apply {
+                    val toggle = item.id == BrowserTabsBar.Id.NORMAL || item.id == BrowserTabsBar.Id.INCOGNITO
+                    text = item.label
+                    contentDescription = item.label
+                    isSingleLine = true
+                    textSize = 13f
+                    setTextColor(Color.WHITE)
+                    typeface = if (item.active) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                    alpha = if (toggle && !item.active) 0.65f else 1f
+                    if (item.active) background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE; cornerRadius = dp(8).toFloat()
+                        setColor(if (item.id == BrowserTabsBar.Id.INCOGNITO) 0xFF4B5563.toInt() else 0xFF7C3AED.toInt())
+                    }
+                    setPadding(dp(6), dp(3), dp(6), dp(3))
+                    setOnClickListener {
+                        when (item.id) {
+                            BrowserTabsBar.Id.NEW_TAB -> promptForUrl(private_ = false)
+                            BrowserTabsBar.Id.NEW_INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; promptForUrl(private_ = true) }
+                            BrowserTabsBar.Id.NORMAL -> { tabFilter = BrowserTabsBar.Filter.NORMAL; showGrid() }
+                            BrowserTabsBar.Id.INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; showGrid() }
+                            BrowserTabsBar.Id.HISTORY -> showHistory()
+                        }
+                    }
+                }
+            })
+        }
+        return android.widget.HorizontalScrollView(ctx).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(row)
+        }
     }
 
     private fun pill(ctx: Context, text: String, onTap: () -> Unit): View =
@@ -800,10 +831,8 @@ class BrowserHostFragment : Fragment() {
                     // #887 an offline copy is not a visit.
                     if (offlineSites.isOffline(u)) return
                     // #802 a private tab is never recorded: no history, no preview.
-                    if (!BrowserSitePolicy.shouldRecord(prefs.byId(tabKey))) {
-                        runCatching { java.net.URI(u) }.getOrNull()?.let { privateOrigins.add("${it.scheme}://${it.authority}") }
-                        return
-                    }
+                    val origin = runCatching { java.net.URI(u) }.getOrNull()?.let { "${it.scheme}://${it.authority}" }
+                    if (!privateSession.visit(prefs.byId(tabKey), origin)) return
                     // Item 5. Local store, no sink, no sync — see BrowserHistory.
                     history.record(u, view?.title ?: u)
                     postDelayed({ capturePreview(this@apply, tabKey) }, 600)
@@ -1618,7 +1647,7 @@ class BrowserHostFragment : Fragment() {
             "forward" -> if (wv?.canGoForward() == true) { wv.goForward(); done(ok()) } else done(ok().put("ok", false).put("why", "no later page"))
             "reload" -> { wv?.reload() ?: return needPage(); done(ok()) }
             "new_tab" -> { promptForUrl(); done(ok()) }
-            "new_private_tab" -> { promptForUrl(private_ = true); done(ok().put("toast", "Private tabs keep no history; cookies are shared with normal tabs")) }
+            "new_private_tab" -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; promptForUrl(private_ = true); done(ok().put("toast", "Private tabs keep no history; cookies are shared with normal tabs")) }
             "site_settings" -> { showSiteSettings(BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }); done(ok()) }
             "clear_data" -> { showClearData(); done(ok()) }
             "profile" -> { showProfile(); done(ok()) }
