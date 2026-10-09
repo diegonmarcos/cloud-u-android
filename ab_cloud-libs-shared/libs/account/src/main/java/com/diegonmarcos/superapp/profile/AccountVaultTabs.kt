@@ -34,20 +34,20 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import java.security.MessageDigest
 
 object VaultTags {
     const val CONNECTIONS = "account:connections"
-    const val DATA = "account:data"
-    const val CONFIGS = "account:configs"
     const val SECRETS = "account:secrets"
+    const val GRANTS = "account:grants"
+    const val VAULT_LINK = "vault:cloud_vault_link"
+    fun secretRow(path: String) = "vault:secret:$path"
     const val SUMMARY = "vault:summary"
     const val EXPORT = "vault:bundle:export"
     const val IMPORT = "vault:bundle:import"
     const val PASS = "vault:bundle:pass"
     const val PASS_OK = "vault:bundle:pass_ok"
     const val MIGRATE = "vault:migrate"
-    const val CAPTURE = "vault:capture"
     const val RESULT = "vault:result"
     fun row(path: String) = "vault:row:$path"
     fun grant(pkg: String, key: String) = "vault:grant:$pkg:$key"
@@ -143,69 +143,61 @@ fun ConnectionsTab(pickBundle: ((String) -> Unit) -> Unit, export: (String, Stri
     }
 }
 
-// ── DATA ─────────────────────────────────────────────────────────────────
+// ── SECRETS ──────────────────────────────────────────────────────────────
 
+private data class SecretRow(val path: String, val fingerprint: String, val source: String)
+
+/** sha256(value) hex prefix: a fingerprint, never the value. */
+private fun fingerprint(value: String): String =
+    MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }.take(12)
+
+/**
+ * Secrets ▸ secrets: ONLY keys the fleet manifest classes `secret` (a key it cannot class is never listed: fail closed).
+ * Per key: presence, a fingerprint (never the value) and the app / store that owns it. The header link opens Cloud Vault;
+ * its package comes from the fleet manifest's `vault` row, never a literal, and the label turns to "Install via Store" when absent.
+ */
 @Composable
-fun DataTab() {
+fun SecretsTab(openVault: () -> Unit) {
     val ctx = LocalContext.current
     val vault = remember { AccountVault(ctx) }
-    val model = remember { AccountModel.get(ctx) }
-    Column(Modifier.fillMaxWidth().testTag(VaultTags.DATA), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        KitSectionHeader(stringResource(R.string.vault_data_title), stringResource(R.string.vault_data_caption))
-        SummaryLine(vault, 0)
-        KitCard {
-            val ids = vault.identities()
-            Dense(stringResource(R.string.vault_data_identities, ids.length()))
-            for (i in 0 until ids.length()) Dense("  " + (ids.optJSONObject(i)?.let { it.optString("label").ifBlank { it.optString("name") } } ?: ids.optString(i)), secondary = true)
-            Dense(stringResource(R.string.vault_data_profile, ctx.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE).all.size))
-            for (slot in AccountStore.Slot.values()) {
-                val d = runCatching { model.store.read(slot) }.getOrNull()
-                Dense("  ${slot.name} · " + (d?.let { "${it.meta.source} · ${it.meta.at}" } ?: stringResource(R.string.account_file_absent_short)), secondary = true)
-            }
+    val m = remember { runCatching { AccountFleet.manifest(ctx) }.getOrNull() }
+    val routes = remember { m?.let { SetupPlan.routes(it) }.orEmpty() }
+    val paths = remember { SetupPlan.leaves(vault.connections()) }
+    val vaultApp = remember { AccountFleet.fleetApps().firstOrNull { it.id == "vault" } }
+    val installed = remember(vaultApp) { vaultApp?.let { FleetSetup.installed(ctx, it.pkg) } ?: false }
+    val rows = remember(paths) {
+        paths.mapNotNull { path ->
+            val r = routes[path]?.firstOrNull() ?: return@mapNotNull null
+            val app = m?.apps?.values?.firstOrNull { a -> m.stores[r.store]?.usedBy?.any { it in a.libs || it == a.module } == true } ?: return@mapNotNull null
+            if (m.keyClass(m.stores.getValue(r.store), r.key, app.id) != "secret") return@mapNotNull null
+            SecretRow(path, fingerprint(vault.connection(path)?.toString().orEmpty()), "${app.id}:${r.store}.${r.key}")
         }
     }
-}
-
-// ── CONFIGS ──────────────────────────────────────────────────────────────
-
-@Composable
-fun ConfigsTab() {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val vault = remember { AccountVault(ctx) }
-    var tick by remember { mutableStateOf(0) }
-    var result by remember { mutableStateOf("") }
-    val configs = remember(tick) { vault.appConfigs() }
-    Column(Modifier.fillMaxWidth().testTag(VaultTags.CONFIGS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        KitSectionHeader(stringResource(R.string.vault_configs_title), stringResource(R.string.vault_configs_caption))
-        SummaryLine(vault, tick)
-        OutlinedButton(modifier = Modifier.fillMaxWidth().testTag(VaultTags.CAPTURE), onClick = {
-            scope.launch {
-                val got = withContext(Dispatchers.IO) { AccountMigrate.capture(vault, AccountFleet.manifest(ctx), { FleetSetup.installed(ctx, it) }, FleetSetup.transport(ctx)) }
-                result = ctx.getString(R.string.vault_captured, got.size); tick++
+    Column(Modifier.fillMaxWidth().testTag(VaultTags.SECRETS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        KitSectionHeader(stringResource(R.string.vault_secrets_title), stringResource(R.string.vault_secrets_values_caption))
+        Row(Modifier.fillMaxWidth().testTag(VaultTags.VAULT_LINK), horizontalArrangement = Arrangement.SpaceBetween) {
+            Dense(vaultApp?.label ?: stringResource(R.string.vault_cloud_vault_fallback_label))
+            TextButton(onClick = openVault) {
+                Text(stringResource(if (installed) R.string.vault_open_cloud_vault else R.string.vault_install_cloud_vault))
             }
-        }) { Text(stringResource(R.string.vault_capture)) }
-        if (result.isNotBlank()) Dense(result, VaultTags.RESULT, true)
+        }
         KitCard {
-            if (configs.length() == 0) Dense(stringResource(R.string.vault_configs_none), secondary = true)
-            for (app in configs.keys().asSequence().sorted()) {
-                val stores = configs.optJSONObject(app) ?: continue
-                Dense(app)
-                for (store in stores.keys().asSequence().sorted()) {
-                    val files = stores.optJSONObject(store) ?: JSONObject()
-                    val n = files.keys().asSequence().sumOf { f -> (files.optJSONObject(f)?.length() ?: 0) }
-                    Dense("  $store · $n", VaultTags.row("$app/$store"), true)
+            if (rows.isEmpty()) Dense(stringResource(R.string.vault_secrets_values_none), secondary = true)
+            for (row in rows) {
+                Row(Modifier.fillMaxWidth().testTag(VaultTags.secretRow(row.path)), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Dense(row.path)
+                    Dense(stringResource(R.string.vault_secret_row, row.fingerprint, row.source), secondary = true)
                 }
             }
         }
     }
 }
 
-// ── SECRETS ──────────────────────────────────────────────────────────────
+// ── GRANTS ───────────────────────────────────────────────────────────────
 
-/** Per-app grants: which package may read which key. Revocable per key or whole; values never drawn. */
+/** Secrets ▸ grants: which package may read which key. Revocable per key or whole; values never drawn. */
 @Composable
-fun SecretsTab() {
+fun GrantsTab() {
     val ctx = LocalContext.current
     val p = LocalKitPalette.current
     val vault = remember { AccountVault(ctx) }
@@ -213,7 +205,7 @@ fun SecretsTab() {
     val grants = remember(tick) { vault.grants.all() }
     var pkg by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().testTag(VaultTags.SECRETS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().testTag(VaultTags.GRANTS), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         KitSectionHeader(stringResource(R.string.vault_secrets_title), stringResource(R.string.vault_secrets_caption))
         SummaryLine(vault, tick)
         KitCard {

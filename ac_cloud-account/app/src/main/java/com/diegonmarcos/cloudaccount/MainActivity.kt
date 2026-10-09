@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudaccount
 
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,7 @@ import com.diegonmarcos.superapp.profile.FleetSetupTab
 import com.diegonmarcos.superapp.profile.ProfilesDevicesPage
 import com.diegonmarcos.superapp.profile.ProfilesDiffPage
 import com.diegonmarcos.superapp.profile.ProfilesWorkingPage
+import com.diegonmarcos.superapp.profile.GrantsTab
 import com.diegonmarcos.superapp.profile.SecretsTab
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.updater.Updater
@@ -62,6 +64,18 @@ import com.diegonmarcos.superapp.updater.Updater
  * until its task lands (Profiles ▸ working/diff, Setup ▸ configs, Secrets ▸ connections/secrets).
  */
 class MainActivity : AppCompatActivity() {
+    // Secrets ▸ connections: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
+    private var pendingPick: ((String) -> Unit)? = null
+    private var pendingExport: Pair<String, String>? = null
+    private val pickLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val onText = pendingPick; pendingPick = null
+        if (uri != null && onText != null) onText(contentResolver.openInputStream(uri)?.bufferedReader()?.readText().orEmpty())
+    }
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val pending = pendingExport; pendingExport = null
+        if (uri != null && pending != null) contentResolver.openOutputStream(uri)?.use { it.write(pending.second.toByteArray()) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
@@ -126,9 +140,13 @@ class MainActivity : AppCompatActivity() {
                 else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
             }
             "secrets" -> when (page) {
-                "connections" -> AccountPlaceholderPage(section, page, "task 7") { ConnectionsTab({ }, { _, _ -> }) }
-                "secrets" -> AccountPlaceholderPage(section, page, "task 7") { SecretsTab() }
-                else -> AccountPlaceholderPage(section, page, "task 7")
+                "connections" -> ConnectionsTab(
+                    pickBundle = { onText -> pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    export = { name, text -> pendingExport = name to text; exportLauncher.launch(name) },
+                )
+                "secrets" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })
+                "grants" -> GrantsTab()
+                else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
             }
             "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} (${BuildConfig.GIT_SHORT_SHA})")
             else -> AccountPlaceholderPage(section, page, "no task: undeclared section")

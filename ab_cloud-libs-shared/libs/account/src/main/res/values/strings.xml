@@ -185,16 +185,6 @@
     <string name="vault_migrate">Take in what SuperApp kept</string>
     <string name="vault_migrated">%1$d filled: %2$s</string>
     <string name="vault_pass_title">Bundle passphrase</string>
-    <string name="vault_data_title">Data</string>
-    <string name="vault_data_caption">The profile, the identities and the S / R / L account files.</string>
-    <string name="vault_data_identities">%1$d identities</string>
-    <string name="vault_data_profile">profile · %1$d values</string>
-    <string name="account_file_absent_short">not stored yet</string>
-    <string name="vault_configs_title">Configs</string>
-    <string name="vault_configs_caption">Every app\'s declared settings, keyed by the store fleet-config.json declares. Capture reads them from the installed apps.</string>
-    <string name="vault_configs_none">Nothing captured yet.</string>
-    <string name="vault_capture">Capture from the installed apps</string>
-    <string name="vault_captured">%1$d apps captured</string>
     <string name="vault_secrets_title">Secrets</string>
     <string name="vault_secrets_caption">Which app may read which key. A key no grant names stays in this app. Revoke at any time.</string>
     <string name="vault_secrets_none">No grants: no app can read a secret from here.</string>
@@ -203,4 +193,10 @@
     <string name="vault_grant_pkg">Package</string>
     <string name="vault_grant_key">Key (fleet.bearer, auth.*, store.key)</string>
     <string name="vault_grant_add">Grant</string>
+    <string name="vault_secrets_values_caption">Secret-class keys only: presence and a fingerprint, never the value. Open Cloud Vault to see or change what is held.</string>
+    <string name="vault_secrets_values_none">No secret-class keys are routed here yet.</string>
+    <string name="vault_secret_row">%1$s · %2$s</string>
+    <string name="vault_open_cloud_vault">Open</string>
+    <string name="vault_install_cloud_vault">Install via Store</string>
+    <string name="vault_cloud_vault_fallback_label">Cloud Vault</string>
 </resources>

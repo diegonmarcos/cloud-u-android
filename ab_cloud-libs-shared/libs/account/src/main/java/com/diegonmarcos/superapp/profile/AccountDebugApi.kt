@@ -39,7 +39,7 @@ object AccountDebugApi {
             // #783 the whole fleet and the new phone
             Op("fleet", "", "per fleet app: contract coverage (covered stores, named gaps, %) from the manifest"),
             // #873/#874 the vault and the fleet setup: counts, key names and ✓/✗ lines; never a value
-            Op("vault", "", "the four sections' sizes (connections, data, configs, secrets) and the per-package grants (patterns only)"),
+            Op("vault", "", "section sizes (connections, data, configs, secrets), per-package grants (patterns only), and per-manifest-class key counts (config/secret/device)"),
             Op("setup", "dry=1|run=1&app=", "dry=1: per app the keys Fleet Setup would push (names, never values) and what no declared store takes; run=1: describe -> apply -> read back, one ✓/✗ line per app (app= retries one)"),
             Op("migrate", "dry=1|status=1", "dry=1: the plan per app; status=1: the running/last report; bare: start the migration (install missing, apply all)"),
             // Cloud Account redesign task 2: the per-device files in the vault, through ForgeClient
@@ -54,14 +54,26 @@ object AccountDebugApi {
             // Cloud Account redesign task 6: Setup ▸ perms (spec 4.9) through PermsPlan
             Op("perms", "dry=1|run=1", "Setup ▸ perms (spec 4.9): dry=1 = per app every runtime permission and special grant, its state (granted/denied/unknown) and whether the working profile wants it, names only; run=1 = Grant all over the shell channel, one line per item, each judged by a re-read"),
             Op("apps", "", "Setup ▸ apps (spec 4.7): the working profile's inventory vs this phone in the Store's classes (installed / fleet / direct = vendor or F-Droid rung / no source declared), package names and counts only"),
-            Op("profilepages", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
+            Op("profiles", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
     }
 
+    /** `vault`: section counts, grants, and per-manifest-class key counts (config / secret / device). */
     private fun vault(ctx: Context): JSONObject {
         val v = com.diegonmarcos.superapp.settings.AccountVault(ctx)
+        val m = runCatching { AccountFleet.manifest(ctx) }.getOrNull()
+        val routes = m?.let { SetupPlan.routes(it) }.orEmpty()
+        val classes = JSONObject()
+        if (m != null) {
+            SetupPlan.leaves(v.connections()).mapNotNull { path ->
+                val r = routes[path]?.firstOrNull() ?: return@mapNotNull null
+                val app = m.apps.values.firstOrNull { a -> m.stores[r.store]?.usedBy?.any { it in a.libs || it == a.module } == true } ?: return@mapNotNull null
+                m.keyClass(m.stores.getValue(r.store), r.key, app.id)
+            }.groupingBy { it }.eachCount().forEach { (cls, n) -> classes.put(cls, n) }
+        }
         return JSONObject().put("sections", v.summary())
             .put("grants", JSONObject().also { o -> v.grants.all().forEach { (pkg, keys) -> o.put(pkg, JSONArray(keys)) } })
+            .put("classes", classes)
     }
 
     private fun setup(ctx: Context, q: Map<String, String>, m: AccountModel): JSONObject {
@@ -143,7 +155,7 @@ object AccountDebugApi {
             "perms" -> perms(ctx, q)
             "apps" -> SetupRunbook(ctx).appsPlan()?.let { SetupRunbook.appsJson(it) }
                 ?: JSONObject().put("result", "✗ no working profile: load one first (/api/account/load)")
-            "profilepages" -> JSONObject().put("loaded", DeviceVault(ctx).working()?.optString("device").orEmpty())
+            "profiles" -> JSONObject().put("loaded", DeviceVault(ctx).working()?.optString("device").orEmpty())
                 .put("drift", profilesDriftCount(ctx, m))
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
             "migrate" -> when {
