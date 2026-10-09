@@ -170,7 +170,7 @@ when changed; WorkManager, like `ConstellationWorker`) · fleet token · debug A
 ### 5.1 The device file — `C_A1-configs/devices/<device>.json`
 ```json
 { "kind": "cloud-account.device-profile", "schema": 1,
-  "device":   { "id": "galaxy", "model": "SM-G996B", "android": 34, "captured_at": "…", "by": "cloud-account/<ver>" },
+  "device":   { "id": "galaxy-s21", "model": "SM-G996B", "android": 34, "captured_at": "…", "by": "cloud-account/<ver>" },
   "apps":     { … the cloud-sa.app-inventory JSON (schema 1) … },
   "settings": { "<app id>": { "<store>": { "<file>": { "<key>": value, "_types": {…} } } } },
   "perms":    { "<pkg>": { "granted": […], "appops": {…}, "roles": […], "battery": true } },

@@ -7,8 +7,8 @@
 # itself is StorePhoneAppsTest / StoreResolverTest's.
 #
 # T1 THE VAULT DECLARES IT. cloud-vault C_A1-configs: `apps` is the LAST schema.json
-#    section, apps/sources.json points apps.devices.galaxy.inventory at
-#    apps/galaxy-apps.json with a cloud-vault json resolver, and that file is a
+#    section, apps/sources.json points apps.devices.galaxy-s21.inventory at
+#    apps/galaxy-s21-apps.json with a cloud-vault json resolver, and that file is a
 #    #565 inventory (kind cloud-sa.app-inventory, schema 1, every row carrying the
 #    six AppInventory keys). Nothing in it is a pending marker any more. Skipped
 #    (UNVERIFIABLE) when cloud-vault is not checked out beside this repo.
@@ -53,23 +53,23 @@ else:
     # section makes emit.py check demand a keyed rebuild, so nothing may land after them by accident).
     (ok if ids and ids[-2:] == ["apps", "peers"] else bad)("schema.json lists `apps` then `peers` as the LAST sections (%s)" % ids[-2:])
     src = json.load(open(os.path.join(vault, "apps", "sources.json")))["items"]
-    inv = src.get("devices", {}).get("galaxy", {}).get("inventory", {})
-    (ok if inv.get("kind") == "json" and inv.get("repo") == "cloud-vault" and inv.get("path") == "C_A1-configs/apps/galaxy-apps.json" and inv.get("pointer") == []
-     else bad)("apps.devices.galaxy.inventory is a cloud-vault json resolver at C_A1-configs/apps/galaxy-apps.json")
+    inv = src.get("devices", {}).get("galaxy-s21", {}).get("inventory", {})
+    (ok if inv.get("kind") == "json" and inv.get("repo") == "cloud-vault" and inv.get("path") == "C_A1-configs/apps/galaxy-s21-apps.json" and inv.get("pointer") == []
+     else bad)("apps.devices.galaxy-s21.inventory is a cloud-vault json resolver at C_A1-configs/apps/galaxy-s21-apps.json")
     def pend(v):
         if isinstance(v, dict): return v.get("kind") == "pending" or any(pend(x) for x in v.values())
         if isinstance(v, list): return any(pend(x) for x in v)
         return False
-    (bad if pend(src["devices"]["galaxy"]) else ok)("the galaxy device carries no pending marker")
-    g = json.load(open(os.path.join(vault, "apps", "galaxy-apps.json")))
+    (bad if pend(src["devices"]["galaxy-s21"]) else ok)("the galaxy-s21 device carries no pending marker")
+    g = json.load(open(os.path.join(vault, "apps", "galaxy-s21-apps.json")))
     keys = {"package", "version_name", "version_code", "origin_store", "ours", "category"}
     rows = g.get("apps", [])
     (ok if g.get("kind") == "cloud-sa.app-inventory" and g.get("schema") == 1 and rows and all(keys <= set(r) for r in rows)
-     else bad)("galaxy-apps.json is a schema-1 cloud-sa.app-inventory, %d rows with the six AppInventory keys" % len(rows))
+     else bad)("galaxy-s21-apps.json is a schema-1 cloud-sa.app-inventory, %d rows with the six AppInventory keys" % len(rows))
     (ok if any(r["ours"] for r in rows) and any(not r["ours"] for r in rows) else bad)("it holds both fleet (ours) and foreign apps")
     bj = json.load(open(os.path.join(app, "build.json")))
     sec = next(s for s in bj["ui"]["profile"]["infos"]["schema"]["sections"] if s["id"] == "apps")
-    (ok if "devices › galaxy › inventory" in sec["fields"] and not sec.get("staged") else bad)("build.json's apps section names devices › galaxy › inventory and is no longer staged")
+    (ok if "devices › galaxy-s21 › inventory" in sec["fields"] and not sec.get("staged") else bad)("build.json's apps section names devices › galaxy-s21 › inventory and is no longer staged")
 
 print("== T2: Account → Store hand-off ==")
 tabs = rd(os.path.join(lib, "account/src/main/java/com/diegonmarcos/superapp/profile/AccountTabs.kt"))

@@ -334,6 +334,9 @@
     "default_section": "account",
     "account": {
       "_doc": "Cloud Account redesign, task 2 (a0_docs/eng-specs/cloud-account-redesign.md sections 2, 5, 6). Read by libs:account's build.gradle into BuildConfig.UI_ACCOUNT_B64 (ForgeClient.Decl). forges: where the vault lives, each written through its contents API; auth 'bearer' sends `Authorization: Bearer <t>` (GitHub), 'token' sends `Authorization: token <t>` (Gitea). A forge's token is read from AccountVault Connections at forge.<id>.token, the primary forge id at forge.primary (default: the first forge with a repo). vault: the branch, the folder the app writes per-device profiles to (devices/<id>.json, DEFAULT.json; never an emit.py input), and the generated secrets file the connect fetch keeps reading.",
+      "device_aliases": {
+        "galaxy": "galaxy-s21"
+      },
       "forges": [
         {
           "id": "github",

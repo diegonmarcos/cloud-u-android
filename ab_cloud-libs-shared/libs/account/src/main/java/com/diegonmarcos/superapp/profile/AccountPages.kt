@@ -90,12 +90,19 @@ object AccountDevice {
     fun resolve(ctx: Context): Resolved {
         val v = AccountVault(ctx)
         val model = Build.MODEL.orEmpty()
-        val conn = (v.connection("device.id") as? String)?.trim().orEmpty()
+        var conn = (v.connection("device.id") as? String)?.trim().orEmpty()
+        migrated(conn, listingIds(ctx), aliases())?.let { to ->
+            // A legacy id the vault no longer lists, renamed by a declared alias: rewrite it once, for good.
+            if ((v.connection(K_DERIVED) as? String).orEmpty() == conn) v.putConnection(K_DERIVED, to)
+            v.putConnection("device.id", to)
+            conn = to
+        }
         if (conn.isNotBlank()) {
             val derived = (v.connection(K_DERIVED) as? String).orEmpty() == conn
             return Resolved(conn, if (derived) SRC_DERIVED else SRC_CONNECTIONS, model, emptyList())
         }
-        val cockpit = VaultCockpit.selectedDevice(ctx).trim()
+        val picked = VaultCockpit.selectedDevice(ctx).trim()
+        val cockpit = migrated(picked, listingIds(ctx), aliases()) ?: picked
         if (cockpit.isNotBlank()) return Resolved(cockpit, SRC_COCKPIT, model, emptyList())
         val c = candidates(ctx)
         if (c.size == 1) {
@@ -105,12 +112,37 @@ object AccountDevice {
         return Resolved("", SRC_NONE, model, c)
     }
 
+    /** The legacy-id aliases the host declares (build.json `ui.account.device_aliases`, `{old: new}`), never written in Kotlin. */
+    fun aliases(b64: String = com.diegonmarcos.superapp.account.BuildConfig.UI_ACCOUNT_B64): Map<String, String> {
+        val o = runCatching { JSONObject(String(java.util.Base64.getDecoder().decode(b64)).ifBlank { "{}" }) }.getOrNull()
+            ?.optJSONObject("device_aliases") ?: return emptyMap()
+        return o.keys().asSequence().associateWith { o.optString(it) }.filterValues { it.isNotBlank() }
+    }
+
+    /** The device ids in the cached devices-folder listing (empty until [DeviceVault.devices] has run). */
+    fun listingIds(ctx: Context): Set<String> {
+        val a = ConfigsPrefs(ctx).text(K_LISTING).takeIf { it.isNotBlank() }
+            ?.let { runCatching { org.json.JSONArray(it) }.getOrNull() } ?: return emptySet()
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("id")?.takeIf { id -> id.isNotBlank() } }.toSet()
+    }
+
+    /**
+     * Pure: the id [conn] migrates to, or null. Only when the listing is known, no longer holds [conn],
+     * and a declared alias maps [conn] to an id the listing does hold.
+     */
+    fun migrated(conn: String, listing: Set<String>, aliases: Map<String, String>): String? {
+        if (conn.isBlank() || listing.isEmpty() || conn in listing) return null
+        return aliases[conn]?.takeIf { it in listing }
+    }
+
     /** The ids whose declared model is this phone's (`Build.MODEL` or `Build.DEVICE`). */
     fun candidates(ctx: Context): List<String> {
         val bundle = AccountModel.get(ctx).server()?.body
         val listing = ConfigsPrefs(ctx).text(K_LISTING).takeIf { it.isNotBlank() }
             ?.let { runCatching { org.json.JSONArray(it) }.getOrNull() }
+        val al = aliases(); val ids = listingIds(ctx)
         return matches(bundle, listing, listOf(Build.MODEL.orEmpty(), Build.DEVICE.orEmpty()))
+            .map { migrated(it, ids, al) ?: it }.distinct()
     }
 
     /** Pure: `electronics.fleet.<id>.model` and listing rows' `model` matched (case-insensitive) to [models]. */
