@@ -127,6 +127,32 @@ class ForgeClientTest {
         assertEquals("C_A1-configs/devices/galaxy.json", d.devicePath("galaxy"))
     }
 
+    /** Over 1 MB the contents API omits content: the raw route must be taken, the sha kept. */
+    private fun bigFile(scheme: String, calls: MutableList<Pair<String, Map<String, String>>>) = ForgeClient.Http { _, url, h, _ ->
+        calls += url to h
+        val raw = (url.contains("/raw/")) || h["Accept"] == "application/vnd.github.raw+json"
+        if (h["Authorization"] != "$scheme $token") 401 to "{}"
+        else if (raw) 200 to "{\"big\":true}"
+        else 200 to """{"sha":"sha-big","size":2169130,"content":"","encoding":"none"}"""
+    }
+
+    @Test fun large_file_falls_back_to_raw_on_github() {
+        val calls = mutableListOf<Pair<String, Map<String, String>>>()
+        val r = ForgeClient(github, token, bigFile("Bearer", calls)).get("C_A1-configs/profile-secrets.json", "main") as Result.Ok
+        assertEquals("{\"big\":true}", r.value.text)
+        assertEquals("sha-big", r.value.sha)
+        assertEquals(2, calls.size)
+        assertEquals("application/vnd.github.raw+json", calls[1].second["Accept"])
+    }
+
+    @Test fun large_file_falls_back_to_raw_on_gitea() {
+        val calls = mutableListOf<Pair<String, Map<String, String>>>()
+        val r = ForgeClient(gitea, token, bigFile("token", calls)).get("C_A1-configs/profile-secrets.json", "main") as Result.Ok
+        assertEquals("{\"big\":true}", r.value.text)
+        assertEquals("sha-big", r.value.sha)
+        assertTrue(calls[1].first.startsWith("https://gitea.test/api/v1/repos/owner/vault/raw/C_A1-configs/profile-secrets.json?ref=main"))
+    }
+
     @Test fun put_dry_shape_is_the_same_body_on_both_bases() {
         val a = ForgeClient(github, "-").putShape("C_A1-configs/devices/galaxy.json", "s", "m", "main")
         val b = ForgeClient(gitea, "-").putShape("C_A1-configs/devices/galaxy.json", "s", "m", "main")

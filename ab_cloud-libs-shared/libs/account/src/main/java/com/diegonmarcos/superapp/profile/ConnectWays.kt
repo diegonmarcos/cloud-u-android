@@ -119,7 +119,7 @@ object ConnectWays {
         return when (val g = ForgeClient(f, token).get(d.secretsFile, d.branch)) {
             is ForgeClient.Result.Ok -> {
                 val body = runCatching { JSONObject(g.value.text) }.getOrNull()
-                    ?: return record(ctx, fail("${d.secretsFile} on $forgeId is not JSON"))
+                    ?: return record(ctx, fail("${d.secretsFile} on $forgeId is not JSON (${g.value.text.length} bytes read)"))
                 val o = land(ctx, body, via)
                 if (o.ok && file) AccountVault(ctx).putConnection("forge.${f.id}.token", token)
                 o
@@ -135,7 +135,7 @@ object ConnectWays {
         val c = v.client(f.id) ?: return record(ctx, fail("forge '${f.id}' unavailable"))
         return when (val g = c.get(v.decl.secretsFile, v.decl.branch)) {
             is ForgeClient.Result.Ok -> runCatching { JSONObject(g.value.text) }.getOrNull()
-                ?.let { land(ctx, it, "fetch:${f.id}") } ?: record(ctx, fail("${v.decl.secretsFile} is not JSON"))
+                ?.let { land(ctx, it, "fetch:${f.id}") } ?: record(ctx, fail("${v.decl.secretsFile} is not JSON (${g.value.text.length} bytes read)"))
             is ForgeClient.Result.Failed -> record(ctx, fail("${f.id} ${g.status}: ${g.reason}"))
         }
     }

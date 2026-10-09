@@ -97,8 +97,23 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         val sha = o.optString("sha")
         val enc = o.optString("content")
         if (sha.isBlank()) return Result.Failed(status, "not a file (no sha)")
+        val size = o.optLong("size", 0L)
+        // Over 1 MB the contents API sends no content (GitHub: "" with encoding "none"; Gitea caps
+        // it too): fetch the bytes by the raw route, keeping the sha from this call.
+        if (enc.isBlank() && size > 0) return raw(path, ref, sha, size)
         val text = runCatching { String(java.util.Base64.getMimeDecoder().decode(enc)) }.getOrElse { return Result.Failed(status, "undecodable content") }
         return Result.Ok(File(text, sha))
+    }
+
+    /** The large-file route: GitHub = the contents URL with the raw media type; Gitea = `/raw/<path>`. */
+    private fun raw(path: String, ref: String, sha: String, size: Long): Result<File> {
+        val (url, headers) = if (forge.auth == Auth.BEARER)
+            (forge.contents(path) + refQuery(ref)) to (headers() + ("Accept" to "application/vnd.github.raw+json"))
+        else
+            (forge.api.trimEnd('/') + "/repos/" + forge.repo + "/raw/" + path.trimStart('/') + refQuery(ref)) to headers()
+        val (status, body) = runCatching { http.call("GET", url, headers, null) }.getOrNull() ?: return Result.Failed(0, "network error (raw)")
+        if (status != 200) return Result.Failed(status, "raw fetch of a $size-byte file: " + reason(status, body))
+        return Result.Ok(File(body, sha))
     }
 
     /** GET a folder listing: name, path, sha per entry; an absent folder is an empty list. */
