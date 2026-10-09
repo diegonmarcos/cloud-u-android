@@ -35,15 +35,21 @@ class NetBackendService : Service() {
     /** One tunnel per name. GoBackend tracks the active tunnel by identity,
      *  so handing it a fresh object per call would make it report empty
      *  statistics for a tunnel it is in fact running. */
-    private val tunnels = HashMap<String, NamedTunnel>()
-
     private class NamedTunnel(private val n: String) : Tunnel {
         @Volatile var state: Tunnel.State = Tunnel.State.DOWN
         override fun getName(): String = n
         override fun onStateChange(newState: Tunnel.State) { state = newState }
     }
 
-    private val backend by lazy { GoBackend(applicationContext) }
+    // ONE Go backend per PROCESS, never per service instance. A bound service is destroyed when
+    // its last client unbinds and created again on the next bind, while the VpnService and the
+    // wireguard-go device it raised live on in the process. A backend per instance starts at
+    // handle -1 and raises a SECOND device on the next UP; the first keeps its UDP sockets and
+    // keeps handshaking with the hubs under the same key, so their replies land in a dead tun
+    // (four devices, tun0..tun3, were found alive after four binds). The tunnel registry moves
+    // with it: GoBackend compares tunnels by identity.
+    private val backend get() = sharedBackend(applicationContext)
+    private val tunnels get() = sharedTunnels
 
     private fun tunnelFor(name: String): NamedTunnel =
         synchronized(tunnels) { tunnels.getOrPut(name) { NamedTunnel(name) } }
@@ -170,6 +176,10 @@ class NetBackendService : Service() {
 
     private companion object {
         const val TAG = "NetBackendService"
+        val sharedTunnels = HashMap<String, NamedTunnel>()
+        @Volatile private var shared: GoBackend? = null
+        fun sharedBackend(ctx: android.content.Context): GoBackend =
+            shared ?: synchronized(this) { shared ?: GoBackend(ctx.applicationContext).also { shared = it } }
         const val KEY_NAME = "name"
         const val KEY_CONFIG = "config"
     }
