@@ -212,7 +212,8 @@ class StoreResolverTest {
             .associateBy { (it.tag as String).removePrefix(StorePhoneFragment.STATE_TAG_PREFIX) }
         assertTrue("no rows rendered", states.isNotEmpty())
         val fleetApps = Fleet.parse(StoreBuildConfig.CONSTELLATION_FLEET_B64).filter { it.kind == "app" }
-        for (a in fleetApps) assertTrue("fleet app ${a.pkg} has no row on an empty phone", a.pkg in states)
+        // 9bc208ee8: Phone lists foreign apps only; a fleet app is the Cloud page's and has no row here.
+        for (a in fleetApps) assertFalse("fleet app ${a.pkg} is the Cloud page's, not a Phone row", a.pkg in states)
         for (a in cfg.apps.values) assertTrue("declared app ${a.pkg} has no row on an empty phone", a.pkg in states)
 
         val badge = ctx.getString(StoreR.string.store_phone_badge_needs_play)
@@ -221,8 +222,6 @@ class StoreResolverTest {
             if (a.needsPlay) assertTrue("${a.pkg} is Play-only but shows no badge: $line", line.contains(badge))
             else assertFalse("${a.pkg} has a direct rung but shows the Play badge: $line", line.contains(badge))
         }
-        val fleetLine = states.getValue(fleetApps.first { it.pkg != ctx.packageName }.pkg).text.toString()
-        assertEquals(ctx.getString(StoreR.string.store_phone_state_not_installed, ctx.getString(StoreR.string.store_phone_source_fleet)), fleetLine)
 
         // The bar's batch verbs are real on this tab now: enabled, with a click.
         val bar = root.findViewWithTag<ViewGroup>(StoreBar.TAG)!!
