@@ -167,4 +167,17 @@ object BrowserTabOps {
         if (tab.pinned) return null
         return tabs.filterNot { it.url == url }
     }
+
+    /**
+     * "Close all": every tab goes except the pinned ones. Returns (kept, closed). [scope] narrows it to
+     * the tabs the grid is showing (normal or incognito) so closing one list never touches the other.
+     */
+    fun closeAll(tabs: List<BrowserTab>, scope: (BrowserTab) -> Boolean = { true }): Pair<List<BrowserTab>, List<BrowserTab>> {
+        val closed = tabs.filter { scope(it) && !it.pinned }
+        return tabs.filterNot { it in closed } to closed
+    }
+
+    /** Undo of a close: the tab comes back as it was (group, drag order, pin, id, preview), or is left alone if already there. */
+    fun restore(tabs: List<BrowserTab>, tab: BrowserTab): List<BrowserTab> =
+        if (tabs.any { it.key == tab.key }) tabs else tabs + tab
 }

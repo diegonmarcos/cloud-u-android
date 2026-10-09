@@ -224,6 +224,7 @@ class BrowserHostFragment : Fragment() {
     }
 
     override fun onPause() {
+        commitSwipe()
         saveTabState()   // #886 the app going away is the last chance to keep where the tab was
         BrowserBus.listener = null
         if (BrowserBus.page === pageHost) BrowserBus.page = null
@@ -278,7 +279,8 @@ class BrowserHostFragment : Fragment() {
             val grid = BrowserTabGrid(
                 ctx,
                 onOpen = { tab -> prefs.setActiveId(tab.key); showDetail(tab) },
-                onClose = { tab -> closeTab(tab) },
+                onSwipeClose = { tab -> swipeClose(tab) },
+                onPin = { tab -> prefs.setPinnedById(tab.key, !tab.pinned); showGrid() },
                 onMenu = { tab, anchor -> showTabMenu(tab, anchor) },
                 onToggleGroup = { g ->
                     prefs.setGroupCollapsed(g, g !in prefs.collapsedGroups()); showGrid()
@@ -311,6 +313,7 @@ class BrowserHostFragment : Fragment() {
      * from the button.
      */
     private fun closeTab(tab: BrowserTab) {
+        commitSwipe()   // a swipe still waiting for Undo must not make this look like the last private tab
         if (!prefs.removeById(tab.key)) {
             toast("“${tab.title.ifBlank { tab.url }}” is pinned — unpin it first")
             return
@@ -321,6 +324,65 @@ class BrowserHostFragment : Fragment() {
         val plan = privateSession.close(tab, left)
         showGrid()   // tears the page's WebView down first: a profile in use cannot be deleted
         plan?.let {
+            if (it.deleteProfile) dropPrivateProfile()
+            else BrowserClearData.endPrivateSession(it.clearOrigins, normalTabsOpen = !it.clearSessionCookies)
+        }
+    }
+
+    // ── swipe to close, with Undo ────────────────────────────────────
+
+    private val swipeClose by lazy { SwipeClose(privateSession) }
+
+    /**
+     * A card was swiped away. A pinned tab asks first (see [SwipeGesture.needsConfirm]); any other tab leaves
+     * the store at once and waits in [swipeClose] for the undo window, with its saved page state and preview
+     * untouched. The private teardown happens when the window closes, in [commitSwipe].
+     */
+    private fun swipeClose(tab: BrowserTab) {
+        if (SwipeGesture.needsConfirm(tab)) {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Close pinned tab?")
+                .setMessage("“${tab.title.ifBlank { tab.url }}” is pinned. Unpin it and close it?")
+                .setNegativeButton("Keep", null)
+                .setPositiveButton("Unpin and close") { _, _ ->
+                    prefs.setPinnedById(tab.key, false)
+                    closeWithUndo(tab)   // undo restores the tab as it was: pinned
+                }
+                .show()
+            return
+        }
+        closeWithUndo(tab)
+    }
+
+    private fun closeWithUndo(tab: BrowserTab) {
+        commitSwipe()
+        if (!prefs.removeById(tab.key)) return
+        swipeClose.begin(tab)
+        showGrid()
+        val bar = runCatching {
+            com.google.android.material.snackbar.Snackbar
+                .make(rootContainer, "Closed “${tab.title.ifBlank { tab.url }}”", 5000)
+                .setAction("Undo") {
+                    prefs.restore(swipeClose.pending ?: return@setAction)
+                    swipeClose.undo(prefs.all())
+                    if (mode is Mode.GRID) showGrid()
+                }
+                .addCallback(object : com.google.android.material.snackbar.Snackbar.Callback() {
+                    override fun onDismissed(sb: com.google.android.material.snackbar.Snackbar?, event: Int) {
+                        if (event != DISMISS_EVENT_ACTION) commitSwipe()
+                    }
+                })
+        }.getOrNull()
+        if (bar == null) commitSwipe() else bar.show()
+    }
+
+    /** The undo window is over (or something else is about to happen): delete the tab's leftovers and tear down private state. */
+    private fun commitSwipe() {
+        val c = swipeClose.commit(prefs.all()) ?: return
+        val ctx = context ?: return
+        BrowserWebState.delete(ctx, c.tab.key)
+        if (c.tab.previewPath.isNotBlank()) runCatching { File(c.tab.previewPath).delete() }
+        c.plan?.let {
             if (it.deleteProfile) dropPrivateProfile()
             else BrowserClearData.endPrivateSession(it.clearOrigins, normalTabsOpen = !it.clearSessionCookies)
         }
@@ -722,6 +784,7 @@ class BrowserHostFragment : Fragment() {
     }
 
     private fun showDetail(tab: BrowserTab) {
+        commitSwipe()
         teardownWebView()   // saves the tab being left (its back stack) and frees its WebView
         translator.abandon()
         mode = Mode.DETAIL(tab.key)
@@ -1346,6 +1409,7 @@ class BrowserHostFragment : Fragment() {
             "navigate" -> { wv ?: return needPage(); wv.loadUrl(a.optString("url")); done(ok().put("url", a.optString("url"))) }
             "open_tab" -> { openEntryUrl(a.optString("url")); done(ok().put("url", a.optString("url"))) }
             "close_tab" -> { val closed = prefs.remove(a.optString("url")); BrowserBus.post(BrowserBus.TABS); done(ok().put("ok", closed)) }
+            "close_all_tabs" -> { val n = prefs.closeAll(a.optBoolean("private", false)); BrowserBus.post(BrowserBus.TABS); done(ok().put("closed", n)) }
             "pin_tab" -> { prefs.setPinned(a.optString("url"), a.optBoolean("on", true)); BrowserBus.post(BrowserBus.TABS); done(ok()) }
             "bookmark_page" -> {
                 if (!url.startsWith("http")) return needPage()

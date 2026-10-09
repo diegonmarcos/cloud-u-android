@@ -28,12 +28,16 @@ import java.io.File
  *
  * Long-press picks a card up, which is what the owner asked for, and is
  * also why every per-tab action lives behind the card's ⋮ instead of
- * behind a long-press menu: the gesture is spoken for.
+ * behind a long-press menu: the gesture is spoken for. A horizontal swipe
+ * closes a card ([SwipeGesture] holds the rules); the card has no ✕ button.
  */
 class BrowserTabGrid(
     context: Context,
     private val onOpen: (BrowserTab) -> Unit,
-    private val onClose: (BrowserTab) -> Unit,
+    /** Swipe left or right on a card: close it (the host confirms first for a pinned tab, and offers Undo). */
+    private val onSwipeClose: (BrowserTab) -> Unit,
+    /** The card's pin icon: toggle the pin. */
+    private val onPin: (BrowserTab) -> Unit,
     private val onMenu: (BrowserTab, View) -> Unit,
     private val onToggleGroup: (String) -> Unit,
     private val onReorder: (List<String>) -> Unit,
@@ -62,6 +66,22 @@ class BrowserTabGrid(
         val pad = dp(context, 8)
         setPadding(pad, pad, pad, dp(context, 24))
         ItemTouchHelper(DragCallback()).attachToRecyclerView(this)
+        // Direction lock: while a touch is clearly horizontal, no ancestor may take it (vertical stays the grid's scroll).
+        val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+        var x0 = 0f; var y0 = 0f
+        addOnItemTouchListener(object : OnItemTouchListener {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> { x0 = e.x; y0 = e.y }
+                    android.view.MotionEvent.ACTION_MOVE ->
+                        if (SwipeGesture.lock(e.x - x0, e.y - y0, slop, dragging = false) == SwipeGesture.Axis.HORIZONTAL)
+                            rv.parent?.requestDisallowInterceptTouchEvent(true)
+                }
+                return false
+            }
+            override fun onTouchEvent(rv: RecyclerView, e: android.view.MotionEvent) = Unit
+            override fun onRequestDisallowInterceptTouchEvent(disallow: Boolean) = Unit
+        })
     }
 
     fun submit(rows: List<BrowserGridRow>) = adapter0.submit(rows)
@@ -71,13 +91,15 @@ class BrowserTabGrid(
     private inner class DragCallback : ItemTouchHelper.SimpleCallback(
         ItemTouchHelper.UP or ItemTouchHelper.DOWN or
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,
-        0, // no swipe: a swipe-to-dismiss would close pinned tabs by accident
+        ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,   // swipe closes; a pinned tab is confirmed by the host, never closed here
     ) {
+        override fun getSwipeThreshold(vh: RecyclerView.ViewHolder): Float = SwipeGesture.THRESHOLD
+
         override fun isLongPressDragEnabled(): Boolean = true
 
         override fun getMovementFlags(rv: RecyclerView, vh: RecyclerView.ViewHolder): Int =
             // Headers do not move; dragging one would reorder nothing.
-            if (adapter0.rowAt(vh.bindingAdapterPosition) is BrowserGridRow.GroupHeader) {
+            if (!SwipeGesture.swipeable(adapter0.rowAt(vh.bindingAdapterPosition))) {
                 makeMovementFlags(0, 0)
             } else {
                 super.getMovementFlags(rv, vh)
@@ -148,7 +170,12 @@ class BrowserTabGrid(
         ): Boolean =
             adapter0.move(vh.bindingAdapterPosition, target.bindingAdapterPosition)
 
-        override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) = Unit
+        override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
+            val pos = vh.bindingAdapterPosition
+            val tab = (adapter0.rowAt(pos) as? BrowserGridRow.TabCard)?.tab ?: return
+            if (SwipeGesture.needsConfirm(tab)) adapter0.notifyItemChanged(pos)   // snap back; the host asks first
+            onSwipeClose(tab)
+        }
 
         override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
             super.clearView(rv, vh)
@@ -305,7 +332,8 @@ class BrowserTabGrid(
                     Gravity.BOTTOM)
                 addView(TextView(ctx).apply {
                     id = ID_PIN
-                    setTextColor(0xFFFFD166.toInt())
+                    text = "📌"
+                    setPadding(dp(ctx, 2), dp(ctx, 2), dp(ctx, 8), dp(ctx, 2))
                 })
                 addView(TextView(ctx).apply {
                     id = ID_TITLE
@@ -316,15 +344,13 @@ class BrowserTabGrid(
                         0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 })
                 addView(TextView(ctx).apply {
-                    id = ID_CLOSE
-                    text = " ✕ "
-                    setTextColor(0xCCFFFFFF.toInt())
-                })
-                addView(TextView(ctx).apply {
                     id = ID_MENU
-                    text = " ⋮ "
+                    text = "⋮"
+                    textSize = 24f
+                    gravity = Gravity.CENTER
                     setTextColor(Color.WHITE)
                     typeface = Typeface.DEFAULT_BOLD
+                    setPadding(dp(ctx, 12), 0, dp(ctx, 10), 0)   // ~36 dp wide, as tall as the row: a clear target, still dense
                 })
             })
         }
@@ -347,9 +373,11 @@ class BrowserTabGrid(
             )
         }
 
+        // The pin icon is always there: bright when pinned, dim when not, and a tap toggles it.
         v.findViewById<TextView>(ID_PIN).apply {
-            text = if (tab.pinned) "📌 " else ""
-            visibility = if (tab.pinned) View.VISIBLE else View.GONE
+            alpha = if (tab.pinned) 1f else 0.35f
+            contentDescription = if (tab.pinned) "Unpin tab" else "Pin tab"
+            setOnClickListener { onPin(tab) }
         }
         v.findViewById<TextView>(ID_TITLE).text = tab.title.ifBlank { tab.url }
         v.findViewById<View>(ID_GROUP_BAR).apply {
@@ -360,16 +388,10 @@ class BrowserTabGrid(
         (v.background as? GradientDrawable)?.apply {
             if (tab.isPrivate) { setColor(0xFF1F2937.toInt()); setStroke(dp(v.context, 2), 0xFF9CA3AF.toInt()) }
             else { setColor(0xFF1A0033.toInt()); setStroke(1, 0x55B794F4) }
+            if (tab.pinned) setStroke(dp(v.context, 2), 0xFFFFD166.toInt())   // pinned: marked on the card itself
         }
         v.scaleX = 1f; v.scaleY = 1f
 
-        // A pinned tab has NO close affordance. BrowserTabPrefs.remove
-        // would refuse it anyway, but drawing a ✕ that does nothing is
-        // worse than drawing none — unpin from ⋮ is the way out.
-        v.findViewById<TextView>(ID_CLOSE).apply {
-            visibility = if (tab.pinned) View.GONE else View.VISIBLE
-            setOnClickListener { if (!tab.pinned) onClose(tab) }
-        }
         v.findViewById<TextView>(ID_MENU).setOnClickListener { anchor -> onMenu(tab, anchor) }
         v.setOnClickListener { onOpen(tab) }
     }
@@ -380,7 +402,6 @@ class BrowserTabGrid(
         const val TYPE_CARD = 1
         val ID_PREVIEW     = View.generateViewId()
         val ID_TITLE       = View.generateViewId()
-        val ID_CLOSE       = View.generateViewId()
         val ID_MENU        = View.generateViewId()
         val ID_PIN         = View.generateViewId()
         val ID_HEADER_TEXT = View.generateViewId()

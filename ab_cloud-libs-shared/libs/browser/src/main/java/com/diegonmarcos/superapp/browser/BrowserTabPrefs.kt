@@ -95,6 +95,16 @@ class BrowserTabPrefs(context: Context) {
         return true
     }
 
+    /** Undo of a close: put [tab] back exactly as it was (a no-op if it is already there). */
+    fun restore(tab: BrowserTab) = save(BrowserTabOps.restore(read(), tab))
+
+    /** "Close all" of the normal tabs, or of the private ones when [incognito]: pinned tabs survive. Returns how many closed. */
+    fun closeAll(incognito: Boolean = false): Int {
+        val (kept, closed) = BrowserTabOps.closeAll(read()) { it.isPrivate == incognito }
+        save(kept)
+        return closed.size
+    }
+
     // ── #886 group colours + the regroup rules (BrowserTabGroups is the logic; this is the store) ──
 
     fun groupColors(): Map<String, Int> {

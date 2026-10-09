@@ -101,8 +101,14 @@ check(has("BrowserTabPrefs", "BrowserTabOps.close(read(), url) ?: return false")
       "2: remove() defers to the rule that refuses a pinned tab")
 check(has("BrowserTab", "if (tab.pinned) return null"),
       "2: the refusal itself")
-check(has("BrowserTabGrid", "if (tab.pinned) View.GONE else View.VISIBLE"),
-      "2: a pinned card draws no close affordance at all")
+check(not has("BrowserTabGrid", "ID_CLOSE") and not has("BrowserTabGrid", '" ✕ "'),
+      "2: a card has no close button at all; swipe closes it")
+check(has("BrowserTabGrid", "ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT", "SwipeGesture.needsConfirm(tab)", "onSwipeClose(tab)"),
+      "2: a card swipes left or right to close, a pinned one is confirmed first")
+check(has("BrowserHostFragment", "Snackbar", '"Undo"', "swipeClose.begin(tab)", "fun commitSwipe("),
+      "2: a swipe-close offers Undo, and the teardown waits for the window to end")
+check(has("BrowserTabGrid", "id = ID_PIN", "onPin(tab)", "textSize = 24f"),
+      "2: the card has a pin icon that toggles the pin, and a larger options icon")
 check(has("BrowserHostFragment", 'if (tab.pinned) "Unpin tab" else "Pin tab"'),
       "2: pin/unpin is reachable from the card menu")
 check(has("BrowserTab", "tabs[from].pinned == tabs[to].pinned"),
