@@ -158,6 +158,28 @@ that ship inside GPL APKs must remain usable there, they need a licence compatib
 GPL APKs). PolyForm/BSL code cannot be *added* to a GPL binary by anyone other than the copyright
 holder. Nothing has been relicensed.
 
+### 4.1 Cloud Store's `play-anon` rung and AuroraOSS/gplayapi (decided 2026-10-09)
+
+Cloud Store installs Google Play apps without a Google account the way Aurora Store does
+(`libs/appstore` `PlayAnonFetcher.kt`). Its upstream reference is
+[AuroraOSS/gplayapi](https://gitlab.com/AuroraOSS/gplayapi), **GPL-3.0** (LICENSE at tag 3.6.3;
+files carry `SPDX-License-Identifier: GPL-3.0-or-later`).
+
+**Decision:** gplayapi's Kotlin is **not** vendored. It depends on protobuf-generated classes and
+a protobuf runtime, which the offline build cannot fetch, and the five HTTP calls the store needs
+are small. They are re-implemented in `PlayAnonFetcher.kt` (own code, HttpURLConnection and a
+minimal protobuf reader). What **is** copied, byte for byte at the pinned tag, is one
+GPL-3.0-or-later data file — the device profile `gplayapi_sm_s20_plus.properties` — with
+gplayapi's LICENSE beside it, in `ab_cloud-libs-shared/libs/gplayapi/` (pin:
+`data/gplayapi-pin.json`; declared in `licenses/upstreams.json` as `gplayapi-profile`).
+
+Consequence: every APK that bundles `libs:appstore` (Cloud Store, the SuperApp) ships that GPL
+file as an asset. Compliance: the file is unmodified, its licence and upstream are shipped next to
+it in this public repository, and the source of the APKs that carry it is this repository. If a
+store APK is ever distributed under terms incompatible with GPL-3.0 for the bundle as a whole, the
+profile must be replaced with one written from scratch (the keys are device facts, see
+`PlayAnonFetcher.userAgent` and the dispenser request).
+
 ## 5. Conflicts and gaps, with concrete fixes
 
 | # | Finding | Evidence | Fix |

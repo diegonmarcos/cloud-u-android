@@ -1,0 +1,19 @@
+{
+  "_doc": "THE ONE PIN of what this repository copies from AuroraOSS/gplayapi. NOT a Gradle module and NOT a Maven dependency: the protocol (anonymous dispenser session -> fdfe details -> purchase -> delivery) is re-implemented in libs:appstore PlayAnonFetcher.kt with the project's own HttpURLConnection and a minimal protobuf reader, so nothing here is compiled and the build needs no network and no protobuf runtime. What IS copied, byte for byte at the tag below, is the device-profile data file the Play servers are asked to treat us as, plus gplayapi's licence. libs:appstore/build.gradle adds profiles/ as an assets dir, and appstore-install-sources.json::resolver.play_anon.device_profile names the file. To move the pin: fetch the file at the new tag, replace it, update tag + commit + sha256 here.",
+  "upstream": "https://gitlab.com/AuroraOSS/gplayapi",
+  "licence": "GPL-3.0-or-later",
+  "licence_evidence": "LICENSE at the tag is the GNU GPL v3 text; the profile file carries 'SPDX-License-Identifier: GPL-3.0-or-later'",
+  "tag": "3.6.3",
+  "commit": "da5d1f4f501c88c0d1e6e89530f32beabac4f06f",
+  "files": {
+    "LICENSE": {
+      "from": "LICENSE",
+      "sha256": "e16780aff588719628230b714c3beb9735d018df2d69f24f1927114cec180c38"
+    },
+    "profiles/gplayapi_sm_s20_plus.properties": {
+      "from": "lib/src/main/res/raw/gplayapi_sm_s20_plus.properties",
+      "sha256": "9ef589f6d6db03e7e81357fd9833d24c7060e66c414396c698d381ee524157a0"
+    }
+  },
+  "_doc_profile_choice": "Samsung S20+ (SM-G986B, Exynos 990, Android 13, arm64-v8a/armeabi-v7a): the closest of gplayapi's 23 profiles to the owner's Galaxy S21 (Exynos 2100, arm64), so Play delivers the same ABI and density splits the phone would get from Play itself."
+}

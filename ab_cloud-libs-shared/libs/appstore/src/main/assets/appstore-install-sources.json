@@ -25,10 +25,11 @@
     "label": "APK"
   },
   "resolver": {
-    "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared. #627 KINDS ARE DECLARED, AND THE PAGE'S SOURCE TABS ARE THAT DECLARATION. `kinds` carries one entry per kind named in `order`, and Store ▸ Phone draws one tab per entry, in `order`, labelled from `label`. Adding a kind here yields a tab with no Kotlin change; a kind in `order` with no `kinds` entry (or the reverse) fails to parse. `fetches` is the honest half: true = this store hands us bytes we can verify and version-compare ourselves (vendor, fdroid); false = it is a HAND-OFF, the row deep-links into that store's own page and there is no automated version compare, which the row says rather than implying one. `installer` is the store app the hand-off is aimed at, looked up in the top-level `sources` map — never named in code. `catalogue` says this kind is a different CLIENT for another kind's catalogue, not a catalogue of its own: Aurora Store serves Google Play's index, so `aurora` aliases `play` and its tab is every app with a `play` rung. Samsung's Galaxy Store is a genuinely separate catalogue, so `samsung` aliases nothing and its tab is exactly the apps that declare it.",
+    "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play-anon` = Google Play's own servers through an anonymous session (PlayAnonFetcher; fetches, sha256 per file, splits installed as one session); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared. #627 KINDS ARE DECLARED, AND THE PAGE'S SOURCE TABS ARE THAT DECLARATION. `kinds` carries one entry per kind named in `order`, and Store ▸ Phone draws one tab per entry, in `order`, labelled from `label`. Adding a kind here yields a tab with no Kotlin change; a kind in `order` with no `kinds` entry (or the reverse) fails to parse. `fetches` is the honest half: true = this store hands us bytes we can verify and version-compare ourselves (vendor, fdroid); false = it is a HAND-OFF, the row deep-links into that store's own page and there is no automated version compare, which the row says rather than implying one. `installer` is the store app the hand-off is aimed at, looked up in the top-level `sources` map — never named in code. `catalogue` says this kind is a different CLIENT for another kind's catalogue, not a catalogue of its own: Aurora Store serves Google Play's index, so `aurora` aliases `play` and its tab is every app with a `play` rung. Samsung's Galaxy Store is a genuinely separate catalogue, so `samsung` aliases nothing and its tab is exactly the apps that declare it.",
     "order": [
       "vendor",
       "fdroid",
+      "play-anon",
       "samsung",
       "aurora",
       "play"
@@ -42,6 +43,13 @@
       "fdroid": {
         "label": "F-Droid",
         "installer": "org.fdroid.fdroid",
+        "fetches": true
+      },
+      "play-anon": {
+        "label": "Play (anonymous)",
+        "_doc": "Google Play's OWN servers, reached the way Aurora Store reaches them, by this store alone: no Google account, no Play app, no Aurora app on the phone. An anonymous Play session is fetched from the first declared dispenser in `play_anon.dispensers` that answers (POST of the declared gplayapi device profile; the dispenser hands back an anonymous account's auth token + gsfId + device tokens), then details -> purchase (free offer) -> delivery give the base APK and every split APK on Google's CDN, each with a sha256 that every downloaded file must match before it goes near an installer (PlayAnonFetcher.kt). HONESTY RULE: a dispenser outage is reported as \"Play token unavailable\", never as \"not installable\" — the app is installable, the anonymous session is what is missing. `catalogue: play` because it IS Google Play's catalogue, through a client that is us.",
+        "installer": "com.diegonmarcos.cloudstore",
+        "catalogue": "play",
         "fetches": true
       },
       "samsung": {
@@ -73,77 +81,322 @@
     "play": {
       "installer": "com.android.vending"
     },
+    "play_anon": {
+      "_doc": "Declared config of the play-anon rung. `dispensers` are tried IN ORDER; the first is Aurora Store's public dispenser (AuroraOSS/AuroraStore Constants.URL_DISPENSER), which answers only Aurora's own client User-Agent, so `user_agent` is declared with it rather than hidden in code. `device_profile` is an asset file copied byte-for-byte from AuroraOSS/gplayapi (pin: ab_cloud-libs-shared/libs/gplayapi/data/gplayapi-pin.json, GPL-3.0-or-later). `api` is Google Play's fdfe base. `token_ttl_minutes` bounds how long one anonymous session is reused before a fresh one is asked for; a 401 from Play also forces one fresh session. No dispenser URL is a Kotlin literal (ac_cloud-store/test/test-store-upstream-sources.sh).",
+      "api": "https://android.clients.google.com/fdfe/",
+      "dispensers": [
+        {
+          "url": "https://auroraoss.com/api/auth",
+          "user_agent": "com.aurora.store-4.6.1-61"
+        }
+      ],
+      "device_profile": "gplayapi_sm_s20_plus.properties",
+      "token_ttl_minutes": 360,
+      "locale": "en_US"
+    },
     "apps": {
-      "com.whatsapp": {
-        "label": "WhatsApp",
+      "ai.perplexity.app.android": {
         "sources": [
           {
-            "kind": "vendor",
-            "apk": "https://www.whatsapp.com/android/current/WhatsApp.apk"
+            "kind": "play-anon"
           },
           {
             "kind": "play"
           }
         ]
       },
-      "org.thoughtcrime.securesms": {
-        "label": "Signal",
+      "ai.perplexity.comet": {
         "sources": [
           {
-            "kind": "vendor",
-            "feed": "https://updates.signal.org/android/latest.json",
-            "version_name": "versionName",
-            "version_code": "versionCode",
-            "apk_key": "url",
-            "sha256_key": "sha256sum"
+            "kind": "play-anon"
           },
           {
             "kind": "play"
           }
         ]
       },
-      "org.mozilla.firefox": {
-        "label": "Firefox",
+      "ai.x.grok": {
         "sources": [
           {
-            "kind": "vendor",
-            "feed": "https://product-details.mozilla.org/1.0/mobile_versions.json",
-            "version_name": "version",
-            "apk": "https://archive.mozilla.org/pub/fenix/releases/{version}/android/fenix-{version}-android-{asset}/fenix-{version}.multi.android-{asset}.apk",
-            "abis": {
-              "arm64-v8a": "arm64-v8a",
-              "armeabi-v7a": "armeabi-v7a",
-              "x86_64": "x86_64",
-              "x86": "x86"
-            }
+            "kind": "play-anon"
           },
           {
             "kind": "play"
           }
         ]
       },
-      "org.telegram.messenger": {
-        "label": "Telegram",
+      "app.affine.pro": {
         "sources": [
           {
-            "kind": "vendor",
-            "apk": "https://telegram.org/dl/android/apk"
+            "kind": "play-anon"
           },
           {
             "kind": "play"
           }
         ]
       },
-      "com.x8bit.bitwarden": {
-        "label": "Bitwarden",
+      "app.sterna": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          }
+        ]
+      },
+      "at.zuggabecka.radiofm4": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "be.greifmatthias.wakaship": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "br.gov.economia.receita.rfb": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "br.gov.meugovbr": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "cat.atm.tmobilitat": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "ch.icoaching.typewise": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "ch.protonvpn.android": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "chat.rocket.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "co.mangotechnologies.clickup": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.Slack": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.adobe.reader": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.airbnb.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.alphainventor.filemanager": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.amazon.avod.thirdpartyclient": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.android.chrome": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.android.settings": {
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+      },
+      "com.android.vending": {
+        "unresolved": "Google Play itself: ships with Google Mobile Services, not published as an app"
+      },
+      "com.anthropic.claude": {
+        "label": "Claude",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.app.applistbackup": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.aspiro.tidal": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.aurora.store": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          }
+        ]
+      },
+      "com.badoo.mobile": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.beemdevelopment.aegis": {
         "sources": [
           {
             "kind": "vendor",
-            "feed": "https://api.github.com/repos/bitwarden/android/releases/latest",
+            "feed": "https://api.github.com/repos/beemdevelopment/Aegis/releases/latest",
             "version_name": "tag_name",
             "version_re": "^v?([0-9][0-9.]*)",
-            "apk": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk",
-            "sha256": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk-sha256.txt"
+            "apk": "https://github.com/beemdevelopment/Aegis/releases/latest/download/aegis-v{version}.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 3.4.3"
+          },
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.beeper.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.bereal.ft": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.binarysmith.webclipwidget.ad": {
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.booking": {
+        "sources": [
+          {
+            "kind": "play-anon"
           },
           {
             "kind": "play"
@@ -165,7 +418,1565 @@
               "armeabi-v7a": "BraveMonoarm.apk",
               "x86_64": "BraveMonox64.apk",
               "x86": "BraveMonox86.apk"
-            }
+            },
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 1.97.56"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.btg.pactual.banking": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.btg.pactual.digital.mobile": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.bumble.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.checkitt": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.cloudflare.onedotonedotonedotone": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.collabora.libreoffice": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.comuto": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.devolutions.remotedesktopmanager": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.dgt.midgt": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.dhl.exp.dhlmobile": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.diegonmarcos.cloudcalendar": {
+        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere"
+      },
+      "com.diegonmarcos.comms.contacts": {
+        "unresolved": "a Cloud fleet package that the fleet manifest does not list; not public anywhere"
+      },
+      "com.digibites.accubattery": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.diotek.sec.lookup.dictionary": {
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+      },
+      "com.downdogapp": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ebay.kleinanzeigen": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.epicgames.portal": {
+        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.esim.numero": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.facebook.orca": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.fatsecret.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.flyersoft.moonreader": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.foxdebug.acode": {
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/Acode-Foundation/Acode/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/Acode-Foundation/Acode/releases/latest/download/app-normal.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 1.13.5"
+          },
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.garmin.android.apps.connectmobile": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.garmin.android.apps.explore": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.garmin.android.apps.messenger": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.garmin.connectiq": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ghisler.android.TotalCommander": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.github.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.authenticator2": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.bard": {
+        "label": "Gemini",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.docs": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.docs.editors.docs": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.docs.editors.sheets": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.fitness": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.labs.language.tailwind": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.magazines": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.maps": {
+        "label": "Google Maps",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.messaging": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.nbu.files": {
+        "label": "Files by Google",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.photos": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.tachyon": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.tasks": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.translate": {
+        "label": "Google Translate",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.walletnfcrel": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.calculator": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.calendar": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.contacts": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.gm": {
+        "label": "Gmail",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.googlequicksearchbox": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.inputmethod.latin": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.youtube": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.audio.hearing.visualization.accessibility.scribe": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.hostelworld.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.imaginecurve.curve.prd": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.instagram.android": {
+        "label": "Instagram",
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.instagram.barcelona": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.linkedin.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.lonelycatgames.Xplore": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mattermost.rn": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.medantapatient.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.memrise.android.memrisecompanion": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mi.earphone": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.microsoft.copilot": {
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.microsoft.lists.public": {
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.microsoft.office.onenote": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.microsoft.office.outlook": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.microsoft.skydrive": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.microsoft.todos": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mo2o.alsa": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mobidia.android.mdm": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mobillium.airalo": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.mobisystems.fileman": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.netflix.mediaclient": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "samsung"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.nomadmania.presentation": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.paypal.android.p2pmobile": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.phlox.simpleserver": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.pinterest": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.playdead.limbo.egs.full": {
+        "unresolved": "installed from com.epicgames.portal; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.rarlab.rar": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.revolut.revolut": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ridedott.rider": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.rome2rio.www.rome2rio": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.rsupport.rs.activity.rsupport.aas2": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "samsung"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ryanair.cheapflights": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.app.contacts": {
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+      },
+      "com.samsung.android.app.notes": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.app.reminder": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.app.routines": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.app.spage": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.app.watchmanager": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "samsung"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.bixby.agent": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.calendar": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "samsung"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.dialer": {
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+      },
+      "com.samsung.android.email.provider": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "samsung"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.game.gamehome": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.lool": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.samsung.android.mdx": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.android.messaging": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.samsung.knox.securefolder": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.sec.android.app.camera": {
+        "unresolved": "preinstalled / no installer recorded; not on Play, not in F-Droid, no publisher APK"
+      },
+      "com.sec.android.app.clockpackage": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.sec.android.app.myfiles": {
+        "unresolved": "installed from com.android.vending; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.sec.android.app.popupcalculator": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.sec.android.app.samsungapps": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.sec.android.app.voicenote": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.sec.android.easyMover": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.sec.android.gallery3d": {
+        "sources": [
+          {
+            "kind": "samsung"
+          }
+        ]
+      },
+      "com.sensorberg.oneaccess": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.shazam.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.skiplagged": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.smlnskgmail.jaman.hashchecker": {
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.spanishcoders.pepephone": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.spotify.music": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.strava": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.termux": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.termux.nix": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          }
+        ]
+      },
+      "com.termux.nix.boot": {
+        "unresolved": "installed from com.diegonmarcos.superapp; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.thetrainline": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.tinder": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.trafi.whitelabel.bvg": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.transferwise.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.trello": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.trianguloy.openInWhatsapp": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ubercab": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.ubnt.usurvey": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.uptodown": {
+        "unresolved": "installed from com.uptodown; not on Play (anonymous details 404), not in F-Droid, no verified publisher APK"
+      },
+      "com.urbandroid.sleep": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.urbansportsclub": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.viber.voip": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.viscouspot.gitsync": {
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/ViscousPot/GitSync/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/ViscousPot/GitSync/releases/latest/download/app-{asset}-release-signed.apk",
+            "abis": {
+              "arm64-v8a": "arm64-v8a",
+              "armeabi-v7a": "armeabi-v7a",
+              "x86_64": "x86_64"
+            },
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 1.8.65"
+          },
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.wbd.stream": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.werewolfapps.online": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.wggesucht.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.whatsapp": {
+        "label": "WhatsApp",
+        "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://www.whatsapp.com/android/current/WhatsApp.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.whatsapp.w4b": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.wikiloc.wikilocandroid": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.wireguard.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.wizzair.WizzAirApp": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.x8bit.bitwarden": {
+        "label": "Bitwarden",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/bitwarden/android/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk",
+            "sha256": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk-sha256.txt",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 2026.9.1"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.xe.currency": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.congstar.meincongstar": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.deutschepost.postident": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.dhl.paket": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.eos.uptrade.android.fahrinfo.berlin": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.flixbus.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.is24.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "de.number26.android": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "dk.shelter.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "ee.mtakso.client": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "es.aeat.pin24h": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "es.bancosantander.apps": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "es.correos.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "es.fnmtrcm.ceres.certificadoDigitalFNMT": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "es.gob.interior.policia.midni": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "eu.faircode.email": {
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "eu.faircode.netguard": {
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/M66B/NetGuard/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/M66B/NetGuard/releases/latest/download/NetGuard-v{version}-release.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 2.337"
+          },
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "im.vector.app": {
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/element-hq/element-android/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/element-hq/element-android/releases/latest/download/vector-gplay-{asset}-release-signed.apk",
+            "abis": {
+              "arm64-v8a": "arm64-v8a",
+              "armeabi-v7a": "armeabi-v7a",
+              "x86_64": "x86_64",
+              "x86": "x86"
+            },
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 1.6.66"
+          },
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "io.japp.blackscreen": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "io.vicoach": {
+        "sources": [
+          {
+            "kind": "play-anon"
           },
           {
             "kind": "play"
@@ -180,30 +1991,61 @@
             "feed": "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest",
             "version_name": "tag_name",
             "version_re": "^v?([0-9][0-9.]*)",
-            "apk": "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/Obsidian-{version}.apk"
+            "apk": "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/Obsidian-{version}.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 1.14.4"
+          },
+          {
+            "kind": "play-anon"
           },
           {
             "kind": "play"
           }
         ]
       },
-      "org.fdroid.fdroid": {
-        "label": "F-Droid",
+      "me.proton.android.drive": {
         "sources": [
           {
-            "kind": "vendor",
-            "apk": "https://f-droid.org/F-Droid.apk"
+            "kind": "play-anon"
           },
           {
-            "kind": "fdroid"
+            "kind": "play"
           }
         ]
       },
-      "org.kde.kdeconnect_tp": {
-        "label": "KDE Connect",
+      "mobi.eup.easygerman": {
         "sources": [
           {
-            "kind": "fdroid"
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "moe.shizuku.privileged.api": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "net.esim.twa": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "net.skyscanner.android.main": {
+        "sources": [
+          {
+            "kind": "play-anon"
           },
           {
             "kind": "play"
@@ -217,61 +2059,191 @@
             "kind": "fdroid"
           },
           {
-            "kind": "play"
-          }
-        ]
-      },
-      "com.anthropic.claude": {
-        "label": "Claude",
-        "sources": [
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.google.android.apps.bard": {
-        "label": "Gemini",
+      "net.techet.netanalyzerlite.an": {
         "sources": [
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.google.android.apps.maps": {
-        "label": "Google Maps",
+      "org.chromium.webapk.a64d263d6f7d935c4_v2": {
+        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it"
+      },
+      "org.chromium.webapk.afdfe84a0acbbed2f_v2": {
+        "unresolved": "a Chrome WebAPK minted on-device by Chrome for one site; no store publishes it"
+      },
+      "org.faudroids.werewolf": {
         "sources": [
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.google.android.gm": {
-        "label": "Gmail",
+      "org.fdroid.fdroid": {
+        "label": "F-Droid",
         "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://f-droid.org/F-Droid.apk",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip"
+          },
+          {
+            "kind": "fdroid"
+          }
+        ]
+      },
+      "org.kde.kdeconnect_tp": {
+        "label": "KDE Connect",
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.google.android.apps.translate": {
-        "label": "Google Translate",
+      "org.mozilla.firefox": {
+        "label": "Firefox",
         "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://product-details.mozilla.org/1.0/mobile_versions.json",
+            "version_name": "version",
+            "apk": "https://archive.mozilla.org/pub/fenix/releases/{version}/android/fenix-{version}-android-{asset}/fenix-{version}.multi.android-{asset}.apk",
+            "abis": {
+              "arm64-v8a": "arm64-v8a",
+              "armeabi-v7a": "armeabi-v7a",
+              "x86_64": "x86_64",
+              "x86": "x86"
+            },
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 157.0.1"
+          },
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.google.android.apps.nbu.files": {
-        "label": "Files by Google",
+      "org.telegram.messenger": {
+        "label": "Telegram",
         "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://telegram.org/dl/android/apk",
+            "verified": "2026-10-09 HTTP 206 application/octet-stream zip"
+          },
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }
         ]
       },
-      "com.instagram.android": {
-        "label": "Instagram",
+      "org.thoughtcrime.securesms": {
+        "label": "Signal",
         "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://updates.signal.org/android/latest.json",
+            "version_name": "versionName",
+            "version_code": "versionCode",
+            "apk_key": "url",
+            "sha256_key": "sha256sum",
+            "verified": "2026-10-09 HTTP 206 application/vnd.android.package-archive zip, feed version 8.29.3 (feed needs a browser User-Agent from curl; urllib got 403)"
+          },
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "pub.hanks.appfolderwidget": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "ride.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "taxi.android.client": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "travel.goki.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "tv.arte.plus7": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "vivino.web.app": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "xyz.chatboxapp.chatbox": {
+        "sources": [
+          {
+            "kind": "play-anon"
+          },
           {
             "kind": "play"
           }

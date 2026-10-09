@@ -56,11 +56,11 @@ internal class UpdateInstaller(private val context: Context) {
     fun install(apk: VerifiedApk, targetPackage: String = context.packageName) {
         Log.i(tag, "install ${apk.file.name} → $targetPackage [${apk.evidence}]")
         InstallGate.serialised(targetPackage, InstallGate.SETTLE_MS) {
-            installLocked(apk.file, targetPackage)
+            installLocked(apk.file, targetPackage, apk.splits.map { it.file })
         }
     }
 
-    private fun installLocked(apk: File, targetPackage: String) {
+    private fun installLocked(apk: File, targetPackage: String, splits: List<File> = emptyList()) {
         UpdateProgress.update(UpdateProgress.State.Installing)
         refuseDowngrade(apk, targetPackage)
         // ASK ABOUT SPACE BEFORE SPENDING AN INSTALL ATTEMPT ON IT.
@@ -107,7 +107,7 @@ internal class UpdateInstaller(private val context: Context) {
             // actually happen. openWrite's own length argument sizes the FILE
             // inside the session, which is a different question and cannot
             // stand in for this one.
-            setSize(expected)
+            setSize(expected + splits.sumOf { it.length() })
             // NO setAppPackageName: it's only a hint, and forcing our fork id on
             // a resigned STOCK upstream APK (chat=com.mattermost.rnbeta,
             // matrix=io.element.android.x) makes PackageInstaller reject it with
@@ -177,6 +177,23 @@ internal class UpdateInstaller(private val context: Context) {
                     error("staged $written of $expected bytes for $targetPackage " +
                         "(source now ${apk.length()}) — APK truncated or removed mid-install, " +
                         "not a bad build")
+                }
+                // Google Play's delivery is a base plus splits, and they install
+                // as ONE session or not at all. Each split was verified by its
+                // own digest before it reached this list (VerifiedApk.withSplits).
+                splits.forEachIndexed { i, part ->
+                    val len = part.length()
+                    var copied = 0L
+                    part.inputStream().use { input ->
+                        session.openWrite("split$i-${part.name.substringAfterLast('-')}", 0, len).use { output ->
+                            copied = input.copyTo(output)
+                            session.fsync(output)
+                        }
+                    }
+                    if (copied != len) {
+                        session.abandon()
+                        error("staged $copied of $len bytes of split ${part.name} for $targetPackage — truncated mid-install")
+                    }
                 }
                 val callback = PendingIntent.getBroadcast(
                     context,

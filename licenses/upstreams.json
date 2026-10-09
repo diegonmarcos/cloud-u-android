@@ -30,6 +30,8 @@
         {"id": "lib-net", "path": "ab_cloud-libs-shared/libs/net", "upstream": "wireguard-android (tunnel/ library)", "licence": "Apache-2.0", "repo": "https://github.com/WireGuard/wireguard-android.git", "ref": "", "detect_base": true, "subpath": "tunnel",
          "_doc_ref": "No pin: aa_cloud-superapp/build.sh step_sync_net rsyncs from an unpinned local clone. detect_base finds the closest upstream commit."},
         {"id": "lib-net-wg", "path": "ab_cloud-libs-shared/libs/net-wg", "upstream": "wireguard-android (tunnel/ library)", "licence": "Apache-2.0", "repo": "https://github.com/WireGuard/wireguard-android.git", "ref": "", "detect_base": true, "subpath": "tunnel",
-         "_doc_ref": "No pin: aa_cloud-superapp/build.sh step_sync_net rsyncs from an unpinned local clone. detect_base finds the closest upstream commit."}
+         "_doc_ref": "No pin: aa_cloud-superapp/build.sh step_sync_net rsyncs from an unpinned local clone. detect_base finds the closest upstream commit."},
+        {"id": "gplayapi-profile", "path": "ab_cloud-libs-shared/libs/gplayapi", "upstream": "AuroraOSS gplayapi", "licence": "GPL-3.0-or-later", "repo": "https://gitlab.com/AuroraOSS/gplayapi.git", "ref": "da5d1f4f501c88c0d1e6e89530f32beabac4f06f",
+         "_doc_ref": "Tag 3.6.3. DATA ONLY: one device-profile .properties file plus LICENSE, copied byte-for-byte and pinned in ab_cloud-libs-shared/libs/gplayapi/data/gplayapi-pin.json. The protocol code that uses it (libs/appstore PlayAnonFetcher.kt) is the owner's own re-implementation and copies no gplayapi source."}
     ]
 }

@@ -50,7 +50,9 @@ object StoreDebugApi {
                 "cached APKs: file, bytes, partial, pkg, versionCode, sha256, shaState"),
             AppDebugServer.Op("stage", "pkg=<applicationId or fleet id>&remote=1 (optional: ask the network too)",
                 "the row's stage: stage id, text, verbs, failedAt"),
-            AppDebugServer.Op("download", "pkg=…", "stage 1 in the background; poll stage"),
+            AppDebugServer.Op("download", "pkg=…",
+                "stage 1 in the background; poll stage. An EXTERNAL pkg walks its declared ladder " +
+                "(vendor, F-Droid, play-anon = Google Play's own servers) and stages the verified APK(s)"),
             AppDebugServer.Op("install", "pkg=…",
                 "download (if nothing installable is cached) → install → clear, in the background, " +
                 "stopping at the first stage that fails; poll stage"),
@@ -152,8 +154,40 @@ object StoreDebugApi {
         val key = q["pkg"].orEmpty()
         val app = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
             .firstOrNull { it.pkg == key || it.id == key || it.altId == key }
-        return if (app == null) JSONObject().put("ok", false).put("error", "no fleet entry for pkg='$key'").toString()
+        return if (app == null) external(ctx, key, op).toString()
         else verb(ctx, app, op, q["remote"] == "1").toString()
+    }
+
+    /** Last external download/install result per package, for the poll. */
+    private val externalResult = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * An EXTERNAL app (not a fleet member): walk its declared ladder exactly as
+     * Store ▸ Phone's Install does — vendor, F-Droid, then Google Play's own
+     * servers through the play-anon rung. download = stage only (fetch +
+     * verify, nothing installed); install/auto = stage then commit. Answers at
+     * once; poll the same op (or /api/store/progress) for the outcome.
+     */
+    private fun external(ctx: Context, pkg: String, op: String): JSONObject {
+        val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(ctx))
+        val app = SourceResolver.resolve(cfg, pkg)
+        val out = JSONObject().put("pkg", pkg).put("op", op).put("declared", app.declared)
+            .put("ladder", JSONArray(app.sources.map { it.kind }))
+        app.unresolved?.let { out.put("unresolved", it) }
+        if (app.direct.isEmpty()) return out.put("ok", false)
+            .put("error", app.unresolved ?: "no rung this store can fetch from for '$pkg'")
+        if (op == "download" || op == "install" || op == "auto") externalResult[pkg] = "running"
+        when (op) {
+            "download" -> thread(name = "store-api-xdownload-$pkg") {
+                externalResult[pkg] = runCatching { ExternalInstall.stage(ctx, cfg, app) }
+                    .fold({ "staged: $it" }, { "failed: ${it.message}" })
+            }
+            "install", "auto" -> thread(name = "store-api-xinstall-$pkg") {
+                externalResult[pkg] = ExternalInstall.run(ctx, cfg, app)?.let { "failed: $it" } ?: "committed"
+            }
+        }
+        if (op == "download" || op == "install" || op == "auto") Thread.sleep(150)
+        return out.put("ok", true).put("last", externalResult[pkg] ?: "running")
     }
 
     /** #804 [StoreAuto.json]; run=1 starts (or resumes) the chain in the

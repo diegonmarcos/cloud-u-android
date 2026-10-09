@@ -37,8 +37,7 @@ object ExternalInstall {
      */
     fun stage(ctx: Context, cfg: SourceResolver.Config, app: SourceResolver.External): VerifiedApk {
         val ladder = app.direct
-        if (ladder.isEmpty())
-            error(ctx.getString(R.string.store_phone_why_play_only, app.label))
+        if (ladder.isEmpty()) error(nothingToFetch(ctx, app))
         val declined = mutableListOf<String>()
         for (src in ladder) {
             try {
@@ -68,8 +67,12 @@ object ExternalInstall {
         }
     }
 
+    private fun nothingToFetch(ctx: Context, app: SourceResolver.External): String =
+        app.unresolved?.let { ctx.getString(R.string.store_phone_state_unresolved, it) }
+            ?: ctx.getString(R.string.store_phone_why_play_only, app.label)
+
     fun run(ctx: Context, cfg: SourceResolver.Config, app: SourceResolver.External): String? {
-        if (app.direct.isEmpty()) return ctx.getString(R.string.store_phone_why_play_only, app.label)
+        if (app.direct.isEmpty()) return nothingToFetch(ctx, app)
         UpdateProgress.beginDownload()
         val apk = try {
             stage(ctx, cfg, app)

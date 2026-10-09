@@ -103,6 +103,41 @@ internal object ShellInstall : InstallChannel {
             return "${channel.name()} is connected but did not answer a trivial `echo` " +
                    "round trip — the channel is up but not usable"
         }
+        /**
+         * A base APK plus its splits (Google Play's delivery) in ONE `pm` session:
+         * install-create, one install-write per file streamed over stdin exactly as
+         * the single-APK path streams, then install-commit. A split app installed
+         * one file at a time does not install at all, so a failure at any step
+         * abandons the session and returns the step's own words.
+         */
+        fun sessionInstall(): String? {
+            val files = apk.allFiles
+            val total = files.sumOf { it.length() }
+            val created = channel.exec(ctx, "pm install-create -r -d -S $total 2>&1")?.trim().orEmpty()
+            val sid = Regex("\\[(\\d+)]").find(created)?.groupValues?.get(1)
+                ?: return "${channel.name()}: `pm install-create` answered: ${created.ifBlank { "nothing" }}"
+            fun abandon(why: String): String {
+                runCatching { channel.exec(ctx, "pm install-abandon $sid 2>&1") }
+                return why
+            }
+            return try {
+                files.forEachIndexed { i, f ->
+                    val name = if (i == 0) "base.apk" else "split$i-${f.name.substringAfterLast('-')}"
+                    val out = channel.execWithStdin(ctx, "pm install-write -S ${f.length()} $sid $name - 2>&1", f)?.trim()
+                        ?: return abandon("${channel.name()} cannot stream a split over stdin")
+                    if (!out.startsWith("Success"))
+                        return abandon("${channel.name()}: `pm install-write` of ${f.name} answered: ${out.ifBlank { "nothing" }}")
+                }
+                val done = channel.exec(ctx, "pm install-commit $sid 2>&1")?.trim().orEmpty()
+                Log.i(TAG, "shell split install via ${channel.name()} (${files.size} files): ${done.ifBlank { "no output" }}")
+                if (done.startsWith("Success")) null
+                else abandon("${channel.name()}: `pm install-commit` of ${files.size} files answered: ${done.ifBlank { "nothing" }}")
+            } catch (t: Throwable) {
+                Log.w(TAG, "shell split install threw", t)
+                abandon("${channel.name()} threw ${t.javaClass.simpleName}: ${t.message}")
+            }
+        }
+        if (apk.splits.isNotEmpty()) return sessionInstall()
         val src = apk.file
         return try {
             // -r reinstall, -d allow version downgrade, -S <size> read the
@@ -126,7 +161,10 @@ internal object ShellInstall : InstallChannel {
             Log.w(TAG, "shell install threw", t)
             "${channel.name()} threw ${t.javaClass.simpleName}: ${t.message}"
         }
-    }}
+    }
+
+
+}
 
 /** PackageInstaller session — always available, but prompts the user. The
  *  result arrives asynchronously at [PackageInstallerReceiver], which is what

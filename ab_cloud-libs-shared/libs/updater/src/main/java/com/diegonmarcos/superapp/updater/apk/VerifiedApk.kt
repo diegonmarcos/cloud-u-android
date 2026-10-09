@@ -28,8 +28,23 @@ import java.io.File
 class VerifiedApk private constructor(
     val file: File,
     val evidence: String,
+    /**
+     * Split APKs installed in the SAME session as [file] (the base). Each one is
+     * itself a [VerifiedApk], so a split cannot reach an installer unchecked any
+     * more than a base can. Empty for a monolithic APK, which is every source
+     * except Google Play's delivery (the store's `play-anon` rung).
+     */
+    val splits: List<VerifiedApk> = emptyList(),
 ) {
     val length: Long get() = file.length()
+
+    /** Base plus every split, in install order. */
+    val allFiles: List<File> get() = listOf(file) + splits.map { it.file }
+
+    /** This base with [parts] attached as its splits: one install, one session. */
+    fun withSplits(parts: List<VerifiedApk>): VerifiedApk =
+        if (parts.isEmpty()) this
+        else VerifiedApk(file, "$evidence + ${parts.size} split(s), each by digest", parts)
 
     override fun toString() = "${file.name} (${file.length()} B, $evidence)"
 

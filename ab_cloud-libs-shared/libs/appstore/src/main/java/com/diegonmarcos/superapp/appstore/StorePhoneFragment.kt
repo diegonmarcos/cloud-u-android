@@ -397,6 +397,8 @@ class StorePhoneFragment : Fragment() {
                 val handoff = r.external?.handoff
                 val text = when {
                     !s.needsPlay -> ctx.getString(R.string.store_phone_state_not_installed, ladder)
+                    r.external?.unresolved != null ->
+                        ctx.getString(R.string.store_phone_state_unresolved, r.external?.unresolved.orEmpty())
                     handoff is SourceResolver.Source.Store ->
                         ctx.getString(R.string.store_phone_state_needs_store, via(handoff.kind))
                     else -> ctx.getString(R.string.store_phone_state_needs_play,

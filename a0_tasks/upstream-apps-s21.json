@@ -1,0 +1,1062 @@
+[
+ {
+  "package": "ai.perplexity.app.android",
+  "version": "2.100.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ai.perplexity.comet",
+  "version": "1.35.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ai.x.grok",
+  "version": "1.2.44-release.00",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "app.affine.pro",
+  "version": "0.27.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "app.sterna",
+  "version": "1.5.3",
+  "origin": "org.fdroid.fdroid"
+ },
+ {
+  "package": "at.zuggabecka.radiofm4",
+  "version": "6.1.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "be.greifmatthias.wakaship",
+  "version": "2023.11.2 (20231114)",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "br.gov.economia.receita.rfb",
+  "version": "4.12.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "br.gov.meugovbr",
+  "version": "3.9.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "cat.atm.tmobilitat",
+  "version": "1.19.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ch.icoaching.typewise",
+  "version": "4.4.48",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ch.protonvpn.android",
+  "version": "5.20.57.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "chat.rocket.android",
+  "version": "4.77.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "co.mangotechnologies.clickup",
+  "version": "7.3.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.Slack",
+  "version": "26.09.50.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.adobe.reader",
+  "version": "26.6.1.45942",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.airbnb.android",
+  "version": "25.46",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.alphainventor.filemanager",
+  "version": "3.8.3",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.amazon.avod.thirdpartyclient",
+  "version": "3.0.474.2247",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.android.chrome",
+  "version": "154.0.8037.126",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.android.settings",
+  "version": "15",
+  "origin": null
+ },
+ {
+  "package": "com.android.vending",
+  "version": "53.4.34-34 [0] [PR] 991240293",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.anthropic.claude",
+  "version": "1.261005.20",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.app.applistbackup",
+  "version": "3.1.3",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.aspiro.tidal",
+  "version": "2.213.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.aurora.store",
+  "version": "4.8.4",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.badoo.mobile",
+  "version": "5.487.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.beemdevelopment.aegis",
+  "version": "3.4.3",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.beeper.android",
+  "version": "4.60.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.bereal.ft",
+  "version": "3.97.0",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.binarysmith.webclipwidget.ad",
+  "version": "1.9.28.10a",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.booking",
+  "version": "63.8.0.11",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.brave.browser",
+  "version": "1.96.61",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.btg.pactual.banking",
+  "version": "2.51.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.btg.pactual.digital.mobile",
+  "version": "9.6.191",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.bumble.app",
+  "version": "5.487.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.checkitt",
+  "version": "5.0.0",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.cloudflare.onedotonedotonedotone",
+  "version": "6.38.9",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.collabora.libreoffice",
+  "version": "26.04.3.1",
+  "origin": null
+ },
+ {
+  "package": "com.comuto",
+  "version": "6.33.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.devolutions.remotedesktopmanager",
+  "version": "2026.3.0.21",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.dgt.midgt",
+  "version": "1.19.7",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.dhl.exp.dhlmobile",
+  "version": "6.1.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.diegonmarcos.cloudcalendar",
+  "version": "0.3.0-dev (sha-fdd96ba5)",
+  "origin": null
+ },
+ {
+  "package": "com.diegonmarcos.comms.contacts",
+  "version": "1.6.0",
+  "origin": "com.diegonmarcos.superapp"
+ },
+ {
+  "package": "com.digibites.accubattery",
+  "version": "2.1.8",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.diotek.sec.lookup.dictionary",
+  "version": "3.003.012",
+  "origin": null
+ },
+ {
+  "package": "com.downdogapp",
+  "version": "7.4.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.ebay.kleinanzeigen",
+  "version": "2026.41.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.epicgames.portal",
+  "version": "0.10.0",
+  "origin": "com.epicgames.portal"
+ },
+ {
+  "package": "com.esim.numero",
+  "version": "18.73",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.facebook.orca",
+  "version": "581.0.0.49.91",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.fatsecret.android",
+  "version": "11.8.1.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.flyersoft.moonreader",
+  "version": "10.7",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.foxdebug.acode",
+  "version": "1.12.0",
+  "origin": "com.google.android.packageinstaller"
+ },
+ {
+  "package": "com.garmin.android.apps.connectmobile",
+  "version": "5.30.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.garmin.android.apps.explore",
+  "version": "4.16",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.garmin.android.apps.messenger",
+  "version": "3.1.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.garmin.connectiq",
+  "version": "2.49",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.ghisler.android.TotalCommander",
+  "version": "3.62d",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.github.android",
+  "version": "1.212.0",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.google.android.apps.authenticator2",
+  "version": "7.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.bard",
+  "version": "1.0.971139365",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.docs",
+  "version": "2.26.397.0.all.alldpi",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.docs.editors.docs",
+  "version": "1.26.401.05.90",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.docs.editors.sheets",
+  "version": "1.26.391.02.90",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.fitness",
+  "version": "2026.08.27.00.arm64-v8a.release",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.labs.language.tailwind",
+  "version": "2025.10.28.829179770",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.magazines",
+  "version": "5.144.0.828494735",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.maps",
+  "version": "26.40.00.989295350",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.messaging",
+  "version": "messages.android_20260924_00_RC00.phone_samsung_dynamic",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.photos",
+  "version": "7.95.0.989626323",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.tachyon",
+  "version": "379.0.989469524.duo.android_20260928.02_p0.s",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.tasks",
+  "version": "2026.09.28.989328701.0-release",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.translate",
+  "version": "10.38.67.991942559.4-release",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.apps.walletnfcrel",
+  "version": "26.39.993999421",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.calculator",
+  "version": "9.0 (827797324)",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.calendar",
+  "version": "2026.38.0-989268529-release",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.contacts",
+  "version": "4.89.27.989965096",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.gm",
+  "version": "2026.09.21.992487546.Release",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.googlequicksearchbox",
+  "version": "17.64.15.ve.arm64",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.inputmethod.latin",
+  "version": "16.3.5.821569955-release-arm64-v8a",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.android.youtube",
+  "version": "21.40.161",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.google.audio.hearing.visualization.accessibility.scribe",
+  "version": "9.0.965827460",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.hostelworld.app",
+  "version": "9.109.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.imaginecurve.curve.prd",
+  "version": "5.59.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.instagram.android",
+  "version": "413.0.0.41.84",
+  "origin": "com.facebook.system"
+ },
+ {
+  "package": "com.instagram.barcelona",
+  "version": "413.0.0.40.83",
+  "origin": "com.facebook.system"
+ },
+ {
+  "package": "com.linkedin.android",
+  "version": "4.1.1255.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.lonelycatgames.Xplore",
+  "version": "4.49.10",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.mattermost.rn",
+  "version": "2.44.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.medantapatient.app",
+  "version": "1.7",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.memrise.android.memrisecompanion",
+  "version": "2.9_3719864_release",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.mi.earphone",
+  "version": "1.38.0i",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.microsoft.copilot",
+  "version": "30.0.440814001",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.microsoft.lists.public",
+  "version": "1.0.79",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.microsoft.office.onenote",
+  "version": "16.0.19127.20320",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.microsoft.office.outlook",
+  "version": "5.2637.3",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.microsoft.skydrive",
+  "version": "7.64.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.microsoft.todos",
+  "version": "2.143.8740.02.beta",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.mo2o.alsa",
+  "version": "9.9.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.mobidia.android.mdm",
+  "version": "9.10.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.mobillium.airalo",
+  "version": "2.8.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.mobisystems.fileman",
+  "version": "10.7.54240",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.netflix.mediaclient",
+  "version": "9.86.0 build 5 74673",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.nomadmania.presentation",
+  "version": "2.0.63",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.paypal.android.p2pmobile",
+  "version": "10.16.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.phlox.simpleserver",
+  "version": "3.4.6",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.pinterest",
+  "version": "14.39.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.playdead.limbo.egs.full",
+  "version": "1.21",
+  "origin": "com.epicgames.portal"
+ },
+ {
+  "package": "com.rarlab.rar",
+  "version": "7.20.build129",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.revolut.revolut",
+  "version": "10.150.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.ridedott.rider",
+  "version": "2.249.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.rome2rio.www.rome2rio",
+  "version": "2.3.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.rsupport.rs.activity.rsupport.aas2",
+  "version": "1.5 (build 457)",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.ryanair.cheapflights",
+  "version": "3.241.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.samsung.android.app.contacts",
+  "version": "15.7.54.2",
+  "origin": null
+ },
+ {
+  "package": "com.samsung.android.app.notes",
+  "version": "4.4.33.5",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.samsung.android.app.reminder",
+  "version": "12.6.02.6",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.app.routines",
+  "version": "4.8.07.1",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.app.spage",
+  "version": "7.6.04.5",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.app.watchmanager",
+  "version": "2.2.72.26092361",
+  "origin": "com.samsung.android.app.watchmanager"
+ },
+ {
+  "package": "com.samsung.android.bixby.agent",
+  "version": "3.5.48.6",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.calendar",
+  "version": "12.6.02.5",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.dialer",
+  "version": "15.7.54.2",
+  "origin": null
+ },
+ {
+  "package": "com.samsung.android.email.provider",
+  "version": "6.2.15.11",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.game.gamehome",
+  "version": "8.0.05.8",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.lool",
+  "version": "13.8.82.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.samsung.android.mdx",
+  "version": "3.6.01.2",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.android.messaging",
+  "version": "16.0.10.49",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.samsung.knox.securefolder",
+  "version": "1.9.40.11",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.sec.android.app.camera",
+  "version": "15.0.02.37",
+  "origin": null
+ },
+ {
+  "package": "com.sec.android.app.clockpackage",
+  "version": "12.4.10.10",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.sec.android.app.myfiles",
+  "version": "15.2.04.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.sec.android.app.popupcalculator",
+  "version": "12.4.00.9",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.sec.android.app.samsungapps",
+  "version": "4.6.11.4",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.sec.android.app.voicenote",
+  "version": "21.5.85.80",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.sec.android.easyMover",
+  "version": "3.7.73.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.sec.android.gallery3d",
+  "version": "15.6.06.0",
+  "origin": "com.sec.android.app.samsungapps"
+ },
+ {
+  "package": "com.sensorberg.oneaccess",
+  "version": "3.5.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.shazam.android",
+  "version": "16.18.0-251106",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.skiplagged",
+  "version": "3.14.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.smlnskgmail.jaman.hashchecker",
+  "version": "3.7.2",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.spanishcoders.pepephone",
+  "version": "v22.24.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.spotify.music",
+  "version": "9.1.88.2204",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.strava",
+  "version": "483.10",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.termux",
+  "version": "0.118.3",
+  "origin": "com.google.android.packageinstaller"
+ },
+ {
+  "package": "com.termux.nix",
+  "version": "0.118.0_v0.3.7_nix",
+  "origin": "com.google.android.packageinstaller"
+ },
+ {
+  "package": "com.termux.nix.boot",
+  "version": "1.0.0",
+  "origin": "com.diegonmarcos.superapp"
+ },
+ {
+  "package": "com.thetrainline",
+  "version": "415.0.0.182626",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.tinder",
+  "version": "16.30.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.trafi.whitelabel.bvg",
+  "version": "5.37.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.transferwise.android",
+  "version": "9.45.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.trello",
+  "version": "2025.22.2.56759",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.trianguloy.openInWhatsapp",
+  "version": "5.4.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.ubercab",
+  "version": "4.604.10002",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.ubnt.usurvey",
+  "version": "2.13.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.uptodown",
+  "version": "7.40",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.urbandroid.sleep",
+  "version": "20260923",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.urbansportsclub",
+  "version": "7.11.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.viber.voip",
+  "version": "28.11.0.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.viscouspot.gitsync",
+  "version": "1.8.65",
+  "origin": "org.fdroid.fdroid"
+ },
+ {
+  "package": "com.wbd.stream",
+  "version": "7.13.0.141",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.werewolfapps.online",
+  "version": "2.7.182",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.wggesucht.android",
+  "version": "2.0.31",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.whatsapp",
+  "version": "2.26.39.74",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.whatsapp.w4b",
+  "version": "2.26.39.72",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.wikiloc.wikilocandroid",
+  "version": "3.64.5",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "com.wireguard.android",
+  "version": "1.0.20260315",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.wizzair.WizzAirApp",
+  "version": "8.4.3",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.x8bit.bitwarden",
+  "version": "2026.9.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "com.xe.currency",
+  "version": "8.0.7",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.congstar.meincongstar",
+  "version": "6.20.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.deutschepost.postident",
+  "version": "34.0.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.dhl.paket",
+  "version": "10.0.0.150 (d14fcfc30)",
+  "origin": "com.aurora.store"
+ },
+ {
+  "package": "de.eos.uptrade.android.fahrinfo.berlin",
+  "version": "8.15.2 (216)",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.flixbus.app",
+  "version": "9.68.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.is24.android",
+  "version": "31.1.0.1571-202609280803",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "de.number26.android",
+  "version": "4.60.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "dk.shelter.app",
+  "version": "3.0.13",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ee.mtakso.client",
+  "version": "CA.186.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "es.aeat.pin24h",
+  "version": "6.2.10",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "es.bancosantander.apps",
+  "version": "10.32.40",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "es.correos.app",
+  "version": "1.14.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "es.fnmtrcm.ceres.certificadoDigitalFNMT",
+  "version": "1.2.21",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "es.gob.interior.policia.midni",
+  "version": "1.0.3",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "eu.faircode.email",
+  "version": "1.2338",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "eu.faircode.netguard",
+  "version": "2.334",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "im.vector.app",
+  "version": "1.6.66",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "io.japp.blackscreen",
+  "version": "1.9.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "io.vicoach",
+  "version": "2.47.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "md.obsidian",
+  "version": "1.14.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "me.proton.android.drive",
+  "version": "3.1.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "mobi.eup.easygerman",
+  "version": "2.7.8",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "moe.shizuku.privileged.api",
+  "version": "13.6.0.r1091.b844bc49",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "net.esim.twa",
+  "version": "9.0.0.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "net.skyscanner.android.main",
+  "version": "7.211",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "net.techet.netanalyzerlite.an",
+  "version": "103.12.2",
+  "origin": "com.google.android.packageinstaller"
+ },
+ {
+  "package": "org.chromium.webapk.a64d263d6f7d935c4_v2",
+  "version": "1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "org.chromium.webapk.afdfe84a0acbbed2f_v2",
+  "version": "1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "org.faudroids.werewolf",
+  "version": "3.0.19",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "org.fdroid.fdroid",
+  "version": "1.23.2",
+  "origin": "com.google.android.packageinstaller"
+ },
+ {
+  "package": "org.kde.kdeconnect_tp",
+  "version": "1.34.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "org.telegram.messenger",
+  "version": "12.10.6",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "org.thoughtcrime.securesms",
+  "version": "8.29.4",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "pub.hanks.appfolderwidget",
+  "version": "11.0.6",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "ride.app",
+  "version": "9.50",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "taxi.android.client",
+  "version": "13.11.0",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "travel.goki.app",
+  "version": "1.122.1",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "tv.arte.plus7",
+  "version": "6.5",
+  "origin": "com.uptodown"
+ },
+ {
+  "package": "vivino.web.app",
+  "version": "2026.40.2",
+  "origin": "com.android.vending"
+ },
+ {
+  "package": "xyz.chatboxapp.chatbox",
+  "version": "1.23.4",
+  "origin": "com.android.vending"
+ }
+]

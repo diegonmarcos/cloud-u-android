@@ -54,8 +54,11 @@ class StoreResolverTest {
     private val sources get() = PhoneAppActions.sources(ctx)
     private val cfg get() = PhoneAppActions.resolver(sources)
 
+    // Since play-anon, every app Play publishes has a rung this store fetches
+    // from itself, so the declaration holds no Play-only row; an UNDECLARED
+    // package is the Play-only case (it resolves to the Play hand-off alone).
     private fun playOnly(): SourceResolver.External =
-        cfg.apps.values.first { it.needsPlay }
+        SourceResolver.resolve(cfg, "com.example.nobody.declared")
     private fun direct(): SourceResolver.External =
         cfg.apps.values.first { !it.needsPlay && it.hasPlay }
 
@@ -70,7 +73,13 @@ class StoreResolverTest {
         assertTrue("the three kinds with behaviour in the resolver must stay declared",
             c.order.containsAll(listOf(SourceResolver.KIND_VENDOR, SourceResolver.KIND_FDROID, SourceResolver.KIND_PLAY)))
         assertTrue("no external apps declared", c.apps.isNotEmpty())
-        assertTrue("the declaration must hold at least one Play-only app to keep the badge honest", c.apps.values.any { it.needsPlay })
+        assertTrue("the declaration must hold at least one app no rung of ours can fetch, to keep the hand-off honest",
+            c.apps.values.any { it.needsPlay })
+        assertTrue("play-anon must be a declared kind ranked between fdroid and the hand-offs",
+            c.order.indexOf(SourceResolver.KIND_PLAY_ANON) == c.order.indexOf(SourceResolver.KIND_FDROID) + 1)
+        assertNotNull("play-anon needs its declared dispensers", c.playAnon)
+        for (app in c.apps.values) if (app.sources.any { it is SourceResolver.Source.PlayAnon })
+            assertFalse("${app.pkg} has a play-anon rung but still needs Play", app.needsPlay)
         assertTrue("the declaration must hold at least one app this store can install itself", c.apps.values.any { !it.needsPlay })
         for (app in c.apps.values) {
             val ranks = app.sources.map { c.order.indexOf(it.kind) }
@@ -89,10 +98,19 @@ class StoreResolverTest {
 
     @Test
     fun `mutation - a URL on a Play rung is refused`() {
-        val pkg = playOnly().pkg
-        val m = mutated { it.getJSONObject("resolver").getJSONObject("apps").getJSONObject(pkg)
-            .getJSONArray("sources").getJSONObject(0).put("apk", "https://example.invalid/fake.apk") }
-        assertFalse("a play source with a url parsed", runCatching { SourceResolver.config(m) }.isSuccess)
+        for (kind in listOf(SourceResolver.KIND_PLAY, SourceResolver.KIND_PLAY_ANON)) {
+            val app = cfg.apps.values.first { a -> a.sources.any { it.kind == kind } }
+            val i = app.sources.indexOfFirst { it.kind == kind }
+            val m = mutated { it.getJSONObject("resolver").getJSONObject("apps").getJSONObject(app.pkg)
+                .getJSONArray("sources").getJSONObject(i).put("apk", "https://example.invalid/fake.apk") }
+            assertFalse("a $kind source with a url parsed", runCatching { SourceResolver.config(m) }.isSuccess)
+        }
+    }
+
+    @Test
+    fun `mutation - a play-anon kind without its declared dispensers is refused`() {
+        val m = mutated { it.getJSONObject("resolver").remove("play_anon") }
+        assertFalse("play-anon parsed with no play_anon block", runCatching { SourceResolver.config(m) }.isSuccess)
     }
 
     @Test
@@ -219,7 +237,8 @@ class StoreResolverTest {
         val badge = ctx.getString(StoreR.string.store_phone_badge_needs_play)
         for (a in cfg.apps.values) {
             val line = states.getValue(a.pkg).text.toString()
-            if (a.needsPlay) assertTrue("${a.pkg} is Play-only but shows no badge: $line", line.contains(badge))
+            if (a.needsPlay && a.handoff is SourceResolver.Source.Play)
+                assertTrue("${a.pkg} is Play-only but shows no badge: $line", line.contains(badge))
             else assertFalse("${a.pkg} has a direct rung but shows the Play badge: $line", line.contains(badge))
         }
 

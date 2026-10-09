@@ -45,6 +45,8 @@ object SourceResolver {
     const val KIND_VENDOR = "vendor"
     const val KIND_FDROID = "fdroid"
     const val KIND_PLAY = "play"
+    /** Google Play's own servers, reached with an anonymous session ([PlayAnonFetcher]). */
+    const val KIND_PLAY_ANON = "play-anon"
 
     /**
      * #627 ONE DECLARED KIND. Read from `resolver.kinds`, one per entry in
@@ -94,6 +96,10 @@ object SourceResolver {
             val versionRe: Regex?,
         ) : Source(KIND_VENDOR)
         object FDroid : Source(KIND_FDROID)
+        /** Fetches: the bytes come from Play's CDN, each split checked against
+         *  the sha256 Play's delivery gives. NOT a hand-off, so an app with this
+         *  rung is installable by this store and carries no 'needs Play' badge. */
+        object PlayAnon : Source(KIND_PLAY_ANON)
         object Play : Source(KIND_PLAY) {
             override val handoff: Boolean get() = true
         }
@@ -105,7 +111,12 @@ object SourceResolver {
         }
     }
 
-    class External(val pkg: String, val label: String, val sources: List<Source>, val declared: Boolean) {
+    class External(
+        val pkg: String, val label: String, val sources: List<Source>, val declared: Boolean,
+        /** Declared reason no public source exists (`"unresolved": "<why>"`). Its
+         *  ladder is empty: nothing to install from, and the row says why. */
+        val unresolved: String? = null,
+    ) {
         /** The rungs this store can download from itself. */
         val direct: List<Source> get() = sources.filter { !it.handoff }
         /** No rung we can serve: the badge, and no Install of our own. */
@@ -137,6 +148,8 @@ object SourceResolver {
         /** The installer package whose store page is the Play rung — looked up in the #564 map, never named in code. */
         val playInstaller: String,
         val apps: Map<String, External>,
+        /** `resolver.play_anon`; null when the map declares no play-anon kind. */
+        val playAnon: PlayAnonFetcher.Config? = null,
     ) {
         /** #627 one declared kind by id, for a label or an installer. */
         fun kind(id: String?): Kind? = kinds.firstOrNull { it.id == id }
@@ -173,7 +186,13 @@ object SourceResolver {
         val byId = kinds.associateBy { it.id }
         val apps = r.getJSONObject("apps")
         val parsed = apps.keys().asSequence().sorted().associateWith { pkg -> external(pkg, apps.getJSONObject(pkg), order, byId) }
-        return Config(order, kinds, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed)
+        // A play-anon kind with no play_anon block is a fetcher with no dispenser,
+        // and a play_anon block with no kind is configuration nothing reads.
+        require((KIND_PLAY_ANON in named) == r.has("play_anon")) {
+            "resolver.kinds names '$KIND_PLAY_ANON' iff resolver.play_anon is declared"
+        }
+        val playAnon = r.optJSONObject("play_anon")?.let { PlayAnonFetcher.config(it) }
+        return Config(order, kinds, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed, playAnon)
     }
 
     /** The declared ladder, or the Play rung alone for a package the map does not know. */
@@ -181,6 +200,12 @@ object SourceResolver {
         cfg.apps[pkg] ?: External(pkg, pkg, listOf(Source.Play), declared = false)
 
     private fun external(pkg: String, o: JSONObject, order: List<String>, kinds: Map<String, Kind>): External {
+        val unresolved = o.optString("unresolved").ifEmpty { null }
+        if (unresolved != null) {
+            // An app with no public source says so, and claims no rung.
+            require((o.optJSONArray("sources")?.length() ?: 0) == 0) { "$pkg: unresolved carries no sources" }
+            return External(pkg, o.optString("label").ifEmpty { pkg }, emptyList(), declared = true, unresolved = unresolved)
+        }
         val arr = o.getJSONArray("sources")
         val list = (0 until arr.length()).map { i -> source(arr.getJSONObject(i), kinds) }
         // The ladder must be a subsequence of `order`: a Play rung ABOVE a
@@ -194,6 +219,12 @@ object SourceResolver {
 
     private fun source(o: JSONObject, kinds: Map<String, Kind>): Source = when (val kind = o.getString("kind")) {
         KIND_FDROID -> Source.FDroid
+        KIND_PLAY_ANON -> {
+            // The URLs come from Play's delivery at fetch time; a rung that
+            // names one is a guess about where Play keeps today's bytes.
+            require(o.length() == 1) { "a play-anon source carries nothing but its kind: $o" }
+            Source.PlayAnon
+        }
         KIND_PLAY -> {
             // Google Play has no public APK URL. A Play rung that names one is
             // a lie about where the bytes come from, so it does not parse.
@@ -271,19 +302,19 @@ object SourceResolver {
 
     /** Local facts only — what a row shows before Check all has run. */
     fun local(ctx: Context, app: External): Check {
-        val have = installed(ctx, app.pkg) ?: return Check.NotInstalled(app.sources.first().kind, app.needsPlay)
+        val have = installed(ctx, app.pkg) ?: return Check.NotInstalled(app.sources.firstOrNull()?.kind, app.needsPlay)
         return Check.Installed(have.first, have.second, null, if (app.declared) Note.NONE else Note.UNDECLARED)
     }
 
     /** Blocking probe: the first rung that has an opinion decides. */
     fun check(ctx: Context, cfg: Config, app: External): Check {
-        val have = installed(ctx, app.pkg) ?: return Check.NotInstalled(app.sources.first().kind, app.needsPlay)
+        val have = installed(ctx, app.pkg) ?: return Check.NotInstalled(app.sources.firstOrNull()?.kind, app.needsPlay)
         val (name, code) = have
         if (!app.declared) return Check.Installed(name, code, null, Note.UNDECLARED)
         for (src in app.sources) {
             if (src is Source.Play) return Check.Installed(name, code, src.kind, Note.PLAY_MANAGES)
             if (src is Source.Store) return Check.Installed(name, code, src.kind, Note.STORE_MANAGES)
-            val probed = try { remoteVersion(cfg, app, src) } catch (t: Throwable) {
+            val probed = try { remoteVersion(ctx, cfg, app, src) } catch (t: Throwable) {
                 return Check.Unknown(name, "${src.kind}: ${t.message ?: t.javaClass.simpleName}")
             }
             val remote = probed ?: return Check.Installed(name, code, src.kind, Note.NO_FEED)
@@ -321,7 +352,9 @@ object SourceResolver {
         return 0
     }
 
-    private fun remoteVersion(cfg: Config, app: External, src: Source): Remote? = when (src) {
+    private fun playAnon(cfg: Config) = cfg.playAnon ?: error("resolver.play_anon is not declared")
+
+    private fun remoteVersion(ctx: Context, cfg: Config, app: External, src: Source): Remote? = when (src) {
         is Source.Vendor -> src.feed?.let { url ->
             val feed = getJson(url) ?: error("feed $url answered 404")
             val name = (path(feed, src.versionName) as? String)?.let { normalise(src, it) }
@@ -330,6 +363,7 @@ object SourceResolver {
         }
         is Source.FDroid -> FDroidIndex.suggested(cfg.fdroid, app.pkg)?.let { Remote(it.first, it.second) }
             ?: error("${app.pkg} is not in the F-Droid api")
+        is Source.PlayAnon -> PlayAnonFetcher.details(ctx, playAnon(cfg), app.pkg).let { Remote(it.versionName, it.versionCode) }
         is Source.Play -> null
         // No public version endpoint exists for these — Galaxy Store's API is
         // device-authenticated and app-internal, and Aurora reads Play's index
@@ -355,6 +389,7 @@ object SourceResolver {
     fun fetch(ctx: Context, cfg: Config, app: External, src: Source): VerifiedApk = when (src) {
         is Source.Vendor -> fetchVendor(ctx, app, src)
         is Source.FDroid -> identity(ctx, app.pkg, FDroidIndex.fetch(ctx, cfg.fdroid, app.pkg))
+        is Source.PlayAnon -> identity(ctx, app.pkg, PlayAnonFetcher.fetch(ctx, playAnon(cfg), app.pkg))
         is Source.Play -> error("${app.label} publishes no APK outside Google Play")
         is Source.Store -> error("${app.label} publishes no APK outside ${src.kind} — that store " +
             "hands out no URL we can fetch, so the row deep-links into it instead")

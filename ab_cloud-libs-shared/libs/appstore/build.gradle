@@ -84,6 +84,15 @@ android {
         buildConfig = true
     }
 
+    // The play-anon rung's device profile, copied byte-for-byte from
+    // AuroraOSS/gplayapi at the tag pinned in ../gplayapi/data/gplayapi-pin.json
+    // (GPL-3.0-or-later; licence beside it). Data only — nothing is compiled.
+    sourceSets {
+        main {
+            assets.srcDir "${projectDir}/../gplayapi/profiles"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

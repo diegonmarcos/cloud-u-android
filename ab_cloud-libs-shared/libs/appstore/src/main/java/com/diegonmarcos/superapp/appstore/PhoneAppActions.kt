@@ -62,6 +62,10 @@ object PhoneAppActions {
                 storePage(sources, cfg.playInstaller, app.pkg)?.takeIf { app.hasPlay }
                     ?.let { (label, page) -> out += Action(Kind.ORIGIN, label, page, null) }
             }
+            // No public source at all: say why, and offer no store page that
+            // does not have it.
+            app.unresolved != null -> out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
+                ctx.getString(R.string.store_phone_state_unresolved, app.unresolved))
             else -> {
                 // #627 HAND OFF TO THE STORE THIS APP ACTUALLY NEEDS. This used
                 // to be Play unconditionally, so an app published only on the

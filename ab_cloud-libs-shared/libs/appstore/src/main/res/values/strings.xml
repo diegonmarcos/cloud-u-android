@@ -96,6 +96,7 @@
     <string name="store_phone_checking">checking…</string>
     <string name="store_phone_count_missing">%1$d not installed, %2$d of them need Play</string>
     <string name="store_phone_badge_needs_play">needs Play</string>
+    <string name="store_phone_state_unresolved">\u25cb not installed  \u00b7  no public source: %1$s</string>
     <string name="store_phone_state_needs_store">\u25cb not installed  \u00b7  %1$s publishes no APK we can fetch; its own page is the official path</string>
     <string name="store_phone_state_needs_play">◯ not installed  ·  %1$s  ·  Google Play publishes no APK; the Play button is the official path</string>
     <string name="store_phone_state_not_installed">◯ not installed  ·  installs via %1$s</string>
