@@ -120,9 +120,10 @@ grep -q 'routes = { name -> com.diegonmarcos.superapp.network.FleetDns.bridgeRou
   && ok "SuperApp: the bridge's routes are the DNS page's preset; StoreDns resolves through the bridge" \
   || bad "SuperApp does not wire the bridge from FleetDns into StoreDns"
 grep -q 'fun bridgeRoutes(ctx: Context, name: String): List<FleetDnsBridge.Route>' "$FLEETDNS" \
-  && grep -q 'return if (servers.isEmpty()) FleetDnsBridge.mirror(label)' "$FLEETDNS" \
+  && grep -q 'servers.isEmpty() -> FleetDnsBridge.mirror(label)' "$FLEETDNS" \
+  && grep -q 'up && fleet.isNotEmpty() && isMeshName(decl, name) ->' "$FLEETDNS" \
   && grep -q 'upstreamsFor(decl, name, up, promised(decl, p.preset, p.fallbacks, p.chosen, fleet, up), fleet)' "$FLEETDNS" \
-  && ok "FleetDns.bridgeRoutes: the promised servers (split for mesh names), else Mirror" \
+  && ok "FleetDns.bridgeRoutes: the promised servers (fleet first for a mesh name while the mesh is up), else Mirror" \
   || bad "FleetDns.bridgeRoutes does not derive the routes from the preset"
 grep -q 'FleetDnsBridge.resolve(name)' "$FRAG" && ! grep -q 'InetAddress.getAllByName' "$FRAG" \
   && ok "the DNS page's Test is the same resolve() the downloader uses" \
