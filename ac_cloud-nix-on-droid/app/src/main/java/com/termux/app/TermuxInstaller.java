@@ -480,13 +480,12 @@ final class TermuxInstaller {
     private static void extractAndSwap(Context context, LibBootstrapManifest libManifest) throws Exception {
         Error error;
 
-        // #863 wipe the staging dir completely (read-only Nix dirs too) and any leftover usr-old
-        try {
-            BootstrapStaging.wipe(TERMUX_STAGING_PREFIX_DIR.toPath());
-            BootstrapStaging.wipe(PREFIX_OLD_DIR.toPath());
-        } catch (IOException e) {
-            throw new BootstrapFailure(BootstrapStaging.bound("Could not wipe the bootstrap staging directory: " + e));
-        }
+        // #863 wipe the staging dir completely (read-only Nix dirs too) and any leftover usr-old.
+        // startup parity with the termux terminal's wipe_rootfs: quiet and never fatal, one summary line.
+        int leftover = BootstrapStaging.wipeQuiet(TERMUX_STAGING_PREFIX_DIR.toPath())
+            + BootstrapStaging.wipeQuiet(PREFIX_OLD_DIR.toPath());
+        if (leftover != 0)
+            Logger.logWarn(LOG_TAG, leftover + " old entries in usr-staging/usr-old could not be removed; continuing");
 
         // Create prefix staging directory if it does not already exist and set required permissions
         error = TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);

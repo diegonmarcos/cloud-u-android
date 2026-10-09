@@ -42,6 +42,7 @@ every phone. A missing or non-positive ceiling is itself a failure.
 Usage: verify_login_closure.py <rootfs.zip> <build.json> <login-closure.json>
 """
 import fnmatch
+import hashlib
 import json
 import os
 import posixpath
@@ -423,6 +424,10 @@ def verify(fs: Rootfs, app_id, profile_link, commands, closure) -> list:
             continue
         runnable(ns, target, f"run: {rel}", problems, seen)
 
+    for rel in closure.get("present", []):
+        if rel not in fs.files:
+            problems.append(f"present: {rel} is not in the zip")
+
     for cmd in commands:
         literal = f"/{profile_link}/bin/{cmd}"
         try:
@@ -452,6 +457,30 @@ def declared_commands(build_json: str, closure: dict) -> list:
     return list(dict.fromkeys(toolset + tooling["binaries"] + closure.get("path_commands", [])))
 
 
+def linux_tool_problems(fs: Rootfs, store_json: str, closure: dict) -> list:
+    """store.json::linux_tools against the zip: every pinned file is baked at its install path,
+    byte for byte what the declaration pins, chmod-ed when it is a CLI, and named in
+    login-closure.json (run for a CLI, present for the greeting) so the closure check above
+    covers it. The same declaration build-rootfs.sh installs into the termux tree."""
+    block = json.load(open(store_json))["linux_tools"]
+    named = set(closure.get("run", [])) | set(closure.get("present", []))
+    problems = []
+    for name, f in sorted(block["files"].items()):
+        rel = f["install"]
+        if rel not in fs.files:
+            problems.append(f"linux_tools: {name} is not baked at /{rel}")
+            continue
+        got = hashlib.sha256(fs.zf.read(rel)).hexdigest()
+        if got != f["sha256"]:
+            problems.append(f"linux_tools: {name} at /{rel} is sha256 {got[:12]}, store.json pins {f['sha256'][:12]}")
+        if int(f["mode"], 8) & 0o111 and rel not in fs.executables:
+            problems.append(f"linux_tools: {name} (/{rel}) is not in EXECUTABLES.txt, so it is never chmod-ed +x")
+        if rel not in named:
+            problems.append(f"linux_tools: login-closure.json names no /{rel} under run or present, "
+                            f"so {name} escapes the closure check")
+    return problems
+
+
 def size_problems(zip_path: str, closure: dict) -> list:
     """#665: the zip on disk against the declared ceiling. The ceiling is required."""
     ceiling = closure.get("size_ceiling_bytes")
@@ -476,8 +505,12 @@ def main(argv) -> int:
     closure = json.load(open(closure_json))
     commands = declared_commands(build_json, closure)
     with zipfile.ZipFile(zip_path) as zf:
-        problems = verify(Rootfs(zf), bootstrap["package_name_rewrite"]["to"],
+        fs = Rootfs(zf)
+        problems = verify(fs, bootstrap["package_name_rewrite"]["to"],
                           tooling["profile_link"], commands, closure)
+        problems += linux_tool_problems(
+            fs, posixpath.join(posixpath.dirname(posixpath.abspath(build_json)),
+                               "..", "ab_cloud-terminal-store", "store.json"), closure)
     problems += size_problems(zip_path, closure)
     for p in problems:
         print(f"FAIL: {p}", file=sys.stderr)

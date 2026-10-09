@@ -67,6 +67,31 @@ P
 python3 "$inv" refresh . --offline 2>/dev/null
 expect 1 "top-level directory with no curated licence (refreshed anyway)"
 
+# ── files fetched at build time from another repository (store.json::linux_tools) ──
+fetched_fixture() {
+  fixture; mkdir -p ab_cloud-terminal-store
+  cat > ab_cloud-terminal-store/store.json <<'J'
+{"linux_tools":{"repo":"o/r","ref":"92e02c639966048c428e55cea1a204ef495115b3",
+ "licence":{"spdx":"PolyForm-Noncommercial-1.0.0","holder":"H"},
+ "files":{"a":{"path":"d/a"},"b":{"path":"d/b"}}}}
+J
+  python3 - <<'P'
+import json; p="licenses/curated.json"; d=json.load(open(p)); d["directories"]["ab_cloud-terminal-store"]={"licence":"LicenseRef-NoLicenseGranted"}; json.dump(d,open(p,"w"))
+P
+  git add -A
+}
+fetched_fixture
+expect 1 "files fetched at build time with no inventory entry"
+python3 "$inv" refresh . --offline 2>/dev/null; git add -A
+expect 0 "fetched files recorded by refresh"
+lic="$(python3 -c 'import json; print(json.load(open("licenses/inventory.json"))["entries"]["fetched:o/r:d/a"]["licence"])')"
+if [ "$lic" = "PolyForm-Noncommercial-1.0.0" ]; then echo "ok   a fetched file carries the licence declared beside its pin"; else echo "FAIL fetched licence is '$lic'"; fail=1; fi
+python3 - <<'P'
+import json; p="ab_cloud-terminal-store/store.json"; d=json.load(open(p)); d["linux_tools"]["files"]["c"]={"path":"d/c"}; json.dump(d,open(p,"w"))
+P
+git add -A
+expect 1 "a further fetched file added to the declaration"
+
 # ── changes that must NOT need an entry ──
 fixture; sed -i 's/core:1.0.0/core:1.1.0/' app/build.gradle; git add -A
 expect 0 "version bump of a recorded coordinate"

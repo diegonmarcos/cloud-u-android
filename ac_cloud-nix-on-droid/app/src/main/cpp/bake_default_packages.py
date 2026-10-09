@@ -57,6 +57,17 @@ def load_render_store():
     return module
 
 
+def load_linux_tools():
+    """ab_cloud-terminal-store/fetch-linux-tools.py, imported by path: the one fetcher both bakes use."""
+    path = STORE_SRC / "fetch-linux-tools.py"
+    if not path.is_file():
+        raise ValueError(f"the shared linux-tools fetcher is missing: {path}")
+    spec = importlib.util.spec_from_file_location("fetch_linux_tools", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def profile_missing(generation: str, tools) -> list:
     """#644 -- declared tool names with nothing behind them in the realized profile.
 
@@ -387,6 +398,7 @@ cloud_trace "bin/login: start, $(cloud_jobctl $$)"
 """
 
 
+# startup-step: storage_links
 def storage_setup(shared_root_name: str) -> str:
     """#612/#736: bin/login's shared-storage block. ~/emulated and ~/cloud-drive-shared-store are
     SYMLINKS to /storage/emulated/0 and its <shared_root_name> store. bin/login runs proot with no
@@ -553,6 +565,7 @@ def resolv_conf_body(nameservers: list) -> str:
     return "".join(f"nameserver {n}\n" for n in nameservers)
 
 
+# startup-step: dns_resolver
 def patch_bin_login_dns(bin_login: str, app_id: str, resolv_conf: str) -> str:
     """#758 -p plus a bind of the baked resolv.conf ($PREFIX/<resolv_conf>) over
     /etc/resolv.conf, inserted right after the /etc bind of bin/login's proot exec."""
@@ -574,6 +587,7 @@ def shizuku_client_binds() -> list:
     return client.get("binds") or []
 
 
+# startup-step: rish_bridge
 def patch_bin_login_rish(bin_login: str, app_id: str) -> str:
     """Put `rish` into the rootfs, mirroring patch_bin_login_dns: bind each
     shizuku_client.binds[] entry's app-written source ($PREFIX/<stage>) onto its
@@ -1009,6 +1023,24 @@ def main() -> int:
                     new_executables.append(rel)
             print(f"#644 store: {len(store_files)} files at {store_dir}, "
                   f"{len(store_tools)} declared tools", file=sys.stderr)
+
+            # ── store.json::linux_tools: the pinned linux-store / linux-account CLIs and the fish
+            # greeting, at the same absolute paths the termux tree gets them (build-rootfs.sh).
+            # startup-step: linux_tools_install
+            try:
+                linux_tools = load_linux_tools().fetch()
+            except (ValueError, OSError) as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+            for rel, (data, mode) in sorted(linux_tools.items()):
+                if rel in existing or rel in new_files:
+                    print(f"FAIL: the input zip already carries {rel}; a second entry would make "
+                          "which one wins depend on extraction order", file=sys.stderr)
+                    return 1
+                new_files[rel] = data
+                if mode & 0o111:
+                    new_executables.append(rel)
+            print(f"linux_tools: {len(linux_tools)} files baked ({', '.join(sorted(linux_tools))})", file=sys.stderr)
 
             fallback_body = (
                 "# #595 -- baked default tooling, sourced by usr/lib/login-inner when\n"

@@ -86,6 +86,21 @@ public class Harness {
     write(f2.resolve("usr/bin/login"), "keep");
     try { BootstrapStaging.swap(f2.resolve("missing-staging"), f2.resolve("usr"), f2.resolve("usr-old")); } catch (java.io.IOException e) { }
     check(Files.exists(f2.resolve("usr/bin/login")), "a failed staging -> usr rename restores the old usr/");
+    // wipeQuiet (the port of the termux terminal's wipe_rootfs): a read-only store tree goes, and a path it cannot
+    // empty is COUNTED, never thrown -- a stale leftover costs one log line, not the start.
+    Path q = Files.createDirectories(files.resolve("quiet"));
+    write(q.resolve("nix/store/abc-pkg/bin/tool"), "x"); write(q.resolve("keep.me"), "x");
+    q.resolve("nix/store/abc-pkg/bin").toFile().setWritable(false, false);
+    q.resolve("nix/store/abc-pkg").toFile().setWritable(false, false);
+    String werr = null; int wleft = -1;
+    try { wleft = BootstrapStaging.wipeQuiet(q); } catch (Throwable t) { werr = t.toString(); }
+    check(werr == null && wleft == 0 && Files.isDirectory(q) && !Files.exists(q.resolve("nix")) && !Files.exists(q.resolve("keep.me")),
+        "wipeQuiet empties a tree with read-only store dirs and keeps the directory" + (werr == null ? "" : " (" + werr + ")"));
+    Path afile = files.resolve("not-a-dir"); write(afile, "x");
+    werr = null; wleft = -1;
+    try { wleft = BootstrapStaging.wipeQuiet(afile); } catch (Throwable t) { werr = t.toString(); }
+    check(werr == null && wleft > 0, "wipeQuiet on a path it cannot empty reports the leftover and never throws" + (werr == null ? "" : " (" + werr + ")"));
+    check(BootstrapStaging.wipeQuiet(files.resolve("does-not-exist")) == 0, "wipeQuiet on a missing directory is 0");
     System.exit(fails == 0 ? 0 : 1);
   }
 }
@@ -119,6 +134,9 @@ mutants = (
     ("symlink not idempotent (Os.symlink-like)", src.replace("if (Files.isSymbolicLink(link)) {", "if (false) {").replace("} else if (Files.exists(link, LinkOption.NOFOLLOW_LINKS)) {", "} else if (false) {")),
     ("swap does not restore old usr", src.replace("if (hadPrefix) {\n                try", "if (false) {\n                try")),
     ("error markdown uncapped", src.replace("s.length() <= MAX_ERROR_CHARS ?", "true ?")),
+    ("wipeQuiet leaves the old entries in place", src.replace("BoundedRecursiveDelete.deleteContents(dir);", "")),
+    ("wipeQuiet lets a failure through (fatal again)", src.replace("/* counted below */", "throw new RuntimeException(ignored);")),
+    ("wipeQuiet calls an unreadable directory clean", src.replace("        } catch (IOException e) {\n            return 1;", "        } catch (IOException e) {\n            return 0;")),
 )
 for name, m in mutants:
     if m == src: fails.append("M mutant did not apply: " + name); continue
@@ -128,7 +146,10 @@ for name, m in mutants:
 
 inst = rd(INST)
 for label, ok in [
-    ("staging wiped before extract", "BootstrapStaging.wipe(TERMUX_STAGING_PREFIX_DIR.toPath());" in inst),
+    ("staging and usr-old wiped quietly before extract (parity with the termux wipe_rootfs)",
+        "BootstrapStaging.wipeQuiet(TERMUX_STAGING_PREFIX_DIR.toPath())" in inst and "BootstrapStaging.wipeQuiet(PREFIX_OLD_DIR.toPath())" in inst),
+    ("a leftover is one warning, never a BootstrapFailure", 'could not be removed; continuing' in inst
+        and "Could not wipe the bootstrap staging directory" not in inst),
     ("symlinks placed idempotently, no raw Os.symlink", "BootstrapStaging.placeSymlink(" in inst and "Os.symlink(" not in inst),
     ("staging -> usr by BootstrapStaging.swap, no renameTo", "BootstrapStaging.swap(" in inst and "renameTo(TERMUX_PREFIX_DIR)" not in inst),
     ("$PREFIX not deleted before the extract", 'deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);\n        if (error' not in inst),

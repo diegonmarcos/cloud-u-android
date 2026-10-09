@@ -195,6 +195,13 @@ def main(argv):
         for terminal in sorted(load()["terminals"]):
             body = render(terminal)
             print("render-store.py: ok — %s renders %d bytes" % (terminal, len(body)))
+        # the pinned linux-store / linux-account / fish greeting declaration is part of the same file
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("fetch_linux_tools", os.path.join(HERE, "fetch-linux-tools.py"))
+        flt = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(flt)
+        block = flt.check(load())
+        print("render-store.py: ok — linux_tools pins %d files at %s" % (len(block["files"]), block["ref"][:12]))
         return 0
     body = render(argv[0])
     if len(argv) > 1:

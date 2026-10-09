@@ -13,8 +13,14 @@
   ],
   "_doc_scan": "The files a login reads, in order: bin/login (the app execs it), login-inner (proot runs it), /etc/profile (read by the `exec -l bash` fallback), the baked PATH script and the store init it sources, and the store declaration that init sources through a variable. Full-line comments are skipped; $HOME and Android host paths are outside the rootfs and skipped.",
   "run": [
-    "usr/lib/cloud-store/cloud-store"
+    "usr/lib/cloud-store/cloud-store",
+    "usr/local/bin/linux-store",
+    "usr/local/bin/linux-account"
   ],
+  "present": [
+    "usr/share/fish/vendor_functions.d/fish_greeting.fish"
+  ],
+  "_doc_present": "store.json::linux_tools -- files the session needs but never executes: the fish greeting, which fish loads from /usr/share/fish/vendor_functions.d (login-init.sh keeps /usr/share in XDG_DATA_DIRS). Each must be in the zip, and verify_login_closure.py also compares every linux_tools file (these three and the CLIs under `run`) byte for byte with the sha256 the declaration pins and requires the CLIs to be in EXECUTABLES.txt.",
   "_doc_run": "Executed by the login but named only through variables (login-init.sh runs \"$CLOUD_STORE_INSTALL_DIR/$CLOUD_STORE_ENGINE\"), so no literal reaches the scan. Literals that resolve to an ELF or a shebang script are checked as executables automatically.",
   "path_commands": [
     "timeout",

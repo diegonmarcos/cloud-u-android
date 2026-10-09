@@ -76,6 +76,42 @@ for name in $(resolved smoke | python3 -c 'import json,sys; print(" ".join(k for
     fi
 done
 
+echo "── store.json::linux_tools: linux-store, linux-account and the fish greeting are baked, byte-exact, and run under proot ──"
+# The tree's files are compared with the sha256 the declaration pins (not with a second fetch), then
+# the CLIs run under the shipped proot -- `help` exits 0 only when their own dependency check
+# (jq, flock, cmp, ...) found everything on PATH -- and fish resolves the greeting from the baked file.
+STORE_JSON="$HERE/../../ab_cloud-terminal-store/store.json"
+python3 -I - "$STORE_JSON" "$STAGE/rootfs" <<'PY' || fail=1
+import hashlib, json, os, sys
+decl = json.load(open(sys.argv[1]))["linux_tools"]
+bad = 0
+for name, f in sorted(decl["files"].items()):
+    path = os.path.join(sys.argv[2], f["install"])
+    if not os.path.isfile(path):
+        print("FAIL %s is not baked at /%s" % (name, f["install"])); bad = 1; continue
+    got = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    mode = os.stat(path).st_mode & 0o777
+    if got != f["sha256"]:
+        print("FAIL %s at /%s is sha256 %s, pinned %s" % (name, f["install"], got[:12], f["sha256"][:12])); bad = 1
+    elif mode != int(f["mode"], 8):
+        print("FAIL %s at /%s has mode %o, declared %s" % (name, f["install"], mode, f["mode"])); bad = 1
+    else:
+        print("ok   %s baked at /%s, sha256 pinned at %s" % (name, f["install"], decl["ref"][:12]))
+sys.exit(bad)
+PY
+for cmd in "linux-store help" "linux-account help"; do
+    if out="$(enter -c "$cmd" 2>&1 </dev/null)" && [ -n "$out" ]; then
+        echo "ok   \`$cmd\` runs under proot: $(echo "$out" | head -1)"
+    else
+        echo "FAIL \`$cmd\` printed '$(echo "$out" | head -3)'"; fail=1
+    fi
+done
+where="$(enter -c "fish -c 'functions --details fish_greeting'" 2>&1 </dev/null | tail -1)"
+case "$where" in
+    /usr/share/fish/vendor_functions.d/fish_greeting.fish) echo "ok   fish resolves fish_greeting from $where" ;;
+    *) echo "FAIL fish resolves fish_greeting from '$where', not the baked /usr/share/fish/vendor_functions.d/fish_greeting.fish"; fail=1 ;;
+esac
+
 echo "── #612/#730: no shared storage here, so no mount point may be left that reads as an empty store ──"
 # The runner has no readable /storage/emulated/0 — exactly a fresh phone before
 # the storage grant. enter.sh must say so and must NOT leave an empty

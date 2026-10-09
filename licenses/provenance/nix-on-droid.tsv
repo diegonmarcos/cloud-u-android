@@ -356,8 +356,10 @@ ac_cloud-nix-on-droid/termux-shared/src/main/res/values/themes.xml	verbatim		77	
 ac_cloud-nix-on-droid/test/test-allow-external-apps.sh	new		0	112	txt
 ac_cloud-nix-on-droid/test/test-bootstrap-baked.sh	new		0	1657	txt
 ac_cloud-nix-on-droid/test/test-home-survives-update.sh	new		0	85	txt
+ac_cloud-nix-on-droid/test/test-linux-tools.sh	new		0	5	txt
 ac_cloud-nix-on-droid/test/test-login-closure.sh	new		0	275	txt
 ac_cloud-nix-on-droid/test/test-noexec-shebang.sh	new		0	97	txt
 ac_cloud-nix-on-droid/test/test-one-agp-pin.sh	new		0	31	txt
 ac_cloud-nix-on-droid/test/test-terminal-debug-api.sh	new		0	94	txt
+ac_cloud-nix-on-droid/test/test-terminal-parity.sh	new		0	5	txt
 ac_cloud-nix-on-droid/test/test-wake-lock.sh	new		0	243	txt

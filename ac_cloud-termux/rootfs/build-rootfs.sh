@@ -52,6 +52,17 @@ docker run --rm --platform "linux/$arch" -v "$STORE_SRC:/src:ro" -v "$W/shim:/ou
 sudo install -D -m 0755 "$W/shim/libcloud-noexec-shebang.so" "$W/tree/usr/local/lib/libcloud-noexec-shebang.so"
 echo /usr/local/lib/libcloud-noexec-shebang.so | sudo tee "$W/tree/etc/ld.so.preload" >/dev/null
 sudo install -m 0644 "$STORE_SRC/gitconfig" "$W/tree/etc/gitconfig"
+
+# startup-step: linux_tools_install
+# store.json::linux_tools -- the pinned linux-store and linux-account CLIs and the fish greeting,
+# the same three files the nix bootstrap bake installs at the same absolute paths. The one
+# fetcher refuses any byte that differs from the sha256 the declaration pins, so a moved
+# upstream cannot slip into the tarball; the plan it prints is the only list installed here.
+mkdir "$W/linux"
+python3 "$STORE_SRC/fetch-linux-tools.py" fetch "$W/linux"
+python3 "$STORE_SRC/fetch-linux-tools.py" plan | while read -r mode rel; do
+    sudo install -D -m "$mode" "$W/linux/$rel" "$W/tree/$rel"
+done
 sudo tar -C "$W/tree" --numeric-owner --exclude='./dev/*' --exclude='./proc/*' --exclude='./sys/*' -cf - . \
     | zstd -T0 -12 --long=27 -q -o "$OUT/rootfs.tar.zst" -f
 sha256sum "$OUT/rootfs.tar.zst" | cut -d' ' -f1 > "$OUT/rootfs.sha256"

@@ -3,6 +3,7 @@ package com.termux.app;
 import com.termux.shared.file.BoundedRecursiveDelete;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -32,6 +33,30 @@ final class BootstrapStaging {
     /** Removes staging and everything in it (read-only Nix dirs included), and any leftover old $PREFIX. */
     static void wipe(Path staging) throws IOException {
         BoundedRecursiveDelete.delete(staging);
+    }
+
+    // startup-step: wipe_stale_root
+    /**
+     * The nix terminal's port of ac_cloud-termux/rootfs/enter.sh::wipe_rootfs: empties {@code dir}
+     * before a re-extract, read-only trees included (every directory is made writable first,
+     * BoundedRecursiveDelete.deleteContents), carries on past an entry that will not go, and never
+     * throws. Returns how many entries are left so the caller can say so in ONE line; the
+     * directory itself is kept, since the extract recreates what it needs. A leftover is not
+     * fatal here: whatever it blocks (a file the extract must overwrite, a swap that must move
+     * usr-old) fails on its own, with its own message, where it matters. A start that died on
+     * stale read-only leftovers is the termux terminal's 2026-10-07 failure; it is not repeated.
+     * (The old $PREFIX's tmp needs no exemption as enter.sh's rootfs /tmp has: swap() discards it.)
+     */
+    static int wipeQuiet(Path dir) {
+        if (!Files.exists(dir, LinkOption.NOFOLLOW_LINKS)) return 0;
+        try { BoundedRecursiveDelete.deleteContents(dir); } catch (IOException | RuntimeException ignored) { /* counted below */ }
+        try (DirectoryStream<Path> left = Files.newDirectoryStream(dir)) {
+            int n = 0;
+            for (Path ignored : left) n++;
+            return n;
+        } catch (IOException e) {
+            return 1;
+        }
     }
 
     /** Creates {@code link -> target}; an existing same link is kept, anything else at the path is replaced. */

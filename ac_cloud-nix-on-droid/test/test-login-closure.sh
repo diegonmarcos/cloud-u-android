@@ -75,6 +75,16 @@ else
     bad "login-closure.json / verify_login_closure.py is listed as a rootfs identity input or companion path"
 fi
 
+# store.json::linux_tools pins the real sha256 of the files fetched from cloud-u-linux, which this
+# offline tester cannot (and should not) download. So the gate runs over a sandbox copy of
+# build.json + store.json whose pins mkroot.py rewrites to the hashes of its synthetic stand-ins;
+# the gate reads store.json beside build.json's app dir, so nothing else about it changes.
+SBX="$SB/sbx"
+mkdir -p "$SBX/ac_cloud-nix-on-droid" "$SBX/ab_cloud-terminal-store"
+cp "$DIR/build.json" "$SBX/ac_cloud-nix-on-droid/build.json"
+cp "$DIR/../ab_cloud-terminal-store/store.json" "$SBX/ab_cloud-terminal-store/store.json"
+BUILD_JSON="$SBX/ac_cloud-nix-on-droid/build.json"
+
 # ── the synthetic rootfs, generated from the real declarations ──────────────
 cat > "$SB/mkroot.py" <<'EOF'
 """Builds a rootfs zip shaped like the baked one: bin/login execs proot-static
@@ -148,6 +158,18 @@ for script in closure["scan"]:
     files.setdefault(script, "# synthetic\n")
 for rel in closure.get("run", []):
     files[rel] = "#!/bin/sh\nexit 0\n"
+# store.json::linux_tools: stand-ins for the pinned files, and the sandbox store.json re-pinned to them
+import hashlib
+store_path = os.path.join(os.path.dirname(os.path.abspath(build_json)), "..", "ab_cloud-terminal-store", "store.json")
+store = json.load(open(store_path))
+LT = store["linux_tools"]["files"]
+for name, f in LT.items():
+    body = ("#!/bin/sh\n# synthetic " + name + "\nexit 0\n") if f["role"] == "cli" else "function fish_greeting\nend\n"
+    files[f["install"]] = body
+    f["sha256"] = hashlib.sha256(body.encode()).hexdigest()
+json.dump(store, open(store_path, "w"), indent=1)
+CLI_INSTALLS = sorted(f["install"] for f in LT.values() if f["role"] == "cli")
+GREETING = [f["install"] for f in LT.values() if f["role"] == "fish_function"][0]
 # The gate's own reader, so the synthetic zip carries exactly what the gate will
 # demand: store.json::toolset + default_packages.binaries + path_commands (#737).
 spec = importlib.util.spec_from_file_location("gate", os.environ["GATE"])
@@ -175,6 +197,9 @@ for m in mutations:
     elif m == "dangling-profile": links[link] = "/nix/store/0000-missing-profile"
     elif m == "engine-not-chmod": executables.remove(closure["run"][0])
     elif m == "no-toolset-tool":  del links[f"{GEN}/bin/{toolset_last}"]
+    elif m == "linux-tool-tampered":  files[CLI_INSTALLS[0]] += "# changed after the pin\n"
+    elif m == "linux-greeting-missing":  del files[GREETING]
+    elif m == "linux-cli-not-chmod":  executables.remove(CLI_INSTALLS[0])
     elif m == "no-needed-lib":    del files["nix/store/aclx-acl/lib/libacl.so.1"]
     elif m == "no-loader-lib":    del files["nix/store/gggg-glibc/lib/libc.so.6"]
     elif m == "exec-renamed":     files["bin/login"] = files["bin/login"].replace("/bin/proot-static", "/bin/proot")
@@ -228,6 +253,9 @@ mutation dangling-profile "0000-missing-profile is not in the zip" "the default 
 mutation engine-not-chmod "run: $ENGINE"                       "the store engine the login executes never chmod-ed"
 TOOLSET_LAST="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["toolset"]["binaries"][-1])' "$DIR/../ab_cloud-terminal-store/store.json")"
 mutation no-toolset-tool  "PATH command '$TOOLSET_LAST'"       "#737: a tool store.json::toolset promises on both terminals ('$TOOLSET_LAST') is missing from the shipped profile"
+mutation linux-tool-tampered "linux_tools: linux-account at /usr/local/bin/linux-account is sha256" "store.json::linux_tools: a CLI whose bytes differ from the pinned sha256 is refused"
+mutation linux-greeting-missing "linux_tools: fish_greeting is not baked" "store.json::linux_tools: the fish greeting missing from the zip is named"
+mutation linux-cli-not-chmod "linux_tools: linux-account (/usr/local/bin/linux-account) is not in EXECUTABLES.txt" "store.json::linux_tools: a CLI never chmod-ed +x is named"
 mutation no-needed-lib    "DT_NEEDED libacl.so.1"              "#846: a library an ELF loads through its RUNPATH was cut from the zip (a -dev/-doc/-man cut that took a .so)"
 mutation no-loader-lib    "DT_NEEDED libc.so.6"                "#846: a library found only in the ELF loader's own dir was cut"
 mutation exec-renamed     "binds nothing"                      "bin/login's proot exec line not recognised (the gate must not pass blind)"

@@ -21,6 +21,13 @@ and anything under licenses/curated.json::scan_skip_prefixes excluded):
                    own code and not subjects)
   asset:<path>     every tracked binary of a licence-bearing kind
                    (curated.asset_extensions: native libs, jars, models, fonts…)
+  fetched:<repo>:<path>
+                   every file the build FETCHES from another repository at a pinned commit and
+                   ships (ab_cloud-terminal-store/store.json::linux_tools: the linux-store /
+                   linux-account CLIs and the fish greeting, both terminals). They are not in this
+                   tree, so nothing else would ever record them. The licence is the one declared
+                   beside the pin (linux_tools.licence), checked against the fetched repository's
+                   LICENSE at that commit when the pin moves.
 
 Keys carry no version, so a version bump never fails the gate; a NEW
 coordinate, package, vendored directory, binary or top-level directory does.
@@ -151,6 +158,16 @@ def discover(root):
                         v = v.get("strictly", v.get("require", ""))
                 if g and a:
                     add(f"maven:{g}:{a}", declared_in=f, version=str(v or ""), scope="catalog")
+
+    store = "ab_cloud-terminal-store/store.json"
+    if store in files:
+        try:
+            lt = load(root, store).get("linux_tools") or {}
+        except Exception:
+            lt = {}
+        for name, spec in sorted((lt.get("files") or {}).items()):
+            add(f"fetched:{lt.get('repo', '?')}:{spec.get('path', name)}", declared_in=store,
+                version=str(lt.get("ref", ""))[:12], scope="shipped")
 
     pkgs, internal = [], set()
     for f in files:
@@ -292,6 +309,11 @@ def refresh(root, offline):
                 dp = deepest(list(dirs) + list(up_by_path), path)
                 lic = (up_by_path[dp]["licence"] if dp in up_by_path else dirs[dp]["licence"]) if dp else "NOASSERTION"
                 out.update({"licence": lic, "licence_source": f"inherits {dp}" if dp else "no containing entry"})
+        elif kind == "fetched":
+            lic = (load(root, "ab_cloud-terminal-store/store.json").get("linux_tools") or {}).get("licence", {})
+            out.update({"licence": lic.get("spdx") or "NOASSERTION",
+                        "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence"
+                                          + (f" (holder {lic['holder']})" if lic.get("holder") else "")})
         elif offline:
             prev = old.get(k, {})
             out.update({"licence": prev.get("licence", "NOASSERTION"),

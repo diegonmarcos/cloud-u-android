@@ -41,6 +41,7 @@ export PROOT_TMP_DIR="$HERE/tmp"
 mkdir -p "$PROOT_TMP_DIR"
 
 # wipe_rootfs begin
+# startup-step: wipe_stale_root
 # Clears the old unpacked root before a re-extract. It can never fail the session:
 # a previous agent session leaves nix/linux-store style files (0444 in 0555 dirs)
 # under the root, which a plain rm cannot remove, so every entry is made writable
@@ -119,6 +120,7 @@ if [ -d "$HERE/cloud-store" ] && [ -d "$ROOTFS/usr/lib/cloud-store" ]; then
     store_entry="/bin/sh /usr/lib/cloud-store/login-exec"
 fi
 
+# startup-step: rish_bridge
 # build.json::shizuku_client — the rish bridge into the rootfs. RishBridge
 # (libs:shizuku-adb-debug-tools) writes `rish` + `rish.env` (RISH_APPLICATION_ID
 # + the fleet token) into $HERE/rish on launch; bind them so a shell INSIDE proot
@@ -135,6 +137,7 @@ if [ -f "$HERE/rish/rish" ] && [ -f "$ROOTFS/usr/local/bin/rish" ]; then
     fi
 fi
 
+# startup-step: storage_links
 # #612/#736: ~/emulated and ~/cloud-drive-shared-store are SYMLINKS in $HOME to
 # /storage/emulated/0 and its CloudDrive store, and /storage/emulated/0 is bound
 # at the SAME path inside the root so one absolute target resolves for the guest
@@ -183,6 +186,7 @@ fi
 # $HOME is bound as /root, so credentials, git config and work survive a
 # rootfs update (which replaces the tree above) and stay visible to Termux.
 #
+# startup-step: dns_resolver
 # #741 -p is how a shell in here resolves names through ANDROID's resolver, so
 # through the SuperApp's DNS menu: the tree's /etc/resolv.conf names 127.0.0.1
 # (rootfs.json::nameservers), an app may not listen on :53, and -p moves a

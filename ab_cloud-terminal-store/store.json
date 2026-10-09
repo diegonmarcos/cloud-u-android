@@ -3,7 +3,59 @@
   "_comment_adding_a_tool": "DATA ONLY, no code change, and that is the whole point of #644. A tool enters the store when it appears in the list `terminals.<t>.tools` points at — ac_cloud-nix-on-droid/build.json::forks.nixdroid.bootstrap.default_packages.binaries (alongside its attr and provides entry) or ac_cloud-termux/rootfs/rootfs.json::binaries. render-store.py re-renders declaration.sh from that list at build time and the engine loops over it at runtime. Nothing here, and nothing in cloud-store, names a tool.",
   "toolset": {
     "_doc": "#737 -- THE tool set both terminals ship baked in, working at the first prompt with no install step. ONE list, consumed by both bakes: render-store.py::tools_of prepends it to each terminal's own list, so it reaches the termux rootfs build (resolve.py merges it into the roster install-in-rootfs.sh installs and command -v's, and verify-inside.sh executes under the shipped proot) and the nix bake (bake_default_packages.py fails when the realized profile lacks bin/<name>; verify_login_closure.py fails when the shipped zip does not resolve /<profile>/bin/<name> to a chmod-ed file). Packaging stays per terminal: termux installs these through apt, tarballs and npm (rootfs.json + the fleet tool belt), nix through attrs (build.json default_packages.attrs/provides). Neither app's own list may repeat a name from here -- both renderers refuse it -- so this cannot quietly become two lists again. `which` is here because the on-device checklist runs `which`, and nothing else on the nix side provides it. python3 is deliberately NOT here: #665 measured it as 19% of the nix OS image with nothing asking for it; the termux terminal keeps it as its own extra because hermes runs in a venv there.",
-    "binaries": ["fish", "zsh", "node", "npm", "npx", "claude", "git", "gh", "curl", "jq", "rg", "fd", "ssh", "sops", "age", "which"]
+    "binaries": ["fish", "zsh", "node", "npm", "npx", "claude", "git", "gh", "curl", "jq", "rg", "fd", "ssh", "sops", "age", "which", "flock", "cmp"],
+    "_doc_flock_cmp": "linux-store (linux_tools below) refuses to start without flock (its one-mutating-run lock) and cmp (its re-exec and store-object comparisons); jq it already had here. Both are Debian base-image binaries (util-linux, diffutils), so the termux tree gains nothing but a declaration; the nix profile gets util-linuxMinimal and diffutils (build.json default_packages.attrs/provides)."
+  },
+  "linux_tools": {
+    "_doc": "THE declaration of what both terminals ship from cloud-u-linux: the `linux-store` and `linux-account` CLIs and the fish greeting. ONE pin, declared like rootfs.json::shared_toolbelt: the two repositories are separate git histories, so a file cannot be shared by path; both are public, so the bakes read each file at this exact commit from raw.githubusercontent.com. `ref` is the content address: bumping it (and the per-file sha256 beside it) is an edit to THIS file, which is an identity file of both rootfs artifacts, so a CLI or greeting change republishes both terminals instead of hiding outside the gate. fetch-linux-tools.py is the only fetcher; it refuses any byte that differs from `sha256` (the same discipline as fetch-proot.py), and both bakes install exactly what it plans: ac_cloud-termux/rootfs/build-rootfs.sh into the tree, ac_cloud-nix-on-droid bake_default_packages.py into the bootstrap zip. The install paths are the same absolute paths in both images, and login-init.sh makes sure /usr/local/bin is on PATH and /usr/share is a fish data dir, so neither terminal needs a different wiring. terminal-parity-guard.py fails when one terminal stops installing or verifying any entry below.",
+    "repo": "diegonmarcos/cloud-u-linux",
+    "ref": "92e02c639966048c428e55cea1a204ef495115b3",
+    "licence": {
+      "_doc": "Checked at the pin: the repository root carries LICENSE (PolyForm Noncommercial 1.0.0, `Required Notice: Copyright 2026 Diego Nepomuceno Marcos`) and LICENSING.md says all original code in it is the licensor's own with no third-party carve-outs; da_dtk/ repeats the same LICENSE. These files are therefore the owner's own work, not a third party's, and are redistributed here by the copyright holder; they travel as separate files inside the rootfs artifacts (aggregation), never compiled into the GPL-3.0-only terminal apps. licenses/inventory.json lists each as a `fetched:` subject.",
+      "spdx": "PolyForm-Noncommercial-1.0.0",
+      "holder": "Diego Nepomuceno Marcos",
+      "notice": "Required Notice: Copyright 2026 Diego Nepomuceno Marcos \u2014 https://diegonmarcos.com"
+    },
+    "files": {
+      "linux-store": {
+        "path": "da_linux-store/linux-store",
+        "sha256": "9d71e595b8655dbb958fdf0b1682c111e0047141b3a13640a9ce62a295638772",
+        "install": "usr/local/bin/linux-store",
+        "mode": "0755",
+        "role": "cli"
+      },
+      "linux-account": {
+        "path": "da_linux-account/linux-account",
+        "sha256": "8d30c800c4ffc7c80edd2d10d698f134056c59b4462fda3a2a5cdcfb9d5aa313",
+        "install": "usr/local/bin/linux-account",
+        "mode": "0755",
+        "role": "cli"
+      },
+      "fish_greeting": {
+        "path": "da_dtk/commands/provision/fish/fish-functions/fish_greeting.fish",
+        "sha256": "9317d608d595b77c3f43cbf8d96fc5dc73cb6c2e91738c0c44c3f9764336ec14",
+        "install": "usr/share/fish/vendor_functions.d/fish_greeting.fish",
+        "mode": "0644",
+        "role": "fish_function"
+      }
+    },
+    "needs": ["jq", "flock", "cmp", "sops", "age"],
+    "_doc_needs": "Runtime dependencies of the CLIs (linux-store: jq sha256sum flock find mv readlink cmp, sops and an age key for its secret layer; linux-account: jq sha256sum). Every name must be in toolset.binaries above, so both terminals' existing bake gates prove it is installed; the guard refuses a name that is not. The TUI scripts (linux-store-tui.py, linux-account-tui.py) are deliberately not shipped: both CLIs fall back to their sh screens without them, and the nix image has no python3 (#665)."
+  },
+  "startup": {
+    "_doc": "The steps a terminal runs when it starts or is baked, declared once so the two cannot drift. Every `startup-step: <id>` marker comment in the files listed under terminals.<t>.startup_files is one step; terminal-parity-guard.py requires the SAME set in both terminals and every id below to be implemented in each (shared ids live in login-init.sh, which both terminals source). A step added to one terminal without the other, or lost from one, is red.",
+    "steps": {
+      "wipe_stale_root": "clear the previous root / staging read-only-safely before a re-extract; quiet, one summary line, never fatal (termux enter.sh wipe_rootfs; nix BootstrapStaging.wipeQuiet)",
+      "storage_links": "~/emulated and ~/cloud-drive-shared-store links to shared storage",
+      "rish_bridge": "bind the rish launcher into the root",
+      "dns_resolver": "lookups go to the app's DNS bridge",
+      "linux_tools_install": "bake the pinned linux-store, linux-account and fish_greeting into the image (fetch-linux-tools.py)",
+      "store_init": "cloud-store ensure, bounded",
+      "agent_auth_env": "agent CLI credentials from the app's env file",
+      "linux_path": "/usr/local/bin on PATH, where the baked CLIs live",
+      "fish_greeting_path": "/usr/share a fish data dir, where the baked greeting lives",
+      "linux_first_start": "first start: linux-store switch when its prerequisites exist, else one line saying what is missing"
+    }
   },
   "store": {
     "_doc": "Runtime layout, under $HOME so it survives every rootfs/bootstrap update (termux binds $HOME as /root; the nix terminal's $HOME is the real app-private path). `current` is the ONE symlink an apply flips, with a single rename(2) — a half-switched profile is therefore not a reachable state. generations/ keeps the previous ones so rollback is a switch, not a rebuild.",
@@ -25,6 +77,16 @@
     "nix": {
       "_doc": "ac_cloud-nix-on-droid. The package layer IS a nix profile, so targets are a fixed prefix under it (never a /nix/store hash: every hash moves with the nixpkgs pin, which is how a literal rots into a dangling link silently) and updates/package-generation rollback are delegated to nix itself.",
       "app_dir": "ac_cloud-nix-on-droid",
+      "startup_files": [
+        "ab_cloud-terminal-store/login-init.sh",
+        "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py",
+        "ac_cloud-nix-on-droid/app/src/main/java/com/termux/app/BootstrapStaging.java"
+      ],
+      "linux_tools": {
+        "_doc": "Where this terminal installs and proves the linux_tools entries: the bake that writes them into the image, and the files whose checks name every entry (the guard requires each cli and the greeting in all of them).",
+        "baked_by": "ac_cloud-nix-on-droid/app/src/main/cpp/bake_default_packages.py",
+        "verified_by": ["ac_cloud-nix-on-droid/login-closure.json", "ac_cloud-nix-on-droid/app/src/main/cpp/verify_login_closure.py"]
+      },
       "tools": { "from_file": "build.json", "at": "forks.nixdroid.bootstrap.default_packages.binaries" },
       "target": {
         "mode": "prefix",
@@ -43,6 +105,16 @@
     "termux": {
       "_doc": "ac_cloud-termux. A baked Debian glibc tree entered through proot: no nix, so the generation/atomic-switch/rollback machinery here is the real implementation rather than a delegation. Targets are searched along the standard FHS path because rootfs.json installs them through apt, tarballs, npm and pip venvs, each into its own dir (install-in-rootfs.sh symlinks venv console scripts into /usr/local/bin), and the declaration should not have to restate which mechanism produced which tool.",
       "app_dir": "ac_cloud-termux",
+      "startup_files": [
+        "ab_cloud-terminal-store/login-init.sh",
+        "ac_cloud-termux/rootfs/build-rootfs.sh",
+        "ac_cloud-termux/rootfs/enter.sh"
+      ],
+      "linux_tools": {
+        "_doc": "Where this terminal installs and proves the linux_tools entries: the bake that writes them into the image, and the files whose checks name every entry (the guard requires each cli and the greeting in all of them).",
+        "baked_by": "ac_cloud-termux/rootfs/build-rootfs.sh",
+        "verified_by": ["ac_cloud-termux/rootfs/verify-rootfs.sh"]
+      },
       "tools": { "from_file": "rootfs/rootfs.json", "at": "binaries" },
       "target": {
         "mode": "search",

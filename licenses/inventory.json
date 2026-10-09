@@ -17,6 +17,9 @@
    "AGPL-3.0-only OR LicenseRef-Element-Commercial": 1,
    "MPL-2.0": 1
   },
+  "fetched": {
+   "PolyForm-Noncommercial-1.0.0": 3
+  },
   "maven": {
    "Apache-2.0": 255,
    "MIT": 25,
@@ -2495,6 +2498,36 @@
    ],
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
+  },
+  "fetched:diegonmarcos/cloud-u-linux:da_dtk/commands/provision/fish/fish-functions/fish_greeting.fish": {
+   "kind": "fetched",
+   "declared_in": [
+    "ab_cloud-terminal-store/store.json"
+   ],
+   "version": "92e02c639966",
+   "scope": "shipped",
+   "licence": "PolyForm-Noncommercial-1.0.0",
+   "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence (holder Diego Nepomuceno Marcos)"
+  },
+  "fetched:diegonmarcos/cloud-u-linux:da_linux-account/linux-account": {
+   "kind": "fetched",
+   "declared_in": [
+    "ab_cloud-terminal-store/store.json"
+   ],
+   "version": "92e02c639966",
+   "scope": "shipped",
+   "licence": "PolyForm-Noncommercial-1.0.0",
+   "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence (holder Diego Nepomuceno Marcos)"
+  },
+  "fetched:diegonmarcos/cloud-u-linux:da_linux-store/linux-store": {
+   "kind": "fetched",
+   "declared_in": [
+    "ab_cloud-terminal-store/store.json"
+   ],
+   "version": "92e02c639966",
+   "scope": "shipped",
+   "licence": "PolyForm-Noncommercial-1.0.0",
+   "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence (holder Diego Nepomuceno Marcos)"
   },
   "maven:androidx.activity:activity": {
    "kind": "maven",

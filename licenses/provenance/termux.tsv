@@ -307,7 +307,9 @@ ac_cloud-termux/termux-shared/src/main/res/values/themes.xml	verbatim		35	0	txt
 ac_cloud-termux/test/test-allow-external-apps.sh	new		0	112	txt
 ac_cloud-termux/test/test-debian-version.sh	new		0	45	txt
 ac_cloud-termux/test/test-home-survives-update.sh	new		0	85	txt
+ac_cloud-termux/test/test-linux-tools.sh	new		0	5	txt
 ac_cloud-termux/test/test-rootfs-declared.sh	new		0	361	txt
 ac_cloud-termux/test/test-terminal-debug-api.sh	new		0	106	txt
+ac_cloud-termux/test/test-terminal-parity.sh	new		0	5	txt
 ac_cloud-termux/test/test-toolbelt-wipe.sh	new		0	90	txt
 ac_cloud-termux/test/test-wake-lock.sh	new		0	243	txt

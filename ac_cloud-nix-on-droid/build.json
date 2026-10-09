@@ -69,8 +69,10 @@
             "../ab_cloud-terminal-store/noexec-shebang.c",
             "../ab_cloud-terminal-store/gitconfig",
             "../ab_cloud-terminal-store/proot.json",
-            "../ab_cloud-terminal-store/fetch-proot.py"
+            "../ab_cloud-terminal-store/fetch-proot.py",
+            "../ab_cloud-terminal-store/fetch-linux-tools.py"
           ],
+          "_doc_identity_files_linux_tools": "store.json::linux_tools -- bake_default_packages.py writes the pinned linux-store, linux-account and fish greeting into this zip through fetch-linux-tools.py, so the fetcher (and, through store.json, the pin and the hashes) address it.",
           "_doc_identity_files_795": "#795 -- proot.json pins and fetch-proot.py fetches the bin/proot-static this zip ships in place of the 24.05 bootstrap's own.",
           "_doc_identity_files_771": "#771 -- rootfs-extras.nix builds goose, hermes and the noexec shim into this zip; it reads goose's and hermes' version and url from ac_cloud-termux/rootfs/rootfs.json (so a bump there must re-address this zip too, even though it also moves on termux-only edits to that file: a stale address is the false green, an extra republish is only bytes); noexec-shebang.c is the shim's source and gitconfig ships as etc/gitconfig.",
           "_doc_identity_files_store": "#644 -- the five ab_cloud-terminal-store entries are here because the link store is BAKED INTO THIS ZIP (usr/lib/cloud-store) and the login-inner patch sources it. Leave them out and an engine fix keeps the old content address: the asset is not uploaded, no phone refetches, and CI is green over a rootfs that still carries the broken engine -- the exact false-green shape #618's address was introduced to prevent. Paths are app-relative and resolved with os.path.join/new File(projectDir.parentFile, ...) by both readers (cloud-android-fleet-manifest-guard.py::_content_address and app/build.gradle::bootstrapArtifactId), so \"../\" reaches the repo root.",
@@ -139,8 +141,11 @@
             "openssh",
             "sops",
             "age",
-            "which"
+            "which",
+            "util-linuxMinimal",
+            "diffutils"
           ],
+          "_doc_attrs_linux_tools": "ab_cloud-terminal-store/store.json::linux_tools -- util-linuxMinimal (flock) and diffutils (cmp) are here because linux-store, baked into this zip next to the termux tree's copy, refuses to start without them, and store.json::toolset now declares both so the same bake gate that proves jq proves them. util-linuxMinimal rather than util-linux: the same flock without systemd, ncurses or the translations (#665 keeps the image lean).",
           "_doc_attrs_737": "#737 -- zsh, gh, curl, jq, ripgrep, fd, openssh, sops, age and which are here because ab_cloud-terminal-store/store.json::toolset now declares the tool set BOTH terminals ship, and this list is how the nix terminal installs it. That supersedes the #641 audit's 'deliberately left out' for curl, openssh and ripgrep: the bar is no longer 'a shell or an agent calls it by name' but 'the terminal is a complete agent workstation on first launch', and the termux terminal already carried all of them through the fleet tool belt. python3 stays out (#665). The names on PATH are NOT listed in `binaries` below -- they come from the toolset, and render-store.py refuses a repeat; `provides` still maps each attr to them so the declaration-level gate can prove every toolset name has an attr behind it before nix runs.",
           "login_shell_attr": "fish",
           "_doc_login_shell_attr": "#641 -- which baked attr becomes the LOGIN shell. bake_default_packages.py retargets the generated usr/lib/login-inner's `usershell=\"...\"` assignment at profile_link + /bin/<this>, and hard-fails the build if that path is not a real, chmod-ed zip entry. MEASURED, not inferred: the pinned aarch64 zip (sha256 64afc02d..., byte-identical to the pin) generates usershell=\"/nix/store/q2j9ncs2b0zd7gbla21ck3jj4knpj23y-bash-5.2-p15/bin/bash\" and contains no fish binary at all (only curl's and nix's fish COMPLETIONS), which is why #594 making fish the default for cloud-terminal-termux never reached this app. Upstream's own -x guard and its `exec -l bash` fallback below the assignment are left alone, so a fish that somehow did not ship still yields a shell.",
@@ -215,6 +220,12 @@
             ],
             "which": [
               "which"
+            ],
+            "util-linuxMinimal": [
+              "flock"
+            ],
+            "diffutils": [
+              "cmp"
             ],
             "goose": [
               "goose"
