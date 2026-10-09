@@ -52,6 +52,9 @@ object ShellAccess {
         // button doing what the boot path already does rather than a second
         // mechanism.
         val (connected, adbMsg) = EmbeddedAdbChannel.autoConnect(ctx)
+        // An explicit Reconnect is not rate-limited: relaunch the local server now that adb is back.
+        if (connected && ChannelModePrefs.current(ctx) == ChannelMode.LOCAL_SERVER && ChannelModePrefs.ownsServer())
+            AdbShellBootstrap.ensureServer(ctx, listOf(EmbeddedAdbChannel), force = true)
         if (connected) ShellChannels.active(ctx)?.let {
             onReady()
             return "Using ${it.name()} — $adbMsg"

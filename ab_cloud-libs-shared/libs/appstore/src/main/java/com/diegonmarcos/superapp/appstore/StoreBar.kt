@@ -13,6 +13,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.AdbPairingService
+import com.diegonmarcos.superapp.adbdebug.ChannelModePrefs
+import com.diegonmarcos.superapp.adbdebug.ChannelSelector
+import com.diegonmarcos.superapp.adbdebug.ShizukuStatus
 import com.diegonmarcos.superapp.adbdebug.ControlStatus
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
@@ -136,15 +139,17 @@ object StoreBar {
         // debugging" switch - that can be on while the channel is dead.
         val ch = StoreStatus.channel()
         if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { into.post { redraw() } }
-        val chLabel = when (ch?.state) {
+        val chLabel = ch?.shizuku?.let { ChannelSelector.shizukuLabel(it) } ?: when (ch?.state) {
             null -> ctx.getString(R.string.store_bar_channel_checking)
-            ControlStatus.Channel.UP -> ctx.getString(R.string.store_bar_channel_up, ch?.via.orEmpty())
-            ControlStatus.Channel.DOWN -> ctx.getString(R.string.store_bar_channel_down)
-            ControlStatus.Channel.NOT_PAIRED -> ctx.getString(R.string.store_bar_channel_unpaired)
+            ControlStatus.Channel.UP -> ChannelSelector.label(ch?.via, down = false)
+            ControlStatus.Channel.DOWN -> ChannelSelector.label(null, down = true)
+            ControlStatus.Channel.NOT_PAIRED -> ChannelSelector.label(null, down = false)
         }
         val chTap: (() -> Unit)? = if (ch == null) ({ StoreStatus.refresh(ctx) { into.post { redraw() } } }) else ({
                 val wd = WirelessDebugging.isOn(ctx)
-                when (ControlStatus.channelAction(ch, wd)) {
+                when (ControlStatus.channelAction(ch, wd, ChannelModePrefs.current(ctx))) {
+                    ControlStatus.Action.OPEN_SHIZUKU, ControlStatus.Action.REQUEST_SHIZUKU ->
+                        toast(ctx, ShizukuStatus.act(ctx))
                     ControlStatus.Action.OPEN_SETTINGS -> openDevSettings(host)
                     ControlStatus.Action.RECONNECT -> {
                         toast(ctx, ctx.getString(R.string.store_bar_asking_shell))

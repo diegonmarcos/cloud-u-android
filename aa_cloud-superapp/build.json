@@ -4752,6 +4752,14 @@
             "subgroup": "Network"
           },
           {
+            "_doc": "ADB SHELL — the full control for the SuperApp's privileged channel (the Cloud Store's Privileged channel setting, same lib: libs:shizuku-adb-debug-tools ShellChannelPanel). Mode (Local server default / Embedded adb / Shizuku / Auto), the live status of each layer (Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route) and Pair / Reconnect / Start / Restart / Stop server / Open Shizuku / Developer options / Test. The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",
+            "id": "adb-shell",
+            "label": "ADB Shell",
+            "icon": "ic_settings",
+            "group": "Setup",
+            "subgroup": "Network"
+          },
+          {
             "id": "about",
             "label": "About",
             "icon": "ic_settings",

@@ -22,7 +22,7 @@ object AdbShellBootstrap {
 
     fun port(): Int = BuildConfig.ADB_SHELL_SERVER_PORT
     fun serverClass(): String = BuildConfig.ADB_SHELL_SERVER_CLASS
-    private fun niceName(): String = BuildConfig.ADB_SHELL_SERVER_NICE
+    fun niceName(): String = BuildConfig.ADB_SHELL_SERVER_NICE
 
     /** Stable per-install token shared with the server via its launch
      *  args. Generated + persisted on first read. */
@@ -68,14 +68,14 @@ object AdbShellBootstrap {
      * stamp from the future is a previous boot and the attempt is due again.
      * Logs one line per attempt; the result is kept for [bootstrapState].
      */
-    fun ensureServer(ctx: Context, ladder: List<ShellChannel>): Boolean {
+    fun ensureServer(ctx: Context, ladder: List<ShellChannel>, force: Boolean = false): Boolean {
         val listening = LocalShellChannel.isReady(ctx)
         if (listening && LocalShellChannel.probe(ctx)) return true
         val via = ladder.firstOrNull { it !== LocalShellChannel && it.isReady(ctx) } ?: return false
         val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val now = SystemClock.elapsedRealtime()
         val last = sp.getLong(K_BOOT_AT, -1L)
-        if (last in 0..now && now - last < RETRY_MS) return false
+        if (!force && last in 0..now && now - last < RETRY_MS) return false
         sp.edit().putLong(K_BOOT_AT, now).putString(K_BOOT_RESULT, "attempted via ${via.name()}: launching").apply()
         // A listening server that does not answer is the previous APK's process (shell uid, it
         // outlives the app): kill it first, by its nice-name, through the channel that still works.

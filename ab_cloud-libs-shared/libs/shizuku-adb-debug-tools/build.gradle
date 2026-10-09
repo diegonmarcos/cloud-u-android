@@ -1,6 +1,9 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    // The channel panel (ShellChannelPanel / ChannelModeBar) is Compose, compiled against the host's Compose
+    // (compileOnly below): only Cloud Store and the SuperApp draw it; every other consumer never loads it.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // ── Shizuku diagnostic catalog ──────────────────────────────────────
@@ -18,6 +21,7 @@ plugins {
 // the consumer does not define it we fall back to this module's home repo (same
 // pattern as libs/voice).
 def adbBuildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+def adbOwnServer = adbBuildJson.shizuku_diagnostics?.local_server != null
 if (adbBuildJson.shizuku_diagnostics == null) adbBuildJson = new groovy.json.JsonSlurper().parse(file('../../build.json'))
 def adbDiag       = adbBuildJson.shizuku_diagnostics ?: [:]
 def adbBundlesRaw = adbDiag.bundles ?: []
@@ -72,6 +76,7 @@ android {
         minSdk 26
         consumerProguardFiles 'consumer-rules.pro', adbServerKeep
         buildConfigField "String", "ADB_DIAG_BUNDLES_B64", "\"${adbBundlesB64}\""
+        buildConfigField "boolean", "ADB_SHELL_SERVER_OWN",  "${adbOwnServer}"
         buildConfigField "int",    "ADB_SHELL_SERVER_PORT",  "${adbServerPort}"
         buildConfigField "String", "ADB_SHELL_SERVER_CLASS", "\"${adbServerClass}\""
         buildConfigField "String", "ADB_SHELL_SERVER_NICE",  "\"${adbServerNice}\""
@@ -84,6 +89,7 @@ android {
         // whose impl (ShellUserService) runs in shell context (uid 2000)
         // so exec() can run privileged dumpsys / getprop / sysfs reads.
         aidl = true
+        compose = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -93,6 +99,11 @@ android {
 }
 
 dependencies {
+    compileOnly platform('androidx.compose:compose-bom:2025.01.00')
+    compileOnly 'androidx.compose.ui:ui'
+    compileOnly 'androidx.compose.foundation:foundation'
+    compileOnly 'androidx.compose.material3:material3'
+    compileOnly 'androidx.compose.runtime:runtime'
     implementation project(':libs:core')
     // HostShell: the re-arm job a host app schedules (WorkManager), shared by Cloud Store and Cloud Account.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'

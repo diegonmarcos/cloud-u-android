@@ -18,3 +18,7 @@
 # consumer rule so every app that pulls this lib keeps the provider whole.
 -keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
+
+# ShellChannelPanel is Compose and compiled against the host (compileOnly): hosts without Compose never load it.
+-dontwarn androidx.compose.**
+-dontwarn kotlinx.coroutines.**

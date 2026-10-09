@@ -96,6 +96,8 @@ object SectionPages {
         // #733 the Store's Apps Mesh page, reached from Configs ▸ Mesh too —
         // the same AppsMesh.page, hosted on its own (no copy).
         sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
+        // Configs > Network > ADB Shell: the privileged channel's full control (lib ShellChannelPanel).
+        sectionId == "config" && pageId == "adb-shell"      -> com.diegonmarcos.superapp.configs.AdbShellFragment.newInstance()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // #740 Configs ▸ Mesh ▸ DNS — the fleet resolver, applied at the Cloud Mesh VPN.
         sectionId == "config" && pageId == "dns"            -> com.diegonmarcos.superapp.network.DnsFragment.newInstance()

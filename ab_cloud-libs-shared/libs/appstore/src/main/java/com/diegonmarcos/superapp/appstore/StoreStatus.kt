@@ -1,7 +1,10 @@
 package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
+import com.diegonmarcos.superapp.adbdebug.ChannelMode
+import com.diegonmarcos.superapp.adbdebug.ChannelModePrefs
 import com.diegonmarcos.superapp.adbdebug.ControlStatus
+import com.diegonmarcos.superapp.adbdebug.ShizukuStatus
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
@@ -26,7 +29,13 @@ internal object StoreStatus {
             override fun paired() = EmbeddedAdbChannel.everPaired(app)
             override fun id(): Pair<String, String?>? =
                 ShellChannels.active(app)?.let { it.name() to it.exec(app, "id") }
-        }).also { probe = it }
+            override fun shizukuState() =
+                if (ChannelModePrefs.current(app) == ChannelMode.SHIZUKU) ShizukuStatus.current(app) else null
+        }).also {
+            probe = it
+            // Switching the mode re-probes at once; the install route already follows (it reads the mode per call).
+            ChannelModePrefs.addListener { invalidate() }
+        }
     }
 
     fun channel(): ControlStatus.ChannelStatus? = probe?.peek()

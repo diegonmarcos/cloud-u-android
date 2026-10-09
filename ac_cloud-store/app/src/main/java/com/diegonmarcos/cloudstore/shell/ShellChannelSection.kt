@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.adbdebug.AdbPairingService
+import com.diegonmarcos.superapp.adbdebug.ChannelModeBar
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.appstore.StoreDensity
@@ -36,9 +37,13 @@ import kotlin.concurrent.thread
 fun ShellChannelSection(ctx: Context) {
     var tick by remember { mutableStateOf(0) }
     var note by remember { mutableStateOf("") }
-    val status = remember(tick) {
-        ShellChannels.active(ctx)?.let { "On: ${it.name()} - installs and updates carry no prompt." }
-            ?: "Off: installs and updates ask for one tap per app until this is paired."
+    var status by remember { mutableStateOf("Checking the channel...") }
+    // Resolving the channel can launch the local server (it sleeps while it comes up): off the main thread.
+    androidx.compose.runtime.LaunchedEffect(tick) {
+        status = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            ShellChannels.active(ctx)?.let { "On: ${it.name()} - installs and updates carry no prompt." }
+                ?: "Off: installs and updates ask for one tap per app until this is paired."
+        }
     }
     Column(Modifier.fillMaxWidth().padding(top = StoreDensity.dpValue(StoreDensity.S12).dp)) {
         Text("Silent installs", fontSize = StoreDensity.T_TITLE.sp)
@@ -65,6 +70,9 @@ fun ShellChannelSection(ctx: Context) {
             OutlinedButton(onClick = { tick++; note = "" },
                 modifier = Modifier.padding(start = 8.dp)) { Text("Refresh", fontSize = StoreDensity.T_BODY.sp) }
         }
+        // Which channel runs the commands: the SAME bar the SuperApp's ADB Shell page draws.
+        Text("Privileged channel", fontSize = StoreDensity.T_TITLE.sp, modifier = Modifier.padding(top = 8.dp))
+        Column(Modifier.padding(top = 4.dp)) { ChannelModeBar { tick++; note = "" } }
         if (note.isNotEmpty()) Text(note, fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }

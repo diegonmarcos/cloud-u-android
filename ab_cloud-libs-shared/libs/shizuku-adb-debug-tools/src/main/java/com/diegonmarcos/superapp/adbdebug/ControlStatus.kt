@@ -35,16 +35,18 @@ object ControlStatus {
     enum class Channel { UP, DOWN, NOT_PAIRED }
 
     /** [via] = the channel that answered (UP only). */
-    data class ChannelStatus(val state: Channel, val via: String? = null)
+    data class ChannelStatus(val state: Channel, val via: String? = null, val shizuku: ShizukuState? = null)
 
-    enum class Action { OPEN_SETTINGS, RECONNECT, PAIR }
+    enum class Action { OPEN_SETTINGS, RECONNECT, PAIR, OPEN_SHIZUKU, REQUEST_SHIZUKU }
 
     /** What a tap on the channel control does. Reconnect needs Wireless Debugging on to
      *  have anything to discover, so with it off the useful step is the switch itself. */
-    fun channelAction(s: ChannelStatus, wirelessDebugOn: Boolean): Action = when (s.state) {
-        Channel.UP -> Action.OPEN_SETTINGS
-        Channel.DOWN -> if (wirelessDebugOn) Action.RECONNECT else Action.OPEN_SETTINGS
-        Channel.NOT_PAIRED -> Action.PAIR
+    fun channelAction(s: ChannelStatus, wirelessDebugOn: Boolean, mode: ChannelMode = ChannelMode.LOCAL_SERVER): Action = when {
+        mode == ChannelMode.SHIZUKU ->
+            if (s.shizuku == ShizukuState.PERMISSION_NEEDED) Action.REQUEST_SHIZUKU else Action.OPEN_SHIZUKU
+        s.state == Channel.UP -> Action.OPEN_SETTINGS
+        s.state == Channel.DOWN -> if (wirelessDebugOn) Action.RECONNECT else Action.OPEN_SETTINGS
+        else -> Action.PAIR
     }
 
     /** `id` output proves a shell-level authorisation: uid 2000 (shell), or 0 under root. */
@@ -59,6 +61,8 @@ object ControlStatus {
         fun paired(): Boolean
         /** (channel name, output of `id`) from the first ready channel, null if none is. Blocking. */
         fun id(): Pair<String, String?>?
+        /** Shizuku mode only: where the external app stands (null in every other mode). */
+        fun shizukuState(): ShizukuState? = null
     }
 
     /**
@@ -97,7 +101,10 @@ object ControlStatus {
             val got = try { f.get(timeoutMs, TimeUnit.MILLISECONDS) }
                 catch (_: TimeoutException) { f.cancel(true); null }
                 catch (_: Exception) { null }
-            if (got != null && isShellUid(got.second)) return ChannelStatus(Channel.UP, got.first)
+            if (got != null && isShellUid(got.second)) return ChannelStatus(Channel.UP, got.first, if (got.first == ChannelSelector.SHIZUKU) ShizukuState.UP else null)
+            val sz = runCatching { backend.shizukuState() }.getOrNull()
+            // Shizuku mode: its own four-way state; "up" that did not answer is not up.
+            if (sz != null) return ChannelStatus(Channel.DOWN, null, if (sz == ShizukuState.UP) ShizukuState.NOT_RUNNING else sz)
             val paired = runCatching { backend.paired() }.getOrDefault(false)
             return ChannelStatus(if (paired) Channel.DOWN else Channel.NOT_PAIRED)
         }

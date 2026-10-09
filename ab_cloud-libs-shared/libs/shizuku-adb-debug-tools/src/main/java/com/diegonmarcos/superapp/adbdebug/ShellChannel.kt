@@ -86,15 +86,17 @@ object ShellChannels {
      *  PRIMARY wins as soon as it can. */
     fun active(ctx: Context): ShellChannel? {
         val ladder = all
-        // Only the app that OWNS the server launches it: the one with no
-        // shizuku_client block (the SuperApp). A terminal consuming this lib
-        // reaches the shell through the SuperApp bridge and must not put ITS
-        // APK + token on the shared port.
-        if (RishBridge.providers.isEmpty()) AdbShellBootstrap.ensureServer(ctx, ladder)
+        val mode = ChannelModePrefs.current(ctx)
+        // Only an app that OWNS a server launches it: SuperApp (no shizuku_client block), or one
+        // that declares its own local_server port (Cloud Store, Cloud Account). A terminal reaching
+        // the shell through the SuperApp bridge must not put ITS APK + token on the shared port.
+        val owns = ChannelModePrefs.ownsServer()
         // Our server is the one channel that can WEDGE: a uid-2000 app_process launched from the
         // previous APK keeps its listening socket after an update while every exec dies in it, so
         // isReady (a connect) stayed true and rish answered "no shell channel ready" with Shizuku up.
         // The ladder asks it to execute before trusting it; ensureServer replaces a wedged one.
-        return ladder.firstOrNull { it.isReady(ctx) && (it !== LocalShellChannel || it.probe(ctx)) }
+        return ChannelSelector.select(mode, ladder, { it.name() },
+            usable = { it.isReady(ctx) && (it !== LocalShellChannel || it.probe(ctx)) },
+            relaunch = { sources -> owns && AdbShellBootstrap.ensureServer(ctx, sources) })
     }
 }
