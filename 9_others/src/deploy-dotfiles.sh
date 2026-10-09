@@ -48,10 +48,28 @@ command -v node >/dev/null 2>&1 || {
 
 # Manifest readers live in one place so a missing interpreter can never again
 # be reported as malformed data.
-json_keys()   { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(Object.keys(m.targets||{}).join(" "))' "$1"; }
-json_target() { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(String(m.targets[process.argv[2]]))' "$1" "$2"; }
-json_root_keys()   { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(Object.keys(m.root_targets||{}).join(" "))' "$1"; }
-json_root_target() { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(String(m.root_targets[process.argv[2]]))' "$1" "$2"; }
+# Directory targets and root files each come in two sections: the universal
+# one, and public_* (leak-scan gates — see manifest _public_doc). This repo
+# owns the manifest and is public, so it installs both.
+json_keys()   { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(Object.keys({...m.targets,...m.public_targets}).join(" "))' "$1"; }
+json_target() { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(String({...m.targets,...m.public_targets}[process.argv[2]]))' "$1" "$2"; }
+json_root_keys()   { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(Object.keys({...m.root_targets,...m.public_root_targets}).join(" "))' "$1"; }
+json_root_target() { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(String({...m.root_targets,...m.public_root_targets}[process.argv[2]]))' "$1" "$2"; }
+# is_public <section-key>: 0 when the key belongs to public_targets / public_root_targets.
+is_public() { node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.exit(process.argv[2] in {...m.public_targets,...m.public_root_targets}?0:1)' "$MANIFEST" "$1"; }
+
+# The public gates land in .github/workflows/ and the repo root, where every
+# deployed artifact carries the GENERATED-FILE banner (test_generated_header_present)
+# — a hand edit to a repo copy must say where the source is. So they go through
+# the same stamping engine as 1_cicd/dist; the universal dotfiles stay verbatim.
+INJECT="$(cd "$(dirname "$0")" && pwd)/inject-header.sh"
+stamp_or_copy() { # <src> <dest> <key>  (src may be a dir)
+    if is_public "$3" && [ -f "$INJECT" ]; then
+        if [ -d "$1" ]; then mode=tree; else mode=file; fi
+        REPO_ROOT="$REPO_ROOT" ENGINE_NAME=9_others/src/deploy-dotfiles.sh bash "$INJECT" "$mode" "$1" "$2"
+    elif [ -d "$1" ]; then cp -rf "$1"/. "$2"/ 2>/dev/null || true
+    else cp -f "$1" "$2"; fi
+}
 
 # ── refresh src/claude/ from the ONE claude SoT ─────────────────────────────
 # Same pattern as the mcp.json refresh below, one tier up: src/ is a GENERATED
@@ -131,7 +149,7 @@ for tool in $TOOLS; do
     #
     # Still additive, never a purge: .claude/ and .obsidian/ mix managed config
     # with machine state (see never_manage), so the target is never emptied.
-    cp -rf "$DF_SRC/$tool"/. "$DF_DIST/$tool"/ 2>/dev/null || true
+    stamp_or_copy "$DF_SRC/$tool" "$DF_DIST/$tool" "$tool"
     cp -rf "$DF_DIST/$tool"/. "$REPO_ROOT/$target"/ 2>/dev/null || true
     n=$(find "$DF_DIST/$tool" -type f 2>/dev/null | wc -l | tr -d ' ')
     log "dotfiles: $tool -> $target ($n files)"
@@ -170,7 +188,7 @@ for rf in $ROOT_FILES; do
 
     [ -f "$src" ] || { log "root: no src for '$rf' — skipping"; continue; }
     mkdir -p "$DF_DIST/root"
-    cp -f "$src" "$DF_DIST/root/$rf"
+    stamp_or_copy "$src" "$DF_DIST/root/$rf" "$rf"
     # Replace a symlink outright rather than writing through it — the whole
     # point is to stop pointing at a machine-local path.
     [ -L "$REPO_ROOT/$target" ] && rm -f "$REPO_ROOT/$target"
