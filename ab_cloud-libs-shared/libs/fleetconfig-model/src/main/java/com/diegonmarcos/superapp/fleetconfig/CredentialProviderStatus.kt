@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.bottomnav
+package com.diegonmarcos.superapp.fleetconfig
 
 import android.content.ComponentName
 import android.content.Context
@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.view.autofill.AutofillManager
 
 /**
  * Is Cloud Vault Android's DEFAULT passwords/passkeys provider?
@@ -137,16 +136,14 @@ object CredentialProviderStatus {
         } catch (_: Throwable) { false }
 
     /**
-     * Live status for [pkg]. From Vault itself pass its own package: AutofillManager (which only answers
-     * about the caller) then confirms the autofill half even where the secure setting is hidden.
+     * Live status for [pkg]. From Vault itself pass [ownAutofillEnabled] (AutofillManager's
+     * hasEnabledAutofillServices, which only answers about the caller): it confirms the autofill half
+     * even where the secure setting is hidden from the app.
      */
-    fun status(ctx: Context, pkg: String = VAULT_PACKAGE): Status {
+    fun status(ctx: Context, pkg: String = VAULT_PACKAGE, ownAutofillEnabled: Boolean? = null): Status {
         var autofill = read(ctx, KEY_AUTOFILL)
-        if (pkg == ctx.packageName) {
-            val own = try { ctx.getSystemService(AutofillManager::class.java)?.hasEnabledAutofillServices() } catch (_: Throwable) { null }
-            if (own == true) autofill = "$pkg/$AUTOFILL_SERVICE"
-            else if (own == false && autofill == null) autofill = ""
-        }
+        if (ownAutofillEnabled == true) autofill = "$pkg/$AUTOFILL_SERVICE"
+        else if (ownAutofillEnabled == false && autofill == null) autofill = ""
         return statusOf(Build.VERSION.SDK_INT, read(ctx, KEY_CREDENTIAL_PRIMARY), read(ctx, KEY_CREDENTIAL_LIST), autofill, pkg)
     }
 
