@@ -135,4 +135,8 @@
     <color name="theme_terminal_hairline">#3300FF66</color>
     <color name="theme_terminal_tile_ink">#FF000000</color>
 
+    <!-- The kit's three state tokens (cloud-account-ui spec 0.3): the same on every launcher theme. -->
+    <color name="cloud_state_ok">#FF7FC98F</color>
+    <color name="cloud_state_warn">#FFE2B85C</color>
+    <color name="cloud_state_bad">#FFE5737A</color>
 </resources>

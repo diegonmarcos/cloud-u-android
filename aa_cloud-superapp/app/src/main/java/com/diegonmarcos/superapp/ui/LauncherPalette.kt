@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.ui
 
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -91,14 +92,12 @@ object LauncherPalette {
      */
     fun kit(ctx: Context): KitPalette = of(ctx).run {
         KitPalette.fromArgb(surface, surfaceSelected, textPrimary, textSecondary, accent, hairline, tileInk,
-            ok = STATE_OK, warn = STATE_WARN, bad = STATE_BAD)
+            ok = state(ctx, R.color.cloud_state_ok), warn = state(ctx, R.color.cloud_state_warn), bad = state(ctx, R.color.cloud_state_bad))
     }
 
     // The kit's three state tokens (cloud-account-ui spec 0.3), the same on every launcher theme:
     // a state dot must read the same whichever wallpaper the theme picks.
-    private val STATE_OK = 0xFF7FC98F.toInt()
-    private val STATE_WARN = 0xFFE2B85C.toInt()
-    private val STATE_BAD = 0xFFE5737A.toInt()
+    private fun state(ctx: Context, res: Int): Int = ContextCompat.getColor(ctx, res)
 
     fun forTheme(ctx: Context, theme: LauncherTheme): Palette {
         cached?.let { if (it.themeId == theme.id) return it }
