@@ -180,7 +180,9 @@ object BrowserDebugApi {
                 }
             }
             "downloads/enqueue" -> need(url, "url") ?: run {
-                val d = BrowserDownloads(app).enqueue(url, config.userAgents["mobile"], null, null, settings.string("download_dir").orEmpty())
+                val d = BrowserDownloads(app).enqueue(url, config.userAgents["mobile"], null, null, settings.string("download_dir").orEmpty()) { u ->
+                    com.diegonmarcos.superapp.browser.TabProfile.cookies(null).getCookie(u)   // not a tab: the default jar
+                }
                 JSONObject().put("ok", true).put("id", d.id).put("file", d.file)
             }
             "downloads/clear" -> { BrowserDownloads(app).clear(); JSONObject().put("ok", true) }
