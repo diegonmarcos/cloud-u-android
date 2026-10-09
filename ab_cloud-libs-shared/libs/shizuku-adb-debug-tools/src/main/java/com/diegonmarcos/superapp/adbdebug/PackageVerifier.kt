@@ -72,6 +72,21 @@ object PackageVerifier {
         runCatching { Settings.Global.getString(ctx.contentResolver, key) }.getOrNull() != null
     }
 
+
+    /** Unprivileged read that keeps "absent" distinct from a value. */
+    fun reading(ctx: Context): ControlStatus.Reading {
+        fun g(key: String) = runCatching { Settings.Global.getString(ctx.contentResolver, key) }
+            .getOrNull()?.let(ControlStatus::parseSetting)
+        return ControlStatus.Reading(g(CONSENT), g(ENABLE), g(ADB))
+    }
+
+    /** The same three values through a shell channel (`settings get global ...`), for
+     *  a build/ROM where the app's own provider read comes back empty. Blocking. */
+    fun readingViaShell(ctx: Context, channel: ShellChannel): ControlStatus.Reading {
+        fun g(key: String) = ControlStatus.parseSetting(channel.exec(ctx, "settings get global $key"))
+        return ControlStatus.Reading(g(CONSENT), g(ENABLE), g(ADB))
+    }
+
     fun state(ctx: Context): State {
         fun g(key: String, def: Int) =
             runCatching { Settings.Global.getInt(ctx.contentResolver, key, def) }.getOrDefault(def)

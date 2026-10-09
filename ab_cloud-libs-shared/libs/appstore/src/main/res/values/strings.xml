@@ -38,18 +38,23 @@
     <string name="store_bar_download_all">⇣  Download all</string>
     <string name="store_bar_open">Open ↗</string>
     <string name="store_bar_play_protect">Play Protect: %1$s</string>
+    <string name="store_bar_play_protect_unknown">This device does not let the Store read Play Protect\'s install scan. Tap to open its settings.</string>
+    <string name="store_bar_play_protect_settings">Play Protect: toggle not allowed here (%1$s). Opened its settings.</string>
+    <string name="store_bar_channel_up">Channel: up (%1$s)</string>
+    <string name="store_bar_channel_down">Channel: down - Reconnect</string>
+    <string name="store_bar_channel_unpaired">Not paired - Pair</string>
+    <string name="store_bar_channel_checking">Channel: checking...</string>
+    <string name="store_bar_channel_up_caption">Live shell round trip answered as uid 2000 - installs and updates carry no tap.</string>
+    <string name="store_bar_channel_down_caption">Paired, but nothing answers. Reconnect needs Wireless Debugging on; tap to retry.</string>
+    <string name="store_bar_channel_unpaired_caption">No shell channel was ever paired. Tap to pair (the code goes in the notification).</string>
     <string name="store_bar_play_protect_off">No install-scan prompt - fleet installs go straight through.</string>
     <string name="store_bar_play_protect_on">Play Protect prompts on every install. Turning it off needs the embedded adb channel (or Shizuku, if you run it); it is device-wide and survives uninstall.</string>
     <string name="store_bar_silent_off">Grant \'Install unknown apps\' for no-tap updates.</string>
     <string name="store_bar_silent_on">Silent installs enabled.</string>
     <string name="store_bar_update_all">⬆  Update all</string>
+    <string name="store_unknown_state">unknown</string>
     <string name="store_bar_wifi_only">Up Wifi Only: %1$s</string>
     <string name="store_bar_wifi_only_toast">Update over Wi-Fi only %1$s</string>
-    <string name="store_bar_wireless_changed">Wireless debugging %1$s via %2$s</string>
-    <string name="store_bar_wireless_debug">Wireless Debug: %1$s</string>
-    <string name="store_bar_wireless_off">Off: no embedded adb channel. \'Direct install\' on any app\'s Details still installs, through the system confirmation sheet.</string>
-    <string name="store_bar_wireless_on">adbd is listening - the embedded channel can install without a tap.</string>
-    <string name="store_bar_wireless_unchanged">NOT changed (%1$s) - still %2$s</string>
     <string name="store_close">Close</string>
     <!-- #625 the APK cache: what it holds per row, and the manual door onto it.
          cached-vs-installed is the row's own answer to "are my downloaded bytes

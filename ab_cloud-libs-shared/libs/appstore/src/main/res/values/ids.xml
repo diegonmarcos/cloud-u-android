@@ -3,4 +3,5 @@
     <!-- #793 the key StoreBar.button / StoreBar.chip mark the views they draw
          with, so a test can tell the Store's shared control from a look-alike. -->
     <item name="store_control" type="id" />
+    <item name="store_redraw" type="id" />
 </resources>

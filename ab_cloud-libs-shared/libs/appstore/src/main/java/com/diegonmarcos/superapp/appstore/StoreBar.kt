@@ -12,11 +12,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.adbdebug.AdbPairingService
+import com.diegonmarcos.superapp.adbdebug.ControlStatus
+import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.adbdebug.ShellAccess
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
-import com.diegonmarcos.superapp.updater.UpdateProgress
 import kotlin.concurrent.thread
 
 /**
@@ -61,6 +63,7 @@ object StoreBar {
         val ctx = host.requireContext()
         into.removeAllViews(); into.tag = TAG
         fun redraw() { if (host.isAdded) render(host, into, verbs) }
+        into.setTag(R.id.store_redraw, ::redraw)
         // Exactly two rows of controls: the batch actions and the auto-update
         // switch on the first, the configs and the remaining switches on the
         // second. Check all refreshes what is on offer, changing nothing; Install
@@ -100,67 +103,99 @@ object StoreBar {
         into.addView(caption(ctx, ctx.getString(
             if (AutoUpdatePrefs.canInstallSilently(ctx)) R.string.store_bar_silent_on else R.string.store_bar_silent_off)))
 
-        // Play Protect's per-INSTALL scan prompt, which no installer can opt out
-        // of from inside its own process. Writing the verifier settings needs
-        // WRITE_SECURE_SETTINGS, so it goes through the shell channel (Shizuku /
-        // embedded adb). Reading is unprivileged, so the label is always the
-        // device's real state even with no channel present.
-        val scan = PackageVerifier.state(ctx)
-        configRow.addView(btn(ctx, Item.PLAY_PROTECT, ctx.getString(R.string.store_bar_play_protect, onOff(ctx, scan.on)),
-            if (scan.on) 0xFF4A4A55.toInt() else 0xFF2F855A.toInt()) {
-            toast(ctx, ctx.getString(R.string.store_bar_asking_shell))
+        // Play Protect's per-INSTALL scan prompt. The label is what the device STORES
+        // (ON / OFF / unknown when no key can be read), never a default. Tap toggles
+        // through the shell channel (or WRITE_SECURE_SETTINGS); when that is absent or
+        // refused it opens Play Protect's own settings. Re-read on resume.
+        val pp = StoreStatus.playProtect(ctx)
+        val ppLabel = when (pp) {
+            ControlStatus.Tri.ON -> onOff(ctx, true)
+            ControlStatus.Tri.OFF -> onOff(ctx, false)
+            ControlStatus.Tri.UNKNOWN -> ctx.getString(R.string.store_unknown_state)
+        }
+        configRow.addView(btn(ctx, Item.PLAY_PROTECT, ctx.getString(R.string.store_bar_play_protect, ppLabel),
+            when (pp) { ControlStatus.Tri.ON -> 0xFF4A4A55.toInt(); ControlStatus.Tri.OFF -> 0xFF2F855A.toInt(); else -> AMBER }) {
+            if (pp == ControlStatus.Tri.UNKNOWN) { openPlayProtect(host); return@btn }
             // setScanning binds Shizuku, which blocks - never on the main thread.
             thread(name = "play-protect-toggle") {
-                val want = !scan.on
-                fun apply(): PackageVerifier.Result = PackageVerifier.setScanning(ctx, want)
-                fun report(r: PackageVerifier.Result) = into.post {
-                    Toast.makeText(ctx, if (r.ok) r.state.describe() + " - via " + r.channel else r.output,
-                        Toast.LENGTH_LONG).show()
-                    redraw()
-                }
-                val first = apply()
-                if (first.channel != "none") { report(first); return@thread }
-                // No channel yet: START the flow that grants one instead of
-                // telling the user to go find it.
-                val msg = ShellAccess.ensure(ctx) { thread(name = "play-protect-retry") { report(apply()) } }
-                into.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
-            }
-        })
-        into.addView(caption(ctx, ctx.getString(
-            if (!scan.on) R.string.store_bar_play_protect_off else R.string.store_bar_play_protect_on)))
-
-        // Wireless Debugging, the switch every silent install rests on: the
-        // embedded adb channel talks to the adbd this starts. [WirelessDebugging]
-        // re-reads the setting, so the label is the device's answer, not ours.
-        // The OS exposes no action for its sub-screen, so "Open" deep-links to
-        // Developer options, where it lives.
-        val wd = WirelessDebugging.isOn(ctx)
-        configRow.addView(btn(ctx, Item.WIRELESS_DEBUG, ctx.getString(R.string.store_bar_wireless_debug, onOff(ctx, wd)),
-            if (wd) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-            toast(ctx, ctx.getString(R.string.store_bar_asking_shell))
-            thread(name = "wireless-debug-toggle") {
-                // busy = an install batch holds the lease; cutting the
-                // channel underneath one strands a half-finished install.
-                val st = UpdateProgress.state
-                val busy = UpdateProgress.batchLabel != null ||
-                    st is UpdateProgress.State.Downloading || st is UpdateProgress.State.Installing
-                val r = WirelessDebugging.set(ctx, !wd, busy = busy)
+                val r = PackageVerifier.setScanning(ctx, pp == ControlStatus.Tri.OFF)
                 into.post {
-                    Toast.makeText(ctx,
-                        (if (r.ok) ctx.getString(R.string.store_bar_wireless_changed, onOff(ctx, r.on), r.channel)
-                         else ctx.getString(R.string.store_bar_wireless_unchanged, r.channel, onOff(ctx, r.on))) +
-                            "\n" + r.detail,
-                        Toast.LENGTH_LONG).show()
-                    redraw()
+                    if (r.ok) Toast.makeText(ctx, r.state.describe() + " - via " + r.channel, Toast.LENGTH_LONG).show()
+                    else { Toast.makeText(ctx, ctx.getString(R.string.store_bar_play_protect_settings, r.output.lineSequence().firstOrNull().orEmpty()), Toast.LENGTH_LONG).show(); openPlayProtect(host) }
+                    StoreStatus.invalidate(); redraw()
                 }
             }
         })
-        configRow.addView(btn(ctx, Item.DEV_OPTIONS, ctx.getString(R.string.store_bar_open), 0xFF7C3AED.toInt()) {
-            val dev = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-            host.startActivity(if (dev.resolveActivity(ctx.packageManager) != null) dev else Intent(Settings.ACTION_SETTINGS))
+        into.addView(caption(ctx, ctx.getString(when (pp) {
+            ControlStatus.Tri.UNKNOWN -> R.string.store_bar_play_protect_unknown
+            ControlStatus.Tri.OFF -> R.string.store_bar_play_protect_off
+            ControlStatus.Tri.ON -> R.string.store_bar_play_protect_on })))
+
+        // The privileged channel itself: a cached live `id` round trip (uid 2000) over the
+        // embedded adb or Shizuku, probed off the main thread. NOT the system "wireless
+        // debugging" switch - that can be on while the channel is dead.
+        val ch = StoreStatus.channel()
+        if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { into.post { redraw() } }
+        val chLabel = when (ch?.state) {
+            null -> ctx.getString(R.string.store_bar_channel_checking)
+            ControlStatus.Channel.UP -> ctx.getString(R.string.store_bar_channel_up, ch?.via.orEmpty())
+            ControlStatus.Channel.DOWN -> ctx.getString(R.string.store_bar_channel_down)
+            ControlStatus.Channel.NOT_PAIRED -> ctx.getString(R.string.store_bar_channel_unpaired)
+        }
+        val chTap: (() -> Unit)? = if (ch == null) null else ({
+                val wd = WirelessDebugging.isOn(ctx)
+                when (ControlStatus.channelAction(ch, wd)) {
+                    ControlStatus.Action.OPEN_SETTINGS -> openDevSettings(host)
+                    ControlStatus.Action.RECONNECT -> {
+                        toast(ctx, ctx.getString(R.string.store_bar_asking_shell))
+                        thread(name = "channel-reconnect") {
+                            val msg = ShellAccess.ensure(ctx) {}
+                            StoreStatus.invalidate()
+                            into.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show(); redraw() }
+                        }
+                    }
+                    ControlStatus.Action.PAIR -> thread(name = "channel-pair") {
+                        // A phone paired before the pairing record existed lands here: reconnect first.
+                        val ok = EmbeddedAdbChannel.autoConnect(ctx).first
+                        if (!ok) into.post { openDevSettings(host); runCatching { AdbPairingService.start(ctx) } }
+                        StoreStatus.invalidate()
+                        into.post { redraw() }
+                    }
+                }
         })
-        into.addView(caption(ctx, ctx.getString(
-            if (wd) R.string.store_bar_wireless_on else R.string.store_bar_wireless_off)))
+        configRow.addView(btn(ctx, Item.WIRELESS_DEBUG, chLabel,
+            when (ch?.state) { ControlStatus.Channel.UP -> 0xFF2F855A.toInt(); ControlStatus.Channel.DOWN -> 0xFFC05621.toInt()
+                else -> 0xFF4A4A55.toInt() }, chTap))
+        configRow.addView(btn(ctx, Item.DEV_OPTIONS, ctx.getString(R.string.store_bar_open), 0xFF7C3AED.toInt()) {
+            openDevSettings(host)
+        })
+        into.addView(caption(ctx, ctx.getString(when (ch?.state) {
+            ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
+            ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
+            ControlStatus.Channel.NOT_PAIRED -> R.string.store_bar_channel_unpaired_caption
+            null -> R.string.store_bar_channel_checking })))
+    }
+
+    /** Back in front (e.g. from settings): drop the cached readings and repaint [bar]. */
+    fun onResume(bar: View?) {
+        StoreStatus.invalidate()
+        @Suppress("UNCHECKED_CAST")
+        (bar?.getTag(R.id.store_redraw) as? (() -> Unit))?.invoke()
+    }
+
+    private val AMBER = 0xFFB7791F.toInt()
+
+    private fun openDevSettings(host: Fragment) {
+        val dev = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+        host.startActivity(if (dev.resolveActivity(host.requireContext().packageManager) != null) dev else Intent(Settings.ACTION_SETTINGS))
+    }
+
+    private fun openPlayProtect(host: Fragment) {
+        val pm = host.requireContext().packageManager
+        val ladder = listOf(
+            Intent().setClassName("com.google.android.gms", "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"),
+            Intent(Settings.ACTION_SECURITY_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+        for (i in ladder) if (i.resolveActivity(pm) != null && runCatching { host.startActivity(i) }.isSuccess) return
     }
 
     private fun onOff(ctx: Context, on: Boolean) = ctx.getString(if (on) R.string.store_on else R.string.store_off)

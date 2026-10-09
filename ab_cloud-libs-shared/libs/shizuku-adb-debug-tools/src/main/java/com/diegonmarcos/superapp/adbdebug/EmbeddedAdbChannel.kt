@@ -108,6 +108,19 @@ object EmbeddedAdbChannel : ShellChannel {
         if (timedOut) "$text\n[…truncated at ${timeoutMs}ms — ${text.length} bytes]" else text
     }.getOrNull()
 
+    private const val PREFS = "embedded_adb"
+    private const val KEY_PAIRED = "paired"
+
+    /** adbd keeps the trust, so the only record of "this app was paired" is ours: set on
+     *  the first successful pair or connect, never cleared (a revoked key shows as down). */
+    private fun markPaired(ctx: Context) {
+        runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_PAIRED, true).apply() }
+    }
+
+    fun everPaired(ctx: Context): Boolean = runCatching {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PAIRED, false)
+    }.getOrDefault(false)
+
     private const val PROBE_TIMEOUT_MS = 4_000L
     private const val EXEC_TIMEOUT_MS = 25_000L
     /** An APK is tens of MB and `pm` only answers once the commit has landed. */
@@ -127,6 +140,7 @@ object EmbeddedAdbChannel : ShellChannel {
      */
     fun pair(ctx: Context, host: String, port: Int, code: String): Pair<Boolean, String> = runCatching {
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).pair(host, port, code) }
+        if (ok) markPaired(ctx)
         ok to (if (ok) "paired" else "pair returned false")
     }.getOrElse { false to "pair failed: ${it.message}" }
 
@@ -137,6 +151,7 @@ object EmbeddedAdbChannel : ShellChannel {
      */
     fun connect(ctx: Context, host: String, port: Int): Pair<Boolean, String> = runCatching {
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).connect(host, port) }
+        if (ok) markPaired(ctx)
         ok to (if (ok) "connected" else "connect returned false")
     }.getOrElse { false to "connect failed: ${it.message}" }
 
@@ -161,6 +176,7 @@ object EmbeddedAdbChannel : ShellChannel {
     fun autoConnect(ctx: Context): Pair<Boolean, String> = runCatching {
         if (isReady(ctx)) return@runCatching true to "already connected"
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).autoConnect(ctx, 10_000) }
+        if (ok) markPaired(ctx)
         ok to (if (ok) "auto-connected via mDNS" else "no _adb-tls-connect service found — Wireless Debugging ON + paired?")
     }.getOrElse { false to "autoconnect failed: ${it.message}" }
 

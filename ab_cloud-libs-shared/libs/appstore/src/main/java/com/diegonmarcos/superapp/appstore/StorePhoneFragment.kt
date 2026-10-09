@@ -63,6 +63,7 @@ class StorePhoneFragment : Fragment() {
     private val cMiss = 0xFF9F7AEA.toInt()
     private val cBadge = 0xFFE53E3E.toInt()
     private var list: LinearLayout? = null
+    private var bar: LinearLayout? = null
     private var rows: List<Row> = emptyList()
     // #619 the row filter. false = Declared (the full set rows() builds:
     // installed ∪ fleet ∪ external) — the default, and the mode Profile ▸ Store
@@ -130,6 +131,7 @@ class StorePhoneFragment : Fragment() {
         // that need Play. Then export / import / clear cache, and the store-source strip.
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
+            bar = this
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
@@ -165,6 +167,7 @@ class StorePhoneFragment : Fragment() {
     // screen, and what they changed must not be drawn stale.
     override fun onResume() {
         super.onResume()
+        StoreBar.onResume(bar)
         reload()
         // #570 Account ▸ Fleet ▸ Apps ▸ Apply list to Store: the declared inventory, same path as a picked file.
         StoreImport.takePending()?.let { importText(it) }

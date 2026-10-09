@@ -268,6 +268,7 @@ class StoreCloudFragment : Fragment() {
      *  that still finds updates pending posts it again. */
     override fun onResume() {
         super.onResume()
+        if (::headerControls.isInitialized) StoreBar.onResume(headerControls)
         context?.let { c -> runCatching { StoreAuto.onPending(c.applicationContext, 0) } }
         // #858 back in front: resolve handed-over installs and show a prompt
         // that is still pending again, then repaint the rows.
