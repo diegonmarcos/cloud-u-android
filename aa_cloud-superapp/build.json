@@ -2984,6 +2984,13 @@
                 "separator": true
               },
               {
+                "_doc": "Configs ▸ Launcher ▸ Presets, first page after the group label and its separator (owner order: Configs | Presets, Store, C3, About).",
+                "id": "configs-presets",
+                "label": "Presets",
+                "icon": "ic_p_sol_personal",
+                "target": "page:config/presets"
+              },
+              {
                 "_doc": "The Configs row's way into Configs ▸ Store (#563). Its label must equal the store page's label — test-store-identity.sh derives both and fails if they drift.",
                 "label": "Store",
                 "icon": "ic_refresh",
@@ -2995,6 +3002,13 @@
                 "label": "C3",
                 "icon": "ic_p_watchdog",
                 "target": "extapp:cloud-c3"
+              },
+              {
+                "_doc": "Configs ▸ Observability ▸ About, last of the owner-ordered tiles (Configs | Presets, Store, C3, About).",
+                "id": "configs-about",
+                "label": "About",
+                "icon": "ic_settings",
+                "target": "page:config/about"
               },
               {
                 "_doc": "#803 the owner moved this tile out of AGI to sit immediately before Store (test-agi-tiles.sh T5). app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
