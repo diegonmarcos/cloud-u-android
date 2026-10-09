@@ -53,6 +53,10 @@ dependencies {
     // only compileOnly-s the cipher, so the app that keeps the store ships it.
     implementation 'androidx.security:security-crypto:1.1.0'
 
+    // WebAuthn in WebView (WebSettingsCompat.setWebAuthenticationSupport; feature WEB_AUTHENTICATION needs
+    // androidx.webkit 1.12+ and a WebView that implements it). 1.14.0 = the fleet's pin.
+    implementation 'androidx.webkit:webkit:1.14.0'
+
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
     implementation 'androidx.appcompat:appcompat:1.7.0'

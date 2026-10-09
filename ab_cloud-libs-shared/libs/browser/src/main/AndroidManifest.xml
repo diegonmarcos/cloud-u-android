@@ -2,5 +2,14 @@
 <!-- libs:browser — in-app WebView host. No new permissions; INTERNET
      is already declared in app/AndroidManifest.xml since other
      subsystems need it. No <activity> or <service> declarations;
-     BrowserHostFragment is hosted by app/'s MainActivity. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+     BrowserHostFragment is hosted by app/'s MainActivity.
+     <queries>: PasskeySupport resolves the system browser for "Continue sign-in in secure browser". -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+</manifest>

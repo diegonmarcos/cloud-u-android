@@ -4175,6 +4175,7 @@
   "maven:androidx.webkit:webkit": {
    "kind": "maven",
    "declared_in": [
+    "ab_cloud-libs-shared/libs/browser/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",

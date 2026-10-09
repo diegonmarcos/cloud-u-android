@@ -741,6 +741,15 @@ class BrowserHostFragment : Fragment() {
             settings.setSupportMultipleWindows(true)
             settings.javaScriptCanOpenWindowsAutomatically = true
             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+            // Passkeys: WebAuthn is off in WebView unless asked for; a refusal falls back to the system browser.
+            passkeyMode = PasskeySupport.apply(settings)
+            val self = this
+            addJavascriptInterface(object {
+                @android.webkit.JavascriptInterface
+                fun failed(name: String?, ms: Long) {
+                    if (PasskeySupport.isWebAuthnFailure(name, ms)) self.post { offerSecureBrowser(self, null, true) }
+                }
+            }, PasskeySupport.JS_BRIDGE)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
                 else View.IMPORTANT_FOR_AUTOFILL_YES
@@ -785,6 +794,7 @@ class BrowserHostFragment : Fragment() {
                     super.onPageFinished(view, finishedUrl)
                     val u = finishedUrl ?: return
                     if (readerOn) return
+                    probePasskey(view, u)
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
                     // #887 an offline copy is not a visit.
@@ -882,6 +892,7 @@ class BrowserHostFragment : Fragment() {
         child.settings.domStorageEnabled = true
         child.settings.setSupportMultipleWindows(true)
         child.settings.javaScriptCanOpenWindowsAutomatically = true
+        PasskeySupport.apply(child.settings)
         applyViewMode(child)
         android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(child, browserSettings.bool("block_third_party_cookies") != true)
         val dialog = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar)
@@ -1810,6 +1821,51 @@ class BrowserHostFragment : Fragment() {
         val imm = v.context.getSystemService(Context.INPUT_METHOD_SERVICE)
             as? android.view.inputmethod.InputMethodManager
         imm?.hideSoftInputFromWindow(v.windowToken, 0)
+    }
+
+    /** Mode WebAuthn was enabled with on the current WebView (null = this WebView cannot do it). */
+    private var passkeyMode: PasskeySupport.Mode? = null
+    private var passkeyOfferedFor: String? = null
+
+    /** On a Google page, read what it says; hook navigator.credentials so a failed passkey call is reported. */
+    private fun probePasskey(view: WebView?, url: String) {
+        view ?: return
+        val host = BrowserSitePolicy.hostOf(url)
+        if (url.startsWith("https://")) view.evaluateJavascript(PasskeySupport.HOOK_JS, null)
+        if (host.endsWith("google.com") || host == "accounts.youtube.com") {
+            view.evaluateJavascript("(document.body&&document.body.innerText||'').slice(0,6000)") { raw ->
+                val text = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull()
+                if (PasskeySupport.shouldOfferSecureBrowser(url, text, false, passkeyMode)) offerSecureBrowser(view, url, false)
+            }
+        }
+    }
+
+    /** "Continue sign-in in secure browser": the same page in the system browser (Custom Tab), where passkeys work. */
+    private fun offerSecureBrowser(view: WebView, url: String?, @Suppress("UNUSED_PARAMETER") jsFailure: Boolean) {
+        val target = url ?: view.url ?: return
+        if (!isAdded || passkeyOfferedFor == target) return
+        val launch = PasskeySupport.secureBrowserLaunch(target, browserPackage()) ?: return
+        passkeyOfferedFor = target
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Passkey needed")
+            .setMessage("This sign-in asks for a passkey, which this in-app page cannot provide. Continue in your secure browser. " +
+                "Cloud Browser never sees your passkey or password. The session stays in that browser.")
+            .setPositiveButton("Continue sign-in in secure browser") { _, _ ->
+                runCatching { startActivity(PasskeySupport.secureBrowserIntent(launch)) }
+                    .onFailure { toast("No browser found") }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /** The system browser that is not us. */
+    private fun browserPackage(): String? {
+        val pm = requireContext().packageManager
+        val probe = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://example.com"))
+            .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+        val all = pm.queryIntentActivities(probe, 0).map { it.activityInfo.packageName }.distinct()
+        val def = pm.resolveActivity(probe, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+        return PasskeySupport.pickBrowserPackage(all, requireContext().packageName, def)
     }
 
     private fun toast(msg: String) {
