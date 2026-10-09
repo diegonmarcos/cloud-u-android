@@ -926,6 +926,8 @@ internal fun ImapMessage.toEntity(
         attachmentsJson = EmailAttachments.encode(attachments.map { it.toBodyPart() }),
         // Schema v30: agrees with [EmailMapper] column by column (an upsert would erase it).
         authClass = AuthIndex.indexed(subject, preview),
+        // Schema v31: the sender's registrable domain, column for column with [EmailMapper].
+        fromDomain = SenderDomain.indexed(fromEmail),
     )
 }
 

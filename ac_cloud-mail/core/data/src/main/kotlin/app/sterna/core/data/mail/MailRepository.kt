@@ -705,8 +705,14 @@ internal fun conversationSql(
     shape: ListShape = ListShape.NONE,
 ): String {
     // The grouping key: the conversation (thread id, else the message's own id) — or, when grouping by
-    // SENDER, the lower-cased address (else the message's own id, which keeps an address-less row alone).
-    fun key(t: String) = if (shape.bySender) "COALESCE(NULLIF(LOWER(TRIM($t.fromEmail)), ''), $t.id)" else "COALESCE($t.threadId, $t.id)"
+    // SENDER, the lower-cased address (else the message's own id, which keeps an address-less row alone) —
+    // or, by DOMAIN, the stored registrable domain ("" groups the address-less rows as "(unknown)"); a row
+    // not indexed yet stays alone under a key no domain can equal until the backfill reaches it.
+    fun key(t: String) = when {
+        shape.byDomain -> "COALESCE($t.fromDomain, char(1) || $t.id)"
+        shape.bySender -> "COALESCE(NULLIF(LOWER(TRIM($t.fromEmail)), ''), $t.id)"
+        else -> "COALESCE($t.threadId, $t.id)"
+    }
     val shapeWhere = shape.whereSql("emails")
     val scope = folderScopeSql(scopeCount, "emails")
     val scopeOuter = folderScopeSql(scopeCount, "e")
@@ -718,14 +724,16 @@ internal fun conversationSql(
         SortOrder.DATE_DESC -> "e.sortKey DESC"
         SortOrder.DATE_ASC -> "e.sortKey ASC"
         SortOrder.SUBJECT -> "LOWER(TRIM(e.subject)) ASC"
-        SortOrder.SENDER -> "LOWER(TRIM(COALESCE(e.fromName, e.fromEmail))) ASC"
+        // Ranked by sender, a domain group is ranked by its domain: the name its heading shows.
+        SortOrder.SENDER -> if (shape.byDomain) "g.tkey ASC, e.sortKey DESC" else "LOWER(TRIM(COALESCE(e.fromName, e.fromEmail))) ASC"
         SortOrder.UNREAD_FIRST -> "g.threadUnread ASC, e.sortKey DESC"
         // e.flagged — the REPRESENTATIVE row's star — and not MAX(flagged) over the thread: sorting
         // on "any message is starred" pins a row wearing an empty star tapping cannot dislodge (#111).
         SortOrder.FLAGGED_FIRST -> "e.flagged DESC, e.sortKey DESC"
     }
     return """
-        SELECT e.*, c.threadCount AS threadCount, t.threadTotal AS threadTotal, g.threadUnread AS threadUnread
+        SELECT e.*, c.threadCount AS threadCount, t.threadTotal AS threadTotal, g.threadUnread AS threadUnread,
+            c.groupUnread AS groupUnread
         FROM emails e
         JOIN (
             SELECT accountId AS gacc, ${key("emails")} AS tkey, MAX(sortKey) AS maxKey, MIN(seen) AS threadUnread
@@ -734,7 +742,8 @@ internal fun conversationSql(
             GROUP BY gacc, tkey$having
         ) g ON ${key("e")} = g.tkey AND e.accountId = g.gacc AND e.sortKey = g.maxKey
         JOIN (
-            SELECT accountId AS cacc, ${key("emails")} AS ckey, COUNT(*) AS threadCount
+            SELECT accountId AS cacc, ${key("emails")} AS ckey, COUNT(*) AS threadCount,
+                SUM(CASE WHEN seen = 0 THEN 1 ELSE 0 END) AS groupUnread
             FROM emails
             WHERE (($scope)$sentAlternatives) AND $notSnoozed
             GROUP BY cacc, ckey
@@ -766,6 +775,8 @@ data class InboxRow(
     val threadCount: Int,
     val unread: Boolean,
     val threadExpandable: Boolean = threadCount > 1,
+    /** Unread messages among the [threadCount]: the heading of a domain group shows it. */
+    val unreadCount: Int = if (unread) 1 else 0,
 )
 
 /** An account-qualified message key. Same-server accounts can cache COLLIDING email ids, so an
@@ -4161,6 +4172,10 @@ class MailRepository(
             // A SENDER group's members: the same table the chip counted, keyed by the address.
             emailDao.cachedSenderEmails(accountId, mailboxIds, threadKey.removePrefix(ListShape.SENDER_KEY_PREFIX))
                 .map { rows -> rows.map { it.toEmail() } }
+        } else if (threadKey.startsWith(SenderDomain.DOMAIN_KEY_PREFIX)) {
+            // A DOMAIN group's members, by the stored domain the chip counted.
+            emailDao.cachedDomainEmails(accountId, mailboxIds, threadKey.removePrefix(SenderDomain.DOMAIN_KEY_PREFIX))
+                .map { rows -> rows.map { it.toEmail() } }
         } else emailDao.cachedThreadEmails(accountId, mailboxIds, threadKey).map { rows -> rows.map { it.toEmail() } }
 
     /**
@@ -4169,6 +4184,13 @@ class MailRepository(
      */
     suspend fun indexAuth(batch: Int = 200): Int =
         AuthIndex.backfill(batch, next = { emailDao.unclassifiedAuth(it) }, store = emailDao::setAuthClass)
+
+    /**
+     * Backfill the sender domain ("Group by Domain") for rows cached before it existed, in bounded batches,
+     * one transaction per batch. Returns how many it indexed.
+     */
+    suspend fun indexDomains(batch: Int = 500): Int =
+        SenderDomain.backfill(batch, next = { emailDao.unindexedDomains(it) }, store = { emailDao.setFromDomains(it) })
 
     /**
      * Re-classify one message from its BODY, which is more than the preview the row was first judged on.

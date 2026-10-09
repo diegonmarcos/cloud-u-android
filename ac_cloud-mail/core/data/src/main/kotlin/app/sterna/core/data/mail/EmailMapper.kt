@@ -42,6 +42,7 @@ internal fun ConversationRow.toInboxRow(): InboxRow =
         threadCount = threadCount,
         unread = threadUnread == 0,
         threadExpandable = threadTotal > 1,
+        unreadCount = groupUnread,
     )
 
 internal fun Email.toEntity(accountId: String, mailboxId: String): EmailEntity {
@@ -81,6 +82,8 @@ internal fun Email.toEntity(accountId: String, mailboxId: String): EmailEntity {
         attachmentsJson = EmailAttachments.encode(attachments),
         // Schema v30: the auth class (G0 _ Auth), decided once here from the preview (see [AuthIndex]).
         authClass = AuthIndex.indexed(subject, preview),
+        // Schema v31: the sender's registrable domain ("Group by Domain"), from the same address as fromEmail.
+        fromDomain = SenderDomain.indexed(sender?.email),
     )
 }
 

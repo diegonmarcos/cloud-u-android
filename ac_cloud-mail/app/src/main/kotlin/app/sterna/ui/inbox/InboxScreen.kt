@@ -1263,10 +1263,13 @@ fun InboxScreen(
                 )
             },
         ) { padding ->
+            // Grouped by domain, each group's row carries a heading naming the domain ([DomainGroupHeader]).
+            val domainGrouped = viewModel.listViewUi.collectAsStateWithLifecycle().value.group == GroupMode.DOMAIN
             // One row renderer, shared by the search list and the paged browse list. Takes the row
             // modifier so the caller can pass `animateItem()` from its own LazyItemScope.
             val emailRow: @Composable (InboxRow, Modifier, Boolean, Int, Boolean) -> Unit = { row, rowModifier, animateEntry, entryIndex, fromSearch ->
                 val email = row.email
+                if (domainGrouped && !fromSearch) DomainGroupHeader(DomainGroupHeading.of(row))
                 val ownerAccount = if (ui.unified) accounts.firstOrNull { it.id == email.accountId } else null
                 // A conversation in the browse list can unfold inline; search results stay flat.
                 val expandable = !fromSearch && row.threadExpandable

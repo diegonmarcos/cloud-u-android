@@ -1219,6 +1219,8 @@
     <string name="list_filter">Filtr</string>
     <string name="list_group_subject">Grupuj według tematu</string>
     <string name="list_group_sender">Grupuj według nadawcy</string>
+    <string name="list_group_domain">Grupuj według domeny</string>
+    <string name="list_domain_group_counts">%1$d · nieprzeczytane: %2$d</string>
     <string name="list_group_none">Bez grupowania</string>
     <string name="list_rank_sender">Według nadawcy</string>
     <string name="list_rank_subject">Według tematu</string>

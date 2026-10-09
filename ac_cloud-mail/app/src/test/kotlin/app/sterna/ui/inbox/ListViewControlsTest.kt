@@ -48,7 +48,7 @@ class ListViewControlsTest {
     @Test fun `every function is declared once and the overflow walks the whole list`() {
         assertEquals(
             listOf(
-                "GROUP_SUBJECT", "GROUP_SENDER", "GROUP_NONE",
+                "GROUP_SUBJECT", "GROUP_SENDER", "GROUP_DOMAIN", "GROUP_NONE",
                 "RANK_NEWEST", "RANK_SENDER", "RANK_SUBJECT",
                 "FILTER_STARRED", "FILTER_UNREAD", "FILTER_ATTACHMENTS",
                 "FILTER_AUTH_CODES", "FILTER_AUTH_LINKS", "FILTER_AUTH_ANY",
@@ -74,7 +74,7 @@ class ListViewControlsTest {
         val ran = mutableListOf<String>()
         val actions = ListViewActions({ ran += "g:$it" }, { ran += "r:$it" }, { ran += "f:$it" })
         ListViewFunction.entries.forEach { it.run(actions) }
-        assertEquals(12, ran.size)
+        assertEquals(13, ran.size)
         assertEquals("g:SUBJECT", ran.first())
         assertEquals("f:AUTH_ANY", ran.last())
     }
@@ -112,6 +112,7 @@ class ListViewControlsTest {
         assertEquals(ListShape(attachments = true), ListView(filters = setOf(ListFilter.ATTACHMENTS)).shape())
         assertEquals(ListShape(), ListView(filters = setOf(ListFilter.UNREAD)).shape()) // unread has its own flag
         assertEquals(ListShape(bySender = true), ListView(group = GroupMode.SENDER).shape())
+        assertEquals(ListShape(byDomain = true), ListView(group = GroupMode.DOMAIN).shape())
         var v = ListView().toggled(ListFilter.AUTH_CODES)
         assertEquals(AuthFilter.CODES, v.shape().auth)
         v = v.toggled(ListFilter.AUTH_ANY)
@@ -133,6 +134,25 @@ class ListViewControlsTest {
         assertEquals("another account's folder of the same id is untouched", ListView(), ListViewPrefs.load(context, b))
         ListViewPrefs.save(context, a, ListView())
         assertEquals("the default is stored as nothing", ListView(), ListViewPrefs.load(context, a))
+    }
+
+    @Test fun `Group by Domain sits right after Group by Sender, is checked alone, and persists`() {
+        val viewMode = ListViewFunction.of(ListViewGroup.VIEW_MODE).map { it.name }
+        assertEquals(listOf("GROUP_SUBJECT", "GROUP_SENDER", "GROUP_DOMAIN", "GROUP_NONE"), viewMode)
+        val ui = ListViewUi.of(ListView(group = GroupMode.DOMAIN), globalConversation = true, globalSort = SortOrder.DATE_DESC)
+        assertEquals(listOf("GROUP_DOMAIN", "RANK_NEWEST"), ListViewFunction.entries.filter { it.isActive(ui) }.map { it.name })
+        assertTrue(ui.groupActive(ListViewGroup.VIEW_MODE))
+        val ran = mutableListOf<GroupMode>()
+        ListViewFunction.GROUP_DOMAIN.run(ListViewActions({ ran += it }, {}, {}))
+        assertEquals(listOf(GroupMode.DOMAIN), ran)
+        val key = ListViewPrefs.keyFor("acc1", "inbox")
+        val view = ListView(GroupMode.DOMAIN, RankMode.SENDER, setOf(ListFilter.UNREAD))
+        ListViewPrefs.save(context, key, view)
+        assertEquals(view, ListViewPrefs.load(context, key))
+        assertEquals("DOMAIN;SENDER;UNREAD", view.encode())
+        // a value stored before the choice existed still reads back as itself
+        assertEquals(ListView(group = GroupMode.SENDER), ListView.decode("SENDER;;"))
+        assertTrue(src("InboxScreen.kt").contains("if (domainGrouped && !fromSearch) DomainGroupHeader(DomainGroupHeading.of(row))"))
     }
 
     @Test fun `a damaged stored value reads as the default`() {

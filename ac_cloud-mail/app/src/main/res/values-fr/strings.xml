@@ -1211,6 +1211,8 @@
     <string name="list_filter">Filtre</string>
     <string name="list_group_subject">Grouper par sujet</string>
     <string name="list_group_sender">Grouper par expéditeur</string>
+    <string name="list_group_domain">Grouper par domaine</string>
+    <string name="list_domain_group_counts">%1$d · %2$d non lus</string>
     <string name="list_group_none">Ne pas grouper</string>
     <string name="list_rank_sender">Par expéditeur</string>
     <string name="list_rank_subject">Par sujet</string>

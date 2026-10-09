@@ -24,7 +24,7 @@ class ListViewSqlTest {
                 CREATE TABLE emails(
                     id TEXT, accountId TEXT, mailboxId TEXT, threadId TEXT,
                     subject TEXT, preview TEXT, receivedAt TEXT, fromName TEXT, fromEmail TEXT,
-                    seen INTEGER, flagged INTEGER, hasAttachment INTEGER, sortKey INTEGER, authClass INTEGER,
+                    seen INTEGER, flagged INTEGER, hasAttachment INTEGER, sortKey INTEGER, authClass INTEGER, fromDomain TEXT,
                     PRIMARY KEY(accountId, id)
                 )
                 """.trimIndent(),
@@ -42,10 +42,15 @@ class ListViewSqlTest {
 
     @After fun tearDown() = db.close()
 
-    private fun insert(id: String, thread: String?, subject: String, from: String, seen: Int, flagged: Int, att: Int, auth: Int?, key: Long) {
-        db.prepareStatement("INSERT INTO emails VALUES(?, 'acc', 'inbox', ?, ?, 'p', '', NULL, ?, ?, ?, ?, ?, ?)").use { ps ->
+    private fun insert(
+        id: String, thread: String?, subject: String, from: String, seen: Int, flagged: Int, att: Int, auth: Int?, key: Long,
+        // what the mappers store; null is a row cached before the domain index existed
+        domain: String? = SenderDomain.indexed(from),
+    ) {
+        db.prepareStatement("INSERT INTO emails VALUES(?, 'acc', 'inbox', ?, ?, 'p', '', NULL, ?, ?, ?, ?, ?, ?, ?)").use { ps ->
             ps.setString(1, id); ps.setString(2, thread); ps.setString(3, subject); ps.setString(4, from)
             ps.setInt(5, seen); ps.setInt(6, flagged); ps.setInt(7, att); ps.setLong(8, key); if (auth == null) ps.setNull(9, java.sql.Types.INTEGER) else ps.setInt(9, auth)
+            ps.setString(10, domain)
             ps.executeUpdate()
         }
     }
@@ -57,9 +62,13 @@ class ListViewSqlTest {
         }
 
     private fun grouped(sort: SortOrder = SortOrder.DATE_DESC, unread: Boolean = false, shape: ListShape = ListShape.NONE): List<Pair<String, Int>> =
+        groupedRows(sort, unread, shape).map { it.first to it.second }
+
+    /** (representative id, count, unread in the group) per group row. */
+    private fun groupedRows(sort: SortOrder = SortOrder.DATE_DESC, unread: Boolean = false, shape: ListShape = ListShape.NONE): List<Triple<String, Int, Int>> =
         db.prepareStatement(conversationSql(scope.size, sort, unread, 0, shape)).use { ps ->
             (1..3).flatMap { scope.flatMap { listOf(it.first, it.second) } }.forEachIndexed { i, a -> ps.setString(i + 1, a) }
-            ps.executeQuery().use { rs -> buildList { while (rs.next()) add(rs.getString("id") to rs.getInt("threadCount")) } }
+            ps.executeQuery().use { rs -> buildList { while (rs.next()) add(Triple(rs.getString("id"), rs.getInt("threadCount"), rs.getInt("groupUnread"))) } }
         }
 
     // -- grouping ----------------------------------------------------------------------------
@@ -75,6 +84,30 @@ class ListViewSqlTest {
     @Test fun `group by sender collapses one address to its newest message, case-insensitively`() {
         val rows = grouped(shape = ListShape(bySender = true))
         assertEquals(listOf("m4" to 1, "m3" to 3, "m1" to 1), rows)
+    }
+
+    @Test fun `group by domain joins subdomains, keeps addresses apart from it, and counts unread`() {
+        insert("m6", null, "Echo", "n@Notifications.GitHub.com", 0, 0, 0, 0, 500)
+        insert("m7", null, "Fox", "o@github.com", 1, 0, 0, 0, 450)
+        insert("m8", null, "Golf", "not an address", 0, 0, 0, 0, 60)
+        insert("m9", null, "Hotel", "p@q.example.co.uk", 1, 0, 0, 0, 70, domain = null)
+        // github.com (m6 + m7), x.io (all five), then the row not indexed yet alone, then "(unknown)"
+        assertEquals(
+            listOf(Triple("m6", 2, 1), Triple("m4", 5, 2), Triple("m9", 1, 0), Triple("m8", 1, 1)),
+            groupedRows(shape = ListShape(byDomain = true)),
+        )
+        // Group by Sender is unchanged: one address per group
+        assertEquals(listOf("m6" to 1, "m7" to 1, "m4" to 1, "m3" to 3, "m1" to 1, "m9" to 1, "m8" to 1), grouped(shape = ListShape(bySender = true)))
+        // ranked by sender, domain groups are ranked by the domain: "" ((unknown)) and the unindexed row first
+        assertEquals(listOf("m8", "m9", "m6", "m4"), grouped(SortOrder.SENDER, shape = ListShape(byDomain = true)).map { it.first })
+        // the filters still narrow which groups show
+        assertEquals(listOf("m6" to 2, "m4" to 5, "m8" to 1), grouped(unread = true, shape = ListShape(byDomain = true)))
+    }
+
+    @Test fun `the domain the heading names is the domain the group was keyed by`() {
+        for (from in listOf("zed@x.io", "n@Notifications.GitHub.com", "p@q.example.co.uk", "broken")) {
+            assertEquals(SenderDomain.label(SenderDomain.indexed(from)), SenderDomain.label(SenderDomain.registrable(from)))
+        }
     }
 
     // -- ranking -----------------------------------------------------------------------------

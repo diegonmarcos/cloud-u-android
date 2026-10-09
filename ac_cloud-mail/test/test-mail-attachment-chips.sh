@@ -97,7 +97,7 @@ has "$IMAPTEXT" 'private fun dispositionIndex(' "A3 body-fld-dsp is located per 
 has "$ENTITY" 'val attachmentsJson: String? = null' "A4 the row has a column for it"
 has "$MIGRATIONS" 'ALTER TABLE `emails` ADD COLUMN `attachmentsJson` TEXT' "A4 the migration adds it"
 has "$DB" 'MIGRATION_27_28' "A4 the migration is registered"
-has "$DB" 'SCHEMA_VERSION = \(2[89]\|30\)' "A4 the schema version moved with it (28, or later - a later migration is a later step, not a regression)"
+has "$DB" 'SCHEMA_VERSION = \(2[89]\|[3-9][0-9]\)' "A4 the schema version moved with it (28, or later - a later migration is a later step, not a regression)"
 has "$MAPPER" 'attachmentsJson = EmailAttachments.encode(attachments)' "A4 the JMAP mapper writes it"
 has "$MAPPER" 'attachments = EmailAttachments.decode(attachmentsJson)' "A4 the JMAP mapper reads it back"
 # The IMAP mapper is a SECOND door into the same table and the @Upsert replaces the row whole:

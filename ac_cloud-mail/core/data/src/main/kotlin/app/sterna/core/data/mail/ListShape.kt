@@ -14,14 +14,19 @@ enum class AuthFilter(val classes: List<AuthClass>) {
 /**
  * What the message list is narrowed and grouped by, beyond the unread funnel and the sort: the
  * combinable filters (starred, with attachments, the auth class) and whether rows are grouped by SENDER
- * instead of by conversation. All-off is the list as it always was, and adds nothing to its SQL.
+ * (one address) or by sender DOMAIN ([SenderDomain]) instead of by conversation. All-off is the list as it
+ * always was, and adds nothing to its SQL.
  */
 data class ListShape(
     val starred: Boolean = false,
     val attachments: Boolean = false,
     val auth: AuthFilter = AuthFilter.OFF,
     val bySender: Boolean = false,
+    val byDomain: Boolean = false,
 ) {
+    /** Grouped by who sent it (an address or a domain), so the Sent folders add nothing to a group. */
+    val bySenderOrDomain: Boolean get() = bySender || byDomain
+
     /** The extra WHERE terms for rows of [table] (each begins with " AND "), constants only. */
     fun whereSql(table: String): String = buildString {
         if (starred) append(" AND $table.flagged = 1")

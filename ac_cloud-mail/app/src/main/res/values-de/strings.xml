@@ -1199,6 +1199,8 @@
     <string name="list_filter">Filter</string>
     <string name="list_group_subject">Nach Betreff gruppieren</string>
     <string name="list_group_sender">Nach Absender gruppieren</string>
+    <string name="list_group_domain">Nach Domain gruppieren</string>
+    <string name="list_domain_group_counts">%1$d · %2$d ungelesen</string>
     <string name="list_group_none">Nicht gruppieren</string>
     <string name="list_rank_sender">Nach Absender</string>
     <string name="list_rank_subject">Nach Betreff</string>

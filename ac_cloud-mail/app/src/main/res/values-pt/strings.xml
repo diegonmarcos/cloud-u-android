@@ -1209,6 +1209,8 @@
     <string name="list_filter">Filtro</string>
     <string name="list_group_subject">Agrupar por assunto</string>
     <string name="list_group_sender">Agrupar por remetente</string>
+    <string name="list_group_domain">Agrupar por domínio</string>
+    <string name="list_domain_group_counts">%1$d · %2$d não lidas</string>
     <string name="list_group_none">Sem agrupamento</string>
     <string name="list_rank_sender">Por remetente</string>
     <string name="list_rank_subject">Por assunto</string>

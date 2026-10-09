@@ -14,4 +14,6 @@ data class ConversationRow(
     val threadTotal: Int,
     /** 0 (falsy) when any message in the thread is unread: MIN(seen) over the group. */
     val threadUnread: Int,
+    /** Unread messages among the [threadCount] counted: a domain group's heading shows it. */
+    val groupUnread: Int = 0,
 )

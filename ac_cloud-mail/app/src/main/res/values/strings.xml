@@ -1308,6 +1308,8 @@
     <string name="list_filter">Filter</string>
     <string name="list_group_subject">Group by Subject</string>
     <string name="list_group_sender">Group by Sender</string>
+    <string name="list_group_domain">Group by Domain</string>
+    <string name="list_domain_group_counts">%1$d · %2$d unread</string>
     <string name="list_group_none">No grouping</string>
     <string name="list_rank_sender">By sender</string>
     <string name="list_rank_subject">By subject</string>

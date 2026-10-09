@@ -61,7 +61,7 @@ class AuthClassMigrationSqlTest {
 
     @Test fun `the migration is registered and the schema version moved with it`() {
         assertTrue(SternaDatabase.ALL_MIGRATIONS.any { it === MIGRATION_29_30 })
-        assertEquals(30, SCHEMA_VERSION)
+        assertTrue("the schema moved on from v30, never back", SCHEMA_VERSION >= 30)
     }
 
     @Test fun `the backfill classifies the unclassified rows with a preview and leaves the rest`() {

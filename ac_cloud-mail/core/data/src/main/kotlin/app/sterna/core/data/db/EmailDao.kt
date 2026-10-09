@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Transaction
+import androidx.room.Update
 import androidx.room.Upsert
 import androidx.sqlite.db.SupportSQLiteQuery
 import app.sterna.core.data.getOrElseUnlessCancelled
@@ -160,6 +161,21 @@ interface EmailDao {
             "AND LOWER(TRIM(fromEmail)) = :sender ORDER BY sortKey DESC",
     )
     fun cachedSenderEmails(accountId: String, mailboxIds: List<String>, sender: String): Flow<List<EmailEntity>>
+
+    /** Rows cached before the domain index existed: the next batch to index ([app.sterna.core.data.mail.SenderDomain]). */
+    @Query("SELECT accountId, id, fromEmail FROM emails WHERE fromDomain IS NULL LIMIT :limit")
+    suspend fun unindexedDomains(limit: Int): List<DomainIndexRow>
+
+    /** One batch of the domain backfill, in one transaction. */
+    @Update(entity = EmailEntity::class)
+    suspend fun setFromDomains(rows: List<FromDomainUpdate>)
+
+    /** All cached messages from one sender DOMAIN ("" = no usable address) in [mailboxIds], newest first: a domain group. */
+    @Query(
+        "SELECT * FROM emails WHERE accountId = :accountId AND mailboxId IN (:mailboxIds) " +
+            "AND fromDomain = :domain ORDER BY sortKey DESC",
+    )
+    fun cachedDomainEmails(accountId: String, mailboxIds: List<String>, domain: String): Flow<List<EmailEntity>>
 
     @Upsert
     suspend fun upsertAll(emails: List<EmailEntity>)
@@ -498,3 +514,9 @@ data class MailboxUnread(
 
 /** The columns [EmailDao.unclassifiedAuth] reads: what the classifier needs, nothing else. */
 data class AuthIndexRow(val accountId: String, val id: String, val subject: String?, val preview: String)
+
+/** The columns [EmailDao.unindexedDomains] reads: what the domain index needs, nothing else. */
+data class DomainIndexRow(val accountId: String, val id: String, val fromEmail: String?)
+
+/** A partial [EmailEntity] for [EmailDao.setFromDomains]: the key and the one column it writes. */
+data class FromDomainUpdate(val accountId: String, val id: String, val fromDomain: String)

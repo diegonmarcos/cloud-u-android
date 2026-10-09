@@ -73,6 +73,7 @@ internal class ListViewActions(
 internal enum class ListViewFunction(val group: ListViewGroup, @StringRes val label: Int) {
     GROUP_SUBJECT(ListViewGroup.VIEW_MODE, R.string.list_group_subject),
     GROUP_SENDER(ListViewGroup.VIEW_MODE, R.string.list_group_sender),
+    GROUP_DOMAIN(ListViewGroup.VIEW_MODE, R.string.list_group_domain),
     GROUP_NONE(ListViewGroup.VIEW_MODE, R.string.list_group_none),
     RANK_NEWEST(ListViewGroup.RANK, R.string.inbox_sort_newest_first),
     RANK_SENDER(ListViewGroup.RANK, R.string.list_rank_sender),
@@ -88,6 +89,7 @@ internal enum class ListViewFunction(val group: ListViewGroup, @StringRes val la
     fun isActive(ui: ListViewUi): Boolean = when (this) {
         GROUP_SUBJECT -> ui.group == GroupMode.SUBJECT
         GROUP_SENDER -> ui.group == GroupMode.SENDER
+        GROUP_DOMAIN -> ui.group == GroupMode.DOMAIN
         GROUP_NONE -> ui.group == GroupMode.NONE
         RANK_NEWEST -> ui.rank == RankMode.NEWEST
         RANK_SENDER -> ui.rank == RankMode.SENDER
@@ -103,6 +105,7 @@ internal enum class ListViewFunction(val group: ListViewGroup, @StringRes val la
     fun run(actions: ListViewActions) = when (this) {
         GROUP_SUBJECT -> actions.onGroup(GroupMode.SUBJECT)
         GROUP_SENDER -> actions.onGroup(GroupMode.SENDER)
+        GROUP_DOMAIN -> actions.onGroup(GroupMode.DOMAIN)
         GROUP_NONE -> actions.onGroup(GroupMode.NONE)
         RANK_NEWEST -> actions.onRank(RankMode.NEWEST)
         RANK_SENDER -> actions.onRank(RankMode.SENDER)

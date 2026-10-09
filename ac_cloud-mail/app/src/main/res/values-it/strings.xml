@@ -1205,6 +1205,8 @@
     <string name="list_filter">Filtro</string>
     <string name="list_group_subject">Raggruppa per oggetto</string>
     <string name="list_group_sender">Raggruppa per mittente</string>
+    <string name="list_group_domain">Raggruppa per dominio</string>
+    <string name="list_domain_group_counts">%1$d · %2$d non letti</string>
     <string name="list_group_none">Nessun raggruppamento</string>
     <string name="list_rank_sender">Per mittente</string>
     <string name="list_rank_subject">Per oggetto</string>

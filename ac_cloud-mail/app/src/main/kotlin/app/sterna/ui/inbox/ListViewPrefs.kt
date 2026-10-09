@@ -5,8 +5,8 @@ import app.sterna.core.data.mail.AuthFilter
 import app.sterna.core.data.mail.ListShape
 import app.sterna.core.data.settings.SortOrder
 
-/** How rows are grouped: threads ("by subject"), by sender, or not at all. */
-internal enum class GroupMode { SUBJECT, SENDER, NONE }
+/** How rows are grouped: threads ("by subject"), by sender address, by sender domain, or not at all. */
+internal enum class GroupMode { SUBJECT, SENDER, DOMAIN, NONE }
 
 /** How rows are ranked. Newest first is the default. */
 internal enum class RankMode(val order: SortOrder) {
@@ -49,6 +49,7 @@ internal data class ListView(
             else -> AuthFilter.OFF
         },
         bySender = group == GroupMode.SENDER,
+        byDomain = group == GroupMode.DOMAIN,
     )
 
     /** Whether the three icon groups should read as active: any non-default choice is set. */

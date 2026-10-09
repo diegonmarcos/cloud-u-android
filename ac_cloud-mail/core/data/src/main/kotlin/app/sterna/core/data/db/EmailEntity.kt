@@ -48,4 +48,7 @@ data class EmailEntity(
     val attachmentsJson: String? = null,
     // Schema v30: rule "G0 _ Auth" -- 1 Ga Code, 2 Gb Link to auth, 0 Gc No Auth; NULL = not classified yet.
     val authClass: Int? = null,
+    // Schema v31: the sender's registrable domain ("Group by Domain", [app.sterna.core.data.mail.SenderDomain]);
+    // "" when the From address has none, NULL = not indexed yet.
+    val fromDomain: String? = null,
 )

@@ -1255,6 +1255,8 @@
     <string name="list_filter">Filtro</string>
     <string name="list_group_subject">Agrupar por asunto</string>
     <string name="list_group_sender">Agrupar por remitente</string>
+    <string name="list_group_domain">Agrupar por dominio</string>
+    <string name="list_domain_group_counts">%1$d · %2$d sin leer</string>
     <string name="list_group_none">Sin agrupar</string>
     <string name="list_rank_sender">Por remitente</string>
     <string name="list_rank_subject">Por asunto</string>

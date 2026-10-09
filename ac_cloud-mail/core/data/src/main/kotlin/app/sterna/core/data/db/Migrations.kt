@@ -396,3 +396,13 @@ val MIGRATION_29_30 = object : Migration(29, 30) {
         db.execSQL("ALTER TABLE emails ADD COLUMN authClass INTEGER")
     }
 }
+
+/**
+ * v30 -> v31: the sender-domain index ("Group by Domain"). One nullable column, no rewrite: NULL means "not
+ * indexed" and `MailRepository.indexDomains` backfills it in the background, so the migration reads no row.
+ */
+val MIGRATION_30_31 = object : Migration(30, 31) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE emails ADD COLUMN fromDomain TEXT")
+    }
+}

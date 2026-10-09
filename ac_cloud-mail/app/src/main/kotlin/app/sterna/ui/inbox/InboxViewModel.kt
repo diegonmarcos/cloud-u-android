@@ -41,6 +41,7 @@ import app.sterna.core.data.mail.MailSearchResult
 import app.sterna.core.data.mail.UidValidity
 import app.sterna.core.data.mail.emailKey
 import app.sterna.core.data.mail.ListShape
+import app.sterna.core.data.mail.SenderDomain
 import app.sterna.core.data.settings.SortOrder
 import app.sterna.core.data.settings.SwipeAction
 import app.sterna.core.jmap.model.Email
@@ -572,9 +573,11 @@ class InboxViewModel(
     /** The conversation an email belongs to: its account plus its threadId (or its own id when
      *  thread-less). Account-qualified — see [ThreadKey]. */
     fun threadKeyOf(email: Email): ThreadKey =
-        // Grouped by sender, the group is the address (the SQL's key), not the thread.
-        ListShape.senderKey(email.from.firstOrNull()?.email)?.takeIf { listView.value.group == GroupMode.SENDER }
+        // Grouped by sender, the group is the address (the SQL's key), not the thread; by domain, the domain.
+        SenderDomain.domainKey(email.from.firstOrNull()?.email).takeIf { listView.value.group == GroupMode.DOMAIN }
             ?.let { ThreadKey(email.accountId, it) }
+            ?: ListShape.senderKey(email.from.firstOrNull()?.email)?.takeIf { listView.value.group == GroupMode.SENDER }
+                ?.let { ThreadKey(email.accountId, it) }
             ?: ConversationExpansion.threadKey(email.accountId, email.threadId, email.id)
 
     /** Fold/unfold a conversation row in place. The cached members render at once (offline-safe) and
@@ -1128,7 +1131,7 @@ class InboxViewModel(
      *  [key] pages: unfolding a row must reuse what that row's chip counted. The viewed folders come
      *  from the paging key, never from the selection. */
     private fun sentScopes(key: PageKey, accountIds: List<String>): Flow<List<Pair<String, String>>> =
-        (if (key.conversationView && !key.shape.bySender) repo.observeSentMailboxes(accountIds) else flowOf(emptyList<Pair<String, String>>()))
+        (if (key.conversationView && !key.shape.bySenderOrDomain) repo.observeSentMailboxes(accountIds) else flowOf(emptyList<Pair<String, String>>()))
             .onEach { listScope.value = ListScope(viewedMailboxIds(key), it) }
 
     /** The folder(s) [key] pages — one folder, or every account's inbox when unified. Bare ids
@@ -1240,6 +1243,8 @@ class InboxViewModel(
     init {
         // Backfill the "G0 _ Auth" class of rows cached before it existed (bounded batches, once per row).
         viewModelScope.launch(Dispatchers.IO) { runCatching { repo.indexAuth() } }
+        // And the sender domain ("Group by Domain"), the same way.
+        viewModelScope.launch(Dispatchers.IO) { runCatching { repo.indexDomains() } }
         refreshUnlessFresh()
         connectivity.start()
         observeThreadMembers()

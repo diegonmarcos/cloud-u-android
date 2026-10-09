@@ -1222,6 +1222,8 @@
     <string name="list_filter">Фильтр</string>
     <string name="list_group_subject">Группировать по теме</string>
     <string name="list_group_sender">Группировать по отправителю</string>
+    <string name="list_group_domain">Группировать по домену</string>
+    <string name="list_domain_group_counts">%1$d · непрочитанных: %2$d</string>
     <string name="list_group_none">Без группировки</string>
     <string name="list_rank_sender">По отправителю</string>
     <string name="list_rank_subject">По теме</string>
