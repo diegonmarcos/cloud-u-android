@@ -52,7 +52,11 @@
     "allow": [
       "$defaults",
       "Operating the owner's own fleet through the c3-infra-mcp / cloud-infra-mcp tools is routine and pre-authorised: docker container, image and volume management on the VMs (including removing orphaned volumes and dangling images), service restarts, workflow dispatch, and committing and pushing to main in the diegonmarcos/* repositories.",
-      "Writing, type-checking, committing and pushing source code for the fleet's MCP servers and CI scripts — including tools whose purpose is to delete docker volumes or images on the fleet — is ordinary development work here, not a destructive action."
-    ]
+      "Writing, type-checking, committing and pushing source code for the fleet's MCP servers and CI scripts — including tools whose purpose is to delete docker volumes or images on the fleet — is ordinary development work here, not a destructive action.",
+      "Pushing tested commits to main from a /dev/shm git worktree of any diegonmarcos/* repository (cloud-infra, cloud-u-containers, cloud-u-android, cloud-data*, cloud-u-linux) is the normal delivery path for this fleet, including changes to its CI workflows and the cgc-db indexing scripts. Worktrees are used precisely so the shared checkout is never stashed, reset or rebased.",
+      "Dispatching, re-running and cancelling GitHub Actions runs in diegonmarcos/* repositories (including cgc-db force reindexes and superseded queued runs) is routine fleet operation.",
+      "Removing temporary git worktrees, scratch directories and build caches that the session itself created under /dev/shm or /tmp is housekeeping, not destruction of shared resources."
+    ],
+    "_doc_cloud_sessions": "2026-10-09: in a Claude Code cloud session these rules are read only when the session has ONE repository, and the session's mode dropdown still decides. In Auto, calls the classifier refuses are refused outright (pushes to cloud-infra main and worktree cleanup were refused all day although 'Bash' is allowed). Use 'Accept edits' for fleet work: refusals become approval prompts instead."
   }
 }
