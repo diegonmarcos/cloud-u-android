@@ -608,7 +608,22 @@ class PermissionsFragment : Fragment() {
             val measured = deviceState(ctx, d)
             PageItem(d.label, measured.first, measured.second) { openDeviceRemedy(ctx, d) }
         }
-        return listOf(
+        // Cloud Vault as the DEFAULT passwords & passkeys provider: read from Settings.Secure, so
+        // a value this uid cannot read shows as unknown (null) with the open-settings action, never a guess.
+        val vault = if (com.diegonmarcos.superapp.core.CredentialProviderStatus.rowVisible(
+                com.diegonmarcos.superapp.core.CredentialProviderStatus.isInstalled(ctx))) {
+            val st = com.diegonmarcos.superapp.core.CredentialProviderStatus.status(ctx)
+            listOf(PageItem("Cloud Vault — passwords & passkeys provider",
+                when (st.overall) {
+                    com.diegonmarcos.superapp.core.CredentialProviderStatus.State.DEFAULT -> true
+                    com.diegonmarcos.superapp.core.CredentialProviderStatus.State.UNKNOWN -> null
+                    else -> false
+                },
+                "${st.overall.label} (${st.detail()})") {
+                com.diegonmarcos.superapp.core.CredentialProviderStatus.open(ctx, st.nextStep)
+            })
+        } else emptyList()
+        return vault + listOf(
             PageItem("Battery optimization (no-optim)", grantedBatteryOptim(ctx), specialAccessBattery(ctx)) { openBatteryOptimizationSettings() },
             PageItem("Default launcher", specialAccessLauncher(ctx).let(::ok), specialAccessLauncher(ctx)) { openDefaultAppsSettings() },
             PageItem("Usage stats", EnergyWatchdog.hasUsageAccess(ctx), specialAccessUsageStats(ctx)) { openUsageAccessSettings() },

@@ -199,6 +199,13 @@ private fun AutoFillScreenContent(
                 .standardHorizontalMargin(),
         )
         Spacer(modifier = Modifier.height(height = 16.dp))
+        CloudVaultProviderStatusRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .standardHorizontalMargin()
+                .padding(horizontal = 16.dp),
+        )
+        Spacer(modifier = Modifier.height(height = 16.dp))
         BitwardenListHeaderText(
             label = stringResource(id = BitwardenString.autofill_noun),
             modifier = Modifier

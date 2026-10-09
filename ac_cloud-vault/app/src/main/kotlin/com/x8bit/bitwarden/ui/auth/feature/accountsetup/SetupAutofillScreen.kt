@@ -50,6 +50,7 @@ import com.bitwarden.ui.platform.resource.BitwardenString
 import com.bitwarden.ui.platform.theme.BitwardenTheme
 import com.bitwarden.ui.platform.util.rememberWindowSize
 import com.x8bit.bitwarden.ui.auth.feature.accountsetup.handlers.rememberSetupAutoFillHandler
+import com.x8bit.bitwarden.ui.platform.feature.settings.autofill.CloudVaultProviderStep
 
 /**
  * Top level composable for the Auto-fill setup screen.
@@ -177,6 +178,8 @@ private fun SetupAutoFillContent(
                 .fillMaxWidth()
                 .standardHorizontalMargin(),
         )
+        Spacer(modifier = Modifier.height(24.dp))
+        CloudVaultProviderStep(modifier = Modifier.fillMaxWidth().standardHorizontalMargin())
         Spacer(modifier = Modifier.height(24.dp))
         BitwardenFilledButton(
             label = stringResource(id = BitwardenString.continue_text),
