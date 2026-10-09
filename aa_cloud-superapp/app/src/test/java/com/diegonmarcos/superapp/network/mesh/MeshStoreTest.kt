@@ -76,7 +76,7 @@ class MeshStoreTest {
 
     @Test fun `the fallback controls reach the port and Test fallbacks lands rung by rung`() {
         val port = FakePort(); val s = store(port); s.poll()
-        s.run("transport.mode", "relay"); s.run("prefs.relayKey", "0123456789abcdef"); s.run("transport.test")
+        s.run("transport.mode", "relay"); s.run("prefs.relayKey", "k".repeat(16)); s.run("transport.test")
         assertEquals(listOf("mode=relay", "relaykey", "test"), port.calls)
         assertEquals("relay", s.transport!!.mode); assertTrue(s.hasRelayKey)
         assertEquals(listOf("udp", "dns", "relay"), s.probes.map { it.id })

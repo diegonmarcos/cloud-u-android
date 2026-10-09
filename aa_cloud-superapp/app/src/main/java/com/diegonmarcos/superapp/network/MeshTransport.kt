@@ -132,6 +132,10 @@ object MeshTransport {
     /** The system's answer for a pinned host is trusted only when it shares an address with the pin. */
     fun agrees(answers: Collection<String>, pinned: Collection<String>): Boolean = pinned.isEmpty() || answers.any { it in pinned }
 
+    /** RFC 1918 / ULA: an answer only a private resolver (the mesh's, or a captive portal's) gives. */
+    fun isPrivate(a: InetAddress): Boolean = a.isSiteLocalAddress || a.isLoopbackAddress || a.isLinkLocalAddress ||
+        (a.address.size == 16 && (a.address[0].toInt() and 0xFE) == 0xFC)
+
     /** Which rung an answer came from, as a path. */
     fun pathOf(rung: String?): Path = when {
         rung == null -> Path.NONE
@@ -358,9 +362,12 @@ object MeshTransport {
         val pin = boot.pinned[host].orEmpty()
         val sys = DnsLadder.walk(host, listOf(DnsLadder.Rung(RUNG_SYSTEM) { InetAddress.getAllByName(it).toList() }))
         val sysIps = sys.addrs.mapNotNull { it.hostAddress }
+        val tunnelUp = runCatching { WgState.backend(ctx).getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
         out += when {
             sys.via == null -> Probe("dns", false, "$host: ${sys.trail}")
             agrees(sysIps, pin) -> Probe("dns", true, "$host -> ${sysIps.joinToString(", ")}, as pinned")
+            // With the mesh up, its own resolver answers the hub's mesh address (split horizon): DNS works.
+            tunnelUp && sys.addrs.all { isPrivate(it) } -> Probe("dns", true, "$host -> ${sysIps.joinToString(", ")}: the mesh's split-horizon answer; off the mesh it is ${pin.joinToString(", ")}")
             else -> Probe("dns", false, "$host -> ${sysIps.joinToString(", ")}, but the fleet pins ${pin.joinToString(", ")}: this network answers wrong")
         }
         val backend = WgState.backend(ctx)

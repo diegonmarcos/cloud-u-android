@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.appstore.DnsLadder
 import com.diegonmarcos.superapp.net.RelaySpec
 import com.wireguard.config.Config
+import com.wireguard.crypto.KeyPair
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -73,22 +74,15 @@ class MeshTransportTest {
     }
 
     @Test fun `the rewrite moves only the named peer and the result still parses`() {
-        val conf = """
-            [Interface]
-            PrivateKey = yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk=
-            Address = 10.0.0.9/24
-
-            [Peer]
-            PublicKey = xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg=
-            AllowedIPs = 10.0.0.0/24
-            Endpoint = 192.0.2.1:443
-
-            [Peer]
-            PublicKey = TrMvSoP4jYQlY6RIzBgbssQqY3vxI2Pi+y71lOWWXX0=
-            AllowedIPs = 10.1.0.0/24
-        """.trimIndent()
-        val hub = "xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg="
-        val other = "TrMvSoP4jYQlY6RIzBgbssQqY3vxI2Pi+y71lOWWXX0="
+        // Keys made here, so no key-shaped literal sits in the tree.
+        val self = KeyPair()
+        val hub = KeyPair().publicKey.toBase64()
+        val other = KeyPair().publicKey.toBase64()
+        val conf = listOf(
+            "[Interface]", "PrivateKey = " + self.privateKey.toBase64(), "Address = 10.0.0.9/24", "",
+            "[Peer]", "PublicKey = $hub", "AllowedIPs = 10.0.0.0/24", "Endpoint = 192.0.2.1:443", "",
+            "[Peer]", "PublicKey = $other", "AllowedIPs = 10.1.0.0/24",
+        ).joinToString("\n")
         val out = MeshTransport.rewrite(conf, mapOf(hub to "127.0.0.1:51830", other to "[2001:db8::7]:51821"))
         val cfg = Config.parse(BufferedReader(StringReader(out)))
         val eps = cfg.peers.associate { it.publicKey.toBase64() to it.endpoint.get().toString() }
@@ -105,6 +99,11 @@ class MeshTransportTest {
         val back = MeshTransport.Plan.parse(json)!!
         assertEquals(p.copy(relay = p.relay!!.copy(prefix = "")), back)
         assertNull(MeshTransport.Plan.parse(""))
+    }
+
+    @Test fun `private answers are told apart from public ones`() {
+        for (a in listOf("10.0.0.1", "192.168.1.1", "172.16.0.9", "fd0c:1d00::1")) assertTrue(a, MeshTransport.isPrivate(InetAddress.getByName(a)))
+        for (a in listOf("192.0.2.10", "2001:db8::10")) assertTrue(a, !MeshTransport.isPrivate(InetAddress.getByName(a)))
     }
 
     @Test fun `endpoints split and join for both families`() {
