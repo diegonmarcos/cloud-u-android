@@ -144,7 +144,10 @@ class BatchForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // startForeground FIRST, always: a started-foreground service that stops before it is
+        // Not a Store-posting package (the SuperApp): begin() never startForegroundService()s it
+        // there, so stopping at once cannot hit the not-foreground-in-time crash.
+        if (!BatchForeground.allowed(this)) { stopSelf(); return START_NOT_STICKY }
+        // Otherwise startForeground FIRST: a started-foreground service that stops before it is
         // foreground crashes the process, whatever the reason it has to stop.
         runCatching {
             ServiceCompat.startForeground(this, BatchForeground.ID, BatchForeground.notification(this),
@@ -155,7 +158,7 @@ class BatchForegroundService : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         // The batch may have ended while this start was in flight ([BatchForeground.end] left the stop to us).
-        if (!BatchForeground.allowed(this) || !BatchForeground.isHeld()) stopSelf()
+        if (!BatchForeground.isHeld()) stopSelf()
         return START_NOT_STICKY
     }
 

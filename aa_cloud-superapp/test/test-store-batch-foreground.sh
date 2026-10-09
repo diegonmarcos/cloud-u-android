@@ -105,9 +105,12 @@ import re, sys
 s = open(sys.argv[1]).read()
 b = re.search(r'override fun onStartCommand\(.*?\n    \}\n', s, re.S).group(0)
 fg, flag = b.find('ServiceCompat.startForeground('), b.find('BatchForeground.foreground = true')
-late = b.find('if (!BatchForeground.allowed(this) || !BatchForeground.isHeld()) stopSelf()')
-first_stop = b.find('stopSelf()')
-assert 0 <= fg < flag < late and fg < first_stop, (fg, flag, late, first_stop)
+late = b.find('if (!BatchForeground.isHeld()) stopSelf()')
+assert 0 <= fg < flag < late, (fg, flag, late)
+# the only stop before startForeground is the not-a-Store-package exit (begin() never starts it there)
+pre = b[:fg].replace('if (!BatchForeground.allowed(this)) { stopSelf(); return START_NOT_STICKY }', '')
+assert 'stopSelf()' not in pre, "a stop before startForeground"
+
 PYC
 grep -q 'inline fun <T> hold(ctx: Context, on: Boolean = true, body: () -> T): T' "$SVC" \
   && grep -q 'try { return body() } finally { if (on) end(ctx) }' "$SVC" \
