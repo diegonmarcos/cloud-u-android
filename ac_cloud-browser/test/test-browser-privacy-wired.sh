@@ -38,6 +38,10 @@ def check(root, ok):
     ok("BrowserSitePolicy.shouldRecord(tab)" in src.get(os.path.join(LIB, "BrowserTabsBar.kt"), ""), "the private-session gate is the shouldRecord policy")
     ok("tabs.filter { BrowserSitePolicy.shouldRecord(it) }" in sug, "suggestions skip private tabs")
     ok("LOAD_NO_CACHE" in frag, "a private tab keeps no HTTP cache")
+    ok("WebViewCompat.setProfile(wv, name)" in frag and "WebViewFeature.MULTI_PROFILE" in frag, "private tabs bind the incognito profile where multi-profile exists")
+    wv = frag[frag.find("webView = WebView(ctx).apply {"):]
+    ok(0 <= wv.find("bindProfile(this, tab)") < wv.find("settings.javaScriptEnabled"), "setProfile runs before the WebView loads anything")
+    ok("store.deleteProfile(PrivateProfile.NAME)" in frag, "the last private tab closing deletes the profile")
     ok("BrowserClearData.endPrivateSession(" in frag, "closing the last private tab ends the private session")
     ok("override fun onPermissionRequest" in frag and "override fun onGeolocationPermissionsShowPrompt" in frag,
        "WebView's permission and location prompts are handled")

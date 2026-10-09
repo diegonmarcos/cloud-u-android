@@ -66,7 +66,32 @@ class BrowserHostFragment : Fragment() {
     private lateinit var downloads: BrowserDownloads
     private lateinit var sitePerms: BrowserSitePermissions
     /** Origins a private tab visited this session — their site storage goes when the last one closes. */
-    private val privateSession = PrivateSession()
+    /** androidx.webkit multi-profile: private tabs get their own cookie jar, storage and cache. */
+    private val profileSupported: Boolean by lazy {
+        runCatching { androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.MULTI_PROFILE) }.getOrDefault(false)
+    }
+    private val privateSession by lazy { PrivateSession(profileSupported) }
+
+    /** Bind [wv] to its tab's profile. MUST run before the WebView loads anything. */
+    private fun bindProfile(wv: WebView, tab: BrowserTab?) {
+        val name = PrivateProfile.nameFor(tab, profileSupported) ?: return
+        runCatching {
+            androidx.webkit.ProfileStore.getInstance().getOrCreateProfile(name)
+            androidx.webkit.WebViewCompat.setProfile(wv, name)
+        }
+    }
+
+    /** The last private tab is gone: drop the profile, or failing that wipe everything in it. */
+    private fun dropPrivateProfile() {
+        val store = androidx.webkit.ProfileStore.getInstance()
+        val deleted = runCatching { store.deleteProfile(PrivateProfile.NAME) }.getOrDefault(false)
+        if (!deleted) runCatching {
+            store.getProfile(PrivateProfile.NAME)?.let { p ->
+                p.cookieManager.removeAllCookies(null)
+                p.webStorage.deleteAllData()
+            }
+        }
+    }
     /** The Tabs view shows normal or incognito tabs, one at a time. */
     private var tabFilter = BrowserTabsBar.Filter.NORMAL
     private lateinit var browserSettings: BrowserSettings
@@ -140,6 +165,7 @@ class BrowserHostFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         prefs = BrowserTabPrefs(ctx)
+        if (PrivateProfile.staleAtStart(profileSupported, prefs.all())) dropPrivateProfile()
         history = BrowserHistory(ctx)
         bookmarks = BrowserBookmarks(ctx)
         downloads = BrowserDownloads(ctx)
@@ -230,6 +256,10 @@ class BrowserHostFragment : Fragment() {
         }
 
         column.addView(tabsBar(ctx))
+        if (PrivateProfile.showNotice(profileSupported, tabFilter)) column.addView(TextView(ctx).apply {
+            text = PrivateProfile.NOTICE; textSize = 12f; setTextColor(0xCCFFFFFF.toInt()); alpha = 0.8f
+            setPadding(dp(8), dp(2), dp(8), dp(2))
+        })
 
         val incog = tabFilter == BrowserTabsBar.Filter.INCOGNITO
         if (incog) column.setBackgroundColor(0xFF121212.toInt())
@@ -285,8 +315,12 @@ class BrowserHostFragment : Fragment() {
         BrowserWebState.delete(requireContext(), tab.key)
         if (tab.previewPath.isNotBlank()) runCatching { File(tab.previewPath).delete() }
         val left = prefs.all()
-        privateSession.close(tab, left)?.let { BrowserClearData.endPrivateSession(it.clearOrigins, normalTabsOpen = !it.clearSessionCookies) }
-        showGrid()
+        val plan = privateSession.close(tab, left)
+        showGrid()   // tears the page's WebView down first: a profile in use cannot be deleted
+        plan?.let {
+            if (it.deleteProfile) dropPrivateProfile()
+            else BrowserClearData.endPrivateSession(it.clearOrigins, normalTabsOpen = !it.clearSessionCookies)
+        }
     }
 
     private fun grouped(c: BrowserTabGroups.Change) =
@@ -762,6 +796,7 @@ class BrowserHostFragment : Fragment() {
         }
 
         webView = WebView(ctx).apply {
+            bindProfile(this, tab)   // before anything loads
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.setSupportZoom(true)
@@ -917,6 +952,7 @@ class BrowserHostFragment : Fragment() {
     private fun openPopup(transport: WebView.WebViewTransport, msg: android.os.Message): Boolean {
         val ctx = context ?: return false
         val child = WebView(ctx)
+        bindProfile(child, currentTab())
         child.settings.javaScriptEnabled = true
         child.settings.domStorageEnabled = true
         child.settings.setSupportMultipleWindows(true)

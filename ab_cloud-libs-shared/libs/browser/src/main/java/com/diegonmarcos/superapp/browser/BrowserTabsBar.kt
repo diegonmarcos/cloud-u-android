@@ -47,10 +47,14 @@ object BrowserTabsBar {
  * site storage of every origin it visited and, when no normal tab is open to lose them, the session
  * cookies (cookies are process-wide in Android WebView, see [BrowserClearData.endPrivateSession]).
  */
-class PrivateSession {
+class PrivateSession(private val profileSupported: Boolean = false) {
     private val origins = HashSet<String>()
 
-    data class ClosePlan(val clearOrigins: Set<String>, val clearSessionCookies: Boolean)
+    /**
+     * [deleteProfile]: the isolated [PrivateProfile.NAME] profile goes, taking its cookies, storage
+     * and cache with it; then nothing is left in the default jar to clear.
+     */
+    data class ClosePlan(val clearOrigins: Set<String>, val clearSessionCookies: Boolean, val deleteProfile: Boolean = false)
 
     /** A page of [tab] finished loading; true = the caller may record it (history, preview). */
     fun visit(tab: BrowserTab?, origin: String?): Boolean {
@@ -62,6 +66,28 @@ class PrivateSession {
     /** [closed] was just removed; [left] are the tabs still open. Null = nothing to clear yet. */
     fun close(closed: BrowserTab, left: List<BrowserTab>): ClosePlan? {
         if (!closed.isPrivate || left.any { it.isPrivate }) return null
+        if (profileSupported) { origins.clear(); return ClosePlan(emptySet(), clearSessionCookies = false, deleteProfile = true) }
         return ClosePlan(origins.toSet(), clearSessionCookies = left.isEmpty()).also { origins.clear() }
     }
+}
+
+/**
+ * Full isolation for private tabs where the WebView implements androidx.webkit multi-profile
+ * (WebViewFeature.MULTI_PROFILE): a private tab runs in the [NAME] profile, with its own cookie jar,
+ * storage and cache; a normal tab never does. Pure decisions only, the WebView calls live in the host.
+ * setProfile must run before the WebView loads anything.
+ */
+object PrivateProfile {
+    const val NAME = "incognito"
+    const val NOTICE = "Private tabs share cookies on this WebView version; update Android System WebView for full isolation"
+
+    /** The profile [tab] must be bound to, or null for the default one (normal tab, or no multi-profile). */
+    fun nameFor(tab: BrowserTab?, supported: Boolean): String? = if (supported && tab?.isPrivate == true) NAME else null
+
+    /** The one-line notice shows only in the incognito grid, only where isolation is unavailable. */
+    fun showNotice(supported: Boolean, filter: BrowserTabsBar.Filter): Boolean =
+        !supported && filter == BrowserTabsBar.Filter.INCOGNITO
+
+    /** At start: a profile left by a previous run is deleted when no private tab survives. */
+    fun staleAtStart(supported: Boolean, tabs: List<BrowserTab>): Boolean = supported && tabs.none { it.isPrivate }
 }

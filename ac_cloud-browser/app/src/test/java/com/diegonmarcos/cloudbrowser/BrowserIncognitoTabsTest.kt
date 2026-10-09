@@ -5,6 +5,7 @@ import com.diegonmarcos.superapp.browser.BrowserTabsBar
 import com.diegonmarcos.superapp.browser.BrowserTabsBar.Filter
 import com.diegonmarcos.superapp.browser.BrowserTabsBar.Id
 import com.diegonmarcos.superapp.browser.BrowserTabsBar.Item
+import com.diegonmarcos.superapp.browser.PrivateProfile
 import com.diegonmarcos.superapp.browser.PrivateSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -82,5 +83,46 @@ class BrowserIncognitoTabsTest {
         assertNull(s.close(tab("p1", true), listOf(tab("p2", true))))
         assertNull(s.close(tab("n"), emptyList()))
         assertNotNull(s.close(tab("p2", true), emptyList()))
+    }
+
+    @Test
+    fun `a private tab gets the incognito profile and a normal tab never does`() {
+        assertEquals("incognito", PrivateProfile.nameFor(tab("p", true), supported = true))
+        assertNull(PrivateProfile.nameFor(tab("n"), supported = true))
+        assertNull(PrivateProfile.nameFor(null, supported = true))
+        // No multi-profile on this WebView: everything stays in the default profile.
+        assertNull(PrivateProfile.nameFor(tab("p", true), supported = false))
+    }
+
+    @Test
+    fun `the profile is deleted when the last private tab closes, not before`() {
+        val s = PrivateSession(profileSupported = true)
+        s.visit(tab("p1", true), "https://p.example")
+        assertNull(s.close(tab("p1", true), listOf(tab("p2", true), tab("n"))))
+        val plan = s.close(tab("p2", true), listOf(tab("n")))!!
+        assertTrue(plan.deleteProfile)
+        // Isolated: nothing to wipe in the shared jar, so normal tabs keep their cookies.
+        assertTrue(plan.clearOrigins.isEmpty())
+        assertFalse(plan.clearSessionCookies)
+        // A normal tab closing never deletes it.
+        assertNull(s.close(tab("n"), listOf(tab("p3", true))))
+        // Without multi-profile the old rule applies and no profile is touched.
+        val old = PrivateSession(profileSupported = false).close(tab("p", true), listOf(tab("n")))!!
+        assertFalse(old.deleteProfile)
+    }
+
+    @Test
+    fun `the fallback notice shows only in the incognito grid without multi-profile`() {
+        assertTrue(PrivateProfile.showNotice(false, Filter.INCOGNITO))
+        assertFalse(PrivateProfile.showNotice(false, Filter.NORMAL))
+        assertFalse(PrivateProfile.showNotice(true, Filter.INCOGNITO))
+        assertEquals("Private tabs share cookies on this WebView version; update Android System WebView for full isolation", PrivateProfile.NOTICE)
+    }
+
+    @Test
+    fun `a stale profile is dropped at start only when no private tab survives`() {
+        assertTrue(PrivateProfile.staleAtStart(true, listOf(tab("n"))))
+        assertFalse(PrivateProfile.staleAtStart(true, listOf(tab("p", true))))
+        assertFalse(PrivateProfile.staleAtStart(false, emptyList()))
     }
 }
