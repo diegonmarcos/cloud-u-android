@@ -6,13 +6,21 @@
 # T1 is run again over deliberately broken copies of the declaration and must go
 # RED on each — a validator that passes a fake Play URL is no validator.
 #
-# T1 DECLARATION HONESTY (validator + 4 mutations). One `resolver` block inside
+# T1 DECLARATION HONESTY (validator + mutations). One `resolver` block inside
 #    the ONE #564 map; `order` and `kinds` name the SAME kinds in the same
-#    order (#627, so the page's source tabs are the declaration); every app's ladder a
-#    strict subsequence of it; a `play` rung carries nothing but its kind
-#    (Google Play publishes no APK URL); every vendor `apk`/`feed`/`sha256`
+#    order (#627, so the page's source tabs are the declaration). Every app row
+#    is EXACTLY ONE of: a ladder (non-empty, a strict subsequence of `order`),
+#    or `unresolved` (a non-blank reason and no rung at all: the row says why
+#    there is nothing to install from). Every row declares `integrity`. A
+#    `play` / `play-anon` rung carries nothing but its kind (Play publishes no
+#    APK URL; play-anon's URLs come from Play's delivery at fetch time). Since
+#    play-anon fetches Play's own catalogue, a declared `play` hand-off always
+#    sits BELOW a `play-anon` rung: no declared row is Play-only, and the
+#    Play-only case is an UNDECLARED package, which SourceResolver.resolve
+#    falls back to the Play hand-off alone. Every vendor `apk`/`feed`/`sha256`
 #    is https; no URL anywhere points at play.google.com; the F-Droid signer
-#    pin is a 64-hex sha256; at least one Play-only and one direct app exist.
+#    pin is a 64-hex sha256; at least one app this store fetches itself and one
+#    it cannot (the hand-off / badge path) are declared.
 # T2 ONE INSTALLER, ONE DOWNLOADER. ExternalInstall commits through
 #    Fleet.commit and nothing else; SourceResolver and FDroidIndex download
 #    through the updater's Download; no store file opens its own
@@ -81,26 +89,47 @@ def validate(doc):
     if play not in doc.get("sources", {}): v.append("play installer %r is not in the #564 sources map" % play)
     apps = r.get("apps", {})
     if not apps: v.append("no apps")
-    n_play_only = n_direct = 0
+    # Which kinds hand us bytes, from the declaration itself (#627), so a new
+    # hand-off store is "not ours to install" by construction, as in Kotlin.
+    fetching = {k for k, spec in (r.get("kinds") or {}).items() if isinstance(spec, dict) and spec.get("fetches") is True}
+    n_direct = n_not_ours = 0
     for pkg, a in apps.items():
+        if a.get("integrity") not in ("none", "play", "unknown"):
+            v.append("%s: integrity %r is not none/play/unknown" % (pkg, a.get("integrity")))
         srcs = a.get("sources", [])
+        if not isinstance(srcs, list): v.append("%s: sources is %r" % (pkg, srcs)); continue
+        if "unresolved" in a:
+            # The unresolved rung: an app with no public source SAYS WHY and
+            # claims no rung. It resolves to nothing to install from, honestly.
+            if not isinstance(a["unresolved"], str) or not a["unresolved"].strip():
+                v.append("%s: unresolved gives no reason (%r)" % (pkg, a["unresolved"]))
+            if srcs: v.append("%s: unresolved but still claims rungs %r" % (pkg, [s.get("kind") for s in srcs]))
+            n_not_ours += 1
+            continue
         kinds = [s.get("kind") for s in srcs]
         ranks = [order.index(k) if k in (order or []) else -1 for k in kinds]
         if not srcs or -1 in ranks or ranks != sorted(ranks) or len(set(ranks)) != len(ranks):
-            v.append("%s ladder %r is not a subsequence of order" % (pkg, kinds))
-        if kinds == ["play"]: n_play_only += 1
-        if any(k != "play" for k in kinds): n_direct += 1
+            v.append("%s ladder %r is not a subsequence of order (and no unresolved reason)" % (pkg, kinds))
+        if "play" in kinds and "play-anon" not in kinds:
+            v.append("%s: a declared Play hand-off with no play-anon rung above it - this store fetches Play's catalogue itself" % pkg)
+        if any(k in fetching for k in kinds): n_direct += 1
+        else: n_not_ours += 1
         for s in srcs:
-            if s.get("kind") == "play" and set(s) != {"kind"}: v.append("%s: a play rung carries %s" % (pkg, sorted(set(s) - {"kind"})))
+            if s.get("kind") in ("play", "play-anon") and set(s) != {"kind"}: v.append("%s: a %s rung carries %s" % (pkg, s.get("kind"), sorted(set(s) - {"kind"})))
             if s.get("kind") == "vendor":
                 if not (s.get("apk") or s.get("apk_key")): v.append("%s: vendor rung names no apk" % pkg)
                 for k in ("apk", "feed", "sha256"):
                     if k in s and not s[k].startswith("https://"): v.append("%s: vendor %s not https" % (pkg, k))
             for k, val in s.items():
                 if isinstance(val, str) and "play.google.com" in val: v.append("%s: %s points at play.google.com — Play has no APK URL" % (pkg, k))
-    if n_play_only == 0: v.append("no Play-only app declared (the badge would be untested)")
+    if n_not_ours == 0: v.append("no declared app this store cannot fetch (the hand-off / badge path would be untested)")
     if n_direct == 0: v.append("no direct app declared")
     return v
+
+# The Play-only case lives in CODE now: an undeclared package resolves to the
+# Play hand-off alone. Checked over the source text so a mutation can break it.
+FALLBACK = re.compile(r"fun resolve\(cfg: Config, pkg: String\): External =\s*cfg\.apps\[pkg\] \?: External\(pkg, pkg, listOf\(Source\.Play\), declared = false\)")
+def fallback_ok(sr_text): return bool(FALLBACK.search(sr_text))
 
 print("== T1: declaration honesty, proven by mutation ==")
 doc = json.loads(read(mapf))
@@ -117,13 +146,21 @@ if not viol: ok("declaration passes every honesty rule (%d apps)" % len(doc["res
 else: bad("declaration violates: " + " | ".join(viol))
 
 apps = doc["resolver"]["apps"]
-play_only = next(p for p, a in apps.items() if [s["kind"] for s in a["sources"]] == ["play"])
-direct = next(p for p, a in apps.items() if len(a["sources"]) > 1 and a["sources"][-1]["kind"] == "play")
-vendor = next(p for p, a in apps.items() if a["sources"][0].get("kind") == "vendor" and "apk" in a["sources"][0])
+ladder = lambda a: [s["kind"] for s in a.get("sources", [])]
+rung = lambda a, k: next(s for s in a["sources"] if s["kind"] == k)
+direct = next(p for p, a in apps.items() if len(ladder(a)) > 1 and ladder(a)[-1] == "play")
+vendor = next(p for p, a in apps.items() if ladder(a)[:1] == ["vendor"] and "apk" in a["sources"][0])
+unresolved = next(p for p, a in apps.items() if "unresolved" in a)
 mutations = {
-    "a URL on a Play rung": lambda d: d["resolver"]["apps"][play_only]["sources"][0].__setitem__("apk", "https://play.google.com/fake.apk"),
+    "a URL on a Play rung": lambda d: rung(d["resolver"]["apps"][direct], "play").__setitem__("apk", "https://play.google.com/fake.apk"),
+    "a URL on a play-anon rung": lambda d: rung(d["resolver"]["apps"][direct], "play-anon").__setitem__("apk", "https://example.invalid/fake.apk"),
     "Play ranked above a direct rung": lambda d: d["resolver"]["apps"][direct].__setitem__("sources", list(reversed(d["resolver"]["apps"][direct]["sources"]))),
+    "a declared Play-only row (play-anon dropped)": lambda d: d["resolver"]["apps"][direct].__setitem__("sources", [{"kind": "play"}]),
     "a plain-http vendor APK": lambda d: d["resolver"]["apps"][vendor]["sources"][0].__setitem__("apk", "http://example.invalid/x.apk"),
+    "an unresolved row that also claims a rung": lambda d: d["resolver"]["apps"][unresolved].__setitem__("sources", [{"kind": "play-anon"}]),
+    "an unresolved row with a blank reason": lambda d: d["resolver"]["apps"][unresolved].__setitem__("unresolved", "  "),
+    "a row with neither a ladder nor an unresolved reason": lambda d: d["resolver"]["apps"][unresolved].pop("unresolved"),
+    "a row without integrity": lambda d: d["resolver"]["apps"][unresolved].pop("integrity"),
     "a truncated F-Droid signer pin": lambda d: d["resolver"]["fdroid"].__setitem__("cert_sha256", "abc"),
     "a Play installer outside the #564 map": lambda d: d["resolver"]["play"].__setitem__("installer", "com.example.nostore"),
 }
@@ -198,6 +235,11 @@ if "require(o.length() == 1)" in sr: ok("the parser refuses a Play rung that car
 else: bad("the parser accepts a Play rung with extra fields")
 if "Fleet.candidateIdentity(ctx, apk.file)" in sr and "id.pkg != pkg" in sr: ok("a downloaded APK must be the package asked for")
 else: bad("SourceResolver installs bytes without checking their package")
+if fallback_ok(sr): ok("an undeclared package resolves to the Play hand-off alone (the Play-only case)")
+else: bad("SourceResolver.resolve no longer falls back to the Play hand-off for an undeclared package")
+if not fallback_ok(sr.replace("listOf(Source.Play), declared = false", "listOf(Source.PlayAnon), declared = false")):
+    ok("mutation goes RED: an undeclared package falls back to play-anon instead of the Play hand-off")
+else: bad("mutation stayed GREEN - the fallback check does not see: an undeclared package falls back to play-anon")
 
 print("== T6 (#627): the source tabs derive from the declaration ==")
 # EVERY kind's user-visible label lives in the asset. It used to live in a `when`
