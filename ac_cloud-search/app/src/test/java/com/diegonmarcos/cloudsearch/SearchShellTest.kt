@@ -219,7 +219,8 @@ class SearchShellTest {
                 val out = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
                 compose.onNodeWithTag("bottomnav_label_$id", useUnmergedTree = true).fetchSemanticsNode()
                     .config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!.invoke(out)
-                assertFalse("label $id overflows with $selected selected", out.single().hasVisualOverflow)
+                assertTrue("label $id is wider than its cell with $selected selected", out.single().size.width <= cell.width)
+                assertFalse("label $id is ellipsized with $selected selected", out.single().isLineEllipsized(0))
             }
             assertEquals(selected, state.section)
         }

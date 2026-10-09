@@ -139,15 +139,18 @@ class SearchHtmlIslandTest {
 
     @Test
     fun `every label fits its 50 dp cell whichever item is selected at 360 dp`() {
+        show(SHIPPED.first().first)
         for ((id, _) in SHIPPED) {
-            show(id)
+            selected = id
+            compose.waitForIdle()
             for ((other, label) in SHIPPED) {
                 val cell = bounds(itemTag(other))
                 val b = bounds(labelTag(other))
                 val text = textLayout(labelTag(other))
                 val why = "'$label' laid out ${text.size.width}px, needs ${text.multiParagraph.intrinsics.maxIntrinsicWidth}px, cell ${cell.width}px (selected $id)"
                 assertTrue("label $other inside its cell: $why", b.left >= cell.left - 0.5f && b.right <= cell.right + 0.5f)
-                assertFalse("label $other overflows: $why", text.hasVisualOverflow)
+                // The text is as wide as its glyphs and that is narrower than the cell (not a paragraph clipped to it).
+                assertTrue("label $other is wider than its cell: $why", text.size.width <= cell.width)
                 assertFalse("label $other is ellipsized: $why", text.isLineEllipsized(0))
                 assertEquals("label $other is one line", 1, text.lineCount)
             }

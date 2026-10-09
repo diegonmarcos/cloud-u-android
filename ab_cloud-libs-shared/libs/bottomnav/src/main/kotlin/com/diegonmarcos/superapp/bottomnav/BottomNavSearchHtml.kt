@@ -156,9 +156,7 @@ public fun SearchHtmlIsland(
                         Text(
                             e.label, color = ink, style = labelStyle, textAlign = TextAlign.Center,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            // Laid out across the whole 50 dp cell and centred in it (as the fleet's label is in its capsule):
-                            // a centred paragraph narrower than its own layout width reads as visual overflow.
-                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = t.labelBottom)
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = t.labelBottom)
                                 .testTag(labelTag(e.id))
                                 .graphicsLayer { alpha = label; translationY = (1f - label) * 8.dp.toPx() },
                         )
