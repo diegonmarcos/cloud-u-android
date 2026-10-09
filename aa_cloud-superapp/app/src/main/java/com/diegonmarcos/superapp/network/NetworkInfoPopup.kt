@@ -45,9 +45,19 @@ import java.net.NetworkInterface
  *   4. Bluetooth — adapter state + connected device names (HEADSET /
  *                  A2DP / GATT) via the hidden BluetoothDevice
  *                  isConnected() probe.
- *   5. Network   — DNS servers from the active network's
+ *   5. ADB       — USB / Wireless debugging, the wireless IP:port, the
+ *                  privileged shell channel (libs:shizuku-adb-debug-tools'
+ *                  own ChannelReader + ChannelState) and the ADB Shell page.
+ *   6. Data      — USB-C cable in a data mode (UsbDataModel): function,
+ *                  host/device role, OTG device names, link speed.
+ *   7. Hotspot   — Wi-Fi hotspot / USB / Bluetooth tethering (TetherModel);
+ *                  SSID, band and clients through the shell channel.
+ *   8. Network   — DNS servers from the active network's
  *                  LinkProperties + every IPv4 bound on a live
  *                  interface.
+ *
+ * The bubble scrolls (capped below the screen height) and opens on the
+ * tapped icon's own section ([show]'s focus).
  *
  * Same dark-glass bubble visual shape as BatteryEstimatePopup +
  * SystemInfoPopup. Anchored under the tapped icon (Gravity.START so
@@ -63,7 +73,28 @@ object NetworkInfoPopup {
     private data class Sample(val tsMs: Long, val totalRx: Long, val totalTx: Long, val mobileRx: Long, val mobileTx: Long)
     @Volatile private var lastSample: Sample? = null
 
-    fun show(ctx: Context, anchor: View) {
+    // Section keys: the strip passes the tapped icon's key so the bubble opens on that section.
+    const val CELLULAR = "cellular"; const val WIFI = "wifi"; const val MESH = "mesh"; const val KDE = "kde"
+    const val BLUETOOTH = "bluetooth"; const val ADB = "adb"; const val DATA = "data"; const val HOTSPOT = "hotspot"
+
+    /** WG link level for the strip's dots + a detail line, from the freshest peer handshake. Blocking (engine binder). */
+    fun wgSignal(ctx: Context): Pair<Int, String> {
+        val b = WgState.backend(ctx)
+        val up = runCatching { b.getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
+        val stats = if (up) runCatching { b.getStatistics(WgState.tunnel) }.getOrNull() else null
+        return wgSignalOf(up, stats)
+    }
+
+    private fun wgSignalOf(up: Boolean, stats: com.wireguard.android.backend.Statistics?): Pair<Int, String> {
+        if (!up) return SignalLevels.NONE to "tunnel down"
+        val newest = runCatching {
+            stats?.peers()?.maxOfOrNull { stats.peer(it)?.latestHandshakeEpochMillis() ?: 0L }
+        }.getOrNull() ?: 0L
+        val age = if (newest > 0L) (System.currentTimeMillis() - newest).coerceAtLeast(0L) else null
+        return SignalLevels.wg(true, age) to (if (age != null) "handshake ${age / 1000}s ago" else "no handshake")
+    }
+
+    fun show(ctx: Context, anchor: View, focus: String? = null) {
         val d = ctx.resources.displayMetrics.density
         val pad = (12 * d).toInt()
         val container = LinearLayout(ctx).apply {
@@ -90,22 +121,24 @@ object NetworkInfoPopup {
         // the radio, so the tap deep-links to the system toggle instead.
         var popup: PopupWindow? = null
         val dismiss = { popup?.dismiss() }
+        val sections = HashMap<String, View>()
+        fun mark(key: String, v: View): View { sections[key] = v; return v }
 
         // ── 1. Cellular
-        container.addView(lightRow(ctx, "Cellular", hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)) {
+        container.addView(mark(CELLULAR, lightRow(ctx, "Cellular", hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_INTERNET_CONNECTIVITY
                 else Settings.ACTION_WIRELESS_SETTINGS)
-        })
+        }))
         for (row in readCellular(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
         container.addView(spacer(ctx, (6 * d).toInt()))
 
         // ── 2. WiFi
-        container.addView(lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
+        container.addView(mark(WIFI, lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_WIFI
                 else Settings.ACTION_WIFI_SETTINGS)
-        })
+        }))
         for (row in readWifi(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
         container.addView(spacer(ctx, (6 * d).toInt()))
 
@@ -114,14 +147,16 @@ object NetworkInfoPopup {
         //      (.1 of its allowed-IP range); tap toggles the shared tunnel. Below,
         //      a labelled block per mesh: endpoint, last talk, key, IP range.
         val meshes = meshList(ctx)
-        container.addView(meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) })
+        container.addView(mark(MESH, meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) }))
+        val stats = runCatching {
+            val b = WgState.backend(ctx)
+            if (b.getState(WgState.tunnel) == Tunnel.State.UP) b.getStatistics(WgState.tunnel) else null
+        }.getOrNull()
+        val (wgLevel, wgDetail) = wgSignalOf(stats != null, stats)
+        container.addView(valueSmall(ctx, "Signal ${SignalLevels.label(wgLevel)} ($wgDetail)"))
         if (meshes.isEmpty()) {
             for (row in readMesh(ctx)) container.addView(valueSmall(ctx, row))
         } else {
-            val stats = runCatching {
-                val b = WgState.backend(ctx)
-                if (b.getState(WgState.tunnel) == Tunnel.State.UP) b.getStatistics(WgState.tunnel) else null
-            }.getOrNull()
             for (m in meshes) {
                 container.addView(label(ctx, m.tag))
                 for (row in meshDetail(m, stats)) container.addView(valueSmall(ctx, row))
@@ -136,32 +171,73 @@ object NetworkInfoPopup {
         val kdeTotal = runCatching {
             com.diegonmarcos.superapp.kdeconnect.KdeConnectConfig.get().devices.size
         }.getOrDefault(0)
-        container.addView(lightRow(ctx, "KDE Connect", kdeConn > 0) {
+        container.addView(mark(KDE, lightRow(ctx, "KDE Connect", kdeConn > 0) {
             dismiss(); (ctx as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "kde")
-        })
+        }))
         container.addView(valueSmall(ctx, "$kdeConn / $kdeTotal device(s) connected"))
         container.addView(spacer(ctx, (6 * d).toInt()))
 
         // ── 4. Bluetooth
-        container.addView(lightRow(ctx, "Bluetooth", bluetoothEnabled(ctx)) {
+        container.addView(mark(BLUETOOTH, lightRow(ctx, "Bluetooth", bluetoothEnabled(ctx)) {
             dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS)
-        })
+        }))
         for (row in readBluetooth(ctx)) container.addView(valueSmall(ctx, row))
         container.addView(spacer(ctx, (6 * d).toInt()))
 
-        // ── 5. USB (cable / data-transfer)
-        container.addView(label(ctx, "USB"))
-        for (row in readUsb(ctx)) container.addView(valueSmall(ctx, row))
+        // ── 5. ADB — USB / Wireless debugging + the privileged shell channel.
+        val openAdbShell: () -> Unit = {
+            dismiss()
+            // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
+            val shell = ctx as? com.diegonmarcos.superapp.ShellActivity
+            if (shell != null) shell.openSectionPage("config", "adb-shell")
+            else com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctx)
+        }
+        val adb = AdbSection.read(ctx)
+        // The light opens the ADB Shell page too: every place that would switch debugging or the
+        // channel hands off to that one page (test-adb-shell-one-place.sh), never to Developer options.
+        container.addView(mark(ADB, lightRow(ctx, "ADB", adb.usb || adb.wireless, openAdbShell)))
+        AdbSection.render(ctx, adb, container, ::valueSmall)
+        container.addView(linkRow(ctx, "ADB Shell ›", openAdbShell))
         container.addView(spacer(ctx, (6 * d).toInt()))
 
-        // ── 6. Network (DNS + private IPs)
+        // ── 6. Data (USB-C cable in a data mode, or OTG host)
+        val usb = readUsbState(ctx)
+        container.addView(mark(DATA, lightRow(ctx, "Data", usb.data) {
+            dismiss(); openUsbSettings(ctx)
+        }))
+        for (row in readUsb(ctx, usb)) container.addView(valueSmall(ctx, row))
+        container.addView(spacer(ctx, (6 * d).toInt()))
+
+        // ── 7. Hotspot / tethering
+        val tether = readTether(ctx, usb)
+        container.addView(mark(HOTSPOT, lightRow(ctx, "Hotspot", tether.active) {
+            dismiss(); openTetherSettings(ctx)
+        }))
+        HotspotSection.render(ctx, tether, container, ::valueSmall)
+        container.addView(buttonRow(ctx,
+            "Tethering settings ›" to { dismiss(); openTetherSettings(ctx) },
+            "ADB Shell ›" to openAdbShell))
+        container.addView(spacer(ctx, (6 * d).toInt()))
+
+        // ── 8. Network (DNS + private IPs)
         container.addView(label(ctx, "Network"))
         for (row in readNetwork(ctx)) container.addView(valueSmall(ctx, row))
 
+        // Nine sections outgrow a phone screen: the bubble scrolls, capped at
+        // ~85% of the screen height, and opens on the tapped icon's section.
+        val dm = ctx.resources.displayMetrics
+        val scroll = android.widget.ScrollView(ctx).apply {
+            isVerticalScrollBarEnabled = false
+            addView(container)
+        }
+        container.measure(
+            View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        val maxH = (dm.heightPixels * 0.85f).toInt()
         val pw = PopupWindow(
-            container,
+            scroll,
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
+            if (container.measuredHeight > maxH) maxH else LinearLayout.LayoutParams.WRAP_CONTENT,
             true,
         ).apply {
             isOutsideTouchable = true
@@ -181,6 +257,7 @@ object NetworkInfoPopup {
         // icon was tapped.
         val anchorLoc = IntArray(2); anchor.getLocationOnScreen(anchorLoc)
         pw.showAsDropDown(anchor, -anchorLoc[0], (6 * d).toInt(), Gravity.START)
+        focus?.let { sections[it] }?.let { target -> scroll.post { scroll.scrollTo(0, (target.top - pad).coerceAtLeast(0)) } }
     }
 
     // ──────────────── Light indicators + radio toggles ────────────────
@@ -396,15 +473,17 @@ object NetworkInfoPopup {
         // Signal — TelephonyManager.signalStrength (API 28+). Pre-28
         // we can only show "—" without the deprecated PhoneStateListener
         // dance, which we deliberately avoid for a one-shot popup.
+        // Signal of the DATA SIM (the one the strip's dots follow), as the same 0..4 level.
         if (Build.VERSION.SDK_INT >= 28) {
-            val ss = runCatching { tm.signalStrength }.getOrNull()
+            val sub = runCatching { android.telephony.SubscriptionManager.getDefaultDataSubscriptionId() }.getOrDefault(-1)
+            val dataTm = if (sub >= 0) runCatching { tm.createForSubscriptionId(sub) }.getOrDefault(tm) else tm
+            val ss = runCatching { dataTm.signalStrength }.getOrNull()
             if (ss != null) {
-                val bars = ss.level.coerceIn(0, 4)
-                val barsStr = "▮".repeat(bars) + "▯".repeat(4 - bars)
+                val lvl = SignalLevels.label(SignalLevels.cell(ss.level))
                 val dbm = runCatching {
                     ss.cellSignalStrengths.firstOrNull()?.dbm
                 }.getOrNull()
-                rows += if (dbm != null) "Signal: $barsStr  $dbm dBm" else "Signal: $barsStr"
+                rows += if (dbm != null) "Signal $lvl ($dbm dBm)" else "Signal $lvl"
             }
         }
         // Mobile rate from TrafficStats delta.
@@ -441,7 +520,7 @@ object NetworkInfoPopup {
         val (band, channel) = decodeWifiFreq(freq)
         rows += "SSID: $ssid"
         rows += "Channel: $channel  ($band)"
-        rows += "Signal: $rssi dBm · $speed Mbps"
+        rows += "Signal ${SignalLevels.label(SignalLevels.wifi(rssi))} ($rssi dBm) · $speed Mbps"
         // WiFi rate ≈ total − mobile (TrafficStats has no WiFi-specific
         // bucket; ethernet usually 0 on phone so this is accurate).
         val wifiRxNow  = now.totalRx  - now.mobileRx
@@ -565,16 +644,12 @@ object NetworkInfoPopup {
         return rows
     }
 
-    // ─────────────────────────── USB ───────────────────────────
+    // ─────────────────────────── Data (USB) ───────────────────────────
 
-    /** Persistent USB section: combines the USB data session (ACTION_USB_STATE)
-     *  with the charge state (ACTION_BATTERY_CHANGED EXTRA_PLUGGED) so it's
-     *  always informative — Data transfer vs Charge-only vs OTG host vs
-     *  Disconnected — plus the active mode and (for tethering) the live USB
-     *  network interface. Battery WATTAGE is intentionally left to the battery
-     *  popup. No permission needed (both are sticky broadcasts). */
-    private fun readUsb(ctx: Context): List<String> {
-        val rows = mutableListOf<String>()
+    /** The sticky ACTION_USB_STATE + charger type + attached OTG devices, through UsbDataModel —
+     *  the same rule the strip's Data icon lights on. No permission needed (sticky broadcasts;
+     *  UsbManager.getDeviceList and device names need none, only opening a device would). */
+    private fun readUsbState(ctx: Context): UsbDataModel.State {
         val app = ctx.applicationContext
         val usb = runCatching {
             app.registerReceiver(null, android.content.IntentFilter("android.hardware.usb.action.USB_STATE"))
@@ -582,42 +657,85 @@ object NetworkInfoPopup {
         val batt = runCatching {
             app.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         }.getOrNull()
+        val extras = UsbDataModel.EXTRA_KEYS.associateWith { usb?.getBooleanExtra(it, false) == true }
+        val otg = runCatching {
+            (app.getSystemService(Context.USB_SERVICE) as? android.hardware.usb.UsbManager)?.deviceList?.values?.map { dev ->
+                val name = listOfNotNull(dev.manufacturerName, dev.productName).joinToString(" ").ifBlank { dev.deviceName }
+                name + " (%04x:%04x)".format(dev.vendorId, dev.productId)
+            }
+        }.getOrNull() ?: emptyList()
+        return UsbDataModel.state(extras, batt?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0, otg)
+    }
 
-        val connected  = usb?.getBooleanExtra("connected", false) ?: false
-        val configured = usb?.getBooleanExtra("configured", false) ?: false
-        val host       = usb?.getBooleanExtra("host_connected", false) ?: false
-        val plugged    = batt?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-        val plugLabel  = when (plugged) {
-            android.os.BatteryManager.BATTERY_PLUGGED_AC -> "AC"
-            android.os.BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-            android.os.BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
-            else -> null
+    /** Data section: headline · mode · role · OTG devices · speed · power · tether NIC.
+     *  Charger WATTAGE stays in the battery popup. */
+    private fun readUsb(ctx: Context, st: UsbDataModel.State): List<String> {
+        val rows = mutableListOf<String>()
+        rows += st.headline()
+        if (st.connected || st.role == UsbDataModel.Role.HOST) {
+            rows += "Mode: " + st.functions.ifEmpty { listOf("none (charge-only)") }.joinToString(", ") +
+                if (st.adbOverUsb) " + adb" else ""
+            rows += "Role: ${st.roleLabel()}"
         }
-        val fns = listOf(
-            "mtp" to "MTP (file transfer)", "ptp" to "PTP (photo)",
-            "rndis" to "RNDIS (tether)", "ncm" to "NCM (tether)", "midi" to "MIDI",
-            "mass_storage" to "Mass storage", "accessory" to "Accessory", "audio_source" to "Audio source",
-        ).filter { usb?.getBooleanExtra(it.first, false) == true }.map { it.second }
-
-        // Status line — the headline the user scans.
-        rows += when {
-            host -> "OTG host connected"
-            connected && fns.isNotEmpty() -> "● Data transfer"
-            connected -> "● Connected (charge-only, no data)"
-            plugLabel == "Wireless" -> "Wireless charging (no cable)"
-            plugLabel != null -> "● Charging (charge-only)"
-            else -> "○ Disconnected"
-        }
-        if (plugLabel != null) rows += "Power: $plugLabel"
-        if (fns.isNotEmpty()) {
-            rows += "Mode: " + fns.joinToString(", ")
-            rows += "Configured: ${if (configured) "yes" else "no"}"
-            // Data stats — for tether modes the kernel exposes a usb/rndis/ncm
-            // NIC; surface its IP (per-iface byte counters are SELinux-blocked
-            // on hardened Samsung, same wall the Mesh section hits).
+        for (dev in st.otgDevices) rows += "  • $dev"
+        if (st.data) rows += "Speed: " + (usbSpeed(st.role) ?: "— (not readable on this device)")
+        if (st.power != null) rows += "Power: ${st.power}"
+        if (st.functions.isNotEmpty()) {
+            rows += "Configured: ${if (st.configured) "yes" else "no"}"
+            // Tether modes expose a usb/rndis/ncm NIC; surface its IP (per-iface byte counters are
+            // SELinux-blocked on hardened Samsung, same wall the Mesh section hits).
             for (s in usbNetStats()) rows += s
         }
         return rows
+    }
+
+    /** Negotiated link speed from sysfs, when the device lets an app read it (many do not: SELinux). */
+    private fun usbSpeed(role: UsbDataModel.Role): String? = runCatching {
+        if (role == UsbDataModel.Role.HOST) {
+            java.io.File("/sys/bus/usb/devices").listFiles()?.asSequence()
+                ?.filter { !it.name.startsWith("usb") && !it.name.contains(':') }
+                ?.mapNotNull { UsbDataModel.hostSpeed(runCatching { java.io.File(it, "speed").readText() }.getOrNull()) }
+                ?.firstOrNull()
+        } else {
+            java.io.File("/sys/class/udc").listFiles()?.asSequence()
+                ?.mapNotNull { UsbDataModel.udcSpeed(runCatching { java.io.File(it, "current_speed").readText() }.getOrNull()) }
+                ?.firstOrNull()
+        }
+    }.getOrNull()
+
+    /** USB preferences (the "Use USB for" screen) where the build exposes it, else Connected devices, else Settings. */
+    private fun openUsbSettings(ctx: Context) = openFirst(ctx,
+        Intent().setClassName("com.android.settings", "com.android.settings.Settings\$UsbDetailsActivity"),
+        Intent("android.settings.CONNECTED_DEVICE_SETTINGS"),
+        Intent(Settings.ACTION_SETTINGS))
+
+    // ─────────────────────────── Hotspot / tethering ───────────────────────────
+
+    /** Sticky TETHER_STATE_CHANGED + WIFI_AP_STATE_CHANGED + the USB tethering function. No permission. */
+    private fun readTether(ctx: Context, usb: UsbDataModel.State): TetherModel.State {
+        val app = ctx.applicationContext
+        val t = runCatching { app.registerReceiver(null, android.content.IntentFilter("android.net.conn.TETHER_STATE_CHANGED")) }.getOrNull()
+        val ap = runCatching { app.registerReceiver(null, android.content.IntentFilter("android.net.wifi.WIFI_AP_STATE_CHANGED")) }.getOrNull()
+        return TetherModel.State(
+            tethered = runCatching { t?.getStringArrayListExtra("tetherArray") }.getOrNull()?.toList() ?: emptyList(),
+            apState = ap?.getIntExtra("wifi_state", -1)?.takeIf { it >= 0 },
+            usbFunction = usb.functions.any { it.startsWith("RNDIS") || it.startsWith("NCM") },
+        )
+    }
+
+    /** System tethering settings. There is no public action for it: the Settings component names
+     *  (AOSP + Samsung) first, then the network panel, then Settings. */
+    private fun openTetherSettings(ctx: Context) = openFirst(ctx,
+        Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings"),
+        Intent().setClassName("com.android.settings", "com.android.settings.Settings\$TetherSettingsActivity"),
+        Intent(Settings.ACTION_WIRELESS_SETTINGS),
+        Intent(Settings.ACTION_SETTINGS))
+
+    private fun openFirst(ctx: Context, vararg tries: Intent) {
+        for (i in tries) {
+            if (runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+        }
+        Toast.makeText(ctx, "No system screen for that", Toast.LENGTH_SHORT).show()
     }
 
     /** Live USB-tether interface(s) named rndis / usb / ncm + their IPv4. */
@@ -808,6 +926,24 @@ object NetworkInfoPopup {
         textSize = 12f
         typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
     }
+    /** A compact tappable action line ("ADB Shell ›"), accent-tinted, same text size as the values. */
+    private fun linkRow(ctx: Context, t: String, onTap: () -> Unit) = TextView(ctx).apply {
+        text = t
+        setTextColor(0xFF7FB8FF.toInt())
+        textSize = 12f
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        val p = (2 * ctx.resources.displayMetrics.density).toInt()
+        setPadding(0, p, (10 * ctx.resources.displayMetrics.density).toInt(), p)
+        isClickable = true
+        setOnClickListener { onTap() }
+    }
+
+    /** Several [linkRow]s on one line. */
+    private fun buttonRow(ctx: Context, vararg actions: Pair<String, () -> Unit>) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        for ((t, a) in actions) addView(linkRow(ctx, t, a))
+    }
+
     private fun spacer(ctx: Context, h: Int) = View(ctx).apply {
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, h)

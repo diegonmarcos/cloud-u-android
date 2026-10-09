@@ -959,9 +959,24 @@
         "type": "bool",
         "on_level": 3
       },
+      "adb": {
+        "_doc": "ADB icon (USB or Wireless debugging on). Reuses an already-vendored sprite pair, so sync-zoomies copies nothing new.",
+        "animal": "horse",
+        "variant": "warrior",
+        "type": "bool",
+        "on_level": 3
+      },
       "usb": {
+        "_doc": "The Data icon (USB-C cable in a data mode or OTG host); keeps the id the old USB icon had, so its pet is unchanged.",
         "animal": "rat",
         "variant": "gray",
+        "type": "bool",
+        "on_level": 3
+      },
+      "hotspot": {
+        "_doc": "HS icon (Wi-Fi hotspot / USB / Bluetooth tethering). Reuses an already-vendored sprite pair.",
+        "animal": "deno",
+        "variant": "green",
         "type": "bool",
         "on_level": 3
       },

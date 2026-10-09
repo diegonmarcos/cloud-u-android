@@ -8,6 +8,9 @@ import com.diegonmarcos.superapp.cloud.CalendarAgendaPopup
 import com.diegonmarcos.superapp.battery.BatteryIconView
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 import com.diegonmarcos.superapp.network.NetworkInfoPopup
+import com.diegonmarcos.superapp.network.SignalLevels
+import com.diegonmarcos.superapp.network.TetherModel
+import com.diegonmarcos.superapp.network.UsbDataModel
 import com.diegonmarcos.superapp.zoomies.PetStrengthView
 
 import android.app.ActivityManager
@@ -15,7 +18,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -44,18 +49,22 @@ import java.util.Locale
  * Android launcher AND the active LauncherTheme is Cloud. Replaces the
  * hidden system status bar with our own 3-cluster row + bottom hairline:
  *
- *   ┌───────────────────────────────────────────────────────────────┐
- *   │ [5G][WiFi][WG]   dd-MM-yyyy HH:mm EEE   [R N%][S N%][Battery] │
- *   │ ─────────────────────────────────────────────────────────────  │  hairline
- *   └───────────────────────────────────────────────────────────────┘
+ *   ┌──────────────────────────────────────────────────────────────────┐
+ *   │ [5G][WiFi][WG][KDE][BT][ADB][Data][HS]  dd-MM-yyyy HH:mm  [R][S][C][Bat] │
+ *   │  ····  ····  ····   (signal dots, ~3dp)                          │
+ *   │ ──────────────────────────────────────────────────────────────── │  hairline
+ *   └──────────────────────────────────────────────────────────────────┘
  *
- *   LEFT  — 5G / WiFi / WG labels. Color-tinted by current state read
- *           from ConnectivityManager (no runtime permission needed —
- *           ACCESS_NETWORK_STATE is install-time). 5G label tracks any
- *           cellular transport (we can't read the exact subtype without
- *           READ_PHONE_STATE; the label is the user-spec'd icon name).
- *           WG label tracks any VPN transport (works for our wg as well
- *           as Tailscale / generic VPN).
+ *   LEFT  — network labels, each over a 4-dot signal row (SignalDots;
+ *           5G / WiFi / WG carry a level, KDE / BT / ADB / Data / HS keep
+ *           the same empty footprint so every icon stays aligned). Tinted
+ *           by state, all event-driven: ConnectivityManager callback (5G /
+ *           WiFi / WG), RSSI_CHANGED + the data SIM's signal callback (dots),
+ *           a Settings.Global observer (ADB = USB or Wireless debugging),
+ *           USB_STATE + OTG attach/detach (Data), TETHER_STATE_CHANGED +
+ *           WIFI_AP_STATE_CHANGED (HS). WG's dots age with the handshake and
+ *           are re-read on the clock's minute tick. 5G label tracks any
+ *           cellular transport; WG any VPN transport.
  *   CENTER — Date + time, monospace, centred. Updated every minute via
  *           ACTION_TIME_TICK + immediate refresh on TIMEZONE_CHANGED /
  *           TIME_CHANGED.
@@ -78,8 +87,15 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val wifiView: TextView
     private val wgView: TextView
     private val btView: TextView
-    private val usbView: TextView
+    private val dataView: TextView
+    private val adbView: TextView
+    private val hsView: TextView
     private val kdeView: TextView
+    private val cellDots = SignalDots.create(context)
+    private val wifiDots = SignalDots.create(context)
+    private val wgDots = SignalDots.create(context)
+    /** Icons with no signal to show (KDE, BT, ADB, Data, HS) still carry an empty dots row. */
+    private fun emptyDots() = SignalDots.create(context)
     private val dateTimeView: TextView
     private val ramView: TextView
     private val storageView: TextView
@@ -117,7 +133,20 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private var hasVpn = false
     private var hasBluetooth = false
     private var hasUsbData = false
+    private var hasAdb = false
+    private var hasHotspot = false
     private var hasKde = false
+    // Signal levels (0..4, -1 = none) for the dots under 5G / WiFi / WG.
+    private var cellLevel = SignalLevels.NONE
+    private var wifiLevel = SignalLevels.NONE
+    private var wgLevel = SignalLevels.NONE
+    // Tethering inputs: the last sticky TETHER_STATE_CHANGED / WIFI_AP_STATE_CHANGED / USB_STATE.
+    private var tetherIfaces: List<String> = emptyList()
+    private var apState: Int? = null
+    private var usbTetherFn = false
+    private val wgReading = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** API 31+ TelephonyCallback or the older PhoneStateListener, held as Any so neither class is touched on a release that lacks it. */
+    private var signalListener: Any? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val metricsTicker = object : Runnable {
@@ -173,30 +202,45 @@ class LauncherStatusStripView @JvmOverloads constructor(
         wifiView     = makeIconLabel("WiFi")
         wgView       = makeIconLabel("WG")
         btView       = makeIconLabel("BT")
-        // USB data indicator — lit only when a cable is connected in a
-        // DATA-transfer mode (MTP/PTP/RNDIS/NCM/MIDI or OTG host), dim on
-        // charge-only or unplugged. Tracks ACTION_USB_STATE.
-        usbView      = makeIconLabel("USB")
+        // ADB — lit while USB debugging or Wireless debugging is on (the two
+        // Settings.Global switches, watched by a ContentObserver).
+        adbView      = makeIconLabel("ADB")
+        // Data — lit only when a USB-C cable is in a DATA mode (MTP/PTP/RNDIS/
+        // NCM/MIDI…) or the phone is the OTG host; dim on charge-only or
+        // unplugged. One rule, UsbDataModel, shared with the popup's section.
+        dataView     = makeIconLabel("Data")
+        // HS — lit while Wi-Fi hotspot, USB or Bluetooth tethering is on
+        // (TETHER_STATE_CHANGED + WIFI_AP_STATE_CHANGED, both sticky).
+        hsView       = makeIconLabel("HS")
         // KDE Connect — lit when ≥1 paired device is connected over the mesh.
         kdeView      = makeIconLabel("KDE")
         // Any of the left-cluster icons → NetworkInfoPopup (shared
         // popup per cluster, per Diego's "yes click any, they are a
-        // cluster" answer). Reusing the same anchor (the tapped icon)
-        // keeps the bubble close to where the user tapped.
-        val openNetworkPopup = OnClickListener { v -> NetworkInfoPopup.show(context, v) }
-        for (v in listOf(signal5gView, wifiView, wgView, btView, usbView, kdeView)) {
+        // cluster" answer), scrolled to the tapped icon's own section.
+        // Reusing the same anchor (the tapped icon) keeps the bubble close
+        // to where the user tapped.
+        val focusOf = mapOf(
+            signal5gView to NetworkInfoPopup.CELLULAR, wifiView to NetworkInfoPopup.WIFI,
+            wgView to NetworkInfoPopup.MESH, kdeView to NetworkInfoPopup.KDE,
+            btView to NetworkInfoPopup.BLUETOOTH, adbView to NetworkInfoPopup.ADB,
+            dataView to NetworkInfoPopup.DATA, hsView to NetworkInfoPopup.HOTSPOT,
+        )
+        for ((v, focus) in focusOf) {
             v.isClickable = true
-            v.setOnClickListener(openNetworkPopup)
+            v.setOnClickListener { NetworkInfoPopup.show(context, v, focus) }
         }
         // Each tool becomes a vertical [pet, icon] column → Line 0 pet sits
-        // directly above its Line 1 icon. makeToolColumn falls back to the
-        // bare icon when pets are disabled or unconfigured for that tool.
-        leftCluster.addView(makeToolColumn("cellular", signal5gView))
-        leftCluster.addView(makeToolColumn("wifi", wifiView))
-        leftCluster.addView(makeToolColumn("vpn", wgView))
-        leftCluster.addView(makeToolColumn("kde", kdeView))   // mesh (WG) → KDE → BT
-        leftCluster.addView(makeToolColumn("bluetooth", btView))
-        leftCluster.addView(makeToolColumn("usb", usbView))
+        // directly above its Line 1 icon, and the icon carries its signal
+        // dots underneath. makeToolColumn falls back to the bare [icon, dots]
+        // when pets are disabled or unconfigured for that tool.
+        leftCluster.addView(makeToolColumn("cellular", withDots(signal5gView, cellDots)))
+        leftCluster.addView(makeToolColumn("wifi", withDots(wifiView, wifiDots)))
+        leftCluster.addView(makeToolColumn("vpn", withDots(wgView, wgDots)))
+        leftCluster.addView(makeToolColumn("kde", withDots(kdeView, emptyDots())))   // mesh (WG) → KDE → BT
+        leftCluster.addView(makeToolColumn("bluetooth", withDots(btView, emptyDots())))
+        leftCluster.addView(makeToolColumn("adb", withDots(adbView, emptyDots())))
+        leftCluster.addView(makeToolColumn("usb", withDots(dataView, emptyDots())))  // the old USB pet now rides Data
+        leftCluster.addView(makeToolColumn("hotspot", withDots(hsView, emptyDots())))
         innerRow.addView(leftCluster)
 
         // ── CENTER: date + time, true screen-centre ────────────────
@@ -258,6 +302,10 @@ class LauncherStatusStripView @JvmOverloads constructor(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT,
         )
         centerCol.addView(dateTimeView)
+        // The left cluster grew by the signal-dots row; the same reserve at the
+        // bottom of the centre and right columns keeps every column's vertical
+        // centre where it was, so the clock and the right icons do not drift.
+        centerCol.setPadding(0, 0, 0, dotsRowPx())
         innerRow.addView(centerCol)
 
         // ── RIGHT cluster: RAM% · Storage% · Battery (anchored END) ─
@@ -298,6 +346,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
         rightCluster.addView(makeToolColumn("storage", storageView))
         rightCluster.addView(makeToolColumn("cpu", cpuView))
         rightCluster.addView(makeToolColumn("battery", batteryView))
+        rightCluster.setPadding(0, 0, 0, dotsRowPx())
         innerRow.addView(rightCluster)
 
         // innerRow IS the two lines now: each tool's column stacks its pet
@@ -369,6 +418,17 @@ class LauncherStatusStripView @JvmOverloads constructor(
             }
         }
     }
+
+    /** The icon over its signal dots, centred: the dots row is the only height added to Line 1. */
+    private fun withDots(icon: TextView, dots: LinearLayout): View = LinearLayout(context).apply {
+        orientation = VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+        addView(icon)
+        addView(dots)
+    }
+
+    /** Height of one dots row, for the other columns' matching reserve. */
+    private fun dotsRowPx(): Int = SignalDots.heightPx(context)
 
     /** Wrap a tool's [iconView] in a vertical [pet, icon] column so its pet
      *  sits on Line 0 directly above the icon on Line 1. Returns the bare
@@ -444,13 +504,31 @@ class LauncherStatusStripView @JvmOverloads constructor(
             // OFF truly freezes RAM/CPU/storage. The clock keeps ticking.
             if (com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(context).toggle("status_live"))
                 refreshMetrics()
+            // A WireGuard handshake ages with no event to say so: re-read its
+            // level on the clock's own once-a-minute tick (no extra timer).
+            refreshWgLevel()
         }
     }
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) { refreshBattery(i) }
     }
     private val usbReceiver = object : BroadcastReceiver() {
-        override fun onReceive(c: Context, i: Intent) { refreshUsb(i) }
+        override fun onReceive(c: Context, i: Intent) {
+            // ATTACHED / DETACHED of an OTG device carry no USB_STATE: re-read the sticky one.
+            val state = if (i.action == USB_STATE) i
+                else runCatching { context.registerReceiver(null, IntentFilter(USB_STATE)) }.getOrNull()
+            refreshUsb(state)
+        }
+    }
+    private val tetherReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) { refreshTether(i) }
+    }
+    private val rssiReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) { refreshWifiLevel() }
+    }
+    /** USB debugging / Wireless debugging flips: Settings.Global, observed, never polled. */
+    private val adbObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) { refreshAdb() }
     }
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
@@ -488,7 +566,27 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 IntentFilter("android.hardware.usb.action.USB_STATE"),
             )
             if (usb != null) refreshUsb(usb)
+            context.registerReceiver(usbReceiver, IntentFilter().apply {
+                addAction("android.hardware.usb.action.USB_DEVICE_ATTACHED")
+                addAction("android.hardware.usb.action.USB_DEVICE_DETACHED")
+            })
         }
+        runCatching {
+            // Both sticky: registering hands back the current tethering / AP state.
+            context.registerReceiver(tetherReceiver, IntentFilter(TETHER_STATE))?.let { refreshTether(it) }
+            context.registerReceiver(tetherReceiver, IntentFilter(AP_STATE))?.let { refreshTether(it) }
+        }
+        runCatching {
+            context.registerReceiver(rssiReceiver, IntentFilter(android.net.wifi.WifiManager.RSSI_CHANGED_ACTION))
+        }
+        runCatching {
+            val cr = context.contentResolver
+            cr.registerContentObserver(android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ADB_ENABLED), false, adbObserver)
+            cr.registerContentObserver(android.provider.Settings.Global.getUriFor(ADB_WIFI), false, adbObserver)
+        }
+        registerSignalListener()
+        refreshAdb()
+        refreshWgLevel()
         runCatching {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             cm?.registerNetworkCallback(
@@ -510,6 +608,10 @@ class LauncherStatusStripView @JvmOverloads constructor(
         runCatching { context.unregisterReceiver(timeReceiver) }
         runCatching { context.unregisterReceiver(batteryReceiver) }
         runCatching { context.unregisterReceiver(usbReceiver) }
+        runCatching { context.unregisterReceiver(tetherReceiver) }
+        runCatching { context.unregisterReceiver(rssiReceiver) }
+        runCatching { context.contentResolver.unregisterContentObserver(adbObserver) }
+        unregisterSignalListener()
         runCatching {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             cm?.unregisterNetworkCallback(networkCallback)
@@ -532,21 +634,105 @@ class LauncherStatusStripView @JvmOverloads constructor(
         if (pct >= 0) toolCfg["battery"]?.let { updatePet("battery", bucketLevel(pct, it.buckets)) }
     }
 
-    /** USB cable DATA-transfer state from ACTION_USB_STATE. "Data" = cable
-     *  connected AND a data function active (MTP/PTP/RNDIS/NCM/MIDI), or
-     *  we're the OTG host — i.e. NOT charge-only (charge-only = connected
-     *  with no data function → stays dim). Keys are the stable AOSP
-     *  ACTION_USB_STATE extras. */
-    private fun refreshUsb(intent: Intent) {
-        val connected = intent.getBooleanExtra("connected", false)
-        val host      = intent.getBooleanExtra("host_connected", false)
-        val dataFn = intent.getBooleanExtra("mtp", false) ||
-            intent.getBooleanExtra("ptp", false) ||
-            intent.getBooleanExtra("rndis", false) ||
-            intent.getBooleanExtra("ncm", false) ||
-            intent.getBooleanExtra("midi", false)
-        hasUsbData = host || (connected && dataFn)
+    /** USB cable DATA-transfer state from ACTION_USB_STATE (+ any attached
+     *  OTG device). "Data" = a data function active (MTP/PTP/RNDIS/NCM/MIDI…)
+     *  or we're the OTG host — NOT charge-only. The rule is UsbDataModel's,
+     *  the same one the popup's Data section prints. */
+    private fun refreshUsb(intent: Intent?) {
+        val extras = UsbDataModel.EXTRA_KEYS.associateWith { intent?.getBooleanExtra(it, false) == true }
+        val otg = runCatching {
+            (context.getSystemService(Context.USB_SERVICE) as? android.hardware.usb.UsbManager)
+                ?.deviceList?.keys?.toList()
+        }.getOrNull() ?: emptyList()
+        hasUsbData = UsbDataModel.state(extras, 0, otg).data
+        usbTetherFn = extras["rndis"] == true || extras["ncm"] == true
+        hasHotspot = TetherModel.State(tetherIfaces, apState, usbTetherFn).active
         applyIconTints()
+    }
+
+    /** TETHER_STATE_CHANGED ("tetherArray" = tethered interfaces) or
+     *  WIFI_AP_STATE_CHANGED ("wifi_state"); each updates its half. */
+    private fun refreshTether(i: Intent) {
+        when (i.action) {
+            TETHER_STATE -> tetherIfaces = runCatching { i.getStringArrayListExtra("tetherArray") }.getOrNull()?.toList() ?: emptyList()
+            AP_STATE -> apState = i.getIntExtra("wifi_state", -1).takeIf { it >= 0 }
+        }
+        hasHotspot = TetherModel.State(tetherIfaces, apState, usbTetherFn).active
+        applyIconTints()
+    }
+
+    private fun refreshAdb() {
+        val cr = context.contentResolver
+        val usb = runCatching { android.provider.Settings.Global.getInt(cr, android.provider.Settings.Global.ADB_ENABLED, 0) == 1 }.getOrDefault(false)
+        // Wireless debugging: the lib's own read (Settings.Global adb_wifi_enabled, API 30+).
+        val wifi = runCatching { com.diegonmarcos.superapp.adbdebug.WirelessDebugging.isOn(context) }.getOrDefault(false)
+        hasAdb = usb || wifi
+        applyIconTints()
+    }
+
+    /** Wi-Fi RSSI → 0..4 (RSSI_CHANGED_ACTION + every connectivity change). No location needed for RSSI. */
+    private fun refreshWifiLevel() {
+        wifiLevel = if (!hasWifi) SignalLevels.NONE else runCatching {
+            @Suppress("DEPRECATION")
+            val rssi = (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager)
+                ?.connectionInfo?.rssi
+            SignalLevels.wifi(rssi)
+        }.getOrDefault(SignalLevels.NONE)
+        applyIconTints()
+    }
+
+    /** WG level from the freshest peer handshake the engine reports. The engine is
+     *  another process (binder), so it is read off the main thread, at most one read in flight. */
+    private fun refreshWgLevel() {
+        if (!wgReading.compareAndSet(false, true)) return
+        val app = context.applicationContext
+        Thread {
+            val level = try { NetworkInfoPopup.wgSignal(app).first } catch (_: Throwable) { SignalLevels.NONE } finally { wgReading.set(false) }
+            post { wgLevel = level; applyIconTints() }
+        }.start()
+    }
+
+    /** Cellular level of the DATA SIM, pushed by the radio (no permission needed for signal strength). */
+    private fun registerSignalListener() {
+        if (signalListener != null) return
+        runCatching {
+            val tm = dataSimTelephony() ?: return
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                val cb = SignalCallback31 { lvl -> post { cellLevel = SignalLevels.cell(lvl); applyIconTints() } }
+                tm.registerTelephonyCallback(context.mainExecutor, cb)
+                signalListener = cb
+            } else {
+                @Suppress("DEPRECATION")
+                val l = object : android.telephony.PhoneStateListener() {
+                    @Deprecated("Deprecated in Java")
+                    override fun onSignalStrengthsChanged(ss: android.telephony.SignalStrength?) {
+                        cellLevel = SignalLevels.cell(ss?.level); applyIconTints()
+                    }
+                }
+                @Suppress("DEPRECATION")
+                tm.listen(l, android.telephony.PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
+                signalListener = l
+            }
+        }
+    }
+
+    private fun unregisterSignalListener() {
+        val l = signalListener ?: return
+        signalListener = null
+        runCatching {
+            val tm = dataSimTelephony() ?: return
+            if (android.os.Build.VERSION.SDK_INT >= 31 && l is android.telephony.TelephonyCallback) tm.unregisterTelephonyCallback(l)
+            else if (l is android.telephony.PhoneStateListener) {
+                @Suppress("DEPRECATION")
+                tm.listen(l, android.telephony.PhoneStateListener.LISTEN_NONE)
+            }
+        }
+    }
+
+    private fun dataSimTelephony(): android.telephony.TelephonyManager? {
+        val tm = context.applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager ?: return null
+        val sub = runCatching { android.telephony.SubscriptionManager.getDefaultDataSubscriptionId() }.getOrDefault(-1)
+        return if (sub >= 0) runCatching { tm.createForSubscriptionId(sub) }.getOrDefault(tm) else tm
     }
 
     /** Walk all known networks via ConnectivityManager and decide
@@ -566,9 +752,11 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 }
             }
         }
+        val vpnChanged = vpn != hasVpn
         hasWifi = wifi; hasCellular = cell; hasVpn = vpn
         hasBluetooth = readBluetoothEnabled()
-        applyIconTints()
+        refreshWifiLevel()   // also applies the tints
+        if (vpnChanged) refreshWgLevel()
     }
 
     /** Bluetooth adapter on/off via BluetoothManager. Wrapped in
@@ -588,7 +776,13 @@ class LauncherStatusStripView @JvmOverloads constructor(
         wifiView    .setTextColor(if (hasWifi)      on else off)
         wgView      .setTextColor(if (hasVpn)       on else off)
         btView      .setTextColor(if (hasBluetooth) on else off)
-        usbView     .setTextColor(if (hasUsbData)   on else off)
+        adbView     .setTextColor(if (hasAdb)       on else off)
+        dataView    .setTextColor(if (hasUsbData)   on else off)
+        hsView      .setTextColor(if (hasHotspot)   on else off)
+        // Signal dots take the icon's own tint (bright when active, faint when not).
+        SignalDots.set(cellDots, cellLevel, if (hasCellular) on else off)
+        SignalDots.set(wifiDots, wifiLevel, if (hasWifi) on else off)
+        SignalDots.set(wgDots, if (hasVpn) wgLevel else SignalLevels.NONE, if (hasVpn) on else off)
         hasKde = runCatching {
             com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectedIds().isNotEmpty()
         }.getOrDefault(false)
@@ -599,6 +793,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
         updateBoolPet("vpn", hasVpn)
         updateBoolPet("bluetooth", hasBluetooth)
         updateBoolPet("usb", hasUsbData)
+        updateBoolPet("adb", hasAdb)
+        updateBoolPet("hotspot", hasHotspot)
         updateBoolPet("kde", hasKde)
     }
 
@@ -639,4 +835,70 @@ class LauncherStatusStripView @JvmOverloads constructor(
             }
         }
     }
+
+    private companion object {
+        const val USB_STATE = "android.hardware.usb.action.USB_STATE"
+        /** ConnectivityManager.ACTION_TETHER_STATE_CHANGED (hidden constant, sticky since API 8). */
+        const val TETHER_STATE = "android.net.conn.TETHER_STATE_CHANGED"
+        /** WifiManager.WIFI_AP_STATE_CHANGED_ACTION (hidden constant, sticky). */
+        const val AP_STATE = "android.net.wifi.WIFI_AP_STATE_CHANGED"
+        /** Settings.Global.ADB_WIFI_ENABLED (@hide, API 30+). */
+        const val ADB_WIFI = "adb_wifi_enabled"
+    }
+}
+
+/** API 31+ signal callback, in its own class so pre-31 runtimes never load TelephonyCallback. */
+@androidx.annotation.RequiresApi(31)
+private class SignalCallback31(private val onLevel: (Int) -> Unit) :
+    android.telephony.TelephonyCallback(), android.telephony.TelephonyCallback.SignalStrengthsListener {
+    override fun onSignalStrengthsChanged(ss: android.telephony.SignalStrength) { onLevel(ss.level) }
+}
+
+/**
+ * SignalDots(level, tint): four tiny dots in a row, filled left to right for a 0..4 signal level,
+ * the unfilled ones a faint copy of the same tint. Sits centred under a status-strip icon (~2 dp
+ * dots, ~1.5 dp apart, ~1 dp above them), so the row grows ~3 dp and the icon keeps its size.
+ * Level -1 draws nothing but keeps the same footprint, so an icon with no signal (ADB, Data, HS,
+ * BT) stays aligned with its neighbours.
+ *
+ * Built from four plain Views with oval backgrounds rather than a View subclass, and kept in this
+ * file rather than a new one: the app's custom-view and View-file counts only go down
+ * (cloud-android-compose-ratchet.py). Internal, so any View-based surface of the app can reuse it.
+ */
+internal object SignalDots {
+
+    /** A new, empty (level -1) dots row. */
+    fun create(ctx: Context): LinearLayout {
+        val d = ctx.resources.displayMetrics.density
+        val dot = maxOf(2, (2f * d + 0.5f).toInt())
+        val gap = maxOf(1, (1.5f * d + 0.5f).toInt())
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, maxOf(1, (1f * d + 0.5f).toInt()), 0, 0)
+            for (i in 0 until 4) addView(View(ctx).apply {
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0) }
+            }, LinearLayout.LayoutParams(dot, dot).apply { if (i > 0) marginStart = gap })
+            tag = Pair(-1, 0)
+        }
+    }
+
+    /** [level] 0..4 (or -1 = none); [tint] the icon's current text colour. Repaints only on change. */
+    fun set(row: LinearLayout, level: Int, tint: Int) {
+        val l = level.coerceIn(-1, 4)
+        if (row.tag == Pair(l, tint)) return
+        row.tag = Pair(l, tint)
+        val alpha = (tint ushr 24) and 0xFF
+        for (i in 0 until row.childCount) {
+            val a = when {
+                l < 0 -> 0
+                i < l -> alpha
+                else -> (alpha * 0.3f).toInt()   // unfilled: same colour, ~30% of the icon's alpha
+            }
+            (row.getChildAt(i).background as? GradientDrawable)?.setColor((tint and 0x00FFFFFF) or (a shl 24))
+        }
+    }
+
+    /** Height a dots row adds under an icon, for the columns that carry none. */
+    fun heightPx(ctx: Context): Int = create(ctx).let { it.measure(0, 0); it.measuredHeight }
 }
