@@ -587,7 +587,9 @@ unit)
     # owner's phone does not hold, and "Process completed with exit code 1" is not a reason.
     # The Kotlin/Gradle error lines of the captured output are re-emitted as ::error:: lines.
     if [ "$rc" -ne 0 ]; then
-        grep -nE '^e: |error:|> Task .* FAILED|What went wrong|Execution failed|Manifest merger|Unresolved reference|tests completed|Could not ' "$unit_log" \
+        # Gradle names a failing test as "Class > method FAILED" and its reason on the lines
+        # after (AssertionError / expected … but was …): both travel, or a red run says only "8 failed".
+        grep -nE '^e: |error:|> Task .* FAILED| FAILED$|What went wrong|Execution failed|Manifest merger|Unresolved reference|tests completed|Could not |AssertionError|Expected|expected:' "$unit_log" \
             | head -40 | tr -d '\r' | cut -c1-900 | sed 's/%/%25/g' \
             | while IFS= read -r l; do echo "::error title=unit tests [$APP_NAME]::$l"; done
     fi
