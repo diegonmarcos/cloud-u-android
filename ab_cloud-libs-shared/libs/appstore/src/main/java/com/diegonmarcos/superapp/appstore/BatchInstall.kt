@@ -145,6 +145,8 @@ object BatchInstall {
             val msg = UpdateProgress.withKey(t.pkg) { StoreJobs.runner.install(t.pkg) { engine.install(ctx, t, apk) } }
             outcomes[t.pkg] = Outcome(t, downloaded = true, installed = msg == null, message = msg)
         }
+        // No row stays open past the batch (a cancelled or failed one was already closed by its own event).
+        targets.forEach { StoreJobs.board.settle(it.pkg) }
         return targets.mapNotNull { outcomes[it.pkg] }
     }
 }

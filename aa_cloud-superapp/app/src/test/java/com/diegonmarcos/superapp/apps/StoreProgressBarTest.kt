@@ -88,6 +88,7 @@ class StoreProgressBarTest {
 
     @Test
     fun `the bar names the app, stage, version, bytes, position and next, and a failure opens that row`() {
+        com.diegonmarcos.superapp.appstore.StoreJobs.board.reset()
         UpdateProgress.reset()   // the pipeline's state is process-wide; start from nothing running
         val app = target()
         shadowOf(ctx.packageManager).installPackage(PackageInfo().apply {

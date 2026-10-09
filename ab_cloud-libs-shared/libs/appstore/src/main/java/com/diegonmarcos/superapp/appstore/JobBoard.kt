@@ -93,6 +93,9 @@ class JobBoard {
         if (!r.finished) rows[key] = r.copy(phase = Phase.DONE, waitingFor = "")
     }
 
+    /** Forget every row (a test starting from nothing running). */
+    @Synchronized fun reset() = rows.clear()
+
     @Synchronized fun row(key: String): Row? = rows[key]
     @Synchronized fun rows(): List<Row> = rows.values.toList()
 

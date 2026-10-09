@@ -259,7 +259,7 @@ class ApkCacheRetentionTest {
 
     @Test
     fun `every download finishes before any install starts`() {
-        val calls = ArrayList<String>()
+        val calls = java.util.Collections.synchronizedList(ArrayList<String>())
         val targets = listOf("a", "b", "c").map {
             BatchInstall.Target("org.example.$it", it, null, null)
         }
@@ -273,9 +273,10 @@ class ApkCacheRetentionTest {
             }
         }
         val outcomes = BatchInstall.run(ctx, targets, engine)
+        // Downloads run up to 3 at once, so their order among themselves is free; none may trail an install.
         assertEquals("download-all-then-install-one-by-one, in that order",
-            listOf("download:a", "download:b", "download:c",
-                   "install:a", "install:b", "install:c"), calls)
+            listOf("download:a", "download:b", "download:c"), calls.take(3).sorted())
+        assertEquals(listOf("install:a", "install:b", "install:c"), calls.drop(3))
         assertEquals("every app gets its own outcome", 3, outcomes.size)
         assertTrue("and each one says it was downloaded and installed",
             outcomes.all { it.downloaded && it.installed })
@@ -283,7 +284,7 @@ class ApkCacheRetentionTest {
 
     @Test
     fun `one dead download costs only its own app`() {
-        val calls = ArrayList<String>()
+        val calls = java.util.Collections.synchronizedList(ArrayList<String>())
         val targets = listOf("a", "bad", "c").map {
             BatchInstall.Target("org.example.$it", it, null, null)
         }
@@ -299,7 +300,8 @@ class ApkCacheRetentionTest {
             }
         }
         val outcomes = BatchInstall.run(ctx, targets, engine)
-        assertEquals(listOf("download:a", "download:bad", "download:c", "install:a", "install:c"), calls)
+        assertEquals(listOf("download:a", "download:bad", "download:c"), calls.take(3).sorted())
+        assertEquals(listOf("install:a", "install:c"), calls.drop(3))
         val bad = outcomes.single { it.target.label == "bad" }
         assertFalse("the dead one is not reported as downloaded", bad.downloaded)
         assertTrue("and its reason survives: ${bad.message}",

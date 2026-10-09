@@ -732,7 +732,7 @@ class StoreCacheStagesTest {
         com.diegonmarcos.superapp.appstore.StoreJobs.board.rows().forEach { rowLog += it }
     }
     private fun watchingRows() {
-        rowLog.clear(); com.diegonmarcos.superapp.appstore.StoreJobs.addObserver(rowWatch)
+        com.diegonmarcos.superapp.appstore.StoreJobs.board.reset(); rowLog.clear(); com.diegonmarcos.superapp.appstore.StoreJobs.addObserver(rowWatch)
     }
 
     @Test
