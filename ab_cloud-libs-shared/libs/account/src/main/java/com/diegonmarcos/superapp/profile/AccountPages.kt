@@ -68,7 +68,7 @@ object AccountPageTags {
 /**
  * Which device this phone is: Connections `device.id`, else the cockpit's pick, else DERIVED from
  * the model — `Build.MODEL` / `Build.DEVICE` against the fetched vault's `electronics.fleet` entries'
- * `model` and the cached `devices/*.json` listing's `model` (refreshed by [DeviceVault.devices]). A
+ * `model` and the cached devices-folder listing's `model` (refreshed by [DeviceVault.devices]). A
  * single match becomes the id and is persisted to Connections `device.id`; zero or several stay blank
  * (the candidates are reported so the picker / runbook can name them). Local data only: safe on main.
  */
