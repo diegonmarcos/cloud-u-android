@@ -35,7 +35,7 @@ def check(root, ok):
     ok(frag.count("BrowserNavPolicy.cleanUserAgent(") >= 2, "S2 both the mobile and the desktop user agent are cleaned")
     ok('ua.replace(Regex(";\\\\s*wv\\\\b")' in pol and 'Version/' in pol, "S2 the policy strips the wv token and the Version marker")
     ok('setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)' in frag, "S3 third-party cookies are on unless blocked")
-    ok("CookieManager.getInstance().setAcceptCookie(true)" in frag, "S3 cookies are accepted")
+    ok("cookiesOf(this).setAcceptCookie(true)" in frag, "S3 cookies are accepted")
     ok(frag.count("settings.setSupportMultipleWindows(true)") >= 2 and "settings.javaScriptCanOpenWindowsAutomatically = true" in frag, "S4 the page may open child windows")
     ok(frag.count("override fun onCreateWindow(") >= 2 and "WebView.WebViewTransport" in frag and "transport.webView = child" in frag and "msg.sendToTarget()" in frag,
        "S4 onCreateWindow hands a child WebView to the transport (opener kept)")
