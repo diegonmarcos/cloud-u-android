@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.core
+package com.diegonmarcos.superapp.bottomnav
 
 import android.content.ComponentName
 import android.content.Context

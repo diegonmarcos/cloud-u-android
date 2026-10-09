@@ -610,17 +610,17 @@ class PermissionsFragment : Fragment() {
         }
         // Cloud Vault as the DEFAULT passwords & passkeys provider: read from Settings.Secure, so
         // a value this uid cannot read shows as unknown (null) with the open-settings action, never a guess.
-        val vault = if (com.diegonmarcos.superapp.core.CredentialProviderStatus.rowVisible(
-                com.diegonmarcos.superapp.core.CredentialProviderStatus.isInstalled(ctx))) {
-            val st = com.diegonmarcos.superapp.core.CredentialProviderStatus.status(ctx)
+        val vault = if (com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.rowVisible(
+                com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.isInstalled(ctx))) {
+            val st = com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.status(ctx)
             listOf(PageItem("Cloud Vault — passwords & passkeys provider",
                 when (st.overall) {
-                    com.diegonmarcos.superapp.core.CredentialProviderStatus.State.DEFAULT -> true
-                    com.diegonmarcos.superapp.core.CredentialProviderStatus.State.UNKNOWN -> null
+                    com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.State.DEFAULT -> true
+                    com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.State.UNKNOWN -> null
                     else -> false
                 },
                 "${st.overall.label} (${st.detail()})") {
-                com.diegonmarcos.superapp.core.CredentialProviderStatus.open(ctx, st.nextStep)
+                com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.open(ctx, st.nextStep)
             })
         } else emptyList()
         return vault + listOf(

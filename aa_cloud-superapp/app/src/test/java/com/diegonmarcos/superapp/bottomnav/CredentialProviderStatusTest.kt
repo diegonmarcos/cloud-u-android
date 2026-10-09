@@ -1,8 +1,8 @@
-package com.diegonmarcos.superapp.core
+package com.diegonmarcos.superapp.bottomnav
 
-import com.diegonmarcos.superapp.core.CredentialProviderStatus as C
-import com.diegonmarcos.superapp.core.CredentialProviderStatus.State
-import com.diegonmarcos.superapp.core.CredentialProviderStatus.Step
+import com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus as C
+import com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.State
+import com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus.Step
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

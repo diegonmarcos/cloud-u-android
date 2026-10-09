@@ -20,7 +20,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.bitwarden.ui.platform.components.button.BitwardenFilledButton
 import com.bitwarden.ui.platform.components.button.BitwardenOutlinedButton
 import com.bitwarden.ui.platform.theme.BitwardenTheme
-import com.diegonmarcos.superapp.core.CredentialProviderStatus
+import com.diegonmarcos.superapp.bottomnav.CredentialProviderStatus
 
 /** Re-reads the provider status every time the screen resumes (the user comes back from Android's settings). */
 @Composable
