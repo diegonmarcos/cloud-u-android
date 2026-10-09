@@ -1634,12 +1634,13 @@
     "wireguard_prefs": {
       "kind": "prefs",
       "class": "config",
-      "doc": "WireGuard tunnel config: name, address, DNS, port, MTU, peers_json, provider, tunnel_enabled; private key is a credential.",
+      "doc": "WireGuard tunnel config: name, address, DNS, port, MTU, peers_json, provider, tunnel_enabled, and the mesh fallback ladder's transport_mode / transport_plan (the path the last connect chose, no key in it); the private key and the TLS-443 relay key are credentials.",
       "used_by": [
         "aa_cloud-superapp"
       ],
       "keys": {
-        "if_privkey": "secret"
+        "if_privkey": "secret",
+        "relay_key": "secret"
       }
     },
     "{pkg}.xamarinessentials": {

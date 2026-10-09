@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.firewall.FirewallController
 import com.diegonmarcos.superapp.network.AccountMesh
 import com.diegonmarcos.superapp.network.FleetDns
+import com.diegonmarcos.superapp.network.MeshTransport
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.network.WireGuardProfiles
@@ -125,16 +126,18 @@ class AndroidMeshPort(context: Context) : MeshPort {
         return r
     }
 
+    /** Up the first way that handshakes (MeshTransport: Direct UDP, then the TLS-443 relay); each try is bringUp(). */
     override fun connect(): String {
         requireEngine()
-        val r = bringUp()
-        check(r == Tunnel.State.UP) { "the engine answered $r" }
-        return "connected: ${prefs.tunnelName}"
+        val path = MeshTransport.connect(ctx) { bringUp() }
+        check(lastUp) { "the engine did not bring the tunnel up" }
+        return "connected: ${prefs.tunnelName} · $path"
     }
 
     override fun disconnect(): String {
         requireEngine()
         backend.setState(WgState.tunnel, Tunnel.State.DOWN, null)
+        MeshTransport.release(ctx)
         prefs.tunnelEnabled = false
         applied = null
         lastUp = false
@@ -144,9 +147,9 @@ class AndroidMeshPort(context: Context) : MeshPort {
     override fun reconnect(): String {
         requireEngine()
         backend.setState(WgState.tunnel, Tunnel.State.DOWN, null)
-        val r = bringUp()
-        check(r == Tunnel.State.UP) { "the engine answered $r after the restart" }
-        return "reconnected: ${prefs.tunnelName}"
+        val path = MeshTransport.connect(ctx) { bringUp() }
+        check(lastUp) { "the engine did not bring the tunnel up after the restart" }
+        return "reconnected: ${prefs.tunnelName} · $path"
     }
 
     /** With the tunnel up, bring it up again on the new config; otherwise the value waits for the next connect. */
@@ -318,6 +321,30 @@ class AndroidMeshPort(context: Context) : MeshPort {
         prefs.saveProfiles(prefs.profiles() + (name to text))
         return activateProfile(name)
     }
+
+    // ── fallbacks ──
+
+    override fun transport(): TransportView {
+        val p = MeshTransport.current(ctx)
+        return TransportView(prefs.transportMode, p?.path?.id.orEmpty(), p?.detail.orEmpty(), runCatching { MeshTransport.relayLine(ctx) }.getOrDefault(""))
+    }
+
+    override fun setTransportMode(v: String): String {
+        require(v in setOf(MeshTransport.MODE_AUTO, MeshTransport.MODE_DIRECT, MeshTransport.MODE_RELAY)) { "a path is auto, direct or relay" }
+        prefs.transportMode = v
+        return "path $v saved - applies at the next connect"
+    }
+
+    override fun hasRelayKey() = prefs.relayKey.isNotBlank()
+
+    override fun setRelayKey(v: String): String {
+        val t = v.trim()
+        require(t.isEmpty() || Regex("[A-Za-z0-9_.~-]{8,128}").matches(t)) { "a relay key is 8-128 URL-safe characters (the server's path prefix)" }
+        prefs.relayKey = t
+        return if (t.isEmpty()) "relay key cleared" else "relay key stored (${t.length} characters) - Test fallbacks checks it against the relay"
+    }
+
+    override fun testFallbacks(): List<ProbeLine> = MeshTransport.test(ctx).map { ProbeLine(it.id, it.ok, it.detail) }
 
     override fun importText(name: String, conf: String): String {
         val r = AccountMesh.applyMesh(prefs, name, conf)

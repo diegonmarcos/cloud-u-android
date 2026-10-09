@@ -143,6 +143,30 @@ class AidlBackend(context: Context) : Backend {
             ?: "DOWN: the installed Cloud-Lib-Net-Wg predates DNS without the mesh — update it"
     }
 
+    /**
+     * The TCP/443 relay ([INetBackend.setRelay]); null [spec] stops it. Every answer is the engine's
+     * [RelayStatus]; an engine that predates the relay answers state "error" naming the update.
+     */
+    fun setRelay(spec: RelaySpec?): RelayStatus = relayCall { RelayStatus.parse(it.setRelay(spec?.toJson().orEmpty())) }
+        ?: RelayStatus("error", spec?.host.orEmpty(), emptyList())
+
+    fun relayStatus(): RelayStatus = relayCall { RelayStatus.parse(it.relayStatus) } ?: RelayStatus("off", "", emptyList())
+
+    fun probeRelay(spec: RelaySpec): RelayProbe = relayCall { RelayProbe.parse(it.probeRelay(spec.toJson())) }
+        ?: RelayProbe("", "", 0, 0, relayMissing())
+
+    /** True when the bound engine answers the relay calls. */
+    fun hasRelay(): Boolean = remote()?.let { s -> runCatching { s.methods().contains("setRelay") }.getOrDefault(false) } ?: false
+
+    fun relayMissing(): String = if (!isEngineInstalled()) "Cloud-Lib-Net-Wg is not installed"
+        else "the installed Cloud-Lib-Net-Wg predates the TCP/443 relay - update it from Store > Cloud Constellation > Libs"
+
+    private fun <T> relayCall(call: (INetBackend) -> T): T? {
+        if (!hasRelay()) return null
+        val r = remote() ?: return null
+        return runCatching { call(r) }.onFailure { Log.w(TAG, "relay call failed", it) }.getOrNull()
+    }
+
     fun unbind() {
         runCatching { ctx.unbindService(connection) }
             .onFailure { Log.w(TAG, "unbind: not bound", it) }

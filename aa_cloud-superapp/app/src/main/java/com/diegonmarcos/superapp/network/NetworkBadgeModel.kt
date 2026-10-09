@@ -50,6 +50,10 @@ object NetworkBadgeModel {
         val bridge: String = "",
         /** Android's Private DNS line, see [privateDnsLine]; "" = not asked. */
         val privateDns: String = "",
+        /** Which fallback rung carries the tunnel (MeshTransport: Direct UDP / Pinned IP / DoH / TLS-443 relay); "" = not decided. */
+        val path: String = "",
+        /** How that path was reached (the name resolved, the relay address and its source); "" = nothing to add. */
+        val pathDetail: String = "",
     )
 
     enum class Act { ALWAYS_ON, TOGGLE, MORE }
@@ -100,6 +104,7 @@ object NetworkBadgeModel {
         parts += s.tunnel.ifBlank { "no tunnel" }
         meshIp(s).takeIf { it.isNotEmpty() }?.let { parts += it }
         parts += peerCount(s.peers.size)
+        if (s.connected && s.path.isNotBlank()) parts += s.path
         if (s.connected) {
             parts += "↓${bytes(s.peers.sumOf { it.rx })} ↑${bytes(s.peers.sumOf { it.tx })}"
         }
@@ -112,6 +117,7 @@ object NetworkBadgeModel {
         l += "Tunnel: ${s.tunnel.ifBlank { "-" }}" +
             if (s.profile.isNotBlank() && s.profile != s.tunnel) " (profile ${s.profile})" else ""
         l += "Interface: " + s.addresses.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
+        if (s.path.isNotBlank()) l += "Path: ${s.path}" + if (s.pathDetail.isNotBlank()) " (${s.pathDetail})" else ""
         l += "Mesh DNS: " + s.dns.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
         l += "Resolvers: " + s.resolvers.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" } +
             if (s.resolversOnVpn && s.resolvers.isNotEmpty()) " (via VPN)" else ""

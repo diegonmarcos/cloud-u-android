@@ -79,6 +79,10 @@ fun ControlRow(store: MeshStore, c: MeshDecl.Control, seeds: Map<String, String>
                 options = store.dnsChoices.map { it.first to it.second }
                 unavailable = store.dnsChoices.filter { it.third.isNotBlank() }.associate { it.first to it.third }
                 selected = store.dnsPreset.ifBlank { MeshDecl.defaultOf(c, seeds) }
+            } else if (c.engine == "transport.mode") {
+                options = c.choices.map { it to declLabel("opt", it, it) }
+                unavailable = emptyMap()
+                selected = store.transport?.mode?.ifBlank { null } ?: c.default
             } else {
                 options = c.choices.map { it to declLabel("opt", it, it) }
                 unavailable = emptyMap()
@@ -110,9 +114,12 @@ fun ControlRow(store: MeshStore, c: MeshDecl.Control, seeds: Map<String, String>
         }
         "secret" -> FieldLine(label, tag) {
             Column {
+                // Two secrets live here: the interface private key and the TLS-443 relay's key. Neither is ever shown.
+                val relay = c.engine == "prefs.relayKey"
+                val held = if (relay) store.hasRelayKey else store.hasKey
                 MField("", { store.run(c.engine, it) }, enabled = usable, secret = true,
-                    hint = if (store.hasKey) stringResource(R.string.mesh_key_stored) else stringResource(R.string.mesh_key_paste))
-                Reason(stringResource(R.string.mesh_key_text))
+                    hint = stringResource(if (held) R.string.mesh_key_stored else R.string.mesh_key_paste))
+                Reason(stringResource(if (relay) R.string.mesh_relay_key_text else R.string.mesh_key_text))
                 if (why != null) Reason(why)
             }
         }

@@ -450,8 +450,8 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
 
 _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     NW="$MUT/libs/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt"
-    _sub "$NW" '"setIdleTunnel", "getIdleStatus", "needsConsent")' '"setIdleTunnel", "needsConsent")'
-    _applied "$LIBS/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt" "$NW" '"setIdleTunnel", "needsConsent")' \
+    _sub "$NW" '"setIdleTunnel", "getIdleStatus", "needsConsent", "setRelay", "getRelayStatus", "probeRelay")' '"setIdleTunnel", "needsConsent", "setRelay", "getRelayStatus", "probeRelay")'
+    _applied "$LIBS/net-wg/src/main/java/com/diegonmarcos/superapp/netwg/NetBackendService.kt" "$NW" '"setIdleTunnel", "needsConsent", "setRelay", "getRelayStatus", "probeRelay")' \
         && _red "E4 a typed engine (net-wg) answers a method its methodNames() does not list" engines "$MUT/libs" "$MUT/build.json"; }
 echo "── $MUTATIONS mutations, $HOLLOW hollow/void/no-op ──"
 [ "$MUTATIONS" -ge 22 ] || { echo "  only $MUTATIONS mutations ran — a mutation block that stops early proves less than it prints"; FAILURES=$((FAILURES + 1)); }

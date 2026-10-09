@@ -74,6 +74,15 @@ class MeshStoreTest {
         assertEquals("1400", s.snapshot!!.cfg.mtu); assertEquals("40", s.snapshot!!.cfg.peers.first().keepalive)
     }
 
+    @Test fun `the fallback controls reach the port and Test fallbacks lands rung by rung`() {
+        val port = FakePort(); val s = store(port); s.poll()
+        s.run("transport.mode", "relay"); s.run("prefs.relayKey", "0123456789abcdef"); s.run("transport.test")
+        assertEquals(listOf("mode=relay", "relaykey", "test"), port.calls)
+        assertEquals("relay", s.transport!!.mode); assertTrue(s.hasRelayKey)
+        assertEquals(listOf("udp", "dns", "relay"), s.probes.map { it.id })
+        assertTrue(s.notice, s.notice.contains("1 of 3 pass") && s.notice.contains("dns fails"))
+    }
+
     @Test fun `excluded apps, dns preset, generate key and peers`() {
         val port = FakePort(); val s = store(port); s.poll()
         s.run("prefs.excludedApps", "com.a, org.b"); s.run("fleetdns.preset", "public_open"); s.run("prefs.generateKey")

@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.network.NetworkBadgeModel
+import com.diegonmarcos.superapp.network.MeshTransport
 import com.diegonmarcos.superapp.network.NetworkBadgeModel.Act
 import com.diegonmarcos.superapp.network.FleetDns
 import com.diegonmarcos.superapp.network.WgState
@@ -173,6 +174,8 @@ class NetworkBadgeService : Service() {
                 dns.mode, dns.specifier, dns.privateDnsActive, dns.privateDnsServer),
             alwaysOn = installed && runCatching { backend.isAlwaysOn }.getOrDefault(false),
             upSinceMs = upSince, upSinceExact = upExact, nowMs = now, note = note,
+            path = if (up) MeshTransport.current(this)?.path?.label.orEmpty() else "",
+            pathDetail = if (up) MeshTransport.current(this)?.detail.orEmpty() else "",
         )
     }
 
@@ -193,12 +196,14 @@ class NetworkBadgeService : Service() {
         val up = runCatching { backend.getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
         if (up) {
             runCatching { backend.setState(WgState.tunnel, Tunnel.State.DOWN, null) }
+            MeshTransport.release(this)
             prefs.tunnelEnabled = false
             note = ""
         } else {
-            val after = runCatching { backend.setState(WgState.tunnel, Tunnel.State.UP, prefs.toTunnelConfig()) }
+            // The same fallback ladder Configs > Mesh > Connect walks (Direct UDP, then the TLS-443 relay).
+            var after: Tunnel.State? = null
+            runCatching { MeshTransport.connect(this) { backend.setState(WgState.tunnel, Tunnel.State.UP, prefs.toTunnelConfig()).also { after = it } } }
                 .onFailure { note = "Connect failed: ${it.message ?: it.javaClass.simpleName}" }
-                .getOrNull()
             prefs.tunnelEnabled = after == Tunnel.State.UP
             // A first connect needs the system VPN consent dialog, which a
             // notification action cannot raise: send the owner to the page.

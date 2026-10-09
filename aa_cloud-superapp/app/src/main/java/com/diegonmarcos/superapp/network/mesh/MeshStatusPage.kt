@@ -86,6 +86,20 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
                     tag = if (i == 0) tag else "")
             }
         }
+        "transport" -> {
+            // Which rung of the fallback ladder carries the tunnel, and the last Test fallbacks, rung by rung.
+            MHeader(stringResource(R.string.mesh_row_transport))
+            val tv = store.transport
+            val path = tv?.path.orEmpty()
+            KvRow(stringResource(R.string.mesh_k_path), if (path.isBlank()) stringResource(R.string.mesh_path_unknown) else declLabel("path", path, path), tag = tag)
+            KvRow(stringResource(R.string.mesh_k_path_mode), declLabel("opt", tv?.mode.orEmpty(), tv?.mode.orEmpty()))
+            if (!tv?.detail.isNullOrBlank()) Reason(tv?.detail.orEmpty())
+            if (!tv?.relay.isNullOrBlank()) KvRow(stringResource(R.string.mesh_k_relay), tv?.relay.orEmpty())
+            for (pr in store.probes) KvRow(declLabel("probe", pr.id, pr.id),
+                stringResource(probeVerdict(pr.ok)) + " · " + pr.detail, tag = "mesh:probe:${pr.id}")
+            MButton(stringResource(R.string.mesh_ctl_test_fallbacks), { store.run("transport.test") },
+                Modifier.testTag("mesh:transport:test").padding(vertical = MeshDensity.dp(MeshDensity.S4)), enabled = !store.busy)
+        }
         "handshake" -> {
             MHeader(stringResource(R.string.mesh_row_handshake))
             KvRow(stringResource(R.string.mesh_k_newest), handshakeText(s.newestHandshakeAgeS, s.up, s.engineInstalled), tag = tag)
@@ -122,6 +136,13 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
         }
         else -> MText(stringResource(R.string.mesh_row_unknown, id), Modifier.testTag(tag), size = MeshDensity.T_META, muted = true)
     }
+}
+
+/** pass / fail / not testable now, for one Test fallbacks rung. */
+internal fun probeVerdict(ok: Boolean?): Int = when (ok) {
+    true -> R.string.mesh_probe_pass
+    false -> R.string.mesh_probe_fail
+    null -> R.string.mesh_probe_skip
 }
 
 @Composable

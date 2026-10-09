@@ -45,6 +45,10 @@ class MeshStore(
     var lockdown by mutableStateOf<Boolean?>(null)
     var apps by mutableStateOf<List<Pair<String, String>>>(emptyList())
     var dnsChoices by mutableStateOf<List<Triple<String, String, String>>>(emptyList())
+    /** Which way the tunnel reaches its hubs (pinned IP, DoH, the TLS-443 relay ...), and the last Test fallbacks. */
+    var transport by mutableStateOf<TransportView?>(null)
+    var hasRelayKey by mutableStateOf(false)
+    var probes by mutableStateOf<List<ProbeLine>>(emptyList())
     /** A declared profile id whose diff / QR is open. */
     var diffFor by mutableStateOf<String?>(null)
     var qrFor by mutableStateOf<String?>(null)
@@ -87,6 +91,8 @@ class MeshStore(
             hasKey = port.hasPrivateKey()
             alwaysOn = port.alwaysOn()
             lockdown = port.lockdown()
+            transport = port.transport()
+            hasRelayKey = port.hasRelayKey()
             if (dnsChoices.isEmpty()) dnsChoices = port.dnsChoices()
         }
     }
@@ -166,6 +172,15 @@ class MeshStore(
             else perform("re-import $a") { port.importText(nameOf(a), text) }
         },
         "fleetdns.preset" to { a, _ -> perform("DNS preset") { port.setDnsPreset(a) } },
+        "transport.mode" to { a, _ -> perform("path") { port.setTransportMode(a) } },
+        "prefs.relayKey" to { a, _ -> perform("relay key") { port.setRelayKey(a) } },
+        "transport.test" to { _, _ ->
+            perform("test fallbacks") {
+                val r = port.testFallbacks()
+                probes = r
+                "${r.count { it.ok == true }} of ${r.size} pass" + r.filter { it.ok == false }.joinToString("") { " · ${it.id} fails" }
+            }
+        },
         "view.sort" to { a, _ -> view["peer_sort"] = a },
         "view.topology" to { a, _ -> view["topology"] = a },
         "view.routeFilter" to { a, _ -> view["route_filter"] = a },

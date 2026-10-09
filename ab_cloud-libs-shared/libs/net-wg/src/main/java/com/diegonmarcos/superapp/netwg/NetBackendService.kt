@@ -5,10 +5,14 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import com.diegonmarcos.superapp.net.INetBackend
+import com.diegonmarcos.superapp.net.RelayProbe
+import com.diegonmarcos.superapp.net.RelaySpec
+import com.diegonmarcos.superapp.net.RelayStatus
 import com.wireguard.android.backend.BackendException
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
+import javax.net.ssl.HttpsURLConnection
 
 /**
  * The far side of [INetBackend]: the only process on the device that holds
@@ -165,12 +169,22 @@ class NetBackendService : Service() {
          *  "another app's VPN" whenever OUR tunnel was up. Unknown (an exception) reads as needed. */
         override fun needsConsent(): Boolean =
             runCatching { GoBackend.VpnService.prepare(this@NetBackendService) != null }.getOrDefault(true)
+
+        /** The TCP/443 fallback (MeshRelay): this process holds the VpnService, so only it can protect the relay's socket. */
+        override fun setRelay(specJson: String?): String = runCatching { sharedRelay.apply(RelaySpec.parse(specJson)) }
+            .getOrElse { RelayStatus("error", "", listOf(RelayStatus.Leg(0, "", false, "", 0, 0, it.message ?: it.javaClass.simpleName))).toJson() }
+
+        override fun getRelayStatus(): String = sharedRelay.status()
+
+        override fun probeRelay(specJson: String?): String = runCatching {
+            sharedRelay.probe(RelaySpec.parse(specJson) ?: error("no relay spec"))
+        }.getOrElse { RelayProbe("", "", 0, 0, it.message ?: it.javaClass.simpleName).toJson() }
     }
 
     /** The wire INetBackend declares, by name (the engine tester holds this list to the AIDL file). */
     fun methodNames(): Array<String> = arrayOf(
         "getState", "setState", "getStatisticsRaw", "getVersion", "isAlwaysOn", "isLockdownEnabled",
-        "setIdleTunnel", "getIdleStatus", "needsConsent")
+        "setIdleTunnel", "getIdleStatus", "needsConsent", "setRelay", "getRelayStatus", "probeRelay")
 
     override fun onBind(intent: Intent?): IBinder = binder
 
@@ -180,6 +194,11 @@ class NetBackendService : Service() {
         @Volatile private var shared: GoBackend? = null
         fun sharedBackend(ctx: android.content.Context): GoBackend =
             shared ?: synchronized(this) { shared ?: GoBackend(ctx.applicationContext).also { shared = it } }
+        /** One relay per PROCESS, like the backend: its loopback ports outlive a service instance. */
+        val sharedRelay = MeshRelay(
+            protect = { GoBackend.protectSocket(it) },
+            verifyHost = { host, session -> HttpsURLConnection.getDefaultHostnameVerifier().verify(host, session) },
+        )
         const val KEY_NAME = "name"
         const val KEY_CONFIG = "config"
     }

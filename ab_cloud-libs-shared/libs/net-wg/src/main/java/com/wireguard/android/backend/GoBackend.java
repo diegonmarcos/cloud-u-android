@@ -70,6 +70,18 @@ public final class GoBackend implements Backend {
         alwaysOnCallback = cb;
     }
 
+    /**
+     * Cloud fleet addition (not upstream): exempt {@code socket} from the VPN exactly as
+     * wireguard-go's own sockets are, through {@link android.net.VpnService#protect}. The engine's
+     * TCP/443 relay (com.diegonmarcos.superapp.netwg.MeshRelay) needs it: its TLS socket must reach
+     * the relay over the underlying network even when the tunnel's allowed IPs cover that address.
+     * False when no VpnService is running (then there is no tunnel to escape).
+     */
+    public static boolean protectSocket(final java.net.Socket socket) {
+        final VpnService service = vpnService.getNow(null);
+        return service != null && service.protect(socket);
+    }
+
     @Nullable private static native String wgGetConfig(int handle);
 
     private static native int wgGetSocketV4(int handle);

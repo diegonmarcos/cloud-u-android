@@ -87,4 +87,7 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.8.2'
     implementation 'androidx.collection:collection:1.4.4'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    // MeshRelayTest: the TCP/443 relay against a local wstunnel-speaking server (plain JVM).
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

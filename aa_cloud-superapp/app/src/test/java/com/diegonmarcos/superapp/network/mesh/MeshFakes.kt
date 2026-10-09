@@ -62,6 +62,15 @@ class FakePort(
     override fun activateProfile(name: String) = rec("activate=$name")
     override fun installDeclared(id: String) = rec("install=$id")
     override fun importText(name: String, conf: String) = rec("import=$name")
+    var mode = "auto"; var relayKey = false; var path = ""
+    override fun transport() = TransportView(mode, path, if (path.isBlank()) "" else "35.0.0.1:443", "")
+    override fun setTransportMode(v: String) = rec("mode=$v").also { mode = v }
+    override fun hasRelayKey() = relayKey
+    override fun setRelayKey(v: String) = rec("relaykey").also { relayKey = v.isNotBlank() }
+    override fun testFallbacks(): List<ProbeLine> {
+        rec("test")
+        return listOf(ProbeLine("udp", true, "handshake 4 s ago"), ProbeLine("dns", false, "answered 10.9.9.9"), ProbeLine("relay", null, "engine too old"))
+    }
 }
 
 class FakeHost : MeshHost {

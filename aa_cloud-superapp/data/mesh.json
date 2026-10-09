@@ -288,5 +288,64 @@
     "tls_expiries": [],
     "last_snapshot_at": "",
     "status": "healthy"
+  },
+  "bootstrap": {
+    "_doc": "Mesh bootstrap: what a client needs to reach the hubs and the TCP/443 relay without the local network's DNS (public Wi-Fi that blocks or hijacks port 53). pinned_hosts are the public answers the zone declares, a hosts-file equivalent (the SuperApp pins them, Linux renders etc_hosts); hubs are the WireGuard hubs by public key; relay is the wstunnel server and routes are its --restrict-to targets matched to the hub each reaches. The path prefix is a secret: only its name travels here.",
+    "sources": {
+      "zone": "c_vps/ba-clo_cloudflare/src/terraform.json",
+      "ws_tunnel": "a_solutions/infra-net_wireguard-mesh-ws-tunnel/build.json",
+      "consolidated": "1_cloud-configs/dist/_cloud-data-consolidated.json"
+    },
+    "zone": "diegonmarcos.com",
+    "pinned_hosts": [
+      {
+        "host": "vpn.diegonmarcos.com",
+        "v4": [
+          "129.151.228.66"
+        ],
+        "v6": [
+          "2603:c026:c104:8f00:0:c704:63b:6eee"
+        ],
+        "role": "relay",
+        "record": "*"
+      }
+    ],
+    "hubs": [
+      {
+        "name": "gcp-proxy",
+        "mesh": "wg0",
+        "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
+        "endpoints": [
+          "35.226.147.64:51820"
+        ]
+      },
+      {
+        "name": "oci-analytics",
+        "mesh": "wg-public",
+        "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
+        "endpoints": [
+          "129.151.228.66:51821"
+        ]
+      }
+    ],
+    "relay": {
+      "host": "vpn.diegonmarcos.com",
+      "port": 443,
+      "scheme": "wss",
+      "path": "/{prefix}/events",
+      "prefix_secret": "WSTUNNEL_PATH_PREFIX",
+      "routes": [
+        {
+          "remote": "127.0.0.1:51820",
+          "hub": "gcp-proxy",
+          "mesh": "wg0",
+          "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc="
+        }
+      ]
+    },
+    "etc_hosts": [
+      "129.151.228.66 vpn.diegonmarcos.com",
+      "2603:c026:c104:8f00:0:c704:63b:6eee vpn.diegonmarcos.com"
+    ]
   }
 }

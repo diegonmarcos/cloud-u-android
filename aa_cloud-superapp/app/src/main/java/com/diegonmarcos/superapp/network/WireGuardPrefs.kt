@@ -83,6 +83,25 @@ class WireGuardPrefs(context: Context) {
         set(value) { sp.edit().putString(K_PROVIDER, value).apply() }
 
     /**
+     * The TLS-443 relay's key: the wstunnel server's upgrade-path secret (WSTUNNEL_PATH_PREFIX, sops in
+     * cloud-u-containers). A credential like the private key: secret-class in fleet-config.json, never
+     * baked, exported, copied or shown; MeshTransport hands it to the engine call that dials, nothing else.
+     */
+    var relayKey: String
+        get() = sp.getString(K_RELAY_KEY, "").orEmpty()
+        set(value) { sp.edit().putString(K_RELAY_KEY, value.trim()).apply() }
+
+    /** How a connect reaches the hubs: auto (the fallback ladder), direct (UDP only) or relay (TLS-443 at once). */
+    var transportMode: String
+        get() = sp.getString(K_TRANSPORT_MODE, null) ?: MeshTransport.decl.defaultMode
+        set(value) { sp.edit().putString(K_TRANSPORT_MODE, value).apply() }
+
+    /** The path the last connect chose (MeshTransport.Plan as JSON, no key in it); "" = the endpoints as configured. */
+    var transportPlan: String
+        get() = sp.getString(K_TRANSPORT_PLAN, "").orEmpty()
+        set(value) { sp.edit().putString(K_TRANSPORT_PLAN, value).commit() }
+
+    /**
      * Overwrite the tunnel's PUBLIC half with the fleet preset — tunnel name,
      * addresses, DNS, listen port, MTU and the whole peer list (hub public
      * key, endpoint, allowed IPs, keepalive).
@@ -240,10 +259,12 @@ class WireGuardPrefs(context: Context) {
      * on the system resolver — carries the one choice. [toWgConfig] stays the
      * literal form contents, which is what an exported .conf must hold.
      * Throws (like any validation failure) when a private preset has no fleet
-     * resolver to point at.
+     * resolver to point at. The endpoints are the path the last connect chose
+     * ([MeshTransport.route]: a resolved name, or the TLS-443 relay's loopback
+     * port), so every re-apply keeps the path the fallback ladder found.
      */
     fun toTunnelConfig(): Config =
-        buildConfig(FleetDns.vpnServers(app, interfaceDns).joinToString(", "))
+        MeshTransport.route(app, buildConfig(FleetDns.vpnServers(app, interfaceDns).joinToString(", ")))
 
     private fun buildConfig(dns: String): Config {
         val ifBuilder = Interface.Builder()
@@ -368,6 +389,9 @@ class WireGuardPrefs(context: Context) {
         private const val K_PROFILES_JSON  = "profiles_json"
         private const val K_ACTIVE_PROFILE = "active_profile"
         private const val K_EXCLUDED_APPS  = "excluded_apps"
+        private const val K_RELAY_KEY      = "relay_key"
+        private const val K_TRANSPORT_MODE = "transport_mode"
+        private const val K_TRANSPORT_PLAN = "transport_plan"
 
         /** The PrivateKey value a stored or exported profile carries in place of the key. */
         const val PROVIDED_BY_DEVICE = "<PROVIDED_BY_DEVICE>"

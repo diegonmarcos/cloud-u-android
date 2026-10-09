@@ -6535,6 +6535,11 @@
           "pkg": "com.diegonmarcos.superapp",
           "what": "firestack (libs:firewall)",
           "how": "its own DoH / DoT / dns53 transports — compiled into the firewall, not the engine the VPN runs today"
+        },
+        {
+          "pkg": "com.diegonmarcos.superapp",
+          "what": "Cloud Mesh fallbacks (network/MeshTransport.kt)",
+          "how": "only the mesh's own bootstrap names (the relay host): the pinned answer from data/mesh.json and DoH by IP (ui.mesh_transport.doh) when the system resolver fails or disagrees with the pin; every other name stays on the preset"
         }
       ],
       "_doc_mesh_down": "#751 The choice also holds while Cloud Mesh is DOWN. The WireGuard engine (Cloud-Lib-Net-Wg) owns the phone's one VPN slot; when no mesh tunnel is up it carries the choice as a PEERLESS tunnel named `tunnel_name`: these addresses, the preset's DNS servers, no route, so every app's lookups go to the chosen resolver and all other traffic falls through to the underlying network exactly as it does outside a split mesh. The fleet resolver is unreachable without the mesh, so Private with fallbacks uses its fallbacks alone, and Private only keeps the fleet resolver with a route to nowhere: lookups fail, none leaks to the local network. Mirror releases the slot.",
@@ -6598,6 +6603,7 @@
             "interface",
             "pubkey",
             "endpoint",
+            "transport",
             "handshake",
             "traffic",
             "latency",
@@ -6875,6 +6881,33 @@
               "group": "identity",
               "label": "Generate keypair",
               "engine": "prefs.generateKey"
+            },
+            {
+              "id": "transport_mode",
+              "kind": "choice",
+              "group": "fallbacks",
+              "label": "Path to the hubs",
+              "default": "auto",
+              "choices": [
+                "auto",
+                "direct",
+                "relay"
+              ],
+              "engine": "transport.mode"
+            },
+            {
+              "id": "relay_key",
+              "kind": "secret",
+              "group": "fallbacks",
+              "label": "TLS-443 relay key",
+              "engine": "prefs.relayKey"
+            },
+            {
+              "id": "test_fallbacks",
+              "kind": "action",
+              "group": "fallbacks",
+              "label": "Test fallbacks",
+              "engine": "transport.test"
             }
           ]
         },
@@ -6896,6 +6929,23 @@
               "engine": "log.clear"
             }
           ]
+        }
+      ]
+    },
+    "_doc_mesh_transport": "THE FALLBACK LADDER of Cloud Mesh (network/MeshTransport.kt reads it baked as BuildConfig.UI_MESH_TRANSPORT_B64; the Status tab's `transport` row and the mesh badge show which rung carries the tunnel, Controls > Fallbacks picks the mode, holds the relay key and runs Test fallbacks). Public Wi-Fi that blocks DNS, port 53 or the mesh's UDP ports leaves WireGuard without a handshake. A connect walks: (1) Direct UDP on the configured endpoints; a peer endpoint that is a NAME is resolved by the system resolver, its answer checked against the PINNED map (data/mesh.json::bootstrap.pinned_hosts, derived by cloud-infra's derive-mesh-snapshot.ts from the Cloudflare zone, never typed here), then the pinned answer, then DoH by IP (`doh`, so DoH itself needs no DNS); (2) when no handshake arrives within `handshake_wait_ms`, the TLS-443 relay: the wstunnel server named by bootstrap.relay, reached at an address from the same ladder (system answer only when it agrees with the pin), real TLS on 443 with SNI and the certificate checked against the relay's name, in the WireGuard engine (Cloud-Lib-Net-Wg, MeshRelay) so its socket is protect()ed from the tunnel; every hub bootstrap.relay.routes reaches gets its endpoint pointed at 127.0.0.1:<relay_listen_base + n>. `mode`: auto = the ladder, direct = UDP only, relay = the relay at once. The relay key is the server's WSTUNNEL_PATH_PREFIX (sops, cloud-u-containers infra-net_wireguard-mesh-ws-tunnel): pasted once, kept in wireguard_prefs as a secret-class key, never baked, logged or exported. `probe_timeout_ms` bounds each rung of Test fallbacks.",
+    "mesh_transport": {
+      "default_mode": "auto",
+      "handshake_wait_ms": 8000,
+      "relay_listen_base": 51830,
+      "probe_timeout_ms": 6000,
+      "doh": [
+        {
+          "label": "DoH 1.1.1.1",
+          "url": "https://1.1.1.1/dns-query"
+        },
+        {
+          "label": "DoH 8.8.8.8",
+          "url": "https://8.8.8.8/dns-query"
         }
       ]
     },

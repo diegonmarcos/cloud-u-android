@@ -74,6 +74,17 @@ interface MeshPort {
     fun installDeclared(id: String): String
     /** [conf] through the same parser the .conf import uses, then stored under [name]. */
     fun importText(name: String, conf: String): String
+
+    // ── fallbacks (network/MeshTransport.kt: pinned IPs, DoH, the TLS-443 relay) ──
+    /** Which way the tunnel reaches its hubs, as the last connect chose it. */
+    fun transport(): TransportView
+    /** auto | direct | relay; applies at the next connect. */
+    fun setTransportMode(v: String): String
+    fun hasRelayKey(): Boolean
+    /** Store the relay's key (blank clears it); never echoed back. */
+    fun setRelayKey(v: String): String
+    /** Every rung probed on its own, in ladder order: Direct UDP, system DNS, pinned IP, DoH, TLS-443 relay. */
+    fun testFallbacks(): List<ProbeLine>
 }
 
 /** What the page needs from its host fragment: the Android surfaces a composable cannot open itself. */
@@ -88,3 +99,13 @@ interface MeshHost {
     fun exportConf()
     fun exportProfiles()
 }
+
+/**
+ * Which way the tunnel reaches its hubs. [path]: direct | pinned | doh | relay | none, "" before the first
+ * connect; [detail] says how (the name resolved, the relay address and its source, or why nothing worked);
+ * [relay] is the engine's relay legs, "" when none runs.
+ */
+data class TransportView(val mode: String, val path: String, val detail: String, val relay: String)
+
+/** One rung of Test fallbacks ([id]: udp | dns | pinned | doh | relay); [ok] null = not testable right now, [detail] says why. */
+data class ProbeLine(val id: String, val ok: Boolean?, val detail: String)

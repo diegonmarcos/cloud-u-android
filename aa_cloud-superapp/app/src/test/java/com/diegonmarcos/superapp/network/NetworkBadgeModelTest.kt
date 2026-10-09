@@ -34,6 +34,14 @@ class NetworkBadgeModelTest {
         assertEquals("wg-mesh · 10.0.0.5 · 2 peers · ↓1.5 KB ↑1.0 MB", c.text)
     }
 
+    @Test fun `the fallback path shows on the line and in the expanded text, only while connected`() {
+        val relay = up(peerA).copy(path = "TLS-443 relay", pathDetail = "vpn.example -> 192.0.2.9 (pinned IP)")
+        assertTrue(NetworkBadgeModel.collapsed(relay).contains("TLS-443 relay"))
+        assertTrue(NetworkBadgeModel.expanded(relay).contains("Path: TLS-443 relay (vpn.example -> 192.0.2.9 (pinned IP))"))
+        assertFalse(NetworkBadgeModel.collapsed(relay.copy(connected = false)).contains("TLS-443 relay"))
+        assertFalse(NetworkBadgeModel.expanded(up(peerA)).contains("Path:"))
+    }
+
     @Test fun `disconnected says so and shows no traffic`() {
         val c = NetworkBadgeModel.card(down)
         assertEquals("Mesh · Disconnected", c.title)

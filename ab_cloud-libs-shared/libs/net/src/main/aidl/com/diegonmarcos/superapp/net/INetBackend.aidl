@@ -68,4 +68,17 @@ interface INetBackend {
      * a client checks methods() before calling it and keeps the consent intent when it is absent.
      */
     boolean needsConsent();
+
+    /**
+     * The TCP/443 fallback: carry WireGuard over TLS to a wstunnel server (RelaySpec JSON; blank
+     * stops it). The engine owns it because only the VpnService's process can protect() a socket
+     * from the tunnel it carries. Returns RelayStatus JSON. Appended last, like every addition.
+     */
+    String setRelay(String specJson);
+
+    /** RelayStatus JSON of the running relay ("off" when none). */
+    String getRelayStatus();
+
+    /** One TLS + upgrade handshake against RelaySpec JSON, from the engine's protected socket: RelayProbe JSON. */
+    String probeRelay(String specJson);
 }
