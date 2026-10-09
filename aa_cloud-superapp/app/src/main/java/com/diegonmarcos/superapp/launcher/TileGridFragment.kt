@@ -91,7 +91,8 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val inflater = LayoutInflater.from(requireContext())
         val palette  = tilePalette(requireContext())
         // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
-        val cols = GridColumns.cloud(requireContext())
+        // A section may declare its own count (Configs: 8); else the Cloud grid's.
+        val cols = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
         var i = 0
         var shownGroup: String? = null
         var shownSub:   String? = null
@@ -115,10 +116,19 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
             // A declared row_break stops the run too — `span == 0 ||` so the
             // tile carrying the break still starts a row instead of a row of
             // zero tiles that would loop forever.
+            // Separator pages ride INLINE: they take only their own text width and never
+            // a column slot, so `span` counts items while `slots` counts the tiles that
+            // fill the `cols` columns.
             var span = 0
-            while (span < cols && i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
+            var slots = 0
+            while (i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
                 subs.getOrNull(i + span).orEmpty() == s &&
-                (span == 0 || !breaks.getOrElse(i + span) { false })) span++
+                (span == 0 || !breaks.getOrElse(i + span) { false })) {
+                val sep = ids[i + span].startsWith(SEPARATOR_PREFIX)
+                if (!sep && slots == cols) break
+                if (!sep) slots++
+                span++
+            }
             // wrap_content row → tile keeps its item_tile.xml fixed height,
             // ScrollView handles overflow. Auto-fit blew up single-row
             // sections into giant tiles.
@@ -130,42 +140,26 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
                 orientation = LinearLayout.HORIZONTAL
                 weightSum = cols.toFloat()
             }
-            var c = 0
-            while (c < cols) {
-                // c < span, not i + c < ids.size: a short last row of a group
-                // gets spacers so the next group starts on its own row.
-                if (c < span) {
-                    if (ids[i + c].startsWith(SEPARATOR_PREFIX)) {
-                        // A declared separator page: the same faint character the Data Apps row uses.
-                        row.addView(TextView(requireContext()).apply {
-                            text = labels[i + c]
-                            setTextColor(0x66FFFFFF)
-                            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                            gravity = android.view.Gravity.CENTER
-                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-                        })
-                        c++; continue
-                    }
-                    val tileView = inflater.inflate(R.layout.item_tile, row, false)
-                    (tileView.layoutParams as LinearLayout.LayoutParams).apply {
-                        width  = 0
-                        weight = 1f
-                    }
-                    bindTile(
-                        tileView    = tileView,
-                        tileId      = ids[i + c],
-                        label       = labels[i + c],
-                        iconRes     = icons.getOrNull(i + c)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
-                        palette     = palette,
-                    )
-                    row.addView(tileView)
-                } else {
-                    val spacer = View(requireContext())
-                    spacer.layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-                    row.addView(spacer)
+            for (k in 0 until span) {
+                if (ids[i + k].startsWith(SEPARATOR_PREFIX)) { row.addView(separatorView(requireContext(), labels[i + k])); continue }
+                val tileView = inflater.inflate(R.layout.item_tile, row, false)
+                (tileView.layoutParams as LinearLayout.LayoutParams).apply {
+                    width  = 0
+                    weight = 1f
                 }
-                c++
+                bindTile(
+                    tileView    = tileView,
+                    tileId      = ids[i + k],
+                    label       = labels[i + k],
+                    iconRes     = icons.getOrNull(i + k)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
+                    palette     = palette,
+                    cols        = cols,
+                )
+                row.addView(tileView)
+            }
+            // A short last row of a group gets spacers so the next group starts on its own row.
+            for (k in slots until cols) {
+                row.addView(View(requireContext()).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
             }
             grid.addView(row)
             i += span
@@ -180,12 +174,13 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         label: String,
         @DrawableRes iconRes: Int,
         palette: List<Pair<Int, Int>>,
+        cols: Int,
     ) {
         val slot = abs(tileId.hashCode()) % palette.size
         val (bg, fg) = palette[slot]
 
         tileView.findViewById<TextView>(R.id.tile_label).text = label
-        com.diegonmarcos.superapp.settings.fitTileIcon(tileView, R.id.tile_icon_bg, GridColumns.cloud(requireContext()), 0, 14)
+        com.diegonmarcos.superapp.settings.fitTileIcon(tileView, R.id.tile_icon_bg, cols, 0, 18)
 
         // Plain icon — no glass coin behind it. Linktree pattern: the
         // tile CARD carries the glass surface (bg_tile_glass), the
@@ -204,6 +199,25 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
             (activity as? TileClickListener)?.onTileClicked(tileId)
         }
     }
+
+    /** A `separator` page as a CHARACTER: the same TextView the Data Apps row draws
+     *  (GroupedTilesFragment.separatorCell) — faint, caption, wrap_content wide. */
+    private fun separatorView(ctx: android.content.Context, text: String): View =
+        TextView(ctx).apply {
+            this.text = text
+            setTextColor(0x66FFFFFF)
+            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            gravity = android.view.Gravity.CENTER
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            val pad = (6 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+            )
+        }
 
     /** Section heading between tile rows. Built in code rather than as a
      *  layout — one TextView, no state, nothing to inflate. */
@@ -258,10 +272,12 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         private const val ARG_TILE_SUBS   = "tile_subgroups"
         /** Tile id prefix of a `separator` page: drawn as the faint character, never clickable. */
         const val SEPARATOR_PREFIX = "separator:"
+        private const val ARG_COLS        = "tile_columns"
         private const val ARG_TILE_BREAKS = "tile_breaks"
 
-        fun newInstance(title: String, tiles: List<Tile>) = TileGridFragment().apply {
+        fun newInstance(title: String, tiles: List<Tile>, columns: Int = 0) = TileGridFragment().apply {
             arguments = bundleOf(
+                ARG_COLS        to columns,
                 ARG_TITLE       to title,
                 ARG_TILE_IDS    to tiles.map { it.id }.toTypedArray(),
                 ARG_TILE_LABELS to tiles.map { it.label }.toTypedArray(),

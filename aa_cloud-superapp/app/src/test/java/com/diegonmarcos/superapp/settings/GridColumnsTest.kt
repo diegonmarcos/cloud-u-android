@@ -88,7 +88,7 @@ class GridColumnsTest {
     @Test fun sevenColumnsFitA360dpScreen() {
         val d = 3f // xxhdpi; the arithmetic is in px, so density must not matter
         fun px(dp: Int) = (dp * d).toInt()
-        val screen = px(360)
+        val screen = 360
         for (cols in GridColumns.MIN..GridColumns.MAX) {
             // Phone strip tile: 52 dp icon wanted, 6 dp padding a side, page pad 8 dp a side.
             val cell = GridColumns.cellPx(screen - px(16), cols)
@@ -117,5 +117,18 @@ class GridColumnsTest {
             .filterIsInstance<android.widget.TextView>().last()
         assertEquals(2, label.maxLines)
         assertEquals(android.text.TextUtils.TruncateAt.END, label.ellipsize)
+    }
+
+    @Test fun configsGridIsEightWideAndItsIconFitsAt360dp() {
+        // Configs declares grid_columns 8 (= MAX). (dp == px at density 1) A tile is margin 3+3 dp, padding 4+4 dp, and the
+        // inline separator costs a few dp more: TileGridFragment hands fitTileIcon 18 dp of chrome.
+        val eight = GridColumns.MAX
+        val cell = GridColumns.cellPx(360, eight)
+        assertEquals(45, cell)
+        val icon = GridColumns.iconPx(32, cell, 18, 16)
+        assertTrue("icon $icon + chrome fits the 45 dp cell", icon + 18 <= cell)
+        assertTrue("and stays a usable icon", icon >= 24)
+        // The widest label of the Network group is clipped, never wrapped past two lines.
+        assertEquals(10f, GridColumns.labelSp(eight))
     }
 }

@@ -56,6 +56,9 @@ object Sections {
          *  the section IS its page (e.g. WireGuard). Source:
          *  build.json::sections[*].single_page. */
         val singlePage: Boolean = false,
+        /** Icons per row of this section's page grid, from `grid_columns` in build.json (Configs: 8).
+         *  0 = follow the Cloud grid count (GridColumns.cloud). */
+        val gridColumns: Int = 0,
         /** When true, the section renders its pages behind ONE tab strip
          *  ([SectionTabsFragment]) instead of a grid of page icons — and on a
          *  tablet each page gets its own pane, all on screen at once. Opt-in
@@ -956,6 +959,7 @@ object Sections {
                     allPages        = pages,
                     defaultChildren = kids,
                     singlePage      = o.optBoolean("single_page", false),
+                    gridColumns     = o.optInt("grid_columns", 0),
                     tabs            = o.optBoolean("tabs", false),
                     isAggregator    = o.optBoolean("is_aggregator", false),
                     tilesShared     = parseTiles("tiles_shared"),

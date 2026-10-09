@@ -408,7 +408,8 @@ class LauncherNavController(private val host: NavHost) {
             // actions to separate.
             tiles = if (actions.isEmpty() && pages.all { it.group == GROUP_PAGES && it.subgroup.isEmpty() })
                         pages.map { it.copy(group = "") }
-                    else pages + actions)
+                    else pages + actions,
+            columns = section.gridColumns)
     }
 
     /** The extras declared on a section's radial node (KDE Connect,
