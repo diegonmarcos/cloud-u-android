@@ -1,6 +1,7 @@
 package app.sterna.ui.inbox
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -77,23 +78,18 @@ class UnreadViewWiringLintTest {
     // -- the toolbar ------------------------------------------------------------------------------
 
     @Test
-    fun `the unread funnel is not offered in a view that is already filtered`() {
+    fun `the unread filter cannot be lifted in a view that is already filtered`() {
         val actions = toolbarActions()
-        assertEquals(
-            "The toolbar's unread funnel must be hidden in the unread view. [listUnreadOnly] forces " +
-                "the filter on there, so the button would be drawn in its OFF colour over a filtered " +
-                "list (it reads ui.unreadOnly, which the scope does not touch) and tapping it would " +
-                "change nothing on screen. Compared as whole conditions: an empty answer means the " +
-                "guard was dropped, and a longer one means it grew a term. Conditions mentioning the " +
-                "view, found in the toolbar's actions, were:\n${viewConditions(actions).joinToString("\n")}",
-            listOf(EXPECTED_FUNNEL_GUARD),
-            viewConditions(actions),
+        assertTrue(
+            "The toolbar must hand the filter group the unread view flag: ListViewIconGroups(shownViewUi, " +
+                "listViewActions, unreadForced = ui.unreadView). [listUnreadOnly] forces the filter on in " +
+                "that view, so the entry is shown checked and disabled. Actions block was:\n$actions",
+            "unreadForced = ui.unreadView" in actions,
         )
-        assertEquals(
-            "The toolbar's actions are expected to hold exactly one toggleUnreadOnly() — the funnel " +
-                "the rule above guards. Actions block was:\n$actions",
-            1,
-            Regex("""\btoggleUnreadOnly\s*\(""").findAll(actions).count(),
+        val controls = File(root, "app/src/main/kotlin/app/sterna/ui/inbox/ListViewControls.kt").readText()
+        assertTrue(
+            "the Only unread entry must be disabled when unreadForced",
+            "enabled = !(unreadForced && fn == ListViewFunction.FILTER_UNREAD)" in controls,
         )
     }
 

@@ -79,6 +79,8 @@ internal fun Email.toEntity(accountId: String, mailboxId: String): EmailEntity {
         // only -- no bytes. Like the three fields above it, every caching path must supply it or the
         // `@Upsert` erases it; that is why the JMAP fetches share one property list.
         attachmentsJson = EmailAttachments.encode(attachments),
+        // Schema v30: the auth class (G0 _ Auth), decided once here from the preview (see [AuthIndex]).
+        authClass = AuthIndex.indexed(subject, preview),
     )
 }
 

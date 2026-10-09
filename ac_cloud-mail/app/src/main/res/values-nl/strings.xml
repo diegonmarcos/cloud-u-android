@@ -1197,4 +1197,18 @@
     <string name="settings_remind_section">Herinnering</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d u</string>
+    <string name="list_view_mode">Weergave</string>
+    <string name="list_rank">Rangschikken</string>
+    <string name="list_filter">Filter</string>
+    <string name="list_group_subject">Groeperen op onderwerp</string>
+    <string name="list_group_sender">Groeperen op afzender</string>
+    <string name="list_group_none">Niet groeperen</string>
+    <string name="list_rank_sender">Op afzender</string>
+    <string name="list_rank_subject">Op onderwerp</string>
+    <string name="list_filter_starred">Alleen met ster</string>
+    <string name="list_filter_unread">Alleen ongelezen</string>
+    <string name="list_filter_attachments">Alleen met bijlagen</string>
+    <string name="list_filter_auth_codes">Auth met codes · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Auth-links · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Elke auth · G0 _ Auth, Ga + Gb</string>
 </resources>

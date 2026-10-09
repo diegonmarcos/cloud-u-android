@@ -231,9 +231,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 
-/** Folder roles whose drawer row shows no overflow menu: the inbox is always watched (#16), and
- *  notifying about one's own sent/drafts/trash/junk would be noise. */
-private val watchMenuHiddenRoles = setOf("inbox", "sent", "drafts", "trash", "junk")
+/** Folder roles whose menu has no "Notify about new mail": notifying about one's own sent/drafts/trash/junk
+ *  would be noise. The Inbox HAS it (on by default; unticked it stops announcing, see InboxViewModel.setFolderWatched). */
+private val watchMenuHiddenRoles = setOf("sent", "drafts", "trash", "junk")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1108,37 +1108,19 @@ fun InboxScreen(
                             }
                         },
                         actions = {
-                            // Hidden in the unread view: listUnreadOnly forces the filter on there,
-                            // so the funnel would sit in its OFF colour over a filtered list (it
-                            // reads ui.unreadOnly, which the scope does not touch).
-                            if (!ui.unreadView) {
-                                IconButton(onClick = { viewModel.toggleUnreadOnly() }) {
-                                    Icon(
-                                        Icons.Filled.FilterList,
-                                        contentDescription = stringResource(R.string.inbox_unread_only),
-                                        tint = if (ui.unreadOnly) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                    )
-                                }
+                            // The view controls, in the owner's order: View mode, Rank, Filter. Search
+                            // follows as the LAST icon, then the overflow. The unread view forces its
+                            // filter on, so there it is shown checked and cannot be lifted.
+                            val listViewUi by viewModel.listViewUi.collectAsStateWithLifecycle()
+                            val listViewActions = remember(viewModel) {
+                                ListViewActions(
+                                    onGroup = viewModel::setGroupMode,
+                                    onRank = viewModel::setRankMode,
+                                    onFilter = viewModel::toggleListFilter,
+                                )
                             }
-                            var sortOpen by remember { mutableStateOf(false) }
-                            // Boxed with its button for the anchoring reason spelled out on the
-                            // overflow menu below (#74).
-                            Box {
-                                IconButton(onClick = { sortOpen = true }) {
-                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.inbox_sort))
-                                }
-                                DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }, shape = MaterialTheme.shapes.medium) {
-                                    SortOrder.entries.forEach { order ->
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(sortLabel(order))) },
-                                            leadingIcon = {
-                                                if (order == ui.sortOrder) Icon(Icons.Filled.Check, contentDescription = null)
-                                            },
-                                            onClick = { viewModel.setSortOrder(order); sortOpen = false },
-                                        )
-                                    }
-                                }
-                            }
+                            val shownViewUi = if (ui.unreadView) listViewUi.copy(filters = listViewUi.filters + ListFilter.UNREAD) else listViewUi
+                            ListViewIconGroups(shownViewUi, listViewActions, unreadForced = ui.unreadView)
                             IconButton(onClick = { viewModel.setSearchActive(true) }) {
                                 Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.inbox_search))
                             }
@@ -1172,6 +1154,13 @@ fun InboxScreen(
                                 // Outbox comes after them (#48). In the Trash the destructive
                                 // "Empty trash" is pushed to the very bottom.
                                 DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }, shape = MaterialTheme.shapes.medium) {
+                                    // Every view function by name, checked when active, then Search.
+                                    ListViewOverflowItems(shownViewUi, listViewActions, ui.unreadView) { overflowOpen = false }
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.inbox_search)) },
+                                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                                        onClick = { viewModel.setSearchActive(true); overflowOpen = false },
+                                    )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.inbox_select_all)) },
                                         leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
@@ -2173,8 +2162,8 @@ private fun DrawerContent(
                                         .padding(MailMetrics.s4),
                                 )
                                 DropdownMenu(folderMenu, onDismissRequest = { folderMenu = false }, shape = MaterialTheme.shapes.medium) {
-                                    // Watch keeps its original audience: meaningless on the inbox
-                                    // (always watched) and noise on one's own sent/drafts/trash/junk.
+                                    // The Inbox shows it too, ticked by default; the others are noise on one's own
+                                    // sent/drafts/trash/junk.
                                     if (mailbox.role !in watchMenuHiddenRoles) {
                                         val watched = mailbox.id in watchedFolders
                                         DropdownMenuItem(
@@ -2979,16 +2968,6 @@ private fun ThreadChildren(
             }
         }
     }
-}
-
-/** String resource for a sort option label in the sort menu. */
-private fun sortLabel(order: SortOrder): Int = when (order) {
-    SortOrder.DATE_DESC -> R.string.inbox_sort_newest_first
-    SortOrder.DATE_ASC -> R.string.inbox_sort_oldest_first
-    SortOrder.SUBJECT -> R.string.inbox_sort_subject
-    SortOrder.SENDER -> R.string.inbox_sort_sender
-    SortOrder.UNREAD_FIRST -> R.string.inbox_sort_unread_first
-    SortOrder.FLAGGED_FIRST -> R.string.inbox_sort_flagged_first
 }
 
 /** One folder in the drawer tree: the mailbox, its [depth], and whether it has children. */

@@ -1200,4 +1200,18 @@
     <string name="settings_remind_section">Promemoria</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d h</string>
+    <string name="list_view_mode">Visualizzazione</string>
+    <string name="list_rank">Ordine</string>
+    <string name="list_filter">Filtro</string>
+    <string name="list_group_subject">Raggruppa per oggetto</string>
+    <string name="list_group_sender">Raggruppa per mittente</string>
+    <string name="list_group_none">Nessun raggruppamento</string>
+    <string name="list_rank_sender">Per mittente</string>
+    <string name="list_rank_subject">Per oggetto</string>
+    <string name="list_filter_starred">Solo con stella</string>
+    <string name="list_filter_unread">Solo non letti</string>
+    <string name="list_filter_attachments">Solo con allegati</string>
+    <string name="list_filter_auth_codes">Auth con codici · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Link di auth · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Qualsiasi auth · G0 _ Auth, Ga + Gb</string>
 </resources>

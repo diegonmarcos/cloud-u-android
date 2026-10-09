@@ -1303,4 +1303,18 @@
     <string name="settings_remind_section">Remind me</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d h</string>
+    <string name="list_view_mode">View mode</string>
+    <string name="list_rank">Rank</string>
+    <string name="list_filter">Filter</string>
+    <string name="list_group_subject">Group by Subject</string>
+    <string name="list_group_sender">Group by Sender</string>
+    <string name="list_group_none">No grouping</string>
+    <string name="list_rank_sender">By sender</string>
+    <string name="list_rank_subject">By subject</string>
+    <string name="list_filter_starred">Only starred</string>
+    <string name="list_filter_unread">Only unread</string>
+    <string name="list_filter_attachments">Only with attachments</string>
+    <string name="list_filter_auth_codes">Auth with codes · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Auth links · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Any auth · G0 _ Auth, Ga + Gb</string>
 </resources>

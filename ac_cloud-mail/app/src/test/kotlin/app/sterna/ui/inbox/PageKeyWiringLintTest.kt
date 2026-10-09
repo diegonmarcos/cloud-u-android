@@ -56,10 +56,10 @@ class PageKeyWiringLintTest {
     // -- 2. what the ViewModel actually hands pageKeyFlow ---------------------------------------
 
     @Test
-    fun `the browse list passes each of the seven flows to its own parameter`() {
+    fun `the browse list passes each of the eight flows to its own parameter`() {
         val arguments = pageKeyFlowArguments()
         assertEquals(
-            "InboxViewModel must hand pageKeyFlow these seven flows and no others, each NAMED and each " +
+            "InboxViewModel must hand pageKeyFlow these eight flows and no others, each NAMED and each " +
                 "matched with its own parameter. Compared as whole pairs, because the parameter name " +
                 "on its own proves nothing: 'currentAccountId = selectionAccountId' contains " +
                 "'currentAccountId =' and would satisfy a looser rule, while selectionAccountId is " +
@@ -90,10 +90,9 @@ class PageKeyWiringLintTest {
                 "raw read in selectAll is the destructive half of #126 rebuilt. Lines found were:" +
                 "\n${readers.joinToString("\n")}",
             listOf(
-                "repo.pagedFolder(credentials, id, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)",
-                "repo.pagedMailbox(key.unifiedScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)",
-                "repo.pagedMailbox(key.unreadScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)",
-                "unreadOnly.value = !unreadOnly.value",
+                "repo.pagedFolder(credentials, id, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)",
+                "repo.pagedMailbox(key.unifiedScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)",
+                "repo.pagedMailbox(key.unreadScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)",
                 "val filtered = listUnreadOnly(selection.value, unreadOnly.value)",
             ),
             readers.sorted(),
@@ -143,11 +142,11 @@ class PageKeyWiringLintTest {
             listOf(
                 listOf(
                     "key.unifiedScopes", "key.sort", "listUnreadOnly(key.sel, key.unreadOnly)",
-                    "key.conversationView", "sent",
+                    "key.conversationView", "sent", "key.shape",
                 ),
                 listOf(
                     "key.unreadScopes", "key.sort", "listUnreadOnly(key.sel, key.unreadOnly)",
-                    "key.conversationView", "sent",
+                    "key.conversationView", "sent", "key.shape",
                 ),
             ),
             // Sorted, so reordering the branches of the `when` is not an error — which of the two
@@ -310,10 +309,11 @@ class PageKeyWiringLintTest {
             "selection = selection",
             "unifiedInboxScopes = unifiedInboxScopes",
             "unreadViewScopes = unreadScopes",
-            "sortOrder = settings.sortOrder",
+            "sortOrder = effectiveSort",
             "unreadOnly = unreadOnly",
-            "conversationView = settings.conversationView",
+            "conversationView = effectiveConversation",
             "currentAccountId = currentAccountId",
+            "listShape = effectiveShape",
         )
 
         private const val SETTINGS_PATH =

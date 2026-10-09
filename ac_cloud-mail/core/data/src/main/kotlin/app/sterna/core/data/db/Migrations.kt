@@ -386,3 +386,13 @@ val MIGRATION_28_29 = object : Migration(28, 29) {
         db.execSQL(MESSAGE_TEXT_CACHE_CREATE_SQL)
     }
 }
+
+/**
+ * v29 -> v30: the auth-class index ("G0 _ Auth"). One nullable column, no rewrite: NULL means "not classified"
+ * and `MailRepository.indexAuth` backfills it in the background, so the migration reads no row.
+ */
+val MIGRATION_29_30 = object : Migration(29, 30) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE emails ADD COLUMN authClass INTEGER")
+    }
+}

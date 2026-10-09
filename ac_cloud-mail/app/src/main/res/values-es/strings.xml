@@ -1250,4 +1250,18 @@
     <string name="settings_remind_section">Recordatorio</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d h</string>
+    <string name="list_view_mode">Vista</string>
+    <string name="list_rank">Orden</string>
+    <string name="list_filter">Filtro</string>
+    <string name="list_group_subject">Agrupar por asunto</string>
+    <string name="list_group_sender">Agrupar por remitente</string>
+    <string name="list_group_none">Sin agrupar</string>
+    <string name="list_rank_sender">Por remitente</string>
+    <string name="list_rank_subject">Por asunto</string>
+    <string name="list_filter_starred">Solo destacados</string>
+    <string name="list_filter_unread">Solo no leídos</string>
+    <string name="list_filter_attachments">Solo con adjuntos</string>
+    <string name="list_filter_auth_codes">Auth con códigos · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Enlaces de auth · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Cualquier auth · G0 _ Auth, Ga + Gb</string>
 </resources>

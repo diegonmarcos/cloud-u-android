@@ -26,6 +26,9 @@ data class StoredAccount(
     val showOnlySubscribedFolders: Boolean = false,
     /** Extra folders watched for new mail, by mailbox id; the Inbox is always watched and never stored here. */
     val watchedFolders: Set<String> = emptySet(),
+    /** Folders whose new-mail notifications are switched OFF, by mailbox id. Today only the Inbox can be in here (it is
+     *  always watched, so it cannot be "unwatched" in [watchedFolders]); absent = notifies, which is the default. */
+    val mutedFolders: Set<String> = emptySet(),
     /** Per-folder collapse choice; absent = undecided. A `Map`, not a set: unfolding must WRITE `false`, or it folds
      *  back. */
     val collapsedFolders: Map<String, Boolean> = emptyMap(),

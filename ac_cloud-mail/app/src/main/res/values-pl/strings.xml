@@ -1214,4 +1214,18 @@
     <string name="settings_remind_section">Przypomnienie</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d godz.</string>
+    <string name="list_view_mode">Widok</string>
+    <string name="list_rank">Kolejność</string>
+    <string name="list_filter">Filtr</string>
+    <string name="list_group_subject">Grupuj według tematu</string>
+    <string name="list_group_sender">Grupuj według nadawcy</string>
+    <string name="list_group_none">Bez grupowania</string>
+    <string name="list_rank_sender">Według nadawcy</string>
+    <string name="list_rank_subject">Według tematu</string>
+    <string name="list_filter_starred">Tylko oznaczone gwiazdką</string>
+    <string name="list_filter_unread">Tylko nieprzeczytane</string>
+    <string name="list_filter_attachments">Tylko z załącznikami</string>
+    <string name="list_filter_auth_codes">Auth z kodami · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Linki auth · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Dowolna auth · G0 _ Auth, Ga + Gb</string>
 </resources>

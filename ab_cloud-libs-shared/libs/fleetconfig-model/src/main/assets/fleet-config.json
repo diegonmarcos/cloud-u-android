@@ -1452,6 +1452,14 @@
         "ac_cloud-mail"
       ]
     },
+    "list_view": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Mail list view choices per account and folder (key account|folder): group mode (subject, sender, none), rank (newest, sender, subject) and the combinable filters (starred, unread, attachments, codes), stored as group;rank;FILTERS. Unset means the global conversation-view and sort settings apply.",
+      "used_by": [
+        "ac_cloud-mail"
+      ]
+    },
     "tabs": {
       "kind": "prefs",
       "class": "config",
@@ -2470,9 +2478,9 @@
         },
         {
           "id": "mail-room-settings-tables",
-          "path": "Room SternaDatabase tables (mailboxes watched/collapsed in account JSON)",
+          "path": "Room SternaDatabase tables (mailboxes watched/muted/collapsed in account JSON)",
           "class": "device",
-          "doc": "No settings tables in Room; per-account watched/collapsed folders live in the account JSON."
+          "doc": "No settings tables in Room; per-account watched, muted (the Inbox's Notify about new mail, default on) and collapsed folders live in the account JSON."
         }
       ]
     },

@@ -9,6 +9,8 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.map
 import androidx.sqlite.db.SimpleSQLiteQuery
+import app.sterna.core.data.text.AuthClassifier
+import app.sterna.core.data.text.htmlToText
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.account.AccountStore
 import app.sterna.core.data.account.AuthType
@@ -554,8 +556,9 @@ private fun pagingQuery(
     scopes: List<Pair<String, String>>,
     sort: SortOrder,
     unreadOnly: Boolean,
+    shape: ListShape = ListShape.NONE,
 ): SimpleSQLiteQuery = SimpleSQLiteQuery(
-    pagingSql(scopes.size, sort, unreadOnly),
+    pagingSql(scopes.size, sort, unreadOnly, shape),
     scopes.flatMap { listOf(it.first, it.second) }.toTypedArray(),
 )
 
@@ -572,6 +575,7 @@ internal fun pagingSql(
     scopeCount: Int,
     sort: SortOrder,
     unreadOnly: Boolean,
+    shape: ListShape = ListShape.NONE,
 ): String {
     val orderBy = when (sort) {
         SortOrder.DATE_DESC -> "sortKey DESC"
@@ -581,14 +585,14 @@ internal fun pagingSql(
         SortOrder.UNREAD_FIRST -> "seen ASC, sortKey DESC"
         SortOrder.FLAGGED_FIRST -> "flagged DESC, sortKey DESC"
     }
-    return "SELECT * FROM emails WHERE ${listRowsWhereSql(scopeCount, unreadOnly)} ORDER BY $orderBy"
+    return "SELECT * FROM emails WHERE ${listRowsWhereSql(scopeCount, unreadOnly, shape)} ORDER BY $orderBy"
 }
 
 /** WHICH ROWS the flat list holds, sort excluded. ONE clause, shared by the two readers that must
  *  not disagree — [pagingSql] and [selectionIdsSql], what "Select all" takes (#126). */
-internal fun listRowsWhereSql(scopeCount: Int, unreadOnly: Boolean): String {
+internal fun listRowsWhereSql(scopeCount: Int, unreadOnly: Boolean, shape: ListShape = ListShape.NONE): String {
     val scope = folderScopeSql(scopeCount, "emails")
-    val seenFilter = if (unreadOnly) " AND seen = 0" else ""
+    val seenFilter = (if (unreadOnly) " AND seen = 0" else "") + shape.whereSql("emails")
     val notSnoozed = " AND ${notSnoozedSql("emails")}"
     return "($scope)$seenFilter$notSnoozed"
 }
@@ -601,14 +605,15 @@ internal fun folderRoleMap(rows: List<AccountMailboxRole>): Map<Pair<String, Str
 
 /** The keys "Select all" may take: the same rows [pagingSql] draws, projected to (accountId, id).
  *  Bind order is [pagingQuery]'s. */
-internal fun selectionIdsSql(scopeCount: Int, unreadOnly: Boolean): String =
-    "SELECT accountId, id FROM emails WHERE ${listRowsWhereSql(scopeCount, unreadOnly)}"
+internal fun selectionIdsSql(scopeCount: Int, unreadOnly: Boolean, shape: ListShape = ListShape.NONE): String =
+    "SELECT accountId, id FROM emails WHERE ${listRowsWhereSql(scopeCount, unreadOnly, shape)}"
 
 internal fun selectionIdsQuery(
     scopes: List<Pair<String, String>>,
     unreadOnly: Boolean,
+    shape: ListShape = ListShape.NONE,
 ): SimpleSQLiteQuery = SimpleSQLiteQuery(
-    selectionIdsSql(scopes.size, unreadOnly),
+    selectionIdsSql(scopes.size, unreadOnly, shape),
     scopes.flatMap { listOf(it.first, it.second) }.toTypedArray(),
 )
 
@@ -674,6 +679,7 @@ internal fun conversationQuery(
     // Each account's Sent folder as an (accountId, mailboxId) PAIR: bare Sent ids across accounts
     // would let a colliding mailbox id inflate that account's chip. NO DEFAULT, deliberately.
     sentMailboxes: List<Pair<String, String>>,
+    shape: ListShape = ListShape.NONE,
 ): SimpleSQLiteQuery {
     // Bind order matches the clauses left-to-right, and EVERY clause binds the same shape —
     // (accountId, mailboxId) per scope, account first; the account-wide total binds nothing.
@@ -682,7 +688,7 @@ internal fun conversationQuery(
     val chipClause = perClause + sent.flatMap { listOf(it.first, it.second) }
     val args = perClause + chipClause + perClause
     return SimpleSQLiteQuery(
-        conversationSql(scopes.size, sort, unreadOnly, sent.size),
+        conversationSql(scopes.size, sort, unreadOnly, sent.size, shape),
         args.toTypedArray(),
     )
 }
@@ -691,7 +697,17 @@ internal fun conversationQuery(
  *  the key alone: a bare `GROUP BY tkey` collapses two accounts' conversations into one row. Bind
  *  order: `g` takes [scopeCount] pairs, account first; `c` the same pairs then one pair per
  *  [sentMailboxCount] Sent folder; the outer WHERE binds like `g`; `t` takes none. */
-internal fun conversationSql(scopeCount: Int, sort: SortOrder, unreadOnly: Boolean, sentMailboxCount: Int = 0): String {
+internal fun conversationSql(
+    scopeCount: Int,
+    sort: SortOrder,
+    unreadOnly: Boolean,
+    sentMailboxCount: Int = 0,
+    shape: ListShape = ListShape.NONE,
+): String {
+    // The grouping key: the conversation (thread id, else the message's own id) — or, when grouping by
+    // SENDER, the lower-cased address (else the message's own id, which keeps an address-less row alone).
+    fun key(t: String) = if (shape.bySender) "COALESCE(NULLIF(LOWER(TRIM($t.fromEmail)), ''), $t.id)" else "COALESCE($t.threadId, $t.id)"
+    val shapeWhere = shape.whereSql("emails")
     val scope = folderScopeSql(scopeCount, "emails")
     val scopeOuter = folderScopeSql(scopeCount, "e")
     val sentAlternatives = " OR (accountId = ? AND mailboxId = ?)".repeat(sentMailboxCount)
@@ -712,19 +728,19 @@ internal fun conversationSql(scopeCount: Int, sort: SortOrder, unreadOnly: Boole
         SELECT e.*, c.threadCount AS threadCount, t.threadTotal AS threadTotal, g.threadUnread AS threadUnread
         FROM emails e
         JOIN (
-            SELECT accountId AS gacc, COALESCE(threadId, id) AS tkey, MAX(sortKey) AS maxKey, MIN(seen) AS threadUnread
+            SELECT accountId AS gacc, ${key("emails")} AS tkey, MAX(sortKey) AS maxKey, MIN(seen) AS threadUnread
             FROM emails
-            WHERE ($scope) AND $notSnoozed
+            WHERE ($scope) AND $notSnoozed$shapeWhere
             GROUP BY gacc, tkey$having
-        ) g ON COALESCE(e.threadId, e.id) = g.tkey AND e.accountId = g.gacc AND e.sortKey = g.maxKey
+        ) g ON ${key("e")} = g.tkey AND e.accountId = g.gacc AND e.sortKey = g.maxKey
         JOIN (
-            SELECT accountId AS cacc, COALESCE(threadId, id) AS ckey, COUNT(*) AS threadCount
+            SELECT accountId AS cacc, ${key("emails")} AS ckey, COUNT(*) AS threadCount
             FROM emails
             WHERE (($scope)$sentAlternatives) AND $notSnoozed
             GROUP BY cacc, ckey
         ) c ON c.ckey = g.tkey AND c.cacc = g.gacc
         JOIN (
-            SELECT accountId AS tacc, COALESCE(threadId, id) AS tkey2, COUNT(*) AS threadTotal
+            SELECT accountId AS tacc, ${key("emails")} AS tkey2, COUNT(*) AS threadTotal
             FROM emails
             WHERE $notSnoozed
             GROUP BY tacc, tkey2
@@ -1393,17 +1409,18 @@ class MailRepository(
         // Each account's Sent-role folder as an (accountId, mailboxId) pair — the conversation chip
         // counts the thread's Sent replies. NO DEFAULT: an omission is a chip that counts too few.
         sentMailboxes: List<Pair<String, String>>,
+        shape: ListShape = ListShape.NONE,
     ): Flow<PagingData<InboxRow>> {
         if (scopes.isEmpty()) return flowOf(PagingData.empty())
         return if (conversationView) {
             Pager(
                 config = pagingConfig(),
-                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.conversationPagingSource(conversationQuery(scopes, sort, unreadOnly, accountId = null, sentMailboxes = sentMailboxes))) },
+                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.conversationPagingSource(conversationQuery(scopes, sort, unreadOnly, accountId = null, sentMailboxes = sentMailboxes, shape = shape))) },
             ).flow.map { data -> data.map { it.toInboxRow() } }
         } else {
             Pager(
                 config = pagingConfig(),
-                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.pagingSource(pagingQuery(scopes, sort, unreadOnly))) },
+                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.pagingSource(pagingQuery(scopes, sort, unreadOnly, shape))) },
             ).flow.map { data -> data.map { InboxRow(it.toEmail(), threadCount = 1, unread = !it.seen) } }
         }
     }
@@ -1421,19 +1438,20 @@ class MailRepository(
         conversationView: Boolean,
         // The account's Sent-role folder as an (accountId, mailboxId) pair — see [pagedMailbox]. NO DEFAULT.
         sentMailboxes: List<Pair<String, String>>,
+        shape: ListShape = ListShape.NONE,
     ): Flow<PagingData<InboxRow>> {
         val scopes = listOf(credentials.id to mailboxId)
         return if (conversationView) {
             Pager(
                 config = pagingConfig(),
                 remoteMediator = folderMediator(credentials, mailboxId, conversationView = true),
-                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.conversationPagingSource(conversationQuery(scopes, sort, unreadOnly, credentials.id, sentMailboxes))) },
+                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.conversationPagingSource(conversationQuery(scopes, sort, unreadOnly, credentials.id, sentMailboxes, shape))) },
             ).flow.map { data -> data.map { it.toInboxRow() } }
         } else {
             Pager(
                 config = pagingConfig(),
                 remoteMediator = folderMediator(credentials, mailboxId, conversationView = false),
-                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.pagingSource(pagingQuery(scopes, sort, unreadOnly))) },
+                pagingSourceFactory = { AnchoredRefreshPagingSource(emailDao.pagingSource(pagingQuery(scopes, sort, unreadOnly, shape))) },
             ).flow.map { data -> data.map { InboxRow(it.toEmail(), threadCount = 1, unread = !it.seen) } }
         }
     }
@@ -1543,8 +1561,8 @@ class MailRepository(
     /**
      * The keys "Select all" may take outside a search: the rows the flat list is PAGING, through
      */
-    suspend fun selectableIds(scopes: List<Pair<String, String>>, unreadOnly: Boolean): List<EmailKey> =
-        emailDao.keysForSelection(selectionIdsQuery(scopes, unreadOnly))
+    suspend fun selectableIds(scopes: List<Pair<String, String>>, unreadOnly: Boolean, shape: ListShape = ListShape.NONE): List<EmailKey> =
+        emailDao.keysForSelection(selectionIdsQuery(scopes, unreadOnly, shape))
             .map { EmailKey(it.accountId, it.id) }
 
     /**
@@ -2196,9 +2214,11 @@ class MailRepository(
      * marks the entry read once it settles, not while it is flicked past.
      */
     suspend fun openEmail(credentials: AccountCredentials, emailId: String, markRead: Boolean = true): Email {
-        if (credentials.protocol == MailProtocol.IMAP) return openEmailImap(credentials, emailId, markRead)
+        if (credentials.protocol == MailProtocol.IMAP) {
+            return refineAuthClass(credentials.id, openEmailImap(credentials, emailId, markRead))
+        }
         val ctx = connect(credentials)
-        val email = client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth)
+        val email = refineAuthClass(credentials.id, client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth))
         if (markRead && !email.isSeen) {
             // Through setRead, never inline: it also nudges the drawer count, protects the id from
             // the next reconcile and advances the mailbox emailState.
@@ -4075,9 +4095,11 @@ class MailRepository(
 
     /** Fetch an email (with body) without marking it read — used to build replies/forwards. */
     suspend fun fetchEmail(credentials: AccountCredentials, emailId: String): Email {
-        if (credentials.protocol == MailProtocol.IMAP) return openEmailImap(credentials, emailId, markRead = false)
+        if (credentials.protocol == MailProtocol.IMAP) {
+            return refineAuthClass(credentials.id, openEmailImap(credentials, emailId, markRead = false))
+        }
         val ctx = connect(credentials)
-        return client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth)
+        return refineAuthClass(credentials.id, client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth))
     }
 
     /** All emails in a conversation (lightweight, no body). */
@@ -4135,7 +4157,32 @@ class MailRepository(
      *  chip on the collapsed row queries the same table, so both sides read the same write. */
     fun observeThreadEmails(accountId: String, mailboxIds: List<String>, threadKey: String): Flow<List<Email>> =
         if (mailboxIds.isEmpty()) flowOf(emptyList())
-        else emailDao.cachedThreadEmails(accountId, mailboxIds, threadKey).map { rows -> rows.map { it.toEmail() } }
+        else if (threadKey.startsWith(ListShape.SENDER_KEY_PREFIX)) {
+            // A SENDER group's members: the same table the chip counted, keyed by the address.
+            emailDao.cachedSenderEmails(accountId, mailboxIds, threadKey.removePrefix(ListShape.SENDER_KEY_PREFIX))
+                .map { rows -> rows.map { it.toEmail() } }
+        } else emailDao.cachedThreadEmails(accountId, mailboxIds, threadKey).map { rows -> rows.map { it.toEmail() } }
+
+    /**
+     * Backfill the auth class ("G0 _ Auth") for rows cached before it existed: [AuthClassifier] over each
+     * row's subject and preview, in bounded batches, once per row. Returns how many it classified.
+     */
+    suspend fun indexAuth(batch: Int = 200): Int =
+        AuthIndex.backfill(batch, next = { emailDao.unclassifiedAuth(it) }, store = emailDao::setAuthClass)
+
+    /**
+     * Re-classify one message from its BODY, which is more than the preview the row was first judged on.
+     * Best effort and quiet: a failure leaves the preview's class in place.
+     */
+    suspend fun refineAuthClass(accountId: String, email: Email): Email {
+        runCatching {
+            val html = email.htmlContent()?.takeIf { it.isNotBlank() }
+            val textPart = email.textBody.firstOrNull()?.partId?.let { email.bodyValues[it]?.value }
+            val text = textPart?.takeIf { it.isNotBlank() } ?: html?.let { htmlToText(it) } ?: return@runCatching
+            emailDao.setAuthClass(accountId, email.id, AuthClassifier.classify(email.subject, text, html).value)
+        }
+        return email
+    }
 
     /** One reading of [observeThreadEmails], for callers that act on a thread once rather than draw it. */
     suspend fun cachedThreadEmails(accountId: String, mailboxIds: List<String>, threadKey: String): List<Email> =

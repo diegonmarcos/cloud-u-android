@@ -46,4 +46,6 @@ data class EmailEntity(
          *  Every fetch path that caches a row must fill it ([EMAIL_LIST_PROPERTIES]) -- the `@Upsert`
          *  replaces the row whole, so one path omitting it erases what the others stored. */
     val attachmentsJson: String? = null,
+    // Schema v30: rule "G0 _ Auth" -- 1 Ga Code, 2 Gb Link to auth, 0 Gc No Auth; NULL = not classified yet.
+    val authClass: Int? = null,
 )

@@ -1,0 +1,141 @@
+package app.sterna.ui.inbox
+
+import android.app.Application
+import app.sterna.core.data.mail.AuthFilter
+import app.sterna.core.data.mail.ListShape
+import app.sterna.core.data.settings.SortOrder
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import java.io.File
+
+/** The list's top bar: icon groups in the owner's order, every function named in the overflow, persistence. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
+class ListViewControlsTest {
+    private val context get() = RuntimeEnvironment.getApplication()
+    private fun src(path: String) = File("src/main/kotlin/app/sterna/ui/inbox/$path").readText()
+
+    // -- the order: View mode, Rank, Filter, then Search LAST before the overflow ---------------
+
+    @Test fun `the groups are View mode, Rank, Filter, in that order`() {
+        assertEquals(
+            listOf(ListViewGroup.VIEW_MODE, ListViewGroup.RANK, ListViewGroup.FILTER),
+            ListViewGroup.entries.toList(),
+        )
+        assertEquals(listOf(false, false, true), ListViewGroup.entries.map { it.multi })
+    }
+
+    @Test fun `the top bar draws the groups, then Search as the last icon, then the overflow`() {
+        val actions = src("InboxScreen.kt").let { it.substring(it.indexOf("actions = {")) }
+        val groups = actions.indexOf("ListViewIconGroups(")
+        val search = actions.indexOf("IconButton(onClick = { viewModel.setSearchActive(true) })")
+        val overflow = actions.indexOf("Icons.Filled.MoreVert")
+        assertTrue("groups, then search, then overflow: $groups $search $overflow", groups in 0 until search && search < overflow)
+        // nothing but the Search icon sits between the groups and the overflow icon
+        val between = actions.substring(groups, overflow)
+        assertEquals("one IconButton between groups and overflow (Search) plus the overflow's own", 2, Regex("""\bIconButton\(""").findAll(between).count())
+    }
+
+    // -- the overflow lists every function by name, checked when active -------------------------
+
+    @Test fun `every function is declared once and the overflow walks the whole list`() {
+        assertEquals(
+            listOf(
+                "GROUP_SUBJECT", "GROUP_SENDER", "GROUP_NONE",
+                "RANK_NEWEST", "RANK_SENDER", "RANK_SUBJECT",
+                "FILTER_STARRED", "FILTER_UNREAD", "FILTER_ATTACHMENTS",
+                "FILTER_AUTH_CODES", "FILTER_AUTH_LINKS", "FILTER_AUTH_ANY",
+            ),
+            ListViewFunction.entries.map { it.name },
+        )
+        val controls = src("ListViewControls.kt")
+        assertTrue(controls.contains("ListViewFunction.entries.forEach { fn ->"))
+        assertTrue(controls.contains("ListViewFunction.of(group).forEach { fn ->"))
+        assertTrue(src("InboxScreen.kt").contains("ListViewOverflowItems(shownViewUi, listViewActions, ui.unreadView)"))
+        // Search is in the overflow too
+        val overflow = src("InboxScreen.kt").substringAfter("ListViewOverflowItems(")
+        assertTrue(overflow.substringBefore("inbox_select_all").contains("R.string.inbox_search"))
+    }
+
+    @Test fun `each function is checked exactly when its choice is active, and runs its own action`() {
+        val ui = ListViewUi.of(
+            ListView(GroupMode.SENDER, RankMode.SUBJECT, setOf(ListFilter.STARRED, ListFilter.AUTH_LINKS)),
+            globalConversation = true, globalSort = SortOrder.DATE_DESC,
+        )
+        val active = ListViewFunction.entries.filter { it.isActive(ui) }.map { it.name }
+        assertEquals(listOf("GROUP_SENDER", "RANK_SUBJECT", "FILTER_STARRED", "FILTER_AUTH_LINKS"), active)
+        val ran = mutableListOf<String>()
+        val actions = ListViewActions({ ran += "g:$it" }, { ran += "r:$it" }, { ran += "f:$it" })
+        ListViewFunction.entries.forEach { it.run(actions) }
+        assertEquals(12, ran.size)
+        assertEquals("g:SUBJECT", ran.first())
+        assertEquals("f:AUTH_ANY", ran.last())
+    }
+
+    // -- an icon is active when any non-default choice is set -----------------------------------
+
+    @Test fun `groups read as active only off their defaults`() {
+        val none = ListViewUi.of(ListView(), globalConversation = true, globalSort = SortOrder.DATE_DESC)
+        assertEquals(listOf(false, false, false), ListViewGroup.entries.map { none.groupActive(it) })
+        val sender = ListViewUi.of(ListView(group = GroupMode.NONE), true, SortOrder.DATE_DESC)
+        assertTrue(sender.groupActive(ListViewGroup.VIEW_MODE)); assertFalse(sender.groupActive(ListViewGroup.RANK))
+        val rank = ListViewUi.of(ListView(rank = RankMode.SENDER), true, SortOrder.DATE_DESC)
+        assertTrue(rank.groupActive(ListViewGroup.RANK))
+        val filter = ListViewUi.of(ListView(filters = setOf(ListFilter.UNREAD)), true, SortOrder.DATE_DESC)
+        assertTrue(filter.groupActive(ListViewGroup.FILTER))
+        // a global default that is flat: "no grouping" is the default there, subject grouping is not
+        assertFalse(ListViewUi.of(ListView(), false, SortOrder.DATE_DESC).groupActive(ListViewGroup.VIEW_MODE))
+        assertTrue(ListViewUi.of(ListView(group = GroupMode.SUBJECT), false, SortOrder.DATE_DESC).groupActive(ListViewGroup.VIEW_MODE))
+    }
+
+    // -- grouping, ranking and the filters reach the query --------------------------------------
+
+    @Test fun `grouping and ranking resolve against the global settings`() {
+        assertEquals(GroupMode.SUBJECT, ListView().effectiveGroup(true))
+        assertEquals(GroupMode.NONE, ListView().effectiveGroup(false))
+        assertEquals(GroupMode.SENDER, ListView(group = GroupMode.SENDER).effectiveGroup(false))
+        assertEquals(SortOrder.FLAGGED_FIRST, ListView().effectiveSort(SortOrder.FLAGGED_FIRST))
+        assertEquals(SortOrder.SENDER, ListView(rank = RankMode.SENDER).effectiveSort(SortOrder.DATE_DESC))
+        assertEquals(SortOrder.SUBJECT, RankMode.SUBJECT.order)
+        assertEquals(SortOrder.DATE_DESC, RankMode.NEWEST.order)
+    }
+
+    @Test fun `each filter maps to its part of the shape, and the auth classes are exclusive`() {
+        assertEquals(ListShape(starred = true), ListView(filters = setOf(ListFilter.STARRED)).shape())
+        assertEquals(ListShape(attachments = true), ListView(filters = setOf(ListFilter.ATTACHMENTS)).shape())
+        assertEquals(ListShape(), ListView(filters = setOf(ListFilter.UNREAD)).shape()) // unread has its own flag
+        assertEquals(ListShape(bySender = true), ListView(group = GroupMode.SENDER).shape())
+        var v = ListView().toggled(ListFilter.AUTH_CODES)
+        assertEquals(AuthFilter.CODES, v.shape().auth)
+        v = v.toggled(ListFilter.AUTH_ANY)
+        assertEquals(setOf(ListFilter.AUTH_ANY), v.filters)
+        assertEquals(AuthFilter.ANY, v.shape().auth)
+        v = v.toggled(ListFilter.STARRED).toggled(ListFilter.AUTH_LINKS)
+        assertEquals(setOf(ListFilter.STARRED, ListFilter.AUTH_LINKS), v.filters)
+        assertEquals(ListShape(starred = true, auth = AuthFilter.LINKS), v.shape())
+    }
+
+    // -- persistence per account and folder ------------------------------------------------------
+
+    @Test fun `choices are stored per account and folder and read back`() {
+        val a = ListViewPrefs.keyFor("acc1", "inbox")
+        val b = ListViewPrefs.keyFor("acc2", "inbox")
+        val view = ListView(GroupMode.SENDER, RankMode.SUBJECT, setOf(ListFilter.STARRED, ListFilter.AUTH_CODES))
+        ListViewPrefs.save(context, a, view)
+        assertEquals(view, ListViewPrefs.load(context, a))
+        assertEquals("another account's folder of the same id is untouched", ListView(), ListViewPrefs.load(context, b))
+        ListViewPrefs.save(context, a, ListView())
+        assertEquals("the default is stored as nothing", ListView(), ListViewPrefs.load(context, a))
+    }
+
+    @Test fun `a damaged stored value reads as the default`() {
+        assertEquals(ListView(), ListView.decode("nonsense;;"))
+        assertEquals(ListView(rank = RankMode.SENDER), ListView.decode("BOGUS;SENDER;NOPE"))
+    }
+}

@@ -924,6 +924,8 @@ internal fun ImapMessage.toEntity(
         // column by column: leave it out here and every IMAP sync pass would erase the chips a JMAP
         // path stored -- on a unified inbox holding both, on the same screen.
         attachmentsJson = EmailAttachments.encode(attachments.map { it.toBodyPart() }),
+        // Schema v30: agrees with [EmailMapper] column by column (an upsert would erase it).
+        authClass = AuthIndex.indexed(subject, preview),
     )
 }
 

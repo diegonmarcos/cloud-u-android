@@ -485,6 +485,23 @@ class AccountStore(context: Context) {
     /** Extra folders watched for new mail (beyond the Inbox, which is always watched). */
     fun watchedFolders(id: String): Set<String> = account(id)?.watchedFolders ?: emptySet()
 
+    /** Folders whose new-mail notifications are switched off (the Inbox's "Notify about new mail" unticked). */
+    fun mutedFolders(id: String): Set<String> = account(id)?.mutedFolders ?: emptySet()
+
+    /** Switch a folder's new-mail notifications off ([muted]) or back on. No-op if the id is unknown. */
+    @Synchronized
+    fun setFolderMuted(id: String, folderId: String, muted: Boolean) {
+        saveAccounts(
+            accounts().map {
+                if (it.id == id) {
+                    it.copy(mutedFolders = if (muted) it.mutedFolders + folderId else it.mutedFolders - folderId)
+                } else {
+                    it
+                }
+            },
+        )
+    }
+
     /** Add/remove a folder from the account's watched set. No-op if the id is unknown. */
     @Synchronized
     fun setFolderWatched(id: String, folderId: String, watched: Boolean) {

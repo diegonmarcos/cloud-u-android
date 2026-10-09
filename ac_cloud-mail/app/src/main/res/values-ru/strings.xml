@@ -1217,4 +1217,18 @@
     <string name="settings_remind_section">Напоминание</string>
     <string name="settings_remind_minutes">%1$d мин</string>
     <string name="settings_remind_hours">%1$d ч</string>
+    <string name="list_view_mode">Вид</string>
+    <string name="list_rank">Порядок</string>
+    <string name="list_filter">Фильтр</string>
+    <string name="list_group_subject">Группировать по теме</string>
+    <string name="list_group_sender">Группировать по отправителю</string>
+    <string name="list_group_none">Без группировки</string>
+    <string name="list_rank_sender">По отправителю</string>
+    <string name="list_rank_subject">По теме</string>
+    <string name="list_filter_starred">Только избранные</string>
+    <string name="list_filter_unread">Только непрочитанные</string>
+    <string name="list_filter_attachments">Только с вложениями</string>
+    <string name="list_filter_auth_codes">Авторизация с кодами · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Ссылки авторизации · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Любая авторизация · G0 _ Auth, Ga + Gb</string>
 </resources>

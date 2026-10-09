@@ -1206,4 +1206,18 @@
     <string name="settings_remind_section">Rappel</string>
     <string name="settings_remind_minutes">%1$d min</string>
     <string name="settings_remind_hours">%1$d h</string>
+    <string name="list_view_mode">Affichage</string>
+    <string name="list_rank">Tri</string>
+    <string name="list_filter">Filtre</string>
+    <string name="list_group_subject">Grouper par sujet</string>
+    <string name="list_group_sender">Grouper par expéditeur</string>
+    <string name="list_group_none">Ne pas grouper</string>
+    <string name="list_rank_sender">Par expéditeur</string>
+    <string name="list_rank_subject">Par sujet</string>
+    <string name="list_filter_starred">Favoris seulement</string>
+    <string name="list_filter_unread">Non lus seulement</string>
+    <string name="list_filter_attachments">Avec pièces jointes seulement</string>
+    <string name="list_filter_auth_codes">Auth avec codes · G0 _ Auth, Ga Code</string>
+    <string name="list_filter_auth_links">Liens d\'auth · G0 _ Auth, Gb Link to auth</string>
+    <string name="list_filter_auth_any">Toute auth · G0 _ Auth, Ga + Gb</string>
 </resources>

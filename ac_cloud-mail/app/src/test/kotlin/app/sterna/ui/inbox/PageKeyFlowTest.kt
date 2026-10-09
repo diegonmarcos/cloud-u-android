@@ -1,5 +1,6 @@
 package app.sterna.ui.inbox
 
+import app.sterna.core.data.mail.ListShape
 import app.sterna.core.data.settings.SortOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,6 +44,7 @@ class PageKeyFlowTest {
     private val unread = Input(false)
     private val conversation = Input(true)
     private val account = Input<String?>("a")
+    private val shape = Input(ListShape.NONE)
 
     /** The keys the flow emitted, in order, while [act] ran. */
     private fun keys(act: TestScope.() -> Unit): List<PageKey> {
@@ -57,6 +59,7 @@ class PageKeyFlowTest {
                     unread.flow,
                     conversation.flow,
                     account.flow,
+                    shape.flow,
                 ).toList(seen)
             }
             runCurrent()
@@ -101,6 +104,7 @@ class PageKeyFlowTest {
             unread.again(); runCurrent()
             conversation.again(); runCurrent()
             account.again(); runCurrent()
+            shape.again(); runCurrent()
         }
         assertEquals(
             "an equal key must not reach flatMapLatest: each one cancels the running Pager and " +
@@ -266,5 +270,15 @@ class PageKeyFlowTest {
         val seen = keys { account.value = null }
         assertEquals("losing the active account must reach the pager: $seen", 2, seen.size)
         assertEquals(listOf("a", null), seen.map { it.accountId })
+    }
+
+    @Test
+    fun `a different shape is a different key, and an equal one is not`() {
+        val seen = keys {
+            shape.value = ListShape(codes = true); runCurrent()
+            shape.again(); runCurrent()
+            shape.value = ListShape(bySender = true); runCurrent()
+        }
+        assertEquals(listOf(ListShape.NONE, ListShape(codes = true), ListShape(bySender = true)), seen.map { it.shape })
     }
 }

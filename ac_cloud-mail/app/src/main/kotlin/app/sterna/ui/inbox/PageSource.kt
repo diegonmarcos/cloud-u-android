@@ -1,6 +1,7 @@
 package app.sterna.ui.inbox
 
 import app.sterna.R
+import app.sterna.core.data.mail.ListShape
 import app.sterna.core.data.settings.SortOrder
 import app.sterna.core.jmap.model.Mailbox
 import app.sterna.ui.components.EmptyArt
@@ -32,6 +33,8 @@ internal data class PageKey(
     // The active account, so a switch re-subscribes the pager even when the new inbox shares the
     // old one's mailbox id (JMAP numbers mailboxes per account, so they often collide).
     val accountId: String? = null,
+    // The extra filters and the sender grouping of the view (starred, attachments, codes, by sender).
+    val shape: ListShape = ListShape.NONE,
 )
 
 /** The key [InboxViewModel.pagedEmails] pages from. Every emission rebuilds the pager, so the list
@@ -45,12 +48,14 @@ internal fun pageKeyFlow(
     unreadOnly: Flow<Boolean>,
     conversationView: Flow<Boolean>,
     currentAccountId: Flow<String?>,
+    listShape: Flow<ListShape>,
 ): Flow<PageKey> =
     combine(selection, unifiedInboxScopes, sortOrder, unreadOnly, conversationView) {
             sel, scopes, sort, unread, conversation ->
         PageKey(sel, scopes, emptyList(), sort, unread, conversation)
     }.combine(unreadViewScopes) { key, scopes -> key.copy(unreadScopes = scopes) }
         .combine(currentAccountId) { key, accountId -> key.copy(accountId = accountId) }
+        .combine(listShape) { key, shape -> key.copy(shape = shape) }
         .distinctUntilChanged()
 
 /** The folders the "unread" view pages: every folder of [accountId] except Trash, Junk/Spam, Sent

@@ -147,6 +147,20 @@ interface EmailDao {
     @Query("SELECT seen FROM emails WHERE accountId = :accountId AND id = :id LIMIT 1")
     suspend fun seenOf(accountId: String, id: String): Boolean?
 
+    /** Rows cached before the auth index existed (or before their preview arrived): the next batch to index. */
+    @Query("SELECT accountId, id, subject, preview FROM emails WHERE authClass IS NULL AND preview IS NOT NULL LIMIT :limit")
+    suspend fun unclassifiedAuth(limit: Int): List<AuthIndexRow>
+
+    @Query("UPDATE emails SET authClass = :authClass WHERE accountId = :accountId AND id = :id")
+    suspend fun setAuthClass(accountId: String, id: String, authClass: Int)
+
+    /** All cached messages from one sender (lower-cased address) in [mailboxIds], newest first: the members of a sender group. */
+    @Query(
+        "SELECT * FROM emails WHERE accountId = :accountId AND mailboxId IN (:mailboxIds) " +
+            "AND LOWER(TRIM(fromEmail)) = :sender ORDER BY sortKey DESC",
+    )
+    fun cachedSenderEmails(accountId: String, mailboxIds: List<String>, sender: String): Flow<List<EmailEntity>>
+
     @Upsert
     suspend fun upsertAll(emails: List<EmailEntity>)
 
@@ -481,3 +495,6 @@ data class MailboxUnread(
     val mailboxId: String,
     val count: Int,
 )
+
+/** The columns [EmailDao.unclassifiedAuth] reads: what the classifier needs, nothing else. */
+data class AuthIndexRow(val accountId: String, val id: String, val subject: String?, val preview: String)

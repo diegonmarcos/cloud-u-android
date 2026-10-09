@@ -40,6 +40,7 @@ import app.sterna.core.data.mail.MailRepository
 import app.sterna.core.data.mail.MailSearchResult
 import app.sterna.core.data.mail.UidValidity
 import app.sterna.core.data.mail.emailKey
+import app.sterna.core.data.mail.ListShape
 import app.sterna.core.data.settings.SortOrder
 import app.sterna.core.data.settings.SwipeAction
 import app.sterna.core.jmap.model.Email
@@ -56,6 +57,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -570,7 +572,10 @@ class InboxViewModel(
     /** The conversation an email belongs to: its account plus its threadId (or its own id when
      *  thread-less). Account-qualified — see [ThreadKey]. */
     fun threadKeyOf(email: Email): ThreadKey =
-        ConversationExpansion.threadKey(email.accountId, email.threadId, email.id)
+        // Grouped by sender, the group is the address (the SQL's key), not the thread.
+        ListShape.senderKey(email.from.firstOrNull()?.email)?.takeIf { listView.value.group == GroupMode.SENDER }
+            ?.let { ThreadKey(email.accountId, it) }
+            ?: ConversationExpansion.threadKey(email.accountId, email.threadId, email.id)
 
     /** Fold/unfold a conversation row in place. The cached members render at once (offline-safe) and
      *  stay live while the row is open ([observeThreadMembers]); for JMAP threads a background
@@ -901,8 +906,61 @@ class InboxViewModel(
     /** Background crawl of the whole mailbox into the index; re-runs the query when it completes. */
     private var crawlJob: Job? = null
 
-    /** Transient view filter: show only unread on the current view. */
-    private val unreadOnly = MutableStateFlow(false)
+    /**
+     * This view's choices (group, rank, filters), per account and folder, kept in [ListViewPrefs].
+     * [listViewKey] names the view on screen; [viewOverrides] holds what was written this run so a
+     * tap shows at once, and anything not in it is read from the preferences once.
+     */
+    private val listViewKey: Flow<String> = combine(selection, currentAccountId) { sel, account ->
+        when (sel) {
+            is Sel.Folder -> ListViewPrefs.keyFor(account, sel.id)
+            Sel.Unified -> ListViewPrefs.keyFor(null, "unified")
+            Sel.Unread -> ListViewPrefs.keyFor(account, "unread")
+        }
+    }.distinctUntilChanged()
+    private val viewOverrides = MutableStateFlow<Map<String, ListView>>(emptyMap())
+    private var currentViewKey: String = ""
+
+    private fun viewFor(key: String, overrides: Map<String, ListView>): ListView =
+        overrides[key] ?: ListViewPrefs.load(getApplication<Application>(), key)
+
+    /** The choices of the view on screen. */
+    internal val listView: StateFlow<ListView> =
+        combine(listViewKey, viewOverrides) { key, overrides -> currentViewKey = key; viewFor(key, overrides) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, ListView())
+
+    private fun updateView(change: (ListView) -> ListView) {
+        val key = currentViewKey
+        val next = change(viewFor(key, viewOverrides.value))
+        ListViewPrefs.save(getApplication<Application>(), key, next)
+        viewOverrides.value = viewOverrides.value + (key to next)
+    }
+
+    internal fun setGroupMode(mode: GroupMode) = updateView { it.copy(group = mode) }
+    internal fun setRankMode(mode: RankMode) = updateView { it.copy(rank = mode) }
+    internal fun toggleListFilter(filter: ListFilter) = updateView { it.toggled(filter) }
+
+    /** What the top bar's three icon groups and the overflow show. */
+    internal val listViewUi: StateFlow<ListViewUi> =
+        combine(listView, settings.conversationView, settings.sortOrder) { view, conversation, sort ->
+            ListViewUi.of(view, conversation, sort)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, ListViewUi())
+
+    /** The sort the pager uses: this view's rank, else the global setting. */
+    private val effectiveSort: Flow<SortOrder> =
+        combine(listView, settings.sortOrder) { view, global -> view.effectiveSort(global) }.distinctUntilChanged()
+
+    /** Grouped at all (by subject or by sender), else the flat list. */
+    private val effectiveConversation: Flow<Boolean> =
+        combine(listView, settings.conversationView) { view, global -> view.effectiveGroup(global) != GroupMode.NONE }
+            .distinctUntilChanged()
+
+    private val effectiveShape: Flow<ListShape> = listView.map { it.shape() }.distinctUntilChanged()
+
+    /** The unread filter of the view on screen (one of the four filters). */
+    private val unreadOnly: StateFlow<Boolean> =
+        listView.map { ListFilter.UNREAD in it.filters }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Multi-select mode: which messages are selected (empty + inactive = off). Account-qualified
      *  keys, not bare ids: the unified inbox can show two accounts' same-id rows, and a bare-id
@@ -999,10 +1057,11 @@ class InboxViewModel(
             selection = selection,
             unifiedInboxScopes = unifiedInboxScopes,
             unreadViewScopes = unreadScopes,
-            sortOrder = settings.sortOrder,
+            sortOrder = effectiveSort,
             unreadOnly = unreadOnly,
-            conversationView = settings.conversationView,
+            conversationView = effectiveConversation,
             currentAccountId = currentAccountId,
+            listShape = effectiveShape,
         )
         .flatMapLatest { key ->
             when (val sel = key.sel) {
@@ -1015,7 +1074,7 @@ class InboxViewModel(
                         // Conversation chips also count the thread's Sent replies, resolved
                         // reactively from the folder cache as account-pinned pairs.
                         sentScopes(key, listOf(credentials.id)).flatMapLatest { sent ->
-                            repo.pagedFolder(credentials, id, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)
+                            repo.pagedFolder(credentials, id, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)
                         }
                     }
                 }
@@ -1023,7 +1082,7 @@ class InboxViewModel(
                     // The accounts the key was built from, not a fresh read of the store: the
                     // pager's rows and its Sent scope must describe the same set of accounts.
                     sentScopes(key, key.unifiedScopes.map { it.first }.distinct()).flatMapLatest { sent ->
-                        repo.pagedMailbox(key.unifiedScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)
+                        repo.pagedMailbox(key.unifiedScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)
                     }
                 }
                 Sel.Unread -> {
@@ -1031,7 +1090,7 @@ class InboxViewModel(
                     // this scope forces it on (WYSIWYG). All three branches and [selectAll] ask the
                     // SAME function — a filter decided twice is the destructive half of #126.
                     sentScopes(key, listOfNotNull(key.accountId)).flatMapLatest { sent ->
-                        repo.pagedMailbox(key.unreadScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent)
+                        repo.pagedMailbox(key.unreadScopes, key.sort, listUnreadOnly(key.sel, key.unreadOnly), key.conversationView, sent, key.shape)
                     }
                 }
             }
@@ -1069,7 +1128,7 @@ class InboxViewModel(
      *  [key] pages: unfolding a row must reuse what that row's chip counted. The viewed folders come
      *  from the paging key, never from the selection. */
     private fun sentScopes(key: PageKey, accountIds: List<String>): Flow<List<Pair<String, String>>> =
-        (if (key.conversationView) repo.observeSentMailboxes(accountIds) else flowOf(emptyList<Pair<String, String>>()))
+        (if (key.conversationView && !key.shape.bySender) repo.observeSentMailboxes(accountIds) else flowOf(emptyList<Pair<String, String>>()))
             .onEach { listScope.value = ListScope(viewedMailboxIds(key), it) }
 
     /** The folder(s) [key] pages — one folder, or every account's inbox when unified. Bare ids
@@ -1179,6 +1238,8 @@ class InboxViewModel(
     )
 
     init {
+        // Backfill the "G0 _ Auth" class of rows cached before it existed (bounded batches, once per row).
+        viewModelScope.launch(Dispatchers.IO) { runCatching { repo.indexAuth() } }
         refreshUnlessFresh()
         connectivity.start()
         observeThreadMembers()
@@ -2136,7 +2197,7 @@ class InboxViewModel(
     }
 
     fun toggleUnreadOnly() {
-        unreadOnly.value = !unreadOnly.value
+        toggleListFilter(ListFilter.UNREAD)
     }
 
     /** Mark every message in the current view as read. */
@@ -2256,7 +2317,7 @@ class InboxViewModel(
                 results = search.results?.map { it.emailKey() },
                 loading = search.loading,
                 complete = search.complete,
-                folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered), hidden),
+                folderKeys = selectableKeysMinusHidden(repo.selectableIds(currentScopes(), filtered, listView.value.shape()), hidden),
             )
         }
     }
@@ -2821,14 +2882,19 @@ class InboxViewModel(
 
     // Initialised inline, NOT from the init block: init runs before this declaration's
     // initialiser, so touching the flow there would NPE during ViewModel construction.
-    private val _watchedFolders =
-        MutableStateFlow(store.currentId()?.let { store.watchedFolders(it) } ?: emptySet())
+    private val _watchedFolders = MutableStateFlow(notifyingFolders())
 
     /** Folders watched for new mail on the current account (the inbox is always watched). */
     val watchedFolders: StateFlow<Set<String>> = _watchedFolders
 
     private fun refreshWatchedFolders() {
-        _watchedFolders.value = store.currentId()?.let { store.watchedFolders(it) } ?: emptySet()
+        _watchedFolders.value = notifyingFolders()
+    }
+
+    /** The folders that notify: the extras watched, plus the Inbox unless its "Notify about new mail" is off. */
+    private fun notifyingFolders(): Set<String> {
+        val id = store.currentId() ?: return emptySet()
+        return notifyingFolderIds(store.watchedFolders(id), store.inboxMailboxId(), store.mutedFolders(id))
     }
 
     // ---- drawer folder tree: the fold/unfold choice, kept per account ----
@@ -2888,6 +2954,13 @@ class InboxViewModel(
     /** Toggle new-mail notifications for one folder, then re-arm push to pick it up. */
     fun setFolderWatched(mailboxId: String, watched: Boolean) {
         val accountId = store.currentId() ?: return
+        if (mailboxId == store.inboxMailboxId()) {
+            // The Inbox is always refreshed (its baseline keeps advancing while it is off, so switching it
+            // back on announces only mail that arrives afterwards): the choice is a mute, not a watch.
+            store.setFolderMuted(accountId, mailboxId, muted = !watched)
+            refreshWatchedFolders()
+            return
+        }
         store.setFolderWatched(accountId, mailboxId, watched)
         // Dropping the baseline means a later re-watch reseeds silently (no stale diff).
         if (!watched) NewMailNotifier.clear(getApplication(), accountId, mailboxId)
@@ -3178,3 +3251,10 @@ internal fun selectAllKeys(
 @StringRes
 internal fun actionFailureMessage(t: Throwable, online: Boolean): Int =
     if (isOfflineFailure(t, online)) R.string.status_action_offline else R.string.status_action_failed
+
+/**
+ * The folders that notify about new mail: the extras watched, plus the Inbox unless it is muted. The Inbox
+ * is ON by default (it is in no stored set), and muting it touches no other folder.
+ */
+internal fun notifyingFolderIds(watched: Set<String>, inboxId: String?, muted: Set<String>): Set<String> =
+    watched + listOfNotNull(inboxId?.takeIf { it !in muted })

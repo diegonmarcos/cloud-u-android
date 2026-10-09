@@ -136,11 +136,14 @@ object NewMailNotifier {
         previewSources: Map<String, PreviewSource> = emptyMap(),
         previewBudget: NotificationPreviews.PreviewBudget =
             NotificationPreviews.PreviewBudget(System::currentTimeMillis),
+        // False for a folder whose "Notify about new mail" is off: nothing new is posted (no banner, no
+        // summary alert), read/departed banners are still taken down, and the baseline still advances.
+        announce: Boolean = true,
     ) {
         // One notification per conversation: the uncollapsed sync hands us every new member of a
         // thread, so a reply burst would fire one per message. The whole burst still enters the
         // baseline below, so a skipped member cannot resurface as "new".
-        val newMail = newSince(context, credentials.id, mailboxId, emails)
+        val newMail = (if (announce) newSince(context, credentials.id, mailboxId, emails) else emptyList())
             .filter { !it.isSeen }
             .groupBy { it.threadId ?: it.id }
             .map { (_, members) -> members.maxBy { it.receivedAt.orEmpty() } }

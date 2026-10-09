@@ -50,6 +50,9 @@ object FetchAndNotify {
             // diff runs once per folder, so a per-folder budget would give an account watching
             // three extras four times the reads on one radio wake-up.
             val previewBudget = NotificationPreviews.PreviewBudget(System::currentTimeMillis)
+            // Folders whose "Notify about new mail" is off (the Inbox can be). They are still refreshed and
+            // their baseline still advances, so switching back on announces only what arrives afterwards.
+            val muted = store.mutedFolders(credentials.id)
             refreshes.forEach { folder ->
                 // FIRST, and it leaves the folder entirely alone: null is the refresh saying its
                 // page cannot state what this folder holds, and the only thing this iteration would
@@ -88,6 +91,7 @@ object FetchAndNotify {
                         folder.departedIds,
                         folder.previewSources,
                         previewBudget,
+                        announce = announcesFolder(folder.mailboxId, muted),
                     )
                 }
             }
@@ -174,3 +178,9 @@ object FetchAndNotify {
  */
 internal fun seedsSilently(resetBaselines: Boolean, isInbox: Boolean, hasBaseline: Boolean): Boolean =
     (resetBaselines && isInbox) || !hasBaseline
+
+/**
+ * Whether a pass may post NEW-mail notifications for [mailboxId]: not when the folder's "Notify about new
+ * mail" is off ([muted], the Inbox's way of saying so). Reminders (RemindWorker, SnoozeWorker) never ask.
+ */
+internal fun announcesFolder(mailboxId: String, muted: Set<String>): Boolean = mailboxId !in muted
