@@ -39,6 +39,7 @@ import com.x8bit.bitwarden.data.platform.manager.ciphermatching.CipherMatchingMa
 import com.x8bit.bitwarden.data.platform.util.getAppOrigin
 import com.x8bit.bitwarden.data.platform.util.getAppSigningSignatureFingerprint
 import com.x8bit.bitwarden.data.platform.util.getSignatureFingerprintAsHexString
+import com.x8bit.bitwarden.data.platform.util.toUriOrNull
 import com.x8bit.bitwarden.data.vault.datasource.sdk.VaultSdkSource
 import com.x8bit.bitwarden.data.vault.datasource.sdk.model.AuthenticateFido2CredentialRequest
 import com.x8bit.bitwarden.data.vault.datasource.sdk.model.RegisterFido2CredentialRequest
@@ -361,6 +362,12 @@ class BitwardenCredentialManagerImpl(
             selectedCipherView = selectedCipherView,
             clientData = clientData,
             callingPackageName = callingAppInfo.packageName,
+            // `rp.id` is optional in WebAuthn: when the site omits it the RP ID is the effective
+            // domain of the origin the browser reported.
+            fallbackRpId = createPublicKeyCredentialRequest.origin
+                ?.prefixHttpsIfNecessaryOrNull()
+                ?.toUriOrNull()
+                ?.host,
         )
     }
 
@@ -371,9 +378,17 @@ class BitwardenCredentialManagerImpl(
         selectedCipherView: CipherView,
         clientData: ClientData,
         callingPackageName: String,
+        fallbackRpId: String? = null,
     ): Fido2RegisterCredentialResult {
         val requestJson =
             getPasskeyAttestationOptionsOrNull(createPublicKeyCredentialRequest.requestJson)
+                ?.let { options ->
+                    if (options.relyingParty.id.isNullOrEmpty() && fallbackRpId != null) {
+                        options.copy(relyingParty = options.relyingParty.copy(id = fallbackRpId))
+                    } else {
+                        options
+                    }
+                }
                 ?.let { passkeyAttestationOptionsSanitizer.sanitize(options = it) }
                 ?.runCatching { json.encodeToString(this) }
                 ?.fold(

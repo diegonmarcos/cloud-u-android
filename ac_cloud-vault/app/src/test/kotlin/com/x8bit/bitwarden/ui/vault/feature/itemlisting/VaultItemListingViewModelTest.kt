@@ -245,6 +245,7 @@ class VaultItemListingViewModelTest : BaseViewModelTest() {
                 callingAppInfo = any(),
             )
         } returns ValidateOriginResult.Success(null)
+        coEvery { resolveRelyingPartyIdFromOrigin(any()) } returns null
     }
 
     private val organizationEventManager = mockk<OrganizationEventManager> {

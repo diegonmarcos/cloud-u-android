@@ -27,6 +27,10 @@ val ValidateOriginResult.Error.messageResourceId: Int
             BitwardenString.passkey_operation_failed_because_browser_signature_does_not_match
         }
 
+        ValidateOriginResult.Error.RpIdOriginMismatch -> {
+            BitwardenString.passkey_operation_failed_because_rp_id_does_not_match_origin
+        }
+
         ValidateOriginResult.Error.Unknown -> {
             BitwardenString.generic_error_message
         }

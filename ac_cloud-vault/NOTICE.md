@@ -46,3 +46,13 @@ instance instead of Bitwarden's hosted cloud service.
   (`ac_cloud-vault/`).
 - Unmodified upstream source: https://github.com/bitwarden/android
   (tag `v2026.7.1-bwpm`).
+
+## Bundled data
+
+- `app/src/main/assets/fido2_privileged_google.json`: Google's published list of browsers
+  allowed to report a web origin to a Credential Manager provider, fetched unmodified from
+  https://www.gstatic.com/gpm-passkeys-privileged-apps/apps.json (package names and signing
+  certificate fingerprints). Refresh with `scripts/refresh-fido2-privileged-google.sh`. See
+  `docs/fido2-privileged-allowlist.md`.
+- `scripts/public_suffix_list.dat`: the Public Suffix List (https://publicsuffix.org/list/),
+  Mozilla Public License 2.0, used to decide which relying-party IDs are registrable domains.

@@ -21,6 +21,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
+import java.io.File
 import java.security.MessageDigest
 
 class OriginManagerTest {
@@ -50,6 +52,13 @@ class OriginManagerTest {
         assetManager = mockAssetManager,
         digitalAssetLinkService = mockDigitalAssetLinkService,
         privilegedAppRepository = mockPrivilegedAppRepository,
+        rpIdOriginMatcher = RpIdOriginMatcher(
+            resourceCacheManager = mockk {
+                every { domainExceptionSuffixes } returns emptyList()
+                every { domainNormalSuffixes } returns listOf("com", "uk", "co.uk")
+                every { domainWildCardSuffixes } returns emptyList()
+            },
+        ),
     )
 
     @BeforeEach
@@ -242,8 +251,128 @@ class OriginManagerTest {
                 ),
             )
         }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validateOrigin should return Success with the squarespace origin when Brave is in the shipped Google allow list`() =
+        runTest {
+            val braveInfo = mockBrowserInfo(
+                packageName = BRAVE_PACKAGE_NAME,
+                originAnswer = { allowList ->
+                    if (allowList.contains(BRAVE_CERT_FINGERPRINT)) {
+                        SQUARESPACE_ORIGIN
+                    } else {
+                        error("no matching signature")
+                    }
+                },
+            )
+            coEvery {
+                mockAssetManager.readAsset(GOOGLE_ALLOW_LIST_FILENAME)
+            } returns shippedAllowList(GOOGLE_ALLOW_LIST_FILENAME).asSuccess()
+
+            assertEquals(
+                ValidateOriginResult.Success("https://www.squarespace.com"),
+                originManager.validateOrigin(
+                    relyingPartyId = "www.squarespace.com",
+                    callingAppInfo = braveInfo,
+                ),
+            )
+            // rpId omitted by the site: the verified origin's host is the relying party.
+            assertEquals(
+                "www.squarespace.com",
+                originManager.resolveRelyingPartyIdFromOrigin(braveInfo),
+            )
+        }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validateOrigin should accept a registrable suffix of the origin host as the rpId`() =
+        runTest {
+            coEvery {
+                mockAssetManager.readAsset(GOOGLE_ALLOW_LIST_FILENAME)
+            } returns DEFAULT_ALLOW_LIST.asSuccess()
+            every { mockPrivilegedAppInfo.getOrigin(any()) } returns SQUARESPACE_ORIGIN
+
+            assertEquals(
+                ValidateOriginResult.Success("https://squarespace.com"),
+                originManager.validateOrigin(
+                    relyingPartyId = "squarespace.com",
+                    callingAppInfo = mockPrivilegedAppInfo,
+                ),
+            )
+        }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validateOrigin should return RpIdOriginMismatch when the rpId is not a registrable suffix of the origin host`() =
+        runTest {
+            coEvery {
+                mockAssetManager.readAsset(GOOGLE_ALLOW_LIST_FILENAME)
+            } returns DEFAULT_ALLOW_LIST.asSuccess()
+            every { mockPrivilegedAppInfo.getOrigin(any()) } returns SQUARESPACE_ORIGIN
+
+            listOf("evil.com", "com", "squarespace.com.evil.com", "login.squarespace.com")
+                .forEach { rpId ->
+                    assertEquals(
+                        ValidateOriginResult.Error.RpIdOriginMismatch,
+                        originManager.validateOrigin(
+                            relyingPartyId = rpId,
+                            callingAppInfo = mockPrivilegedAppInfo,
+                        ),
+                    )
+                }
+        }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validateOrigin should return PrivilegedAppNotAllowed for a browser that is in no allow list`() =
+        runTest {
+            val unknownBrowser = mockBrowserInfo(
+                packageName = "com.example.unknownbrowser",
+                originAnswer = { error("not reached") },
+            )
+            coEvery {
+                mockAssetManager.readAsset(GOOGLE_ALLOW_LIST_FILENAME)
+            } returns shippedAllowList(GOOGLE_ALLOW_LIST_FILENAME).asSuccess()
+            coEvery {
+                mockAssetManager.readAsset(COMMUNITY_ALLOW_LIST_FILENAME)
+            } returns shippedAllowList(COMMUNITY_ALLOW_LIST_FILENAME).asSuccess()
+            coEvery {
+                mockPrivilegedAppRepository.getUserTrustedAllowListJson()
+            } returns """{"apps": []}"""
+
+            assertEquals(
+                ValidateOriginResult.Error.PrivilegedAppNotAllowed,
+                originManager.validateOrigin(
+                    relyingPartyId = "squarespace.com",
+                    callingAppInfo = unknownBrowser,
+                ),
+            )
+            assertNull(originManager.resolveRelyingPartyIdFromOrigin(unknownBrowser))
+        }
+
+    @Test
+    fun `resolveRelyingPartyIdFromOrigin should return null for a native app`() = runTest {
+        assertNull(originManager.resolveRelyingPartyIdFromOrigin(mockNonPrivilegedAppInfo))
+    }
+
+    private fun mockBrowserInfo(
+        packageName: String,
+        originAnswer: (allowList: String) -> String,
+    ): CallingAppInfo = mockk {
+        every { isOriginPopulated() } returns true
+        every { this@mockk.packageName } returns packageName
+        every { getOrigin(any()) } answers { originAnswer(firstArg()) }
+    }
+
+    private fun shippedAllowList(fileName: String): String =
+        File("src/main/assets/$fileName").readText()
 }
 
+private const val BRAVE_PACKAGE_NAME = "com.brave.browser"
+private const val BRAVE_CERT_FINGERPRINT =
+    "9C:2D:B7:05:13:51:5F:DB:FB:BC:58:5B:3E:DF:3D:71:23:D4:DC:67:C9:4F:FD:30:63:61:C1:D7:9B:BF:18:AC"
+private const val SQUARESPACE_ORIGIN = "https://www.squarespace.com"
 private const val DEFAULT_PACKAGE_NAME = "com.x8bit.bitwarden"
 private const val DEFAULT_APP_SIGNATURE = "0987654321ABCDEF"
 private const val DEFAULT_CERT_FINGERPRINT = "30:39:38:37:36:35:34:33:32:31:41:42:43:44:45:46"

@@ -115,6 +115,30 @@
           }
         ]
       }
+    },
+    {
+      "type": "android",
+      "info": {
+        "package_name": "com.diegonmarcos.cloudbrowser",
+        "signatures": [
+          {
+            "build": "release",
+            "cert_fingerprint_sha256": "50:7E:56:A3:5B:0E:0D:7E:0A:CE:55:16:F4:94:96:E6:2F:ED:A7:21:ED:6C:17:6D:DF:B3:34:12:9C:EE:18:99"
+          }
+        ]
+      }
+    },
+    {
+      "type": "android",
+      "info": {
+        "package_name": "com.diegonmarcos.cloudvault",
+        "signatures": [
+          {
+            "build": "release",
+            "cert_fingerprint_sha256": "50:7E:56:A3:5B:0E:0D:7E:0A:CE:55:16:F4:94:96:E6:2F:ED:A7:21:ED:6C:17:6D:DF:B3:34:12:9C:EE:18:99"
+          }
+        ]
+      }
     }
   ]
 }

@@ -18,13 +18,18 @@ fun CallingAppInfo.getSignatureFingerprintAsHexString(): String? {
 }
 
 /**
- * Returns true if this [CallingAppInfo] is present in the privileged app [allowList]. Otherwise,
- * returns false.
+ * Validates this privileged [CallingAppInfo] against the privileged app [allowList].
+ *
+ * The browser's origin is resolved with `CallingAppInfo.getOrigin(allowList)`, which only returns
+ * one when both the package name and the signing certificate are in the list. The result is
+ * [ValidateOriginResult.Error.RpIdOriginMismatch] when [isRpIdValidForOrigin] rejects the
+ * [relyingPartyId] for that origin.
  */
 fun CallingAppInfo.validatePrivilegedApp(
     relyingPartyId: String,
     allowList: String,
     isVerifiedSource: Boolean,
+    isRpIdValidForOrigin: (relyingPartyId: String, origin: String) -> Boolean = { _, _ -> true },
 ): ValidateOriginResult {
     if (!allowList.contains("\"$packageName\"")) {
         return ValidateOriginResult.Error.PrivilegedAppNotAllowed
@@ -34,6 +39,8 @@ fun CallingAppInfo.validatePrivilegedApp(
         val origin = getOrigin(allowList)
         if (origin.isNullOrEmpty()) {
             ValidateOriginResult.Error.PasskeyNotSupportedForApp
+        } else if (!isRpIdValidForOrigin(relyingPartyId, origin)) {
+            ValidateOriginResult.Error.RpIdOriginMismatch
         } else {
             ValidateOriginResult.Success(
                 origin = if (isVerifiedSource) {

@@ -1199,16 +1199,15 @@ class VaultItemListingViewModel @Inject constructor(
                 )
                 return
             }
-        val relyingPartyId = relyingPartyParser.parse(option)
-            ?: run {
-                showCredentialManagerErrorDialog(
-                    BitwardenString
-                        .passkey_operation_failed_because_relying_party_cannot_be_identified
-                        .asText(),
-                )
-                return
-            }
+        val parsedRelyingPartyId = relyingPartyParser.parse(option)
         viewModelScope.launch {
+            // `rpId` is optional in WebAuthn: default to the browser's verified origin.
+            val relyingPartyId = parsedRelyingPartyId
+                ?: originManager.resolveRelyingPartyIdFromOrigin(request.callingAppInfo)
+                ?: run {
+                    showRelyingPartyCannotBeIdentifiedDialog()
+                    return@launch
+                }
             val validateOriginResult = originManager
                 .validateOrigin(
                     relyingPartyId = relyingPartyId,
@@ -2306,18 +2305,17 @@ class VaultItemListingViewModel @Inject constructor(
     private fun handleRegisterFido2CredentialRequestReceive(
         action: VaultItemListingsAction.Internal.CreateCredentialRequestReceive,
     ) {
-        val relyingPartyId = action.request.providerRequest
+        val parsedRelyingPartyId = action.request.providerRequest
             .getCreatePasskeyCredentialRequestOrNull()
             ?.let { relyingPartyParser.parse(it) }
-            ?: run {
-                showCredentialManagerErrorDialog(
-                    BitwardenString
-                        .passkey_operation_failed_because_relying_party_cannot_be_identified
-                        .asText(),
-                )
-                return
-            }
         viewModelScope.launch {
+            // `rp.id` is optional in WebAuthn: default to the browser's verified origin.
+            val relyingPartyId = parsedRelyingPartyId
+                ?: originManager.resolveRelyingPartyIdFromOrigin(action.request.callingAppInfo)
+                ?: run {
+                    showRelyingPartyCannotBeIdentifiedDialog()
+                    return@launch
+                }
             val validateOriginResult = originManager
                 .validateOrigin(
                     relyingPartyId = relyingPartyId,
@@ -2414,21 +2412,20 @@ class VaultItemListingViewModel @Inject constructor(
                 return
             }
 
-        val relyingPartyId = request
+        val parsedRelyingPartyId = request
             .beginGetPublicKeyCredentialOptions
             .mapNotNull { relyingPartyParser.parse(it) }
             .distinct()
             .firstOrNull()
-            ?: run {
-                showCredentialManagerErrorDialog(
-                    BitwardenString
-                        .passkey_operation_failed_because_relying_party_cannot_be_identified
-                        .asText(),
-                )
-                return
-            }
 
         viewModelScope.launch {
+            // `rpId` is optional in WebAuthn: default to the browser's verified origin.
+            val relyingPartyId = parsedRelyingPartyId
+                ?: originManager.resolveRelyingPartyIdFromOrigin(callingAppInfo)
+                ?: run {
+                    showRelyingPartyCannotBeIdentifiedDialog()
+                    return@launch
+                }
             val validateOriginResult = originManager.validateOrigin(
                 relyingPartyId = relyingPartyId,
                 callingAppInfo = callingAppInfo,
@@ -2455,6 +2452,14 @@ class VaultItemListingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun showRelyingPartyCannotBeIdentifiedDialog() {
+        showCredentialManagerErrorDialog(
+            BitwardenString
+                .passkey_operation_failed_because_relying_party_cannot_be_identified
+                .asText(),
+        )
     }
 
     private fun handleOriginValidationFail(

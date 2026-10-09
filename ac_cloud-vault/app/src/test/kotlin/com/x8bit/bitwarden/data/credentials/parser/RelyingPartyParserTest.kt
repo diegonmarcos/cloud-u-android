@@ -67,6 +67,30 @@ class RelyingPartyParserTest {
     }
 
     @Test
+    fun `parse CreatePublicKeyCredentialRequest should read rp id from sparse options`() {
+        val result = relyingPartyParser.parse(
+            mockk<CreatePublicKeyCredentialRequest> {
+                every { requestJson } returns SPARSE_ATTESTATION_OPTIONS_JSON
+            },
+        )
+
+        assertEquals("www.squarespace.com", result)
+    }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `parse CreatePublicKeyCredentialRequest should return null for sparse options without rp id`() {
+        val result = relyingPartyParser.parse(
+            mockk<CreatePublicKeyCredentialRequest> {
+                every { requestJson } returns SPARSE_ATTESTATION_OPTIONS_JSON
+                    .replace("{ \"id\": \"www.squarespace.com\" }", "{}")
+            },
+        )
+
+        assertNull(result)
+    }
+
+    @Test
     fun `parse BeginGetPublicKeyCredentialOption should return relyingPartyId`() {
         val result = relyingPartyParser.parse(
             mockk<BeginGetPublicKeyCredentialOption> {
@@ -177,6 +201,14 @@ private val INVALID_ASSERTION_OPTIONS_JSON = """
   "allowCredentials": [],
   "timeout": 60000,
   "userVerification": "preferred",
+}
+"""
+    .trimIndent()
+private val SPARSE_ATTESTATION_OPTIONS_JSON = """
+{
+  "challenge": "tZ1rLJ_paLC8IMmg",
+  "rp": { "id": "www.squarespace.com" },
+  "user": { "id": "UmhpTE9NOUY", "name": "mockUserName" }
 }
 """
     .trimIndent()

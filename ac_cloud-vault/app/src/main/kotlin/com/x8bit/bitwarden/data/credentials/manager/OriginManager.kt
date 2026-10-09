@@ -20,4 +20,14 @@ interface OriginManager {
         relyingPartyId: String,
         callingAppInfo: CallingAppInfo,
     ): ValidateOriginResult
+
+    /**
+     * Resolves the relying party ID of a request that carries none (`rp.id` / `rpId` are optional
+     * in WebAuthn, the default being the effective domain of the origin).
+     *
+     * Only a browser on the privileged-app allow lists can vouch for a web origin, so this
+     * returns the host of `CallingAppInfo.getOrigin(allowList)` for those, and null for native
+     * apps or browsers that are not allowed.
+     */
+    suspend fun resolveRelyingPartyIdFromOrigin(callingAppInfo: CallingAppInfo): String?
 }

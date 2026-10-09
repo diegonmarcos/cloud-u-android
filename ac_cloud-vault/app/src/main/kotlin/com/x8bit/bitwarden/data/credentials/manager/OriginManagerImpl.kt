@@ -21,7 +21,28 @@ class OriginManagerImpl(
     private val assetManager: AssetManager,
     private val digitalAssetLinkService: DigitalAssetLinkService,
     private val privilegedAppRepository: PrivilegedAppRepository,
+    private val rpIdOriginMatcher: RpIdOriginMatcher,
 ) : OriginManager {
+
+    override suspend fun resolveRelyingPartyIdFromOrigin(
+        callingAppInfo: CallingAppInfo,
+    ): String? {
+        if (!callingAppInfo.isOriginPopulated()) return null
+        val allowListSources: List<suspend () -> String?> = listOf(
+            { assetManager.readAsset(GOOGLE_ALLOW_LIST_FILE_NAME).getOrNull() },
+            { assetManager.readAsset(COMMUNITY_ALLOW_LIST_FILE_NAME).getOrNull() },
+            { privilegedAppRepository.getUserTrustedAllowListJson() },
+        )
+        for (source in allowListSources) {
+            val allowList = source()
+                ?.takeIf { it.contains("\"${callingAppInfo.packageName}\"") }
+                ?: continue
+            // Throws when the package's signing certificate is not in this list.
+            val origin = runCatching { callingAppInfo.getOrigin(allowList) }.getOrNull()
+            if (!origin.isNullOrEmpty()) return rpIdOriginMatcher.hostOf(origin)
+        }
+        return null
+    }
 
     override suspend fun validateOrigin(
         relyingPartyId: String,
@@ -101,6 +122,7 @@ class OriginManagerImpl(
         relyingPartyId = relyingPartyId,
         allowList = privilegedAppRepository.getUserTrustedAllowListJson(),
         isVerifiedSource = true,
+        isRpIdValidForOrigin = rpIdOriginMatcher::isRpIdValidForOrigin,
     )
 
     private suspend fun validatePrivilegedAppSignatureWithAllowList(
@@ -116,6 +138,7 @@ class OriginManagerImpl(
                     relyingPartyId = relyingPartyId,
                     allowList = allowList,
                     isVerifiedSource = isVerifiedSource,
+                    isRpIdValidForOrigin = rpIdOriginMatcher::isRpIdValidForOrigin,
                 )
             }
             .fold(

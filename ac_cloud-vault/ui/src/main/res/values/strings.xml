@@ -948,6 +948,7 @@ Do you want to switch to this account?</string>
     <string name="passkey_operation_failed_because_app_signature_is_invalid">Passkey operation failed because app signature is invalid.</string>
     <string name="passkey_registration_failed_due_to_an_internal_error">Passkey registration failed due to an internal error.</string>
     <string name="passkey_operation_failed_because_relying_party_cannot_be_identified">Passkey operation failed because relying party cannot be identified.</string>
+    <string name="passkey_operation_failed_because_rp_id_does_not_match_origin">Passkey operation failed because the relying party ID does not match the website the browser is on.</string>
     <string name="passkey_operation_failed_because_the_request_is_invalid">Passkey operation failed because the request is invalid.</string>
     <string name="passkey_operation_failed_because_no_item_was_selected">Passkey operation failed because no item was selected.</string>
     <string name="passkey_operation_failed_because_the_request_is_unsupported">Passkey operation failed because the request is unsupported.</string>

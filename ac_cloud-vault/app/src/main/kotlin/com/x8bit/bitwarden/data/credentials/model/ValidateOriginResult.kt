@@ -37,6 +37,12 @@ sealed class ValidateOriginResult {
         data object PrivilegedAppSignatureNotFound : Error()
 
         /**
+         * Indicates the calling app is a trusted browser, but the relying party ID of the request
+         * is not the origin's host or a registrable domain suffix of it.
+         */
+        data object RpIdOriginMismatch : Error()
+
+        /**
          * Indicates passkeys are not supported for the requesting application.
          */
         data object PasskeyNotSupportedForApp : Error()

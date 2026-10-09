@@ -18,6 +18,7 @@ import com.x8bit.bitwarden.data.credentials.manager.CredentialProviderRequestMan
 import com.x8bit.bitwarden.data.credentials.manager.CredentialProviderRequestManagerImpl
 import com.x8bit.bitwarden.data.credentials.manager.OriginManager
 import com.x8bit.bitwarden.data.credentials.manager.OriginManagerImpl
+import com.x8bit.bitwarden.data.credentials.manager.RpIdOriginMatcher
 import com.x8bit.bitwarden.data.credentials.parser.RelyingPartyParser
 import com.x8bit.bitwarden.data.credentials.parser.RelyingPartyParserImpl
 import com.x8bit.bitwarden.data.credentials.processor.CredentialProviderProcessor
@@ -27,6 +28,7 @@ import com.x8bit.bitwarden.data.credentials.repository.PrivilegedAppRepositoryIm
 import com.x8bit.bitwarden.data.credentials.sanitizer.PasskeyAttestationOptionsSanitizer
 import com.x8bit.bitwarden.data.credentials.sanitizer.PasskeyAttestationOptionsSanitizerImpl
 import com.x8bit.bitwarden.data.platform.manager.AssetManager
+import com.x8bit.bitwarden.data.platform.manager.ResourceCacheManager
 import com.x8bit.bitwarden.data.platform.manager.ciphermatching.CipherMatchingManager
 import com.x8bit.bitwarden.data.vault.datasource.sdk.VaultSdkSource
 import com.x8bit.bitwarden.data.vault.repository.VaultRepository
@@ -95,11 +97,13 @@ object CredentialProviderModule {
         assetManager: AssetManager,
         digitalAssetLinkService: DigitalAssetLinkService,
         privilegedAppRepository: PrivilegedAppRepository,
+        resourceCacheManager: ResourceCacheManager,
     ): OriginManager =
         OriginManagerImpl(
             assetManager = assetManager,
             digitalAssetLinkService = digitalAssetLinkService,
             privilegedAppRepository = privilegedAppRepository,
+            rpIdOriginMatcher = RpIdOriginMatcher(resourceCacheManager),
         )
 
     @Provides
