@@ -3046,6 +3046,13 @@
             "title": "Configs",
             "tiles": [
               {
+                "_doc": "#803 the owner moved this tile out of AGI to sit immediately before Store (test-agi-tiles.sh T5). app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
+                "id": "cloud-superapp",
+                "label": "SuperApp",
+                "icon": "ic_superapp_d",
+                "target": "app://com.diegonmarcos.superapp"
+              },
+              {
                 "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
                 "label": "Configs",
                 "icon": "ic_settings",
@@ -3083,20 +3090,6 @@
                 "label": "About",
                 "icon": "ic_settings",
                 "target": "page:config/about"
-              },
-              {
-                "_doc": "#803 the owner moved this tile out of AGI to sit immediately before Store (test-agi-tiles.sh T5). app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
-                "id": "cloud-superapp",
-                "label": "SuperApp",
-                "icon": "ic_superapp_d",
-                "target": "app://com.diegonmarcos.superapp"
-              },
-              {
-                "_doc": "Account (#867) — Cloud Account is its own app (ac_cloud-account), so this tile is extapp:, like Store and C3: it opens the app, or offers the install through ui.external_apps[id=cloud-account] when it is absent. Sits between Store and Configs by the owner's ordering of this row.",
-                "id": "cloud-account",
-                "label": "Account",
-                "icon": "ic_settings",
-                "target": "extapp:cloud-account"
               }
             ]
           }

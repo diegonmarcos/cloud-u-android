@@ -139,12 +139,12 @@ for d in locales:
               "phone_install_downloading", "phone_install_no_source"):
         check('name="%s"' % s in xml, "%s/strings.xml defines %s" % (d, s))
 
-print("== T5: the Configs row reads Configs │ Presets, Store, C3, About, then SuperApp, Account ==")
+print("== T5: the Configs row reads SuperApp, Configs │ Presets, Store, C3, About ==")
 configs = [g for g in groups(bj["ui"]["sections"], "Configs")]
 check(len(configs) == 1, "exactly one Configs tile group under ui.sections (found %d)" % len(configs))
 if configs:
     row = [t.get("label") for t in configs[0]["tiles"]]
-    check(row == ["Configs", "|", "Presets", "Store", "C3", "About", "SuperApp", "Account"], "Configs row = Configs | Presets, Store, C3, About (owner order), SuperApp and Account kept after (got %s)" % row)
+    check(row == ["SuperApp", "Configs", "|", "Presets", "Store", "C3", "About"], "Configs row = SuperApp, Configs | Presets, Store, C3, About (owner order; no Account tile) (got %s)" % row)
     sa = next((t for t in configs[0]["tiles"] if t.get("label") == "SuperApp"), {})
     check(sa.get("id") == "cloud-superapp" and sa.get("target") == "app://" + bj["android"]["application_id"],
           "the moved SuperApp tile still opens this app's own package (%s)" % sa.get("target"))
