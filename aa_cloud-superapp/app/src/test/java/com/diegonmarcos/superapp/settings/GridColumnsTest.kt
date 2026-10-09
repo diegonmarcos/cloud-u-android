@@ -88,7 +88,7 @@ class GridColumnsTest {
     @Test fun sevenColumnsFitA360dpScreen() {
         val d = 3f // xxhdpi; the arithmetic is in px, so density must not matter
         fun px(dp: Int) = (dp * d).toInt()
-        val screen = 360
+        val screen = px(360)
         for (cols in GridColumns.MIN..GridColumns.MAX) {
             // Phone strip tile: 52 dp icon wanted, 6 dp padding a side, page pad 8 dp a side.
             val cell = GridColumns.cellPx(screen - px(16), cols)
