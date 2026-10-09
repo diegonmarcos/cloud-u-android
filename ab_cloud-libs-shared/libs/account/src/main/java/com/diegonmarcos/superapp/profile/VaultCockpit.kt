@@ -304,7 +304,11 @@ object VaultCockpit {
                 profiles.keys().forEach { name -> (profiles.opt(name) as? String)?.let { candidates.putIfAbsent("$id/$name", it) } }
             }
         }
-        return candidates.filter { (_, conf) -> addressesOf(conf).any { it in mine } }.toSortedMap()
+        // One profile per TEXT: the vault may declare a device's profiles under two trees (the mesh
+        // section's devices/<id>/… and the peers section's <id>/…); the same conf twice would be
+        // two selectable rows of the same name, and "8 profiles stored" for four.
+        val seen = HashSet<String>()
+        return candidates.filter { (_, conf) -> addressesOf(conf).any { it in mine } && seen.add(conf.trim()) }.toSortedMap()
     }
 
     /** What this device's tunnel is right now, for the comparison column. */

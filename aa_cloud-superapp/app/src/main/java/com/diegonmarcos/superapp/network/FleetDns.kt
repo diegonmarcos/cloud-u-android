@@ -286,8 +286,19 @@ object FleetDns {
         val p = Prefs(ctx); val up = meshUp(ctx); val fleet = fleetResolvers(ctx)
         val label = effective(decl, p.preset).label
         val servers = upstreamsFor(decl, name, up, promised(decl, p.preset, p.fallbacks, p.chosen, fleet, up), fleet)
-        return if (servers.isEmpty()) FleetDnsBridge.mirror(label)
-        else listOf(FleetDnsBridge.Route("Android system resolver ($label)")) + servers.map { FleetDnsBridge.Route("$label $it", listOf(it)) }
+        val android = FleetDnsBridge.Route("Android system resolver ($label)")
+        return when {
+            servers.isEmpty() -> FleetDnsBridge.mirror(label)
+            // A mesh name while the mesh is up is the fleet resolver's to answer (hickory's split
+            // horizon: vault.diegonmarcos.com → the gateway's mesh address). Android's resolver
+            // races every server it holds and handed the PUBLIC address back first, so the
+            // tunnel was never used for the fleet's own names. It stays only as the last
+            // resort of a preset that allows fallbacks.
+            up && fleet.isNotEmpty() && isMeshName(decl, name) ->
+                servers.map { FleetDnsBridge.Route("$label $it", listOf(it)) } +
+                    (if (effective(decl, p.preset).fallbackAllowed) listOf(android) else emptyList())
+            else -> listOf(android) + servers.map { FleetDnsBridge.Route("$label $it", listOf(it)) }
+        }
     }
 
     // ── #794 is the choice in effect? ────────────────────────────────────
