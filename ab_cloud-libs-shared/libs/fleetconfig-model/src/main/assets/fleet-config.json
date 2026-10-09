@@ -548,6 +548,22 @@
         "lib-appstore"
       ]
     },
+    "store_integrity_marks": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory).",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
+    "store_play_anon": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "store_fleet_bearer_fallback": {
       "kind": "prefs",
       "class": "secret",

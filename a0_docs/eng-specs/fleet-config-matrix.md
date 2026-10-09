@@ -15,11 +15,11 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 40 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 41 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 9 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 10 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
@@ -43,12 +43,12 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 2 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
-| cloud-store | `com.diegonmarcos.cloudstore` | 5 | 0 | 100% |
+| cloud-store | `com.diegonmarcos.cloudstore` | 6 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 9 | 7 | 56% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **190** | **35** | **84%** |
+| **fleet** | | **193** | **35** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -114,7 +114,9 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -136,7 +138,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 40 covered, 0 gaps.
+Coverage: 41 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -205,13 +207,15 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottom
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 9 covered, 0 gaps.
+Coverage: 10 covered, 0 gaps.
 
 ## cloud-agenda — `com.diegonmarcos.cloudagenda`
 
@@ -796,11 +800,13 @@ Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtoo
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
+| `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 
