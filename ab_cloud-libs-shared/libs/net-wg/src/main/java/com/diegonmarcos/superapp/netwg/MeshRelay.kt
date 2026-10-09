@@ -7,6 +7,7 @@ import java.io.BufferedInputStream
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -95,11 +96,15 @@ class MeshRelay(
 
     /** TCP (protected, by address: no DNS) and, unless [RelaySpec.tls] is off, a verified TLS session. */
     private fun connect(s: RelaySpec, addr: String): Socket {
+        val target = InetAddress.getByName(addr)
         val raw = Socket()
-        protect(raw)
         try {
+            // A bare Socket() has no file descriptor until it is bound, and protect() marks that fd:
+            // bind first (wildcard of the target's family, ephemeral port), then protect, then connect.
+            raw.bind(InetSocketAddress(InetAddress.getByName(if (target is Inet6Address) "::" else "0.0.0.0"), 0))
+            runCatching { protect(raw) }
             raw.tcpNoDelay = true
-            raw.connect(InetSocketAddress(InetAddress.getByName(addr), s.port), CONNECT_MS)
+            raw.connect(InetSocketAddress(target, s.port), CONNECT_MS)
             raw.soTimeout = CONNECT_MS
             if (!s.tls) return raw
             val ssl = tlsFactory().createSocket(raw, s.host, s.port, true) as SSLSocket

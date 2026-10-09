@@ -118,6 +118,14 @@ class MeshRelayTest {
         assertTrue(!none.ok && none.error.isNotBlank())
     }
 
+    @Test fun theSocketIsBoundBeforeItIsProtected() {
+        // VpnService.protect marks the socket's descriptor, which a bare Socket() does not have yet.
+        val seen = ArrayList<Boolean>()
+        val r = MeshRelay(protect = { seen += it.isBound && !it.isConnected; true }).also { relays += it }
+        assertTrue(RelayProbe.parse(r.probe(spec(freeUdpPort()))).ok)
+        assertEquals(listOf(true), seen)
+    }
+
     @Test fun stoppingReleasesThePort() {
         val port = freeUdpPort()
         val r = relay()

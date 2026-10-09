@@ -79,7 +79,14 @@ public final class GoBackend implements Backend {
      */
     public static boolean protectSocket(final java.net.Socket socket) {
         final VpnService service = vpnService.getNow(null);
-        return service != null && service.protect(socket);
+        if (service == null) return false;
+        try {
+            return service.protect(socket);
+        } catch (final RuntimeException e) {
+            // A socket with no descriptor yet (never bound) cannot be marked.
+            Log.w(TAG, "protectSocket: " + e);
+            return false;
+        }
     }
 
     @Nullable private static native String wgGetConfig(int handle);
