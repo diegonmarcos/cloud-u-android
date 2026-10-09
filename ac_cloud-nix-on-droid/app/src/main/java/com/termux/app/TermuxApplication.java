@@ -29,6 +29,8 @@ public class TermuxApplication extends Application {
 
     /** #758 held so the bridge's sockets live as long as the process. */
     private static SystemDnsBridge dnsBridge;
+    /** #900 the ordered upstream reads the active network's DNS list through it. */
+    private static Context dnsContext;
     /** #794 why there is no bridge here, for /api/sysdns/state; null while none was tried. */
     private static String dnsBridgeWhyNot;
 
@@ -53,6 +55,7 @@ public class TermuxApplication extends Application {
         // and runs proot -p, so every shell lookup (a typed session, RunCommandService or
         // /api/terminal/exec, all of which run in this process) lands here and is answered by
         // Android's resolver, i.e. by the SuperApp's DNS menu. Before any early return below.
+        dnsContext = getApplicationContext();
         startDnsBridge();
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
@@ -147,7 +150,7 @@ public class TermuxApplication extends Application {
     /** One bind on the shells' port: true when this terminal now answers it. */
     private static boolean bindDnsBridge() {
         try {
-            dnsBridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
+            dnsBridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.ordered(dnsContext),
                 line -> Logger.logInfo(LOG_TAG, line));
             dnsBridgeWhyNot = null;
             return true;

@@ -1,7 +1,11 @@
 package com.diegonmarcos.cloudlib.sysdns;
 
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.DnsResolver;
+import android.net.LinkProperties;
+import android.net.Network;
 
 import java.io.Closeable;
 import java.io.DataInputStream;
@@ -314,6 +318,59 @@ public final class SystemDnsBridge implements Closeable {
      * looper; the inline executor this once passed ran the callback right there. Its own thread
      * keeps main out of it, and the bridge moves the answer to its reply thread regardless.
      */
+    /**
+     * #900 The active network's DNS servers, asked ONE AT A TIME IN THEIR ORDER; the next only on a
+     * timeout or a non-definitive answer (anything but NOERROR / NXDOMAIN).
+     *
+     * Under the Cloud Mesh VPN that list IS the DNS preset ("Private with fallbacks": 10.0.0.1,
+     * 10.1.0.1, then the public ones), but Android's resolver does not walk it in order: it picks
+     * by its own server statistics and caches what a public fallback said while the mesh was down.
+     * Measured 2026-10-09 with the mesh up: the fleet resolver answered vault.diegonmarcos.com
+     * 10.0.0.1, the shell's bridge (via [android]) answered the public 129.151.228.66 and the
+     * wg_only vault returned 403. No DNS list (or none answered) = [android].
+     */
+    @TargetApi(29)
+    public static Upstream ordered(Context context) {
+        final Context app = context.getApplicationContext();
+        final Upstream fallback = android();
+        final ExecutorService walkers = Executors.newCachedThreadPool(named("sysdns-ordered"));
+        return new Upstream() {
+            @Override public void query(final byte[] query, final Answer done) {
+                try {
+                    walkers.execute(new Runnable() { @Override public void run() {
+                        ConnectivityManager cm = app.getSystemService(ConnectivityManager.class);
+                        Network net = cm == null ? null : cm.getActiveNetwork();
+                        LinkProperties lp = net == null ? null : cm.getLinkProperties(net);
+                        if (lp != null) for (InetAddress server : lp.getDnsServers()) {
+                            byte[] a = askServer(query, server, net);
+                            if (a != null && a.length >= 12 && ((a[3] & 0x0F) == 0 || (a[3] & 0x0F) == 3)) { done.reply(a); return; }
+                        }
+                        fallback.query(query, done);
+                    }});
+                } catch (RejectedExecutionException e) { done.reply(null); }
+            }
+        };
+    }
+
+    /** Ordered walk timeout per server: short, so a dead fleet resolver costs little before the next. */
+    private static final int ORDERED_TIMEOUT_MS = 1500;
+
+    /** [query] to [server]:53 over UDP on [net]; null on timeout, error or a reply to another query. */
+    private static byte[] askServer(byte[] query, InetAddress server, Network net) {
+        try (DatagramSocket s = new DatagramSocket()) {
+            if (net != null) net.bindSocket(s);
+            s.setSoTimeout(ORDERED_TIMEOUT_MS);
+            s.send(new DatagramPacket(query, query.length, server, 53));
+            byte[] buf = new byte[4096];
+            DatagramPacket p = new DatagramPacket(buf, buf.length);
+            s.receive(p);
+            if (p.getLength() < 12 || buf[0] != query[0] || buf[1] != query[1]) return null;
+            return Arrays.copyOf(buf, p.getLength());
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     @TargetApi(29)
     public static Upstream android() {
         final Executor callbacks = Executors.newSingleThreadExecutor(named("sysdns-netd"));

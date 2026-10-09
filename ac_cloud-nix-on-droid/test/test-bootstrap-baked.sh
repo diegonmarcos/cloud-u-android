@@ -1764,7 +1764,7 @@ if dns_patch_ok "$BAKE_PY" && grep -qF 'patch_bin_login_dns(bin_login, app_id, d
     && grep -qF 'cloudDnsBridge().resolv_conf' "$GRADLE" && grep -qF 'CLOUD_DNS_BRIDGE_PORT' "$GRADLE" \
     && grep -qF "'src/bridge/java'" "$GRADLE" \
     && grep -qF 'startDnsBridge();' "$DIR/app/src/main/java/com/termux/app/TermuxApplication.java" \
-    && grep -qF 'SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android()' "$DIR/app/src/main/java/com/termux/app/TermuxApplication.java"; then
+    && grep -qF 'SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.ordered(dnsContext)' "$DIR/app/src/main/java/com/termux/app/TermuxApplication.java"; then
     ok "#758 bin/login binds a loopback-only resolv.conf after /etc and passes -p; the app starts libs/sysdns's bridge on the declared port"
 else
     bad "#758 the nix shell's DNS does not reach the app's bridge (bin/login patch, baked resolv.conf, gradle wiring or bridge start missing)"

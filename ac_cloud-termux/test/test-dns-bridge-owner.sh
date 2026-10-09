@@ -29,7 +29,7 @@ grep -q "is the terminals' shell port (#889)" "$FLEET" && ok "its state says who
 for f in "$TERMUX" "$NIX"; do
   n="$(basename "$f")"
   echo "== $n: binds the shells' port and retries until it owns it =="
-  grep -q 'new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android()' "$f" \
+  grep -qE 'new SystemDnsBridge\(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.ordered\((app|dnsContext)\)' "$f" \
     && ok "$n binds bridge_port (baked as CLOUD_DNS_BRIDGE_PORT)" || bad "$n does not bind bridge_port"
   grep -q 'RETRY_MS = 3000' "$f" && grep -q '"sysdns-rebind"' "$f" && grep -q 'setDaemon(true)' "$f" \
     && ok "$n retries every 3 s on the daemon thread sysdns-rebind" || bad "$n has no rebind retry"
@@ -43,6 +43,12 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 sys.exit(0 if ("#889" in d["_doc_bridge_port"] and "ONLY A TERMINAL BINDS IT" in d["_doc_bridge_port"] and d["bridge_port"] == 2053) else 1)
 PY
+
+# #900 the shells' bridge asks the network's DNS list IN ORDER (fleet resolver first), never Android's own pick
+BR="$ANDROID/ab_cloud-libs-shared/libs/sysdns/src/bridge/java/com/diegonmarcos/cloudlib/sysdns/SystemDnsBridge.java"
+grep -q 'public static Upstream ordered(Context context)' "$BR" && grep -q 'for (InetAddress server : lp.getDnsServers())' "$BR" \
+  && ok "SystemDnsBridge.ordered walks the active network's DNS servers in order (#900)" || bad "no ordered upstream in SystemDnsBridge"
+grep -q 'listOfNotNull(vpnOrdered()) + underlying()' "$FLEET" && ok "FleetDnsBridge.mirror asks the VPN's DNS list in order first (#900)" || bad "mirror() does not start with the ordered VPN list"
 
 if [ "$fails" -eq 0 ]; then echo "test-dns-bridge-owner: all green"; exit 0; fi
 echo "test-dns-bridge-owner: $fails failure(s)"; exit 1

@@ -163,7 +163,7 @@ final class TerminalDebugApi {
             // log says why.
             Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
         }
-        CloudDnsBridge.start();
+        CloudDnsBridge.start(app);
 
         if (CloudRootfs.isUnpacked()) return new JSONObject().put("ok", true).put("bootstrap", "ready");
         JSONObject unpack = run(app, "true", UNPACK_TIMEOUT_MS);

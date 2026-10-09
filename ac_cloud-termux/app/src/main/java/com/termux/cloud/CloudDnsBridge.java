@@ -32,7 +32,11 @@ public final class CloudDnsBridge {
     private static final long RETRY_MS = 3000;
     private static Thread rebind;
 
-    public static synchronized void start() {
+    /** #900 for the ordered upstream: the active network's DNS list. Set by the first start(Context). */
+    private static android.content.Context app;
+
+    public static synchronized void start(android.content.Context context) {
+        app = context.getApplicationContext();
         if (bridge != null || rebind != null) return;
         if (Build.VERSION.SDK_INT < 29) {
             // ponytail: no raw system resolver below Android 10 (DnsResolver is API 29); the shell
@@ -62,7 +66,7 @@ public final class CloudDnsBridge {
     /** One bind on the shells' port: true when this terminal now answers it. */
     private static boolean bind() {
         try {
-            bridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.android(),
+            bridge = new SystemDnsBridge(BuildConfig.CLOUD_DNS_BRIDGE_PORT, SystemDnsBridge.ordered(app),
                 line -> Logger.logInfo(LOG_TAG, line));
             whyNot = null;
             return true;

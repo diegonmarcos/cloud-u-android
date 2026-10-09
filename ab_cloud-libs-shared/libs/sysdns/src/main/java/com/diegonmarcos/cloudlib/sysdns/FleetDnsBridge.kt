@@ -86,7 +86,20 @@ object FleetDnsBridge {
 
     /** Mirror Android: the system resolver on each underlying (non-VPN) network, then the uid's default. */
     fun mirror(preset: String? = null): List<Route> =
-        underlying() + Route("Android system resolver" + (preset?.let { " ($it)" } ?: ""))
+        listOfNotNull(vpnOrdered()) + underlying() + Route("Android system resolver" + (preset?.let { " ($it)" } ?: ""))
+
+    /**
+     * #900 The VPN's DNS list asked IN ITS ORDER (the Cloud Mesh preset: fleet resolver first).
+     * Android's resolver picks among those servers by its own statistics, so with the mesh up a
+     * public fallback could answer a fleet name with its public address (a wg_only host then 403s).
+     */
+    private fun vpnOrdered(): Route? {
+        val cm = app?.getSystemService(ConnectivityManager::class.java) ?: return null
+        @Suppress("DEPRECATION")
+        val vpn = cm.allNetworks.firstOrNull { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true } ?: return null
+        val servers = cm.getLinkProperties(vpn)?.dnsServers?.map { it.hostAddress ?: "" }?.filter { it.isNotEmpty() }.orEmpty()
+        return if (servers.isEmpty()) null else Route("VPN DNS in order", servers, vpn)
+    }
 
     private fun underlying(): List<Route> {
         val cm = app?.getSystemService(ConnectivityManager::class.java) ?: return emptyList()
@@ -166,7 +179,8 @@ object FleetDnsBridge {
         try {
             return runCatching {
                 if (r.servers.isEmpty()) android(q, r.network)
-                else r.servers.firstNotNullOfOrNull { s -> runCatching { forward(q, s, r.network) }.getOrNull() }
+                // in order; a SERVFAIL / REFUSED from one server moves on to the next (#900)
+                else r.servers.firstNotNullOfOrNull { s -> runCatching { forward(q, s, r.network) }.getOrNull()?.takeIf { DnsWire.rcode(it) in DEFINITIVE } }
             }.getOrNull()
         } finally { inFlight.release() }
     }

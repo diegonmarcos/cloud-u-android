@@ -125,7 +125,7 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
         Logger.logVerbose(LOG_TAG, "onCreate");
         runStartForeground();
         // #741 the rootfs shell resolves through Android's resolver, never a server of its own.
-        CloudDnsBridge.start();
+        CloudDnsBridge.start(this);
     }
 
     @SuppressLint("Wakelock")
