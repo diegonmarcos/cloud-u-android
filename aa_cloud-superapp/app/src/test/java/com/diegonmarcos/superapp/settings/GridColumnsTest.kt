@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.settings
 
 import android.app.Application
 import android.content.Context
+import android.view.ContextThemeWrapper
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.launcher.IndexTiles
@@ -22,6 +23,8 @@ import org.robolectric.annotation.Config
 class GridColumnsTest {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
+    // MaterialCardView (IndexTiles) insists on a Material theme; the app context has none here.
+    private val themed: Context get() = ContextThemeWrapper(ctx, com.google.android.material.R.style.Theme_MaterialComponents)
 
     @Before fun clean() {
         ctx.getSharedPreferences(GridColumns.STORE, Context.MODE_PRIVATE).edit().clear().commit()
@@ -73,7 +76,7 @@ class GridColumnsTest {
         val cells = (1..16).map { IndexTiles.Cell("c$it") {} }
         for (n in GridColumns.MIN..GridColumns.MAX) {
             GridColumns.set(ctx, GridColumns.Kind.CLOUD, n)
-            val grid = IndexTiles.grid(ctx, GridColumns.cloud(ctx), cells) as android.widget.LinearLayout
+            val grid = IndexTiles.grid(themed, GridColumns.cloud(ctx), cells) as android.widget.LinearLayout
             val firstRow = grid.getChildAt(0) as android.widget.LinearLayout
             assertEquals("row width at $n columns", n, firstRow.childCount)
             assertEquals("rows at $n columns", (16 + n - 1) / n, grid.childCount)
@@ -107,7 +110,7 @@ class GridColumnsTest {
     @Test fun labelsEllipsizeInsteadOfWrappingIntoEachOther() {
         // Index card labels are 2 lines max and END-ellipsized.
         GridColumns.set(ctx, GridColumns.Kind.CLOUD, 7)
-        val grid = IndexTiles.grid(ctx, 7, listOf(IndexTiles.Cell("Averyveryverylongunbrokenlabel") {})) as android.widget.LinearLayout
+        val grid = IndexTiles.grid(themed, 7, listOf(IndexTiles.Cell("Averyveryverylongunbrokenlabel") {})) as android.widget.LinearLayout
         val card = (grid.getChildAt(0) as android.widget.LinearLayout).getChildAt(0) as android.view.ViewGroup
         val inner = card.getChildAt(0) as android.view.ViewGroup
         val label = (0 until inner.childCount).map { inner.getChildAt(it) }
