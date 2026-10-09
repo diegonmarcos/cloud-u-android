@@ -804,7 +804,7 @@ internal fun CopyCodeIcon() {
  * reads — the flattened text, for line isolation and phrases, and the raw markup, for the
  * large-font-cell signal. Nothing is cached, flattened or sent anywhere.
  */
-private fun verificationCodeFromMessage(email: Email): String? {
+internal fun verificationCodeFromMessage(email: Email): String? {
     val (raw, isHtml) = bodySource(email)
     return extractVerificationCode(
         subject = email.subject,

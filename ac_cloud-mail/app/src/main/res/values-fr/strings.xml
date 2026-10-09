@@ -1201,4 +1201,9 @@
     <string name="settings_text_answer_note">Le prompt qui rédige une réponse suggérée. Il sert à la Prédiction de réponse du composeur et à la réponse suggérée dans l\'encadré de résumé IA.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Rétablir par défaut</string>
+    <string name="notif_copy_code">Copier le code</string>
+    <string name="notif_remind">Rappeler</string>
+    <string name="settings_remind_section">Rappel</string>
+    <string name="settings_remind_minutes">%1$d min</string>
+    <string name="settings_remind_hours">%1$d h</string>
 </resources>

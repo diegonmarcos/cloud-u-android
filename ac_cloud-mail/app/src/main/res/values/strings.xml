@@ -1298,4 +1298,9 @@
     <string name="settings_text_answer_note">The prompt that writes a suggested reply. It is used by Answer Prediction in the composer and by the reply suggested in the AI Resume box.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Reset to default</string>
+    <string name="notif_copy_code">Copy code</string>
+    <string name="notif_remind">Remind</string>
+    <string name="settings_remind_section">Remind me</string>
+    <string name="settings_remind_minutes">%1$d min</string>
+    <string name="settings_remind_hours">%1$d h</string>
 </resources>

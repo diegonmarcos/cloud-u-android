@@ -1192,4 +1192,9 @@
     <string name="settings_text_answer_note">De prompt die een voorgesteld antwoord schrijft. Hij wordt gebruikt door Antwoordvoorspelling in de editor en door het voorgestelde antwoord in het AI-samenvattingsvak.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Standaard herstellen</string>
+    <string name="notif_copy_code">Code kopiëren</string>
+    <string name="notif_remind">Herinner</string>
+    <string name="settings_remind_section">Herinnering</string>
+    <string name="settings_remind_minutes">%1$d min</string>
+    <string name="settings_remind_hours">%1$d u</string>
 </resources>

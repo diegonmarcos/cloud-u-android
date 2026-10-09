@@ -824,6 +824,9 @@ private fun NotificationsScreen(viewModel: SettingsViewModel, onBack: () -> Unit
                         onClick = { viewModel.setNotificationContent(NotificationContent.NONE) },
                     )
                 }
+                SettingsSection(stringResource(R.string.settings_remind_section)) {
+                    RemindDelayChoices()
+                }
                 SettingsSection(stringResource(R.string.settings_quiet_hours_section)) {
                     SettingSwitch(
                         title = stringResource(R.string.settings_quiet_hours_title),
@@ -2882,7 +2885,7 @@ private fun DefaultIdentityRadioRow(selected: Boolean, onSelect: () -> Unit) {
 
 /** One outcome-framed delivery choice (radio + explanation), issue #17. */
 @Composable
-private fun DeliveryModeOption(
+internal fun DeliveryModeOption(
     title: String,
     subtitle: String,
     selected: Boolean,

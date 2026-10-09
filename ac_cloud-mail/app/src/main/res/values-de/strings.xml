@@ -1189,4 +1189,9 @@
     <string name="settings_text_answer_note">Der Prompt, der einen Antwortvorschlag schreibt. Er wird vom Antwortvorschlag im Editor und von der Antwort im KI-Resümee-Feld verwendet.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Auf Standard zurücksetzen</string>
+    <string name="notif_copy_code">Code kopieren</string>
+    <string name="notif_remind">Erinnern</string>
+    <string name="settings_remind_section">Erinnerung</string>
+    <string name="settings_remind_minutes">%1$d Min.</string>
+    <string name="settings_remind_hours">%1$d Std.</string>
 </resources>

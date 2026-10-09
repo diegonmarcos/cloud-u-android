@@ -14,8 +14,9 @@ import app.sterna.MainActivity
 import app.sterna.R
 import app.sterna.core.data.settings.NotificationContent
 import app.sterna.core.jmap.model.Email
+import app.sterna.ui.message.verificationCodeFromMessage
 
-enum class MailNotificationAction { REPLY, MARK_READ, DELETE }
+enum class MailNotificationAction { REPLY, COPY_CODE, REMIND }
 
 /** Notification channels + helpers. No telemetry, no third-party push. */
 object Notifications {
@@ -33,10 +34,11 @@ object Notifications {
      *  the child speaks exactly when it stands alone. */
     fun summaryShownFor(liveChildren: Int): Boolean = liveChildren >= SUMMARY_MIN_CHILDREN
 
-    private val ALL_ACTIONS = listOf(
+    private val ACTIONS = listOf(MailNotificationAction.REPLY, MailNotificationAction.REMIND)
+    private val ACTIONS_WITH_CODE = listOf(
         MailNotificationAction.REPLY,
-        MailNotificationAction.MARK_READ,
-        MailNotificationAction.DELETE,
+        MailNotificationAction.COPY_CODE,
+        MailNotificationAction.REMIND,
     )
 
     /**
@@ -46,12 +48,16 @@ object Notifications {
         content: NotificationContent,
         hasSender: Boolean,
         hasSubject: Boolean,
-    ): List<MailNotificationAction> = when (content) {
-        NotificationContent.BODY_PREVIEW,
-        NotificationContent.SENDER_AND_SUBJECT,
-        -> if (hasSender || hasSubject) ALL_ACTIONS else emptyList()
-        NotificationContent.SENDER_ONLY -> if (hasSender) ALL_ACTIONS else emptyList()
-        NotificationContent.NONE -> emptyList()
+        hasCode: Boolean = false,
+    ): List<MailNotificationAction> {
+        val all = if (hasCode) ACTIONS_WITH_CODE else ACTIONS
+        return when (content) {
+            NotificationContent.BODY_PREVIEW,
+            NotificationContent.SENDER_AND_SUBJECT,
+            -> if (hasSender || hasSubject) all else emptyList()
+            NotificationContent.SENDER_ONLY -> if (hasSender) all else emptyList()
+            NotificationContent.NONE -> emptyList()
+        }
     }
 
     /** The per-message ids the account is left with once a pass is done. Counted rather than
@@ -205,11 +211,15 @@ object Notifications {
         // [MailNotificationText] so no caller can post with the defaults and leak what the user hid
         // (#84). The body opening comes from [Email.preview]; nothing is fetched from here.
         val (title, text, bigText) = MailNotificationText.resolve(content, sender, subject, generic, email.preview)
+        // THE reading pane's extractor, on what this notification has of the message: Copy Code is
+        // offered only when it finds a code, and the code travels on the button.
+        val code = verificationCodeFromMessage(email)
         // Which buttons it may carry: a notification that names nothing offers nothing (#57).
         val actions = actionsFor(
             content,
             hasSender = !fromName.isNullOrBlank(),
             hasSubject = realSubject != null,
+            hasCode = code != null,
         )
         val notifId = childId(accountId, email.id)
         // Carry the message identity so a tap opens THAT email even when the app is running. Its
@@ -251,18 +261,19 @@ object Notifications {
                         when (action) {
                             MailNotificationAction.REPLY ->
                                 replyAction(context, email.id, accountId, notifId)
-                            MailNotificationAction.MARK_READ -> simpleAction(
+                            MailNotificationAction.COPY_CODE -> simpleAction(
                                 context,
-                                context.getString(R.string.notif_mark_read),
-                                NotificationActionReceiver.ACTION_MARK_READ,
+                                context.getString(R.string.notif_copy_code),
+                                NotificationActionReceiver.ACTION_COPY_CODE,
                                 email.id,
                                 accountId,
                                 notifId,
+                                code,
                             )
-                            MailNotificationAction.DELETE -> simpleAction(
+                            MailNotificationAction.REMIND -> simpleAction(
                                 context,
-                                context.getString(R.string.notif_delete),
-                                NotificationActionReceiver.ACTION_DELETE,
+                                context.getString(R.string.notif_remind),
+                                NotificationActionReceiver.ACTION_REMIND,
                                 email.id,
                                 accountId,
                                 notifId,
@@ -375,6 +386,8 @@ object Notifications {
     }
 
     fun cancelChild(context: Context, accountId: String, emailId: String) {
+        // Read or gone: a pending Remind for it has nothing left to remind of.
+        NotificationReminders.cancel(context, accountId, emailId)
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.cancel(childId(accountId, emailId))
         // Also the pre-update form, or a banner from the previous build survives every dismissal.
@@ -384,6 +397,8 @@ object Notifications {
     /** Dismiss the notifications for [emailIds] that just became read, here or on another device,
      *  and refresh the group summary. A no-op for ids with no live notification (#19). */
     fun dismiss(context: Context, accountId: String, accountLabel: String, emailIds: Collection<String>) {
+        // Reminders go even for ids whose banner is already down (the Remind tap took it down).
+        emailIds.forEach { NotificationReminders.cancel(context, accountId, it) }
         val active = activeChildIds(context, accountId)
         val hit = emailIds.filter { isChildActive(active, accountId, it) }
         if (hit.isEmpty()) return
@@ -456,11 +471,13 @@ object Notifications {
         emailId: String,
         accountId: String,
         notifId: Int,
+        code: String? = null,
     ): NotificationCompat.Action {
         val pending = PendingIntent.getBroadcast(
             context,
             actionRequestCode(accountId, emailId, action),
-            actionIntent(context, action, emailId, accountId, notifId),
+            actionIntent(context, action, emailId, accountId, notifId)
+                .apply { if (code != null) putExtra(NotificationActionReceiver.EXTRA_CODE, code) },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Action.Builder(0, label, pending).build()

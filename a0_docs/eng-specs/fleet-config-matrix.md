@@ -32,7 +32,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
-| cloud-mail | `com.diegonmarcos.comms.mail` | 6 | 1 | 85% |
+| cloud-mail | `com.diegonmarcos.comms.mail` | 7 | 1 | 87% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
@@ -48,7 +48,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **188** | **35** | **84%** |
+| **fleet** | | **189** | **35** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -508,6 +508,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetco
 | `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `mail_notifications` | prefs | config | yes | Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |
@@ -526,7 +527,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetco
 | `shared_prefs/sterna_account.xml accounts JSON` | secret | Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw. |
 | `Room SternaDatabase tables (mailboxes watched/collapsed in account JSON)` | device | No settings tables in Room; per-account watched/collapsed folders live in the account JSON. |
 
-Coverage: 6 covered, 1 gaps — datastore:settings.
+Coverage: 7 covered, 1 gaps — datastore:settings.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 

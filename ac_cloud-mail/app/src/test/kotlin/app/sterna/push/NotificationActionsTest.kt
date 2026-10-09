@@ -11,10 +11,11 @@ import org.junit.Test
  */
 class NotificationActionsTest {
 
-    private val all = listOf(
+    private val all = listOf(MailNotificationAction.REPLY, MailNotificationAction.REMIND)
+    private val withCode = listOf(
         MailNotificationAction.REPLY,
-        MailNotificationAction.MARK_READ,
-        MailNotificationAction.DELETE,
+        MailNotificationAction.COPY_CODE,
+        MailNotificationAction.REMIND,
     )
 
     /** The shipped decision, fed the way [Notifications.notifyNewMail] feeds it. */
@@ -30,7 +31,7 @@ class NotificationActionsTest {
     /**
      * BODY_PREVIEW reveals strictly more than SENDER_AND_SUBJECT and is read the same way here:
      */
-    @Test fun `body preview keeps the same three actions, in the same order`() {
+    @Test fun `body preview keeps the same actions, in the same order`() {
         assertEquals(all, actions(NotificationContent.BODY_PREVIEW, SENDER, SUBJECT))
         assertEquals(all, actions(NotificationContent.BODY_PREVIEW, sender = null, subject = SUBJECT))
         assertEquals(all, actions(NotificationContent.BODY_PREVIEW, SENDER, subject = null))
@@ -51,11 +52,11 @@ class NotificationActionsTest {
         assertEquals("$NO_SUBJECT\n$PREVIEW", onScreen.bigText)
     }
 
-    @Test fun `sender and subject keeps reply, mark as read and delete, in that order`() {
+    @Test fun `sender and subject keeps reply and remind, in that order`() {
         assertEquals(all, actions(NotificationContent.SENDER_AND_SUBJECT, SENDER, SUBJECT))
     }
 
-    @Test fun `sender only keeps the same three actions, in the same order`() {
+    @Test fun `sender only keeps the same actions, in the same order`() {
         assertEquals(all, actions(NotificationContent.SENDER_ONLY, SENDER, SUBJECT))
     }
 
@@ -68,8 +69,8 @@ class NotificationActionsTest {
 
     @Test fun `nothing destructive is offered when the message cannot be identified`() {
         val offered = actions(NotificationContent.NONE, SENDER, SUBJECT)
-        assertFalse("Delete acts blind at NONE", MailNotificationAction.DELETE in offered)
-        assertFalse("Mark as read acts blind at NONE", MailNotificationAction.MARK_READ in offered)
+        assertFalse("Copy Code acts blind at NONE", MailNotificationAction.COPY_CODE in offered)
+        assertFalse("Remind acts blind at NONE", MailNotificationAction.REMIND in offered)
         assertFalse("Reply acts blind at NONE", MailNotificationAction.REPLY in offered)
     }
 
@@ -126,6 +127,17 @@ class NotificationActionsTest {
                 }
             }
         }
+    }
+
+    @Test fun `a detected code adds Copy Code between Reply and Remind, and its absence omits it`() {
+        assertEquals(all, Notifications.actionsFor(NotificationContent.SENDER_AND_SUBJECT, true, true))
+        assertEquals(withCode, Notifications.actionsFor(NotificationContent.SENDER_AND_SUBJECT, true, true, hasCode = true))
+        assertEquals(withCode, Notifications.actionsFor(NotificationContent.BODY_PREVIEW, true, true, hasCode = true))
+        assertTrue(Notifications.actionsFor(NotificationContent.NONE, true, true, hasCode = true).isEmpty())
+    }
+
+    @Test fun `mark read and delete are no longer on the banner`() {
+        assertEquals(setOf("REPLY", "COPY_CODE", "REMIND"), MailNotificationAction.entries.map { it.name }.toSet())
     }
 
     @Test fun `no position offers the same action twice`() {

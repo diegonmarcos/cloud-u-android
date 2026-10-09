@@ -1245,4 +1245,9 @@
     <string name="settings_text_answer_note">El prompt que escribe una respuesta sugerida. Lo usan la Predicción de respuesta del editor y la respuesta sugerida en el cuadro de resumen IA.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Restablecer valores predeterminados</string>
+    <string name="notif_copy_code">Copiar código</string>
+    <string name="notif_remind">Recordar</string>
+    <string name="settings_remind_section">Recordatorio</string>
+    <string name="settings_remind_minutes">%1$d min</string>
+    <string name="settings_remind_hours">%1$d h</string>
 </resources>

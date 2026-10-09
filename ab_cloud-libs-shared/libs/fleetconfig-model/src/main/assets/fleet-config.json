@@ -1444,6 +1444,14 @@
         "ac_cloud-mail"
       ]
     },
+    "mail_notifications": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification.",
+      "used_by": [
+        "ac_cloud-mail"
+      ]
+    },
     "tabs": {
       "kind": "prefs",
       "class": "config",

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
+import app.sterna.R
 import app.sterna.SternaApplication
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.mail.MailRepository
@@ -20,7 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Handles new-mail notification quick actions (reply / mark read / delete) in the background.
+ * Handles new-mail notification quick actions (reply / copy code / remind; mark read and delete handlers stay for banners already on the shade) in the background.
  */
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -28,6 +29,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val emailId = intent.getStringExtra(EXTRA_EMAIL_ID) ?: return
         val accountId = intent.getStringExtra(EXTRA_ACCOUNT_ID) ?: return
         val notifId = intent.getIntExtra(EXTRA_NOTIF_ID, 0)
+        val code = intent.getStringExtra(EXTRA_CODE)
         val replyText = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY)?.toString()
 
         val appContext = context.applicationContext
@@ -36,6 +38,19 @@ class NotificationActionReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val credentials = container.accountStore.credentials(accountId)
+                if (action == ACTION_COPY_CODE) {
+                    if (code != null) copyCode(appContext, code)
+                    // The code is on the clipboard; the banner has done its job.
+                    dismiss(appContext, accountId, credentials, emailId, notifId)
+                    return@launch
+                }
+                if (action == ACTION_REMIND) {
+                    // Down first, then scheduled: dismiss() cancels nothing of the reminder, but the
+                    // order keeps a failed schedule from leaving the banner up AND the tap spent.
+                    dismiss(appContext, accountId, credentials, emailId, notifId)
+                    NotificationReminders.schedule(appContext, accountId, emailId)
+                    return@launch
+                }
                 // Reply leaves the common path BEFORE the dismissal below: it used to fall through
                 // to it, so a reply that sent nothing still cleared the notification and the text.
                 if (action == ACTION_REPLY) {
@@ -61,6 +76,23 @@ class NotificationActionReceiver : BroadcastReceiver() {
             } finally {
                 pending.finish()
             }
+        }
+    }
+
+    /**
+     * Copy [code] and say so. Marked sensitive on Android 13+ so the clipboard preview and
+     * cloud-synced clipboards leave it out. A toast needs the main thread.
+     */
+    private fun copyCode(context: Context, code: String) {
+        val clip = android.content.ClipData.newPlainText("code", code)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            clip.description.extras = android.os.PersistableBundle().apply {
+                putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        (context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(clip)
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(context, R.string.message_code_copied, android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -176,6 +208,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_MARK_READ = "app.sterna.action.MARK_READ"
         const val ACTION_DELETE = "app.sterna.action.DELETE"
+        const val ACTION_COPY_CODE = "app.sterna.action.COPY_CODE"
+        const val ACTION_REMIND = "app.sterna.action.REMIND"
+        const val EXTRA_CODE = "code"
         const val ACTION_REPLY = "app.sterna.action.REPLY"
         const val EXTRA_EMAIL_ID = "email_id"
         const val EXTRA_ACCOUNT_ID = "account_id"

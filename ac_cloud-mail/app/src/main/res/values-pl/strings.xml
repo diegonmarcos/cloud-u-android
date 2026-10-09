@@ -1209,4 +1209,9 @@
     <string name="settings_text_answer_note">Prompt, który pisze proponowaną odpowiedź. Używa go Podpowiedź odpowiedzi w edytorze oraz odpowiedź proponowana w polu podsumowania AI.</string>
     <string name="settings_text_answer_prompt">Prompt</string>
     <string name="settings_text_answer_reset">Przywróć domyślny</string>
+    <string name="notif_copy_code">Kopiuj kod</string>
+    <string name="notif_remind">Przypomnij</string>
+    <string name="settings_remind_section">Przypomnienie</string>
+    <string name="settings_remind_minutes">%1$d min</string>
+    <string name="settings_remind_hours">%1$d godz.</string>
 </resources>

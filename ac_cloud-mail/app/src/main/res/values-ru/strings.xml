@@ -1212,4 +1212,9 @@
     <string name="settings_text_answer_note">Промпт, который пишет предлагаемый ответ. Его используют Подсказка ответа в редакторе и ответ, предлагаемый в блоке ИИ-резюме.</string>
     <string name="settings_text_answer_prompt">Промпт</string>
     <string name="settings_text_answer_reset">Сбросить по умолчанию</string>
+    <string name="notif_copy_code">Копировать код</string>
+    <string name="notif_remind">Напомнить</string>
+    <string name="settings_remind_section">Напоминание</string>
+    <string name="settings_remind_minutes">%1$d мин</string>
+    <string name="settings_remind_hours">%1$d ч</string>
 </resources>
