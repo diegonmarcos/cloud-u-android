@@ -55,6 +55,7 @@ object AccountDebugApi {
             Op("perms", "dry=1|run=1", "Setup ▸ perms (spec 4.9): dry=1 = per app every runtime permission and special grant, its state (granted/denied/unknown) and whether the working profile wants it, names only; run=1 = Grant all over the shell channel, one line per item, each judged by a re-read"),
             Op("apps", "", "Setup ▸ apps (spec 4.7): the working profile's inventory vs this phone in the Store's classes (installed / fleet / direct = vendor or F-Droid rung / no source declared), package names and counts only"),
             Op("profiles", "", "Profiles pages (spec 4.3-4.5): the loaded device and the working-vs-runtime drift count; counts only, never a value"),
+            Op("device", "set=<id>&new=1", "which device this phone is: id, source (connections|cockpit|derived|none), Build.MODEL and the model-matched candidates; set= persists Connections device.id, refused unless the id is a declared device (electronics / devices/) or new=1"),
         )) { op, q -> runCatching { handle(app, op, q)?.toString() }.getOrElse { JSONObject().put("error", it.message).toString() } }
         // /api/adb/... on Account's own port, so its uid-2000 channel can be driven from a terminal.
         // Same shape as SuperApp's DevControlServer handler (copied: a lib never imports app code);
@@ -166,6 +167,7 @@ object AccountDebugApi {
             "profiles" -> JSONObject().put("loaded", DeviceVault(ctx).working()?.optString("device").orEmpty())
                 .put("drift", profilesDriftCount(ctx, m))
             "import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)
+            "device" -> device(ctx, q)
             "migrate" -> when {
                 q["dry"] == "1" -> m.migratePlan()
                 q["status"] == "1" -> AccountFleet.progress
@@ -177,6 +179,24 @@ object AccountDebugApi {
             }
             else -> null
         }
+    }
+
+    /** `device`: read the resolved id; `set=<id>` persists it after checking it is declared (or new=1). */
+    private fun device(ctx: Context, q: Map<String, String>): JSONObject {
+        val set = q["set"]?.trim()
+        if (set.isNullOrEmpty()) return AccountDevice.resolve(ctx).json()
+        if (set == DeviceProfile.DEFAULT_ID) return JSONObject().put("result", "✗ ${DeviceProfile.DEFAULT_ID} is the fallback file, not a device")
+        val bundle = AccountModel.get(ctx).server()?.body
+        val listing = com.diegonmarcos.superapp.settings.ConfigsPrefs(ctx).text(AccountDevice.K_LISTING)
+            .let { t -> runCatching { org.json.JSONArray(t) }.getOrNull() }
+        val known = LinkedHashSet<String>()
+        AccountDevice.declared(ctx).forEach { known += it.id }
+        bundle?.optJSONObject("electronics")?.optJSONObject("fleet")?.keys()?.forEach { known += it }
+        if (listing != null) for (i in 0 until listing.length()) listing.optJSONObject(i)?.optString("id")?.takeIf { it.isNotBlank() }?.let { known += it }
+        if (set !in known && q["new"] != "1")
+            return JSONObject().put("result", "✗ '$set' is not a declared device (known: ${known.joinToString(",")}); add new=1 for a new one")
+        AccountDevice.setId(ctx, set)
+        return AccountDevice.resolve(ctx).json().put("result", "✓ device id = $set")
     }
 
     /**

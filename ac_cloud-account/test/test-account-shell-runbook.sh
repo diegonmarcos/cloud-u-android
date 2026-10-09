@@ -94,6 +94,21 @@ ad = api.split("private fun adb(")[1] if "private fun adb(" in api else ""
 ok('"exec" ->' in ad and "shell.active(ctx)?.exec(ctx, cmd)" in ad, "adb/exec runs over ShellChannels.active", "adb/exec does not run over the active channel")
 srv = rd("ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt")
 ok('OPEN_OPS = setOf("system/ping")' in srv and "if (op !in OPEN_OPS && !fleet)" in srv, "route groups (adb/exec included) sit behind the fleet token", "adb/exec reachable without the fleet token")
+# the device id: never a fabricated 404, derived from the model, set only to a declared id
+pr = rb.split("private fun runProfile")[1].split("private fun workingProfile")[0]
+ok('if (id.isBlank()) return State.Failed("this phone has no device id' in pr and pr.index("id.isBlank()") < pr.index("v.load(id)"),
+   "blank device id fails by name before any forge call", "blank device id still reaches the forge")
+ok('"status", 404' not in pr, "runProfile never fabricates a 404", "runProfile fabricates a 404")
+ok("neither $path nor $defPath exists" in pr, "no device file and no DEFAULT names both paths", "missing DEFAULT is not named")
+ap2 = rd("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountPages.kt")
+dv = ap2.split("object AccountDevice")[1].split("fun setId")[0]
+ok("listOf(Build.MODEL.orEmpty(), Build.DEVICE.orEmpty())" in dv and '?.opt("model")' in dv and 'row.opt("model")' in dv and "if (m != null && m in want) out += id" in dv,
+   "derivation matches Build.MODEL/DEVICE against fleet + devices/ models", "derivation ignores the model")
+ok("if (c.size == 1)" in dv and 'putConnection("device.id", c[0])' in dv, "a single match is persisted to Connections", "derivation does not persist / accepts several")
+ok('"derived from model ${resolved.model}"' in ap2, "picker hints the derived model", "picker lost the derived hint")
+dd = api.split("private fun device(")[1].split("/**")[0] if "private fun device(" in api else ""
+ok('if (set !in known && q["new"] != "1")' in dd and 'Op("device"' in api and '"device" -> device(ctx, q)' in api,
+   "device?set= refuses an undeclared id without new=1", "device?set= accepts an undeclared id")
 sys.exit(fails)
 PY
 }
@@ -110,6 +125,7 @@ ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profil
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountDebugApi.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/RunbookPage.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AppsPage.kt
+ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountPages.kt
 ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt
 ac_cloud-store/app/src/main/AndroidManifest.xml
 ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShellService.kt
@@ -162,5 +178,8 @@ mutate "service never started at boot" ab_cloud-libs-shared/libs/shizuku-adb-deb
 mutate "exec route missing" $P/AccountDebugApi.kt 'Op("exec", "cmd=' 'Op("execX", "cmd=' || M=$((M+1))
 mutate "exec not over the channel" $P/AccountDebugApi.kt 'shell.active(ctx)?.exec(ctx, cmd)' 'null' || M=$((M+1))
 mutate "exec not token-gated" $D/AppDebugServer.kt 'OPEN_OPS = setOf("system/ping")' 'OPEN_OPS = setOf("system/ping", "adb/exec")' || M=$((M+1))
+mutate "blank id still reaches the forge" $P/SetupRunbook.kt 'if (id.isBlank()) return State.Failed("this phone has no device id' 'if (false) return State.Failed("this phone has no device id' || M=$((M+1))
+mutate "derivation ignores the model" $P/AccountPages.kt 'if (m != null && m in want) out += id' 'out += id' || M=$((M+1))
+mutate "device?set= accepts an undeclared id without new" $P/AccountDebugApi.kt 'if (set !in known && q["new"] != "1")' 'if (false)' || M=$((M+1))
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

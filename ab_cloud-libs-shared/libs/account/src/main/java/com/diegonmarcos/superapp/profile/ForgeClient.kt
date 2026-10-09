@@ -92,7 +92,7 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         if (token.isBlank()) return Result.Failed(0, "no credential for forge '${forge.id}'")
         if (forge.repo == null) return Result.Failed(0, "forge '${forge.id}' declares no repo")
         val (status, body) = exchange("GET", forge.contents(path) + refQuery(ref), null) ?: return Result.Failed(0, "network error")
-        if (status != 200) return Result.Failed(status, reason(status, body))
+        if (status != 200) return Result.Failed(status, reason(status, body, path))
         val o = runCatching { JSONObject(body) }.getOrNull() ?: return Result.Failed(status, "not a file (no JSON object)")
         val sha = o.optString("sha")
         val enc = o.optString("content")
@@ -112,7 +112,7 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         else
             (forge.api.trimEnd('/') + "/repos/" + forge.repo + "/raw/" + path.trimStart('/') + refQuery(ref)) to headers()
         val (status, body) = runCatching { http.call("GET", url, headers, null) }.getOrNull() ?: return Result.Failed(0, "network error (raw)")
-        if (status != 200) return Result.Failed(status, "raw fetch of a $size-byte file: " + reason(status, body))
+        if (status != 200) return Result.Failed(status, "raw fetch of a $size-byte file: " + reason(status, body, path))
         return Result.Ok(File(body, sha))
     }
 
@@ -122,7 +122,7 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         if (forge.repo == null) return Result.Failed(0, "forge '${forge.id}' declares no repo")
         val (status, body) = exchange("GET", forge.contents(dir) + refQuery(ref), null) ?: return Result.Failed(0, "network error")
         if (status == 404) return Result.Ok(emptyList())
-        if (status != 200) return Result.Failed(status, reason(status, body))
+        if (status != 200) return Result.Failed(status, reason(status, body, dir))
         val arr = runCatching { JSONArray(body) }.getOrNull() ?: return Result.Failed(status, "not a folder")
         return Result.Ok((0 until arr.length()).mapNotNull { arr.optJSONObject(it) }
             .filter { it.optString("type", "file") == "file" }
@@ -165,7 +165,7 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         if (forge.repo == null) return Result.Failed(0, "forge '${forge.id}' declares no repo")
         val body = JSONObject().put("message", message).put("sha", sha).put("branch", branch)
         val (status, resp) = exchange("DELETE", forge.contents(path), body.toString()) ?: return Result.Failed(0, "network error")
-        if (status != 200) return Result.Failed(status, reason(status, resp))
+        if (status != 200) return Result.Failed(status, reason(status, resp, path))
         return Result.Ok(Unit)
     }
 
@@ -178,7 +178,7 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         // Gitea creates with POST and updates with PUT; GitHub does both with PUT.
         val method = if (sha == null && forge.auth == Auth.TOKEN) "POST" else "PUT"
         val (status, resp) = exchange(method, forge.contents(path), body.toString()) ?: return Result.Failed(0, "network error")
-        if (status != 200 && status != 201) return Result.Failed(status, reason(status, resp))
+        if (status != 200 && status != 201) return Result.Failed(status, reason(status, resp, path))
         val newSha = runCatching { JSONObject(resp).optJSONObject("content")?.optString("sha") }.getOrNull().orEmpty()
         return Result.Ok(newSha)
     }
@@ -188,11 +188,11 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         runCatching { http.call(method, url, headers(), body) }.getOrNull()
 
     /** The server's own message, never the request (which held the token). */
-    private fun reason(status: Int, body: String): String {
+    private fun reason(status: Int, body: String, path: String = ""): String {
         val msg = runCatching { JSONObject(body).optString("message") }.getOrDefault("").take(200)
         return when (status) {
             401, 403 -> "the credential was refused by '${forge.id}' ($status${if (msg.isBlank()) "" else ": $msg"})"
-            404 -> "not found on '${forge.id}'"
+            404 -> if (path.isBlank()) "not found on '${forge.id}'" else "$path not found on '${forge.id}'"
             409, 422 -> "the file changed on the server since it was read ($status)"
             else -> "HTTP $status${if (msg.isBlank()) "" else ": $msg"}"
         }

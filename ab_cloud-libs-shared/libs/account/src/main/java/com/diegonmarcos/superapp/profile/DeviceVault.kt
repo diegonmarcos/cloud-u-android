@@ -61,6 +61,8 @@ class DeviceVault(private val ctx: Context, val decl: ForgeClient.Decl = ForgeCl
             }
             out.put(row)
         }
+        // AccountDevice derives this phone's id from these rows' model (main-thread safe: cached, no GET).
+        ConfigsPrefs(ctx).putText(AccountDevice.K_LISTING, out.toString())
         return JSONObject().put("ok", true).put("forge", c.forge.id).put("dir", decl.devicesDir).put("devices", out)
     }
 

@@ -38,6 +38,7 @@ import com.diegonmarcos.cloudlib.auth.SignInResult
 import com.diegonmarcos.cloudlib.auth.SignInWays
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.settings.AccountVault
+import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitSelectableTile
@@ -64,13 +65,76 @@ object AccountPageTags {
     fun placeholder(section: String, page: String) = "placeholder:$section/$page"
 }
 
-/** Which device this phone is: Connections `device.id`, else the cockpit's pick. */
+/**
+ * Which device this phone is: Connections `device.id`, else the cockpit's pick, else DERIVED from
+ * the model — `Build.MODEL` / `Build.DEVICE` against the fetched vault's `electronics.fleet` entries'
+ * `model` and the cached `devices/*.json` listing's `model` (refreshed by [DeviceVault.devices]). A
+ * single match becomes the id and is persisted to Connections `device.id`; zero or several stay blank
+ * (the candidates are reported so the picker / runbook can name them). Local data only: safe on main.
+ */
 object AccountDevice {
-    fun id(ctx: Context): String =
-        (AccountVault(ctx).connection("device.id") as? String)?.ifBlank { null } ?: VaultCockpit.selectedDevice(ctx)
+    const val SRC_CONNECTIONS = "connections"
+    const val SRC_COCKPIT = "cockpit"
+    const val SRC_DERIVED = "derived"
+    const val SRC_NONE = "none"
+    private const val K_DERIVED = "device.derived"
+    const val K_LISTING = "account.devices.listing"
+
+    data class Resolved(val id: String, val source: String, val model: String, val candidates: List<String>) {
+        fun json(): JSONObject = JSONObject().put("id", id).put("source", source).put("model", model)
+            .put("candidates", org.json.JSONArray(candidates))
+    }
+
+    fun id(ctx: Context): String = resolve(ctx).id
+
+    fun resolve(ctx: Context): Resolved {
+        val v = AccountVault(ctx)
+        val model = Build.MODEL.orEmpty()
+        val conn = (v.connection("device.id") as? String)?.trim().orEmpty()
+        if (conn.isNotBlank()) {
+            val derived = (v.connection(K_DERIVED) as? String).orEmpty() == conn
+            return Resolved(conn, if (derived) SRC_DERIVED else SRC_CONNECTIONS, model, emptyList())
+        }
+        val cockpit = VaultCockpit.selectedDevice(ctx).trim()
+        if (cockpit.isNotBlank()) return Resolved(cockpit, SRC_COCKPIT, model, emptyList())
+        val c = candidates(ctx)
+        if (c.size == 1) {
+            v.putConnection("device.id", c[0]); v.putConnection(K_DERIVED, c[0])
+            return Resolved(c[0], SRC_DERIVED, model, c)
+        }
+        return Resolved("", SRC_NONE, model, c)
+    }
+
+    /** The ids whose declared model is this phone's (`Build.MODEL` or `Build.DEVICE`). */
+    fun candidates(ctx: Context): List<String> {
+        val bundle = AccountModel.get(ctx).server()?.body
+        val listing = ConfigsPrefs(ctx).text(K_LISTING).takeIf { it.isNotBlank() }
+            ?.let { runCatching { org.json.JSONArray(it) }.getOrNull() }
+        return matches(bundle, listing, listOf(Build.MODEL.orEmpty(), Build.DEVICE.orEmpty()))
+    }
+
+    /** Pure: `electronics.fleet.<id>.model` and listing rows' `model` matched (case-insensitive) to [models]. */
+    fun matches(bundle: JSONObject?, listing: org.json.JSONArray?, models: List<String>): List<String> {
+        val want = models.map { it.trim().lowercase() }.filter { it.isNotBlank() }.toSet()
+        if (want.isEmpty()) return emptyList()
+        val out = LinkedHashSet<String>()
+        val fleet = bundle?.optJSONObject("electronics")?.optJSONObject("fleet")
+        fleet?.keys()?.forEach { id ->
+            val m = (fleet.optJSONObject(id)?.opt("model") as? String)?.trim()?.lowercase()
+            if (m != null && m in want) out += id
+        }
+        if (listing != null) for (i in 0 until listing.length()) {
+            val row = listing.optJSONObject(i) ?: continue
+            val id = row.optString("id")
+            val m = (row.opt("model") as? String)?.trim()?.lowercase()
+            if (id.isNotBlank() && id != DeviceProfile.DEFAULT_ID && m != null && m in want) out += id
+        }
+        return out.toList()
+    }
 
     fun setId(ctx: Context, id: String) {
         AccountVault(ctx).putConnection("device.id", id.trim())
+        AccountVault(ctx).putConnection(K_DERIVED, "")
         VaultCockpit.selectDevice(ctx, id.trim())
     }
 
@@ -127,7 +191,8 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     val shown = model.shown()
     val about = InfoMask.schema.firstOrNull { it.id == "about" }
-    val deviceId = remember(tick) { AccountDevice.id(ctx) }
+    val resolved = remember(tick) { AccountDevice.resolve(ctx) }
+    val deviceId = resolved.id
     val working = remember(tick) { DeviceVault(ctx).working() }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).testTag(AccountPageTags.PROFILE),
@@ -157,6 +222,7 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
         KitSectionHeader("This phone", "which device file this phone backs up to and restores from")
         KitCard {
             KitSettingsRow("Device id", deviceId.ifBlank { "not picked — tap to pick" }, onClick = { picking = true })
+            if (resolved.source == AccountDevice.SRC_DERIVED) Dense("derived from model ${resolved.model}", true)
             Dense("model ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             val prof = working?.optJSONObject("profile")
             Dense("loaded profile: " + (working?.optString("device")?.ifBlank { null } ?: "none"))
@@ -195,7 +261,12 @@ fun AccountProfilePage(open: (section: String, page: String) -> Unit) {
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (devices.isEmpty()) Dense("the vault declares no devices yet (fetch it on Account ▸ connect)", true)
-                    for (d in devices) KitSelectableTile(d.label.ifBlank { d.id }, d.id, d.id == deviceId, {
+                    for (d in devices) KitSelectableTile(d.label.ifBlank { d.id },
+                        when {
+                            d.id == deviceId && resolved.source == AccountDevice.SRC_DERIVED -> "${d.id} · derived from model ${resolved.model}"
+                            d.id in resolved.candidates -> "${d.id} · model ${resolved.model} matches"
+                            else -> d.id
+                        }, d.id == deviceId, {
                         AccountDevice.setId(ctx, d.id); picking = false; tick++
                     })
                     OutlinedTextField(typed, { typed = it }, label = { Text("new device…") }, singleLine = true)

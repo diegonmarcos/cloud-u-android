@@ -140,16 +140,24 @@ class SetupRunbook(private val ctx: Context) {
     }
 
     private fun runProfile(): State {
-        val id = AccountDevice.id(ctx)
         val v = DeviceVault(ctx)
+        // Refresh the devices/ listing first, so the model derivation sees every file's `model`.
+        if (AccountDevice.id(ctx).isBlank()) runCatching { v.devices() }
+        val dev = AccountDevice.resolve(ctx)
+        val id = dev.id
+        if (id.isBlank()) return State.Failed("this phone has no device id: pick it in Account ▸ profile " +
+            "(model ${dev.model}; candidates: ${dev.candidates.joinToString(", ").ifBlank { "none" }})")
         if (v.working()?.optString("device") == id) return checkProfile()
-        val r = if (id.isBlank()) JSONObject().put("ok", false).put("status", 404) else v.load(id)
+        val path = v.decl.devicePath(id)
+        val defPath = v.decl.devicePath(DeviceProfile.DEFAULT_ID)
+        val r = v.load(id)
         if (r.optBoolean("ok")) return State.Done(r.optString("result").removePrefix("✓ "))
-        if (r.optInt("status") != 404) return State.Failed(r.optString("result").removePrefix("✗ "))
+        if (r.optInt("status") != 404) return State.Failed("$path: " + r.optString("result").removePrefix("✗ "))
         if (v.working()?.optString("device") == DeviceProfile.DEFAULT_ID) return checkProfile()
         val d = v.load(DeviceProfile.DEFAULT_ID)
-        return if (d.optBoolean("ok")) State.Done("no file for '$id': " + d.optString("result").removePrefix("✓ "))
-               else State.Failed(d.optString("result").removePrefix("✗ "))
+        if (d.optBoolean("ok")) return State.Done("no $path: " + d.optString("result").removePrefix("✓ "))
+        return if (d.optInt("status") == 404) State.Failed("neither $path nor $defPath exists on '${v.primary()?.id.orEmpty()}'")
+               else State.Failed("$defPath: " + d.optString("result").removePrefix("✗ "))
     }
 
     private fun workingProfile(): JSONObject? = DeviceVault(ctx).working()?.optJSONObject("profile")
