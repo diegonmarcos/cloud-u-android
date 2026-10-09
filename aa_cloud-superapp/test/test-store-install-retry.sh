@@ -86,7 +86,7 @@ if printf '%s' "$SW" | grep -q 'ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTA
 else bad "a RETRY verdict leaves the row or the bar on Installing"; fi
 
 ST="$(strip "$SRC/StoreStages.kt")"
-IC="$(printf '%s' "$ST" | sed -n '/private fun installCached(/,/^    }/p')"
+IC="$(printf '%s' "$ST" | sed -n '/private fun installCachedGated(/,/^    }/p')"
 STG="$(printf '%s' "$ST" | sed -n '/fun stage(ctx: Context, app: Fleet.App/,/^    }/p')"
 if printf '%s' "$IC" | grep -q 'StoreInstallWatch.record(' && printf '%s' "$STG" | grep -q 'StoreInstallWatch.sweep('; then
   ok "every handover is recorded, and every row stage resolves it"

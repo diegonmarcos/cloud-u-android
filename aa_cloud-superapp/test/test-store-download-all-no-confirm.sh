@@ -59,7 +59,7 @@ else ok "StoreBar's buttons run their verb on tap, no dialog"; fi
 # ── 4. visible progress: the batch publishes into UpdateProgress ───────────
 ST="$(strip "$SRC/StoreStages.kt")"
 SD="$(printf '%s' "$ST" | sed -n '/fun downloadAll(/,/^    }/p')"
-if printf '%s' "$SD" | grep -q 'UpdateProgress.beginBatch(' && printf '%s' "$FRAG" | grep -q 'UpdateProgress.addObserver\|progressObserver'; then
+if printf '%s' "$SD" | grep -q 'StoreJobs.board.begin(' && printf '%s' "$FRAG" | grep -q 'UpdateProgress.addObserver\|progressObserver'; then
   ok "Download all drives the Store's progress row"
 else bad "Download all publishes no progress"; fi
 

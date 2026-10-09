@@ -46,7 +46,7 @@ for frag in ("StoreCloudFragment.kt", "StorePhoneFragment.kt"):
     if re.search(r"StoreBar\.render\(this\b", kt[frag]): ok(frag + " draws StoreBar")
     else: bad(frag + " does not draw the shared StoreBar")
 for needle in ("AutoUpdatePrefs.setEnabled(", "AutoUpdatePrefs.setRequireUnmetered(",
-               "PackageVerifier.setScanning(", "WirelessDebugging.set(", "ACTION_APPLICATION_DEVELOPMENT_SETTINGS"):
+               "PackageVerifier.setScanning(", "ControlStatus.channelAction(", "ACTION_APPLICATION_DEVELOPMENT_SETTINGS"):
     owners = sorted(f for f, t in kt.items() if needle in t)
     if owners == ["StoreBar.kt"]: ok(needle + " lives only in StoreBar")
     else: bad(needle + " is in %s — a second copy of the bar" % owners)
