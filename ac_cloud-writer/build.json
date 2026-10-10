@@ -167,7 +167,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-09",
+        "pricing_as_of": "2026-10-10",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -208,6 +208,7 @@
               "bf16"
             ],
             "trained_for": [
+              "academia",
               "marketing",
               "roleplay",
               "translation"
@@ -243,9 +244,8 @@
               "fp8"
             ],
             "trained_for": [
-              "health",
-              "marketing",
-              "roleplay"
+              "roleplay",
+              "trivia"
             ],
             "prompt": 0.09,
             "completion": 0.34,
@@ -290,7 +290,7 @@
               "translation"
             ],
             "prompt": 0.259,
-            "completion": 0.42,
+            "completion": 0.8,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
@@ -315,7 +315,7 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0047,
+            "prompt": 0.0142,
             "completion": 1.28,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
@@ -332,6 +332,7 @@
             "trained_for": [
               "academia",
               "finance",
+              "health",
               "legal",
               "programming",
               "roleplay",
