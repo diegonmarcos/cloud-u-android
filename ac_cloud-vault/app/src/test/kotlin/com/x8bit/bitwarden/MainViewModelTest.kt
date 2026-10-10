@@ -44,6 +44,7 @@ import com.x8bit.bitwarden.data.autofill.manager.AutofillSelectionManager
 import com.x8bit.bitwarden.data.autofill.manager.AutofillSelectionManagerImpl
 import com.x8bit.bitwarden.data.autofill.model.AutofillSaveItem
 import com.x8bit.bitwarden.data.autofill.model.AutofillSelectionData
+import com.x8bit.bitwarden.data.autofill.cloud.takeRelayedAddIdentityOrNull
 import com.x8bit.bitwarden.data.autofill.util.getAutofillSaveItemOrNull
 import com.x8bit.bitwarden.data.autofill.util.getAutofillSelectionDataOrNull
 import com.x8bit.bitwarden.data.billing.util.PremiumCheckoutCallbackResult
@@ -185,6 +186,7 @@ class MainViewModelTest : BaseViewModelTest() {
             Intent::getTotpDataOrNull,
             Intent::getPasswordlessRequestDataIntentOrNull,
             Intent::getAutofillSaveItemOrNull,
+            Intent::takeRelayedAddIdentityOrNull,
             Intent::getAutofillSelectionDataOrNull,
             Intent::getCompleteRegistrationDataIntentOrNull,
             Intent::isAddTotpLoginItemFromAuthenticator,
@@ -218,6 +220,7 @@ class MainViewModelTest : BaseViewModelTest() {
             Intent::getTotpDataOrNull,
             Intent::getPasswordlessRequestDataIntentOrNull,
             Intent::getAutofillSaveItemOrNull,
+            Intent::takeRelayedAddIdentityOrNull,
             Intent::getAutofillSelectionDataOrNull,
             Intent::getCompleteRegistrationDataIntentOrNull,
             Intent::isAddTotpLoginItemFromAuthenticator,
@@ -1411,6 +1414,7 @@ private fun createMockIntent(
     every { getTotpDataOrNull() } returns mockTotpData
     every { getPasswordlessRequestDataIntentOrNull() } returns mockPasswordlessRequestData
     every { getAutofillSaveItemOrNull() } returns mockAutofillSaveItem
+    every { takeRelayedAddIdentityOrNull() } returns null
     every { getAutofillSelectionDataOrNull() } returns mockAutofillSelectionData
     every { getCompleteRegistrationDataIntentOrNull() } returns mockCompleteRegistrationData
     every { isMyVaultShortcut } returns mockIsMyVaultShortcut

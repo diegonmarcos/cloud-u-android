@@ -12,7 +12,8 @@ package com.x8bit.bitwarden.data.autofill.cloud
  * 3. one-time-code wording in the id, name, label or placeholder (checked before the password
  *    input types, because banks render SMS codes in number-password fields);
  * 4. the input type (text / visible / web / number password, email) and HTML `type`;
- * 5. id / name / label / placeholder wording, as a last resort, for input-like nodes only.
+ * 5. ID-document wording ([IdentityFieldClassifier]): DNI, NIE, passport, Personalausweis, CPF...;
+ * 6. id / name / label / placeholder wording, as a last resort, for input-like nodes only.
  *
  * Pure Kotlin on purpose: [FieldSignals] carries the node's facts, so the rules are tested with
  * fake trees on a plain JVM.
@@ -113,7 +114,11 @@ object CloudFieldClassifier {
         }
         if (isEmailInputType(signals.inputType) || htmlType == "email") return FieldKind.EMAIL
 
-        // 5. Wording.
+        // 5. ID-document wording (DNI, passport, Personalausweis, CPF, ...), before the card and
+        //    username words: an "ID card number" is not a payment card. See IdentityFieldClassifier.
+        if (IdentityFieldClassifier.isDocumentField(signals)) return FieldKind.ID_DOCUMENT
+
+        // 6. Wording.
         return when {
             tokens.any { it in CARD_TOKENS } -> FieldKind.CARD
             tokens.any { it in PASSWORD_TOKENS } -> FieldKind.PASSWORD

@@ -2,6 +2,7 @@ package com.x8bit.bitwarden.data.autofill.builder
 
 import android.widget.inline.InlinePresentationSpec
 import com.bitwarden.ui.platform.base.util.isValidEmail
+import com.x8bit.bitwarden.data.autofill.cloud.IdentityFieldMapping
 import com.x8bit.bitwarden.data.autofill.model.AutofillCipher
 import com.x8bit.bitwarden.data.autofill.model.AutofillPartition
 import com.x8bit.bitwarden.data.autofill.model.AutofillRequest
@@ -94,6 +95,20 @@ class FilledDataBuilderImpl(
                     }
                     .orEmpty()
             }
+
+            is AutofillPartition.Identity -> {
+                // Cloud Vault: every Identity item that has a value for one of the page's
+                // document fields; no domain match (the user picks one), nothing while locked.
+                autofillCipherProvider
+                    .getIdentityAutofillCiphers()
+                    .mapNotNull { autofillCipher ->
+                        fillIdentityPartitionOrNull(
+                            autofillCipher = autofillCipher,
+                            partition = autofillRequest.partition,
+                            inlinePresentationSpec = { getCipherInlinePresentationOrNull() },
+                        )
+                    }
+            }
         }
 
         // Use getOrLastOrNull so if the list has run dry take the last spec.
@@ -180,6 +195,39 @@ class FilledDataBuilderImpl(
             inlinePresentationSpec = inlinePresentationSpec,
         )
     }
+}
+
+/**
+ * Cloud Vault: fill the Identity [partition] from [autofillCipher], or null when the item has no
+ * value for any of the page's ID-document fields (it is then not offered at all). Only the
+ * document fields carry the suggestion ([FilledPartition.presentationIds]); the name, address
+ * and undocumented-expiry fields are filled with it but never show it, so they stay the browser's
+ * and keyboard's. [inlinePresentationSpec] is asked only for an item that is offered.
+ */
+private fun fillIdentityPartitionOrNull(
+    autofillCipher: AutofillCipher.Identity,
+    partition: AutofillPartition.Identity,
+    inlinePresentationSpec: () -> InlinePresentationSpec?,
+): FilledPartition? {
+    val filled = partition
+        .views
+        .mapNotNull { autofillView ->
+            IdentityFieldMapping
+                .valueFor(field = autofillView.field, values = autofillCipher.values)
+                ?.let { value -> autofillView.buildFilledItemOrNull(value = value) }
+                ?.let { filledItem -> autofillView to filledItem }
+        }
+    val presentationIds = filled
+        .filter { (autofillView, _) -> autofillView.field.isDocument }
+        .map { (_, filledItem) -> filledItem.autofillId }
+        .toSet()
+    if (presentationIds.isEmpty()) return null
+    return FilledPartition(
+        autofillCipher = autofillCipher,
+        filledItems = filled.map { (_, filledItem) -> filledItem },
+        inlinePresentationSpec = inlinePresentationSpec(),
+        presentationIds = presentationIds,
+    )
 }
 
 /**

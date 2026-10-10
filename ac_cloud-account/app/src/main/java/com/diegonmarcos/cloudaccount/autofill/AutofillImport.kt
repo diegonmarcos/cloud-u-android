@@ -22,7 +22,18 @@ import org.json.JSONObject
  * and their details (issued, valid until, support/CAN) are collected apart. JSON: see [EXAMPLE_JSON].
  */
 object AutofillImport {
-    data class ParsedId(val type: String, val number: String, val country: String = "", val details: Map<String, String> = emptyMap())
+    /**
+     * One ID document found in the paste, never stored here. [givenName], [middleName] and [familyName]
+     * are the holder's, from the profile the ID was listed under (both Spanish family names in
+     * [familyName]), so Cloud Vault's new-Identity screen comes prefilled with them.
+     */
+    data class ParsedId(
+        val type: String, val number: String, val country: String = "", val details: Map<String, String> = emptyMap(),
+        val givenName: String = "", val middleName: String = "", val familyName: String = "",
+    ) {
+        /** A number never reaches a log line or a crash report through this class. */
+        override fun toString(): String = "ParsedId(type=$type, number=${AutofillImport.mask(number)}, country=$country)"
+    }
     data class Result(val profiles: List<AutofillProfile>, val snippets: List<Snippet>, val ids: List<ParsedId>, val skipped: List<String>)
 
     /** Only the last three characters show; the review never displays a whole ID number. */
@@ -127,6 +138,7 @@ object AutofillImport {
     private fun parseText(t: String): Result {
         val profiles = ArrayList<Draft>(); val snippets = ArrayList<Snippet>(); val ids = ArrayList<ParsedId>(); val skipped = ArrayList<String>()
         var cur: Draft? = null; var addr: AutofillAddress? = null; var snippet: Pair<String, StringBuilder>? = null; var lastId = -1
+        val idOwners = ArrayList<Draft?>()
         fun flushAddr() { val a = addr ?: return; if (!a.isEmpty) cur?.addresses?.add(a); addr = null }
         fun flushSnippet() { val s = snippet ?: return; if (s.second.isNotBlank()) snippets += Snippet(label = s.first, text = s.second.toString().trimEnd()); snippet = null }
         fun draft(): Draft = cur ?: Draft("").also { cur = it; profiles += it }
@@ -152,7 +164,7 @@ object AutofillImport {
                 ID_TYPES.any { it.second.containsMatchIn(key) } && colon > 0 -> {
                     val type = ID_TYPES.first { it.second.containsMatchIn(key) }.first
                     val country = Regex("\\(([^)]*)\\)").find(key)?.groupValues?.get(1)?.trim()?.uppercase().orEmpty()
-                    ids += ParsedId(type, value, country); lastId = ids.size - 1
+                    ids += ParsedId(type, value, country); idOwners += cur; lastId = ids.size - 1
                 }
                 lookup(ID_DETAILS, baseKey) != null && lastId >= 0 -> {
                     val d = lookup(ID_DETAILS, baseKey)!!; ids[lastId] = ids[lastId].copy(details = ids[lastId].details + (d to value))
@@ -183,8 +195,15 @@ object AutofillImport {
         val built = profiles.mapIndexed { i, d -> d.build(i == 0) }.filterNot { it.isEmpty }.map { p ->
             if (p.label.isNotBlank()) p else p.copy(label = p.fullName.ifBlank { "Imported" })
         }
-        return Result(built, snippets, ids, skipped)
+        return Result(built, snippets, ids.mapIndexed { i, id -> idOwners[i]?.fields?.let { id.withHolder(it) } ?: id }, skipped)
     }
+
+    /** The holder's names from a profile's [fields] (AutofillSot profile keys). */
+    private fun ParsedId.withHolder(fields: Map<String, String>): ParsedId = copy(
+        givenName = fields["given_name"].orEmpty().trim(),
+        middleName = fields["additional_name"].orEmpty().trim(),
+        familyName = listOf(fields["family_name"], fields["family_name2"]).mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }.joinToString(" "),
+    )
 
     // ── JSON ─────────────────────────────────────────────────────────────
 
@@ -199,10 +218,13 @@ object AutofillImport {
 
     private fun parseJson(o: JSONObject): Result {
         val ids = ArrayList<ParsedId>()
-        fun idsOf(a: JSONArray?) = a.objects().forEach { ids += ParsedId(it.optString("type"), it.optString("number"), it.optString("country").uppercase(),
-            listOf("issued", "valid_until", "support").filter { k -> it.has(k) }.associateWith { k -> it.optString(k) }) }
+        fun idsOf(a: JSONArray?, holder: JSONObject? = null) = a.objects().forEach {
+            val id = ParsedId(it.optString("type"), it.optString("number"), it.optString("country").uppercase(),
+                listOf("issued", "valid_until", "support", "issuing_country").filter { k -> it.has(k) }.associateWith { k -> it.optString(k) })
+            ids += holder?.let { h -> id.withHolder(AutofillSot.PROFILE_FIELDS.associateWith { k -> h.optString(k) }) } ?: id
+        }
         val profiles = o.optJSONArray("profiles").objects().mapIndexed { i, p ->
-            idsOf(p.optJSONArray("ids"))
+            idsOf(p.optJSONArray("ids"), holder = p)
             AutofillProfile(label = p.optString("label"), isDefault = p.optBoolean("is_default", i == 0),
                 fields = AutofillSot.PROFILE_FIELDS.filter { p.optString(it).isNotBlank() }.associateWith { p.optString(it).trim() },
                 addresses = p.optJSONArray("addresses").objects().mapIndexed { j, a ->

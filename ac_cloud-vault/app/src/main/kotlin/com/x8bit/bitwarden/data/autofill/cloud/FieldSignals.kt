@@ -33,6 +33,12 @@ enum class FieldKind {
     PASSWORD,
     OTP,
     CARD,
+
+    /**
+     * An ID-document field (national ID, passport, driving licence, support number, ...): filled
+     * from Identity items, see [IdentityFieldClassifier].
+     */
+    ID_DOCUMENT,
     NONE,
 }
 

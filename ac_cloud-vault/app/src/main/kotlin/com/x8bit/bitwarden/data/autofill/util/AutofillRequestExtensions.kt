@@ -33,4 +33,8 @@ fun AutofillRequest.Fillable.toAutofillSaveItem(): AutofillSaveItem =
                 uri = uri,
             )
         }
+
+        // Cloud Vault: an Identity partition carries no SaveInfo, so no save request reaches
+        // here for one; the processor drops it anyway. Never prefilled from a page.
+        is AutofillPartition.Identity -> AutofillSaveItem.Identity()
     }

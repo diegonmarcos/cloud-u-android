@@ -125,7 +125,10 @@ class AutofillParserImpl(
         val urlBarWebsite = traversalDataList
             .flatMap { it.urlBarWebsites }
             .firstOrNull()
-        val autofillViews = traversalDataList.toAutofillViews(urlBarWebsite = urlBarWebsite)
+        val autofillViews = traversalDataList
+            .toAutofillViews(urlBarWebsite = urlBarWebsite)
+            // Cloud Vault: Identity views count only when an ID-document field has focus.
+            .withIdentityViewsOnlyForFocusedDocument()
 
         // Find the focused view, or fallback to the first fillable item on the screen (so
         // we at least have something to hook into)
@@ -175,6 +178,12 @@ class AutofillParserImpl(
             is AutofillView.Login -> {
                 AutofillPartition.Login(
                     views = effectiveViews.filterIsInstance<AutofillView.Login>(),
+                )
+            }
+
+            is AutofillView.Identity -> {
+                AutofillPartition.Identity(
+                    views = effectiveViews.filterIsInstance<AutofillView.Identity>(),
                 )
             }
 
@@ -235,7 +244,9 @@ class AutofillParserImpl(
             when (focusedView) {
                 is AutofillView.Card -> rule.category in CARD_FILL_ASSIST_CATEGORIES
                 is AutofillView.Login -> rule.category in LOGIN_FILL_ASSIST_CATEGORIES
-                is AutofillView.Unused -> false
+                is AutofillView.Identity,
+                is AutofillView.Unused,
+                    -> false
             }
         }
 
@@ -261,6 +272,7 @@ private fun AssistStructure.traverse(): List<ViewNodeTraversalData> =
                 .rootViewNode
                 ?.traverse(parentWebsite = null)
                 ?.updateForMissingPasswordFields()
+                ?.updateForIdentityFieldsAboveAPassword()
                 ?.updateForMissingUsernameFields()
         }
 
@@ -283,6 +295,43 @@ private fun List<ViewNodeTraversalData>.toAutofillViews(
             .flatten()
             .filter { it !is AutofillView.Unused }
     return autofillViewLists.map { it.updateWebsiteIfNecessary(website = urlBarWebsite) }
+}
+
+/**
+ * Cloud Vault: Identity items are offered on an ID-document field only, so the Identity views of a
+ * screen stay only when the FOCUSED view is one of its document fields; otherwise they are
+ * dropped here, exactly as the Unused views they used to be, and the screen is handled as before.
+ * This is what keeps the vault off plain name and address forms (the browser and keyboard fill
+ * those) and stops a fallback focus from offering Identity items on a field that is no document.
+ */
+private fun List<AutofillView>.withIdentityViewsOnlyForFocusedDocument(): List<AutofillView> {
+    val focused = firstOrNull { it.data.isFocused }
+    val isDocumentFocused = (focused as? AutofillView.Identity)?.field?.isDocument == true
+    return if (isDocumentFocused) this else filterNot { it is AutofillView.Identity }
+}
+
+/**
+ * Cloud Vault: on a login screen the field above the password is its username even when it
+ * reads as an ID document (Spanish sites log in with "DNI / NIE" + password). When a screen has a
+ * password field and no username field, an Identity view directly above a password field
+ * becomes the login's username, as an unknown field there always did upstream.
+ */
+private fun ViewNodeTraversalData.updateForIdentityFieldsAboveAPassword(): ViewNodeTraversalData {
+    val passwordPositions = this.autofillViews.mapIndexedNotNull { index, autofillView ->
+        (autofillView as? AutofillView.Login.Password)?.let { index }
+    }
+    if (passwordPositions.isEmpty() ||
+        this.autofillViews.any { it is AutofillView.Login.Username }
+    ) {
+        return this
+    }
+    return this.copyAndMapAutofillViews { index, autofillView ->
+        if (autofillView is AutofillView.Identity && passwordPositions.contains(index + 1)) {
+            AutofillView.Login.Username(data = autofillView.data)
+        } else {
+            autofillView
+        }
+    }
 }
 
 /**
@@ -451,6 +500,7 @@ private fun AutofillView.updateWebsiteIfNecessary(website: String?): AutofillVie
         is AutofillView.Login.Password -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Login.Totp -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Login.Username -> this.copy(data = this.data.copy(website = site))
+        is AutofillView.Identity -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Unused -> this.copy(data = this.data.copy(website = site))
     }
 }

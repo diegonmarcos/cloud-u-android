@@ -23,6 +23,9 @@ data class AutofillSelectionData(
     enum class Type {
         CARD,
         LOGIN,
+
+        /** Cloud Vault: an Identity item, for an ID-document field. */
+        IDENTITY,
     }
 
     /**

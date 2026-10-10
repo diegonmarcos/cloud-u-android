@@ -1,7 +1,6 @@
 package com.diegonmarcos.cloudaccount.autofill
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -326,11 +325,17 @@ fun AutofillImportPage() {
     var text by remember { mutableStateOf("") }
     var parsed by remember { mutableStateOf<AutofillImport.Result?>(null) }
     var saved by remember { mutableStateOf<String?>(null) }
+    // The IDs of the last review stay listed after Save until each is sent to Cloud Vault.
+    var ids by remember { mutableStateOf<List<AutofillImport.ParsedId>>(emptyList()) }
+    var sent by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    val vaultTakesIds = remember(parsed, ids) { VaultIdentityHandoff.isAvailable(ctx) }
 
     Page("Import", "Paste your data as text (labelled lines, one block per profile) or JSON. Nothing is saved until you review it. ID documents found in the paste are NOT stored here: they belong in Cloud Vault as Identity items.") {
         Field("Paste text or JSON", text, "autofill:import:text", single = false) { text = it; parsed = null; saved = null }
         KitActionBar(listOf(
-            KitAction("Review", "autofill:import:review", enabled = text.isNotBlank()) { parsed = AutofillImport.parse(text) },
+            KitAction("Review", "autofill:import:review", enabled = text.isNotBlank()) {
+                parsed = AutofillImport.parse(text).also { ids = it.ids; sent = emptySet() }
+            },
             KitAction("Format help", "autofill:import:help") { text = AutofillImport.EXAMPLE },
         ))
         saved?.let { Text(it, color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.body, modifier = Modifier.testTag("autofill:import:saved")) }
@@ -340,30 +345,55 @@ fun AutofillImportPage() {
                 r.profiles.forEach { p -> KitListRow(p.title, secondary = profileSummary(p), tag = "autofill:import:profile:${p.title}") }
                 r.snippets.forEach { s -> KitListRow("Snippet: " + s.label.ifBlank { "untitled" }, secondary = s.text.replace('\n', ' ').take(60)) }
                 if (r.profiles.isEmpty() && r.snippets.isEmpty()) Text("Nothing recognised to save.", color = LocalKitPalette.current.textSecondary, fontSize = KitDensity.body)
-                if (r.ids.isNotEmpty()) {
-                    Text("ID documents — save these in Cloud Vault (Identity item), not here", color = LocalKitPalette.current.textPrimary,
-                        fontSize = KitDensity.title, modifier = Modifier.padding(top = KitDensity.small))
-                    r.ids.forEach { id -> KitListRow(id.type, secondary = AutofillImport.mask(id.number) + if (id.country.isNotBlank()) " · ${id.country}" else "", tag = "autofill:import:id") }
-                    KitActionBar(listOf(KitAction("Open Cloud Vault", "autofill:import:vault") { openVault(ctx) }), filledFirst = false)
-                }
+                if (r.ids.isNotEmpty()) IdDocumentsForVault(ids, sent, vaultTakesIds) { i -> sent = sent + i }
                 if (r.skipped.isNotEmpty()) Text("${r.skipped.size} line(s) not understood were left out.", color = LocalKitPalette.current.textSecondary, fontSize = KitDensity.caption)
                 KitActionBar(listOf(
                     KitAction("Save ${r.profiles.size} profile(s), ${r.snippets.size} snippet(s)", "autofill:import:save", enabled = r.profiles.isNotEmpty() || r.snippets.isNotEmpty()) {
                         r.profiles.forEach { store.save(it) }; r.snippets.forEach { store.save(it) }; notifyAll(ctx)
-                        saved = "Saved. " + if (r.ids.isNotEmpty()) "Add the ${r.ids.size} ID document(s) in Cloud Vault." else ""
+                        val pending = r.ids.indices.count { it !in sent }
+                        saved = "Saved. " + when {
+                            pending == 0 -> ""
+                            vaultTakesIds -> "Send the $pending ID document(s) below to Cloud Vault."
+                            else -> "Add the $pending ID document(s) in Cloud Vault."
+                        }
                         parsed = null; text = ""
                     },
-                    KitAction("Discard", "autofill:import:discard") { parsed = null },
+                    KitAction("Discard", "autofill:import:discard") { parsed = null; ids = emptyList(); sent = emptySet() },
                 ))
+            }
+        }
+        // After Save the review closes; its ID documents stay here until each is sent.
+        if (parsed == null && vaultTakesIds && ids.indices.any { it !in sent }) {
+            KitCard(Modifier.padding(vertical = KitDensity.small).testTag("autofill:import:ids:card")) {
+                IdDocumentsForVault(ids, sent, vaultTakesIds) { i -> sent = sent + i }
             }
         }
     }
 }
 
-/** Cloud Vault's own screen: it publishes no add-identity intent, so the user adds the Identity item there. */
-private fun openVault(ctx: Context) {
-    val i = ctx.packageManager.getLaunchIntentForPackage(VAULT_PKG) ?: return
-    ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+/**
+ * The ID documents of a review, masked (last three characters only). With a Cloud Vault that has the
+ * add-identity entry point, each row has "Add to Cloud Vault": the vault opens its new-Identity screen
+ * prefilled, after its own unlock, and saves only on the user's tap. Otherwise (vault missing or too
+ * old) the previous flow: open Cloud Vault and add the Identity item by hand.
+ */
+@Composable
+private fun IdDocumentsForVault(ids: List<AutofillImport.ParsedId>, sent: Set<Int>, vaultTakesIds: Boolean, onSent: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    if (ids.isEmpty()) return
+    Text(
+        if (vaultTakesIds) "ID documents — add each to Cloud Vault as an Identity item, not here (you review and save it there)"
+        else "ID documents — save these in Cloud Vault (Identity item), not here",
+        color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.title, modifier = Modifier.padding(top = KitDensity.small),
+    )
+    ids.forEachIndexed { i, id ->
+        val masked = AutofillImport.mask(id.number) + if (id.country.isNotBlank()) " · ${id.country}" else ""
+        KitListRow(id.type, secondary = if (i in sent) "$masked · sent to Cloud Vault" else masked, tag = "autofill:import:id")
+        if (vaultTakesIds && i !in sent) {
+            KitActionBar(listOf(KitAction("Add to Cloud Vault", "autofill:import:vault:add:$i") {
+                if (VaultIdentityHandoff.send(ctx, id)) onSent(i) else VaultIdentityHandoff.openVault(ctx)
+            }), filledFirst = false)
+        }
+    }
+    if (!vaultTakesIds) KitActionBar(listOf(KitAction("Open Cloud Vault", "autofill:import:vault") { VaultIdentityHandoff.openVault(ctx) }), filledFirst = false)
 }
-
-private const val VAULT_PKG = "com.diegonmarcos.cloudvault"

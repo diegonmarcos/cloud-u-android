@@ -24,6 +24,17 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Account ▸ Import sends each ID document it finds to Cloud Vault's add-identity entry point
+         (autofill/VaultIdentityHandoff.kt), which opens the vault's new-Identity screen prefilled.
+         A fleet signature permission: granted at install because both apps carry the constellation
+         key. Defined here too, identically to Cloud Vault's own definition, so it exists whichever
+         app is installed first. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY"
+        android:label="Add an ID document to Cloud Vault"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY" />
+
     <application
         android:name=".App"
         android:allowBackup="false"

@@ -4,6 +4,7 @@ import android.content.IntentSender
 import android.os.Build
 import android.service.autofill.Dataset
 import android.service.autofill.Presentations
+import android.view.autofill.AutofillId
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import com.x8bit.bitwarden.data.autofill.model.AutofillAppInfo
@@ -68,10 +69,15 @@ private fun FilledPartition.applyToDatasetPostTiramisu(
         .build()
 
     filledItems.forEach { filledItem ->
-        filledItem.applyToDatasetPostTiramisu(
-            datasetBuilder = datasetBuilder,
-            presentations = presentation,
-        )
+        if (presentationIds == null || filledItem.autofillId in presentationIds) {
+            filledItem.applyToDatasetPostTiramisu(
+                datasetBuilder = datasetBuilder,
+                presentations = presentation,
+            )
+        } else {
+            // Cloud Vault: filled when the dataset is picked, never shows it.
+            filledItem.applyFillOnlyToDatasetPostTiramisu(datasetBuilder = datasetBuilder)
+        }
     }
 }
 
@@ -84,6 +90,15 @@ private fun FilledPartition.buildDatasetPreTiramisu(
     datasetBuilder: Dataset.Builder,
     remoteViews: RemoteViews,
 ) {
+    presentationIds?.let { ids ->
+        buildFieldPresentedDatasetPreTiramisu(
+            autofillAppInfo = autofillAppInfo,
+            datasetBuilder = datasetBuilder,
+            remoteViews = remoteViews,
+            presentationIds = ids,
+        )
+        return
+    }
     if (autofillAppInfo.isVersionAtLeast(version = Build.VERSION_CODES.R)) {
         inlinePresentationSpec
             ?.createCipherInlinePresentationOrNull(
@@ -101,5 +116,38 @@ private fun FilledPartition.buildDatasetPreTiramisu(
             datasetBuilder = datasetBuilder,
             remoteViews = remoteViews,
         )
+    }
+}
+
+/**
+ * Cloud Vault, before Tiramisu: a dataset whose suggestion shows only on [presentationIds]. The
+ * inline presentation is set per field (API 30+), never on the whole dataset, so a fill-only
+ * field neither shows the drop-down nor an inline chip.
+ */
+private fun FilledPartition.buildFieldPresentedDatasetPreTiramisu(
+    autofillAppInfo: AutofillAppInfo,
+    datasetBuilder: Dataset.Builder,
+    remoteViews: RemoteViews,
+    presentationIds: Set<AutofillId>,
+) {
+    val inlinePresentation =
+        if (autofillAppInfo.isVersionAtLeast(version = Build.VERSION_CODES.R)) {
+            inlinePresentationSpec?.createCipherInlinePresentationOrNull(
+                autofillAppInfo = autofillAppInfo,
+                autofillCipher = autofillCipher,
+            )
+        } else {
+            null
+        }
+    filledItems.forEach { filledItem ->
+        if (filledItem.autofillId in presentationIds) {
+            filledItem.applyWithInlineToDatasetPreTiramisu(
+                datasetBuilder = datasetBuilder,
+                remoteViews = remoteViews,
+                inlinePresentation = inlinePresentation,
+            )
+        } else {
+            filledItem.applyFillOnlyToDatasetPreTiramisu(datasetBuilder = datasetBuilder)
+        }
     }
 }

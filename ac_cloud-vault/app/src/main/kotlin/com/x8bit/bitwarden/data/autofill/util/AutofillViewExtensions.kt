@@ -86,6 +86,16 @@ private fun AutofillView.buildListAutofillValueOrNull(
                 }
         }
 
+        is AutofillView.Identity -> {
+            // A country or state <select>: its options are matched without case.
+            this
+                .data
+                .autofillOptions
+                .indexOfFirst { it.trim().equals(value.trim(), ignoreCase = true) }
+                .takeIf { it != -1 }
+                ?.let { AutofillValue.forList(it) }
+        }
+
         is AutofillView.Card.CardholderName,
         is AutofillView.Card.ExpirationDate,
         is AutofillView.Card.Number,

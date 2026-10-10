@@ -9,6 +9,8 @@ import com.bitwarden.ui.platform.base.util.orNullIfBlank
 import com.x8bit.bitwarden.data.autofill.cloud.CloudFieldClassifier
 import com.x8bit.bitwarden.data.autofill.cloud.FieldKind
 import com.x8bit.bitwarden.data.autofill.cloud.FieldSignals
+import com.x8bit.bitwarden.data.autofill.cloud.IdentityField
+import com.x8bit.bitwarden.data.autofill.cloud.IdentityFieldClassifier
 import com.x8bit.bitwarden.data.autofill.model.AutofillHint
 import com.x8bit.bitwarden.data.autofill.model.AutofillView
 
@@ -137,6 +139,11 @@ private val AssistStructure.ViewNode.supportedAutofillHint: AutofillHint?
         // would read "the code we sent to your phone" as a username field.
         val cloudKind = cloudFieldKindOrNull()
         if (cloudKind == FieldKind.OTP) return AutofillHint.OTP
+        // Cloud Vault: an ID-document field (DNI, passport, Personalausweis, CPF...) next, before
+        // the upstream heuristics, which have no ID fields and would read "ID card number" as a
+        // card. The parser turns one directly above a password field back into a login username.
+        val identityField = cloudIdentityFieldOrNull()
+        if (identityField?.isDocument == true) return AutofillHint.IDENTITY
         return when {
             this.isUsernameField -> AutofillHint.USERNAME
             this.isPasswordField -> AutofillHint.PASSWORD
@@ -152,7 +159,17 @@ private val AssistStructure.ViewNode.supportedAutofillHint: AutofillHint?
             // Cloud Vault fallback: HTML autocomplete tokens, number-password input types and
             // the androidx hints upstream does not list.
             ?: cloudKind?.toAutofillHintOrNull()
+            // Cloud Vault, last: a name / address / expiry field an Identity item may fill when
+            // the user picks one on a document field of the same screen.
+            ?: identityField?.let { AutofillHint.IDENTITY }
     }
+
+/**
+ * Cloud Vault's Identity classification of this node (see [IdentityFieldClassifier]); any
+ * failure reads as "no opinion", like [cloudFieldKindOrNull].
+ */
+private fun AssistStructure.ViewNode.cloudIdentityFieldOrNull(): IdentityField? =
+    runCatching { IdentityFieldClassifier.classify(toFieldSignals()) }.getOrNull()
 
 /**
  * Cloud Vault's classification of this node (see [CloudFieldClassifier]). A node the framework
@@ -189,6 +206,7 @@ private fun FieldKind.toAutofillHintOrNull(): AutofillHint? = when (this) {
     FieldKind.PASSWORD -> AutofillHint.PASSWORD
     FieldKind.OTP -> AutofillHint.OTP
     FieldKind.CARD,
+    FieldKind.ID_DOCUMENT,
     FieldKind.NONE,
         -> null
 }
@@ -292,6 +310,12 @@ private fun AssistStructure.ViewNode.buildAutofillView(
         AutofillView.Login.Totp(
             data = autofillViewData,
         )
+    }
+
+    AutofillHint.IDENTITY -> {
+        cloudIdentityFieldOrNull()
+            ?.let { field -> AutofillView.Identity(data = autofillViewData, field = field) }
+            ?: AutofillView.Unused(data = autofillViewData)
     }
 
     AutofillHint.CARD_BRAND -> {

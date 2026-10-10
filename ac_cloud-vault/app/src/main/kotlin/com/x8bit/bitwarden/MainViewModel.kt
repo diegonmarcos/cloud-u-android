@@ -25,6 +25,7 @@ import com.x8bit.bitwarden.data.auth.util.getCompleteRegistrationDataIntentOrNul
 import com.x8bit.bitwarden.data.auth.util.getPasswordlessRequestDataIntentOrNull
 import com.x8bit.bitwarden.data.autofill.accessibility.manager.AccessibilitySelectionManager
 import com.x8bit.bitwarden.data.autofill.manager.AutofillSelectionManager
+import com.x8bit.bitwarden.data.autofill.cloud.takeRelayedAddIdentityOrNull
 import com.x8bit.bitwarden.data.autofill.util.getAutofillSaveItemOrNull
 import com.x8bit.bitwarden.data.autofill.util.getAutofillSelectionDataOrNull
 import com.x8bit.bitwarden.data.billing.util.getPremiumCheckoutCallbackResult
@@ -320,6 +321,8 @@ class MainViewModel @Inject constructor(
     ) {
         val passwordlessRequestData = intent.getPasswordlessRequestDataIntentOrNull()
         val autofillSaveItem = intent.getAutofillSaveItemOrNull()
+            // Cloud Vault: an ID document relayed in memory by AddIdentityActivity.
+            ?: intent.takeRelayedAddIdentityOrNull()
         val autofillSelectionData = intent.getAutofillSelectionDataOrNull()
         val shareData = shareManager.getShareDataOrNull(intent = intent)
         val totpData: TotpData? =

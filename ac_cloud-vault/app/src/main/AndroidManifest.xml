@@ -32,6 +32,16 @@
         android:protectionLevel="signature|knownSigner"
         tools:targetApi="s" />
 
+    <!-- Cloud Vault: the add-identity entry point (AddIdentityActivity). A fleet signature
+         permission, like com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_*: Android grants it
+         at install time to an APK signed with the constellation key (SIGNING.md) and refuses
+         every other APK, with no prompt. Cloud Account defines the same permission, identically,
+         so it exists whichever of the two is installed first. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY"
+        android:label="Add an ID document to Cloud Vault"
+        android:protectionLevel="signature" />
+
     <application
         android:name=".BitwardenApplication"
         android:allowBackup="false"
@@ -139,6 +149,24 @@
                 <action android:name="com.x8bit.bitwarden.credentials.ACTION_GET_PASSWORD" />
                 <action android:name="com.x8bit.bitwarden.credentials.ACTION_UNLOCK_ACCOUNT" />
 
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Cloud Vault: add an ID document as an Identity item. Exported ONLY behind the fleet
+             signature permission above; no UI of its own: it reads the extras once, removes them,
+             relays the document to MainActivity in memory, and MainActivity opens the
+             new-Identity screen prefilled (after unlock). Nothing is saved without the user's
+             Save. -->
+        <activity
+            android:name=".AddIdentityActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:permission="com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloudvault.action.ADD_IDENTITY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

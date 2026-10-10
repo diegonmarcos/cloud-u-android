@@ -3,6 +3,7 @@ package com.x8bit.bitwarden.data.autofill.model
 import androidx.annotation.DrawableRes
 import com.bitwarden.core.Uuid
 import com.bitwarden.ui.platform.resource.BitwardenDrawable
+import com.x8bit.bitwarden.data.autofill.cloud.IdentityValues
 
 /**
  * A paired down model of the CipherView for use within the autofill feature.
@@ -53,6 +54,25 @@ sealed class AutofillCipher {
 
         override val isTotpEnabled: Boolean
             get() = false
+    }
+
+    /**
+     * Cloud Vault: an Identity item, for ID-document fields. [values] are secrets: this class
+     * never prints them.
+     */
+    data class Identity(
+        override val cipherId: String?,
+        override val name: String,
+        override val subtitle: String,
+        val values: IdentityValues,
+    ) : AutofillCipher() {
+        override val iconRes: Int
+            @DrawableRes get() = BitwardenDrawable.ic_id_card
+
+        override val isTotpEnabled: Boolean
+            get() = false
+
+        override fun toString(): String = "AutofillCipher.Identity(cipherId=$cipherId)"
     }
 
     /**

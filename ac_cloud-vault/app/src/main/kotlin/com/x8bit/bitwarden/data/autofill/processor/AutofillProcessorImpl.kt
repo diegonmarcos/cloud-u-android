@@ -12,6 +12,7 @@ import com.x8bit.bitwarden.data.autofill.builder.FilledDataBuilder
 import com.x8bit.bitwarden.data.autofill.builder.SaveInfoBuilder
 import com.x8bit.bitwarden.data.autofill.cloud.AutofillUriResolver
 import com.x8bit.bitwarden.data.autofill.model.AutofillAppInfo
+import com.x8bit.bitwarden.data.autofill.model.AutofillPartition
 import com.x8bit.bitwarden.data.autofill.model.AutofillRequest
 import com.x8bit.bitwarden.data.autofill.model.AutofillSaveItem
 import com.x8bit.bitwarden.data.autofill.parser.AutofillParser
@@ -99,7 +100,12 @@ class AutofillProcessorImpl(
                 )
 
                 when (autofillRequest) {
-                    is AutofillRequest.Fillable -> {
+                    is AutofillRequest.Fillable -> if (
+                        // Cloud Vault: ID documents are never saved from a page.
+                        autofillRequest.partition is AutofillPartition.Identity
+                    ) {
+                        saveCallback.onSuccess()
+                    } else {
                         val saveItem = autofillRequest
                             .resolveUriForSave()
                             .toAutofillSaveItem()

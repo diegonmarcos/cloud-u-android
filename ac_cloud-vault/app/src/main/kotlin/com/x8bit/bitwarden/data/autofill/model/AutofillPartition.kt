@@ -56,6 +56,25 @@ sealed class AutofillPartition {
     }
 
     /**
+     * Cloud Vault: the Identity [AutofillPartition], built only when the focused field is an
+     * ID-document field. Never saved: an Identity item is added in the vault's own screen.
+     */
+    data class Identity(
+        override val views: List<AutofillView.Identity>,
+    ) : AutofillPartition() {
+        override val optionalSaveIds: List<AutofillId>
+            get() = emptyList()
+        override val requiredSaveIds: List<AutofillId>
+            get() = emptyList()
+        override val saveType: Int
+            get() = SaveInfo.SAVE_DATA_TYPE_GENERIC
+
+        /** The ID-document fields: the ones that show the vault's suggestions. */
+        val documentViews: List<AutofillView.Identity>
+            get() = views.filter { it.field.isDocument }
+    }
+
+    /**
      * The login [AutofillPartition] data.
      */
     data class Login(

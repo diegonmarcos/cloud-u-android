@@ -19,4 +19,9 @@ enum class AutofillHint {
      * TOTP code.
      */
     OTP,
+
+    /**
+     * Cloud Vault: a field an Identity item fills (see `IdentityFieldClassifier`).
+     */
+    IDENTITY,
 }

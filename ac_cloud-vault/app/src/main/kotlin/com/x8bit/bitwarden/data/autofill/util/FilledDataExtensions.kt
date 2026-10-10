@@ -23,7 +23,12 @@ import kotlin.random.Random
  * Returns all the possible [AutofillId]s that were potentially fillable for the given [FilledData].
  */
 val FilledData.fillableAutofillIds: List<AutofillId>
-    get() = this.originalPartition.views.map { it.data.autofillId }
+    get() = when (val partition = this.originalPartition) {
+        // Cloud Vault: the "open vault" / "vault is locked" entry sits on the document fields
+        // only; an Identity partition's name and address fields never show a vault entry.
+        is AutofillPartition.Identity -> partition.documentViews.map { it.data.autofillId }
+        else -> partition.views.map { it.data.autofillId }
+    }
 
 /**
  * Builds a [Dataset] for the Vault item.
@@ -37,6 +42,7 @@ fun FilledData.buildVaultItemDataset(
         type = when (this.originalPartition) {
             is AutofillPartition.Card -> AutofillSelectionData.Type.CARD
             is AutofillPartition.Login -> AutofillSelectionData.Type.LOGIN
+            is AutofillPartition.Identity -> AutofillSelectionData.Type.IDENTITY
         },
         uri = this.uri,
     )

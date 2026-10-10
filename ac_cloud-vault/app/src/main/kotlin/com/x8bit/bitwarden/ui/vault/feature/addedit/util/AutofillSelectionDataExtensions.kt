@@ -20,6 +20,10 @@ fun AutofillSelectionData.toDefaultAddTypeContent(
             VaultAddEditState.ViewState.Content.ItemType.Card()
         }
 
+        AutofillSelectionData.Type.IDENTITY -> {
+            VaultAddEditState.ViewState.Content.ItemType.Identity()
+        }
+
         AutofillSelectionData.Type.LOGIN -> {
             VaultAddEditState.ViewState.Content.ItemType.Login(
                 uriList = listOf(

@@ -2837,6 +2837,19 @@ class VaultItemListingViewModel @Inject constructor(
                 }
             }
 
+            AutofillSelectionData.Type.IDENTITY -> {
+                // Cloud Vault: every Identity item; an ID document is not tied to a site.
+                this.map { vaultData ->
+                    vaultData.copy(
+                        decryptCipherListResult = vaultData.decryptCipherListResult.copy(
+                            successes = vaultData.decryptCipherListResult.successes
+                                .filter { it.type is CipherListViewType.Identity },
+                            failures = emptyList(),
+                        ),
+                    )
+                }
+            }
+
             AutofillSelectionData.Type.LOGIN -> {
                 val matchUri = state
                     .autofillSelectionData
@@ -3033,7 +3046,9 @@ data class VaultItemListingState(
                                 BitwardenString.select_a_card_for_x.asText(it)
                             }
 
-                            AutofillSelectionData.Type.LOGIN -> {
+                            AutofillSelectionData.Type.LOGIN,
+                            AutofillSelectionData.Type.IDENTITY,
+                                -> {
                                 BitwardenString.items_for_uri.asText(it)
                             }
                         }

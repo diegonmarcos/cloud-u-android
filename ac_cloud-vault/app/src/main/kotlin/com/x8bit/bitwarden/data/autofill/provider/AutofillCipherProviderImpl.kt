@@ -7,6 +7,7 @@ import com.bitwarden.vault.CipherRepromptType
 import com.bitwarden.vault.CipherView
 import com.x8bit.bitwarden.data.auth.repository.AuthRepository
 import com.x8bit.bitwarden.data.autofill.model.AutofillCipher
+import com.x8bit.bitwarden.data.autofill.util.toAutofillIdentityOrNull
 import com.x8bit.bitwarden.data.platform.manager.PolicyManager
 import com.x8bit.bitwarden.data.platform.manager.ciphermatching.CipherMatchingManager
 import com.x8bit.bitwarden.data.platform.util.firstWithTimeoutOrNull
@@ -135,6 +136,25 @@ class AutofillCipherProviderImpl(
                     website = uri,
                     totpCode = if (includeTotpCode) currentTotpCodeOrNull(cipherView) else null,
                 )
+            }
+    }
+
+    override suspend fun getIdentityAutofillCiphers(): List<AutofillCipher.Identity> {
+        // Locked → null → nothing: no Identity value is read before the vault is unlocked.
+        val cipherListViews = getUnlockedCipherListViewsOrNull() ?: return emptyList()
+        return cipherListViews
+            .filter {
+                // Must be identity type.
+                it.type is CipherListViewType.Identity &&
+                    // Must still be active.
+                    it.isActive &&
+                    // Must not require a reprompt.
+                    it.reprompt == CipherRepromptType.NONE
+            }
+            .mapNotNull { cipherListView ->
+                cipherListView.id
+                    ?.let { decryptCipherOrNull(cipherId = it) }
+                    ?.toAutofillIdentityOrNull()
             }
     }
 

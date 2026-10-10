@@ -1,6 +1,7 @@
 package com.x8bit.bitwarden.data.autofill.model
 
 import android.view.autofill.AutofillId
+import com.x8bit.bitwarden.data.autofill.cloud.IdentityField
 
 /**
  * The processed, relevant data from an autofill view node.
@@ -136,6 +137,16 @@ sealed class AutofillView {
             override val data: Data,
         ) : Login()
     }
+
+    /**
+     * Cloud Vault: a field an Identity item fills (an ID-document field, or a name / address /
+     * expiry field next to one). Only [IdentityField.isDocument] fields make the vault offer
+     * Identity items; the others are filled when the user picks one there.
+     */
+    data class Identity(
+        override val data: Data,
+        val field: IdentityField,
+    ) : AutofillView()
 
     /**
      * A view that is an input field but does not correspond to any known autofill field.

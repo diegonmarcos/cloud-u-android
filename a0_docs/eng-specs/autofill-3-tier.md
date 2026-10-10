@@ -43,10 +43,20 @@ birth date, nationality, organisation, job title — and:
 **B) IDs are NOT here.** National ID, passport, residence permit (type, issuing country, number,
 support/serial/CAN, issue date, valid until) are sensitive identity data: they belong in **Cloud Vault as
 Bitwarden Identity items**. The browser engine never fills an ID field; the keyboard never shows an ID on
-its row and suppresses itself on one; Cloud Account's Import detects IDs in a paste and routes them to
-Cloud Vault without storing them. **Filling ID fields is Vault's job through the Autofill framework —
-a follow-up for the vault tier**, with field heuristics such as `dni`, `nie`, `nif`, `personalausweis`,
-`ausweisnummer`, `passport`/`pasaporte`/`passaporte`/`reisepass`, `cpf`, `rg`, `aufenthaltstitel`.
+its row and suppresses itself on one; Cloud Account's Import detects IDs in a paste and hands each to
+Cloud Vault's add-identity entry point without storing it. **Filling ID fields is Vault's job through the
+Autofill framework** (shipped): `dni`, `nie`, `nif`, `personalausweis`/`ausweisnummer`,
+`passport`/`pasaporte`/`passaporte`/`reisepass`/`passnummer`, `cpf`, `rg`/`identidade`, `aufenthaltstitel`,
+"ID number", "document number", "número de soporte"/CAN, document expiry ("valid until", "fecha de
+caducidad", "gültig bis", "validade") and issuing country, mapped to the Identity item's `passportNumber`,
+`licenseNumber`, `ssn` and custom fields (`DNI`, `Support number`, `Valid until`, ...); the table is in the
+vault contract (rule 8).
+
+**The name / address rule (no collision).** Plain name and address filling belongs to Tiers 2 and 3. Cloud
+Vault writes a screen's name and address fields **only** as part of an Identity item the user picked on an
+ID-document field of that same screen; those fields never show a Vault suggestion of their own, and a
+name / address form with no ID-document field gets nothing from Vault. A field the framework filled that
+way is the framework's (rule 3 of the vault contract): the browser never touches it again.
 
 **C) Snippets** — labelled, multi-line, emoji-safe text blocks ("About me", a bio, standard messages).
 Offered on keyboard row 2 only when the field is multi-line (`TYPE_TEXT_FLAG_MULTI_LINE`); in the browser
@@ -112,9 +122,13 @@ app holds: personal data goes only to the apps that ask for it. The SuperApp's I
 
 **Editor** — Cloud Account ▸ Account ▸ **Autofill** (profiles with their typed addresses and contacts: add,
 edit in place, default, remove, delete with confirmation), **Sites** (rules and default-profile rules),
-**Snippets**, **Import** (paste text or JSON → review → save; IDs found are listed for Cloud Vault, never
-stored; Cloud Vault publishes no add-identity intent, so the review opens Vault and says to add an Identity
-item there).
+**Snippets**, **Import** (paste text or JSON → review → save; IDs found are listed, masked, for Cloud Vault and
+never stored: each row's "Add to Cloud Vault" sends that document, with the holder's names from its profile,
+to Cloud Vault's add-identity entry point (`com.diegonmarcos.cloudvault.action.ADD_IDENTITY`, behind the
+signature permission `com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY` that Cloud Account requests and
+defines), which unlocks, opens the new-Identity screen prefilled and saves only on the user's tap. A vault
+that is missing or older than the entry point gets the previous flow: open Vault, add the Identity item by
+hand. `ac_cloud-account/.../autofill/VaultIdentityHandoff.kt`).
 
 ## 4. Tier 2 — Cloud Browser DOM autofill
 
@@ -224,7 +238,8 @@ animation. An empty inline response clears row 1.
 |---|---|---|---|
 | Page load, address/contact form, user focuses a field | chip "Fill address: <profile>", fills the block on tap | row 2: SOT values for that field (a different surface from the chip) | — |
 | Focus a login / password field | **nothing** (secret, or login-form identity) | **Suppression Mode** on password/OTP: no own chips; row 1 shows Vault's inline chips | dropdown / inline chips, fills |
-| Focus an ID document field (DNI, passport, CPF…) | **nothing** | **Suppression Mode** | fills Identity items (follow-up, §2 B) |
+| Focus an ID document field (DNI, passport, CPF…) | **nothing** | **Suppression Mode** | offers Identity items (after unlock, no domain match, never auto-selected); the picked one fills the document fields and that screen's name/address fields |
+| Focus a name / address field of a screen that also has an ID field | chip as usual | row 2 as usual | **no suggestion** on that field; filled only when an Identity item is picked on the ID field |
 | Focus an arbitrary unclassified input | nothing | row 2: word suggestions (+ snippets on multi-line) | — |
 | About / bio / message textarea | "Insert snippet ▾", only on a pick | row 2: snippets (multi-line) | — |
 | Email field, contact form | may pre-fill on tap | row 2 email candidates | may fill when the user picks a dataset; the browser then defers that field |
@@ -253,11 +268,13 @@ animation. An empty inline response clears row 1.
 Owned by the Cloud Vault work (`ac_cloud-vault`, not touched here); its contract is
 [`ac_cloud-vault/docs/autofill-tiers-contract.md`](../../ac_cloud-vault/docs/autofill-tiers-contract.md) (rules 1–7:
 secrets only in the vault, the browser never fills secret fields, the framework fill wins, the keyboard makes
-room, locked means no data, same-site only, only browsers name the site). What Tiers 2/3 rely on from it: the
+room, locked means no data, same-site only, only browsers name the site; rule 8: ID documents are the vault's,
+names and addresses are not). What Tiers 2/3 rely on from it: the
 WebView's autofill structure is honoured (the browser keeps `importantForAutofill = YES`), inline
 suggestions are offered to the IME (the keyboard returns an `InlineSuggestionsRequest` with three
-presentation specs at strip height), Vault never fills non-secret profile data from this SOT, and — the
-follow-up — Vault fills ID document fields from Identity items (heuristics in §2 B).
+presentation specs at strip height), Vault never fills non-secret profile data from this SOT, Vault fills ID
+document fields from Identity items (§2 B), and names / addresses only inside a picked Identity item (§2 B,
+the name / address rule).
 
 ## 9. Tests
 
@@ -267,6 +284,8 @@ follow-up — Vault fills ID document fields from Identity items (heuristics in 
 | DOM engine: autocomplete tokens, EN/ES/PT/FR/DE labels, ES/DE/BR forms (two surnames, Straße + Hausnummer split, c/o, piso/puerta, bairro, complemento), password/OTP/card/IBAN/username/**ID** exclusion, rule override (never of secrets), login vs contact vs checkout email, React-controlled input + native setter, event order, `<select>`, hidden fields, framework deference, snippet fields (own chip, never in a block), save offer (never incognito, never a password), MutationObserver, SPA | `ac_cloud-browser/test/autofill_js_harness.js` via `test-browser-dom-autofill.sh` (node, fake DOM, + mutations) | ship-cloud-browser testers |
 | Browser host: chip words, per-country values, picker order (site rule → TLD → default), secret/ID keys refused, literals, snippets, save proposal + dedupe, legacy profiles, per-host config; clear categories (no cookie/site clear reaches autofill data, per-site origins only) | `ac_cloud-browser/app/src/test/.../DomAutofillTest.kt` | ship-cloud-browser unit |
 | Clear-data wiring: cookie/storage/site clears never touch autofill data and vice versa, own section + confirm, per-site clear scoped, nothing in WebView storage, incognito never writes | `ac_cloud-browser/test/test-browser-autofill-data-separate.sh` (+ mutations) | ship-cloud-browser testers |
+| Vault: ID fields across EN/ES/DE/PT and their negatives ("User ID", card expiry, PIN), Identity → field mapping incl. custom fields, which screens become an Identity partition, nothing before unlock, only document fields show the suggestion; the add-identity entry point (signature permission in the manifest, caller re-check, extras prefilled and removed, in-memory hand-over, the new-Identity screen) | `ac_cloud-vault/app/src/test/.../data/autofill/cloud/Identity*Test.kt`, `CloudVaultIdentityFillTest.kt`, `AddIdentityEntryPointTest.kt` | ship-cloud-vault "Test → autofill tier" |
+| Account → Vault hand-off: the ADD_IDENTITY intent and its extras (text and JSON imports, holder names), nothing sent without a vault that answers, the permission requested and defined | `ac_cloud-account/app/src/test/.../VaultIdentityHandoffTest.kt` (Robolectric) | ship-cloud-account "JVM unit tests" |
 | Keyboard: EditorInfo → mode (password/OTP/card/ID/no-learning), field keys, row arbitration matrix (inline present/absent × normal/suppressed), candidates + profile picker, snippets only on multi-line | `libs/keyboard/src/test/.../autofill/ImeAutofillTest.kt` | ship-cloud-keyboard `./build.sh unit` |
 | Keyboard wiring: row 1 layout, inline never on row 2, suppression → row 2 hidden + incognito + no clipboard chip, commitText, read-only permission | `ac_cloud-keyboard/test/test-keyboard-autofill-rows.sh` (+ mutations) | ship-cloud-keyboard testers |
 
@@ -275,8 +294,9 @@ follow-up — Vault fills ID document fields from Identity items (heuristics in 
 1. Install Cloud Account, Cloud Browser and Cloud Keyboard from the fleet (same signing key, so both
    permissions are granted at install). Settings ▸ System ▸ Keyboard: enable **Cloud Keyboard** and make it
    the default; Settings ▸ Passwords & autofill: **Cloud Vault** as the autofill service.
-2. Cloud Account ▸ Account ▸ Import: paste your data (Format help shows the shape), review, Save; add the
-   listed ID documents in Cloud Vault as Identity items. Or add profiles by hand under Autofill.
+2. Cloud Account ▸ Account ▸ Import: paste your data (Format help shows the shape), review, Save; for each
+   listed ID document tap "Add to Cloud Vault" → Vault unlocks, shows the new Identity item prefilled →
+   Save. Or add profiles by hand under Autofill.
 3. Sites: add a default-profile rule `de` → your Germany profile.
 4. A `.de` shop with an address form and a login form: focus the address form's PLZ → the chip "Fill address:
    <Germany profile> · Postal ▾" → tap → street, Hausnummer, PLZ, Ort fill, and a React/Vue checkout

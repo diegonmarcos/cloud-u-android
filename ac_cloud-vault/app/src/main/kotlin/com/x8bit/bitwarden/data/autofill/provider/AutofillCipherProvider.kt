@@ -27,4 +27,10 @@ interface AutofillCipherProvider {
         uri: String,
         includeTotpCode: Boolean = false,
     ): List<AutofillCipher.Login>
+
+    /**
+     * Cloud Vault: get all [AutofillCipher.Identity]s for the current user, for an ID-document
+     * field. Empty while the vault is locked. Not matched against the page: the user picks one.
+     */
+    suspend fun getIdentityAutofillCiphers(): List<AutofillCipher.Identity> = emptyList()
 }
