@@ -15,11 +15,11 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 41 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 42 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 10 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 11 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
@@ -43,12 +43,12 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 2 | 0 | 100% |
 | cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
-| cloud-store | `com.diegonmarcos.cloudstore` | 6 | 0 | 100% |
+| cloud-store | `com.diegonmarcos.cloudstore` | 7 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 9 | 7 | 56% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **193** | **35** | **84%** |
+| **fleet** | | **196** | **35** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -112,6 +112,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
+| `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
@@ -138,7 +139,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 41 covered, 0 gaps.
+Coverage: 42 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -205,6 +206,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottom
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
+| `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
@@ -215,7 +217,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottom
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-agenda — `com.diegonmarcos.cloudagenda`
 
@@ -798,6 +800,7 @@ Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtoo
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
+| `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
 | `store_fleet_bearer` | encrypted | secret | yes | #866 Cloud Store's own entry of the fleet bearer for the Commits / CI-CD feeds, used only when SuperApp (which holds the token and serves it over its CONSTELLATION_DATA provider) is not installed; a credential. |
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
@@ -806,7 +809,7 @@ Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtoo
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 6 covered, 0 gaps.
+Coverage: 7 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 

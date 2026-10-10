@@ -556,6 +556,14 @@
         "lib-appstore"
       ]
     },
+    "store_declared_edits": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "store_play_anon": {
       "kind": "prefs",
       "class": "device",
