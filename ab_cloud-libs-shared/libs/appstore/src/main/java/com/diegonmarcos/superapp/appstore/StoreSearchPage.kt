@@ -71,8 +71,8 @@ object StoreSearchPage {
     @Composable
     private fun Pill(label: String, on: Boolean, onClick: () -> Unit) {
         Text(label, color = Color.White, fontSize = StoreDensity.T_META.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(2.dp).background(if (on) Color(0xFF2F855A) else Color(0xFF3A3A44))
-                .clickableNoRipple(onClick).padding(horizontal = 8.dp, vertical = 6.dp))
+            modifier = Modifier.padding(StoreDensity.dpValue(StoreDensity.S2).dp).background(if (on) Color(0xFF2F855A) else Color(0xFF3A3A44))
+                .clickableNoRipple(onClick).padding(horizontal = StoreDensity.dpValue(StoreDensity.S8).dp, vertical = StoreDensity.dpValue(StoreDensity.S6).dp))
     }
 
     @Composable
@@ -100,7 +100,7 @@ object StoreSearchPage {
             }
         }
 
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(StoreDensity.dpValue(StoreDensity.S4).dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(query, { query = it }, Modifier.weight(1f), singleLine = true,
                     placeholder = { Text("Search Play and F-Droid") },
@@ -116,7 +116,7 @@ object StoreSearchPage {
             val pm = ctx.packageManager
             shown.forEach { r ->
                 val installed = runCatching { pm.getPackageInfo(r.pkg, 0) }.isSuccess
-                Column(Modifier.fillMaxWidth().padding(vertical = 2.dp).background(Color(0xFF1C1C24)).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Column(Modifier.fillMaxWidth().padding(vertical = StoreDensity.dpValue(StoreDensity.S2).dp).background(Color(0xFF1C1C24)).padding(horizontal = StoreDensity.dpValue(StoreDensity.S12).dp, vertical = StoreDensity.dpValue(StoreDensity.S8).dp)) {
                     Text(r.title, color = Color.White, fontSize = StoreDensity.T_TITLE.sp)
                     val from = listOfNotNull("F-Droid".takeIf { r.fdroid }, "Play".takeIf { r.play }).joinToString(" + ")
                     Text(listOf(r.pkg, r.by, from, if (r.foss) "FOSS" else "Private").filter { it.isNotBlank() }.joinToString("  ·  "),

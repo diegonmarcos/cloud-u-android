@@ -83,13 +83,13 @@ class StoreProgressPanel {
     @Composable
     private fun Panel(ctx: Context) {
         val u = ui ?: return
-        Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.fillMaxWidth().padding(top = StoreDensity.dpValue(StoreDensity.S6).dp, bottom = StoreDensity.dpValue(StoreDensity.S4).dp), verticalArrangement = Arrangement.spacedBy(StoreDensity.dpValue(StoreDensity.S4).dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(u.text, color = if (u.failed) Color(0xFFF56565) else Color(0xFFF6AD55), fontSize = StoreDensity.T_META.sp,
                     modifier = Modifier.weight(1f))
                 if (u.cancellable) Text("Cancel", color = Color.White, fontSize = StoreDensity.T_META.sp,
-                    modifier = Modifier.padding(start = 8.dp).background(Color(0xFF4A4A55))
-                        .clickableNoRipple { Updater.cancelNow(ctx.applicationContext) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    modifier = Modifier.padding(start = StoreDensity.dpValue(StoreDensity.S8).dp).background(Color(0xFF4A4A55))
+                        .clickableNoRipple { Updater.cancelNow(ctx.applicationContext) }.padding(horizontal = StoreDensity.dpValue(StoreDensity.S12).dp, vertical = StoreDensity.dpValue(StoreDensity.S6).dp))
             }
             if (u.indeterminate) LinearProgressIndicator(Modifier.fillMaxWidth())
             else LinearProgressIndicator(progress = { u.percent / 100f }, modifier = Modifier.fillMaxWidth())
