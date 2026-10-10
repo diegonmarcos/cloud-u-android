@@ -16,8 +16,10 @@
 #   T7  pricing: every model entry is {id, name, open?, params_b?, quant?,
 #       trained_for?, note?, prompt?, completion?}; a provider with catalog_url has
 #       pricing_as_of + baked prices; and, when the catalog is reachable, every id
-#       exists there, 'open' matches hugging_face_id, and baked $/M match the live
-#       price within 1 % (a drift = bump pricing_as_of + values)
+#       exists there and every baked price is a sane number within x$DRIFT_FACTOR of the live
+#       one (fatal); 'open' and a re-price beyond 1 % are DRIFT: a warn: line while
+#       pricing_as_of is inside DRIFT_MAX_AGE_DAYS, fatal once it is older (the daily
+#       refresh in the "Test -> AI model registry" workflow rewrites them)
 #   T9  model catalogues (ai-registries.json::catalogues, e.g. Cloud Search's model page): one row per
 #       provider, an offline snapshot on every priced row, and, live, every curated id still listed by
 #       the OpenRouter catalogue (models / embeddings / images / videos) that prices its section
@@ -157,33 +159,61 @@ CATALOG=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['keyboa
 # scheduled run is the one that catches a price the owner is being charged.
 live_checks_are_advisory() { [ -n "${CLOUD_RELEASE_GATE:-}" ]; }
 
+# ── WHAT A DRIFT IS ALLOWED TO DO ─────────────────────────────────────────
+# OpenRouter re-prices models by the hour (deepseek-v4-flash-0731's input went 0.0047 -> 0.0131 ->
+# 0.0137 $/M inside one day) and re-ranks categories without notice. A baked value is an OFFLINE
+# FALLBACK - AiRouter.refreshPricing reads the live price on the phone - so a value that is merely a
+# few days old is not a defect, and a check that turned red on every re-price was red more days than
+# green and so told nobody anything. What stays fatal: an id OpenRouter no longer lists; a baked
+# price that is not a sane number (negative, NaN); a price off by more than DRIFT_FACTOR in either
+# direction (a unit or scaling bug - per token vs per million - not a re-price); and ANY drift once
+# the registry's pricing_as_of is older than DRIFT_MAX_AGE_DAYS, which means the scheduled refresh
+# (cloud-android-ai-registry-refresh.py, run by the "Test -> AI model registry" workflow every day)
+# has stopped landing. A drift inside the window prints a `warn:` line and the refresh rewrites it.
+export DRIFT_MAX_AGE_DAYS="${DRIFT_MAX_AGE_DAYS:-7}"
+export DRIFT_FACTOR="${DRIFT_FACTOR:-10}"
+
 if live_checks_are_advisory; then
   echo "  skip: T7 live catalog — release gate does not veto a publish on a third party's live state; the scheduled AI model registry monitor enforces this"
 elif curl -sS --max-time 30 -o /tmp/kb-ai-catalog.$$ "$CATALOG" 2>/dev/null; then
   if python3 - "$ROOT" "$REGISTRIES" /tmp/kb-ai-catalog.$$ <<'EOF'
-import json, os, sys
+import datetime, json, math, os, sys
 root, manifest, catalog = sys.argv[1], sys.argv[2], sys.argv[3]
+max_age, factor = int(os.environ["DRIFT_MAX_AGE_DAYS"]), float(os.environ["DRIFT_FACTOR"])
 cat = {m["id"]: m for m in json.load(open(catalog))["data"]}
-bad = []
+bad, warn = [], []
 # Every registry in the manifest, not just the keyboard's: two apps bake their own copy of this
 # table, and checking one of them is how a stale row survives untouched in the other.
 for r in json.load(open(manifest))["registries"]:
     pv = json.load(open(os.path.join(root, r["path"])))[r["key"]]["providers"]["openrouter"]
+    age = (datetime.date.today() - datetime.date.fromisoformat(pv["pricing_as_of"])).days
+    stale = age > max_age
+    drift = bad if stale else warn
     for m in pv["models"]:
         c = cat.get(m["id"])
         if not c: bad.append(f"{r['label']} {m['id']}: not in catalog"); continue
-        if bool(m.get("open")) != bool(c.get("hugging_face_id")): bad.append(f"{r['label']} {m['id']}: open={m.get('open', False)} but hugging_face_id={c.get('hugging_face_id')!r}")
+        if bool(m.get("open")) != bool(c.get("hugging_face_id")): drift.append(f"{r['label']} {m['id']}: open={m.get('open', False)} but hugging_face_id={c.get('hugging_face_id')!r}")
         for k in ("prompt", "completion"):
+            baked = m[k]
+            if not isinstance(baked, (int, float)) or math.isnan(baked) or baked < 0:
+                bad.append(f"{r['label']} {m['id']}: baked {k} {baked!r} is not a price"); continue
             # The catalogue publishes DOLLARS PER TOKEN, as a string; the registry is authored in
             # DOLLARS PER MILLION TOKENS. This *1e6 is the ONLY conversion on this path and it is
             # the same one AiRouter.refreshPricing applies to the live price, so a factor that
             # crept in on either side shows up here as a hundred-fold or million-fold disagreement
-            # rather than as a plausible-looking number on the settings screen.
+            # rather than as a plausible-looking number on the settings screen - and THAT stays fatal.
             live = float(c["pricing"][k]) * 1e6
-            if abs(live - m[k]) > 0.01 * max(live, m[k]): bad.append(f"{r['label']} {m['id']}: {k} baked {m[k]} vs live {live:.4f} $/M")
+            if live < 0: continue  # "varies" (a router): nothing to compare
+            if baked > 0 and live > 0 and max(live / baked, baked / live) > factor:
+                bad.append(f"{r['label']} {m['id']}: {k} baked {baked} vs live {live:.4f} $/M - off by more than x{factor:g}, a unit error, not a re-price")
+            elif abs(live - baked) > 0.01 * max(live, baked):
+                drift.append(f"{r['label']} {m['id']}: {k} baked {baked} vs live {live:.4f} $/M")
+    if stale and any(x.startswith(r["label"] + " ") for x in bad):
+        bad.append(f"{r['label']}: pricing_as_of {pv['pricing_as_of']} is {age} days old (window {max_age}) - the scheduled refresh has stopped landing")
+for w in warn: print(f"  warn: T7 drift inside the {max_age}-day window (the scheduled refresh rewrites it): {w}")
 assert not bad, "\n    ".join(bad)
 EOF
-  then ok "T7 live catalog: every registry's ids, open flags and baked prices within 1 %"; else bad "T7 live catalog cross-check"; fi
+  then ok "T7 live catalog: every registry id listed, every baked price a sane number within x$DRIFT_FACTOR, drift only inside the $DRIFT_MAX_AGE_DAYS-day window"; else bad "T7 live catalog cross-check"; fi
 else
   echo "  skip: T7 live catalog unreachable ($CATALOG) — offline, baked prices unverified"
 fi
@@ -468,8 +498,9 @@ if live_checks_are_advisory; then
 elif ! curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null; then
   echo "  skip: T8 live OpenRouter cross-check unreachable ($CATALOG) — quant/trained_for unverified"
 elif python3 - "$ROOT" "$REGISTRIES" <<'EOF'
-import json, os, sys, urllib.request, collections
+import collections, datetime, json, os, sys, urllib.request
 root, manifest = sys.argv[1], sys.argv[2]
+max_age = int(os.environ["DRIFT_MAX_AGE_DAYS"])
 def get(u):
     with urllib.request.urlopen(u, timeout=40) as r: return json.load(r)
 ranked = collections.defaultdict(set)
@@ -480,9 +511,12 @@ for c in ("programming", "roleplay", "marketing", "marketing/seo", "technology",
 # Both registries list the same model ids, so the per-model endpoint call is fetched once and
 # reused — checking the second copy costs no extra requests.
 endpoints = {}
-drift = []
+fatal, warn = [], []
 for r in json.load(open(manifest))["registries"]:
     pv = json.load(open(os.path.join(root, r["path"])))[r["key"]]["providers"]["openrouter"]
+    age = (datetime.date.today() - datetime.date.fromisoformat(pv["pricing_as_of"])).days
+    drift = fatal if age > max_age else warn
+    before = len(fatal)
     for m in pv["models"]:
         live_cats = ranked.get(m["id"], set())
         if set(m.get("trained_for", [])) != live_cats:
@@ -492,10 +526,13 @@ for r in json.load(open(manifest))["registries"]:
         live_q = sorted({e.get("quantization") for e in endpoints[m["id"]] if e.get("quantization")} - {"unknown"})
         if sorted(m.get("quant", [])) != live_q:
             drift.append(f"{r['label']} {m['id']}: quant {sorted(m.get('quant', []))} vs live {live_q}")
-assert not drift, "\n    ".join(drift)
+    if len(fatal) > before:
+        fatal.append(f"{r['label']}: pricing_as_of {pv['pricing_as_of']} is {age} days old (window {max_age}) - the scheduled refresh has stopped landing")
+for w in warn: print(f"  warn: T8 drift inside the {max_age}-day window (the scheduled refresh rewrites it): {w}")
+assert not fatal, "\n    ".join(fatal)
 EOF
-then ok "T8 live: every registry's baked quantisation and trained_for still match OpenRouter"
-else bad "T8 live: quant/trained_for drifted from OpenRouter (each drift listed above) — refresh those fields in the registry the line names, then bump its pricing_as_of"; fi
+then ok "T8 live: baked quantisation and trained_for match OpenRouter, or drift only inside the $DRIFT_MAX_AGE_DAYS-day window"
+else bad "T8 live: quant/trained_for drifted and the registry is older than the window (each listed above) — run 1_cicd/src/scripts/cloud-android-ai-registry-refresh.py and commit"; fi
 
 # T9 model catalogues (ai-registries.json::catalogues): curated selections an app browses, priced live
 # on the phone. The shape is static and fatal; whether every id is still listed is OpenRouter's state,

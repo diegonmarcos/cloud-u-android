@@ -39,9 +39,13 @@ on:
       - "ab_cloud-libs-shared/build.json"
       - "ac_cloud-mail/build.json"
       - "ac_cloud-search/app/src/main/assets/models/catalogue.json"
+      - "ac_cloud-writer/build.json"
+      - "1_cicd/src/scripts/cloud-android-ai-registry-refresh.py"
 
+# contents: write for ONE thing only: the scheduled refresh below commits the
+# re-read baked values (three build.json files, nothing else) back to main.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: test-ai-model-registry-${{ github.ref }}
@@ -54,6 +58,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Enough history for the scheduled refresh to rebase its commit onto a main that moved.
+          fetch-depth: 50
+
+      # THE SCHEDULE REFRESHES, THE TESTER JUDGES. OpenRouter re-prices by the hour, so a
+      # check that demanded the baked values equal the live ones was red most mornings and
+      # meant nothing. On the schedule (and a manual dispatch) the refresh script rewrites
+      # every drifted price / quantisation / category and bumps pricing_as_of, and the
+      # result is committed to main; the tester then runs on the refreshed tree. A drift a
+      # push meets inside DRIFT_MAX_AGE_DAYS is a warn: line, and only a registry whose
+      # pricing_as_of has fallen out of that window - this step stopped landing - is red.
+      # Pushed with GITHUB_TOKEN, so it starts no ship workflow: phones read live prices
+      # anyway (AiRouter.refreshPricing) and the next build of each app bakes the new ones.
+      - name: Scheduled refresh of the baked registry values
+        if: github.event_name != 'push'
+        run: |
+          set -euo pipefail
+          python3 1_cicd/src/scripts/cloud-android-ai-registry-refresh.py
+          changed="$(git status --porcelain -- ab_cloud-libs-shared/build.json ac_cloud-mail/build.json ac_cloud-writer/build.json)"
+          if [ -z "$changed" ]; then echo "Nothing drifted: the baked registries already match OpenRouter."; exit 0; fi
+          git add -- ab_cloud-libs-shared/build.json ac_cloud-mail/build.json ac_cloud-writer/build.json
+          git -c user.name="Claude" -c user.email="noreply@anthropic.com" \
+            commit -m "ci(ai-registry): refresh the baked OpenRouter values via run ${GITHUB_RUN_ID} [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 10
+          done
+          echo "::warning::could not push the refreshed registries - main kept moving. The tester below still judges the refreshed values; the next scheduled run retries."
 
       # The tester decides the verdict and owns every assertion; this step only
       # runs it, once, and lets its exit code be the gate — a drifted row now
@@ -71,5 +103,5 @@ jobs:
       - name: Summarise what was checked and what was skipped
         if: always()
         run: |
-          grep -E "^  (skip|FAIL):" /tmp/registry-drift.log >> "$GITHUB_STEP_SUMMARY" \
+          grep -E "^  (skip|warn|FAIL):" /tmp/registry-drift.log >> "$GITHUB_STEP_SUMMARY" \
             || echo "Every live catalogue check reached OpenRouter and agreed with the registries." >> "$GITHUB_STEP_SUMMARY"
