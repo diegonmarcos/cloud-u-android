@@ -13,6 +13,8 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    // New store UI is Compose (the fleet ratchet): the progress row and the Search page.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // The fleet manifest is baked HERE now rather than into the app: the store is
@@ -81,6 +83,7 @@ android {
     }
 
     buildFeatures {
+        compose = true
         buildConfig = true
     }
 
@@ -101,6 +104,10 @@ android {
 }
 
 dependencies {
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
     implementation project(':libs:core')
     // The store drives the updater; that direction is the whole separation.
     api project(':libs:updater')

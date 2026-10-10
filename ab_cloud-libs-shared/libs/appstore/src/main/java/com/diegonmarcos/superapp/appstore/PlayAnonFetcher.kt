@@ -206,6 +206,20 @@ object PlayAnonFetcher {
         Details(vc, Proto.get(ad, 4)?.decodeToString(), ot)
     }
 
+    /** One app in Play's catalogue, as search returns it. */
+    class Hit(val pkg: String, val title: String, val creator: String, val versionCode: Long?)
+
+    /** Play's catalogue search, as Aurora does it (`search?c=3&q=`): every app document in the answer,
+     *  found by walking it (the list nesting changes between Play versions; the document does not). */
+    fun search(ctx: Context, cfg: Config, query: String): List<Hit> = withSession(ctx, cfg) { a, p ->
+        val r = call("${cfg.api}search?" + query(mapOf("c" to "3", "q" to query, "ksm" to "1")), headers(a, p, cfg.locale))
+        Proto.appDocs(r).mapNotNull { d ->
+            val pkg = Proto.get(d, 1)?.decodeToString() ?: return@mapNotNull null
+            Hit(pkg, Proto.get(d, 5)?.decodeToString() ?: pkg, Proto.get(d, 6)?.decodeToString().orEmpty(),
+                Proto.get(d, 13, 1)?.let { Proto.varint(it, 3) })
+        }.distinctBy { it.pkg }
+    }
+
     class PlayFile(val name: String, val url: String, val size: Long, val sha256: String?)
 
     /** details → purchase → delivery: the files Play would install, each with its sha256. */
@@ -326,5 +340,19 @@ object PlayAnonFetcher {
         fun all(b: ByteArray, no: Int): List<ByteArray> = fields(b).filter { it.no == no }.mapNotNull { it.bytes }
 
         fun varint(b: ByteArray, no: Int): Long? = fields(b).firstOrNull { it.no == no && it.num != null }?.num
+
+        private val PKG = Regex("^[A-Za-z][\\w]*(\\.[A-Za-z_][\\w]*)+$")
+
+        /** Every app document anywhere in [b]: a message whose field 1 is a package name and that carries
+         *  details (field 13). Bytes that do not parse as a message are skipped, never thrown on. */
+        fun appDocs(b: ByteArray, depth: Int = 0, out: MutableList<ByteArray> = ArrayList()): List<ByteArray> {
+            if (depth > 12) return out
+            val fs = runCatching { fields(b) }.getOrNull() ?: return out
+            val id = fs.firstOrNull { it.no == 1 && it.bytes != null }?.bytes
+                ?.let { runCatching { it.decodeToString() }.getOrNull() }
+            if (id != null && PKG.matches(id) && fs.any { it.no == 13 && it.bytes != null }) { out += b; return out }
+            for (f in fs) f.bytes?.takeIf { it.size > 8 }?.let { appDocs(it, depth + 1, out) }
+            return out
+        }
     }
 }

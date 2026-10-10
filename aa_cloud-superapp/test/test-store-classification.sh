@@ -207,9 +207,13 @@ else:
     # the git-proxy's {error, code}); that is the error parser, not a feed
     # template, so those three words are exempt in that one file only.
     err_keys = {"message", "error", "code"}
+    # FDroidIndex reads F-Droid's own signed index-v1 schema (packageName, name, summary, license,
+    # localized): those are that format's keys, not feed templates, so they are exempt in that file only.
+    index_keys = {"packageName", "name", "summary", "license", "localized"}
     leaked = sorted({"%s: %r" % (fn, w) for fn, t in store_files.items()
                      for w in owned if '"%s"' % w in t
-                     and not (fn == "SourceResolver.kt" and w in err_keys)})
+                     and not (fn == "SourceResolver.kt" and w in err_keys)
+                     and not (fn == "FDroidIndex.kt" and w in index_keys)})
     if owned and not leaked:
         ok("none of the %d declared feed strings is written in the store's code" % len(owned))
     else: bad("a feed string is hardcoded outside the one declaration: %s" % "; ".join(leaked[:6]))

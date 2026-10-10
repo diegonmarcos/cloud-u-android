@@ -279,6 +279,10 @@
             "label": "Installed"
           },
           {
+            "id": "search",
+            "label": "Search"
+          },
+          {
             "id": "declared",
             "label": "Declared"
           }

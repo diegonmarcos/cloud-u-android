@@ -4,6 +4,7 @@
 <resources>
     <string name="store_phone_caption">Every app that belongs on this phone: installed, Cloud fleet, and the declared external apps. Install and Update go through this store — fleet release, the vendor\'s own APK, or the official F-Droid repo — and a row marked needs Play can only be opened on Play. Stop needs the paired adb channel; Remove asks Android to confirm.</string>
     <string name="store_phone_filter_declared">Declared</string>
+    <string name="store_phone_filter_search">Search</string>
     <string name="store_phone_filter_installed">Installed</string>
     <string name="store_phone_loading">Loading…</string>
     <string name="store_phone_count">%1$d apps</string>

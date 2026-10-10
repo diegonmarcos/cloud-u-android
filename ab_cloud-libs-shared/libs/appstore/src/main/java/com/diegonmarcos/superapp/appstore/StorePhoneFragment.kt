@@ -84,6 +84,10 @@ class StorePhoneFragment : Fragment() {
     private var stateFilter = 0
     private val stateChips = ArrayList<TextView>()
     private val progress = StoreProgressPanel()
+    /** The Search page (between Installed and Declared) replaces the list and its controls. */
+    private var searchMode = false
+    private val listViews = ArrayList<View>()
+    private var searchHost: View? = null
     // Installed owns Export and the APK cache (what is on this phone); Declared owns Import (a list to install).
     private val installedOnlyViews = ArrayList<View>()
     private val declaredOnlyViews = ArrayList<View>()
@@ -125,8 +129,9 @@ class StorePhoneFragment : Fragment() {
         // the Cloud page's own strip builder unless the host draws them (StorePages.hostDrawsStrip).
         val strip = if (StorePages.hostDrawsStrip) null else StoreTabs.bar(ctx, listOf(listOf(
             StoreControls.Control(ctx.getString(R.string.store_phone_filter_installed), "", controls.groupTab),
+            StoreControls.Control(ctx.getString(R.string.store_phone_filter_search), "", controls.groupTab),
             StoreControls.Control(ctx.getString(R.string.store_phone_filter_declared), "", controls.groupTab))),
-            pageButtons) { StorePages.select(SECTION, if (it == 0) PAGE_INSTALLED else PAGE_DECLARED) }
+            pageButtons) { StorePages.select(SECTION, PAGES[it]) }
         syncPage()
         stopObserving = StorePages.observe(SECTION) { view?.post { syncPage(); redraw() } }
 
@@ -140,6 +145,7 @@ class StorePhoneFragment : Fragment() {
         // that need Play. Then export / import / clear cache, and the store-source strip.
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
+            listViews += this
             bar = this
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
@@ -147,6 +153,7 @@ class StorePhoneFragment : Fragment() {
         col.addView(progress.view(ctx))
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
+            listViews += this
             addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) }.also { installedOnlyViews += it })
             addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) }.also { declaredOnlyViews += it })
             // #625 the manual door onto the cache. The app owns eviction now, so
@@ -160,20 +167,28 @@ class StorePhoneFragment : Fragment() {
         })
         sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(sourceHost)
-        col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
+        val cap = caption(ctx, ctx.getString(R.string.store_phone_caption))
+        col.addView(cap)
         val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         list = rowsView
         col.addView(rowsView)
+        listViews += listOfNotNull(sourceHost, cap, rowsView)
+        searchHost = StoreSearchPage.view(ctx) { cfg ?: runCatching { PhoneAppActions.resolver(PhoneAppActions.sources(ctx)) }.getOrNull() }
+            .also { col.addView(it) }
         syncPage()  // again, now that the page-specific buttons exist
         return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })
     }
 
     /** [installedOnly] is the selected page, and the strip paints it. */
     private fun syncPage() {
-        installedOnly = StorePages.page(SECTION, PAGE_DECLARED) == PAGE_INSTALLED
-        StoreTabs.paint(pageButtons, if (installedOnly) 0 else 1)
+        val page = StorePages.page(SECTION, PAGE_DECLARED)
+        installedOnly = page == PAGE_INSTALLED
+        searchMode = page == PAGE_SEARCH
+        StoreTabs.paint(pageButtons, PAGES.indexOf(page).coerceAtLeast(0))
+        listViews.forEach { it.visibility = if (searchMode) View.GONE else View.VISIBLE }
+        searchHost?.visibility = if (searchMode) View.VISIBLE else View.GONE
         installedOnlyViews.forEach { it.visibility = if (installedOnly) View.VISIBLE else View.GONE }
-        declaredOnlyViews.forEach { it.visibility = if (installedOnly) View.GONE else View.VISIBLE }
+        declaredOnlyViews.forEach { it.visibility = if (installedOnly || searchMode) View.GONE else View.VISIBLE }
     }
 
     // Reloaded on every return: Remove and App info leave for a system
@@ -208,7 +223,7 @@ class StorePhoneFragment : Fragment() {
     override fun onDestroyView() {
         stopObserving?.invoke(); stopObserving = null; pageButtons.clear(); sourceHost = null
         list = null; cacheBtn = null; stateViews.clear()
-        installedOnlyViews.clear(); declaredOnlyViews.clear(); stateChips.clear(); progress.detach(); super.onDestroyView()
+        installedOnlyViews.clear(); declaredOnlyViews.clear(); listViews.clear(); searchHost = null; stateChips.clear(); progress.detach(); super.onDestroyView()
     }
 
     /** Every launchable app, fleet included, as [AppInventory] JSON. */
@@ -733,6 +748,9 @@ class StorePhoneFragment : Fragment() {
         const val SECTION = "phone"
         const val PAGE_INSTALLED = "installed"
         const val PAGE_DECLARED = "declared"
+        const val PAGE_SEARCH = "search"
+        /** build.json::ui phone.pages order: Installed | Search | Declared. */
+        val PAGES = listOf(PAGE_INSTALLED, PAGE_SEARCH, PAGE_DECLARED)
         private const val UNSHELVED = "￿"
         private const val EXPORT_NAME = "cloud-sa-apps.json"
         // A .json picked from Downloads is as often octet-stream as json.

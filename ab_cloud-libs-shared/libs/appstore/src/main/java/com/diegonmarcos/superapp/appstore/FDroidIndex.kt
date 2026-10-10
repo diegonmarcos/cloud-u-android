@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.appstore
 import android.content.Context
 import android.os.Build
 import android.util.JsonReader
+import android.util.JsonToken
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
 import com.diegonmarcos.superapp.updater.cache.ApkCache
@@ -95,6 +96,67 @@ object FDroidIndex {
             return bytes
         }
     }
+
+    /** One app in the official F-Droid repo, as search returns it. Every one is free and open source. */
+    class Hit(val pkg: String, val name: String, val summary: String, val license: String)
+
+    /** Search the signed index's apps by name, summary or package, case-insensitive; at most [limit]. */
+    fun search(ctx: Context, cfg: JSONObject, query: String, limit: Int = 60): List<Hit> {
+        val index = verifiedIndex(ctx, cfg.getString("repo") + cfg.getString("index"), cfg.getString("index_entry"), cfg.getString("cert_sha256"))
+        return search(index.inputStream(), query, limit)
+    }
+
+    fun search(input: InputStream, query: String, limit: Int = 60): List<Hit> {
+        val q = query.trim().lowercase(); if (q.isEmpty()) return emptyList()
+        val out = ArrayList<Hit>()
+        JsonReader(InputStreamReader(input, Charsets.UTF_8)).use { r ->
+            r.beginObject()
+            while (r.hasNext()) when (r.nextName()) {
+                "apps" -> { r.beginArray(); while (r.hasNext()) {
+                    var p = ""; var name = ""; var sum = ""; var lic = ""
+                    r.beginObject()
+                    while (r.hasNext()) when (r.nextName()) {
+                        "packageName" -> p = r.str()
+                        "name" -> name = r.str()
+                        "summary" -> sum = r.str()
+                        "license" -> lic = r.str()
+                        "localized" -> { r.beginObject(); while (r.hasNext()) { val loc = r.nextName(); r.beginObject()
+                            while (r.hasNext()) when (r.nextName()) {
+                                "name" -> r.str().let { if (name.isEmpty() || loc.startsWith("en")) name = it }
+                                "summary" -> r.str().let { if (sum.isEmpty() || loc.startsWith("en")) sum = it }
+                                else -> r.skipValue()
+                            }; r.endObject() }; r.endObject() }
+                        else -> r.skipValue()
+                    }
+                    r.endObject()
+                    if (out.size < limit && (q in p.lowercase() || q in name.lowercase() || q in sum.lowercase()))
+                        out += Hit(p, name.ifEmpty { p }, sum, lic)
+                }; r.endArray() }
+                else -> r.skipValue()
+            }
+            r.endObject()
+        }
+        return out
+    }
+
+    @Volatile private var pkgCache: Set<String>? = null
+
+    /** Every package in the signed index, read once per process: what makes a Play hit FOSS. */
+    fun packages(ctx: Context, cfg: JSONObject): Set<String> = pkgCache ?: run {
+        val index = verifiedIndex(ctx, cfg.getString("repo") + cfg.getString("index"), cfg.getString("index_entry"), cfg.getString("cert_sha256"))
+        val out = HashSet<String>()
+        JsonReader(InputStreamReader(index.inputStream(), Charsets.UTF_8)).use { r ->
+            r.beginObject()
+            while (r.hasNext()) when (r.nextName()) {
+                "apps" -> { r.beginArray(); while (r.hasNext()) appHead(r)?.let { out += it.first }; r.endArray() }
+                else -> r.skipValue()
+            }
+            r.endObject()
+        }
+        out.also { pkgCache = it }
+    }
+
+    private fun JsonReader.str(): String = if (peek() == JsonToken.NULL) { nextNull(); "" } else nextString()
 
     /** Streamed lookup of one package in an index-v1.json. Null = not in the index. */
     fun lookup(input: InputStream, pkg: String): Entry? {
