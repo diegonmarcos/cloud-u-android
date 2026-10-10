@@ -89,7 +89,7 @@
           <div class="cfg-section-title">Terminal / SSH</div>
           <label class="cfg-row"><span>Terminal</span><select id="cfg-terminal"></select></label>
           <div id="cfg-terminal-status" class="cfg-hint"></div>
-          <div class="cfg-hint">Every tab, file and Store command runs in the selected terminal. Host / port / user, Test connection, SSH key and setup steps:</div>
+          <div class="cfg-hint">Every tab, file and Store command runs in the selected terminal, through its own session service: nothing to install or authorise. SSH fallback for an older terminal build (host / port / user, Test, key, setup):</div>
           <button id="cfg-ssh-open" class="cfg-btn">Open SSH settings</button>
         </section>
         <section class="cfg-section">
@@ -124,6 +124,7 @@
   <script src="vendor/xterm-addon-fit.js"></script>
   <script src="vendor/xterm-addon-search.js"></script>
   <script src="js/transport.js"></script>
+  <script src="js/termtext.js"></script>
   <script src="js/term.js"></script>
   <script src="js/filebrowser.js"></script>
   <script src="js/store.js"></script>

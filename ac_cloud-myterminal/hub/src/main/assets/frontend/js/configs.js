@@ -21,8 +21,9 @@ const Configs = {
 
   // The Terminal field: options come ONLY from AndroidTerm.terminals() (the
   // declared terminal-targets.json list), never from a list in this file.
-  // Every open and every change probes the selected terminal, so a terminal
-  // that is not installed or has no sshd shows up here in red instead of as a
+  // Every open and every change probes the selected terminal (its session
+  // service; SSH only for an older build), so a terminal that is not installed
+  // or cannot start a shell shows up here in red, with why, instead of as a
   // blank tab later.
   loadTerminals() {
     const sel = document.getElementById("cfg-terminal");
@@ -35,7 +36,7 @@ const Configs = {
     for (const b of t.backends) {
       const o = document.createElement("option");
       o.value = b.key;
-      o.textContent = `${b.label} — ${b.host}:${b.port}`;
+      o.textContent = b.label;
       sel.appendChild(o);
     }
     sel.value = t.selected;
@@ -72,8 +73,10 @@ const Configs = {
   },
 };
 // Probe verdict from TerminalBridge.probeTerminal / selectTerminal.
+// err is TerminalRoute.explain's sentence: the reason (not installed / too old /
+// permission / sshd not running / key not authorised) and the one thing to do.
 window.__termProbe = (key, err) => Configs.termStatus(
-  err ? `✗ ${err} — is it installed, is its sshd running, is the SSH key authorised? Open SSH settings for the setup steps.` : "✓ reachable",
+  err ? `✗ ${err}. Open SSH settings for the fallback setup.` : "✓ connected — zero setup",
   !!err);
 window.Configs = Configs;
 Configs.init();

@@ -173,5 +173,9 @@
         "java"
       ]
     }
+  },
+  "links": {
+    "_doc": "Where a URL tapped in the terminal opens. Long-press on a link (or on an entry of the pane menu's URL list) opens it in browser_package when that app is installed, else in the phone's default browser; a tap copies it. Baked as BuildConfig.LINK_BROWSER_PACKAGE (LinkOpener.kt); the manifest's <queries> names the same package so the lookup sees it.",
+    "browser_package": "com.diegonmarcos.cloudbrowser"
   }
 }

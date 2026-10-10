@@ -9,7 +9,9 @@ import java.util.concurrent.Executors
 
 /**
  * JavascriptInterface named "AndroidTerm" — bridges the my-konsole frontend's
- * `window.Transport` shim to [SshBackend].
+ * `window.Transport` shim to the selected fleet terminal: natively through
+ * [TerminalSessions] (the env's signature-guarded session service, zero setup),
+ * or through [SshBackend] only for a terminal build that predates it.
  *
  * Threading model:
  *   - All @JavascriptInterface methods are called from a background WebView thread.
@@ -89,12 +91,16 @@ class TerminalBridge(
         probeTerminal()
     }
 
-    /** Probe the SELECTED terminal; result via window.__termProbe. */
+    /** Probe the SELECTED terminal; result via window.__termProbe. Native session first
+     *  (TerminalSessions.probe binds the env's service; a never-opened terminal bootstraps
+     *  itself), the SSH fallback only for a build without it — null when either works, else
+     *  the precise reason naming t.label and its host:port. */
     @JavascriptInterface
     fun probeTerminal() {
         executor.submit {
             val t = TerminalTargets.effectiveTarget(activity, backendKey())
-            val err = ssh.testConnection(t)?.let { "${t.label} (${t.host}:${t.port}) unreachable: $it" }
+            val p = TerminalSessions.probe(activity, ssh, t)
+            val err = if (p.usable) null else p.message
             emitRaw("window.__termProbe(${q(t.key)},${if (err == null) "null" else q(err)})")
         }
     }
@@ -105,20 +111,35 @@ class TerminalBridge(
     fun ptyStart(id: String, cols: Int, rows: Int, cwd: String) {
         executor.submit {
             val target = TerminalTargets.effectiveTarget(activity, backendKey())
+            val onData = { data: String -> emitRaw("window.__aptyData(${q(id)},${q(data)})") }
+            val onExit = { emitRaw("window.__aptyExit(${q(id)})") }
             try {
+                // Zero-setup path: the env's own login shell over ICloudSession.
+                val refused = TerminalSessions.open(activity, ssh, target, id, cols, rows, onData, onExit)
+                if (refused == null) {
+                    if (cwd.isNotEmpty()) TerminalSessions.write(id, "cd '${cwd.replace("'", "'\\''")}'\n")
+                    return@submit
+                }
+                // Not natively reachable and no SSH fallback worth trying: say exactly why.
+                if (!TerminalRoute.trySshAfter(refused.session)) throw TerminalSessions.Unreachable(refused.message)
                 ssh.openShell(
                     target  = target,
                     id      = id,
                     cols    = cols,
                     rows    = rows,
                     cwd     = cwd,
-                    onData  = { data -> emitRaw("window.__aptyData(${q(id)},${q(data)})") },
-                    onExit  = { emitRaw("window.__aptyExit(${q(id)})") },
+                    onData  = onData,
+                    onExit  = onExit,
                 )
             } catch (e: Exception) {
-                // Surface the error inline in the terminal — red ANSI error line.
-                val msg = "\r\n[31m⚠ SSH to ${target.label} " +
-                    "(${target.host}:${target.port}) failed: ${e.message}[0m\r\n"
+                // Surface the error inline in the terminal — red ANSI error line, naming the
+                // terminal and, for the SSH fallback, the classified reason.
+                val why = if (e is TerminalSessions.Unreachable) e.message ?: "" else TerminalRoute.explain(
+                    TerminalRoute.Reason.TOO_OLD, TerminalRoute.sshReason(e.message ?: e.toString()),
+                    target.label, target.host, target.port, e.message)
+                val msg = "\r\n\u001b[31m⚠ ${target.label} " +
+                    "(${target.host}:${target.port}): $why\u001b[0m\r\n" +
+                    "\u001b[2m  Configs ▸ Terminal shows the setup for this case.\u001b[0m\r\n"
                 emitRaw("window.__aptyData(${q(id)},${q(msg)})")
             }
         }
@@ -126,17 +147,52 @@ class TerminalBridge(
 
     @JavascriptInterface
     fun ptyWrite(id: String, data: String) {
-        executor.submit { ssh.write(id, data) }
+        executor.submit { if (TerminalSessions.owns(id)) TerminalSessions.write(id, data) else ssh.write(id, data) }
     }
 
     @JavascriptInterface
     fun ptyResize(id: String, cols: Int, rows: Int) {
-        executor.submit { ssh.resize(id, cols, rows) }
+        executor.submit { if (TerminalSessions.owns(id)) TerminalSessions.resize(id, cols, rows) else ssh.resize(id, cols, rows) }
     }
 
     @JavascriptInterface
     fun ptyKill(id: String) {
-        executor.submit { ssh.kill(id) }
+        executor.submit { if (TerminalSessions.owns(id)) TerminalSessions.kill(activity, id) else ssh.kill(id) }
+    }
+
+    // ── Clipboard + links (the pane menu: Copy All / Copy Last / Paste / URLs) ──
+
+    /** Put [text] on the system clipboard; the WebView's navigator.clipboard may be refused
+     *  on a file:// page, this never is. */
+    @JavascriptInterface
+    fun clipboardSet(text: String) {
+        activity.runOnUiThread {
+            val cm = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("terminal", text))
+        }
+    }
+
+    /** Whether the clipboard holds anything, asked WITHOUT reading it (no "pasted from your
+     *  clipboard" notice): the pane menu greys Paste out on an empty clipboard. */
+    @JavascriptInterface
+    fun clipboardHas(): Boolean {
+        val cm = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        return cm.hasPrimaryClip()
+    }
+
+    /** The clipboard's text, "" when it holds none. Read only when the user pastes. */
+    @JavascriptInterface
+    fun clipboardGet(): String {
+        val cm = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = cm.primaryClip ?: return ""
+        if (clip.itemCount == 0) return ""
+        return clip.getItemAt(0).coerceToText(activity)?.toString() ?: ""
+    }
+
+    /** Open [url] in Cloud Browser when it is installed, else in the phone's default browser. */
+    @JavascriptInterface
+    fun openUrl(url: String) {
+        activity.runOnUiThread { LinkOpener.open(activity, url) }
     }
 
     // ── File system ───────────────────────────────────────────────────────────
@@ -146,7 +202,10 @@ class TerminalBridge(
         executor.submit {
             val target = TerminalTargets.effectiveTarget(activity, backendKey())
             try {
-                val entries = ssh.listDir(target, path)
+                val entries = if (TerminalSessions.native(activity, target))
+                    FsScripts.parseList(TerminalSessions.exec(activity, target, FsScripts.list(path)))
+                        .map { it.key to it.value }
+                else ssh.listDir(target, path)
                 val arr = JSONArray()
                 entries.forEach { (name, isDir) ->
                     arr.put(JSONObject().apply {
@@ -167,7 +226,9 @@ class TerminalBridge(
         executor.submit {
             val target = TerminalTargets.effectiveTarget(activity, backendKey())
             try {
-                val text = ssh.readFile(target, path)
+                val text = if (TerminalSessions.native(activity, target))
+                    TerminalSessions.exec(activity, target, FsScripts.read(path))
+                else ssh.readFile(target, path)
                 // Shim does JSON.parse(j) → must pass JSONObject.quote(text) so
                 // JSON.parse yields the raw string (not a nested object).
                 emitRaw("window.__afsResult($rid,true,${JSONObject.quote(text)})")
@@ -182,7 +243,9 @@ class TerminalBridge(
         executor.submit {
             val target = TerminalTargets.effectiveTarget(activity, backendKey())
             try {
-                ssh.writeFile(target, path, content)
+                if (TerminalSessions.native(activity, target))
+                    TerminalSessions.exec(activity, target, FsScripts.write(path, content))
+                else ssh.writeFile(target, path, content)
                 emitRaw("window.__afsResult($rid,true,null)")
             } catch (e: Exception) {
                 emitRaw("window.__afsResult($rid,false,${q(e.message ?: "writeFile failed")})")

@@ -149,6 +149,8 @@ android {
         // ahead of time. Resolved from the vault by build.sh::_resolve_ssh_key.
         buildConfigField "String", "CLOUD_SSH_KEY_B64", "\"${System.getenv('CLOUD_SSH_KEY_B64') ?: ''}\""
         buildConfigField "String", "TERMINAL_BACKEND_DEFAULT",   "\"${buildJson.ui.terminal_backend_default}\""
+        // Where a URL from the terminal opens on long-press (LinkOpener): build.json::links.
+        buildConfigField "String", "LINK_BROWSER_PACKAGE", "\"${buildJson.links?.browser_package ?: ''}\""
         // #787 whether an open shell takes the wake lock without being asked: build.json::wake_lock.
         if (!(buildJson.wake_lock?.default_on instanceof Boolean))
             throw new GradleException("build.json wake_lock must declare boolean default_on")
@@ -188,6 +190,9 @@ android {
 
     buildFeatures {
         buildConfig = true
+        // ICloudSession.aidl — the client half of the fleet terminals' session service
+        // (TerminalSessions); the same file is the server's in both terminals.
+        aidl = true
     }
 
     // Stable signing — the WHOLE constellation (this hub + 3 forks + cloud-comms

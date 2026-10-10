@@ -154,19 +154,9 @@ final class TerminalDebugApi {
 
     /** The bootstrap and the running service a typed session can count on: {"ok":true,...} or why not. */
     private static JSONObject ready(Context app) throws JSONException {
-        try {
-            TermuxInstaller.ensureInstalled(app);
-        } catch (Exception e) {
-            Logger.logStackTraceWithMessage(LOG_TAG, "Bootstrap for the debug API failed", e);
-            return new JSONObject().put("ok", false).put("bootstrap", "failed").put("error", e.getMessage());
-        }
-        try {
-            app.startForegroundService(new Intent(app, TermuxService.class));
-        } catch (RuntimeException e) {
-            // The command still runs; only its protection from the freezer is missing, and the
-            // log says why.
-            Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
-        }
+        String error = prepare(app);
+        if (error != null)
+            return new JSONObject().put("ok", false).put("bootstrap", "failed").put("error", error);
         String notice = TermuxInstaller.rootfsVersionNotice();
         // #748: an extracted $PREFIX is not a working terminal. The phone reported "ready" over a
         // bin/login that died at exit 127 before proot, so every check failed with the real cause
@@ -184,8 +174,35 @@ final class TerminalDebugApi {
         return new JSONObject().put("ok", true).put("bootstrap", notice == null ? "ready" : notice);
     }
 
+    /**
+     * The headless half of {@link #ready}, shared with CloudSessionService: the bootstrap out of
+     * the companion lib, then the service. null, or why the terminal cannot start. The proving
+     * login ready() adds is left to the caller: a session shows its own failure.
+     */
+    static String prepare(Context app) {
+        try {
+            TermuxInstaller.ensureInstalled(app);
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Headless bootstrap failed", e);
+            return e.getMessage() == null ? e.toString() : e.getMessage();
+        }
+        try {
+            app.startForegroundService(new Intent(app, TermuxService.class));
+        } catch (RuntimeException e) {
+            // The command still runs; only its protection from the freezer is missing, and the
+            // log says why.
+            Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
+        }
+        return null;
+    }
+
     /** One command through login, as a JSON result. */
     private static JSONObject run(Context app, String cmd, int timeout) throws JSONException {
+        return run(app, cmd, null, timeout);
+    }
+
+    /** {@link #run(Context, String, int)} with [stdin] fed to the command (then closed). */
+    static JSONObject run(Context app, String cmd, String stdin, int timeout) throws JSONException {
         JSONObject r = new JSONObject().put("cmd", cmd);
         String cwd = TermuxConstants.TERMUX_HOME_DIR_PATH;
 
@@ -212,9 +229,10 @@ final class TerminalDebugApi {
             } catch (IOException e) {
                 return r.put("ok", false).put("exit", -1).put("error", "could not start login: " + e.getMessage());
             }
-            // No stdin: a command that reads it gets EOF instead of waiting out the timeout.
-            try {
-                process.getOutputStream().close();
+            // stdin written and closed: a command that reads it gets EOF instead of waiting out the
+            // timeout.
+            try (java.io.OutputStream os = process.getOutputStream()) {
+                if (stdin != null && !stdin.isEmpty()) os.write(stdin.getBytes(StandardCharsets.UTF_8));
             } catch (IOException ignored) {
                 // Already gone: the command exited first.
             }

@@ -2,8 +2,13 @@ package com.termux.terminal;
 
 /**
  * Native methods for creating and managing pseudoterminal subprocesses. C code is in jni/termux.c.
+ *
+ * Public in this fork (upstream: package-private) for one caller outside the package:
+ * com.termux.app.CloudSessionService, which hands a login shell's PTY to Cloud MyTerminal
+ * and so needs the same createSubprocess / setPtyWindowSize / waitFor / close a
+ * TerminalSession uses, without a TerminalSession (and its emulator) reading the fd.
  */
-final class JNI {
+public final class JNI {
 
     static {
         System.loadLibrary("termux");

@@ -25,6 +25,7 @@
     <string name="permission_run_command_label">Run commands in &TERMUX_APP_NAME; environment</string>
     <string name="permission_run_command_description">execute arbitrary commands within &TERMUX_APP_NAME;
         environment and access files</string>
+    <string name="permission_terminal_session_description">Allows an app signed with the fleet key to open a login shell in this terminal (Cloud MyTerminal). Granted automatically to those apps and to no others.</string>
 
 
 

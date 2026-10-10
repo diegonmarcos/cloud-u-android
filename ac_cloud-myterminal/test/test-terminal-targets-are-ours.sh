@@ -26,6 +26,9 @@
 #     terminal that would not connect, and the symptom was indistinguishable from
 #     a broken app.
 #
+# Since then loopback SSH became the FALLBACK: the terminals are reached through their own
+# signature-guarded session service first (test-terminal-session.sh covers that path).
+#
 # Nothing here touches a device or opens a socket.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"          # → ac_cloud-myterminal
@@ -44,9 +47,12 @@ command -v awk >/dev/null || { echo "ERROR: awk required" >&2; exit 2; }
 
 echo "== T1: no upstream terminal package id appears anywhere in this app =="
 
-# The whole tree, sources and declarations alike. `cld.termux*` would be no
-# better here: this app addresses a terminal by host/port/user, so ANY package id
-# for one is a second, competing way to name the target.
+# The whole tree, sources and declarations alike. Since the zero-setup sessions
+# this app DOES name its terminals by package — to bind their session service —
+# but only the FLEET's ids (cld.termux, cld.termux.nix), declared once in
+# terminal-targets.json::backends.*.package and mirrored in the manifest's
+# <queries> (test-terminal-session.sh pins the two equal). An upstream com.termux*
+# id is still the #605 defect, and still banned here.
 #
 # PROSE IS STRIPPED FIRST, and that is not a loophole. The `_doc` explaining why
 # the ban exists has to NAME the thing it bans, and so does the comment above a
@@ -91,7 +97,7 @@ PY
 )"
 if [ -n "$HITS" ]; then
     printf '%s\n' "$HITS" | sed 's/^/    /'
-    bad "T1 an upstream terminal package id is named in this app. It reaches the fleet's terminals over loopback SSH, so a packageName here is either dead weight or the #605 defect arriving — that ticket shipped com.termux.nix where cld.termux.nix was meant and login could not find proot-static"
+    bad "T1 an upstream terminal package id is named in this app. It reaches the fleet's terminals by THEIR ids (cld.termux*), so a com.termux* name here is the #605 defect arriving — that ticket shipped com.termux.nix where cld.termux.nix was meant and login could not find proot-static"
 else
     ok "T1 no com.termux* id in data/, hub/src/ or build.json"
 fi
@@ -250,11 +256,18 @@ if printf '%s' "$SB" | grep -q 'TerminalTargets\.all()\.none' && printf '%s' "$S
 else
     bad "T5b selectTerminal accepts a key without checking the declaration, or refuses it silently — forBackend would quietly fall back to another terminal"
 fi
+# Since the zero-setup sessions the probe is TerminalSessions.probe (the env's session service,
+# SSH only for an older build), and the sentence it reports is TerminalRoute.explain over the
+# target's label, host and port — so both halves are checked, the bridge and the probe.
 PB="$(body probeTerminal)"
-if printf '%s' "$PB" | grep -q 'testConnection' && printf '%s' "$PB" | grep -q 't\.label' && printf '%s' "$PB" | grep -q 't\.port'; then
-    ok "T5c the probe names the terminal it could not reach"
+SESS="$KT/TerminalSessions.kt"
+PROBE="$(awk 'index($0,"fun probe("){on=1} on{print; n+=gsub(/\{/,"{"); n-=gsub(/\}/,"}"); if(n==0 && seen) exit; if(n>0) seen=1}' "$SESS" 2>/dev/null)"
+if printf '%s' "$PB" | grep -q 'TerminalSessions\.probe(' && printf '%s' "$PB" | grep -q '__termProbe' \
+   && printf '%s' "$PROBE" | grep -q 'ssh\.testConnection' \
+   && printf '%s' "$PROBE" | grep -q 'TerminalRoute\.explain(.*t\.label, t\.host, t\.port'; then
+    ok "T5c the probe tries the session service, then SSH, and names the terminal it could not reach"
 else
-    bad "T5c the selection probe does not test the connection or does not name label/port — a missing terminal would look like a dead tab again"
+    bad "T5c the selection probe does not go through TerminalSessions.probe, or that probe does not fall back to SSH / name label, host and port — a missing terminal would look like a dead tab again"
 fi
 
 # (b) run configs.js for real against the bridge shape built from the JSON.

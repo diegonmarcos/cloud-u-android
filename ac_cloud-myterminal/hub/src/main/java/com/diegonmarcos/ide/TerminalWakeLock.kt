@@ -10,25 +10,36 @@ import android.provider.Settings
 
 /**
  * #787 The partial wake lock an open terminal holds, so a shell keeps running with the screen
- * locked. This app has no terminal service: its sessions are the SSH shells [SshBackend] holds
- * open, and it calls [sync] whenever that count changes. [CloudWakeLock] (the class cld.termux
+ * locked. This app has no terminal service: its sessions are the native PTYs [TerminalSessions]
+ * holds (it calls [syncNative]) and the fallback SSH shells [SshBackend] holds (it calls [sync]),
+ * each whenever its count changes. [CloudWakeLock] (the class cld.termux
  * and cld.termux.nix run) decides; this only does the PowerManager work it asks for.
  */
 object TerminalWakeLock {
 
     private var lock: PowerManager.WakeLock? = null
     @Volatile private var sessions = 0
+    @Volatile private var nativeSessions = 0
 
-    /** [count] shells are open now: take or drop the lock to match it and the user's choice. */
+    /** [ssh] SSH shells are open now: take or drop the lock to match them, the native
+     *  shells ([syncNative]) and the user's choice. */
     @Synchronized
-    fun sync(ctx: Context, count: Int = sessions) {
-        sessions = count
+    fun sync(ctx: Context, ssh: Int = sessions) {
+        sessions = ssh
+        val count = ssh + nativeSessions
         val app = ctx.applicationContext
         when (CloudWakeLock.STATE.update(IdePrefs.wakeLockWanted(app), count, System.currentTimeMillis())) {
             CloudWakeLock.Transition.ACQUIRE -> acquire(app)
             CloudWakeLock.Transition.RELEASE -> lock?.release().also { lock = null }
             else -> Unit
         }
+    }
+
+    /** [count] native (ICloudSession) shells are open now; [TerminalSessions] calls it. */
+    @Synchronized
+    fun syncNative(ctx: Context, count: Int) {
+        nativeSessions = count
+        sync(ctx)
     }
 
     @SuppressLint("WakelockTimeout", "BatteryLife")

@@ -314,8 +314,29 @@ body { display: flex; flex-direction: column; }
   position: fixed; z-index: 20; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.4); padding: 4px 0; min-width: 140px;
 }
-.pane-menu-item { padding: 5px 14px; font: 13px monospace; cursor: pointer; }
+.pane-menu-item { padding: 5px 14px; font: 13px monospace; cursor: pointer; display: flex; gap: 14px; align-items: center; }
 .pane-menu-item:hover { background: var(--accent); color: var(--bg); }
+#pane-menu { min-width: 220px; max-width: min(92vw, 520px); max-height: 80vh; overflow-y: auto; }
+.pane-menu-item > span:first-child { flex: 1; white-space: nowrap; }
+.pane-menu-hint { font-size: 11px; opacity: .65; white-space: nowrap; }
+.pane-menu-item.disabled { opacity: .4; cursor: default; }
+.pane-menu-item.disabled:hover { background: transparent; color: inherit; }
+.pane-menu-sep { height: 1px; margin: 3px 0; background: var(--border); }
+.pane-menu-split button { font: 13px monospace; min-width: 30px; padding: 2px 6px; background: var(--bg2); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+.pane-menu-split:hover { background: transparent; color: inherit; }
+.pane-menu-split button:hover { background: var(--accent); color: var(--bg); }
+.pane-menu-head { padding: 4px 14px 6px; font: 11px monospace; opacity: .7; border-bottom: 1px solid var(--border); margin-bottom: 3px; }
+.pane-menu-url { font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#paste-confirm { position: fixed; inset: 0; z-index: 210; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+.paste-confirm-panel { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; width: min(92vw, 560px); padding: 6px 0 10px; }
+.paste-confirm-panel pre { margin: 0 14px; max-height: 40vh; overflow: auto; font: 12px monospace; background: var(--bg); padding: 6px 8px; border-radius: 4px; }
+.paste-confirm-bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 14px 0; }
+.paste-confirm-bar button { font: 13px monospace; padding: 4px 14px; background: var(--bg2); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
+#paste-run { background: var(--accent); color: var(--bg); }
+#term-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 220; background: var(--bg3); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font: 12px monospace; pointer-events: none; }
+#term-toast[hidden] { display: none; }
 
 /* Configs overlay — same app UI, opened from the row-1 Configs button. */
 #configs-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.55); display: flex; justify-content: center; }

@@ -6,14 +6,17 @@
       "host": "127.0.0.1",
       "port": 8023,
       "user": "termux",
-      "sshd_install": "pkg install openssh"
+      "sshd_install": "pkg install openssh",
+      "package": "cld.termux"
     },
     "nix-on-droid": {
       "label": "Cloud Terminal (nix)",
       "host": "127.0.0.1",
       "port": 8024,
       "user": "nix-on-droid",
-      "sshd_install": "nix-shell -p openssh"
+      "sshd_install": "nix-shell -p openssh",
+      "package": "cld.termux.nix"
     }
-  }
+  },
+  "_doc_session": "ZERO-SETUP SESSIONS. `package` is the terminal app MyTerminal binds: its CloudSessionService (action com.diegonmarcos.cloud.terminal.SESSION, guarded by the signature-level com.diegonmarcos.cloud.permission.TERMINAL_SESSION) hands back a PTY running that app's own login shell, so there is no sshd to install or start and no key to copy. host/port/user/sshd_install remain only for the SSH FALLBACK, used when an installed terminal build predates that service; the manual sshd steps are shown only when both paths failed, with the reason (TerminalRoute). These are the FLEET's ids (cld.termux, cld.termux.nix), never the upstream com.termux* ones (#605), and this file is the only place MyTerminal names them: the manifest's <queries> must list exactly these (test-terminal-session.sh)."
 }

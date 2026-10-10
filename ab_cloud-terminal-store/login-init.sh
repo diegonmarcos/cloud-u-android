@@ -30,6 +30,47 @@ case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
     *) XDG_DATA_DIRS="${XDG_DATA_DIRS:+$XDG_DATA_DIRS:}/usr/share"; export XDG_DATA_DIRS ;;
 esac
 
+# Shell integration: OSC 133 prompt marks, so a terminal can tell where each command and its
+# output start and end (MyTerminal's "Copy Last"). A prompt start, B command start, C output
+# start, D;<exit> command end. Shared code, not a startup step of its own: both terminals source
+# this one file, so neither can have it without the other.
+#   fish < 4  a snippet in the user's own vendor_conf.d ($XDG_DATA_HOME/fish, which fish reads
+#             without any XDG_DATA_DIRS change; fish 4 emits the marks itself, so the snippet
+#             steps aside there);
+#   bash      PROMPT_COMMAND (D, A, and B appended to PS1 once) and PS0 (C), exported so the
+#             interactive shell login execs inherits them.
+# Never fatal, never prints; rewritten only when its version line changes.
+_cosc="${XDG_DATA_HOME:-${HOME:-/root}/.local/share}/fish/vendor_conf.d"
+if [ ! -f "$_cosc/cloud-osc133.fish" ] \
+   || ! grep -q 'cloud-osc133 v1' "$_cosc/cloud-osc133.fish" 2>/dev/null; then
+    mkdir -p "$_cosc" 2>/dev/null \
+    && cat > "$_cosc/cloud-osc133.fish" 2>/dev/null <<'CLOUD_OSC133'
+# cloud-osc133 v1 -- OSC 133 prompt marks, written by ab_cloud-terminal-store/login-init.sh
+status is-interactive; or exit
+string match -qr '^[4-9]' -- $version; and exit
+set -q __cloud_osc133; and exit
+set -g __cloud_osc133 1
+function __cloud_osc133_c --on-event fish_preexec
+    printf '\e]133;C\a'
+end
+function __cloud_osc133_d --on-event fish_postexec
+    printf '\e]133;D;%s\a' $status
+end
+if functions -q fish_prompt
+    functions -c fish_prompt __cloud_osc133_prompt
+    function fish_prompt
+        printf '\e]133;A\a'
+        __cloud_osc133_prompt
+        printf '\e]133;B\a'
+    end
+end
+CLOUD_OSC133
+fi
+unset _cosc
+PROMPT_COMMAND='__cloud_s=$?; printf "\033]133;D;%s\007\033]133;A\007" "$__cloud_s"; case "$PS1" in *"133;B"*) ;; *) PS1="$PS1\[\033]133;B\007\]" ;; esac'
+PS0='\e]133;C\a'
+export PROMPT_COMMAND PS0
+
 if [ -r "$CLOUD_STORE_INSTALL_DIR/declaration.sh" ]; then
     # shellcheck disable=SC1091 # generated, and its path is the one literal here
     . "$CLOUD_STORE_INSTALL_DIR/declaration.sh"

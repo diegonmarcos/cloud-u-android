@@ -20,6 +20,31 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Zero-setup sessions into the fleet's terminals (TerminalSessions → their
+         CloudSessionService). Signature level: the system grants it only because this
+         APK and the terminals carry the one fleet key, and refuses every other app.
+         DEFINED here as well as in both terminals (same key, so the definitions agree),
+         so the grant never depends on which of the three was installed first. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION"
+        android:label="Cloud terminal sessions"
+        android:description="@string/perm_terminal_session"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION" />
+
+    <!-- Package visibility (API 30+): the terminals named by data/terminal-targets.json
+         ::backends.*.package (detected as installed, bound by package), any app serving
+         the session action, and build.json::links.browser_package (Cloud Browser).
+         test-terminal-session.sh fails when these drift from the declarations. -->
+    <queries>
+        <package android:name="cld.termux" />
+        <package android:name="cld.termux.nix" />
+        <package android:name="com.diegonmarcos.cloudbrowser" />
+        <intent>
+            <action android:name="com.diegonmarcos.cloud.terminal.SESSION" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:label="@string/app_name"

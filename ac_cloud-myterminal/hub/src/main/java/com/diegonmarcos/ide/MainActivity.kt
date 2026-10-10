@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Wire the bridge — exposes AndroidTerm to JS before loadUrl.
-        val bridge = TerminalBridge(this, webView, ssh) { IdePrefs.terminalBackend(this) }
+        val bridge = TerminalBridge(this, webView, ssh) { TerminalSessions.activeBackend(this) }
         webView.addJavascriptInterface(bridge, "AndroidTerm")
 
         // Inject the Transport shim at document-start so it runs before the
@@ -176,6 +176,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        TerminalSessions.disconnectAll(this)
         ssh.disconnectAll()
         super.onDestroy()
     }

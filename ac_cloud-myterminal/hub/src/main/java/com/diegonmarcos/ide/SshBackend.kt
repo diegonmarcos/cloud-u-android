@@ -37,7 +37,10 @@ class SshBackend(private val ctx: Context) {
     private val privKeyFile = File(ctx.filesDir, "terminal_id_ecdsa")
     private val pubKeyFile  = File(ctx.filesDir, "terminal_id_ecdsa.pub")
 
-    init { ensureKeyPair() }
+    // LAZY since the native session path (TerminalSessions) became the default: SSH is only the
+    // fallback for a terminal build without the session service, so a build without the declared
+    // key must still open — it fails only if that fallback is ever needed, and says why.
+    @Volatile private var keyLoaded = false
 
     /**
      * Write out the DECLARED constellation key — the same one cloud-watchdog
@@ -52,7 +55,9 @@ class SshBackend(private val ctx: Context) {
      * Baked from the vault at build time (build.sh::_resolve_ssh_key), the
      * same shape as the one shared signing key.
      */
+    @Synchronized
     private fun ensureKeyPair() {
+        if (keyLoaded) return
         if (!privKeyFile.exists()) {
             val pem = runCatching {
                 String(android.util.Base64.decode(BuildConfig.CLOUD_SSH_KEY_B64, android.util.Base64.DEFAULT))
@@ -69,6 +74,7 @@ class SshBackend(private val ctx: Context) {
             privKeyFile.setReadable(true, true)
         }
         jsch.addIdentity(privKeyFile.absolutePath)
+        keyLoaded = true
     }
 
     /**
@@ -98,6 +104,7 @@ class SshBackend(private val ctx: Context) {
     private fun session(target: TerminalTargets.Target): Session {
         val existing = sessions[target.key]
         if (existing != null && existing.isConnected) return existing
+        ensureKeyPair()
 
         val s = jsch.getSession(target.user, target.host, target.port)
         s.setConfig("StrictHostKeyChecking",    "no")
@@ -276,8 +283,8 @@ class SshBackend(private val ctx: Context) {
      * Does not touch any cached live sessions.
      */
     fun testConnection(target: TerminalTargets.Target): String? {
-        if (!privKeyFile.exists()) return "Key not yet generated — open the terminal once first"
         return try {
+            ensureKeyPair()
             val testJsch = JSch()
             testJsch.addIdentity(privKeyFile.absolutePath)
             val s = testJsch.getSession(target.user, target.host, target.port)

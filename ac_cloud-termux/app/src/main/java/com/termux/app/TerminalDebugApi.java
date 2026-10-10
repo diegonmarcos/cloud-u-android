@@ -149,21 +149,9 @@ final class TerminalDebugApi {
      * or the reason it is not ready.
      */
     private static JSONObject ready(Context app) throws JSONException {
-        try {
-            TermuxInstaller.ensureInstalled(app);
-        } catch (Exception e) {
-            Logger.logStackTraceWithMessage(LOG_TAG, "Bootstrap for the debug API failed", e);
-            return new JSONObject().put("ok", false).put("bootstrap", "failed").put("error", e.getMessage());
-        }
-
-        try {
-            app.startForegroundService(new Intent(app, TermuxService.class));
-        } catch (RuntimeException e) {
-            // The command still runs; only its protection from the freezer is missing, and the
-            // log says why.
-            Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
-        }
-        CloudDnsBridge.start(app);
+        String error = prepare(app);
+        if (error != null)
+            return new JSONObject().put("ok", false).put("bootstrap", "failed").put("error", error);
 
         if (CloudRootfs.isUnpacked()) return new JSONObject().put("ok", true).put("bootstrap", "ready");
         JSONObject unpack = run(app, "true", UNPACK_TIMEOUT_MS);
@@ -172,6 +160,30 @@ final class TerminalDebugApi {
         // points at it. A typed session lands in that same shell, so the command runs there too —
         // and the answer says so instead of passing for the rootfs.
         return new JSONObject().put("ok", true).put("bootstrap", "rootfs not unpacked").put("unpack", unpack);
+    }
+
+    /**
+     * The headless half of {@link #ready}, shared with CloudSessionService: the bootstrap and the
+     * staged rootfs, then the service with its DNS bridge. null, or why the terminal cannot start.
+     * enter.sh's one-time unpack is NOT run here: a session shows it happening, a debug call pays
+     * it in ready() with its own long timeout.
+     */
+    static String prepare(Context app) {
+        try {
+            TermuxInstaller.ensureInstalled(app);
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Headless bootstrap failed", e);
+            return e.getMessage() == null ? e.toString() : e.getMessage();
+        }
+        try {
+            app.startForegroundService(new Intent(app, TermuxService.class));
+        } catch (RuntimeException e) {
+            // The command still runs; only its protection from the freezer is missing, and the
+            // log says why.
+            Logger.logStackTraceWithMessage(LOG_TAG, "Could not start TermuxService", e);
+        }
+        CloudDnsBridge.start(app);
+        return null;
     }
 
     /** One command through login, as a JSON result. */

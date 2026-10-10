@@ -8786,6 +8786,18 @@
         "note": "Lets the SuperApp run a shell command inside the terminal environment. This is how the watchdog and the dev-control surfaces reach the filesystem without shipping their own shell."
       },
       {
+        "id": "terminal-session",
+        "label": "Terminal Session",
+        "kind": "service",
+        "action": "com.diegonmarcos.cloud.terminal.SESSION",
+        "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
+        "serves": [
+          "cld.termux",
+          "cld.termux.nix"
+        ],
+        "note": "A login shell in a PTY for Cloud MyTerminal (ICloudSession), the zero-setup replacement for loopback SSH: no sshd, no listening socket, no key to copy. Signature-level, defined by both terminals and MyTerminal so the grant never depends on install order; every call re-checks permission and signature."
+      },
+      {
         "id": "run-command",
         "label": "Run Command",
         "kind": "service",

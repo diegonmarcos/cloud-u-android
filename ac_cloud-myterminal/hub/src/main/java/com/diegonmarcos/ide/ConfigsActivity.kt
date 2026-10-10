@@ -63,21 +63,45 @@ class ConfigsActivity : AppCompatActivity() {
             enabled = true,
         ) { startUpdateCheck() })
 
-        // ── Terminal setup instructions (shown on the page) ───────────────
-        // GENERATED from data/terminal-targets.json, one block per declared
-        // backend. It used to be a single hand-written string naming both envs
-        // and their ports, which is a SECOND declaration of the port: it told
-        // the reader to start the nix-on-droid sshd on 8022 while the JSON
-        // dialled 8024, so following the instructions exactly still produced a
-        // terminal that would not connect.
-        body.addView(Ui.header(
+        // ── Terminal status, probed on open ───────────────────────────────
+        // Zero setup is the normal case: the selected terminal is probed through its
+        // session service (TerminalSessions.probe), and turns green on its own. The
+        // manual sshd steps below are added ONLY when that probe failed, under the
+        // precise reason (TerminalRoute.explain) — never as the first thing a new phone
+        // shows.
+        val currentBackend = TerminalSessions.activeBackend(this)
+        val probeTarget = TerminalTargets.effectiveTarget(this, currentBackend)
+        val statusHeader = Ui.header(
             this,
-            getString(R.string.cfg_terminal_setup_title),
-            getString(R.string.cfg_terminal_setup_steps, terminalSetupBlocks()),
-        ))
+            getString(R.string.cfg_terminal_status_title),
+            getString(R.string.cfg_terminal_status_checking, probeTarget.label),
+        )
+        body.addView(statusHeader)
+        val setupSlot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        body.addView(setupSlot)
+        Thread {
+            val p = TerminalSessions.probe(this, SshBackend(this), probeTarget)
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                val sub = (statusHeader as LinearLayout).getChildAt(1) as TextView
+                sub.text = when {
+                    p.native -> getString(R.string.cfg_terminal_status_native, probeTarget.label)
+                    p.usable -> getString(R.string.cfg_terminal_status_ssh, probeTarget.label)
+                    else -> getString(R.string.cfg_terminal_status_failed, p.message)
+                }
+                sub.setTextColor(if (p.usable) Color.GREEN else Color.RED)
+                // The fallback instructions, GENERATED from data/terminal-targets.json (one
+                // block per declared backend, so ports/users/commands are the values the app
+                // dials) — and only when there is something to fall back from.
+                if (!p.native) setupSlot.addView(Ui.header(
+                    this,
+                    getString(R.string.cfg_terminal_setup_title),
+                    getString(R.string.cfg_terminal_setup_steps, terminalSetupBlocks()),
+                ))
+            }
+        }.also { it.isDaemon = true }.start()
 
         // ── Terminal backend switcher ─────────────────────────────────────
-        val currentBackend = IdePrefs.terminalBackend(this)
         val backendTarget  = TerminalTargets.forBackend(currentBackend)
         body.addView(Ui.appCard(
             this, "⌨",

@@ -24,6 +24,10 @@ object IdePrefs {
         sp(ctx).getString(KEY_BACKEND, BuildConfig.TERMINAL_BACKEND_DEFAULT)
             ?: BuildConfig.TERMINAL_BACKEND_DEFAULT
 
+    /** The owner's explicit pick, or null on a phone where nobody chose one —
+     *  TerminalSessions.activeBackend then picks an installed terminal. */
+    fun storedTerminalBackend(ctx: Context): String? = sp(ctx).getString(KEY_BACKEND, null)
+
     fun setTerminalBackend(ctx: Context, v: String) {
         sp(ctx).edit().putString(KEY_BACKEND, v).apply()
     }

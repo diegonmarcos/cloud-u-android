@@ -22,6 +22,9 @@ object TerminalTargets {
          *  the setup instructions are generated per backend rather than
          *  hand-written once for two envs that do not share a package manager. */
         val sshdInstall: String = "",
+        /** The terminal app's package: what MyTerminal binds its session service in, and
+         *  detects as installed. Declared, never a literal in Kotlin. */
+        val pkg: String = "",
     )
 
     private val root: JSONObject by lazy {
@@ -54,6 +57,7 @@ object TerminalTargets {
             port        = obj.getInt("port"),
             user        = obj.getString("user"),
             sshdInstall = obj.optString("sshd_install", ""),
+            pkg         = obj.optString("package", ""),
         )
     }
 

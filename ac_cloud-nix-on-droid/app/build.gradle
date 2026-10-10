@@ -33,10 +33,12 @@ android {
     }
 
     // #744 AGP 8: the namespace (R and BuildConfig's package) lives here, not in
-    // the manifest, and BuildConfig is opt-in — this app's own code reads it.
+    // the manifest, and BuildConfig and AIDL are opt-in — this app's own code
+    // reads BuildConfig, and CloudSessionService implements ICloudSession.aidl.
     namespace 'com.termux'
     buildFeatures {
         buildConfig true
+        aidl true
     }
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()

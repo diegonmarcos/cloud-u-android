@@ -35,6 +35,18 @@
         android:label="@string/permission_cloud_exec_label"
         android:protectionLevel="signature" />
 
+    <!-- Zero-setup terminal sessions for the fleet (CloudSessionService). Signature level:
+         granted only to APKs signed with the fleet key, at install, with no prompt; any
+         other app is refused by the system before the service is reached. Declared ALSO
+         by ac_cloud-nix-on-droid and ac_cloud-myterminal (same key, so the definitions
+         agree): whichever is installed first defines it, and the grant never depends
+         on the order the apps were installed in. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION"
+        android:label="Cloud terminal sessions"
+        android:description="@string/permission_terminal_session_description"
+        android:protectionLevel="signature" />
+
     <!-- #628 - the two packages this app resolves by name at runtime.
          PackageManager.getApplicationInfo() finds cloud-lib-rootfs-termux (the rootfs
          library whose APK carries the root filesystem this terminal enters) and
@@ -220,6 +232,19 @@
             android:permission="${TERMUX_PACKAGE_NAME}.permission.RUN_COMMAND">
             <intent-filter>
                 <action android:name="${TERMUX_PACKAGE_NAME}.RUN_COMMAND" />
+            </intent-filter>
+        </service>
+
+        <!-- A login shell in a PTY for Cloud MyTerminal (ICloudSession): no sshd, no
+             listening socket, no key to copy. Exported ONLY behind the signature-level
+             TERMINAL_SESSION permission, and every call re-checks permission and
+             signature (SessionGate). -->
+        <service
+            android:name=".app.CloudSessionService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.TERMINAL_SESSION">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloud.terminal.SESSION" />
             </intent-filter>
         </service>
 
