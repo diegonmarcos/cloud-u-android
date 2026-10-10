@@ -227,7 +227,7 @@ fresh; sub app/sterna/ui/components/DenseMaterial.kt "modifier.size(MailMetrics.
 red "the Icon wrapper stops sizing (D5)" d5 "$T/s"
 fresh; sub app/sterna/ui/theme/Theme.kt "content = { ProvideDenseTouchTargets(content) }," "content = content," || fail "M: stale tester (D6)"
 red "the dense touch targets not provided (D6)" d6 "$T/s/app/sterna/ui/theme/MailMetrics.kt" "$T/s/app/sterna/ui/theme/Theme.kt"
-fresh; sub app/sterna/ui/theme/Theme.kt "CompositionLocalProvider(LocalMailListPalette provides mailListPalette) {" "CompositionLocalProvider(LocalMailListPalette provides mailListPalette, LocalDensity provides Density(LocalDensity.current.density * 0.8f)) {" || fail "M: stale tester (D7 density)"
+fresh; sub app/sterna/ui/theme/Theme.kt "CompositionLocalProvider(LocalMailListPalette provides mailListPalette, LocalSternaDarkTheme provides darkTheme) {" "CompositionLocalProvider(LocalMailListPalette provides mailListPalette, LocalSternaDarkTheme provides darkTheme, LocalDensity provides Density(LocalDensity.current.density * 0.8f)) {" || fail "M: stale tester (D7 density)"
 red "a LocalDensity override at the theme (D7)" d7 "$T/s"
 fresh; sub app/sterna/ui/theme/Theme.kt "typography = SternaTypography," "typography = SternaTypography, modifier = androidx.compose.ui.Modifier.scale(0.8f)," || fail "M: stale tester (D7 scale)"
 red "a root Modifier.scale in the theme (D7)" d7 "$T/s"
