@@ -127,6 +127,16 @@ object EmbeddedAdbChannel : ShellChannel {
         return if (port > 0) "$host:$port" else host
     }
 
+    /** adbd answered "pairing is required": it no longer trusts this app's key (revoked, or the key
+     *  was regenerated). The record goes, so the page says "not paired" instead of a stale "paired". */
+    internal fun forgetPaired(ctx: Context) {
+        runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_PAIRED).apply() }
+    }
+
+    private fun rejected(ctx: Context, e: Throwable) {
+        if (e.message.orEmpty().contains("pairing is required", ignoreCase = true)) forgetPaired(ctx)
+    }
+
     fun everPaired(ctx: Context): Boolean = runCatching {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PAIRED, false)
     }.getOrDefault(false)
@@ -163,7 +173,7 @@ object EmbeddedAdbChannel : ShellChannel {
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).connect(host, port) }
         if (ok) { markPaired(ctx); runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_PORT, port).apply() } }
         ok to (if (ok) "connected" else "connect returned false")
-    }.getOrElse { false to "connect failed: ${it.message}" }
+    }.getOrElse { rejected(ctx, it); false to "connect failed: ${it.message}" }
 
     /**
      * Close the client's connection. After a Wi-Fi change the old socket can
@@ -188,7 +198,7 @@ object EmbeddedAdbChannel : ShellChannel {
         val ok = onWifi(ctx) { AdbManager.getInstance(ctx).autoConnect(ctx, 10_000) }
         if (ok) { markPaired(ctx); runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_PORT).apply() } }
         ok to (if (ok) "auto-connected via mDNS" else "no _adb-tls-connect service found — Wireless Debugging ON + paired?")
-    }.getOrElse { false to "autoconnect failed: ${it.message}" }
+    }.getOrElse { rejected(ctx, it); false to "autoconnect failed: ${it.message}" }
 
     /**
      * Run [block] with the process temporarily pinned to the Wi-Fi

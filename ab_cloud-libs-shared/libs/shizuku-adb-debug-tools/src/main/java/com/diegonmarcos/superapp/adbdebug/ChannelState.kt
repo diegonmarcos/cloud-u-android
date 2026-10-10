@@ -153,7 +153,7 @@ object ChannelState {
         }
         val routeVal = (r ?: "none") + " - ${f.mode.title()} mode" + when (conn) {
             ConnState.CONNECTING -> ", connecting"
-            ConnState.DEGRADED -> ", degraded"
+            ConnState.DEGRADED -> ", degraded: " + degradedWhy(f)
             else -> ""
         }
         return listOf(
@@ -164,6 +164,13 @@ object ChannelState {
             row(ROW_SHIZUKU, "Shizuku", shz.first, shz.second),
         ) + (if (f.bridgeDeclared) listOf(row(ROW_BRIDGE, "SuperApp bridge", bridge.first, bridge.second)) else emptyList()) +
             StatusRow(ROW_ROUTE, "Active route", routeDot, routeVal, at)
+    }
+
+    /** Why [ConnState.DEGRADED], in the words of what is missing. */
+    fun degradedWhy(f: ChannelFacts): String = when (f.mode) {
+        ChannelMode.LOCAL_SERVER -> "commands run, but nothing can relaunch the server if it dies " +
+            "(embedded adb ${if (f.adbPaired) "not connected" else "not paired"}, Shizuku not running)"
+        else -> "the embedded adb dropped; a lower rung carries the commands"
     }
 
     /** The one-line chip other screens draw: the route, or why there is none. */

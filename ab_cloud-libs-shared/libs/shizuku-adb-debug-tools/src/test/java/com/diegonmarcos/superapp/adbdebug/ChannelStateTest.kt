@@ -90,7 +90,8 @@ class ChannelStateTest {
         val down = row(ChannelState.rows(healthy.copy(serverRunning = false)), "active-route")
         assertEquals(Dot.BAD to "none - Local server mode", down.dot to down.value)
         val deg = row(ChannelState.rows(healthy.copy(adbConnected = false, shizukuRunning = false)), "active-route")
-        assertEquals(Dot.WARN to "local-server - Local server mode, degraded", deg.dot to deg.value)
+        assertEquals(Dot.WARN, deg.dot)
+        assertTrue(deg.value, deg.value.startsWith("local-server - Local server mode, degraded: commands run, but nothing can relaunch the server"))
         val con = row(ChannelState.rows(healthy.copy(connecting = true)), "active-route")
         assertEquals(Dot.WARN, con.dot); assertTrue(con.value.endsWith("connecting"))
     }

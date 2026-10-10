@@ -76,6 +76,9 @@ class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
                 val cert = selfSign(kp)
                 ks.setKeyEntry(ALIAS, kp.private, PASSWORD, arrayOf<Certificate>(cert))
                 file.outputStream().use { ks.store(it, PASSWORD) }
+                // A new key is a new identity adbd has never trusted: whatever pairing this app
+                // remembered belonged to the old key.
+                EmbeddedAdbChannel.forgetPaired(ctx)
             }
             return ks
         }
