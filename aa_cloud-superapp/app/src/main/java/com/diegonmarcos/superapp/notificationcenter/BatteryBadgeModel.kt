@@ -41,9 +41,9 @@ object BatteryBadgeModel {
             }
             x.onPower -> "Plugged in, not charging"
             x.levelPct == 0 -> "Empty"
-            r.toEmptyAtAvgMs != null -> "~${BatteryRows.fmtHm(r.toEmptyAtAvgMs)} left (est)"
-            r.toEmptyMs != null -> "~${BatteryRows.fmtHm(r.toEmptyMs)} left (est, now)"
-            else -> "learning…"
+            else -> r.toEmptyAtAvgMs?.let { "~${BatteryRows.fmtHm(it)} left (est)" }
+                ?: r.toEmptyMs?.let { "~${BatteryRows.fmtHm(it)} left (est, now)" }
+                ?: "learning…"
         }
     }
 
